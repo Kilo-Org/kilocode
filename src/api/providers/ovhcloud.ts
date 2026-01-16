@@ -11,6 +11,7 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import { convertToR1Format } from "../transform/r1-format"
 import { XmlMatcher } from "../../utils/xml-matcher"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 export class OVHcloudAIEndpointsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -28,7 +29,7 @@ export class OVHcloudAIEndpointsHandler extends RouterProvider implements Single
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		_metadata?: ApiHandlerCreateMessageMetadata,
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const { id: modelId, info } = await this.fetchModel()
 
@@ -43,9 +44,12 @@ export class OVHcloudAIEndpointsHandler extends RouterProvider implements Single
 			messages: openAiMessages,
 			stream: true,
 			stream_options: { include_usage: true },
+			...(metadata?.tools && { tools: metadata.tools }),
+			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 		}
 
 		const completion = await this.client.chat.completions.create(body)
+
 		const matcher = new XmlMatcher(
 			"think",
 			(chunk) =>
@@ -55,12 +59,41 @@ export class OVHcloudAIEndpointsHandler extends RouterProvider implements Single
 				}) as const,
 		)
 
+		const activeToolCallIds = new Set<string>()
+
 		for await (const chunk of completion) {
+			verifyFinishReason(chunk.choices[0])
 			const delta = chunk.choices[0]?.delta
+			const finishReason = chunk.choices[0]?.finish_reason
+
 			if (delta?.content) {
 				for (const matcherChunk of matcher.update(delta.content)) {
 					yield matcherChunk
 				}
+			}
+
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					if (toolCall.id) {
+						activeToolCallIds.add(toolCall.id)
+					}
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
+			}
+
+			// Emit tool_call_end events when finish_reason is "tool_calls"
+			// This ensures tool calls are finalized even if the stream doesn't properly close
+			if (finishReason === "tool_calls" && activeToolCallIds.size > 0) {
+				for (const id of activeToolCallIds) {
+					yield { type: "tool_call_end", id }
+				}
+				activeToolCallIds.clear()
 			}
 
 			if (chunk.usage) {

@@ -29,7 +29,6 @@
 		"autoModeWarning": "Chế độ YOLO - các thao tác công cụ được tự động phê duyệt",
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
-		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
 		"runModeLocal": "Cục bộ",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Đám mây",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "Bật/tắt chế độ YOLO",
 		"renameSession": "Đổi tên phiên",
 		"clickToRename": "Nhấp để đổi tên",
-		"confirmRename": "Xác nhận đổi tên"
+		"confirmRename": "Xác nhận đổi tên",
+		"selectModel": "Chọn mô hình",
+		"modelTooltip": "Chọn mô hình AI để sử dụng cho phiên này",
+		"defaultModel": "Mô hình mặc định",
+		"loadingModels": "Đang tải..."
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

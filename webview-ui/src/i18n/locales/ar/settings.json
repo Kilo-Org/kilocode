@@ -308,6 +308,7 @@
 		"makeActiveProfile": "جعل الملف النشط",
 		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
 		"apiProvider": "مزود API",
+		"apiProviderDocs": "توثيق المزود",
 		"model": "النموذج",
 		"nameEmpty": "الاسم ما يصير فاضي",
 		"nameExists": "الاسم مستخدم مسبقًا",
@@ -365,6 +366,8 @@
 		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
 		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"vertex1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"basetenApiKey": "مفتاح Baseten API",
 		"getBasetenApiKey": "احصل على مفتاح Baseten API",
 		"cerebrasApiKey": "مفتاح Cerebras API",
@@ -485,6 +488,14 @@
 		"awsRegion": "منطقة AWS",
 		"awsCrossRegion": "تمكين الاستدلال عبر المناطق",
 		"awsGlobalInference": "استخدام الاستدلال العالمي (اختيار منطقة AWS الأمثل تلقائيًا)",
+		"awsServiceTier": "طبقة الخدمة",
+		"awsServiceTierStandard": "قياسية",
+		"awsServiceTierStandardDesc": "أداء وتكلفة متوازنة",
+		"awsServiceTierFlex": "مرنة (خصم 50%)",
+		"awsServiceTierFlexDesc": "تكلفة أقل، زمن استجابة أعلى للمهام غير الحرجة",
+		"awsServiceTierPriority": "أولوية (رسوم 75% إضافية)",
+		"awsServiceTierPriorityDesc": "أسرع أداء للتطبيقات الحرجة",
+		"awsServiceTierNote": "طبقات الخدمة تؤثر على التسعير والأداء. المرنة تقدم خصم 50% مع زمن استجابة أعلى، الأولوية تقدم أداء أفضل بـ 25% مع رسوم 75% إضافية.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "استخدام نقطة VPC مخصصة",
 			"vpcEndpointUrlPlaceholder": "اكتب رابط نقطة VPC (اختياري)",
@@ -830,6 +841,10 @@
 			"label": "حد ملفات المشروع",
 			"description": "أقصى عدد ملفات تُدرج من المجلد الحالي."
 		},
+		"enableSubfolderRules": {
+			"label": "تمكين قواعد المجلدات الفرعية",
+			"description": "اكتشاف وتحميل ملفات .roo/rules و AGENTS.md من المجلدات الفرعية بشكل تكراري. مفيد للمشاريع الضخمة ذات القواعد الخاصة بكل حزمة."
+		},
 		"rooignore": {
 			"label": "إظهار ملفات .kilocodeignore",
 			"description": "عند التفعيل تُعرض مع رمز قفل؛ عند التعطيل تُخفى."
@@ -1093,6 +1108,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "التحويل من الكلام إلى النص (STT)",
 			"description": "عند التفعيل، يمكن لـ Kilo Code تحويل صوتك إلى نص باستخدام نموذج Whisper من OpenAI. انقر على زر الميكروفون في المحادثة لبدء التسجيل. يتطلب تثبيت FFmpeg ومزود API OpenAI مُكوَّن."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "تفعيل الأدوات المخصصة",
+			"description": "عند التفعيل، يمكن لـ Kilo تحميل واستخدام أدوات TypeScript/JavaScript مخصصة من مجلد .kilocode/tools في مشروعك أو ~/.kilocode/tools للأدوات العامة. ملاحظة: سيتم الموافقة على هذه الأدوات تلقائياً.",
+			"toolsHeader": "الأدوات المخصصة المتاحة",
+			"noTools": "لم يتم تحميل أدوات مخصصة. أضف ملفات .ts أو .js إلى مجلد .kilocode/tools في مشروعك أو ~/.kilocode/tools للأدوات العامة.",
+			"refreshButton": "تحديث",
+			"refreshing": "جاري التحديث...",
+			"refreshSuccess": "تم تحديث الأدوات بنجاح",
+			"refreshError": "فشل تحديث الأدوات",
+			"toolParameters": "المعاملات"
 		}
 	},
 	"promptCaching": {

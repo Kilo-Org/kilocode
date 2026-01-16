@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Open Source AI coding assistant for planning, building, and fixing code."
+		"description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,8 +99,7 @@
 			"errorOutput": "Error output: {{output}}",
 			"processExitedWithError": "Claude Code process exited with code {{exitCode}}. Error output: {{output}}",
 			"stoppedWithReason": "Claude Code stopped with reason: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}",

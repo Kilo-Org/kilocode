@@ -29,7 +29,6 @@
 		"autoModeWarning": "Režim YOLO - operace nástrojů jsou automaticky schváleny",
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
-		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
 		"runModeLocal": "Lokální",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -63,7 +62,11 @@
 		"toggleYoloMode": "Přepnout režim YOLO",
 		"renameSession": "Přejmenovat relaci",
 		"clickToRename": "Klikni pro přejmenování",
-		"confirmRename": "Potvrdit přejmenování"
+		"confirmRename": "Potvrdit přejmenování",
+		"selectModel": "Vyber model",
+		"modelTooltip": "Vyber, který AI model použít pro tuto relaci",
+		"defaultModel": "Výchozí model",
+		"loadingModels": "Načítání..."
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",

@@ -29,7 +29,6 @@
 		"autoModeWarning": "Modalità YOLO - le operazioni degli strumenti vengono approvate automaticamente",
 		"starting": "Avvio in corso...",
 		"startAriaLabel": "Avvia agente con il prompt fornito",
-		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga",
 		"runModeLocal": "Locale",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "Attiva/disattiva modalità YOLO",
 		"renameSession": "Rinomina sessione",
 		"clickToRename": "Clicca per rinominare",
-		"confirmRename": "Conferma rinomina"
+		"confirmRename": "Conferma rinomina",
+		"selectModel": "Seleziona modello",
+		"modelTooltip": "Scegli quale modello AI usare per questa sessione",
+		"defaultModel": "Modello predefinito",
+		"loadingModels": "Caricamento..."
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",

@@ -14,6 +14,7 @@ This is a pnpm monorepo using Turbo for task orchestration:
 - **`apps/`** - E2E tests, Storybook, docs
 
 Key source directories:
+
 - `src/api/providers/` - AI provider implementations (50+ providers)
 - `src/core/tools/` - Tool implementations (ReadFile, ApplyDiff, ExecuteCommand, etc.)
 - `src/services/` - Services (MCP, browser, checkpoints, code-index)
@@ -56,7 +57,11 @@ Brief description of the change
 - Use `patch` for fixes, `minor` for features, `major` for breaking changes
 - For CLI changes, use `"@kilocode/cli": patch` instead
 
-Keep changesets concise but well-written as they become part of release notes.
+Keep changesets concise and feature-oriented as they appear directly in release notes.
+
+- **Only for actual changes**: Documentation-only or internal tooling changes do not need a changeset.
+- **User-focused**: Avoid technical descriptions, code references, or PR numbers. Readers may not know the codebase.
+- **Concise**: Use a one-liner for small fixes. For larger features, a few words or a short sentence is sufficient.
 
 ## Fork Merge Process
 
@@ -67,11 +72,13 @@ Kilo Code is a fork of [Roo Code](https://github.com/RooVetGit/Roo-Code). We per
 To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
 
 **Single line:**
+
 ```typescript
 const value = 42 // kilocode_change
 ```
 
 **Multi-line:**
+
 ```typescript
 // kilocode_change start
 const foo = 1
@@ -80,6 +87,7 @@ const bar = 2
 ```
 
 **New files:**
+
 ```typescript
 // kilocode_change - new file
 ```
@@ -90,6 +98,7 @@ Code in these directories is Kilo Code-specific and doesn't need markers:
 
 - `cli/` - CLI package
 - `jetbrains/` - JetBrains plugin
+- `agent-manager/` directories
 - Any path containing `kilocode` in filename or directory name
 - `src/services/ghost/` - Ghost service
 

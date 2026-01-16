@@ -24,6 +24,16 @@ export interface BatchDiffItem {
 }
 
 /**
+ * Directory deletion stats structure
+ */
+export interface DeleteFileStats {
+	files: number
+	directories: number
+	size: number
+	isComplete: boolean
+}
+
+/**
  * Parsed tool data structure
  */
 export interface ToolData {
@@ -48,6 +58,8 @@ export interface ToolData {
 	source?: string
 	additionalFileCount?: number
 	fastApplyResult?: unknown
+	diffStats?: { added: number; removed: number }
+	stats?: DeleteFileStats
 }
 
 /**

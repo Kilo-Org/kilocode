@@ -111,7 +111,50 @@ export function convertToBedrockConverseMessages(
 			}
 
 			if (messageBlock.type === "tool_result") {
-				// Handle content field - can be string or array
+				// When NOT using native tools, convert tool_result to text format
+				// This matches how tool_use is converted to XML text when native tools are disabled.
+				// Without this, Bedrock will error with "toolConfig field must be defined when using
+				// toolUse and toolResult content blocks" because toolResult blocks require toolConfig.
+				if (!useNativeTools) {
+					let toolResultContent: string
+					if (messageBlock.content) {
+						if (typeof messageBlock.content === "string") {
+							toolResultContent = messageBlock.content
+						} else if (Array.isArray(messageBlock.content)) {
+							toolResultContent = messageBlock.content
+								.map((item) => (typeof item === "string" ? item : item.text || String(item)))
+								.join("\n")
+						} else {
+							toolResultContent = String(messageBlock.output || "")
+						}
+					} else if (messageBlock.output) {
+						if (typeof messageBlock.output === "string") {
+							toolResultContent = messageBlock.output
+						} else if (Array.isArray(messageBlock.output)) {
+							toolResultContent = messageBlock.output
+								.map((part) => {
+									if (typeof part === "object" && "text" in part) {
+										return part.text
+									}
+									if (typeof part === "object" && "type" in part && part.type === "image") {
+										return "(see following message for image)"
+									}
+									return String(part)
+								})
+								.join("\n")
+						} else {
+							toolResultContent = String(messageBlock.output)
+						}
+					} else {
+						toolResultContent = ""
+					}
+
+					return {
+						text: `<tool_result>\n<tool_use_id>${messageBlock.tool_use_id || ""}</tool_use_id>\n<output>${toolResultContent}</output>\n</tool_result>`,
+					} as ContentBlock
+				}
+
+				// Handle content field - can be string or array (native tool format)
 				if (messageBlock.content) {
 					// Content is a string
 					if (typeof messageBlock.content === "string") {

@@ -30,6 +30,7 @@ describe.skip("About", () => {
 	const defaultProps = {
 		telemetrySetting: "enabled" as const,
 		setTelemetrySetting: vi.fn(),
+		isVsCode: true,
 	}
 
 	beforeEach(() => {

@@ -13,7 +13,6 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
-import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
 
 interface SearchReplaceOperation {
 	search: string
@@ -112,6 +111,8 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 			let fileContent: string
 			try {
 				fileContent = await fs.readFile(absolutePath, "utf8")
+				// Normalize line endings to LF for consistent matching
+				fileContent = fileContent.replace(/\r\n/g, "\n")
 			} catch (error) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("search_and_replace")
@@ -121,18 +122,15 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				return
 			}
 
-			const useCrLf_kilocode = fileContent.includes("\r\n")
-
 			// Apply all operations sequentially
 			let newContent = fileContent
 			const errors: string[] = []
 
 			for (let i = 0; i < operations.length; i++) {
-				const { search, replace } = operations[i]
-				const searchPattern = new RegExp(
-					escapeRegExp(normalizeLineEndings_kilocode(search, useCrLf_kilocode)),
-					"g",
-				)
+				// Normalize line endings in search/replace strings to match file content
+				const search = operations[i].search.replace(/\r\n/g, "\n")
+				const replace = operations[i].replace.replace(/\r\n/g, "\n")
+				const searchPattern = new RegExp(escapeRegExp(search), "g")
 
 				const matchCount = newContent.match(searchPattern)?.length ?? 0
 				if (matchCount === 0) {
@@ -148,7 +146,7 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				}
 
 				// Apply the replacement
-				newContent = newContent.replace(searchPattern, normalizeLineEndings_kilocode(replace, useCrLf_kilocode))
+				newContent = newContent.replace(searchPattern, replace)
 			}
 
 			// If all operations failed, return error

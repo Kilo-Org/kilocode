@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLO-Modus - Tool-Operationen werden automatisch genehmigt",
 		"starting": "Wird gestartet...",
 		"startAriaLabel": "Agent mit angegebenem Prompt starten",
-		"keyboardHint": "Enter zum Starten, Shift+Enter für neue Zeile",
 		"runModeLocal": "Lokal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLO-Modus umschalten",
 		"renameSession": "Sitzung umbenennen",
 		"clickToRename": "Klicken zum Umbenennen",
-		"confirmRename": "Umbenennung bestätigen"
+		"confirmRename": "Umbenennung bestätigen",
+		"selectModel": "Modell auswählen",
+		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
+		"defaultModel": "Standard-Modell",
+		"loadingModels": "Wird geladen..."
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",

@@ -2,7 +2,10 @@
 
 一些快速提示，帮助你充分利用 Kilo Code。
 
-- 将 Kilo Code 拖到[侧边栏](https://code.visualstudio.com/api/ux-guidelines/sidebars#secondary-sidebar)，以便同时查看资源管理器、搜索、源代码控制等。
+- 右键点击活动栏中的 Kilo Code 图标，选择 **移动到 → 辅助侧边栏**，将 Kilo Code 移动到[辅助侧边栏](https://code.visualstudio.com/api/ux-guidelines/sidebars#secondary-sidebar)，这样你可以同时查看资源管理器、搜索、源代码控制等。
+
+    ![移动到辅助侧边栏](./move-to-secondary.png)
+
 - 当 Kilo Code 位于与文件资源管理器分开的侧边栏时，你可以将文件从资源管理器拖到聊天窗口中（甚至可以一次拖多个文件）。只需在开始拖动文件后按住 shift 键。
 - 如果你不使用[MCP](/features/mcp/overview)，请在 <Codicon name="notebook" /> 提示选项卡中关闭它，以显著减少系统提示的大小。
 - 为了保持[自定义模式](/agent-behavior/custom-modes)的正轨，请限制它们可以编辑的文件类型。

@@ -1208,9 +1208,11 @@ export class FileSystemAPI {
 
 	async writeFile(uri: Uri, content: Uint8Array): Promise<void> {
 		try {
-			fs.writeFileSync(uri.fsPath, content)
-		} catch {
-			throw new Error(`Failed to write file: ${uri.fsPath}`)
+			// Use Buffer.from to ensure proper handling of Uint8Array content
+			// and write with explicit encoding to handle Unicode paths on Windows
+			fs.writeFileSync(uri.fsPath, Buffer.from(content))
+		} catch (error) {
+			throw new Error(`Failed to write file: ${uri.fsPath}: ${(error as Error).message}`)
 		}
 	}
 

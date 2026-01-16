@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Assistente di programmazione AI open source per la pianificazione, la creazione e la correzione del codice."
+		"description": "Agente di programmazione AI open source che genera codice dal linguaggio naturale, automatizza le attività ed esegue comandi da terminale. Include autocompletamento inline, automazione del browser, refactoring automatizzato e modalità personalizzate per pianificazione, programmazione e debug. Supporta oltre 500 modelli AI tra cui Claude (Anthropic), Gemini, Grok, GPT, Codex e GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,8 +99,7 @@
 			"errorOutput": "Output di errore: {{output}}",
 			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Chiave API Groq",
-			"getGroqApiKey": "Ottieni chiave API Groq",
-			"claudeCode": {
-				"pathLabel": "Percorso Claude Code",
-				"description": "Percorso opzionale alla tua CLI Claude Code. Predefinito 'claude' se non impostato.",
-				"placeholder": "Predefinito: claude"
-			}
+			"getGroqApiKey": "Ottieni chiave API Groq"
 		}
 	},
 	"customModes": {

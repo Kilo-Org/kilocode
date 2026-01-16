@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLO 모드 - 도구 작업이 자동 승인됩니다",
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
-		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈",
 		"runModeLocal": "로컬",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "클라우드",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLO 모드 전환",
 		"renameSession": "세션 이름 변경",
 		"clickToRename": "클릭하여 이름 변경",
-		"confirmRename": "이름 변경 확인"
+		"confirmRename": "이름 변경 확인",
+		"selectModel": "모델 선택",
+		"modelTooltip": "이 세션에 사용할 AI 모델 선택",
+		"defaultModel": "기본 모델",
+		"loadingModels": "로딩 중..."
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",

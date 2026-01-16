@@ -1,5 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
+import { z } from "zod"
 
 import {
 	openRouterDefaultModelId,
@@ -16,6 +17,7 @@ import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCal
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { normalizeMistralToolCallId } from "../transform/mistral-format"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { TOOL_PROTOCOL } from "@roo-code/types"
 import { ApiStreamChunk } from "../transform/stream"
@@ -51,6 +53,7 @@ import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from ".
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { generateImageWithProvider, ImageGenerationResult } from "./utils/image-generation"
 import { KiloCodeChunkSchema } from "./kilocode/chunk-schema"
+import { applyRouterToolPreferences } from "./utils/router-tool-preferences"
 
 // Add custom interface for OpenRouter params.
 type OpenRouterChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
@@ -61,11 +64,75 @@ type OpenRouterChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
 	provider?: OpenRouterProviderParams // kilocode_change
 }
 
-// OpenRouter error structure that may include metadata.raw with actual upstream error
+// Zod schema for OpenRouter error response structure (for caught exceptions)
+const OpenRouterErrorResponseSchema = z.object({
+	error: z
+		.object({
+			message: z.string().optional(),
+			code: z.number().optional(),
+			metadata: z
+				.object({
+					raw: z.string().optional(),
+				})
+				.optional(),
+		})
+		.optional(),
+})
+
+// OpenRouter error structure that may include error.metadata.raw with actual upstream error
+// This is for caught exceptions which have the error wrapped in an "error" property
 interface OpenRouterErrorResponse {
+	error?: {
+		message?: string
+		code?: number
+		metadata?: { raw?: string }
+	}
+}
+
+// Direct error object structure (for streaming errors passed directly)
+interface OpenRouterError {
 	message?: string
 	code?: number
 	metadata?: { raw?: string }
+}
+
+/**
+ * Helper function to parse and extract error message from metadata.raw
+ * metadata.raw is often a JSON encoded string that may contain .message or .error fields
+ * Example structures:
+ * - {"message": "Error text"}
+ * - {"error": "Error text"}
+ * - {"error": {"message": "Error text"}}
+ * - {"type":"error","error":{"type":"invalid_request_error","message":"tools: Tool names must be unique."}}
+ */
+function extractErrorFromMetadataRaw(raw: string | undefined): string | undefined {
+	if (!raw) {
+		return undefined
+	}
+
+	try {
+		const parsed = JSON.parse(raw)
+		// Check for common error message fields
+		if (typeof parsed === "object" && parsed !== null) {
+			// Check for direct message field
+			if (typeof parsed.message === "string") {
+				return parsed.message
+			}
+			// Check for nested error.message field (e.g., Anthropic error format)
+			if (typeof parsed.error === "object" && parsed.error !== null && typeof parsed.error.message === "string") {
+				return parsed.error.message
+			}
+			// Check for error as a string
+			if (typeof parsed.error === "string") {
+				return parsed.error
+			}
+		}
+		// If we can't extract a specific field, return the raw string
+		return raw
+	} catch {
+		// If it's not valid JSON, return as-is
+		return raw
+	}
 }
 
 // See `OpenAI.Chat.Completions.ChatCompletionChunk["usage"]`
@@ -187,19 +254,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	/**
 	 * Handle OpenRouter streaming error response and report to telemetry.
 	 * OpenRouter may include metadata.raw with the actual upstream provider error.
+	 * @param error The error object (not wrapped - receives the error directly)
 	 */
-	private handleStreamingError(error: OpenRouterErrorResponse, modelId: string, operation: string): never {
-		const rawErrorMessage = error?.metadata?.raw || error?.message
+	private handleStreamingError(error: OpenRouterError, modelId: string, operation: string): never {
+		const rawString = error?.metadata?.raw
+		const parsedError = extractErrorFromMetadataRaw(rawString)
+		const rawErrorMessage = parsedError || error?.message || "Unknown error"
 
 		const apiError = Object.assign(
-			new ApiProviderError(
-				rawErrorMessage ?? "Unknown error",
-				this.providerName,
-				modelId,
-				operation,
-				error?.code,
-			),
-			{ status: error?.code, error: { message: error?.message, metadata: error?.metadata } },
+			new ApiProviderError(rawErrorMessage, this.providerName, modelId, operation, error?.code),
+			{ status: error?.code, error },
 		)
 
 		TelemetryService.instance.captureException(apiError)
@@ -253,9 +317,14 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		// Convert Anthropic messages to OpenAI format.
+		// Pass normalization function for Mistral compatibility (requires 9-char alphanumeric IDs)
+		const isMistral = modelId.toLowerCase().includes("mistral")
 		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
+			...convertToOpenAiMessages(
+				messages,
+				isMistral ? { normalizeToolCallId: normalizeMistralToolCallId } : undefined,
+			),
 		]
 
 		// DeepSeek highly recommends using user instead of system role.
@@ -264,7 +333,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		// Process reasoning_details when switching models to Gemini for native tool call compatibility
-		const toolProtocol = resolveToolProtocol(this.options, model.info)
+		// IMPORTANT: Use metadata.toolProtocol if provided (task's locked protocol) for consistency
+		const toolProtocol = resolveToolProtocol(this.options, model.info, metadata?.toolProtocol)
 		const isNativeProtocol = toolProtocol === TOOL_PROTOCOL.NATIVE
 		const isGemini = modelId.startsWith("google/gemini")
 
@@ -314,8 +384,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 		// kilocode_change end
 
-		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
-
 		// https://openrouter.ai/docs/transforms
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
@@ -327,7 +395,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			stream_options: { include_usage: true },
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			parallel_tool_calls: false, // Ensure only one tool call at a time
-			...(transforms && { transforms }),
+			// Only include provider if openRouterSpecificProvider is not "[default]".
+			...(this.options.openRouterSpecificProvider &&
+				this.options.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME && {
+					provider: {
+						order: [this.options.openRouterSpecificProvider],
+						only: [this.options.openRouterSpecificProvider],
+						allow_fallbacks: false,
+					},
+				}),
 			...(reasoning && { reasoning }),
 			...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
@@ -350,20 +426,46 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			if (this.providerName === "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
 				throw error
 			}
-
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "createMessage")
-			TelemetryService.instance.captureException(apiError)
-
-			// Preserve existing readability improvements for user-facing errors.
-			const readableMessage = makeOpenRouterErrorReadable(error)
-			throw new Error(readableMessage)
 			// kilocode_change end
+
+			// Try to parse as OpenRouter error structure using Zod
+			const parseResult = OpenRouterErrorResponseSchema.safeParse(error)
+
+			if (parseResult.success && parseResult.data.error) {
+				const openRouterError = parseResult.data
+				const rawString = openRouterError.error?.metadata?.raw
+				const parsedError = extractErrorFromMetadataRaw(rawString)
+				const rawErrorMessage = parsedError || openRouterError.error?.message || "Unknown error"
+
+				const apiError = Object.assign(
+					new ApiProviderError(
+						rawErrorMessage,
+						this.providerName,
+						modelId,
+						"createMessage",
+						openRouterError.error?.code,
+					),
+					{
+						status: openRouterError.error?.code,
+						error: openRouterError.error,
+					},
+				)
+
+				TelemetryService.instance.captureException(apiError)
+				throw handleOpenAIError(error, this.providerName)
+			} else {
+				// Fallback for non-OpenRouter errors
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "createMessage")
+				TelemetryService.instance.captureException(apiError)
+				throw handleOpenAIError(error, this.providerName)
+			}
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
 		let inferenceProvider: string | undefined // kilocode_change
-		// Accumulator for reasoning_details: accumulate text by type-index key
+		// Accumulator for reasoning_details FROM the API.
+		// We preserve the original shape of reasoning_details to prevent malformed responses.
 		const reasoningDetailsAccumulator = new Map<
 			string,
 			{
@@ -378,10 +480,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		>()
 
+		// Track whether we've yielded displayable text from reasoning_details.
+		// When reasoning_details has displayable content (reasoning.text or reasoning.summary),
+		// we skip yielding the top-level reasoning field to avoid duplicate display.
+		let hasYieldedReasoningFromDetails = false
+
 		for await (const chunk of stream) {
 			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
 			if ("error" in chunk) {
-				this.handleStreamingError(chunk.error as OpenRouterErrorResponse, modelId, "createMessage")
+				this.handleStreamingError(chunk.error as OpenRouterError, modelId, "createMessage")
 			}
 
 			// kilocode_change start
@@ -449,22 +556,28 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 						}
 
 						// Yield text for display (still fragmented for live streaming)
+						// Only reasoning.text and reasoning.summary have displayable content
+						// reasoning.encrypted is intentionally skipped as it contains redacted content
 						let reasoningText: string | undefined
 						if (detail.type === "reasoning.text" && typeof detail.text === "string") {
 							reasoningText = detail.text
 						} else if (detail.type === "reasoning.summary" && typeof detail.summary === "string") {
 							reasoningText = detail.summary
 						}
-						// Note: reasoning.encrypted types are intentionally skipped as they contain redacted content
 
 						if (reasoningText) {
+							hasYieldedReasoningFromDetails = true
 							yield { type: "reasoning", text: reasoningText }
 						}
 					}
-				} else if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
-					// Handle legacy reasoning format - only if reasoning_details is not present
-					// See: https://openrouter.ai/docs/use-cases/reasoning-tokens
-					yield { type: "reasoning", text: delta.reasoning }
+				}
+
+				// Handle top-level reasoning field for UI display.
+				// Skip if we've already yielded from reasoning_details to avoid duplicate display.
+				if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
+					if (!hasYieldedReasoningFromDetails) {
+						yield { type: "reasoning", text: delta.reasoning }
+					}
 				}
 
 				// kilocode_change start
@@ -506,7 +619,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		// After streaming completes, store the accumulated reasoning_details
+		// After streaming completes, store ONLY the reasoning_details we received from the API.
 		if (reasoningDetailsAccumulator.size > 0) {
 			this.currentReasoningDetails = Array.from(reasoningDetailsAccumulator.values())
 		}
@@ -550,6 +663,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
 			info = this.endpoints[this.options.openRouterSpecificProvider]
 		}
+
+		// Apply tool preferences for models accessed through routers (OpenAI, Gemini)
+		info = applyRouterToolPreferences(id, info)
 
 		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
 
@@ -596,14 +712,42 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		try {
 			response = await this.client.chat.completions.create(completionParams, requestOptions)
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "completePrompt")
-			TelemetryService.instance.captureException(apiError)
-			throw handleOpenAIError(error, this.providerName)
+			// Try to parse as OpenRouter error structure using Zod
+			const parseResult = OpenRouterErrorResponseSchema.safeParse(error)
+
+			if (parseResult.success && parseResult.data.error) {
+				const openRouterError = parseResult.data
+				const rawString = openRouterError.error?.metadata?.raw
+				const parsedError = extractErrorFromMetadataRaw(rawString)
+				const rawErrorMessage = parsedError || openRouterError.error?.message || "Unknown error"
+
+				const apiError = Object.assign(
+					new ApiProviderError(
+						rawErrorMessage,
+						this.providerName,
+						modelId,
+						"completePrompt",
+						openRouterError.error?.code,
+					),
+					{
+						status: openRouterError.error?.code,
+						error: openRouterError.error,
+					},
+				)
+
+				TelemetryService.instance.captureException(apiError)
+				throw handleOpenAIError(error, this.providerName)
+			} else {
+				// Fallback for non-OpenRouter errors
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "completePrompt")
+				TelemetryService.instance.captureException(apiError)
+				throw handleOpenAIError(error, this.providerName)
+			}
 		}
 
 		if ("error" in response) {
-			this.handleStreamingError(response.error as OpenRouterErrorResponse, modelId, "completePrompt")
+			this.handleStreamingError(response.error as OpenRouterError, modelId, "completePrompt")
 		}
 
 		const completion = response as OpenAI.Chat.ChatCompletion

@@ -515,6 +515,7 @@ export const tasksCommand: Command = {
 			name: "argument",
 			description: "Argument for the subcommand",
 			required: false,
+			provider: taskIdAutocompleteProvider,
 			conditionalProviders: [
 				{
 					condition: (context) => context.getArgument("subcommand") === "select",

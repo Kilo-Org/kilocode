@@ -146,6 +146,7 @@ export function isNonBlockingAsk(ask: ClineAsk): ask is NonBlockingAsk {
  * - `api_req_finished`: Indicates an API request has completed successfully
  * - `api_req_retried`: Indicates an API request is being retried after a failure
  * - `api_req_retry_delayed`: Indicates an API request retry has been delayed
+ * - `api_req_rate_limit_wait`: Indicates a configured rate-limit wait (not an error)
  * - `api_req_deleted`: Indicates an API request has been deleted/cancelled
  * - `text`: General text message or assistant response
  * - `reasoning`: Assistant's reasoning or thought process (often hidden from user)
@@ -172,6 +173,7 @@ export const clineSays = [
 	"api_req_finished",
 	"api_req_retried",
 	"api_req_retry_delayed",
+	"api_req_rate_limit_wait",
 	"api_req_deleted",
 	"text",
 	"image",

@@ -327,6 +327,7 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 		"use_mcp_server",
 		"payment_required_prompt",
 		"checkpoint_restore",
+		"api_req_failed", // Rate limit/quota exhaustion errors - enables auto-retry
 	]
 
 	const lastMessage = messages[messages.length - 1]

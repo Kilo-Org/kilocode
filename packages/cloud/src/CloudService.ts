@@ -337,6 +337,11 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements Di
 		return this.shareService!.canShareTask()
 	}
 
+	public async canSharePublicly(): Promise<boolean> {
+		this.ensureInitialized()
+		return this.shareService!.canSharePublicly()
+	}
+
 	// Lifecycle
 
 	public dispose(): void {

@@ -135,7 +135,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已禁用）",
-				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
+				"noCredits": "**账户余额不足**\n\n你的 Kilo Code 账户没有余额。要使用自动补全功能，请为账户充值。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "会话总费用:",
 				"provider": "提供商:",
 				"model": "模型:",
@@ -203,5 +204,9 @@
 			"invalidApiKey": "您的 OpenAI API 密钥无效或无权访问实时 API。请检查您的 API 密钥并重试。",
 			"unknown": "连接失败。请检查您的配置并重试。"
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo 代码：添加了{{source}} {{configType}}：{{name}}{{modeStr}}",
+		"removed": "Kilo代码：已移除{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

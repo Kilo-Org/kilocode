@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।"
+		"description": "ओपन सोर्स AI कोडिंग एजेंट जो प्राकृतिक भाषा से कोड जनरेट करता है, कार्यों को स्वचालित करता है, और टर्मिनल कमांड चलाता है। इनलाइन ऑटोकम्प्लीट, ब्राउज़र ऑटोमेशन, स्वचालित रीफैक्टरिंग, और प्लानिंग, कोडिंग और डिबगिंग के लिए कस्टम मोड शामिल हैं। Claude (Anthropic), Gemini, Grok, GPT, Codex और GLM सहित 500+ AI मॉडल का समर्थन करता है।"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,8 +99,7 @@
 			"errorOutput": "त्रुटि आउटपुट: {{output}}",
 			"processExitedWithError": "Claude Code प्रक्रिया कोड {{exitCode}} के साथ समाप्त हुई। त्रुटि आउटपुट: {{output}}",
 			"stoppedWithReason": "Claude Code इस कारण से रुका: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}",
@@ -210,11 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "ग्रोक एपीआई कुंजी",
-			"getGroqApiKey": "ग्रोक एपीआई कुंजी प्राप्त करें",
-			"claudeCode": {
-				"pathLabel": "क्लाउड कोड पाथ",
-				"description": "आपके क्लाउड कोड CLI का वैकल्पिक पाथ। सेट न होने पर डिफ़ॉल्ट रूप से 'claude'।"
-			}
+			"getGroqApiKey": "ग्रोक एपीआई कुंजी प्राप्त करें"
 		}
 	},
 	"customModes": {

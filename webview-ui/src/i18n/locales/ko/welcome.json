@@ -6,37 +6,42 @@
 	"routers": {
 		"requesty": {
 			"description": "최적화된 LLM 라우터",
-			"incentive": "$1 무료 크레딧"
+			"incentive": "무료 $1 크레딧"
 		},
 		"openrouter": {
 			"description": "LLM을 위한 통합 인터페이스"
 		},
 		"roo": {
-			"description": "시작하기에 최고의 무료 모델",
-			"incentive": "Roo를 무료로 체험해보세요"
+			"description": "시작하기 위한 최고의 무료 모델",
+			"incentive": "Roo 무료로 시도해보기"
 		}
 	},
 	"chooseProvider": "Kilo Code가 작동하려면 API 키가 필요합니다.",
 	"providerSignup": {
-		"rooCloudProvider": "Roo Code Cloud 제공업체",
-		"rooCloudDescription": "Roo를 사용하는 가장 간단한 방법. 저렴한 비용으로 무료 및 유료 모델을 선별하여 제공",
+		"heading": "공급자 선택",
+		"chooseProvider": "Roo가 작동하려면 LLM 공급자가 필요합니다. 시작하려면 하나를 선택하세요. 나중에 더 추가할 수 있습니다.",
+		"rooCloudProvider": "Roo Code Cloud 공급자",
+		"rooCloudDescription": "시작하는 가장 쉬운 방법은 Roo Code Cloud 공급자를 사용하는 것입니다: 무료 및 유료 모델의 신중하게 선택된 믹스, 저렴한 비용으로.",
 		"learnMore": "자세히 알아보기",
-		"useAnotherProvider": "다른 제공업체 사용",
+		"useAnotherProvider": "타사 공급자",
 		"useAnotherProviderDescription": "API 키를 입력하고 시작하세요.",
-		"noApiKeys": "키를 다루기 싫으세요? Roo Code Cloud 제공업체를 선택하세요.",
-		"getStarted": "시작하기"
+		"noApiKeys": "API 키와 별도의 계정을 다루고 싶지 않으신가요?",
+		"backToRoo": "Roo Code Cloud 공급자를 선택하세요.",
+		"goBack": "뒤로",
+		"finish": "완료"
 	},
 	"waitingForCloud": {
-		"heading": "Roo Code Cloud로 이동 중입니다...",
-		"description": "브라우저에서 가입을 완료하면 자동으로 여기로 돌아옵니다.",
-		"noPrompt": "URL을 열도록 요청받지 않으면 <clickHere>여기를 클릭</clickHere>하세요.",
-		"havingTrouble": "가입을 완료했지만 문제가 있으면 <clickHere>여기를 클릭</clickHere>하세요.",
-		"pasteUrl": "브라우저에서 콜백 URL을 붙여넣으세요:",
-		"invalidURL": "유효한 콜백 URL로 보이지 않습니다. Roo Code Cloud에서 브라우저에 표시하는 내용을 복사하세요.",
-		"goBack": "돌아가기"
+		"heading": "Roo Code Cloud에 로그인 중...",
+		"description": "Roo Code Cloud에 등록하기 위해 브라우저로 이동합니다. 그런 다음 여기로 돌아와서 완료합니다.",
+		"noPrompt": "URL을 열도록 요청받지 않으면 <clickHere>여기를 클릭하세요</clickHere>.",
+		"havingTrouble": "등록을 완료했지만 문제가 있는 경우 <clickHere>여기를 클릭하세요</clickHere>.",
+		"pasteUrl": "브라우저에서 표시된 콜백 URL을 붙여넣으세요:",
+		"docsLink": "작동하지 않나요? <DocsLink>문서를 확인하세요</DocsLink>.",
+		"invalidURL": "유효한 콜백 URL처럼 보이지 않습니다. Roo Code Cloud가 브라우저에 표시하는 것을 복사하세요.",
+		"goBack": "뒤로"
 	},
 	"startRouter": "LLM 라우터 사용을 권장합니다:",
-	"startCustom": "또는 직접 API 키를 가져올 수 있습니다:",
+	"startCustom": "또는 자신의 API 키를 가져올 수 있습니다:",
 	"telemetry": {
 		"helpImprove": "Kilo Code 개선에 도움 주세요",
 		"helpImproveMessage": "Kilo Code는 버그 수정 및 확장 기능 개선을 위해 오류 및 사용 데이터를 수집합니다. 이 원격 측정은 코드, 프롬프트 또는 개인 정보를 수집하지 않습니다. <settingsLink>설정</settingsLink>에서 이를 끌 수 있습니다."

@@ -1148,6 +1148,87 @@ describe("McpHub", () => {
 			expect(servers[0].name).toBe("enabled-server")
 		})
 
+		it("should deduplicate servers by name with project servers taking priority", () => {
+			const mockConnections: McpConnection[] = [
+				{
+					type: "connected",
+					server: {
+						name: "shared-server",
+						config: '{"source":"global"}',
+						status: "connected",
+						disabled: false,
+						source: "global",
+					},
+					client: {} as any,
+					transport: {} as any,
+				} as ConnectedMcpConnection,
+				{
+					type: "connected",
+					server: {
+						name: "shared-server",
+						config: '{"source":"project"}',
+						status: "connected",
+						disabled: false,
+						source: "project",
+					},
+					client: {} as any,
+					transport: {} as any,
+				} as ConnectedMcpConnection,
+				{
+					type: "connected",
+					server: {
+						name: "unique-global-server",
+						config: "{}",
+						status: "connected",
+						disabled: false,
+						source: "global",
+					},
+					client: {} as any,
+					transport: {} as any,
+				} as ConnectedMcpConnection,
+			]
+
+			mcpHub.connections = mockConnections
+			const servers = mcpHub.getServers()
+
+			// Should have 2 servers: deduplicated "shared-server" + "unique-global-server"
+			expect(servers.length).toBe(2)
+
+			// Find the shared-server - it should be the project version
+			const sharedServer = servers.find((s) => s.name === "shared-server")
+			expect(sharedServer).toBeDefined()
+			expect(sharedServer!.source).toBe("project")
+			expect(sharedServer!.config).toBe('{"source":"project"}')
+
+			// The unique global server should also be present
+			const uniqueServer = servers.find((s) => s.name === "unique-global-server")
+			expect(uniqueServer).toBeDefined()
+		})
+
+		it("should keep global server when no project server with same name exists", () => {
+			const mockConnections: McpConnection[] = [
+				{
+					type: "connected",
+					server: {
+						name: "global-only-server",
+						config: "{}",
+						status: "connected",
+						disabled: false,
+						source: "global",
+					},
+					client: {} as any,
+					transport: {} as any,
+				} as ConnectedMcpConnection,
+			]
+
+			mcpHub.connections = mockConnections
+			const servers = mcpHub.getServers()
+
+			expect(servers.length).toBe(1)
+			expect(servers[0].name).toBe("global-only-server")
+			expect(servers[0].source).toBe("global")
+		})
+
 		it("should prevent calling tools on disabled servers", async () => {
 			// Mock fs.readFile to return a disabled server config
 			vi.mocked(fs.readFile).mockResolvedValue(

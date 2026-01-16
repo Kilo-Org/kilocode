@@ -155,6 +155,14 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<CliD
 	// when finding it, even when the editor is launched from Finder/Spotlight
 	const shellEnv = process.platform !== "win32" ? getLoginShellPath(log) : undefined
 
+	// 0) Development mode: use CLI from launch.json env variable
+	// This allows F5 debugging to use the locally built CLI from the source workspace
+	const devCliPath = process.env.KILOCODE_DEV_CLI_PATH
+	if (devCliPath && (await fileExistsAtPath(devCliPath))) {
+		log?.(`Using dev CLI from KILOCODE_DEV_CLI_PATH: ${devCliPath}`)
+		return { cliPath: devCliPath, shellPath: shellEnv }
+	}
+
 	// 1) Explicit override from settings
 	try {
 		// Lazy import avoids hard dep when running in non-extension contexts

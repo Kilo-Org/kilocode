@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLO-modus - tool-operaties worden automatisch goedgekeurd",
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
-		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
 		"runModeLocal": "Lokaal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLO-modus wisselen",
 		"renameSession": "Sessie hernoemen",
 		"clickToRename": "Klik om te hernoemen",
-		"confirmRename": "Hernoemen bevestigen"
+		"confirmRename": "Hernoemen bevestigen",
+		"selectModel": "Model selecteren",
+		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
+		"defaultModel": "Standaardmodel",
+		"loadingModels": "Laden..."
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

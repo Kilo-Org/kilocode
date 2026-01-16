@@ -4,7 +4,6 @@ import {
 	type DynamicProvider,
 	type LocalProvider,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
-	CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS,
 	isDynamicProvider,
 	isLocalProvider,
 	ToolProtocol, // kilocode_change
@@ -121,11 +120,6 @@ export const getModelMaxOutputTokens = ({
 	settings?: ProviderSettings
 	format?: "anthropic" | "openai" | "gemini" | "openrouter"
 }): number | undefined => {
-	// Check for Claude Code specific max output tokens setting
-	if (settings?.apiProvider === "claude-code") {
-		return settings.claudeCodeMaxOutputTokens || CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS
-	}
-
 	if (shouldUseReasoningBudget({ model, settings })) {
 		return settings?.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
 	}
@@ -187,10 +181,10 @@ const dynamicProviderExtras = {
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	litellm: {} as { apiKey: string; baseUrl: string },
+	litellm: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change: parameters optional
 	kilocode: {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
 	deepinfra: {} as { apiKey?: string; baseUrl?: string },
-	"io-intelligence": {} as { apiKey: string },
+	"io-intelligence": {} as { apiKey?: string }, // kilocode_change: parameters optional
 	requesty: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
 	// kilocode_change start

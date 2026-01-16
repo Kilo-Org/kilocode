@@ -130,6 +130,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		)
 
 		let lastUsage: OpenAI.CompletionUsage | undefined
+		const activeToolCallIds = new Set<string>()
 
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices?.[0]) // kilocode_change
@@ -143,6 +144,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			}
 
 			const delta = chunk.choices?.[0]?.delta
+			const finishReason = chunk.choices?.[0]?.finish_reason
 
 			if (delta?.content) {
 				for (const processedChunk of matcher.update(delta.content)) {
@@ -165,6 +167,9 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			// Emit raw tool call chunks - NativeToolCallParser handles state management
 			if (delta?.tool_calls) {
 				for (const toolCall of delta.tool_calls) {
+					if (toolCall.id) {
+						activeToolCallIds.add(toolCall.id)
+					}
 					yield {
 						type: "tool_call_partial",
 						index: toolCall.index,
@@ -173,6 +178,15 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 						arguments: toolCall.function?.arguments,
 					}
 				}
+			}
+
+			// Emit tool_call_end events when finish_reason is "tool_calls"
+			// This ensures tool calls are finalized even if the stream doesn't properly close
+			if (finishReason === "tool_calls" && activeToolCallIds.size > 0) {
+				for (const id of activeToolCallIds) {
+					yield { type: "tool_call_end", id }
+				}
+				activeToolCallIds.clear()
 			}
 
 			if (chunk.usage) {

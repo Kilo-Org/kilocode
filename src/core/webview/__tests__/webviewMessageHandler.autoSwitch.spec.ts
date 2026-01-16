@@ -155,7 +155,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(refreshOrganizationModes).toHaveBeenCalled()
 
 			// Verify models were flushed and refetched (via upsertApiConfiguration handler)
-			expect(flushModels).toHaveBeenCalledWith("kilocode")
+			expect(flushModels).toHaveBeenCalledWith(
+				{
+					provider: "kilocode",
+					kilocodeOrganizationId: "org-1",
+					kilocodeToken: "test-token",
+				},
+				true,
+			)
 			expect(getModels).toHaveBeenCalledWith({
 				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
@@ -223,7 +230,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify flushModels was called (via upsertApiConfiguration)
-			expect(flushModels).toHaveBeenCalledWith("kilocode")
+			expect(flushModels).toHaveBeenCalledWith(
+				{
+					provider: "kilocode",
+					kilocodeOrganizationId: "org-1",
+					kilocodeToken: "test-token",
+				},
+				true,
+			)
 
 			// Verify getModels was called with organization ID (via upsertApiConfiguration)
 			expect(getModels).toHaveBeenCalledWith({

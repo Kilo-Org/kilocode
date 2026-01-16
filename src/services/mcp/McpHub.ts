@@ -437,8 +437,23 @@ export class McpHub {
 	}
 
 	getServers(): McpServer[] {
-		// Only return enabled servers
-		return this.connections.filter((conn) => !conn.server.disabled).map((conn) => conn.server)
+		// Only return enabled servers, deduplicating by name with project servers taking priority
+		const enabledConnections = this.connections.filter((conn) => !conn.server.disabled)
+
+		// Deduplicate by server name: project servers take priority over global servers
+		const serversByName = new Map<string, McpServer>()
+		for (const conn of enabledConnections) {
+			const existing = serversByName.get(conn.server.name)
+			if (!existing) {
+				serversByName.set(conn.server.name, conn.server)
+			} else if (conn.server.source === "project" && existing.source !== "project") {
+				// Project server overrides global server with the same name
+				serversByName.set(conn.server.name, conn.server)
+			}
+			// If existing is project and current is global, keep existing (project wins)
+		}
+
+		return Array.from(serversByName.values())
 	}
 
 	getAllServers(): McpServer[] {

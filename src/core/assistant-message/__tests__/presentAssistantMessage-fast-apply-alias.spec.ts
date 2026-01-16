@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { presentAssistantMessage } from "../presentAssistantMessage"
 
 const mocks = vi.hoisted(() => ({
-	editFileToolMock: vi.fn(),
-	applyDiffHandleMock: vi.fn(),
+	fastEditFileToolMock: vi.fn(),
+	searchEditFileHandleMock: vi.fn(),
 }))
 
 // Mock dependencies that are not relevant to this unit test
@@ -26,26 +26,33 @@ vi.mock("../../tools/kilocode/editFileTool", async (importOriginal) => {
 	const actual = (await importOriginal()) as any
 	return {
 		...actual,
-		editFileTool: mocks.editFileToolMock,
+		editFileTool: mocks.fastEditFileToolMock,
+		isFastApplyAvailable: vi.fn().mockReturnValue(true),
 	}
 })
 
-vi.mock("../../tools/ApplyDiffTool", () => ({
-	applyDiffTool: {
-		handle: mocks.applyDiffHandleMock,
+vi.mock("../../tools/EditFileTool", () => ({
+	editFileTool: {
+		handle: mocks.searchEditFileHandleMock,
 	},
 }))
 
-describe("presentAssistantMessage - Fast Apply alias undo", () => {
+describe("presentAssistantMessage - fast_edit_file routing", () => {
 	let mockTask: any
 
 	beforeEach(() => {
-		mocks.editFileToolMock.mockReset()
-		mocks.applyDiffHandleMock.mockReset()
+		mocks.fastEditFileToolMock.mockReset()
+		mocks.searchEditFileHandleMock.mockReset()
 
 		// Simulate a valid tool execution that returns a tool_result.
-		mocks.editFileToolMock.mockImplementation(async (_cline: any, _block: any, _ask: any, _err: any, push: any) => {
-			push("ok")
+		mocks.fastEditFileToolMock.mockImplementation(
+			async (_cline: any, _block: any, _ask: any, _err: any, push: any) => {
+				push("ok")
+			},
+		)
+
+		mocks.searchEditFileHandleMock.mockImplementation(async (_cline: any, _block: any, _callbacks: any) => {
+			throw new Error("search edit_file tool should not be called in these tests")
 		})
 
 		mockTask = {
@@ -94,14 +101,13 @@ describe("presentAssistantMessage - Fast Apply alias undo", () => {
 		}
 	})
 
-	it("maps native alias-resolved apply_diff back to edit_file when Fast Apply is available", async () => {
+	it("executes fast_edit_file via Fast Apply tool handler", async () => {
 		const toolCallId = "tool_call_123"
 		mockTask.assistantMessageContent = [
 			{
 				type: "tool_use",
 				id: toolCallId,
-				name: "apply_diff",
-				originalName: "edit_file",
+				name: "fast_edit_file",
 				params: {
 					target_file: "src/example.ts",
 					instructions: "Update the function",
@@ -113,17 +119,39 @@ describe("presentAssistantMessage - Fast Apply alias undo", () => {
 
 		await presentAssistantMessage(mockTask)
 
-		// Should have executed the Fast Apply tool handler, not apply_diff
-		expect(mocks.editFileToolMock).toHaveBeenCalledTimes(1)
-		expect(mocks.applyDiffHandleMock).not.toHaveBeenCalled()
+		// Should have executed the Fast Apply tool handler
+		expect(mocks.fastEditFileToolMock).toHaveBeenCalledTimes(1)
+		expect(mocks.searchEditFileHandleMock).not.toHaveBeenCalled()
 
-		// recordToolUsage should be attributed to edit_file
-		expect(mockTask.recordToolUsage).toHaveBeenCalledWith("edit_file")
+		// recordToolUsage should be attributed to fast_edit_file
+		expect(mockTask.recordToolUsage).toHaveBeenCalledWith("fast_edit_file")
 
 		// Ensure a tool_result was produced for native protocol
 		const toolResult = mockTask.userMessageContent.find(
 			(item: any) => item.type === "tool_result" && item.tool_use_id === toolCallId,
 		)
 		expect(toolResult).toBeDefined()
+	})
+
+	it("backward-compat: routes edit_file with Fast Apply params to fast_edit_file handler", async () => {
+		const toolCallId = "tool_call_456"
+		mockTask.assistantMessageContent = [
+			{
+				type: "tool_use",
+				id: toolCallId,
+				name: "edit_file",
+				params: {
+					target_file: "src/example.ts",
+					instructions: "Update the function",
+					code_edit: "// ... existing code ...\nconst y = 2\n",
+				},
+				partial: false,
+			},
+		]
+
+		await presentAssistantMessage(mockTask)
+
+		expect(mocks.fastEditFileToolMock).toHaveBeenCalledTimes(1)
+		expect(mocks.searchEditFileHandleMock).not.toHaveBeenCalled()
 	})
 })

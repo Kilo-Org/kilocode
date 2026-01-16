@@ -380,117 +380,47 @@ describe("searchReplaceTool", () => {
 		})
 	})
 
-	// kilocode_change start
-	describe("line ending handling", () => {
-		it("handles files with Unix line endings (LF)", async () => {
-			const fileContent = "Line 1\nLine 2\nLine 3"
-			const oldString = "Line 2"
-			const newString = "Modified Line 2"
+	describe("CRLF normalization", () => {
+		it("normalizes CRLF to LF when reading file", async () => {
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
 
 			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
+				{ old_string: "Line 2", new_string: "Modified Line 2" },
+				{ fileContent: contentWithCRLF },
 			)
 
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
 		})
 
-		it("handles files with Windows line endings (CRLF)", async () => {
-			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
-			const oldString = "Line 2"
-			const newString = "Modified Line 2"
+		it("normalizes CRLF in old_string to match LF-normalized file content", async () => {
+			// File has CRLF line endings
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
+			// Search string also has CRLF (simulating what the model might send)
+			const searchWithCRLF = "Line 1\r\nLine 2"
 
 			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
+				{ old_string: searchWithCRLF, new_string: "Modified Lines" },
+				{ fileContent: contentWithCRLF },
 			)
 
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
 		})
 
-		it("normalizes search string with LF to match file with CRLF", async () => {
-			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
-			const oldString = "Line 1\nLine 2" // LF in search string
-			const newString = "Modified Lines"
+		it("matches LF old_string against CRLF file content after normalization", async () => {
+			// File has CRLF line endings
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
+			// Search string has LF (typical model output)
+			const searchWithLF = "Line 1\nLine 2"
 
 			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
+				{ old_string: searchWithLF, new_string: "Modified Lines" },
+				{ fileContent: contentWithCRLF },
 			)
 
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
-		})
-
-		it("normalizes search string with CRLF to match file with LF", async () => {
-			const fileContent = "Line 1\nLine 2\nLine 3"
-			const oldString = "Line 1\r\nLine 2" // CRLF in search string
-			const newString = "Modified Lines"
-
-			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
-			)
-
-			expect(mockCline.consecutiveMistakeCount).toBe(0)
-			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
-		})
-
-		it("preserves CRLF line endings in replacement text for CRLF files", async () => {
-			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
-			const oldString = "Line 2"
-			const newString = "Modified\nLine 2" // LF in replacement
-
-			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
-			)
-
-			// The tool should normalize the replacement to use CRLF
-			expect(mockCline.consecutiveMistakeCount).toBe(0)
-			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
-		})
-
-		it("preserves LF line endings in replacement text for LF files", async () => {
-			const fileContent = "Line 1\nLine 2\nLine 3"
-			const oldString = "Line 2"
-			const newString = "Modified\r\nLine 2" // CRLF in replacement
-
-			await executeSearchReplaceTool(
-				{
-					old_string: oldString,
-					new_string: newString,
-				},
-				{ fileContent },
-			)
-
-			// The tool should normalize the replacement to use LF
-			expect(mockCline.consecutiveMistakeCount).toBe(0)
-			expect(mockAskApproval).toHaveBeenCalled()
-			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
 		})
 	})
-	// kilocode_change end
 })

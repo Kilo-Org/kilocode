@@ -51,6 +51,7 @@ export const providerProfilesSchema = z.object({
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
 			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
+			claudeCodeLegacySettingsMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -75,6 +76,7 @@ export class ProviderSettingsManager {
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			claudeCodeLegacySettingsMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -250,6 +252,7 @@ export class ProviderSettingsManager {
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
 						morphApiKeyMigrated: false, // kilocode_change: Morph API key migration
+						claudeCodeLegacySettingsMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -291,6 +294,25 @@ export class ProviderSettingsManager {
 					isDirty ||= result
 				}
 				// kilocode_change end
+				if (!providerProfiles.migrations.claudeCodeLegacySettingsMigrated) {
+					// These keys were used by the removed local Claude Code CLI wrapper.
+					for (const apiConfig of Object.values(providerProfiles.apiConfigs)) {
+						if (apiConfig.apiProvider !== "claude-code") continue
+
+						const config = apiConfig as unknown as Record<string, unknown>
+						if ("claudeCodePath" in config) {
+							delete config.claudeCodePath
+							isDirty = true
+						}
+						if ("claudeCodeMaxOutputTokens" in config) {
+							delete config.claudeCodeMaxOutputTokens
+							isDirty = true
+						}
+					}
+
+					providerProfiles.migrations.claudeCodeLegacySettingsMigrated = true
+					isDirty = true
+				}
 
 				if (isDirty) {
 					await this.store(providerProfiles)

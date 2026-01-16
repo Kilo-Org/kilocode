@@ -5,6 +5,8 @@ export interface BuildCliArgsOptions {
 	 * When false, CLI will send ask messages requiring user approval via JSON-IO.
 	 */
 	yoloMode?: boolean
+	/** Model ID to use for this session (overrides CLI default) */
+	model?: string
 }
 
 /**
@@ -24,6 +26,10 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 	}
 
 	args.push(`--workspace=${workspace}`)
+
+	if (options?.model) {
+		args.push(`--model=${options.model}`)
+	}
 
 	if (options?.sessionId) {
 		args.push(`--session=${options.sessionId}`)

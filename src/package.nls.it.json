@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agente di Codifica IA, Copilot e Completamento Automatico",
-	"extension.description": "Assistente di programmazione AI open source per la pianificazione, la creazione e la correzione del codice.",
+	"extension.description": "Agente di codifica AI open source che genera codice dal linguaggio naturale, automatizza le attività ed esegue comandi da terminale. Include completamento automatico inline, automazione del browser, refactoring automatico e modalità personalizzate per pianificazione, codifica e debug. Supporta oltre 500 modelli AI tra cui Claude (Anthropic), Gemini, Grok, GPT, Codex e GLM.",
 	"command.newTask.title": "Nuovo Task",
 	"command.explainCode.title": "Spiega Codice",
 	"command.fixCode.title": "Correggi Codice",

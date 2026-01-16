@@ -4,6 +4,31 @@ import { SystemMessage } from "@mistralai/mistralai/models/components/systemmess
 import { ToolMessage } from "@mistralai/mistralai/models/components/toolmessage"
 import { UserMessage } from "@mistralai/mistralai/models/components/usermessage"
 
+/**
+ * Normalizes a tool call ID to be compatible with Mistral's strict ID requirements.
+ * Mistral requires tool call IDs to be:
+ * - Only alphanumeric characters (a-z, A-Z, 0-9)
+ * - Exactly 9 characters in length
+ *
+ * This function extracts alphanumeric characters from the original ID and
+ * pads/truncates to exactly 9 characters, ensuring deterministic output.
+ *
+ * @param id - The original tool call ID (e.g., "call_5019f900a247472bacde0b82" or "toolu_123")
+ * @returns A normalized 9-character alphanumeric ID compatible with Mistral
+ */
+export function normalizeMistralToolCallId(id: string): string {
+	// Extract only alphanumeric characters
+	const alphanumeric = id.replace(/[^a-zA-Z0-9]/g, "")
+
+	// Take first 9 characters, or pad with zeros if shorter
+	if (alphanumeric.length >= 9) {
+		return alphanumeric.slice(0, 9)
+	}
+
+	// Pad with zeros to reach 9 characters
+	return alphanumeric.padEnd(9, "0")
+}
+
 export type MistralMessage =
 	| (SystemMessage & { role: "system" })
 	| (UserMessage & { role: "user" })
@@ -67,7 +92,7 @@ export function convertToMistralMessages(anthropicMessages: Anthropic.Messages.M
 
 						mistralMessages.push({
 							role: "tool",
-							toolCallId: toolResult.tool_use_id,
+							toolCallId: normalizeMistralToolCallId(toolResult.tool_use_id),
 							content: resultContent,
 						} as ToolMessage & { role: "tool" })
 					}
@@ -127,7 +152,7 @@ export function convertToMistralMessages(anthropicMessages: Anthropic.Messages.M
 				let toolCalls: MistralToolCallMessage[] | undefined
 				if (toolMessages.length > 0) {
 					toolCalls = toolMessages.map((toolUse) => ({
-						id: toolUse.id,
+						id: normalizeMistralToolCallId(toolUse.id),
 						type: "function" as const,
 						function: {
 							name: toolUse.name,

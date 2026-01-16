@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI-агент для кодирования, Copilot и автозаполнение",
-	"extension.description": "Целая команда ИИ-разработчиков в вашем редакторе.",
+	"extension.description": "AI-агент для кодирования с открытым исходным кодом, который генерирует код из естественного языка, автоматизирует задачи и выполняет команды терминала. Включает встроенное автодополнение, автоматизацию браузера, автоматический рефакторинг и пользовательские режимы для планирования, кодирования и отладки. Поддерживает более 500 AI-моделей, включая Claude (Anthropic), Gemini, Grok, GPT, Codex и GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.sidebar.name": "Kilo Code",

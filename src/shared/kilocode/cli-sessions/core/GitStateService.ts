@@ -80,17 +80,35 @@ export class GitStateService {
 			const git = simpleGit(cwd)
 
 			const remotes = await git.getRemotes(true)
-			const repoUrl = remotes[0]?.refs?.fetch || remotes[0]?.refs?.push
 
-			const head = await git.revparse(["HEAD"])
-
+			// Get branch name (undefined if detached HEAD)
 			let branch: string | undefined
 			try {
 				const symbolicRef = await git.raw(["symbolic-ref", "-q", "HEAD"])
 				branch = symbolicRef.trim().replace(/^refs\/heads\//, "")
 			} catch {
-				branch = undefined
+				// Detached HEAD - branch remains undefined
 			}
+
+			// Determine which remote to use based on branch tracking configuration
+			let selectedRemote: (typeof remotes)[0] | undefined
+			if (branch) {
+				try {
+					const trackingRemote = await git.raw(["config", `branch.${branch}.remote`])
+					const trackingRemoteName = trackingRemote.trim()
+					if (trackingRemoteName) {
+						selectedRemote = remotes.find((remote) => remote.name === trackingRemoteName)
+					}
+				} catch {
+					// No tracking remote configured - fall through to fallback
+				}
+			}
+
+			// Fallback: prefer origin, then first remote
+			selectedRemote ??= remotes.find((remote) => remote.name === "origin") ?? remotes[0]
+
+			const repoUrl = selectedRemote?.refs?.fetch ?? selectedRemote?.refs?.push
+			const head = await git.revparse(["HEAD"])
 
 			const untrackedOutput = await git.raw(["ls-files", "--others", "--exclude-standard"])
 			const untrackedFiles = untrackedOutput.trim().split("\n").filter(Boolean)

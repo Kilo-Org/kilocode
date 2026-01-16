@@ -211,11 +211,6 @@
 			"label": "瀏覽器",
 			"description": "自動執行瀏覽器操作而無需核准 — 注意：僅適用於模型支援電腦使用時"
 		},
-		"retry": {
-			"label": "重試",
-			"description": "當伺服器回傳錯誤回應時自動重試失敗的 API 請求",
-			"delayLabel": "重試請求前的延遲"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "在 MCP 伺服器檢視中啟用個別 MCP 工具的自動核准（需要此設定和工具的「始終允許」核取方塊）"
@@ -278,6 +273,7 @@
 		"makeActiveProfile": "設為活動設定檔",
 		"makeActiveTooltip": "啟用此設定檔以用於 API 請求",
 		"apiProvider": "API 供應商",
+		"apiProviderDocs": "供應商文檔",
 		"model": "模型",
 		"nameEmpty": "名稱不能為空",
 		"nameExists": "已存在同名的設定檔",
@@ -325,7 +321,6 @@
 		"getRequestyApiKey": "取得 Requesty API 金鑰",
 		"getRequestyBaseUrl": "基礎 URL",
 		"requestyUseCustomBaseUrl": "使用自訂基礎 URL",
-		"openRouterTransformsText": "將提示和訊息鏈壓縮到上下文大小 (<a>OpenRouter 轉換</a>)",
 		"anthropicApiKey": "Anthropic API 金鑰",
 		"getAnthropicApiKey": "取得 Anthropic API 金鑰",
 		"anthropicUseAuthToken": "將 Anthropic API 金鑰作為 Authorization 標頭傳遞，而非使用 X-Api-Key",
@@ -335,6 +330,8 @@
 		"anthropicAzureDeploymentPlaceholder": "輸入部署名稱...",
 		"awsBedrock1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"awsBedrock1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"vertex1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
+		"vertex1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
 		"basetenApiKey": "Baseten API 金鑰",
 		"getBasetenApiKey": "取得 Baseten API 金鑰",
 		"cerebrasApiKey": "Cerebras API 金鑰",
@@ -417,6 +414,14 @@
 		"awsRegion": "AWS 區域",
 		"awsCrossRegion": "使用跨區域推論",
 		"awsGlobalInference": "使用全域推論 (自動選取最佳 AWS 區域)",
+		"awsServiceTier": "服務層級",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "效能和成本均衡",
+		"awsServiceTierFlex": "Flex (50% 折扣)",
+		"awsServiceTierFlexDesc": "低成本，非關鍵工作的延遲較高",
+		"awsServiceTierPriority": "Priority (75% 溢價)",
+		"awsServiceTierPriorityDesc": "為關鍵業務應用提供最快效能",
+		"awsServiceTierNote": "服務層級會影響定價和效能。Flex 提供 50% 折扣但延遲較高，Priority 提供 25% 更好的效能但費用溢價 75%。",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自訂 VPC 端點",
 			"vpcEndpointUrlPlaceholder": "輸入 VPC 端點 URL（選填）",
@@ -799,6 +804,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git 狀態最大檔案數",
 			"description": "git狀態上下文中包含的最大檔案條目數。設為0禁用。分支資訊和提交在>0時始終顯示。"
+		},
+		"enableSubfolderRules": {
+			"label": "啟用子資料夾規則",
+			"description": "遞迴發現並載入子目錄中的 .roo/rules 和 AGENTS.md 檔案。適用於具有每包規則的 monorepo。"
 		}
 	},
 	"terminal": {
@@ -988,6 +997,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "语音转文本 (STT)",
 			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "啟用自訂工具",
+			"description": "啟用後，Kilo 可以從專案的 .kilocode/tools 目錄或全域工具目錄 ~/.kilocode/tools 載入並使用自訂 TypeScript/JavaScript 工具。注意：這些工具將自動獲得核准。",
+			"toolsHeader": "可用的自訂工具",
+			"noTools": "未載入自訂工具。請將 .ts 或 .js 檔案新增至專案的 .kilocode/tools 目錄或全域工具目錄 ~/.kilocode/tools。",
+			"refreshButton": "重新整理",
+			"refreshing": "重新整理中...",
+			"refreshSuccess": "工具重新整理成功",
+			"refreshError": "工具重新整理失敗",
+			"toolParameters": "參數"
 		}
 	},
 	"promptCaching": {

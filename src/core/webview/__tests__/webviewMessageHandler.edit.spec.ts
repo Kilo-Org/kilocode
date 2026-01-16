@@ -32,6 +32,7 @@ vi.mock("../../task-persistence", () => ({
 vi.mock("../../../api/providers/fetchers/modelCache", () => ({
 	getModels: vi.fn(),
 	flushModels: vi.fn(),
+	getModelsFromCache: vi.fn().mockReturnValue(undefined),
 }))
 
 vi.mock("../checkpointRestoreHandler", () => ({

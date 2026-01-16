@@ -28,7 +28,6 @@
 		"refreshButtonTitle": "Refresh messages",
 		"starting": "Starting...",
 		"startAriaLabel": "Start agent with provided prompt",
-		"keyboardHint": "Press Enter to start, Shift+Enter for new line",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -62,7 +61,11 @@
 		"openTerminal": "Open terminal",
 		"renameSession": "Rename session",
 		"clickToRename": "Click to rename",
-		"confirmRename": "Confirm rename"
+		"confirmRename": "Confirm rename",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",

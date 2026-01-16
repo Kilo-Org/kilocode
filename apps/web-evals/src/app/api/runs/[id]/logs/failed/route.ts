@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 			archive.on("error", reject)
 		})
 
-		// Add each failed task's log file to the archive
+		// Add each failed task's log file and history files to the archive
 		const logDir = path.join(LOG_BASE_PATH, String(runId))
 		let filesAdded = 0
 
@@ -69,18 +69,36 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 			// Sanitize language and exercise to prevent path traversal
 			const safeLanguage = sanitizePathComponent(task.language)
 			const safeExercise = sanitizePathComponent(task.exercise)
+			const expectedBase = path.resolve(LOG_BASE_PATH)
+
+			// Add the log file
 			const logFileName = `${safeLanguage}-${safeExercise}.log`
 			const logFilePath = path.join(logDir, logFileName)
 
 			// Verify the resolved path is within the expected directory (defense in depth)
-			const resolvedPath = path.resolve(logFilePath)
-			const expectedBase = path.resolve(LOG_BASE_PATH)
-			if (!resolvedPath.startsWith(expectedBase)) {
-				continue // Skip files with suspicious paths
+			const resolvedLogPath = path.resolve(logFilePath)
+			if (resolvedLogPath.startsWith(expectedBase) && fs.existsSync(logFilePath)) {
+				archive.file(logFilePath, { name: logFileName })
+				filesAdded++
 			}
 
-			if (fs.existsSync(logFilePath)) {
-				archive.file(logFilePath, { name: logFileName })
+			// Add the API conversation history file
+			// Format: {language}-{exercise}.{iteration}_api_conversation_history.json
+			const apiHistoryFileName = `${safeLanguage}-${safeExercise}.${task.iteration}_api_conversation_history.json`
+			const apiHistoryFilePath = path.join(logDir, apiHistoryFileName)
+			const resolvedApiHistoryPath = path.resolve(apiHistoryFilePath)
+			if (resolvedApiHistoryPath.startsWith(expectedBase) && fs.existsSync(apiHistoryFilePath)) {
+				archive.file(apiHistoryFilePath, { name: apiHistoryFileName })
+				filesAdded++
+			}
+
+			// Add the UI messages file
+			// Format: {language}-{exercise}.{iteration}_ui_messages.json
+			const uiMessagesFileName = `${safeLanguage}-${safeExercise}.${task.iteration}_ui_messages.json`
+			const uiMessagesFilePath = path.join(logDir, uiMessagesFileName)
+			const resolvedUiMessagesPath = path.resolve(uiMessagesFilePath)
+			if (resolvedUiMessagesPath.startsWith(expectedBase) && fs.existsSync(uiMessagesFilePath)) {
+				archive.file(uiMessagesFilePath, { name: uiMessagesFileName })
 				filesAdded++
 			}
 		}

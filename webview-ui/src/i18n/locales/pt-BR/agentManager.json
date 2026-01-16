@@ -29,7 +29,6 @@
 		"autoModeWarning": "Modo YOLO - operações de ferramentas são aprovadas automaticamente",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente com o prompt fornecido",
-		"keyboardHint": "Pressione Enter para iniciar, Shift+Enter para nova linha",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Nuvem",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "Alternar modo YOLO",
 		"renameSession": "Renomear sessão",
 		"clickToRename": "Clique para renomear",
-		"confirmRename": "Confirmar renomeação"
+		"confirmRename": "Confirmar renomeação",
+		"selectModel": "Selecionar modelo",
+		"modelTooltip": "Escolha qual modelo de IA usar para esta sessão",
+		"defaultModel": "Modelo padrão",
+		"loadingModels": "Carregando..."
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",

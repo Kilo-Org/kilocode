@@ -11,7 +11,9 @@ import {
 	type VerbosityLevel,
 	type ReasoningEffortExtended,
 	type ServiceTier,
+	ApiProviderError,
 } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -23,12 +25,14 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
+import { isMcpTool } from "../../utils/mcp-name"
 
 export type OpenAiNativeModel = ReturnType<OpenAiNativeHandler["getModel"]>
 
 export class OpenAiNativeHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
+	private readonly providerName = "OpenAI Native"
 	// Resolved service tier from Responses API (actual tier used by OpenAI)
 	private lastServiceTier: ServiceTier | undefined
 	// Complete response output array (includes reasoning items with encrypted_content)
@@ -289,17 +293,21 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			...(metadata?.tools && {
 				tools: metadata.tools
 					.filter((tool) => tool.type === "function")
-					.map((tool) => ({
-						type: "function",
-						name: tool.function.name,
-						description: tool.function.description,
-						// kilocode_change start: normalize invalid schemes for strict mode
-						parameters: normalizeObjectAdditionalPropertiesFalse(
-							ensureAllRequired(tool.function.parameters),
-						),
-						// kilocode_chang end
-						strict: true,
-					})),
+					.map((tool) => {
+						// MCP tools use the 'mcp--' prefix - disable strict mode for them
+						// to preserve optional parameters from the MCP server schema
+						const isMcp = isMcpTool(tool.function.name)
+						return {
+							type: "function",
+							name: tool.function.name,
+							description: tool.function.description,
+							// kilocode_change: normalize invalid schemes for strict mode for MCP
+							parameters: isMcp
+								? normalizeObjectAdditionalPropertiesFalse(tool.function.parameters)
+								: ensureAllRequired(tool.function.parameters),
+							strict: !isMcp,
+						}
+					}),
 			}),
 			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 		}
@@ -550,6 +558,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Handle streaming response
 			yield* this.handleStreamResponse(response.body, model)
 		} catch (error) {
+			const model = this.getModel()
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, model.id, "createMessage")
+			TelemetryService.instance.captureException(apiError)
+
 			if (error instanceof Error) {
 				// Re-throw with the original error message if it's already formatted
 				if (error.message.includes("Responses API")) {
@@ -1027,6 +1040,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// If we didn't get any content, don't throw - the API might have returned an empty response
 			// This can happen in certain edge cases and shouldn't break the flow
 		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, model.id, "createMessage")
+			TelemetryService.instance.captureException(apiError)
+
 			if (error instanceof Error) {
 				throw new Error(`Error processing response stream: ${error.message}`)
 			}
@@ -1353,6 +1370,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 			return ""
 		} catch (error) {
+			const errorModel = this.getModel()
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, errorModel.id, "completePrompt")
+			TelemetryService.instance.captureException(apiError)
+
 			if (error instanceof Error) {
 				throw new Error(`OpenAI Native completion error: ${error.message}`)
 			}

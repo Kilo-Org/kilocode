@@ -6,33 +6,38 @@
 	"routers": {
 		"requesty": {
 			"description": "Seu roteador LLM otimizado",
-			"incentive": "$1 de crédito grátis"
+			"incentive": "Crédito grátis de $1"
 		},
 		"openrouter": {
 			"description": "Uma interface unificada para LLMs"
 		},
 		"roo": {
 			"description": "Os melhores modelos gratuitos para começar",
-			"incentive": "Experimente o Roo gratuitamente"
+			"incentive": "Tente Roo gratuitamente"
 		}
 	},
 	"chooseProvider": "Para fazer sua mágica, o Kilo Code precisa de uma chave API.",
 	"providerSignup": {
+		"heading": "Escolha seu provedor",
+		"chooseProvider": "Roo precisa de um provedor LLM para funcionar. Escolha um para começar, você pode adicionar mais depois.",
 		"rooCloudProvider": "Provedor Roo Code Cloud",
-		"rooCloudDescription": "A maneira mais simples de usar o Roo. Uma combinação selecionada de modelos gratuitos e pagos a baixo custo",
-		"learnMore": "saiba mais",
-		"useAnotherProvider": "Usar outro provedor",
-		"useAnotherProviderDescription": "Digite uma chave API e comece.",
-		"noApiKeys": "Não quer lidar com chaves? Escolha o Provedor Roo Code Cloud.",
-		"getStarted": "Começar"
+		"rooCloudDescription": "A maneira mais simples de começar é com o Provedor Roo Code Cloud: uma mistura selecionada de modelos gratuitos e pagos a baixo custo.",
+		"learnMore": "Saiba mais",
+		"useAnotherProvider": "Provedor de terceiros",
+		"useAnotherProviderDescription": "Insira uma chave API e comece.",
+		"noApiKeys": "Não quer lidar com chaves API e contas separadas?",
+		"backToRoo": "Escolha o Provedor Roo Code Cloud.",
+		"goBack": "Voltar",
+		"finish": "Concluir"
 	},
 	"waitingForCloud": {
-		"heading": "Levando você para Roo Code Cloud...",
-		"description": "Conclua o registro no seu navegador e você retornará aqui automaticamente.",
+		"heading": "Fazendo login no Roo Code Cloud...",
+		"description": "Vamos levá-lo ao seu navegador para se registrar no Roo Code Cloud. Depois o trazeremos de volta aqui para terminar.",
 		"noPrompt": "Se você não for solicitado a abrir uma URL, <clickHere>clique aqui</clickHere>.",
-		"havingTrouble": "Se você completou o registro mas está tendo problemas, <clickHere>clique aqui</clickHere>.",
-		"pasteUrl": "Cole a URL de callback do seu navegador:",
-		"invalidURL": "Isso não parece uma URL de callback válida. Copie o que o Roo Code Cloud está mostrando no seu navegador.",
+		"havingTrouble": "Se você completou o cadastro mas está tendo problemas, <clickHere>clique aqui</clickHere>.",
+		"pasteUrl": "Cole a URL de callback mostrada no seu navegador:",
+		"docsLink": "Não está funcionando? <DocsLink>Consulte a documentação</DocsLink>.",
+		"invalidURL": "Isso não parece ser uma URL de callback válida. Por favor, copie o que o Roo Code Cloud está mostrando em seu navegador.",
 		"goBack": "Voltar"
 	},
 	"startRouter": "Recomendamos usar um roteador LLM:",

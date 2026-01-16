@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (deaktiviert)",
-				"tokenError": "Ein gültiger Token muss gesetzt werden, um Autocomplete zu verwenden",
+				"noCredits": "**Kein Guthaben auf deinem Konto**\n\nDein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Kein Autocomplete-Modell konfiguriert**\n\nUm Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu: {{providers}}.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Sitzungsgesamtkosten:",
 				"provider": "Anbieter:",
 				"model": "Modell:",
@@ -203,5 +204,9 @@
 			"invalidApiKey": "Ihr OpenAI API-Schlüssel ist ungültig oder hat keinen Zugriff auf die Realtime API. Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut.",
 			"unknown": "Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Konfiguration und versuchen Sie es erneut."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo-Code: Hinzugefügt {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo-Code: Entfernt {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

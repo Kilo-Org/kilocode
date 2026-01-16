@@ -7,6 +7,7 @@ import * as vscode from "vscode"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { fileExistsAtPath } from "../../utils/fs"
 import { checkBunPath } from "./index.kilocode" // kilocode_change
+import "../../utils/path" // Import to enable String.prototype.toPosix()
 /*
 This file provides functionality to perform regex searches on files using ripgrep.
 Inspired by: https://github.com/DiscreteTom/vscode-ripgrep-utils
@@ -195,11 +196,11 @@ export async function regexSearchFiles(
 					}
 
 					const lastResult = currentFile.searchResults[currentFile.searchResults.length - 1]
-					if (lastResult?.lines.length > 0) {
+					if (lastResult?.lines && lastResult.lines.length > 0) {
 						const lastLine = lastResult.lines[lastResult.lines.length - 1]
 
 						// If this line is contiguous with the last result, add to it
-						if (parsed.data.line_number <= lastLine.line + 1) {
+						if (lastLine && parsed.data.line_number <= lastLine.line + 1) {
 							lastResult.lines.push(line)
 						} else {
 							// Otherwise create a new result

@@ -6,31 +6,36 @@ import { GlamaHandler } from "../glama"
 import { ApiHandlerOptions } from "../../../shared/api"
 
 // Mock dependencies
+const mockModelsData = {
+	"anthropic/claude-3-7-sonnet": {
+		maxTokens: 8192,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 3,
+		outputPrice: 15,
+		cacheWritesPrice: 3.75,
+		cacheReadsPrice: 0.3,
+		description: "Claude 3.7 Sonnet",
+		thinking: false,
+	},
+	"openai/gpt-4o": {
+		maxTokens: 4096,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 5,
+		outputPrice: 15,
+		description: "GPT-4o",
+	},
+}
+
 vitest.mock("../fetchers/modelCache", () => ({
 	getModels: vitest.fn().mockImplementation(() => {
-		return Promise.resolve({
-			"anthropic/claude-3-7-sonnet": {
-				maxTokens: 8192,
-				contextWindow: 200000,
-				supportsImages: true,
-				supportsPromptCache: true,
-				inputPrice: 3,
-				outputPrice: 15,
-				cacheWritesPrice: 3.75,
-				cacheReadsPrice: 0.3,
-				description: "Claude 3.7 Sonnet",
-				thinking: false,
-			},
-			"openai/gpt-4o": {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsImages: true,
-				supportsPromptCache: false,
-				inputPrice: 5,
-				outputPrice: 15,
-				description: "GPT-4o",
-			},
-		})
+		return Promise.resolve(mockModelsData)
+	}),
+	getModelsFromCache: vitest.fn().mockImplementation(() => {
+		return mockModelsData
 	}),
 }))
 

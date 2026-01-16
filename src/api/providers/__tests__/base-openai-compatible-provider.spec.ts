@@ -383,4 +383,166 @@ describe("BaseOpenAiCompatibleProvider", () => {
 			expect(firstChunk.value).toMatchObject({ type: "usage", inputTokens: 100, outputTokens: 50 })
 		})
 	})
+
+	describe("Tool call handling", () => {
+		it("should yield tool_call_end events when finish_reason is tool_calls", async () => {
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						next: vi
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: {
+												tool_calls: [
+													{
+														index: 0,
+														id: "call_123",
+														function: { name: "test_tool", arguments: '{"arg":' },
+													},
+												],
+											},
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: {
+												tool_calls: [
+													{
+														index: 0,
+														function: { arguments: '"value"}' },
+													},
+												],
+											},
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: {},
+											finish_reason: "tool_calls",
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({ done: true }),
+					}),
+				}
+			})
+
+			const stream = handler.createMessage("system prompt", [])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Should have tool_call_partial and tool_call_end
+			const partialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			const endChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
+
+			expect(partialChunks).toHaveLength(2)
+			expect(endChunks).toHaveLength(1)
+			expect(endChunks[0]).toEqual({ type: "tool_call_end", id: "call_123" })
+		})
+
+		it("should yield multiple tool_call_end events for parallel tool calls", async () => {
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						next: vi
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: {
+												tool_calls: [
+													{
+														index: 0,
+														id: "call_001",
+														function: { name: "tool_a", arguments: "{}" },
+													},
+													{
+														index: 1,
+														id: "call_002",
+														function: { name: "tool_b", arguments: "{}" },
+													},
+												],
+											},
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: {},
+											finish_reason: "tool_calls",
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({ done: true }),
+					}),
+				}
+			})
+
+			const stream = handler.createMessage("system prompt", [])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const endChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
+			expect(endChunks).toHaveLength(2)
+			expect(endChunks.map((c: any) => c.id).sort()).toEqual(["call_001", "call_002"])
+		})
+
+		it("should not yield tool_call_end when finish_reason is not tool_calls", async () => {
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						next: vi
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [
+										{
+											delta: { content: "Some text response" },
+											finish_reason: "stop",
+										},
+									],
+								},
+							})
+							.mockResolvedValueOnce({ done: true }),
+					}),
+				}
+			})
+
+			const stream = handler.createMessage("system prompt", [])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const endChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
+			expect(endChunks).toHaveLength(0)
+		})
+	})
 })

@@ -16,6 +16,80 @@ import { t } from "../../i18n"
 const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 const CEREBRAS_DEFAULT_TEMPERATURE = 0
 
+// kilocode_change start
+/**
+ * Conservative max_tokens for Cerebras to avoid premature rate limiting.
+ * Cerebras rate limiter estimates token consumption using max_completion_tokens upfront,
+ * so requesting the model maximum (e.g., 64K) reserves that quota even if actual usage is low.
+ * 8K is sufficient for most agentic tool use while preserving rate limit headroom.
+ */
+const CEREBRAS_DEFAULT_MAX_TOKENS = 8_192
+const CEREBRAS_INTEGRATION_HEADER = "X-Cerebras-3rd-Party-Integration"
+const CEREBRAS_INTEGRATION_NAME = "kilocode"
+// kilocode_change end
+
+/**
+ * Removes thinking tokens from text to prevent model confusion when processing conversation history.
+ * This is crucial because models can get confused by their own thinking tokens in input.
+ */
+function stripThinkingTokens(text: string): string {
+	// Remove <think>...</think> blocks entirely, including nested ones
+	return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim()
+}
+
+/**
+ * Flattens OpenAI message content to simple strings that Cerebras can handle.
+ * Cerebras doesn't support complex content arrays like OpenAI does.
+ */
+function flattenMessageContent(content: any): string {
+	if (typeof content === "string") {
+		return content
+	}
+
+	if (Array.isArray(content)) {
+		return content
+			.map((part) => {
+				if (typeof part === "string") {
+					return part
+				}
+				if (part.type === "text") {
+					return part.text || ""
+				}
+				if (part.type === "image_url") {
+					return "[Image]" // Placeholder for images since Cerebras doesn't support images
+				}
+				return ""
+			})
+			.filter(Boolean)
+			.join("\n")
+	}
+
+	// Fallback for any other content types
+	return String(content || "")
+}
+
+/**
+ * Converts OpenAI messages to Cerebras-compatible format with simple string content.
+ * Also strips thinking tokens from assistant messages to prevent model confusion.
+ */
+function convertToCerebrasMessages(openaiMessages: any[]): Array<{ role: string; content: string }> {
+	return openaiMessages
+		.map((msg) => {
+			let content = flattenMessageContent(msg.content)
+
+			// Strip thinking tokens from assistant messages to prevent confusion
+			if (msg.role === "assistant") {
+				content = stripThinkingTokens(content)
+			}
+
+			return {
+				role: msg.role,
+				content,
+			}
+		})
+		.filter((msg) => msg.content.trim() !== "") // Remove empty messages
+}
+
 export class CerebrasHandler extends BaseProvider implements SingleCompletionHandler {
 	private apiKey: string
 	private providerModels: typeof cerebrasModels
@@ -106,12 +180,14 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		const openaiMessages = convertToOpenAiMessages(messages)
 
 		// Prepare request body following Cerebras API specification exactly
+		// Use conservative default to avoid premature rate limiting (Cerebras reserves quota upfront)
+		const effectiveMaxTokens = Math.min(max_tokens || CEREBRAS_DEFAULT_MAX_TOKENS, CEREBRAS_DEFAULT_MAX_TOKENS) // kilocode_change
 		const requestBody: Record<string, any> = {
 			model,
 			messages: [{ role: "system", content: systemPrompt }, ...openaiMessages],
 			stream: true,
 			// Use max_completion_tokens (Cerebras-specific parameter)
-			...(max_tokens && max_tokens > 0 && max_tokens <= 32768 ? { max_completion_tokens: max_tokens } : {}),
+			...(effectiveMaxTokens > 0 ? { max_completion_tokens: effectiveMaxTokens } : {}), // kilocode_change
 			// Clamp temperature to Cerebras range (0 to 1.5)
 			...(temperature !== undefined && temperature !== CEREBRAS_DEFAULT_TEMPERATURE
 				? {
@@ -131,7 +207,7 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 					...DEFAULT_HEADERS,
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${this.apiKey}`,
-					"X-Cerebras-3rd-Party-Integration": "kilocode",
+					[CEREBRAS_INTEGRATION_HEADER]: CEREBRAS_INTEGRATION_NAME, // kilocode_change
 				},
 				body: JSON.stringify(requestBody),
 			})
@@ -293,7 +369,7 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 					...DEFAULT_HEADERS,
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${this.apiKey}`,
-					"X-Cerebras-3rd-Party-Integration": "kilocode",
+					[CEREBRAS_INTEGRATION_HEADER]: CEREBRAS_INTEGRATION_NAME, // kilocode_change
 				},
 				body: JSON.stringify(requestBody),
 			})

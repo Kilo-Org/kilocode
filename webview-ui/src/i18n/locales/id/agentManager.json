@@ -29,7 +29,6 @@
 		"autoModeWarning": "Mode YOLO - operasi alat disetujui secara otomatis",
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
-		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
 		"runModeLocal": "Lokal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "Alihkan mode YOLO",
 		"renameSession": "Ubah nama sesi",
 		"clickToRename": "Klik untuk mengubah nama",
-		"confirmRename": "Konfirmasi ubah nama"
+		"confirmRename": "Konfirmasi ubah nama",
+		"selectModel": "Pilih model",
+		"modelTooltip": "Pilih model AI mana yang akan digunakan untuk sesi ini",
+		"defaultModel": "Model default",
+		"loadingModels": "Memuat..."
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

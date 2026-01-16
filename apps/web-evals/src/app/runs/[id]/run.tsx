@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect, Fragment } from "react"
 import { toast } from "sonner"
-import { LoaderCircle, FileText, Copy, Check, StopCircle } from "lucide-react"
+import { LoaderCircle, FileText, Copy, Check, StopCircle, List, Layers } from "lucide-react"
 
 import type { Run, TaskMetrics as _TaskMetrics, Task } from "@roo-code/evals"
 import type { ToolName } from "@roo-code/types"
@@ -40,6 +40,9 @@ import { TaskStatus } from "./task-status"
 import { RunStatus } from "./run-status"
 
 type TaskMetrics = Pick<_TaskMetrics, "tokensIn" | "tokensOut" | "tokensContext" | "duration" | "cost">
+
+// Extended Task type with taskMetrics from useRunStatus
+type TaskWithMetrics = Task & { taskMetrics: _TaskMetrics | null }
 
 type ToolUsageEntry = { attempts: number; failures: number }
 type ToolUsage = Record<string, ToolUsageEntry>
@@ -250,6 +253,19 @@ export function Run({ run }: { run: Run }) {
 	const [copied, setCopied] = useState(false)
 	const [showKillDialog, setShowKillDialog] = useState(false)
 	const [isKilling, setIsKilling] = useState(false)
+	const [groupByStatus, setGroupByStatus] = useState(() => {
+		// Initialize from localStorage if available (client-side only)
+		if (typeof window !== "undefined") {
+			const stored = localStorage.getItem("evals-group-by-status")
+			return stored === "true"
+		}
+		return false
+	})
+
+	// Persist groupByStatus to localStorage
+	useEffect(() => {
+		localStorage.setItem("evals-group-by-status", String(groupByStatus))
+	}, [groupByStatus])
 
 	// Determine if run is still active (has heartbeat or runners)
 	const isRunActive = !run.taskMetricsId && (!!heartbeat || (runners && runners.length > 0))
@@ -300,10 +316,91 @@ export function Run({ run }: { run: Run }) {
 		return () => document.removeEventListener("keydown", handleKeyDown)
 	}, [selectedTask])
 
+	const taskMetrics: Record<number, TaskMetrics> = useMemo(() => {
+		// Reference usageUpdatedAt to trigger recomputation when Map contents change
+		void usageUpdatedAt
+		const metrics: Record<number, TaskMetrics> = {}
+
+		// Helper to calculate duration from database timestamps when streaming duration
+		// is unavailable (e.g., page was loaded after TaskStarted event was published)
+		const calculateDurationFromTimestamps = (task: TaskWithMetrics): number => {
+			if (!task.startedAt) return 0
+			const startTime = new Date(task.startedAt).getTime()
+			const endTime = task.finishedAt ? new Date(task.finishedAt).getTime() : Date.now()
+			return endTime - startTime
+		}
+
+		tasks?.forEach((task) => {
+			const streamingUsage = tokenUsage.get(task.id)
+			const dbMetrics = task.taskMetrics
+
+			// For finished tasks, prefer DB values but fall back to streaming values
+			// This handles race conditions during timeout where DB might not have latest data
+			if (task.finishedAt) {
+				// Check if DB metrics have meaningful values (not just default/empty)
+				const dbHasData = dbMetrics && (dbMetrics.tokensIn > 0 || dbMetrics.tokensOut > 0 || dbMetrics.cost > 0)
+				if (dbHasData) {
+					// If DB duration is 0 but we have timestamps, calculate from timestamps
+					const duration = dbMetrics.duration || calculateDurationFromTimestamps(task)
+					metrics[task.id] = { ...dbMetrics, duration }
+				} else if (streamingUsage) {
+					// Fall back to streaming values if DB is empty/stale
+					// Use streaming duration, or calculate from timestamps if not available
+					const duration = streamingUsage.duration || calculateDurationFromTimestamps(task)
+					metrics[task.id] = {
+						tokensIn: streamingUsage.totalTokensIn,
+						tokensOut: streamingUsage.totalTokensOut,
+						tokensContext: streamingUsage.contextTokens,
+						duration,
+						cost: streamingUsage.totalCost,
+					}
+				} else {
+					// Task finished but no DB metrics and no streaming data
+					// (e.g., page loaded after task completed, metrics not persisted)
+					// Still provide duration calculated from timestamps
+					metrics[task.id] = {
+						tokensIn: 0,
+						tokensOut: 0,
+						tokensContext: 0,
+						duration: calculateDurationFromTimestamps(task),
+						cost: 0,
+					}
+				}
+			} else if (streamingUsage) {
+				// For running tasks, use streaming values
+				// Use streaming duration, or calculate from task.startedAt if not available
+				// (happens when page loads after TaskStarted event was already published)
+				const duration = streamingUsage.duration || calculateDurationFromTimestamps(task)
+				metrics[task.id] = {
+					tokensIn: streamingUsage.totalTokensIn,
+					tokensOut: streamingUsage.totalTokensOut,
+					tokensContext: streamingUsage.contextTokens,
+					duration,
+					cost: streamingUsage.totalCost,
+				}
+			} else if (task.startedAt) {
+				// Task has started (has startedAt in DB) but no streaming data yet
+				// This can happen when page loads after TaskStarted but before TokenUsageUpdated
+				metrics[task.id] = {
+					tokensIn: 0,
+					tokensOut: 0,
+					tokensContext: 0,
+					duration: calculateDurationFromTimestamps(task),
+					cost: 0,
+				}
+			}
+		})
+
+		return metrics
+	}, [tasks, tokenUsage, usageUpdatedAt])
+
 	const onViewTaskLog = useCallback(
 		async (task: Task) => {
-			// Only allow viewing logs for tasks that have started
-			if (!task.startedAt && !tokenUsage.get(task.id)) {
+			// Only allow viewing logs for tasks that have started.
+			// Note: we treat presence of derived metrics as evidence of a started task,
+			// since this page may be rendered without streaming `tokenUsage` populated.
+			const hasStarted = !!task.startedAt || !!tokenUsage.get(task.id) || !!taskMetrics[task.id]
+			if (!hasStarted) {
 				toast.error("Task has not started yet")
 				return
 			}
@@ -332,49 +429,8 @@ export function Run({ run }: { run: Run }) {
 				setIsLoadingLog(false)
 			}
 		},
-		[run.id, tokenUsage],
+		[run.id, tokenUsage, taskMetrics],
 	)
-
-	const taskMetrics: Record<number, TaskMetrics> = useMemo(() => {
-		// Reference usageUpdatedAt to trigger recomputation when Map contents change
-		void usageUpdatedAt
-		const metrics: Record<number, TaskMetrics> = {}
-
-		tasks?.forEach((task) => {
-			const streamingUsage = tokenUsage.get(task.id)
-			const dbMetrics = task.taskMetrics
-
-			// For finished tasks, prefer DB values but fall back to streaming values
-			// This handles race conditions during timeout where DB might not have latest data
-			if (task.finishedAt) {
-				// Check if DB metrics have meaningful values (not just default/empty)
-				const dbHasData = dbMetrics && (dbMetrics.tokensIn > 0 || dbMetrics.tokensOut > 0 || dbMetrics.cost > 0)
-				if (dbHasData) {
-					metrics[task.id] = dbMetrics
-				} else if (streamingUsage) {
-					// Fall back to streaming values if DB is empty/stale
-					metrics[task.id] = {
-						tokensIn: streamingUsage.totalTokensIn,
-						tokensOut: streamingUsage.totalTokensOut,
-						tokensContext: streamingUsage.contextTokens,
-						duration: streamingUsage.duration ?? 0,
-						cost: streamingUsage.totalCost,
-					}
-				}
-			} else if (streamingUsage) {
-				// For running tasks, use streaming values
-				metrics[task.id] = {
-					tokensIn: streamingUsage.totalTokensIn,
-					tokensOut: streamingUsage.totalTokensOut,
-					tokensContext: streamingUsage.contextTokens,
-					duration: streamingUsage.duration ?? 0,
-					cost: streamingUsage.totalCost,
-				}
-			}
-		})
-
-		return metrics
-	}, [tasks, tokenUsage, usageUpdatedAt])
 
 	// Collect all unique tool names from all tasks and sort by total attempts
 	const toolColumns = useMemo<ToolName[]>(() => {
@@ -463,10 +519,13 @@ export function Run({ run }: { run: Run }) {
 			}
 		}
 
+		const remaining = tasks.length - completed
+
 		return {
 			passed,
 			failed,
 			completed,
+			remaining,
 			passRate: completed > 0 ? ((passed / completed) * 100).toFixed(1) : null,
 			totalTokensIn,
 			totalTokensOut,
@@ -501,258 +560,399 @@ export function Run({ run }: { run: Run }) {
 		return Date.now() - startTime
 	}, [tasks, run.createdAt, run.taskMetricsId, usageUpdatedAt])
 
-	return (
-		<>
-			<div>
-				{stats && (
-					<div className="mb-4 p-4 border rounded-lg bg-muted sticky top-0 z-10">
-						{/* Provider, Model title and status */}
-						<div className="flex items-center justify-center gap-3 mb-3 relative">
-							{run.settings?.apiProvider && (
-								<span className="text-sm text-muted-foreground">{run.settings.apiProvider}</span>
-							)}
-							<div className="font-mono">{run.model}</div>
-							<RunStatus runStatus={runStatus} isComplete={!!run.taskMetricsId} />
-							{run.description && (
-								<span className="text-sm text-muted-foreground">- {run.description}</span>
-							)}
-							{isRunActive && (
+	// Task status categories
+	type TaskStatusCategory = "failed" | "in_progress" | "passed" | "not_started"
+
+	const getTaskStatusCategory = useCallback(
+		(task: TaskWithMetrics): TaskStatusCategory => {
+			if (task.passed === false) return "failed"
+			if (task.passed === true) return "passed"
+			// Check streaming data, DB metrics, or startedAt timestamp
+			const hasStarted = !!task.startedAt || !!tokenUsage.get(task.id) || !!taskMetrics[task.id]
+			if (hasStarted) return "in_progress"
+			return "not_started"
+		},
+		[tokenUsage, taskMetrics],
+	)
+
+	// Group tasks by status while preserving original index
+	const groupedTasks = useMemo(() => {
+		if (!tasks || !groupByStatus) return null
+
+		const groups: Record<TaskStatusCategory, Array<{ task: TaskWithMetrics; originalIndex: number }>> = {
+			failed: [],
+			in_progress: [],
+			passed: [],
+			not_started: [],
+		}
+
+		tasks.forEach((task, index) => {
+			const status = getTaskStatusCategory(task)
+			groups[status].push({ task, originalIndex: index })
+		})
+
+		return groups
+	}, [tasks, groupByStatus, getTaskStatusCategory])
+
+	const statusLabels = useMemo(
+		(): Record<TaskStatusCategory, { label: string; className: string; count: number }> => ({
+			failed: { label: "Failed", className: "text-red-500", count: groupedTasks?.failed.length ?? 0 },
+			in_progress: {
+				label: "In Progress",
+				className: "text-yellow-500",
+				count: groupedTasks?.in_progress.length ?? 0,
+			},
+			passed: { label: "Passed", className: "text-green-500", count: groupedTasks?.passed.length ?? 0 },
+			not_started: {
+				label: "Not Started",
+				className: "text-muted-foreground",
+				count: groupedTasks?.not_started.length ?? 0,
+			},
+		}),
+		[groupedTasks],
+	)
+
+	const statusOrder: TaskStatusCategory[] = ["failed", "in_progress", "passed", "not_started"]
+
+	// Helper to render a task row
+	const renderTaskRow = (task: TaskWithMetrics, originalIndex: number) => {
+		const hasStarted = !!task.startedAt || !!tokenUsage.get(task.id) || !!taskMetrics[task.id]
+		return (
+			<TableRow
+				key={task.id}
+				className={`${hasStarted ? "cursor-pointer hover:bg-muted/50" : ""} ${task.passed === false ? "bg-red-950/30 border-l-2 border-l-red-500" : ""}`}
+				onClick={() => hasStarted && onViewTaskLog(task)}>
+				<TableCell className="text-center text-muted-foreground font-mono text-xs">
+					{originalIndex + 1}
+				</TableCell>
+				<TableCell>
+					<div className="flex items-center gap-2">
+						<TaskStatus task={task} running={hasStarted} />
+						<div className="flex items-center gap-2">
+							<span>
+								{task.language}/{task.exercise}
+								{task.iteration > 1 && (
+									<span className="text-muted-foreground ml-1">(#{task.iteration})</span>
+								)}
+							</span>
+							{hasStarted && (
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => setShowKillDialog(true)}
-											disabled={isKilling}
-											className="absolute right-0 flex items-center gap-1 text-muted-foreground hover:text-destructive">
-											{isKilling ? (
-												<LoaderCircle className="size-4 animate-spin" />
-											) : (
-												<StopCircle className="size-4" />
-											)}
-											Kill
-										</Button>
+										<FileText className="size-3 text-muted-foreground" />
 									</TooltipTrigger>
-									<TooltipContent>Stop all containers for this run</TooltipContent>
+									<TooltipContent>Click to view log</TooltipContent>
 								</Tooltip>
 							)}
 						</div>
-						{/* Main Stats Row */}
-						<div className="flex items-start justify-center gap-x-8 gap-y-3">
-							{/* Passed/Failed */}
-							<div className="text-center min-w-[80px]">
-								<div className="text-2xl font-bold whitespace-nowrap">
-									<span className="text-green-600">{stats.passed}</span>
-									<span className="text-muted-foreground mx-1">/</span>
-									<span className="text-red-600">{stats.failed}</span>
-								</div>
-								<div className="text-xs text-muted-foreground">Passed / Failed</div>
-							</div>
-
-							{/* Pass Rate */}
-							<div className="text-center min-w-[80px]">
-								<div
-									className={`text-2xl font-bold ${
-										stats.passRate === null
-											? ""
-											: parseFloat(stats.passRate) === 100
-												? ""
-												: parseFloat(stats.passRate) >= 80
-													? "text-yellow-500"
-													: "text-red-500"
-									}`}>
-									{stats.passRate ? `${stats.passRate}%` : "-"}
-								</div>
-								<div className="text-xs text-muted-foreground">Pass Rate</div>
-							</div>
-
-							{/* Tokens */}
-							<div className="text-center min-w-[140px]">
-								<div className="text-xl font-bold font-mono whitespace-nowrap">
-									{formatTokens(stats.totalTokensIn)}
-									<span className="text-muted-foreground mx-1">/</span>
-									{formatTokens(stats.totalTokensOut)}
-								</div>
-								<div className="text-xs text-muted-foreground">Tokens In / Out</div>
-							</div>
-
-							{/* Cost */}
-							<div className="text-center min-w-[70px]">
-								<div className="text-2xl font-bold font-mono">{formatCurrency(stats.totalCost)}</div>
-								<div className="text-xs text-muted-foreground">Cost</div>
-							</div>
-
-							{/* Duration */}
-							<div className="text-center min-w-[90px]">
-								<div className="text-2xl font-bold font-mono whitespace-nowrap">
-									{stats.totalDuration > 0 ? formatDuration(stats.totalDuration) : "-"}
-								</div>
-								<div className="text-xs text-muted-foreground">Duration</div>
-							</div>
-
-							{/* Elapsed Time */}
-							<div className="text-center min-w-[90px]">
-								<div className="text-2xl font-bold font-mono whitespace-nowrap">
-									{elapsedTime !== null ? formatDuration(elapsedTime) : "-"}
-								</div>
-								<div className="text-xs text-muted-foreground">Elapsed</div>
-							</div>
-						</div>
-
-						{/* Tool Usage Row */}
-						{Object.keys(stats.toolUsage).length > 0 && (
-							<div className="flex items-center justify-center gap-2 flex-wrap mt-3">
-								{Object.entries(stats.toolUsage)
-									.sort(([, a], [, b]) => b.attempts - a.attempts)
-									.map(([toolName, usage]) => {
-										const abbr = getToolAbbreviation(toolName)
-										const successRate =
-											usage.attempts > 0
-												? ((usage.attempts - usage.failures) / usage.attempts) * 100
-												: 100
-										const rateColor =
-											successRate === 100
-												? "text-green-500"
-												: successRate >= 80
-													? "text-yellow-500"
-													: "text-red-500"
-										return (
-											<Tooltip key={toolName}>
-												<TooltipTrigger asChild>
-													<div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 border border-border/50 hover:border-border transition-colors cursor-default text-xs">
-														<span className="font-medium text-muted-foreground">
-															{abbr}
-														</span>
-														<span className="font-bold tabular-nums">{usage.attempts}</span>
-														<span className={`${rateColor}`}>
-															{formatToolUsageSuccessRate(usage)}
-														</span>
-													</div>
-												</TooltipTrigger>
-												<TooltipContent side="bottom">{toolName}</TooltipContent>
-											</Tooltip>
-										)
-									})}
-							</div>
-						)}
 					</div>
+				</TableCell>
+				{taskMetrics[task.id] ? (
+					<>
+						<TableCell className="font-mono text-xs">
+							<div className="flex items-center justify-evenly">
+								<div>{formatTokens(taskMetrics[task.id]!.tokensIn)}</div>/
+								<div>{formatTokens(taskMetrics[task.id]!.tokensOut)}</div>
+							</div>
+						</TableCell>
+						<TableCell className="font-mono text-xs">
+							{formatTokens(taskMetrics[task.id]!.tokensContext)}
+						</TableCell>
+						{toolColumns.map((toolName) => {
+							const dbUsage = task.taskMetrics?.toolUsage?.[toolName]
+							const streamingUsage = toolUsage.get(task.id)?.[toolName]
+							const usage = task.finishedAt ? (dbUsage ?? streamingUsage) : streamingUsage
+
+							const successRate =
+								usage && usage.attempts > 0
+									? ((usage.attempts - usage.failures) / usage.attempts) * 100
+									: 100
+							const rateColor =
+								successRate === 100
+									? "text-muted-foreground"
+									: successRate >= 80
+										? "text-yellow-500"
+										: "text-red-500"
+							return (
+								<TableCell key={toolName} className="text-xs text-center">
+									{usage ? (
+										<div className="flex flex-col items-center">
+											<span className="font-medium">{usage.attempts}</span>
+											<span className={rateColor}>{formatToolUsageSuccessRate(usage)}</span>
+										</div>
+									) : (
+										<span className="text-muted-foreground">-</span>
+									)}
+								</TableCell>
+							)
+						})}
+						<TableCell className="font-mono text-xs">
+							{taskMetrics[task.id]!.duration ? formatDuration(taskMetrics[task.id]!.duration) : "-"}
+						</TableCell>
+						<TableCell className="font-mono text-xs">
+							{formatCurrency(taskMetrics[task.id]!.cost)}
+						</TableCell>
+					</>
+				) : (
+					<TableCell colSpan={5 + toolColumns.length} />
 				)}
+			</TableRow>
+		)
+	}
+
+	return (
+		<>
+			<div>
 				{!tasks ? (
 					<LoaderCircle className="size-4 animate-spin" />
 				) : (
-					<Table className="border">
-						<TableHeader>
-							<TableRow>
-								<TableHead>Exercise</TableHead>
-								<TableHead className="text-center">Tokens In / Out</TableHead>
-								<TableHead>Context</TableHead>
-								{toolColumns.map((toolName) => (
-									<TableHead key={toolName} className="text-xs text-center">
-										<Tooltip>
-											<TooltipTrigger>{getToolAbbreviation(toolName)}</TooltipTrigger>
-											<TooltipContent>{toolName}</TooltipContent>
-										</Tooltip>
-									</TableHead>
-								))}
-								<TableHead>Duration</TableHead>
-								<TableHead>Cost</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{tasks.map((task) => {
-								const hasStarted = !!task.startedAt || !!tokenUsage.get(task.id)
-								return (
-									<TableRow
-										key={task.id}
-										className={`${hasStarted ? "cursor-pointer hover:bg-muted/50" : ""} ${task.passed === false ? "bg-red-950/30 border-l-2 border-l-red-500" : ""}`}
-										onClick={() => hasStarted && onViewTaskLog(task)}>
-										<TableCell>
-											<div className="flex items-center gap-2">
-												<TaskStatus task={task} running={hasStarted} />
-												<div className="flex items-center gap-2">
-													<span>
-														{task.language}/{task.exercise}
-														{task.iteration > 1 && (
-															<span className="text-muted-foreground ml-1">
-																(#{task.iteration})
-															</span>
-														)}
-													</span>
-													{hasStarted && (
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<FileText className="size-3 text-muted-foreground" />
-															</TooltipTrigger>
-															<TooltipContent>Click to view log</TooltipContent>
-														</Tooltip>
-													)}
-												</div>
-											</div>
-										</TableCell>
-										{taskMetrics[task.id] ? (
+					<>
+						{/* View Toggle */}
+						<div className="flex justify-end mb-2">
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setGroupByStatus(!groupByStatus)}
+										className="flex items-center gap-2">
+										{groupByStatus ? (
 											<>
-												<TableCell className="font-mono text-xs">
-													<div className="flex items-center justify-evenly">
-														<div>{formatTokens(taskMetrics[task.id]!.tokensIn)}</div>/
-														<div>{formatTokens(taskMetrics[task.id]!.tokensOut)}</div>
-													</div>
-												</TableCell>
-												<TableCell className="font-mono text-xs">
-													{formatTokens(taskMetrics[task.id]!.tokensContext)}
-												</TableCell>
-												{toolColumns.map((toolName) => {
-													// Use DB values for finished tasks, but fall back to streaming values
-													// if DB values are missing (handles race condition during timeout)
-													const dbUsage = task.taskMetrics?.toolUsage?.[toolName]
-													const streamingUsage = toolUsage.get(task.id)?.[toolName]
-													const usage = task.finishedAt
-														? (dbUsage ?? streamingUsage)
-														: streamingUsage
-
-													const successRate =
-														usage && usage.attempts > 0
-															? ((usage.attempts - usage.failures) / usage.attempts) * 100
-															: 100
-													const rateColor =
-														successRate === 100
-															? "text-muted-foreground"
-															: successRate >= 80
-																? "text-yellow-500"
-																: "text-red-500"
-													return (
-														<TableCell key={toolName} className="text-xs text-center">
-															{usage ? (
-																<div className="flex flex-col items-center">
-																	<span className="font-medium">
-																		{usage.attempts}
-																	</span>
-																	<span className={rateColor}>
-																		{formatToolUsageSuccessRate(usage)}
-																	</span>
-																</div>
-															) : (
-																<span className="text-muted-foreground">-</span>
-															)}
-														</TableCell>
-													)
-												})}
-												<TableCell className="font-mono text-xs">
-													{taskMetrics[task.id]!.duration
-														? formatDuration(taskMetrics[task.id]!.duration)
-														: "-"}
-												</TableCell>
-												<TableCell className="font-mono text-xs">
-													{formatCurrency(taskMetrics[task.id]!.cost)}
-												</TableCell>
+												<List className="size-4" />
+												<span>Show Order</span>
 											</>
 										) : (
-											<TableCell colSpan={4 + toolColumns.length} />
+											<>
+												<Layers className="size-4" />
+												<span>Group by Status</span>
+											</>
 										)}
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									{groupByStatus ? "Show tasks in run order" : "Group tasks by status"}
+								</TooltipContent>
+							</Tooltip>
+						</div>
+						<Table className="border">
+							<TableHeader className="sticky top-0 z-10">
+								{stats && (
+									<TableRow>
+										<TableHead colSpan={6 + toolColumns.length} className="bg-muted p-4">
+											{/* Provider, Model title and status */}
+											<div className="flex items-center justify-center gap-3 mb-3 relative">
+												{run.settings?.apiProvider && (
+													<span className="text-sm text-muted-foreground">
+														{run.settings.apiProvider}
+													</span>
+												)}
+												<div className="font-mono">{run.model}</div>
+												<RunStatus runStatus={runStatus} isComplete={!!run.taskMetricsId} />
+												{run.description && (
+													<span className="text-sm text-muted-foreground">
+														- {run.description}
+													</span>
+												)}
+												{isRunActive && (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => setShowKillDialog(true)}
+																disabled={isKilling}
+																className="absolute right-0 flex items-center gap-1 text-muted-foreground hover:text-destructive">
+																{isKilling ? (
+																	<LoaderCircle className="size-4 animate-spin" />
+																) : (
+																	<StopCircle className="size-4" />
+																)}
+																Kill
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent>
+															Stop all containers for this run
+														</TooltipContent>
+													</Tooltip>
+												)}
+											</div>
+											{/* Main Stats Row */}
+											<div className="flex items-start justify-center gap-x-8 gap-y-3">
+												{/* Pass Rate / Fail Rate / Remaining % */}
+												<div className="text-center min-w-[160px]">
+													<div className="text-2xl font-bold whitespace-nowrap">
+														<span className="text-green-600">
+															{stats.completed > 0
+																? `${((stats.passed / stats.completed) * 100).toFixed(1)}%`
+																: "-"}
+														</span>
+														<span className="text-muted-foreground mx-1">/</span>
+														<span className="text-red-600">
+															{stats.completed > 0
+																? `${((stats.failed / stats.completed) * 100).toFixed(1)}%`
+																: "-"}
+														</span>
+														<span className="text-muted-foreground mx-1">/</span>
+														<span className="text-muted-foreground">
+															{tasks.length > 0
+																? `${((stats.remaining / tasks.length) * 100).toFixed(1)}%`
+																: "-"}
+														</span>
+													</div>
+													<div className="text-xs text-muted-foreground">
+														<span className="text-green-600">{stats.passed}</span>
+														{" / "}
+														<span className="text-red-600">{stats.failed}</span>
+														{" / "}
+														<span>{stats.remaining}</span>
+														{" of "}
+														{tasks.length}
+													</div>
+												</div>
+
+												{/* Tokens */}
+												<div className="text-center min-w-[140px]">
+													<div className="text-xl font-bold font-mono whitespace-nowrap">
+														{formatTokens(stats.totalTokensIn)}
+														<span className="text-muted-foreground mx-1">/</span>
+														{formatTokens(stats.totalTokensOut)}
+													</div>
+													<div className="text-xs text-muted-foreground">Tokens In / Out</div>
+												</div>
+
+												{/* Cost */}
+												<div className="text-center min-w-[70px]">
+													<div className="text-2xl font-bold font-mono">
+														{formatCurrency(stats.totalCost)}
+													</div>
+													<div className="text-xs text-muted-foreground">Cost</div>
+												</div>
+
+												{/* Duration */}
+												<div className="text-center min-w-[90px]">
+													<div className="text-2xl font-bold font-mono whitespace-nowrap">
+														{stats.totalDuration > 0
+															? formatDuration(stats.totalDuration)
+															: "-"}
+													</div>
+													<div className="text-xs text-muted-foreground">Duration</div>
+												</div>
+
+												{/* Elapsed Time */}
+												<div className="text-center min-w-[90px]">
+													<div className="text-2xl font-bold font-mono whitespace-nowrap">
+														{elapsedTime !== null ? formatDuration(elapsedTime) : "-"}
+													</div>
+													<div className="text-xs text-muted-foreground">Elapsed</div>
+												</div>
+
+												{/* Estimated Time Remaining - only show if run is active and we have data */}
+												{!run.taskMetricsId &&
+													elapsedTime !== null &&
+													stats.completed > 0 &&
+													stats.remaining > 0 && (
+														<div className="text-center min-w-[90px]">
+															<div className="text-2xl font-bold font-mono whitespace-nowrap text-muted-foreground">
+																~
+																{formatDuration(
+																	(elapsedTime / stats.completed) * stats.remaining,
+																)}
+															</div>
+															<div className="text-xs text-muted-foreground">
+																Est. Remaining
+															</div>
+														</div>
+													)}
+											</div>
+
+											{/* Tool Usage Row */}
+											{Object.keys(stats.toolUsage).length > 0 && (
+												<div className="flex items-center justify-center gap-2 flex-wrap mt-3">
+													{Object.entries(stats.toolUsage)
+														.sort(([, a], [, b]) => b.attempts - a.attempts)
+														.map(([toolName, usage]) => {
+															const abbr = getToolAbbreviation(toolName)
+															const successRate =
+																usage.attempts > 0
+																	? ((usage.attempts - usage.failures) /
+																			usage.attempts) *
+																		100
+																	: 100
+															const rateColor =
+																successRate === 100
+																	? "text-green-500"
+																	: successRate >= 80
+																		? "text-yellow-500"
+																		: "text-red-500"
+															return (
+																<Tooltip key={toolName}>
+																	<TooltipTrigger asChild>
+																		<div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 border border-border/50 hover:border-border transition-colors cursor-default text-xs">
+																			<span className="font-medium text-muted-foreground">
+																				{abbr}
+																			</span>
+																			<span className="font-bold tabular-nums">
+																				{usage.attempts}
+																			</span>
+																			<span className={`${rateColor}`}>
+																				{formatToolUsageSuccessRate(usage)}
+																			</span>
+																		</div>
+																	</TooltipTrigger>
+																	<TooltipContent side="bottom">
+																		{toolName}
+																	</TooltipContent>
+																</Tooltip>
+															)
+														})}
+												</div>
+											)}
+										</TableHead>
 									</TableRow>
-								)
-							})}
-						</TableBody>
-					</Table>
+								)}
+								<TableRow>
+									<TableHead className="w-12 text-center">#</TableHead>
+									<TableHead>Exercise</TableHead>
+									<TableHead className="text-center">Tokens In / Out</TableHead>
+									<TableHead>Context</TableHead>
+									{toolColumns.map((toolName) => (
+										<TableHead key={toolName} className="text-xs text-center">
+											<Tooltip>
+												<TooltipTrigger>{getToolAbbreviation(toolName)}</TooltipTrigger>
+												<TooltipContent>{toolName}</TooltipContent>
+											</Tooltip>
+										</TableHead>
+									))}
+									<TableHead>Duration</TableHead>
+									<TableHead>Cost</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{groupByStatus && groupedTasks
+									? // Grouped view
+										statusOrder.map((status) => {
+											const group = groupedTasks[status]
+											if (group.length === 0) return null
+											const { label, className } = statusLabels[status]
+											return (
+												<Fragment key={status}>
+													<TableRow className="bg-muted/50 hover:bg-muted/50">
+														<TableCell colSpan={6 + toolColumns.length} className="py-2">
+															<span className={`font-semibold ${className}`}>
+																{label} ({group.length})
+															</span>
+														</TableCell>
+													</TableRow>
+													{group.map(({ task, originalIndex }) =>
+														renderTaskRow(task, originalIndex),
+													)}
+												</Fragment>
+											)
+										})
+									: // Default order view
+										tasks.map((task, index) => renderTaskRow(task, index))}
+							</TableBody>
+						</Table>
+					</>
 				)}
 			</div>
 

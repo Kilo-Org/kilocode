@@ -1407,4 +1407,97 @@ describe("Context Management", () => {
 			expect(resultWithLastMessage).toBe(true)
 		})
 	})
+
+	/**
+	 * Tests for newContextTokensAfterTruncation including system prompt
+	 */
+	describe("newContextTokensAfterTruncation", () => {
+		const createModelInfo = (contextWindow: number, maxTokens?: number): ModelInfo => ({
+			contextWindow,
+			supportsPromptCache: true,
+			maxTokens,
+		})
+
+		it("should include system prompt tokens in newContextTokensAfterTruncation", async () => {
+			const modelInfo = createModelInfo(100000, 30000)
+			const totalTokens = 70001 // Above threshold to trigger truncation
+
+			const messages: ApiMessage[] = [
+				{ role: "user", content: "First message" },
+				{ role: "assistant", content: "Second message" },
+				{ role: "user", content: "Third message" },
+				{ role: "assistant", content: "Fourth message" },
+				{ role: "user", content: "" }, // Small content in last message
+			]
+
+			const systemPrompt = "You are a helpful assistant. Follow these rules carefully."
+
+			const result = await manageContext({
+				messages,
+				totalTokens,
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 100,
+				systemPrompt,
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+			})
+
+			// Should have truncation
+			expect(result.truncationId).toBeDefined()
+			expect(result.newContextTokensAfterTruncation).toBeDefined()
+
+			// The newContextTokensAfterTruncation should include system prompt tokens
+			// Count system prompt tokens to verify
+			const systemPromptTokens = await estimateTokenCount([{ type: "text", text: systemPrompt }], mockApiHandler)
+			expect(systemPromptTokens).toBeGreaterThan(0)
+
+			// newContextTokensAfterTruncation should be >= system prompt tokens
+			// (since it includes system prompt + remaining message tokens)
+			expect(result.newContextTokensAfterTruncation).toBeGreaterThanOrEqual(systemPromptTokens)
+		})
+
+		it("should produce consistent prev vs new token comparison (both including system prompt)", async () => {
+			const modelInfo = createModelInfo(100000, 30000)
+			const totalTokens = 70001 // Above threshold to trigger truncation
+
+			const messages: ApiMessage[] = [
+				{ role: "user", content: "First message" },
+				{ role: "assistant", content: "Second message" },
+				{ role: "user", content: "Third message" },
+				{ role: "assistant", content: "Fourth message" },
+				{ role: "user", content: "" }, // Small content in last message
+			]
+
+			const systemPrompt = "System prompt for testing"
+
+			const result = await manageContext({
+				messages,
+				totalTokens,
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 100,
+				systemPrompt,
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+			})
+
+			// After truncation, newContextTokensAfterTruncation should be less than prevContextTokens
+			// because we removed some messages
+			expect(result.newContextTokensAfterTruncation).toBeDefined()
+			expect(result.newContextTokensAfterTruncation).toBeLessThan(result.prevContextTokens)
+
+			// But newContextTokensAfterTruncation should still be a reasonable value
+			// (not near-zero like the bug showed) - it should be at least
+			// a significant fraction of prevContextTokens after 50% truncation
+			// With system prompt included, we expect roughly 50% of the messages remaining
+			expect(result.newContextTokensAfterTruncation).toBeGreaterThan(0)
+		})
+	})
 })

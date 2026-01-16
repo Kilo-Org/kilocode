@@ -5,7 +5,7 @@
 	"start": "Hadi başlayalım!",
 	"routers": {
 		"requesty": {
-			"description": "Optimize edilmiş LLM yönlendiricin",
+			"description": "Optimize edilmiş LLM yönlendiriciniz",
 			"incentive": "$1 ücretsiz kredi"
 		},
 		"openrouter": {
@@ -18,25 +18,30 @@
 	},
 	"chooseProvider": "Sihirini yapabilmesi için Kilo Code'nun bir API anahtarına ihtiyacı var.",
 	"providerSignup": {
-		"rooCloudProvider": "Roo Code Cloud Sağlayıcısı",
-		"rooCloudDescription": "Roo'yu kullanmanın en basit yolu. Düşük maliyetle seçilmiş ücretsiz ve ücretli modellerin karışımı",
-		"learnMore": "daha fazla bilgi",
-		"useAnotherProvider": "Başka bir sağlayıcı kullan",
+		"heading": "Sağlayıcınızı seçin",
+		"chooseProvider": "Roo'nun çalışması için bir LLM sağlayıcısına ihtiyacı var. Başlamak için bir tane seç, sonra daha fazlasını ekleyebilirsin.",
+		"rooCloudProvider": "Roo Code Cloud Sağlayıcı",
+		"rooCloudDescription": "Başlamak için en kolay yol Roo Code Cloud Sağlayıcısı'nı kullanmaktır: ücretsiz ve ücretli modellerin dikkatli seçilmiş bir karışımı, düşük maliyette.",
+		"learnMore": "Daha fazla bilgi",
+		"useAnotherProvider": "Üçüncü taraf Sağlayıcı",
 		"useAnotherProviderDescription": "Bir API anahtarı gir ve başla.",
-		"noApiKeys": "Anahtarlarla uğraşmak istemez misin? Roo Code Cloud Sağlayıcısı'nı seç.",
-		"getStarted": "Başla"
+		"noApiKeys": "API anahtarları ve ayrı hesaplarla uğraşmak istemez misin?",
+		"backToRoo": "Roo Code Cloud Sağlayıcısını seç.",
+		"goBack": "Geri",
+		"finish": "Bitir"
 	},
 	"waitingForCloud": {
-		"heading": "Seni Roo Code Cloud'a götürüyoruz...",
-		"description": "Tarayıcında kaydı tamamla ve otomatik olarak buraya döneceksin.",
-		"noPrompt": "URL açmanız istenmezse, <clickHere>buraya tıkla</clickHere>.",
-		"havingTrouble": "Kaydı tamamladıysan ama sorun yaşıyorsan, <clickHere>buraya tıkla</clickHere>.",
-		"pasteUrl": "Tarayıcınızdan geri arama URL'sini yapıştırın:",
-		"invalidURL": "Bu geçerli bir geri arama URL'si gibi görünmüyor. Roo Code Cloud'un tarayıcında gösterdiği şeyi kopyala.",
-		"goBack": "Geri Dön"
+		"heading": "Roo Code Cloud'a giriş yapılıyor...",
+		"description": "Seni Roo Code Cloud'a kaydolmak için tarayıcına göndereceğiz. Sonra seni buraya geri getireceğiz.",
+		"noPrompt": "Bir URL açmanız istenmezse, <clickHere>buraya tıklayın</clickHere>.",
+		"havingTrouble": "Kaydı tamamladıysanız ama sorun yaşıyorsanız, <clickHere>buraya tıklayın</clickHere>.",
+		"pasteUrl": "Tarayıcınızda gösterilen geri arama URL'sini yapıştırın:",
+		"docsLink": "Çalışmıyor mu? <DocsLink>Belgeleri kontrol edin</DocsLink>.",
+		"invalidURL": "Bu geçerli bir geri arama URL'si gibi görünmüyor. Roo Code Cloud'un tarayıcınızda gösterdiğini kopyalayın.",
+		"goBack": "Geri"
 	},
-	"startRouter": "Bir LLM yönlendiricisi kullanmanı öneririz:",
-	"startCustom": "Veya kendi API anahtarını kullanabilirsin:",
+	"startRouter": "Bir LLM yönlendiricisi kullanmanızı öneririz:",
+	"startCustom": "Veya kendi API anahtarınızı getirebilirsiniz:",
 	"telemetry": {
 		"helpImprove": "Kilo Code'u Geliştirmeye Yardım Et",
 		"helpImproveMessage": "Kilo Code, hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri toplar. Bu telemetri kod, prompts veya kişisel bilgi toplamaz. Bunu <settingsLink>ayarlar</settingsLink>da kapatabilirsin."

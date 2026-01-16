@@ -246,6 +246,94 @@ describe("getKeepMessagesWithToolBlocks", () => {
 		expect(result.keepMessages).toEqual(messages)
 		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
 	})
+
+	it("should preserve reasoning blocks alongside tool_use blocks for DeepSeek/Z.ai interleaved thinking", () => {
+		const reasoningBlock = {
+			type: "reasoning" as const,
+			text: "Let me think about this step by step...",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_deepseek_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_deepseek_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				// DeepSeek stores reasoning as content blocks alongside tool_use
+				content: [reasoningBlock as any, { type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].ts).toBe(5)
+
+		// Should preserve the tool_use block
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+
+		// Should preserve the reasoning block for DeepSeek/Z.ai interleaved thinking
+		expect(result.reasoningBlocksToPreserve).toHaveLength(1)
+		expect((result.reasoningBlocksToPreserve[0] as any).type).toBe("reasoning")
+		expect((result.reasoningBlocksToPreserve[0] as any).text).toBe("Let me think about this step by step...")
+	})
+
+	it("should return empty reasoningBlocksToPreserve when no reasoning blocks present", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				// No reasoning block, just text and tool_use
+				content: [{ type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 2,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock],
+				ts: 3,
+			},
+			{ role: "assistant", content: "Done", ts: 4 },
+			{ role: "user", content: "Thanks", ts: 5 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.reasoningBlocksToPreserve).toHaveLength(0)
+	})
 })
 
 describe("getMessagesSinceLastSummary", () => {
@@ -422,7 +510,14 @@ describe("summarizeConversation", () => {
 		const summaryMessage = result.messages.find((m) => m.isSummary)
 		expect(summaryMessage).toBeDefined()
 		expect(summaryMessage!.role).toBe("assistant")
-		expect(summaryMessage!.content).toBe("This is a summary")
+		// Summary content is now always an array with [synthetic reasoning, text]
+		// for DeepSeek-reasoner compatibility (requires reasoning_content on all assistant messages)
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(2)
+		expect(content[0].type).toBe("reasoning")
+		expect(content[1].type).toBe("text")
+		expect(content[1].text).toBe("This is a summary")
 		expect(summaryMessage!.isSummary).toBe(true)
 
 		// Verify that the effective API history matches expected: first + summary + last N messages
@@ -827,14 +922,16 @@ describe("summarizeConversation", () => {
 		expect(summaryMessage!.isSummary).toBe(true)
 		expect(Array.isArray(summaryMessage!.content)).toBe(true)
 
-		// Content should be [text block, tool_use block]
+		// Content should be [synthetic reasoning, text block, tool_use block]
+		// The synthetic reasoning is always added for DeepSeek-reasoner compatibility
 		const content = summaryMessage!.content as Anthropic.Messages.ContentBlockParam[]
-		expect(content).toHaveLength(2)
-		expect(content[0].type).toBe("text")
-		expect((content[0] as Anthropic.Messages.TextBlockParam).text).toBe("Summary of conversation")
-		expect(content[1].type).toBe("tool_use")
-		expect((content[1] as Anthropic.Messages.ToolUseBlockParam).id).toBe("toolu_123")
-		expect((content[1] as Anthropic.Messages.ToolUseBlockParam).name).toBe("read_file")
+		expect(content).toHaveLength(3)
+		expect((content[0] as any).type).toBe("reasoning") // Synthetic reasoning for DeepSeek
+		expect(content[1].type).toBe("text")
+		expect((content[1] as Anthropic.Messages.TextBlockParam).text).toBe("Summary of conversation")
+		expect(content[2].type).toBe("tool_use")
+		expect((content[2] as Anthropic.Messages.ToolUseBlockParam).id).toBe("toolu_123")
+		expect((content[2] as Anthropic.Messages.ToolUseBlockParam).name).toBe("read_file")
 
 		// With non-destructive condensing, all messages are retained plus the summary
 		expect(result.messages.length).toBe(messages.length + 1) // all original + summary
@@ -981,13 +1078,163 @@ describe("summarizeConversation", () => {
 		expect(summaryMessage).toBeDefined()
 		expect(Array.isArray(summaryMessage!.content)).toBe(true)
 		const summaryContent = summaryMessage!.content as Anthropic.Messages.ContentBlockParam[]
-		expect(summaryContent[0]).toEqual({ type: "text", text: "This is a summary" })
+		// First block is synthetic reasoning for DeepSeek-reasoner compatibility
+		expect((summaryContent[0] as any).type).toBe("reasoning")
+		// Second block is the text summary
+		expect(summaryContent[1]).toEqual({ type: "text", text: "This is a summary" })
 
 		const preservedToolUses = summaryContent.filter(
 			(block): block is Anthropic.Messages.ToolUseBlockParam => block.type === "tool_use",
 		)
 		expect(preservedToolUses).toHaveLength(2)
 		expect(preservedToolUses.map((block) => block.id)).toEqual(["toolu_parallel_1", "toolu_parallel_2"])
+	})
+
+	it("should preserve reasoning blocks in summary message for DeepSeek/Z.ai interleaved thinking", async () => {
+		const reasoningBlock = {
+			type: "reasoning" as const,
+			text: "Let me think about this step by step...",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_deepseek_reason",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_deepseek_reason",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				// DeepSeek stores reasoning as content blocks alongside tool_use
+				content: [reasoningBlock as any, { type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Create a stream with usage information
+		const streamWithUsage = (async function* () {
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithUsage) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false, // isAutomaticTrigger
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
+			true, // useNativeTools - required for tool_use block preservation
+		)
+
+		// Find the summary message
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+		expect(summaryMessage!.isSummary).toBe(true)
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
+
+		// Content should be [synthetic reasoning, preserved reasoning, text block, tool_use block]
+		// - Synthetic reasoning is always added for DeepSeek-reasoner compatibility
+		// - Preserved reasoning from the condensed assistant message
+		// This order ensures reasoning_content is always present for DeepSeek/Z.ai
+		const content = summaryMessage!.content as Anthropic.Messages.ContentBlockParam[]
+		expect(content).toHaveLength(4)
+
+		// First block should be synthetic reasoning
+		expect((content[0] as any).type).toBe("reasoning")
+		expect((content[0] as any).text).toContain("Condensing conversation context")
+
+		// Second block should be preserved reasoning from the condensed message
+		expect((content[1] as any).type).toBe("reasoning")
+		expect((content[1] as any).text).toBe("Let me think about this step by step...")
+
+		// Third block should be text (the summary)
+		expect(content[2].type).toBe("text")
+		expect((content[2] as Anthropic.Messages.TextBlockParam).text).toBe("Summary of conversation")
+
+		// Fourth block should be tool_use
+		expect(content[3].type).toBe("tool_use")
+		expect((content[3] as Anthropic.Messages.ToolUseBlockParam).id).toBe("toolu_deepseek_reason")
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should include synthetic reasoning block in summary for DeepSeek-reasoner compatibility even without tool_use blocks", async () => {
+		// This test verifies the fix for the DeepSeek-reasoner 400 error:
+		// "Missing `reasoning_content` field in the assistant message at message index 1"
+		// DeepSeek-reasoner requires reasoning_content on ALL assistant messages, not just those with tool_calls.
+		// After condensation, the summary becomes an assistant message that needs reasoning_content.
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Tell me a joke", ts: 1 },
+			{ role: "assistant", content: "Why did the programmer quit?", ts: 2 },
+			{ role: "user", content: "I don't know, why?", ts: 3 },
+			{ role: "assistant", content: "He didn't get arrays!", ts: 4 },
+			{ role: "user", content: "Another one please", ts: 5 },
+			{ role: "assistant", content: "Why do programmers prefer dark mode?", ts: 6 },
+			{ role: "user", content: "Why?", ts: 7 },
+		]
+
+		// Create a stream with usage information (no tool calls in this conversation)
+		const streamWithUsage = (async function* () {
+			yield { type: "text" as const, text: "Summary: User requested jokes." }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithUsage) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false, // isAutomaticTrigger
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
+			false, // useNativeTools - not using tools in this test
+		)
+
+		// Find the summary message
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+		expect(summaryMessage!.isSummary).toBe(true)
+
+		// CRITICAL: Content must be an array with a synthetic reasoning block
+		// This is required for DeepSeek-reasoner which needs reasoning_content on all assistant messages
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
+		const content = summaryMessage!.content as any[]
+
+		// Should have [synthetic reasoning, text]
+		expect(content).toHaveLength(2)
+		expect(content[0].type).toBe("reasoning")
+		expect(content[0].text).toContain("Condensing conversation context")
+		expect(content[1].type).toBe("text")
+		expect(content[1].text).toBe("Summary: User requested jokes.")
+
+		expect(result.error).toBeUndefined()
 	})
 })
 

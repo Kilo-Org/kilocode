@@ -1,14 +1,73 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
+/**
+ * Options for converting Anthropic messages to OpenAI format.
+ */
+export interface ConvertToOpenAiMessagesOptions {
+	/**
+	 * Optional function to normalize tool call IDs for providers with strict ID requirements.
+	 * When provided, this function will be applied to all tool_use IDs and tool_result tool_use_ids.
+	 * This allows callers to declare provider-specific ID format requirements.
+	 */
+	normalizeToolCallId?: (id: string) => string
+	/**
+	 * If true, merge text content after tool_results into the last tool message
+	 * instead of creating a separate user message. This is critical for providers
+	 * with reasoning/thinking models (like DeepSeek-reasoner, GLM-4.7, etc.) where
+	 * a user message after tool results causes the model to drop all previous
+	 * reasoning_content. Default is false for backward compatibility.
+	 */
+	mergeToolResultText?: boolean
+}
+
 export function convertToOpenAiMessages(
 	anthropicMessages: Anthropic.Messages.MessageParam[],
+	options?: ConvertToOpenAiMessagesOptions,
 ): OpenAI.Chat.ChatCompletionMessageParam[] {
 	const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
 
+	const mapReasoningDetails = (details: unknown): any[] | undefined => {
+		if (!Array.isArray(details)) {
+			return undefined
+		}
+
+		return details.map((detail: any) => {
+			// Strip `id` from openai-responses-v1 blocks because OpenAI's Responses API
+			// requires `store: true` to persist reasoning blocks. Since we manage
+			// conversation state client-side, we don't use `store: true`, and sending
+			// back the `id` field causes a 404 error.
+			if (detail?.format === "openai-responses-v1" && detail?.id) {
+				const { id, ...rest } = detail
+				return rest
+			}
+			return detail
+		})
+	}
+
+	// Use provided normalization function or identity function
+	const normalizeId = options?.normalizeToolCallId ?? ((id: string) => id)
+
 	for (const anthropicMessage of anthropicMessages) {
 		if (typeof anthropicMessage.content === "string") {
-			openAiMessages.push({ role: anthropicMessage.role, content: anthropicMessage.content })
+			// Some upstream transforms (e.g. [`Task.buildCleanConversationHistory()`](src/core/task/Task.ts:4048))
+			// will convert a single text block into a string for compactness.
+			// If a message also contains reasoning_details (Gemini 3 / xAI / o-series, etc.),
+			// we must preserve it here as well.
+			const messageWithDetails = anthropicMessage as any
+			const baseMessage: OpenAI.Chat.ChatCompletionMessageParam & { reasoning_details?: any[] } = {
+				role: anthropicMessage.role,
+				content: anthropicMessage.content,
+			}
+
+			if (anthropicMessage.role === "assistant") {
+				const mapped = mapReasoningDetails(messageWithDetails.reasoning_details)
+				if (mapped) {
+					;(baseMessage as any).reasoning_details = mapped
+				}
+			}
+
+			openAiMessages.push(baseMessage)
 		} else {
 			// image_url.url is base64 encoded image data
 			// ensure it contains the content-type of the image: data:image/png;base64,
@@ -56,7 +115,7 @@ export function convertToOpenAiMessages(
 					}
 					openAiMessages.push({
 						role: "tool",
-						tool_call_id: toolMessage.tool_use_id,
+						tool_call_id: normalizeId(toolMessage.tool_use_id),
 						content: content,
 					})
 				})
@@ -79,25 +138,48 @@ export function convertToOpenAiMessages(
 
 				// Process non-tool messages
 				if (nonToolMessages.length > 0) {
-					openAiMessages.push({
-						role: "user",
-						content: nonToolMessages.map((part) => {
-							if (part.type === "image") {
-								return {
-									type: "image_url",
-									image_url: {
-										// kilocode_change begin support type==url
-										url:
-											part.source.type === "url"
-												? part.source.url
-												: `data:${part.source.media_type};base64,${part.source.data}`,
-										// kilocode_change end
-									},
+					// Check if we should merge text into the last tool message
+					// This is critical for reasoning/thinking models where a user message
+					// after tool results causes the model to drop all previous reasoning_content
+					const hasOnlyTextContent = nonToolMessages.every((part) => part.type === "text")
+					const hasToolMessages = toolMessages.length > 0
+					const shouldMergeIntoToolMessage =
+						options?.mergeToolResultText && hasToolMessages && hasOnlyTextContent
+
+					if (shouldMergeIntoToolMessage) {
+						// Merge text content into the last tool message
+						const lastToolMessage = openAiMessages[
+							openAiMessages.length - 1
+						] as OpenAI.Chat.ChatCompletionToolMessageParam
+						if (lastToolMessage?.role === "tool") {
+							const additionalText = nonToolMessages
+								.map((part) => (part as Anthropic.TextBlockParam).text)
+								.join("\n")
+							lastToolMessage.content = `${lastToolMessage.content}\n\n${additionalText}`
+						}
+					} else {
+						// Standard behavior: add user message with text/image content
+						openAiMessages.push({
+							role: "user",
+							content: nonToolMessages.map((part) => {
+								if (part.type === "image") {
+									return {
+										type: "image_url",
+
+										image_url: {
+											// kilocode_change begin support type==url
+											url:
+												part.source.type === "url"
+													? part.source.url
+													: `data:${part.source.media_type};base64,${part.source.data}`,
+											// kilocode_change end
+										},
+									}
 								}
-							}
-							return { type: "text", text: part.text }
-						}),
-					})
+								return { type: "text", text: part.text }
+							}),
+						})
+					}
 				}
 			} else if (anthropicMessage.role === "assistant") {
 				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
@@ -130,7 +212,7 @@ export function convertToOpenAiMessages(
 
 				// Process tool use messages
 				let tool_calls: OpenAI.Chat.ChatCompletionMessageToolCall[] = toolMessages.map((toolMessage) => ({
-					id: toolMessage.id,
+					id: normalizeId(toolMessage.id),
 					type: "function",
 					function: {
 						name: toolMessage.name,
@@ -139,18 +221,30 @@ export function convertToOpenAiMessages(
 					},
 				}))
 
-				// Check if the message has reasoning_details (used by Gemini 3, etc.)
+				// Check if the message has reasoning_details (used by Gemini 3, xAI, etc.)
 				const messageWithDetails = anthropicMessage as any
-				const baseMessage: OpenAI.Chat.ChatCompletionAssistantMessageParam = {
+
+				// Build message with reasoning_details BEFORE tool_calls to preserve
+				// the order expected by providers like Roo. Property order matters
+				// when sending messages back to some APIs.
+				const baseMessage: OpenAI.Chat.ChatCompletionAssistantMessageParam & {
+					reasoning_details?: any[]
+				} = {
 					role: "assistant",
 					content,
-					// Cannot be an empty array. API expects an array with minimum length 1, and will respond with an error if it's empty
-					tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
 				}
 
-				// Preserve reasoning_details if present (will be processed by provider if needed)
-				if (messageWithDetails.reasoning_details && Array.isArray(messageWithDetails.reasoning_details)) {
-					;(baseMessage as any).reasoning_details = messageWithDetails.reasoning_details
+				// Pass through reasoning_details to preserve the original shape from the API.
+				// The `id` field is stripped from openai-responses-v1 blocks (see mapReasoningDetails).
+				const mapped = mapReasoningDetails(messageWithDetails.reasoning_details)
+				if (mapped) {
+					baseMessage.reasoning_details = mapped
+				}
+
+				// Add tool_calls after reasoning_details
+				// Cannot be an empty array. API expects an array with minimum length 1, and will respond with an error if it's empty
+				if (tool_calls.length > 0) {
+					baseMessage.tool_calls = tool_calls
 				}
 
 				openAiMessages.push(baseMessage)

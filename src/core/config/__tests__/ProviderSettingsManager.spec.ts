@@ -80,6 +80,7 @@ describe("ProviderSettingsManager", () => {
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
+						claudeCodeLegacySettingsMigrated: true,
 					},
 				}),
 			)
@@ -136,6 +137,7 @@ describe("ProviderSettingsManager", () => {
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
 						morphApiKeyMigrated: true,
+						claudeCodeLegacySettingsMigrated: true,
 					},
 				}),
 			)

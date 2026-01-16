@@ -18,12 +18,17 @@
 	},
 	"chooseProvider": "Aby mohl dělat svá kouzla, Kilo Code potřebuje API klíč.",
 	"providerSignup": {
+		"heading": "Vyber svého poskytovatele",
+		"chooseProvider": "Roo potřebuje poskytovatele LLM k fungování. Vyber jeden pro začátek, později můžeš přidat další.",
 		"rooCloudProvider": "Roo Code Cloud Provider",
 		"rooCloudDescription": "Nejjednodušší způsob použití Roo. Kurátorovaná směs bezplatných a placených modelů za nízkou cenu",
 		"learnMore": "dozvědět se více",
 		"useAnotherProvider": "Použít jiného poskytovatele",
 		"useAnotherProviderDescription": "Zadejte API klíč a můžete začít.",
 		"noApiKeys": "Nechceš řešit klíče? Použij Roo Code Cloud Provider.",
+		"backToRoo": "Použít Roo Code Cloud Provider.",
+		"goBack": "Zpět",
+		"finish": "Dokončit",
 		"getStarted": "Začít"
 	},
 	"waitingForCloud": {
@@ -32,6 +37,7 @@
 		"noPrompt": "Pokud se nezobrazí výzva k otevření URL, <clickHere>klikněte zde</clickHere>.",
 		"havingTrouble": "Pokud jste dokončili registraci, ale máte problémy, <clickHere>klikněte zde</clickHere>.",
 		"pasteUrl": "Vložte zpětnou URL z vašeho prohlížeče:",
+		"docsLink": "Nefunguje? <DocsLink>Zkontroluj dokumentaci</DocsLink>.",
 		"invalidURL": "To nevypadá jako platná zpětná URL. Zkopíruj prosím to, co ukazuje Roo Code Cloud ve tvém prohlížeči.",
 		"goBack": "Jít zpět"
 	},

@@ -2,7 +2,7 @@ import { useCallback } from "react"
 import { Checkbox } from "vscrui"
 import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { type ProviderSettings, VERTEX_REGIONS } from "@roo-code/types"
+import { type ProviderSettings, VERTEX_REGIONS, VERTEX_1M_CONTEXT_MODEL_IDS } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
@@ -17,6 +17,13 @@ type VertexProps = {
 
 export const Vertex = ({ apiConfiguration, setApiConfigurationField, simplifySettings }: VertexProps) => {
 	const { t } = useAppTranslation()
+
+	// Check if the selected model supports 1M context (Claude Sonnet 4 / 4.5)
+	const supports1MContextBeta =
+		!!apiConfiguration?.apiModelId &&
+		VERTEX_1M_CONTEXT_MODEL_IDS.includes(
+			apiConfiguration.apiModelId as (typeof VERTEX_1M_CONTEXT_MODEL_IDS)[number],
+		)
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -93,6 +100,22 @@ export const Vertex = ({ apiConfiguration, setApiConfigurationField, simplifySet
 					</SelectContent>
 				</Select>
 			</div>
+
+			{supports1MContextBeta && (
+				<div>
+					<Checkbox
+						data-testid="checkbox-vertex-1m-context"
+						checked={apiConfiguration?.vertex1MContext ?? false}
+						onChange={(checked: boolean) => {
+							setApiConfigurationField("vertex1MContext", checked)
+						}}>
+						{t("settings:providers.vertex1MContextBetaLabel")}
+					</Checkbox>
+					<div className="text-sm text-vscode-descriptionForeground mt-1 ml-6">
+						{t("settings:providers.vertex1MContextBetaDescription")}
+					</div>
+				</div>
+			)}
 
 			{!simplifySettings && apiConfiguration.apiModelId?.startsWith("gemini") && (
 				<div className="mt-6">

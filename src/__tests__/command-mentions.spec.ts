@@ -27,7 +27,7 @@ describe.skip("Command Mentions", () => {
 
 	// Helper function to call parseMentions with required parameters
 	const callParseMentions = async (text: string) => {
-		return await parseMentions(
+		const result = await parseMentions(
 			text,
 			"/test/cwd", // cwd
 			mockUrlContentFetcher, // urlContentFetcher
@@ -38,6 +38,8 @@ describe.skip("Command Mentions", () => {
 			50, // maxDiagnosticMessages
 			undefined, // maxReadFileLine
 		)
+		// Return just the text for backward compatibility with existing tests
+		return result.text
 	}
 
 	describe("parseMentions with command support", () => {

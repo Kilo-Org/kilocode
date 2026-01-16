@@ -75,6 +75,39 @@ function validateRequiredField(provider: ProviderConfig, fieldName: string, erro
  */
 function handleSpecialValidations(provider: ProviderConfig, errors: string[]): void {
 	switch (provider.provider) {
+		case "bedrock": {
+			// Bedrock supports three authentication methods:
+			// 1. API key/token authentication (awsUseApiKey + awsApiKey)
+			// 2. Profile-based credentials (awsUseProfile + awsProfile)
+			// 3. Direct credentials (awsAccessKey + awsSecretKey)
+			const useApiKey = provider.awsUseApiKey as boolean | undefined
+			const apiKey = provider.awsApiKey as string | undefined
+			const useProfile = provider.awsUseProfile as boolean | undefined
+			const profile = provider.awsProfile as string | undefined
+			const accessKey = provider.awsAccessKey as string | undefined
+			const secretKey = provider.awsSecretKey as string | undefined
+
+			const hasDirectCredentials = accessKey && accessKey.length > 0 && secretKey && secretKey.length > 0
+
+			if (useApiKey) {
+				// User explicitly enabled API key auth - require awsApiKey
+				if (!apiKey || apiKey.length === 0) {
+					errors.push("awsApiKey is required when awsUseApiKey is enabled for selected provider")
+				}
+			} else if (useProfile) {
+				// User explicitly enabled profile auth - require awsProfile
+				if (!profile || profile.length === 0) {
+					errors.push("awsProfile is required when awsUseProfile is enabled for selected provider")
+				}
+			} else if (!hasDirectCredentials) {
+				// No auth method configured - require at least one
+				errors.push(
+					"Bedrock authentication required: provide awsAccessKey and awsSecretKey, or enable awsUseApiKey with awsApiKey, or enable awsUseProfile with awsProfile",
+				)
+			}
+			break
+		}
+
 		case "vertex": {
 			// At least one of vertexJsonCredentials or vertexKeyFile must be provided
 			const jsonCreds = provider.vertexJsonCredentials as string | undefined

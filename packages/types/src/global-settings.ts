@@ -79,7 +79,6 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowDelete: z.boolean().optional(), // kilocode_change
 	writeDelayMs: z.number().min(0).optional(),
 	alwaysAllowBrowser: z.boolean().optional(),
-	alwaysApproveResubmit: z.boolean().optional(),
 	requestDelaySeconds: z.number().optional(),
 	alwaysAllowMcp: z.boolean().optional(),
 	alwaysAllowModeSwitch: z.boolean().optional(),
@@ -87,7 +86,6 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowExecute: z.boolean().optional(),
 	alwaysAllowFollowupQuestions: z.boolean().optional(),
 	followupAutoApproveTimeoutMs: z.number().optional(),
-	alwaysAllowUpdateTodoList: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
 	deniedCommands: z.array(z.string()).optional(),
 	commandExecutionTimeout: z.number().optional(),
@@ -178,6 +176,7 @@ export const globalSettingsSchema = z.object({
 	maxOpenTabsContext: z.number().optional(),
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
+	enableSubfolderRules: z.boolean().optional(),
 	maxReadFileLine: z.number().optional(),
 	maxImageFileSize: z.number().optional(),
 	maxTotalImageSize: z.number().optional(),
@@ -349,7 +348,6 @@ export const isGlobalStateKey = (key: string): key is Keys<GlobalState> =>
 // Default settings when running evals (unless overridden).
 export const EVALS_SETTINGS: RooCodeSettings = {
 	apiProvider: "openrouter",
-	openRouterUseMiddleOutTransform: false,
 
 	lastShownAnnouncementId: "jul-09-2025-3-23-0",
 
@@ -364,14 +362,12 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowDelete: true, // kilocode_change
 	writeDelayMs: 1000,
 	alwaysAllowBrowser: true,
-	alwaysApproveResubmit: true,
 	requestDelaySeconds: 10,
 	alwaysAllowMcp: true,
 	alwaysAllowModeSwitch: true,
 	alwaysAllowSubtasks: true,
 	alwaysAllowExecute: true,
 	alwaysAllowFollowupQuestions: true,
-	alwaysAllowUpdateTodoList: true,
 	followupAutoApproveTimeoutMs: 0,
 	allowedCommands: ["*"],
 	commandExecutionTimeout: 20,

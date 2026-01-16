@@ -326,8 +326,8 @@ export class DiffViewProvider {
 			await task.say("user_feedback_diff", JSON.stringify(say))
 		}
 
-		// Check which protocol we're using
-		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info)
+		// Check which protocol we're using - use the task's locked protocol for consistency
+		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info, task.taskToolProtocol)
 		const useNative = isNativeProtocol(toolProtocol)
 
 		// Build notices array

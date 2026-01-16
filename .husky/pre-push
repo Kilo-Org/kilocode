@@ -1,3 +1,11 @@
+#!/usr/bin/env sh
+# Add node_modules/.bin to PATH for local binaries
+# Use git to find the repository root reliably
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$(dirname -- "$0")/../..")"
+if [ -d "$REPO_ROOT/node_modules/.bin" ]; then
+    export PATH="$REPO_ROOT/node_modules/.bin:$PATH"
+fi
+
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
 if [ "$branch" = "main" ]; then

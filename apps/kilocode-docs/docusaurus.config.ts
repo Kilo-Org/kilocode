@@ -120,7 +120,11 @@ const config: Config = {
 					},
 					{
 						to: "/agent-behavior/custom-instructions",
-						from: ["/advanced-usage/custom-instructions", "/features/custom-instructions", "/customization/custom-instructions"],
+						from: [
+							"/advanced-usage/custom-instructions",
+							"/features/custom-instructions",
+							"/customization/custom-instructions",
+						],
 					},
 					{
 						to: "/agent-behavior/custom-modes",
@@ -165,6 +169,11 @@ const config: Config = {
 					{
 						to: "/features/api-configuration-profiles",
 						from: ["/advanced-usage/api-configuration-profiles"],
+					},
+
+					{
+						to: "/slack",
+						from: ["/advanced-usage/slackbot"],
 					},
 
 					// MCP related redirects

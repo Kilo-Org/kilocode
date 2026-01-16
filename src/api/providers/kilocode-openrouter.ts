@@ -20,6 +20,7 @@ import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
+import type { FimHandler } from "./kilocode/FimHandler"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -143,9 +144,13 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		return this.getModel()
 	}
 
-	supportsFim(): boolean {
+	fimSupport(): FimHandler | undefined {
 		const modelId = this.options.kilocodeModel ?? this.defaultModel
-		return modelId.includes("codestral")
+		if (!modelId.includes("codestral")) {
+			return undefined
+		}
+
+		return this
 	}
 
 	async *streamFim(

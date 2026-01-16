@@ -18,6 +18,8 @@
 	},
 	"chooseProvider": "เพื่อทำสิ่งมหัศจรรย์ Kilo Code ต้องการ API key",
 	"providerSignup": {
+		"heading": "เลือกผู้ให้บริการของคุณ",
+		"chooseProvider": "Roo ต้องการผู้ให้บริการ LLM เพื่อทำงาน เลือกหนึ่งรายการเพื่อเริ่มต้น คุณสามารถเพิ่มเติมได้ในภายหลัง",
 		"rooCloudProvider": "Roo Code Cloud Provider",
 		"rooCloudProviderHeading": "ผู้ให้บริการ Roo Code Cloud",
 		"rooCloudProviderBody": "วิธีที่ง่ายที่สุดในการใช้ Roo โมเดลฟรีและแบบเสียค่าใช้จ่ายแบบผสมที่ได้รับการคัดสรรมาในราคาถูก",
@@ -36,7 +38,10 @@
 		"learnMore": "เรียนรู้เพิ่มเติม",
 		"useAnotherProvider": "ใช้ผู้ให้บริการอื่น",
 		"useAnotherProviderDescription": "ป้อน API key และเริ่มใช้งาน",
-		"noApiKeys": "ไม่ต้องการจัดการกับ key หรือไม่? ใช้ Roo Code Cloud Provider",
+		"noApiKeys": "ไม่ต้องการจัดการกับ API key และบัญชีแยกต่างหาก?",
+		"backToRoo": "ใช้ Roo Code Cloud Provider",
+		"goBack": "ย้อนกลับ",
+		"finish": "เสร็จสิ้น",
 		"getStarted": "เริ่มต้นใช้งาน"
 	},
 	"waitingForCloud": {
@@ -45,6 +50,7 @@
 		"noPrompt": "หากคุณไม่ได้รับการแจ้งให้เปิด URL <clickHere>คลิกที่นี่</clickHere>",
 		"havingTrouble": "หากคุณดำเนินการสมัครสมาชิกเสร็จสิ้นแล้วแต่มีปัญหา <clickHere>คลิกที่นี่</clickHere>",
 		"pasteUrl": "วาง URL callback จากเบราว์เซอร์ของคุณ:",
+		"docsLink": "ใช้งานไม่ได้? <DocsLink>ดูเอกสาร</DocsLink>",
 		"invalidURL": "นี่ดูไม่เหมือน callback URL ที่ถูกต้อง โปรดคัดลอกสิ่งที่ Roo Code Cloud แสดงในเบราว์เซอร์ของคุณ",
 		"goBack": "ย้อนกลับ"
 	},

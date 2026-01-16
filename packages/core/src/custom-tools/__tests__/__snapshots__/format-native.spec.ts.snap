@@ -1,0 +1,231 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Native Protocol snapshots > should generate correct native definition for cached tool 1`] = `
+{
+  "function": {
+    "description": "Cached tool",
+    "name": "cached",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object",
+    },
+    "source": undefined,
+    "strict": true,
+  },
+  "type": "function",
+}
+`;
+
+exports[`Native Protocol snapshots > should generate correct native definition for legacy tool (using args) 1`] = `
+{
+  "function": {
+    "description": "Legacy tool using args",
+    "name": "legacy",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "description": "The input string",
+          "type": "string",
+        },
+      },
+      "required": [
+        "input",
+      ],
+      "type": "object",
+    },
+    "source": undefined,
+    "strict": true,
+  },
+  "type": "function",
+}
+`;
+
+exports[`Native Protocol snapshots > should generate correct native definition for mixed export tool 1`] = `
+{
+  "function": {
+    "description": "Valid",
+    "name": "mixed_validTool",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object",
+    },
+    "source": undefined,
+    "strict": true,
+  },
+  "type": "function",
+}
+`;
+
+exports[`Native Protocol snapshots > should generate correct native definition for simple tool 1`] = `
+{
+  "function": {
+    "description": "Simple tool",
+    "name": "simple",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "The input value",
+          "type": "string",
+        },
+      },
+      "required": [
+        "value",
+      ],
+      "type": "object",
+    },
+    "source": undefined,
+    "strict": true,
+  },
+  "type": "function",
+}
+`;
+
+exports[`Native Protocol snapshots > should generate correct native definitions for all fixtures combined 1`] = `
+[
+  {
+    "function": {
+      "description": "Simple tool",
+      "name": "simple",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "description": "The input value",
+            "type": "string",
+          },
+        },
+        "required": [
+          "value",
+        ],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Cached tool",
+      "name": "cached",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Legacy tool using args",
+      "name": "legacy",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "description": "The input string",
+            "type": "string",
+          },
+        },
+        "required": [
+          "input",
+        ],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Tool A",
+      "name": "multi_toolA",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Tool B",
+      "name": "multi_toolB",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Valid",
+      "name": "mixed_validTool",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+]
+`;
+
+exports[`Native Protocol snapshots > should generate correct native definitions for multi export tools 1`] = `
+[
+  {
+    "function": {
+      "description": "Tool A",
+      "name": "multi_toolA",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+  {
+    "function": {
+      "description": "Tool B",
+      "name": "multi_toolB",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object",
+      },
+      "source": undefined,
+      "strict": true,
+    },
+    "type": "function",
+  },
+]
+`;

@@ -11,11 +11,12 @@ interface ExtensionMessageRowProps {
 	message: ExtensionChatMessage
 }
 
-function ErrorFallback({ error }: { error: Error }) {
+function ErrorFallback({ error }: { error: unknown }) {
 	const theme = useTheme()
+	const errorMessage = error instanceof Error ? error.message : String(error)
 	return (
 		<Box width={getBoxWidth(1)} borderColor={theme.semantic.error} borderStyle="round" padding={1} marginY={1}>
-			<Text color={theme.semantic.error}>Error rendering message: {error.message}</Text>
+			<Text color={theme.semantic.error}>Error rendering message: {errorMessage}</Text>
 		</Box>
 	)
 }
@@ -43,5 +44,9 @@ export const ExtensionMessageRow: React.FC<ExtensionMessageRowProps> = ({ messag
 		)
 	}
 
-	return <ErrorBoundary fallbackRender={ErrorFallback}>{content}</ErrorBoundary>
+	return (
+		<ErrorBoundary fallbackRender={ErrorFallback}>
+			<>{content}</>
+		</ErrorBoundary>
+	)
 }

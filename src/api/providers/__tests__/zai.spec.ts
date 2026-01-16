@@ -92,6 +92,22 @@ describe("ZAiHandler", () => {
 			expect(model.info.contextWindow).toBe(200_000)
 		})
 
+		it("should return GLM-4.7 international model with thinking support", () => {
+			const testModelId: InternationalZAiModelId = "glm-4.7"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(internationalZAiModels[testModelId])
+			expect(model.info.contextWindow).toBe(200_000)
+			expect(model.info.supportsReasoningEffort).toEqual(["disable", "medium"])
+			expect(model.info.reasoningEffort).toBe("medium")
+			expect(model.info.preserveReasoning).toBe(true)
+		})
+
 		it("should return GLM-4.5v international model with vision support", () => {
 			const testModelId: InternationalZAiModelId = "glm-4.5v"
 			const handlerWithModel = new ZAiHandler({
@@ -170,6 +186,22 @@ describe("ZAiHandler", () => {
 			expect(model.info.supportsImages).toBe(true)
 			expect(model.info.maxTokens).toBe(16_384)
 			expect(model.info.contextWindow).toBe(131_072)
+		})
+
+		it("should return GLM-4.7 China model with thinking support", () => {
+			const testModelId: MainlandZAiModelId = "glm-4.7"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "china_coding",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(mainlandZAiModels[testModelId])
+			expect(model.info.contextWindow).toBe(204_800)
+			expect(model.info.supportsReasoningEffort).toEqual(["disable", "medium"])
+			expect(model.info.reasoningEffort).toBe("medium")
+			expect(model.info.preserveReasoning).toBe(true)
 		})
 	})
 
@@ -379,6 +411,125 @@ describe("ZAiHandler", () => {
 				}),
 				undefined,
 			)
+		})
+	})
+
+	describe("GLM-4.7 Thinking Mode", () => {
+		it("should enable thinking by default for GLM-4.7 (default reasoningEffort is medium)", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.7",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+				// No reasoningEffort setting - should use model default (medium)
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// For GLM-4.7 with default reasoning (medium), thinking should be enabled
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "glm-4.7",
+					thinking: { type: "enabled" },
+				}),
+			)
+		})
+
+		it("should disable thinking for GLM-4.7 when reasoningEffort is set to disable", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.7",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+				enableReasoningEffort: true,
+				reasoningEffort: "disable",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// For GLM-4.7 with reasoning disabled, thinking should be disabled
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "glm-4.7",
+					thinking: { type: "disabled" },
+				}),
+			)
+		})
+
+		it("should enable thinking for GLM-4.7 when reasoningEffort is set to medium", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.7",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+				enableReasoningEffort: true,
+				reasoningEffort: "medium",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// For GLM-4.7 with reasoning set to medium, thinking should be enabled
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "glm-4.7",
+					thinking: { type: "enabled" },
+				}),
+			)
+		})
+
+		it("should NOT add thinking parameter for non-thinking models like GLM-4.6", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.6",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// For GLM-4.6 (no thinking support), thinking parameter should not be present
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.thinking).toBeUndefined()
 		})
 	})
 })

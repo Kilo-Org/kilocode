@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLO modu - araç işlemleri otomatik olarak onaylanır",
 		"starting": "Başlatılıyor...",
 		"startAriaLabel": "Verilen istemle ajanı başlat",
-		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter",
 		"runModeLocal": "Yerel",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Bulut",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLO modunu değiştir",
 		"renameSession": "Oturumu yeniden adlandır",
 		"clickToRename": "Yeniden adlandırmak için tıkla",
-		"confirmRename": "Yeniden adlandırmayı onayla"
+		"confirmRename": "Yeniden adlandırmayı onayla",
+		"selectModel": "Model seç",
+		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
+		"defaultModel": "Varsayılan model",
+		"loadingModels": "Yükleniyor..."
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

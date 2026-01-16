@@ -6,6 +6,7 @@ import * as readline from "readline"
 import { byLengthAsc, Fzf } from "fzf"
 import { getBinPath } from "../ripgrep"
 import { Package } from "../../shared/package"
+import "../../utils/path" // Import to enable String.prototype.toPosix()
 
 export type FileResult = { path: string; type: "file" | "folder"; label?: string }
 

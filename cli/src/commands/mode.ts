@@ -1,6 +1,7 @@
 import type { ModeConfig } from "../types/messages.js"
 import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
 import { getAllModes } from "../constants/modes/defaults.js"
+import { getSearchedPaths } from "../config/customModes.js"
 
 async function modeAutocompleteProvider(context: ArgumentProviderContext) {
 	const customModes = context.commandContext?.customModes || []
@@ -41,11 +42,23 @@ function showAvailableModes(allModes: ModeConfig[], addMessage: CommandContext["
 	})
 }
 
-function showInvalidModeError(requestedMode: string, availableSlugs: string[], addMessage: CommandContext["addMessage"]) {
+function showInvalidModeError(
+	requestedMode: string,
+	availableSlugs: string[],
+	addMessage: CommandContext["addMessage"],
+) {
+	const searchedPaths = getSearchedPaths()
+	const pathsDetails = searchedPaths
+		.map((searched) => {
+			const status = searched.found ? `found, ${searched.modesCount} mode(s)` : "not found"
+			return `  • ${searched.type === "global" ? "Global" : "Project"}: ${searched.path} (${status})`
+		})
+		.join("\n")
+
 	addMessage({
 		id: Date.now().toString(),
 		type: "error",
-		content: `Invalid mode "${requestedMode}". Available modes: ${availableSlugs.join(", ")}`,
+		content: `Invalid mode "${requestedMode}".\n\nThe CLI searched for custom modes in:\n${pathsDetails}\n\nAvailable modes: ${availableSlugs.join(", ")}`,
 		ts: Date.now(),
 	})
 }

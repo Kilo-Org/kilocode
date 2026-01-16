@@ -1,13 +1,16 @@
+import { parseJSON } from "partial-json"
+
 import { type ToolName, toolNames, type FileEntry } from "@roo-code/types"
+import { customToolRegistry } from "@roo-code/core"
+
 import {
 	type ToolUse,
 	type McpToolUse,
 	type ToolParamName,
-	toolParamNames,
 	type NativeToolArgs,
+	toolParamNames,
 } from "../../shared/tools"
-import { resolveToolAlias } from "../../shared/tool-aliases" // kilocode_change
-import { parseJSON } from "partial-json"
+import { resolveToolAlias } from "../../shared/tool-aliases" // kilocode_change: prevent circular dependency
 import type {
 	ApiStreamToolCallStartChunk,
 	ApiStreamToolCallDeltaChunk,
@@ -525,6 +528,37 @@ export class NativeToolCallParser {
 				}
 				break
 
+			case "edit_file":
+				if (
+					partialArgs.file_path !== undefined ||
+					partialArgs.old_string !== undefined ||
+					partialArgs.new_string !== undefined
+				) {
+					nativeArgs = {
+						file_path: partialArgs.file_path,
+						old_string: partialArgs.old_string,
+						new_string: partialArgs.new_string,
+						expected_replacements: partialArgs.expected_replacements,
+					}
+				}
+				break
+
+			// kilocode_change start: Fast Apply
+			case "fast_edit_file":
+				if (
+					partialArgs.target_file !== undefined ||
+					partialArgs.instructions !== undefined ||
+					partialArgs.code_edit !== undefined
+				) {
+					nativeArgs = {
+						target_file: partialArgs.target_file,
+						instructions: partialArgs.instructions,
+						code_edit: partialArgs.code_edit,
+					}
+				}
+				break
+			// kilocode_change end
+
 			default:
 				break
 		}
@@ -558,15 +592,16 @@ export class NativeToolCallParser {
 	}): ToolUse<TName> | McpToolUse | null {
 		// Check if this is a dynamic MCP tool (mcp--serverName--toolName)
 		const mcpPrefix = MCP_TOOL_PREFIX + MCP_TOOL_SEPARATOR
+
 		if (typeof toolCall.name === "string" && toolCall.name.startsWith(mcpPrefix)) {
 			return this.parseDynamicMcpTool(toolCall)
 		}
 
-		// Resolve tool alias to canonical name (e.g., "edit_file" -> "apply_diff", "temp_edit_file" -> "search_and_replace")
+		// Resolve tool alias to canonical name
 		const resolvedName = resolveToolAlias(toolCall.name as string) as TName
 
-		// Validate tool name (after alias resolution)
-		if (!toolNames.includes(resolvedName as ToolName)) {
+		// Validate tool name (after alias resolution).
+		if (!toolNames.includes(resolvedName as ToolName) && !customToolRegistry.has(resolvedName)) {
 			console.error(`Invalid tool name: ${toolCall.name} (resolved: ${resolvedName})`)
 			console.error(`Valid tool names:`, toolNames)
 			return null
@@ -574,7 +609,7 @@ export class NativeToolCallParser {
 
 		try {
 			// Parse the arguments JSON string
-			const args = JSON.parse(toolCall.arguments)
+			const args = toolCall.arguments === "" ? {} : JSON.parse(toolCall.arguments)
 
 			// Build legacy params object for backward compatibility with XML protocol and UI.
 			// Native execution path uses nativeArgs instead, which has proper typing.
@@ -589,7 +624,7 @@ export class NativeToolCallParser {
 				}
 
 				// Validate parameter name
-				if (!toolParamNames.includes(key as ToolParamName)) {
+				if (!toolParamNames.includes(key as ToolParamName) && !customToolRegistry.has(resolvedName)) {
 					console.warn(`Unknown parameter '${key}' for tool '${resolvedName}'`)
 					console.warn(`Valid param names:`, toolParamNames)
 					continue
@@ -633,8 +668,8 @@ export class NativeToolCallParser {
 					break
 
 				// kilocode_change start
+				// case "edit_file":
 				case "condense":
-				case "edit_file":
 				case "delete_file":
 				case "new_rule":
 				case "report_bug":
@@ -794,7 +829,44 @@ export class NativeToolCallParser {
 					}
 					break
 
+				case "edit_file":
+					if (
+						args.file_path !== undefined &&
+						args.old_string !== undefined &&
+						args.new_string !== undefined
+					) {
+						nativeArgs = {
+							file_path: args.file_path,
+							old_string: args.old_string,
+							new_string: args.new_string,
+							expected_replacements: args.expected_replacements,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				// kilocode_change start: Fast Apply
+				case "fast_edit_file":
+					if (
+						args.target_file !== undefined &&
+						args.instructions !== undefined &&
+						args.code_edit !== undefined
+					) {
+						nativeArgs = {
+							target_file: args.target_file,
+							instructions: args.instructions,
+							code_edit: args.code_edit,
+						} as NativeArgsFor<TName>
+					}
+					break
+				// kilocode_change end
+
 				default:
+					if (customToolRegistry.has(resolvedName)) {
+						nativeArgs = args as NativeArgsFor<TName>
+					} else {
+						console.error(`Unhandled tool: ${resolvedName}`)
+					}
+
 					break
 			}
 

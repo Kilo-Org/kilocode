@@ -146,9 +146,11 @@
 		"streaming": "Sol·licitud API...",
 		"cancelled": "Sol·licitud API cancel·lada",
 		"streamingFailed": "Transmissió API ha fallat",
-		"errorTitle": "Error API {{code}}",
+		"rateLimitWait": "Limitació de taxa",
+		"errorTitle": "Error de proveïdor {{code}}",
 		"errorMessage": {
 			"docs": "Documentació",
+			"goToSettings": "Configuració",
 			"400": "El proveïdor no ha pogut processar la sol·licitud tal com es va fer. Interromp la tasca i prova una abordatge diferent.",
 			"401": "No s'ha pogut autenticar amb el proveïdor. Si us plau, verifica la teva configuració de clau API.",
 			"402": "Sembla que se t'han acabat els fons/crèdits al teu compte. Vés al teu proveïdor i afegeix més per continuar.",
@@ -156,7 +158,8 @@
 			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
 			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
 			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Kilo.",
-			"connection": "Error de connexió. Assegureu-vos que teniu una connexió a Internet funcional."
+			"connection": "Error de connexió. Assegureu-vos que teniu una connexió a Internet funcional.",
+			"claudeCodeNotAuthenticated": "Has d'iniciar sessió per utilitzar Claude Code. Vés a Configuració i fes clic a \"Iniciar sessió a Claude Code\" per autenticar-te."
 		}
 	},
 	"checkpoint": {
@@ -270,10 +273,19 @@
 		"hasQuestion": "Kilo Code té una pregunta"
 	},
 	"taskCompleted": "Tasca completada",
+	"modelResponseIncomplete": "Resposta del model incompleta",
+	"modelResponseErrors": {
+		"noToolsUsed": "El model no ha utilitzat cap eina en la seva resposta. Això sol passar quan el model només proporciona text/raonament sense cridar les eines necessàries per completar la tasca.",
+		"noToolsUsedDetails": "El model ha proporcionat text/raonament però no ha cridat cap de les eines necessàries. Això sol indicar que el model ha entès malament la tasca o té dificultats per determinar quina eina utilitzar. El model ha estat sol·licitat automàticament per tornar-ho a provar amb l'ús adequat de les eines.",
+		"noAssistantMessages": "El model no ha proporcionat cap contingut de resposta. Això pot indicar un problema amb l'API o la sortida del model.",
+		"noAssistantMessagesDetails": "El model de llenguatge ha retornat una resposta buida sense text ni crides a eines. Això pot passar a causa de problemes d'API, limitació de velocitat o problemes específics del model. El model ha estat sol·licitat automàticament per tornar-ho a provar."
+	},
 	"errorDetails": {
+		"link": "Details",
 		"title": "Detalls de l'error",
 		"copyToClipboard": "Copiar al porta-retalls",
-		"copied": "Copiat!"
+		"copied": "Copiat!",
+		"diagnostics": "Obtenir informació d'error detallada"
 	},
 	"powershell": {
 		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
@@ -330,9 +342,9 @@
 			"goToSettingsButton": "Anar a Configuració"
 		},
 		"release": {
-			"heading": "Novetats:",
-			"contextRewind": "La condensació millorada del context et permet restaurar el context anterior complet quan rebobines a un punt de control",
-			"rooProvider": "El proveïdor de Roo Code Cloud ara conserva el contingut del raonament i utilitza per defecte les eines natives per a un millor rendiment"
+			"heading": "Què hi ha de nou:",
+			"skills": "Roo ara suporta <skillsLink>Agent Skills</skillsLink> - paquets reutilitzables de prompts, ferramentes i recursos per estendre les capacitats de Roo.",
+			"nativeToolCalling": "L'invocació nativa d'eines és ara obligatòria per a totes les noves tasques. <blogLink>Més informació</blogLink> sobre la motivació i què fer si trobes problemes."
 		},
 		"cloudAgents": {
 			"heading": "Novetats al núvol:",

@@ -6,13 +6,19 @@
 import { useSetAtom, useAtomValue } from "jotai"
 import { useCallback, useState } from "react"
 import { addMessageAtom } from "../atoms/ui.js"
-import { imageReferencesAtom, clearImageReferencesAtom } from "../atoms/keyboard.js"
+import {
+	imageReferencesAtom,
+	clearImageReferencesAtom,
+	pastedTextReferencesAtom,
+	clearPastedTextReferencesAtom,
+} from "../atoms/keyboard.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
 import { processMessageImages } from "../../media/processMessageImages.js"
+import { expandPastedTextReferences } from "../../media/processPastedText.js"
 
 /**
  * Options for useMessageHandler hook
@@ -62,6 +68,8 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const addMessage = useSetAtom(addMessageAtom)
 	const imageReferences = useAtomValue(imageReferencesAtom)
 	const clearImageReferences = useSetAtom(clearImageReferencesAtom)
+	const pastedTextReferences = useAtomValue(pastedTextReferencesAtom)
+	const clearPastedTextReferences = useSetAtom(clearPastedTextReferencesAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
 
@@ -75,11 +83,15 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 			setIsSending(true)
 
 			try {
+				// Expand [Pasted text #N +X lines] references with full content
+				const pastedTextRefsObject = Object.fromEntries(pastedTextReferences)
+				const expandedText = expandPastedTextReferences(trimmedText, pastedTextRefsObject)
+
 				// Convert image references Map to object for processMessageImages
 				const imageRefsObject = Object.fromEntries(imageReferences)
 
 				// Process any @path image mentions and [Image #N] references in the message
-				const processed = await processMessageImages(trimmedText, imageRefsObject)
+				const processed = await processMessageImages(expandedText, imageRefsObject)
 
 				// Show any image loading errors to the user
 				if (processed.errors.length > 0) {
@@ -108,9 +120,12 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 					...(processed.hasImages && { images: processed.images }),
 				}
 
-				// Clear image references after processing
+				// Clear image and pasted text references after processing
 				if (imageReferences.size > 0) {
 					clearImageReferences()
+				}
+				if (pastedTextReferences.size > 0) {
+					clearPastedTextReferences()
 				}
 
 				// Send to extension - either as response to active task or as new task
@@ -137,7 +152,17 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				setIsSending(false)
 			}
 		},
-		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask, imageReferences, clearImageReferences],
+		[
+			addMessage,
+			ciMode,
+			sendMessage,
+			sendAskResponse,
+			hasActiveTask,
+			imageReferences,
+			clearImageReferences,
+			pastedTextReferences,
+			clearPastedTextReferences,
+		],
 	)
 
 	return {

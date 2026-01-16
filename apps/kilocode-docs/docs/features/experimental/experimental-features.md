@@ -42,6 +42,6 @@ When enabled, Kilo Code will remind the model about the details of its current m
 
 ## Providing Feedback
 
-If you encounter any issues with experimental features, or if you have suggestions for improvements, please report them on the [Kilo Code Code GitHub Issues page](https://github.com/Kilo-Org/kilocode) or join our [Discord server](https://kilo.love/discord) where we have channels dedciated to many experimental features.
+If you encounter any issues with experimental features, or if you have suggestions for improvements, please report them on the [Kilo Code Code GitHub Issues page](https://github.com/Kilo-Org/kilocode) or join our [Discord server](https://kilo.ai/discord) where we have channels dedciated to many experimental features.
 
 Your feedback is valuable and helps us improve Kilo Code!

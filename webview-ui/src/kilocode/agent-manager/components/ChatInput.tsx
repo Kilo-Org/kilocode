@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useMemo } from "react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
 import { GitBranch, GitPullRequest, SendHorizontal, Square } from "lucide-react"
+import { modelsConfigAtom } from "../state/atoms/models"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
+import { SelectDropdown, type DropdownOption } from "../../../components/ui/select-dropdown"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
@@ -21,6 +23,7 @@ interface ChatInputProps {
 	worktreeBranchName?: string
 	parentBranch?: string
 	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
+	modelId?: string // Model ID used for this session (displayed read-only)
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -33,13 +36,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	worktreeBranchName,
 	parentBranch,
 	sessionStatus,
+	modelId,
 }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
+	const modelsConfig = useAtomValue(modelsConfigAtom)
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const addToQueue = useSetAtom(addToQueueAtom)
+
+	// Build model options for the disabled dropdown (consistent with NewAgentForm)
+	const modelOptions: DropdownOption[] = useMemo(() => {
+		if (!modelsConfig) return []
+		return modelsConfig.models.map((model) => ({
+			value: model.id,
+			label: model.displayName || model.id,
+			description: model.contextWindow ? `${Math.floor(model.contextWindow / 1000)}K context` : undefined,
+		}))
+	}, [modelsConfig])
 
 	// Auto-focus the textarea when the session changes (user selects a different session)
 	useEffect(() => {
@@ -240,7 +255,21 @@ If any step fails, ask the user for help.`
 					/>
 
 					{/* Floating Actions */}
-					<div className="absolute bottom-2 right-2 z-30 flex gap-1">
+					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-1">
+						{/* Model indicator (read-only) - disabled SelectDropdown for visual consistency */}
+						{modelId && modelOptions.length > 0 && (
+							<div className="am-model-selector mr-1">
+								<SelectDropdown
+									value={modelId}
+									options={modelOptions}
+									onChange={() => {}} // No-op since disabled
+									disabled={true}
+									triggerClassName="am-model-selector-trigger"
+									contentClassName="am-model-selector-content"
+									align="end"
+								/>
+							</div>
+						)}
 						{showFinishToBranch && (
 							<StandardTooltip
 								content={

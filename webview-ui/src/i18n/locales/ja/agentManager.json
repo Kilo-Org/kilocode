@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLOモード - ツール操作は自動承認されます",
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
-		"keyboardHint": "Enterで開始、Shift+Enterで改行",
 		"runModeLocal": "ローカル",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "クラウド",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLOモードを切り替え",
 		"renameSession": "セッション名を変更",
 		"clickToRename": "クリックして名前を変更",
-		"confirmRename": "名前変更を確認"
+		"confirmRename": "名前変更を確認",
+		"selectModel": "モデルを選択",
+		"modelTooltip": "このセッションで使用するAIモデルを選択",
+		"defaultModel": "デフォルトモデル",
+		"loadingModels": "読み込み中..."
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

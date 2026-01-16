@@ -29,7 +29,6 @@
 		"autoModeWarning": "Режим YOLO - операції з інструментами схвалюються автоматично",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустити агента з наданим промптом",
-		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка",
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Хмара",
@@ -64,7 +63,11 @@
 		"toggleYoloMode": "Перемкнути режим YOLO",
 		"renameSession": "Перейменувати сесію",
 		"clickToRename": "Натисніть для перейменування",
-		"confirmRename": "Підтвердити перейменування"
+		"confirmRename": "Підтвердити перейменування",
+		"selectModel": "Вибрати модель",
+		"modelTooltip": "Вибери, яку AI-модель використовувати для цієї сесії",
+		"defaultModel": "Модель за замовчуванням",
+		"loadingModels": "Завантаження..."
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",

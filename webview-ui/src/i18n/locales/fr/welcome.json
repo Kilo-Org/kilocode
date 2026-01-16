@@ -18,20 +18,25 @@
 	},
 	"chooseProvider": "Pour faire sa magie, Kilo Code a besoin d'une clé API.",
 	"providerSignup": {
+		"heading": "Choisis ton fournisseur",
+		"chooseProvider": "Roo a besoin d'un fournisseur LLM pour fonctionner. Choisis-en un pour commencer, tu peux en ajouter d'autres plus tard.",
 		"rooCloudProvider": "Fournisseur Roo Code Cloud",
-		"rooCloudDescription": "La façon la plus simple d'utiliser Roo. Un mélange sélectionné de modèles gratuits et payants à faible coût",
-		"learnMore": "en savoir plus",
-		"useAnotherProvider": "Utiliser un autre fournisseur",
+		"rooCloudDescription": "Le moyen le plus simple de commencer est le Fournisseur Roo Code Cloud : un mélange sélectionné de modèles gratuits et payants à faible coût.",
+		"learnMore": "En savoir plus",
+		"useAnotherProvider": "Fournisseur tiers",
 		"useAnotherProviderDescription": "Entre une clé API et commence.",
-		"noApiKeys": "Tu ne veux pas te soucier des clés? Opte pour le Fournisseur Roo Code Cloud.",
-		"getStarted": "Commencer"
+		"noApiKeys": "Tu ne veux pas gérer les clés API et les comptes séparés?",
+		"backToRoo": "Opte pour le Fournisseur Roo Code Cloud.",
+		"goBack": "Retour",
+		"finish": "Terminer"
 	},
 	"waitingForCloud": {
-		"heading": "Nous te menons à Roo Code Cloud...",
+		"heading": "Connexion à Roo Code Cloud...",
 		"description": "Termine l'inscription dans ton navigateur et tu reviendras ici automatiquement.",
 		"noPrompt": "Si tu n'es pas invité à ouvrir une URL, <clickHere>clique ici</clickHere>.",
 		"havingTrouble": "Si tu as terminé l'inscription mais que tu rencontres des problèmes, <clickHere>clique ici</clickHere>.",
 		"pasteUrl": "Colle l'URL de rappel depuis ton navigateur :",
+		"docsLink": "Ça ne fonctionne pas? <DocsLink>Consulte la documentation</DocsLink>.",
 		"invalidURL": "Cela ne ressemble pas à une URL de rappel valide. Copie ce que Roo Code Cloud affiche dans ton navigateur.",
 		"goBack": "Retour"
 	},

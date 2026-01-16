@@ -29,7 +29,6 @@
 		"autoModeWarning": "YOLO मोड - टूल ऑपरेशन स्वचालित रूप से स्वीकृत हैं",
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
-		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
 		"runModeLocal": "स्थानीय",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "क्लाउड",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "YOLO मोड टॉगल करें",
 		"renameSession": "सत्र का नाम बदलें",
 		"clickToRename": "नाम बदलने के लिए क्लिक करें",
-		"confirmRename": "नाम बदलने की पुष्टि करें"
+		"confirmRename": "नाम बदलने की पुष्टि करें",
+		"selectModel": "मॉडल चुनें",
+		"modelTooltip": "इस सत्र के लिए कौन सा AI मॉडल उपयोग करना है चुनें",
+		"defaultModel": "डिफ़ॉल्ट मॉडल",
+		"loadingModels": "लोड हो रहा है..."
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",

@@ -75,10 +75,10 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 					<Text color={theme.semantic.warning}>Press {exitModifierKey}+C again to exit.</Text>
 				) : (
 					<>
-							{isCancelling && <ThinkingAnimation text="Cancelling..." />}
-							{isStreaming && !isCancelling && <ThinkingAnimation />}
-							{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
-						</>
+						{isCancelling && <ThinkingAnimation text="Cancelling..." />}
+						{isStreaming && !isCancelling && <ThinkingAnimation />}
+						{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
+					</>
 				)}
 			</Box>
 

@@ -29,7 +29,6 @@
 		"autoModeWarning": "Mode YOLO - les operacions d'eines s'aproven automàticament",
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
-		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Núvol",
@@ -62,7 +61,11 @@
 		"toggleYoloMode": "Alternar mode YOLO",
 		"renameSession": "Canviar el nom de la sessió",
 		"clickToRename": "Fes clic per canviar el nom",
-		"confirmRename": "Confirmar canvi de nom"
+		"confirmRename": "Confirmar canvi de nom",
+		"selectModel": "Selecciona model",
+		"modelTooltip": "Tria quin model d'IA utilitzar per a aquesta sessió",
+		"defaultModel": "Model per defecte",
+		"loadingModels": "Carregant..."
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",

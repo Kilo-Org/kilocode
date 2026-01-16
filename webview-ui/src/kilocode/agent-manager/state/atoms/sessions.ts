@@ -27,6 +27,7 @@ export interface AgentSession {
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
 	yoloMode?: boolean // True if session was started with --yolo flag (auto-approve operations)
+	model?: string // Model ID used for this session
 }
 
 /**

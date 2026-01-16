@@ -413,12 +413,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [intendedCursorPosition, setIntendedCursorPosition] = useState<number | null>(null)
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
-		// const [isFocused, setIsFocused] = useState(false) // kilocode_change - not needed
+		const [isFocused, setIsFocused] = useState(false)
 		// kilocode_change start: FIM autocomplete ghost text
 		const {
 			ghostText,
 			handleKeyDown: handleGhostTextKeyDown,
 			handleInputChange: handleGhostTextInputChange,
+			handleFocus: handleGhostTextFocus,
+			handleBlur: handleGhostTextBlur,
+			handleSelect: handleGhostTextSelect,
+			clearGhostText,
 		} = useChatGhostText({
 			textAreaRef,
 			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
@@ -1012,8 +1016,18 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowSlashCommandsMenu(false)
 			} // kilocode_change
 
-			// setIsFocused(false) // kilocode_change - not needed
+			setIsFocused(false)
 		}, [isMouseDownOnMenu])
+
+		// kilocode_change start: FIM autocomplete - track focus for ghost text
+		useEffect(() => {
+			if (isFocused) {
+				handleGhostTextFocus()
+			} else {
+				handleGhostTextBlur()
+			}
+		}, [isFocused, handleGhostTextFocus, handleGhostTextBlur])
+		// kilocode_change end: FIM autocomplete
 
 		const handlePaste = useCallback(
 			async (e: React.ClipboardEvent) => {
@@ -1025,6 +1039,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const urlRegex = /^\S+:\/\/\S+$/
 				if (urlRegex.test(pastedText.trim())) {
 					e.preventDefault()
+					clearGhostText() // kilocode_change: Clear ghost text on paste of URL as well
 					const trimmedUrl = pastedText.trim()
 					const newValue =
 						inputValue.slice(0, cursorPosition) + trimmedUrl + " " + inputValue.slice(cursorPosition)
@@ -1109,6 +1124,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				t,
 				selectedImages.length,
 				showImageWarning, // kilocode_change
+				clearGhostText, // kilocode_change: Clear ghost text on paste
 			],
 		)
 
@@ -1207,7 +1223,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			if (textAreaRef.current) {
 				setCursorPosition(textAreaRef.current.selectionStart)
 			}
-		}, [])
+			handleGhostTextSelect() // kilocode_change: Clear ghost text if cursor moved away from end
+		}, [handleGhostTextSelect])
 
 		const handleKeyUp = useCallback(
 			(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1548,7 +1565,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							updateHighlights()
 						}
 					}}
-					// onFocus={() => setIsFocused(true)} // kilocode_change - not needed
+					onFocus={() => setIsFocused(true)}
 					onKeyDown={(e) => {
 						// Handle ESC to cancel in edit mode
 						if (isEditMode && e.key === "Escape" && !e.nativeEvent?.isComposing) {

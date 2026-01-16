@@ -30,6 +30,11 @@ describe("Slash Command Matching", () => {
 			const results = getMatchingSlashCommands("")
 			expect(results.length).toBeGreaterThan(0)
 		})
+
+		it("should include condense aliases in results", () => {
+			const results = getMatchingSlashCommands("cond")
+			expect(results.some((r) => r.name === "condense")).toBe(true)
+		})
 	})
 
 	describe("validateSlashCommand - case insensitivity", () => {
@@ -37,6 +42,12 @@ describe("Slash Command Matching", () => {
 			expect(validateSlashCommand("newtask")).toBe("full")
 			expect(validateSlashCommand("NEWTASK")).toBe("full")
 			expect(validateSlashCommand("NewTask")).toBe("full")
+		})
+
+		it("should validate condense aliases", () => {
+			expect(validateSlashCommand("smol")).toBe("full")
+			expect(validateSlashCommand("condense")).toBe("full")
+			expect(validateSlashCommand("compact")).toBe("full")
 		})
 
 		it("should validate partial matches regardless of case", () => {

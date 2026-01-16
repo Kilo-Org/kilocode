@@ -1,3 +1,14 @@
+// Mock TelemetryService before other imports
+const mockCaptureException = vi.fn()
+
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: (...args: unknown[]) => mockCaptureException(...args),
+		},
+	},
+}))
+
 // Mock AWS SDK credential providers
 vi.mock("@aws-sdk/credential-providers", () => {
 	const mockFromIni = vi.fn().mockReturnValue({
@@ -24,8 +35,13 @@ vi.mock("@aws-sdk/client-bedrock-runtime", () => {
 })
 
 import { AwsBedrockHandler } from "../bedrock"
-import { ConverseStreamCommand, BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime"
-import { BEDROCK_1M_CONTEXT_MODEL_IDS } from "@roo-code/types"
+import { ConverseStreamCommand, BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime"
+import {
+	BEDROCK_1M_CONTEXT_MODEL_IDS,
+	BEDROCK_SERVICE_TIER_MODEL_IDS,
+	bedrockModels,
+	ApiProviderError,
+} from "@roo-code/types"
 
 import type { Anthropic } from "@anthropic-ai/sdk"
 
@@ -358,6 +374,103 @@ describe("AwsBedrockHandler", () => {
 
 				expect(result.crossRegionInference).toBe(false)
 				expect(result.modelId).toBe("ap.anthropic.claude-3-5-sonnet-20241022-v2:0") // Should be preserved as-is
+			})
+		})
+
+		describe("AWS GovCloud and China partition support", () => {
+			it("should parse AWS GovCloud ARNs (arn:aws-us-gov:bedrock:...)", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: "test",
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-gov-west-1",
+				})
+
+				const parseArn = (handler as any).parseArn.bind(handler)
+
+				const result = parseArn(
+					"arn:aws-us-gov:bedrock:us-gov-west-1:123456789012:inference-profile/us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0",
+				)
+
+				expect(result.isValid).toBe(true)
+				expect(result.region).toBe("us-gov-west-1")
+				expect(result.modelType).toBe("inference-profile")
+			})
+
+			it("should parse AWS China ARNs (arn:aws-cn:bedrock:...)", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: "test",
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "cn-north-1",
+				})
+
+				const parseArn = (handler as any).parseArn.bind(handler)
+
+				const result = parseArn(
+					"arn:aws-cn:bedrock:cn-north-1:123456789012:inference-profile/anthropic.claude-3-sonnet-20240229-v1:0",
+				)
+
+				expect(result.isValid).toBe(true)
+				expect(result.region).toBe("cn-north-1")
+				expect(result.modelType).toBe("inference-profile")
+			})
+
+			it("should accept GovCloud custom ARN in handler constructor", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsAccessKey: "test-access-key",
+					awsSecretKey: "test-secret-key",
+					awsRegion: "us-gov-west-1",
+					awsCustomArn:
+						"arn:aws-us-gov:bedrock:us-gov-west-1:123456789012:inference-profile/us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0",
+				})
+
+				// Should not throw and should return valid model info
+				const modelInfo = handler.getModel()
+				expect(modelInfo.id).toBe(
+					"arn:aws-us-gov:bedrock:us-gov-west-1:123456789012:inference-profile/us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0",
+				)
+				expect(modelInfo.info).toBeDefined()
+			})
+
+			it("should accept China region custom ARN in handler constructor", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsAccessKey: "test-access-key",
+					awsSecretKey: "test-secret-key",
+					awsRegion: "cn-north-1",
+					awsCustomArn:
+						"arn:aws-cn:bedrock:cn-north-1:123456789012:inference-profile/anthropic.claude-3-sonnet-20240229-v1:0",
+				})
+
+				// Should not throw and should return valid model info
+				const modelInfo = handler.getModel()
+				expect(modelInfo.id).toBe(
+					"arn:aws-cn:bedrock:cn-north-1:123456789012:inference-profile/anthropic.claude-3-sonnet-20240229-v1:0",
+				)
+				expect(modelInfo.info).toBeDefined()
+			})
+
+			it("should detect region mismatch in GovCloud ARN", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: "test",
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+				})
+
+				const parseArn = (handler as any).parseArn.bind(handler)
+
+				// Region in ARN (us-gov-west-1) doesn't match provided region (us-east-1)
+				const result = parseArn(
+					"arn:aws-us-gov:bedrock:us-gov-west-1:123456789012:inference-profile/us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0",
+					"us-east-1",
+				)
+
+				expect(result.isValid).toBe(true)
+				expect(result.region).toBe("us-gov-west-1")
+				expect(result.errorMessage).toContain("Region mismatch")
 			})
 		})
 	})
@@ -753,6 +866,382 @@ describe("AwsBedrockHandler", () => {
 			expect(commandArg.additionalModelRequestFields.anthropic_version).toBeUndefined()
 			// Model ID should have cross-region prefix
 			expect(commandArg.modelId).toBe(`us.${BEDROCK_1M_CONTEXT_MODEL_IDS[0]}`)
+		})
+	})
+
+	describe("service tier feature", () => {
+		const supportedModelId = BEDROCK_SERVICE_TIER_MODEL_IDS[0] // amazon.nova-lite-v1:0
+
+		beforeEach(() => {
+			mockConverseStreamCommand.mockReset()
+		})
+
+		describe("pricing multipliers in getModel()", () => {
+			it("should apply FLEX tier pricing with 50% discount", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "FLEX",
+				})
+
+				const model = handler.getModel()
+				const baseModel = bedrockModels[supportedModelId as keyof typeof bedrockModels] as {
+					inputPrice: number
+					outputPrice: number
+				}
+
+				// FLEX tier should apply 0.5 multiplier (50% discount)
+				expect(model.info.inputPrice).toBe(baseModel.inputPrice * 0.5)
+				expect(model.info.outputPrice).toBe(baseModel.outputPrice * 0.5)
+			})
+
+			it("should apply PRIORITY tier pricing with 75% premium", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "PRIORITY",
+				})
+
+				const model = handler.getModel()
+				const baseModel = bedrockModels[supportedModelId as keyof typeof bedrockModels] as {
+					inputPrice: number
+					outputPrice: number
+				}
+
+				// PRIORITY tier should apply 1.75 multiplier (75% premium)
+				expect(model.info.inputPrice).toBe(baseModel.inputPrice * 1.75)
+				expect(model.info.outputPrice).toBe(baseModel.outputPrice * 1.75)
+			})
+
+			it("should not modify pricing for STANDARD tier", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "STANDARD",
+				})
+
+				const model = handler.getModel()
+				const baseModel = bedrockModels[supportedModelId as keyof typeof bedrockModels] as {
+					inputPrice: number
+					outputPrice: number
+				}
+
+				// STANDARD tier should not modify pricing (1.0 multiplier)
+				expect(model.info.inputPrice).toBe(baseModel.inputPrice)
+				expect(model.info.outputPrice).toBe(baseModel.outputPrice)
+			})
+
+			it("should not apply service tier pricing for unsupported models", () => {
+				const unsupportedModelId = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+				const handler = new AwsBedrockHandler({
+					apiModelId: unsupportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "FLEX", // Try to apply FLEX tier
+				})
+
+				const model = handler.getModel()
+				const baseModel = bedrockModels[unsupportedModelId as keyof typeof bedrockModels] as {
+					inputPrice: number
+					outputPrice: number
+				}
+
+				// Pricing should remain unchanged for unsupported models
+				expect(model.info.inputPrice).toBe(baseModel.inputPrice)
+				expect(model.info.outputPrice).toBe(baseModel.outputPrice)
+			})
+		})
+
+		describe("service_tier parameter in API requests", () => {
+			it("should include service_tier as top-level parameter for supported models", async () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "PRIORITY",
+				})
+
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{
+						role: "user",
+						content: "Test message",
+					},
+				]
+
+				const generator = handler.createMessage("", messages)
+				await generator.next() // Start the generator
+
+				// Verify the command was created with service_tier at top level
+				// Per AWS documentation, service_tier must be a top-level parameter, not inside additionalModelRequestFields
+				// https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
+				expect(mockConverseStreamCommand).toHaveBeenCalled()
+				const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
+
+				// service_tier should be at the top level of the payload
+				expect(commandArg.service_tier).toBe("PRIORITY")
+				// service_tier should NOT be in additionalModelRequestFields
+				if (commandArg.additionalModelRequestFields) {
+					expect(commandArg.additionalModelRequestFields.service_tier).toBeUndefined()
+				}
+			})
+
+			it("should include service_tier FLEX as top-level parameter", async () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "FLEX",
+				})
+
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{
+						role: "user",
+						content: "Test message",
+					},
+				]
+
+				const generator = handler.createMessage("", messages)
+				await generator.next() // Start the generator
+
+				expect(mockConverseStreamCommand).toHaveBeenCalled()
+				const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
+
+				// service_tier should be at the top level of the payload
+				expect(commandArg.service_tier).toBe("FLEX")
+				// service_tier should NOT be in additionalModelRequestFields
+				if (commandArg.additionalModelRequestFields) {
+					expect(commandArg.additionalModelRequestFields.service_tier).toBeUndefined()
+				}
+			})
+
+			it("should NOT include service_tier for unsupported models", async () => {
+				const unsupportedModelId = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+				const handler = new AwsBedrockHandler({
+					apiModelId: unsupportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsBedrockServiceTier: "PRIORITY", // Try to apply PRIORITY tier
+				})
+
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{
+						role: "user",
+						content: "Test message",
+					},
+				]
+
+				const generator = handler.createMessage("", messages)
+				await generator.next() // Start the generator
+
+				expect(mockConverseStreamCommand).toHaveBeenCalled()
+				const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
+
+				// Service tier should NOT be included for unsupported models (at top level or in additionalModelRequestFields)
+				expect(commandArg.service_tier).toBeUndefined()
+				if (commandArg.additionalModelRequestFields) {
+					expect(commandArg.additionalModelRequestFields.service_tier).toBeUndefined()
+				}
+			})
+
+			it("should NOT include service_tier when not specified", async () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					// No awsBedrockServiceTier specified
+				})
+
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{
+						role: "user",
+						content: "Test message",
+					},
+				]
+
+				const generator = handler.createMessage("", messages)
+				await generator.next() // Start the generator
+
+				expect(mockConverseStreamCommand).toHaveBeenCalled()
+				const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
+
+				// Service tier should NOT be included when not specified (at top level or in additionalModelRequestFields)
+				expect(commandArg.service_tier).toBeUndefined()
+				if (commandArg.additionalModelRequestFields) {
+					expect(commandArg.additionalModelRequestFields.service_tier).toBeUndefined()
+				}
+			})
+		})
+
+		describe("service tier with cross-region inference", () => {
+			it("should apply service tier pricing with cross-region inference prefix", () => {
+				const handler = new AwsBedrockHandler({
+					apiModelId: supportedModelId,
+					awsAccessKey: "test",
+					awsSecretKey: "test",
+					awsRegion: "us-east-1",
+					awsUseCrossRegionInference: true,
+					awsBedrockServiceTier: "FLEX",
+				})
+
+				const model = handler.getModel()
+				const baseModel = bedrockModels[supportedModelId as keyof typeof bedrockModels] as {
+					inputPrice: number
+					outputPrice: number
+				}
+
+				// Model ID should have cross-region prefix
+				expect(model.id).toBe(`us.${supportedModelId}`)
+
+				// FLEX tier pricing should still be applied
+				expect(model.info.inputPrice).toBe(baseModel.inputPrice * 0.5)
+				expect(model.info.outputPrice).toBe(baseModel.outputPrice * 0.5)
+			})
+		})
+	})
+
+	describe("error telemetry", () => {
+		let mockSend: ReturnType<typeof vi.fn>
+
+		beforeEach(() => {
+			mockCaptureException.mockClear()
+			// Get access to the mock send function from the mocked client
+			mockSend = vi.mocked(BedrockRuntimeClient).mock.results[0]?.value?.send
+		})
+
+		it("should capture telemetry on createMessage error", async () => {
+			// Create a handler with a fresh mock
+			const errorHandler = new AwsBedrockHandler({
+				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+				awsAccessKey: "test-access-key",
+				awsSecretKey: "test-secret-key",
+				awsRegion: "us-east-1",
+			})
+
+			// Get the mock send from the new handler instance
+			const clientInstance =
+				vi.mocked(BedrockRuntimeClient).mock.results[vi.mocked(BedrockRuntimeClient).mock.results.length - 1]
+					?.value
+			const mockSendFn = clientInstance?.send as ReturnType<typeof vi.fn>
+
+			// Mock the send to throw an error
+			mockSendFn.mockRejectedValueOnce(new Error("Bedrock API error"))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Hello",
+				},
+			]
+
+			const generator = errorHandler.createMessage("You are a helpful assistant", messages)
+
+			// Consume the generator - it should throw
+			await expect(async () => {
+				for await (const _chunk of generator) {
+					// Should throw before or during iteration
+				}
+			}).rejects.toThrow()
+
+			// Verify telemetry was captured
+			expect(mockCaptureException).toHaveBeenCalledTimes(1)
+			expect(mockCaptureException).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: "Bedrock API error",
+					provider: "Bedrock",
+					modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					operation: "createMessage",
+				}),
+			)
+
+			// Verify it's an ApiProviderError
+			const capturedError = mockCaptureException.mock.calls[0][0]
+			expect(capturedError).toBeInstanceOf(ApiProviderError)
+		})
+
+		it("should capture telemetry on completePrompt error", async () => {
+			// Create a handler with a fresh mock
+			const errorHandler = new AwsBedrockHandler({
+				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+				awsAccessKey: "test-access-key",
+				awsSecretKey: "test-secret-key",
+				awsRegion: "us-east-1",
+			})
+
+			// Get the mock send from the new handler instance
+			const clientInstance =
+				vi.mocked(BedrockRuntimeClient).mock.results[vi.mocked(BedrockRuntimeClient).mock.results.length - 1]
+					?.value
+			const mockSendFn = clientInstance?.send as ReturnType<typeof vi.fn>
+
+			// Mock the send to throw an error for ConverseCommand
+			mockSendFn.mockRejectedValueOnce(new Error("Bedrock completion error"))
+
+			// Call completePrompt - it should throw
+			await expect(errorHandler.completePrompt("Test prompt")).rejects.toThrow()
+
+			// Verify telemetry was captured
+			expect(mockCaptureException).toHaveBeenCalledTimes(1)
+			expect(mockCaptureException).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: "Bedrock completion error",
+					provider: "Bedrock",
+					modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					operation: "completePrompt",
+				}),
+			)
+
+			// Verify it's an ApiProviderError
+			const capturedError = mockCaptureException.mock.calls[0][0]
+			expect(capturedError).toBeInstanceOf(ApiProviderError)
+		})
+
+		it("should still throw the error after capturing telemetry", async () => {
+			// Create a handler with a fresh mock
+			const errorHandler = new AwsBedrockHandler({
+				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+				awsAccessKey: "test-access-key",
+				awsSecretKey: "test-secret-key",
+				awsRegion: "us-east-1",
+			})
+
+			// Get the mock send from the new handler instance
+			const clientInstance =
+				vi.mocked(BedrockRuntimeClient).mock.results[vi.mocked(BedrockRuntimeClient).mock.results.length - 1]
+					?.value
+			const mockSendFn = clientInstance?.send as ReturnType<typeof vi.fn>
+
+			// Mock the send to throw an error
+			mockSendFn.mockRejectedValueOnce(new Error("Test error for throw verification"))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Hello",
+				},
+			]
+
+			const generator = errorHandler.createMessage("You are a helpful assistant", messages)
+
+			// Verify the error is still thrown after telemetry capture
+			await expect(async () => {
+				for await (const _chunk of generator) {
+					// Should throw
+				}
+			}).rejects.toThrow()
+
+			// Telemetry should have been captured before the error was thrown
+			expect(mockCaptureException).toHaveBeenCalled()
 		})
 	})
 })

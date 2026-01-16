@@ -4,6 +4,15 @@ import Image from '@site/src/components/Image';
 
 Code Actions are a powerful feature of VS Code that provide quick fixes, refactorings, and other code-related suggestions directly within the editor. Kilo Code integrates with this system to offer AI-powered assistance for common coding tasks.
 
+:::tip Code Actions vs Autocomplete
+**Code Actions** and **Autocomplete** are two different ways Kilo Code can assist you:
+
+- **Code Actions** (this page) are **explicit and user-triggered**. You invoke them via the lightbulb icon, right-click context menu, or keyboard shortcut (`Ctrl+.` / `Cmd+.`). They operate on selected code and open a conversation in the chat panel.
+- **[Autocomplete](/basic-usage/autocomplete)** is **inline and automatic**. It suggests completions as you type, appearing as ghost text directly in the editor. You accept suggestions with `Tab`.
+
+Use Code Actions when you want to explain, fix, or improve existing code. Use Autocomplete when you want AI to help you write new code as you type.
+:::
+
 ## What are Code Actions?
 
 Code Actions appear as a lightbulb icon (💡) in the editor gutter (the area to the left of the line numbers). They can also be accessed via the right-click context menu, or via keyboard shortcut. They are triggered when:

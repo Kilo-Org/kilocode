@@ -85,9 +85,10 @@ export const toolParamNames = [
 	"files", // Native protocol parameter for read_file
 	"operations", // search_and_replace parameter for multiple operations
 	"patch", // apply_patch parameter
-	"file_path", // search_replace parameter
-	"old_string", // search_replace parameter
-	"new_string", // search_replace parameter
+	"file_path", // search_replace and edit_file parameter
+	"old_string", // search_replace and edit_file parameter
+	"new_string", // search_replace and edit_file parameter
+	"expected_replacements", // edit_file parameter for multiple occurrences
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -106,6 +107,10 @@ export type NativeToolArgs = {
 	apply_diff: { path: string; diff: string }
 	search_and_replace: { path: string; operations: Array<{ search: string; replace: string }> }
 	search_replace: { file_path: string; old_string: string; new_string: string }
+	edit_file: { file_path: string; old_string: string; new_string: string; expected_replacements?: number }
+	// kilocode_change start: Fast Apply
+	fast_edit_file: { target_file: string; instructions: string; code_edit: string }
+	// kilocode_change end
 	apply_patch: { patch: string }
 	ask_followup_question: {
 		question: string
@@ -251,8 +256,9 @@ export interface RunSlashCommandToolUse extends ToolUse<"run_slash_command"> {
 }
 
 // kilocode_change start: Morph fast apply
-export interface EditFileToolUse extends ToolUse {
-	name: "edit_file"
+
+export interface FastEditFileToolUse extends ToolUse {
+	name: "fast_edit_file"
 	params: Required<Pick<Record<ToolParamName, string>, "target_file" | "instructions" | "code_edit">>
 }
 // kilocode_change end
@@ -276,13 +282,17 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	write_to_file: "write files",
 	apply_diff: "apply changes",
 	// kilocode_change start
-	edit_file: "edit file",
+	// edit_file: "edit file",
 	delete_file: "delete files",
 	report_bug: "report bug",
 	condense: "condense the current context window",
 	// kilocode_change start
 	search_and_replace: "apply changes using search and replace",
 	search_replace: "apply single search and replace",
+	edit_file: "edit files using search and replace",
+	// kilocode_change start: Fast Apply
+	fast_edit_file: "edit files using Fast Apply",
+	// kilocode_change end
 	apply_patch: "apply patches using codex format",
 	search_files: "search files",
 	list_files: "list files",
@@ -298,6 +308,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
+	custom_tool: "use custom tools",
 } as const
 
 // Define available tool groups.
@@ -308,13 +319,16 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	edit: {
 		tools: [
 			"apply_diff",
-			"edit_file", // kilocode_change: Morph fast apply
+			"edit_file",
+			// kilocode_change start: Fast Apply
+			"fast_edit_file",
+			// kilocode_change end
 			"write_to_file",
 			"delete_file", // kilocode_change
 			"new_rule", // kilocode_change
 			"generate_image",
 		],
-		customTools: ["search_and_replace", "search_replace", "apply_patch"],
+		customTools: ["search_and_replace", "search_replace", "edit_file", "apply_patch"],
 	},
 	browser: {
 		tools: ["browser_action"],
@@ -354,9 +368,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
  * To add a new alias, simply add an entry here. No other files need to be modified.
  */
 export const TOOL_ALIASES: Record<string, ToolName> = {
-	edit_file: "apply_diff",
 	write_file: "write_to_file",
-	temp_edit_file: "search_and_replace",
 } as const
 
 export type DiffResult =

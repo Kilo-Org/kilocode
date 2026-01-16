@@ -24,7 +24,15 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
-				"basic-usage/autocomplete",
+				{
+					type: "category",
+					label: "Autocomplete",
+					link: {
+						type: "doc",
+						id: "basic-usage/autocomplete/index",
+					},
+					items: ["basic-usage/autocomplete/mistral-setup"],
+				},
 				"basic-usage/context-mentions",
 				{
 					type: "category",
@@ -171,7 +179,6 @@ const sidebars: SidebarsConfig = {
 				"features/auto-launch-configuration",
 				"advanced-usage/auto-cleanup",
 				"advanced-usage/integrations",
-				"advanced-usage/slackbot",
 				"advanced-usage/appbuilder",
 				"advanced-usage/cloud-agent",
 				"advanced-usage/code-reviews",
@@ -253,6 +260,7 @@ const sidebars: SidebarsConfig = {
 			],
 		},
 		"cli",
+		"slack",
 	],
 }
 

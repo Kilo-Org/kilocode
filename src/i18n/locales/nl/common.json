@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Een compleet ontwikkelteam van AI-agenten in je editor."
+		"description": "Open source AI-coderingsagent die code genereert uit natuurlijke taal, taken automatiseert en terminalopdrachten uitvoert. Met inline autocomplete, browserautomatisering, geautomatiseerde refactoring en aangepaste modi voor planning, codering en debugging. Ondersteunt meer dan 500 AI-modellen, waaronder Claude (Anthropic), Gemini, Grok, GPT, Codex en GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,8 +99,7 @@
 			"errorOutput": "Foutuitvoer: {{output}}",
 			"processExitedWithError": "Claude Code proces beëindigd met code {{exitCode}}. Foutuitvoer: {{output}}",
 			"stoppedWithReason": "Claude Code gestopt om reden: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Kan OAuth-referenties niet laden. Authenticeer eerst: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API-sleutel",
-			"getGroqApiKey": "Groq API-sleutel ophalen",
-			"claudeCode": {
-				"pathLabel": "Claude Code Pad",
-				"description": "Optioneel pad naar je Claude Code CLI. Standaard 'claude' indien niet ingesteld.",
-				"placeholder": "Standaard: claude"
-			}
+			"getGroqApiKey": "Groq API-sleutel ophalen"
 		}
 	},
 	"customModes": {

@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest"
 import type OpenAI from "openai"
 import type Anthropic from "@anthropic-ai/sdk"
-import { convertOpenAIToolToAnthropic, convertOpenAIToolsToAnthropic } from "../converters"
+import {
+	convertOpenAIToolToAnthropic,
+	convertOpenAIToolsToAnthropic,
+	convertOpenAIToolChoiceToAnthropic,
+} from "../converters"
 
 describe("converters", () => {
 	describe("convertOpenAIToolToAnthropic", () => {
@@ -139,6 +143,70 @@ describe("converters", () => {
 		it("should handle empty array", () => {
 			const results = convertOpenAIToolsToAnthropic([])
 			expect(results).toEqual([])
+		})
+	})
+
+	describe("convertOpenAIToolChoiceToAnthropic", () => {
+		it("should return auto with disabled parallel tool use when toolChoice is undefined", () => {
+			const result = convertOpenAIToolChoiceToAnthropic(undefined)
+			expect(result).toEqual({ type: "auto", disable_parallel_tool_use: true })
+		})
+
+		it("should return auto with enabled parallel tool use when parallelToolCalls is true", () => {
+			const result = convertOpenAIToolChoiceToAnthropic(undefined, true)
+			expect(result).toEqual({ type: "auto", disable_parallel_tool_use: false })
+		})
+
+		it("should return undefined for 'none' tool choice", () => {
+			const result = convertOpenAIToolChoiceToAnthropic("none")
+			expect(result).toBeUndefined()
+		})
+
+		it("should return auto for 'auto' tool choice", () => {
+			const result = convertOpenAIToolChoiceToAnthropic("auto")
+			expect(result).toEqual({ type: "auto", disable_parallel_tool_use: true })
+		})
+
+		it("should return any for 'required' tool choice", () => {
+			const result = convertOpenAIToolChoiceToAnthropic("required")
+			expect(result).toEqual({ type: "any", disable_parallel_tool_use: true })
+		})
+
+		it("should return auto for unknown string tool choice", () => {
+			const result = convertOpenAIToolChoiceToAnthropic("unknown" as any)
+			expect(result).toEqual({ type: "auto", disable_parallel_tool_use: true })
+		})
+
+		it("should convert function object form to tool type", () => {
+			const result = convertOpenAIToolChoiceToAnthropic({
+				type: "function",
+				function: { name: "get_weather" },
+			})
+			expect(result).toEqual({
+				type: "tool",
+				name: "get_weather",
+				disable_parallel_tool_use: true,
+			})
+		})
+
+		it("should handle function object form with parallel tool calls enabled", () => {
+			const result = convertOpenAIToolChoiceToAnthropic(
+				{
+					type: "function",
+					function: { name: "read_file" },
+				},
+				true,
+			)
+			expect(result).toEqual({
+				type: "tool",
+				name: "read_file",
+				disable_parallel_tool_use: false,
+			})
+		})
+
+		it("should return auto for object without function property", () => {
+			const result = convertOpenAIToolChoiceToAnthropic({ type: "something" } as any)
+			expect(result).toEqual({ type: "auto", disable_parallel_tool_use: true })
 		})
 	})
 })

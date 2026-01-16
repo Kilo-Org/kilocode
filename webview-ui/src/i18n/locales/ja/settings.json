@@ -278,6 +278,7 @@
 		"makeActiveProfile": "アクティブプロファイルにする",
 		"makeActiveTooltip": "このプロファイルをアクティブにしてAPIリクエストに使用する",
 		"apiProvider": "APIプロバイダー",
+		"apiProviderDocs": "プロバイダードキュメント",
 		"model": "モデル",
 		"nameEmpty": "名前を空にすることはできません",
 		"nameExists": "この名前のプロファイルは既に存在します",
@@ -325,7 +326,6 @@
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"getRequestyBaseUrl": "ベースURL",
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
-		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
@@ -335,6 +335,8 @@
 		"anthropicAzureDeploymentPlaceholder": "デプロイメント名を入力...",
 		"awsBedrock1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
+		"vertex1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
+		"vertex1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
 		"basetenApiKey": "Baseten APIキー",
 		"getBasetenApiKey": "Baseten APIキーを取得",
 		"cerebrasApiKey": "Cerebras APIキー",
@@ -443,6 +445,14 @@
 		"awsRegion": "AWSリージョン",
 		"awsCrossRegion": "クロスリージョン推論を使用",
 		"awsGlobalInference": "グローバル推論を使用する（最適なAWSリージョンを自動選択）",
+		"awsServiceTier": "サービスティア",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "バランスの取れたパフォーマンスとコスト",
+		"awsServiceTierFlex": "Flex（50%割引）",
+		"awsServiceTierFlexDesc": "低コスト、非クリティカルなタスクのレイテンシが高い",
+		"awsServiceTierPriority": "Priority（75%プレミアム）",
+		"awsServiceTierPriorityDesc": "ミッションクリティカルなアプリケーション向けの最速パフォーマンス",
+		"awsServiceTierNote": "サービスティアは価格とパフォーマンスに影響します。Flexは50%割引でレイテンシが高く、Priorityは25%優れたパフォーマンスで75%のプレミアムです。",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "カスタムVPCエンドポイントを使用",
 			"vpcEndpointUrlPlaceholder": "VPCエンドポイントURLを入力（任意）",
@@ -799,6 +809,10 @@
 		"maxGitStatusFiles": {
 			"label": "Gitステータス最大ファイル数",
 			"description": "gitステータスコンテキストに含めるファイルエントリの最大数。無効にするには0に設定します。ブランチ情報とコミットは、> 0の場合に常に表示されます。"
+		},
+		"enableSubfolderRules": {
+			"label": "サブフォルダルールを有効化",
+			"description": "サブディレクトリから.roo/rulesとAGENTS.mdファイルを再帰的に検出してロードします。パッケージごとのルールを持つモノレポに便利です。"
 		}
 	},
 	"terminal": {
@@ -988,6 +1002,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "音声認識 (STT)",
 			"description": "有効にすると、Kilo CodeはOpenAIのWhisperモデルを使用して音声をテキストに変換できます。録音を開始するには、チャット内のマイクボタンをクリックしてください。FFmpegのインストールと、設定済みのOpenAI APIプロバイダーが必要です。"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "カスタムツールを有効化",
+			"description": "有効にすると、Kiloはプロジェクトの .kilocode/tools ディレクトリまたはグローバルツール用の ~/.kilocode/tools からカスタム TypeScript/JavaScript ツールを読み込んで使用できます。注意：これらのツールは自動的に承認されます。",
+			"toolsHeader": "利用可能なカスタムツール",
+			"noTools": "カスタムツールが読み込まれていません。プロジェクトの .kilocode/tools ディレクトリまたはグローバルツール用の ~/.kilocode/tools に .ts または .js ファイルを追加してください。",
+			"refreshButton": "更新",
+			"refreshing": "更新中...",
+			"refreshSuccess": "ツールが正常に更新されました",
+			"refreshError": "ツールの更新に失敗しました",
+			"toolParameters": "パラメーター"
 		}
 	},
 	"promptCaching": {

@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI Codeer Agent, Copilot en Automatisch Aanvullen",
-	"extension.description": "Een compleet ontwikkelteam van AI-agents in je editor.",
+	"extension.description": "Open Source AI codeer-agent die code genereert uit natuurlijke taal, taken automatiseert en terminal-commando's uitvoert. Met inline automatisch aanvullen, browser-automatisering, automatische refactoring en aangepaste modi voor planning, codering en debugging. Ondersteunt 500+ AI-modellen waaronder Claude (Anthropic), Gemini, Grok, GPT, Codex en GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.sidebar.name": "Kilo Code",

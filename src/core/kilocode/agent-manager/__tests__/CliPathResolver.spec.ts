@@ -117,9 +117,7 @@ describe("findKilocodeCli", () => {
 		const spawnSyncMock = vi
 			.fn()
 			.mockReturnValue({ stdout: `__KILO_PATH_START__${testShellPath}__KILO_PATH_END__\n` })
-		const execSyncMock = vi
-			.fn()
-			.mockReturnValue("\x1b]1337;RemoteHost=host.local\x07/opt/homebrew/bin/kilocode\n")
+		const execSyncMock = vi.fn().mockReturnValue("\x1b]1337;RemoteHost=host.local\x07/opt/homebrew/bin/kilocode\n")
 		const statSyncMock = vi.fn().mockImplementation((filePath: string) => {
 			if (filePath === "/opt/homebrew/bin/kilocode") {
 				return { isFile: () => true }

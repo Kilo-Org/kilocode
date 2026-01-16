@@ -1,10 +1,40 @@
-import { sanitizeMcpName, buildMcpToolName, parseMcpToolName, MCP_TOOL_SEPARATOR, MCP_TOOL_PREFIX } from "../mcp-name"
+import {
+	sanitizeMcpName,
+	buildMcpToolName,
+	parseMcpToolName,
+	isMcpTool,
+	MCP_TOOL_SEPARATOR,
+	MCP_TOOL_PREFIX,
+} from "../mcp-name"
 
 describe("mcp-name utilities", () => {
 	describe("constants", () => {
 		it("should have correct separator and prefix", () => {
 			expect(MCP_TOOL_SEPARATOR).toBe("--")
 			expect(MCP_TOOL_PREFIX).toBe("mcp")
+		})
+	})
+
+	describe("isMcpTool", () => {
+		it("should return true for valid MCP tool names", () => {
+			expect(isMcpTool("mcp--server--tool")).toBe(true)
+			expect(isMcpTool("mcp--my_server--get_forecast")).toBe(true)
+		})
+
+		it("should return false for non-MCP tool names", () => {
+			expect(isMcpTool("server--tool")).toBe(false)
+			expect(isMcpTool("tool")).toBe(false)
+			expect(isMcpTool("read_file")).toBe(false)
+			expect(isMcpTool("")).toBe(false)
+		})
+
+		it("should return false for old underscore format", () => {
+			expect(isMcpTool("mcp_server_tool")).toBe(false)
+		})
+
+		it("should return false for partial prefix", () => {
+			expect(isMcpTool("mcp-server")).toBe(false)
+			expect(isMcpTool("mcp")).toBe(false)
 		})
 	})
 
@@ -23,18 +53,24 @@ describe("mcp-name utilities", () => {
 			expect(sanitizeMcpName("test#$%^&*()")).toBe("test")
 		})
 
-		it("should keep valid characters (alphanumeric, underscore, dot, colon, dash)", () => {
+		it("should keep valid characters (alphanumeric, underscore, dash)", () => {
 			expect(sanitizeMcpName("server_name")).toBe("server_name")
-			expect(sanitizeMcpName("server.name")).toBe("server.name")
-			expect(sanitizeMcpName("server:name")).toBe("server:name")
 			expect(sanitizeMcpName("server-name")).toBe("server-name")
 			expect(sanitizeMcpName("Server123")).toBe("Server123")
+		})
+
+		it("should remove dots and colons for AWS Bedrock compatibility", () => {
+			// Dots and colons are NOT allowed due to AWS Bedrock restrictions
+			expect(sanitizeMcpName("server.name")).toBe("servername")
+			expect(sanitizeMcpName("server:name")).toBe("servername")
+			expect(sanitizeMcpName("awslabs.aws-documentation-mcp-server")).toBe("awslabsaws-documentation-mcp-server")
 		})
 
 		it("should prepend underscore if name starts with non-letter/underscore", () => {
 			expect(sanitizeMcpName("123server")).toBe("_123server")
 			expect(sanitizeMcpName("-server")).toBe("_-server")
-			expect(sanitizeMcpName(".server")).toBe("_.server")
+			// Dots are removed, so ".server" becomes "server" which starts with a letter
+			expect(sanitizeMcpName(".server")).toBe("server")
 		})
 
 		it("should not modify names that start with letter or underscore", () => {

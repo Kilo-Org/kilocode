@@ -19,6 +19,7 @@ export interface AppOptions {
 	parallel?: boolean
 	worktreeBranch?: string | undefined
 	noSplash?: boolean
+	attachments?: string[] | undefined
 }
 
 export interface AppProps {

@@ -30,6 +30,13 @@ Type a clear, concise description of what you want Kilo Code to do in the chat b
 
 No special commands or syntax needed—just use plain English.
 
+<details>
+<summary>💡 Optional: Try Autocomplete</summary>
+
+While chat is great for complex tasks, Kilo Code also offers **inline autocomplete** for quick code suggestions. Open any code file, start typing, and watch for ghost text suggestions. Press `Tab` to accept. [Learn more about Autocomplete →](/basic-usage/autocomplete)
+
+</details>
+
 <img src="/docs/img/your-first-task/your-first-task-6.png" alt="Typing a task in the Kilo Code chat interface" width="500" />
 *Enter your task in natural language - no special syntax required.*
 
@@ -76,4 +83,8 @@ You've completed your first task. Along the way you learned:
 - Why approval keeps you in control
 - How iteration lets the AI refine its work
 
-Ready for more? Explore different [modes](/basic-usage/using-modes) or try [auto-approval](/features/auto-approving-actions) to speed up repetitive tasks.
+Ready for more? Here are some next steps:
+
+- **[Autocomplete](/basic-usage/autocomplete)** — Get inline code suggestions as you type
+- **[Modes](/basic-usage/using-modes)** — Explore different modes for different tasks
+- **[Auto-approval](/features/auto-approving-actions)** — Speed up repetitive tasks

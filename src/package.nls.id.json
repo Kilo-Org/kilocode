@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agen Pengkodean AI, Copilot, dan Pelengkapan Otomatis",
-	"extension.description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode.",
+	"extension.description": "Agen pengkodean AI Open Source yang menghasilkan kode dari bahasa alami, mengotomatisasi tugas, dan menjalankan perintah terminal. Dilengkapi dengan pelengkapan otomatis inline, otomatisasi browser, refactoring otomatis, dan mode kustom untuk perencanaan, pengkodean, dan debugging. Mendukung 500+ model AI termasuk Claude (Anthropic), Gemini, Grok, GPT, Codex dan GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
