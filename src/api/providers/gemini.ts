@@ -26,6 +26,7 @@ import type {
 import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import { convertOpenAIToolToGeminiFunction } from "../../services/continuedev/core/llm/openai-adapters/util/gemini-types"
 import { t } from "i18next"
 import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
@@ -185,11 +186,17 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		// "Tool use with function calling is unsupported" (HTTP 400) errors.
 		if (metadata?.tools && metadata.tools.length > 0) {
 			tools.push({
-				functionDeclarations: metadata.tools.map((tool) => ({
-					name: (tool as any).function.name,
-					description: (tool as any).function.description,
-					parametersJsonSchema: (tool as any).function.parameters,
-				})),
+				functionDeclarations: metadata.tools.map((tool) => {
+					const converted = convertOpenAIToolToGeminiFunction(tool)
+					// The convertOpenAIToolToGeminiFunction returns parameters with GeminiObjectSchema type
+					// which is structurally compatible with @google/genai's Schema but uses a different
+					// enum for the type field. Cast to satisfy the type checker.
+					return {
+						name: converted.name,
+						description: converted.description,
+						...(converted.parameters ? { parameters: converted.parameters as any } : {}),
+					}
+				}),
 			})
 		} else {
 			if (this.options.enableUrlContext) {
