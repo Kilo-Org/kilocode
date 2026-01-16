@@ -6,6 +6,7 @@ import {
 	promptOrganizationSelection,
 	INVALID_TOKEN_ERROR,
 } from "./shared.js"
+import { withRawMode } from "../../utils/terminal.js"
 
 /**
  * Execute the manual token authentication flow
@@ -22,14 +23,18 @@ export async function authenticateWithToken(): Promise<AuthResult> {
 
 	// Loop until we get a valid token
 	while (!isValidToken) {
-		const { token } = await inquirer.prompt<{ token: string }>([
-			{
-				type: "password",
-				name: "token",
-				message: "API Key:",
-				mask: true,
-			},
-		])
+		// Use withRawMode to ensure interactive prompts work correctly
+		// (required for inquirer v13+ which uses @inquirer/prompts internally)
+		const { token } = await withRawMode(() =>
+			inquirer.prompt<{ token: string }>([
+				{
+					type: "password",
+					name: "token",
+					message: "API Key:",
+					mask: true,
+				},
+			]),
+		)
 
 		kilocodeToken = token
 

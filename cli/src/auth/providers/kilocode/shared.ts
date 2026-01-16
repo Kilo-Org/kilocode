@@ -4,6 +4,7 @@ import { z } from "zod"
 import inquirer from "inquirer"
 import { logs } from "../../../services/logs.js"
 import type { KilocodeOrganization, KilocodeProfileData } from "../../types.js"
+import { withRawMode } from "../../utils/terminal.js"
 
 const API_TIMEOUT_MS = 5000
 
@@ -132,14 +133,18 @@ export async function promptOrganizationSelection(organizations: KilocodeOrganiz
 		})),
 	]
 
-	const { accountType } = await inquirer.prompt<{ accountType: string }>([
-		{
-			type: "list",
-			name: "accountType",
-			message: "Select account type:",
-			choices: accountChoices,
-		},
-	])
+	// Use withRawMode to ensure arrow key navigation works in list prompts
+	// (required for inquirer v13+ which uses @inquirer/prompts internally)
+	const { accountType } = await withRawMode(() =>
+		inquirer.prompt<{ accountType: string }>([
+			{
+				type: "list",
+				name: "accountType",
+				message: "Select account type:",
+				choices: accountChoices,
+			},
+		]),
+	)
 
 	// Return organization ID if not personal
 	return accountType !== "personal" ? accountType : undefined

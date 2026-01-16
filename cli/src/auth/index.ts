@@ -1,6 +1,7 @@
 import inquirer from "inquirer"
 import { loadConfig, saveConfig, CLIConfig } from "../config/index.js"
 import { authProviders } from "./providers/index.js"
+import { withRawMode } from "./utils/terminal.js"
 
 /**
  * Main authentication wizard
@@ -17,15 +18,19 @@ export default async function authWizard(): Promise<void> {
 		}))
 
 		// Prompt user to select a provider
-		const { selectedProvider } = await inquirer.prompt<{ selectedProvider: string }>([
-			{
-				type: "list",
-				name: "selectedProvider",
-				message: "Please select which provider you would like to use:",
-				choices: providerChoices,
-				loop: false,
-			},
-		])
+		// Use withRawMode to ensure arrow key navigation works in list prompts
+		// (required for inquirer v13+ which uses @inquirer/prompts internally)
+		const { selectedProvider } = await withRawMode(() =>
+			inquirer.prompt<{ selectedProvider: string }>([
+				{
+					type: "list",
+					name: "selectedProvider",
+					message: "Please select which provider you would like to use:",
+					choices: providerChoices,
+					loop: false,
+				},
+			]),
+		)
 
 		// Find the selected provider
 		const provider = authProviders.find((p) => p.value === selectedProvider)
