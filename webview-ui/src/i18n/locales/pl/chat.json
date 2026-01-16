@@ -159,7 +159,8 @@
 			"500": "Błąd serwera dostawcy. Po stronie dostawcy coś się nie powiodło, w Twoim żądaniu nie ma nic złego.",
 			"unknown": "Nieznany błąd API. Skontaktuj się z pomocą techniczną Kilo.",
 			"connection": "Błąd połączenia. Upewnij się, że masz działające połączenie internetowe.",
-			"claudeCodeNotAuthenticated": "Musisz się zalogować, aby korzystać z Claude Code. Przejdź do Ustawień i kliknij \"Zaloguj się do Claude Code\", aby się uwierzytelnić."
+			"claudeCodeNotAuthenticated": "Musisz się zalogować, aby korzystać z Claude Code. Przejdź do Ustawień i kliknij \"Zaloguj się do Claude Code\", aby się uwierzytelnić.",
+			"unknown": "Nieznany błąd API, kliknij Szczegóły, aby uzyskać więcej informacji."
 		}
 	},
 	"checkpoint": {

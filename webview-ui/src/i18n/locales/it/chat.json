@@ -162,7 +162,8 @@
 			"500": "Errore del server del provider. C'è qualcosa di sbagliato dal lato del provider, non c'è nulla di sbagliato nella tua richiesta.",
 			"unknown": "Errore API sconosciuto. Contatta il supporto di Kilo.",
 			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante.",
-			"claudeCodeNotAuthenticated": "Devi accedere per utilizzare Claude Code. Vai su Impostazioni e clicca su \"Accedi a Claude Code\" per autenticarti."
+			"claudeCodeNotAuthenticated": "Devi accedere per utilizzare Claude Code. Vai su Impostazioni e clicca su \"Accedi a Claude Code\" per autenticarti.",
+			"unknown": "Errore API sconosciuto, clicca su Dettagli per maggiori informazioni."
 		}
 	},
 	"checkpoint": {

@@ -165,7 +165,8 @@
 			"500": "提供商伺服器錯誤。提供商端發生問題，您的請求沒有問題。",
 			"unknown": "未知 API 錯誤。請聯絡 Kilo 支援。",
 			"connection": "連線錯誤。請確保您有可用的網際網路連線。",
-			"claudeCodeNotAuthenticated": "你需要登入才能使用 Claude Code。前往設定並點擊「登入 Claude Code」以進行驗證。"
+			"claudeCodeNotAuthenticated": "你需要登入才能使用 Claude Code。前往設定並點擊「登入 Claude Code」以進行驗證。",
+			"unknown": "未知 API 錯誤，點擊詳細資料以取得更多資訊。"
 		}
 	},
 	"checkpoint": {

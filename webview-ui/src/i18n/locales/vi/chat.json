@@ -159,7 +159,8 @@
 			"500": "Lỗi máy chủ của nhà cung cấp. Có sự cố ở phía nhà cung cấp, không có gì sai với yêu cầu của bạn.",
 			"unknown": "Lỗi API không xác định. Vui lòng liên hệ hỗ trợ Kilo.",
 			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động.",
-			"claudeCodeNotAuthenticated": "Bạn cần đăng nhập để sử dụng Claude Code. Vào Cài đặt và nhấp vào \"Đăng nhập vào Claude Code\" để xác thực."
+			"claudeCodeNotAuthenticated": "Bạn cần đăng nhập để sử dụng Claude Code. Vào Cài đặt và nhấp vào \"Đăng nhập vào Claude Code\" để xác thực.",
+			"unknown": "Lỗi API không xác định, nhấp vào Chi tiết để biết thêm thông tin."
 		}
 	},
 	"checkpoint": {

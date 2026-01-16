@@ -159,7 +159,8 @@
 			"500": "Error del servidor del proveedor. Algo está mal en el lado del proveedor, no hay nada mal con tu solicitud.",
 			"unknown": "Error API desconocido. Por favor contacta al soporte de Kilo.",
 			"connection": "Error de conexión. Asegúrate de tener una conexión a Internet funcional.",
-			"claudeCodeNotAuthenticated": "Debes iniciar sesión para usar Claude Code. Ve a Configuración y haz clic en \"Iniciar sesión en Claude Code\" para autenticarte."
+			"claudeCodeNotAuthenticated": "Debes iniciar sesión para usar Claude Code. Ve a Configuración y haz clic en \"Iniciar sesión en Claude Code\" para autenticarte.",
+			"unknown": "Error de API desconocido, haz clic en Detalles para más información."
 		}
 	},
 	"checkpoint": {
