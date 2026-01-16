@@ -23,6 +23,17 @@ vi.mock("../../ui/utils/messages.js", () => ({
 	})),
 }))
 
+// Mock readline for user confirmation
+vi.mock("readline", () => ({
+	createInterface: vi.fn(() => ({
+		question: vi.fn((_prompt: string, callback: (answer: string) => void) => {
+			// Default to "y" for tests
+			callback("y")
+		}),
+		close: vi.fn(),
+	})) as any,
+}))
+
 import { checkForUpdates, performUpdate, restartCLI } from "../../services/update.js"
 
 describe("updateCommand", () => {
@@ -98,7 +109,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// First message: "Checking for updates..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(1,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				1,
 				expect.objectContaining({
 					type: "system",
 					content: "Checking for updates...",
@@ -106,7 +118,8 @@ describe("updateCommand", () => {
 			)
 
 			// Second message: "Already up to date"
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "system",
 					content: "Already up to date (v1.0.0)",
@@ -146,7 +159,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// First message: "Checking for updates..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(1,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				1,
 				expect.objectContaining({
 					type: "system",
 					content: "Checking for updates...",
@@ -154,7 +168,8 @@ describe("updateCommand", () => {
 			)
 
 			// Second message: "Update available: 1.0.0 → 1.1.0"
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "system",
 					content: "Update available: 1.0.0 → 1.1.0",
@@ -162,7 +177,8 @@ describe("updateCommand", () => {
 			)
 
 			// Third message: confirmation prompt
-			expect(addMessageSpy).toHaveBeenNthCalledWith(3,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				3,
 				expect.objectContaining({
 					type: "system",
 					content: "Would you like to update now? This will install the latest version and restart the CLI.",
@@ -204,7 +220,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// Fourth message: "Installing update..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(4,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				4,
 				expect.objectContaining({
 					type: "system",
 					content: "Installing update...",
@@ -228,7 +245,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// Fifth message: success message
-			expect(addMessageSpy).toHaveBeenNthCalledWith(5,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				5,
 				expect.objectContaining({
 					type: "system",
 					content: "Update completed successfully. Please restart the CLI to use the new version.",
@@ -289,7 +307,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// Sixth message: "Restarting CLI..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(6,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				6,
 				expect.objectContaining({
 					type: "system",
 					content: "Restarting CLI...",
@@ -315,7 +334,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// Fifth message: error message
-			expect(addMessageSpy).toHaveBeenNthCalledWith(5,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				5,
 				expect.objectContaining({
 					type: "error",
 					content: "Update failed with exit code 1. Please check the logs for details.",
@@ -349,7 +369,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// First message: "Checking for updates..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(1,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				1,
 				expect.objectContaining({
 					type: "system",
 					content: "Checking for updates...",
@@ -357,7 +378,8 @@ describe("updateCommand", () => {
 			)
 
 			// Second message: error message
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "error",
 					content: "Update command failed: Network error",
@@ -370,7 +392,8 @@ describe("updateCommand", () => {
 
 			await updateCommand.handler(mockContext)
 
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "error",
 					content: "Update command failed: String error",
@@ -383,7 +406,8 @@ describe("updateCommand", () => {
 
 			await updateCommand.handler(mockContext)
 
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "error",
 					content: "Update command failed: null",
@@ -404,7 +428,8 @@ describe("updateCommand", () => {
 			await updateCommand.handler(mockContext)
 
 			// First message: "Checking for updates..."
-			expect(addMessageSpy).toHaveBeenNthCalledWith(1,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				1,
 				expect.objectContaining({
 					type: "system",
 					content: "Checking for updates...",
@@ -412,7 +437,8 @@ describe("updateCommand", () => {
 			)
 
 			// Second message: error message
-			expect(addMessageSpy).toHaveBeenNthCalledWith(2,
+			expect(addMessageSpy).toHaveBeenNthCalledWith(
+				2,
 				expect.objectContaining({
 					type: "system",
 					content: "Failed to check for updates. Please try again later.",

@@ -28,53 +28,70 @@ export const autoupdateCommand: Command = {
 		const { args, addMessage, config } = context
 
 		try {
-			// If no argument provided, show current status
 			if (args.length === 0 || !args[0]) {
-				const status = config.autoUpdate ? "enabled" : "disabled"
-				addMessage({
-					...generateMessage(),
-					type: "system",
-					content: `Auto-update is currently ${status}.`,
-				})
+				displayStatus(addMessage, config.autoUpdate)
 				return
 			}
 
 			const action = args[0].toLowerCase()
 
 			if (action === "on") {
-				// Enable auto-update
-				config.autoUpdate = true
-				await saveConfig(config)
-
-				addMessage({
-					...generateMessage(),
-					type: "system",
-					content: "Auto-update is now enabled. The CLI will automatically check for updates and update when a new version is available.",
-				})
+				await enableAutoUpdate(addMessage, config)
 			} else if (action === "off") {
-				// Disable auto-update
-				config.autoUpdate = false
-				await saveConfig(config)
-
-				addMessage({
-					...generateMessage(),
-					type: "system",
-					content: "Auto-update is now disabled.",
-				})
+				await disableAutoUpdate(addMessage, config)
 			} else {
-				// Invalid argument
-				addMessage({
-					...generateMessage(),
-					type: "error",
-					content: `Invalid action "${action}". Use "on" to enable or "off" to disable auto-update.`,
-				})
+				displayInvalidAction(addMessage, action)
 			}
 		} catch (error) {
-			addMessage({
-				...generateMessage(),
-				type: "error",
-				content: `Auto-update command failed: ${error instanceof Error ? error.message : String(error)}`,
-			})
+			displayError(addMessage, error)
 		}
 	},
+}
+
+function displayStatus(addMessage: (msg: any) => void, enabled: boolean | undefined): void {
+	const status = enabled ? "enabled" : "disabled"
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: `Auto-update is currently ${status}.`,
+	})
+}
+
+async function enableAutoUpdate(addMessage: (msg: any) => void, config: any): Promise<void> {
+	config.autoUpdate = true
+	await saveConfig(config)
+
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content:
+			"Auto-update is now enabled. The CLI will automatically check for updates and update when a new version is available.",
+	})
+}
+
+async function disableAutoUpdate(addMessage: (msg: any) => void, config: any): Promise<void> {
+	config.autoUpdate = false
+	await saveConfig(config)
+
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Auto-update is now disabled.",
+	})
+}
+
+function displayInvalidAction(addMessage: (msg: any) => void, action: string): void {
+	addMessage({
+		...generateMessage(),
+		type: "error",
+		content: `Invalid action "${action}". Use "on" to enable or "off" to disable auto-update.`,
+	})
+}
+
+function displayError(addMessage: (msg: any) => void, error: unknown): void {
+	addMessage({
+		...generateMessage(),
+		type: "error",
+		content: `Auto-update command failed: ${error instanceof Error ? error.message : String(error)}`,
+	})
 }

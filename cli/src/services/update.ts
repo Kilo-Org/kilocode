@@ -8,6 +8,7 @@ import { spawn, ChildProcess } from "child_process"
 import { readFileSync } from "fs"
 import { logs } from "./logs.js"
 import semver from "semver"
+import { getCliInstallCommand, getLocalCliInstallCommand } from "@roo-code/core"
 
 const NPM_REGISTRY_URL = "https://registry.npmjs.org/@kilocode/cli"
 const PACKAGE_JSON_PATH = new URL("../../package.json", import.meta.url)
@@ -95,6 +96,7 @@ export async function checkForUpdates(): Promise<{
 
 /**
  * Perform the update by running npm install -g @kilocode/cli@latest
+ * Falls back to local installation if global install fails.
  */
 export async function performUpdate(): Promise<{
 	success: boolean
@@ -102,24 +104,56 @@ export async function performUpdate(): Promise<{
 }> {
 	logs.info("Starting update process...", "UpdateService")
 
+	// Try global installation first
+	const globalResult = await runNpmInstall(getCliInstallCommand())
+	if (globalResult.success) {
+		return globalResult
+	}
+
+	// Global install failed, try local installation
+	logs.info("Global installation failed, trying local installation...", "UpdateService")
+	const localResult = await runNpmInstall(getLocalCliInstallCommand())
+
+	if (localResult.success) {
+		return {
+			...localResult,
+			message:
+				"Update completed successfully (local installation). Please restart the CLI to use the new version.",
+		}
+	}
+
+	// Both methods failed
+	return {
+		success: false,
+		message: `Update failed. Please try installing manually:\n\nGlobal: ${getCliInstallCommand()}\nLocal: ${getLocalCliInstallCommand()}`,
+	}
+}
+
+/**
+ * Run an npm install command and return the result.
+ */
+async function runNpmInstall(command: string): Promise<{
+	success: boolean
+	message: string
+}> {
 	return new Promise((resolve) => {
-		const npmProcess = spawn("npm", ["install", "-g", "@kilocode/cli@latest"], {
+		const npmProcess = spawn(command, {
 			stdio: "pipe",
 			shell: true,
-		})
+		}) as ChildProcess
 
 		let stdout = ""
 		let stderr = ""
 
-		npmProcess.stdout?.on("data", (data) => {
+		npmProcess.stdout?.on("data", (data: Buffer) => {
 			stdout += data.toString()
 		})
 
-		npmProcess.stderr?.on("data", (data) => {
+		npmProcess.stderr?.on("data", (data: Buffer) => {
 			stderr += data.toString()
 		})
 
-		npmProcess.on("close", (code) => {
+		npmProcess.on("close", (code: number | null) => {
 			if (code === 0) {
 				logs.info("Update completed successfully", "UpdateService")
 				resolve({
@@ -138,7 +172,7 @@ export async function performUpdate(): Promise<{
 			}
 		})
 
-		npmProcess.on("error", (error) => {
+		npmProcess.on("error", (error: Error) => {
 			logs.error("Failed to start update process", "UpdateService", { error })
 			resolve({
 				success: false,

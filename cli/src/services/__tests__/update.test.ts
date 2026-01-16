@@ -34,6 +34,12 @@ vi.mock("child_process")
 // Mock the fs module
 vi.mock("fs")
 
+// Mock @roo-code/core
+vi.mock("@roo-code/core", () => ({
+	getCliInstallCommand: vi.fn(() => "npm install -g @kilocode/cli"),
+	getLocalCliInstallCommand: vi.fn(() => "npm install @kilocode/cli --prefix /home/user/.kilocode/cli/pkg"),
+}))
+
 // Mock global fetch
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -55,9 +61,7 @@ const createMockProcess = (): ChildProcess => {
 describe("update service", () => {
 	describe("getCurrentVersion", () => {
 		it("should return the version from package.json", () => {
-			vi.mocked(readFileSync).mockReturnValue(
-				JSON.stringify({ version: "1.2.3" }),
-			)
+			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: "1.2.3" }))
 
 			const version = getCurrentVersion()
 
@@ -95,9 +99,7 @@ describe("update service", () => {
 	describe("checkForUpdates", () => {
 		beforeEach(() => {
 			vi.clearAllMocks()
-			vi.mocked(readFileSync).mockReturnValue(
-				JSON.stringify({ version: "1.0.0" }),
-			)
+			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: "1.0.0" }))
 		})
 
 		it("should return update available when latest version is greater", async () => {
@@ -133,9 +135,7 @@ describe("update service", () => {
 		})
 
 		it("should return no update available when current version is greater", async () => {
-			vi.mocked(readFileSync).mockReturnValue(
-				JSON.stringify({ version: "1.1.0" }),
-			)
+			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: "1.1.0" }))
 
 			vi.mocked(mockFetch).mockResolvedValue({
 				ok: true,
@@ -209,9 +209,7 @@ describe("update service", () => {
 		})
 
 		it("should handle pre-release versions correctly", async () => {
-			vi.mocked(readFileSync).mockReturnValue(
-				JSON.stringify({ version: "1.0.0" }),
-			)
+			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: "1.0.0" }))
 
 			vi.mocked(mockFetch).mockResolvedValue({
 				ok: true,
@@ -229,7 +227,7 @@ describe("update service", () => {
 	})
 
 	describe("performUpdate", () => {
-		it("should return success when npm install succeeds", async () => {
+		it("should return success when global npm install succeeds", async () => {
 			const mockChildProcess = createMockProcess()
 			vi.mocked(spawn).mockReturnValue(mockChildProcess)
 
@@ -245,13 +243,13 @@ describe("update service", () => {
 
 			expect(result.success).toBe(true)
 			expect(result.message).toBe("Update completed successfully. Please restart the CLI to use the new version.")
-			expect(spawn).toHaveBeenCalledWith("npm", ["install", "-g", "@kilocode/cli@latest"], {
+			expect(spawn).toHaveBeenCalledWith("npm install -g @kilocode/cli", {
 				stdio: "pipe",
 				shell: true,
 			})
 		})
 
-		it("should return failure when npm install fails", async () => {
+		it("should try local installation when global install fails", async () => {
 			const mockChildProcess = createMockProcess()
 			vi.mocked(spawn).mockReturnValue(mockChildProcess)
 
@@ -260,44 +258,55 @@ describe("update service", () => {
 			// Wait for async setup to complete
 			await new Promise((resolve) => setImmediate(resolve))
 
-			// Simulate failed exit
+			// Simulate failed exit for global install
+			mockChildProcess.emit("close", 1)
+
+			// Wait for second attempt (local install)
+			await new Promise((resolve) => setImmediate(resolve))
+
+			// Simulate successful exit for local install
+			mockChildProcess.emit("close", 0)
+
+			const result = await promise
+
+			expect(result.success).toBe(true)
+			expect(result.message).toContain("Update completed successfully (local installation)")
+			expect(spawn).toHaveBeenCalledTimes(2)
+		})
+
+		it("should return failure when both global and local install fail", async () => {
+			const mockChildProcess = createMockProcess()
+			vi.mocked(spawn).mockReturnValue(mockChildProcess)
+
+			const promise = performUpdate()
+
+			// Wait for async setup to complete
+			await new Promise((resolve) => setImmediate(resolve))
+
+			// Simulate failed exit for global install
+			mockChildProcess.emit("close", 1)
+
+			// Wait for second attempt (local install)
+			await new Promise((resolve) => setImmediate(resolve))
+
+			// Simulate failed exit for local install
 			mockChildProcess.emit("close", 1)
 
 			const result = await promise
 
 			expect(result.success).toBe(false)
-			expect(result.message).toBe("Update failed with exit code 1. Please check the logs for details.")
-		})
-
-		it("should return failure when npm install fails with non-zero exit code", async () => {
-			const mockChildProcess = createMockProcess()
-			vi.mocked(spawn).mockReturnValue(mockChildProcess)
-
-			const promise = performUpdate()
-
-			// Wait for async setup to complete
-			await new Promise((resolve) => setImmediate(resolve))
-
-			// Simulate failed exit with different code
-			mockChildProcess.emit("close", 127)
-
-			const result = await promise
-
-			expect(result.success).toBe(false)
-			expect(result.message).toBe("Update failed with exit code 127. Please check the logs for details.")
+			expect(result.message).toContain("Update failed")
+			expect(result.message).toContain("npm install -g @kilocode/cli")
+			expect(result.message).toContain("npm install @kilocode/cli --prefix")
 		})
 
 		it("should return failure when spawn fails", async () => {
 			const mockChildProcess = createMockProcess()
-			vi.mocked(spawn).mockReturnValue(mockChildProcess)
+			vi.mocked(spawn).mockImplementation(() => {
+				throw new Error("Command not found")
+			})
 
 			const promise = performUpdate()
-
-			// Wait for async setup to complete
-			await new Promise((resolve) => setImmediate(resolve))
-
-			// Simulate spawn error
-			mockChildProcess.emit("error", new Error("Command not found"))
 
 			const result = await promise
 
@@ -377,14 +386,10 @@ describe("update service", () => {
 
 			expect(result.success).toBe(true)
 			expect(result.message).toBe("Restarting CLI...")
-			expect(spawn).toHaveBeenCalledWith(
-				process.execPath,
-				[process.argv[1]],
-				{
-					detached: true,
-					stdio: "ignore",
-				},
-			)
+			expect(spawn).toHaveBeenCalledWith(process.execPath, [process.argv[1]], {
+				detached: true,
+				stdio: "ignore",
+			})
 			expect(process.exit).toHaveBeenCalledWith(0)
 		})
 
@@ -400,14 +405,10 @@ describe("update service", () => {
 
 			restartCLI()
 
-			expect(spawn).toHaveBeenCalledWith(
-				process.execPath,
-				["cli.js", "--help", "--verbose"],
-				{
-					detached: true,
-					stdio: "ignore",
-				},
-			)
+			expect(spawn).toHaveBeenCalledWith(process.execPath, ["cli.js", "--help", "--verbose"], {
+				detached: true,
+				stdio: "ignore",
+			})
 		})
 
 		it("should return failure when spawn throws error", () => {

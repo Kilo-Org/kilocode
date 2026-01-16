@@ -17,85 +17,126 @@ export const updateCommand: Command = {
 		const { addMessage, config } = context
 
 		try {
-			// Check for updates
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: "Checking for updates...",
-			})
-
 			const updateResult = await checkForUpdates()
 
 			if (!updateResult.updateAvailable) {
-				// No update available
-				addMessage({
-					...generateMessage(),
-					type: "system",
-					content: updateResult.message,
-				})
+				displayNoUpdateAvailable(addMessage, updateResult.message)
 				return
 			}
 
-			// Update is available
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: updateResult.message,
-			})
+			displayUpdateAvailable(addMessage, updateResult.message)
 
-			// Ask user to confirm
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: "Would you like to update now? This will install the latest version and restart the CLI.",
-			})
+			const confirmed = await waitForUserConfirmation()
 
-			// Note: In a real implementation, we would wait for user confirmation here
-			// For now, we'll proceed with the update automatically
-			// TODO: Add interactive confirmation when the CLI supports it
-
-			// Perform the update
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: "Installing update...",
-			})
-
-			const updateResult2 = await performUpdate()
-
-			if (!updateResult2.success) {
-				addMessage({
-					...generateMessage(),
-					type: "error",
-					content: updateResult2.message,
-				})
+			if (!confirmed) {
+				displayUpdateCancelled(addMessage)
 				return
 			}
 
-			// Update successful
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: updateResult2.message,
-			})
-
-			// Update lastUpdateCheck in config
-			config.lastUpdateCheck = new Date().toISOString()
-
-			// Restart the CLI
-			addMessage({
-				...generateMessage(),
-				type: "system",
-				content: "Restarting CLI...",
-			})
-
-			restartCLI()
+			await performUpdateAndRestart(addMessage, config)
 		} catch (error) {
-			addMessage({
-				...generateMessage(),
-				type: "error",
-				content: `Update command failed: ${error instanceof Error ? error.message : String(error)}`,
-			})
+			displayError(addMessage, error)
 		}
 	},
+}
+
+function displayNoUpdateAvailable(addMessage: (msg: any) => void, message: string): void {
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Checking for updates...",
+	})
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: message,
+	})
+}
+
+function displayUpdateAvailable(addMessage: (msg: any) => void, message: string): void {
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Checking for updates...",
+	})
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: message,
+	})
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Would you like to update now? This will install the latest version and restart the CLI.",
+	})
+}
+
+function displayUpdateCancelled(addMessage: (msg: any) => void): void {
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Update cancelled.",
+	})
+}
+
+async function performUpdateAndRestart(addMessage: (msg: any) => void, config: any): Promise<void> {
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Installing update...",
+	})
+
+	const updateResult = await performUpdate()
+
+	if (!updateResult.success) {
+		addMessage({
+			...generateMessage(),
+			type: "error",
+			content: updateResult.message,
+		})
+		return
+	}
+
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: updateResult.message,
+	})
+
+	config.lastUpdateCheck = new Date().toISOString()
+
+	addMessage({
+		...generateMessage(),
+		type: "system",
+		content: "Restarting CLI...",
+	})
+
+	restartCLI()
+}
+
+function displayError(addMessage: (msg: any) => void, error: unknown): void {
+	addMessage({
+		...generateMessage(),
+		type: "error",
+		content: `Update command failed: ${error instanceof Error ? error.message : String(error)}`,
+	})
+}
+
+/**
+ * Wait for user confirmation (y/n).
+ * Returns true if user confirms, false otherwise.
+ */
+async function waitForUserConfirmation(): Promise<boolean> {
+	return new Promise((resolve) => {
+		const readline = require("readline").createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		})
+
+		readline.question("Update now? (y/n): ", (answer: string) => {
+			readline.close()
+			const normalized = answer.trim().toLowerCase()
+			resolve(normalized === "y" || normalized === "yes")
+		})
+	})
 }

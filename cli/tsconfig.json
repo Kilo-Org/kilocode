@@ -26,7 +26,8 @@
 		"types": ["node"],
 		"baseUrl": ".",
 		"paths": {
-			"@roo/*": ["../src/shared/*"]
+			"@roo/*": ["../src/shared/*"],
+			"@roo-code/core": ["../packages/core/src"]
 		},
 		"skipLibCheck": true
 	},
