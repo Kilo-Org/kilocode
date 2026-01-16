@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { t } from "../../i18n"
+import { Package } from "../../shared/package"
 
 export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 	public readonly providedCodeActionKinds = {
@@ -12,6 +13,11 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		_context: vscode.CodeActionContext,
 		_token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
+		// Check if code actions are disabled in settings
+		if (!vscode.workspace.getConfiguration(Package.name).get<boolean>("enableCodeActions", true)) {
+			return []
+		}
+
 		const action = new vscode.CodeAction(
 			t("kilocode:ghost.codeAction.title"),
 			this.providedCodeActionKinds["quickfix"],
