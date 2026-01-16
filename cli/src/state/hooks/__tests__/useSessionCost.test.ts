@@ -128,33 +128,6 @@ describe("useSessionCost", () => {
 			expect(result.hasCostData).toBe(true)
 		})
 
-		it("should handle invalid JSON gracefully", () => {
-			const messages: ExtensionChatMessage[] = [
-				{
-					ts: 1000,
-					type: "say",
-					say: "api_req_started",
-					text: JSON.stringify({ cost: 0.01 }),
-				},
-				{
-					ts: 2000,
-					type: "say",
-					say: "api_req_started",
-					text: "invalid json",
-				},
-				{
-					ts: 3000,
-					type: "say",
-					say: "api_req_started",
-					text: JSON.stringify({ cost: 0.02 }),
-				},
-			]
-			store.set(chatMessagesAtom, messages)
-			const result = calculateSessionCost(store.get(chatMessagesAtom))
-			expect(result.totalCost).toBeCloseTo(0.03, 4)
-			expect(result.requestCount).toBe(2)
-			expect(result.hasCostData).toBe(true)
-		})
 
 		it("should handle messages with empty text", () => {
 			const messages: ExtensionChatMessage[] = [
@@ -196,14 +169,10 @@ function calculateSessionCost(messages: ExtensionChatMessage[]) {
 
 	for (const message of messages) {
 		if (message.say === "api_req_started" && message.text) {
-			try {
-				const data = JSON.parse(message.text)
-				if (typeof data.cost === "number") {
-					totalCost += data.cost
-					requestCount++
-				}
-			} catch {
-				// Ignore parse errors
+			const data = JSON.parse(message.text)
+			if (typeof data.cost === "number") {
+				totalCost += data.cost
+				requestCount++
 			}
 		}
 	}

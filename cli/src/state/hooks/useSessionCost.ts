@@ -29,14 +29,10 @@ export function useSessionCost(): SessionCostInfo {
 
 		for (const message of messages) {
 			if (message.say === "api_req_started" && message.text) {
-				try {
-					const data = JSON.parse(message.text)
-					if (typeof data.cost === "number") {
-						totalCost += data.cost
-						requestCount++
-					}
-				} catch {
-					// Ignore parse errors
+				const data = JSON.parse(message.text)
+				if (typeof data.cost === "number") {
+					totalCost += data.cost
+					requestCount++
 				}
 			}
 		}
