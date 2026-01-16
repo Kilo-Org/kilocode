@@ -2566,7 +2566,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				showRooIgnoredFiles = false,
 				includeDiagnosticMessages = true,
 				maxDiagnosticMessages = 50,
-				maxReadFileLine = -1,
+				maxReadFileLine = 500 /*kilocode_change*/,
 			} = (await this.providerRef.deref()?.getState()) ?? {}
 
 			// kilocode_change start
@@ -4298,7 +4298,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
+				maxReadFileLine: state?.maxReadFileLine ?? 500 /*kilocode_change*/,
 				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				// kilocode_change start

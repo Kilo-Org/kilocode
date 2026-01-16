@@ -105,4 +105,4 @@ Give it a try. I think you'll find yourself wondering how you ever managed witho
 
 ---
 
-_Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilo.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.love/discord)!_
+_Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilo.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.ai/discord)!_

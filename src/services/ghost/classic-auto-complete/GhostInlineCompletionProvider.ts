@@ -370,6 +370,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		suffix: string,
 		model: GhostModel,
 		telemetryContext: AutocompleteContext,
+		languageId?: string,
 	): FillInAtCursorSuggestion {
 		if (!suggestionText) {
 			this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
@@ -381,6 +382,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			prefix,
 			suffix,
 			model: model.getModelName() || "",
+			languageId,
 		})
 
 		if (processedText) {
@@ -681,9 +683,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		try {
-			// Curry processSuggestion with prefix, suffix, model, and telemetry context
+			// Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
 			const curriedProcessSuggestion = (text: string) =>
-				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext)
+				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
 
 			const result =
 				prompt.strategy === "fim"

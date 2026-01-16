@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: เอเจนต์เขียนโค้ด AI, Copilot และการเติมข้อความอัตโนมัติ",
-	"extension.description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด",
+	"extension.description": "เอเจนต์เขียนโค้ด AI แบบ Open Source ที่สร้างโค้ดจากภาษาธรรมชาติ ทำงานอัตโนมัติ และรันคำสั่ง Terminal มีฟีเจอร์เติมข้อความอัตโนมัติแบบ inline, ระบบอัตโนมัติของเบราว์เซอร์, การ refactor อัตโนมัติ และโหมดที่กำหนดเองสำหรับการวางแผน เขียนโค้ด และดีบัก รองรับโมเดล AI มากกว่า 500 รุ่น รวมถึง Claude (Anthropic), Gemini, Grok, GPT, Codex และ GLM",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",

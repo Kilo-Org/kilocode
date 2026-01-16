@@ -53,6 +53,7 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option("--on-task-completed <prompt>", "Send a custom prompt to the agent when the task completes")
 	.option(
 		"--attach <path>",
 		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
@@ -61,6 +62,14 @@ program
 	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
+		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
+		// This is a defensive check for cases where Commander.js routing might not work as expected
+		// (e.g., when spawned as a child process with stdin disconnected)
+		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		if (SUBCOMMANDS.includes(prompt)) {
+			return
+		}
+
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
@@ -149,6 +158,18 @@ program
 		// Validate that --json requires --auto (--json-io is independent)
 		if (options.json && !options.auto) {
 			console.error("Error: --json option requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that --on-task-completed requires --auto
+		if (options.onTaskCompleted && !options.auto) {
+			console.error("Error: --on-task-completed option requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate --on-task-completed prompt is not empty
+		if (options.onTaskCompleted !== undefined && options.onTaskCompleted.trim() === "") {
+			console.error("Error: --on-task-completed requires a non-empty prompt")
 			process.exit(1)
 		}
 
@@ -266,6 +287,7 @@ program
 			noSplash: options.nosplash,
 			appendSystemPrompt: options.appendSystemPrompt,
 			attachments: attachments.length > 0 ? attachments : undefined,
+			onTaskCompleted: options.onTaskCompleted,
 		})
 		await cli.start()
 		await cli.dispose()
@@ -297,7 +319,13 @@ program
 	.description("Run a system compatibility check for the Kilo Code CLI")
 	.argument("[mode]", `The mode to debug (${DEBUG_MODES.join(", ")})`, "")
 	.action(async (mode: string) => {
-		if (!mode || !DEBUG_MODES.includes(mode)) {
+		// If no mode is provided, show available debug modes (helpful UX)
+		if (!mode) {
+			console.log(`Available debug modes: ${DEBUG_MODES.join(", ")}`)
+			process.exit(0)
+		}
+
+		if (!DEBUG_MODES.includes(mode)) {
 			console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
 			process.exit(1)
 		}

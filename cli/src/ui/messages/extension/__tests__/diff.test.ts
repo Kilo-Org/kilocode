@@ -60,7 +60,7 @@ describe("parseDiffContent", () => {
 	})
 
 	describe("SEARCH/REPLACE format", () => {
-		it("should parse a simple SEARCH/REPLACE block", () => {
+		it("should parse a simple SEARCH/REPLACE block without markers", () => {
 			const startLineMarker = ":start" + "_line:5"
 			const diff = `<<<<<<< SEARCH
 ${startLineMarker}
@@ -72,14 +72,10 @@ new content
 
 			const result = parseDiffContent(diff)
 
-			expect(result).toHaveLength(7)
-			expect(result[0]).toEqual({ type: "marker", content: "<<<<<<< SEARCH" })
-			expect(result[1]).toEqual({ type: "marker", content: startLineMarker })
-			expect(result[2]).toEqual({ type: "marker", content: "-------" })
-			expect(result[3]).toEqual({ type: "deletion", content: "old content", oldLineNum: 5 })
-			expect(result[4]).toEqual({ type: "marker", content: "=======" })
-			expect(result[5]).toEqual({ type: "addition", content: "new content", newLineNum: 5 })
-			expect(result[6]).toEqual({ type: "marker", content: ">>>>>>> REPLACE" })
+			// Markers are now filtered out - only actual code changes are returned
+			expect(result).toHaveLength(2)
+			expect(result[0]).toEqual({ type: "deletion", content: "old content", oldLineNum: 5 })
+			expect(result[1]).toEqual({ type: "addition", content: "new content", newLineNum: 5 })
 		})
 
 		it("should handle multi-line SEARCH/REPLACE", () => {
@@ -195,6 +191,7 @@ new content line 2
 
 			const result = parseDiffContent(diff)
 
+			// Markers are filtered out - only actual code changes
 			const deletions = result.filter((l) => l.type === "deletion")
 			const additions = result.filter((l) => l.type === "addition")
 
@@ -216,6 +213,7 @@ line to delete 2
 
 			const result = parseDiffContent(diff)
 
+			// Markers are filtered out - only actual code changes
 			const deletions = result.filter((l) => l.type === "deletion")
 			const additions = result.filter((l) => l.type === "addition")
 
@@ -239,6 +237,7 @@ Some trailing text`
 
 			const result = parseDiffContent(diff)
 
+			// Markers are filtered out - only context and actual code changes
 			// First line should be context
 			expect(result[0]).toEqual({ type: "context", content: "Some preamble text" })
 			// Last line should be context
@@ -257,6 +256,7 @@ new content
 
 			const result = parseDiffContent(diff)
 
+			// Markers are filtered out - only actual code changes
 			// Should still parse, defaulting to line 1 when parsing fails
 			const deletions = result.filter((l) => l.type === "deletion")
 			const additions = result.filter((l) => l.type === "addition")

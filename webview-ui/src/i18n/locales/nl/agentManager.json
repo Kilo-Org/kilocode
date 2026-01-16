@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLO-modus - tool-operaties worden automatisch goedgekeurd",
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
-		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
 		"runModeLocal": "Lokaal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Wijzig basisbranch",
 		"noBranches": "Geen branches gevonden",
 		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht",
-		"openTerminal": "Terminal openen"
+		"openTerminal": "Terminal openen",
+		"selectModel": "Model selecteren",
+		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
+		"defaultModel": "Standaardmodel",
+		"loadingModels": "Laden..."
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

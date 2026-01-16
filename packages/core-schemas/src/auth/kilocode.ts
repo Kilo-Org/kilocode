@@ -33,9 +33,9 @@ export const pollingOptionsSchema = z.object({
 	/** Maximum number of attempts before timeout */
 	maxAttempts: z.number(),
 	/** Function to execute on each poll */
-	pollFn: z.function().args().returns(z.promise(z.unknown())),
+	pollFn: z.function({ input: z.tuple([]), output: z.promise(z.unknown()) }),
 	/** Optional callback for progress updates */
-	onProgress: z.function().args(z.number(), z.number()).returns(z.void()).optional(),
+	onProgress: z.function({ input: z.tuple([z.number(), z.number()]), output: z.void() }).optional(),
 })
 
 /**
