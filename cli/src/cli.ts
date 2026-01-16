@@ -37,6 +37,7 @@ import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
 import { randomUUID } from "crypto"
+import { checkForUpdates, performUpdate, restartCLI } from "./services/update.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -94,6 +95,35 @@ export class CLI {
 				// Save the updated config to persist changes
 				await this.store.set(saveConfigAtom, config)
 				logs.info("Provider/model overrides applied and saved", "CLI")
+			}
+
+			// Auto-update check
+			if (config.autoUpdate) {
+				try {
+					const updateResult = await checkForUpdates()
+
+					// Update lastUpdateCheck timestamp regardless of update availability
+					config.lastUpdateCheck = new Date().toISOString()
+					await this.store.set(saveConfigAtom, config)
+
+					if (updateResult.updateAvailable) {
+						logs.info(
+							`A new version (${updateResult.latestVersion}) is available. You're currently on version ${updateResult.currentVersion}.`,
+							"CLI",
+						)
+						logs.info("Updating automatically...", "CLI")
+
+						const updateResult2 = await performUpdate()
+						if (updateResult2.success) {
+							logs.info("Update successful! Restarting...", "CLI")
+							restartCLI()
+						} else {
+							logs.error(`Update failed: ${updateResult2.message}`, "CLI")
+						}
+					}
+				} catch (error) {
+					logs.error("Auto-update check failed", "CLI", { error })
+				}
 			}
 
 			const telemetryService = getTelemetryService()

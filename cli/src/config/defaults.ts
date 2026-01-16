@@ -61,4 +61,6 @@ export const DEFAULT_CONFIG = {
 	autoApproval: DEFAULT_AUTO_APPROVAL,
 	theme: "dark",
 	customThemes: {},
+	autoUpdate: false,
+	lastUpdateCheck: null,
 } satisfies CLIConfig
