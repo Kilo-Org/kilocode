@@ -311,6 +311,15 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			cacheReadTokens: z.number().optional(),
 			cacheWriteTokens: z.number().optional(),
 			cost: z.number().optional(),
+			// kilocode_change start Extended LLM observability metrics
+			completionTime: z.number().optional(),
+			inferenceProvider: z.string().optional(),
+			apiProvider: z.string().optional(),
+			modelId: z.string().optional(),
+			success: z.boolean().optional(),
+			errorType: z.string().optional(),
+			errorMessage: z.string().optional(),
+			// kilocode_change end
 		}),
 	}),
 ])

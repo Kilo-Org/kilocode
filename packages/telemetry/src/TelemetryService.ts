@@ -101,9 +101,14 @@ export class TelemetryService {
 			cacheWriteTokens: number
 			cacheReadTokens: number
 			cost?: number
-			// kilocode_change start
+			// kilocode_change start Extended LLM observability metrics
 			completionTime?: number
 			inferenceProvider?: string
+			apiProvider?: string
+			modelId?: string
+			success?: boolean
+			errorType?: string
+			errorMessage?: string
 			// kilocode_change end
 		},
 	): void {

@@ -416,6 +416,111 @@ describe("Cline", () => {
 		})
 	})
 
+	// kilocode_change start: Phase 1a LLM observability - error telemetry coverage
+	describe("LLM completion telemetry (errors)", () => {
+		it("tracks first-chunk API failures via captureLlmCompletion(success=false)", async () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext,
+			})
+
+			vi.spyOn(task as any, "getSystemPrompt").mockResolvedValue("system")
+
+			// Ensure the error path uses auto-retry instead of prompting the user.
+			mockProvider.getState = vi.fn().mockResolvedValue({
+				apiConfiguration: mockApiConfig,
+				autoApprovalEnabled: true,
+				requestDelaySeconds: 1,
+			})
+
+			const telemetrySpy = vi
+				.spyOn(TelemetryService.instance, "captureLlmCompletion")
+				.mockImplementation(() => {})
+
+			let firstAttempt = true
+			const failingStream = {
+				[Symbol.asyncIterator]() {
+					return this
+				},
+				async next() {
+					throw new Error("API Error")
+				},
+				async return() {
+					return { done: true, value: undefined }
+				},
+			} as unknown as AsyncGenerator<ApiStreamChunk>
+
+			const successStream = (async function* () {
+				yield { type: "text", text: "ok" } as ApiStreamChunk
+			})()
+
+			vi.spyOn(task.api, "createMessage").mockImplementation(() => {
+				if (firstAttempt) {
+					firstAttempt = false
+					return failingStream as any
+				}
+				return successStream as any
+			})
+
+			const iterator = task.attemptApiRequest(0)
+			await iterator.next()
+
+			expect(telemetrySpy).toHaveBeenCalledTimes(1)
+			expect(telemetrySpy).toHaveBeenCalledWith(task.taskId, expect.objectContaining({ success: false }))
+
+			const props = telemetrySpy.mock.calls[0]?.[1] as Record<string, unknown>
+			expect(props.errorMessage).toBe("API Error")
+		})
+
+		it("tracks mid-stream API failures via captureLlmCompletion(success=false)", async () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext,
+			})
+
+			vi.spyOn(task as any, "getSystemPrompt").mockResolvedValue("system")
+
+			mockProvider.getState = vi.fn().mockResolvedValue({
+				apiConfiguration: mockApiConfig,
+				autoApprovalEnabled: true,
+				requestDelaySeconds: 1,
+			})
+
+			const telemetrySpy = vi
+				.spyOn(TelemetryService.instance, "captureLlmCompletion")
+				.mockImplementation(() => {})
+
+			// Simulate a true mid-stream failure: first chunk succeeds, the *next* chunk throws.
+			vi.spyOn(task.api, "createMessage").mockImplementation(() => {
+				return (async function* () {
+					yield { type: "text", text: "partial" } as ApiStreamChunk
+					throw new Error("Boom")
+				})() as any
+			})
+
+			const iterator = task.attemptApiRequest(0)
+
+			// First chunk ok
+			await iterator.next()
+
+			// Next chunk throws, and should be tracked as a failure
+			await expect(iterator.next()).rejects.toThrow("Boom")
+
+			const failureCalls = telemetrySpy.mock.calls.filter(([, props]) => (props as any)?.success === false)
+			expect(failureCalls.length).toBeGreaterThanOrEqual(1)
+
+			const failureProps = failureCalls[0]?.[1] as Record<string, unknown>
+			expect(failureProps.errorMessage).toBe("Boom")
+		})
+	})
+	// kilocode_change end
+
 	describe("getEnvironmentDetails", () => {
 		describe("API conversation handling", () => {
 			it.skip("should clean conversation history before sending to API", async () => {

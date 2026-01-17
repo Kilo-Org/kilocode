@@ -40,6 +40,8 @@ import {
 	TodoItem,
 	getApiProtocol,
 	getModelId,
+	getErrorMessage, // kilocode_change
+	getErrorStatusCode, // kilocode_change
 	isIdleAsk,
 	isInteractiveAsk,
 	isResumableAsk,
@@ -50,6 +52,7 @@ import {
 	MAX_CHECKPOINT_TIMEOUT_SECONDS,
 	MIN_CHECKPOINT_TIMEOUT_SECONDS,
 	TOOL_PROTOCOL,
+	shouldReportApiErrorToTelemetry, // kilocode_change
 	ConsecutiveMistakeError,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -3261,6 +3264,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									// kilocode_change start
 									completionTime: performance.now() - apiRequestStartTime,
 									inferenceProvider,
+									apiProvider: this.apiConfiguration.apiProvider,
+									modelId: cachedModelId,
+									success: true,
 									// kilocode_change end
 								})
 							}
@@ -3364,6 +3370,44 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// Cline instance to finish aborting (error is thrown here when
 					// any function in the for loop throws due to this.abort).
 					if (!this.abandoned) {
+						// kilocode_change start: Phase 1a LLM observability - fallback mid-stream API failure telemetry
+						// attemptApiRequest() captures mid-stream failures, but depending on consumption/iteration patterns
+						// (and especially in tests), the error can surface here without having been reported yet.
+						if (
+							!(
+								typeof error === "object" &&
+								error !== null &&
+								(error as any).__llmCompletionTelemetryCaptured === true
+							)
+						) {
+							const errorStatusCode = getErrorStatusCode(error)
+							const extractedErrorMessage =
+								getErrorMessage(error) ?? (error instanceof Error ? error.message : String(error))
+
+							if (shouldReportApiErrorToTelemetry(errorStatusCode, extractedErrorMessage)) {
+								TelemetryService.instance.captureLlmCompletion(this.taskId, {
+									// Report whatever partial usage we have at this point.
+									inputTokens,
+									outputTokens,
+									cacheWriteTokens,
+									cacheReadTokens,
+									completionTime: performance.now() - apiRequestStartTime,
+									inferenceProvider,
+									apiProvider: this.apiConfiguration.apiProvider,
+									modelId: cachedModelId,
+									success: false,
+									errorType:
+										errorStatusCode !== undefined
+											? `http_${errorStatusCode}`
+											: error instanceof Error
+												? error.name
+												: "unknown",
+									errorMessage: extractedErrorMessage,
+								})
+							}
+						}
+						// kilocode_change end
+
 						// Determine cancellation reason
 						const cancelReason: ClineApiReqCancelReason = this.abort ? "user_cancelled" : "streaming_failed"
 
@@ -4345,6 +4389,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Reset the flag after using it
 		this.skipPrevResponseIdOnce = false
 
+		// kilocode_change start: Phase 1a LLM observability - track request timing for error telemetry
+		const apiRequestStartTime = performance.now()
+		// kilocode_change end
+
 		// The provider accepts reasoning items alongside standard messages; cast to the expected parameter type.
 		const stream = this.api.createMessage(
 			systemPrompt,
@@ -4385,6 +4433,45 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
 			this.isWaitingForFirstChunk = false
+
+			// kilocode_change start: Phase 1a LLM observability - track first-chunk API request failures
+			// Only track non-user-cancel failures; aborts are not "API errors" and would be noisy.
+			if (!abortSignal.aborted && !this.abort) {
+				const errorStatusCode = getErrorStatusCode(error)
+				const extractedErrorMessage =
+					getErrorMessage(error) ?? (error instanceof Error ? error.message : String(error))
+
+				if (shouldReportApiErrorToTelemetry(errorStatusCode, extractedErrorMessage)) {
+					const effectiveApiConfiguration = apiConfiguration ?? this.apiConfiguration
+
+					TelemetryService.instance.captureLlmCompletion(this.taskId, {
+						// No token usage available when the request fails before streaming usage.
+						inputTokens: 0,
+						outputTokens: 0,
+						cacheWriteTokens: 0,
+						cacheReadTokens: 0,
+						// Extended LLM observability metrics
+						completionTime: performance.now() - apiRequestStartTime,
+						apiProvider: effectiveApiConfiguration?.apiProvider,
+						modelId: this.api.getModel().id,
+						success: false,
+						errorType:
+							errorStatusCode !== undefined
+								? `http_${errorStatusCode}`
+								: error instanceof Error
+									? error.name
+									: "unknown",
+						errorMessage: extractedErrorMessage,
+					})
+
+					// Mark the error so upstream consumers can avoid duplicate telemetry. // kilocode_change
+					if (typeof error === "object" && error !== null) {
+						;(error as any).__llmCompletionTelemetryCaptured = true
+					}
+				}
+			}
+			// kilocode_change end
+
 			// kilocode_change start
 			if (apiConfiguration?.apiProvider === "kilocode" && isAnyRecognizedKiloCodeError(error)) {
 				const { response } = await (isPaymentRequiredError(error)
@@ -4460,14 +4547,55 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		// No error, so we can continue to yield all remaining chunks.
-		// (Needs to be placed outside of try/catch since it we want caller to
-		// handle errors not with api_req_failed as that is reserved for first
-		// chunk failures only.)
-		// This delegates to another generator or iterable object. In this case,
-		// it's saying "yield all remaining values from this iterator". This
-		// effectively passes along all subsequent chunks from the original
-		// stream.
-		yield* iterator
+		// NOTE: We *do* wrap this in a try/catch to ensure mid-stream failures are also tracked.
+		// The caller still handles the error (we rethrow), but telemetry should not depend on
+		// where the stream is consumed. // kilocode_change
+		try {
+			// This delegates to another generator or iterable object. In this case,
+			// it's saying "yield all remaining values from this iterator". This
+			// effectively passes along all subsequent chunks from the original stream.
+			yield* iterator
+		} catch (error) {
+			// kilocode_change start: Phase 1a LLM observability - track post-first-chunk API failures
+			// Only track non-user-cancel failures; aborts are not "API errors" and would be noisy.
+			if (!abortSignal.aborted && !this.abort) {
+				const errorStatusCode = getErrorStatusCode(error)
+				const extractedErrorMessage =
+					getErrorMessage(error) ?? (error instanceof Error ? error.message : String(error))
+
+				if (shouldReportApiErrorToTelemetry(errorStatusCode, extractedErrorMessage)) {
+					const effectiveApiConfiguration = apiConfiguration ?? this.apiConfiguration
+
+					TelemetryService.instance.captureLlmCompletion(this.taskId, {
+						// Token usage might be partially available in the caller, but is not reliably accessible here.
+						// Record the failure with minimal required properties.
+						inputTokens: 0,
+						outputTokens: 0,
+						cacheWriteTokens: 0,
+						cacheReadTokens: 0,
+						completionTime: performance.now() - apiRequestStartTime,
+						apiProvider: effectiveApiConfiguration?.apiProvider,
+						modelId: this.api.getModel().id,
+						success: false,
+						errorType:
+							errorStatusCode !== undefined
+								? `http_${errorStatusCode}`
+								: error instanceof Error
+									? error.name
+									: "unknown",
+						errorMessage: extractedErrorMessage,
+					})
+
+					// Mark the error so upstream consumers can avoid duplicate telemetry. // kilocode_change
+					if (typeof error === "object" && error !== null) {
+						;(error as any).__llmCompletionTelemetryCaptured = true
+					}
+				}
+			}
+			// kilocode_change end
+
+			throw error
+		}
 
 		// kilocode_change start
 		if (apiConfiguration?.rateLimitAfter) {
