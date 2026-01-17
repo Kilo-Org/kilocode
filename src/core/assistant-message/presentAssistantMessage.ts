@@ -124,12 +124,12 @@ export async function presentAssistantMessage(cline: Task) {
 					: `MCP tool ${mcpBlock.name} was interrupted and not executed due to user rejecting a previous tool.`
 
 				if (toolCallId) {
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: errorMessage,
 						is_error: true,
-					} as Anthropic.ToolResultBlockParam)
+					})
 				}
 				break
 			}
@@ -139,12 +139,12 @@ export async function presentAssistantMessage(cline: Task) {
 				const errorMessage = `MCP tool [${mcpBlock.name}] was not executed because a tool has already been used in this message. Only one tool may be used per message.`
 
 				if (toolCallId) {
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: errorMessage,
 						is_error: true,
-					} as Anthropic.ToolResultBlockParam)
+					})
 				}
 				break
 			}
@@ -176,11 +176,11 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 
 				if (toolCallId) {
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: resultContent,
-					} as Anthropic.ToolResultBlockParam)
+					})
 
 					if (imageBlocks.length > 0) {
 						cline.userMessageContent.push(...imageBlocks)
@@ -493,12 +493,12 @@ export async function presentAssistantMessage(cline: Task) {
 
 				if (toolCallId) {
 					// Native protocol: MUST send tool_result for every tool_use
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: errorMessage,
 						is_error: true,
-					} as Anthropic.ToolResultBlockParam)
+					})
 				} else {
 					// XML protocol: send as text
 					cline.userMessageContent.push({
@@ -518,12 +518,12 @@ export async function presentAssistantMessage(cline: Task) {
 
 				if (toolCallId) {
 					// Native protocol: MUST send tool_result for every tool_use
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: errorMessage,
 						is_error: true,
-					} as Anthropic.ToolResultBlockParam)
+					})
 				} else {
 					// XML protocol: send as text
 					cline.userMessageContent.push({
@@ -577,11 +577,11 @@ export async function presentAssistantMessage(cline: Task) {
 					}
 
 					// Add tool_result with text content only
-					cline.userMessageContent.push({
+					cline.pushToolResultToUserContent({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: resultContent,
-					} as Anthropic.ToolResultBlockParam)
+					})
 
 					// Add image blocks separately after tool_result
 					if (imageBlocks.length > 0) {
@@ -801,12 +801,12 @@ export async function presentAssistantMessage(cline: Task) {
 
 					if (toolProtocol === TOOL_PROTOCOL.NATIVE && toolCallId) {
 						// For native protocol, push tool_result directly without setting didAlreadyUseTool
-						cline.userMessageContent.push({
+						cline.pushToolResultToUserContent({
 							type: "tool_result",
 							tool_use_id: toolCallId,
 							content: typeof errorContent === "string" ? errorContent : "(validation error)",
 							is_error: true,
-						} as Anthropic.ToolResultBlockParam)
+						})
 					} else {
 						// For XML protocol, use the standard pushToolResult
 						pushToolResult(errorContent)
@@ -1203,12 +1203,12 @@ export async function presentAssistantMessage(cline: Task) {
 					// Push tool_result directly for native protocol WITHOUT setting didAlreadyUseTool
 					// This prevents the stream from being interrupted with "Response interrupted by tool use result"
 					if (toolProtocol === TOOL_PROTOCOL.NATIVE && toolCallId) {
-						cline.userMessageContent.push({
+						cline.pushToolResultToUserContent({
 							type: "tool_result",
 							tool_use_id: toolCallId,
 							content: formatResponse.toolError(errorMessage, toolProtocol),
 							is_error: true,
-						} as Anthropic.ToolResultBlockParam)
+						})
 					} else {
 						pushToolResult(formatResponse.toolError(errorMessage, toolProtocol))
 					}

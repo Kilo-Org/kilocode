@@ -172,7 +172,7 @@
 			"500": "Chyba serveru poskytovatele. Něco je špatně na straně poskytovatele, s tvým požadavkem není nic v nepořádku.",
 			"connection": "Chyba připojení. Ujisti se, že máš funkční připojení k internetu.",
 			"claudeCodeNotAuthenticated": "Musíš se přihlásit, abys mohl používat Claude Code. Jdi do Nastavení a klikni na \"Přihlásit se ke Claude Code\" pro autentizaci.",
-			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Kilo."
+			"unknown": "Neznámá API chyba, klikni na Detaily pro více informací."
 		}
 	},
 	"checkpoint": {

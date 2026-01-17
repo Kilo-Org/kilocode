@@ -5,6 +5,7 @@ import { FIELD_REGISTRY, isOptionalField, getProviderDefaultModel } from "../../
 import { PROVIDER_LABELS } from "../../constants/providers/labels.js"
 import { isModelField } from "../../constants/providers/models.js"
 import inquirer from "inquirer"
+import { withRawMode } from "../utils/terminal.js"
 
 /**
  * Creates a generic authentication function for a provider
@@ -75,7 +76,9 @@ function createGenericAuthFunction(providerName: ProviderName) {
 		}
 
 		// Prompt user for all fields
-		const answers = await inquirer.prompt(prompts)
+		// Use withRawMode to ensure arrow key navigation works in list prompts
+		// (required for inquirer v13+ which uses @inquirer/prompts internally)
+		const answers = await withRawMode(() => inquirer.prompt(prompts))
 
 		// Build provider config
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

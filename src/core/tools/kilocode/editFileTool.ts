@@ -189,7 +189,8 @@ export async function editFileTool(
 		trackContribution({
 			cwd: cline.cwd,
 			filePath: relPath,
-			unifiedDiff: unifiedPatch,
+			originalContent,
+			newContent,
 			status: approved ? "accepted" : "rejected",
 			taskId: cline.taskId,
 			organizationId: state?.apiConfiguration?.kilocodeOrganizationId,

@@ -360,6 +360,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		| Anthropic.ToolResultBlockParam // kilocode_change
 	)[] = []
 	userMessageContentReady = false
+
+	/**
+	 * Push a tool_result block to userMessageContent, preventing duplicates.
+	 * This is critical for native tool protocol where duplicate tool_use_ids cause API errors.
+	 *
+	 * @param toolResult - The tool_result block to add
+	 * @returns true if added, false if duplicate was skipped
+	 */
+	public pushToolResultToUserContent(toolResult: Anthropic.ToolResultBlockParam): boolean {
+		const existingResult = this.userMessageContent.find(
+			(block): block is Anthropic.ToolResultBlockParam =>
+				block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+		)
+		if (existingResult) {
+			console.warn(
+				`[Task#pushToolResultToUserContent] Skipping duplicate tool_result for tool_use_id: ${toolResult.tool_use_id}`,
+			)
+			return false
+		}
+		this.userMessageContent.push(toolResult)
+		return true
+	}
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didToolFailInCurrentTurn = false
@@ -2566,7 +2588,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				showRooIgnoredFiles = false,
 				includeDiagnosticMessages = true,
 				maxDiagnosticMessages = 50,
-				maxReadFileLine = -1,
+				maxReadFileLine = 500 /*kilocode_change*/,
 			} = (await this.providerRef.deref()?.getState()) ?? {}
 
 			// kilocode_change start
@@ -4298,7 +4320,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
+				maxReadFileLine: state?.maxReadFileLine ?? 500 /*kilocode_change*/,
 				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				// kilocode_change start

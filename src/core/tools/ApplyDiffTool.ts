@@ -181,7 +181,8 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				trackContribution({
 					cwd: task.cwd,
 					filePath: relPath,
-					unifiedDiff: unifiedPatch,
+					originalContent,
+					newContent: diffResult.content,
 					status: didApprove ? "accepted" : "rejected",
 					taskId: task.taskId,
 					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
@@ -238,7 +239,8 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				trackContribution({
 					cwd: task.cwd,
 					filePath: relPath,
-					unifiedDiff: unifiedPatch,
+					originalContent,
+					newContent: diffResult.content,
 					status: didApprove ? "accepted" : "rejected",
 					taskId: task.taskId,
 					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
