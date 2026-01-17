@@ -34,7 +34,9 @@ Skills are loaded from multiple locations, allowing both personal skills and pro
 
 ### Global Skills (User-Level)
 
-Located in `~/.kilocode/skills/`:
+Global skills are located in the `.kilocode` directory within your Home directory. 
+* Mac and Linux: `~/.kilocode/skills/`
+* Windows: `\Users\<yourUser>\.kilocode\`
 
 ```
 ~/.kilocode/
