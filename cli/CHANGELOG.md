@@ -1,5 +1,29 @@
 # @kilocode/cli
 
+## 0.23.1
+
+### Patch Changes
+
+- [#5164](https://github.com/Kilo-Org/kilocode/pull/5164) [`d63378c`](https://github.com/Kilo-Org/kilocode/commit/d63378c5698a0117177d86143185cb46c66f3c73) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Show auth prompt instead of timeout when CLI not configured in Agent Manager
+
+- [#5169](https://github.com/Kilo-Org/kilocode/pull/5169) [`18a9da4`](https://github.com/Kilo-Org/kilocode/commit/18a9da440f4905ce45c80bb0fa622767880de6c6) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed escape sequences appearing as raw text on Windows cmd.exe
+
+## 0.23.0
+
+### Minor Changes
+
+- [#5084](https://github.com/Kilo-Org/kilocode/pull/5084) [`f0c79d2`](https://github.com/Kilo-Org/kilocode/commit/f0c79d27c4952e0359ebc97d41bb50aebd2ef577) Thanks [@montanaflynn](https://github.com/montanaflynn)! - Improved CLI welcome flow: added interactive model selection list using `@inquirer/prompts`, updated provider selection to display a scrollable list, and refactored model fetching logic into a reusable service.
+
+### Patch Changes
+
+- [#5116](https://github.com/Kilo-Org/kilocode/pull/5116) [`cf00ed8`](https://github.com/Kilo-Org/kilocode/commit/cf00ed870c1af723924177372da1054411e269cd) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Make .env file optional in CLI - users can configure via KILO\_\* environment variables instead
+
+## 0.22.2
+
+### Patch Changes
+
+- [#5113](https://github.com/Kilo-Org/kilocode/pull/5113) [`6d04a15`](https://github.com/Kilo-Org/kilocode/commit/6d04a150383af75ed42b954fc3c42e9e010bbed9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI crash when config file is empty or contains invalid JSON
+
 ## 0.22.1
 
 ### Patch Changes
