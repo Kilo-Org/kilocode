@@ -14,7 +14,8 @@
 		"shareSession": "セッションを共有",
 		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
 		"shareConfirmYes": "はい",
-		"shareConfirmNo": "いいえ"
+		"shareConfirmNo": "いいえ",
+		"yoloMode": "YOLOモード"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -55,6 +56,12 @@
 		"noBranches": "ブランチが見つかりません",
 		"noMatchingBranches": "検索に一致するブランチがありません",
 		"openTerminal": "ターミナルを開く",
+		"yoloModeOn": "YOLOモード オン - すべての操作が自動承認されます",
+		"yoloModeOff": "YOLOモード オフ - 操作には承認が必要です",
+		"toggleYoloMode": "YOLOモードを切り替え",
+		"renameSession": "セッション名を変更",
+		"clickToRename": "クリックして名前を変更",
+		"confirmRename": "名前変更を確認",
 		"selectModel": "モデルを選択",
 		"modelTooltip": "このセッションで使用するAIモデルを選択",
 		"defaultModel": "デフォルトモデル",
@@ -73,7 +80,9 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}",
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
-		"copyCommand": "コマンドをコピー"
+		"copyCommand": "コマンドをコピー",
+		"approve": "承認",
+		"deny": "拒否"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",

@@ -14,7 +14,8 @@
 		"shareSession": "Sitzung teilen",
 		"shareConfirmMessage": "Möchtest du einen Schnappschuss dieser Sitzung öffentlich teilen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nein"
+		"shareConfirmNo": "Nein",
+		"yoloMode": "YOLO-Modus"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Einen neuen Agenten starten",
@@ -55,6 +56,12 @@
 		"noBranches": "Keine Branches gefunden",
 		"noMatchingBranches": "Keine Branches entsprechen deiner Suche",
 		"openTerminal": "Terminal öffnen",
+		"yoloModeOn": "YOLO-Modus AN - alle Operationen werden automatisch genehmigt",
+		"yoloModeOff": "YOLO-Modus AUS - Genehmigung für Operationen erforderlich",
+		"toggleYoloMode": "YOLO-Modus umschalten",
+		"renameSession": "Sitzung umbenennen",
+		"clickToRename": "Klicken zum Umbenennen",
+		"confirmRename": "Umbenennung bestätigen",
 		"selectModel": "Modell auswählen",
 		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
 		"defaultModel": "Standard-Modell",
@@ -73,7 +80,9 @@
 		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}",
 		"expandOutput": "Ausgabe erweitern",
 		"collapseOutput": "Ausgabe einklappen",
-		"copyCommand": "Befehl kopieren"
+		"copyCommand": "Befehl kopieren",
+		"approve": "Genehmigen",
+		"deny": "Ablehnen"
 	},
 	"chatInput": {
 		"autoMode": "Agent läuft im Vollautomatik-Modus - keine Eingabe möglich",

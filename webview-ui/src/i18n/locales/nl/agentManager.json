@@ -14,7 +14,8 @@
 		"shareSession": "Sessie delen",
 		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nee"
+		"shareConfirmNo": "Nee",
+		"yoloMode": "YOLO-modus"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -55,6 +56,12 @@
 		"noBranches": "Geen branches gevonden",
 		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht",
 		"openTerminal": "Terminal openen",
+		"yoloModeOn": "YOLO-modus aan - alle operaties worden automatisch goedgekeurd",
+		"yoloModeOff": "YOLO-modus uit - goedkeuring vereist voor operaties",
+		"toggleYoloMode": "YOLO-modus wisselen",
+		"renameSession": "Sessie hernoemen",
+		"clickToRename": "Klik om te hernoemen",
+		"confirmRename": "Hernoemen bevestigen",
 		"selectModel": "Model selecteren",
 		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
 		"defaultModel": "Standaardmodel",
@@ -73,7 +80,9 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer invouwen",
-		"copyCommand": "Opdracht kopiëren"
+		"copyCommand": "Opdracht kopiëren",
+		"approve": "Goedkeuren",
+		"deny": "Weigeren"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

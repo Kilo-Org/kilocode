@@ -14,7 +14,8 @@
 		"shareSession": "分享工作階段",
 		"shareConfirmMessage": "是否要公開分享此工作階段的快照？",
 		"shareConfirmYes": "是",
-		"shareConfirmNo": "否"
+		"shareConfirmNo": "否",
+		"yoloMode": "YOLO 模式"
 	},
 	"sessionDetail": {
 		"startNewAgent": "啟動新代理",
@@ -55,6 +56,12 @@
 		"noBranches": "找不到 Branch",
 		"noMatchingBranches": "沒有符合的 Branch",
 		"openTerminal": "開啟終端機",
+		"yoloModeOn": "YOLO 模式已開啟 - 所有操作自動批准",
+		"yoloModeOff": "YOLO 模式已關閉 - 操作需要批准",
+		"toggleYoloMode": "切換 YOLO 模式",
+		"renameSession": "重新命名工作階段",
+		"clickToRename": "點擊重新命名",
+		"confirmRename": "確認重新命名",
 		"selectModel": "選擇模型",
 		"modelTooltip": "選擇此工作階段使用的 AI 模型",
 		"defaultModel": "預設模型",
@@ -73,7 +80,9 @@
 		"usingTool": "正在使用工具：**{{tool}}** {{details}}",
 		"expandOutput": "展開輸出",
 		"collapseOutput": "收合輸出",
-		"copyCommand": "複製指令"
+		"copyCommand": "複製指令",
+		"approve": "批准",
+		"deny": "拒絕"
 	},
 	"chatInput": {
 		"autoMode": "Agent 正在全自動模式下執行 - 不允許輸入",

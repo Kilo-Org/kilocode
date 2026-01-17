@@ -67,8 +67,18 @@ describe("detectInputState", () => {
 						{
 							condition: (context) => context.getArgument("subcommand") === "select",
 							provider: async () => [
-								{ value: "personal", description: "Personal account", matchScore: 1, highlightedValue: "personal" },
-								{ value: "kilo-code", description: "Kilo Code team", matchScore: 1, highlightedValue: "kilo-code" },
+								{
+									value: "personal",
+									description: "Personal account",
+									matchScore: 1,
+									highlightedValue: "personal",
+								},
+								{
+									value: "kilo-code",
+									description: "Kilo Code team",
+									matchScore: 1,
+									highlightedValue: "kilo-code",
+								},
 							],
 						},
 					],
@@ -108,7 +118,12 @@ describe("detectInputState", () => {
 							},
 							provider: async () => [
 								{ value: "gpt-4", description: "GPT-4", matchScore: 1, highlightedValue: "gpt-4" },
-								{ value: "claude-sonnet", description: "Claude Sonnet", matchScore: 1, highlightedValue: "claude-sonnet" },
+								{
+									value: "claude-sonnet",
+									description: "Claude Sonnet",
+									matchScore: 1,
+									highlightedValue: "claude-sonnet",
+								},
 							],
 						},
 					],
@@ -132,7 +147,12 @@ describe("detectInputState", () => {
 					required: true,
 					provider: async () => [
 						{ value: "code", description: "Code mode", matchScore: 1, highlightedValue: "code" },
-						{ value: "architect", description: "Architect mode", matchScore: 1, highlightedValue: "architect" },
+						{
+							value: "architect",
+							description: "Architect mode",
+							matchScore: 1,
+							highlightedValue: "architect",
+						},
 					],
 				},
 			],

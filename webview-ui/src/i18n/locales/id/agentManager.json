@@ -14,7 +14,8 @@
 		"shareSession": "Bagikan sesi",
 		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
 		"shareConfirmYes": "Ya",
-		"shareConfirmNo": "Tidak"
+		"shareConfirmNo": "Tidak",
+		"yoloMode": "Mode YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -55,6 +56,12 @@
 		"noBranches": "Tidak ada cabang ditemukan",
 		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu",
 		"openTerminal": "Buka terminal",
+		"yoloModeOn": "Mode YOLO aktif - semua operasi disetujui otomatis",
+		"yoloModeOff": "Mode YOLO nonaktif - persetujuan diperlukan untuk operasi",
+		"toggleYoloMode": "Alihkan mode YOLO",
+		"renameSession": "Ubah nama sesi",
+		"clickToRename": "Klik untuk mengubah nama",
+		"confirmRename": "Konfirmasi ubah nama",
 		"selectModel": "Pilih model",
 		"modelTooltip": "Pilih model AI mana yang akan digunakan untuk sesi ini",
 		"defaultModel": "Model default",
@@ -73,7 +80,9 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
-		"copyCommand": "Salin perintah"
+		"copyCommand": "Salin perintah",
+		"approve": "Setujui",
+		"deny": "Tolak"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

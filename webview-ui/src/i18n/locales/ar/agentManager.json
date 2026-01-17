@@ -14,7 +14,8 @@
 		"shareSession": "مشاركة الجلسة",
 		"shareConfirmMessage": "هل ترغب في مشاركة لقطة من هذه الجلسة علنًا؟",
 		"shareConfirmYes": "نعم",
-		"shareConfirmNo": "لا"
+		"shareConfirmNo": "لا",
+		"yoloMode": "وضع YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -59,6 +60,12 @@
 		"noBranches": "لم يتم العثور على فروع",
 		"noMatchingBranches": "لا توجد فروع تطابق بحثك",
 		"openTerminal": "فتح الطرفية",
+		"yoloModeOn": "وضع YOLO مفعّل - جميع العمليات معتمدة تلقائياً",
+		"yoloModeOff": "وضع YOLO معطّل - العمليات تحتاج موافقة",
+		"toggleYoloMode": "تبديل وضع YOLO",
+		"renameSession": "إعادة تسمية الجلسة",
+		"clickToRename": "انقر لإعادة التسمية",
+		"confirmRename": "تأكيد إعادة التسمية",
 		"selectModel": "اختر النموذج",
 		"modelTooltip": "اختر نموذج الذكاء الاصطناعي لهذه الجلسة",
 		"defaultModel": "النموذج الافتراضي",
@@ -77,7 +84,9 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
 		"expandOutput": "توسيع المخرجات",
 		"collapseOutput": "طي المخرجات",
-		"copyCommand": "نسخ الأمر"
+		"copyCommand": "نسخ الأمر",
+		"approve": "موافقة",
+		"deny": "رفض"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",

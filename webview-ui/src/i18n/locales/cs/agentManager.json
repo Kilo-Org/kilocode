@@ -14,7 +14,8 @@
 		"shareSession": "Sdílet relaci",
 		"shareConfirmMessage": "Chcete veřejně sdílet snímek této relace?",
 		"shareConfirmYes": "Ano",
-		"shareConfirmNo": "Ne"
+		"shareConfirmNo": "Ne",
+		"yoloMode": "Režim YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -56,6 +57,12 @@
 		"noBranches": "Nebyly nalezeny žádné větve",
 		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání",
 		"openTerminal": "Otevřít terminál",
+		"yoloModeOn": "Režim YOLO zapnutý - všechny operace jsou automaticky schváleny",
+		"yoloModeOff": "Režim YOLO vypnutý - vyžaduje se schválení operací",
+		"toggleYoloMode": "Přepnout režim YOLO",
+		"renameSession": "Přejmenovat relaci",
+		"clickToRename": "Klikni pro přejmenování",
+		"confirmRename": "Potvrdit přejmenování",
 		"selectModel": "Vyber model",
 		"modelTooltip": "Vyber, který AI model použít pro tuto relaci",
 		"defaultModel": "Výchozí model",
@@ -74,7 +81,9 @@
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}",
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
-		"copyCommand": "Kopírovat příkaz"
+		"copyCommand": "Kopírovat příkaz",
+		"approve": "Schválit",
+		"deny": "Odmítnout"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",

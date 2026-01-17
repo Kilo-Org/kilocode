@@ -70,4 +70,41 @@ describe("buildCliArgs", () => {
 		expect(args).toContain("--yolo")
 		expect(args).not.toContain("--auto")
 	})
+
+	// YOLO mode tests
+	describe("yoloMode option", () => {
+		it("includes --yolo by default (undefined)", () => {
+			const args = buildCliArgs("/workspace", "prompt")
+
+			expect(args).toContain("--yolo")
+		})
+
+		it("includes --yolo when yoloMode is true", () => {
+			const args = buildCliArgs("/workspace", "prompt", { yoloMode: true })
+
+			expect(args).toContain("--yolo")
+		})
+
+		it("excludes --yolo when yoloMode is false", () => {
+			const args = buildCliArgs("/workspace", "prompt", { yoloMode: false })
+
+			expect(args).not.toContain("--yolo")
+		})
+
+		it("excludes --yolo when yoloMode is false with session", () => {
+			const args = buildCliArgs("/workspace", "prompt", { yoloMode: false, sessionId: "abc123" })
+
+			expect(args).not.toContain("--yolo")
+			expect(args).toContain("--session=abc123")
+			expect(args).toEqual(["--json-io", "--workspace=/workspace", "--session=abc123", "prompt"])
+		})
+
+		it("includes --yolo when yoloMode is true with session", () => {
+			const args = buildCliArgs("/workspace", "prompt", { yoloMode: true, sessionId: "abc123" })
+
+			expect(args).toContain("--yolo")
+			expect(args).toContain("--session=abc123")
+			expect(args).toEqual(["--json-io", "--yolo", "--workspace=/workspace", "--session=abc123", "prompt"])
+		})
+	})
 })

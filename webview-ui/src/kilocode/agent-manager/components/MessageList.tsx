@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
-import { sessionInputAtomFamily } from "../state/atoms/sessions"
+import { sessionInputAtomFamily, selectedSessionAtom } from "../state/atoms/sessions"
 import {
 	sessionMessageQueueAtomFamily,
 	sessionSendingMessageIdAtomFamily,
@@ -28,6 +28,8 @@ import {
 	User,
 	Clock,
 	Loader,
+	Check,
+	X,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -65,7 +67,11 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
 	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
+	const selectedSession = useAtomValue(selectedSessionAtom)
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
+
+	// Get session's yoloMode - if true, don't show approval buttons
+	const sessionYoloMode = selectedSession?.yoloMode ?? true // Default true for backward compat
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
@@ -77,7 +83,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 			const msg = messages[i]
 			if (msg.type !== "ask" || msg.ask !== "command") continue
 
-			let data: ReturnType<typeof extractCommandMetadata> = null
+			let data: { exitCode?: number; status?: string; isRunning?: boolean } | null = null
 
 			// Find output messages following this command
 			for (let j = i + 1; j < messages.length; j++) {
@@ -85,7 +91,20 @@ export function MessageList({ sessionId }: MessageListProps) {
 				if (next.type === "ask" && next.ask === "command") break
 				if (next.ask !== "command_output" && next.say !== "command_output") continue
 
-				data = extractCommandMetadata(next)
+				const extracted = extractCommandMetadata(next)
+				if (extracted) {
+					// Merge data, keeping exitCode if we already have it
+					// (ask.command_output has exitCode, say.command_output doesn't)
+					if (data === null) {
+						data = extracted
+					} else {
+						data = {
+							exitCode: data.exitCode ?? extracted.exitCode,
+							status: extracted.status ?? data.status,
+							isRunning: extracted.isRunning,
+						}
+					}
+				}
 			}
 
 			if (data) info.set(msg.ts, data)
@@ -167,6 +186,9 @@ export function MessageList({ sessionId }: MessageListProps) {
 					key={msg.ts || index}
 					message={msg}
 					isLast={isLastCombinedMessage}
+					sessionId={sessionId}
+					sessionYoloMode={sessionYoloMode}
+					allMessages={messages}
 					commandExecutionByTs={commandExecutionByTs}
 					onSuggestionClick={handleSuggestionClick}
 					onCopyToInput={handleCopyToInput}
@@ -175,12 +197,15 @@ export function MessageList({ sessionId }: MessageListProps) {
 		},
 		[
 			combinedMessages.length,
+			messages,
 			commandExecutionByTs,
 			handleSuggestionClick,
 			handleCopyToInput,
 			sendingMessageId,
 			handleRetryMessage,
 			handleDiscardMessage,
+			sessionId,
+			sessionYoloMode,
 		],
 	)
 
@@ -227,12 +252,24 @@ function extractFollowUpData(message: ClineMessage): { question: string; suggest
 interface MessageItemProps {
 	message: ClineMessage
 	isLast: boolean
+	sessionId: string
+	sessionYoloMode: boolean
+	allMessages: ClineMessage[]
 	commandExecutionByTs: Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>
 	onSuggestionClick?: (suggestion: SuggestionItem) => void
 	onCopyToInput?: (suggestion: SuggestionItem) => void
 }
 
-function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick, onCopyToInput }: MessageItemProps) {
+function MessageItem({
+	message,
+	isLast,
+	sessionId,
+	sessionYoloMode,
+	allMessages,
+	commandExecutionByTs,
+	onSuggestionClick,
+	onCopyToInput,
+}: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
@@ -244,6 +281,10 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 	let content: React.ReactNode = null
 	let extraInfo: React.ReactNode = null
 	let suggestions: SuggestionItem[] | undefined
+	let needsApproval = false // Track if this ask message needs approval buttons
+	let wasAutoApproved = false // Track if command was auto-approved (executed without user action)
+	let wasDenied = false // Track if user clicked Deny button
+	let userRespondedViaText = false // Track if user responded via text instead of clicking buttons
 
 	// --- SAY ---
 	if (message.type === "say") {
@@ -320,6 +361,27 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 						terminalStatus={execInfo?.status}
 					/>
 				)
+				// Show approval buttons only when NOT in YOLO mode
+				if (!sessionYoloMode) {
+					needsApproval = true
+					// Check if command was executed or user responded via text
+					const msgIndex = allMessages.findIndex((m) => m.ts === message.ts)
+					if (msgIndex !== -1) {
+						const messagesAfter = allMessages.slice(msgIndex + 1)
+						const hasOutput = messagesAfter.some((m) => m.type === "say" && m.say === "command_output")
+						const userFeedbackMsg = messagesAfter.find((m) => m.type === "say" && m.say === "user_feedback")
+						if (hasOutput) {
+							wasAutoApproved = true
+						} else if (userFeedbackMsg) {
+							const feedbackText = userFeedbackMsg.text || (userFeedbackMsg as any).content || ""
+							if (feedbackText === "User denied this operation") {
+								wasDenied = true
+							} else {
+								userRespondedViaText = true
+							}
+						}
+					}
+				}
 				break
 			}
 			case "command_output": {
@@ -347,6 +409,25 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 				} else {
 					content = <SimpleMarkdown content={messageText} />
 				}
+				// Show approval buttons only when NOT in YOLO mode and not already answered
+				if (!sessionYoloMode && !message.isAnswered) {
+					needsApproval = true
+					// Check if user responded via text or clicked Deny
+					const msgIndex = allMessages.findIndex((m) => m.ts === message.ts)
+					if (msgIndex !== -1) {
+						const userFeedbackMsg = allMessages
+							.slice(msgIndex + 1)
+							.find((m) => m.type === "say" && m.say === "user_feedback")
+						if (userFeedbackMsg) {
+							const feedbackText = userFeedbackMsg.text || (userFeedbackMsg as any).content || ""
+							if (feedbackText === "User denied this operation") {
+								wasDenied = true
+							} else {
+								userRespondedViaText = true
+							}
+						}
+					}
+				}
 				break
 			}
 			default:
@@ -365,6 +446,16 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 					{extraInfo}
 				</div>
 				{content && <div className="am-message-body">{content}</div>}
+				{needsApproval && (
+					<ApprovalButtons
+						sessionId={sessionId}
+						messageTs={message.ts}
+						isAnswered={message.isAnswered}
+						wasAutoApproved={wasAutoApproved}
+						wasDenied={wasDenied}
+						userRespondedViaText={userRespondedViaText}
+					/>
+				)}
 				{suggestions && suggestions.length > 0 && onSuggestionClick && (
 					<FollowUpSuggestions
 						suggestions={suggestions}
@@ -373,6 +464,92 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 					/>
 				)}
 			</div>
+		</div>
+	)
+}
+
+/**
+ * Approval buttons for ask messages when YOLO mode is OFF.
+ * Shows Approve/Deny buttons that send responses via JSON-IO to the CLI.
+ */
+interface ApprovalButtonsProps {
+	sessionId: string
+	messageTs: number
+	isAnswered?: boolean
+	wasAutoApproved?: boolean // True if command was executed without user action
+	wasDenied?: boolean // True if user clicked Deny button
+	userRespondedViaText?: boolean // True if user responded via text input instead of clicking buttons
+}
+
+function ApprovalButtons({
+	sessionId,
+	messageTs,
+	isAnswered,
+	wasAutoApproved,
+	wasDenied,
+	userRespondedViaText,
+}: ApprovalButtonsProps) {
+	const { t } = useTranslation("agentManager")
+	// Track which button was clicked: "approved" | "denied" | null
+	const [response, setResponse] = useState<"approved" | "denied" | null>(null)
+
+	// Determine final state: user clicked OR auto-approved by CLI OR command executed OR denied OR user responded via text
+	const isResolved = response !== null || isAnswered || wasAutoApproved || wasDenied || userRespondedViaText
+	// Determine which button should appear selected
+	// Priority: local click state > wasDenied > wasAutoApproved/isAnswered > null (for text response)
+	const effectiveResponse =
+		response ??
+		(wasDenied ? "denied" : userRespondedViaText ? null : isAnswered || wasAutoApproved ? "approved" : null)
+
+	const handleApprove = () => {
+		if (isResolved) return
+		setResponse("approved")
+		vscode.postMessage({
+			type: "agentManager.respondToApproval",
+			sessionId,
+			approved: true,
+			messageTs,
+		})
+	}
+
+	const handleDeny = () => {
+		if (isResolved) return
+		setResponse("denied")
+		vscode.postMessage({
+			type: "agentManager.respondToApproval",
+			sessionId,
+			approved: false,
+			text: "User denied this operation",
+			messageTs,
+		})
+	}
+
+	return (
+		<div className="am-approval-buttons" role="group" aria-label="Approval actions">
+			<button
+				className={cn(
+					"am-approve-btn",
+					isResolved && "am-approval-disabled",
+					effectiveResponse === "approved" && "am-approval-selected",
+				)}
+				onClick={handleApprove}
+				disabled={isResolved}
+				aria-label={t("messages.approve")}>
+				<Check size={14} />
+				{t("messages.approve")}
+			</button>
+			<button
+				className={cn(
+					"am-deny-btn",
+					isResolved && "am-approval-disabled",
+					effectiveResponse === "denied" && "am-approval-selected",
+				)}
+				onClick={handleDeny}
+				disabled={isResolved}
+				aria-label={t("messages.deny")}>
+				<X size={14} />
+				{t("messages.deny")}
+			</button>
 		</div>
 	)
 }

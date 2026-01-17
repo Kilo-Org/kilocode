@@ -222,8 +222,8 @@ function getCheckpointsPath(): string {
 }
 
 /**
-	* Handle /checkpoint disable
-	*/
+ * Handle /checkpoint disable
+ */
 async function handleDisable(context: CommandContext): Promise<void> {
 	const { addMessage, sendWebviewMessage } = context
 

@@ -38,6 +38,7 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
+	yoloMode?: boolean
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
@@ -143,6 +144,7 @@ export class CliProcessHandler {
 		options:
 			| {
 					parallelMode?: boolean
+					yoloMode?: boolean
 					sessionId?: string
 					label?: string
 					gitUrl?: string
@@ -183,6 +185,7 @@ export class CliProcessHandler {
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
 				gitUrl: options?.gitUrl,
+				yoloMode: options?.yoloMode,
 			})
 			this.debugLog(`Pending session created, waiting for CLI session_created event`)
 			this.callbacks.onPendingSessionChanged(pendingSession)
@@ -193,6 +196,7 @@ export class CliProcessHandler {
 		// and passing the worktree path as the workspace. CLI is unaware of worktrees.
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			sessionId: options?.sessionId,
+			yoloMode: options?.yoloMode,
 			model: options?.model,
 		})
 		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
@@ -248,6 +252,7 @@ export class CliProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
+				yoloMode: options?.yoloMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
@@ -519,13 +524,24 @@ export class CliProcessHandler {
 		const provisionalId = `provisional-${Date.now()}`
 		this.pendingProcess.provisionalSessionId = provisionalId
 
-		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath, model } =
-			this.pendingProcess
+		const {
+			prompt,
+			startTime,
+			parallelMode,
+			yoloMode,
+			desiredLabel,
+			gitUrl,
+			parser,
+			worktreeBranch,
+			worktreePath,
+			model,
+		} = this.pendingProcess
 
 		this.registry.createSession(provisionalId, prompt, startTime, {
 			parallelMode,
 			labelOverride: desiredLabel,
 			gitUrl,
+			yoloMode,
 			model,
 		})
 
@@ -542,6 +558,8 @@ export class CliProcessHandler {
 			this.registry.setSessionPid(provisionalId, proc.pid)
 		}
 
+		// Clear the timeout BEFORE clearing the pending session to prevent race conditions
+		this.clearPendingTimeout()
 		this.registry.clearPendingSession()
 		this.callbacks.onPendingSessionChanged(null)
 		this.callbacks.onSessionCreated(this.pendingProcess?.sawApiReqStarted ?? false)
@@ -641,6 +659,7 @@ export class CliProcessHandler {
 			startTime,
 			parser,
 			parallelMode,
+			yoloMode,
 			worktreeBranch,
 			worktreePath,
 			worktreeInfo,
@@ -690,6 +709,7 @@ export class CliProcessHandler {
 				parallelMode,
 				labelOverride: desiredLabel,
 				gitUrl,
+				yoloMode,
 				model,
 			})
 			this.debugLog(`Created new session: ${sessionId}`)

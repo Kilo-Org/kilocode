@@ -46,6 +46,7 @@ export const agentSessionSchema = z.object({
 	parallelMode: parallelModeInfoSchema.optional(),
 	gitUrl: z.string().optional(),
 	model: z.string().optional(), // Model ID used for this session
+	yoloMode: z.boolean().optional(), // True if session was started with --yolo flag (auto-approve operations)
 })
 
 /**
@@ -57,6 +58,7 @@ export const pendingSessionSchema = z.object({
 	startTime: z.number(),
 	parallelMode: z.boolean().optional(),
 	gitUrl: z.string().optional(),
+	yoloMode: z.boolean().optional(), // True if session will be started with --yolo flag
 })
 
 /**
@@ -77,6 +79,7 @@ export const startSessionMessageSchema = z.object({
 	type: z.literal("agentManager.startSession"),
 	prompt: z.string(),
 	parallelMode: z.boolean().optional(),
+	yoloMode: z.boolean().optional(), // True to auto-approve all tool operations
 	existingBranch: z.string().optional(),
 	model: z.string().optional(), // Model ID to use for this session
 	versions: z.number().optional(), // Number of versions for multi-version mode

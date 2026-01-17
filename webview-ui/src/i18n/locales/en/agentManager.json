@@ -14,7 +14,8 @@
 		"shareSession": "Share session",
 		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
 		"shareConfirmYes": "Yes",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"yoloMode": "YOLO mode"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -38,6 +39,9 @@
 		"creatingSession": "Creating session...",
 		"waitingForCli": "Initializing agent session...",
 		"autoModeWarning": "YOLO mode - tool operations are auto-approved",
+		"yoloModeOn": "YOLO mode ON - auto-approve all operations",
+		"yoloModeOff": "YOLO mode OFF - require approval for operations",
+		"toggleYoloMode": "Toggle YOLO mode",
 		"versions": "Versions",
 		"versionsTooltip": "Parallel agents exploring different approaches",
 		"versionsHelperText": "{{count}} parallel agents on separate branches",
@@ -55,6 +59,9 @@
 		"noBranches": "No branches found",
 		"noMatchingBranches": "No branches match your search",
 		"openTerminal": "Open terminal",
+		"renameSession": "Rename session",
+		"clickToRename": "Click to rename",
+		"confirmRename": "Confirm rename",
 		"selectModel": "Select model",
 		"modelTooltip": "Choose which AI model to use for this session",
 		"defaultModel": "Default model",
@@ -73,7 +80,9 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"copyCommand": "Copy command"
+		"copyCommand": "Copy command",
+		"approve": "Approve",
+		"deny": "Deny"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",

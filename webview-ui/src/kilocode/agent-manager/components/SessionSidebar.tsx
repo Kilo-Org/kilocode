@@ -11,7 +11,7 @@ import {
 import { sessionMachineUiStateAtom } from "../state/atoms/stateMachine"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import { Plus, Loader2, RefreshCw, GitBranch, Folder, Share2 } from "lucide-react"
+import { Plus, Loader2, RefreshCw, GitBranch, Folder, Share2, Zap } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
@@ -197,6 +197,11 @@ function SessionItem({
 					{!isWorktree && (
 						<span className="am-workspace-indicator" title={t("sidebar.local")}>
 							<Folder size={10} />
+						</span>
+					)}
+					{session.yoloMode !== false && (
+						<span className="am-yolo-indicator" title={t("sidebar.yoloMode")}>
+							<Zap size={10} />
 						</span>
 					)}
 				</div>
