@@ -19,18 +19,18 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -49,18 +49,18 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: "18"
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -78,18 +78,18 @@ jobs:
                 os: [ubuntu-latest, windows-latest]
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -120,18 +120,18 @@ jobs:
                 os: [ubuntu-latest, windows-latest]
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: "18"
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -154,7 +154,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   submodules: recursive
                   lfs: true
@@ -163,11 +163,11 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
-            - uses: actions/setup-java@v4
+            - uses: actions/setup-java@v5
               with:
                   distribution: "jetbrains"
                   java-version: "21"
@@ -175,7 +175,7 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Gradle
-              uses: gradle/actions/setup-gradle@v4
+              uses: gradle/actions/setup-gradle@v5
               with:
                   cache-read-only: ${{ github.ref != 'refs/heads/main' }}
             - name: Install system dependencies
@@ -188,7 +188,7 @@ jobs:
                     build-essential \
                     python3
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -204,18 +204,18 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
