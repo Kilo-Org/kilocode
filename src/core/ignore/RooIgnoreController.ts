@@ -9,21 +9,31 @@ import "../../utils/path" // Import to enable String.prototype.toPosix()
 export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 
 /**
+ * Supported ignore file names in order of precedence.
+ * .kilocodeignore takes precedence over .kiloignore
+ */
+export const IGNORE_FILE_NAMES = [".kilocodeignore", ".kiloignore"] as const
+
+/**
  * Controls LLM access to files by enforcing ignore patterns.
  * Designed to be instantiated once in Cline.ts and passed to file manipulation services.
- * Uses the 'ignore' library to support standard .gitignore syntax in .kilocodeignore files.
+ * Uses the 'ignore' library to support standard .gitignore syntax in ignore files.
+ * Supports both .kilocodeignore and .kiloignore (with .kilocodeignore taking precedence).
  */
 export class RooIgnoreController {
 	private cwd: string
 	private ignoreInstance: Ignore
 	private disposables: vscode.Disposable[] = []
 	rooIgnoreContent: string | undefined
+	/** The actual ignore file name being used (for error messages) */
+	activeIgnoreFileName: string | undefined
 
 	constructor(cwd: string) {
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
 		this.rooIgnoreContent = undefined
-		// Set up file watcher for .kilocodeignore
+		this.activeIgnoreFileName = undefined
+		// Set up file watcher for ignore files
 		this.setupFileWatcher()
 	}
 
@@ -36,48 +46,60 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Set up the file watcher for .kilocodeignore changes
+	 * Set up file watchers for ignore file changes.
+	 * Watches both .kilocodeignore and .kiloignore for changes.
 	 */
 	private setupFileWatcher(): void {
-		const rooignorePattern = new vscode.RelativePattern(this.cwd, ".kilocodeignore")
-		const fileWatcher = vscode.workspace.createFileSystemWatcher(rooignorePattern)
+		for (const ignoreFileName of IGNORE_FILE_NAMES) {
+			const ignorePattern = new vscode.RelativePattern(this.cwd, ignoreFileName)
+			const fileWatcher = vscode.workspace.createFileSystemWatcher(ignorePattern)
 
-		// Watch for changes and updates
-		this.disposables.push(
-			fileWatcher.onDidChange(() => {
-				this.loadRooIgnore()
-			}),
-			fileWatcher.onDidCreate(() => {
-				this.loadRooIgnore()
-			}),
-			fileWatcher.onDidDelete(() => {
-				this.loadRooIgnore()
-			}),
-		)
+			// Watch for changes and updates
+			this.disposables.push(
+				fileWatcher.onDidChange(() => {
+					this.loadRooIgnore()
+				}),
+				fileWatcher.onDidCreate(() => {
+					this.loadRooIgnore()
+				}),
+				fileWatcher.onDidDelete(() => {
+					this.loadRooIgnore()
+				}),
+			)
 
-		// Add fileWatcher itself to disposables
-		this.disposables.push(fileWatcher)
+			// Add fileWatcher itself to disposables
+			this.disposables.push(fileWatcher)
+		}
 	}
 
 	/**
-	 * Load custom patterns from .kilocodeignore if it exists
+	 * Load custom patterns from ignore file if it exists.
+	 * Checks for .kilocodeignore first, then falls back to .kiloignore.
 	 */
 	private async loadRooIgnore(): Promise<void> {
 		try {
 			// Reset ignore instance to prevent duplicate patterns
 			this.ignoreInstance = ignore()
-			const ignorePath = path.join(this.cwd, ".kilocodeignore")
-			if (await fileExistsAtPath(ignorePath)) {
-				const content = await fs.readFile(ignorePath, "utf8")
-				this.rooIgnoreContent = content
-				this.ignoreInstance.add(content)
-				this.ignoreInstance.add(".kilocodeignore")
-			} else {
-				this.rooIgnoreContent = undefined
+			this.rooIgnoreContent = undefined
+			this.activeIgnoreFileName = undefined
+
+			// Check for ignore files in order of precedence
+			for (const ignoreFileName of IGNORE_FILE_NAMES) {
+				const ignorePath = path.join(this.cwd, ignoreFileName)
+				if (await fileExistsAtPath(ignorePath)) {
+					const content = await fs.readFile(ignorePath, "utf8")
+					this.rooIgnoreContent = content
+					this.activeIgnoreFileName = ignoreFileName
+					this.ignoreInstance.add(content)
+					// Also ignore the ignore file itself
+					this.ignoreInstance.add(ignoreFileName)
+					// Only use the first found file (precedence order)
+					break
+				}
 			}
 		} catch (error) {
 			// Should never happen: reading file failed even though it exists
-			console.error("Unexpected error loading .kilocodeignore:", error)
+			console.error("Unexpected error loading ignore file:", error)
 		}
 	}
 

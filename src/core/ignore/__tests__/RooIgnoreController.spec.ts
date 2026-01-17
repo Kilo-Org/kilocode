@@ -2,7 +2,7 @@
 
 import type { Mock } from "vitest"
 
-import { RooIgnoreController, LOCK_TEXT_SYMBOL } from "../RooIgnoreController"
+import { RooIgnoreController, LOCK_TEXT_SYMBOL, IGNORE_FILE_NAMES } from "../RooIgnoreController"
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
@@ -132,7 +132,15 @@ describe("RooIgnoreController", () => {
 				}),
 			)
 
-			// Verify event handlers were registered
+			// Also check for .kiloignore watcher
+			expect(vscode.workspace.createFileSystemWatcher).toHaveBeenCalledWith(
+				expect.objectContaining({
+					base: TEST_CWD,
+					pattern: ".kiloignore",
+				}),
+			)
+
+			// Verify event handlers were registered (called twice, once for each watcher)
 			expect(mockWatcher.onDidCreate).toHaveBeenCalled()
 			expect(mockWatcher.onDidChange).toHaveBeenCalled()
 			expect(mockWatcher.onDidDelete).toHaveBeenCalled()
@@ -153,10 +161,65 @@ describe("RooIgnoreController", () => {
 			await controller.initialize()
 
 			// Verify error was logged
-			expect(consoleSpy).toHaveBeenCalledWith("Unexpected error loading .kilocodeignore:", expect.any(Error))
+			expect(consoleSpy).toHaveBeenCalledWith("Unexpected error loading ignore file:", expect.any(Error))
 
 			// Cleanup
 			consoleSpy.mockRestore()
+		})
+
+		/**
+		 * Tests fallback to .kiloignore when .kilocodeignore doesn't exist
+		 */
+		it("should fall back to .kiloignore when .kilocodeignore doesn't exist", async () => {
+			// Setup mocks: .kilocodeignore doesn't exist, but .kiloignore does
+			mockFileExists.mockImplementation(async (filePath: string) => {
+				return filePath.endsWith(".kiloignore")
+			})
+			mockReadFile.mockResolvedValue("node_modules\n.git\nsecrets.json")
+
+			// Initialize controller
+			await controller.initialize()
+
+			// Verify file was checked and read from .kiloignore
+			expect(mockFileExists).toHaveBeenCalledWith(path.join(TEST_CWD, ".kilocodeignore"))
+			expect(mockFileExists).toHaveBeenCalledWith(path.join(TEST_CWD, ".kiloignore"))
+			expect(mockReadFile).toHaveBeenCalledWith(path.join(TEST_CWD, ".kiloignore"), "utf8")
+
+			// Verify content was stored
+			expect(controller.rooIgnoreContent).toBe("node_modules\n.git\nsecrets.json")
+			expect(controller.activeIgnoreFileName).toBe(".kiloignore")
+
+			// Test that ignore patterns were applied
+			expect(controller.validateAccess("node_modules/package.json")).toBe(false)
+			expect(controller.validateAccess("src/app.ts")).toBe(true)
+		})
+
+		/**
+		 * Tests that .kilocodeignore takes precedence over .kiloignore
+		 */
+		it("should use .kilocodeignore when both files exist (precedence)", async () => {
+			// Setup mocks: both files exist
+			mockFileExists.mockResolvedValue(true)
+			// First call (for .kilocodeignore) should return its content
+			mockReadFile.mockResolvedValue("secrets/**")
+
+			// Initialize controller
+			await controller.initialize()
+
+			// Verify only .kilocodeignore was read (precedence)
+			expect(mockReadFile).toHaveBeenCalledWith(path.join(TEST_CWD, ".kilocodeignore"), "utf8")
+			expect(mockReadFile).not.toHaveBeenCalledWith(path.join(TEST_CWD, ".kiloignore"), "utf8")
+
+			// Verify .kilocodeignore patterns are used
+			expect(controller.activeIgnoreFileName).toBe(".kilocodeignore")
+			expect(controller.validateAccess("secrets/api-keys.json")).toBe(false)
+		})
+
+		/**
+		 * Tests that IGNORE_FILE_NAMES constant is exported correctly
+		 */
+		it("should export IGNORE_FILE_NAMES with correct precedence order", () => {
+			expect(IGNORE_FILE_NAMES).toEqual([".kilocodeignore", ".kiloignore"])
 		})
 	})
 
