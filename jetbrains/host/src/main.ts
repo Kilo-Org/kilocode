@@ -81,7 +81,7 @@ const server = net.createServer((socket) => {
 					appName: "VSCodeAPIHook",
 					appHost: "node",
 					appLanguage: "en",
-					appUriScheme: "vscode",
+					appUriScheme: "jetbrains",
 					appRoot: URI.file(__dirname),
 					globalStorageHome: URI.file(path.join(__dirname, "globalStorage")),
 					workspaceStorageHome: URI.file(path.join(__dirname, "workspaceStorage")),
