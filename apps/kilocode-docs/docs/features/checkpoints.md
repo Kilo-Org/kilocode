@@ -13,10 +13,11 @@ Checkpoints let you:
 
 - **Checkpoints are enabled by default.**
 - **Git must be installed** for checkpoints to function - [see installation instructions](#git-installation)
+- The working directory must be a Git repository for checkpoints to work
 - No GitHub account or repository is required
 - No Git personal information configuration is needed
 - The shadow Git repository operates independently from your project's existing Git configuration
-  :::
+   :::
 
 ## Configuration Options
 
@@ -80,11 +81,11 @@ To restore a project to a previous checkpoint state:
    <img src="/docs/img/checkpoints/checkpoints-7.png" alt="Restore checkpoint button interface" width="100" />
 3. Choose one of these restoration options:
 
-    <img src="/docs/img/checkpoints/checkpoints-4.png" alt="Restore checkpoint option" width="300" />
-    - **Restore Files Only** - Reverts only workspace files to checkpoint state without modifying conversation history. Ideal for comparing alternative implementations while maintaining chat context, allowing you to seamlessly switch between different project states. This option does not require confirmation and lets you quickly switch between different implementations.
-    - **Restore Files & Task** - Reverts both workspace files AND removes all subsequent conversation messages. Use when you want to completely reset both your code and conversation back to the checkpoint's point in time. This option requires confirmation in a dialog as it cannot be undone.
+   <img src="/docs/img/checkpoints/checkpoints-4.png" alt="Restore checkpoint option" width="300" />
+   - **Restore Files Only** - Reverts only workspace files to checkpoint state without modifying conversation history. Ideal for comparing alternative implementations while maintaining chat context, allowing you to seamlessly switch between different project states. This option does not require confirmation and lets you quickly switch between different implementations.
+   - **Restore Files & Task** - Reverts both workspace files AND removes all subsequent conversation messages. Use when you want to completely reset both your code and conversation back to the checkpoint's point in time. This option requires confirmation in a dialog as it cannot be undone.
 
-       <img src="/docs/img/checkpoints/checkpoints-9.png" alt="Confirmation dialog for restoring checkpoint with files & task" width="300" />
+      <img src="/docs/img/checkpoints/checkpoints-9.png" alt="Confirmation dialog for restoring checkpoint with files & task" width="300" />
 
 ### Limitations and Considerations
 
@@ -167,12 +168,12 @@ This separation is intentional, as `.kilocodeignore` limits which files the AI c
 
 #### Nested Git Repositories
 
-The checkpoint system includes special handling for nested Git repositories:
+Checkpoints do not support nested Git repositories. The working directory must be a single Git repository for checkpoints to function properly.
 
-- Temporarily renames nested `.git` directories to `.git_disabled` during operations
-- Restores them after operations complete
-- Allows proper tracking of files in nested repositories
-- Ensures nested repositories remain functional and unaffected
+- Checkpoints require a single Git repository (not nested `.git` directories)
+- Nested `.git` directories are not supported and may cause unexpected behavior
+- Git submodules are not a workaround - each submodule will have its own `.git` directory, which is incompatible with checkpoint tracking
+- If you have nested repositories, consider using Git submodules instead or consolidating to a single repository
 
 ### Concurrency Control
 
