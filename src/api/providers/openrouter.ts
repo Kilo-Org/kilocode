@@ -318,7 +318,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		// Convert Anthropic messages to OpenAI format.
 		// Pass normalization function for Mistral compatibility (requires 9-char alphanumeric IDs)
-		const isMistral = modelId.toLowerCase().includes("mistral")
+		const isMistral = false // kilocode_change: OpenRouter doesn't need this and normalizeMistralToolCallId is buggy where toolu_bdrk_1234 => toolubdrk
 		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
 			...convertToOpenAiMessages(
