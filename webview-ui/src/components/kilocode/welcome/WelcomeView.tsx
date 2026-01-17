@@ -63,15 +63,6 @@ const WelcomeView = () => {
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
-				<div className="flex justify-end">
-					<button
-						className="text-xs text-vscode-foreground hover:underline"
-						onClick={() =>
-							(vscode.postMessage as any)({ type: "action", action: "settingsButtonClicked" })
-						}>
-						{t("welcome.importSettings")}
-					</button>
-				</div>
 				{manualConfig ? (
 					<>
 						<ApiOptions
