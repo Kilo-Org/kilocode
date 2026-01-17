@@ -98,15 +98,16 @@ For team or production use:
 
 ## Configuration
 
-1. Click the **Codebase Indexing** button in the chat window
-2. Enable **"Enable Codebase Indexing"** using the toggle switch
-3. Configure your embedding provider:
+1. Open Kilo Code settings (<Codicon name="gear" /> icon)
+2. Navigate to **Codebase Indexing** section
+3. Enable **"Enable Codebase Indexing"** using the toggle switch
+4. Configure your embedding provider:
     - **OpenAI**: Enter API key and select model
     - **Gemini**: Enter Google AI API key and select embedding model
     - **Ollama**: Enter base URL and select model
-4. Set Qdrant URL and optional API key
-5. Configure **Max Search Results** (default: 20, range: 1-100)
-6. Click **Save** to start initial indexing
+5. Set Qdrant URL and optional API key
+6. Configure **Max Search Results** (default: 20, range: 1-100)
+7. Click **Save** to start initial indexing
 
 ### Enable/Disable Toggle
 

@@ -77,11 +77,7 @@ export class GhostModel {
 					continue
 				}
 			}
-			// kilocode_change: Use the user's configured model if present, otherwise use default
-			const modelIdKey = modelIdKeysByProvider[provider]
-			const userConfiguredModel = (profile as any)[modelIdKey]
-			const profileToUse = userConfiguredModel ? profile : { ...profile, [modelIdKey]: model }
-			await useProfile(this, profileToUse, provider)
+			await useProfile(this, { ...profile, [modelIdKeysByProvider[provider]]: model }, provider)
 			return true
 		}
 
