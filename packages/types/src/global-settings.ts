@@ -308,6 +308,7 @@ export const SECRET_STATE_KEYS = [
 	"vercelAiGatewayApiKey",
 	"sapAiCoreServiceKey", // kilocode_change
 	"basetenApiKey",
+	"corethinkApiKey",
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)

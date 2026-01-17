@@ -1,5 +1,6 @@
 export * from "./anthropic.js"
 export * from "./baseten.js"
+export * from "./corethink.js"
 export * from "./bedrock.js"
 export * from "./cerebras.js"
 export * from "./chutes.js"
@@ -43,6 +44,7 @@ export * from "./minimax.js"
 
 import { anthropicDefaultModelId } from "./anthropic.js"
 import { basetenDefaultModelId } from "./baseten.js"
+import { corethinkDefaultModelId } from "./corethink.js"
 import { bedrockDefaultModelId } from "./bedrock.js"
 import { cerebrasDefaultModelId } from "./cerebras.js"
 import { chutesDefaultModelId } from "./chutes.js"
@@ -107,6 +109,8 @@ export function getProviderDefaultModelId(
 			return chutesDefaultModelId
 		case "baseten":
 			return basetenDefaultModelId
+		case "corethink":
+			return corethinkDefaultModelId
 		case "bedrock":
 			return bedrockDefaultModelId
 		case "vertex":

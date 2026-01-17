@@ -370,6 +370,8 @@
 		"vertex1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"basetenApiKey": "مفتاح Baseten API",
 		"getBasetenApiKey": "احصل على مفتاح Baseten API",
+		"corethinkApiKey": "مفتاح Corethink API",
+		"getCorethinkApiKey": "احصل على مفتاح Corethink API",
 		"cerebrasApiKey": "مفتاح Cerebras API",
 		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",

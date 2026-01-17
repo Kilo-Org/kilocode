@@ -355,6 +355,8 @@
 		"basetenApiKey": "Klíč API Baseten",
 		"basetenApiKeyPlaceholder": "Zadejte svůj klíč API Baseten",
 		"getBasetenApiKey": "Získat klíč API Baseten",
+		"corethinkApiKey": "Klíč API Corethink",
+		"getCorethinkApiKey": "Získat klíč API Corethink",
 		"cerebrasApiKey": "Klíč API Cerebras",
 		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
