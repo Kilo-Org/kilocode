@@ -1,7 +1,7 @@
 import { getApiUrl } from "@roo-code/types"
 import { openRouterDefaultModelId } from "@roo-code/types"
 import { z } from "zod"
-import inquirer from "inquirer"
+import { select } from "@inquirer/prompts"
 import { logs } from "../../../services/logs.js"
 import type { KilocodeOrganization, KilocodeProfileData } from "../../types.js"
 import { withRawMode } from "../../utils/terminal.js"
@@ -134,16 +134,12 @@ export async function promptOrganizationSelection(organizations: KilocodeOrganiz
 	]
 
 	// Use withRawMode to ensure arrow key navigation works in list prompts
-	// (required for inquirer v13+ which uses @inquirer/prompts internally)
-	const { accountType } = await withRawMode(() =>
-		inquirer.prompt<{ accountType: string }>([
-			{
-				type: "list",
-				name: "accountType",
-				message: "Select account type:",
-				choices: accountChoices,
-			},
-		]),
+	const accountType = await withRawMode(() =>
+		select({
+			message: "Select account type:",
+			choices: accountChoices,
+			loop: false,
+		}),
 	)
 
 	// Return organization ID if not personal
