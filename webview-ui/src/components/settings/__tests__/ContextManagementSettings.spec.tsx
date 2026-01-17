@@ -513,7 +513,7 @@ describe("ContextManagementSettings", () => {
 			const checkbox = screen.getByTestId("max-read-file-always-full-checkbox")
 
 			expect(input).toBeInTheDocument()
-			expect(input).toHaveValue(-1)
+			expect(input).toHaveValue(500 /* kilocode_change */)
 			expect(input).not.toBeDisabled() // Input is not disabled when maxReadFileLine is undefined (only when explicitly set to -1)
 			expect(checkbox).toBeInTheDocument()
 			expect(checkbox).not.toBeChecked() // Checkbox is not checked when maxReadFileLine is undefined (only when explicitly set to -1)
