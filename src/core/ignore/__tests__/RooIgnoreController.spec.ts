@@ -461,13 +461,60 @@ describe("RooIgnoreController", () => {
 			expect(instructions).toContain("node_modules")
 			expect(instructions).toContain(".git")
 			expect(instructions).toContain("secrets/**")
+			expect(instructions).toContain("Supports both .kilocodeignore and .kiloignore")
 		})
 
 		/**
-		 * Tests behavior when no .kilocodeignore exists
+		 * Tests instructions generation with .kiloignore
 		 */
-		it("should return undefined when no .kilocodeignore exists", async () => {
-			// Setup no .kilocodeignore
+		it("should generate formatted instructions when .kiloignore exists", async () => {
+			// Setup: only .kiloignore exists
+			mockFileExists.mockImplementation(async (filePath: string) => {
+				return filePath.endsWith(".kiloignore")
+			})
+			mockReadFile.mockResolvedValue("*.env\n.env.local")
+			await controller.initialize()
+
+			const instructions = controller.getInstructions()
+
+			// Verify instruction format uses .kiloignore
+			expect(instructions).toContain("# .kiloignore")
+			expect(instructions).toContain(".kiloignore file where")
+			expect(instructions).toContain(LOCK_TEXT_SYMBOL)
+			expect(instructions).toContain("*.env")
+			expect(instructions).toContain(".env.local")
+			expect(instructions).toContain("Supports both .kilocodeignore and .kiloignore")
+		})
+
+		/**
+		 * Tests instructions generation when both files exist (precedence)
+		 */
+		it("should generate formatted instructions for .kilocodeignore when both files exist", async () => {
+			// Setup: both files exist
+			mockFileExists.mockResolvedValue(true)
+			// .kilocodeignore content (should be used)
+			mockReadFile.mockImplementation(async (filePath) => {
+				if (filePath.toString().endsWith(".kilocodeignore")) {
+					return "secrets/**"
+				}
+				return "other-stuff"
+			})
+
+			await controller.initialize()
+
+			const instructions = controller.getInstructions()
+
+			// Verify instruction format uses .kilocodeignore and NOT .kiloignore
+			expect(instructions).toContain("# .kilocodeignore")
+			expect(instructions).not.toContain("# .kiloignore")
+			expect(instructions).toContain("secrets/**")
+		})
+
+		/**
+		 * Tests behavior when no ignore file exists
+		 */
+		it("should return undefined when no ignore file exists", async () => {
+			// Setup no ignore file
 			mockFileExists.mockResolvedValue(false)
 			await controller.initialize()
 

@@ -57,13 +57,13 @@ export class RooIgnoreController {
 			// Watch for changes and updates
 			this.disposables.push(
 				fileWatcher.onDidChange(() => {
-					this.loadRooIgnore()
+					void this.loadRooIgnore()
 				}),
 				fileWatcher.onDidCreate(() => {
-					this.loadRooIgnore()
+					void this.loadRooIgnore()
 				}),
 				fileWatcher.onDidDelete(() => {
-					this.loadRooIgnore()
+					void this.loadRooIgnore()
 				}),
 			)
 
@@ -91,12 +91,13 @@ export class RooIgnoreController {
 					this.rooIgnoreContent = content
 					this.activeIgnoreFileName = ignoreFileName
 					this.ignoreInstance.add(content)
-					// Also ignore the ignore file itself
-					this.ignoreInstance.add(ignoreFileName)
 					// Only use the first found file (precedence order)
 					break
 				}
 			}
+
+			// Always ignore both possible ignore filenames so neither can be read by LLM
+			this.ignoreInstance.add(IGNORE_FILE_NAMES.join("\n"))
 		} catch (error) {
 			// Should never happen: reading file failed even though it exists
 			console.error("Unexpected error loading ignore file:", error)
@@ -110,7 +111,7 @@ export class RooIgnoreController {
 	 * @returns true if file is accessible, false if ignored
 	 */
 	validateAccess(filePath: string): boolean {
-		// Always allow access if .kilocodeignore does not exist
+		// Always allow access if no ignore file exists
 		if (!this.rooIgnoreContent) {
 			return true
 		}
@@ -127,7 +128,7 @@ export class RooIgnoreController {
 				realPath = absolutePath
 			}
 
-			// Convert real path to relative for .rooignore checking
+			// Convert real path to relative for ignore checking
 			const relativePath = path.relative(this.cwd, realPath).toPosix()
 
 			// Check if the real path is ignored
@@ -144,7 +145,7 @@ export class RooIgnoreController {
 	 * @returns path of file that is being accessed if it is being accessed, undefined if command is allowed
 	 */
 	validateCommand(command: string): string | undefined {
-		// Always allow if no .kilocodeignore exists
+		// Always allow if no ignore file exists
 		if (!this.rooIgnoreContent) {
 			return undefined
 		}
@@ -232,14 +233,14 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Get formatted instructions about the .kilocodeignore file for the LLM
-	 * @returns Formatted instructions or undefined if .kilocodeignore doesn't exist
+	 * Get formatted instructions about the ignore file for the LLM
+	 * @returns Formatted instructions or undefined if no ignore file exists
 	 */
 	getInstructions(): string | undefined {
-		if (!this.rooIgnoreContent) {
+		if (!this.rooIgnoreContent || !this.activeIgnoreFileName) {
 			return undefined
 		}
 
-		return `# .kilocodeignore\n\n(The following is provided by a root-level .kilocodeignore file where the user has specified files and directories that should not be  accessed. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n.kilocodeignore`
+		return `# ${this.activeIgnoreFileName}\n\n(The following is provided by a root-level ${this.activeIgnoreFileName} file where the user has specified files and directories that should not be accessed. Supports both .kilocodeignore and .kiloignore; .kilocodeignore takes precedence if both exist. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n${this.activeIgnoreFileName}`
 	}
 }
