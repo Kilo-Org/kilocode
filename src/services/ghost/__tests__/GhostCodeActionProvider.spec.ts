@@ -27,7 +27,7 @@ describe("GhostCodeActionProvider", () => {
 	})
 
 	describe("provideCodeActions", () => {
-		it("should return empty array when enableCodeActions is false", () => {
+		it("should return empty array when enableCodeActions is false", async () => {
 			mockConfig.get.mockReturnValue(false)
 
 			const document = {} as vscode.TextDocument
@@ -35,13 +35,13 @@ describe("GhostCodeActionProvider", () => {
 			const context = {} as vscode.CodeActionContext
 			const token = {} as vscode.CancellationToken
 
-			const result = provider.provideCodeActions(document, range, context, token)
+			const result = await provider.provideCodeActions(document, range, context, token)
 
 			expect(result).toEqual([])
 			expect(mockConfig.get).toHaveBeenCalledWith("enableCodeActions", true)
 		})
 
-		it("should return code action when enableCodeActions is true", () => {
+		it("should return code action when enableCodeActions is true", async () => {
 			mockConfig.get.mockReturnValue(true)
 
 			const document = { uri: vscode.Uri.parse("file:///test.txt") } as vscode.TextDocument
@@ -49,10 +49,12 @@ describe("GhostCodeActionProvider", () => {
 			const context = {} as vscode.CodeActionContext
 			const token = {} as vscode.CancellationToken
 
-			const result = provider.provideCodeActions(document, range, context, token)
+			const result = await provider.provideCodeActions(document, range, context, token)
 
-			expect(result).toHaveLength(1)
-			expect(result[0].title).toBe("kilocode:ghost.codeAction.title")
+			expect(result).toBeTruthy()
+			expect(Array.isArray(result)).toBe(true)
+			expect(result!.length).toBe(1)
+			expect(result![0].title).toBe("kilocode:ghost.codeAction.title")
 			expect(mockConfig.get).toHaveBeenCalledWith("enableCodeActions", true)
 		})
 	})
