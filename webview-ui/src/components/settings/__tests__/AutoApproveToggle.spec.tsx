@@ -24,6 +24,7 @@ describe("AutoApproveToggle", () => {
 		alwaysAllowMcp: false,
 		alwaysAllowModeSwitch: true,
 		alwaysAllowSubtasks: false,
+		alwaysApproveResubmit: false, // kilocode_change
 		alwaysAllowExecute: true,
 		alwaysAllowFollowupQuestions: false,
 		onToggle: mockOnToggle,
