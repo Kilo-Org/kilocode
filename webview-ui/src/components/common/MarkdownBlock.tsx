@@ -204,6 +204,10 @@ const StyledMarkdown = styled.div`
 `
 
 const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
+	const stripThinkTags = (text: string): string => {
+		if (!text) return ""
+		return text.replace(/[\s\S]*?<\/think>/gi, "")
+	}
 	const components = useMemo(
 		() => ({
 			table: ({ children, ...props }: any) => {
@@ -323,7 +327,7 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 				]}
 				rehypePlugins={[rehypeKatex as any]}
 				components={components}>
-				{markdown || ""}
+				{stripThinkTags(markdown || "")}
 			</ReactMarkdown>
 		</StyledMarkdown>
 	)
