@@ -1,5 +1,40 @@
 # @kilocode/cli
 
+## 0.23.0
+
+### Minor Changes
+
+- [#5084](https://github.com/Kilo-Org/kilocode/pull/5084) [`f0c79d2`](https://github.com/Kilo-Org/kilocode/commit/f0c79d27c4952e0359ebc97d41bb50aebd2ef577) Thanks [@montanaflynn](https://github.com/montanaflynn)! - Improved CLI welcome flow: added interactive model selection list using `@inquirer/prompts`, updated provider selection to display a scrollable list, and refactored model fetching logic into a reusable service.
+
+### Patch Changes
+
+- [#5116](https://github.com/Kilo-Org/kilocode/pull/5116) [`cf00ed8`](https://github.com/Kilo-Org/kilocode/commit/cf00ed870c1af723924177372da1054411e269cd) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Make .env file optional in CLI - users can configure via KILO\_\* environment variables instead
+
+## 0.22.2
+
+### Patch Changes
+
+- [#5113](https://github.com/Kilo-Org/kilocode/pull/5113) [`6d04a15`](https://github.com/Kilo-Org/kilocode/commit/6d04a150383af75ed42b954fc3c42e9e010bbed9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI crash when config file is empty or contains invalid JSON
+
+## 0.22.1
+
+### Patch Changes
+
+- [#5098](https://github.com/Kilo-Org/kilocode/pull/5098) [`e811ebe`](https://github.com/Kilo-Org/kilocode/commit/e811ebe287f187bac11239fddfab7067f428872d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Show total session cost in status bar instead of per-request costs. Remove "API Request in progress" messages for cleaner UI.
+
+- [#5100](https://github.com/Kilo-Org/kilocode/pull/5100) [`a49868e`](https://github.com/Kilo-Org/kilocode/commit/a49868e17842d252a9a28d61aa0683267e8e3020) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI context indicator showing incorrect values by skipping placeholder api_req_started messages
+
+- [#5104](https://github.com/Kilo-Org/kilocode/pull/5104) [`15a8d77`](https://github.com/Kilo-Org/kilocode/commit/15a8d77fdbe78314b448714e9812fc0857393cf5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI interactive prompts (arrow key navigation) not working on Windows
+
+    The inquirer v13+ upgrade introduced stricter TTY raw mode requirements. This fix ensures raw mode is properly enabled before inquirer prompts, restoring arrow key navigation in list selections like provider choice during `kilocode auth`.
+
+- [#5092](https://github.com/Kilo-Org/kilocode/pull/5092) [`42cdb11`](https://github.com/Kilo-Org/kilocode/commit/42cdb11b77552cb87fce9ee591bd68cbe419c3be) Thanks [@Drilmo](https://github.com/Drilmo)! - Fix Cmd+V image paste regression in VSCode terminal
+
+    Restores the ability to paste images using Cmd+V in VSCode terminal, which was broken in #4916. VSCode sends empty bracketed paste sequences for Cmd+V (unlike regular terminals that send key events), so we need to check the clipboard for images when receiving an empty paste.
+
+- Updated dependencies [[`b2e2630`](https://github.com/Kilo-Org/kilocode/commit/b2e26304e562e516383fbf95a3fdc668d88e1487)]:
+    - @kilocode/core-schemas@0.0.1
+
 ## 0.22.0
 
 ### Minor Changes
