@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
 import { CommitMessageProvider } from "./CommitMessageProvider"
+import { GitCommitInlineCompletionProvider } from "./GitCommitInlineCompletionProvider"
 import { t } from "../../i18n"
 
 /**
@@ -19,5 +20,17 @@ export function registerCommitMessageProvider(
 		console.error("Commit message provider activation failed:", error)
 	})
 
+	// Register the inline completion provider for git commit messages
+	const inlineCompletionProvider = new GitCommitInlineCompletionProvider(context, outputChannel)
+	context.subscriptions.push(inlineCompletionProvider)
+
+	// Register for the SCM input box scheme
+	const inlineCompletionDisposable = vscode.languages.registerInlineCompletionItemProvider(
+		{ scheme: "vscode-scm" },
+		inlineCompletionProvider,
+	)
+	context.subscriptions.push(inlineCompletionDisposable)
+
 	outputChannel.appendLine(t("kilocode:commitMessage.providerRegistered"))
+	outputChannel.appendLine("[GitCommitInlineCompletionProvider] Registered for vscode-scm scheme")
 }
