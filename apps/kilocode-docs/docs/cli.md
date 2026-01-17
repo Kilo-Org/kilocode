@@ -38,8 +38,22 @@ Upgrade the Kilo CLI package:
 - **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
 - **Choose the right mode for the task in your workflow.** Select between Architect, Ask, Debug, Orchestrator, or custom agent modes.
 - **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
+- **Extend capabilities with skills.** Add domain expertise and repeatable workflows through [Agent Skills](#skills).
 
 ## CLI reference
+
+### Keyboard shortcuts
+
+| Shortcut    | Description                                                                        |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `Shift+Tab` | Cycle through modes (architect → code → ask → debug → orchestrator → custom modes) |
+| `Ctrl+C`    | Exit (press twice to confirm)                                                      |
+| `Ctrl+X`    | Cancel current task                                                                |
+| `Esc`       | Cancel current task (while streaming) or clear input                               |
+| `Ctrl+Y`    | Toggle YOLO mode (auto-approve all operations)                                     |
+| `Ctrl+R`    | Resume task (when a task is ready to resume)                                       |
+| `!`         | Enter shell mode (when input is empty)                                             |
+| `↑/↓`       | Navigate command history (when input is empty)                                     |
 
 ### CLI commands
 
@@ -67,6 +81,65 @@ Upgrade the Kilo CLI package:
 | `/new`                | Start a new task with the agent with a clean slate               |                                |
 | `/help`               | List available commands and how to use them                      |                                |
 | `/exit`               | Exit the CLI                                                     |                                |
+
+## Skills
+
+The CLI supports [Agent Skills](https://agentskills.io/), a lightweight format for extending AI capabilities with specialized knowledge and workflows.
+
+Skills are discovered from:
+
+- **Global skills**: `~/.kilocode/skills/` (available in all projects)
+- **Project skills**: `.kilocode/skills/` (project-specific)
+
+Skills can be:
+
+- **Generic** - Available in all modes
+- **Mode-specific** - Only loaded when using a particular mode (e.g., `code`, `architect`)
+
+For example:
+
+```
+your-project/
+└── .kilocode/
+    ├── skills/               # Generic skills for this project
+    │   └── project-conventions/
+    │       └── SKILL.md
+    └── skills-code/          # Code mode skills for this project
+        └── linting-rules/
+            └── SKILL.md
+```
+
+### Adding a Skill
+
+1. Create the skill directory:
+
+    ```bash
+    mkdir -p ~/.kilocode/skills/api-design
+    ```
+
+2. Create a `SKILL.md` file with YAML frontmatter:
+
+    ```markdown
+    ---
+    name: api-design
+    description: REST API design best practices and conventions
+    ---
+
+    # API Design Guidelines
+
+    When designing REST APIs, follow these conventions...
+    ```
+
+    The `name` field must match the directory name exactly.
+
+3. Start a new CLI session to load the skill
+
+#### Finding skills
+
+There are community efforts to build and share agent skills. Some resources include:
+
+- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
+- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
 
 ## Checkpoint Management
 

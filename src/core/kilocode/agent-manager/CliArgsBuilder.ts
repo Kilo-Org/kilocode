@@ -1,7 +1,6 @@
 export interface BuildCliArgsOptions {
-	parallelMode?: boolean
 	sessionId?: string
-	existingBranch?: string
+	model?: string
 }
 
 /**
@@ -15,13 +14,8 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
 	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
 
-	if (options?.parallelMode) {
-		args.push("--parallel")
-
-		// Add existing branch flag if specified (resume on existing branch)
-		if (options.existingBranch) {
-			args.push(`--existing-branch=${options.existingBranch}`)
-		}
+	if (options?.model) {
+		args.push(`--model=${options.model}`)
 	}
 
 	if (options?.sessionId) {

@@ -2,7 +2,7 @@
 
 import { CompletionOptions } from "../../index.js"
 import { getLastNUriRelativePathParts, getShortestUniqueRelativeUriPaths } from "../../util/uri.js"
-import { AutocompleteCodeSnippet, AutocompleteSnippet, AutocompleteSnippetType } from "../snippets/types.js"
+import { AutocompleteCodeSnippet, AutocompleteSnippet, AutocompleteSnippetType } from "../types.js"
 
 type TemplateRenderer = (
 	prefix: string,

@@ -214,11 +214,6 @@
 			"label": "Trình duyệt",
 			"description": "Tự động thực hiện các hành động trình duyệt mà không cần phê duyệt. Lưu ý: Chỉ áp dụng khi mô hình hỗ trợ sử dụng máy tính"
 		},
-		"retry": {
-			"label": "Thử lại",
-			"description": "Tự động thử lại các yêu cầu API thất bại khi máy chủ trả về phản hồi lỗi",
-			"delayLabel": "Trì hoãn trước khi thử lại yêu cầu"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Bật tự động phê duyệt các công cụ MCP riêng lẻ trong chế độ xem Máy chủ MCP (yêu cầu cả cài đặt này và hộp kiểm \"Luôn cho phép\" của công cụ)"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Đặt làm hồ sơ hoạt động",
 		"makeActiveTooltip": "Kích hoạt hồ sơ này để sử dụng cho các yêu cầu API",
 		"apiProvider": "Nhà cung cấp API",
+		"apiProviderDocs": "Tài liệu Nhà cung cấp",
 		"model": "Mẫu",
 		"nameEmpty": "Tên không được để trống",
 		"nameExists": "Đã tồn tại một hồ sơ với tên này",
@@ -332,7 +328,6 @@
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"getRequestyBaseUrl": "URL cơ sở",
 		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
-		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
@@ -342,6 +337,8 @@
 		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
+		"vertex1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"basetenApiKey": "Khóa API Baseten",
 		"getBasetenApiKey": "Lấy khóa API Baseten",
 		"cerebrasApiKey": "Khóa API Cerebras",
@@ -442,6 +439,14 @@
 		"awsRegion": "Vùng AWS",
 		"awsCrossRegion": "Sử dụng suy luận liên vùng",
 		"awsGlobalInference": "Sử dụng suy luận toàn cầu (tự động chọn Khu vực AWS tối ưu)",
+		"awsServiceTier": "Cấp độ dịch vụ",
+		"awsServiceTierStandard": "Tiêu chuẩn",
+		"awsServiceTierStandardDesc": "Hiệu suất và chi phí cân bằng",
+		"awsServiceTierFlex": "Linh hoạt (giảm giá 50%)",
+		"awsServiceTierFlexDesc": "Chi phí thấp hơn, độ trễ cao hơn cho các tác vụ không quan trọng",
+		"awsServiceTierPriority": "Ưu tiên (Phí thêm 75%)",
+		"awsServiceTierPriorityDesc": "Hiệu suất nhanh nhất cho các ứng dụng quan trọng",
+		"awsServiceTierNote": "Các cấp độ dịch vụ ảnh hưởng đến giá và hiệu suất. Linh hoạt cung cấp giảm giá 50% với độ trễ cao hơn, Ưu tiên cung cấp hiệu suất tốt hơn 25% với phí thêm 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Sử dụng điểm cuối VPC tùy chỉnh",
 			"vpcEndpointUrlPlaceholder": "Nhập URL điểm cuối VPC (tùy chọn)",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status tệp tối đa",
 			"description": "Số lượng mục tệp tối đa để bao gồm trong ngữ cảnh trạng thái git. Đặt thành 0 để tắt. Thông tin nhánh và các commit luôn được hiển thị khi > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Bật quy tắc thư mục con",
+			"description": "Khám phá và tải đệ quy các tệp .roo/rules và AGENTS.md từ các thư mục con. Hữu ích cho monorepo có quy tắc theo gói."
 		}
 	},
 	"terminal": {
@@ -987,6 +996,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Chuyển Giọng nói thành Văn bản (STT)",
 			"description": "Khi được bật, Kilo Code có thể chuyển đổi giọng nói của bạn thành văn bản bằng mô hình Whisper của OpenAI. Nhấp vào nút microphone trong chat để bắt đầu ghi âm. Yêu cầu cài đặt FFmpeg và cấu hình nhà cung cấp API OpenAI."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Bật công cụ tùy chỉnh",
+			"description": "Khi được bật, Kilo có thể tải và sử dụng các công cụ TypeScript/JavaScript tùy chỉnh từ thư mục .kilocode/tools của dự án hoặc ~/.kilocode/tools cho các công cụ toàn cục. Lưu ý: các công cụ này sẽ được tự động phê duyệt.",
+			"toolsHeader": "Công cụ tùy chỉnh có sẵn",
+			"noTools": "Không có công cụ tùy chỉnh nào được tải. Thêm tệp .ts hoặc .js vào thư mục .kilocode/tools của dự án hoặc ~/.kilocode/tools cho các công cụ toàn cục.",
+			"refreshButton": "Làm mới",
+			"refreshing": "Đang làm mới...",
+			"refreshSuccess": "Làm mới công cụ thành công",
+			"refreshError": "Không thể làm mới công cụ",
+			"toolParameters": "Thông số"
 		}
 	},
 	"promptCaching": {
@@ -1026,7 +1046,9 @@
 		"searchPlaceholder": "Tìm kiếm",
 		"noMatchFound": "Không tìm thấy kết quả",
 		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}",
-		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau."
+		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau.",
+		"recommendedModels": "Mô hình được đề xuất",
+		"allModels": "Tất cả mô hình"
 	},
 	"footer": {
 		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",

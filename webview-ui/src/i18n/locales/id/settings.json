@@ -214,11 +214,6 @@
 			"label": "Browser",
 			"description": "Secara otomatis melakukan aksi browser tanpa memerlukan persetujuan. Catatan: Hanya berlaku ketika model mendukung computer use"
 		},
-		"retry": {
-			"label": "Coba Lagi",
-			"description": "Secara otomatis mencoba ulang permintaan API yang gagal ketika server mengembalikan respons error",
-			"delayLabel": "Delay sebelum mencoba ulang permintaan"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Aktifkan auto-approval tool MCP individual di tampilan Server MCP (memerlukan pengaturan ini dan checkbox \"Selalu izinkan\" tool tersebut)"
@@ -254,7 +249,7 @@
 		},
 		"updateTodoList": {
 			"label": "Todo",
-			"description": "Daftar tugas diperbarui secara otomatis tanpa persetujuan"
+			"description": "Secara otomatis memperbarui daftar todo tanpa memerlukan persetujuan"
 		},
 		"apiRequestLimit": {
 			"title": "Permintaan Maks",
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Jadikan Profil Aktif",
 		"makeActiveTooltip": "Aktifkan profil ini untuk digunakan dalam permintaan API",
 		"apiProvider": "Provider API",
+		"apiProviderDocs": "Dokumentasi Penyedia",
 		"model": "Model",
 		"nameEmpty": "Nama tidak boleh kosong",
 		"nameExists": "Profil dengan nama ini sudah ada",
@@ -324,7 +320,6 @@
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Gunakan URL dasar khusus",
-		"openRouterTransformsText": "Kompres prompt dan rantai pesan ke ukuran konteks (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Dapatkan Anthropic API Key",
 		"anthropicUseAuthToken": "Kirim Anthropic API Key sebagai Authorization header alih-alih X-Api-Key",
@@ -334,6 +329,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Masukkan nama deployment...",
 		"awsBedrock1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
+		"vertex1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
 		"basetenApiKey": "Baseten API Key",
 		"getBasetenApiKey": "Dapatkan Baseten API Key",
 		"cerebrasApiKey": "Cerebras API Key",
@@ -416,6 +413,14 @@
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Gunakan cross-region inference",
 		"awsGlobalInference": "Gunakan inferensi Global (pilih Wilayah AWS optimal secara otomatis)",
+		"awsServiceTier": "Tingkat Layanan",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Performa dan biaya yang seimbang",
+		"awsServiceTierFlex": "Flex (diskon 50%)",
+		"awsServiceTierFlexDesc": "Biaya lebih rendah, latensi lebih tinggi untuk tugas non-kritikal",
+		"awsServiceTierPriority": "Priority (premium 75%)",
+		"awsServiceTierPriorityDesc": "Performa tercepat untuk aplikasi mission-critical",
+		"awsServiceTierNote": "Tingkat layanan memengaruhi harga dan performa. Flex menawarkan diskon 50% dengan latensi lebih tinggi, Priority menawarkan performa 25% lebih baik dengan premium 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Gunakan VPC endpoint kustom",
 			"vpcEndpointUrlPlaceholder": "Masukkan VPC Endpoint URL (opsional)",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status maks file",
 			"description": "Jumlah maksimum entri file untuk disertakan dalam konteks status git. Atur ke 0 untuk menonaktifkan. Info cabang dan commit selalu ditampilkan saat > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Aktifkan aturan subfolder",
+			"description": "Temukan dan muat file .roo/rules dan AGENTS.md secara rekursif dari subdirektori. Berguna untuk monorepo dengan aturan per-paket."
 		}
 	},
 	"terminal": {
@@ -1008,6 +1017,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Ucapan-ke-Teks (STT)",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengubah suara Anda menjadi teks menggunakan model Whisper dari OpenAI. Klik tombol mikrofon di chat untuk mulai merekam. Memerlukan FFmpeg yang terinstal dan penyedia API OpenAI yang dikonfigurasi."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Aktifkan tool kustom",
+			"description": "Ketika diaktifkan, Kilo dapat memuat dan menggunakan tool kustom TypeScript/JavaScript dari direktori .kilocode/tools proyek kamu atau ~/.kilocode/tools untuk tool global. Catatan: tool ini akan otomatis disetujui.",
+			"toolsHeader": "Tool Kustom yang Tersedia",
+			"noTools": "Tidak ada tool kustom yang dimuat. Tambahkan file .ts atau .js ke direktori .kilocode/tools proyek kamu atau ~/.kilocode/tools untuk tool global.",
+			"refreshButton": "Refresh",
+			"refreshing": "Merefresh...",
+			"refreshSuccess": "Tool berhasil direfresh",
+			"refreshError": "Gagal merefresh tool",
+			"toolParameters": "Parameter"
 		}
 	},
 	"promptCaching": {
@@ -1047,7 +1067,9 @@
 		"searchPlaceholder": "Cari",
 		"noMatchFound": "Tidak ada yang cocok ditemukan",
 		"useCustomModel": "Gunakan kustom: {{modelId}}",
-		"simplifiedExplanation": "Anda dapat menyesuaikan pengaturan model terperinci nanti."
+		"simplifiedExplanation": "Anda dapat menyesuaikan pengaturan model terperinci nanti.",
+		"recommendedModels": "Model yang direkomendasikan",
+		"allModels": "Semua model"
 	},
 	"footer": {
 		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilo.ai/discord</discordLink>",

@@ -85,6 +85,33 @@ echo "Fix the bug in app.ts" | kilocode --auto
 kilocode --auto "Run tests" --timeout 300
 ```
 
+#### Task Completion Hook
+
+Use `--on-task-completed` to send a follow-up prompt to the agent when the main task completes. This is useful for automating post-task actions like creating pull requests.
+
+```bash
+# Create a PR after the task completes
+kilocode --auto "Implement feature X" --on-task-completed "Create a pull request with a descriptive title and body"
+
+# Run tests and report results
+kilocode --auto "Fix the failing tests" --on-task-completed "Summarize what was fixed and verify all tests pass"
+
+# Commit changes with a specific message format
+kilocode --auto "Refactor the auth module" --on-task-completed "Commit all changes with a conventional commit message"
+```
+
+**Requirements:**
+
+- Requires `--auto` mode
+- Prompt cannot be empty
+- Maximum prompt length: 50,000 characters
+
+**Behavior:**
+
+- After the main task completes, the prompt is sent to the agent as a follow-up message
+- The agent has 90 seconds to complete the follow-up action
+- Supports markdown, special characters, and multi-line prompts
+
 #### Autonomous mode Behavior
 
 When running in Autonomous mode (`--auto` flag):
@@ -160,6 +187,20 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 - `question`: Auto-approve follow-up questions
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
+
+#### Context Management Configuration
+
+You can also configure context management settings:
+
+```json
+{
+	"maxConcurrentFileReads": 5
+}
+```
+
+**Configuration Options:**
+
+- `maxConcurrentFileReads`: Maximum number of files that can be read in a single `read_file` request (default: 5, minimum: 1). The AI will be instructed about this limit and requests exceeding it will be rejected. Set to `1` to disable multi-file reads.
 
 #### Command Approval Patterns
 
@@ -245,7 +286,7 @@ To build and run the CLI locally off your branch:
 cd src
 pnpm bundle
 pnpm vsix
-pnpm vsix:unpackged
+pnpm vsix:unpacked
 cd ..
 ```
 

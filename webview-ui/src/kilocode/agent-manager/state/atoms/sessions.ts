@@ -8,6 +8,7 @@ export interface ParallelModeInfo {
 	enabled: boolean
 	branch?: string
 	worktreePath?: string
+	parentBranch?: string
 	completionMessage?: string
 }
 
@@ -25,6 +26,7 @@ export interface AgentSession {
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
+	model?: string // Model ID used for this session
 }
 
 /**

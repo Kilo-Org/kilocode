@@ -1,5 +1,5 @@
 import { AutocompleteLanguageInfo } from "../../../autocomplete/constants/AutocompleteLanguageInfo"
-import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/snippets/types"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/types"
 import { GetLspDefinitionsFunction } from "../../../autocomplete/types"
 import { getAst, getTreePathAtCursor } from "../../../autocomplete/util/ast"
 import { intersection } from "../../../util/ranges"

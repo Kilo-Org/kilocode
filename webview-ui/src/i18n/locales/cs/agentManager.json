@@ -28,7 +28,6 @@
 		"autoModeWarning": "Režim YOLO - operace nástrojů jsou automaticky schváleny",
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
-		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
 		"runModeLocal": "Lokální",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -56,7 +55,11 @@
 		"branchPickerTooltip": "Změnit základní větev",
 		"noBranches": "Nebyly nalezeny žádné větve",
 		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání",
-		"openTerminal": "Otevřít terminál"
+		"openTerminal": "Otevřít terminál",
+		"selectModel": "Vyber model",
+		"modelTooltip": "Vyber, který AI model použít pro tuto relaci",
+		"defaultModel": "Výchozí model",
+		"loadingModels": "Načítání..."
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
@@ -81,6 +84,7 @@
 		"cancelTitle": "Zrušit agenta",
 		"finishToBranchTitle": "Dokončit worktree a připravit branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Dokončit worktree a připravit branch",
+		"createPRTitle": "Vytvořit pull request",
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
 		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"

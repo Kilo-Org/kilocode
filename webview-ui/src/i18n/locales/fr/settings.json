@@ -211,11 +211,6 @@
 			"label": "Navigateur",
 			"description": "Effectuer automatiquement des actions du navigateur sans nécessiter d'approbation. Remarque : S'applique uniquement lorsque le modèle prend en charge l'utilisation de l'ordinateur"
 		},
-		"retry": {
-			"label": "Réessayer",
-			"description": "Réessayer automatiquement les requêtes API échouées lorsque le serveur renvoie une réponse d'erreur",
-			"delayLabel": "Délai avant de réessayer la requête"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Activer l'approbation automatique des outils MCP individuels dans la vue des serveurs MCP (nécessite à la fois ce paramètre et la case à cocher \"Toujours autoriser\" de l'outil)"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Définir comme profil actif",
 		"makeActiveTooltip": "Active ce profil pour l'utiliser dans les requêtes API",
 		"apiProvider": "Fournisseur d'API",
+		"apiProviderDocs": "Documentation du Fournisseur",
 		"model": "Modèle",
 		"nameEmpty": "Le nom ne peut pas être vide",
 		"nameExists": "Un profil avec ce nom existe déjà",
@@ -333,7 +329,6 @@
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"getRequestyBaseUrl": "URL de base",
 		"requestyUseCustomBaseUrl": "Utiliser une URL de base personnalisée",
-		"openRouterTransformsText": "Compresser les prompts et chaînes de messages à la taille du contexte (<a>Transformations OpenRouter</a>)",
 		"anthropicApiKey": "Clé API Anthropic",
 		"getAnthropicApiKey": "Obtenir la clé API Anthropic",
 		"anthropicUseAuthToken": "Passer la clé API Anthropic comme en-tête d'autorisation au lieu de X-Api-Key",
@@ -343,6 +338,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Entrez le nom de déploiement...",
 		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
+		"vertex1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"basetenApiKey": "Clé API Baseten",
 		"getBasetenApiKey": "Obtenir la clé API Baseten",
 		"cerebrasApiKey": "Clé API Cerebras",
@@ -425,6 +422,14 @@
 		"awsRegion": "Région AWS",
 		"awsCrossRegion": "Utiliser l'inférence inter-régions",
 		"awsGlobalInference": "Utiliser l'inférence globale (sélection automatique de la région AWS optimale)",
+		"awsServiceTier": "Niveau de service",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Performances et coûts équilibrés",
+		"awsServiceTierFlex": "Flexible (50% de réduction)",
+		"awsServiceTierFlexDesc": "Coût inférieur, latence plus élevée pour les tâches non critiques",
+		"awsServiceTierPriority": "Priorité (75% de prime)",
+		"awsServiceTierPriorityDesc": "Performances optimales pour les applications critiques",
+		"awsServiceTierNote": "Les niveaux de service affectent les prix et les performances. Flexible offre une réduction de 50% avec une latence plus élevée, Priorité offre 25% de meilleures performances avec une prime de 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utiliser un point de terminaison VPC personnalisé",
 			"vpcEndpointUrlPlaceholder": "Entrer l'URL du point de terminaison VPC (optionnel)",
@@ -797,6 +802,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status max fichiers",
 			"description": "Nombre maximum de fichiers à inclure dans le contexte de statut git. Mettre à 0 pour désactiver. Les informations de branche et les commits sont toujours affichés si > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Activer les règles des sous-dossiers",
+			"description": "Découvrir et charger récursivement les fichiers .roo/rules et AGENTS.md depuis les sous-répertoires. Utile pour les monorepos avec des règles par package."
 		}
 	},
 	"terminal": {
@@ -986,6 +995,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Reconnaissance vocale (STT)",
 			"description": "Lorsque cette option est activée, Kilo Code peut transcrire votre voix en texte en utilisant le modèle Whisper d'OpenAI. Cliquez sur le bouton microphone dans le chat pour commencer l'enregistrement. Nécessite l'installation de FFmpeg et un fournisseur d'API OpenAI configuré."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Activer les outils personnalisés",
+			"description": "Lorsqu'activé, Kilo peut charger et utiliser des outils TypeScript/JavaScript personnalisés à partir du répertoire .kilocode/tools de votre projet ou ~/.kilocode/tools pour des outils globaux. Remarque : ces outils seront automatiquement auto-approuvés.",
+			"toolsHeader": "Outils personnalisés disponibles",
+			"noTools": "Aucun outil personnalisé chargé. Ajoutez des fichiers .ts ou .js au répertoire .kilocode/tools de votre projet ou ~/.kilocode/tools pour des outils globaux.",
+			"refreshButton": "Actualiser",
+			"refreshing": "Actualisation...",
+			"refreshSuccess": "Outils actualisés avec succès",
+			"refreshError": "Échec de l'actualisation des outils",
+			"toolParameters": "Paramètres"
 		}
 	},
 	"promptCaching": {
@@ -1025,7 +1045,9 @@
 		"searchPlaceholder": "Rechercher",
 		"noMatchFound": "Aucune correspondance trouvée",
 		"useCustomModel": "Utiliser personnalisé : {{modelId}}",
-		"simplifiedExplanation": "Tu peux ajuster les paramètres détaillés du modèle ultérieurement."
+		"simplifiedExplanation": "Tu peux ajuster les paramètres détaillés du modèle ultérieurement.",
+		"recommendedModels": "Modèles recommandés",
+		"allModels": "Tous les modèles"
 	},
 	"footer": {
 		"feedback": "Si vous avez des questions ou des commentaires, n'hésitez pas à ouvrir un problème sur <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou à rejoindre <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilo.ai/discord</discordLink>",

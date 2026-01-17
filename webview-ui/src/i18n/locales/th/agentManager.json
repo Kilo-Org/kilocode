@@ -28,7 +28,6 @@
 		"autoModeWarning": "โหมด YOLO - การดำเนินการของเครื่องมือได้รับการอนุมัติอัตโนมัติ",
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
-		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
 		"runModeLocal": "ภายในเครื่อง",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "คลาวด์",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
 		"noBranches": "ไม่พบสาขา",
 		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
-		"openTerminal": "เปิดเทอร์มินัล"
+		"openTerminal": "เปิดเทอร์มินัล",
+		"selectModel": "เลือกโมเดล",
+		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
+		"defaultModel": "โมเดลเริ่มต้น",
+		"loadingModels": "กำลังโหลด..."
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -80,6 +83,7 @@
 		"cancelTitle": "ยกเลิกเอเจนต์",
 		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
+		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "vitest"
-import { AutocompleteCodeSnippet, AutocompleteDiffSnippet, AutocompleteSnippetType } from "../../snippets/types"
+import { AutocompleteCodeSnippet, AutocompleteDiffSnippet, AutocompleteSnippetType } from "../../types"
 import { HelperVars } from "../../util/HelperVars"
 import { formatOpenedFilesContext } from "../formatOpenedFilesContext"
 

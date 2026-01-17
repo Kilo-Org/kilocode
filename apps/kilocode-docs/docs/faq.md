@@ -24,7 +24,7 @@ Kilo Code uses large language models (LLMs) to understand your requests and tran
 - Perform web browsing (if enabled).
 - Use external tools via the Model Context Protocol (MCP).
 
-You interact with Kilo Code through a chat interface, where you provide instructions and review/approve its proposed actions.
+You interact with Kilo Code through a chat interface, where you provide instructions and review/approve its proposed actions, or you can use the inline autocomplete feature which helps you as you type.
 
 ### What can Kilo Code do?
 
@@ -49,7 +49,7 @@ You can also use Kilo Code with a [local model](advanced-usage/local-models) or 
 
 ### How do I pay for model usage via Kilo Code?
 
-If you choose to pay for models via Kilo Code, you do so by buying Kilo Credits. You can [buy Kilo Credits](basic-usage/adding-credits) securely via Stripe with a credit card. We do not charge a markup on Kilo Credits. $1 you give us is $1 in Kilo Credits.
+If you choose to pay for models via Kilo Code, you do so by buying Kilo Credits. You can [purchase Kilo Credits](basic-usage/adding-credits) and receive bonus credits. We do not charge a markup on Kilo Credits. $1 you give us is $1 in Kilo Credits.
 
 Model usage is metered by the providers in terms of different kinds of tokens. When you use a model, we debit your Kilo credits by the amount the provider charges us -- with no markup.
 
@@ -105,6 +105,25 @@ Yes, Kilo Code supports running models locally using [Ollama](/providers/ollama)
 
 Open the Kilo Code panel (<img src="/docs/img/kilo-v1.svg" width="12" />) and type your task in the chat box. Be clear and specific about what you want Kilo Code to do. See [The Chat Interface](/basic-usage/the-chat-interface) for best practices.
 
+### When should I use chat vs autocomplete?
+
+Use **chat** when you need to:
+
+- Make complex, multi-file changes
+- Refactor code across your project
+- Get explanations or ask questions
+- Have Kilo Code execute commands or browse the web
+- Work on tasks that require planning and multiple steps
+
+Use **autocomplete** when you need to:
+
+- Complete the current line or block of code quickly
+- Get suggestions for common patterns and boilerplate
+- Make quick, localized edits without context switching
+- Speed up typing repetitive code
+
+In general, autocomplete is best for quick, in-flow coding assistance, while chat is better for larger tasks that require more context and interaction.
+
 ### What are modes in Kilo Code?
 
 [Modes](/basic-usage/using-modes) are different personas that Kilo Code can adopt, each with a specific focus and set of capabilities. The built-in modes are:
@@ -113,7 +132,7 @@ Open the Kilo Code panel (<img src="/docs/img/kilo-v1.svg" width="12" />) and ty
 - **Architect:** For planning and technical leadership.
 - **Ask:** For answering questions and providing information.
 - **Debug:** For systematic problem diagnosis.
-  You can also create [Custom Modes](/features/custom-modes).
+  You can also create [Custom Modes](/agent-behavior/custom-modes).
 
 ### How do I switch between modes?
 

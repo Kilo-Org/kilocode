@@ -241,7 +241,7 @@ Task data is stored in your VS Code global storage location:
 ## Related Features
 
 - [**Checkpoints**](../features/checkpoints): Version control for tasks that can be restored
-- [**Settings Management**](../features/settings-management): Export/import settings including cleanup configuration
+- [**Settings Management**](../basic-usage/settings-management): Export/import settings including cleanup configuration
 - [**Task History**](../basic-usage/the-chat-interface): Managing and organizing your task history
 
 ## Frequently Asked Questions

@@ -1,9 +1,11 @@
 export * from "./api.js"
 export * from "./auto-purge.js" // kilocode_change
+export * from "./context-config.js" // kilocode_change
 export * from "./cloud.js"
 export * from "./codebase-index.js"
 export * from "./context-management.js"
 export * from "./cookie-consent.js"
+export * from "./custom-tool.js"
 export * from "./events.js"
 export * from "./experiment.js"
 export * from "./feature-flags.js"
@@ -19,7 +21,6 @@ export * from "./mode.js"
 export * from "./model.js"
 export * from "./profile-type.js" // kilocode_change
 export * from "./provider-settings.js"
-export * from "./single-file-read-models.js"
 export * from "./task.js"
 export * from "./todo.js"
 export * from "./telemetry.js"
@@ -30,7 +31,6 @@ export * from "./type-fu.js"
 export * from "./vscode.js"
 export * from "./kilocode/kilocode.js"
 export * from "./kilocode/device-auth.js" // kilocode_change
-export * from "./kilocode/nativeFunctionCallingProviders.js"
 export * from "./usage-tracker.js" // kilocode_change
 
 export * from "./providers/index.js"

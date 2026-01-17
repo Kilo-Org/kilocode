@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLOモード - ツール操作は自動承認されます",
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
-		"keyboardHint": "Enterで開始、Shift+Enterで改行",
 		"runModeLocal": "ローカル",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "クラウド",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "ベースブランチを切り替え",
 		"noBranches": "ブランチが見つかりません",
 		"noMatchingBranches": "検索に一致するブランチがありません",
-		"openTerminal": "ターミナルを開く"
+		"openTerminal": "ターミナルを開く",
+		"selectModel": "モデルを選択",
+		"modelTooltip": "このセッションで使用するAIモデルを選択",
+		"defaultModel": "デフォルトモデル",
+		"loadingModels": "読み込み中..."
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -80,6 +83,7 @@
 		"cancelTitle": "エージェントをキャンセル",
 		"finishToBranchTitle": "Worktreeを終了してブランチを準備: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktreeを終了してブランチを準備",
+		"createPRTitle": "プルリクエストを作成",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
 		"hint": "Enterで送信、Shift+Enterで改行"

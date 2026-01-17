@@ -31,7 +31,7 @@ Before using Cloud Agents:
 
 - **Compute is free during limited beta**
     - Please provide any feedback in our Cloud Agents beta Discord channel:
-        - [Kilo Discord](https://discord.gg/D2ExdEcq)
+        - [Kilo Discord](https://kilo.ai/discord)
 - **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
 
 ---
@@ -88,6 +88,16 @@ You can customize each Cloud Agent session by defining:
     - Installing dependencies
     - Bootstrapping tooling
     - Running setup scripts
+
+---
+
+## Skills
+
+Cloud Agents support project-level [skills](../cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
+
+:::note
+Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
+:::
 
 ---
 

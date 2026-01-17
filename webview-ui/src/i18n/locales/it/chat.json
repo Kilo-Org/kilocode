@@ -149,17 +149,20 @@
 		"streaming": "Richiesta API...",
 		"cancelled": "Richiesta API annullata",
 		"streamingFailed": "Streaming API fallito",
-		"errorTitle": "Errore API {{code}}",
+		"rateLimitWait": "Limitazione della frequenza",
+		"errorTitle": "Errore del fornitore {{code}}",
 		"errorMessage": {
 			"docs": "Documentazione",
+			"goToSettings": "Impostazioni",
 			"400": "Il provider non ha potuto elaborare la richiesta come presentata. Interrompi l'attività e prova un approccio diverso.",
 			"401": "Impossibile autenticare con il provider. Verifica la configurazione della tua chiave API.",
 			"402": "Sembra che tu abbia esaurito i fondi/crediti nel tuo account. Vai al tuo provider e aggiungi altro per continuare.",
 			"403": "Non autorizzato. La tua chiave API è valida, ma il provider ha rifiutato di completare questa richiesta.",
 			"429": "Troppe richieste. Sei limitato dal provider. Attendi un po' prima della tua prossima chiamata API.",
 			"500": "Errore del server del provider. C'è qualcosa di sbagliato dal lato del provider, non c'è nulla di sbagliato nella tua richiesta.",
-			"unknown": "Errore API sconosciuto. Contatta il supporto di Kilo.",
-			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante."
+			"unknown": "Errore API sconosciuto, clicca su Dettagli per maggiori informazioni.",
+			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante.",
+			"claudeCodeNotAuthenticated": "Devi accedere per utilizzare Claude Code. Vai su Impostazioni e clicca su \"Accedi a Claude Code\" per autenticarti."
 		}
 	},
 	"checkpoint": {
@@ -270,10 +273,19 @@
 		"hasQuestion": "Kilo ha una domanda"
 	},
 	"taskCompleted": "Attività completata",
+	"modelResponseIncomplete": "Risposta del modello incompleta",
+	"modelResponseErrors": {
+		"noToolsUsed": "Il modello non ha utilizzato alcuno strumento nella sua risposta. Questo accade tipicamente quando il modello fornisce solo testo/ragionamento senza chiamare gli strumenti necessari per completare l'attività.",
+		"noToolsUsedDetails": "Il modello ha fornito testo/ragionamento ma non ha chiamato nessuno degli strumenti richiesti. Questo di solito indica che il modello ha frainteso l'attività o ha difficoltà a determinare quale strumento utilizzare. Il modello è stato automaticamente sollecitato a riprovare con l'uso appropriato degli strumenti.",
+		"noAssistantMessages": "Il modello non ha fornito alcun contenuto di risposta. Questo potrebbe indicare un problema con l'API o l'output del modello.",
+		"noAssistantMessagesDetails": "Il modello linguistico ha restituito una risposta vuota senza testo o chiamate a strumenti. Questo può accadere a causa di problemi API, limitazione della velocità o problemi specifici del modello. Il modello è stato automaticamente sollecitato a riprovare."
+	},
 	"errorDetails": {
+		"link": "Dettagli",
 		"title": "Dettagli errore",
 		"copyToClipboard": "Copia negli appunti",
-		"copied": "Copiato!"
+		"copied": "Copiato!",
+		"diagnostics": "Ottieni informazioni errore dettagliate"
 	},
 	"powershell": {
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
@@ -330,9 +342,9 @@
 			"goToSettingsButton": "Vai alle Impostazioni"
 		},
 		"release": {
-			"heading": "Novità in questa versione:",
-			"contextRewind": "La condensazione migliorata del contesto ora ti consente di ripristinare il contesto precedente completo quando riavvolgi a un checkpoint",
-			"rooProvider": "Il provider Roo Code Cloud ora preserva il contenuto del ragionamento e utilizza gli strumenti nativi per impostazione predefinita per migliori prestazioni"
+			"heading": "Novità:",
+			"skills": "Roo ora supporta <skillsLink>Agent Skills</skillsLink> - pacchetti riutilizzabili di prompt, strumenti e risorse per estendere le capacità di Roo.",
+			"nativeToolCalling": "La chiamata nativa degli strumenti è ora obbligatoria per tutte le nuove attività. <blogLink>Scopri di più</blogLink> sulla motivazione e cosa fare se riscontri problemi."
 		},
 		"cloudAgents": {
 			"heading": "Novità nel Cloud:",

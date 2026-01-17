@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLO 模式 - 工具操作自动批准",
 		"starting": "正在启动...",
 		"startAriaLabel": "使用提供的提示启动代理",
-		"keyboardHint": "按 Enter 启动，Shift+Enter 换行",
 		"runModeLocal": "本地",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "云端",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "切换基础 Branch",
 		"noBranches": "未找到 Branch",
 		"noMatchingBranches": "没有匹配的 Branch",
-		"openTerminal": "打开终端"
+		"openTerminal": "打开终端",
+		"selectModel": "选择模型",
+		"modelTooltip": "选择此会话使用的 AI 模型",
+		"defaultModel": "默认模型",
+		"loadingModels": "加载中..."
 	},
 	"messages": {
 		"waiting": "等待代理响应...",
@@ -80,6 +83,7 @@
 		"cancelTitle": "取消代理",
 		"finishToBranchTitle": "完成 Worktree 并准备分支：{{branch}}",
 		"finishToBranchTitleNoBranch": "完成 Worktree 并准备分支",
+		"createPRTitle": "创建 Pull Request",
 		"sendTitle": "发送消息",
 		"resumeTitle": "继续代理",
 		"hint": "按 Enter 发送，Shift+Enter 换行"

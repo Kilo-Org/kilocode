@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLO मोड - टूल ऑपरेशन स्वचालित रूप से स्वीकृत हैं",
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
-		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
 		"runModeLocal": "स्थानीय",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "क्लाउड",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "बेस ब्रांच बदलें",
 		"noBranches": "कोई ब्रांच नहीं मिली",
 		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं",
-		"openTerminal": "टर्मिनल खोलें"
+		"openTerminal": "टर्मिनल खोलें",
+		"selectModel": "मॉडल चुनें",
+		"modelTooltip": "इस सत्र के लिए कौन सा AI मॉडल उपयोग करना है चुनें",
+		"defaultModel": "डिफ़ॉल्ट मॉडल",
+		"loadingModels": "लोड हो रहा है..."
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
@@ -80,6 +83,7 @@
 		"cancelTitle": "एजेंट रद्द करें",
 		"finishToBranchTitle": "Worktree समाप्त करें और branch तैयार करें: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree समाप्त करें और branch तैयार करें",
+		"createPRTitle": "Pull request बनाएं",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
 		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"

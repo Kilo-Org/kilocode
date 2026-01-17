@@ -1,10 +1,11 @@
 import { basename } from "node:path"
-import { render, Instance } from "ink"
+import { render, Instance, type RenderOptions } from "ink"
 import React from "react"
 import { createStore } from "jotai"
 import { createExtensionService, ExtensionService } from "./services/extension.js"
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
+import { initializeSyntaxHighlighter } from "./ui/utils/syntaxHighlight.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
@@ -23,6 +24,7 @@ import { getTelemetryService, getIdentityManager } from "./services/telemetry/in
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
+import { finishWithOnTaskCompleted } from "./pr/on-task-completed.js"
 import { isGitWorktree } from "./utils/git.js"
 import { Package } from "./constants/package.js"
 import type { CLIOptions } from "./types/cli.js"
@@ -33,6 +35,8 @@ import { getSelectedModelId } from "./utils/providers.js"
 import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
+import { randomUUID } from "crypto"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -64,6 +68,12 @@ export class CLI {
 		try {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 			logs.info(`Version: ${Package.version}`, "CLI")
+
+			// Initialize syntax highlighter early so it's ready when diffs are displayed
+			// This runs in the background and doesn't block startup
+			void initializeSyntaxHighlighter().then(() => {
+				logs.debug("Syntax highlighter initialized", "CLI")
+			})
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
@@ -114,6 +124,10 @@ export class CLI {
 
 			if (this.options.customModes) {
 				serviceOptions.customModes = this.options.customModes
+			}
+
+			if (this.options.appendSystemPrompt) {
+				serviceOptions.appendSystemPrompt = this.options.appendSystemPrompt
 			}
 
 			this.service = createExtensionService(serviceOptions)
@@ -211,7 +225,7 @@ export class CLI {
 								}
 
 								// Otherwise, fetch the task from history using promise-based request/response pattern
-								const requestId = crypto.randomUUID()
+								const requestId = randomUUID()
 
 								// Create a promise that will be resolved when the response arrives
 								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
@@ -330,6 +344,13 @@ export class CLI {
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.jsonInteractive || this.options.ci || !process.stdin.isTTY
+		const renderOptions: RenderOptions = {
+			// Enable Ink's incremental renderer to avoid redrawing the entire screen on every update.
+			// This reduces flickering for frequently updating UIs.
+			incrementalRendering: true,
+			exitOnCtrlC: false,
+			...(shouldDisableStdin ? { stdout: process.stdout, stderr: process.stderr } : {}),
+		}
 
 		this.ui = render(
 			React.createElement(App, {
@@ -346,15 +367,11 @@ export class CLI {
 					parallel: this.options.parallel || false,
 					worktreeBranch: this.options.worktreeBranch || undefined,
 					noSplash: this.options.noSplash || false,
+					attachments: this.options.attachments,
 				},
 				onExit: () => this.dispose(),
 			}),
-			shouldDisableStdin
-				? {
-						stdout: process.stdout,
-						stderr: process.stderr,
-					}
-				: undefined,
+			renderOptions,
 		)
 
 		// Wait for UI to exit
@@ -419,7 +436,8 @@ export class CLI {
 		// Determine exit code based on signal type and CI mode
 		let exitCode = 0
 
-		let beforeExit = () => {}
+		// beforeExit may be an async cleanup function or a sync one. Default to noop.
+		let beforeExit: (() => Promise<void>) | (() => void) = async () => {}
 
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
@@ -455,7 +473,25 @@ export class CLI {
 
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
-				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				const cleanup = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				if (typeof cleanup === "function") {
+					beforeExit = cleanup as (() => Promise<void>) | (() => void)
+				} else {
+					beforeExit = async () => {}
+				}
+			}
+
+			// Handle --on-task-completed flag (only if not in parallel mode, which has its own flow)
+			if (this.options.onTaskCompleted && !this.options.parallel) {
+				const onTaskCompletedBeforeExit = await finishWithOnTaskCompleted(this, {
+					cwd: this.options.workspace || process.cwd(),
+					prompt: this.options.onTaskCompleted,
+				})
+				const originalBeforeExit = beforeExit
+				beforeExit = () => {
+					originalBeforeExit()
+					onTaskCompletedBeforeExit()
+				}
 			}
 
 			// Shutdown telemetry service before exiting
@@ -485,7 +521,12 @@ export class CLI {
 
 			exitCode = 1
 		} finally {
-			beforeExit()
+			try {
+				// Await cleanup in case it's async; catch and log errors but don't prevent process.exit
+				await Promise.resolve(beforeExit())
+			} catch (err) {
+				logs.error("Error during beforeExit cleanup", "CLI", { error: err })
+			}
 
 			// Exit process with appropriate code
 			process.exit(exitCode)
@@ -669,6 +710,31 @@ export class CLI {
 	 */
 	getStore(): ReturnType<typeof createStore> | null {
 		return this.store
+	}
+
+	/**
+	 * Returns true if the CLI should show an exit confirmation prompt for SIGINT.
+	 */
+	shouldConfirmExitOnSigint(): boolean {
+		return (
+			!!this.store &&
+			!this.options.ci &&
+			!this.options.json &&
+			!this.options.jsonInteractive &&
+			process.stdin.isTTY
+		)
+	}
+
+	/**
+	 * Trigger the exit confirmation prompt. Returns true if handled.
+	 */
+	requestExitConfirmation(): boolean {
+		if (!this.shouldConfirmExitOnSigint()) {
+			return false
+		}
+
+		this.store?.set(triggerExitConfirmationAtom)
+		return true
 	}
 
 	/**

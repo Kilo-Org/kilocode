@@ -307,3 +307,189 @@ describe("validateSelectedProvider", () => {
 		expect(result.valid).toBe(true)
 	})
 })
+
+describe("Bedrock provider authentication validation", () => {
+	it("should validate bedrock with awsUseApiKey=true and awsApiKey (no access keys required)", () => {
+		// This is the bug reported in issue #4705
+		// When awsUseApiKey is true and awsApiKey is provided,
+		// awsAccessKey and awsSecretKey should NOT be required
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					awsUseApiKey: true,
+					awsApiKey: "valid-api-key-token-12345",
+					// Note: awsAccessKey and awsSecretKey are NOT provided
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(true)
+		expect(result.errors).toBeUndefined()
+	})
+
+	it("should validate bedrock with awsUseProfile=true and awsProfile (no access keys required)", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					awsUseProfile: true,
+					awsProfile: "my-aws-profile",
+					// Note: awsAccessKey and awsSecretKey are NOT provided
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(true)
+		expect(result.errors).toBeUndefined()
+	})
+
+	it("should validate bedrock with direct credentials (awsAccessKey and awsSecretKey)", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					awsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+					awsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(true)
+		expect(result.errors).toBeUndefined()
+	})
+
+	it("should reject bedrock when awsUseApiKey=true but awsApiKey is missing", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					awsUseApiKey: true,
+					// awsApiKey is missing!
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(result.errors?.some((e) => e.includes("awsApiKey"))).toBe(true)
+	})
+
+	it("should reject bedrock when awsUseProfile=true but awsProfile is missing", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					awsUseProfile: true,
+					// awsProfile is missing!
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(result.errors?.some((e) => e.includes("awsProfile"))).toBe(true)
+	})
+
+	it("should reject bedrock when no authentication method is configured", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsRegion: "us-east-2",
+					// No auth method configured!
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(
+			result.errors?.some(
+				(e) => e.includes("awsAccessKey") || e.includes("awsApiKey") || e.includes("authentication"),
+			),
+		).toBe(true)
+	})
+
+	it("should always require awsRegion for bedrock", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+					awsUseApiKey: true,
+					awsApiKey: "valid-api-key-token-12345",
+					// awsRegion is missing!
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(result.errors?.some((e) => e.includes("awsRegion"))).toBe(true)
+	})
+
+	it("should always require apiModelId for bedrock", () => {
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "aws",
+			providers: [
+				{
+					id: "aws",
+					provider: "bedrock",
+					awsRegion: "us-east-2",
+					awsUseApiKey: true,
+					awsApiKey: "valid-api-key-token-12345",
+					// apiModelId is missing!
+				},
+			],
+		}
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(result.errors?.some((e) => e.includes("apiModelId"))).toBe(true)
+	})
+})

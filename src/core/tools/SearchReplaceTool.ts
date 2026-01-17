@@ -13,7 +13,6 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
-import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
 
 interface SearchReplaceParams {
 	file_path: string
@@ -106,6 +105,8 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			let fileContent: string
 			try {
 				fileContent = await fs.readFile(absolutePath, "utf8")
+				// Normalize line endings to LF for consistent matching
+				fileContent = fileContent.replace(/\r\n/g, "\n")
 			} catch (error) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("search_replace")
@@ -115,11 +116,12 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				return
 			}
 
-			const useCrLf_kilocode = fileContent.includes("\r\n")
-			const normalizedOldString_kilocode = normalizeLineEndings_kilocode(old_string, useCrLf_kilocode)
+			// Normalize line endings in search/replace strings to match file content
+			const normalizedOldString = old_string.replace(/\r\n/g, "\n")
+			const normalizedNewString = new_string.replace(/\r\n/g, "\n")
 
 			// Check for exact match (literal string, not regex)
-			const matchCount = fileContent.split(normalizedOldString_kilocode).length - 1
+			const matchCount = fileContent.split(normalizedOldString).length - 1
 
 			if (matchCount === 0) {
 				task.consecutiveMistakeCount++
@@ -146,8 +148,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			}
 
 			// Apply the single replacement
-			const normalizedNewString_kilocode = normalizeLineEndings_kilocode(new_string, useCrLf_kilocode)
-			const newContent = fileContent.replace(normalizedOldString_kilocode, normalizedNewString_kilocode)
+			const newContent = fileContent.replace(normalizedOldString, normalizedNewString)
 
 			// Check if any changes were made
 			if (newContent === fileContent) {

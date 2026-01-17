@@ -19,6 +19,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxOpenTabsContext: number
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
+	enableSubfolderRules?: boolean
 	maxReadFileLine?: number
 	maxImageFileSize?: number
 	maxTotalImageSize?: number
@@ -37,6 +38,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
+		| "enableSubfolderRules"
 		| "maxReadFileLine"
 		| "maxImageFileSize"
 		| "maxTotalImageSize"
@@ -59,6 +61,7 @@ export const ContextManagementSettings = ({
 	maxOpenTabsContext,
 	maxWorkspaceFiles,
 	showRooIgnoredFiles,
+	enableSubfolderRules,
 	setCachedStateField,
 	maxReadFileLine,
 	maxImageFileSize,
@@ -207,6 +210,20 @@ export const ContextManagementSettings = ({
 				</div>
 
 				<div>
+					<VSCodeCheckbox
+						checked={enableSubfolderRules}
+						onChange={(e: any) => setCachedStateField("enableSubfolderRules", e.target.checked)}
+						data-testid="enable-subfolder-rules-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.enableSubfolderRules.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.enableSubfolderRules.description")}
+					</div>
+				</div>
+
+				<div>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxReadFile.label")}</span>
 						<div className="flex items-center gap-4">
@@ -214,7 +231,7 @@ export const ContextManagementSettings = ({
 								type="number"
 								pattern="-?[0-9]*"
 								className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-								value={maxReadFileLine ?? -1}
+								value={maxReadFileLine ?? 500 /*kilocode_change*/}
 								min={-1}
 								onChange={(e) => {
 									const newValue = parseInt(e.target.value, 10)

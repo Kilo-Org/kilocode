@@ -42,6 +42,8 @@ interface PendingProcessInfo {
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
 	worktreePath?: string // Captured from welcome event before session_created
+	/** Worktree info if created by extension (for parallel mode) - has full details upfront */
+	worktreeInfo?: { branch: string; path: string; parentBranch: string }
 	provisionalSessionId?: string // Used to show streaming content before session_created
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
@@ -51,6 +53,7 @@ interface PendingProcessInfo {
 	hadShellPath?: boolean // Track if shell PATH was used (for telemetry)
 	cliPath?: string // CLI path for error telemetry
 	configurationError?: string // Captured from welcome event instructions (indicates misconfigured CLI)
+	model?: string // Model ID used for this session
 }
 
 interface ActiveProcessInfo {
@@ -147,6 +150,10 @@ export class CliProcessHandler {
 					existingBranch?: string
 					/** Shell PATH from login shell - ensures CLI can access tools like git on macOS */
 					shellPath?: string
+					/** Worktree info if created by extension (for parallel mode) */
+					worktreeInfo?: { branch: string; path: string; parentBranch: string }
+					/** Model ID to use for this session (overrides CLI default) */
+					model?: string
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -165,6 +172,7 @@ export class CliProcessHandler {
 					parallelMode: options?.parallelMode,
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
+					model: options?.model,
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
@@ -181,10 +189,11 @@ export class CliProcessHandler {
 		}
 
 		// Build CLI command
+		// Note: Worktree/parallel mode is handled by AgentManagerProvider creating the worktree
+		// and passing the worktree path as the workspace. CLI is unaware of worktrees.
 		const cliArgs = buildCliArgs(workspace, prompt, {
-			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
-			existingBranch: options?.existingBranch,
+			model: options?.model,
 		})
 		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
 
@@ -242,11 +251,13 @@ export class CliProcessHandler {
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
+				worktreeInfo: options?.worktreeInfo,
 				stderrBuffer: [],
 				stdoutBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
 				hadShellPath: !!options?.shellPath, // Track for telemetry
 				cliPath,
+				model: options?.model,
 			}
 		}
 
@@ -508,13 +519,14 @@ export class CliProcessHandler {
 		const provisionalId = `provisional-${Date.now()}`
 		this.pendingProcess.provisionalSessionId = provisionalId
 
-		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath } =
+		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath, model } =
 			this.pendingProcess
 
 		this.registry.createSession(provisionalId, prompt, startTime, {
 			parallelMode,
 			labelOverride: desiredLabel,
 			gitUrl,
+			model,
 		})
 
 		if (parallelMode && (worktreeBranch || worktreePath)) {
@@ -544,6 +556,7 @@ export class CliProcessHandler {
 		realSessionId: string,
 		worktreeBranch: string | undefined,
 		worktreePath: string | undefined,
+		worktreeInfo: { branch: string; path: string; parentBranch: string } | undefined,
 		parallelMode: boolean | undefined,
 	): void {
 		this.debugLog(`Upgrading provisional session ${provisionalSessionId} -> ${realSessionId}`)
@@ -558,7 +571,15 @@ export class CliProcessHandler {
 
 		this.callbacks.onSessionRenamed?.(provisionalSessionId, realSessionId)
 
-		if (parallelMode && (worktreeBranch || worktreePath)) {
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(realSessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+		} else if (parallelMode && (worktreeBranch || worktreePath)) {
+			// Fallback: use branch/path from CLI welcome event
 			this.registry.updateParallelModeInfo(realSessionId, {
 				branch: worktreeBranch,
 				worktreePath,
@@ -622,11 +643,13 @@ export class CliProcessHandler {
 			parallelMode,
 			worktreeBranch,
 			worktreePath,
+			worktreeInfo,
 			desiredSessionId,
 			desiredLabel,
 			sawApiReqStarted,
 			gitUrl,
 			provisionalSessionId,
+			model,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
@@ -645,6 +668,7 @@ export class CliProcessHandler {
 				sessionId,
 				worktreeBranch,
 				worktreePath,
+				worktreeInfo,
 				parallelMode,
 			)
 			return
@@ -666,16 +690,25 @@ export class CliProcessHandler {
 				parallelMode,
 				labelOverride: desiredLabel,
 				gitUrl,
+				model,
 			})
 			this.debugLog(`Created new session: ${sessionId}`)
 		}
 
 		this.debugLog(`Session created with CLI sessionId: ${event.sessionId}, mapped to: ${session.sessionId}`)
 
-		// Apply worktree branch if captured from welcome event
-		if (worktreeBranch && parallelMode) {
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(session.sessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+			this.debugLog(`Applied worktree info: ${worktreeInfo.path} (branch: ${worktreeInfo.branch})`)
+		} else if (worktreeBranch && parallelMode) {
+			// Fallback: use branch from CLI welcome event
 			this.registry.updateParallelModeInfo(session.sessionId, { branch: worktreeBranch })
-			this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
+			this.debugLog(`Applied worktree branch from CLI: ${worktreeBranch}`)
 		}
 
 		const resolvedWorktreePath =

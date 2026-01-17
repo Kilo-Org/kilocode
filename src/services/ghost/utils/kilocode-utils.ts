@@ -1,5 +1,4 @@
-import { getKiloBaseUriFromToken } from "@roo-code/types"
-import { AUTOCOMPLETE_PROVIDER_MODELS, AutocompleteProviderKey } from "../types"
+import { getKiloBaseUriFromToken, AUTOCOMPLETE_PROVIDER_MODELS, AutocompleteProviderKey } from "@roo-code/types"
 
 export { AUTOCOMPLETE_PROVIDER_MODELS }
 export type { AutocompleteProviderKey }

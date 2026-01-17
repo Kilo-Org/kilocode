@@ -1,0 +1,38 @@
+{
+	"name": "@kilocode/core-schemas",
+	"version": "0.0.1",
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"scripts": {
+		"lint": "eslint src --ext=ts --max-warnings=0",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run",
+		"build": "tsup",
+		"clean": "rimraf dist .turbo"
+	},
+	"dependencies": {
+		"zod": "^4.3.5"
+	},
+	"peerDependencies": {
+		"@roo-code/types": "workspace:^"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@roo-code/config-typescript": "workspace:^",
+		"@roo-code/types": "workspace:^",
+		"@types/node": "20.x",
+		"globals": "^16.3.0",
+		"tsup": "^8.3.5",
+		"vitest": "^3.2.3"
+	}
+}

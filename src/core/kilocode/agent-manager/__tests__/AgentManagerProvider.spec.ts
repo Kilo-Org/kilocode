@@ -82,6 +82,29 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
+		// Mock WorktreeManager for parallel mode tests
+		vi.doMock("../WorktreeManager", () => ({
+			WorktreeManager: vi.fn().mockImplementation(() => ({
+				createWorktree: vi.fn().mockResolvedValue({
+					branch: "test-branch-123",
+					path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+					parentBranch: "main",
+				}),
+				commitChanges: vi.fn().mockResolvedValue({ success: true }),
+				removeWorktree: vi.fn().mockResolvedValue(undefined),
+				discoverWorktrees: vi.fn().mockResolvedValue([]),
+				ensureGitExclude: vi.fn().mockResolvedValue(undefined),
+			})),
+			WorktreeError: class WorktreeError extends Error {
+				constructor(
+					public code: string,
+					message: string,
+				) {
+					super(message)
+				}
+			},
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
@@ -819,6 +842,28 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		expect(state.sessions[0].sessionId).toBe("session-2")
 	})
 
+	it("updates currentGitUrl when starting a session if not already set (race condition fix)", async () => {
+		// Simulate the race condition: currentGitUrl is undefined because initializeCurrentGitUrl hasn't completed
+		;(provider as any).currentGitUrl = undefined
+
+		// Start a session - this should update currentGitUrl
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should now be set from the session's gitUrl
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("does not overwrite currentGitUrl if already set", async () => {
+		// Set a different currentGitUrl
+		;(provider as any).currentGitUrl = "https://github.com/org/other-repo.git"
+
+		// Start a session
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should NOT be overwritten
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/other-repo.git")
+	})
+
 	describe("filterRemoteSessionsByGitUrl", () => {
 		it("returns only sessions with matching git_url when currentGitUrl is set", () => {
 			const remoteSessions = [
@@ -1061,7 +1106,7 @@ describe("AgentManagerProvider telemetry", () => {
 	})
 
 	describe("Regression Tests - finishWorktreeSession validation (P0)", () => {
-		it("should not attempt to terminate non-running worktree sessions", async () => {
+		it("should not attempt to finish non-running worktree sessions", async () => {
 			const registry = (provider as any).registry
 			const sessionId = "session-done-1"
 			registry.createSession(sessionId, "test done session", undefined, { parallelMode: true })
@@ -1073,11 +1118,11 @@ describe("AgentManagerProvider telemetry", () => {
 			// Call finishWorktreeSession on a done session
 			;(provider as any).finishWorktreeSession(sessionId)
 
-			// Should NOT call terminateProcess
+			// Should NOT call terminateProcess - session is not running
 			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
 		})
 
-		it("should only allow finishing running worktree sessions", async () => {
+		it("should keep session interactive after finishing running worktree sessions", async () => {
 			const registry = (provider as any).registry
 			const sessionId = "session-running-1"
 			registry.createSession(sessionId, "test running session", undefined, { parallelMode: true })
@@ -1090,8 +1135,8 @@ describe("AgentManagerProvider telemetry", () => {
 			// Call finishWorktreeSession on a running session
 			;(provider as any).finishWorktreeSession(sessionId)
 
-			// Should call terminateProcess
-			expect(processHandler.terminateProcess).toHaveBeenCalledWith(sessionId, "SIGTERM")
+			// Should NOT call terminateProcess - session should remain interactive
+			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
 		})
 	})
 })

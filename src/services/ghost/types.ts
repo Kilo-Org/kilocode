@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/snippets/types"
+import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/types"
 import type {
 	Position,
 	Range,
@@ -10,16 +10,6 @@ import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { GhostModel } from "./GhostModel"
-
-export const AUTOCOMPLETE_PROVIDER_MODELS = new Map([
-	["mistral", "codestral-latest"],
-	["kilocode", "mistralai/codestral-2508"],
-	["openrouter", "mistralai/codestral-2508"],
-	["requesty", "mistral/codestral-latest"],
-	["bedrock", "mistral.codestral-2508-v1:0"],
-] as const)
-
-export type AutocompleteProviderKey = typeof AUTOCOMPLETE_PROVIDER_MODELS extends Map<infer K, any> ? K : never
 
 export interface ResponseMetaData {
 	cost: number
@@ -147,7 +137,8 @@ export interface GhostStatusBarStateProps {
 	model?: string
 	provider?: string
 	profileName?: string | null
-	hasValidToken: boolean
+	hasKilocodeProfileWithNoBalance?: boolean
+	hasNoUsableProvider?: boolean
 	totalSessionCost: number
 	completionCount: number
 	sessionStartTime: number
@@ -163,6 +154,14 @@ export interface AutocompleteContext {
 export type CacheMatchType = "exact" | "partial_typing" | "backward_deletion"
 
 export type CostTrackingCallback = (cost: number, inputTokens: number, outputTokens: number) => void
+
+/**
+ * Information about the last suggestion shown to the user.
+ * Used for telemetry tracking when suggestions are accepted.
+ */
+export interface LastSuggestionInfo extends AutocompleteContext {
+	length: number
+}
 
 export interface PendingRequest {
 	prefix: string

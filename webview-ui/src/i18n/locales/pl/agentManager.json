@@ -28,7 +28,6 @@
 		"autoModeWarning": "Tryb YOLO - operacje narzędzi są automatycznie zatwierdzane",
 		"starting": "Uruchamianie...",
 		"startAriaLabel": "Uruchom agenta z podanym poleceniem",
-		"keyboardHint": "Naciśnij Enter, aby uruchomić, Shift+Enter dla nowej linii",
 		"runModeLocal": "Lokalny",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Chmura",
@@ -57,7 +56,11 @@
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
 		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
-		"openTerminal": "Otwórz terminal"
+		"openTerminal": "Otwórz terminal",
+		"selectModel": "Wybierz model",
+		"modelTooltip": "Wybierz, którego modelu AI użyć w tej sesji",
+		"defaultModel": "Domyślny model",
+		"loadingModels": "Ładowanie..."
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",
@@ -82,6 +85,7 @@
 		"cancelTitle": "Anuluj agenta",
 		"finishToBranchTitle": "Zakończ worktree i przygotuj branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Zakończ worktree i przygotuj branch",
+		"createPRTitle": "Utwórz pull request",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
 		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"

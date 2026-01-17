@@ -18,6 +18,7 @@ import {
 } from "@roo-code/types"
 
 import { Mode } from "./modes"
+import { MicrophoneDevice } from "./sttContract" // kilocode_change: Microphone device type for STT
 
 export type ClineAskResponse =
 	| "yesButtonClicked"
@@ -145,6 +146,9 @@ export interface WebviewMessage {
 		| "stt:start" // kilocode_change: Start STT recording
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording
+		| "stt:checkAvailability" // kilocode_change: Check STT availability on demand
+		| "stt:listDevices" // kilocode_change: List microphone devices
+		| "stt:selectDevice" // kilocode_change: Select microphone device
 		| "includeTaskHistoryInEnhance" // kilocode_change
 		| "snoozeAutocomplete" // kilocode_change
 		| "autoApprovalEnabled"
@@ -158,9 +162,9 @@ export interface WebviewMessage {
 		| "requestCheckpointRestoreApproval"
 		| "seeNewChanges" // kilocode_change
 		| "deleteMcpServer"
+		| "insertTextToChatArea" // kilocode_change
 		| "humanRelayResponse"
 		| "humanRelayCancel"
-		| "insertTextToChatArea" // kilocode_change
 		| "codebaseIndexEnabled"
 		| "telemetrySetting"
 		| "testBrowserConnection"
@@ -190,11 +194,14 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "toggleApiConfigPin"
 		| "hasOpenedModeSelector"
+		| "clearCloudAuthSkipModel"
 		| "cloudButtonClicked"
 		| "rooCloudSignIn"
 		| "cloudLandingPageSignIn"
 		| "rooCloudSignOut"
 		| "rooCloudManualUrl"
+		| "claudeCodeSignIn"
+		| "claudeCodeSignOut"
 		| "switchOrganization"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
@@ -288,6 +295,9 @@ export interface WebviewMessage {
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 		| "chatCompletionAccepted" // kilocode_change: User accepted a chat completion suggestion
+		| "downloadErrorDiagnostics"
+		| "requestClaudeCodeRateLimits"
+		| "refreshCustomTools"
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -339,6 +349,7 @@ export interface WebviewMessage {
 	setting?: string
 	slug?: string
 	language?: string // User's language for speech transcription (STT)
+	device?: MicrophoneDevice | null // kilocode_change: Microphone device for stt:selectDevice
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload

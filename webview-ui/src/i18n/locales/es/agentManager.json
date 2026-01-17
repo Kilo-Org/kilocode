@@ -28,7 +28,6 @@
 		"autoModeWarning": "Modo YOLO - las operaciones de herramientas se aprueban automáticamente",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente con el prompt proporcionado",
-		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Nube",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Cambiar rama base",
 		"noBranches": "No se encontraron ramas",
 		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda",
-		"openTerminal": "Abrir terminal"
+		"openTerminal": "Abrir terminal",
+		"selectModel": "Seleccionar modelo",
+		"modelTooltip": "Elige qué modelo de IA usar para esta sesión",
+		"defaultModel": "Modelo predeterminado",
+		"loadingModels": "Cargando..."
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",
@@ -80,6 +83,7 @@
 		"cancelTitle": "Cancelar agente",
 		"finishToBranchTitle": "Finalizar worktree y preparar branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finalizar worktree y preparar branch",
+		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar mensaje",
 		"resumeTitle": "Reanudar agente",
 		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea"

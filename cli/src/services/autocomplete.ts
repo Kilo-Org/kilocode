@@ -402,9 +402,10 @@ export function detectInputState(input: string): InputState {
 	}
 
 	// Determine which argument is being typed
-	// If input ends with space and we have no args yet, we're typing the first argument
+	// If input ends with space, user is ready to type the NEXT argument
+	// If input doesn't end with space, user is still typing the CURRENT argument
 	const endsWithSpace = input.endsWith(" ")
-	const argumentIndex = endsWithSpace && parsed.args.length === 0 ? 0 : parsed.args.length - 1
+	const argumentIndex = endsWithSpace ? parsed.args.length : Math.max(0, parsed.args.length - 1)
 	const argumentDef = command.arguments[argumentIndex]
 
 	// If no argument definition exists for this index, return command type
@@ -483,6 +484,7 @@ function createProviderContext(
 			refreshRouterModels: commandContext.refreshRouterModels,
 			taskHistoryData: commandContext.taskHistoryData || null,
 			chatMessages: commandContext.chatMessages || [],
+			customModes: commandContext.customModes || [],
 		}
 	}
 

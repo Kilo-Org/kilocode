@@ -4,9 +4,13 @@ import { DISCORD_URL } from '@site/src/constants.ts'
 
 Once you've used any initial free Kilo Credits, you can easily add more:
 
-- Add a credit card to your account (all payments are securely processed through Stripe)
-- We don't currently offer a subscription, so you only pay for the credits you use, and only when you choose to top up your credits!
-- Leverage your own API provider by [connecting your own API provider](/getting-started/connecting-api-provider.md)
+- Subscribe to the [Kilo Pass](https://kilo.ai/features/kilo-pass), the most cost effective way to add credits.
+- Purchase additional credits as a one-time transaction.
+- Enable automatic top-up, which purchases additional credits when your balance is below $5.
+
+These options are available to purchase from your [personal profile page](https://app.kilo.ai/profile).
+
+You can also use subscriptions or credits you may have purchased directly with an AI provider by adding your keys on the [Bring your own Key (BYOK)](https://app.kilo.ai/byok) settings screen. If your provider is not yet supported, you can also [directly connect your provider](/getting-started/connecting-api-provider.md) in the extension and CLI.
 
 ## Transparent Pricing
 

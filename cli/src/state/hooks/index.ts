@@ -69,3 +69,7 @@ export type { UseFollowupSuggestionsReturn } from "./useFollowupSuggestions.js"
 export { useFollowupCIResponse } from "./useFollowupCIResponse.js"
 export { useTerminal } from "./useTerminal.js"
 export { useFollowupHandler } from "./useFollowupHandler.js"
+
+// Session cost hooks
+export { useSessionCost, formatSessionCost } from "./useSessionCost.js"
+export type { SessionCostInfo } from "./useSessionCost.js"

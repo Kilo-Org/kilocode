@@ -326,8 +326,8 @@ export class DiffViewProvider {
 			await task.say("user_feedback_diff", JSON.stringify(say))
 		}
 
-		// Check which protocol we're using
-		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info)
+		// Check which protocol we're using - use the task's locked protocol for consistency
+		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info, task.taskToolProtocol)
 		const useNative = isNativeProtocol(toolProtocol)
 
 		// Build notices array
@@ -687,6 +687,10 @@ export class DiffViewProvider {
 	}> {
 		const absolutePath = path.resolve(this.cwd, relPath)
 
+		// kilocode_change start: In CLI mode, skip VSCode-specific operations (diagnostics are mocked)
+		const skipVscodeOps = process.env.KILO_CLI_MODE === "true"
+		// kilocode_change end
+
 		// Get diagnostics before editing the file
 		this.preDiagnostics = vscode.languages.getDiagnostics()
 
@@ -696,28 +700,34 @@ export class DiffViewProvider {
 
 		// Open the document to ensure diagnostics are loaded
 		// When openFile is false (PREVENT_FOCUS_DISRUPTION enabled), we only open in memory
-		if (openFile) {
-			// Show the document in the editor
-			await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
-				preview: false,
-				preserveFocus: true,
-			})
-		} else {
-			// Just open the document in memory to trigger diagnostics without showing it
-			const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
+		// kilocode_change start: Skip document opening in CLI mode
+		if (!skipVscodeOps) {
+			// kilocode_change end
+			if (openFile) {
+				// Show the document in the editor
+				await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
+					preview: false,
+					preserveFocus: true,
+				})
+			} else {
+				// Just open the document in memory to trigger diagnostics without showing it
+				const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
 
-			// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
-			if (doc.isDirty) {
-				await doc.save()
+				// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
+				if (doc.isDirty) {
+					await doc.save()
+				}
+
+				// Force a small delay to ensure diagnostics are triggered
+				await new Promise((resolve) => setTimeout(resolve, 100))
 			}
-
-			// Force a small delay to ensure diagnostics are triggered
-			await new Promise((resolve) => setTimeout(resolve, 100))
 		}
 
 		let newProblemsMessage = ""
 
-		if (diagnosticsEnabled) {
+		// kilocode_change start: Skip diagnostic delay in CLI mode
+		if (diagnosticsEnabled && !skipVscodeOps) {
+			// kilocode_change end
 			// Add configurable delay to allow linters time to process
 			const safeDelayMs = Math.max(0, writeDelayMs)
 

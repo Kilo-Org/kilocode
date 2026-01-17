@@ -18,12 +18,17 @@
 	},
 	"chooseProvider": "Щоб творити магію, Kilo Code потребує API ключ.",
 	"providerSignup": {
+		"heading": "Обери свого провайдера",
+		"chooseProvider": "Roo потребує провайдера LLM для роботи. Обери один для початку, ти можеш додати більше пізніше.",
 		"rooCloudProvider": "Провайдер Roo Code Cloud",
 		"rooCloudDescription": "Найпростіший спосіб використовувати Roo. Кураторська суміш безкоштовних та платних моделей за низьку ціну",
 		"learnMore": "дізнатися більше",
 		"useAnotherProvider": "Використати іншого провайдера",
 		"useAnotherProviderDescription": "Введи API ключ і почни.",
 		"noApiKeys": "Не хочеш мати справу з ключами? Обери Провайдер Roo Code Cloud.",
+		"backToRoo": "Перейти до Провайдера Roo Code Cloud.",
+		"goBack": "Назад",
+		"finish": "Завершити",
 		"getStarted": "Почати"
 	},
 	"waitingForCloud": {
@@ -32,6 +37,7 @@
 		"noPrompt": "Якщо не з'явилась пропозиція відкрити URL, <clickHere>клікни тут</clickHere>.",
 		"havingTrouble": "Якщо ти завершив реєстрацію, але є проблеми, <clickHere>клікни тут</clickHere>.",
 		"pasteUrl": "Вклей callback URL з браузера:",
+		"docsLink": "Не працює? <DocsLink>Перевір документацію</DocsLink>.",
 		"invalidURL": "Це не схоже на валідний callback URL. Будь ласка, скопіюй те, що показує Roo Code Cloud у твоєму браузері.",
 		"goBack": "Повернутися"
 	},

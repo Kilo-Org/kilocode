@@ -29,23 +29,75 @@ vi.mock("openai", () => {
 							}
 						}
 
+						// Check if this is a reasoning_content test by looking at model
+						const isReasonerModel = options.model?.includes("deepseek-reasoner")
+						const isToolCallTest = options.tools?.length > 0
+
 						// Return async iterator for streaming
 						return {
 							[Symbol.asyncIterator]: async function* () {
-								yield {
-									choices: [
-										{
-											delta: { content: "Test response" },
-											index: 0,
-										},
-									],
-									usage: null,
+								// For reasoner models, emit reasoning_content first
+								if (isReasonerModel) {
+									yield {
+										choices: [
+											{
+												delta: { reasoning_content: "Let me think about this..." },
+												index: 0,
+											},
+										],
+										usage: null,
+									}
+									yield {
+										choices: [
+											{
+												delta: { reasoning_content: " I'll analyze step by step." },
+												index: 0,
+											},
+										],
+										usage: null,
+									}
 								}
+
+								// For tool call tests with reasoner, emit tool call
+								if (isReasonerModel && isToolCallTest) {
+									yield {
+										choices: [
+											{
+												delta: {
+													tool_calls: [
+														{
+															index: 0,
+															id: "call_123",
+															function: {
+																name: "get_weather",
+																arguments: '{"location":"SF"}',
+															},
+														},
+													],
+												},
+												index: 0,
+											},
+										],
+										usage: null,
+									}
+								} else {
+									yield {
+										choices: [
+											{
+												delta: { content: "Test response" },
+												index: 0,
+											},
+										],
+										usage: null,
+									}
+								}
+
 								yield {
 									choices: [
 										{
 											delta: {},
 											index: 0,
+											finish_reason: isToolCallTest ? "tool_calls" : "stop",
 										},
 									],
 									usage: {
@@ -70,7 +122,7 @@ vi.mock("openai", () => {
 import OpenAI from "openai"
 import type { Anthropic } from "@anthropic-ai/sdk"
 
-import { deepSeekDefaultModelId } from "@roo-code/types"
+import { deepSeekDefaultModelId, type ModelInfo } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../../shared/api"
 
@@ -172,6 +224,27 @@ describe("DeepSeekHandler", () => {
 			expect(model.info.contextWindow).toBe(128_000)
 			expect(model.info.supportsImages).toBe(false)
 			expect(model.info.supportsPromptCache).toBe(true)
+		})
+
+		it("should have preserveReasoning enabled for deepseek-reasoner to support interleaved thinking", () => {
+			// This is critical for DeepSeek's interleaved thinking mode with tool calls.
+			// See: https://api-docs.deepseek.com/guides/thinking_mode
+			// The reasoning_content needs to be passed back during tool call continuation
+			// within the same turn for the model to continue reasoning properly.
+			const handlerWithReasoner = new DeepSeekHandler({
+				...mockOptions,
+				apiModelId: "deepseek-reasoner",
+			})
+			const model = handlerWithReasoner.getModel()
+			// Cast to ModelInfo to access preserveReasoning which is an optional property
+			expect((model.info as ModelInfo).preserveReasoning).toBe(true)
+		})
+
+		it("should NOT have preserveReasoning enabled for deepseek-chat", () => {
+			// deepseek-chat doesn't use thinking mode, so no need to preserve reasoning
+			const model = handler.getModel()
+			// Cast to ModelInfo to access preserveReasoning which is an optional property
+			expect((model.info as ModelInfo).preserveReasoning).toBeUndefined()
 		})
 
 		it("should return provided model ID with default model info if model does not exist", () => {
@@ -315,6 +388,110 @@ describe("DeepSeekHandler", () => {
 			expect(result.outputTokens).toBe(50)
 			expect(result.cacheWriteTokens).toBeUndefined()
 			expect(result.cacheReadTokens).toBeUndefined()
+		})
+	})
+
+	describe("interleaved thinking mode", () => {
+		const systemPrompt = "You are a helpful assistant."
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "user",
+				content: [
+					{
+						type: "text" as const,
+						text: "Hello!",
+					},
+				],
+			},
+		]
+
+		it("should handle reasoning_content in streaming responses for deepseek-reasoner", async () => {
+			const reasonerHandler = new DeepSeekHandler({
+				...mockOptions,
+				apiModelId: "deepseek-reasoner",
+			})
+
+			const stream = reasonerHandler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Should have reasoning chunks
+			const reasoningChunks = chunks.filter((chunk) => chunk.type === "reasoning")
+			expect(reasoningChunks.length).toBeGreaterThan(0)
+			expect(reasoningChunks[0].text).toBe("Let me think about this...")
+			expect(reasoningChunks[1].text).toBe(" I'll analyze step by step.")
+		})
+
+		it("should pass thinking parameter for deepseek-reasoner model", async () => {
+			const reasonerHandler = new DeepSeekHandler({
+				...mockOptions,
+				apiModelId: "deepseek-reasoner",
+			})
+
+			const stream = reasonerHandler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume the stream
+			}
+
+			// Verify that the thinking parameter was passed to the API
+			// Note: mockCreate receives two arguments - request options and path options
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					thinking: { type: "enabled" },
+				}),
+				{}, // Empty path options for non-Azure URLs
+			)
+		})
+
+		it("should NOT pass thinking parameter for deepseek-chat model", async () => {
+			const chatHandler = new DeepSeekHandler({
+				...mockOptions,
+				apiModelId: "deepseek-chat",
+			})
+
+			const stream = chatHandler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume the stream
+			}
+
+			// Verify that the thinking parameter was NOT passed to the API
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.thinking).toBeUndefined()
+		})
+
+		it("should handle tool calls with reasoning_content", async () => {
+			const reasonerHandler = new DeepSeekHandler({
+				...mockOptions,
+				apiModelId: "deepseek-reasoner",
+			})
+
+			const tools: any[] = [
+				{
+					type: "function",
+					function: {
+						name: "get_weather",
+						description: "Get weather",
+						parameters: { type: "object", properties: {} },
+					},
+				},
+			]
+
+			const stream = reasonerHandler.createMessage(systemPrompt, messages, { taskId: "test", tools })
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Should have reasoning chunks
+			const reasoningChunks = chunks.filter((chunk) => chunk.type === "reasoning")
+			expect(reasoningChunks.length).toBeGreaterThan(0)
+
+			// Should have tool call chunks
+			const toolCallChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			expect(toolCallChunks.length).toBeGreaterThan(0)
+			expect(toolCallChunks[0].name).toBe("get_weather")
 		})
 	})
 })

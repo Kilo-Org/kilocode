@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../shared/kilocode/wrapper"
+import { TelemetrySetting } from "@roo-code/types"
 
 export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 	const appName = vscode.env.appName
@@ -30,4 +31,24 @@ export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 		kiloCodeWrapperVersion,
 		kiloCodeWrapperJetbrains,
 	}
+}
+
+export const getEditorNameHeader = () => {
+	const props = getKiloCodeWrapperProperties()
+	return (
+		props.kiloCodeWrapped
+			? [props.kiloCodeWrapperTitle, props.kiloCodeWrapperVersion]
+			: [vscode.env.appName, vscode.version]
+	)
+		.filter(Boolean)
+		.join(" ")
+}
+
+export function getEffectiveTelemetrySetting(telemetrySetting: TelemetrySetting | undefined) {
+	const isVsCode = !getKiloCodeWrapperProperties().kiloCodeWrapped
+	return isVsCode && vscode.env.isTelemetryEnabled
+		? "enabled"
+		: telemetrySetting === "disabled"
+			? "disabled"
+			: "enabled"
 }

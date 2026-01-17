@@ -11,6 +11,7 @@ export interface ExtensionHostOptions {
 	extensionRootPath: string // Root path for extension assets
 	identity?: IdentityInfo // Identity information for VSCode environment
 	customModes?: ModeConfig[] // Custom modes configuration
+	appendSystemPrompt?: string // Custom text to append to system prompt
 }
 
 // Extension module interface
@@ -786,6 +787,8 @@ export class ExtensionHost extends EventEmitter {
 				imageGeneration: false,
 				runSlashCommand: false,
 			},
+			// Add appendSystemPrompt from CLI options
+			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),
 		}
 
 		// The CLI will inject the actual configuration through updateState
@@ -1027,6 +1030,23 @@ export class ExtensionHost extends EventEmitter {
 			autoApprovalSettings.alwaysAllowUpdateTodoList = configState.alwaysAllowUpdateTodoList
 		}
 
+		// Context management settings
+		const contextSettings: Record<string, unknown> = {}
+		if (configState.maxConcurrentFileReads !== undefined) {
+			contextSettings.maxConcurrentFileReads = configState.maxConcurrentFileReads
+		}
+
+		// Send context management settings if any are present
+		if (Object.keys(contextSettings).length > 0) {
+			await this.sendWebviewMessage({
+				type: "updateSettings",
+				updatedSettings: contextSettings,
+			})
+			logs.debug("Context management settings synchronized to extension", "ExtensionHost", {
+				settings: Object.keys(contextSettings),
+			})
+		}
+
 		// Send auto-approval settings if any are present
 		if (Object.keys(autoApprovalSettings).length > 0) {
 			await this.sendWebviewMessage({
@@ -1035,6 +1055,20 @@ export class ExtensionHost extends EventEmitter {
 			})
 			logs.debug("Auto-approval settings synchronized to extension", "ExtensionHost", {
 				settings: Object.keys(autoApprovalSettings),
+			})
+		}
+
+		// Sync appendSystemPrompt to extension
+		// This setting is passed from CLI options and needs to be stored in the extension's
+		// contextProxy so it's available when generating the system prompt
+		const appendSystemPrompt = configState.appendSystemPrompt || this.options.appendSystemPrompt
+		if (appendSystemPrompt) {
+			await this.sendWebviewMessage({
+				type: "updateSettings",
+				updatedSettings: { appendSystemPrompt },
+			})
+			logs.debug("appendSystemPrompt synchronized to extension", "ExtensionHost", {
+				length: appendSystemPrompt.length,
 			})
 		}
 	}

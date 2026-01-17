@@ -9,14 +9,9 @@ describe("CliArgsBuilder", () => {
 		const args = buildCliArgs(workspace, prompt)
 
 		expect(args).toContain("--json-io")
+		expect(args).toContain("--yolo")
 		expect(args).toContain(`--workspace=${workspace}`)
 		expect(args).toContain(prompt)
-	})
-
-	it("adds --parallel flag when parallelMode is true", () => {
-		const args = buildCliArgs(workspace, prompt, { parallelMode: true })
-
-		expect(args).toContain("--parallel")
 	})
 
 	it("adds --session flag when sessionId is provided", () => {
@@ -32,34 +27,30 @@ describe("CliArgsBuilder", () => {
 		expect(args).toContain("--session=abc123")
 	})
 
-	describe("existingBranch", () => {
-		it("adds --existing-branch flag when parallelMode and existingBranch are set", () => {
-			const args = buildCliArgs(workspace, prompt, {
-				parallelMode: true,
-				existingBranch: "feature/my-branch",
-			})
+	it("does not include --parallel flag (worktree is handled by extension)", () => {
+		// CLI is now worktree-agnostic - extension creates worktree and passes path as workspace
+		const args = buildCliArgs(workspace, prompt)
 
-			expect(args).toContain("--parallel")
-			expect(args).toContain("--existing-branch=feature/my-branch")
-		})
+		expect(args).not.toContain("--parallel")
+		expect(args.some((arg) => arg.includes("--existing-branch"))).toBe(false)
+	})
 
-		it("ignores existingBranch when parallelMode is false", () => {
-			const args = buildCliArgs(workspace, prompt, {
-				parallelMode: false,
-				existingBranch: "feature/my-branch",
-			})
+	it("adds --model flag when model is provided", () => {
+		const args = buildCliArgs(workspace, prompt, { model: "claude-opus-4" })
 
-			expect(args).not.toContain("--parallel")
-			expect(args.some((arg) => arg.includes("--existing-branch"))).toBe(false)
-		})
+		expect(args).toContain("--model=claude-opus-4")
+	})
 
-		it("handles branch names with special characters", () => {
-			const args = buildCliArgs(workspace, prompt, {
-				parallelMode: true,
-				existingBranch: "feature/add-user-auth",
-			})
+	it("does not add --model flag when model is not provided", () => {
+		const args = buildCliArgs(workspace, prompt)
 
-			expect(args).toContain("--existing-branch=feature/add-user-auth")
-		})
+		expect(args.some((arg) => arg.startsWith("--model="))).toBe(false)
+	})
+
+	it("combines model with sessionId when both are provided", () => {
+		const args = buildCliArgs(workspace, prompt, { model: "claude-opus-4", sessionId: "abc123" })
+
+		expect(args).toContain("--model=claude-opus-4")
+		expect(args).toContain("--session=abc123")
 	})
 })

@@ -3,14 +3,22 @@
  * Provides a clean interface for sending user messages to the extension
  */
 
-import { useSetAtom } from "jotai"
+import { useSetAtom, useAtomValue } from "jotai"
 import { useCallback, useState } from "react"
 import { addMessageAtom } from "../atoms/ui.js"
+import {
+	imageReferencesAtom,
+	clearImageReferencesAtom,
+	pastedTextReferencesAtom,
+	clearPastedTextReferencesAtom,
+} from "../atoms/keyboard.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
+import { processMessageImages } from "../../media/processMessageImages.js"
+import { expandPastedTextReferences } from "../../media/processPastedText.js"
 
 /**
  * Options for useMessageHandler hook
@@ -34,7 +42,7 @@ export interface UseMessageHandlerReturn {
  * Hook that provides message sending functionality
  *
  * This hook handles sending regular user messages (non-commands) to the extension,
- * including adding the message to the UI and handling errors.
+ * including processing @path image mentions and handling errors.
  *
  * @example
  * ```tsx
@@ -58,51 +66,81 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const { ciMode = false } = options
 	const [isSending, setIsSending] = useState(false)
 	const addMessage = useSetAtom(addMessageAtom)
+	const imageReferences = useAtomValue(imageReferencesAtom)
+	const clearImageReferences = useSetAtom(clearImageReferencesAtom)
+	const pastedTextReferences = useAtomValue(pastedTextReferencesAtom)
+	const clearPastedTextReferences = useSetAtom(clearPastedTextReferencesAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
 
 	const sendUserMessage = useCallback(
 		async (text: string): Promise<void> => {
 			const trimmedText = text.trim()
-
 			if (!trimmedText) {
 				return
 			}
 
-			// Don't add user message to CLI state - the extension will handle it
-			// This prevents duplicate messages in the UI
-
-			// Set sending state
 			setIsSending(true)
 
 			try {
-				// Track user message
+				// Expand [Pasted text #N +X lines] references with full content
+				const pastedTextRefsObject = Object.fromEntries(pastedTextReferences)
+				const expandedText = expandPastedTextReferences(trimmedText, pastedTextRefsObject)
+
+				// Convert image references Map to object for processMessageImages
+				const imageRefsObject = Object.fromEntries(imageReferences)
+
+				// Process any @path image mentions and [Image #N] references in the message
+				const processed = await processMessageImages(expandedText, imageRefsObject)
+
+				// Show any image loading errors to the user
+				if (processed.errors.length > 0) {
+					for (const error of processed.errors) {
+						const errorMessage: CliMessage = {
+							id: `img-err-${Date.now()}-${Math.random()}`,
+							type: "error",
+							content: error,
+							ts: Date.now(),
+						}
+						addMessage(errorMessage)
+					}
+				}
+
+				// Track telemetry
 				getTelemetryService().trackUserMessageSent(
-					trimmedText.length,
-					false, // hasImages - CLI doesn't support images yet
+					processed.text.length,
+					processed.hasImages,
 					hasActiveTask,
-					undefined, // taskId - will be added when we have task tracking
+					undefined,
 				)
 
-				// Check if there's an active task to determine message type
-				// This matches the webview behavior in ChatView.tsx (lines 650-683)
+				// Build message payload
+				const payload = {
+					text: processed.text,
+					...(processed.hasImages && { images: processed.images }),
+				}
+
+				// Clear image and pasted text references after processing
+				if (imageReferences.size > 0) {
+					clearImageReferences()
+				}
+				if (pastedTextReferences.size > 0) {
+					clearPastedTextReferences()
+				}
+
+				// Send to extension - either as response to active task or as new task
 				if (hasActiveTask) {
-					// Send as response to existing task (like webview does)
-					logs.debug("Sending message as response to active task", "useMessageHandler")
-					await sendAskResponse({
-						response: "messageResponse",
-						text: trimmedText,
+					logs.debug("Sending message as response to active task", "useMessageHandler", {
+						hasImages: processed.hasImages,
 					})
+					await sendAskResponse({ response: "messageResponse", ...payload })
 				} else {
-					// Start new task (no active conversation)
-					logs.debug("Starting new task", "useMessageHandler")
-					await sendMessage({
-						type: "newTask",
-						text: trimmedText,
+					logs.debug("Starting new task", "useMessageHandler", {
+						hasImages: processed.hasImages,
 					})
+					await sendMessage({ type: "newTask", ...payload })
 				}
 			} catch (error) {
-				// Add error message if sending failed
 				const errorMessage: CliMessage = {
 					id: Date.now().toString(),
 					type: "error",
@@ -111,11 +149,20 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				}
 				addMessage(errorMessage)
 			} finally {
-				// Reset sending state
 				setIsSending(false)
 			}
 		},
-		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask],
+		[
+			addMessage,
+			ciMode,
+			sendMessage,
+			sendAskResponse,
+			hasActiveTask,
+			imageReferences,
+			clearImageReferences,
+			pastedTextReferences,
+			clearPastedTextReferences,
+		],
 	)
 
 	return {

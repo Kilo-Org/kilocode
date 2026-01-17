@@ -123,10 +123,6 @@ vi.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
-vi.mock("../../../core/kilocode/wrapper", () => ({
-	getKiloCodeWrapperProperties: () => ({ kiloCodeWrapperJetbrains: false }),
-}))
-
 vi.mock("../../../core/config/ContextProxy", () => {
 	const state: Record<string, any> = {}
 
@@ -163,7 +159,6 @@ async function createManager(): Promise<GhostServiceManager> {
 	__setState({
 		ghostServiceSettings: {
 			enableAutoTrigger: false,
-			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		},
 	})
@@ -264,7 +259,6 @@ describe("GhostServiceManager (less mocked logic)", () => {
 			vi.mocked(vscode.languages.registerInlineCompletionItemProvider).mockReturnValue(disposable as any)
 			;(manager as any).settings = {
 				enableAutoTrigger: true,
-				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			}
 
@@ -286,7 +280,6 @@ describe("GhostServiceManager (less mocked logic)", () => {
 			;(manager as any).settings = {
 				enableAutoTrigger: true,
 				snoozeUntil: Date.now() + 60_000,
-				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			}
 
@@ -303,7 +296,6 @@ describe("GhostServiceManager (less mocked logic)", () => {
 			;(manager as any).inlineCompletionProviderDisposable = existingDisposable
 			;(manager as any).settings = {
 				enableAutoTrigger: false,
-				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			}
 
