@@ -991,23 +991,25 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 }
 
 function handlePaste(set: Setter, text: string): void {
+	// Normalize tabs to spaces to prevent border corruption and ensure consistent display
+	const normalizedText = text.replace(/\t/g, "  ")
+
 	// Quick line count check - avoid processing large text unnecessarily
 	let lineCount = 0
-	for (let i = 0; i < text.length; i++) {
-		if (text[i] === "\n") lineCount++
+	for (let i = 0; i < normalizedText.length; i++) {
+		if (normalizedText[i] === "\n") lineCount++
 		if (lineCount >= PASTE_LINE_THRESHOLD) break
 	}
 	lineCount++ // Account for last line (no trailing newline)
 
 	if (lineCount >= PASTE_LINE_THRESHOLD) {
-		// Store original text - normalize tabs only when expanding
-		const actualLineCount = text.split("\n").length
-		const refNumber = set(addPastedTextReferenceAtom, text)
+		// Store normalized text
+		const actualLineCount = normalizedText.split("\n").length
+		const refNumber = set(addPastedTextReferenceAtom, normalizedText)
 		const reference = formatPastedTextReference(refNumber, actualLineCount)
 		set(insertTextAtom, reference + " ")
 	} else {
-		// Small paste - normalize tabs to prevent border corruption
-		const normalizedText = text.replace(/\t/g, "  ")
+		// Small paste
 		set(insertTextAtom, normalizedText)
 	}
 }
