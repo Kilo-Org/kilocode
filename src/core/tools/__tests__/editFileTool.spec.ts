@@ -451,5 +451,381 @@ describe("editFileTool", () => {
 			expect(mockTask.consecutiveMistakeCount).toBe(0)
 			expect(mockAskApproval).toHaveBeenCalled()
 		})
+
+		it("handles multiple $ signs and special patterns like $$ correctly", async () => {
+			await executeEditFileTool(
+				{ old_string: "price", new_string: "$$ = $$100" },
+				{ fileContent: "The price is here" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("handles $& replacement pattern correctly", async () => {
+			await executeEditFileTool(
+				{ old_string: "value", new_string: "$& matched $&" },
+				{ fileContent: "The value is set" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+	})
+
+	describe("path handling", () => {
+		it("handles absolute file paths correctly", async () => {
+			const absolutePath = process.platform === "win32" ? "C:\\projects\\file.txt" : "/projects/file.txt"
+			mockedPathIsAbsolute.mockReturnValue(true)
+
+			await executeEditFileTool(
+				{ file_path: absolutePath, old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			// Verify the edit succeeds with absolute path
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("handles relative file paths correctly", async () => {
+			mockedPathIsAbsolute.mockReturnValue(false)
+
+			await executeEditFileTool(
+				{ file_path: "src/file.txt", old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			// Verify the edit succeeds with relative path
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+	})
+
+	describe("write-protected files", () => {
+		it("passes isProtected flag to askApproval for write-protected files", async () => {
+			mockTask.rooProtectedController.isWriteProtected.mockReturnValue(true)
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.rooProtectedController.isWriteProtected).toHaveBeenCalled()
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.any(String),
+				undefined,
+				true, // isProtected flag
+			)
+		})
+
+		it("passes isProtected=false for non-protected files", async () => {
+			mockTask.rooProtectedController.isWriteProtected.mockReturnValue(false)
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith("tool", expect.any(String), undefined, false)
+		})
+
+		it("handles missing rooProtectedController gracefully", async () => {
+			mockTask.rooProtectedController = undefined
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+	})
+
+	describe("prevent focus disruption experiment", () => {
+		it("uses saveDirectly when prevent focus disruption is enabled", async () => {
+			mockTask.providerRef.deref.mockReturnValue({
+				getState: vi.fn().mockResolvedValue({
+					diagnosticsEnabled: true,
+					writeDelayMs: 500,
+					experiments: { preventFocusDisruption: true },
+				}),
+			})
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.diffViewProvider.saveDirectly).toHaveBeenCalled()
+			expect(mockTask.diffViewProvider.open).not.toHaveBeenCalled()
+		})
+
+		it("uses normal diff view workflow when experiment is disabled", async () => {
+			mockTask.providerRef.deref.mockReturnValue({
+				getState: vi.fn().mockResolvedValue({
+					diagnosticsEnabled: true,
+					writeDelayMs: 1000,
+					experiments: {},
+				}),
+			})
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.diffViewProvider.open).toHaveBeenCalled()
+			expect(mockTask.diffViewProvider.saveChanges).toHaveBeenCalled()
+		})
+
+		it("does not revert changes when rejection happens with experiment enabled", async () => {
+			mockTask.providerRef.deref.mockReturnValue({
+				getState: vi.fn().mockResolvedValue({
+					diagnosticsEnabled: true,
+					writeDelayMs: 500,
+					experiments: { preventFocusDisruption: true },
+				}),
+			})
+			mockAskApproval.mockResolvedValue(false)
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			// revertChanges should not be called when experiment is enabled
+			expect(mockTask.diffViewProvider.revertChanges).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("edge cases", () => {
+		it("handles unicode characters in old_string and new_string", async () => {
+			await executeEditFileTool(
+				{ old_string: "Hello 世界", new_string: "你好 World 🌍" },
+				{ fileContent: "Say Hello 世界 today" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("handles multiline old_string and new_string", async () => {
+			const multilineOld = "function test() {\n  return true;\n}"
+			const multilineNew = "function test() {\n  console.log('hello');\n  return false;\n}"
+
+			await executeEditFileTool(
+				{ old_string: multilineOld, new_string: multilineNew },
+				{ fileContent: `// Comment\n${multilineOld}\n// End` },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("handles old_string at the beginning of file", async () => {
+			await executeEditFileTool(
+				{ old_string: "First", new_string: "Modified First" },
+				{ fileContent: "First line\nSecond line" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+		})
+
+		it("handles old_string at the end of file", async () => {
+			await executeEditFileTool(
+				{ old_string: "last line", new_string: "modified last" },
+				{ fileContent: "First line\nlast line" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+		})
+
+		it("handles special regex characters in old_string", async () => {
+			await executeEditFileTool(
+				{ old_string: "test.*pattern", new_string: "replaced" },
+				{ fileContent: "This is test.*pattern here" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("handles empty lines in content", async () => {
+			await executeEditFileTool(
+				{ old_string: "middle", new_string: "replaced" },
+				{ fileContent: "first\n\nmiddle\n\nlast" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+		})
+
+		it("handles tabs and mixed whitespace", async () => {
+			await executeEditFileTool(
+				{ old_string: "\t\tindented", new_string: "    spaces" },
+				{ fileContent: "line1\n\t\tindented\nline3" },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+		})
+
+		it("handles very long strings", async () => {
+			const longString = "x".repeat(10000)
+			const newLongString = "y".repeat(10000)
+
+			await executeEditFileTool(
+				{ old_string: longString, new_string: newLongString },
+				{ fileContent: `prefix${longString}suffix` },
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+		})
+	})
+
+	describe("parseLegacy method", () => {
+		it("parses file_path correctly", () => {
+			const result = editFileTool.parseLegacy({ file_path: "test.txt" })
+			expect(result.file_path).toBe("test.txt")
+		})
+
+		it("parses old_string correctly", () => {
+			const result = editFileTool.parseLegacy({ old_string: "old content" })
+			expect(result.old_string).toBe("old content")
+		})
+
+		it("parses new_string correctly", () => {
+			const result = editFileTool.parseLegacy({ new_string: "new content" })
+			expect(result.new_string).toBe("new content")
+		})
+
+		it("parses expected_replacements as integer", () => {
+			const result = editFileTool.parseLegacy({ expected_replacements: "5" })
+			expect(result.expected_replacements).toBe(5)
+		})
+
+		it("returns undefined for missing expected_replacements", () => {
+			const result = editFileTool.parseLegacy({})
+			expect(result.expected_replacements).toBeUndefined()
+		})
+
+		it("returns empty strings for missing required params", () => {
+			const result = editFileTool.parseLegacy({})
+			expect(result.file_path).toBe("")
+			expect(result.old_string).toBe("")
+			expect(result.new_string).toBe("")
+		})
+	})
+
+	describe("multiple replacements", () => {
+		it("appends replacement count info to result message when expected_replacements > 1", async () => {
+			mockTask.diffViewProvider.pushToolWriteResult.mockResolvedValue("File modified")
+
+			const result = await executeEditFileTool(
+				{ old_string: "Line", new_string: "Row", expected_replacements: "4" },
+				{ fileContent: "Line 1\nLine 2\nLine 3\nLine 4" },
+			)
+
+			expect(result).toContain("(4 replacements)")
+		})
+
+		it("does not append replacement info when expected_replacements is 1", async () => {
+			mockTask.diffViewProvider.pushToolWriteResult.mockResolvedValue("File modified")
+
+			const result = await executeEditFileTool(
+				{ old_string: "unique text", new_string: "replaced", expected_replacements: "1" },
+				{ fileContent: "This is unique text here" },
+			)
+
+			expect(result).not.toContain("replacements)")
+		})
+	})
+
+	describe("queued messages processing", () => {
+		it("calls processQueuedMessages after successful edit", async () => {
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.processQueuedMessages).toHaveBeenCalled()
+		})
+
+		it("does not call processQueuedMessages when edit is rejected", async () => {
+			mockAskApproval.mockResolvedValue(false)
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.processQueuedMessages).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("outside workspace handling", () => {
+		it("includes isOutsideWorkspace flag in tool message", async () => {
+			mockedIsPathOutsideWorkspace.mockReturnValue(true)
+
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining('"isOutsideWorkspace":true'),
+				undefined,
+				expect.any(Boolean),
+			)
+		})
+	})
+
+	describe("partial block preview", () => {
+		it("truncates long old_string in preview", async () => {
+			const longOldString = "x".repeat(100)
+
+			await executeEditFileTool({ old_string: longOldString, new_string: "short" }, { isPartial: true })
+
+			expect(mockTask.ask).toHaveBeenCalled()
+			const askCall = mockTask.ask.mock.calls[0]
+			const messageContent = askCall[1]
+			expect(messageContent).toContain("...")
+		})
+	})
+
+	describe("diff view behavior", () => {
+		it("sets originalContent on diffViewProvider", async () => {
+			const content = "Line 1\nLine 2\nLine 3"
+
+			await executeEditFileTool({ old_string: "Line 2", new_string: "Modified" }, { fileContent: content })
+
+			expect(mockTask.diffViewProvider.originalContent).toBe(content)
+		})
+
+		it("scrolls to first diff after updating diff view", async () => {
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.diffViewProvider.scrollToFirstDiff).toHaveBeenCalled()
+		})
+
+		it("resets diff view after successful save", async () => {
+			await executeEditFileTool(
+				{ old_string: "Line 2", new_string: "Modified" },
+				{ fileContent: "Line 1\nLine 2\nLine 3" },
+			)
+
+			expect(mockTask.diffViewProvider.reset).toHaveBeenCalled()
+		})
+	})
+
+	describe("tool name property", () => {
+		it("has correct tool name", () => {
+			expect(editFileTool.name).toBe("edit_file")
+		})
 	})
 })
