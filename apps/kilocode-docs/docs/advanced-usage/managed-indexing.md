@@ -3,7 +3,9 @@ title: Managed Indexing
 sidebar_label: Managed Indexing
 ---
 
-Kilo's **Managed Indexing** feature provides semantic search across your repositories using cloud-hosted embeddings. When enabled, Kilo indexes your codebase to deliver more relevant, context-aware responses during development.
+Kilo's **Managed Indexing** is enabled **by default** and provides semantic search across your repositories using cloud-hosted embeddings. When active, Kilo indexes your codebase to deliver more relevant, context-aware AI responses during development.
+
+> **Important:** Source code is processed transiently to generate embeddings and is never stored or persisted; only non-reversible vector embeddings are kept.
 
 ---
 
@@ -37,20 +39,18 @@ Before enabling Managed Indexing:
 
 ---
 
-## How to Enable
-
-Codebase Indexing is rolling out across our users. It will automatically engage unless your repository root is configured to opt out.
-
+## How to Disable (Per Project)
+You can disable Managed Indexing for **specific repositories** using a local configuration file.
 1. Create a `.kilocode/config.json` file in the root of your repository (if it doesn't already exist).
 2. Add the following configuration:
-
 ```json
 {
-	"project": {
-		"managedIndexingEnabled": false
-	}
+  "project": {
+    "managedIndexingEnabled": false
+  }
 }
 ```
+If you would like to remove Managed Indexing completely for your organization, please raise a support ticket at [kilo.ai/support](https://kilo.ai/support).
 
 ### Configuration Options
 
