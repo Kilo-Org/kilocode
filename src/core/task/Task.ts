@@ -136,7 +136,12 @@ import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_chan
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
 import { processUserContentMentions } from "../mentions/processUserContentMentions"
-import { getMessagesSinceLastSummary, summarizeConversation, getEffectiveApiHistory } from "../condense"
+import {
+	getMessagesSinceLastSummary,
+	summarizeConversation,
+	getEffectiveApiHistory,
+	uncondenseForExtendedThinking,
+} from "../condense"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
@@ -4270,6 +4275,56 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					?.postMessageToWebview({ type: "condenseTaskContextResponse", text: this.taskId })
 			}
 		}
+
+		// kilocode_change start
+		// Check if history has summary messages that are incompatible with extended thinking.
+		// This can happen when a conversation was condensed with a different model and is now
+		// being used with an Anthropic extended thinking model. If so, uncondense by removing
+		// the invalid summary and restoring the condensed messages, then re-condense with the
+		// current model (which will produce valid thinking blocks).
+		const currentModelInfo = this.api.getModel().info
+		const uncondenseResult = uncondenseForExtendedThinking(this.apiConversationHistory, currentModelInfo)
+		if (uncondenseResult.didUncondense) {
+			console.log(
+				`[Task#${this.taskId}] Uncondensed history for extended thinking compatibility - removed invalid summary`,
+			)
+			this.apiConversationHistory = uncondenseResult.messages
+			await this.saveApiConversationHistory()
+
+			// After uncondensing, immediately re-condense with the current model to avoid context overflow.
+			// The current model (with extended thinking) will produce valid thinking blocks.
+			const prevContextTokens = await this.api.countTokens(
+				this.apiConversationHistory.flatMap((m) =>
+					typeof m.content === "string" ? [{ type: "text" as const, text: m.content }] : m.content,
+				),
+			)
+			console.log(`[Task#${this.taskId}] Re-condensing after uncondense - context tokens: ${prevContextTokens}`)
+
+			const recondenseResult = await summarizeConversation(
+				this.apiConversationHistory,
+				this.api,
+				await this.getSystemPrompt(),
+				this.taskId,
+				prevContextTokens,
+				true, // isAutomaticTrigger
+				undefined, // customCondensingPrompt - use default
+				undefined, // condensingApiHandler - use main handler (current model with extended thinking)
+				this._taskToolProtocol === "native",
+			)
+
+			if (recondenseResult.error) {
+				console.error(`[Task#${this.taskId}] Re-condensation failed: ${recondenseResult.error}`)
+				// Don't throw - let it continue and potentially fail with context overflow
+				// User will see the error and can manually handle it
+			} else {
+				console.log(
+					`[Task#${this.taskId}] Re-condensation successful - new context tokens: ${recondenseResult.newContextTokens}`,
+				)
+				this.apiConversationHistory = recondenseResult.messages
+				await this.saveApiConversationHistory()
+			}
+		}
+		// kilocode_change end
 
 		// Get the effective API history by filtering out condensed messages
 		// This allows non-destructive condensing where messages are tagged but not deleted,
