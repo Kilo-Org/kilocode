@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 0.23.1
+
+### Patch Changes
+
+- [#5164](https://github.com/Kilo-Org/kilocode/pull/5164) [`d63378c`](https://github.com/Kilo-Org/kilocode/commit/d63378c5698a0117177d86143185cb46c66f3c73) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Show auth prompt instead of timeout when CLI not configured in Agent Manager
+
+- [#5169](https://github.com/Kilo-Org/kilocode/pull/5169) [`18a9da4`](https://github.com/Kilo-Org/kilocode/commit/18a9da440f4905ce45c80bb0fa622767880de6c6) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed escape sequences appearing as raw text on Windows cmd.exe
+
 ## 0.23.0
 
 ### Minor Changes
