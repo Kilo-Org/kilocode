@@ -13,7 +13,7 @@ import { ExtensionStateContext } from "@/context/ExtensionStateContext"
 interface MarketplaceViewProps {
 	onDone?: () => void
 	stateManager: MarketplaceViewStateManager
-	targetTab?: "mcp" | "mode"
+	targetTab?: "mcp" | "mode" | "skill"
 	hideHeader?: boolean // kilocode_change
 }
 export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = false }: MarketplaceViewProps) {
@@ -44,7 +44,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 	}, [state.allItems, hasReceivedInitialState])
 
 	useEffect(() => {
-		if (targetTab && (targetTab === "mcp" || targetTab === "mode")) {
+		if (targetTab && (targetTab === "mcp" || targetTab === "mode" || targetTab === "skill")) {
 			manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: targetTab } })
 		}
 	}, [targetTab, manager])
@@ -143,10 +143,11 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 							<div className="absolute w-full h-[2px] -bottom-[2px] bg-vscode-input-border">
 								<div
 									className={cn(
-										"absolute w-1/2 h-[2px] bottom-0 bg-vscode-button-background transition-all duration-300 ease-in-out",
+										"absolute w-1/3 h-[2px] bottom-0 bg-vscode-button-background transition-all duration-300 ease-in-out",
 										{
 											"left-0": state.activeTab === "mcp",
-											"left-1/2": state.activeTab === "mode",
+											"left-1/3": state.activeTab === "mode",
+											"left-2/3": state.activeTab === "skill",
 										},
 									)}
 								/>
@@ -162,6 +163,13 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 									manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "mode" } })
 								}>
 								Modes
+							</button>
+							<button
+								className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
+								onClick={() =>
+									manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skill" } })
+								}>
+								Skills
 							</button>
 						</div>
 					</div>
@@ -184,6 +192,14 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 							filteredTags={filteredTags}
 							filterByType="mode"
 							headerMessage={modesHeaderMessage} // kilocode_change
+						/>
+					)}
+					{state.activeTab === "skill" && (
+						<MarketplaceListView
+							stateManager={stateManager}
+							allTags={allTags}
+							filteredTags={filteredTags}
+							filterByType="skill"
 						/>
 					)}
 				</TabContent>

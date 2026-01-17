@@ -1,0 +1,228 @@
+import type { Meta, StoryObj } from "@storybook/react"
+import { MarketplaceView } from "./MarketplaceView"
+import { MarketplaceViewStateManager } from "./MarketplaceViewStateManager"
+
+// Mock skill data for Storybook
+const mockSkills = [
+	{
+		id: "test-generation",
+		name: "Test Generation",
+		description: "AI-powered test generation for Jest, Vitest, PyTest, and other testing frameworks. Generate comprehensive test suites from your codebase.",
+		author: "kilocode",
+		tags: ["testing", "jest", "vitest", "pytest", "quality"],
+		repository: {
+			fullName: "kilocode/test-generation",
+			stars: 150,
+			forks: 25,
+			url: "https://github.com/kilocode/test-generation",
+			pushedAt: "2026-01-07T12:00:00Z",
+		},
+		category: "Testing",
+		hasInstallCommand: true,
+		skillFile: "test-generation.md",
+		type: "skill" as const,
+	},
+	{
+		id: "refactor-master",
+		name: "Refactor Master",
+		description: "Advanced refactoring assistance for code organization, pattern implementation, and technical debt reduction.",
+		author: "refactor-community",
+		tags: ["refactoring", "clean-code", "patterns"],
+		repository: {
+			fullName: "refactor-community/refactor-master",
+			stars: 89,
+			forks: 12,
+			url: "https://github.com/refactor-community/refactor-master",
+			pushedAt: "2026-01-06T18:30:00Z",
+		},
+		category: "Refactoring",
+		hasInstallCommand: true,
+		skillFile: "refactor-master.md",
+		type: "skill" as const,
+	},
+	{
+		id: "api-architect",
+		name: "API Architect",
+		description: "Design and implement RESTful APIs, GraphQL schemas, and gRPC services with best practices for scalability and maintainability.",
+		author: "api-experts",
+		tags: ["api", "rest", "graphql", "grpc", "backend"],
+		repository: {
+			fullName: "api-experts/api-architect",
+			stars: 234,
+			forks: 45,
+			url: "https://github.com/api-experts/api-architect",
+			pushedAt: "2026-01-05T09:15:00Z",
+		},
+		category: "Backend",
+		hasInstallCommand: true,
+		skillFile: "api-architect.md",
+		type: "skill" as const,
+	},
+	{
+		id: "database-guru",
+		name: "Database Guru",
+		description: "Database design, query optimization, migration assistance for PostgreSQL, MySQL, MongoDB, and other database systems.",
+		author: "db-specialists",
+		tags: ["database", "sql", "postgresql", "mysql", "mongodb"],
+		repository: {
+			fullName: "db-specialists/database-guru",
+			stars: 178,
+			forks: 33,
+			url: "https://github.com/db-specialists/database-guru",
+			pushedAt: "2026-01-04T14:45:00Z",
+		},
+		category: "Database",
+		hasInstallCommand: true,
+		skillFile: "database-guru.md",
+		type: "skill" as const,
+	},
+	{
+		id: "security-auditor",
+		name: "Security Auditor",
+		description: "Security code review, vulnerability detection, and best practices for secure coding across multiple languages.",
+		author: "security-team",
+		tags: ["security", "audit", "vulnerabilities", "compliance"],
+		repository: {
+			fullName: "security-team/security-auditor",
+			stars: 312,
+			forks: 67,
+			url: "https://github.com/security-team/security-auditor",
+			pushedAt: "2026-01-03T11:20:00Z",
+		},
+		category: "Security",
+		hasInstallCommand: true,
+		skillFile: "security-auditor.md",
+		type: "skill" as const,
+	},
+	{
+		id: "documentation-helper",
+		name: "Documentation Helper",
+		description: "Generate comprehensive documentation, README files, API docs, and code comments automatically.",
+		author: "docs-team",
+		tags: ["documentation", "readme", "api-docs"],
+		repository: {
+			fullName: "docs-team/documentation-helper",
+			stars: 95,
+			forks: 18,
+			url: "https://github.com/docs-team/documentation-helper",
+			pushedAt: "2026-01-02T16:00:00Z",
+		},
+		category: "Documentation",
+		hasInstallCommand: true,
+		skillFile: "documentation-helper.md",
+		type: "skill" as const,
+	},
+]
+
+// Mock state manager for Storybook
+const createMockStateManager = () => {
+	const manager = new MarketplaceViewStateManager()
+	manager.initialize()
+	return manager
+}
+
+const meta: Meta<typeof MarketplaceView> = {
+	title: "Marketplace/MarketplaceView",
+	component: MarketplaceView,
+	parameters: {
+		layout: "fullscreen",
+	},
+	argTypes: {
+		targetTab: {
+			control: "select",
+			options: ["mcp", "mode", "skill"],
+		},
+		hideHeader: {
+			control: "boolean",
+		},
+	},
+}
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const SkillsTab: Story = {
+	args: {
+		stateManager: createMockStateManager(),
+		targetTab: "skill",
+		hideHeader: false,
+	},
+	play: async ({ canvasElement }) => {
+		// Set up the mock state with skills data
+		const stateManager = new MarketplaceViewStateManager()
+		stateManager.initialize()
+		
+		// Simulate receiving skills data
+		stateManager.handleMessage({
+			type: "marketplaceData",
+			marketplaceItems: mockSkills,
+			organizationMcps: [],
+		})
+		
+		// Set active tab to skill
+		stateManager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skill" } })
+	},
+}
+
+export const SkillsTabWithSearch: Story = {
+	args: {
+		stateManager: createMockStateManager(),
+		targetTab: "skill",
+		hideHeader: false,
+	},
+	play: async ({ canvasElement }) => {
+		const stateManager = new MarketplaceViewStateManager()
+		stateManager.initialize()
+		
+		stateManager.handleMessage({
+			type: "marketplaceData",
+			marketplaceItems: mockSkills,
+			organizationMcps: [],
+		})
+		
+		stateManager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skill" } })
+		
+		// Apply search filter
+		stateManager.transition({
+			type: "UPDATE_FILTERS",
+			payload: { filters: { search: "test" } },
+		})
+	},
+}
+
+export const SkillsTabEmpty: Story = {
+	args: {
+		stateManager: createMockStateManager(),
+		targetTab: "skill",
+		hideHeader: false,
+	},
+	play: async ({ canvasElement }) => {
+		const stateManager = new MarketplaceViewStateManager()
+		stateManager.initialize()
+		
+		stateManager.handleMessage({
+			type: "marketplaceData",
+			marketplaceItems: [],
+			organizationMcps: [],
+		})
+		
+		stateManager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skill" } })
+	},
+}
+
+export const SkillsTabLoading: Story = {
+	args: {
+		stateManager: createMockStateManager(),
+		targetTab: "skill",
+		hideHeader: false,
+	},
+	play: async ({ canvasElement }) => {
+		const stateManager = new MarketplaceViewStateManager()
+		stateManager.initialize()
+		
+		// Set loading state
+		stateManager.transition({ type: "FETCH_ITEMS" })
+		stateManager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skill" } })
+	},
+}

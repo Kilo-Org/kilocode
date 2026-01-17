@@ -11,7 +11,7 @@ const meta = {
 	argTypes: {
 		targetTab: {
 			control: { type: "select" },
-			options: ["mcp", "mode"],
+			options: ["mcp", "mode", "skill"],
 			description: "Which tab should be active initially",
 		},
 		hideHeader: {
@@ -64,5 +64,44 @@ export const ModeTab: Story = {
 	args: {
 		stateManager: createMockMarketplaceStateManager("mode") as any,
 		targetTab: "mode",
+	},
+}
+
+export const SkillTab: Story = {
+	args: {
+		stateManager: createMockMarketplaceStateManager("skill") as any,
+		targetTab: "skill",
+	},
+}
+
+export const AllTabsWithItems: Story = {
+	args: {
+		stateManager: createMockMarketplaceStateManager("mcp") as any,
+		targetTab: "mcp",
+	},
+	parameters: {
+		extensionState: createExtensionStateMock({
+			organizationAllowList: {
+				allowAll: true,
+				providers: {},
+			},
+			apiConfiguration: {
+				apiProvider: "anthropic",
+				apiModelId: "claude-3-5-sonnet-20241022",
+				apiKey: "mock-key",
+			},
+			marketplaceInstalledMetadata: {
+				global: {
+					"filesystem-mcp": { type: "mcp" },
+					"architect-mode": { type: "mode" },
+				},
+				project: {
+					"database-mcp": { type: "mcp" },
+				},
+			},
+			mcpServers: [],
+			mode: "code",
+			customModes: [],
+		}),
 	},
 }

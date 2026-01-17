@@ -42,6 +42,72 @@ export const mockMarketplaceItems = [
 		content:
 			"slug: debug\nname: Debug\nmodel: anthropic/claude-sonnet-4\nprompt: |\n  You are a debugging specialist.",
 	},
+	{
+		id: "translate-skill",
+		name: "Translate Skill",
+		description: "Translate and localize applications with support for multiple languages and formats.",
+		author: "Kilocode",
+		tags: ["i18n", "translation", "localization"],
+		type: "skill" as const,
+		category: "Developer Tools",
+		repository: {
+			fullName: "kilocode/translate-skill",
+			stars: 1250,
+			forks: 89,
+			url: "https://github.com/kilocode/translate-skill",
+			pushedAt: "2024-01-15T10:30:00Z",
+		},
+		skillFile: "SKILL.md",
+		marketplaceJson: {
+			name: "Translate Skill",
+			version: "1.0.0",
+			installCommand: "npm install @kilocode/translate-skill",
+			description: "Translation and localization for your apps",
+		},
+		content: "# Translate Skill\n\nThis skill provides translation and localization capabilities...",
+	},
+	{
+		id: "test-skill",
+		name: "Test Skill",
+		description: "Comprehensive testing utilities for writing and managing test suites.",
+		author: "TestingTeam",
+		tags: ["testing", "quality", "automation"],
+		type: "skill" as const,
+		category: "Quality Assurance",
+		repository: {
+			fullName: "community/test-skill",
+			stars: 567,
+			forks: 45,
+			url: "https://github.com/community/test-skill",
+			pushedAt: "2024-01-14T15:45:00Z",
+		},
+		skillFile: "SKILL.md",
+		marketplaceJson: {
+			name: "Test Skill",
+			version: "2.1.0",
+			installCommand: "npm install @community/test-skill",
+			description: "Testing utilities for any project",
+		},
+		content: "# Test Skill\n\nComprehensive testing utilities...",
+	},
+	{
+		id: "refactor-skill",
+		name: "Refactor Skill",
+		description: "Automated code refactoring and improvement suggestions.",
+		author: "RefactorKing",
+		tags: ["refactoring", "code-quality", "improvements"],
+		type: "skill" as const,
+		category: "Code Quality",
+		repository: {
+			fullName: "community/refactor-skill",
+			stars: 892,
+			forks: 67,
+			url: "https://github.com/community/refactor-skill",
+			pushedAt: "2024-01-13T09:20:00Z",
+		},
+		skillFile: "SKILL.md",
+		content: "# Refactor Skill\n\nAutomated code refactoring...",
+	},
 ]
 
 export const mockModes = [
@@ -68,22 +134,30 @@ export const mockModes = [
 	},
 ]
 
-export const createMockMarketplaceStateManager = (activeTab: "mcp" | "mode" = "mcp") => ({
-	getState: () => ({
-		allItems: mockMarketplaceItems,
-		organizationMcps: [],
-		displayItems: mockMarketplaceItems,
-		displayOrganizationMcps: [],
-		isFetching: false,
-		activeTab,
-		filters: {
-			type: "",
-			search: "",
-			tags: [],
-			installed: "all" as const,
-		},
-		installedMetadata: { global: {}, project: {} },
-	}),
+export const createMockMarketplaceStateManager = (activeTab: "mcp" | "mode" | "skill" = "mcp") => ({
+	getState: () => {
+		const items =
+			activeTab === "mcp"
+				? mockMarketplaceItems.filter((i) => i.type === "mcp")
+				: activeTab === "mode"
+					? mockMarketplaceItems.filter((i) => i.type === "mode")
+					: mockMarketplaceItems.filter((i) => i.type === "skill")
+		return {
+			allItems: mockMarketplaceItems,
+			organizationMcps: [],
+			displayItems: items,
+			displayOrganizationMcps: [],
+			isFetching: false,
+			activeTab,
+			filters: {
+				type: "",
+				search: "",
+				tags: [],
+				installed: "all" as const,
+			},
+			installedMetadata: { global: {}, project: {} },
+		}
+	},
 	transition: () => Promise.resolve(),
 	onStateChange: () => () => {},
 	cleanup: () => {},

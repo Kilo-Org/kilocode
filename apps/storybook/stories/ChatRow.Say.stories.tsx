@@ -42,7 +42,7 @@ const meta = {
 		editable: false,
 		hasCheckpoint: false,
 	},
-} satisfies Meta<typeof ChatRow>
+} as Meta<typeof ChatRow>
 
 export default meta
 type Story = StoryObj<typeof meta>

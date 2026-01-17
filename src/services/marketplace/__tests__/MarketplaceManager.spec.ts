@@ -169,6 +169,8 @@ describe("MarketplaceManager", () => {
 
 			// Mock the loadAllItems method
 			vi.spyOn(manager["configLoader"], "loadAllItems").mockResolvedValue(mockItems)
+			// Mock skills loader to return empty
+			vi.spyOn(manager["skillsLoader"], "fetchAllSkills").mockResolvedValue([])
 
 			const result = await manager.getMarketplaceItems()
 
@@ -223,6 +225,8 @@ describe("MarketplaceManager", () => {
 			]
 
 			vi.spyOn(manager["configLoader"], "loadAllItems").mockResolvedValue(mockItems)
+			// Mock skills loader to return empty
+			vi.spyOn(manager["skillsLoader"], "fetchAllSkills").mockResolvedValue([])
 
 			const result = await manager.getMarketplaceItems()
 
@@ -267,6 +271,8 @@ describe("MarketplaceManager", () => {
 			]
 
 			vi.spyOn(manager["configLoader"], "loadAllItems").mockResolvedValue(mockItems)
+			// Mock skills loader to return empty
+			vi.spyOn(manager["skillsLoader"], "fetchAllSkills").mockResolvedValue([])
 
 			const result = await manager.getMarketplaceItems()
 
@@ -294,6 +300,8 @@ describe("MarketplaceManager", () => {
 			]
 
 			vi.spyOn(manager["configLoader"], "loadAllItems").mockResolvedValue(mockItems)
+			// Mock skills loader to return empty
+			vi.spyOn(manager["skillsLoader"], "fetchAllSkills").mockResolvedValue([])
 
 			const result = await manager.getMarketplaceItems()
 

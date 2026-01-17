@@ -2,7 +2,14 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
 import * as yaml from "yaml"
-import type { MarketplaceItem, MarketplaceItemType, InstallMarketplaceItemOptions, McpParameter } from "@roo-code/types"
+import type {
+	MarketplaceItem,
+	MarketplaceItemType,
+	InstallMarketplaceItemOptions,
+	McpParameter,
+	ModeMarketplaceItem,
+	McpMarketplaceItem,
+} from "@roo-code/types"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
@@ -26,13 +33,15 @@ export class SimpleInstaller {
 				return await this.installMode(item, target)
 			case "mcp":
 				return await this.installMcp(item, target, options)
+			case "skill":
+				return await this.installSkill(item, target)
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
 	}
 
 	private async installMode(
-		item: MarketplaceItem,
+		item: ModeMarketplaceItem,
 		target: "project" | "global",
 	): Promise<{ filePath: string; line?: number }> {
 		if (!item.content) {
@@ -155,7 +164,7 @@ export class SimpleInstaller {
 	}
 
 	private async installMcp(
-		item: MarketplaceItem,
+		item: McpMarketplaceItem,
 		target: "project" | "global",
 		options?: InstallOptions,
 	): Promise<{ filePath: string; line?: number }> {
@@ -183,7 +192,7 @@ export class SimpleInstaller {
 		}
 
 		// Merge parameters (method-specific override global)
-		const itemParameters = item.type === "mcp" ? item.parameters || [] : []
+		const itemParameters = item.parameters || []
 		const allParameters = [...itemParameters, ...methodParameters]
 		const uniqueParameters = Array.from(new Map(allParameters.map((p) => [p.key, p])).values())
 
@@ -207,7 +216,7 @@ export class SimpleInstaller {
 				methodParameters = method.parameters || []
 
 				// Re-merge parameters with the newly selected method
-				const itemParametersForNewMethod = item.type === "mcp" ? item.parameters || [] : []
+				const itemParametersForNewMethod = item.parameters || []
 				const allParametersForNewMethod = [...itemParametersForNewMethod, ...methodParameters]
 				const uniqueParametersForNewMethod = Array.from(
 					new Map(allParametersForNewMethod.map((p) => [p.key, p])).values(),
@@ -288,12 +297,15 @@ export class SimpleInstaller {
 			case "mcp":
 				await this.removeMcp(item, target)
 				break
+			case "skill":
+				await this.removeSkill(item, target)
+				break
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
 	}
 
-	private async removeMode(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+	private async removeMode(item: ModeMarketplaceItem, target: "project" | "global"): Promise<void> {
 		if (!this.customModesManager) {
 			throw new Error("CustomModesManager is not available")
 		}
@@ -328,7 +340,7 @@ export class SimpleInstaller {
 		await this.customModesManager.deleteCustomMode(modeSlug, true)
 	}
 
-	private async removeMcp(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+	private async removeMcp(item: McpMarketplaceItem, target: "project" | "global"): Promise<void> {
 		const filePath = await this.getMcpFilePath(target)
 
 		try {
@@ -379,6 +391,54 @@ export class SimpleInstaller {
 		} else {
 			const globalSettingsPath = await ensureSettingsDirectoryExists(this.context)
 			return path.join(globalSettingsPath, GlobalFileNames.mcpSettings)
+		}
+	}
+
+	private async getSkillsDirectory(target: "project" | "global"): Promise<string> {
+		if (target === "project") {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+			if (!workspaceFolder) {
+				throw new Error("No workspace folder found")
+			}
+			return path.join(workspaceFolder.uri.fsPath, ".kilocode", "skills")
+		} else {
+			const globalSettingsPath = await ensureSettingsDirectoryExists(this.context)
+			return path.join(globalSettingsPath, "skills")
+		}
+	}
+
+	private async installSkill(
+		item: MarketplaceItem,
+		target: "project" | "global",
+	): Promise<{ filePath: string; line?: number }> {
+		const skillsDir = await this.getSkillsDirectory(target)
+		const skillDirPath = path.join(skillsDir, item.id)
+		const filePath = path.join(skillDirPath, "SKILL.md")
+
+		await fs.mkdir(path.dirname(filePath), { recursive: true })
+		await fs.writeFile(
+			filePath,
+			`---
+name: ${item.name}
+description: ${item.description}
+---
+# ${item.name}
+${item.description}
+`,
+			"utf-8",
+		)
+
+		return { filePath }
+	}
+
+	async removeSkill(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+		const skillsDir = await this.getSkillsDirectory(target)
+		const skillDirPath = path.join(skillsDir, item.id)
+
+		try {
+			await fs.rm(skillDirPath, { recursive: true, force: true })
+		} catch {
+			// Directory doesn't exist or can't be removed
 		}
 	}
 }

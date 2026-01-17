@@ -69,6 +69,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 		const labels: Partial<Record<MarketplaceItem["type"], string>> = {
 			mode: t("marketplace:filters.type.mode"),
 			mcp: t("marketplace:filters.type.mcpServer"),
+			skill: t("marketplace:filters.type.skill"),
 		}
 		return labels[item.type] ?? "N/A"
 	}, [item.type, t])
@@ -156,6 +157,35 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 
 				<p className="my-2 text-vscode-foreground">{item.description}</p>
 
+				{/* Skill-specific info: repository stats and category */}
+				{item.type === "skill" && (
+					<div className="flex flex-wrap gap-2 my-2">
+						{/* Repository stats */}
+						{item.repository && (
+							<div className="flex gap-3 text-xs text-vscode-descriptionForeground">
+								{item.repository.stars !== undefined && (
+									<span className="flex items-center gap-1">
+										<span className="codicon codicon-star-filled text-yellow-500"></span>
+										{item.repository.stars}
+									</span>
+								)}
+								{item.repository.forks !== undefined && (
+									<span className="flex items-center gap-1">
+										<span className="codicon codicon-git-branch"></span>
+										{item.repository.forks}
+									</span>
+								)}
+							</div>
+						)}
+						{/* Category badge */}
+						{item.category && (
+							<span className="text-xs px-2 py-0.5 rounded-sm h-5 flex items-center bg-vscode-button-secondaryBackground text-vscode-foreground border border-vscode-panel-border">
+								{item.category}
+							</span>
+						)}
+					</div>
+				)}
+
 				{/* Installation status badges and tags in the same row */}
 				{(isInstalled || (item.tags && item.tags.length > 0)) && (
 					<div className="relative flex flex-wrap gap-1 my-2">
@@ -213,7 +243,9 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 						<AlertDialogTitle>
 							{item.type === "mode"
 								? t("marketplace:removeConfirm.mode.title")
-								: t("marketplace:removeConfirm.mcp.title")}
+								: item.type === "skill"
+									? t("marketplace:removeConfirm.skill.title")
+									: t("marketplace:removeConfirm.mcp.title")}
 						</AlertDialogTitle>
 						<AlertDialogDescription>
 							{item.type === "mode" ? (
@@ -223,6 +255,8 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 										{t("marketplace:removeConfirm.mode.rulesWarning")}
 									</div>
 								</>
+							) : item.type === "skill" ? (
+								t("marketplace:removeConfirm.skill.message", { skillName: item.name })
 							) : (
 								t("marketplace:removeConfirm.mcp.message", { mcpName: item.name })
 							)}
