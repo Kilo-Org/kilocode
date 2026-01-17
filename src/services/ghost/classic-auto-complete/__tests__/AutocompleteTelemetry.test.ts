@@ -16,6 +16,7 @@ describe("AutocompleteTelemetry", () => {
 	 */
 	function createSuggestion(index: number): FillInAtCursorSuggestion {
 		return {
+			id: `id-${index}`,
 			text: `text-${index}`,
 			prefix: `prefix-${index}`,
 			suffix: `suffix-${index}`,
