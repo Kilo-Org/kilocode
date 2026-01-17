@@ -11,7 +11,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 /**
- * Executes a VSCode command with the given command ID.
+ * Executes an extension command with the given command ID.
  * This function uses the RPC protocol to communicate with the extension host.
  *
  * @param commandId The identifier of the command to execute
@@ -25,7 +25,7 @@ fun executeCommand(commandId: String, project: Project?) {
 
 /**
  * Action that handles clicks on the Plus button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class PlusButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(PlusButtonClickAction::class.java)
@@ -44,7 +44,7 @@ class PlusButtonClickAction : AnAction() {
 
 /**
  * Action that handles clicks on the Prompts button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class PromptsButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(PromptsButtonClickAction::class.java)
@@ -63,7 +63,7 @@ class PromptsButtonClickAction : AnAction() {
 
 /**
  * Action that handles clicks on the MCP button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class MCPButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(MCPButtonClickAction::class.java)
@@ -82,7 +82,7 @@ class MCPButtonClickAction : AnAction() {
 
 /**
  * Action that handles clicks on the History button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class HistoryButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(HistoryButtonClickAction::class.java)
@@ -116,7 +116,7 @@ class ProfileButtonClickAction : AnAction() {
 
 /**
  * Action that handles clicks on the Settings button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class SettingsButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(SettingsButtonClickAction::class.java)
@@ -135,7 +135,7 @@ class SettingsButtonClickAction : AnAction() {
 
 /**
  * Action that handles clicks on the Marketplace button in the UI.
- * Executes the corresponding VSCode command when triggered.
+ * Executes the corresponding extension command when triggered.
  */
 class MarketplaceButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(MarketplaceButtonClickAction::class.java)
