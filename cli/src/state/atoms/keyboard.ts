@@ -648,6 +648,9 @@ function handleFollowupKeys(get: Getter, set: Setter, key: Key): void {
 					set(setTextAtom, suggestion.answer)
 					set(selectedIndexAtom, -1)
 				}
+			} else {
+				// No suggestion selected, cycle modes
+				set(cycleNextModeAtom)
 			}
 			return
 
@@ -724,6 +727,9 @@ function handleAutocompleteKeys(get: Getter, set: Setter, key: Key): void {
 					const { row, column } = calculateRowColumnFromPosition(newText, cursorPosition)
 					set(moveToAtom, { row, column })
 				}
+			} else {
+				// No suggestion selected, cycle modes
+				set(cycleNextModeAtom)
 			}
 			return
 
@@ -924,6 +930,11 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 		// Delete
 		case "delete":
 			set(deleteCharAtom)
+			return
+
+		// Tab (cycle modes)
+		case "tab":
+			set(cycleNextModeAtom)
 			return
 
 		// Escape

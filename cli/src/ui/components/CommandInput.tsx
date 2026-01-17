@@ -14,6 +14,8 @@ import {
 	commitCountdownSecondsAtom,
 } from "../../state/atoms/ui.js"
 import { shellModeActiveAtom, executeShellCommandAtom } from "../../state/atoms/keyboard.js"
+import { extensionModeAtom, customModesAtom } from "../../state/atoms/extension.js"
+import { getModeBySlug } from "../../constants/modes/defaults.js"
 import { MultilineTextInput } from "./MultilineTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
 import { useApprovalHandler } from "../../state/hooks/useApprovalHandler.js"
@@ -42,6 +44,12 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	const isShellModeActive = useAtomValue(shellModeActiveAtom)
 	const inputMode = useAtomValue(inputModeAtom)
 	const executeShellCommand = useSetAtom(executeShellCommandAtom)
+
+	// Get current mode
+	const extensionMode = useAtomValue(extensionModeAtom)
+	const customModes = useAtomValue(customModesAtom)
+	const currentModeConfig = getModeBySlug(extensionMode, customModes)
+	const modeName = currentModeConfig?.name?.toLowerCase() || extensionMode.toLowerCase()
 
 	// Use the command input hook for autocomplete functionality
 	const { isAutocompleteVisible, commandSuggestions, argumentSuggestions, fileMentionSuggestions } = useCommandInput()
@@ -145,9 +153,9 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 			<Box borderStyle="round" borderColor={borderColor} paddingX={1}>
 				<Box flexDirection="row" alignItems="center">
 					<Text color={promptColor} bold>
-						{isShellMode && !isCommittingParallelMode && (
+						{!isCommittingParallelMode && (
 							<>
-								<Text color={promptColor}>shell</Text>
+								<Text color={promptColor}>{isShellMode ? "shell" : modeName}</Text>
 								<Text> </Text>
 							</>
 						)}
