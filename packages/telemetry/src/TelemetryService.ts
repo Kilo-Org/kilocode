@@ -89,6 +89,12 @@ export class TelemetryService {
 		this.captureEvent(TelemetryEventName.TASK_COMPLETED, { taskId })
 	}
 
+	// kilocode_change start
+	public captureSessionMetrics(taskId: string, properties: Record<string, unknown>): void {
+		this.captureEvent(TelemetryEventName.SESSION_METRICS, { taskId, ...properties })
+	}
+	// kilocode_change end
+
 	public captureConversationMessage(taskId: string, source: "user" | "assistant"): void {
 		this.captureEvent(TelemetryEventName.TASK_CONVERSATION_MESSAGE, { taskId, source })
 	}
