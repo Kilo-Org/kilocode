@@ -99,6 +99,18 @@ describe("presentAssistantMessage - fast_edit_file routing", () => {
 			ask: vi.fn().mockResolvedValue({ response: "yesButtonClicked" }),
 			askMode: "code",
 		}
+
+		// Add pushToolResultToUserContent method after mockTask is created so it can reference mockTask
+		mockTask.pushToolResultToUserContent = vi.fn().mockImplementation((toolResult: any) => {
+			const existingResult = mockTask.userMessageContent.find(
+				(block: any) => block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+			)
+			if (existingResult) {
+				return false
+			}
+			mockTask.userMessageContent.push(toolResult)
+			return true
+		})
 	})
 
 	it("executes fast_edit_file via Fast Apply tool handler", async () => {

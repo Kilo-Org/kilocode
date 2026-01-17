@@ -92,6 +92,7 @@ Paging should **only occur on Recommended Models when using the Kilo Gateway**. 
 **Per-session (aggregated at session close or timeout):**
 
 - Session duration
+- Time from user input to first model response
 - Total turns/steps
 - Total tool calls by tool type
 - Total errors by error type

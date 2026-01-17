@@ -6,6 +6,7 @@ import { createExtensionService, ExtensionService } from "./services/extension.j
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { initializeSyntaxHighlighter } from "./ui/utils/syntaxHighlight.js"
+import { supportsTitleSetting } from "./ui/utils/terminalCapabilities.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
@@ -78,7 +79,9 @@ export class CLI {
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
 			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
-			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			if (supportsTitleSetting()) {
+				process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			}
 
 			// Create Jotai store
 			this.store = createStore()
