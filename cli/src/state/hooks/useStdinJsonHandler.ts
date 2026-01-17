@@ -1,11 +1,16 @@
 /**
  * Hook to handle JSON messages from stdin in jsonInteractive mode.
  * This enables bidirectional communication with the Agent Manager.
+ *
+ * Supports both:
+ * - Schema v1.0.0 (versioned format with schemaVersion field)
+ * - Legacy format (for backward compatibility)
  */
 
 import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
+import { JSON_SCHEMA_VERSION, type VersionedInputMessage } from "@kilocode/core-schemas"
 import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
 import { logs } from "../../services/logs.js"
 
@@ -15,10 +20,17 @@ export interface StdinMessage {
 	text?: string
 	images?: string[]
 	approved?: boolean
+	// Schema v1.0.0 fields
+	schemaVersion?: string
+	content?: string
 }
 
 export interface StdinMessageHandlers {
-	sendAskResponse: (params: { response: "messageResponse"; text?: string; images?: string[] }) => Promise<void>
+	sendAskResponse: (params: {
+		response?: "messageResponse" | "retry_clicked" | "objectResponse"
+		text?: string
+		images?: string[]
+	}) => Promise<void>
 	cancelTask: () => Promise<void>
 	respondToTool: (params: {
 		response: "yesButtonClicked" | "noButtonClicked"
@@ -78,6 +90,68 @@ export async function handleStdinMessage(
 	}
 }
 
+/**
+ * Check if a raw message is a versioned input (schema v1.0.0)
+ */
+function isVersionedInputMessage(message: unknown): boolean {
+	if (typeof message !== "object" || message === null) {
+		return false
+	}
+	const msg = message as Record<string, unknown>
+	return "schemaVersion" in msg && msg.schemaVersion === JSON_SCHEMA_VERSION
+}
+
+/**
+ * Handle a versioned input message (schema v1.0.0)
+ * Exported for testing purposes.
+ */
+export async function handleVersionedMessage(
+	message: VersionedInputMessage,
+	handlers: StdinMessageHandlers,
+): Promise<{ handled: boolean; error?: string }> {
+	switch (message.type) {
+		case "user_input":
+			await handlers.sendAskResponse({
+				response: "messageResponse",
+				...(message.content !== undefined && { text: message.content }),
+				...(message.images !== undefined && { images: message.images }),
+			})
+			return { handled: true }
+
+		case "approval":
+			await handlers.respondToTool({
+				response: "yesButtonClicked",
+				...(message.content !== undefined && { text: message.content }),
+				...(message.images !== undefined && { images: message.images }),
+			})
+			return { handled: true }
+
+		case "rejection":
+			await handlers.respondToTool({
+				response: "noButtonClicked",
+				...(message.content !== undefined && { text: message.content }),
+				...(message.images !== undefined && { images: message.images }),
+			})
+			return { handled: true }
+
+		case "abort":
+			await handlers.cancelTask()
+			return { handled: true }
+
+		case "response":
+			// Handle special response types (retry_clicked, objectResponse, messageResponse)
+			await handlers.sendAskResponse({
+				response: message.response,
+				...(message.content !== undefined && { text: message.content }),
+				...(message.images !== undefined && { images: message.images }),
+			})
+			return { handled: true }
+
+		default:
+			return { handled: false, error: `Unknown versioned message type: ${message.type}` }
+	}
+}
+
 export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
@@ -112,8 +186,34 @@ export function useStdinJsonHandler(enabled: boolean) {
 			if (!trimmed) return
 
 			try {
-				const message: StdinMessage = JSON.parse(trimmed)
-				logs.debug("Received stdin message", "useStdinJsonHandler", { type: message.type })
+				const rawMessage = JSON.parse(trimmed)
+
+				// Check for versioned input (schema v1.0.0)
+				if (isVersionedInputMessage(rawMessage)) {
+					const versioned = rawMessage as VersionedInputMessage
+					logs.debug("Received versioned stdin message", "useStdinJsonHandler", {
+						version: versioned.schemaVersion,
+						type: versioned.type,
+					})
+
+					const result = await handleVersionedMessage(versioned, handlers)
+					if (!result.handled) {
+						logs.warn("Unknown versioned message type", "useStdinJsonHandler", { type: versioned.type })
+					}
+					return
+				}
+
+				// Handle legacy format (backward compatibility)
+				const message: StdinMessage = rawMessage
+				if (!message.schemaVersion) {
+					logs.debug(
+						"Received legacy stdin message (consider upgrading to schema v1.0.0)",
+						"useStdinJsonHandler",
+						{
+							type: message.type,
+						},
+					)
+				}
 
 				const result = await handleStdinMessage(message, handlers)
 				if (!result.handled) {
