@@ -13,6 +13,7 @@ type AutoApproveToggles = Pick<
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
+	| "alwaysApproveResubmit" // kilocode_change
 	| "alwaysAllowExecute"
 	| "alwaysAllowFollowupQuestions"
 >
@@ -79,6 +80,15 @@ export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveCo
 		icon: "list-tree",
 		testId: "always-allow-subtasks-toggle",
 	},
+	// kilocode_change start
+	alwaysApproveResubmit: {
+		key: "alwaysApproveResubmit",
+		labelKey: "settings:autoApprove.retry.label",
+		descriptionKey: "settings:autoApprove.retry.description",
+		icon: "refresh",
+		testId: "always-approve-resubmit-toggle",
+	},
+	// kilocode_change end
 	alwaysAllowExecute: {
 		key: "alwaysAllowExecute",
 		labelKey: "settings:autoApprove.execute.label",
