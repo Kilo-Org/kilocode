@@ -215,7 +215,14 @@ program
 		// Check if we have env config with all required fields
 		const hasEnvConfig = envConfigExists()
 
-		if (!hasConfig && !hasEnvConfig) {
+		let configHasProviders = true
+		if (hasConfig) {
+			const { loadConfig } = await import("./config/persistence.js")
+			const { config } = await loadConfig()
+			configHasProviders = config.providers && config.providers.length > 0
+		}
+
+		if (!hasEnvConfig && (!hasConfig || !configHasProviders)) {
 			// No config file and no env config
 			// Check if running in agent-manager mode (spawned from VS Code extension)
 			if (process.env.KILO_PLATFORM === "agent-manager") {
@@ -240,6 +247,19 @@ program
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()
+
+			// After successful authentication, verify we have a valid configuration
+			const { loadConfig } = await import("./config/persistence.js")
+			const reloadResult = await loadConfig()
+			const reloadedConfig = reloadResult.config
+
+			// Check if we now have a valid provider
+			if (!reloadedConfig.provider || !reloadedConfig.providers.length) {
+				console.error("\n❌ Authentication completed but no valid provider was configured.")
+				process.exit(1)
+			}
+
+			console.log("\n✓ Authentication completed. Starting CLI...")
 		} else if (!hasConfig && hasEnvConfig) {
 			// Running with env config only
 			logs.info("Running in ephemeral mode with environment variable configuration", "Index")
