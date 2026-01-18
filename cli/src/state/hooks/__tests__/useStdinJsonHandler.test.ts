@@ -3,10 +3,20 @@
  *
  * Tests the handleStdinMessage function which handles JSON messages
  * from stdin in jsonInteractive mode.
+ *
+ * Supports both:
+ * - Schema v1.0.0 (versioned format)
+ * - Legacy format (backward compatibility)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { handleStdinMessage, type StdinMessage, type StdinMessageHandlers } from "../useStdinJsonHandler.js"
+import { JSON_SCHEMA_VERSION } from "@kilocode/core-schemas"
+import {
+	handleStdinMessage,
+	handleVersionedMessage,
+	type StdinMessage,
+	type StdinMessageHandlers,
+} from "../useStdinJsonHandler.js"
 
 describe("handleStdinMessage", () => {
 	let handlers: StdinMessageHandlers
@@ -243,6 +253,250 @@ describe("handleStdinMessage", () => {
 
 			const call = sendAskResponse.mock.calls[0][0]
 			expect("images" in call).toBe(false)
+		})
+	})
+})
+
+describe("handleVersionedMessage (schema v1.0.0)", () => {
+	let handlers: StdinMessageHandlers
+	let sendAskResponse: ReturnType<typeof vi.fn>
+	let cancelTask: ReturnType<typeof vi.fn>
+	let respondToTool: ReturnType<typeof vi.fn>
+
+	beforeEach(() => {
+		sendAskResponse = vi.fn().mockResolvedValue(undefined)
+		cancelTask = vi.fn().mockResolvedValue(undefined)
+		respondToTool = vi.fn().mockResolvedValue(undefined)
+
+		handlers = {
+			sendAskResponse,
+			cancelTask,
+			respondToTool,
+		}
+	})
+
+	describe("user_input messages", () => {
+		it("should call sendAskResponse for user_input", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "user_input",
+				content: "hello world",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "hello world",
+			})
+		})
+
+		it("should handle user_input without content", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "user_input",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+			})
+		})
+
+		it("should pass images in user_input", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "user_input",
+				content: "check this",
+				images: ["screenshot.png"],
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "check this",
+				images: ["screenshot.png"],
+			})
+		})
+	})
+
+	describe("approval messages", () => {
+		it("should call respondToTool with yesButtonClicked for approval", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "approval",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+			})
+		})
+
+		it("should include content text when approving", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "approval",
+				content: "approved with comment",
+			}
+
+			await handleVersionedMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+				text: "approved with comment",
+			})
+		})
+
+		it("should pass images in approval", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "approval",
+				images: ["screenshot.png"],
+			}
+
+			await handleVersionedMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+				images: ["screenshot.png"],
+			})
+		})
+	})
+
+	describe("rejection messages", () => {
+		it("should call respondToTool with noButtonClicked for rejection", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "rejection",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+			})
+		})
+
+		it("should include rejection reason as text", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "rejection",
+				content: "not allowed for security reasons",
+			}
+
+			await handleVersionedMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+				text: "not allowed for security reasons",
+			})
+		})
+
+		it("should pass images in rejection", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "rejection",
+				content: "rejected",
+				images: ["evidence.png"],
+			}
+
+			await handleVersionedMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+				text: "rejected",
+				images: ["evidence.png"],
+			})
+		})
+	})
+
+	describe("abort messages", () => {
+		it("should call cancelTask for abort", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "abort",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(cancelTask).toHaveBeenCalled()
+			expect(sendAskResponse).not.toHaveBeenCalled()
+			expect(respondToTool).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("response messages", () => {
+		it("should call sendAskResponse with retry_clicked", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "response",
+				response: "retry_clicked",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "retry_clicked",
+			})
+		})
+
+		it("should call sendAskResponse with objectResponse", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "response",
+				response: "objectResponse",
+				content: JSON.stringify({ choice: "file1.ts" }),
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "objectResponse",
+				text: JSON.stringify({ choice: "file1.ts" }),
+			})
+		})
+
+		it("should call sendAskResponse with messageResponse via response type", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "response",
+				response: "messageResponse",
+				content: "hello",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "hello",
+			})
+		})
+	})
+
+	describe("unknown message types", () => {
+		it("should return handled: false for unknown types", async () => {
+			const message = {
+				schemaVersion: JSON_SCHEMA_VERSION,
+				type: "unknownType",
+			}
+
+			const result = await handleVersionedMessage(message, handlers)
+
+			expect(result.handled).toBe(false)
+			expect(result.error).toBe("Unknown versioned message type: unknownType")
 		})
 	})
 })
