@@ -216,7 +216,27 @@ program
 		const hasEnvConfig = envConfigExists()
 
 		if (!hasConfig && !hasEnvConfig) {
-			// No config file and no env config - show auth wizard
+			// No config file and no env config
+			// Check if running in agent-manager mode (spawned from VS Code extension)
+			if (process.env.KILO_PLATFORM === "agent-manager") {
+				// Output a welcome message with instructions that the agent manager can detect.
+				// The agent manager will show a localized error dialog with "Run kilocode auth"
+				// and "Run kilocode config" buttons. The instructions here are just for
+				// triggering the cli_configuration_error handler and providing log context.
+				const welcomeMessage = {
+					type: "welcome",
+					timestamp: Date.now(),
+					metadata: {
+						welcomeOptions: {
+							instructions: ["Configuration required: No provider configured."],
+						},
+					},
+				}
+				console.log(JSON.stringify(welcomeMessage))
+				process.exit(1)
+			}
+
+			// Interactive mode - show auth wizard
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()
