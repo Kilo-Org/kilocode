@@ -86,7 +86,9 @@
 		"createPRTitle": "Pull Request erstellen",
 		"sendTitle": "Nachricht senden",
 		"resumeTitle": "Agent fortsetzen",
-		"hint": "Enter zum Senden, Shift+Enter für neue Zeile"
+		"hint": "Enter zum Senden, Shift+Enter für neue Zeile",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "läuft",

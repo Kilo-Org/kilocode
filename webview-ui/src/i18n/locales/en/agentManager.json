@@ -86,7 +86,9 @@
 		"createPRTitle": "Create pull request",
 		"sendTitle": "Send message",
 		"resumeTitle": "Resume agent",
-		"hint": "Press Enter to send, Shift+Enter for new line"
+		"hint": "Press Enter to send, Shift+Enter for new line. Paste images with Ctrl/Cmd+V",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "running",

@@ -81,6 +81,7 @@ export const startSessionMessageSchema = z.object({
 	model: z.string().optional(), // Model ID to use for this session
 	versions: z.number().optional(), // Number of versions for multi-version mode
 	labels: z.array(z.string()).optional(), // Labels for multi-version sessions
+	images: z.array(z.string()).optional(), // Image data URLs to include with the prompt
 })
 
 export const agentManagerMessageSchema = z.discriminatedUnion("type", [

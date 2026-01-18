@@ -86,7 +86,9 @@
 		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
-		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"
+		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "กำลังทำงาน",

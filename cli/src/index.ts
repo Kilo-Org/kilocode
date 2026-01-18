@@ -101,8 +101,10 @@ program
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
+		// BUT NOT in json-io mode, where stdin is used for bidirectional communication
+		// and the prompt will come via a "newTask" message
 		let finalPrompt = prompt || ""
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && !process.stdin.isTTY && !options.jsonIo) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
