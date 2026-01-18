@@ -43,6 +43,9 @@ export const Moonshot = ({ apiConfiguration, setApiConfigurationField }: Moonsho
 					<VSCodeOption value="https://api.moonshot.cn/v1" className="p-2">
 						api.moonshot.cn
 					</VSCodeOption>
+					<VSCodeOption value="https://api.kimi.com/coding/v1" className="p-2">
+						api.kimi.com/coding/v1
+					</VSCodeOption>
 				</VSCodeDropdown>
 			</div>
 			<div>

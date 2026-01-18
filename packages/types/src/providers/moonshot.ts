@@ -6,6 +6,21 @@ export type MoonshotModelId = keyof typeof moonshotModels
 export const moonshotDefaultModelId: MoonshotModelId = "kimi-k2-thinking"
 
 export const moonshotModels = {
+	"kimi-for-coding": {
+		maxTokens: 32_000,
+		contextWindow: 131_072,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		supportsReasoningEffort: true,
+		inputPrice: 0.6, // $0.60 per million tokens (cache miss)
+		outputPrice: 2.5, // $2.50 per million tokens
+		cacheWritesPrice: 0, // $0 per million tokens (cache miss)
+		cacheReadsPrice: 0.15, // $0.15 per million tokens (cache hit)
+		preserveReasoning: true,
+		supportsNativeTools: true,
+		description: `Kimi for coding`,
+	},
 	"kimi-k2-0711-preview": {
 		maxTokens: 32_000,
 		contextWindow: 131_072,
@@ -44,6 +59,21 @@ export const moonshotModels = {
 		cacheWritesPrice: 0, // $0 per million tokens (cache miss)
 		cacheReadsPrice: 0.6, // $0.60 per million tokens (cache hit)
 		description: `Kimi K2 Turbo is a high-speed version of the state-of-the-art Kimi K2 mixture-of-experts (MoE) language model, with the same 32 billion activated parameters and 1 trillion total parameters, optimized for output speeds of up to 60 tokens per second, peaking at 100 tokens per second.`,
+	},
+
+	"kimi-k2-thinking-turbo": {
+		maxTokens: 32_000,
+		contextWindow: 262144,
+		supportsImages: false,
+		supportsPromptCache: true,
+		inputPrice: 1.15, // $1.15 per million tokens (cache miss)
+		outputPrice: 8.0, // $8.00 per million tokens
+		cacheWritesPrice: 0, // $0 per million tokens (cache miss)
+		cacheReadsPrice: 0.15, // $0.15 per million tokens (cache hit)
+		supportsNativeTools: true,
+		preserveReasoning: true,
+		defaultTemperature: 1.0,
+		description: `High-speed version of kimi-k2-thinking, suitable for scenarios requiring both deep reasoning and extremely fast responses`,
 	},
 	"kimi-k2-thinking": {
 		maxTokens: 16_000, // Recommended ≥ 16,000
