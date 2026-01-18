@@ -69,8 +69,6 @@ import {
 	cycleModelCatalogSortAtom,
 	cycleModelCatalogCapabilityFilterAtom,
 	cycleModelCatalogProviderFilterAtom,
-	nextModelCatalogPageAtom,
-	prevModelCatalogPageAtom,
 	selectNextModelCatalogItemAtom,
 	selectPreviousModelCatalogItemAtom,
 	modelCatalogSearchAtom,
