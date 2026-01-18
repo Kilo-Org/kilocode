@@ -20,6 +20,7 @@ import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { StatusIndicator } from "./components/StatusIndicator.js"
 import { initializeCommands } from "../commands/index.js"
+import { initializeCustomCommands } from "../commands/custom.js"
 import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
 import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
@@ -40,7 +41,7 @@ import { useTerminal } from "../state/hooks/useTerminal.js"
 import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
 import { useWebviewMessage } from "../state/hooks/useWebviewMessage.js"
 
-// Initialize commands on module load
+// Initialize built-in commands on module load
 initializeCommands()
 
 interface UIAppProps {
@@ -143,11 +144,14 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.parallel, setIsParallelMode])
 
-	// Initialize workspace path for shell commands
+	// Initialize workspace path for shell commands and load custom commands
 	useEffect(() => {
+		const workspace = options.workspace || process.cwd()
 		if (options.workspace) {
 			setWorkspacePath(options.workspace)
 		}
+		// Load custom commands from ~/.kilocode/commands/ and .kilocode/commands/
+		void initializeCustomCommands(workspace)
 	}, [options.workspace, setWorkspacePath])
 
 	// Handle CI mode exit
