@@ -39,6 +39,7 @@ import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
 import { useWebviewMessage } from "../state/hooks/useWebviewMessage.js"
+import { isResumeAskMessage, shouldWaitForResumeAsk } from "./utils/resumePrompt.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -81,7 +82,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	})
 
 	// Get sendMessage for sending initial prompt with attachments
-	const { sendMessage } = useWebviewMessage()
+	const { sendMessage, sendAskResponse } = useWebviewMessage()
 
 	// Followup handler hook for automatic suggestion population
 	useFollowupHandler()
@@ -168,10 +169,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {
 		if (options.prompt && !promptExecutedRef.current && configValidation.valid) {
-			// If a session was restored, wait for the task messages to be loaded
-			// This prevents creating a new task instead of continuing the restored one
-			if (taskResumedViaSession && !hasActiveTask) {
-				logs.debug("Waiting for restored session messages to load", "UI")
+			// If a session was restored, wait for the resume ask to arrive
+			// This ensures the prompt answers the resume ask instead of sending too early.
+			if (shouldWaitForResumeAsk(taskResumedViaSession, hasActiveTask, lastChatMessage)) {
+				logs.debug("Waiting for resume ask before executing prompt", "UI")
 				return
 			}
 
@@ -189,8 +190,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					setCiCompletionDetected(false)
 				}
 
+				const shouldAnswerResumeAsk = taskResumedViaSession && isResumeAskMessage(lastChatMessage)
+
 				// Determine if it's a command or regular message
-				if (isCommandInput(trimmedPrompt)) {
+				if (isCommandInput(trimmedPrompt) && !shouldAnswerResumeAsk) {
 					executeCommand(trimmedPrompt, onExit)
 				} else {
 					// Check if there are CLI attachments to load
@@ -224,9 +227,19 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 								textLength: trimmedPrompt.length,
 								imageCount: result.images.length,
 							})
-							// Send message with loaded images directly using sendMessage
-							await sendMessage({ type: "newTask", text: trimmedPrompt, images: result.images })
+							// Respond to resume ask if present, otherwise start a new task
+							if (shouldAnswerResumeAsk) {
+								await sendAskResponse({
+									response: "messageResponse",
+									text: trimmedPrompt,
+									images: result.images,
+								})
+							} else {
+								await sendMessage({ type: "newTask", text: trimmedPrompt, images: result.images })
+							}
 						})()
+					} else if (shouldAnswerResumeAsk) {
+						void sendAskResponse({ response: "messageResponse", text: trimmedPrompt })
 					} else {
 						sendUserMessage(trimmedPrompt)
 					}
@@ -243,8 +256,11 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		executeCommand,
 		sendUserMessage,
 		sendMessage,
+		sendAskResponse,
 		addMessage,
 		onExit,
+		lastChatMessage,
+		setCiCompletionIgnoreBeforeTimestamp,
 		setTaskResumedViaSession,
 		setCiCompletionDetected,
 	])

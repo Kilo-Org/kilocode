@@ -115,6 +115,7 @@ describe("useCIMode", () => {
 		}
 
 		store.set(chatMessagesAtom, [historicalMessage, newMessage])
+		await new Promise((resolve) => setTimeout(resolve, 0))
 		store.set(ciCompletionDetectedAtom, true)
 
 		await new Promise((resolve) => setTimeout(resolve, 0))
