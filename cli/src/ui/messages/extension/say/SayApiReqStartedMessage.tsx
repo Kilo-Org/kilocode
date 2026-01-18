@@ -5,27 +5,25 @@ import { parseApiReqInfo } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 
 /**
- * Display API request status (streaming/completed/failed/cancelled)
+ * Display API request status (only for failed/cancelled states)
+ *
+ * In-progress and completed states are no longer shown individually.
+ * The total session cost is displayed in the StatusBar instead.
+ * This reduces visual noise and provides a cleaner user experience.
  */
 export const SayApiReqStartedMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
 	const apiInfo = parseApiReqInfo(message)
 
-	// In-progress state
-	// NOTE: api_req_started is often sent as a non-partial placeholder before cost/usage is known.
-	// In the CLI we treat "no completion indicators" as still in progress.
+	// In-progress state - don't show anything (thinking spinner is enough)
 	if (
 		message.partial ||
 		(!apiInfo?.streamingFailedMessage && !apiInfo?.cancelReason && apiInfo?.cost === undefined)
 	) {
-		return (
-			<Box marginY={1}>
-				<Text color={theme.semantic.info}>⟳ API Request in progress...</Text>
-			</Box>
-		)
+		return null
 	}
 
-	// Failed state
+	// Failed state - show error message
 	if (apiInfo?.streamingFailedMessage) {
 		return (
 			<Box flexDirection="column" marginY={1}>
@@ -41,7 +39,7 @@ export const SayApiReqStartedMessage: React.FC<MessageComponentProps> = ({ messa
 		)
 	}
 
-	// Cancelled state
+	// Cancelled state - show cancellation message
 	if (apiInfo?.cancelReason) {
 		return (
 			<Box flexDirection="column" marginY={1}>
@@ -59,23 +57,6 @@ export const SayApiReqStartedMessage: React.FC<MessageComponentProps> = ({ messa
 		)
 	}
 
-	// Completed state
-	return (
-		<Box marginY={1}>
-			<Text color={theme.semantic.success} bold>
-				✓ API Request
-			</Text>
-			{apiInfo?.cost !== undefined && (
-				<>
-					<Text color={theme.semantic.info}> - Cost: ${apiInfo.cost.toFixed(4)}</Text>
-					{apiInfo.usageMissing && (
-						<Text color={theme.ui.text.dimmed} dimColor>
-							{" "}
-							(estimated)
-						</Text>
-					)}
-				</>
-			)}
-		</Box>
-	)
+	// Completed state - don't show anything (total cost shown in StatusBar)
+	return null
 }

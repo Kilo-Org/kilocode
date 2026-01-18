@@ -24,6 +24,7 @@ import {
 	clearBuffersAtom,
 	setupKeyboardAtom,
 	appendToPasteBufferAtom,
+	triggerClipboardImagePasteAtom,
 } from "../../state/atoms/keyboard.js"
 import {
 	parseKittySequence,
@@ -67,6 +68,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const clearBuffers = useSetAtom(clearBuffersAtom)
 	const setupKeyboard = useSetAtom(setupKeyboardAtom)
 	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
+	const triggerClipboardImagePaste = useSetAtom(triggerClipboardImagePasteAtom)
 
 	// Jotai getters (for reading current state)
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
@@ -102,14 +104,19 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		isPasteRef.current = false
 		pasteBufferRef.current = ""
 
-		if (wasPasting && currentBuffer) {
-			// Normalize line endings: convert \r\n and \r to \n
-			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-			// Directly broadcast paste event - skip clipboard image check for bracketed pastes
-			// Clipboard image check only runs for explicit Cmd+V (handled in handleGlobalHotkeys)
-			broadcastKey(createPasteKey(normalizedBuffer))
+		if (wasPasting) {
+			if (currentBuffer) {
+				// Regular text paste - normalize line endings and broadcast
+				const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+				broadcastKey(createPasteKey(normalizedBuffer))
+			} else {
+				// Empty bracketed paste - likely Cmd+V with image in clipboard (VSCode terminal)
+				// VSCode sends empty bracketed paste sequences for Cmd+V, unlike regular terminals
+				// that send the key event directly (handled in handleGlobalHotkeys)
+				triggerClipboardImagePaste()
+			}
 		}
-	}, [setPasteMode, broadcastKey])
+	}, [setPasteMode, broadcastKey, triggerClipboardImagePaste])
 
 	useEffect(() => {
 		// Save original raw mode state

@@ -1,5 +1,76 @@
 # @kilocode/cli
 
+## 0.23.1
+
+### Patch Changes
+
+- [#5164](https://github.com/Kilo-Org/kilocode/pull/5164) [`d63378c`](https://github.com/Kilo-Org/kilocode/commit/d63378c5698a0117177d86143185cb46c66f3c73) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Show auth prompt instead of timeout when CLI not configured in Agent Manager
+
+- [#5169](https://github.com/Kilo-Org/kilocode/pull/5169) [`18a9da4`](https://github.com/Kilo-Org/kilocode/commit/18a9da440f4905ce45c80bb0fa622767880de6c6) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed escape sequences appearing as raw text on Windows cmd.exe
+
+## 0.23.0
+
+### Minor Changes
+
+- [#5084](https://github.com/Kilo-Org/kilocode/pull/5084) [`f0c79d2`](https://github.com/Kilo-Org/kilocode/commit/f0c79d27c4952e0359ebc97d41bb50aebd2ef577) Thanks [@montanaflynn](https://github.com/montanaflynn)! - Improved CLI welcome flow: added interactive model selection list using `@inquirer/prompts`, updated provider selection to display a scrollable list, and refactored model fetching logic into a reusable service.
+
+### Patch Changes
+
+- [#5116](https://github.com/Kilo-Org/kilocode/pull/5116) [`cf00ed8`](https://github.com/Kilo-Org/kilocode/commit/cf00ed870c1af723924177372da1054411e269cd) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Make .env file optional in CLI - users can configure via KILO\_\* environment variables instead
+
+## 0.22.2
+
+### Patch Changes
+
+- [#5113](https://github.com/Kilo-Org/kilocode/pull/5113) [`6d04a15`](https://github.com/Kilo-Org/kilocode/commit/6d04a150383af75ed42b954fc3c42e9e010bbed9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI crash when config file is empty or contains invalid JSON
+
+## 0.22.1
+
+### Patch Changes
+
+- [#5098](https://github.com/Kilo-Org/kilocode/pull/5098) [`e811ebe`](https://github.com/Kilo-Org/kilocode/commit/e811ebe287f187bac11239fddfab7067f428872d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Show total session cost in status bar instead of per-request costs. Remove "API Request in progress" messages for cleaner UI.
+
+- [#5100](https://github.com/Kilo-Org/kilocode/pull/5100) [`a49868e`](https://github.com/Kilo-Org/kilocode/commit/a49868e17842d252a9a28d61aa0683267e8e3020) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI context indicator showing incorrect values by skipping placeholder api_req_started messages
+
+- [#5104](https://github.com/Kilo-Org/kilocode/pull/5104) [`15a8d77`](https://github.com/Kilo-Org/kilocode/commit/15a8d77fdbe78314b448714e9812fc0857393cf5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI interactive prompts (arrow key navigation) not working on Windows
+
+    The inquirer v13+ upgrade introduced stricter TTY raw mode requirements. This fix ensures raw mode is properly enabled before inquirer prompts, restoring arrow key navigation in list selections like provider choice during `kilocode auth`.
+
+- [#5092](https://github.com/Kilo-Org/kilocode/pull/5092) [`42cdb11`](https://github.com/Kilo-Org/kilocode/commit/42cdb11b77552cb87fce9ee591bd68cbe419c3be) Thanks [@Drilmo](https://github.com/Drilmo)! - Fix Cmd+V image paste regression in VSCode terminal
+
+    Restores the ability to paste images using Cmd+V in VSCode terminal, which was broken in #4916. VSCode sends empty bracketed paste sequences for Cmd+V (unlike regular terminals that send key events), so we need to check the clipboard for images when receiving an empty paste.
+
+- Updated dependencies [[`b2e2630`](https://github.com/Kilo-Org/kilocode/commit/b2e26304e562e516383fbf95a3fdc668d88e1487)]:
+    - @kilocode/core-schemas@0.0.1
+
+## 0.22.0
+
+### Minor Changes
+
+- [#5046](https://github.com/Kilo-Org/kilocode/pull/5046) [`fd2029c`](https://github.com/Kilo-Org/kilocode/commit/fd2029c1de9adeedb4ac4974c10f43c936d60914) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `--on-task-completed <prompt>` flag to send a custom prompt to the agent when the task completes. This flag requires `--auto` mode and allows users to define any follow-up action (e.g., creating a PR, running tests, generating documentation). The prompt is sent to the agent after the main task completes, enabling flexible post-task automation.
+
+- [#5022](https://github.com/Kilo-Org/kilocode/pull/5022) [`2fc244c`](https://github.com/Kilo-Org/kilocode/commit/2fc244c85c7b1b3758e1139667e3615822656e10) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add syntax highlighting to code edit diffs in the CLI. Diffs now display with language-aware syntax coloring using Shiki, making code changes easier to read. Includes support for 60+ languages, automatic language detection from file extensions, and theme-aware highlighting that works with both light and dark themes. Also increased the diff display limit from 20 to 50 lines with smart context collapsing around changes.
+
+### Patch Changes
+
+- [#4988](https://github.com/Kilo-Org/kilocode/pull/4988) [`7253ac0`](https://github.com/Kilo-Org/kilocode/commit/7253ac0457bf226688cad475002123a84916ea44) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Bedrock provider validation to support API key authentication without requiring access keys
+
+- [#5064](https://github.com/Kilo-Org/kilocode/pull/5064) [`2713d06`](https://github.com/Kilo-Org/kilocode/commit/2713d069e9775e3e7b7e7f5954152b275029bd0d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add default autocomplete suggestions for select commands (`/model select`, `/provider select`, `/tasks select`, `/session select`)
+
+- [#5066](https://github.com/Kilo-Org/kilocode/pull/5066) [`8055f15`](https://github.com/Kilo-Org/kilocode/commit/8055f153d1491c39eb2254d74c3842e4616a79d2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI dispose, randomUUID, and debug UX issues
+
+- [#5011](https://github.com/Kilo-Org/kilocode/pull/5011) [`9c8bb7b`](https://github.com/Kilo-Org/kilocode/commit/9c8bb7b9bde56eb4d32093a2ee4bb72ac0906e92) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix multiline paste regression where pasting text with newlines would submit after the first line
+
+- [#5000](https://github.com/Kilo-Org/kilocode/pull/5000) [`1c88a66`](https://github.com/Kilo-Org/kilocode/commit/1c88a66caaacef3b96bc819456181d84174b82b2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix empty files being created when project path contains non-Latin characters (e.g., Cyrillic, Chinese)
+
+    The CLI's `write_to_file` command was creating empty files when the project directory path contained non-Latin characters. This was caused by improper handling of `Uint8Array` content in the `FileSystemAPI.writeFile` method. The fix ensures proper `Buffer.from()` conversion before writing to the filesystem.
+
+- [#5058](https://github.com/Kilo-Org/kilocode/pull/5058) [`c9f1f6a`](https://github.com/Kilo-Org/kilocode/commit/c9f1f6afe32cdec374e7138c997c2a0b89b4989b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix autocomplete for `/teams select` and other multi-argument commands
+
+- [#4985](https://github.com/Kilo-Org/kilocode/pull/4985) [`69a541a`](https://github.com/Kilo-Org/kilocode/commit/69a541a6d85cf79580c7d80c691bf3f5a6aa6b89) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Windows cmd.exe display bug with escape sequences
+
+    On Windows cmd.exe, the `\x1b[3J` (clear scrollback buffer) escape sequence is not properly supported and causes display artifacts like raw escape sequences appearing in the output (e.g., `[\r\n\t...]`).
+
 ## 0.21.0
 
 ### Minor Changes

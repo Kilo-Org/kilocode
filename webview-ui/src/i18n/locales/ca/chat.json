@@ -157,9 +157,9 @@
 			"403": "No autoritzat. La teva clau API és vàlida, però el proveïdor ha rebutjat completar aquesta sol·licitud.",
 			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
 			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
-			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Kilo.",
 			"connection": "Error de connexió. Assegureu-vos que teniu una connexió a Internet funcional.",
-			"claudeCodeNotAuthenticated": "Has d'iniciar sessió per utilitzar Claude Code. Vés a Configuració i fes clic a \"Iniciar sessió a Claude Code\" per autenticar-te."
+			"claudeCodeNotAuthenticated": "Has d'iniciar sessió per utilitzar Claude Code. Vés a Configuració i fes clic a \"Iniciar sessió a Claude Code\" per autenticar-te.",
+			"unknown": "Error API desconegut, fes clic a Detalls per a més informació."
 		}
 	},
 	"checkpoint": {

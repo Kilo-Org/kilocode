@@ -1129,8 +1129,19 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
-					await connection.transport.close()
-					await connection.client.close()
+					// kilocode_change start
+					// Fire-and-forget: don't await close() calls as they can block
+					// waiting for the subprocess to exit. The MCP SDK's transport.close()
+					// waits up to 2 seconds for the process to exit gracefully before
+					// sending SIGTERM, then another 2 seconds before SIGKILL.
+					// This 4+ second delay is unacceptable during CLI shutdown.
+					connection.transport.close().catch((err) => {
+						console.error(`Error closing transport for ${name}:`, err)
+					})
+					connection.client.close().catch((err) => {
+						console.error(`Error closing client for ${name}:`, err)
+					})
+					// kilocode_change end
 				}
 			} catch (error) {
 				console.error(`Failed to close transport for ${name}:`, error)
