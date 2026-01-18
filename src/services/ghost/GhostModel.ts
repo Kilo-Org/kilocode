@@ -9,6 +9,7 @@ import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilo
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
 import { ResponseMetaData } from "./types"
+import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 
 function getFimHandler(handler: ApiHandler): FimHandler | undefined {
 	if (typeof handler.fimSupport === "function") {
@@ -162,6 +163,11 @@ export class GhostModel {
 
 		console.log("USED MODEL", this.apiHandler.getModel())
 
+		// Clear any leftover parser state from previous calls to prevent interference
+		// with main chat tool call parsing
+		NativeToolCallParser.clearAllStreamingToolCalls()
+		NativeToolCallParser.clearRawChunkState()
+
 		const stream = this.apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
 		])
@@ -189,6 +195,11 @@ export class GhostModel {
 		} catch (error) {
 			console.error("Error streaming completion:", error)
 			throw error
+		} finally {
+			// Clean up parser state after completion to prevent interference
+			// with subsequent main chat calls
+			NativeToolCallParser.clearAllStreamingToolCalls()
+			NativeToolCallParser.clearRawChunkState()
 		}
 
 		return {
