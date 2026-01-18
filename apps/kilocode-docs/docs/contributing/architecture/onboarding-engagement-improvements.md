@@ -146,3 +146,113 @@ Re-engage inactive users by highlighting new features and improvements. Acts as 
 - Personalized onboarding flows based on user role (frontend dev, backend dev, DevOps)
 - AI-powered prompt suggestions based on actual project code patterns
 - Integration with Kilo Code teams for company/repo-personalized onboarding
+
+# Signup Survey
+
+Add a one-question survey to the user signup flow to capture the user's role/persona. This data will help us understand our user base, enable personalization, and support analytics segmentation.
+
+### Survey Question
+
+**Question:** Which of these best describes your role at work?
+
+**Answer Choices (radio buttons):**
+
+1. Developer/Coder/Software Engineer
+2. Product manager or designer
+3. DevOps, DevSecOps, or QA
+4. Other professional role (e.g., sales, marketing, executive)
+5. Hobbyist, student, or researcher
+
+**Alternative action:** "Prefer not to answer" button (separate from radio selection)
+
+## User Experience
+
+### Where it Appears
+
+The survey appears in the signup flow, after auth is complete, but before the user selects individual vs team.
+
+### Dynamic Button Behavior
+
+A single button adapts based on user selection:
+
+- **No selection made** → Button says "Prefer not to answer"
+- **Selection made** → Button says "Continue"
+
+### Survey Page Layout
+
+**State 1: No selection made**
+
+```
+┌─────────────────────────────────────────────┐
+│  [Kilo Logo]                                │
+│                                             │
+│     Help us customize your Kilo experience  │
+│                                             │
+│     Which of these best describes           │
+│     your role at work?                      │
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │ ○ Developer/Coder/Software Engineer │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ Product manager or designer       │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ DevOps, DevSecOps, or QA          │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ Other professional role           │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ Hobbyist, student, or researcher  │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│       [ Prefer not to answer ]              │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**State 2: Selection made**
+
+```
+┌─────────────────────────────────────────────┐
+│  [Kilo Logo]                                │
+│                                             │
+│     Help us customize your Kilo experience  │
+│                                             │
+│     Which of these best describes           │
+│     your role at work?                      │
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │ ○ Developer/Coder/Software Engineer │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ● Product manager or designer       │   │  ← selected
+│  ├─────────────────────────────────────┤   │
+│  │ ○ DevOps, DevSecOps, or QA          │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ Other professional role           │   │
+│  ├─────────────────────────────────────┤   │
+│  │ ○ Hobbyist, student, or researcher  │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│            [ Continue ]                     │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+## When the Survey Appears
+
+- **New users only:** Shown after account creation and verification, before the welcome page
+- **Existing users:** Will NOT see the survey retroactively
+- **One-time:** Users who complete the survey will not see it again
+- **Mandatory:** No skip option—users must either select an answer or click "Prefer not to answer"
+
+## Data Requirements
+
+We need to distinguish between three states:
+
+| User Scenario                             | What We Record                 |
+| ----------------------------------------- | ------------------------------ |
+| User selected an answer                   | The selected role              |
+| User clicked "Prefer not to answer"       | Explicit decline (`no_answer`) |
+| User never saw the survey (existing user) | No data                        |
+
+## Future Extensibility
+
+The survey structure should support adding additional questions later (e.g., company size, primary use case) without disrupting existing data (i.e. probably a json column in db).
