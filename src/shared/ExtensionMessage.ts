@@ -28,6 +28,7 @@ import { ModelRecord, RouterModels } from "./api"
 import {
 	ProfileDataResponsePayload,
 	BalanceDataResponsePayload,
+	KiloPassStateResponsePayload, // kilocode_change
 	TaskHistoryResponsePayload,
 	TasksByIdResponsePayload,
 } from "./WebviewMessage"
@@ -148,6 +149,7 @@ export interface ExtensionMessage {
 		| "vsCodeSetting"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "kiloPassStateResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
 		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
 		| "authenticatedUser"
@@ -210,6 +212,7 @@ export interface ExtensionMessage {
 	payload?:
 		| ProfileDataResponsePayload
 		| BalanceDataResponsePayload
+		| KiloPassStateResponsePayload
 		| TasksByIdResponsePayload
 		| TaskHistoryResponsePayload
 		| [string, string] // For file save events [taskId, filePath]

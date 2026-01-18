@@ -144,6 +144,59 @@
 			"action": "Купити зараз",
 			"viewAll": "Переглянути всі варіанти цін"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Підпишіться для передбачуваних витрат на AI зі зростаючими бонусними кредитами",
+			"recommended": "Рекомендовано",
+			"perMonth": "/міс.",
+			"action": "Підписатися",
+			"learnMore": "Дізнатися більше про Kilo Pass",
+			"yourSubscription": "Ваш Kilo Pass",
+			"status": {
+				"active": "Активна",
+				"canceled": "Скасована",
+				"past_due": "Прострочена",
+				"trialing": "Пробна",
+				"paused": "Призупинена",
+				"cancelling": "Скасовується"
+			},
+			"tiers": {
+				"tier_19": "Стартовий",
+				"tier_49": "Про",
+				"tier_199": "Експерт"
+			},
+			"cadence": {
+				"monthly": "Щомісячно",
+				"yearly": "Щорічно"
+			},
+			"nextBilling": "Наступний платіж: {{date}}",
+			"activeUntil": "Активна до: {{date}}",
+			"streak": "{{count}} місяць поспіль",
+			"streakPlural": "{{count}} місяців поспіль",
+			"bonusCredits": "+${{amount}} бонус {{date}}",
+			"manage": "Керувати підпискою",
+			"boost": {
+				"mode": "Режим Boost",
+				"unlocked": "Boost розблоковано!",
+				"unlockProgress": "${{amount}} до розблокування Boost",
+				"monthlyUsage": "Щомісячне використання",
+				"nextBoost": "Наступний Boost",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Використай <amount>${{amount}}</amount> для розблокування Boost"
+			},
+			"refills": "Поповнення через {{days}} днів",
+			"passActiveUntil": "Pass активний до",
+			"creditsNote": "Кредити Pass ніколи не закінчуються. Невикористані кредити boost закінчуються при поповненні.",
+			"promo": "Розблокуй <boost>Режим Boost</boost> для отримання до 50% безкоштовних кредитів.",
+			"plans": {
+				"monthly": "Щомісяця",
+				"perMonth": "/місяць",
+				"includesCredits": "Включає <highlight>${{price}}/місяць</highlight> кредитів Pass",
+				"upToBoost": "До <highlight>{{percent}}%</highlight> кредитів Boost",
+				"firstMonthBoost": "Перший місяць: <highlight>+{{percent}}%</highlight> кредитів Boost"
+			},
+			"subscriptionNote": "Кредити Pass ніколи не закінчуються. Кредити Boost розблоковуються після використання місячних кредитів Pass і закінчуються в кінці кожного місячного циклу."
+		},
 		"detailedUsage": "Детальне використання",
 		"createOrganization": "Створити організацію для відстеження детального використання"
 	},

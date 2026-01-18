@@ -144,6 +144,59 @@
 			"action": "立即购买",
 			"viewAll": "查看所有价格选项"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "订阅以获得可预测的 AI 支出和不断增长的奖励额度",
+			"recommended": "推荐",
+			"perMonth": "/月",
+			"action": "订阅",
+			"learnMore": "了解更多关于 Kilo Pass",
+			"yourSubscription": "你的 Kilo Pass",
+			"status": {
+				"active": "活跃",
+				"canceled": "已取消",
+				"past_due": "逾期",
+				"trialing": "试用中",
+				"paused": "已暂停",
+				"cancelling": "取消中"
+			},
+			"tiers": {
+				"tier_19": "入门版",
+				"tier_49": "专业版",
+				"tier_199": "专家版"
+			},
+			"cadence": {
+				"monthly": "月付",
+				"yearly": "年付"
+			},
+			"nextBilling": "下次结算：{{date}}",
+			"activeUntil": "有效期至：{{date}}",
+			"streak": "连续 {{count}} 个月",
+			"streakPlural": "连续 {{count}} 个月",
+			"bonusCredits": "+${{amount}} 奖励（{{date}}）",
+			"manage": "管理订阅",
+			"boost": {
+				"mode": "Boost 模式",
+				"unlocked": "Boost 已解锁！",
+				"unlockProgress": "还需 ${{amount}} 解锁 Boost",
+				"monthlyUsage": "每月使用量",
+				"nextBoost": "下次 Boost",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "使用 <amount>${{amount}}</amount> 解锁 Boost"
+			},
+			"refills": "{{days}} 天后补充",
+			"passActiveUntil": "Pass 有效期至",
+			"creditsNote": "Pass 额度永不过期。未使用的 Boost 额度在补充时过期。",
+			"promo": "解锁 <boost>Boost 模式</boost>，获得最高 50% 免费额度。",
+			"plans": {
+				"monthly": "月付",
+				"perMonth": "/月",
+				"includesCredits": "包含 <highlight>${{price}}/月</highlight> Pass 额度",
+				"upToBoost": "最高 <highlight>{{percent}}%</highlight> Boost 额度",
+				"firstMonthBoost": "首月：<highlight>+{{percent}}%</highlight> Boost 额度"
+			},
+			"subscriptionNote": "Pass 额度永不过期。Boost 额度在消耗一个月 Pass 额度后解锁，并在每个月度周期结束时过期。"
+		},
 		"detailedUsage": "详细使用情况",
 		"createOrganization": "创建组织以跟踪详细使用情况"
 	},

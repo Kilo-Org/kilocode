@@ -182,6 +182,8 @@ export interface WebviewMessage {
 		| "fetchProfileDataRequest" // kilocode_change
 		| "profileDataResponse" // kilocode_change
 		| "fetchBalanceDataRequest" // kilocode_change
+		| "fetchKiloPassStateRequest" // kilocode_change
+		| "kiloPassStateResponse" // kilocode_change
 		| "shopBuyCredits" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
@@ -453,6 +455,45 @@ export interface BalanceDataResponsePayload {
 	data?: any // Replace 'any' with a more specific type if known for balance
 	error?: string
 }
+
+// kilocode_change start: Kilo Pass subscription state types
+export type KiloPassTier = "tier_19" | "tier_49" | "tier_199"
+export type KiloPassCadence = "monthly" | "yearly"
+export type KiloPassSubscriptionStatus =
+	| "active"
+	| "canceled"
+	| "incomplete"
+	| "incomplete_expired"
+	| "past_due"
+	| "paused"
+	| "trialing"
+	| "unpaid"
+
+export interface KiloPassSubscriptionState {
+	stripeSubscriptionId: string
+	tier: KiloPassTier
+	cadence: KiloPassCadence
+	status: KiloPassSubscriptionStatus
+	cancelAtPeriodEnd: boolean
+	currentStreakMonths: number
+	nextYearlyIssueAt: string | null
+	nextBonusCreditsUsd: number | null
+	nextBillingAt: string | null
+	currentPeriodBaseCreditsUsd: number
+	currentPeriodUsageUsd: number
+	currentPeriodBonusCreditsUsd: number | null
+	isBonusUnlocked: boolean
+	refillAt: string | null
+}
+
+export interface KiloPassStateResponsePayload {
+	success: boolean
+	data?: {
+		subscription: KiloPassSubscriptionState | null
+	}
+	error?: string
+}
+// kilocode_change end: Kilo Pass subscription state types
 
 export interface SeeNewChangesPayload {
 	commitRange: CommitRange

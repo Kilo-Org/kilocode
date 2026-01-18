@@ -144,6 +144,59 @@
 			"action": "今すぐ購入",
 			"viewAll": "すべての価格オプションを表示"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "予測可能なAI支出と増加するボーナスクレジットのためにサブスクライブ",
+			"recommended": "おすすめ",
+			"perMonth": "/月",
+			"action": "登録する",
+			"learnMore": "Kilo Passについて詳しく",
+			"yourSubscription": "あなたのKilo Pass",
+			"status": {
+				"active": "有効",
+				"canceled": "キャンセル済み",
+				"past_due": "支払い遅延",
+				"trialing": "試用中",
+				"paused": "一時停止",
+				"cancelling": "キャンセル中"
+			},
+			"tiers": {
+				"tier_19": "スターター",
+				"tier_49": "プロ",
+				"tier_199": "エキスパート"
+			},
+			"cadence": {
+				"monthly": "月額",
+				"yearly": "年額"
+			},
+			"nextBilling": "次回請求日: {{date}}",
+			"activeUntil": "有効期限: {{date}}",
+			"streak": "{{count}}ヶ月連続",
+			"streakPlural": "{{count}}ヶ月連続",
+			"bonusCredits": "+${{amount}}ボーナス（{{date}}）",
+			"manage": "サブスクリプション管理",
+			"boost": {
+				"mode": "ブーストモード",
+				"unlocked": "ブースト解除！",
+				"unlockProgress": "ブースト解除まで${{amount}}",
+				"monthlyUsage": "月間使用量",
+				"nextBoost": "次のブースト",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "<amount>${{amount}}</amount> を使用して Boost を解除"
+			},
+			"refills": "{{days}}日後に補充",
+			"passActiveUntil": "パス有効期限",
+			"creditsNote": "パスクレジットは期限切れになりません。未使用のブーストクレジットは補充時に期限切れになります。",
+			"promo": "<boost>Boost モード</boost>を解除して最大50%の無料クレジットを獲得。",
+			"plans": {
+				"monthly": "月額",
+				"perMonth": "/月",
+				"includesCredits": "<highlight>${{price}}/月</highlight>の Pass クレジットを含む",
+				"upToBoost": "最大<highlight>{{percent}}%</highlight>の Boost クレジット",
+				"firstMonthBoost": "初月: <highlight>+{{percent}}%</highlight> Boost クレジット"
+			},
+			"subscriptionNote": "Pass クレジットは期限切れになりません。Boost クレジットは1ヶ月分の Pass クレジットを消費した後に解除され、各月間サイクルの終わりに期限切れになります。"
+		},
 		"detailedUsage": "詳細な使用状況",
 		"createOrganization": "詳細な使用状況を追跡する組織を作成"
 	},
