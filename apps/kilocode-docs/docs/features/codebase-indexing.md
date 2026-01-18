@@ -98,8 +98,10 @@ For team or production use:
 
 ## Configuration
 
-1. Open Kilo Code settings (<Codicon name="gear" /> icon)
-2. Navigate to **Codebase Indexing** section
+Access codebase indexing settings directly from the chat interface:
+
+1. Look for the **Database icon** in the top-right of the Kilo Code chat panel
+2. Click the icon to open the **Codebase Indexing** popover
 3. Enable **"Enable Codebase Indexing"** using the toggle switch
 4. Configure your embedding provider:
     - **OpenAI**: Enter API key and select model
