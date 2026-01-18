@@ -1,5 +1,21 @@
 # @kilocode/cli
 
+## 0.23.2
+
+### Patch Changes
+
+- [#5141](https://github.com/Kilo-Org/kilocode/pull/5141) [`37a489c`](https://github.com/Kilo-Org/kilocode/commit/37a489c8640afea57384f030c6fd0be7bd58c130) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Improve --continue flag reliability by replacing fixed 2-second timeout with Promise-based response handling
+
+- [#5171](https://github.com/Kilo-Org/kilocode/pull/5171) [`49b82ea`](https://github.com/Kilo-Org/kilocode/commit/49b82ea281bf7166c2d1cc830a1e5df909a5fb76) Thanks [@Drilmo](https://github.com/Drilmo)! - Fix missing visual feedback and input blocking during paste operations
+
+    - Display "Pasting image..." loader when pasting images via Cmd+V/Ctrl+V
+    - Display "Pasting text..." loader when pasting large text (10+ lines)
+    - Block keyboard input during paste operations to prevent concurrent writes
+    - Support multiple concurrent paste operations with counter-based tracking
+
+- Updated dependencies [[`cdc3e2e`](https://github.com/Kilo-Org/kilocode/commit/cdc3e2ea32ced833b9d1d1983a4252eda3c0fdf1)]:
+    - @kilocode/core-schemas@0.0.2
+
 ## 0.23.1
 
 ### Patch Changes

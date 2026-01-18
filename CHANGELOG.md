@@ -1,5 +1,12 @@
 # kilo-code
 
+## 4.148.2
+
+### Patch Changes
+
+- Updated dependencies [[`cdc3e2e`](https://github.com/Kilo-Org/kilocode/commit/cdc3e2ea32ced833b9d1d1983a4252eda3c0fdf1)]:
+    - @kilocode/core-schemas@0.0.2
+
 ## 4.148.1
 
 ### Patch Changes
