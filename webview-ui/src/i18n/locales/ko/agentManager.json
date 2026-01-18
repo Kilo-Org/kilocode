@@ -86,7 +86,9 @@
 		"createPRTitle": "Pull request 생성",
 		"sendTitle": "메시지 보내기",
 		"resumeTitle": "에이전트 재개",
-		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈"
+		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "실행 중",

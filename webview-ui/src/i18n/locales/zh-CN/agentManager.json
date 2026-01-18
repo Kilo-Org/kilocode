@@ -86,7 +86,9 @@
 		"createPRTitle": "创建 Pull Request",
 		"sendTitle": "发送消息",
 		"resumeTitle": "继续代理",
-		"hint": "按 Enter 发送，Shift+Enter 换行"
+		"hint": "按 Enter 发送，Shift+Enter 换行",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "运行中",

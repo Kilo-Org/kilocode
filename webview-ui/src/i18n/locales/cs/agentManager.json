@@ -87,7 +87,9 @@
 		"createPRTitle": "Vytvořit pull request",
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
-		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"
+		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "běží",
