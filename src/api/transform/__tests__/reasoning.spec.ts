@@ -838,6 +838,63 @@ describe("reasoning.ts", () => {
 			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
 			expect(result).toEqual({ thinkingLevel: "medium", includeThoughts: true })
 		})
+
+		it("should return undefined for budget-only models when budget is not enabled (fixes issue #4490)", () => {
+			// This test covers the bug where gemini-2.5-flash would fail with
+			// "Thinking level is not supported for this model" because thinkingLevel
+			// was being sent to a model that only supports thinkingBudget
+			const geminiFlashModel: ModelInfo = {
+				...baseModel,
+				// gemini-2.5-flash supports budget but NOT effort-based reasoning
+				supportsReasoningBudget: true,
+				// Note: no supportsReasoningEffort, no requiredReasoningBudget
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				// User may have a reasoningEffort set from a different model
+				reasoningEffort: "high",
+				// But enableReasoningEffort is not true, so budget won't be used
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiFlashModel,
+				reasoningBudget: 4096,
+				reasoningEffort: "high",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options)
+			// Should return undefined, NOT { thinkingLevel: "high", includeThoughts: true }
+			// because this model doesn't support thinkingLevel
+			expect(result).toBeUndefined()
+		})
+
+		it("should return undefined for budget-only models even with explicit effort setting", () => {
+			// Models like gemini-2.5-flash only support budget-based reasoning
+			const budgetOnlyModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningBudget: true,
+				maxThinkingTokens: 24576,
+				// Critically: no supportsReasoningEffort
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				reasoningEffort: "medium",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: budgetOnlyModel,
+				reasoningBudget: 8192,
+				reasoningEffort: "medium",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options)
+			// Must not send thinkingLevel to a model that doesn't support it
+			expect(result).toBeUndefined()
+		})
 	})
 
 	describe("Integration scenarios", () => {
