@@ -6,7 +6,7 @@
 import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
-import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { sendAskResponseAtom, sendTaskAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
 import { logs } from "../../services/logs.js"
 
 export interface StdinMessage {
@@ -19,6 +19,7 @@ export interface StdinMessage {
 
 export interface StdinMessageHandlers {
 	sendAskResponse: (params: { response: "messageResponse"; text?: string; images?: string[] }) => Promise<void>
+	sendTask: (params: { text: string; images?: string[] }) => Promise<void>
 	cancelTask: () => Promise<void>
 	respondToTool: (params: {
 		response: "yesButtonClicked" | "noButtonClicked"
@@ -36,6 +37,16 @@ export async function handleStdinMessage(
 	handlers: StdinMessageHandlers,
 ): Promise<{ handled: boolean; error?: string }> {
 	switch (message.type) {
+		case "newTask":
+			// Start a new task with prompt and optional images
+			// This allows the Agent Manager to send the initial prompt via stdin
+			// instead of CLI args, enabling images to be included with the first message
+			await handlers.sendTask({
+				text: message.text || "",
+				...(message.images !== undefined && { images: message.images }),
+			})
+			return { handled: true }
+
 		case "askResponse":
 			// Handle ask response (user message, approval response, etc.)
 			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
@@ -80,6 +91,7 @@ export async function handleStdinMessage(
 
 export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
+	const sendTask = useSetAtom(sendTaskAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
 
@@ -98,6 +110,9 @@ export function useStdinJsonHandler(enabled: boolean) {
 		const handlers: StdinMessageHandlers = {
 			sendAskResponse: async (params) => {
 				await sendAskResponse(params)
+			},
+			sendTask: async (params) => {
+				await sendTask(params)
 			},
 			cancelTask: async () => {
 				await cancelTask()
@@ -142,5 +157,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 		return () => {
 			rl.close()
 		}
-	}, [enabled, sendAskResponse, cancelTask, respondToTool])
+	}, [enabled, sendAskResponse, sendTask, cancelTask, respondToTool])
 }
