@@ -19,6 +19,7 @@ import { JsonRenderer } from "./JsonRenderer.js"
 import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { StatusIndicator } from "./components/StatusIndicator.js"
+import { ModelCatalogMenu } from "./components/ModelCatalogMenu.js"
 import { initializeCommands } from "../commands/index.js"
 import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
@@ -354,6 +355,8 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					<Text color={theme.semantic.error}>⚠ {error}</Text>
 				</Box>
 			)}
+
+			<ModelCatalogMenu />
 
 			{!options.ci && configValidation.valid && (
 				<>
