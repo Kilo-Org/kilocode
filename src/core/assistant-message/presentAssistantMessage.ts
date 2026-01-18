@@ -154,7 +154,10 @@ export async function presentAssistantMessage(cline: Task) {
 			const toolCallId = mcpBlock.id
 			const toolProtocol = TOOL_PROTOCOL.NATIVE // MCP tools in native mode always use native protocol
 
-			const pushToolResult = (content: ToolResponse) => {
+			// Store approval feedback to merge into tool result (GitHub #10465)
+			let approvalFeedback: { text: string; images?: string[] } | undefined
+
+			const pushToolResult = (content: ToolResponse, feedbackImages?: string[]) => {
 				if (hasToolResult) {
 					console.warn(
 						`[presentAssistantMessage] Skipping duplicate tool_result for mcp_tool_use: ${toolCallId}`,
@@ -173,6 +176,18 @@ export async function presentAssistantMessage(cline: Task) {
 					resultContent =
 						textBlocks.map((item) => (item as Anthropic.TextBlockParam).text).join("\n") ||
 						"(tool did not return anything)"
+				}
+
+				// Merge approval feedback into tool result (GitHub #10465)
+				if (approvalFeedback) {
+					const feedbackText = formatResponse.toolApprovedWithFeedback(approvalFeedback.text, toolProtocol)
+					resultContent = `${feedbackText}\n\n${resultContent}`
+
+					// Add feedback images to the image blocks
+					if (approvalFeedback.images) {
+						const feedbackImageBlocks = formatResponse.imageBlocks(approvalFeedback.images)
+						imageBlocks = [...feedbackImageBlocks, ...imageBlocks]
+					}
 				}
 
 				if (toolCallId) {
@@ -223,11 +238,12 @@ export async function presentAssistantMessage(cline: Task) {
 					return false
 				}
 
+				// Store approval feedback to be merged into tool result (GitHub #10465)
+				// Don't push it as a separate tool_result here - that would create duplicates.
+				// The tool will call pushToolResult, which will merge the feedback into the actual result.
 				if (text) {
 					await cline.say("user_feedback", text, images)
-					pushToolResult(
-						formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text, toolProtocol), images),
-					)
+					approvalFeedback = { text, images }
 				}
 
 				return true
@@ -548,6 +564,9 @@ export async function presentAssistantMessage(cline: Task) {
 			// Previously resolved from experiments.isEnabled(..., EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS)
 			const isMultipleNativeToolCallsEnabled = false
 
+			// Store approval feedback to merge into tool result (GitHub #10465)
+			let approvalFeedback: { text: string; images?: string[] } | undefined
+
 			const pushToolResult = (content: ToolResponse) => {
 				if (toolProtocol === TOOL_PROTOCOL.NATIVE) {
 					// For native protocol, only allow ONE tool_result per tool call
@@ -576,6 +595,21 @@ export async function presentAssistantMessage(cline: Task) {
 							"(tool did not return anything)"
 					}
 
+					// Merge approval feedback into tool result (GitHub #10465)
+					if (approvalFeedback) {
+						const feedbackText = formatResponse.toolApprovedWithFeedback(
+							approvalFeedback.text,
+							toolProtocol,
+						)
+						resultContent = `${feedbackText}\n\n${resultContent}`
+
+						// Add feedback images to the image blocks
+						if (approvalFeedback.images) {
+							const feedbackImageBlocks = formatResponse.imageBlocks(approvalFeedback.images)
+							imageBlocks = [...feedbackImageBlocks, ...imageBlocks]
+						}
+					}
+
 					// Add tool_result with text content only
 					cline.pushToolResultToUserContent({
 						type: "tool_result",
@@ -591,15 +625,44 @@ export async function presentAssistantMessage(cline: Task) {
 					hasToolResult = true
 				} else {
 					// For XML protocol, add as text blocks (legacy behavior)
+					let resultContent: string
+
+					if (typeof content === "string") {
+						resultContent = content || "(tool did not return anything)"
+					} else {
+						const textBlocks = content.filter((item) => item.type === "text")
+						resultContent =
+							textBlocks.map((item) => (item as Anthropic.TextBlockParam).text).join("\n") ||
+							"(tool did not return anything)"
+					}
+
+					// Merge approval feedback into tool result (GitHub #10465)
+					if (approvalFeedback) {
+						const feedbackText = formatResponse.toolApprovedWithFeedback(
+							approvalFeedback.text,
+							toolProtocol,
+						)
+						resultContent = `${feedbackText}\n\n${resultContent}`
+					}
+
 					cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
 
 					if (typeof content === "string") {
 						cline.userMessageContent.push({
 							type: "text",
-							text: content || "(tool did not return anything)",
+							text: resultContent,
 						})
 					} else {
-						cline.userMessageContent.push(...content)
+						// Add text content with merged feedback
+						cline.userMessageContent.push({
+							type: "text",
+							text: resultContent,
+						})
+						// Add any images from the tool result
+						const imageBlocks = content.filter((item) => item.type === "image")
+						if (imageBlocks.length > 0) {
+							cline.userMessageContent.push(...imageBlocks)
+						}
 					}
 				}
 
@@ -668,12 +731,12 @@ export async function presentAssistantMessage(cline: Task) {
 					return false
 				}
 
-				// Handle yesButtonClicked with text.
+				// Store approval feedback to be merged into tool result (GitHub #10465)
+				// Don't push it as a separate tool_result here - that would create duplicates.
+				// The tool will call pushToolResult, which will merge the feedback into the actual result.
 				if (text) {
 					await cline.say("user_feedback", text, images)
-					pushToolResult(
-						formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text, toolProtocol), images),
-					)
+					approvalFeedback = { text, images }
 				}
 
 				captureAskApproval(block.name, true) // kilocode_change
