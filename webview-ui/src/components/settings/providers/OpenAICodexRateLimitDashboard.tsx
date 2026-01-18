@@ -1,63 +1,55 @@
 import React, { useCallback, useEffect, useState } from "react"
 import type { OpenAiCodexRateLimitInfo } from "@roo-code/types"
 
-import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { vscode } from "@src/utils/vscode"
 
 interface OpenAICodexRateLimitDashboardProps {
 	isAuthenticated: boolean
 }
 
-type Translate = (key: string, options?: Record<string, any>) => string
-
-function formatDurationSeconds(totalSeconds: number, t: Translate): string {
+function formatTimeRemainingMs(ms: number | undefined): string {
+	if (!ms) return ""
+	const totalSeconds = Math.max(0, Math.floor(ms / 1000))
 	const days = Math.floor(totalSeconds / 86400)
 	const hours = Math.floor((totalSeconds % 86400) / 3600)
 	const minutes = Math.floor((totalSeconds % 3600) / 60)
 
-	if (days > 0) {
-		return t("settings:providers.openAiCodexRateLimits.duration.daysHours", { days, hours })
-	}
-	if (hours > 0) {
-		return t("settings:providers.openAiCodexRateLimits.duration.hoursMinutes", { hours, minutes })
-	}
-	return t("settings:providers.openAiCodexRateLimits.duration.minutes", { minutes })
+	if (days > 0) return `${days}d ${hours}h`
+	if (hours > 0) return `${hours}h ${minutes}m`
+	return `${minutes}m`
 }
 
-function formatTimeRemainingMs(ms: number | undefined, t: Translate): string {
-	if (ms === undefined) return ""
-	if (ms <= 0) return t("settings:providers.openAiCodexRateLimits.time.now")
-	const totalSeconds = Math.max(0, Math.floor(ms / 1000))
-	return formatDurationSeconds(totalSeconds, t)
-}
-
-function formatResetTimeMs(resetMs: number | undefined, t: Translate): string {
-	if (!resetMs) return t("settings:providers.openAiCodexRateLimits.time.notAvailable")
+function formatResetTimeMs(resetMs: number | undefined): string {
+	if (!resetMs) return "N/A"
 	const diffMs = resetMs - Date.now()
-	if (diffMs <= 0) return t("settings:providers.openAiCodexRateLimits.time.now")
+	if (diffMs <= 0) return "Now"
 
 	const diffSec = Math.floor(diffMs / 1000)
-	return formatDurationSeconds(diffSec, t)
+	const hours = Math.floor(diffSec / 3600)
+	const minutes = Math.floor((diffSec % 3600) / 60)
+	if (hours > 24) {
+		const days = Math.floor(hours / 24)
+		const remainingHours = hours % 24
+		return `${days}d ${remainingHours}h`
+	}
+	if (hours > 0) return `${hours}h ${minutes}m`
+	return `${minutes}m`
 }
 
-function formatWindowLabel(windowMinutes: number | undefined, t: Translate): string | undefined {
+function formatWindowLabel(windowMinutes: number | undefined): string | undefined {
 	if (!windowMinutes) return undefined
-	if (windowMinutes === 60) return t("settings:providers.openAiCodexRateLimits.window.oneHour")
-	if (windowMinutes === 24 * 60) return t("settings:providers.openAiCodexRateLimits.window.daily")
-	if (windowMinutes === 7 * 24 * 60) return t("settings:providers.openAiCodexRateLimits.window.weekly")
-	if (windowMinutes === 5 * 60) return t("settings:providers.openAiCodexRateLimits.window.fiveHour")
-	if (windowMinutes % (24 * 60) === 0) {
-		return t("settings:providers.openAiCodexRateLimits.window.days", { days: windowMinutes / (24 * 60) })
-	}
-	if (windowMinutes % 60 === 0) {
-		return t("settings:providers.openAiCodexRateLimits.window.hours", { hours: windowMinutes / 60 })
-	}
-	return t("settings:providers.openAiCodexRateLimits.window.minutes", { minutes: windowMinutes })
+	if (windowMinutes === 60) return "1h limit"
+	if (windowMinutes === 24 * 60) return "Daily limit"
+	if (windowMinutes === 7 * 24 * 60) return "Weekly limit"
+	if (windowMinutes === 5 * 60) return "5h limit"
+	if (windowMinutes % (24 * 60) === 0) return `${windowMinutes / (24 * 60)}d`
+	if (windowMinutes % 60 === 0) return `${windowMinutes / 60}h`
+	return `${windowMinutes}m`
 }
 
-function formatPlanLabel(planType: string | undefined, t: Translate): string {
-	if (!planType) return t("settings:providers.openAiCodexRateLimits.plan.default")
-	return t("settings:providers.openAiCodexRateLimits.plan.withType", { planType })
+function formatPlanLabel(planType: string | undefined): string {
+	if (!planType) return "Codex"
+	return `Codex (${planType})`
 }
 
 const UsageProgressBar: React.FC<{ usedPercent: number; label?: string }> = ({ usedPercent, label }) => {
@@ -85,7 +77,6 @@ const UsageProgressBar: React.FC<{ usedPercent: number; label?: string }> = ({ u
 }
 
 export const OpenAICodexRateLimitDashboard: React.FC<OpenAICodexRateLimitDashboardProps> = ({ isAuthenticated }) => {
-	const { t } = useAppTranslation()
 	const [rateLimits, setRateLimits] = useState<OpenAiCodexRateLimitInfo | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -130,9 +121,7 @@ export const OpenAICodexRateLimitDashboard: React.FC<OpenAICodexRateLimitDashboa
 	if (isLoading && !rateLimits) {
 		return (
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-md p-3">
-				<div className="text-sm text-vscode-descriptionForeground">
-					{t("settings:providers.openAiCodexRateLimits.loading")}
-				</div>
+				<div className="text-sm text-vscode-descriptionForeground">Loading usage limits...</div>
 			</div>
 		)
 	}
@@ -141,13 +130,11 @@ export const OpenAICodexRateLimitDashboard: React.FC<OpenAICodexRateLimitDashboa
 		return (
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-md p-3">
 				<div className="flex items-center justify-between">
-					<div className="text-sm text-vscode-errorForeground">
-						{t("settings:providers.openAiCodexRateLimits.loadError")}
-					</div>
+					<div className="text-sm text-vscode-errorForeground">Failed to load usage limits</div>
 					<button
 						onClick={fetchRateLimits}
 						className="text-xs text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground cursor-pointer bg-transparent border-none">
-						{t("settings:providers.openAiCodexRateLimits.retry")}
+						Retry
 					</button>
 				</div>
 				<div className="mt-2 text-xs text-vscode-descriptionForeground break-words">{error}</div>
@@ -161,48 +148,34 @@ export const OpenAICodexRateLimitDashboard: React.FC<OpenAICodexRateLimitDashboa
 	const secondary = rateLimits.secondary
 	const planType = rateLimits.planType
 
-	const planLabel = formatPlanLabel(planType, t)
+	const planLabel = formatPlanLabel(planType)
 
-	const primaryWindowLabel = primary ? formatWindowLabel(primary.windowMinutes, t) : undefined
-	const primaryTimeRemaining = primary?.resetsAt ? formatTimeRemainingMs(primary.resetsAt - Date.now(), t) : ""
+	const primaryWindowLabel = primary ? formatWindowLabel(primary.windowMinutes) : undefined
+	const primaryTimeRemaining = primary?.resetsAt ? formatTimeRemainingMs(primary.resetsAt - Date.now()) : ""
 	const primaryUsed = primary ? Math.round(primary.usedPercent) : undefined
 
-	const secondaryWindowLabel = secondary ? formatWindowLabel(secondary.windowMinutes, t) : undefined
-	const secondaryTimeRemaining = secondary?.resetsAt ? formatTimeRemainingMs(secondary.resetsAt - Date.now(), t) : ""
+	const secondaryWindowLabel = secondary ? formatWindowLabel(secondary.windowMinutes) : undefined
+	const secondaryTimeRemaining = secondary?.resetsAt ? formatTimeRemainingMs(secondary.resetsAt - Date.now()) : ""
 	const secondaryUsed = secondary ? Math.round(secondary.usedPercent) : undefined
-
-	const getUsageStatusLabel = (used: number | undefined, timeRemaining: string, resetAt?: number) => {
-		const usedLabel =
-			used !== undefined ? t("settings:providers.openAiCodexRateLimits.usedPercent", { percent: used }) : ""
-		const resetLabel = timeRemaining
-			? t("settings:providers.openAiCodexRateLimits.resetsIn", { time: timeRemaining })
-			: resetAt
-				? t("settings:providers.openAiCodexRateLimits.resetsIn", {
-						time: formatResetTimeMs(resetAt, t),
-					})
-				: ""
-
-		if (usedLabel && resetLabel) return `${usedLabel} • ${resetLabel}`
-		return usedLabel || resetLabel
-	}
 
 	return (
 		<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-md p-3">
 			<div className="mb-3">
-				<div className="text-sm font-medium text-vscode-foreground">
-					{t("settings:providers.openAiCodexRateLimits.title", { planLabel })}
-				</div>
+				<div className="text-sm font-medium text-vscode-foreground">Usage Limits for {planLabel}</div>
 			</div>
 
 			<div className="space-y-3">
 				{primary ? (
 					<div className="space-y-1">
 						<div className="flex items-center justify-between text-xs">
-							<span className="text-vscode-foreground">
-								{primaryWindowLabel ?? t("settings:providers.openAiCodexRateLimits.window.usage")}
-							</span>
+							<span className="text-vscode-foreground">{primaryWindowLabel ?? "Usage"}</span>
 							<span className="text-vscode-descriptionForeground">
-								{getUsageStatusLabel(primaryUsed, primaryTimeRemaining, primary.resetsAt)}
+								{primaryUsed !== undefined ? `${primaryUsed}% used` : ""}
+								{primaryTimeRemaining
+									? ` • resets in ${primaryTimeRemaining}`
+									: primary.resetsAt
+										? ` • resets in ${formatResetTimeMs(primary.resetsAt)}`
+										: ""}
 							</span>
 						</div>
 						<UsageProgressBar usedPercent={primary.usedPercent} label={undefined} />
@@ -212,11 +185,14 @@ export const OpenAICodexRateLimitDashboard: React.FC<OpenAICodexRateLimitDashboa
 				{secondary ? (
 					<div className="space-y-1">
 						<div className="flex items-center justify-between text-xs">
-							<span className="text-vscode-foreground">
-								{secondaryWindowLabel ?? t("settings:providers.openAiCodexRateLimits.window.usage")}
-							</span>
+							<span className="text-vscode-foreground">{secondaryWindowLabel ?? "Usage"}</span>
 							<span className="text-vscode-descriptionForeground">
-								{getUsageStatusLabel(secondaryUsed, secondaryTimeRemaining, secondary.resetsAt)}
+								{secondaryUsed !== undefined ? `${secondaryUsed}% used` : ""}
+								{secondaryTimeRemaining
+									? ` • resets in ${secondaryTimeRemaining}`
+									: secondary.resetsAt
+										? ` • resets in ${formatResetTimeMs(secondary.resetsAt)}`
+										: ""}
 							</span>
 						</div>
 						<UsageProgressBar usedPercent={secondary.usedPercent} />

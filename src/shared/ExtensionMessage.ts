@@ -29,6 +29,7 @@ import { McpServer } from "./mcp"
 import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
+import type { OpenAiCodexRateLimitInfo } from "@roo-code/types"
 // kilocode_change start
 import {
 	ProfileDataResponsePayload,
@@ -208,6 +209,9 @@ export interface ExtensionMessage {
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 		| "claudeCodeRateLimits"
 		| "customToolsResult"
+		| "modes"
+		| "taskWithAggregatedCosts"
+		| "openAiCodexRateLimits"
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -376,6 +380,12 @@ export interface ExtensionMessage {
 	deviceAuthError?: string
 	// kilocode_change end: Device auth data
 	tools?: SerializedCustomToolDefinition[] // For customToolsResult
+}
+
+export interface OpenAiCodexRateLimitsMessage {
+	type: "openAiCodexRateLimits"
+	values?: OpenAiCodexRateLimitInfo
+	error?: string
 }
 
 export type ExtensionState = Pick<
@@ -743,6 +753,7 @@ export interface WebviewMessage {
 		| "openDebugUiHistory"
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
+		| "requestOpenAiCodexRateLimits"
 		| "refreshCustomTools"
 		| "requestModes"
 		| "switchMode"
@@ -772,7 +783,6 @@ export interface WebviewMessage {
 	promptMode?: string | "enhance"
 	customPrompt?: PromptComponent
 	dataUrls?: string[]
-
 	values?: Record<string, any>
 	query?: string
 	setting?: string
@@ -836,6 +846,10 @@ export interface WebviewMessage {
 		codebaseIndexOpenRouterApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
+}
+
+export interface RequestOpenAiCodexRateLimitsMessage {
+	type: "requestOpenAiCodexRateLimits"
 }
 
 export const checkoutDiffPayloadSchema = z.object({
