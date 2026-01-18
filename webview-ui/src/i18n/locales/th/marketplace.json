@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "พบปัญหากับรายการ marketplace หรือมีข้อเสนอแนะสำหรับรายการใหม่? <0>เปิด GitHub issue</0> เพื่อแจ้งให้เราทราบ!"
+	},
+	"skills": {
+		"loading": "กำลังโหลดทักษะ...",
+		"searchPlaceholder": "ค้นหาทักษะ...",
+		"allCategories": "ทั้งหมด",
+		"resultsCount": "พบ {{count}} ทักษะ",
+		"noResults": "ไม่พบทักษะที่ตรงกับเกณฑ์ของคุณ",
+		"viewOnGitHub": "ดูบน GitHub"
 	}
 }

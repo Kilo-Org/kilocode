@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react"
-import { MarketplaceItem, McpParameter, McpInstallationMethod } from "@roo-code/types"
+import { MarketplaceItem, McpParameter, McpInstallationMethod, isSkillItem } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import {
@@ -45,13 +45,15 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 	}, [item])
 
 	// Check if item has multiple installation methods
+	// Skills don't have content field, so we need to check for it
 	const hasMultipleMethods = useMemo(() => {
-		return item && Array.isArray(item.content) && item.content.length > 1
+		if (!item || isSkillItem(item)) return false
+		return Array.isArray(item.content) && item.content.length > 1
 	}, [item])
 
 	// Get installation method names (for display in dropdown)
 	const methodNames = useMemo(() => {
-		if (!item || !Array.isArray(item.content)) return []
+		if (!item || isSkillItem(item) || !Array.isArray(item.content)) return []
 
 		// Content is an array of McpInstallationMethod objects
 		return (item.content as Array<{ name: string; content: string }>).map((method) => method.name)
@@ -59,7 +61,7 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 
 	// Get effective parameters for the selected method (global + method-specific)
 	const effectiveParameters = useMemo(() => {
-		if (!item) return []
+		if (!item || isSkillItem(item)) return []
 
 		const globalParams = item.type === "mcp" ? item.parameters || [] : []
 		let methodParams: McpParameter[] = []
@@ -85,8 +87,8 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 		const globalPrereqs = item.prerequisites || []
 		let methodPrereqs: string[] = []
 
-		// Get method-specific prerequisites if content is an array
-		if (Array.isArray(item.content)) {
+		// Get method-specific prerequisites if content is an array (skills don't have content)
+		if (!isSkillItem(item) && Array.isArray(item.content)) {
 			const selectedMethod = item.content[selectedMethodIndex] as McpInstallationMethod
 			methodPrereqs = selectedMethod?.prerequisites || []
 		}
@@ -99,6 +101,12 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 	// Update parameter values when method changes
 	React.useEffect(() => {
 		if (item) {
+			// Skills don't have parameters
+			if (isSkillItem(item)) {
+				setParameterValues({})
+				return
+			}
+
 			// Get effective parameters for current method
 			const globalParams = item.type === "mcp" ? item.parameters || [] : []
 			let methodParams: McpParameter[] = []

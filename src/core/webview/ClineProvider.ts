@@ -1975,7 +1975,7 @@ export class ClineProvider
 				}),
 			])
 
-			// Send marketplace data separately
+			// Send marketplace data separately (skills are now included in marketplaceItems with type: "skill")
 			this.postMessageToWebview({
 				type: "marketplaceData",
 				organizationMcps: marketplaceResult.organizationMcps || [],

@@ -2,7 +2,24 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
 import * as yaml from "yaml"
-import type { MarketplaceItem, MarketplaceItemType, InstallMarketplaceItemOptions, McpParameter } from "@roo-code/types"
+import type {
+	MarketplaceItem,
+	MarketplaceItemType,
+	InstallMarketplaceItemOptions,
+	McpParameter,
+	ModeMarketplaceItem,
+	McpMarketplaceItem,
+} from "@roo-code/types"
+
+// Type guard for mode marketplace items
+function isModeItem(item: MarketplaceItem): item is ModeMarketplaceItem & { type: "mode" } {
+	return item.type === "mode"
+}
+
+// Type guard for MCP marketplace items
+function isMcpItem(item: MarketplaceItem): item is McpMarketplaceItem & { type: "mcp" } {
+	return item.type === "mcp"
+}
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
@@ -26,6 +43,9 @@ export class SimpleInstaller {
 				return await this.installMode(item, target)
 			case "mcp":
 				return await this.installMcp(item, target, options)
+			case "skill":
+				// Skills are not installable through the marketplace - they are managed separately
+				throw new Error("Skills cannot be installed through the marketplace installer")
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
@@ -35,13 +55,12 @@ export class SimpleInstaller {
 		item: MarketplaceItem,
 		target: "project" | "global",
 	): Promise<{ filePath: string; line?: number }> {
-		if (!item.content) {
-			throw new Error("Mode item missing content")
+		if (!isModeItem(item)) {
+			throw new Error("Item is not a mode")
 		}
 
-		// Modes should always have string content, not array
-		if (Array.isArray(item.content)) {
-			throw new Error("Mode content should not be an array")
+		if (!item.content) {
+			throw new Error("Mode item missing content")
 		}
 
 		// If CustomModesManager is available, use importModeWithRules
@@ -159,6 +178,10 @@ export class SimpleInstaller {
 		target: "project" | "global",
 		options?: InstallOptions,
 	): Promise<{ filePath: string; line?: number }> {
+		if (!isMcpItem(item)) {
+			throw new Error("Item is not an MCP")
+		}
+
 		if (!item.content) {
 			throw new Error("MCP item missing content")
 		}
@@ -183,7 +206,7 @@ export class SimpleInstaller {
 		}
 
 		// Merge parameters (method-specific override global)
-		const itemParameters = item.type === "mcp" ? item.parameters || [] : []
+		const itemParameters = item.parameters || []
 		const allParameters = [...itemParameters, ...methodParameters]
 		const uniqueParameters = Array.from(new Map(allParameters.map((p) => [p.key, p])).values())
 
@@ -207,7 +230,7 @@ export class SimpleInstaller {
 				methodParameters = method.parameters || []
 
 				// Re-merge parameters with the newly selected method
-				const itemParametersForNewMethod = item.type === "mcp" ? item.parameters || [] : []
+				const itemParametersForNewMethod = item.parameters || []
 				const allParametersForNewMethod = [...itemParametersForNewMethod, ...methodParameters]
 				const uniqueParametersForNewMethod = Array.from(
 					new Map(allParametersForNewMethod.map((p) => [p.key, p])).values(),
@@ -288,6 +311,9 @@ export class SimpleInstaller {
 			case "mcp":
 				await this.removeMcp(item, target)
 				break
+			case "skill":
+				// Skills are not removable through the marketplace - they are managed separately
+				throw new Error("Skills cannot be removed through the marketplace installer")
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
@@ -298,14 +324,12 @@ export class SimpleInstaller {
 			throw new Error("CustomModesManager is not available")
 		}
 
-		// Parse the item content to get the slug
-		let content: string
-		if (Array.isArray(item.content)) {
-			// Array of McpInstallationMethod objects - use first method
-			content = item.content[0].content
-		} else {
-			content = item.content || ""
+		if (!isModeItem(item)) {
+			throw new Error("Item is not a mode")
 		}
+
+		// Parse the item content to get the slug
+		const content = item.content || ""
 
 		let modeSlug: string
 		try {
@@ -329,6 +353,10 @@ export class SimpleInstaller {
 	}
 
 	private async removeMcp(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+		if (!isMcpItem(item)) {
+			throw new Error("Item is not an MCP")
+		}
+
 		const filePath = await this.getMcpFilePath(target)
 
 		try {
@@ -336,15 +364,6 @@ export class SimpleInstaller {
 			const existingData = JSON.parse(existing)
 
 			if (existingData?.mcpServers) {
-				// Parse the item content to get server names
-				let content: string
-				if (Array.isArray(item.content)) {
-					// Array of McpInstallationMethod objects - use first method
-					content = item.content[0].content
-				} else {
-					content = item.content
-				}
-
 				const serverName = item.id
 				delete existingData.mcpServers[serverName]
 

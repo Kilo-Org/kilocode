@@ -16,6 +16,7 @@ import type { CustomModesManager } from "../../core/config/CustomModesManager"
 import { RemoteConfigLoader } from "./RemoteConfigLoader"
 import { SimpleInstaller } from "./SimpleInstaller"
 
+// kilocode_change - skills are now included in marketplaceItems with type: "skill"
 export interface MarketplaceItemsResponse {
 	organizationMcps: MarketplaceItem[]
 	marketplaceItems: MarketplaceItem[]
@@ -50,6 +51,7 @@ export class MarketplaceManager {
 				errors.push(`Organization settings: ${orgErrorMessage}`)
 			}
 
+			// kilocode_change - skills are now included as MarketplaceItem with type: "skill"
 			const allMarketplaceItems = await this.configLoader.loadAllItems(orgSettings?.hideMarketplaceMcps)
 			let organizationMcps: MarketplaceItem[] = []
 			let marketplaceItems = allMarketplaceItems
@@ -67,7 +69,7 @@ export class MarketplaceManager {
 				if (orgSettings.hiddenMcps && orgSettings.hiddenMcps.length > 0) {
 					const hiddenMcpIds = new Set(orgSettings.hiddenMcps)
 					marketplaceItems = allMarketplaceItems.filter(
-						(item) => item.type !== "mcp" || !hiddenMcpIds.has(item.id),
+						(item: MarketplaceItem) => item.type !== "mcp" || !hiddenMcpIds.has(item.id),
 					)
 				}
 			}

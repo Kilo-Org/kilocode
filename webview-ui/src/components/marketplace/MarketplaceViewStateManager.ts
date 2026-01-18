@@ -11,7 +11,7 @@
  * 3. Using minimal state updates to avoid resetting scroll position
  */
 
-import { MarketplaceItem } from "@roo-code/types"
+import { MarketplaceItem, isSkillItem, SkillMarketplaceItem } from "@roo-code/types"
 import { vscode } from "../../utils/vscode"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
 import type { MarketplaceInstalledMetadata } from "../../../../src/shared/ExtensionMessage"
@@ -22,7 +22,7 @@ export interface ViewState {
 	displayItems?: MarketplaceItem[] // Items currently being displayed (filtered or all)
 	displayOrganizationMcps?: MarketplaceItem[] // Organization MCPs currently being displayed (filtered or all)
 	isFetching: boolean
-	activeTab: "mcp" | "mode"
+	activeTab: "mcp" | "mode" | "skills" // kilocode_change - Added skills tab
 	filters: {
 		type: string
 		search: string
@@ -444,6 +444,7 @@ export class MarketplaceViewStateManager {
 		}
 
 		// Handle marketplace data updates (fetched on demand)
+		// kilocode_change - Skills are now included in marketplaceItems with type: "skill"
 		if (message.type === "marketplaceData") {
 			const marketplaceItems = message.marketplaceItems
 			const organizationMcps = message.organizationMcps || []
@@ -452,6 +453,7 @@ export class MarketplaceViewStateManager {
 			if (marketplaceItems !== undefined) {
 				// Always use the marketplace items from the extension when they're provided
 				// This ensures fresh data is always displayed
+				// Skills are now included in marketplaceItems with type: "skill"
 				const items = [...marketplaceItems]
 				const orgMcps = [...organizationMcps]
 
@@ -482,5 +484,13 @@ export class MarketplaceViewStateManager {
 			// Notify state change
 			this.notifyStateChange()
 		}
+	}
+
+	/**
+	 * Get skills from allItems (items with type: "skill")
+	 * kilocode_change - Helper method to filter skills from unified marketplace items
+	 */
+	public getSkills(): SkillMarketplaceItem[] {
+		return this.state.allItems.filter(isSkillItem)
 	}
 }

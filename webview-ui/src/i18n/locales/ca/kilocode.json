@@ -308,6 +308,9 @@
 		},
 		"mcp": {
 			"description": "Aquests servidors MCP són mantinguts per la comunitat. Fes clic <1>aquí</1> per editar els teus propis ajustos de MCP."
+		},
+		"skills": {
+			"description": "Explora i descobreix habilitats de la comunitat. Les habilitats proporcionen instruccions especialitzades per a tasques específiques."
 		}
 	},
 	"modes": {

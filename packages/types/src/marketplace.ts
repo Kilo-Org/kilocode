@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { skillMarketplaceItemSchema } from "./skill.js"
 
 /**
  * Schema for MCP parameter definitions
@@ -27,7 +28,7 @@ export type McpInstallationMethod = z.infer<typeof mcpInstallationMethodSchema>
 /**
  * Component type validation
  */
-export const marketplaceItemTypeSchema = z.enum(["mode", "mcp"] as const)
+export const marketplaceItemTypeSchema = z.enum(["mode", "mcp", "skill"] as const)
 
 export type MarketplaceItemType = z.infer<typeof marketplaceItemTypeSchema>
 
@@ -73,6 +74,8 @@ export const marketplaceItemSchema = z.discriminatedUnion("type", [
 	mcpMarketplaceItemSchema.extend({
 		type: z.literal("mcp"),
 	}),
+	// Skill marketplace item
+	skillMarketplaceItemSchema,
 ])
 
 export type MarketplaceItem = z.infer<typeof marketplaceItemSchema>

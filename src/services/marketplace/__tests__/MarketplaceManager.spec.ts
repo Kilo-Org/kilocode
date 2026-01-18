@@ -167,7 +167,7 @@ describe("MarketplaceManager", () => {
 				},
 			]
 
-			// Mock the loadAllItems method
+			// Mock the loadAllItems method - now returns flat array
 			vi.spyOn(manager["configLoader"], "loadAllItems").mockResolvedValue(mockItems)
 
 			const result = await manager.getMarketplaceItems()

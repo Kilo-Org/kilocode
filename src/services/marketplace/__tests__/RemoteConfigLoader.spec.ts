@@ -39,7 +39,7 @@ describe("RemoteConfigLoader", () => {
 	})
 
 	describe("loadAllItems", () => {
-		it("should fetch and combine modes and MCPs from API", async () => {
+		it("should fetch and combine modes, MCPs, and skills from API", async () => {
 			const mockModesYaml = `items:
   - id: "test-mode"
     name: "Test Mode"
@@ -53,6 +53,13 @@ describe("RemoteConfigLoader", () => {
     url: "https://github.com/test/test-mcp"
     content: '{"command": "test"}'`
 
+			const mockSkillsYaml = `items:
+  - id: "test-skill"
+    description: "A test skill"
+    category: "testing"
+    githubUrl: "https://github.com/test/test-skill"
+    rawUrl: "https://raw.githubusercontent.com/test/test-skill/main/SKILL.md"`
+
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
 					return Promise.resolve({ data: mockModesYaml })
@@ -60,12 +67,15 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
+				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
-			const items = await loader.loadAllItems()
+			const result = await loader.loadAllItems()
 
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // modes, mcps, skills
 			expect(mockedAxios.get).toHaveBeenCalledWith(
 				"https://test.api.com/api/marketplace/modes",
 				expect.objectContaining({
@@ -87,21 +97,32 @@ describe("RemoteConfigLoader", () => {
 				}),
 			)
 
-			expect(items).toHaveLength(2)
-			expect(items[0]).toEqual({
+			// Result is now a flat array of MarketplaceItem[] including skills
+			expect(result).toHaveLength(3)
+			expect(result[0]).toEqual({
 				type: "mode",
 				id: "test-mode",
 				name: "Test Mode",
 				description: "A test mode",
 				content: "customModes:\n  - slug: test\n    name: Test",
 			})
-			expect(items[1]).toEqual({
+			expect(result[1]).toEqual({
 				type: "mcp",
 				id: "test-mcp",
 				name: "Test MCP",
 				description: "A test MCP",
 				url: "https://github.com/test/test-mcp",
 				content: '{"command": "test"}',
+			})
+			// Skills are now included in the array with type: "skill"
+			expect(result[2]).toEqual({
+				type: "skill",
+				id: "test-skill",
+				name: "test-skill", // Name is derived from id
+				description: "A test skill",
+				category: "testing",
+				githubUrl: "https://github.com/test/test-skill",
+				rawUrl: "https://raw.githubusercontent.com/test/test-skill/main/SKILL.md",
 			})
 		})
 
@@ -119,6 +140,8 @@ describe("RemoteConfigLoader", () => {
     url: "https://github.com/test/test-mcp"
     content: "test content"`
 
+			const mockSkillsYaml = `items: []`
+
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
 					return Promise.resolve({ data: mockModesYaml })
@@ -126,16 +149,19 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
+				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
 			// First call - should hit API
 			const items1 = await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // modes, mcps, skills
 
 			// Second call - should use cache
 			const items2 = await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2) // Still 2, not 4
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // Still 3, not 6
 
 			expect(items1).toEqual(items2)
 		})
@@ -148,6 +174,7 @@ describe("RemoteConfigLoader", () => {
     content: "test content"`
 
 			const mockMcpsYaml = `items: []`
+			const mockSkillsYaml = `items: []`
 
 			// Mock modes endpoint to fail twice then succeed
 			let modesCallCount = 0
@@ -162,15 +189,19 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
+				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
-			const items = await loader.loadAllItems()
+			const result = await loader.loadAllItems()
 
 			// Should have retried modes endpoint 3 times (2 failures + 1 success)
 			expect(modesCallCount).toBe(3)
-			expect(items).toHaveLength(1)
-			expect(items[0].type).toBe("mode")
+			// Result is now a flat array
+			expect(result).toHaveLength(1)
+			expect(result[0].type).toBe("mode")
 		})
 
 		it("should throw error after max retries", async () => {
@@ -200,12 +231,17 @@ describe("RemoteConfigLoader", () => {
     url: "https://github.com/test/test-mcp"
     content: "test content"`
 
+			const mockSkillsYaml = `items: []`
+
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
 					return Promise.resolve({ data: invalidModesYaml })
 				}
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: validMcpsYaml })
+				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
 				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
@@ -230,12 +266,17 @@ describe("RemoteConfigLoader", () => {
     url: "https://github.com/test/test-mcp"
     content: "test content"`
 
+			const mockSkillsYaml = `items: []`
+
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
 					return Promise.resolve({ data: mockModesYaml })
 				}
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
+				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
 				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
@@ -274,6 +315,7 @@ describe("RemoteConfigLoader", () => {
     content: "test content"`
 
 			const mockMcpsYaml = `items: []`
+			const mockSkillsYaml = `items: []`
 
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
@@ -282,23 +324,26 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
+				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
 			// First call
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // modes, mcps, skills
 
 			// Second call - should use cache
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3)
 
 			// Clear cache
 			loader.clearCache()
 
 			// Third call - should hit API again
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(4)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(6) // 3 more calls
 		})
 	})
 
@@ -311,6 +356,7 @@ describe("RemoteConfigLoader", () => {
     content: "test content"`
 
 			const mockMcpsYaml = `items: []`
+			const mockSkillsYaml = `items: []`
 
 			mockedAxios.get.mockImplementation((url: string) => {
 				if (url.includes("/modes")) {
@@ -318,6 +364,9 @@ describe("RemoteConfigLoader", () => {
 				}
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
+				}
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: mockSkillsYaml })
 				}
 				return Promise.reject(new Error("Unknown URL"))
 			})
@@ -330,18 +379,18 @@ describe("RemoteConfigLoader", () => {
 
 			// First call
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // modes, mcps, skills
 
 			// Second call immediately - should use cache
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3)
 
 			// Advance time by 6 minutes (360,000 ms)
 			currentTime += 6 * 60 * 1000
 
 			// Third call - cache should be expired
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(4)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(6) // 3 more calls
 
 			// Restore original Date.now
 			Date.now = originalDateNow

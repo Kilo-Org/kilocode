@@ -1,0 +1,68 @@
+import { z } from "zod"
+
+/**
+ * Type definitions for Skills Marketplace items
+ *
+ * These types define the structure of skills data that will be served
+ * from the Skills Marketplace API and displayed in the UI.
+ */
+
+/**
+ * Schema for raw skill data from the API (before transformation to MarketplaceItem)
+ */
+export const rawSkillSchema = z.object({
+	// Core identity
+	id: z.string(),
+	description: z.string(),
+
+	// Categorization
+	category: z.string(),
+
+	// URLs for viewing/downloading
+	githubUrl: z.string(),
+	rawUrl: z.string(),
+})
+
+export type RawSkill = z.infer<typeof rawSkillSchema>
+
+/**
+ * A skill as a marketplace item (extends base marketplace item schema)
+ * This is defined in marketplace.ts as part of the discriminated union
+ */
+export const skillMarketplaceItemSchema = z.object({
+	type: z.literal("skill"),
+	id: z.string().min(1),
+	name: z.string().min(1),
+	description: z.string(),
+	author: z.string().optional(),
+	authorUrl: z.string().url("Author URL must be a valid URL").optional(),
+	tags: z.array(z.string()).optional(),
+	prerequisites: z.array(z.string()).optional(),
+	// Skill-specific fields
+	category: z.string(),
+	githubUrl: z.string(),
+	rawUrl: z.string(),
+})
+
+export type SkillMarketplaceItem = z.infer<typeof skillMarketplaceItemSchema>
+
+/**
+ * @deprecated Use SkillMarketplaceItem instead. This alias is kept for backward compatibility.
+ */
+export type Skill = SkillMarketplaceItem
+
+/**
+ * Type guard to check if a MarketplaceItem is a skill
+ */
+export function isSkillItem(item: { type: string }): item is SkillMarketplaceItem {
+	return item.type === "skill"
+}
+
+/**
+ * Container for raw skills from the API (the YAML output format from backend)
+ */
+export const skillsMarketplaceCatalogSchema = z.object({
+	items: z.array(rawSkillSchema),
+})
+
+export type SkillsMarketplaceCatalog = z.infer<typeof skillsMarketplaceCatalogSchema>

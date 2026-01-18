@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Marketplaceアイテムで問題を見つけた、または新しいアイテムの提案がありますか？<0>GitHub issueを開いて</0>お知らせください！"
+	},
+	"skills": {
+		"loading": "スキルを読み込み中...",
+		"searchPlaceholder": "スキルを検索...",
+		"allCategories": "すべて",
+		"resultsCount": "{{count}}個のスキルが見つかりました",
+		"noResults": "条件に一致するスキルが見つかりません",
+		"viewOnGitHub": "GitHubで表示"
 	}
 }

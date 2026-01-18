@@ -154,5 +154,13 @@
 	},
 	"footer": {
 		"issueText": "Problem mit einem Marketplace-Element gefunden oder Vorschläge für neue? <0>Öffne ein GitHub-Issue</0>, um es uns mitzuteilen!"
+	},
+	"skills": {
+		"loading": "Skills werden geladen...",
+		"searchPlaceholder": "Skills durchsuchen...",
+		"allCategories": "Alle",
+		"resultsCount": "{{count}} Skills gefunden",
+		"noResults": "Keine Skills gefunden, die deinen Kriterien entsprechen",
+		"viewOnGitHub": "Auf GitHub anzeigen"
 	}
 }
