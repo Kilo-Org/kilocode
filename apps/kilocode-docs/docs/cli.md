@@ -141,6 +141,7 @@ There are community efforts to build and share agent skills. Some resources incl
 - [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
 - [Skill Specification](https://agentskills.io/home) - Agent Skills specification
 - [AGNXI](https://agnxi.com/) - A hand-curated directory of AI agent skills
+  
 ## Checkpoint Management
 
 Kilo Code automatically creates checkpoints as you work, allowing you to revert to previous states in your project's history.
