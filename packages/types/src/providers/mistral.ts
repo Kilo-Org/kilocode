@@ -18,7 +18,7 @@ export const mistralModels = {
 	},
 	"devstral-medium-latest": {
 		maxTokens: 8192,
-		contextWindow: 131_000,
+		contextWindow: 256_000,
 		supportsImages: true,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
