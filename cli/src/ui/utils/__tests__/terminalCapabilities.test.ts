@@ -145,6 +145,40 @@ describe("terminalCapabilities", () => {
 		})
 	})
 
+	describe("supportsTitleSetting", () => {
+		it("should return true when WT_SESSION is set (Windows Terminal)", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: "some-session-id" })
+			vi.resetModules()
+			const { supportsTitleSetting } = await import("../terminalCapabilities.js")
+			expect(supportsTitleSetting()).toBe(true)
+		})
+
+		it("should return true when TERM_PROGRAM is vscode", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: "vscode" })
+			vi.resetModules()
+			const { supportsTitleSetting } = await import("../terminalCapabilities.js")
+			expect(supportsTitleSetting()).toBe(true)
+		})
+
+		it("should return false on Windows without modern terminal indicators", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
+			vi.resetModules()
+			const { supportsTitleSetting } = await import("../terminalCapabilities.js")
+			expect(supportsTitleSetting()).toBe(false)
+		})
+
+		it("should return true on non-Windows platforms", async () => {
+			mockPlatform("darwin")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
+			vi.resetModules()
+			const { supportsTitleSetting } = await import("../terminalCapabilities.js")
+			expect(supportsTitleSetting()).toBe(true)
+		})
+	})
+
 	describe("getTerminalClearSequence", () => {
 		it("should return Windows-compatible clear sequence on legacy Windows (cmd.exe)", async () => {
 			mockPlatform("win32")
@@ -265,6 +299,23 @@ describe("terminalCapabilities", () => {
 			// Should not become \r\r\n
 			expect(result).toBe("line1\r\nline2\r\nline3")
 			expect(result).not.toContain("\r\r\n")
+		})
+	})
+
+	describe("detectKittyProtocolSupport", () => {
+		it("should skip detection and return false on legacy Windows (cmd.exe)", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
+			vi.resetModules()
+			const { detectKittyProtocolSupport } = await import("../terminalCapabilities.js")
+
+			// On legacy Windows, should immediately return false without sending CSI queries
+			const result = await detectKittyProtocolSupport()
+			expect(result).toBe(false)
+
+			// Should NOT have written any CSI query sequences (which would display as raw text)
+			const csiQueries = writtenData.filter((d) => d.includes("\x1b[?u") || d.includes("\x1b[c"))
+			expect(csiQueries).toHaveLength(0)
 		})
 	})
 

@@ -6,6 +6,7 @@ import { createExtensionService, ExtensionService } from "./services/extension.j
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { initializeSyntaxHighlighter } from "./ui/utils/syntaxHighlight.js"
+import { supportsTitleSetting } from "./ui/utils/terminalCapabilities.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
@@ -14,8 +15,8 @@ import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import {
 	addPendingRequestAtom,
+	removePendingRequestAtom,
 	TaskHistoryData,
-	taskHistoryDataAtom,
 	updateTaskHistoryFiltersAtom,
 } from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
@@ -78,7 +79,9 @@ export class CLI {
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
 			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
-			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			if (supportsTitleSetting()) {
+				process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			}
 
 			// Create Jotai store
 			this.store = createStore()
@@ -646,23 +649,36 @@ export class CLI {
 				favoritesOnly: false,
 			})
 
-			// Send task history request to extension
-			await this.store.set(sendWebviewMessageAtom, {
-				type: "taskHistoryRequest",
-				payload: {
-					requestId: Date.now().toString(),
-					workspace: "current",
-					sort: "newest",
-					favoritesOnly: false,
-					pageIndex: 0,
-				},
+			// Create a unique request ID for tracking the response
+			const requestId = `${Date.now()}-${Math.random()}`
+			const TASK_HISTORY_TIMEOUT_MS = 5000
+
+			// Fetch task history with Promise-based response handling
+			const taskHistoryData = await new Promise<TaskHistoryData>((resolve, reject) => {
+				// Set up timeout
+				const timeout = setTimeout(() => {
+					this.store!.set(removePendingRequestAtom, requestId)
+					reject(new Error(`Task history request timed out after ${TASK_HISTORY_TIMEOUT_MS}ms`))
+				}, TASK_HISTORY_TIMEOUT_MS)
+
+				// Register the pending request - it will be resolved when the response arrives
+				this.store!.set(addPendingRequestAtom, { requestId, resolve, reject, timeout })
+
+				// Send task history request to extension
+				this.store!.set(sendWebviewMessageAtom, {
+					type: "taskHistoryRequest",
+					payload: {
+						requestId,
+						workspace: "current",
+						sort: "newest",
+						favoritesOnly: false,
+						pageIndex: 0,
+					},
+				}).catch((err) => {
+					this.store!.set(removePendingRequestAtom, requestId)
+					reject(err)
+				})
 			})
-
-			// Wait for the data to arrive (the response will update taskHistoryDataAtom through effects)
-			await new Promise((resolve) => setTimeout(resolve, 2000))
-
-			// Get the task history data
-			const taskHistoryData = this.store.get(taskHistoryDataAtom)
 
 			if (!taskHistoryData || !taskHistoryData.historyItems || taskHistoryData.historyItems.length === 0) {
 				logs.warn("No previous tasks found for workspace", "CLI", { workspace })
@@ -693,7 +709,12 @@ export class CLI {
 			logs.info("Task resume initiated", "CLI", { taskId: lastTask.id, task: lastTask.task })
 		} catch (error) {
 			logs.error("Failed to resume conversation", "CLI", { error, workspace })
-			console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			if (errorMessage.includes("timed out")) {
+				console.error("\nFailed to fetch task history (request timed out). Please try again.\n")
+			} else {
+				console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			}
 			process.exit(1)
 		}
 	}
