@@ -43,6 +43,7 @@ SPDX-License-Identifier: Apache-2.0
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="ai.kilocode.jetbrains.plugin.WecoderPluginService"/>
         <jbProtocolCommand implementation="ai.kilocode.jetbrains.commands.KiloCodeAuthProtocolCommand" />
+        <jbProtocolCommand implementation="ai.kilocode.jetbrains.commands.KiloCodeOAuthCallbackCommand" />
         <postStartupActivity implementation="ai.kilocode.jetbrains.plugin.WecoderPlugin"/>
         <editorFactoryListener implementation="ai.kilocode.jetbrains.editor.EditorListener"/>
         <toolWindow factoryClass="ai.kilocode.jetbrains.ui.RooToolWindowFactory"

@@ -372,7 +372,7 @@ class ExtensionHostManager : Disposable {
                 "appName" to getCurrentIDEName(),
                 "appHost" to "node",
                 "appLanguage" to "en",
-                "appUriScheme" to "vscode",
+                "appUriScheme" to "jetbrains",
                 "appRoot" to uriFromPath(pluginDir),
                 "globalStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"), ".kilocode", "globalStorage").toString()),
                 "workspaceStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"), ".kilocode", "workspaceStorage").toString()),
