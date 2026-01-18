@@ -8,7 +8,8 @@ interface OpenAICodexRateLimitDashboardProps {
 }
 
 function formatTimeRemainingMs(ms: number | undefined): string {
-	if (!ms) return ""
+	if (ms === undefined) return ""
+	if (ms <= 0) return "Now"
 	const totalSeconds = Math.max(0, Math.floor(ms / 1000))
 	const days = Math.floor(totalSeconds / 86400)
 	const hours = Math.floor((totalSeconds % 86400) / 3600)

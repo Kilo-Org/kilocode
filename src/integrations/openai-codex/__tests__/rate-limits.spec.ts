@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest"
 import { parseOpenAiCodexUsagePayload } from "../rate-limits"
 
 describe("parseOpenAiCodexUsagePayload()", () => {
-	it("maps primary/secondary windows and credits", () => {
+	it("maps primary/secondary windows", () => {
 		const fetchedAt = 1234567890000
 		const payload = {
 			rate_limit: {
