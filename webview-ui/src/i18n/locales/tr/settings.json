@@ -1138,6 +1138,10 @@
 		"showTimestamps": {
 			"label": "Zaman damgalarını göster",
 			"description": "Sohbet görünümündeki her mesaj için zaman damgası göster"
+		},
+		"showDiffStats": {
+			"label": "Diff istatistiklerini göster",
+			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
 	"ghost": {

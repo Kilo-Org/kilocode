@@ -9,6 +9,7 @@
 		"tokens": "Token",
 		"cache": "快取",
 		"apiCost": "API 費用",
+		"changes": "變更",
 		"size": "大小",
 		"condenseContext": "智慧壓縮內容",
 		"contextWindow": "上下文長度",

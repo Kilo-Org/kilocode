@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "Coût API",
+		"changes": "Modifications",
 		"size": "Taille",
 		"contextWindow": "Durée du contexte",
 		"closeAndStart": "Fermer la tâche et en commencer une nouvelle",

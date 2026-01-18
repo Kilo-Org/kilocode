@@ -1136,6 +1136,10 @@
 		"showTimestamps": {
 			"label": "Mostrar marcas de tiempo",
 			"description": "Mostrar la marca de tiempo para cada mensaje en la vista del chat"
+		},
+		"showDiffStats": {
+			"label": "Mostrar estadísticas de diff",
+			"description": "Mostrar estadísticas de líneas añadidas/eliminadas en el encabezado de la tarea"
 		}
 	},
 	"ghost": {

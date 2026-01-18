@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "API Cost",
+		"changes": "Changes",
 		"size": "Size",
 		"condenseContext": "Intelligently condense context",
 		"contextWindow": "Context Length",

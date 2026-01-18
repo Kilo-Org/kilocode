@@ -596,6 +596,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline }) // kilocode_change
 			vscode.postMessage({ type: "sendMessageOnEnter", bool: sendMessageOnEnter }) // kilocode_change
 			vscode.postMessage({ type: "showTimestamps", bool: showTimestamps }) // kilocode_change
+			vscode.postMessage({ type: "showDiffStats", bool: cachedState.showDiffStats }) // kilocode_change
 			vscode.postMessage({ type: "hideCostBelowThreshold", value: hideCostBelowThreshold }) // kilocode_change
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "yoloGatekeeperApiConfigId", text: yoloGatekeeperApiConfigId || "" }) // kilocode_change: AI gatekeeper for YOLO mode
@@ -1081,6 +1082,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							showTaskTimeline={showTaskTimeline}
 							sendMessageOnEnter={sendMessageOnEnter}
 							showTimestamps={cachedState.showTimestamps} // kilocode_change
+							showDiffStats={cachedState.showDiffStats} // kilocode_change
 							hideCostBelowThreshold={hideCostBelowThreshold}
 							setCachedStateField={setCachedStateField}
 						/>
