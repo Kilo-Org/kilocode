@@ -2934,8 +2934,6 @@ export const webviewMessageHandler = async (
 				const kilocodeToken = apiConfiguration?.kilocodeToken
 
 				if (!kilocodeToken) {
-					// No token means user isn't logged in - this is not an error condition
-					// Just return null subscription state so UI can show the unsubscribed view
 					provider.postMessageToWebview({
 						type: "kiloPassStateResponse",
 						payload: { success: true, data: { subscription: null } },
@@ -2947,12 +2945,9 @@ export const webviewMessageHandler = async (
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",
 				}
-
-				// tRPC query endpoint: kiloPass.getState
 				const url = getKiloUrlFromToken("https://api.kilo.ai/api/trpc/kiloPass.getState", kilocodeToken)
 				const response = await axios.get(url, { headers })
 
-				// tRPC wraps the response in { result: { data: { json: ... } } }
 				const subscriptionData =
 					response.data?.result?.data?.json ?? response.data?.result?.data ?? response.data
 
