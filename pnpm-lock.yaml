@@ -1255,8 +1255,8 @@ importers:
         specifier: ^0.12.1
         version: 0.12.1
       gulp-bom:
-        specifier: ^3.0.0
-        version: 3.0.0(gulp@4.0.2)
+        specifier: ^5.0.0
+        version: 5.0.0(gulp@4.0.2)
       gulp-buffer:
         specifier: 0.0.2
         version: 0.0.2
@@ -5405,6 +5405,7 @@ packages:
   '@lancedb/lancedb@0.21.3':
     resolution: {integrity: sha512-hfzp498BfcCJ730fV1YGGoXVxRgE+W1n0D0KwanKlbt8bBPSQ6E6Tf8mPXc8rKdAXIRR3o5mTzMG3z3Fda+m3Q==}
     engines: {node: '>= 18'}
+    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -12047,6 +12048,10 @@ packages:
     resolution: {integrity: sha512-wK2sCs4feiiJeFXn3zvY0p41mdU5VUgbgs1rNsc/y5ngFUijdWd+iIN8eoyuZHKB8xN6BL4PdWmzqFmxNg6V2w==}
     engines: {node: '>=6.0.0'}
 
+  easy-transform-stream@1.0.1:
+    resolution: {integrity: sha512-ktkaa6XR7COAR3oj02CF3IOgz2m1hCaY3SfzvKT4Svt2MhHw9XCt+ncJNWfe2TGz31iqzNGZ8spdKQflj+Rlog==}
+    engines: {node: '>=14.16'}
+
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
 
@@ -13376,9 +13381,9 @@ packages:
     resolution: {integrity: sha512-n/hx8bbGsqrcizruqDTX6zy2FUdkTDGAz04IdopNxNTZivZmizf8u9WLYJreUE6/qCnSJnyjS1HP82+mLk7rjg==}
     hasBin: true
 
-  gulp-bom@3.0.0:
-    resolution: {integrity: sha512-iw/J94F+MVlxG64Q17BSkHsyjpY17qHl3N3A/jDdrL77zQBkhKtTiKLqM4di9CUX/qFToyyeDsOWwH+rESBgmA==}
-    engines: {node: '>=8'}
+  gulp-bom@5.0.0:
+    resolution: {integrity: sha512-DiFsJR8p/ENCtjNcPNyb3OxgVv189jU5qtVAX9/jRtBKBKPyktaR/WbxJZyNwupShI53vF48kqkTZ83hMsRmJA==}
+    engines: {node: '>=18'}
     peerDependencies:
       gulp: '>=4'
     peerDependenciesMeta:
@@ -13410,6 +13415,10 @@ packages:
 
   gulp-json-editor@2.6.0:
     resolution: {integrity: sha512-Ni0ZUpNrhesHiTlHQth/Nv1rXCn0LUicEvzA5XuGy186C4PVeNoRjfuAIQrbmt3scKv8dgGbCs0hd77ScTw7hA==}
+
+  gulp-plugin-extras@0.1.0:
+    resolution: {integrity: sha512-SqJI+BiJrCydau75ZVBlWmzkg6aEaFj2Hrcyg8+dtQx2JUvME1tjOB0Qf/JSuURgDUJFbnLiiAt7L1GoGsW7ug==}
+    engines: {node: '>=18'}
 
   gulp-plumber@1.2.1:
     resolution: {integrity: sha512-mctAi9msEAG7XzW5ytDVZ9PxWMzzi1pS2rBH7lA095DhMa6KEXjm+St0GOCc567pJKJ/oCvosVAZEpAey0q2eQ==}
@@ -33738,6 +33747,8 @@ snapshots:
 
   easy-stack@1.0.1: {}
 
+  easy-transform-stream@1.0.1: {}
+
   ecdsa-sig-formatter@1.0.11:
     dependencies:
       safe-buffer: 5.2.1
@@ -35582,10 +35593,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  gulp-bom@3.0.0(gulp@4.0.2):
+  gulp-bom@5.0.0(gulp@4.0.2):
     dependencies:
-      plugin-error: 1.0.1
-      through2: 3.0.2
+      gulp-plugin-extras: 0.1.0
     optionalDependencies:
       gulp: 4.0.2
 
@@ -35648,6 +35658,12 @@ snapshots:
       js-beautify: 1.15.4
       plugin-error: 2.0.1
       through2: 4.0.2
+
+  gulp-plugin-extras@0.1.0:
+    dependencies:
+      '@types/vinyl': 2.0.12
+      chalk: 5.6.2
+      easy-transform-stream: 1.0.1
 
   gulp-plumber@1.2.1:
     dependencies:
