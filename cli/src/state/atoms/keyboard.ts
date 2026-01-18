@@ -1008,10 +1008,13 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key): void {
 }
 
 async function handlePaste(set: Setter, text: string): Promise<void> {
+	// Normalize tabs to spaces to prevent border corruption and ensure consistent display
+	const normalizedText = text.replace(/\t/g, "  ")
+
 	// Quick line count check - avoid processing large text unnecessarily
 	let lineCount = 0
-	for (let i = 0; i < text.length; i++) {
-		if (text[i] === "\n") lineCount++
+	for (let i = 0; i < normalizedText.length; i++) {
+		if (normalizedText[i] === "\n") lineCount++
 		if (lineCount >= PASTE_LINE_THRESHOLD) break
 	}
 	lineCount++ // Account for last line (no trailing newline)
@@ -1027,14 +1030,13 @@ async function handlePaste(set: Setter, text: string): Promise<void> {
 
 	try {
 		if (isLargePaste) {
-			// Store original text - normalize tabs only when expanding
-			const actualLineCount = text.split("\n").length
-			const refNumber = set(addPastedTextReferenceAtom, text)
+			// Store normalized text - tabs are already normalized above
+			const actualLineCount = normalizedText.split("\n").length
+			const refNumber = set(addPastedTextReferenceAtom, normalizedText)
 			const reference = formatPastedTextReference(refNumber, actualLineCount)
 			set(insertTextAtom, reference + " ")
 		} else {
-			// Small paste - normalize tabs to prevent border corruption
-			const normalizedText = text.replace(/\t/g, "  ")
+			// Small paste - insert normalized text
 			set(insertTextAtom, normalizedText)
 		}
 	} finally {
