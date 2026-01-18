@@ -71,6 +71,7 @@ export const PROVIDERS = [
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	{ value: "sap-ai-core", label: "SAP AI Core" },
 	// kilocode_change end
+	{ value: "nscale", label: "Nscale" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
