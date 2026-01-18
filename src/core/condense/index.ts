@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import crypto from "crypto"
 
 import { TelemetryService } from "@roo-code/telemetry"
+import { ModelInfo } from "@roo-code/types"
 
 import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
@@ -32,15 +33,21 @@ function getToolUseBlocks(message: ApiMessage): Anthropic.Messages.ToolUseBlock[
 
 /**
  * Gets reasoning blocks from a message's content array.
- * Task stores reasoning as {type: "reasoning", text: "..."} blocks,
- * which convertToR1Format and convertToZAiFormat already know how to extract.
+ * Task stores reasoning as:
+ * - {type: "reasoning", text: "..."} blocks for DeepSeek/Z.ai (convertToR1Format/convertToZAiFormat extract these)
+ * - {type: "thinking", thinking: "...", signature: "..."} blocks for Anthropic extended thinking
+ * - {type: "redacted_thinking", data: "..."} blocks for Anthropic redacted thinking
  */
 function getReasoningBlocks(message: ApiMessage): Anthropic.Messages.ContentBlockParam[] {
 	if (message.role !== "assistant" || typeof message.content === "string") {
 		return []
 	}
-	// Filter for reasoning blocks and cast to ContentBlockParam (the type field is compatible)
-	return message.content.filter((block) => (block as any).type === "reasoning") as any[]
+	// Filter for reasoning blocks (DeepSeek/Z.ai) and thinking blocks (Anthropic extended thinking)
+	// These are different formats but serve the same purpose
+	return message.content.filter((block) => {
+		const blockType = (block as any).type
+		return blockType === "reasoning" || blockType === "thinking" || blockType === "redacted_thinking"
+	}) as any[]
 }
 
 /**
@@ -295,6 +302,16 @@ export async function summarizeConversation(
 	let cost = 0
 	let outputTokens = 0
 
+	// kilocode_change start: Capture thinking blocks from condensing response
+	// When condensing with Anthropic extended thinking enabled, the response will include
+	// thinking/redacted_thinking blocks with valid signatures. We need to capture these
+	// and include them in the summary message so the next API request is valid.
+	// The API requires assistant messages to start with thinking blocks when extended thinking is enabled.
+	const summaryThinkingBlocks: Anthropic.Messages.ContentBlockParam[] = []
+	// Track the last ant_thinking chunk (multiple may be emitted during streaming, we want the final one)
+	let lastAntThinking: { thinking: string; signature: string } | null = null
+	// kilocode_change end
+
 	for await (const chunk of stream) {
 		if (chunk.type === "text") {
 			summary += chunk.text
@@ -303,7 +320,35 @@ export async function summarizeConversation(
 			cost = chunk.totalCost ?? 0
 			outputTokens = chunk.outputTokens ?? 0
 		}
+		// kilocode_change start: Capture Anthropic thinking blocks from condensing response
+		else if (chunk.type === "ant_thinking") {
+			// Multiple ant_thinking chunks may be emitted during streaming:
+			// 1. From content_block_start (may have partial data)
+			// 2. From signature_delta (has full accumulated thinking + signature)
+			// Keep the last one with a valid signature as it has the complete data
+			if (chunk.thinking && chunk.signature) {
+				lastAntThinking = { thinking: chunk.thinking, signature: chunk.signature }
+			}
+		} else if (chunk.type === "ant_redacted_thinking") {
+			// Redacted thinking blocks should be preserved as-is
+			summaryThinkingBlocks.push({
+				type: "redacted_thinking",
+				data: chunk.data,
+			} as Anthropic.Messages.RedactedThinkingBlock)
+		}
+		// kilocode_change end
 	}
+
+	// kilocode_change start: Finalize captured thinking blocks
+	// Add the final ant_thinking chunk as a proper thinking block
+	if (lastAntThinking) {
+		summaryThinkingBlocks.push({
+			type: "thinking",
+			thinking: lastAntThinking.thinking,
+			signature: lastAntThinking.signature,
+		} as Anthropic.Messages.ThinkingBlock)
+	}
+	// kilocode_change end
 
 	summary = summary.trim()
 
@@ -313,39 +358,86 @@ export async function summarizeConversation(
 	}
 
 	// Build the summary message content
-	// CRITICAL: Always include a reasoning block in the summary for DeepSeek-reasoner compatibility.
-	// DeepSeek-reasoner requires `reasoning_content` on ALL assistant messages, not just those with tool_calls.
-	// Without this, we get: "400 Missing `reasoning_content` field in the assistant message"
-	// See: https://api-docs.deepseek.com/guides/thinking_mode
+	// Provider-specific handling:
 	//
-	// The summary content structure is:
-	// 1. Synthetic reasoning block (always present) - for DeepSeek-reasoner compatibility
-	// 2. Any preserved reasoning blocks from the condensed assistant message (if tool_use blocks are preserved)
-	// 3. Text block with the summary
-	// 4. Tool_use blocks (if any need to be preserved for tool_result pairing)
-
-	// Create a synthetic reasoning block that explains the summary
-	// This is minimal but satisfies DeepSeek's requirement for reasoning_content on all assistant messages
-	const syntheticReasoningBlock = {
-		type: "reasoning" as const,
-		text: "Condensing conversation context. The summary below captures the key information from the prior conversation.",
-	}
+	// 1. Anthropic extended thinking: When using Anthropic extended thinking, assistant messages
+	//    must start with thinking blocks (type: "thinking" or "redacted_thinking").
+	//    Thinking blocks come from TWO sources:
+	//    a) summaryThinkingBlocks: Captured from the condensing API response (has valid signatures)
+	//    b) reasoningBlocksToPreserve: Preserved from preceding message (for tool_result pairing)
+	//    The summaryThinkingBlocks take priority as they are from the actual condensing response.
+	//    The synthetic reasoning block (type: "reasoning") gets filtered out by filterNonAnthropicBlocks
+	//    anyway, and would cause a 400 error if it's the only block before the text content.
+	//
+	// 2. DeepSeek-reasoner: Requires `reasoning_content` on ALL assistant messages.
+	//    Without the synthetic reasoning block, we get: "400 Missing `reasoning_content` field"
+	//    See: https://api-docs.deepseek.com/guides/thinking_mode
+	//
+	// The summary content structure depends on what blocks are available:
+	// - If Anthropic thinking blocks from stream: [stream thinking blocks..., text, tool_use blocks...]
+	// - If Anthropic thinking blocks preserved: [preserved thinking blocks..., text, tool_use blocks...]
+	// - Otherwise (DeepSeek/Z.ai): [synthetic reasoning, preserved reasoning..., text, tool_use blocks...]
 
 	const textBlock: Anthropic.Messages.TextBlockParam = { type: "text", text: summary }
 
+	// kilocode_change start: Check for thinking blocks from BOTH sources
+	// Priority: thinking blocks captured from condensing response > preserved from history
+	const hasSummaryThinkingBlocks = summaryThinkingBlocks.length > 0
+	const hasPreservedAnthropicThinkingBlocks = reasoningBlocksToPreserve.some((block) => {
+		const blockType = (block as any).type
+		return blockType === "thinking" || blockType === "redacted_thinking"
+	})
+	const hasAnthropicThinkingBlocks = hasSummaryThinkingBlocks || hasPreservedAnthropicThinkingBlocks
+
+	// Check if the main API handler uses Anthropic extended thinking (supportsReasoningBudget)
+	// If so, and we don't have valid thinking blocks for the summary, condensation is incompatible
+	// because Anthropic requires the final assistant message to start with a thinking block
+	// when extended thinking is enabled, and we can't generate valid signed thinking blocks.
+	const mainModelInfo = apiHandler.getModel().info
+	const mainModelHasExtendedThinking = mainModelInfo.supportsReasoningBudget === true
+
+	if (mainModelHasExtendedThinking && !hasAnthropicThinkingBlocks) {
+		// The main model has extended thinking enabled, but we couldn't capture valid thinking blocks
+		// from the condensing response. This will cause a 400 error when sending the next request.
+		// Return an error instead of creating an invalid summary.
+		const error =
+			"Cannot condense context: Anthropic extended thinking requires thinking blocks in assistant messages, but the condensing model did not produce valid thinking blocks. Use the same model for condensing or disable extended thinking."
+		return { ...response, cost, error }
+	}
+	// kilocode_change end
+
 	let summaryContent: Anthropic.Messages.ContentBlockParam[]
-	if (toolUseBlocksToPreserve.length > 0) {
-		// Include: synthetic reasoning, preserved reasoning (if any), summary text, and tool_use blocks
-		summaryContent = [
-			syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam,
-			...reasoningBlocksToPreserve,
-			textBlock,
-			...toolUseBlocksToPreserve,
-		]
+	if (hasAnthropicThinkingBlocks) {
+		// Anthropic extended thinking: Place thinking blocks first, skip synthetic reasoning
+		// The thinking blocks have valid signatures and will pass API validation
+		// kilocode_change start: Use thinking blocks from stream if available, otherwise use preserved
+		const thinkingBlocksToUse = hasSummaryThinkingBlocks ? summaryThinkingBlocks : reasoningBlocksToPreserve
+		// kilocode_change end
+		if (toolUseBlocksToPreserve.length > 0) {
+			summaryContent = [...thinkingBlocksToUse, textBlock, ...toolUseBlocksToPreserve]
+		} else {
+			summaryContent = [...thinkingBlocksToUse, textBlock]
+		}
 	} else {
-		// Include: synthetic reasoning and summary text
-		// This ensures the summary always has reasoning_content for DeepSeek-reasoner
-		summaryContent = [syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam, textBlock]
+		// DeepSeek/Z.ai or no thinking blocks: Include synthetic reasoning for compatibility
+		const syntheticReasoningBlock = {
+			type: "reasoning" as const,
+			text: "Condensing conversation context. The summary below captures the key information from the prior conversation.",
+		}
+
+		if (toolUseBlocksToPreserve.length > 0) {
+			// Include: synthetic reasoning, preserved reasoning (if any), summary text, and tool_use blocks
+			summaryContent = [
+				syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam,
+				...reasoningBlocksToPreserve,
+				textBlock,
+				...toolUseBlocksToPreserve,
+			]
+		} else {
+			// Include: synthetic reasoning and summary text
+			// This ensures the summary always has reasoning_content for DeepSeek-reasoner
+			summaryContent = [syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam, textBlock]
+		}
 	}
 
 	// Generate a unique condenseId for this summary
@@ -552,4 +644,101 @@ export function cleanupAfterTruncation(messages: ApiMessage[]): ApiMessage[] {
 		}
 		return msg
 	})
+}
+
+/**
+ * Checks if a summary message has valid Anthropic thinking blocks.
+ * Returns true if the summary starts with thinking or redacted_thinking block.
+ */
+function summaryHasValidThinkingBlocks(message: ApiMessage): boolean {
+	if (!message.isSummary || typeof message.content === "string") {
+		return false
+	}
+	if (message.content.length === 0) {
+		return false
+	}
+	const firstBlock = message.content[0] as { type: string }
+	return firstBlock.type === "thinking" || firstBlock.type === "redacted_thinking"
+}
+
+/**
+ * Checks if any summary message in the history is incompatible with Anthropic extended thinking.
+ * When extended thinking is enabled, all assistant messages (including summaries) must start
+ * with thinking or redacted_thinking blocks. If a summary was created without these blocks
+ * (e.g., by a different model or before this requirement was known), it will cause a 400 error.
+ *
+ * @param messages - The API conversation history
+ * @param modelInfo - The model info to check for extended thinking support
+ * @returns true if there are incompatible summaries that need to be removed
+ */
+export function hasIncompatibleSummaryForExtendedThinking(messages: ApiMessage[], modelInfo: ModelInfo): boolean {
+	// Only relevant for models with extended thinking (supportsReasoningBudget)
+	if (!modelInfo.supportsReasoningBudget) {
+		return false
+	}
+
+	// Check if any summary message lacks valid thinking blocks
+	for (const msg of messages) {
+		if (msg.isSummary && !summaryHasValidThinkingBlocks(msg)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+/**
+ * Removes invalid summary messages and restores condensed messages for extended thinking compatibility.
+ * This is used when a conversation was condensed with a model that doesn't support extended thinking,
+ * but is now being used with a model that requires thinking blocks in all assistant messages.
+ *
+ * The function:
+ * 1. Identifies summaries without valid thinking blocks
+ * 2. Removes those summary messages
+ * 3. Clears condenseParent references for messages that were condensed by those summaries
+ *
+ * @param messages - The API conversation history
+ * @param modelInfo - The model info to check for extended thinking support
+ * @returns Object containing the cleaned messages and whether any uncondensing occurred
+ */
+export function uncondenseForExtendedThinking(
+	messages: ApiMessage[],
+	modelInfo: ModelInfo,
+): { messages: ApiMessage[]; didUncondense: boolean } {
+	// Only relevant for models with extended thinking
+	if (!modelInfo.supportsReasoningBudget) {
+		return { messages, didUncondense: false }
+	}
+
+	// Collect condenseIds of invalid summaries (summaries without thinking blocks)
+	const invalidSummaryIds = new Set<string>()
+	for (const msg of messages) {
+		if (msg.isSummary && msg.condenseId && !summaryHasValidThinkingBlocks(msg)) {
+			invalidSummaryIds.add(msg.condenseId)
+		}
+	}
+
+	if (invalidSummaryIds.size === 0) {
+		return { messages, didUncondense: false }
+	}
+
+	// Remove invalid summaries and clear condenseParent for messages that were condensed by them
+	const cleanedMessages = messages
+		.filter((msg) => {
+			// Remove invalid summary messages
+			if (msg.isSummary && msg.condenseId && invalidSummaryIds.has(msg.condenseId)) {
+				return false
+			}
+			return true
+		})
+		.map((msg) => {
+			// Clear condenseParent for messages that referenced invalid summaries
+			if (msg.condenseParent && invalidSummaryIds.has(msg.condenseParent)) {
+				const { condenseParent, ...rest } = msg
+				return rest as ApiMessage
+			}
+			return msg
+		})
+
+	return { messages: cleanedMessages, didUncondense: true }
 }
