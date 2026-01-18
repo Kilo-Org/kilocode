@@ -22,6 +22,8 @@ import { themeCommand } from "./theme.js"
 import { checkpointCommand } from "./checkpoint.js"
 import { sessionCommand } from "./session.js"
 import { condenseCommand } from "./condense.js"
+import { updateCommand } from "./update.js"
+import { autoupdateCommand } from "./autoupdate.js"
 
 /**
  * Initialize all commands
@@ -43,4 +45,6 @@ export function initializeCommands(): void {
 	commandRegistry.register(checkpointCommand)
 	commandRegistry.register(sessionCommand)
 	commandRegistry.register(condenseCommand)
+	commandRegistry.register(updateCommand)
+	commandRegistry.register(autoupdateCommand)
 }
