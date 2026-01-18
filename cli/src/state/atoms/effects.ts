@@ -13,6 +13,7 @@ import {
 	updateRouterModelsAtom,
 	chatMessagesAtom,
 	updateChatMessagesAtom,
+	taskResumedViaContinueOrSessionAtom,
 } from "./extension.js"
 import { ciCompletionDetectedAtom, ciCompletionIgnoreBeforeTimestampAtom } from "./ci.js"
 import {
