@@ -10,16 +10,16 @@ Kilo Deploy lets you ship **Next.js** applications directly from Kilo Code, with
 - **One-click deployment** from the Kilo Code dashboard
 - **No manual configuration** — deployment settings are generated for you
 - **Deployment history** with logs and build details
-- **Automatic rebuilds** on every GitHub push
+- **Automatic rebuilds** on every Git push
 
 ---
 
 ## Prerequisites
 
 - Your project must use **Next.js 15** (all minor/patch versions) or the **latest minor of Next.js 14**
-- You must enable the **GitHub Integration**
-    - Go to **Integrations → GitHub**
-    - Click **Configure** and follow the prompts to connect GitHub to Kilo Code
+- You must enable the **GitHub or GitLab Integration**
+    - Go to **Integrations → GitHub** or **Integrations → GitLab**
+    - Click **Configure** and follow the prompts to connect your provider to Kilo Code
 
 Deploy supports all major package managers: **npm, pnpm, yarn, bun**. Kilo Code automatically detects which one your project uses and runs the correct build command.
 
@@ -35,7 +35,7 @@ Deploy supports all major package managers: **npm, pnpm, yarn, bun**. Kilo Code 
 ### 2. Select Your Project
 
 - Click **New Deployment**
-- Choose **GitHub** in the Integration dropdown
+- Choose **GitHub** or **GitLab** in the Integration dropdown
 - Select your repository and branch
 
 <img width="600" height="443" alt="DeploySelection" src="https://github.com/user-attachments/assets/e592a7c1-a2dd-42e3-ba5d-d86d9b61001f" />

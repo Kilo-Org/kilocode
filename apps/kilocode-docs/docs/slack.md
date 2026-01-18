@@ -23,7 +23,7 @@ Kilo for Slack brings the power of Kilo Code directly into your Slack workspace.
 Before using Kilo for Slack:
 
 - You must have a **Kilo Code account** with available credits
-- Your **GitHub Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so Kilo can access your repositories
+- Your **GitHub or GitLab Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so Kilo can access your repositories
 
 To install Kilo for Slack, simply go to the integrations menu in the sidebar on https://app.kilo.ai and set up the Slack integration.
 
@@ -157,10 +157,10 @@ Kilo for Slack supports over 400+ models across different providers.
 Ensure Kilo for Slack is installed in your workspace and has been added to the channel you're using.
 
 **"Kilo can't access my repository."**
-Verify your GitHub integration is configured correctly in the [Integrations tab](https://app.kilo.ai/integrations).
+Verify your GitHub or GitLab integration is configured correctly in the [Integrations tab](https://app.kilo.ai/integrations).
 
 **"I'm getting incomplete responses."**
 Try breaking your request into smaller, more specific questions.
 
 **"Kilo doesn't understand my codebase."**
-Make sure the repository you're asking about is connected and accessible through your GitHub integration.
+Make sure the repository you're asking about is connected and accessible through your GitHub or GitLab integration.
