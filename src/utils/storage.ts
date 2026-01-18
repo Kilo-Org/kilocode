@@ -68,6 +68,8 @@ export function getStorageBasePathSync(defaultPath: string): string {
 		fsSync.rmSync(testFile)
 		return customStoragePath
 	} catch (error) {
+		// Log error and fall back to default path (matches async version behavior)
+		console.error(`Custom storage path is unusable: ${error instanceof Error ? error.message : String(error)}`)
 		return defaultPath
 	}
 }
