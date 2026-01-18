@@ -19,6 +19,8 @@ describe("TerminalProcess", () => {
 	let mockStream: AsyncIterableIterator<string>
 
 	beforeEach(() => {
+		vi.clearAllMocks()
+
 		// Create properly typed mock terminal
 		mockTerminal = {
 			shellIntegration: {
@@ -176,6 +178,34 @@ describe("TerminalProcess", () => {
 
 			expect(continueSpy).toHaveBeenCalled()
 			expect(terminalProcess["isListening"]).toBe(false)
+		})
+	})
+
+	describe("abort", () => {
+		it("sends CTRL+C even after continue has been called", () => {
+			// Simulate user clicking "Proceed While Running"
+			terminalProcess.continue()
+
+			// User later clicks "Kill Command"
+			terminalProcess.abort()
+
+			// CTRL+C should still be sent to terminate the process
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+		})
+
+		it("sends CTRL+C when still listening", () => {
+			terminalProcess.abort()
+
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+		})
+
+		it("does not throw if terminal is already gone", () => {
+			// Simulate terminal being garbage collected
+			vi.spyOn(terminalProcess["terminalRef"], "deref").mockReturnValue(undefined)
+
+			expect(() => terminalProcess.abort()).not.toThrow()
 		})
 	})
 

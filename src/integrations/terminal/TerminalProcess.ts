@@ -265,10 +265,10 @@ export class TerminalProcess extends BaseTerminalProcess {
 	}
 
 	public override abort() {
-		if (this.isListening) {
-			// Send SIGINT using CTRL+C
-			this.terminal.terminal.sendText("\x03")
-		}
+		// User-initiated kill must always attempt to interrupt the process.
+		// Listening state does not reflect process liveness.
+		const terminal = this.terminalRef.deref()
+		terminal?.terminal?.sendText("\x03")
 	}
 
 	public override hasUnretrievedOutput(): boolean {
