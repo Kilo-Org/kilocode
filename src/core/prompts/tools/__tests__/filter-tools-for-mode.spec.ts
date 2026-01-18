@@ -417,7 +417,7 @@ describe("filterNativeToolsForMode", () => {
 			toolsWithSlashCommand,
 			"code",
 			[codeMode],
-			{ runSlashCommand: false },
+			{ autoExecuteWorkflow: false },
 			undefined,
 			{},
 			undefined,

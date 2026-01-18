@@ -985,7 +985,7 @@
 				"relace": "Relace Apply v3"
 			}
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Bật lệnh slash do mô hình khởi tạo",
 			"description": "Khi được bật, Kilo Code có thể chạy các lệnh slash của bạn để thực hiện các quy trình làm việc."
 		},

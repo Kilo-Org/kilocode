@@ -22,6 +22,10 @@ import { getGitStatus } from "../../utils/git"
 
 import { Task } from "../task/Task"
 import { formatReminderSection } from "./reminder"
+// kilocode_change start
+import { getWorkflowsForEnvironment } from "../workflow-discovery/getWorkflowsForEnvironment"
+import { refreshWorkflowToggles } from "../context/instructions/workflows"
+// kilocode_change end
 
 // kilocode_change start
 import { OpenRouterHandler } from "../../api/providers/openrouter"
@@ -381,5 +385,29 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			? state.apiConfiguration.todoListEnabled
 			: true
 	const reminderSection = todoListEnabled ? formatReminderSection(cline.todoList) : ""
-	return `<environment_details>\n${details.trim()}\n${reminderSection}\n</environment_details>`
+
+	// kilocode_change start
+	// Add workflow discovery information if experiment is enabled
+	let localWorkflowToggles: Record<string, boolean> = {}
+	let globalWorkflowToggles: Record<string, boolean> = {}
+
+	if (clineProvider?.context) {
+		const toggles = await refreshWorkflowToggles(clineProvider.context, cline.cwd)
+		localWorkflowToggles = toggles.localWorkflowToggles
+		globalWorkflowToggles = toggles.globalWorkflowToggles
+	}
+	// kilocode_change end
+
+	const enabledWorkflows = new Map<string, boolean>()
+	Object.entries(localWorkflowToggles || {}).forEach(([path, enabled]) => {
+		enabledWorkflows.set(path, enabled)
+	})
+	Object.entries(globalWorkflowToggles || {}).forEach(([path, enabled]) => {
+		enabledWorkflows.set(path, enabled)
+	})
+
+	const workflowSection = await getWorkflowsForEnvironment(cline.cwd, experiments, enabledWorkflows)
+	// kilocode_change end
+
+	return `<environment_details>\n${details.trim()}\n${reminderSection}\n${workflowSection}\n</environment_details>`
 }

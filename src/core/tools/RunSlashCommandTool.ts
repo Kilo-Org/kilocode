@@ -1,10 +1,12 @@
+// kilocode_change start
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { getCommand, getCommandNames } from "../../services/command/commands"
+import { getWorkflow, getWorkflowNames } from "../../services/workflow/workflows"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { getModeBySlug } from "../../shared/modes"
+// kilocode_change end
 
 interface RunSlashCommandParams {
 	command: string
@@ -25,22 +27,13 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 		const { command: commandName, args } = params
 		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 
-		// Check if run slash command experiment is enabled
+		// Check if auto-execute workflow experiment is enabled
 		const provider = task.providerRef.deref()
 		const state = await provider?.getState()
-		const isRunSlashCommandEnabled = experiments.isEnabled(
+		const isAutoExecuteEnabled = experiments.isEnabled(
 			state?.experiments ?? {},
-			EXPERIMENT_IDS.RUN_SLASH_COMMAND,
+			EXPERIMENT_IDS.AUTO_EXECUTE_WORKFLOW,
 		)
-
-		if (!isRunSlashCommandEnabled) {
-			pushToolResult(
-				formatResponse.toolError(
-					"Run slash command is an experimental feature that must be enabled in settings. Please enable 'Run Slash Command' in the Experimental Settings section.",
-				),
-			)
-			return
-		}
 
 		try {
 			if (!commandName) {
@@ -53,17 +46,17 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 
 			task.consecutiveMistakeCount = 0
 
-			// Get the command from the commands service
-			const command = await getCommand(task.cwd, commandName)
+			// Get the workflow from the workflows service
+			const workflow = await getWorkflow(task.cwd, commandName)
 
-			if (!command) {
-				// Get available commands for error message
-				const availableCommands = await getCommandNames(task.cwd)
+			if (!workflow) {
+				// Get available workflows for error message
+				const availableWorkflows = await getWorkflowNames(task.cwd)
 				task.recordToolError("run_slash_command")
 				task.didToolFailInCurrentTurn = true
 				pushToolResult(
 					formatResponse.toolError(
-						`Command '${commandName}' not found. Available commands: ${availableCommands.join(", ") || "(none)"}`,
+						`Workflow '${commandName}' not found. Available workflows: ${availableWorkflows.join(", ") || "(none)"}`,
 					),
 				)
 				return
@@ -73,49 +66,60 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				tool: "runSlashCommand",
 				command: commandName,
 				args: args,
-				source: command.source,
-				description: command.description,
-				mode: command.mode,
+				source: workflow.source,
+				description: workflow.description,
+				mode: workflow.mode,
 			})
 
-			const didApprove = await askApproval("tool", toolMessage)
-
-			if (!didApprove) {
-				return
+			// kilocode_change: Fix workflow display bug - always send tool message to webview even when auto-execute is enabled
+			// This ensures that user can see what workflow is being executed
+			// If auto-execute is disabled, wait for approval
+			// If auto-execute is enabled, still send message but don't wait for approval
+			if (!isAutoExecuteEnabled) {
+				const didApprove = await askApproval("tool", toolMessage)
+				if (!didApprove) {
+					return
+				}
+			} else {
+				// kilocode_change: When auto-execute is enabled, send message to webview without waiting for approval
+				// This ensures that workflow tool UI is displayed even when auto-executing
+				await task.ask("tool", toolMessage, false).catch(() => {})
 			}
+			// kilocode_change end
 
-			// Switch mode if specified in the command frontmatter
-			if (command.mode) {
+			// Switch mode if specified in the workflow frontmatter
+			if (workflow.mode) {
 				const provider = task.providerRef.deref()
-				const targetMode = getModeBySlug(command.mode, (await provider?.getState())?.customModes)
+				const targetMode = getModeBySlug(workflow.mode, (await provider?.getState())?.customModes)
 				if (targetMode) {
-					await provider?.handleModeSwitch(command.mode)
+					await provider?.handleModeSwitch(workflow.mode)
 				}
 			}
 
-			// Build the result message
-			let result = `Command: /${commandName}`
+			// kilocode_change: Update message text with complete tool result content
+			// Build the result message with complete workflow data
+			let result = `Workflow: /${commandName}`
 
-			if (command.description) {
-				result += `\nDescription: ${command.description}`
+			if (workflow.description) {
+				result += `\nDescription: ${workflow.description}`
 			}
 
-			if (command.argumentHint) {
-				result += `\nArgument hint: ${command.argumentHint}`
+			if (workflow.arguments) {
+				result += `\nArguments: ${workflow.arguments}`
 			}
 
-			if (command.mode) {
-				result += `\nMode: ${command.mode}`
+			if (workflow.mode) {
+				result += `\nMode: ${workflow.mode}`
 			}
 
 			if (args) {
 				result += `\nProvided arguments: ${args}`
 			}
 
-			result += `\nSource: ${command.source}`
-			result += `\n\n--- Command Content ---\n\n${command.content}`
+			result += `\nSource: ${workflow.source}`
+			result += `\n\n--- Workflow Content ---\n\n${workflow.content}`
 
-			// Return the command content as the tool result
+			// Return the workflow content as the tool result
 			pushToolResult(result)
 		} catch (error) {
 			await handleError("running slash command", error as Error)
@@ -126,13 +130,41 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 		const commandName: string | undefined = block.params.command
 		const args: string | undefined = block.params.args
 
-		const partialMessage = JSON.stringify({
-			tool: "runSlashCommand",
-			command: this.removeClosingTag("command", commandName, block.partial),
-			args: this.removeClosingTag("args", args, block.partial),
-		})
-
-		await task.ask("tool", partialMessage, block.partial).catch(() => {})
+		// kilocode_change: Fix workflow display bug - include complete workflow data when transitioning to complete
+		// When transitioning from partial to complete (block.partial === false), we need to include
+		// the complete workflow data (source, description, content) in the message text.
+		// Without this, the tool object parsed from message.text still contains the old partial
+		// tool message data, which causes SlashCommandItem to render it incorrectly
+		// (e.g., showing partial=true when the workflow is actually complete).
+		if (!block.partial) {
+			// Transitioning to complete - fetch and include complete workflow data
+			const workflow = await getWorkflow(task.cwd, commandName || "")
+			const completeMessage = JSON.stringify({
+				tool: "runSlashCommand",
+				command: commandName,
+				args: args,
+				source: workflow?.source,
+				description: workflow?.description,
+			})
+			// kilocode_change: Add diagnostic logging for workflow tool display issue
+			console.log(`[RunSlashCommandTool.handlePartial] Sending COMPLETE message to webview:`, completeMessage)
+			await task.ask("tool", completeMessage, false).catch(() => {})
+			console.log(`[RunSlashCommandTool.handlePartial] COMPLETE message sent successfully`)
+			// kilocode_change end
+		} else {
+			// Partial message - use minimal data structure
+			const partialMessage = JSON.stringify({
+				tool: "runSlashCommand",
+				command: this.removeClosingTag("command", commandName, block.partial),
+				args: this.removeClosingTag("args", args, block.partial),
+			})
+			// kilocode_change: Add diagnostic logging for workflow tool display issue
+			console.log(`[RunSlashCommandTool.handlePartial] Sending PARTIAL message to webview:`, partialMessage)
+			await task.ask("tool", partialMessage, block.partial).catch(() => {})
+			console.log(`[RunSlashCommandTool.handlePartial] PARTIAL message sent successfully`)
+			// kilocode_change end
+		}
+		// kilocode_change end
 	}
 }
 
