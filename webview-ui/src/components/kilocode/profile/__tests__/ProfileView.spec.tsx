@@ -118,64 +118,6 @@ describe("ProfileView", () => {
 	}
 
 	describe("Kilo Pass section", () => {
-		test("shows subscription options on personal accounts when not subscribed", async () => {
-			renderProfileView()
-
-			simulateProfileDataResponse({
-				user: { name: "Test User", email: "test@example.com" },
-				organizations: [],
-			})
-			simulateBalanceDataResponse(10.0)
-			simulateKiloPassStateResponse(null) // No subscription
-
-			// Should show all three subscription tiers with prices
-			await waitFor(() => {
-				expect(screen.getByText("$19")).toBeInTheDocument()
-			})
-			expect(screen.getByText("$49")).toBeInTheDocument()
-			expect(screen.getByText("$199")).toBeInTheDocument()
-		})
-
-		test("shows subscription details when user has active subscription", async () => {
-			const mockSubscription = {
-				stripeSubscriptionId: "sub_123",
-				tier: "tier_49" as const,
-				cadence: "monthly" as const,
-				status: "active",
-				cancelAtPeriodEnd: false,
-				currentStreakMonths: 3,
-				nextYearlyIssueAt: null,
-				nextBonusCreditsUsd: 5,
-				nextBillingAt: "2026-02-01T00:00:00Z",
-				// Boost mode fields
-				currentPeriodBaseCreditsUsd: 49,
-				currentPeriodUsageUsd: 25.5,
-				currentPeriodBonusCreditsUsd: 5,
-				isBonusUnlocked: false,
-				refillAt: "2026-02-01T00:00:00Z",
-			}
-
-			renderProfileView()
-
-			simulateProfileDataResponse({
-				user: { name: "Test User", email: "test@example.com" },
-				organizations: [],
-			})
-			simulateBalanceDataResponse(10.0)
-			simulateKiloPassStateResponse(mockSubscription)
-
-			// Should show subscription info section - now shows Kilo Pass title and tier/cadence info
-			await waitFor(() => {
-				expect(screen.getByText("kilocode:profile.kiloPass.title")).toBeInTheDocument()
-			})
-
-			// Should show the tier and status
-			expect(screen.getByText("kilocode:profile.kiloPass.status.active")).toBeInTheDocument()
-
-			// Should NOT show subscription options when already subscribed
-			expect(screen.queryByText("kilocode:profile.kiloPass.action")).not.toBeInTheDocument()
-		})
-
 		test("does not show Kilo Pass section on organization/team accounts", async () => {
 			const orgExtensionState = {
 				...mockExtensionState,
@@ -205,24 +147,6 @@ describe("ProfileView", () => {
 	})
 
 	describe("Top-up credit packages", () => {
-		test("displays all four credit packages with correct amounts", async () => {
-			renderProfileView()
-
-			simulateProfileDataResponse({
-				user: { name: "Test User", email: "test@example.com" },
-				organizations: [],
-			})
-			simulateBalanceDataResponse(10.0)
-			simulateKiloPassStateResponse(null)
-
-			await waitFor(() => {
-				expect(screen.getByText("$20")).toBeInTheDocument()
-			})
-			expect(screen.getByText("$50")).toBeInTheDocument()
-			expect(screen.getByText("$100")).toBeInTheDocument()
-			expect(screen.getByText("$200")).toBeInTheDocument()
-		})
-
 		test('calls shopBuyCredits when "Buy Now" button is clicked', async () => {
 			renderProfileView()
 

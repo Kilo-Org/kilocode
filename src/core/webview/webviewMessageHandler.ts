@@ -2934,10 +2934,11 @@ export const webviewMessageHandler = async (
 				const kilocodeToken = apiConfiguration?.kilocodeToken
 
 				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state for Kilo Pass state.")
+					// No token means user isn't logged in - this is not an error condition
+					// Just return null subscription state so UI can show the unsubscribed view
 					provider.postMessageToWebview({
 						type: "kiloPassStateResponse",
-						payload: { success: false, error: "KiloCode API token not configured." },
+						payload: { success: true, data: { subscription: null } },
 					})
 					break
 				}
