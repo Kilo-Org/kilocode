@@ -1730,7 +1730,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											<Button
 												disabled={!enableButtons}
 												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
-												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handlePrimaryButtonClick(undefined, undefined)}>
 												{primaryButtonText}
 											</Button>
 										</StandardTooltip>
@@ -1751,7 +1751,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											<Button
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
 												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
-												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handleSecondaryButtonClick(undefined, undefined)}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</Button>
 										</StandardTooltip>
