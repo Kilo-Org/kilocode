@@ -392,6 +392,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowFollowupQuestions"
+	| "alwaysApproveResubmit" // kilocode_change
 	| "alwaysAllowExecute"
 	| "followupAutoApproveTimeoutMs"
 	| "allowedCommands"
@@ -467,6 +468,7 @@ export type ExtensionState = Pick<
 	| "includeCurrentCost"
 	| "maxGitStatusFiles"
 	| "requestDelaySeconds"
+	| "requestRetryMax" // kilocode_change
 	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
 > & {
 	version: string
