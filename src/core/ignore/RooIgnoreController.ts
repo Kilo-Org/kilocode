@@ -9,21 +9,31 @@ import "../../utils/path" // Import to enable String.prototype.toPosix()
 export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 
 /**
+ * Supported ignore file names in order of precedence.
+ * .kilocodeignore takes precedence over .kiloignore
+ */
+export const IGNORE_FILE_NAMES = [".kilocodeignore", ".kiloignore"] as const
+
+/**
  * Controls LLM access to files by enforcing ignore patterns.
  * Designed to be instantiated once in Cline.ts and passed to file manipulation services.
- * Uses the 'ignore' library to support standard .gitignore syntax in .kilocodeignore files.
+ * Uses the 'ignore' library to support standard .gitignore syntax in ignore files.
+ * Supports both .kilocodeignore and .kiloignore (with .kilocodeignore taking precedence).
  */
 export class RooIgnoreController {
 	private cwd: string
 	private ignoreInstance: Ignore
 	private disposables: vscode.Disposable[] = []
 	rooIgnoreContent: string | undefined
+	/** The actual ignore file name being used (for error messages) */
+	activeIgnoreFileName: string | undefined
 
 	constructor(cwd: string) {
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
 		this.rooIgnoreContent = undefined
-		// Set up file watcher for .kilocodeignore
+		this.activeIgnoreFileName = undefined
+		// Set up file watcher for ignore files
 		this.setupFileWatcher()
 	}
 
@@ -36,48 +46,61 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Set up the file watcher for .kilocodeignore changes
+	 * Set up file watchers for ignore file changes.
+	 * Watches both .kilocodeignore and .kiloignore for changes.
 	 */
 	private setupFileWatcher(): void {
-		const rooignorePattern = new vscode.RelativePattern(this.cwd, ".kilocodeignore")
-		const fileWatcher = vscode.workspace.createFileSystemWatcher(rooignorePattern)
+		for (const ignoreFileName of IGNORE_FILE_NAMES) {
+			const ignorePattern = new vscode.RelativePattern(this.cwd, ignoreFileName)
+			const fileWatcher = vscode.workspace.createFileSystemWatcher(ignorePattern)
 
-		// Watch for changes and updates
-		this.disposables.push(
-			fileWatcher.onDidChange(() => {
-				this.loadRooIgnore()
-			}),
-			fileWatcher.onDidCreate(() => {
-				this.loadRooIgnore()
-			}),
-			fileWatcher.onDidDelete(() => {
-				this.loadRooIgnore()
-			}),
-		)
+			// Watch for changes and updates
+			this.disposables.push(
+				fileWatcher.onDidChange(() => {
+					void this.loadRooIgnore()
+				}),
+				fileWatcher.onDidCreate(() => {
+					void this.loadRooIgnore()
+				}),
+				fileWatcher.onDidDelete(() => {
+					void this.loadRooIgnore()
+				}),
+			)
 
-		// Add fileWatcher itself to disposables
-		this.disposables.push(fileWatcher)
+			// Add fileWatcher itself to disposables
+			this.disposables.push(fileWatcher)
+		}
 	}
 
 	/**
-	 * Load custom patterns from .kilocodeignore if it exists
+	 * Load custom patterns from ignore file if it exists.
+	 * Checks for .kilocodeignore first, then falls back to .kiloignore.
 	 */
 	private async loadRooIgnore(): Promise<void> {
 		try {
 			// Reset ignore instance to prevent duplicate patterns
 			this.ignoreInstance = ignore()
-			const ignorePath = path.join(this.cwd, ".kilocodeignore")
-			if (await fileExistsAtPath(ignorePath)) {
-				const content = await fs.readFile(ignorePath, "utf8")
-				this.rooIgnoreContent = content
-				this.ignoreInstance.add(content)
-				this.ignoreInstance.add(".kilocodeignore")
-			} else {
-				this.rooIgnoreContent = undefined
+			this.rooIgnoreContent = undefined
+			this.activeIgnoreFileName = undefined
+
+			// Check for ignore files in order of precedence
+			for (const ignoreFileName of IGNORE_FILE_NAMES) {
+				const ignorePath = path.join(this.cwd, ignoreFileName)
+				if (await fileExistsAtPath(ignorePath)) {
+					const content = await fs.readFile(ignorePath, "utf8")
+					this.rooIgnoreContent = content
+					this.activeIgnoreFileName = ignoreFileName
+					this.ignoreInstance.add(content)
+					// Only use the first found file (precedence order)
+					break
+				}
 			}
+
+			// Always ignore both possible ignore filenames so neither can be read by LLM
+			this.ignoreInstance.add(IGNORE_FILE_NAMES.join("\n"))
 		} catch (error) {
 			// Should never happen: reading file failed even though it exists
-			console.error("Unexpected error loading .kilocodeignore:", error)
+			console.error("Unexpected error loading ignore file:", error)
 		}
 	}
 
@@ -88,7 +111,7 @@ export class RooIgnoreController {
 	 * @returns true if file is accessible, false if ignored
 	 */
 	validateAccess(filePath: string): boolean {
-		// Always allow access if .kilocodeignore does not exist
+		// Always allow access if no ignore file exists
 		if (!this.rooIgnoreContent) {
 			return true
 		}
@@ -105,7 +128,7 @@ export class RooIgnoreController {
 				realPath = absolutePath
 			}
 
-			// Convert real path to relative for .rooignore checking
+			// Convert real path to relative for ignore checking
 			const relativePath = path.relative(this.cwd, realPath).toPosix()
 
 			// Check if the real path is ignored
@@ -122,7 +145,7 @@ export class RooIgnoreController {
 	 * @returns path of file that is being accessed if it is being accessed, undefined if command is allowed
 	 */
 	validateCommand(command: string): string | undefined {
-		// Always allow if no .kilocodeignore exists
+		// Always allow if no ignore file exists
 		if (!this.rooIgnoreContent) {
 			return undefined
 		}
@@ -210,14 +233,14 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Get formatted instructions about the .kilocodeignore file for the LLM
-	 * @returns Formatted instructions or undefined if .kilocodeignore doesn't exist
+	 * Get formatted instructions about the ignore file for the LLM
+	 * @returns Formatted instructions or undefined if no ignore file exists
 	 */
 	getInstructions(): string | undefined {
-		if (!this.rooIgnoreContent) {
+		if (!this.rooIgnoreContent || !this.activeIgnoreFileName) {
 			return undefined
 		}
 
-		return `# .kilocodeignore\n\n(The following is provided by a root-level .kilocodeignore file where the user has specified files and directories that should not be  accessed. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n.kilocodeignore`
+		return `# ${this.activeIgnoreFileName}\n\n(The following is provided by a root-level ${this.activeIgnoreFileName} file where the user has specified files and directories that should not be accessed. Supports both .kilocodeignore and .kiloignore; .kilocodeignore takes precedence if both exist. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n${this.activeIgnoreFileName}`
 	}
 }
