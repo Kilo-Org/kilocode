@@ -175,6 +175,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		language,
 		alwaysAllowBrowser,
 		alwaysAllowExecute,
+		alwaysAllowRalph, // kilocode_change
+		ralphLoopLimit, // kilocode_change
+		ralphCompletionDelimiter, // kilocode_change
 		alwaysAllowMcp,
 		alwaysAllowModeSwitch,
 		alwaysAllowSubtasks,
@@ -519,6 +522,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 					alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? undefined,
 					alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? undefined,
 					alwaysAllowExecute: alwaysAllowExecute ?? undefined,
+					alwaysAllowRalph: alwaysAllowRalph ?? undefined, // kilocode_change
+					ralphLoopLimit: ralphLoopLimit ?? 5, // kilocode_change
+					ralphCompletionDelimiter: ralphCompletionDelimiter !== undefined ? ralphCompletionDelimiter : "<ralph>COMPLETED</ralph>", // kilocode_change
 					alwaysAllowBrowser: alwaysAllowBrowser ?? undefined,
 					alwaysAllowMcp,
 					alwaysAllowModeSwitch,
@@ -1026,6 +1032,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							alwaysAllowWriteProtected={alwaysAllowWriteProtected}
 							alwaysAllowBrowser={alwaysAllowBrowser}
 							alwaysAllowMcp={alwaysAllowMcp}
+							alwaysAllowRalph={alwaysAllowRalph} // kilocode_change
+							ralphLoopLimit={ralphLoopLimit} // kilocode_change
+							ralphCompletionDelimiter={ralphCompletionDelimiter} // kilocode_change
 							alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 							alwaysAllowSubtasks={alwaysAllowSubtasks}
 							alwaysAllowExecute={alwaysAllowExecute}

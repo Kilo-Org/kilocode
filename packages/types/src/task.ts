@@ -97,6 +97,7 @@ export interface CreateTaskOptions {
 	initialTodos?: TodoItem[]
 	/** Initial status for the task's history item (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
+	ralphLoopCount?: number // kilocode_change
 }
 
 export enum TaskStatus {
@@ -110,6 +111,7 @@ export enum TaskStatus {
 export const taskMetadataSchema = z.object({
 	task: z.string().optional(),
 	images: z.array(z.string()).optional(),
+	ralphLoopCount: z.number().int().min(0).optional(), // kilocode_change
 })
 
 export type TaskMetadata = z.infer<typeof taskMetadataSchema>

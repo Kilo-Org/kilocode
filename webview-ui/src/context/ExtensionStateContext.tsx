@@ -47,6 +47,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	dismissedNotificationIds: string[] // kilocode_change
 	yoloMode?: boolean // kilocode_change
 	setYoloMode: (value: boolean) => void // kilocode_Change
+	ralphEnabled?: boolean // kilocode_change
+	setRalphEnabled: (value: boolean) => void // kilocode_change
 	// kilocode_change start - Auto-purge settings
 	autoPurgeEnabled?: boolean
 	setAutoPurgeEnabled: (value: boolean) => void
@@ -112,6 +114,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setAlwaysAllowWriteOutsideWorkspace: (value: boolean) => void
 	setAlwaysAllowDelete: (value: boolean) => void // kilocode_change
 	setAlwaysAllowExecute: (value: boolean) => void
+	alwaysAllowRalph?: boolean // kilocode_change
+	setAlwaysAllowRalph: (value: boolean) => void // kilocode_change
 	setAlwaysAllowBrowser: (value: boolean) => void
 	setAlwaysAllowMcp: (value: boolean) => void
 	setAlwaysAllowModeSwitch: (value: boolean) => void
@@ -286,6 +290,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		yoloGatekeeperApiConfigId: "", // kilocode_change: Default empty string for gatekeeper API config ID
 		hasOpenedModeSelector: false, // Default to false (not opened yet)
+		ralphEnabled: false, // kilocode_change
 		autoApprovalEnabled: true,
 		customModes: [],
 		maxOpenTabsContext: 20,
@@ -594,6 +599,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, alwaysAllowWriteOutsideWorkspace: value })),
 		setAlwaysAllowDelete: (value) => setState((prevState) => ({ ...prevState, alwaysAllowDelete: value })), // kilocode_change
 		setAlwaysAllowExecute: (value) => setState((prevState) => ({ ...prevState, alwaysAllowExecute: value })),
+		setAlwaysAllowRalph: (value) => setState((prevState) => ({ ...prevState, alwaysAllowRalph: value })), // kilocode_change
 		setAlwaysAllowBrowser: (value) => setState((prevState) => ({ ...prevState, alwaysAllowBrowser: value })),
 		setAlwaysAllowMcp: (value) => setState((prevState) => ({ ...prevState, alwaysAllowMcp: value })),
 		setAlwaysAllowModeSwitch: (value) => setState((prevState) => ({ ...prevState, alwaysAllowModeSwitch: value })),
@@ -661,6 +667,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 		setShowTimestamps: (value) => setState((prevState) => ({ ...prevState, showTimestamps: value })),
 		setYoloMode: (value) => setState((prevState) => ({ ...prevState, yoloMode: value })), // kilocode_change
+		setRalphEnabled: (value) => setState((prevState) => ({ ...prevState, ralphEnabled: value })), // kilocode_change
 		// kilocode_change end
 		setAutoApprovalEnabled: (value) => setState((prevState) => ({ ...prevState, autoApprovalEnabled: value })),
 		setCustomModes: (value) => setState((prevState) => ({ ...prevState, customModes: value })),
