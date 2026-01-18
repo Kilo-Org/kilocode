@@ -751,15 +751,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 											<VSCodeDivider className="w-full my-6" />
 
-											{/* One-time Top-up Section */}
+											{/* Buy Credits Section */}
 											<div className="text-lg font-semibold text-[var(--vscode-foreground)] mb-4 text-center">
 												{t("kilocode:profile.shop.title")}
 											</div>
-											<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-4 text-center">
-												{t("kilocode:profile.shop.description")}
-											</div>
 
-											<div className="grid grid-cols-2 min-[300px]:grid-cols-4 gap-3 mb-6">
+											<div className="grid grid-cols-1 min-[300px]:grid-cols-2 gap-3 mb-6">
 												{creditPackages.map((pkg) => (
 													<div
 														key={pkg.credits}
