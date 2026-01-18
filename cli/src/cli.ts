@@ -278,8 +278,15 @@ export class CLI {
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
+					// Set flag BEFORE restoring session to prevent race condition
+					// The session restoration triggers async state updates that may contain
+					// historical completion_result messages. Without this flag set first,
+					// the CI exit logic may trigger before the prompt can execute.
+					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					await this.sessionService?.restoreSession(this.options.session)
 				} else if (this.options.fork) {
+					// Set flag BEFORE forking session (same race condition as restore)
+					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
 					await this.sessionService?.forkSession(this.options.fork)
 				}

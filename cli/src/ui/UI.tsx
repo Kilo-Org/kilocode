@@ -8,9 +8,9 @@ import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom, yoloModeAtom } from "../state/atoms/ui.js"
 import { processImagePaths } from "../media/images.js"
-import { setCIModeAtom } from "../state/atoms/ci.js"
+import { setCIModeAtom, ciCompletionDetectedAtom, ciCompletionIgnoreBeforeTimestampAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
-import { taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
+import { lastChatMessageAtom, taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
 import { useTaskState } from "../state/hooks/useTaskState.js"
 import { isParallelModeAtom } from "../state/atoms/index.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
@@ -61,12 +61,16 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const setCIMode = useSetAtom(setCIModeAtom)
 	const setYoloMode = useSetAtom(yoloModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
+	const setTaskResumedViaSession = useSetAtom(taskResumedViaContinueOrSessionAtom)
+	const setCiCompletionDetected = useSetAtom(ciCompletionDetectedAtom)
+	const setCiCompletionIgnoreBeforeTimestamp = useSetAtom(ciCompletionIgnoreBeforeTimestampAtom)
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
 	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
+	const lastChatMessage = useAtomValue(lastChatMessageAtom)
 	const { hasActiveTask } = useTaskState()
 	const exitRequestCounter = useAtomValue(exitRequestCounterAtom)
 
@@ -177,6 +181,14 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			if (trimmedPrompt) {
 				logs.debug("Executing initial prompt", "UI", { prompt: trimmedPrompt })
 
+				// Clear the session restoration flag after prompt execution starts
+				if (taskResumedViaSession) {
+					logs.debug("Resetting session restoration flags after prompt execution", "UI")
+					setCiCompletionIgnoreBeforeTimestamp(lastChatMessage?.ts ?? Date.now())
+					setTaskResumedViaSession(false)
+					setCiCompletionDetected(false)
+				}
+
 				// Determine if it's a command or regular message
 				if (isCommandInput(trimmedPrompt)) {
 					executeCommand(trimmedPrompt, onExit)
@@ -224,6 +236,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [
 		options.prompt,
 		options.attachments,
+		options.ci,
 		taskResumedViaSession,
 		hasActiveTask,
 		configValidation.valid,
@@ -232,6 +245,8 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		sendMessage,
 		addMessage,
 		onExit,
+		setTaskResumedViaSession,
+		setCiCompletionDetected,
 	])
 
 	// Simplified submit handler that delegates to appropriate hook
