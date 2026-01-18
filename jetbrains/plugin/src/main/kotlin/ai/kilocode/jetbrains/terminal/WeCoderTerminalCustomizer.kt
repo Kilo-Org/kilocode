@@ -49,9 +49,9 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
 
                 // Define shell integration configs to copy
                 val shellConfigs = mapOf(
-                    "vscode-zsh" to listOf(".zshrc", ".zshenv"),
-                    "vscode-bash" to listOf("bashrc"),
-                    "vscode-powershell" to listOf("profile.ps1", "diagnose.ps1"),
+                    "jetbrains-zsh" to listOf(".zshrc", ".zshenv"),
+                    "jetbrains-bash" to listOf("bashrc"),
+                    "jetbrains-powershell" to listOf("profile.ps1", "diagnose.ps1"),
                 )
 
                 // Copy integration files for each shell
@@ -104,12 +104,12 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         logger.info("🌍 Environment variables: ${envs.entries.joinToString("\n")}")
 
         // Inject VSCode shell integration script
-        return injectVSCodeScript(command, envs)
+        return injectShellIntegrationScript(command, envs)
     }
 
-    private fun injectVSCodeScript(command: Array<String>, envs: MutableMap<String, String>): Array<String> {
+    private fun injectShellIntegrationScript(command: Array<String>, envs: MutableMap<String, String>): Array<String> {
         val shellName = File(command[0]).name
-        val scriptPath = getVSCodeScript(shellName) ?: run {
+        val scriptPath = getJetBrainsScript(shellName) ?: run {
             logger.warn("🚫 No integration script found for Shell($shellName)")
             return command
         }
@@ -118,7 +118,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         logger.info("🐚 Shell type: $shellName")
 
         // Set general injection flag
-        envs["VSCODE_INJECTION"] = "1"
+        envs["KILOCODE_SHELL_INJECTION"] = "1"
 
         return when (shellName) {
             "bash", "sh" -> injectBashScript(command, envs, scriptPath)
@@ -272,19 +272,19 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         return (1..16).map { chars.random() }.joinToString("")
     }
 
-    private fun getVSCodeScript(shellName: String): String? {
+    private fun getJetBrainsScript(shellName: String): String? {
         return when (shellName) {
             "bash", "sh" -> {
                 // bash uses --rcfile parameter, needs to point to a specific file
-                Paths.get(shellIntegrationBaseDir, "vscode-bash", "bashrc").toString()
+                Paths.get(shellIntegrationBaseDir, "jetbrains-bash", "bashrc").toString()
             }
             "zsh" -> {
                 // zsh uses ZDOTDIR, needs to point to a directory, zsh will automatically look for .zshrc and .zshenv in that directory
-                Paths.get(shellIntegrationBaseDir, "vscode-zsh").toString()
+                Paths.get(shellIntegrationBaseDir, "jetbrains-zsh").toString()
             }
             "powershell", "pwsh", "powershell.exe" -> {
                 // PowerShell uses -File parameter, needs to point to a specific file
-                Paths.get(shellIntegrationBaseDir, "vscode-powershell", "profile.ps1").toString()
+                Paths.get(shellIntegrationBaseDir, "jetbrains-powershell", "profile.ps1").toString()
             }
             else -> null
         }
