@@ -54,18 +54,18 @@ import {
 	modelCatalogPageCountAtom,
 	modelCatalogVisibleItemsAtom,
 	modelCatalogSelectedIndexAtom,
+	modelCatalogTotalItemsAtom,
+	modelCatalogVisibleWindowStartAtom,
 	openModelCatalogAtom,
 	closeModelCatalogAtom,
 	setModelCatalogSearchAtom,
 	cycleModelCatalogSortAtom,
 	cycleModelCatalogCapabilityFilterAtom,
 	cycleModelCatalogProviderFilterAtom,
-	nextModelCatalogPageAtom,
-	prevModelCatalogPageAtom,
 	selectNextModelCatalogItemAtom,
 	selectPreviousModelCatalogItemAtom,
 	selectModelCatalogItemAtom,
-	MODEL_CATALOG_PAGE_SIZE,
+	MODEL_CATALOG_VISIBLE_WINDOW,
 } from "../modelSelection.js"
 import { configAtom } from "../config.js"
 import type { ModelInfo } from "../../../constants/providers/models.js"
@@ -131,7 +131,7 @@ describe("modelSelection atoms", () => {
 			expect(store.get(modelCatalogProviderFilterAtom)).toBe("kilocode")
 			expect(store.get(modelCatalogSortAtom)).toBe("preferred")
 			expect(store.get(modelCatalogCapabilitiesAtom)).toEqual([])
-			expect(store.get(modelCatalogPageAtom)).toBe(0)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
 		})
 
 		it("openModelCatalogAtom should set up state", () => {
@@ -146,19 +146,20 @@ describe("modelSelection atoms", () => {
 			expect(store.get(modelCatalogCurrentProviderAtom)).toBe("kilocode")
 			expect(store.get(modelCatalogCurrentModelIdAtom)).toBe("model-a")
 			expect(store.get(modelCatalogSearchAtom)).toBe("")
-			expect(store.get(modelCatalogPageAtom)).toBe(0)
+			// Current model should be selected
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
 		})
 
 		it("closeModelCatalogAtom should reset state", () => {
 			store.set(modelCatalogVisibleAtom, true)
 			store.set(modelCatalogSearchAtom, "searching")
-			store.set(modelCatalogPageAtom, 2)
+			store.set(modelCatalogSelectedIndexAtom, 5)
 
 			store.set(closeModelCatalogAtom)
 
 			expect(store.get(modelCatalogVisibleAtom)).toBe(false)
 			expect(store.get(modelCatalogSearchAtom)).toBe("")
-			expect(store.get(modelCatalogPageAtom)).toBe(0)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
 		})
 	})
 
@@ -196,32 +197,46 @@ describe("modelSelection atoms", () => {
 			expect(items.map((i) => i.modelId)).toContain("claude-3-5-sonnet")
 		})
 
-		it("should handle pagination", () => {
+		it("should handle continuous scrolling with fixed window", () => {
 			store.set(openModelCatalogAtom, {
 				allModels: mockModelsMany,
 				currentProvider: "kilocode",
 				currentModelId: "model-1",
 			})
 
-			expect(store.get(modelCatalogPageCountAtom)).toBe(3) // 25 models / 10 per page = 3 pages
-			expect(store.get(modelCatalogVisibleItemsAtom)).toHaveLength(MODEL_CATALOG_PAGE_SIZE)
+			expect(store.get(modelCatalogTotalItemsAtom)).toBe(25)
+			expect(store.get(modelCatalogVisibleItemsAtom)).toHaveLength(MODEL_CATALOG_VISIBLE_WINDOW)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
+			expect(store.get(modelCatalogVisibleWindowStartAtom)).toBe(0)
 
-			store.set(nextModelCatalogPageAtom)
-			expect(store.get(modelCatalogPageAtom)).toBe(1)
-			expect(store.get(modelCatalogVisibleItemsAtom)).toHaveLength(MODEL_CATALOG_PAGE_SIZE)
+			// Navigate to item 9 (last item in first window)
+			for (let i = 0; i < 9; i++) {
+				store.set(selectNextModelCatalogItemAtom)
+			}
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(9)
+			expect(store.get(modelCatalogVisibleWindowStartAtom)).toBe(0)
 
-			store.set(nextModelCatalogPageAtom)
-			expect(store.get(modelCatalogPageAtom)).toBe(2)
-			expect(store.get(modelCatalogVisibleItemsAtom)).toHaveLength(5) // Last page should have 5 items
+			// Navigate to item 10 - should scroll window
+			store.set(selectNextModelCatalogItemAtom)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(10)
+			expect(store.get(modelCatalogVisibleWindowStartAtom)).toBe(1)
 
-			store.set(nextModelCatalogPageAtom) // Should not go beyond last page
-			expect(store.get(modelCatalogPageAtom)).toBe(2)
+			// Navigate to end
+			for (let i = 11; i < 25; i++) {
+				store.set(selectNextModelCatalogItemAtom)
+			}
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(24)
 
-			store.set(prevModelCatalogPageAtom)
-			expect(store.get(modelCatalogPageAtom)).toBe(1)
+			// Navigate past end - should wrap to beginning
+			store.set(selectNextModelCatalogItemAtom)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
+
+			// Navigate past beginning - should wrap to end
+			store.set(selectPreviousModelCatalogItemAtom)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(24)
 		})
 
-		it("should handle item selection navigation", () => {
+		it("should handle item selection navigation with wrap", () => {
 			store.set(openModelCatalogAtom, {
 				allModels: mockModelsMany,
 				currentProvider: "kilocode",
@@ -233,18 +248,19 @@ describe("modelSelection atoms", () => {
 			store.set(selectNextModelCatalogItemAtom)
 			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(1)
 
-			// Go to end of page
-			for (let i = 1; i < MODEL_CATALOG_PAGE_SIZE; i++) {
+			// Go to end of list
+			for (let i = 2; i < 25; i++) {
 				store.set(selectNextModelCatalogItemAtom)
 			}
-			// Now we should be on page 1, index 0
-			expect(store.get(modelCatalogPageAtom)).toBe(1)
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(24)
+
+			// Should wrap back to beginning
+			store.set(selectNextModelCatalogItemAtom)
 			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(0)
 
 			store.set(selectPreviousModelCatalogItemAtom)
-			// Should wrap back to page 0, last index
-			expect(store.get(modelCatalogPageAtom)).toBe(0)
-			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(MODEL_CATALOG_PAGE_SIZE - 1)
+			// Should wrap back to end
+			expect(store.get(modelCatalogSelectedIndexAtom)).toBe(24)
 		})
 	})
 

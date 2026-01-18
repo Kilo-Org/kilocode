@@ -11,11 +11,11 @@ import {
 	modelCatalogSortAtom,
 	modelCatalogCapabilitiesAtom,
 	modelCatalogProviderFilterAtom,
-	modelCatalogPageAtom,
 	modelCatalogVisibleItemsAtom,
 	modelCatalogSelectedIndexAtom,
-	modelCatalogPageCountAtom,
 	modelCatalogAllModelsAtom,
+	modelCatalogVisibleWindowStartAtom,
+	modelCatalogTotalItemsAtom,
 } from "../../state/atoms/modelSelection.js"
 import { useTheme } from "../../state/hooks/useTheme.js"
 import { prettyModelName } from "../../constants/providers/models.js"
@@ -42,10 +42,10 @@ export const ModelCatalogMenu: React.FC = () => {
 	const sort = useAtomValue(modelCatalogSortAtom)
 	const capabilities = useAtomValue(modelCatalogCapabilitiesAtom)
 	const providerFilter = useAtomValue(modelCatalogProviderFilterAtom)
-	const page = useAtomValue(modelCatalogPageAtom)
 	const visibleItems = useAtomValue(modelCatalogVisibleItemsAtom)
 	const selectedIndex = useAtomValue(modelCatalogSelectedIndexAtom)
-	const pageCount = useAtomValue(modelCatalogPageCountAtom)
+	const windowStart = useAtomValue(modelCatalogVisibleWindowStartAtom)
+	const totalItems = useAtomValue(modelCatalogTotalItemsAtom)
 	const allModels = useAtomValue(modelCatalogAllModelsAtom)
 
 	if (!visible) {
@@ -114,7 +114,7 @@ export const ModelCatalogMenu: React.FC = () => {
 					<Text color={theme.ui.text.dimmed}>No models found</Text>
 				</Box>
 			) : (
-				<ModelList items={visibleItems} selectedIndex={selectedIndex} />
+				<ModelList items={visibleItems} selectedIndex={selectedIndex} windowStart={windowStart} />
 			)}
 
 			<Box marginTop={1}>
@@ -123,7 +123,7 @@ export const ModelCatalogMenu: React.FC = () => {
 
 			<Box flexDirection="row" justifyContent="space-between" marginTop={1}>
 				<Text color={theme.ui.text.dimmed}>
-					Page {page + 1}/{pageCount || 1}
+					Item {selectedIndex + 1}/{totalItems || 0}
 				</Text>
 			</Box>
 
@@ -139,9 +139,10 @@ export const ModelCatalogMenu: React.FC = () => {
 interface ModelListProps {
 	items: ModelCatalogItem[]
 	selectedIndex: number
+	windowStart: number
 }
 
-const ModelList: React.FC<ModelListProps> = ({ items, selectedIndex }) => {
+const ModelList: React.FC<ModelListProps> = ({ items, selectedIndex, windowStart }) => {
 	const theme = useTheme()
 
 	let currentProvider: string | null = null
@@ -156,7 +157,7 @@ const ModelList: React.FC<ModelListProps> = ({ items, selectedIndex }) => {
 			currentProvider = item.provider
 			displayItems.push({ type: "provider", provider: item.provider })
 		}
-		displayItems.push({ type: "model", modelItem: item, index: i })
+		displayItems.push({ type: "model", modelItem: item, index: windowStart + i })
 	}
 
 	return (

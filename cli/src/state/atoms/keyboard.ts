@@ -1262,14 +1262,6 @@ function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
 			set(selectPreviousModelCatalogItemAtom)
 			return
 
-		case "right":
-			set(nextModelCatalogPageAtom)
-			return
-
-		case "left":
-			set(prevModelCatalogPageAtom)
-			return
-
 		case "backspace":
 			if (search.length > 0) {
 				set(setModelCatalogSearchAtom, search.slice(0, -1))

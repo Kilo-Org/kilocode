@@ -7,7 +7,7 @@ import { addMessageAtom } from "./ui.js"
 import { MODEL_SORT_OPTIONS, MODEL_CAPABILITY_OPTIONS } from "../../types/modelCatalog.js"
 import type { ModelSortOption, ModelCapabilityFilter } from "../../types/modelCatalog.js"
 
-export const MODEL_CATALOG_PAGE_SIZE = 10
+export const MODEL_CATALOG_VISIBLE_WINDOW = 10
 
 export interface ModelCatalogItem {
 	provider: string
@@ -62,22 +62,53 @@ export const modelCatalogItemsAtom = atom<ModelCatalogItem[]>((get) => {
 
 export const modelCatalogPageCountAtom = atom<number>((get) => {
 	const items = get(modelCatalogItemsAtom)
-	return Math.ceil(items.length / MODEL_CATALOG_PAGE_SIZE)
+	return Math.ceil(items.length / MODEL_CATALOG_VISIBLE_WINDOW)
+})
+
+export const modelCatalogTotalItemsAtom = atom<number>((get) => {
+	return get(modelCatalogItemsAtom).length
 })
 
 export const modelCatalogVisibleItemsAtom = atom<ModelCatalogItem[]>((get) => {
 	const items = get(modelCatalogItemsAtom)
-	const page = get(modelCatalogPageAtom)
-	const start = page * MODEL_CATALOG_PAGE_SIZE
-	return items.slice(start, start + MODEL_CATALOG_PAGE_SIZE)
+	const selectedIndex = get(modelCatalogSelectedIndexAtom)
+	const totalItems = items.length
+	const windowSize = MODEL_CATALOG_VISIBLE_WINDOW
+
+	if (totalItems <= windowSize) {
+		return items
+	}
+
+	let windowStart = selectedIndex - windowSize + 1
+	windowStart = Math.max(0, windowStart)
+	windowStart = Math.min(windowStart, totalItems - windowSize)
+
+	return items.slice(windowStart, windowStart + windowSize)
+})
+
+export const modelCatalogVisibleWindowStartAtom = atom<number>((get) => {
+	const items = get(modelCatalogItemsAtom)
+	const selectedIndex = get(modelCatalogSelectedIndexAtom)
+	const totalItems = items.length
+	const windowSize = MODEL_CATALOG_VISIBLE_WINDOW
+
+	if (totalItems <= windowSize) {
+		return 0
+	}
+
+	let windowStart = selectedIndex - windowSize + 1
+	windowStart = Math.max(0, windowStart)
+	windowStart = Math.min(windowStart, totalItems - windowSize)
+
+	return windowStart
 })
 
 export const modelCatalogSelectedIndexAtom = atom<number>(0)
 
 export const modelCatalogSelectedItemAtom = atom<ModelCatalogItem | null>((get) => {
-	const visibleItems = get(modelCatalogVisibleItemsAtom)
+	const items = get(modelCatalogItemsAtom)
 	const selectedIndex = get(modelCatalogSelectedIndexAtom)
-	return visibleItems[selectedIndex] ?? null
+	return items[selectedIndex] ?? null
 })
 
 export const openModelCatalogAtom = atom(
@@ -95,23 +126,24 @@ export const openModelCatalogAtom = atom(
 		set(modelCatalogCurrentProviderAtom, params.currentProvider)
 		set(modelCatalogCurrentModelIdAtom, params.currentModelId)
 		set(modelCatalogSearchAtom, "")
-		set(modelCatalogPageAtom, 0)
-		set(modelCatalogSelectedIndexAtom, 0)
 		set(modelCatalogVisibleAtom, true)
+
+		const items = get(modelCatalogItemsAtom)
+		const currentIndex = items.findIndex(
+			(item) => item.provider === params.currentProvider && item.modelId === params.currentModelId,
+		)
+		set(modelCatalogSelectedIndexAtom, currentIndex >= 0 ? currentIndex : 0)
 	},
 )
 
 export const closeModelCatalogAtom = atom(null, (get, set) => {
 	set(modelCatalogVisibleAtom, false)
-	// Reset search and selection state to ensure clean state for next open
 	set(modelCatalogSearchAtom, "")
 	set(modelCatalogSelectedIndexAtom, 0)
-	set(modelCatalogPageAtom, 0)
 })
 
 export const setModelCatalogSearchAtom = atom(null, (get, set, search: string) => {
 	set(modelCatalogSearchAtom, search)
-	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)
 })
 
@@ -124,7 +156,6 @@ export const cycleModelCatalogSortAtom = atom(null, (get, set) => {
 		nextSort = sorts[(currentIndex + 1) % sorts.length] ?? "preferred"
 	}
 	set(modelCatalogSortAtom, nextSort)
-	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)
 })
 
@@ -156,7 +187,6 @@ export const cycleModelCatalogCapabilityFilterAtom = atom(null, (get, set) => {
 			}
 		}
 	}
-	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)
 })
 
@@ -186,55 +216,31 @@ export const cycleModelCatalogProviderFilterAtom = atom(null, (get, set) => {
 			set(modelCatalogProviderFilterAtom, nextProvider)
 		}
 	}
-	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)
 })
 
-export const nextModelCatalogPageAtom = atom(null, (get, set) => {
-	const page = get(modelCatalogPageAtom)
-	const pageCount = get(modelCatalogPageCountAtom)
-	if (page < pageCount - 1) {
-		set(modelCatalogPageAtom, page + 1)
-		set(modelCatalogSelectedIndexAtom, 0)
-	}
+export const nextModelCatalogPageAtom = atom(null, (_get, _set) => {
+	// No longer used - navigation is continuous with up/down arrows
 })
 
-export const prevModelCatalogPageAtom = atom(null, (get, set) => {
-	const page = get(modelCatalogPageAtom)
-	if (page > 0) {
-		set(modelCatalogPageAtom, page - 1)
-		set(modelCatalogSelectedIndexAtom, 0)
-	}
+export const prevModelCatalogPageAtom = atom(null, (_get, _set) => {
+	// No longer used - navigation is continuous with up/down arrows
 })
 
 export const selectNextModelCatalogItemAtom = atom(null, (get, set) => {
-	const visibleItems = get(modelCatalogVisibleItemsAtom)
-	if (visibleItems.length === 0) return
+	const items = get(modelCatalogItemsAtom)
+	if (items.length === 0) return
 	const selectedIndex = get(modelCatalogSelectedIndexAtom)
-	const page = get(modelCatalogPageAtom)
-	const pageCount = get(modelCatalogPageCountAtom)
-
-	if (selectedIndex + 1 < visibleItems.length) {
-		set(modelCatalogSelectedIndexAtom, selectedIndex + 1)
-	} else if (page < pageCount - 1) {
-		set(modelCatalogPageAtom, page + 1)
-		set(modelCatalogSelectedIndexAtom, 0)
-	}
+	const newIndex = (selectedIndex + 1) % items.length
+	set(modelCatalogSelectedIndexAtom, newIndex)
 })
 
 export const selectPreviousModelCatalogItemAtom = atom(null, (get, set) => {
-	const visibleItems = get(modelCatalogVisibleItemsAtom)
-	if (visibleItems.length === 0) return
+	const items = get(modelCatalogItemsAtom)
+	if (items.length === 0) return
 	const selectedIndex = get(modelCatalogSelectedIndexAtom)
-	const page = get(modelCatalogPageAtom)
-
-	if (selectedIndex > 0) {
-		set(modelCatalogSelectedIndexAtom, selectedIndex - 1)
-	} else if (page > 0) {
-		set(modelCatalogPageAtom, page - 1)
-		const newPageItems = get(modelCatalogVisibleItemsAtom)
-		set(modelCatalogSelectedIndexAtom, newPageItems.length - 1)
-	}
+	const newIndex = (selectedIndex - 1 + items.length) % items.length
+	set(modelCatalogSelectedIndexAtom, newIndex)
 })
 
 export const selectModelCatalogItemAtom = atom(null, async (get, set) => {
