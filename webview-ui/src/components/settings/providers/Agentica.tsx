@@ -4,12 +4,23 @@ import type { ProviderSettings } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
 import { securePasswordStorage } from "@/utils/passwordStorage"
-
+import { PlansView } from "../PlansView"
+// Inside the Agentica component, add this state
+const [showPlansView, setShowPlansView] = useState(false)
 type AgenticaProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	uriScheme?: string
 }
+const handlePlansViewClose = useCallback(() => {
+    setShowPlansView(false)
+    // Refresh subscription data when closing the plans view
+    if (apiConfiguration.agenticaApiKey) {
+        fetchSubscriptionWithApiKey()
+    } else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
+        fetchSubscription()
+    }
+}, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword])
 
 type DeviceAuthStatus = "idle" | "pending" | "success" | "error"
 
@@ -354,6 +365,29 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					<div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "4px" }}>
 						Current Plan: {subscription.data.plan_tier.toUpperCase()}
 					</div>
+					<VSCodeButton 
+						onClick={() => setShowPlansView(true)}
+						appearance="secondary"
+						style={{ height: '24px', fontSize: '12px', padding: '0 8px' }}
+					>
+						Manage Plan
+					</VSCodeButton>
+					{showPlansView && (
+					<div style={{
+						position: 'fixed',
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+						backgroundColor: 'rgba(0, 0, 0, 0.5)',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						zIndex: 1000
+					}}>
+						<PlansView onDone={handlePlansViewClose} />
+					</div>
+				)}
 					<div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)" }}>
 						Daily Credits: ${subscription.data.daily_credits_remaining.toFixed(2)} / ${subscription.limits.daily_credits.toFixed(2)}
 					</div>
