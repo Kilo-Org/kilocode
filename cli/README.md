@@ -276,38 +276,4 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### Getting Started
-
-To build and run the CLI locally:
-
-1. Install dependencies from the root workspace folder:
-
-    ```bash
-    pnpm install
-    ```
-
-2. Set up your environment file. Copy the sample and configure your API keys:
-
-    ```bash
-    cp .env.sample cli/dist/.env
-    # Edit cli/dist/.env with your API keys
-    ```
-
-3. Build the extension core from the root workspace folder:
-
-    ```bash
-    pnpm cli:bundle
-    ```
-
-4. Change into the cli folder and run the development server:
-
-    ```bash
-    cd ./cli
-    pnpm start:dev
-    ```
-
-> **Tip:** To view log output while developing, open a new terminal and run `pnpm logs` from the cli folder. Use `pnpm logs:clear` to truncate on-disk logs.
-
-### Using DevTools
-
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start:dev` command, and then run `npx react-devtools` to show the devtools inspector.
+See [Development Guide](cli/docs/DEVELOPMENT.md) for setup instructions.
