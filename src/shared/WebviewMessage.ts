@@ -218,6 +218,7 @@ export interface WebviewMessage {
 		| "showTaskTimeline" // kilocode_change
 		| "sendMessageOnEnter" // kilocode_change
 		| "showTimestamps" // kilocode_change
+		| "showDiffStats" // kilocode_change
 		| "hideCostBelowThreshold" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change

@@ -14,7 +14,9 @@
 		"shareSession": "Oturumu paylaş",
 		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
 		"shareConfirmYes": "Evet",
-		"shareConfirmNo": "Hayır"
+		"shareConfirmNo": "Hayır",
+		"options": "Seçenekler",
+		"configureSetupScript": "Worktree kurulum betiği"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",

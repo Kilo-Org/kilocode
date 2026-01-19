@@ -1148,6 +1148,10 @@
 		"showTimestamps": {
 			"label": "Afficher les horodatages",
 			"description": "Afficher l'horodatage pour chaque message dans la vue de discussion"
+		},
+		"showDiffStats": {
+			"label": "Afficher les statistiques de diff",
+			"description": "Afficher les statistiques de lignes ajoutées/supprimées dans l'en-tête de la tâche"
 		}
 	},
 	"ghost": {

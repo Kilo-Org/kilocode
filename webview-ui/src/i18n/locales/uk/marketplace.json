@@ -147,6 +147,10 @@
 			"title": "Видалити MCP Server",
 			"message": "Ти впевнений, що хочеш видалити MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Видалити навичку",
+			"message": "Ти впевнений, що хочеш видалити навичку \"{{skillName}}\"?"
+		},
 		"cancel": "Скасувати",
 		"confirm": "Видалити"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Усі",
 		"resultsCount": "Знайдено {{count}} навичок",
 		"noResults": "Не знайдено навичок, що відповідають твоїм критеріям",
-		"viewOnGitHub": "Переглянути на GitHub"
+		"install": "Встановити",
+		"installTitle": "Встановити навичку {{name}}",
+		"installing": "Встановлення..."
 	}
 }

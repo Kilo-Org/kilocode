@@ -1149,6 +1149,10 @@
 		"showTimestamps": {
 			"label": "Mostrar carimbos de tempo",
 			"description": "Mostrar carimbo de tempo para cada mensagem na visualização do chat"
+		},
+		"showDiffStats": {
+			"label": "Mostrar estatísticas de diff",
+			"description": "Exibir estatísticas de linhas adicionadas/removidas no cabeçalho da tarefa"
 		}
 	},
 	"ghost": {

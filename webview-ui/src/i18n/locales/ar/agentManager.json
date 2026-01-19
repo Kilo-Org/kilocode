@@ -14,7 +14,9 @@
 		"shareSession": "مشاركة الجلسة",
 		"shareConfirmMessage": "هل ترغب في مشاركة لقطة من هذه الجلسة علنًا؟",
 		"shareConfirmYes": "نعم",
-		"shareConfirmNo": "لا"
+		"shareConfirmNo": "لا",
+		"options": "خيارات",
+		"configureSetupScript": "سكريبت إعداد Worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
