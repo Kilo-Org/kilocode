@@ -46,36 +46,40 @@ describe("convertImagesToDataUrls", () => {
 		vi.clearAllMocks()
 	})
 
-	it("should return undefined for undefined input", async () => {
+	it("should return empty result for undefined input", async () => {
 		const result = await convertImagesToDataUrls(undefined)
-		expect(result).toBeUndefined()
+		expect(result).toEqual({ images: [], errors: [] })
 	})
 
-	it("should return undefined for empty array", async () => {
+	it("should return empty result for empty array", async () => {
 		const result = await convertImagesToDataUrls([])
-		expect(result).toBeUndefined()
+		expect(result).toEqual({ images: [], errors: [] })
 	})
 
 	it("should pass through data URLs unchanged", async () => {
 		const dataUrl =
 			"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 		const result = await convertImagesToDataUrls([dataUrl])
-		expect(result).toEqual([dataUrl])
+		expect(result.images).toEqual([dataUrl])
+		expect(result.errors).toEqual([])
 	})
 
 	it("should convert file paths to data URLs", async () => {
 		const result = await convertImagesToDataUrls(["/tmp/image.png"])
-		expect(result).toEqual(["data:image/png;base64,mock-tmpimagepng"])
+		expect(result.images).toEqual(["data:image/png;base64,mock-tmpimagepng"])
+		expect(result.errors).toEqual([])
 	})
 
 	it("should handle mixed data URLs and file paths", async () => {
 		const dataUrl = "data:image/png;base64,existing"
 		const result = await convertImagesToDataUrls([dataUrl, "/tmp/new.png"])
-		expect(result).toEqual([dataUrl, "data:image/png;base64,mock-tmpnewpng"])
+		expect(result.images).toEqual([dataUrl, "data:image/png;base64,mock-tmpnewpng"])
+		expect(result.errors).toEqual([])
 	})
 
 	it("should handle multiple file paths", async () => {
 		const result = await convertImagesToDataUrls(["/tmp/a.png", "/tmp/b.png"])
-		expect(result).toEqual(["data:image/png;base64,mock-tmpapng", "data:image/png;base64,mock-tmpbpng"])
+		expect(result.images).toEqual(["data:image/png;base64,mock-tmpapng", "data:image/png;base64,mock-tmpbpng"])
+		expect(result.errors).toEqual([])
 	})
 })

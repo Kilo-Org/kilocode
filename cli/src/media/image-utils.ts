@@ -14,20 +14,30 @@ export function isDataUrl(str: string): boolean {
 }
 
 /**
+ * Result of image conversion, including both successful conversions and errors.
+ */
+export interface ImageConversionResult {
+	/** Successfully converted data URLs */
+	images: string[]
+	/** Errors for images that failed to convert */
+	errors: Array<{ path: string; error: string }>
+}
+
+/**
  * Convert image paths to data URLs if needed.
  * If images are already data URLs, they are passed through unchanged.
  * If images are file paths, they are read and converted to data URLs.
  *
  * @param images Array of image paths or data URLs
  * @param logContext Optional context string for error logging
- * @returns Array of data URLs (or undefined if no valid images)
+ * @returns Object containing successful images and any errors
  */
 export async function convertImagesToDataUrls(
 	images: string[] | undefined,
 	logContext: string = "image-utils",
-): Promise<string[] | undefined> {
+): Promise<ImageConversionResult> {
 	if (!images || images.length === 0) {
-		return undefined
+		return { images: [], errors: [] }
 	}
 
 	// Separate data URLs from file paths
@@ -44,7 +54,7 @@ export async function convertImagesToDataUrls(
 
 	// If all images are already data URLs, return them directly
 	if (filePaths.length === 0) {
-		return dataUrls.length > 0 ? dataUrls : undefined
+		return { images: dataUrls, errors: [] }
 	}
 
 	// Convert file paths to data URLs
@@ -58,5 +68,5 @@ export async function convertImagesToDataUrls(
 
 	// Combine existing data URLs with newly converted ones
 	const allDataUrls = [...dataUrls, ...result.images]
-	return allDataUrls.length > 0 ? allDataUrls : undefined
+	return { images: allDataUrls, errors: result.errors }
 }

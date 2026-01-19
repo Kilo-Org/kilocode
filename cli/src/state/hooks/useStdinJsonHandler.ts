@@ -39,6 +39,14 @@ export interface StdinMessageHandlers {
  *
  * File paths are automatically converted to data URLs before being sent.
  */
+/**
+ * Output a JSON message to stdout for the Agent Manager to consume.
+ * Used for error notifications and other structured output.
+ */
+function outputJsonMessage(message: Record<string, unknown>): void {
+	console.log(JSON.stringify(message))
+}
+
 export async function handleStdinMessage(
 	message: StdinMessage,
 	handlers: StdinMessageHandlers,
@@ -49,10 +57,20 @@ export async function handleStdinMessage(
 			// This allows the Agent Manager to send the initial prompt via stdin
 			// instead of CLI args, enabling images to be included with the first message
 			// Images are converted from file paths to data URLs if needed
-			const images = await convertImagesToDataUrls(message.images)
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
 			await handlers.sendTask({
 				text: message.text || "",
-				...(images && { images }),
+				...(result.images.length > 0 && { images: result.images }),
 			})
 			return { handled: true }
 		}
@@ -60,7 +78,18 @@ export async function handleStdinMessage(
 		case "askResponse": {
 			// Handle ask response (user message, approval response, etc.)
 			// Images are converted from file paths to data URLs if needed
-			const images = await convertImagesToDataUrls(message.images)
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
+			const images = result.images.length > 0 ? result.images : undefined
 			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
 				await handlers.respondToTool({
 					response: message.askResponse,

@@ -11,10 +11,11 @@ import { handleStdinMessage, type StdinMessage, type StdinMessageHandlers } from
 // Mock the image-utils module which is used by useStdinJsonHandler
 vi.mock("../../../media/image-utils.js", () => ({
 	convertImagesToDataUrls: vi.fn().mockImplementation(async (images: string[] | undefined) => {
-		if (!images || images.length === 0) return undefined
-		return images.map((img) =>
+		if (!images || images.length === 0) return { images: [], errors: [] }
+		const convertedImages = images.map((img) =>
 			img.startsWith("data:") ? img : `data:image/png;base64,mock-${img.replace(/[^a-zA-Z0-9]/g, "")}`,
 		)
+		return { images: convertedImages, errors: [] }
 	}),
 }))
 
