@@ -7,7 +7,7 @@
  * See CLI_CONTEXT_DROP_INVESTIGATION.md for details.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import type { ExtensionChatMessage, ExtensionState } from "../../../types/messages.js"
 import {
@@ -35,11 +35,7 @@ function createMinimalState(messages: ExtensionChatMessage[]): ExtensionState {
 }
 
 // Helper to create a chat message
-function createMessage(
-	ts: number,
-	text: string,
-	options: Partial<ExtensionChatMessage> = {},
-): ExtensionChatMessage {
+function createMessage(ts: number, text: string, options: Partial<ExtensionChatMessage> = {}): ExtensionChatMessage {
 	return {
 		ts,
 		type: "say",
@@ -475,14 +471,17 @@ describe("CLI Context Drop Investigation", () => {
 			for (let i = 0; i < 3; i++) {
 				updates.push(
 					new Promise<void>((resolve) => {
-						setTimeout(() => {
-							const stateUpdate = createMinimalState([
-								msg1,
-								createMessage(2000, `Message 2 - state ${i}`, { partial: true }),
-							])
-							store.set(updateExtensionStateAtom, stateUpdate)
-							resolve()
-						}, i * 15 + 5) // Offset to interleave with streaming
+						setTimeout(
+							() => {
+								const stateUpdate = createMinimalState([
+									msg1,
+									createMessage(2000, `Message 2 - state ${i}`, { partial: true }),
+								])
+								store.set(updateExtensionStateAtom, stateUpdate)
+								resolve()
+							},
+							i * 15 + 5,
+						) // Offset to interleave with streaming
 					}),
 				)
 			}
@@ -510,11 +509,14 @@ describe("CLI Context Drop Investigation", () => {
 				for (let i = 0; i < 5; i++) {
 					updates.push(
 						new Promise<void>((resolve) => {
-							setTimeout(() => {
-								const update = createMessage(1000 + i * 1000, `Message ${i + 1} - round ${round}`)
-								store.set(updateChatMessageByTsAtom, update)
-								resolve()
-							}, round * 5 + i)
+							setTimeout(
+								() => {
+									const update = createMessage(1000 + i * 1000, `Message ${i + 1} - round ${round}`)
+									store.set(updateChatMessageByTsAtom, update)
+									resolve()
+								},
+								round * 5 + i,
+							)
 						}),
 					)
 				}
@@ -609,7 +611,7 @@ describe("CLI Context Drop Investigation", () => {
 			store.set(updateExtensionStateAtom, createMinimalState([msg1]))
 
 			// CLI adds a message directly (simulating synthetic ask)
-			const cliMsg: ExtensionChatMessage = {
+			const _cliMsg: ExtensionChatMessage = {
 				ts: 2000,
 				type: "ask",
 				ask: "command_output",
