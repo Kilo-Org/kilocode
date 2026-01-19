@@ -8,12 +8,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { handleStdinMessage, type StdinMessage, type StdinMessageHandlers } from "../useStdinJsonHandler.js"
 
-// Mock the processImagePaths function
-vi.mock("../../../media/images.js", () => ({
-	processImagePaths: vi.fn().mockImplementation(async (paths: string[]) => ({
-		images: paths.map((p) => `data:image/png;base64,mock-${p.replace(/[^a-zA-Z0-9]/g, "")}`),
-		errors: [],
-	})),
+// Mock the image-utils module which is used by useStdinJsonHandler
+vi.mock("../../../media/image-utils.js", () => ({
+	convertImagesToDataUrls: vi.fn().mockImplementation(async (images: string[] | undefined) => {
+		if (!images || images.length === 0) return undefined
+		return images.map((img) =>
+			img.startsWith("data:") ? img : `data:image/png;base64,mock-${img.replace(/[^a-zA-Z0-9]/g, "")}`,
+		)
+	}),
 }))
 
 describe("handleStdinMessage", () => {

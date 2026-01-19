@@ -1,8 +1,6 @@
 import * as vscode from "vscode"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import * as os from "node:os"
-import { randomUUID } from "node:crypto"
 import { t } from "i18next"
 import { AgentRegistry } from "./AgentRegistry"
 import { renameMapKey } from "./mapUtils"
@@ -47,20 +45,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { fetchAvailableModels, type ModelsApiResponse } from "./CliModelsFetcher"
 import { startSessionMessageSchema, type StartSessionMessage } from "./types"
 import { openImage } from "../../../integrations/misc/image-handler"
-
-/**
- * Message format for sending responses to the CLI via stdin.
- * Used for user messages, approval responses, and other interactions.
- */
-interface StdinAskResponseMessage {
-	type: "askResponse"
-	askResponse: "messageResponse" | "yesButtonClicked" | "noButtonClicked"
-	text: string
-	images?: string[]
-}
-
-/** Directory name for temporary image files */
-const TEMP_IMAGES_DIR = "kilo-code-agent-manager-images"
+import { TempImageManager, type StdinAskResponseMessage } from "./TempImageManager"
 
 /**
  * AgentManagerProvider
@@ -94,6 +79,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private availableModels: ModelsApiResponse | null = null
 	// Flag to track if models are being fetched
 	private fetchingModels: boolean = false
+	// Manages temporary image files for Agent Manager sessions
+	private tempImageManager: TempImageManager
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -103,6 +90,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
 		this.terminalManager = new SessionTerminalManager(this.registry, this.outputChannel)
+		this.tempImageManager = new TempImageManager(this.outputChannel)
 
 		// Initialize currentGitUrl from workspace
 		void this.initializeCurrentGitUrl()
@@ -195,80 +183,18 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Save base64 data URL images to temp files and return file paths.
-	 * Images are saved to a temp directory and cleaned up when the extension deactivates.
+	 * Delegates to TempImageManager.
 	 */
 	private async saveImagesToTempFiles(dataUrls: string[]): Promise<string[]> {
-		if (!dataUrls || dataUrls.length === 0) {
-			return []
-		}
-
-		const tempDir = path.join(os.tmpdir(), TEMP_IMAGES_DIR)
-
-		// Ensure temp directory exists
-		await fs.promises.mkdir(tempDir, { recursive: true })
-
-		const savedPaths: string[] = []
-
-		for (const dataUrl of dataUrls) {
-			try {
-				// Parse data URL: data:image/png;base64,<data>
-				const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/)
-				if (!match) {
-					this.outputChannel.appendLine(`[AgentManager] Invalid image data URL format`)
-					continue
-				}
-
-				const [, format, base64Data] = match
-				const ext = format === "jpeg" ? "jpg" : format
-				const filename = `clipboard-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`
-				const filepath = path.join(tempDir, filename)
-
-				// Write the image file
-				const buffer = Buffer.from(base64Data, "base64")
-				await fs.promises.writeFile(filepath, buffer)
-
-				savedPaths.push(filepath)
-				this.outputChannel.appendLine(`[AgentManager] Saved image to temp file: ${filepath}`)
-			} catch (error) {
-				this.outputChannel.appendLine(`[AgentManager] Failed to save image: ${error}`)
-			}
-		}
-
-		return savedPaths
+		return this.tempImageManager.saveImagesToTempFiles(dataUrls)
 	}
 
 	/**
 	 * Build a StdinAskResponseMessage with optional image support.
-	 * Handles saving images to temp files and attaching paths to the message.
+	 * Delegates to TempImageManager.
 	 */
 	private async buildAskResponseMessage(content: string, images?: string[]): Promise<StdinAskResponseMessage> {
-		const message: StdinAskResponseMessage = {
-			type: "askResponse",
-			askResponse: "messageResponse",
-			text: content,
-		}
-
-		if (images && images.length > 0) {
-			const imagePaths = await this.saveImagesToTempFiles(images)
-			if (imagePaths.length > 0) {
-				message.images = imagePaths
-			}
-		}
-
-		return message
-	}
-
-	/**
-	 * Clean up temporary image files created during the session.
-	 */
-	private async cleanupTempImages(): Promise<void> {
-		const tempDir = path.join(os.tmpdir(), TEMP_IMAGES_DIR)
-		try {
-			await fs.promises.rm(tempDir, { recursive: true, force: true })
-			this.outputChannel.appendLine(`[AgentManager] Cleaned up temp images directory`)
-		} catch {
-			// Directory may not exist, ignore
-		}
+		return this.tempImageManager.buildAskResponseMessage(content, images)
 	}
 
 	/**
@@ -1621,7 +1547,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.firstApiReqStarted.clear()
 
 		// Clean up temporary image files
-		void this.cleanupTempImages()
+		void this.tempImageManager.cleanup()
 
 		this.panel?.dispose()
 		this.disposables.forEach((d) => d.dispose())

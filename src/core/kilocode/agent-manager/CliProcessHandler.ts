@@ -326,7 +326,7 @@ export class CliProcessHandler {
 
 	/**
 	 * Send the initial prompt with images via stdin as a newTask message.
-	 * This is used when images are present, since images can't be passed via CLI args.
+	 * Images are passed as file paths in the JSON message, which the CLI converts to data URLs.
 	 */
 	private sendInitialPromptWithImages(proc: ChildProcess, prompt: string, images: string[]): void {
 		// Small delay to ensure CLI is ready to receive stdin
