@@ -6,8 +6,9 @@
 import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
-import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { sendAskResponseAtom, sendTaskAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
 import { logs } from "../../services/logs.js"
+import { convertImagesToDataUrls } from "../../media/image-utils.js"
 
 export interface StdinMessage {
 	type: string
@@ -19,6 +20,7 @@ export interface StdinMessage {
 
 export interface StdinMessageHandlers {
 	sendAskResponse: (params: { response: "messageResponse"; text?: string; images?: string[] }) => Promise<void>
+	sendTask: (params: { text: string; images?: string[] }) => Promise<void>
 	cancelTask: () => Promise<void>
 	respondToTool: (params: {
 		response: "yesButtonClicked" | "noButtonClicked"
@@ -30,28 +32,79 @@ export interface StdinMessageHandlers {
 /**
  * Handles a parsed stdin message by calling the appropriate handler.
  * Exported for testing purposes.
+ *
+ * Images can be provided as either:
+ * - Data URLs (e.g., "data:image/png;base64,...")
+ * - File paths (e.g., "/tmp/image.png" or "./screenshot.png")
+ *
+ * File paths are automatically converted to data URLs before being sent.
  */
+/**
+ * Output a JSON message to stdout for the Agent Manager to consume.
+ * Used for error notifications and other structured output.
+ */
+function outputJsonMessage(message: Record<string, unknown>): void {
+	console.log(JSON.stringify(message))
+}
+
 export async function handleStdinMessage(
 	message: StdinMessage,
 	handlers: StdinMessageHandlers,
 ): Promise<{ handled: boolean; error?: string }> {
 	switch (message.type) {
-		case "askResponse":
+		case "newTask": {
+			// Start a new task with prompt and optional images
+			// This allows the Agent Manager to send the initial prompt via stdin
+			// instead of CLI args, enabling images to be included with the first message
+			// Images are converted from file paths to data URLs if needed
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
+			await handlers.sendTask({
+				text: message.text || "",
+				...(result.images.length > 0 && { images: result.images }),
+			})
+			return { handled: true }
+		}
+
+		case "askResponse": {
 			// Handle ask response (user message, approval response, etc.)
+			// Images are converted from file paths to data URLs if needed
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
+			const images = result.images.length > 0 ? result.images : undefined
 			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
 				await handlers.respondToTool({
 					response: message.askResponse,
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			} else {
 				await handlers.sendAskResponse({
 					response: (message.askResponse as "messageResponse") ?? "messageResponse",
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			}
 			return { handled: true }
+		}
 
 		case "cancelTask":
 			await handlers.cancelTask()
@@ -80,6 +133,7 @@ export async function handleStdinMessage(
 
 export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
+	const sendTask = useSetAtom(sendTaskAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
 
@@ -98,6 +152,9 @@ export function useStdinJsonHandler(enabled: boolean) {
 		const handlers: StdinMessageHandlers = {
 			sendAskResponse: async (params) => {
 				await sendAskResponse(params)
+			},
+			sendTask: async (params) => {
+				await sendTask(params)
 			},
 			cancelTask: async () => {
 				await cancelTask()
@@ -142,5 +199,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 		return () => {
 			rl.close()
 		}
-	}, [enabled, sendAskResponse, cancelTask, respondToTool])
+	}, [enabled, sendAskResponse, sendTask, cancelTask, respondToTool])
 }

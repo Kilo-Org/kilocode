@@ -60,12 +60,17 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
 			const items = await loader.loadAllItems()
 
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - now 3 calls (modes, mcps, skills)
 			expect(mockedAxios.get).toHaveBeenCalledWith(
 				"https://test.api.com/api/marketplace/modes",
 				expect.objectContaining({
@@ -126,16 +131,21 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
 			// First call - should hit API
 			const items1 = await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - now 3 calls (modes, mcps, skills)
 
 			// Second call - should use cache
 			const items2 = await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2) // Still 2, not 4
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - still 3, not 6
 
 			expect(items1).toEqual(items2)
 		})
@@ -162,6 +172,11 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
@@ -207,6 +222,11 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: validMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
@@ -237,6 +257,11 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
@@ -282,23 +307,28 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
 			// First call
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - now 3 calls (modes, mcps, skills)
 
 			// Second call - should use cache
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - still 3, not 6
 
 			// Clear cache
 			loader.clearCache()
 
 			// Third call - should hit API again
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(4)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(6) // kilocode_change - 3 more calls
 		})
 	})
 
@@ -319,6 +349,11 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/mcps")) {
 					return Promise.resolve({ data: mockMcpsYaml })
 				}
+				// kilocode_change start
+				if (url.includes("/skills")) {
+					return Promise.resolve({ data: "items: []" })
+				}
+				// kilocode_change end
 				return Promise.reject(new Error("Unknown URL"))
 			})
 
@@ -330,18 +365,18 @@ describe("RemoteConfigLoader", () => {
 
 			// First call
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - now 3 calls (modes, mcps, skills)
 
 			// Second call immediately - should use cache
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3) // kilocode_change - still 3, not 6
 
 			// Advance time by 6 minutes (360,000 ms)
 			currentTime += 6 * 60 * 1000
 
 			// Third call - cache should be expired
 			await loader.loadAllItems()
-			expect(mockedAxios.get).toHaveBeenCalledTimes(4)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(6) // kilocode_change - 3 more calls
 
 			// Restore original Date.now
 			Date.now = originalDateNow

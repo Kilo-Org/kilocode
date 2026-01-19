@@ -37,8 +37,10 @@ export function ensureRawMode(): () => void {
 	if (!wasRawMode) {
 		try {
 			process.stdin.setRawMode(true)
-		} catch {
-			// If setting raw mode fails, just continue without it
+		} catch (error) {
+			// If setting raw mode fails, log and continue without it
+			// The CLI will fall back to non-interactive mode
+			console.debug("Failed to enable terminal raw mode:", error)
 			return () => {}
 		}
 	}
@@ -48,8 +50,9 @@ export function ensureRawMode(): () => void {
 		if (!wasRawMode && process.stdin.isTTY && typeof process.stdin.setRawMode === "function") {
 			try {
 				process.stdin.setRawMode(false)
-			} catch {
-				// Ignore errors during cleanup
+			} catch (error) {
+				// Log but don't throw - terminal state restoration is best-effort
+				console.debug("Failed to restore terminal raw mode:", error)
 			}
 		}
 	}

@@ -297,7 +297,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		showAutoApproveMenu: false, // kilocode_change
 		enableSubfolderRules: false, // Default to disabled - must be enabled to load rules from subdirectories
 		renderContext: "sidebar",
-		maxReadFileLine: -1, // Default max read file line limit
+		maxReadFileLine: 500 /*kilocode_change*/, // Default max read file line limit
 		maxImageFileSize: 5, // Default max image file size in MB
 		maxTotalImageSize: 20, // Default max total image size in MB
 		pinnedApiConfigs: {}, // Empty object for pinned API configs

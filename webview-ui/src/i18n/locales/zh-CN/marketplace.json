@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "发现 marketplace 项目问题或有新项目建议？<0>在 GitHub 开启 issue</0> 告诉我们！"
+	},
+	"skills": {
+		"loading": "正在加载技能...",
+		"searchPlaceholder": "搜索技能...",
+		"allCategories": "全部",
+		"resultsCount": "找到 {{count}} 个技能",
+		"noResults": "未找到符合条件的技能",
+		"viewOnGitHub": "在 GitHub 上查看"
 	}
 }

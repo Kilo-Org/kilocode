@@ -157,9 +157,9 @@
 			"403": "Nicht autorisiert. Dein API-Schlüssel ist gültig, aber der Anbieter hat sich geweigert, diese Anfrage zu erfüllen.",
 			"429": "Zu viele Anfragen. Du wirst vom Anbieter rate-limitiert. Bitte warte ein wenig, bevor du den nächsten API-Aufruf machst.",
 			"500": "Fehler auf dem Server des Anbieters. Es stimmt etwas mit der Anbieterseite nicht, mit deiner Anfrage stimmt alles.",
-			"unknown": "Unbekannter API-Fehler. Bitte kontaktiere den Kilo Support.",
 			"connection": "Verbindungsfehler. Stelle sicher, dass du eine funktionierende Internetverbindung hast.",
-			"claudeCodeNotAuthenticated": "Du musst dich anmelden, um Claude Code zu verwenden. Gehe zu den Einstellungen und klicke auf \"Bei Claude Code anmelden\", um dich zu authentifizieren."
+			"claudeCodeNotAuthenticated": "Du musst dich anmelden, um Claude Code zu verwenden. Gehe zu den Einstellungen und klicke auf \"Bei Claude Code anmelden\", um dich zu authentifizieren.",
+			"unknown": "Unbekannter API-Fehler, klicke auf Details für weitere Informationen."
 		}
 	},
 	"checkpoint": {

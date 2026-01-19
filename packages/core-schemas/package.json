@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/core-schemas",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"exports": {
@@ -21,7 +21,7 @@
 		"clean": "rimraf dist .turbo"
 	},
 	"dependencies": {
-		"zod": "^3.25.61"
+		"zod": "^4.3.5"
 	},
 	"peerDependencies": {
 		"@roo-code/types": "workspace:^"
