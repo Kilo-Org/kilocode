@@ -414,7 +414,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// Multi-version mode: spawn sessions sequentially
 		// We need to wait for each pending session to clear before starting the next
-		// Note: Images are only sent to the first session in multi-version mode
 		this.outputChannel.appendLine(`[AgentManager] Starting ${configs.length} versions in multi-version mode`)
 
 		for (let i = 0; i < configs.length; i++) {
@@ -426,7 +425,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
-				images: i === 0 ? imagePaths : undefined, // Only send images to first version
+				images: imagePaths, // Send images to all versions
 			})
 
 			// Wait for the pending session to transition to active before spawning the next
