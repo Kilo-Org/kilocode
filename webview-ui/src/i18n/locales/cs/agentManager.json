@@ -88,8 +88,8 @@
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
 		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Přidat obrázek",
+		"removeImage": "Odebrat obrázek"
 	},
 	"status": {
 		"running": "běží",

@@ -87,8 +87,8 @@
 		"sendTitle": "Nachricht senden",
 		"resumeTitle": "Agent fortsetzen",
 		"hint": "Enter zum Senden, Shift+Enter für neue Zeile",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Bild hinzufügen",
+		"removeImage": "Bild entfernen"
 	},
 	"status": {
 		"running": "läuft",

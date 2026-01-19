@@ -87,8 +87,8 @@
 		"sendTitle": "傳送訊息",
 		"resumeTitle": "繼續代理",
 		"hint": "按 Enter 傳送，Shift+Enter 換行",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "新增圖片",
+		"removeImage": "移除圖片"
 	},
 	"status": {
 		"running": "執行中",

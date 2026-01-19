@@ -89,8 +89,8 @@
 		"sendTitle": "Отправить сообщение",
 		"resumeTitle": "Возобновить агента",
 		"hint": "Enter для отправки, Shift+Enter для новой строки",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Добавить изображение",
+		"removeImage": "Удалить изображение"
 	},
 	"status": {
 		"running": "выполняется",

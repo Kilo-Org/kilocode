@@ -87,8 +87,8 @@
 		"sendTitle": "Mesaj gönder",
 		"resumeTitle": "Ajanı devam ettir",
 		"hint": "Göndermek için Enter, yeni satır için Shift+Enter",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Resim ekle",
+		"removeImage": "Resmi kaldır"
 	},
 	"status": {
 		"running": "çalışıyor",

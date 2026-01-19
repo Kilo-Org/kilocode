@@ -89,8 +89,8 @@
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
 		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Dodaj obraz",
+		"removeImage": "Usuń obraz"
 	},
 	"status": {
 		"running": "działa",

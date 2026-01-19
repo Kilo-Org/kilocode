@@ -87,8 +87,8 @@
 		"sendTitle": "Bericht verzenden",
 		"resumeTitle": "Agent hervatten",
 		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Afbeelding toevoegen",
+		"removeImage": "Afbeelding verwijderen"
 	},
 	"status": {
 		"running": "actief",

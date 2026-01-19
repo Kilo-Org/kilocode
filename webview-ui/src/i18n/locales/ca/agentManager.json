@@ -87,8 +87,8 @@
 		"sendTitle": "Enviar missatge",
 		"resumeTitle": "Reprendre agent",
 		"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Afegir imatge",
+		"removeImage": "Eliminar imatge"
 	},
 	"status": {
 		"running": "en execució",

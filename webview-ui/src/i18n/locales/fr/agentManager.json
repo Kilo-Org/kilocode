@@ -87,8 +87,8 @@
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
 		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Ajouter une image",
+		"removeImage": "Supprimer l'image"
 	},
 	"status": {
 		"running": "en cours",

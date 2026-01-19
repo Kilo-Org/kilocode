@@ -87,8 +87,8 @@
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
 		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Thêm hình ảnh",
+		"removeImage": "Xóa hình ảnh"
 	},
 	"status": {
 		"running": "đang chạy",

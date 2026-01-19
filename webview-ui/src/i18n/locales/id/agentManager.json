@@ -87,8 +87,8 @@
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
 		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru",
-		"addImage": "Add image",
-		"removeImage": "Remove image"
+		"addImage": "Tambah gambar",
+		"removeImage": "Hapus gambar"
 	},
 	"status": {
 		"running": "berjalan",
