@@ -12,6 +12,8 @@ import {
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
 import { WorktreeManager, WorktreeError } from "./WorktreeManager"
+import { SetupScriptService } from "./SetupScriptService"
+import { SetupScriptRunner } from "./SetupScriptRunner"
 import { AgentTaskRunner, AgentTasks } from "./AgentTaskRunner"
 import { findKilocodeCli, type CliDiscoveryResult } from "./CliPathResolver"
 import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
@@ -75,6 +77,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private sendingMessageMap: Map<string, string> = new Map()
 	// Worktree manager for parallel mode sessions (lazy initialized)
 	private worktreeManager: WorktreeManager | undefined
+	// Setup script service for worktree initialization (lazy initialized)
+	private setupScriptService: SetupScriptService | undefined
 	// Cached available models from CLI (fetched on panel open)
 	private availableModels: ModelsApiResponse | null = null
 	// Flag to track if models are being fetched
@@ -336,6 +340,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.showTerminal":
 					this.terminalManager.showTerminal(message.sessionId as string)
 					break
+				case "agentManager.configureSetupScript":
+					void this.configureSetupScript()
+					break
 				case "agentManager.sessionShare":
 					SessionManager.init()
 						?.shareSession(message.sessionId as string)
@@ -507,6 +514,60 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Get or create SetupScriptService for the current workspace
+	 */
+	private getSetupScriptService(): SetupScriptService {
+		if (!this.setupScriptService) {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+			if (!workspaceFolder) {
+				throw new Error("No workspace folder open")
+			}
+			this.setupScriptService = new SetupScriptService(workspaceFolder)
+		}
+		return this.setupScriptService
+	}
+
+	/**
+	 * Run the setup script for a new worktree session.
+	 * Non-blocking - script failures don't prevent session start.
+	 */
+	private async runSetupScriptForWorktree(worktreePath: string): Promise<void> {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		if (!workspaceFolder) {
+			return
+		}
+
+		try {
+			const setupScriptService = this.getSetupScriptService()
+			const runner = new SetupScriptRunner(this.outputChannel, setupScriptService)
+
+			await runner.runIfConfigured({
+				worktreePath,
+				repoPath: workspaceFolder,
+			})
+		} catch (error) {
+			// Non-blocking - log error but don't fail session start
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.outputChannel.appendLine(`[AgentManager] Setup script error (non-blocking): ${errorMsg}`)
+		}
+	}
+
+	/**
+	 * Open the setup script configuration in VS Code editor.
+	 * Creates a default template if no script exists.
+	 */
+	private async configureSetupScript(): Promise<void> {
+		try {
+			const setupScriptService = this.getSetupScriptService()
+			await setupScriptService.openInEditor()
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.outputChannel.appendLine(`[AgentManager] Failed to open setup script: ${errorMsg}`)
+			void vscode.window.showErrorMessage(`Failed to open setup script: ${errorMsg}`)
+		}
+	}
+
+	/**
 	 * Start a new agent session using the kilocode CLI
 	 * @param prompt - The task prompt for the agent
 	 */
@@ -565,6 +626,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 				return
 			}
 			effectiveWorkspace = worktreeInfo.path
+
+			// Run setup script for new worktree sessions (non-blocking)
+			// Only run for new sessions, not when resuming (existingBranch indicates resume)
+			if (!options.existingBranch) {
+				await this.runSetupScriptForWorktree(worktreeInfo.path)
+			}
 		}
 
 		await this.spawnCliWithCommonSetup(

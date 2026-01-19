@@ -14,7 +14,9 @@
 		"shareSession": "Udostępnij sesję",
 		"shareConfirmMessage": "Czy chcesz publicznie udostępnić migawkę tej sesji?",
 		"shareConfirmYes": "Tak",
-		"shareConfirmNo": "Nie"
+		"shareConfirmNo": "Nie",
+		"options": "Opcje",
+		"configureSetupScript": "Skrypt setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
