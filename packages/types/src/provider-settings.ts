@@ -55,6 +55,7 @@ export const dynamicProviders = [
 	"inception",
 	"synthetic",
 	"sap-ai-core",
+	"agentica",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -157,6 +158,7 @@ export const providerNames = [
 	"virtual-quota-fallback",
 	"synthetic",
 	"inception",
+	"agentica",
 	// kilocode_change end
 	"sambanova",
 	"vertex",
@@ -435,6 +437,14 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 })
 
 // kilocode_change start
+const agenticaSchema = baseProviderSettingsSchema.extend({
+	agenticaApiKey: z.string().optional(),
+	agenticaModelId: z.string().optional(),
+	agenticaBaseUrl: z.string().optional(),
+	agenticaEmail: z.string().optional(), // kilocode_change
+	agenticaPassword: z.string().optional(), // kilocode_change
+})
+
 const inceptionSchema = apiModelIdProviderModelSchema.extend({
 	inceptionLabsBaseUrl: z.string().optional(),
 	inceptionLabsApiKey: z.string().optional(),
@@ -570,6 +580,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
 	inceptionSchema.merge(z.object({ apiProvider: z.literal("inception") })),
+	agenticaSchema.merge(z.object({ apiProvider: z.literal("agentica") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	basetenSchema.merge(z.object({ apiProvider: z.literal("baseten") })),
@@ -610,6 +621,7 @@ export const providerSettingsSchema = z.object({
 	...syntheticSchema.shape,
 	...ovhcloudSchema.shape,
 	...inceptionSchema.shape,
+	...agenticaSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -677,6 +689,7 @@ export const modelIdKeys = [
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
 	"sapAiCoreModelId", // kilocode_change
+	"agenticaModelId", // kilocode_change
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -739,6 +752,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	roo: "apiModelId",
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	"virtual-quota-fallback": "apiModelId",
+	agentica: "agenticaModelId", // kilocode_change
 }
 
 /**
@@ -884,6 +898,7 @@ export const MODELS_BY_PROVIDER: Record<
 	inception: { id: "inception", label: "Inception", models: [] },
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
+	agentica: { id: "agentica", label: "Agentica", models: [] }, // kilocode_change
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },

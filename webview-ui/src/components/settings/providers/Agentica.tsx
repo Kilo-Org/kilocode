@@ -5,22 +5,12 @@ import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
 import { securePasswordStorage } from "@/utils/passwordStorage"
 import { PlansView } from "../PlansView"
-// Inside the Agentica component, add this state
-const [showPlansView, setShowPlansView] = useState(false)
+
 type AgenticaProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	uriScheme?: string
 }
-const handlePlansViewClose = useCallback(() => {
-    setShowPlansView(false)
-    // Refresh subscription data when closing the plans view
-    if (apiConfiguration.agenticaApiKey) {
-        fetchSubscriptionWithApiKey()
-    } else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
-        fetchSubscription()
-    }
-}, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword])
 
 type DeviceAuthStatus = "idle" | "pending" | "success" | "error"
 
@@ -33,6 +23,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 	const [deviceAuthVerificationUrl, setDeviceAuthVerificationUrl] = useState<string>()
 	const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
 	const [deviceAuthError, setDeviceAuthError] = useState<string>()
+	const [showPlansView, setShowPlansView] = useState(false)
 
 	// Load stored password on component mount
 	useEffect(() => {
@@ -93,15 +84,6 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 		return () => window.removeEventListener("message", handleMessage)
 	}, [])
 
-	// Fetch subscription status when credentials are provided (API key or email/password)
-	useEffect(() => {
-		if (apiConfiguration.agenticaApiKey) {
-			fetchSubscriptionWithApiKey()
-		} else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
-			fetchSubscription()
-		}
-	}, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword])
-
 	const fetchSubscription = async () => {
 		if (!apiConfiguration.agenticaEmail || !apiConfiguration.agenticaPassword) return
 		
@@ -121,6 +103,21 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 			setLoading(false)
 		}
 	}
+
+	// Fetch subscription status when credentials are provided (API key or email/password)
+	useEffect(() => {
+		if (apiConfiguration.agenticaApiKey) {
+			fetchSubscriptionWithApiKey()
+		} else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
+			fetchSubscription()
+		}
+	}, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword])
+
+	const handlePlansViewClose = useCallback(() => {
+		setShowPlansView(false)
+		// Refresh subscription data when closing the plans view
+		fetchSubscription()
+	}, [fetchSubscription])
 
 	const fetchSubscriptionWithApiKey = async () => {
 		if (!apiConfiguration.agenticaApiKey) return
@@ -146,11 +143,11 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 	const handleDeviceAuth = useCallback(() => {
 		setDeviceAuthStatus("pending")
 		setDeviceAuthError(undefined)
-		vscode.postMessage({ type: "startAgenticaDeviceAuth" })
+		vscode.postMessage({ type: "startDeviceAuth" })
 	}, [])
 
 	const handleCancelDeviceAuth = useCallback(() => {
-		vscode.postMessage({ type: "cancelAgenticaDeviceAuth" })
+		vscode.postMessage({ type: "cancelDeviceAuth" })
 		// Reset state immediately for better UX
 		setDeviceAuthStatus("idle")
 		setDeviceAuthCode(undefined)
