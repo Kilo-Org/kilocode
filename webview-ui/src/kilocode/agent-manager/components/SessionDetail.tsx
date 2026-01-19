@@ -403,7 +403,8 @@ function NewAgentForm() {
 						maxRows={12}
 						style={{
 							paddingTop: "12px",
-							paddingBottom: "40px",
+							// Add extra padding when images are present to make room for the image row
+							paddingBottom: hasImages ? "76px" : "40px",
 							paddingLeft: "16px",
 							paddingRight: "36px",
 						}}
