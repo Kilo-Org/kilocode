@@ -26,9 +26,9 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({ src, index, onRe
 			/>
 			<button
 				onClick={() => onRemove(index)}
-				className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-vscode-badge-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+				className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-vscode-button-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
 				aria-label={t("chatInput.removeImage")}>
-				<X size={8} className="text-vscode-foreground" />
+				<X size={8} className="text-vscode-button-foreground" />
 			</button>
 		</div>
 	)
