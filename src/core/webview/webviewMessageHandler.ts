@@ -1194,7 +1194,7 @@ export const webviewMessageHandler = async (
 					const { getOpenRouterModels } = await import("../../api/providers/fetchers/openrouter")
 					// If forceRefresh is true (manual Auto-fill click), flush cache first
 					if (message?.values?.forceRefresh) {
-						await flushModels("openrouter", true)
+						await flushModels({ provider: "openrouter" }, true)
 					}
 					const openRouterModels = await getOpenRouterModels()
 					modelInfo = openRouterModels[message.values.openAiModelId]
