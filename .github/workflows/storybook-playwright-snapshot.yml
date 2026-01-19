@@ -21,7 +21,7 @@ concurrency:
 env:
     DOCKER_BUILDKIT: 1
     COMPOSE_DOCKER_CLI_BUILD: 1
-    NODE_VERSION: 20.19.2
+    NODE_VERSION: 20.20.0
     PNPM_VERSION: 10.8.1
     SECRETS_SET: ${{ secrets.OPENROUTER_API_KEY != '' }}
     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

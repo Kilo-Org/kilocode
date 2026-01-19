@@ -6,7 +6,7 @@ import { z } from "zod"
 export const mcpToolSchema = z.object({
 	name: z.string(),
 	description: z.string().optional(),
-	inputSchema: z.record(z.unknown()).optional(),
+	inputSchema: z.record(z.string(), z.unknown()).optional(),
 })
 
 /**
@@ -29,7 +29,7 @@ export const mcpServerStatusSchema = z.enum(["connected", "connecting", "disconn
  */
 export const mcpServerSchema = z.object({
 	name: z.string(),
-	config: z.record(z.unknown()),
+	config: z.record(z.string(), z.unknown()),
 	status: mcpServerStatusSchema,
 	tools: z.array(mcpToolSchema).optional(),
 	resources: z.array(mcpResourceSchema).optional(),
