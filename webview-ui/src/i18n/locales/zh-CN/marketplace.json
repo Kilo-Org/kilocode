@@ -147,6 +147,10 @@
 			"title": "删除 MCP 服务器",
 			"message": "您确定要删除 MCP 服务器\"{{mcpName}}\"吗？"
 		},
+		"skill": {
+			"title": "删除技能",
+			"message": "您确定要删除技能\"{{skillName}}\"吗？"
+		},
 		"cancel": "取消",
 		"confirm": "删除"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "全部",
 		"resultsCount": "找到 {{count}} 个技能",
 		"noResults": "未找到符合条件的技能",
-		"viewOnGitHub": "在 GitHub 上查看"
+		"install": "安装",
+		"installTitle": "安装 {{name}} 技能",
+		"installing": "正在安装..."
 	}
 }

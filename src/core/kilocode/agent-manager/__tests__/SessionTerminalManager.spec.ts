@@ -55,11 +55,18 @@ describe("SessionTerminalManager", () => {
 	})
 
 	describe("showTerminal", () => {
-		it("shows warning when session does not exist", () => {
-			terminalManager.showTerminal("non-existent")
+		it("creates terminal with workspace path for remote-only session (not in registry)", () => {
+			// Remote-only sessions are sessions from cloud history that haven't been resumed yet
+			// They exist in the webview's Jotai state but not in the backend registry
+			terminalManager.showTerminal("remote-session-id")
 
-			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith("Session not found")
-			expect(vscode.window.createTerminal).not.toHaveBeenCalled()
+			expect(vscode.window.createTerminal).toHaveBeenCalledWith({
+				cwd: MOCK_WORKSPACE_PATH,
+				name: "Agent: Session",
+				iconPath: expect.objectContaining({ id: "terminal" }),
+			})
+			expect(mockTerminal.show).toHaveBeenCalled()
+			expect(vscode.window.showWarningMessage).not.toHaveBeenCalled()
 		})
 
 		it("creates terminal with workspace path for local session (no worktree)", () => {

@@ -9,6 +9,7 @@
 		"tokens": "Token",
 		"cache": "Cache",
 		"apiCost": "Biaya API",
+		"changes": "Perubahan",
 		"size": "Ukuran",
 		"condenseContext": "Kondensasi konteks secara cerdas",
 		"contextWindow": "Panjang Konteks",

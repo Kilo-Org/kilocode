@@ -1141,6 +1141,10 @@
 		"showTimestamps": {
 			"label": "显示时间戳",
 			"description": "在聊天视图中为每条消息显示时间戳"
+		},
+		"showDiffStats": {
+			"label": "显示差异统计",
+			"description": "在任务标题中显示添加/删除的行数统计"
 		}
 	},
 	"ghost": {
