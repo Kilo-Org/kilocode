@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Znalazłeś problem z elementem marketplace lub masz sugestie dotyczące nowych elementów? <0>Otwórz issue na GitHub</0>, aby nam o tym powiedzieć!"
+	},
+	"skills": {
+		"loading": "Ładowanie umiejętności...",
+		"searchPlaceholder": "Szukaj umiejętności...",
+		"allCategories": "Wszystkie",
+		"resultsCount": "Znaleziono {{count}} umiejętności",
+		"noResults": "Nie znaleziono umiejętności pasujących do twoich kryteriów",
+		"viewOnGitHub": "Zobacz na GitHubie"
 	}
 }
