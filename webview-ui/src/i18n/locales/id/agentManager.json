@@ -86,7 +86,9 @@
 		"createPRTitle": "Buat pull request",
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
-		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"
+		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru",
+		"addImage": "Tambah gambar",
+		"removeImage": "Hapus gambar"
 	},
 	"status": {
 		"running": "berjalan",

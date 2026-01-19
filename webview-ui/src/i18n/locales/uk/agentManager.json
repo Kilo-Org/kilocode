@@ -88,7 +88,9 @@
 		"createPRTitle": "Створити pull request",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
-		"hint": "Enter для надсилання, Shift+Enter для нового рядка"
+		"hint": "Enter для надсилання, Shift+Enter для нового рядка",
+		"addImage": "Додати зображення",
+		"removeImage": "Видалити зображення"
 	},
 	"status": {
 		"running": "виконується",

@@ -44,6 +44,8 @@ import { WorkspaceGitService } from "./WorkspaceGitService"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { fetchAvailableModels, type ModelsApiResponse } from "./CliModelsFetcher"
 import { startSessionMessageSchema, type StartSessionMessage } from "./types"
+import { openImage } from "../../../integrations/misc/image-handler"
+import { TempImageManager, type StdinAskResponseMessage } from "./TempImageManager"
 
 /**
  * AgentManagerProvider
@@ -77,6 +79,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private availableModels: ModelsApiResponse | null = null
 	// Flag to track if models are being fetched
 	private fetchingModels: boolean = false
+	// Manages temporary image files for Agent Manager sessions
+	private tempImageManager: TempImageManager
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -86,6 +90,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
 		this.terminalManager = new SessionTerminalManager(this.registry, this.outputChannel)
+		this.tempImageManager = new TempImageManager(this.outputChannel)
 
 		// Initialize currentGitUrl from workspace
 		void this.initializeCurrentGitUrl()
@@ -177,6 +182,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Save base64 data URL images to temp files and return file paths.
+	 * Delegates to TempImageManager.
+	 */
+	private async saveImagesToTempFiles(dataUrls: string[]): Promise<string[]> {
+		return this.tempImageManager.saveImagesToTempFiles(dataUrls)
+	}
+
+	/**
+	 * Build a StdinAskResponseMessage with optional image support.
+	 * Delegates to TempImageManager.
+	 */
+	private async buildAskResponseMessage(content: string, images?: string[]): Promise<StdinAskResponseMessage> {
+		return this.tempImageManager.buildAskResponseMessage(content, images)
+	}
+
+	/**
 	 * Open or focus the Agent Manager panel
 	 */
 	public async openPanel(): Promise<void> {
@@ -265,6 +286,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 						message.sessionId as string,
 						message.content as string,
 						message.sessionLabel as string | undefined,
+						message.images as string[] | undefined,
 					)
 					break
 				case "agentManager.messageQueued":
@@ -273,10 +295,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 						message.messageId as string,
 						message.content as string,
 						message.sessionLabel as string | undefined,
+						message.images as string[] | undefined,
 					)
 					break
 				case "agentManager.resumeSession":
-					void this.resumeSession(message.sessionId as string, message.content as string)
+					void this.resumeSession(
+						message.sessionId as string,
+						message.content as string,
+						message.images as string[] | undefined,
+					)
 					break
 				case "agentManager.cancelSession":
 					void this.cancelSession(message.sessionId as string)
@@ -325,6 +352,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 							vscode.window.showErrorMessage(`Failed to share session: ${errorMessage}`)
 						})
 					break
+				case "openImage":
+					// Handle image click from ImageThumbnail component
+					void openImage(message.text as string)
+					break
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Error handling message: ${error}`)
@@ -349,7 +380,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		const validatedMessage: StartSessionMessage = parseResult.data
-		const { prompt, parallelMode = false, existingBranch, model } = validatedMessage
+		const { prompt, parallelMode = false, existingBranch, model, images } = validatedMessage
+
+		// Save images to temp files if provided
+		let imagePaths: string[] | undefined
+		if (images && images.length > 0) {
+			imagePaths = await this.saveImagesToTempFiles(images)
+			this.outputChannel.appendLine(`[AgentManager] Saved ${imagePaths.length} images for new session`)
+		}
 
 		// Clamp versions to valid range to prevent runaway process spawning
 		const rawVersions = validatedMessage.versions ?? 1
@@ -369,6 +407,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				images: imagePaths,
 			})
 			return
 		}
@@ -386,6 +425,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				images: imagePaths, // Send images to all versions
 			})
 
 			// Wait for the pending session to transition to active before spawning the next
@@ -477,6 +517,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			labelOverride?: string
 			existingBranch?: string
 			model?: string
+			images?: string[] // Image file paths to include with the initial prompt
 		},
 	): Promise<void> {
 		if (!prompt) {
@@ -536,6 +577,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				worktreeInfo,
 				effectiveWorkspace,
 				model: options?.model,
+				images: options?.images, // Images are sent with prompt via stdin newTask message
 			},
 			onSetupFailed,
 		)
@@ -589,6 +631,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			effectiveWorkspace?: string
 			model?: string
+			images?: string[] // Image file paths to include with the initial prompt
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
@@ -984,12 +1027,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	/**
 	 * Send a message to a session's stdin (for agent instructions)
 	 */
-	private async sendMessageToStdin(sessionId: string, content: string): Promise<void> {
-		const message = {
-			type: "askResponse",
-			askResponse: "messageResponse",
-			text: content,
-		}
+	private async sendMessageToStdin(sessionId: string, content: string, images?: string[]): Promise<void> {
+		const message = await this.buildAskResponseMessage(content, images)
 		await this.processHandler.writeToStdin(sessionId, message)
 	}
 
@@ -1010,19 +1049,19 @@ export class AgentManagerProvider implements vscode.Disposable {
 	/**
 	 * Send a follow-up message to a running agent session via stdin.
 	 */
-	public async sendMessage(sessionId: string, content: string, sessionLabel?: string): Promise<void> {
+	public async sendMessage(
+		sessionId: string,
+		content: string,
+		sessionLabel?: string,
+		images?: string[],
+	): Promise<void> {
 		if (!this.processHandler.hasStdin(sessionId)) {
 			// Session is not running - ignore the message
 			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, ignoring follow-up message`)
 			return
 		}
 
-		const message = {
-			type: "askResponse",
-			askResponse: "messageResponse",
-			text: content,
-		}
-
+		const message = await this.buildAskResponseMessage(content, images)
 		await this.safeWriteToStdin(sessionId, message, "message")
 	}
 
@@ -1035,13 +1074,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 		messageId: string,
 		content: string,
 		_sessionLabel?: string,
+		images?: string[],
 	): Promise<void> {
 		// Validate the session and message prerequisites
 		const validationError = this.validateMessagePrerequisites(sessionId, messageId)
 		if (validationError) return
 
 		// Attempt to send the message
-		await this.sendQueuedMessage(sessionId, messageId, content)
+		await this.sendQueuedMessage(sessionId, messageId, content, images)
 	}
 
 	/**
@@ -1070,18 +1110,18 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Send a validated queued message to the CLI.
 	 * Handles marking as sending, actual send, and error handling.
 	 */
-	private async sendQueuedMessage(sessionId: string, messageId: string, content: string): Promise<void> {
+	private async sendQueuedMessage(
+		sessionId: string,
+		messageId: string,
+		content: string,
+		images?: string[],
+	): Promise<void> {
 		// Mark as sending
 		this.sendingMessageMap.set(sessionId, messageId)
 		this.notifyMessageStatus(sessionId, messageId, "sending")
 
 		try {
-			const message = {
-				type: "askResponse",
-				askResponse: "messageResponse",
-				text: content,
-			}
-
+			const message = await this.buildAskResponseMessage(content, images)
 			await this.safeWriteToStdin(sessionId, message, "message")
 			this.log(sessionId, `Message ${messageId} sent successfully`)
 			this.notifyMessageStatus(sessionId, messageId, "sent")
@@ -1116,7 +1156,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	/**
 	 * Resume a completed session by spawning a new CLI process with --session flag.
 	 */
-	public async resumeSession(sessionId: string, content: string): Promise<void> {
+	public async resumeSession(sessionId: string, content: string, images?: string[]): Promise<void> {
 		const session = this.registry.getSession(sessionId)
 		if (!session) {
 			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not found, cannot resume`)
@@ -1125,8 +1165,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// If session is still running, send as regular message instead
 		if (this.processHandler.hasStdin(sessionId)) {
-			await this.sendMessage(sessionId, content)
+			await this.sendMessage(sessionId, content, undefined, images)
 			return
+		}
+
+		// Save images to temp files if provided (for the initial prompt via stdin newTask)
+		let imagePaths: string[] | undefined
+		if (images && images.length > 0) {
+			imagePaths = await this.saveImagesToTempFiles(images)
+			this.outputChannel.appendLine(`[AgentManager] Saved ${imagePaths.length} images for resumed session`)
 		}
 
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
@@ -1141,6 +1188,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					gitUrl: session.gitUrl,
 					worktreeInfo,
 					effectiveWorkspace: worktreeInfo.path,
+					images: imagePaths, // Images sent with prompt via stdin newTask message
 				})
 				return
 			}
@@ -1152,6 +1200,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			sessionId, // This triggers --session=<id> flag
 			parallelMode: session.parallelMode?.enabled,
 			gitUrl: session.gitUrl,
+			images: imagePaths, // Images sent with prompt via stdin newTask message
 		})
 	}
 
@@ -1495,6 +1544,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.terminalManager.dispose()
 		this.sessionMessages.clear()
 		this.firstApiReqStarted.clear()
+
+		// Clean up temporary image files
+		void this.tempImageManager.cleanup()
 
 		this.panel?.dispose()
 		this.disposables.forEach((d) => d.dispose())

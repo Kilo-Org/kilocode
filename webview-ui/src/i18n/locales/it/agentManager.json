@@ -86,7 +86,9 @@
 		"createPRTitle": "Crea pull request",
 		"sendTitle": "Invia messaggio",
 		"resumeTitle": "Riprendi agente",
-		"hint": "Premi Invio per inviare, Shift+Invio per nuova riga"
+		"hint": "Premi Invio per inviare, Shift+Invio per nuova riga",
+		"addImage": "Aggiungi immagine",
+		"removeImage": "Rimuovi immagine"
 	},
 	"status": {
 		"running": "in esecuzione",
