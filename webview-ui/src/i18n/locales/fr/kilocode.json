@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Ces modes sont disponibles auprès de la communauté. Cliquez <1>ici</1> pour modifier vos propres modes personnalisés."
+		},
+		"skills": {
+			"description": "Parcourez et découvrez des compétences de la communauté. Les compétences fournissent des instructions spécialisées pour des tâches spécifiques."
 		}
 	},
 	"modes": {

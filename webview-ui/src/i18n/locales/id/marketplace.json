@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Menemukan masalah dengan item marketplace atau punya saran untuk yang baru? <0>Buka GitHub issue</0> untuk memberi tahu kami!"
+	},
+	"skills": {
+		"loading": "Memuat skill...",
+		"searchPlaceholder": "Cari skill...",
+		"allCategories": "Semua",
+		"resultsCount": "{{count}} skill ditemukan",
+		"noResults": "Tidak ada skill yang cocok dengan kriteria Anda",
+		"viewOnGitHub": "Lihat di GitHub"
 	}
 }

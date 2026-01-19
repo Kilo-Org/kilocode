@@ -86,7 +86,9 @@
 		"createPRTitle": "Pull request बनाएं",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
-		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"
+		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter",
+		"addImage": "छवि जोड़ें",
+		"removeImage": "छवि हटाएं"
 	},
 	"status": {
 		"running": "चल रहा है",

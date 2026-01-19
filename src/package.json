@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.148.0",
+	"version": "4.148.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -11,7 +11,7 @@
 	},
 	"engines": {
 		"vscode": "^1.84.0",
-		"node": "20.19.2"
+		"node": "20.20.0"
 	},
 	"extensionKind": [
 		"workspace"

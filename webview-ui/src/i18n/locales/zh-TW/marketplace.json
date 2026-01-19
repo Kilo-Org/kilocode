@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "發現市集項目有問題或有新建議嗎？<0>到 GitHub 開個 issue</0> 告訴我們！"
+	},
+	"skills": {
+		"loading": "正在載入技能...",
+		"searchPlaceholder": "搜尋技能...",
+		"allCategories": "全部",
+		"resultsCount": "找到 {{count}} 個技能",
+		"noResults": "找不到符合條件的技能",
+		"viewOnGitHub": "在 GitHub 上檢視"
 	}
 }
