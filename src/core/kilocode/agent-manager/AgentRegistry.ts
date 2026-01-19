@@ -147,6 +147,18 @@ export class AgentRegistry {
 	}
 
 	/**
+	 * Update the mode for a session.
+	 */
+	public updateSessionMode(sessionId: string, mode: string): AgentSession | undefined {
+		const session = this.sessions.get(sessionId)
+		if (!session) {
+			return undefined
+		}
+		session.mode = mode
+		return session
+	}
+
+	/**
 	 * Update parallel mode info on a session.
 	 */
 	public updateParallelModeInfo(

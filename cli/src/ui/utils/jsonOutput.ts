@@ -1,5 +1,5 @@
 /**
- * JSON output utilities for CI mode
+ * JSON output utilities for CI mode and JSON-IO protocol
  * Converts messages to JSON format for non-interactive output
  */
 
@@ -76,4 +76,13 @@ export function outputJsonMessage(unifiedMessage: UnifiedMessage): void {
 export function outputJsonMessages(messages: UnifiedMessage[]): void {
 	const jsonOutputs = messages.map(formatMessageAsJson)
 	console.log(JSON.stringify(jsonOutputs))
+}
+
+/**
+ * Output a raw JSON object to stdout for JSON-IO protocol communication.
+ * Used for bidirectional communication with the Agent Manager.
+ * @param message - Any JSON-serializable object with a 'type' field
+ */
+export function outputJsonIoMessage(message: Record<string, unknown>): void {
+	console.log(JSON.stringify(message))
 }

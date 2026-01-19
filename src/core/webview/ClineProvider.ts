@@ -3227,12 +3227,25 @@ export class ClineProvider
 
 	// Modes
 
-	public async getModes(): Promise<{ slug: string; name: string }[]> {
+	public async getModes(): Promise<
+		{ slug: string; name: string; description?: string; iconName?: string; source?: string }[]
+	> {
 		try {
 			const customModes = await this.customModesManager.getCustomModes()
-			return [...DEFAULT_MODES, ...customModes].map(({ slug, name }) => ({ slug, name }))
+			return [...DEFAULT_MODES, ...customModes].map(({ slug, name, roleDefinition, iconName, source }) => ({
+				slug,
+				name,
+				description: roleDefinition?.slice(0, 100), // Truncate for display
+				iconName,
+				source,
+			}))
 		} catch (error) {
-			return DEFAULT_MODES.map(({ slug, name }) => ({ slug, name }))
+			return DEFAULT_MODES.map(({ slug, name, roleDefinition, iconName }) => ({
+				slug,
+				name,
+				description: roleDefinition?.slice(0, 100),
+				iconName,
+			}))
 		}
 	}
 

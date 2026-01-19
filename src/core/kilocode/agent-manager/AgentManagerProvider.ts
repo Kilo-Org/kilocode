@@ -28,6 +28,7 @@ import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
 import type { ProviderSettings } from "@roo-code/types"
+import { DEFAULT_MODE_SLUG } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -163,6 +164,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 			},
 			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
 			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
+			onModeChanged: (sessionId, mode, previousMode) => {
+				this.outputChannel.appendLine(
+					`[AgentManager] Mode changed for session ${sessionId}: ${previousMode} -> ${mode}`,
+				)
+				// Update session mode in registry
+				this.registry.updateSessionMode(sessionId, mode)
+				// Notify webview of mode change
+				this.postMessage({
+					type: "agentManager.modeChanged",
+					sessionId,
+					mode,
+					previousMode,
+				})
+				// Also post updated state to ensure UI is in sync
+				this.postStateToWebview()
+			},
 		}
 
 		this.processHandler = new CliProcessHandler(this.registry, callbacks)
@@ -268,6 +285,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					this.postStateToWebview()
 					void this.fetchAndPostRemoteSessions()
 					void this.fetchAndPostAvailableModels()
+					void this.fetchAndPostAvailableModes()
 					break
 				case "agentManager.refreshModels":
 					void this.fetchAndPostAvailableModels(true)
@@ -356,6 +374,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 					// Handle image click from ImageThumbnail component
 					void openImage(message.text as string)
 					break
+				case "agentManager.setMode":
+					void this.setSessionMode(message.sessionId as string, message.mode as string)
+					break
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Error handling message: ${error}`)
@@ -380,7 +401,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		const validatedMessage: StartSessionMessage = parseResult.data
-		const { prompt, parallelMode = false, existingBranch, model, images } = validatedMessage
+		const { prompt, parallelMode = false, existingBranch, model, mode, images } = validatedMessage
 
 		// Save images to temp files if provided
 		let imagePaths: string[] | undefined
@@ -407,6 +428,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				mode,
 				images: imagePaths,
 			})
 			return
@@ -425,6 +447,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				mode,
 				images: imagePaths, // Send images to all versions
 			})
 
@@ -517,6 +540,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			labelOverride?: string
 			existingBranch?: string
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect")
 			images?: string[] // Image file paths to include with the initial prompt
 		},
 	): Promise<void> {
@@ -577,6 +601,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				worktreeInfo,
 				effectiveWorkspace,
 				model: options?.model,
+				mode: options?.mode,
 				images: options?.images, // Images are sent with prompt via stdin newTask message
 			},
 			onSetupFailed,
@@ -631,6 +656,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			effectiveWorkspace?: string
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect")
 			images?: string[] // Image file paths to include with the initial prompt
 		},
 		onSetupFailed?: () => void,
@@ -1066,6 +1092,26 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Set the mode for a running agent session via stdin.
+	 * This sends a setMode message to the CLI which updates the mode in the CLI's config.
+	 */
+	private async setSessionMode(sessionId: string, mode: string): Promise<void> {
+		if (!this.processHandler.hasStdin(sessionId)) {
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, cannot set mode`)
+			return
+		}
+
+		const message = { type: "setMode", mode }
+		try {
+			await this.processHandler.writeToStdin(sessionId, message)
+			this.outputChannel.appendLine(`[AgentManager] Set mode to ${mode} for session ${sessionId}`)
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : "Unknown error"
+			this.outputChannel.appendLine(`[AgentManager] Failed to set mode for session ${sessionId}: ${errorMsg}`)
+		}
+	}
+
+	/**
 	 * Handle a queued message from the webview.
 	 * Orchestrates validation, sending, and status notification.
 	 */
@@ -1417,6 +1463,41 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Fetch available modes from ClineProvider and post to webview
+	 */
+	private async fetchAndPostAvailableModes(): Promise<void> {
+		try {
+			const modes = await this.provider.getModes()
+			const currentMode = await this.provider.getMode()
+			this.outputChannel.appendLine(
+				`[AgentManager] Fetched ${modes.length} available modes, current: ${currentMode}`,
+			)
+
+			this.postMessage({
+				type: "agentManager.availableModes",
+				modes: modes.map((mode) => ({
+					slug: mode.slug,
+					name: mode.name,
+					description: mode.description,
+					iconName: mode.iconName,
+					source: mode.source as "global" | "project" | "organization" | undefined,
+				})),
+				currentMode,
+			})
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Error fetching modes: ${error instanceof Error ? error.message : String(error)}`,
+			)
+			// Send empty modes array on error
+			this.postMessage({
+				type: "agentManager.availableModes",
+				modes: [],
+				currentMode: DEFAULT_MODE_SLUG,
+			})
+		}
+	}
+
 	private async handleListBranches(): Promise<void> {
 		try {
 			const gitService = new WorkspaceGitService()
@@ -1454,6 +1535,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		const { localServerUrl, csp, reactRefreshScript } = viteConfig
 
+		// Include both shared base styles (index.css with codicons) and agent-manager specific styles
+		const baseStylesUri = getUri(webview, this.context.extensionUri, ["webview-ui", "build", "assets", "index.css"])
 		const stylesUri = getUri(webview, this.context.extensionUri, [
 			"webview-ui",
 			"build",
@@ -1470,6 +1553,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					<meta charset="utf-8">
 					<meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
 					<meta http-equiv="Content-Security-Policy" content="${csp.join("; ")}">
+					<link rel="stylesheet" type="text/css" href="${baseStylesUri}">
 					<link rel="stylesheet" type="text/css" href="${stylesUri}">
 					<title>Agent Manager</title>
 				</head>

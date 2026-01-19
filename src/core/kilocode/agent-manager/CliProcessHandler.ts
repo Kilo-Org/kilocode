@@ -7,6 +7,7 @@ import {
 	type WelcomeStreamEvent,
 	type KilocodeStreamEvent,
 	type KilocodePayload,
+	type ModeChangedStreamEvent,
 } from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
@@ -85,6 +86,7 @@ export interface CliProcessHandlerCallbacks {
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
+	onModeChanged?: (sessionId: string, mode: string, previousMode: string) => void // Called when mode changes during session
 }
 
 export class CliProcessHandler {
@@ -116,7 +118,11 @@ export class CliProcessHandler {
 		}
 	}
 
-	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings, shellPath?: string): NodeJS.ProcessEnv {
+	private buildEnvWithApiConfiguration(
+		apiConfiguration?: ProviderSettings,
+		shellPath?: string,
+		mode?: string,
+	): NodeJS.ProcessEnv {
 		const baseEnv = { ...process.env }
 
 		// On macOS/Linux, use the shell PATH to ensure CLI can access tools like git
@@ -134,13 +140,21 @@ export class CliProcessHandler {
 			(message) => this.debugLog(message),
 		)
 
-		return {
+		const env: NodeJS.ProcessEnv = {
 			...baseEnv,
 			...overrides,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",
 			KILO_PLATFORM: "agent-manager",
 		}
+
+		// Pass mode via environment variable if specified
+		if (mode) {
+			env.KILO_MODE = mode
+			this.debugLog(`Setting KILO_MODE=${mode}`)
+		}
+
+		return env
 	}
 
 	public spawnProcess(
@@ -161,6 +175,8 @@ export class CliProcessHandler {
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 					/** Model ID to use for this session (overrides CLI default) */
 					model?: string
+					/** Mode slug to use for this session (e.g., "code", "architect") */
+					mode?: string
 					/** Image paths to send with initial prompt (requires prompt to be sent via stdin) */
 					images?: string[]
 			  }
@@ -207,7 +223,7 @@ export class CliProcessHandler {
 			model: options?.model,
 			promptViaStdin: hasImages,
 		})
-		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath, options?.mode)
 
 		// On Windows, batch files must be launched via cmd.exe to handle paths with spaces reliably.
 		const isWindowsBatch =
@@ -553,6 +569,13 @@ export class CliProcessHandler {
 		// Find the session for this process
 		const sessionId = this.findSessionIdForProcess(proc)
 		if (sessionId) {
+			// Handle mode_changed event specially - notify callback
+			if (event.streamEventType === "mode_changed") {
+				const modeEvent = event as ModeChangedStreamEvent
+				this.debugLog(`Mode changed for session ${sessionId}: ${modeEvent.previousMode} -> ${modeEvent.mode}`)
+				this.callbacks.onModeChanged?.(sessionId, modeEvent.mode, modeEvent.previousMode)
+			}
+
 			onCliEvent(sessionId, event)
 			this.callbacks.onStateChanged()
 		}
