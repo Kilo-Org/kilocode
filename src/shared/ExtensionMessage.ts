@@ -199,6 +199,11 @@ export interface ExtensionMessage {
 		| "deviceAuthComplete" // kilocode_change: Device auth successful
 		| "deviceAuthFailed" // kilocode_change: Device auth failed
 		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
+		| "agenticaDeviceAuthStarted" // kilocode_change: Agentica GitHub device auth initiated
+		| "agenticaDeviceAuthPolling" // kilocode_change: Agentica GitHub device auth polling update
+		| "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub device auth successful
+		| "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub device auth failed
+		| "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub device auth cancelled
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 		| "claudeCodeRateLimits"
 		| "customToolsResult"
@@ -370,7 +375,6 @@ export interface ExtensionMessage {
 	deviceAuthError?: string
 	// kilocode_change end: Device auth data
 	tools?: SerializedCustomToolDefinition[] // For customToolsResult
-}
 
 export type ExtensionState = Pick<
 	GlobalSettings,

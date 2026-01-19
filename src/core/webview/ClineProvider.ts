@@ -118,7 +118,8 @@ import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
-import { GithubDeviceAuthService } from "../services/agentica/GithubDeviceAuthService" // kilocode_change
+import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService" // kilocode_change
+import { delay } from "../../utils/delay" // kilocode_change
 // kilocode_change end
 
 /**
@@ -139,6 +140,8 @@ interface PendingEditOperation {
 	timeoutId: NodeJS.Timeout
 	createdAt: number
 }
+
+export interface ClineProviderState extends ExtensionState {} // kilocode_change: exported view state shape
 
 export class ClineProvider
 	extends EventEmitter<TaskProviderEvents>
@@ -1783,7 +1786,7 @@ export class ClineProvider
 			this.agenticaGithubDeviceAuthService = new GithubDeviceAuthService()
 
 			// Wire events to webview
-			this.agenticaGithubDeviceAuthService.on("started", (data) => {
+			this.agenticaGithubDeviceAuthService.on("started", (data: { userCode: string; verificationUrl: string; expiresIn: number }) => {
 				this.postMessageToWebview({
 					type: "agenticaDeviceAuthStarted",
 					deviceAuthCode: data.userCode,
@@ -1794,14 +1797,14 @@ export class ClineProvider
 				vscode.env.openExternal(vscode.Uri.parse(data.verificationUrl))
 			})
 
-			this.agenticaGithubDeviceAuthService.on("polling", (timeRemaining) => {
+			this.agenticaGithubDeviceAuthService.on("polling", (timeRemaining: number) => {
 				this.postMessageToWebview({
 					type: "agenticaDeviceAuthPolling",
 					deviceAuthTimeRemaining: timeRemaining,
 				})
 			})
 
-			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken) => {
+			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken: string) => {
 				try {
 					// Exchange GitHub access token for Agentica API key
 					const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
@@ -1869,7 +1872,7 @@ export class ClineProvider
 				this.agenticaGithubDeviceAuthService = undefined
 			})
 
-			this.agenticaGithubDeviceAuthService.on("error", (error) => {
+			this.agenticaGithubDeviceAuthService.on("error", (error: Error) => {
 				this.postMessageToWebview({
 					type: "agenticaDeviceAuthFailed",
 					deviceAuthError: error.message,
