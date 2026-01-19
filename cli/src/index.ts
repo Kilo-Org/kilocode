@@ -190,7 +190,11 @@ program
 
 		// Validate attachments if specified
 		const attachments: string[] = options.attach || []
-		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		const attachRequiresAutoResult = validateAttachRequiresAuto({
+			attach: attachments,
+			auto: options.auto,
+			jsonIo: options.jsonIo,
+		})
 		if (!attachRequiresAutoResult.valid) {
 			console.error(attachRequiresAutoResult.error)
 			process.exit(1)

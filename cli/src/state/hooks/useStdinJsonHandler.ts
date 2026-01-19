@@ -8,6 +8,58 @@ import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
 import { sendAskResponseAtom, sendTaskAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
 import { logs } from "../../services/logs.js"
+import { processImagePaths } from "../../media/images.js"
+
+/**
+ * Check if a string is a data URL (starts with "data:")
+ */
+function isDataUrl(str: string): boolean {
+	return str.startsWith("data:")
+}
+
+/**
+ * Convert image paths to data URLs if needed.
+ * If images are already data URLs, they are passed through unchanged.
+ * If images are file paths, they are read and converted to data URLs.
+ *
+ * @param images Array of image paths or data URLs
+ * @returns Array of data URLs (or undefined if no valid images)
+ */
+async function convertImagesToDataUrls(images: string[] | undefined): Promise<string[] | undefined> {
+	if (!images || images.length === 0) {
+		return undefined
+	}
+
+	// Separate data URLs from file paths
+	const dataUrls: string[] = []
+	const filePaths: string[] = []
+
+	for (const image of images) {
+		if (isDataUrl(image)) {
+			dataUrls.push(image)
+		} else {
+			filePaths.push(image)
+		}
+	}
+
+	// If all images are already data URLs, return them directly
+	if (filePaths.length === 0) {
+		return dataUrls.length > 0 ? dataUrls : undefined
+	}
+
+	// Convert file paths to data URLs
+	const result = await processImagePaths(filePaths)
+
+	if (result.errors.length > 0) {
+		for (const error of result.errors) {
+			logs.error(`Failed to load image "${error.path}": ${error.error}`, "useStdinJsonHandler")
+		}
+	}
+
+	// Combine existing data URLs with newly converted ones
+	const allDataUrls = [...dataUrls, ...result.images]
+	return allDataUrls.length > 0 ? allDataUrls : undefined
+}
 
 export interface StdinMessage {
 	type: string
@@ -31,38 +83,50 @@ export interface StdinMessageHandlers {
 /**
  * Handles a parsed stdin message by calling the appropriate handler.
  * Exported for testing purposes.
+ *
+ * Images can be provided as either:
+ * - Data URLs (e.g., "data:image/png;base64,...")
+ * - File paths (e.g., "/tmp/image.png" or "./screenshot.png")
+ *
+ * File paths are automatically converted to data URLs before being sent.
  */
 export async function handleStdinMessage(
 	message: StdinMessage,
 	handlers: StdinMessageHandlers,
 ): Promise<{ handled: boolean; error?: string }> {
 	switch (message.type) {
-		case "newTask":
+		case "newTask": {
 			// Start a new task with prompt and optional images
 			// This allows the Agent Manager to send the initial prompt via stdin
 			// instead of CLI args, enabling images to be included with the first message
+			// Images are converted from file paths to data URLs if needed
+			const images = await convertImagesToDataUrls(message.images)
 			await handlers.sendTask({
 				text: message.text || "",
-				...(message.images !== undefined && { images: message.images }),
+				...(images && { images }),
 			})
 			return { handled: true }
+		}
 
-		case "askResponse":
+		case "askResponse": {
 			// Handle ask response (user message, approval response, etc.)
+			// Images are converted from file paths to data URLs if needed
+			const images = await convertImagesToDataUrls(message.images)
 			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
 				await handlers.respondToTool({
 					response: message.askResponse,
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			} else {
 				await handlers.sendAskResponse({
 					response: (message.askResponse as "messageResponse") ?? "messageResponse",
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			}
 			return { handled: true }
+		}
 
 		case "cancelTask":
 			await handlers.cancelTask()
