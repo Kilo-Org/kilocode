@@ -190,12 +190,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					setCiCompletionDetected(false)
 				}
 
-				const shouldAnswerResumeAsk = taskResumedViaSession && isResumeAskMessage(lastChatMessage)
-
-				// Determine if it's a command or regular message
-				if (isCommandInput(trimmedPrompt) && !shouldAnswerResumeAsk) {
+				// Commands are always executed, regardless of resume ask state
+				// This ensures /exit, /clear, etc. work correctly even when resuming a session
+				if (isCommandInput(trimmedPrompt)) {
 					executeCommand(trimmedPrompt, onExit)
 				} else {
+					const shouldAnswerResumeAsk = taskResumedViaSession && isResumeAskMessage(lastChatMessage)
+
 					// Check if there are CLI attachments to load
 					if (options.attachments && options.attachments.length > 0) {
 						// Async IIFE to load attachments and send message
