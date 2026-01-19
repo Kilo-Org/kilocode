@@ -9,7 +9,7 @@ on:
 env:
     REPO_PATH: ${{ github.repository }}
     GIT_REF: main
-    NODE_VERSION: 20.19.2
+    NODE_VERSION: 20.20.0
     PNPM_VERSION: 10.8.1
 
 jobs:
