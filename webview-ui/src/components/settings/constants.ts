@@ -63,6 +63,7 @@ export const PROVIDERS = [
 	{ value: "cerebras", label: "Cerebras" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "doubao", label: "Doubao" },
+	{ value: "agentica", label: "Agentica" },
 	// kilocode_change start
 	{ value: "inception", label: "Inception" },
 	{ value: "gemini-cli", label: "Gemini CLI" },

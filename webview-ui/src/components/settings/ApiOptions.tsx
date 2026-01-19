@@ -76,6 +76,7 @@ import {
 
 import {
 	Anthropic,
+	Agentica,
 	Baseten,
 	Bedrock,
 	Cerebras,
@@ -572,6 +573,14 @@ const ApiOptions = ({
 					simplifySettings={fromWelcomeView}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
+				/>
+			)}
+			
+			{selectedProvider === "agentica" && (
+				<Agentica
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					uriScheme={uriScheme}
 				/>
 			)}
 
