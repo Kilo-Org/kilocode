@@ -147,6 +147,10 @@
 			"title": "Hapus Server MCP",
 			"message": "Apakah Anda yakin ingin menghapus server MCP \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Hapus Skill",
+			"message": "Apakah Anda yakin ingin menghapus skill \"{{skillName}}\"?"
+		},
 		"cancel": "Batal",
 		"confirm": "Hapus"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Semua",
 		"resultsCount": "{{count}} skill ditemukan",
 		"noResults": "Tidak ada skill yang cocok dengan kriteria Anda",
-		"viewOnGitHub": "Lihat di GitHub"
+		"install": "Instal",
+		"installTitle": "Instal skill {{name}}",
+		"installing": "Menginstal..."
 	}
 }
