@@ -166,6 +166,11 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case "chutes":
 			models = await getChutesModels(options.apiKey)
 			break
+		case "agentica": {
+			// kilocode_change: Agentica models are not fetched via the shared router yet
+			models = {}
+			break
+		}
 		//kilocode_change start
 		case "nano-gpt":
 			models = await getNanoGptModels({

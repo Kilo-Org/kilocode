@@ -205,6 +205,7 @@ const dynamicProviderExtras = {
 		sapAiCoreUseOrchestration?: boolean
 	},
 	// kilocode_change end
+	agentica: {} as {}, // kilocode_change: Agentica dynamic provider
 } as const satisfies Record<RouterName, object>
 
 // Build the dynamic options union from the map, intersected with CommonFetchParams

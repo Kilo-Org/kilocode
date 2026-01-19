@@ -858,6 +858,7 @@ export const webviewMessageHandler = async (
 						ovhcloud: {},
 						inception: {},
 						kilocode: {},
+						agentica: {},
 						gemini: {},
 						// kilocode_change end
 						openrouter: {},

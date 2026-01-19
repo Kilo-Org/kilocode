@@ -4,7 +4,7 @@ import type { ProviderSettings } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
 import { securePasswordStorage } from "@/utils/passwordStorage"
-import { PlansView } from "../PlansView"
+import PlansView from "../PlansView"
 
 type AgenticaProps = {
 	apiConfiguration: ProviderSettings

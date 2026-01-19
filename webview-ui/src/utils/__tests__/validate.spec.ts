@@ -87,6 +87,7 @@ describe("Model Validation Functions", () => {
 		synthetic: {},
 		"sap-ai-core": {},
 		// kilocode_change end
+		agentica: {},
 		roo: {},
 		chutes: {},
 	}

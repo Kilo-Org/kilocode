@@ -257,7 +257,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "baseten":
 			return new BasetenHandler(options)
 		default:
-			apiProvider satisfies "gemini-cli" | undefined
+			apiProvider satisfies "gemini-cli" | "agentica" | undefined // kilocode_change: allow agentica to fall through
 			return new AnthropicHandler(options)
 	}
 }
