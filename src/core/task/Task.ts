@@ -1531,6 +1531,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
 	}
 
+	public supersedePendingAsk(): void {
+		this.lastMessageTs = Date.now()
+	}
+
 	/**
 	 * Updates the API configuration but preserves the locked tool protocol.
 	 * The task's tool protocol is locked at creation time and should NOT change
