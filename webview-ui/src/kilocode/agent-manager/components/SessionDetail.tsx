@@ -389,6 +389,8 @@ function NewAgentForm() {
 						"rounded",
 					)}>
 					<DynamicTextArea
+						// Key changes when images are added/removed to trigger resize recalculation
+						key={hasImages ? "with-images" : "no-images"}
 						autoFocus
 						value={promptText}
 						onChange={(e) => setPromptText(e.target.value)}
