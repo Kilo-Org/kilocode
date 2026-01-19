@@ -433,20 +433,23 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		}
 
 		// Mock some providers to succeed and others to fail
+		// Order matches candidates array in webviewMessageHandler.ts:
+		// 1. openrouter, 2. requesty, 3. glama, 4. unbound, 5. kilocode, 6. vercel-ai-gateway,
+		// 7. deepinfra, 8. nano-gpt, 9. ovhcloud, 10. inception, 11. synthetic, 12. roo, 13. chutes
+		// Then conditional: litellm (included because litellmApiKey and litellmBaseUrl are in config)
+		// Note: gemini and ollama are NOT included because apiProvider is not set to those values
 		mockGetModels
 			.mockResolvedValueOnce(mockModels) // openrouter
-			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockResolvedValueOnce(mockModels) // kilocode_change: glama
+			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockResolvedValueOnce(mockModels) // kilocode
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
 			.mockResolvedValueOnce(mockModels) // deepinfra
-			.mockResolvedValueOnce(mockModels) // nano-gpt // kilocode_change
-			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change
-			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
+			.mockResolvedValueOnce(mockModels) // nano-gpt
+			.mockResolvedValueOnce(mockModels) // ovhcloud
+			.mockRejectedValueOnce(new Error("Inception API error")) // inception
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // synthetic
 			.mockResolvedValueOnce(mockModels) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
@@ -470,7 +473,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -484,7 +486,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Synthetic API error",
 			values: { provider: "synthetic" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -507,7 +508,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: {},
-				glama: mockModels, // kilocode_change
+				glama: mockModels,
 				unbound: {},
 				roo: mockModels,
 				chutes: {},
@@ -517,15 +518,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
-				// kilocode_change start
 				kilocode: mockModels,
 				"nano-gpt": mockModels,
 				inception: {},
 				synthetic: {},
-				gemini: mockModels,
+				gemini: {},
 				ovhcloud: mockModels,
 				"sap-ai-core": {},
-				// kilocode_change end
 			},
 			values: undefined,
 		})
@@ -533,20 +532,23 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 
 	it("handles Error objects and string errors correctly", async () => {
 		// Mock providers to fail with different error types
+		// Order matches candidates array in webviewMessageHandler.ts:
+		// 1. openrouter, 2. requesty, 3. glama, 4. unbound, 5. kilocode, 6. vercel-ai-gateway,
+		// 7. deepinfra, 8. nano-gpt, 9. ovhcloud, 10. inception, 11. synthetic, 12. roo, 13. chutes
+		// Then conditional: litellm (included because litellmApiKey and litellmBaseUrl are in config)
+		// Note: gemini and ollama are NOT included because apiProvider is not set to those values
 		mockGetModels
-			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
-			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
+			.mockRejectedValueOnce(new Error("OpenRouter API error")) // openrouter
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockRejectedValueOnce(new Error("Glama API error")) // kilocode_change: glama
+			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
-			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
+			.mockResolvedValueOnce({}) // kilocode - Success
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt // kilocode_change
-			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change inception
-			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
+			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt
+			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud
+			.mockRejectedValueOnce(new Error("Inception API error")) // inception
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
@@ -559,18 +561,9 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Structured error message",
+			error: "OpenRouter API error",
 			values: { provider: "openrouter" },
 		})
-
-		// kilocode_change start
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Gemini API error",
-			values: { provider: "gemini" },
-		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -579,14 +572,12 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "requesty" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Glama API error",
 			values: { provider: "glama" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -595,28 +586,12 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Ollama API error",
-			values: { provider: "ollama" },
-		})
-
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Vercel AI Gateway error",
 			values: { provider: "vercel-ai-gateway" },
 		})
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Chutes API error",
-			values: { provider: "chutes" },
-		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -625,20 +600,32 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "deepinfra" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Nano-GPT API error",
 			values: { provider: "nano-gpt" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Vercel AI Gateway error",
-			values: { provider: "vercel-ai-gateway" },
+			error: "OVHcloud AI Endpoints error",
+			values: { provider: "ovhcloud" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Inception API error",
+			values: { provider: "inception" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Synthetic API error",
+			values: { provider: "synthetic" },
 		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -661,21 +648,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
-
-		// kilocode_change start
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "OVHcloud AI Endpoints error",
-			values: { provider: "ovhcloud" },
-		})
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Inception API error",
-			values: { provider: "inception" },
-		})
-		// kilocode_change end
 	})
 
 	it("prefers config values over message values for LiteLLM", async () => {
