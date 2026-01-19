@@ -119,6 +119,34 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		}
 	}
 
+	// kilocode_change start
+	/**
+	 * Override convertToolsForOpenAI to ensure all tools have the same strict value.
+	 * Cerebras doesn't allow mixed strict values - all tools must be strict: true or strict: false.
+	 * We set all tools to strict: false to maintain compatibility with MCP tools.
+	 */
+	protected override convertToolsForOpenAI(tools: any[] | undefined): any[] | undefined {
+		if (!tools) {
+			return undefined
+		}
+
+		return tools.map((tool) => {
+			if (tool.type !== "function") {
+				return tool
+			}
+
+			return {
+				...tool,
+				function: {
+					...tool.function,
+					strict: false, // Cerebras requires all tools to have the same strict value
+					parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
+				},
+			}
+		})
+	}
+	// kilocode_change end
+
 	/**
 	 * Override convertToolSchemaForOpenAI to remove unsupported schema fields for Cerebras.
 	 * Cerebras doesn't support minItems/maxItems in array schemas with strict mode.

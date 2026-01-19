@@ -60,6 +60,124 @@ describe("CerebrasHandler", () => {
 		})
 	})
 
+	describe("tool conversion", () => {
+		it("should set all tools to strict: false to avoid Cerebras mixed strict error", () => {
+			const mockTools = [
+				{
+					type: "function" as const,
+					function: {
+						name: "read_file",
+						description: "Read a file",
+						parameters: {
+							type: "object",
+							properties: {
+								path: { type: "string" },
+							},
+						},
+					},
+				},
+				{
+					type: "function" as const,
+					function: {
+						name: "mcp--some-tool",
+						description: "MCP tool",
+						parameters: {
+							type: "object",
+							properties: {
+								data: { type: "string" },
+							},
+						},
+					},
+				},
+			]
+
+			// Access the protected method via type assertion
+			const convertedTools = (handler as any).convertToolsForOpenAI(mockTools)
+
+			// All tools should have strict: false (Cerebras requirement)
+			expect(convertedTools).toHaveLength(2)
+			expect(convertedTools[0].function.strict).toBe(false)
+			expect(convertedTools[1].function.strict).toBe(false)
+		})
+
+		it("should send tools with consistent strict: false in API request", async () => {
+			const mockTools = [
+				{
+					type: "function" as const,
+					function: {
+						name: "read_file",
+						description: "Read a file",
+						parameters: {
+							type: "object",
+							properties: {
+								path: { type: "string" },
+							},
+						},
+					},
+				},
+				{
+					type: "function" as const,
+					function: {
+						name: "mcp--some-tool",
+						description: "MCP tool",
+						parameters: {
+							type: "object",
+							properties: {
+								data: { type: "string" },
+							},
+						},
+					},
+				},
+			]
+
+			vi.mocked(fetch).mockResolvedValueOnce({
+				ok: true,
+				body: { getReader: () => ({ read: () => Promise.resolve({ done: true }), releaseLock: vi.fn() }) },
+			} as any)
+
+			await handler
+				.createMessage("test", [], {
+					taskId: "test-task-id",
+					tools: mockTools,
+					toolProtocol: "native",
+				})
+				.next()
+
+			// Verify fetch was called
+			expect(fetch).toHaveBeenCalled()
+
+			// Get the request body
+			const requestBody = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)
+
+			// Verify all tools in the request have strict: false
+			expect(requestBody.tools).toBeDefined()
+			expect(requestBody.tools).toHaveLength(2)
+			expect(requestBody.tools[0].function.strict).toBe(false)
+			expect(requestBody.tools[1].function.strict).toBe(false)
+		})
+
+		it("should strip unsupported schema fields like minItems/maxItems", () => {
+			const schemaWithUnsupportedFields = {
+				type: "object",
+				properties: {
+					items: {
+						type: "array",
+						minItems: 1,
+						maxItems: 10,
+						items: { type: "string" },
+					},
+				},
+			}
+
+			// Access the protected method via type assertion
+			const converted = (handler as any).convertToolSchemaForOpenAI(schemaWithUnsupportedFields)
+
+			// minItems and maxItems should be removed
+			expect(converted.properties.items.minItems).toBeUndefined()
+			expect(converted.properties.items.maxItems).toBeUndefined()
+		})
+	})
+
 	describe("message conversion", () => {
 		it("should strip thinking tokens from assistant messages", () => {
 			// This would test the stripThinkingTokens function
