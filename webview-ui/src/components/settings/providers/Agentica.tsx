@@ -143,11 +143,11 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 	const handleDeviceAuth = useCallback(() => {
 		setDeviceAuthStatus("pending")
 		setDeviceAuthError(undefined)
-		vscode.postMessage({ type: "startDeviceAuth" })
+		vscode.postMessage({ type: "startAgenticaDeviceAuth" })
 	}, [])
 
 	const handleCancelDeviceAuth = useCallback(() => {
-		vscode.postMessage({ type: "cancelDeviceAuth" })
+		vscode.postMessage({ type: "cancelAgenticaDeviceAuth" })
 		// Reset state immediately for better UX
 		setDeviceAuthStatus("idle")
 		setDeviceAuthCode(undefined)

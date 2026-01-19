@@ -138,15 +138,22 @@ const PlansView: React.FC<PlansViewProps> = ({ onDone }) => {
                 {/* Pending Downgrade Banner */}
                 {subscription.data.scheduled_downgrade_plan && (
                     <div style={{
-                        background: "var(--vscode-editor-inactiveSelectionBackground)",
-                        border: "1px solid var(--vscode-charts-yellow)",
+                        marginTop: "16px",
+                        padding: "12px",
+                        backgroundColor: "var(--vscode-editor-inactiveSelectionBackground)",
                         borderRadius: "6px",
-                        padding: "16px",
-                        marginBottom: "24px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px"
+                        border: "1px solid var(--vscode-panel-border)"
                     }}>
+                        <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>Current Plan: {subscription.data.plan_tier.toUpperCase()}</span>
+                            <VSCodeButton 
+                                onClick={() => setUpgradeModalOpen(true)}
+                                appearance="secondary"
+                                style={{ fontSize: "11px", padding: "2px 10px", marginTop: "4px" }}
+                            >
+                                Manage Plan
+                            </VSCodeButton>
+                        </div>
                         <span className="codicon codicon-info" style={{
                             color: "var(--vscode-charts-yellow)",
                             fontSize: "20px",
