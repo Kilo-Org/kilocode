@@ -37,7 +37,7 @@ Kilo Code provides access to the latest frontier coding models through its built
 
 ## BYOK support
 
-You can also bring your own key (BYOK) to the Kilo Gateway. We currently support the following providers: Anthropic, OpenAI, Google AI Studio, MiniMax, Mistral AI, xAI, and [Z.ai](https://z.ai).
+You can also bring your own key (BYOK) to the Kilo Gateway. We currently support the following providers: Anthropic, OpenAI, Google AI Studio, MiniMax, Mistral AI, xAI, and Z.ai.
 
 You can access the BYOK section of the Kilo Gateway here: https://app.kilo.ai/byok
 
