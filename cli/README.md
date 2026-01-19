@@ -278,47 +278,36 @@ This instructs the AI to proceed without user input.
 
 ### Getting Started
 
-To build and run the CLI locally off your branch:
+To build and run the CLI locally:
 
-#### Build the VS Code extension
+1. Install dependencies from the root workspace folder:
 
-```shell
-cd src
-pnpm bundle
-pnpm vsix
-pnpm vsix:unpacked
-cd ..
-```
+    ```bash
+    pnpm install
+    ```
 
-#### Install CLI dependencies
+2. Set up your environment file. Copy the sample and configure your API keys:
 
-```shell
-cd cli
-pnpm install
-pnpm deps:install
-```
+    ```bash
+    cp .env.sample cli/dist/.env
+    # Edit cli/dist/.env with your API keys
+    ```
 
-#### Build the CLI
+3. Build the extension core from the root workspace folder:
 
-```shell
-pnpm clean
-pnpm clean:kilocode
-pnpm copy:kilocode
-pnpm build
-```
+    ```bash
+    pnpm cli:bundle
+    ```
 
-#### Configure CLI settings
+4. Change into the cli folder and run the development server:
 
-```shell
-pnpm start config
-```
+    ```bash
+    cd ./cli
+    pnpm start:dev
+    ```
 
-#### Run the built CLI
-
-```shell
-pnpm start
-```
+> **Tip:** To view log output while developing, open a new terminal and run `pnpm logs` from the cli folder. Use `pnpm logs:clear` to truncate on-disk logs.
 
 ### Using DevTools
 
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
+In order to run the CLI with devtools, add `DEV=true` to your `pnpm start:dev` command, and then run `npx react-devtools` to show the devtools inspector.
