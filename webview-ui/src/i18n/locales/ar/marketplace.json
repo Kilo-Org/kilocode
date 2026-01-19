@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "واجهت مشكلة أو عندك اقتراح لسوق العناصر؟ <0>افتح تذكرة على GitHub</0> وعطنا خبر!"
+	},
+	"skills": {
+		"loading": "جاري تحميل المهارات...",
+		"searchPlaceholder": "ابحث عن المهارات...",
+		"allCategories": "الكل",
+		"resultsCount": "{{count}} مهارة تم العثور عليها",
+		"noResults": "لم يتم العثور على مهارات تطابق معاييرك",
+		"viewOnGitHub": "عرض على GitHub"
 	}
 }

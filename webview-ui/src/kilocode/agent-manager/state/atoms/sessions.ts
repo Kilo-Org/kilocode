@@ -62,6 +62,12 @@ export const startSessionFailedCounterAtom = atom(0)
 // Per-session input value for the chat input field
 export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""))
 
+// Per-session images (data URLs) for the chat input field
+export const sessionImagesAtomFamily = atomFamily((_sessionId: string) => atom<string[]>([]))
+
+// Maximum images per message (limited to fit in the input field UI)
+export const MAX_IMAGES_PER_MESSAGE = 4
+
 // User preference for run mode (persisted across new agent forms)
 export type RunMode = "local" | "worktree"
 // Default to local until worktree mode is ready to ship

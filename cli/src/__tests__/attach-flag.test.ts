@@ -66,18 +66,35 @@ describe("CLI --attach flag", () => {
 	})
 
 	describe("Mode validation", () => {
-		it("should reject --attach without --auto", () => {
+		it("should reject --attach without --auto or --json-io", () => {
 			const result = validateAttachRequiresAuto({
 				attach: ["./screenshot.png"],
 			})
 			expect(result.valid).toBe(false)
-			expect(result.error).toBe("Error: --attach option requires --auto flag")
+			expect(result.error).toBe("Error: --attach option requires --auto or --json-io flag")
 		})
 
 		it("should accept --attach with --auto flag", () => {
 			const result = validateAttachRequiresAuto({
 				attach: ["./screenshot.png"],
 				auto: true,
+			})
+			expect(result.valid).toBe(true)
+		})
+
+		it("should accept --attach with --json-io flag", () => {
+			const result = validateAttachRequiresAuto({
+				attach: ["./screenshot.png"],
+				jsonIo: true,
+			})
+			expect(result.valid).toBe(true)
+		})
+
+		it("should accept --attach with both --auto and --json-io flags", () => {
+			const result = validateAttachRequiresAuto({
+				attach: ["./screenshot.png"],
+				auto: true,
+				jsonIo: true,
 			})
 			expect(result.valid).toBe(true)
 		})

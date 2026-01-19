@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Encontrou um problema com um item do marketplace ou tem sugestões para novos itens? <0>Abra um issue no GitHub</0> para nos avisar!"
+	},
+	"skills": {
+		"loading": "Carregando habilidades...",
+		"searchPlaceholder": "Buscar habilidades...",
+		"allCategories": "Todas",
+		"resultsCount": "{{count}} habilidades encontradas",
+		"noResults": "Nenhuma habilidade encontrada que corresponda aos seus critérios",
+		"viewOnGitHub": "Ver no GitHub"
 	}
 }

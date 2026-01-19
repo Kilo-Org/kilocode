@@ -8,16 +8,20 @@ export interface AttachmentValidationResult {
 }
 
 /**
- * Validates that --attach requires --auto flag.
- * Attachments can only be used in autonomous mode.
+ * Validates that --attach requires --auto or --json-io flag.
+ * Attachments can be used in autonomous mode or json-io mode (for Agent Manager).
  */
-export function validateAttachRequiresAuto(options: { attach?: string[]; auto?: boolean }): AttachmentValidationResult {
+export function validateAttachRequiresAuto(options: {
+	attach?: string[]
+	auto?: boolean
+	jsonIo?: boolean
+}): AttachmentValidationResult {
 	const attachments = options.attach || []
 	if (attachments.length > 0) {
-		if (!options.auto) {
+		if (!options.auto && !options.jsonIo) {
 			return {
 				valid: false,
-				error: "Error: --attach option requires --auto flag",
+				error: "Error: --attach option requires --auto or --json-io flag",
 			}
 		}
 	}

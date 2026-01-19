@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Diese Modi werden von der Community bereitgestellt. Klicken Sie <1>hier</1>, um Ihre eigenen benutzerdefinierten Modi zu bearbeiten."
+		},
+		"skills": {
+			"description": "Durchstöbere und entdecke Skills aus der Community. Skills bieten spezialisierte Anweisungen für bestimmte Aufgaben."
 		}
 	},
 	"modes": {

@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Нашли проблему с элементом marketplace или есть предложения для новых элементов? <0>Откройте issue на GitHub</0>, чтобы сообщить нам!"
+	},
+	"skills": {
+		"loading": "Загрузка навыков...",
+		"searchPlaceholder": "Поиск навыков...",
+		"allCategories": "Все",
+		"resultsCount": "Найдено {{count}} навыков",
+		"noResults": "Навыки, соответствующие вашим критериям, не найдены",
+		"viewOnGitHub": "Посмотреть на GitHub"
 	}
 }

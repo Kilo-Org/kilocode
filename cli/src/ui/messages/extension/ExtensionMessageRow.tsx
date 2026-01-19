@@ -1,7 +1,7 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
-import { ErrorBoundary } from "react-error-boundary"
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary"
 import { AskMessageRouter } from "./AskMessageRouter.js"
 import { SayMessageRouter } from "./SayMessageRouter.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
@@ -11,11 +11,12 @@ interface ExtensionMessageRowProps {
 	message: ExtensionChatMessage
 }
 
-function ErrorFallback({ error }: { error: Error }) {
+function ErrorFallback({ error }: FallbackProps) {
 	const theme = useTheme()
+	const errorMessage = error instanceof Error ? error.message : String(error)
 	return (
 		<Box width={getBoxWidth(1)} borderColor={theme.semantic.error} borderStyle="round" padding={1} marginY={1}>
-			<Text color={theme.semantic.error}>Error rendering message: {error.message}</Text>
+			<Text color={theme.semantic.error}>Error rendering message: {errorMessage}</Text>
 		</Box>
 	)
 }

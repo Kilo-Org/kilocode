@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Bir marketplace öğesi ile ilgili sorun bulduğun veya yeni öğeler için önerilerin var mı? <0>GitHub'da issue aç</0> ve bize bildir!"
+	},
+	"skills": {
+		"loading": "Beceriler yükleniyor...",
+		"searchPlaceholder": "Beceri ara...",
+		"allCategories": "Tümü",
+		"resultsCount": "{{count}} beceri bulundu",
+		"noResults": "Kriterlerinize uyan beceri bulunamadı",
+		"viewOnGitHub": "GitHub'da görüntüle"
 	}
 }

@@ -101,8 +101,10 @@ program
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
+		// BUT NOT in json-io mode, where stdin is used for bidirectional communication
+		// and the prompt will come via a "newTask" message
 		let finalPrompt = prompt || ""
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && !process.stdin.isTTY && !options.jsonIo) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
@@ -188,7 +190,11 @@ program
 
 		// Validate attachments if specified
 		const attachments: string[] = options.attach || []
-		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		const attachRequiresAutoResult = validateAttachRequiresAuto({
+			attach: attachments,
+			auto: options.auto,
+			jsonIo: options.jsonIo,
+		})
 		if (!attachRequiresAutoResult.valid) {
 			console.error(attachRequiresAutoResult.error)
 			process.exit(1)

@@ -88,7 +88,9 @@
 		"createPRTitle": "Utwórz pull request",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
-		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"
+		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii",
+		"addImage": "Dodaj obraz",
+		"removeImage": "Usuń obraz"
 	},
 	"status": {
 		"running": "działa",

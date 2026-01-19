@@ -86,7 +86,9 @@
 		"createPRTitle": "Pull request maken",
 		"sendTitle": "Bericht verzenden",
 		"resumeTitle": "Agent hervatten",
-		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel"
+		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel",
+		"addImage": "Afbeelding toevoegen",
+		"removeImage": "Afbeelding verwijderen"
 	},
 	"status": {
 		"running": "actief",

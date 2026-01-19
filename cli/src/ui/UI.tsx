@@ -8,9 +8,9 @@ import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom, yoloModeAtom } from "../state/atoms/ui.js"
 import { processImagePaths } from "../media/images.js"
-import { setCIModeAtom } from "../state/atoms/ci.js"
+import { setCIModeAtom, ciCompletionDetectedAtom, ciCompletionIgnoreBeforeTimestampAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
-import { taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
+import { lastChatMessageAtom, taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
 import { useTaskState } from "../state/hooks/useTaskState.js"
 import { isParallelModeAtom } from "../state/atoms/index.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
@@ -40,6 +40,7 @@ import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
 import { useWebviewMessage } from "../state/hooks/useWebviewMessage.js"
+import { isResumeAskMessage, shouldWaitForResumeAsk } from "./utils/resumePrompt.js"
 
 // Initialize built-in commands on module load
 initializeCommands()
@@ -62,12 +63,16 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const setCIMode = useSetAtom(setCIModeAtom)
 	const setYoloMode = useSetAtom(yoloModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
+	const setTaskResumedViaSession = useSetAtom(taskResumedViaContinueOrSessionAtom)
+	const setCiCompletionDetected = useSetAtom(ciCompletionDetectedAtom)
+	const setCiCompletionIgnoreBeforeTimestamp = useSetAtom(ciCompletionIgnoreBeforeTimestampAtom)
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
 	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
+	const lastChatMessage = useAtomValue(lastChatMessageAtom)
 	const { hasActiveTask } = useTaskState()
 	const exitRequestCounter = useAtomValue(exitRequestCounterAtom)
 
@@ -78,7 +83,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	})
 
 	// Get sendMessage for sending initial prompt with attachments
-	const { sendMessage } = useWebviewMessage()
+	const { sendMessage, sendAskResponse } = useWebviewMessage()
 
 	// Followup handler hook for automatic suggestion population
 	useFollowupHandler()
@@ -168,10 +173,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {
 		if (options.prompt && !promptExecutedRef.current && configValidation.valid) {
-			// If a session was restored, wait for the task messages to be loaded
-			// This prevents creating a new task instead of continuing the restored one
-			if (taskResumedViaSession && !hasActiveTask) {
-				logs.debug("Waiting for restored session messages to load", "UI")
+			// If a session was restored, wait for the resume ask to arrive
+			// This ensures the prompt answers the resume ask instead of sending too early.
+			if (shouldWaitForResumeAsk(taskResumedViaSession, hasActiveTask, lastChatMessage)) {
+				logs.debug("Waiting for resume ask before executing prompt", "UI")
 				return
 			}
 
@@ -181,10 +186,21 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			if (trimmedPrompt) {
 				logs.debug("Executing initial prompt", "UI", { prompt: trimmedPrompt })
 
-				// Determine if it's a command or regular message
+				// Clear the session restoration flag after prompt execution starts
+				if (taskResumedViaSession) {
+					logs.debug("Resetting session restoration flags after prompt execution", "UI")
+					setCiCompletionIgnoreBeforeTimestamp(lastChatMessage?.ts ?? Date.now())
+					setTaskResumedViaSession(false)
+					setCiCompletionDetected(false)
+				}
+
+				// Commands are always executed, regardless of resume ask state
+				// This ensures /exit, /clear, etc. work correctly even when resuming a session
 				if (isCommandInput(trimmedPrompt)) {
 					executeCommand(trimmedPrompt, onExit)
 				} else {
+					const shouldAnswerResumeAsk = taskResumedViaSession && isResumeAskMessage(lastChatMessage)
+
 					// Check if there are CLI attachments to load
 					if (options.attachments && options.attachments.length > 0) {
 						// Async IIFE to load attachments and send message
@@ -216,9 +232,19 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 								textLength: trimmedPrompt.length,
 								imageCount: result.images.length,
 							})
-							// Send message with loaded images directly using sendMessage
-							await sendMessage({ type: "newTask", text: trimmedPrompt, images: result.images })
+							// Respond to resume ask if present, otherwise start a new task
+							if (shouldAnswerResumeAsk) {
+								await sendAskResponse({
+									response: "messageResponse",
+									text: trimmedPrompt,
+									images: result.images,
+								})
+							} else {
+								await sendMessage({ type: "newTask", text: trimmedPrompt, images: result.images })
+							}
 						})()
+					} else if (shouldAnswerResumeAsk) {
+						void sendAskResponse({ response: "messageResponse", text: trimmedPrompt })
 					} else {
 						sendUserMessage(trimmedPrompt)
 					}
@@ -228,14 +254,20 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [
 		options.prompt,
 		options.attachments,
+		options.ci,
 		taskResumedViaSession,
 		hasActiveTask,
 		configValidation.valid,
 		executeCommand,
 		sendUserMessage,
 		sendMessage,
+		sendAskResponse,
 		addMessage,
 		onExit,
+		lastChatMessage,
+		setCiCompletionIgnoreBeforeTimestamp,
+		setTaskResumedViaSession,
+		setCiCompletionDetected,
 	])
 
 	// Simplified submit handler that delegates to appropriate hook

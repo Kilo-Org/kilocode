@@ -86,7 +86,9 @@
 		"createPRTitle": "Tạo pull request",
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
-		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"
+		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng",
+		"addImage": "Thêm hình ảnh",
+		"removeImage": "Xóa hình ảnh"
 	},
 	"status": {
 		"running": "đang chạy",

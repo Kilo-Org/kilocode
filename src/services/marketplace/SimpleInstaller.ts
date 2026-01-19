@@ -26,15 +26,22 @@ export class SimpleInstaller {
 				return await this.installMode(item, target)
 			case "mcp":
 				return await this.installMcp(item, target, options)
+			// kilocode_change start - Handle skill type
+			case "skill":
+				// Skills are not installable through the marketplace - they are managed separately
+				throw new Error("Skills cannot be installed through the marketplace installer")
+			// kilocode_change end
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
 	}
 
+	// kilocode_change start - Use narrowed type for better type safety
 	private async installMode(
-		item: MarketplaceItem,
+		item: Extract<MarketplaceItem, { type: "mode" }>,
 		target: "project" | "global",
 	): Promise<{ filePath: string; line?: number }> {
+		// kilocode_change end
 		if (!item.content) {
 			throw new Error("Mode item missing content")
 		}
@@ -154,11 +161,13 @@ export class SimpleInstaller {
 		return { filePath, line }
 	}
 
+	// kilocode_change start - Use narrowed type for better type safety
 	private async installMcp(
-		item: MarketplaceItem,
+		item: Extract<MarketplaceItem, { type: "mcp" }>,
 		target: "project" | "global",
 		options?: InstallOptions,
 	): Promise<{ filePath: string; line?: number }> {
+		// kilocode_change end
 		if (!item.content) {
 			throw new Error("MCP item missing content")
 		}
@@ -183,7 +192,7 @@ export class SimpleInstaller {
 		}
 
 		// Merge parameters (method-specific override global)
-		const itemParameters = item.type === "mcp" ? item.parameters || [] : []
+		const itemParameters = item.parameters || [] // kilocode_change - simplified due to narrowed type
 		const allParameters = [...itemParameters, ...methodParameters]
 		const uniqueParameters = Array.from(new Map(allParameters.map((p) => [p.key, p])).values())
 
@@ -207,7 +216,7 @@ export class SimpleInstaller {
 				methodParameters = method.parameters || []
 
 				// Re-merge parameters with the newly selected method
-				const itemParametersForNewMethod = item.type === "mcp" ? item.parameters || [] : []
+				const itemParametersForNewMethod = item.parameters || [] // kilocode_change - simplified due to narrowed type
 				const allParametersForNewMethod = [...itemParametersForNewMethod, ...methodParameters]
 				const uniqueParametersForNewMethod = Array.from(
 					new Map(allParametersForNewMethod.map((p) => [p.key, p])).values(),
@@ -288,12 +297,22 @@ export class SimpleInstaller {
 			case "mcp":
 				await this.removeMcp(item, target)
 				break
+			// kilocode_change start - Handle skill type
+			case "skill":
+				// Skills are not removable through the marketplace - they are managed separately
+				throw new Error("Skills cannot be removed through the marketplace installer")
+			// kilocode_change end
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
 		}
 	}
 
-	private async removeMode(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+	// kilocode_change start - Use narrowed type for better type safety
+	private async removeMode(
+		item: Extract<MarketplaceItem, { type: "mode" }>,
+		target: "project" | "global",
+	): Promise<void> {
+		// kilocode_change end
 		if (!this.customModesManager) {
 			throw new Error("CustomModesManager is not available")
 		}
@@ -302,7 +321,7 @@ export class SimpleInstaller {
 		let content: string
 		if (Array.isArray(item.content)) {
 			// Array of McpInstallationMethod objects - use first method
-			content = item.content[0].content
+			content = (item.content as any)[0].content // kilocode_change - cast needed due to narrowed type
 		} else {
 			content = item.content || ""
 		}
@@ -328,7 +347,12 @@ export class SimpleInstaller {
 		await this.customModesManager.deleteCustomMode(modeSlug, true)
 	}
 
-	private async removeMcp(item: MarketplaceItem, target: "project" | "global"): Promise<void> {
+	// kilocode_change start - Use narrowed type for better type safety
+	private async removeMcp(
+		item: Extract<MarketplaceItem, { type: "mcp" }>,
+		target: "project" | "global",
+	): Promise<void> {
+		// kilocode_change end
 		const filePath = await this.getMcpFilePath(target)
 
 		try {
@@ -336,15 +360,7 @@ export class SimpleInstaller {
 			const existingData = JSON.parse(existing)
 
 			if (existingData?.mcpServers) {
-				// Parse the item content to get server names
-				let content: string
-				if (Array.isArray(item.content)) {
-					// Array of McpInstallationMethod objects - use first method
-					content = item.content[0].content
-				} else {
-					content = item.content
-				}
-
+				// kilocode change removed parsing logic which wasn't necessary as evidenced by types
 				const serverName = item.id
 				delete existingData.mcpServers[serverName]
 

@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Mode-mode ini tersedia dari komunitas. Klik <1>di sini</1> untuk mengedit mode kustom Anda sendiri."
+		},
+		"skills": {
+			"description": "Jelajahi dan temukan skill dari komunitas. Skill menyediakan instruksi khusus untuk tugas-tugas tertentu."
 		}
 	},
 	"modes": {
