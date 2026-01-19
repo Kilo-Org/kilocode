@@ -310,8 +310,11 @@ export class NativeToolCallParser {
 	private static convertFileEntries(files: any[]): FileEntry[] {
 		return files.map((file: any) => {
 			const entry: FileEntry = { path: file.path }
-			if (file.line_ranges && Array.isArray(file.line_ranges)) {
-				entry.lineRanges = file.line_ranges
+			// kilocode_change: support lineRanges spelling, often preferred by Claude
+			const lineRanges = file.line_ranges ?? file.lineRanges
+			if (lineRanges && Array.isArray(lineRanges)) {
+				entry.lineRanges = lineRanges
+					// kilocode_change end
 					.map((range: any) => {
 						// Handle tuple format: [start, end]
 						if (Array.isArray(range) && range.length >= 2) {
@@ -330,7 +333,7 @@ export class NativeToolCallParser {
 						}
 						return null
 					})
-					.filter(Boolean)
+					.filter((range) => range !== null) // kilocode_change
 			}
 			return entry
 		})

@@ -119,7 +119,7 @@
 				"kilocode": "index.js"
 			},
 			"engines": {
-				"node": ">=20.19.2"
+				"node": ">=20.20.0"
 			}
 		},
 		"node_modules/@alcalzone/ansi-tokenize": {
