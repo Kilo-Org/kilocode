@@ -110,7 +110,7 @@
 		}
 	},
 	"engines": {
-		"node": ">=20.19.2"
+		"node": ">=20.20.0"
 	},
 	"keywords": ["cli", "tui", "terminal", "ai", "assistant", "kilocode", "kilo", "ink"],
 	"author": {
