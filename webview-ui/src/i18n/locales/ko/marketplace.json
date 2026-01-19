@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "Marketplace 아이템에 문제가 있거나 새로운 아이템에 대한 제안이 있나요? <0>GitHub issue를 열어서</0> 알려주세요!"
+	},
+	"skills": {
+		"loading": "스킬 로딩 중...",
+		"searchPlaceholder": "스킬 검색...",
+		"allCategories": "전체",
+		"resultsCount": "{{count}}개 스킬 발견",
+		"noResults": "조건에 맞는 스킬을 찾을 수 없습니다",
+		"viewOnGitHub": "GitHub에서 보기"
 	}
 }

@@ -437,8 +437,23 @@ export class McpHub {
 	}
 
 	getServers(): McpServer[] {
-		// Only return enabled servers
-		return this.connections.filter((conn) => !conn.server.disabled).map((conn) => conn.server)
+		// Only return enabled servers, deduplicating by name with project servers taking priority
+		const enabledConnections = this.connections.filter((conn) => !conn.server.disabled)
+
+		// Deduplicate by server name: project servers take priority over global servers
+		const serversByName = new Map<string, McpServer>()
+		for (const conn of enabledConnections) {
+			const existing = serversByName.get(conn.server.name)
+			if (!existing) {
+				serversByName.set(conn.server.name, conn.server)
+			} else if (conn.server.source === "project" && existing.source !== "project") {
+				// Project server overrides global server with the same name
+				serversByName.set(conn.server.name, conn.server)
+			}
+			// If existing is project and current is global, keep existing (project wins)
+		}
+
+		return Array.from(serversByName.values())
 	}
 
 	getAllServers(): McpServer[] {
@@ -1114,8 +1129,19 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
-					await connection.transport.close()
-					await connection.client.close()
+					// kilocode_change start
+					// Fire-and-forget: don't await close() calls as they can block
+					// waiting for the subprocess to exit. The MCP SDK's transport.close()
+					// waits up to 2 seconds for the process to exit gracefully before
+					// sending SIGTERM, then another 2 seconds before SIGKILL.
+					// This 4+ second delay is unacceptable during CLI shutdown.
+					connection.transport.close().catch((err) => {
+						console.error(`Error closing transport for ${name}:`, err)
+					})
+					connection.client.close().catch((err) => {
+						console.error(`Error closing client for ${name}:`, err)
+					})
+					// kilocode_change end
 				}
 			} catch (error) {
 				console.error(`Failed to close transport for ${name}:`, error)

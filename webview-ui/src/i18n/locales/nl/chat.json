@@ -141,17 +141,20 @@
 		"streaming": "API-verzoek...",
 		"cancelled": "API-verzoek geannuleerd",
 		"streamingFailed": "API-streaming mislukt",
-		"errorTitle": "API-fout {{code}}",
+		"rateLimitWait": "Snelheidsbeperking",
+		"errorTitle": "Fout van provider {{code}}",
 		"errorMessage": {
 			"docs": "Documentatie",
+			"goToSettings": "Instellingen",
 			"400": "De provider kon het verzoek niet verwerken zoals ingediend. Stop de taak en probeer een ander benadering.",
 			"401": "Kon niet authenticeren met provider. Controleer je API-sleutelconfiguratie.",
 			"402": "Het lijkt erop dat je funds/credits op je account op zijn. Ga naar je provider en voeg meer toe om door te gaan.",
 			"403": "Niet geautoriseerd. Je API-sleutel is geldig, maar de provider weigerde dit verzoek in te willigen.",
 			"429": "Te veel verzoeken. Je bent rate-gelimiteerd door de provider. Wacht alsjeblieft even voor je volgende API-aanroep.",
 			"500": "Provider-serverfout. Er is iets mis aan de kant van de provider, er is niets mis met je verzoek.",
-			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Kilo-ondersteuning.",
-			"connection": "Verbindingsfout. Zorg ervoor dat je een werkende internetverbinding hebt."
+			"unknown": "Onbekende API-fout, klik op Details voor meer informatie.",
+			"connection": "Verbindingsfout. Zorg ervoor dat je een werkende internetverbinding hebt.",
+			"claudeCodeNotAuthenticated": "Je moet inloggen om Claude Code te gebruiken. Ga naar Instellingen en klik op \"Inloggen bij Claude Code\" om te authenticeren."
 		}
 	},
 	"checkpoint": {
@@ -266,14 +269,23 @@
 	},
 	"taskCompleted": "Taak voltooid",
 	"error": "Fout",
+	"modelResponseIncomplete": "Modelrespons onvolledig",
+	"modelResponseErrors": {
+		"noToolsUsed": "Het model heeft geen tools gebruikt in zijn reactie. Dit gebeurt meestal wanneer het model alleen tekst/redenering levert zonder de vereiste tools aan te roepen om de taak te voltooien.",
+		"noToolsUsedDetails": "Het model heeft tekst/redenering geleverd maar heeft geen van de vereiste tools aangeroepen. Dit geeft meestal aan dat het model de taak verkeerd heeft begrepen of moeite heeft om te bepalen welke tool te gebruiken. Het model is automatisch gevraagd om opnieuw te proberen met correct gebruik van tools.",
+		"noAssistantMessages": "Het model heeft geen reactie-inhoud geleverd. Dit kan wijzen op een probleem met de API of de output van het model.",
+		"noAssistantMessagesDetails": "Het taalmodel heeft een lege reactie geretourneerd zonder tekst of tool-aanroepen. Dit kan gebeuren door API-problemen, snelheidslimieten of modelspecifieke problemen. Het model is automatisch gevraagd om opnieuw te proberen."
+	},
 	"diffError": {
 		"title": "Bewerking mislukt"
 	},
 	"troubleMessage": "Kilo Code ondervindt problemen...",
 	"errorDetails": {
+		"link": "Details",
 		"title": "Foutdetails",
 		"copyToClipboard": "Naar klembord kopiëren",
-		"copied": "Gekopieerd!"
+		"copied": "Gekopieerd!",
+		"diagnostics": "Gedetailleerde foutinformatie ophalen"
 	},
 	"powershell": {
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
@@ -307,9 +319,9 @@
 			"goToSettingsButton": "Ga naar Instellingen"
 		},
 		"release": {
-			"heading": "Nieuw:",
-			"contextRewind": "Verbeterde context-samenvatting stelt je nu in staat om de volledige vorige context te herstellen bij het terugspoelen naar een checkpoint",
-			"rooProvider": "De Roo Code Cloud-provider behoudt nu reasoninginhoud en gebruikt standaard native tools voor betere prestaties"
+			"heading": "Wat is er nieuw:",
+			"skills": "Roo ondersteunt nu <skillsLink>Agent Skills</skillsLink> - herbruikbare pakketten van prompts, tools en resources om de mogelijkheden van Roo uit te breiden.",
+			"nativeToolCalling": "Native tool calling is nu vereist voor alle nieuwe taken. <blogLink>Meer informatie</blogLink> over de motivatie en wat je moet doen als je problemen ondervindt."
 		},
 		"cloudAgents": {
 			"heading": "Nieuw in de Cloud:",

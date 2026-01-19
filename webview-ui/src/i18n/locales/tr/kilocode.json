@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"skills": {
+			"description": "Topluluktan becerilere göz atın ve keşfedin. Beceriler, belirli görevler için özel talimatlar sağlar."
 		}
 	},
 	"modes": {

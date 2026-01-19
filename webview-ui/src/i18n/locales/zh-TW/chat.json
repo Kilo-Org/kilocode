@@ -152,17 +152,20 @@
 		"streaming": "正在處理 API 請求...",
 		"cancelled": "API 請求已取消",
 		"streamingFailed": "API 串流處理失敗",
-		"errorTitle": "API 錯誤 {{code}}",
+		"rateLimitWait": "速率限制",
+		"errorTitle": "提供商錯誤 {{code}}",
 		"errorMessage": {
 			"docs": "文件",
+			"goToSettings": "設定",
 			"400": "提供商無法按照此方式處理請求。請停止工作並嘗試其他方法。",
 			"401": "無法向提供商進行身份驗證。請檢查您的 API 金鑰設定。",
 			"402": "您的帳戶資金/額度似乎已用盡。請前往提供商增加額度以繼續。",
 			"403": "無權存取。您的 API 金鑰有效，但提供商拒絕完成此請求。",
 			"429": "請求次數過多。提供商已對您的請求進行速率限制。請在下一次 API 呼叫前稍候。",
 			"500": "提供商伺服器錯誤。提供商端發生問題，您的請求沒有問題。",
-			"unknown": "未知 API 錯誤。請聯絡 Kilo 支援。",
-			"connection": "連線錯誤。請確保您有可用的網際網路連線。"
+			"unknown": "未知 API 錯誤,點擊詳情了解更多資訊。",
+			"connection": "連線錯誤。請確保您有可用的網際網路連線。",
+			"claudeCodeNotAuthenticated": "你需要登入才能使用 Claude Code。前往設定並點擊「登入 Claude Code」以進行驗證。"
 		}
 	},
 	"checkpoint": {
@@ -300,15 +303,24 @@
 	},
 	"taskCompleted": "工作完成",
 	"error": "錯誤",
-	"errorDetails": {
-		"title": "錯誤詳情",
-		"copyToClipboard": "複製到剪貼簿",
-		"copied": "已複製！"
+	"modelResponseIncomplete": "模型回應不完整",
+	"modelResponseErrors": {
+		"noToolsUsed": "模型在回應中未使用任何工具。這通常發生在模型僅提供文字/推理而未呼叫完成工作所需的工具時。",
+		"noToolsUsedDetails": "模型提供了文字/推理，但未呼叫任何必需的工具。這通常表示模型誤解了工作，或在確定使用哪個工具時遇到困難。系統已自動提示模型使用正確的工具重試。",
+		"noAssistantMessages": "模型未提供任何回應內容。這可能表示 API 或模型輸出存在問題。",
+		"noAssistantMessagesDetails": "語言模型回傳了一個沒有任何文字或工具呼叫的空回應。這可能是由於 API 問題、速率限制或模型特定問題所導致。系統已自動提示模型重試。"
 	},
 	"diffError": {
 		"title": "編輯失敗"
 	},
-	"troubleMessage": "Kilo Code 遇到問題...",
+	"troubleMessage": "Roo 遇到問題...",
+	"errorDetails": {
+		"link": "詳情",
+		"title": "錯誤詳細資訊",
+		"copyToClipboard": "複製到剪貼簿",
+		"copied": "已複製！",
+		"diagnostics": "取得詳細錯誤資訊"
+	},
 	"powershell": {
 		"issues": "您似乎遇到了 Windows PowerShell 的問題，請參閱此說明文件"
 	},
@@ -341,9 +353,9 @@
 			"goToSettingsButton": "前往設定"
 		},
 		"release": {
-			"heading": "最新功能：",
-			"contextRewind": "改進的上下文壓縮現在允許您在回到存檔點時恢復完整的先前上下文",
-			"rooProvider": "Roo Code Cloud 提供商現在保留推理內容，並預設使用原生工具以獲得更佳效能"
+			"heading": "新增功能：",
+			"skills": "Roo 現已支援 <skillsLink>Agent Skills</skillsLink> - 可重複使用的提示詞、工具和資源套件，用於擴展 Roo 的功能。",
+			"nativeToolCalling": "所有新工作現在都需要原生工具呼叫。<blogLink>深入了解</blogLink>相關動機以及遇到問題時的解決方案。"
 		},
 		"cloudAgents": {
 			"heading": "雲端的新功能：",

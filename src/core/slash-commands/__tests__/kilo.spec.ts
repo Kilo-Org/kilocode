@@ -110,6 +110,35 @@ describe("parseKiloSlashCommands", () => {
 				expect(result.needsRulesFileCheck).toBe(false)
 			})
 		})
+
+		describe("/condense command", () => {
+			it("should process /condense command", async () => {
+				const text = "<task>/condense</task>"
+				const result = await parseKiloSlashCommands(text, emptyToggles, emptyToggles)
+
+				expect(result.processedText).toContain('<explicit_instructions type="condense">')
+				expect(result.needsRulesFileCheck).toBe(false)
+			})
+
+			it("should process /condense with additional instructions", async () => {
+				const text = "<user_message>/condense Focus on the API changes</user_message>"
+				const result = await parseKiloSlashCommands(text, emptyToggles, emptyToggles)
+
+				expect(result.processedText).toContain('<explicit_instructions type="condense">')
+				expect(result.processedText).toContain("Focus on the API changes")
+				expect(result.needsRulesFileCheck).toBe(false)
+			})
+		})
+
+		describe("/compact command", () => {
+			it("should process /compact command", async () => {
+				const text = "<task>/compact</task>"
+				const result = await parseKiloSlashCommands(text, emptyToggles, emptyToggles)
+
+				expect(result.processedText).toContain('<explicit_instructions type="condense">')
+				expect(result.needsRulesFileCheck).toBe(false)
+			})
+		})
 	})
 
 	describe("tag patterns", () => {

@@ -88,6 +88,7 @@ import { t } from "../../i18n"
 
 import { buildApiHandler } from "../../api"
 import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
+import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
 
 import { ContextProxy } from "../config/ContextProxy"
 import { getEnabledRules } from "./kilorules"
@@ -103,6 +104,7 @@ import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 import { REQUESTY_BASE_URL } from "../../shared/utils/requesty"
+import { validateAndFixToolResultIds } from "../task/validateToolResultIds"
 
 //kilocode_change start
 import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
@@ -111,7 +113,7 @@ import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
-import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { getEffectiveTelemetrySetting, getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
@@ -176,7 +178,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "dec-2025-v3.36.0-context-rewind-roo-provider" // v3.36.0 Context Rewind & Roo Provider Improvements
+	public readonly latestAnnouncementId = "dec-2025-v3.38.0-skills-native-tool-calling" // v3.38.0 Skills & Native Tool Calling Required
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -2083,7 +2085,6 @@ export class ClineProvider
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
-			alwaysAllowUpdateTodoList,
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext,
@@ -2115,7 +2116,6 @@ export class ClineProvider
 			fuzzyMatchThreshold,
 			// mcpEnabled,  // kilocode_change: always true
 			enableMcpServerCreation,
-			alwaysApproveResubmit,
 			requestDelaySeconds,
 			currentApiConfigName,
 			listApiConfigMeta,
@@ -2134,6 +2134,7 @@ export class ClineProvider
 			browserToolEnabled,
 			telemetrySetting,
 			showRooIgnoredFiles,
+			enableSubfolderRules,
 			language,
 			showAutoApproveMenu, // kilocode_change
 			showTaskTimeline, // kilocode_change
@@ -2150,6 +2151,7 @@ export class ClineProvider
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,
+			publicSharingEnabled,
 			organizationAllowList,
 			organizationSettingsVersion,
 			maxConcurrentFileReads,
@@ -2179,7 +2181,6 @@ export class ClineProvider
 			openRouterImageApiKey,
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
-			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
@@ -2190,7 +2191,13 @@ export class ClineProvider
 		// kilocode_change start: Get active model for virtual quota fallback UI display
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
-				? this.getCurrentTask()!.api.getModel()
+				? {
+						...this.getCurrentTask()!.api.getModel(),
+						activeProfileNumber:
+							this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
+								? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
+								: undefined,
+					}
 				: undefined
 		// kilocode_change end
 
@@ -2243,12 +2250,11 @@ export class ClineProvider
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
 			alwaysAllowDelete: alwaysAllowDelete ?? false, // kilocode_change
-			alwaysAllowExecute: alwaysAllowExecute ?? true,
-			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
-			alwaysAllowMcp: alwaysAllowMcp ?? true,
-			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
-			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
-			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+			alwaysAllowExecute: alwaysAllowExecute ?? false,
+			alwaysAllowBrowser: alwaysAllowBrowser ?? false,
+			alwaysAllowMcp: alwaysAllowMcp ?? false,
+			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
+			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
 			isBrowserSessionActive,
 			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
@@ -2299,8 +2305,6 @@ export class ClineProvider
 			fuzzyMatchThreshold: fuzzyMatchThreshold ?? 1.0,
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: enableMcpServerCreation ?? true,
-			alwaysApproveResubmit: alwaysApproveResubmit ?? false,
-			requestDelaySeconds: requestDelaySeconds ?? 10,
 			currentApiConfigName: currentApiConfigName ?? "default",
 			listApiConfigMeta: listApiConfigMeta ?? [],
 			pinnedApiConfigs: pinnedApiConfigs ?? {},
@@ -2328,8 +2332,9 @@ export class ClineProvider
 			showTimestamps: showTimestamps ?? true, // kilocode_change
 			hideCostBelowThreshold, // kilocode_change
 			language, // kilocode_change
+			enableSubfolderRules: enableSubfolderRules ?? false,
 			renderContext: this.renderContext,
-			maxReadFileLine: maxReadFileLine ?? -1,
+			maxReadFileLine: maxReadFileLine ?? 500 /*kilocode_change*/,
 			maxImageFileSize: maxImageFileSize ?? 5,
 			maxTotalImageSize: maxTotalImageSize ?? 20,
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
@@ -2342,8 +2347,10 @@ export class ClineProvider
 			enterBehavior: enterBehavior ?? "send",
 			cloudUserInfo,
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
+			cloudAuthSkipModel: this.context.globalState.get<boolean>("roo-auth-skip-model") ?? false,
 			cloudOrganizations,
 			sharingEnabled: sharingEnabled ?? false,
+			publicSharingEnabled: publicSharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
 			ghostServiceSettings: ghostServiceSettings,
@@ -2415,9 +2422,16 @@ export class ClineProvider
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
-			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			claudeCodeIsAuthenticated: await (async () => {
+				try {
+					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
+					return await claudeCodeOAuthManager.isAuthenticated()
+				} catch {
+					return false
+				}
+			})(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
 		}
 	}
@@ -2497,6 +2511,16 @@ export class ClineProvider
 			)
 		}
 
+		let publicSharingEnabled: boolean = false
+
+		try {
+			publicSharingEnabled = await CloudService.instance.canSharePublicly()
+		} catch (error) {
+			console.error(
+				`[getState] failed to get public sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
 		let organizationSettingsVersion: number = -1
 
 		try {
@@ -2545,7 +2569,6 @@ export class ClineProvider
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
-			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
 			isBrowserSessionActive,
 			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
@@ -2589,8 +2612,6 @@ export class ClineProvider
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: stateValues.enableMcpServerCreation ?? true,
 			mcpServers: this.mcpHub?.getAllServers() ?? [],
-			alwaysApproveResubmit: stateValues.alwaysApproveResubmit ?? false,
-			requestDelaySeconds: Math.max(5, stateValues.requestDelaySeconds ?? 10),
 			currentApiConfigName: stateValues.currentApiConfigName ?? "default",
 			listApiConfigMeta: stateValues.listApiConfigMeta ?? [],
 			pinnedApiConfigs: stateValues.pinnedApiConfigs ?? {},
@@ -2617,16 +2638,16 @@ export class ClineProvider
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,
-			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform,
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
-			telemetrySetting: stateValues.telemetrySetting || "unset",
+			telemetrySetting: getEffectiveTelemetrySetting(stateValues.telemetrySetting), // kilocode_change
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
 			sendMessageOnEnter: stateValues.sendMessageOnEnter ?? true, // kilocode_change
 			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
 			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
-			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
+			enableSubfolderRules: stateValues.enableSubfolderRules ?? false,
+			maxReadFileLine: stateValues.maxReadFileLine ?? 500 /*kilocode_change*/,
 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
@@ -2642,6 +2663,7 @@ export class ClineProvider
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,
+			publicSharingEnabled,
 			organizationAllowList,
 			organizationSettingsVersion,
 			condensingApiConfigId: stateValues.condensingApiConfigId,
@@ -3432,12 +3454,11 @@ export class ClineProvider
 						alwaysAllowReadOnly: !!state.alwaysAllowReadOnly,
 						alwaysAllowReadOnlyOutsideWorkspace: !!state.alwaysAllowReadOnlyOutsideWorkspace,
 						alwaysAllowSubtasks: !!state.alwaysAllowSubtasks,
-						alwaysAllowUpdateTodoList: !!state.alwaysAllowUpdateTodoList,
+
 						alwaysAllowWrite: !!state.alwaysAllowWrite,
 						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
 						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
 						alwaysAllowDelete: !!state.alwaysAllowDelete, // kilocode_change
-						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
 						yoloMode: !!state.yoloMode,
 					},
 				}
@@ -3910,6 +3931,15 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 				],
 				ts,
 			})
+		}
+
+		// Validate the newly injected tool_result against the preceding assistant message.
+		// This ensures the tool_result's tool_use_id matches a tool_use in the immediately
+		// preceding assistant message (Anthropic API requirement).
+		const lastMessage = parentApiMessages[parentApiMessages.length - 1]
+		if (lastMessage?.role === "user") {
+			const validatedMessage = validateAndFixToolResultIds(lastMessage, parentApiMessages.slice(0, -1))
+			parentApiMessages[parentApiMessages.length - 1] = validatedMessage
 		}
 
 		await saveApiMessages({ messages: parentApiMessages as any, taskId: parentTaskId, globalStoragePath })

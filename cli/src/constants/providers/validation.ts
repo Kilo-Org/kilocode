@@ -11,7 +11,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	openrouter: ["openRouterApiKey", "openRouterModelId"],
 	ollama: ["ollamaBaseUrl", "ollamaModelId"],
 	lmstudio: ["lmStudioBaseUrl", "lmStudioModelId"],
-	bedrock: ["awsAccessKey", "awsSecretKey", "awsRegion", "apiModelId"],
+	bedrock: ["awsRegion", "apiModelId"], // Auth fields handled in handleSpecialValidations (supports API key, profile, or direct credentials)
 	gemini: ["geminiApiKey", "apiModelId"],
 	"claude-code": ["claudeCodePath", "apiModelId"],
 	mistral: ["mistralApiKey", "apiModelId"],
@@ -39,8 +39,8 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	requesty: ["requestyApiKey", "requestyModelId"],
 	roo: ["apiModelId"],
 	"vercel-ai-gateway": ["vercelAiGatewayApiKey", "vercelAiGatewayModelId"],
-	"human-relay": ["apiModelId"],
 	"fake-ai": ["apiModelId"],
+	"human-relay": ["apiModelId"],
 	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
 	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
 	synthetic: ["syntheticApiKey", "apiModelId"],

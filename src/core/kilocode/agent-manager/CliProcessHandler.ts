@@ -29,6 +29,12 @@ const PENDING_SESSION_TIMEOUT_MS = 30_000
 const MAX_STDOUT_BUFFER_SIZE = 64 * 1024
 
 /**
+ * Delay before sending initial prompt with images via stdin (ms).
+ * Allows the CLI process to initialize and be ready to receive stdin input.
+ */
+const STDIN_READY_DELAY_MS = 100
+
+/**
  * Tracks a pending session while waiting for CLI's session_created event.
  * Note: This is only used for NEW sessions. Resume sessions go directly to activeSessions.
  */
@@ -53,6 +59,8 @@ interface PendingProcessInfo {
 	hadShellPath?: boolean // Track if shell PATH was used (for telemetry)
 	cliPath?: string // CLI path for error telemetry
 	configurationError?: string // Captured from welcome event instructions (indicates misconfigured CLI)
+	model?: string // Model ID used for this session
+	images?: string[] // Image paths to send with initial prompt via stdin
 }
 
 interface ActiveProcessInfo {
@@ -151,6 +159,10 @@ export class CliProcessHandler {
 					shellPath?: string
 					/** Worktree info if created by extension (for parallel mode) */
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
+					/** Model ID to use for this session (overrides CLI default) */
+					model?: string
+					/** Image paths to send with initial prompt (requires prompt to be sent via stdin) */
+					images?: string[]
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -169,6 +181,7 @@ export class CliProcessHandler {
 					parallelMode: options?.parallelMode,
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
+					model: options?.model,
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
@@ -187,8 +200,12 @@ export class CliProcessHandler {
 		// Build CLI command
 		// Note: Worktree/parallel mode is handled by AgentManagerProvider creating the worktree
 		// and passing the worktree path as the workspace. CLI is unaware of worktrees.
+		// When images are present, prompt is sent via stdin (as newTask message) instead of CLI args
+		const hasImages = options?.images && options.images.length > 0
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			sessionId: options?.sessionId,
+			model: options?.model,
+			promptViaStdin: hasImages,
 		})
 		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
 
@@ -252,6 +269,8 @@ export class CliProcessHandler {
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
 				hadShellPath: !!options?.shellPath, // Track for telemetry
 				cliPath,
+				model: options?.model,
+				images: options?.images, // Store images to send with prompt via stdin
 			}
 		}
 
@@ -297,6 +316,41 @@ export class CliProcessHandler {
 		})
 
 		this.debugLog(`spawned CLI process pid=${proc.pid}`)
+
+		// If images are present, send the initial prompt with images via stdin
+		// This is done here because the prompt was not passed as CLI arg
+		if (hasImages && proc.stdin) {
+			this.sendInitialPromptWithImages(proc, prompt, options!.images!)
+		}
+	}
+
+	/**
+	 * Send the initial prompt with images via stdin as a newTask message.
+	 * Images are passed as file paths in the JSON message, which the CLI converts to data URLs.
+	 */
+	private sendInitialPromptWithImages(proc: ChildProcess, prompt: string, images: string[]): void {
+		// Small delay to ensure CLI is ready to receive stdin
+		setTimeout(() => {
+			if (!proc.stdin || proc.killed) {
+				this.callbacks.onLog(`Cannot send initial prompt: process stdin not available`)
+				return
+			}
+
+			const message = {
+				type: "newTask",
+				text: prompt,
+				images,
+			}
+
+			const jsonLine = JSON.stringify(message) + "\n"
+			proc.stdin.write(jsonLine, (error) => {
+				if (error) {
+					this.callbacks.onLog(`Failed to send initial prompt with images: ${error.message}`)
+				} else {
+					this.debugLog(`Sent initial prompt with ${images.length} images via stdin`)
+				}
+			})
+		}, STDIN_READY_DELAY_MS)
 	}
 
 	public stopProcess(sessionId: string): void {
@@ -513,13 +567,14 @@ export class CliProcessHandler {
 		const provisionalId = `provisional-${Date.now()}`
 		this.pendingProcess.provisionalSessionId = provisionalId
 
-		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath } =
+		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath, model } =
 			this.pendingProcess
 
 		this.registry.createSession(provisionalId, prompt, startTime, {
 			parallelMode,
 			labelOverride: desiredLabel,
 			gitUrl,
+			model,
 		})
 
 		if (parallelMode && (worktreeBranch || worktreePath)) {
@@ -642,6 +697,7 @@ export class CliProcessHandler {
 			sawApiReqStarted,
 			gitUrl,
 			provisionalSessionId,
+			model,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
@@ -682,6 +738,7 @@ export class CliProcessHandler {
 				parallelMode,
 				labelOverride: desiredLabel,
 				gitUrl,
+				model,
 			})
 			this.debugLog(`Created new session: ${sessionId}`)
 		}

@@ -728,4 +728,125 @@ describe("MessageManager", () => {
 			expect(apiCall[0].role).toBe("system")
 		})
 	})
+
+	describe("Race condition handling", () => {
+		it("should preserve assistant message when clineMessage timestamp is earlier due to async execution", async () => {
+			// This test reproduces the bug where deleting a user_feedback clineMessage
+			// incorrectly removes an assistant API message that was added AFTER the
+			// clineMessage (due to async tool execution during streaming).
+			//
+			// Timeline (race condition scenario):
+			// - T1 (100): clineMessage "user_feedback" created during tool execution
+			// - T2 (200): assistant API message added when stream completes
+			// - T3 (300): user API message (tool_result) added after pWaitFor
+			//
+			// When deleting the clineMessage at T1, we should:
+			// - Keep the assistant message at T2
+			// - Remove the user message at T3
+
+			mockTask.clineMessages = [
+				{ ts: 50, say: "user", text: "Initial request" },
+				{ ts: 100, say: "user_feedback", text: "tell me a joke 3" }, // Race: created BEFORE assistant API msg
+			]
+
+			mockTask.apiConversationHistory = [
+				{ ts: 50, role: "user", content: [{ type: "text", text: "Initial request" }] },
+				{
+					ts: 200, // Race: added AFTER clineMessage at ts=100
+					role: "assistant",
+					content: [{ type: "tool_use", id: "tool_1", name: "attempt_completion", input: {} }],
+				},
+				{
+					ts: 300,
+					role: "user",
+					content: [{ type: "tool_result", tool_use_id: "tool_1", content: "tell me a joke 3" }],
+				},
+			]
+
+			// Delete the user_feedback clineMessage at ts=100
+			await manager.rewindToTimestamp(100)
+
+			// The fix ensures we find the first API user message at or after cutoff (ts=300)
+			// and use that as the actual cutoff, preserving the assistant message (ts=200)
+			const apiCall = mockTask.overwriteApiConversationHistory.mock.calls[0][0]
+			expect(apiCall).toHaveLength(2)
+			expect(apiCall[0].ts).toBe(50) // Initial user message preserved
+			expect(apiCall[1].ts).toBe(200) // Assistant message preserved (was incorrectly removed before fix)
+			expect(apiCall[1].role).toBe("assistant")
+		})
+
+		it("should handle normal case where timestamps are properly ordered", async () => {
+			// Normal case: clineMessage timestamp aligns with API message timestamp
+			mockTask.clineMessages = [
+				{ ts: 100, say: "user", text: "First" },
+				{ ts: 200, say: "user_feedback", text: "Feedback" },
+			]
+
+			mockTask.apiConversationHistory = [
+				{ ts: 100, role: "user", content: [{ type: "text", text: "First" }] },
+				{ ts: 150, role: "assistant", content: [{ type: "text", text: "Response" }] },
+				{ ts: 200, role: "user", content: [{ type: "text", text: "Feedback" }] },
+			]
+
+			await manager.rewindToTimestamp(200)
+
+			// Should keep messages before the user message at ts=200
+			const apiCall = mockTask.overwriteApiConversationHistory.mock.calls[0][0]
+			expect(apiCall).toHaveLength(2)
+			expect(apiCall[0].ts).toBe(100)
+			expect(apiCall[1].ts).toBe(150)
+		})
+
+		it("should fall back to original cutoff when no user message found at or after cutoff", async () => {
+			// Edge case: no API user message at or after the cutoff timestamp
+			mockTask.clineMessages = [
+				{ ts: 100, say: "user", text: "First" },
+				{ ts: 200, say: "assistant", text: "Response" },
+				{ ts: 300, say: "assistant", text: "Another response" },
+			]
+
+			mockTask.apiConversationHistory = [
+				{ ts: 100, role: "user", content: [{ type: "text", text: "First" }] },
+				{ ts: 150, role: "assistant", content: [{ type: "text", text: "Response" }] },
+				{ ts: 250, role: "assistant", content: [{ type: "text", text: "Another response" }] },
+				// No user message at or after ts=200
+			]
+
+			await manager.rewindToTimestamp(200)
+
+			// Falls back to original behavior: keep messages with ts < 200
+			// This removes the assistant message at ts=250
+			const apiCall = mockTask.overwriteApiConversationHistory.mock.calls[0][0]
+			expect(apiCall).toHaveLength(2)
+			expect(apiCall[0].ts).toBe(100)
+			expect(apiCall[1].ts).toBe(150)
+		})
+
+		it("should handle multiple assistant messages before the user message in race condition", async () => {
+			// Complex race scenario: multiple assistant messages added before user message
+			mockTask.clineMessages = [
+				{ ts: 50, say: "user", text: "Initial" },
+				{ ts: 100, say: "user_feedback", text: "Feedback" }, // Race condition
+			]
+
+			mockTask.apiConversationHistory = [
+				{ ts: 50, role: "user", content: [{ type: "text", text: "Initial" }] },
+				{ ts: 150, role: "assistant", content: [{ type: "text", text: "First assistant msg" }] }, // After clineMessage
+				{ ts: 200, role: "assistant", content: [{ type: "text", text: "Second assistant msg" }] }, // After clineMessage
+				{ ts: 250, role: "user", content: [{ type: "text", text: "Feedback" }] },
+			]
+
+			await manager.rewindToTimestamp(100)
+
+			// Should preserve both assistant messages (ts=150, ts=200) because the first
+			// user message at or after cutoff is at ts=250
+			const apiCall = mockTask.overwriteApiConversationHistory.mock.calls[0][0]
+			expect(apiCall).toHaveLength(3)
+			expect(apiCall[0].ts).toBe(50)
+			expect(apiCall[1].ts).toBe(150)
+			expect(apiCall[1].role).toBe("assistant")
+			expect(apiCall[2].ts).toBe(200)
+			expect(apiCall[2].role).toBe("assistant")
+		})
+	})
 })

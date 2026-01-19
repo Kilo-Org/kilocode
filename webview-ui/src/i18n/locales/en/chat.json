@@ -152,9 +152,11 @@
 		"streaming": "API Request...",
 		"cancelled": "API Request Cancelled",
 		"streamingFailed": "API Streaming Failed",
-		"errorTitle": "API Error {{code}}",
+		"rateLimitWait": "Rate limiting",
+		"errorTitle": "Provider Error {{code}}",
 		"errorMessage": {
 			"docs": "Docs",
+			"goToSettings": "Settings",
 			"400": "The provider couldn't process the request as made. Stop the task and try a different approach.",
 			"401": "Couldn't authenticate with provider. Please check your API key configuration.",
 			"402": "You seem to have run out of funds/credits in your account. Go to your provider and add more to continue.",
@@ -162,7 +164,8 @@
 			"429": "Too many requests. You're being rate-limited by the provider. Please wait a bit before your next API call.",
 			"500": "Provider server error. Something is wrong on the provider side, there's nothing wrong with your request.",
 			"connection": "Connection error. Make sure you have a working internet connection.",
-			"unknown": "Unknown API error. Please contact Kilo support."
+			"claudeCodeNotAuthenticated": "You need to sign in to use Claude Code. Go to Settings and click \"Sign in to Claude Code\" to authenticate.",
+			"unknown": "Unknown API error, click Details for more information."
 		}
 	},
 	"checkpoint": {
@@ -297,10 +300,19 @@
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
+	"modelResponseIncomplete": "Model Response Incomplete",
+	"modelResponseErrors": {
+		"noToolsUsed": "The model failed to use any tools in its response. This typically happens when the model provides only text/reasoning without calling the required tools to complete the task.",
+		"noToolsUsedDetails": "The model provided text/reasoning but did not call any of the required tools. This usually indicates the model misunderstood the task or is having difficulty determining which tool to use. The model has been automatically prompted to retry with proper tool usage.",
+		"noAssistantMessages": "The model did not provide any response content. This may indicate an issue with the API or the model's output.",
+		"noAssistantMessagesDetails": "The language model returned an empty response without any text or tool calls. This can happen due to API issues, rate limiting, or model-specific problems. The model has been automatically prompted to retry."
+	},
 	"errorDetails": {
+		"link": "Details",
 		"title": "Error Details",
-		"copyToClipboard": "Copy to Clipboard",
-		"copied": "Copied!"
+		"copyToClipboard": "Copy basic error info",
+		"copied": "Copied!",
+		"diagnostics": "Get detailed error info"
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
@@ -338,8 +350,8 @@
 		},
 		"release": {
 			"heading": "What's New:",
-			"contextRewind": "Improved context condensing now lets you restore the full previous context when rewinding to a checkpoint",
-			"rooProvider": "Roo Code Cloud provider now preserves reasoning content and defaults to native tools for better performance"
+			"skills": "Roo now supports <skillsLink>Agent Skills</skillsLink> - reusable packages of prompts, tools, and resources to extend Roo's capabilities.",
+			"nativeToolCalling": "Native tool calling is now required for all new tasks. <blogLink>Read more</blogLink> about the motivation and what to do if you're encountering issues."
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",

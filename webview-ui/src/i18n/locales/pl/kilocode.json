@@ -308,6 +308,9 @@
 		},
 		"modes": {
 			"description": "Te tryby są dostępne ze społeczności. Kliknij <1>tutaj</1>, aby edytować swoje własne niestandardowe tryby."
+		},
+		"skills": {
+			"description": "Przeglądaj i odkrywaj umiejętności od społeczności. Umiejętności zapewniają specjalistyczne instrukcje dla konkretnych zadań."
 		}
 	},
 	"modes": {

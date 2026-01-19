@@ -42,6 +42,19 @@ Upgrade the Kilo CLI package:
 
 ## CLI reference
 
+### Keyboard shortcuts
+
+| Shortcut    | Description                                                                        |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `Shift+Tab` | Cycle through modes (architect → code → ask → debug → orchestrator → custom modes) |
+| `Ctrl+C`    | Exit (press twice to confirm)                                                      |
+| `Ctrl+X`    | Cancel current task                                                                |
+| `Esc`       | Cancel current task (while streaming) or clear input                               |
+| `Ctrl+Y`    | Toggle YOLO mode (auto-approve all operations)                                     |
+| `Ctrl+R`    | Resume task (when a task is ready to resume)                                       |
+| `!`         | Enter shell mode (when input is empty)                                             |
+| `↑/↓`       | Navigate command history (when input is empty)                                     |
+
 ### CLI commands
 
 | Command               | Description                                                      | Example                        |
@@ -127,6 +140,142 @@ There are community efforts to build and share agent skills. Some resources incl
 
 - [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
 - [Skill Specification](https://agentskills.io/home) - Agent Skills specification
+
+## Custom Commands
+
+Custom commands allow you to create reusable slash commands that execute predefined prompts with argument substitution. They provide a convenient way to streamline repetitive tasks and standardize workflows.
+
+Custom commands are discovered from:
+
+- **Global commands**: `~/.kilocode/commands/` (available in all projects)
+- **Project commands**: `.kilocode/commands/` (project-specific)
+
+Commands are simple markdown files with YAML frontmatter for configuration.
+
+### Creating a Custom Command
+
+1. Create the commands directory:
+
+    ```bash
+    mkdir -p ~/.kilocode/commands # mkdir %USERPROFILE%\.kilocode\commands on windows
+    ```
+
+2. Create a markdown file (e.g., `component.md`):
+
+    ```markdown
+    ---
+    description: Create a new React component
+    arguments:
+        - ComponentName
+    ---
+
+    Create a new React component named $1.
+    Include:
+
+    - Proper TypeScript typing
+    - Basic component structure
+    - Export statement
+    - A simple props interface if appropriate
+
+    Place it in the appropriate directory based on the project structure.
+    ```
+
+3. Use the command in your CLI session:
+
+    ```bash
+    /component Button
+    ```
+
+### Frontmatter Options
+
+Custom commands support the following frontmatter fields:
+
+- **`description`** (optional): Short description shown in `/help`
+- **`arguments`** (optional): List of argument names for documentation
+- **`mode`** (optional): Automatically switch to this mode when running the command
+- **`model`** (optional): Automatically switch to this model when running the command
+
+### Argument Substitution
+
+Commands support powerful argument substitution:
+
+- **`$ARGUMENTS`**: All arguments joined with spaces
+- **`$1`, `$2`, `$3`, etc.**: Individual positional arguments
+
+**Example:**
+
+```markdown
+---
+description: Create a file with content
+arguments:
+    - filename
+    - content
+---
+
+Create a new file named $1 with the following content:
+
+$2
+```
+
+Usage: `/createfile app.ts "console.log('Hello')"`
+
+### Mode and Model Switching
+
+Commands can automatically switch modes and models:
+
+```markdown
+---
+description: Run tests with coverage
+mode: code
+model: anthropic/claude-3-5-sonnet-20241022
+---
+
+Run the full test suite with coverage report and show any failures.
+Focus on the failing tests and suggest fixes.
+```
+
+When you run `/test`, it will automatically switch to code mode and use the specified model.
+
+### Example Commands
+
+**Initialize project documentation:**
+
+```markdown
+---
+description: Analyze codebase and create AGENTS.md
+mode: code
+---
+
+Please analyze this codebase and create an AGENTS.md file containing:
+
+1. Build/lint/test commands - especially for running a single test
+2. Code style guidelines including imports, formatting, types, naming conventions
+
+Focus on project-specific, non-obvious information discovered by reading files.
+```
+
+**Refactor code:**
+
+```markdown
+---
+description: Refactor code for better quality
+arguments:
+    - filepath
+---
+
+Refactor $1 to improve:
+
+- Code readability
+- Performance
+- Maintainability
+- Type safety
+
+Explain the changes you make and why they improve the code.
+```
+
+### Command Priority
+
+Project-specific commands override global commands with the same name, allowing you to customize behavior per project while maintaining sensible defaults globally.
 
 ## Checkpoint Management
 

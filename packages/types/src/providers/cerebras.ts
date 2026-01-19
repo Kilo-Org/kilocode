@@ -6,16 +6,6 @@ export type CerebrasModelId = keyof typeof cerebrasModels
 export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 export const cerebrasModels = {
-	"zai-glm-4.6": {
-		maxTokens: 16384, // Conservative default to avoid premature rate limiting (Cerebras reserves quota upfront)
-		contextWindow: 131072,
-		supportsImages: false,
-		supportsPromptCache: false,
-		supportsNativeTools: true,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Fast general-purpose model on Cerebras (up to 1,000 tokens/s). To be deprecated soon.",
-	},
 	"zai-glm-4.7": {
 		maxTokens: 16384, // Conservative default to avoid premature rate limiting (Cerebras reserves quota upfront)
 		contextWindow: 131072,
@@ -33,6 +23,7 @@ export const cerebrasModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "Intelligent model with ~1400 tokens/s",
@@ -43,6 +34,7 @@ export const cerebrasModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "Powerful model with ~2600 tokens/s",
@@ -53,6 +45,7 @@ export const cerebrasModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "SOTA coding performance with ~2500 tokens/s",
@@ -63,6 +56,7 @@ export const cerebrasModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0,
 		outputPrice: 0,
 		description:

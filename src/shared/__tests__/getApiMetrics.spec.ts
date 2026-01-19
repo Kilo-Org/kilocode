@@ -264,8 +264,9 @@ describe("getApiMetrics", () => {
 			expect(result.totalCacheReads).toBeUndefined()
 			expect(result.totalCost).toBe(0)
 
-			// The implementation concatenates all token values including cache tokens
-			expect(result.contextTokens).toBe("not-a-numbernot-a-number") // tokensIn + tokensOut (OpenAI default)
+			// Non-number values are not valid token data, so contextTokens should be 0
+			// (the message is treated as a placeholder without valid token data)
+			expect(result.contextTokens).toBe(0)
 		})
 	})
 

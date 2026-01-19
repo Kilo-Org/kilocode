@@ -56,22 +56,22 @@ async function validateParams(
 ): Promise<boolean> {
 	if (!targetFile) {
 		cline.consecutiveMistakeCount++
-		cline.recordToolError("edit_file")
-		pushToolResult(await cline.sayAndCreateMissingParamError("edit_file", "target_file"))
+		cline.recordToolError("fast_edit_file")
+		pushToolResult(await cline.sayAndCreateMissingParamError("fast_edit_file", "target_file"))
 		return false
 	}
 
 	if (!instructions) {
 		cline.consecutiveMistakeCount++
-		cline.recordToolError("edit_file")
-		pushToolResult(await cline.sayAndCreateMissingParamError("edit_file", "instructions"))
+		cline.recordToolError("fast_edit_file")
+		pushToolResult(await cline.sayAndCreateMissingParamError("fast_edit_file", "instructions"))
 		return false
 	}
 
 	if (codeEdit === undefined) {
 		cline.consecutiveMistakeCount++
-		cline.recordToolError("edit_file")
-		pushToolResult(await cline.sayAndCreateMissingParamError("edit_file", "code_edit"))
+		cline.recordToolError("fast_edit_file")
+		pushToolResult(await cline.sayAndCreateMissingParamError("fast_edit_file", "code_edit"))
 		return false
 	}
 
@@ -143,7 +143,7 @@ export async function editFileTool(
 
 		if (morphApplyResult && !morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("edit_file")
+			cline.recordToolError("fast_edit_file")
 			const error = `Failed to apply edit using Fast Apply. Please disable the Fast Apply experimental feature if this error persists. ${morphApplyResult.error}`
 			cline.say("error", error)
 			pushToolResult(formatResponse.toolError(error))
@@ -189,7 +189,8 @@ export async function editFileTool(
 		trackContribution({
 			cwd: cline.cwd,
 			filePath: relPath,
-			unifiedDiff: unifiedPatch,
+			originalContent,
+			newContent,
 			status: approved ? "accepted" : "rejected",
 			taskId: cline.taskId,
 			organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
@@ -373,7 +374,7 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 
 	// Priority 1: Use direct Morph API key if available
 	// Allow human-relay for debugging
-	if ((apiProvider === "morph" && state.morphApiKey) || state.apiConfiguration?.apiProvider === "human-relay") {
+	if (apiProvider === "morph" && state.morphApiKey) {
 		const [org, model] = selectedModel.split("/")
 		return {
 			available: true,

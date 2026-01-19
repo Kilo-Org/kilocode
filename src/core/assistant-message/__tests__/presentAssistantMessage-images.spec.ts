@@ -60,6 +60,18 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 			say: vi.fn().mockResolvedValue(undefined),
 			ask: vi.fn().mockResolvedValue({ response: "yesButtonClicked" }),
 		}
+
+		// Add pushToolResultToUserContent method after mockTask is created so it can reference mockTask
+		mockTask.pushToolResultToUserContent = vi.fn().mockImplementation((toolResult: any) => {
+			const existingResult = mockTask.userMessageContent.find(
+				(block: any) => block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+			)
+			if (existingResult) {
+				return false
+			}
+			mockTask.userMessageContent.push(toolResult)
+			return true
+		})
 	})
 
 	it("should preserve images in tool_result for native protocol", async () => {

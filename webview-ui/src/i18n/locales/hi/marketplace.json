@@ -152,5 +152,13 @@
 	},
 	"footer": {
 		"issueText": "कोई marketplace आइटम के साथ समस्या है या नए आइटम के लिए सुझाव हैं? <0>GitHub issue खोलें</0> हमें बताने के लिए!"
+	},
+	"skills": {
+		"loading": "स्किल्स लोड हो रहे हैं...",
+		"searchPlaceholder": "स्किल्स खोजें...",
+		"allCategories": "सभी",
+		"resultsCount": "{{count}} स्किल्स मिले",
+		"noResults": "आपके मापदंडों से मेल खाने वाले कोई स्किल्स नहीं मिले",
+		"viewOnGitHub": "GitHub पर देखें"
 	}
 }

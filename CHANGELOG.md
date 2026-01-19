@@ -1,8 +1,243 @@
 # kilo-code
 
-## 4.143.21
+## 4.149.0
 
-- Fix JetBrains plugin build by handling missing gradle.properties in CI check script. Thanks @janpaul123, @kevinvandijk, @chrarnoldus, @hassoncs, @markijbema, @catrielmuller! - Fixes #3271
+### Minor Changes
+
+- [#5176](https://github.com/Kilo-Org/kilocode/pull/5176) [`6765832`](https://github.com/Kilo-Org/kilocode/commit/676583256cb405ef8fb8008f313bfe4a090e9ba0) Thanks [@Drilmo](https://github.com/Drilmo)! - Add image support to Agent Manager
+
+    - Paste images from clipboard (Ctrl/Cmd+V) or select via file browser button
+    - Works in new agent prompts, follow-up messages, and resumed sessions
+    - Support for PNG, JPEG, WebP, and GIF formats (up to 4 images per message)
+    - Click thumbnails to preview, hover to remove
+    - New `newTask` stdin message type for initial prompts with images
+    - Temp image files are automatically cleaned up when extension deactivates
+
+### Patch Changes
+
+- [#5179](https://github.com/Kilo-Org/kilocode/pull/5179) [`aff6137`](https://github.com/Kilo-Org/kilocode/commit/aff613714afe752fffba01ed5958d6123426b69c) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Fix duplicate tool_result blocks when users approve tool execution with feedback text
+
+    Cherry-picked from upstream Roo-Code:
+
+    - [#10466](https://github.com/RooCodeInc/Roo-Code/pull/10466) - Add explicit deduplication (thanks @daniel-lxs)
+    - [#10519](https://github.com/RooCodeInc/Roo-Code/pull/10519) - Merge approval feedback into tool result (thanks @daniel-lxs)
+
+- [#5200](https://github.com/Kilo-Org/kilocode/pull/5200) [`495e5ff`](https://github.com/Kilo-Org/kilocode/commit/495e5ffad395fa49626a2e4992e82c690f0be8c7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - - Fixed webview flickering in JetBrains plugin for smoother UI rendering
+
+    - Improved thread management in JetBrains plugin to prevent UI freezes
+
+- [#5194](https://github.com/Kilo-Org/kilocode/pull/5194) [`fe6c025`](https://github.com/Kilo-Org/kilocode/commit/fe6c02510bd969eb3f7212804bd330beaa9fc4cb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved the reliability of the read_file tool when using Claude models
+
+- [#5078](https://github.com/Kilo-Org/kilocode/pull/5078) [`d4cc35d`](https://github.com/Kilo-Org/kilocode/commit/d4cc35ddb86ef9d0165e4d61323fa9a0920f2ba7) Thanks [@markijbema](https://github.com/markijbema)! - Remove clipboard reading from chat autocomplete
+
+- Updated dependencies [[`6765832`](https://github.com/Kilo-Org/kilocode/commit/676583256cb405ef8fb8008f313bfe4a090e9ba0), [`cdc3e2e`](https://github.com/Kilo-Org/kilocode/commit/cdc3e2ea32ced833b9d1d1983a4252eda3c0fdf1)]:
+    - @kilocode/core-schemas@0.0.2
+
+## 4.148.1
+
+### Patch Changes
+
+- [#5138](https://github.com/Kilo-Org/kilocode/pull/5138) [`e5d08e5`](https://github.com/Kilo-Org/kilocode/commit/e5d08e5464ee85a50cbded2af5a2d0bd3a5390e2) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - fix: prevent duplicate tool_result blocks causing API errors (thanks @daniel-lxs)
+
+- [#5118](https://github.com/Kilo-Org/kilocode/pull/5118) [`9ff3a91`](https://github.com/Kilo-Org/kilocode/commit/9ff3a919ecc9430c8c6c71659cfe1fa734d92877) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Fix model search matching for free tags.
+
+## 4.148.0
+
+### Minor Changes
+
+- [#4903](https://github.com/Kilo-Org/kilocode/pull/4903) [`db67550`](https://github.com/Kilo-Org/kilocode/commit/db6755024b651ec8401e90935a8185f3c9a145c8) Thanks [@eliasto](https://github.com/eliasto)! - feat(ovhcloud): Add native function calling support
+
+### Patch Changes
+
+- [#5073](https://github.com/Kilo-Org/kilocode/pull/5073) [`ab88311`](https://github.com/Kilo-Org/kilocode/commit/ab883117517b2037e23ab67c68874846be3e5c7c) Thanks [@jrf0110](https://github.com/jrf0110)! - Supports AI Attribution and code formatters format on save. Previously, the AI attribution service would not account for the fact that after saving, the AI generated code would completely change based on the user's configured formatter. This change fixes the issue by using the formatted result for attribution.
+
+- [#5106](https://github.com/Kilo-Org/kilocode/pull/5106) [`a55d1a5`](https://github.com/Kilo-Org/kilocode/commit/a55d1a58a6d127d8649baa95c1a526e119b984fe) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix slow CLI termination when pressing Ctrl+C during prompt selection
+
+    MCP server connection cleanup now uses fire-and-forget pattern for transport.close() and client.close() calls, which could previously block for 2+ seconds if MCP servers were unresponsive. This ensures fast exit behavior when the user wants to quit quickly.
+
+- [#5102](https://github.com/Kilo-Org/kilocode/pull/5102) [`7a528c4`](https://github.com/Kilo-Org/kilocode/commit/7a528c42e1de49336b914ca0cbd58057a16259ad) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Partial reads are now allowed by default, prevent the context to grow too quickly.
+
+- Updated dependencies [[`b2e2630`](https://github.com/Kilo-Org/kilocode/commit/b2e26304e562e516383fbf95a3fdc668d88e1487)]:
+    - @kilocode/core-schemas@0.0.1
+
+## 4.147.0
+
+### Minor Changes
+
+- [#5023](https://github.com/Kilo-Org/kilocode/pull/5023) [`879bd5d`](https://github.com/Kilo-Org/kilocode/commit/879bd5d6aa8d8e422cf0711ab2729abec10ee511) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Agent Manager now lets you choose which AI model to use when starting a new session. Your model selection is remembered across panel reopens, and active sessions display the model being used.
+
+### Patch Changes
+
+- [#5060](https://github.com/Kilo-Org/kilocode/pull/5060) [`ce99875`](https://github.com/Kilo-Org/kilocode/commit/ce998755310094117d687cc271e117005a46cd90) Thanks [@DoubleDoubleBonus](https://github.com/DoubleDoubleBonus)! - Add OpenAI Native model option gpt-5.2-codex.
+
+- [#4686](https://github.com/Kilo-Org/kilocode/pull/4686) [`2bd899e`](https://github.com/Kilo-Org/kilocode/commit/2bd899eede90bc1e11b32cce55dd52f3e7ac9323) Thanks [@Ashwinhegde19](https://github.com/Ashwinhegde19)! - Fix BrowserSessionRow crash on non-string inputs
+
+- [#4381](https://github.com/Kilo-Org/kilocode/pull/4381) [`e37b839`](https://github.com/Kilo-Org/kilocode/commit/e37b8397bcd1f8bd8742e29b1af8edabc5ddf9db) Thanks [@inj-src](https://github.com/inj-src)! - fix: better chat view by limiting the maximum width
+
+- [#5028](https://github.com/Kilo-Org/kilocode/pull/5028) [`885a54a`](https://github.com/Kilo-Org/kilocode/commit/885a54aae6c43620c431eeb055794f00f2dada0b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Visual Studio Code's telemetry setting is now respected
+
+- [#4406](https://github.com/Kilo-Org/kilocode/pull/4406) [`7dd14bd`](https://github.com/Kilo-Org/kilocode/commit/7dd14bd35c7aa82bdcbe179a6b1141735778b5a2) Thanks [@Secsys-FDU](https://github.com/Secsys-FDU)! - fix: block Windows CMD injection vectors in auto-approved commands
+
+## 4.146.0
+
+### Minor Changes
+
+- [#4865](https://github.com/Kilo-Org/kilocode/pull/4865) [`d9e65fe`](https://github.com/Kilo-Org/kilocode/commit/d9e65fe1027943a51cfc1dd97c2eed86ed104748) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.36.7-v3.38.3
+
+    - Feat: Add option in Context settings to recursively load `.kilocode/rules` and `AGENTS.md` from subdirectories (PR #10446 by @mrubens)
+    - Fix: Stop frequent Claude Code sign-ins by hardening OAuth refresh token handling (PR #10410 by @hannesrudolph)
+    - Fix: Add `maxConcurrentFileReads` limit to native `read_file` tool schema (PR #10449 by @app/roomote)
+    - Fix: Add type check for `lastMessage.text` in TTS useEffect to prevent runtime errors (PR #10431 by @app/roomote)
+    - Align skills system with Agent Skills specification (PR #10409 by @hannesrudolph)
+    - Prevent write_to_file from creating files at truncated paths (PR #10415 by @mrubens and @daniel-lxs)
+    - Fix rate limit wait display (PR #10389 by @hannesrudolph)
+    - Remove human-relay provider (PR #10388 by @hannesrudolph)
+    - Fix: Flush pending tool results before condensing context (PR #10379 by @daniel-lxs)
+    - Fix: Revert mergeToolResultText for OpenAI-compatible providers (PR #10381 by @hannesrudolph)
+    - Fix: Enforce maxConcurrentFileReads limit in read_file tool (PR #10363 by @roomote)
+    - Fix: Improve feedback message when read_file is used on a directory (PR #10371 by @roomote)
+    - Fix: Handle custom tool use similarly to MCP tools for IPC schema purposes (PR #10364 by @jr)
+    - Add support for npm packages and .env files to custom tools, allowing custom tools to import dependencies and access environment variables (PR #10336 by @cte)
+    - Remove simpleReadFileTool feature, streamlining the file reading experience (PR #10254 by @app/roomote)
+    - Remove OpenRouter Transforms feature (PR #10341 by @app/roomote)
+    - Fix: Send native tool definitions by default for OpenAI to ensure proper tool usage (PR #10314 by @hannesrudolph)
+    - Fix: Preserve reasoning_details shape to prevent malformed responses when processing model output (PR #10313 by @hannesrudolph)
+    - Fix: Drain queued messages while waiting for ask to prevent message loss (PR #10315 by @hannesrudolph)
+    - Feat: Add grace retry for empty assistant messages to improve reliability (PR #10297 by @hannesrudolph)
+    - Feat: Enable mergeToolResultText for all OpenAI-compatible providers for better tool result handling (PR #10299 by @hannesrudolph)
+    - Feat: Strengthen native tool-use guidance in prompts for improved model behavior (PR #10311 by @hannesrudolph)
+    - Add MiniMax M2.1 and improve environment_details handling for Minimax thinking models (PR #10284 by @hannesrudolph)
+    - Add GLM-4.7 model with thinking mode support for Zai provider (PR #10282 by @hannesrudolph)
+    - Add experimental custom tool calling - define custom tools that integrate seamlessly with your AI workflow (PR #10083 by @cte)
+    - Deprecate XML tool protocol selection and force native tool format for new tasks (PR #10281 by @daniel-lxs)
+    - Fix: Emit tool_call_end events in OpenAI handler when streaming ends (#10275 by @torxeon, PR #10280 by @daniel-lxs)
+    - Fix: Emit tool_call_end events in BaseOpenAiCompatibleProvider (PR #10293 by @hannesrudolph)
+    - Fix: Disable strict mode for MCP tools to preserve optional parameters (PR #10220 by @daniel-lxs)
+    - Fix: Move array-specific properties into anyOf variant in normalizeToolSchema (PR #10276 by @daniel-lxs)
+    - Fix: Add graceful fallback for model parsing in Chutes provider (PR #10279 by @hannesrudolph)
+    - Fix: Enable Requesty refresh models with credentials (PR #10273 by @daniel-lxs)
+    - Fix: Improve reasoning_details accumulation and serialization (PR #10285 by @hannesrudolph)
+    - Fix: Preserve reasoning_content in condense summary for DeepSeek-reasoner (PR #10292 by @hannesrudolph)
+    - Refactor Zai provider to merge environment_details into tool result instead of system message (PR #10289 by @hannesrudolph)
+    - Remove parallel_tool_calls parameter from litellm provider (PR #10274 by @roomote)
+    - Fix: Normalize tool schemas for VS Code LM API to resolve error 400 when using VS Code Language Model API providers (PR #10221 by @hannesrudolph)
+    - Add 1M context window beta support for Claude Sonnet 4 on Vertex AI, enabling significantly larger context for complex tasks (PR #10209 by @hannesrudolph)
+    - Add native tool call defaults for OpenAI-compatible providers, expanding native function calling across more configurations (PR #10213 by @hannesrudolph)
+    - Enable native tool calls for Requesty provider (PR #10211 by @daniel-lxs)
+    - Improve API error handling and visibility with clearer error messages and better user feedback (PR #10204 by @brunobergher)
+    - Add downloadable error diagnostics from chat errors, making it easier to troubleshoot and report issues (PR #10188 by @brunobergher)
+    - Fix refresh models button not properly flushing the cache, ensuring model lists update correctly (#9682 by @tl-hbk, PR #9870 by @pdecat)
+    - Fix additionalProperties handling for strict mode compatibility, resolving schema validation issues with certain providers (PR #10210 by @daniel-lxs)
+    - Add native tool calling support for Claude models on Vertex AI, enabling more efficient and reliable tool interactions (PR #10197 by @hannesrudolph)
+    - Fix JSON Schema format value stripping for OpenAI compatibility, resolving issues with unsupported format values (PR #10198 by @daniel-lxs)
+    - Improve "no tools used" error handling with graceful retry mechanism for better reliability when tools fail to execute (PR #10196 by @hannesrudolph)
+    - Change default tool protocol from XML to native for improved reliability and performance (PR #10186 by @mrubens)
+    - Add native tool support for VS Code Language Model API providers (PR #10191 by @daniel-lxs)
+    - Lock task tool protocol for consistent task resumption, ensuring tasks resume with the same protocol they started with (PR #10192 by @daniel-lxs)
+    - Replace edit_file tool alias with actual edit_file tool for improved diff editing capabilities (PR #9983 by @hannesrudolph)
+    - Fix LiteLLM router models by merging default model info for native tool calling support (PR #10187 by @daniel-lxs)
+    - Fix: Add userAgentAppId to Bedrock embedder for code indexing (#10165 by @jackrein, PR #10166 by @roomote)
+    - Update OpenAI and Gemini tool preferences for improved model behavior (PR #10170 by @hannesrudolph)
+    - Add support for Claude Code Provider native tool calling, improving tool execution performance and reliability (PR #10077 by @hannesrudolph)
+    - Enable native tool calling by default for Z.ai models for better model compatibility (PR #10158 by @app/roomote)
+    - Enable native tools by default for OpenAI compatible provider to improve tool calling support (PR #10159 by @daniel-lxs)
+    - Fix: Normalize MCP tool schemas for Bedrock and OpenAI strict mode to ensure proper tool compatibility (PR #10148 by @daniel-lxs)
+    - Fix: Remove dots and colons from MCP tool names for Bedrock compatibility (PR #10152 by @daniel-lxs)
+    - Fix: Convert tool_result to XML text when native tools disabled for Bedrock (PR #10155 by @daniel-lxs)
+    - Fix: Support AWS GovCloud and China region ARNs in Bedrock provider for expanded regional support (PR #10157 by @app/roomote)
+    - Implement interleaved thinking mode for DeepSeek Reasoner, enabling streaming reasoning output (PR #9969 by @hannesrudolph)
+    - Fix: Preserve reasoning_content during tool call sequences in DeepSeek (PR #10141 by @hannesrudolph)
+    - Fix: Correct token counting for context truncation display (PR #9961 by @hannesrudolph)
+    - Fix: Normalize tool call IDs for cross-provider compatibility via OpenRouter, ensuring consistent handling across different AI providers (PR #10102 by @daniel-lxs)
+    - Fix: Add additionalProperties: false to nested MCP tool schemas, improving schema validation and preventing unexpected properties (PR #10109 by @daniel-lxs)
+    - Fix: Validate tool_result IDs in delegation resume flow, preventing errors when resuming delegated tasks (PR #10135 by @daniel-lxs)
+    - Feat: Add full error details to streaming failure dialog, providing more comprehensive information for debugging streaming issues (PR #10131 by @roomote)
+    - Implement incremental token-budgeted file reading for smarter, more efficient file content retrieval (PR #10052 by @jr)
+    - Enable native tools by default for multiple providers including OpenAI, Azure, Google, Vertex, and more (PR #10059 by @daniel-lxs)
+    - Enable native tools by default for Anthropic and add telemetry tracking for tool format usage (PR #10021 by @daniel-lxs)
+    - Fix: Prevent race condition from deleting wrong API messages during streaming (PR #10113 by @hannesrudolph)
+    - Fix: Prevent duplicate MCP tools error by deduplicating servers at source (PR #10096 by @daniel-lxs)
+    - Remove strict ARN validation for Bedrock custom ARN users allowing more flexibility (#10108 by @wisestmumbler, PR #10110 by @roomote)
+    - Add metadata to error details dialog for improved debugging (PR #10050 by @roomote)
+    - Remove description from Bedrock service tiers for cleaner UI (PR #10118 by @mrubens)
+    - Improve tool configuration for OpenAI models in OpenRouter (PR #10082 by @hannesrudolph)
+    - Capture more detailed provider-specific error information from OpenRouter for better debugging (PR #10073 by @jr)
+    - Add Amazon Nova 2 Lite model to Bedrock provider (#9802 by @Smartsheet-JB-Brown, PR #9830 by @roomote)
+    - Add AWS Bedrock service tier support (#9874 by @Smartsheet-JB-Brown, PR #9955 by @roomote)
+    - Remove auto-approve toggles for to-do and retry actions to simplify the approval workflow (PR #10062 by @hannesrudolph)
+    - Move isToolAllowedForMode out of shared directory for better code organization (PR #10089 by @cte)
+
+### Patch Changes
+
+- [#4950](https://github.com/Kilo-Org/kilocode/pull/4950) [`4b31180`](https://github.com/Kilo-Org/kilocode/commit/4b311806d571e115a6f6ab30d910e0bd39cc317b) Thanks [@markijbema](https://github.com/markijbema)! - Fix chat autocomplete to only show suggestions when textarea has focus, text hasn't changed, and clear suggestions on paste
+
+- [#4995](https://github.com/Kilo-Org/kilocode/pull/4995) [`95e9b6d`](https://github.com/Kilo-Org/kilocode/commit/95e9b6d234681d34f3903715de1ceba67e745516) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - fix: use correct api url for some endpoints
+
+- [#5008](https://github.com/Kilo-Org/kilocode/pull/5008) [`a86cd0c`](https://github.com/Kilo-Org/kilocode/commit/a86cd0c96a0aa0be112ccc5ee957ed3593caf2e8) Thanks [@markijbema](https://github.com/markijbema)! - Minor improvement to markdown autocomplete suggestions
+
+- [#4445](https://github.com/Kilo-Org/kilocode/pull/4445) [`91f9aa3`](https://github.com/Kilo-Org/kilocode/commit/91f9aa34d9f98e85c1500e204b8b576f82c9d606) Thanks [@chriscool](https://github.com/chriscool)! - fix: configure husky hooks for reliable execution
+
+## 4.145.0
+
+### Minor Changes
+
+- [#4955](https://github.com/Kilo-Org/kilocode/pull/4955) [`8789f84`](https://github.com/Kilo-Org/kilocode/commit/8789f84e7d652185fce1767dcc29893080c7da87) Thanks [@iscekic](https://github.com/iscekic)! - add /condense and /compact commands
+
+### Patch Changes
+
+- [#4876](https://github.com/Kilo-Org/kilocode/pull/4876) [`7010f60`](https://github.com/Kilo-Org/kilocode/commit/7010f60bec33b5e1cdeff4a5bc2ad3c638e584cc) Thanks [@markijbema](https://github.com/markijbema)! - Autocomplete: Show entire suggestion when first line has no word characters
+
+- [#4183](https://github.com/Kilo-Org/kilocode/pull/4183) [`de30ffa`](https://github.com/Kilo-Org/kilocode/commit/de30ffa307c2bf0ad72eec67782b67725172f71f) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - fix(cerebras): use conservative max_tokens and add integration header
+
+    **Conservative max_tokens:**
+    Cerebras rate limiter estimates token consumption using max_completion_tokens upfront rather than actual usage. When agentic tools automatically set this to the model maximum (e.g., 64K), users exhaust their quota prematurely and get rate-limited despite minimal actual token consumption.
+
+    This fix uses a conservative default of 8K tokens instead of the model maximum. This is sufficient for most agentic tool use while preserving rate limit headroom.
+
+    **Integration header:**
+    Added `X-Cerebras-3rd-Party-Integration: kilocode` header to all Cerebras API requests for tracking and analytics.
+
+- [#4856](https://github.com/Kilo-Org/kilocode/pull/4856) [`100462e`](https://github.com/Kilo-Org/kilocode/commit/100462e956f7f7799525ebddb7d10050435047da) Thanks [@markijbema](https://github.com/markijbema)! - Improve autocomplete tooltip messaging when there's no balance
+
+    When a user has a Kilo Code account with no credits, the autocomplete status bar now shows a helpful message explaining that they need to add credits to use autocomplete, rather than just showing a generic token error.
+
+- [#4793](https://github.com/Kilo-Org/kilocode/pull/4793) [`4fff873`](https://github.com/Kilo-Org/kilocode/commit/4fff873a4b28fa66afbcf837358bcd584665a8be) Thanks [@mcowger](https://github.com/mcowger)! - Restore various providers to modelCache endpoint to fix outdated entries.
+
+## 4.144.0
+
+### Minor Changes
+
+- [#4888](https://github.com/Kilo-Org/kilocode/pull/4888) [`334328d`](https://github.com/Kilo-Org/kilocode/commit/334328de5fa1825726b07be5d587550de2c52d91) Thanks [@hassoncs](https://github.com/hassoncs)! - Show notifications when skills are added or removed from the project or global config
+
+### Patch Changes
+
+- [#4880](https://github.com/Kilo-Org/kilocode/pull/4880) [`909bca7`](https://github.com/Kilo-Org/kilocode/commit/909bca7665b91753c3a9fd0435b13f1c91bcb2f2) Thanks [@markijbema](https://github.com/markijbema)! - Fixed that some tasks in task history were red
+
+- [#4862](https://github.com/Kilo-Org/kilocode/pull/4862) [`10ce725`](https://github.com/Kilo-Org/kilocode/commit/10ce72547d207b4f03538ebb3dc525d5bd92727d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Add Kilo icon to editor toolbar for quick access to open Kilo from any context
+
+- [#4940](https://github.com/Kilo-Org/kilocode/pull/4940) [`9809864`](https://github.com/Kilo-Org/kilocode/commit/9809864ce51474c29b0db2635a19a92520a2f1f1) Thanks [@Drilmo](https://github.com/Drilmo)! - Add KILOCODE_DEV_CLI_PATH support for easier extension + CLI development workflow
+
+- [#4899](https://github.com/Kilo-Org/kilocode/pull/4899) [`7a58919`](https://github.com/Kilo-Org/kilocode/commit/7a58919c7e4e12e0c954031081e12745419bf8b9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Disable ask_followup_question tool when yolo mode is enabled to prevent the agent from asking itself questions and auto-answering them. Applied to:
+
+    - XML tool descriptions (system prompt)
+    - Native tool filtering
+    - Tool execution (returns error message if model still tries to use the tool from conversation history)
+
+- [#4863](https://github.com/Kilo-Org/kilocode/pull/4863) [`c65b798`](https://github.com/Kilo-Org/kilocode/commit/c65b798d99cd07bae2312d284663cd298a1b3f9e) Thanks [@hassoncs](https://github.com/hassoncs)! - Allow users to pick an input device for Speech-to-Text input
+
+- [#4892](https://github.com/Kilo-Org/kilocode/pull/4892) [`b37c944`](https://github.com/Kilo-Org/kilocode/commit/b37c944a8bea644660b6f2c4400d0b47cbdee979) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager session disappearing immediately after starting due to gitUrl race condition
+
+- [#4898](https://github.com/Kilo-Org/kilocode/pull/4898) [`14b22b6`](https://github.com/Kilo-Org/kilocode/commit/14b22b6b9b947ceab6418d6e43962b5535adad1e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix session becoming non-interactable after clicking "Finish to Branch" button. The session now remains active so users can continue working after committing changes.
+
+- [#4835](https://github.com/Kilo-Org/kilocode/pull/4835) [`d55c093`](https://github.com/Kilo-Org/kilocode/commit/d55c093797c4a816a86ee5ee000f32a98f28199b) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Add section headers to model selection dropdowns for "Recommended models" and "All models"
+
+- [#4891](https://github.com/Kilo-Org/kilocode/pull/4891) [`20f1a16`](https://github.com/Kilo-Org/kilocode/commit/20f1a16e2ed37bd79332bac8ea1358b01c4acbc0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: prevent double display of MCP marketplace section in settings view
+
+- [#4873](https://github.com/Kilo-Org/kilocode/pull/4873) [`72ed20b`](https://github.com/Kilo-Org/kilocode/commit/72ed20b686f28062fb795beb44377a993bb40a7b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improve support for VSCode's HTTP proxy settings
+
+- [#4901](https://github.com/Kilo-Org/kilocode/pull/4901) [`140bbf7`](https://github.com/Kilo-Org/kilocode/commit/140bbf7630a81591b18cc60a989690142e6b6039) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Agent Manager: Parallel mode no longer modifies .gitignore
+
+    Worktree exclusion rules are now written to `.git/info/exclude` instead, avoiding changes to tracked files in your repository.
 
 ## 4.143.2
 

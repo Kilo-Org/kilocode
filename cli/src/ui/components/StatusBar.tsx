@@ -1,5 +1,5 @@
 /**
- * StatusBar component - displays project info, git branch, mode, model, and context usage
+ * StatusBar component - displays project info, git branch, mode, model, context usage, and session cost
  */
 
 import React, { useEffect, useMemo, useState } from "react"
@@ -16,6 +16,7 @@ import {
 } from "../../state/atoms/index.js"
 import { useGitInfo } from "../../state/hooks/useGitInfo.js"
 import { useContextUsage } from "../../state/hooks/useContextUsage.js"
+import { useSessionCost, formatSessionCost } from "../../state/hooks/useSessionCost.js"
 import { useTheme } from "../../state/hooks/useTheme.js"
 import { formatContextUsage } from "../../utils/context.js"
 import {
@@ -110,6 +111,9 @@ export const StatusBar: React.FC = () => {
 
 	// Calculate context usage
 	const contextUsage = useContextUsage(messages, apiConfig)
+
+	// Calculate session cost
+	const sessionCost = useSessionCost()
 
 	const [isWorktree, setIsWorktree] = useState(false)
 
@@ -217,6 +221,16 @@ export const StatusBar: React.FC = () => {
 				<Text color={contextColor} bold>
 					{contextText}
 				</Text>
+
+				{/* Session Cost */}
+				{sessionCost.hasCostData && (
+					<>
+						<Text color={theme.ui.text.dimmed} dimColor>
+							{" | "}
+						</Text>
+						<Text color={theme.semantic.info}>{formatSessionCost(sessionCost.totalCost)}</Text>
+					</>
+				)}
 			</Box>
 		</Box>
 	)

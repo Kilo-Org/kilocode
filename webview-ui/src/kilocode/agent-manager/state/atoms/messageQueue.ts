@@ -11,6 +11,7 @@ export interface QueuedMessage {
 	id: string
 	sessionId: string
 	content: string
+	images?: string[] // Data URLs of pasted images
 	status: "queued" | "sending" | "sent" | "failed"
 	timestamp: number
 	error?: string
@@ -41,23 +42,27 @@ export const nextQueuedMessageAtomFamily = atomFamily((sessionId: string) =>
 )
 
 // Action: Add message to queue
-export const addToQueueAtom = atom(null, (get, set, payload: { sessionId: string; content: string }) => {
-	const { sessionId, content } = payload
-	const queue = get(sessionMessageQueueAtomFamily(sessionId))
+export const addToQueueAtom = atom(
+	null,
+	(get, set, payload: { sessionId: string; content: string; images?: string[] }) => {
+		const { sessionId, content, images } = payload
+		const queue = get(sessionMessageQueueAtomFamily(sessionId))
 
-	const newMessage: QueuedMessage = {
-		id: generateId(),
-		sessionId,
-		content,
-		status: "queued",
-		timestamp: Date.now(),
-		retryCount: 0,
-		maxRetries: 3,
-	}
+		const newMessage: QueuedMessage = {
+			id: generateId(),
+			sessionId,
+			content,
+			images,
+			status: "queued",
+			timestamp: Date.now(),
+			retryCount: 0,
+			maxRetries: 3,
+		}
 
-	set(sessionMessageQueueAtomFamily(sessionId), [...queue, newMessage])
-	return newMessage
-})
+		set(sessionMessageQueueAtomFamily(sessionId), [...queue, newMessage])
+		return newMessage
+	},
+)
 
 // Action: Update message status
 export const updateMessageStatusAtom = atom(

@@ -122,12 +122,43 @@ export class SkillsManager {
 				return
 			}
 
+			// Strict spec validation (https://agentskills.io/specification)
+			// Name constraints:
+			// - 1-64 chars
+			// - lowercase letters/numbers/hyphens only
+			// - must not start/end with hyphen
+			// - must not contain consecutive hyphens
+			if (effectiveSkillName.length < 1 || effectiveSkillName.length > 64) {
+				console.error(
+					`Skill name "${effectiveSkillName}" is invalid: name must be 1-64 characters (got ${effectiveSkillName.length})`,
+				)
+				return
+			}
+			const nameFormat = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+			if (!nameFormat.test(effectiveSkillName)) {
+				console.error(
+					`Skill name "${effectiveSkillName}" is invalid: must be lowercase letters/numbers/hyphens only (no leading/trailing hyphen, no consecutive hyphens)`,
+				)
+				return
+			}
+
+			// Description constraints:
+			// - 1-1024 chars
+			// - non-empty (after trimming)
+			const description = frontmatter.description.trim()
+			if (description.length < 1 || description.length > 1024) {
+				console.error(
+					`Skill "${effectiveSkillName}" has an invalid description length: must be 1-1024 characters (got ${description.length})`,
+				)
+				return
+			}
+
 			// Create unique key combining name, source, and mode for override resolution
 			const skillKey = this.getSkillKey(effectiveSkillName, source, mode)
 
 			this.skills.set(skillKey, {
 				name: effectiveSkillName,
-				description: frontmatter.description,
+				description,
 				path: skillMdPath,
 				source,
 				mode, // undefined for generic skills, string for mode-specific

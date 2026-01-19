@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
-				"tokenError": "Token yang valid harus diatur untuk menggunakan Autocomplete",
+				"noCredits": "**Tidak ada kredit di akun kamu**\n\nAkun Kilo Code kamu tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun kamu.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Tidak ada model autocomplete yang dikonfigurasi**\n\nUntuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini: {{providers}}.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Total biaya sesi:",
 				"provider": "Penyedia:",
 				"model": "Model:",

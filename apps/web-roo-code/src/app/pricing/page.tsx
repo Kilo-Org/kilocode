@@ -71,6 +71,7 @@ interface PricingTier {
 		text: string
 		href?: string
 	}
+	learnMoreLink?: string
 }
 
 const pricingTiers: PricingTier[] = [
@@ -123,6 +124,7 @@ const pricingTiers: PricingTier[] = [
 			text: "Sign up",
 			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP + "?redirect_url=/billing",
 		},
+		learnMoreLink: "/cloud/team",
 	},
 ]
 
@@ -164,11 +166,11 @@ export default function PricingPage() {
 										<Icon className="size-6" strokeWidth={1.5} />
 									</div>
 
-									<div className="grow mb-8">
+									<div className="grow mb-8 md:h-[214px]">
 										<p className="text-sm text-muted-foreground font-light mb-2">
 											{tier.featuresIntro}&nbsp;
 										</p>
-										<ul className="space-y-3 my-0 md:h-[192px]">
+										<ul className="space-y-3 my-0">
 											{tier.features.map((feature) => (
 												<li key={feature} className="flex items-start gap-2">
 													<Check className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
@@ -176,6 +178,15 @@ export default function PricingPage() {
 												</li>
 											))}
 										</ul>
+										{tier.learnMoreLink && (
+											<div className="mt-2">
+												<Link
+													href={tier.learnMoreLink}
+													className="text-sm text-violet-600 dark:text-violet-400 hover:underline">
+													Learn more →
+												</Link>
+											</div>
+										)}
 									</div>
 
 									<p className="text-base font-light">{tier.trial}</p>
@@ -225,7 +236,7 @@ export default function PricingPage() {
 									On any plan, you can use your own LLM provider API key or use the built-in Roo Code
 									Cloud provider – curated models to work with Roo with no markup, including the
 									latest Gemini, GPT and Claude. Paid with credits.
-									<Link href="/provider/pricing" className="underline hover:no-underline ml-1">
+									<Link href="/provider" className="underline hover:no-underline ml-1">
 										See per model pricing.
 									</Link>
 								</p>

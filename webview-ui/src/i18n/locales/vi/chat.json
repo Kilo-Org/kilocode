@@ -146,17 +146,20 @@
 		"streaming": "Yêu cầu API...",
 		"cancelled": "Yêu cầu API đã hủy",
 		"streamingFailed": "Streaming API thất bại",
-		"errorTitle": "Lỗi API {{code}}",
+		"rateLimitWait": "Giới hạn tốc độ",
+		"errorTitle": "Lỗi nhà cung cấp {{code}}",
 		"errorMessage": {
 			"docs": "Tài liệu",
+			"goToSettings": "Cài đặt",
 			"400": "Nhà cung cấp không thể xử lý yêu cầu theo cách này. Hãy dừng nhiệm vụ và thử một cách tiếp cận khác.",
 			"401": "Không thể xác thực với nhà cung cấp. Vui lòng kiểm tra cấu hình khóa API của bạn.",
 			"402": "Có vẻ như bạn đã hết tiền/tín dụng trong tài khoản. Hãy truy cập nhà cung cấp và thêm tiền để tiếp tục.",
 			"403": "Truy cập bị từ chối. Khóa API của bạn hợp lệ, nhưng nhà cung cấp từ chối hoàn thành yêu cầu này.",
 			"429": "Quá nhiều yêu cầu. Nhà cung cấp đang giới hạn tốc độ yêu cầu của bạn. Vui lòng chờ một chút trước khi gọi API tiếp theo.",
 			"500": "Lỗi máy chủ của nhà cung cấp. Có sự cố ở phía nhà cung cấp, không có gì sai với yêu cầu của bạn.",
-			"unknown": "Lỗi API không xác định. Vui lòng liên hệ hỗ trợ Kilo.",
-			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động."
+			"unknown": "Lỗi API không xác định, nhấp vào Chi tiết để biết thêm thông tin.",
+			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động.",
+			"claudeCodeNotAuthenticated": "Bạn cần đăng nhập để sử dụng Claude Code. Vào Cài đặt và nhấp vào \"Đăng nhập vào Claude Code\" để xác thực."
 		}
 	},
 	"checkpoint": {
@@ -271,10 +274,19 @@
 		"hasQuestion": "Kilo Code có một câu hỏi"
 	},
 	"taskCompleted": "Nhiệm vụ hoàn thành",
+	"modelResponseIncomplete": "Phản hồi của mô hình không đầy đủ",
+	"modelResponseErrors": {
+		"noToolsUsed": "Mô hình đã không sử dụng bất kỳ công cụ nào trong phản hồi của mình. Điều này thường xảy ra khi mô hình chỉ cung cấp văn bản/lý luận mà không gọi các công cụ cần thiết để hoàn thành tác vụ.",
+		"noToolsUsedDetails": "Mô hình đã cung cấp văn bản/lý luận nhưng không gọi bất kỳ công cụ bắt buộc nào. Điều này thường cho thấy mô hình đã hiểu sai tác vụ hoặc đang gặp khó khăn trong việc xác định công cụ nào sẽ sử dụng. Mô hình đã được tự động nhắc thử lại với việc sử dụng công cụ phù hợp.",
+		"noAssistantMessages": "Mô hình không cung cấp bất kỳ nội dung phản hồi nào. Điều này có thể cho thấy có vấn đề với API hoặc đầu ra của mô hình.",
+		"noAssistantMessagesDetails": "Mô hình ngôn ngữ đã trả về một phản hồi trống mà không có văn bản hoặc lệnh gọi công cụ nào. Điều này có thể xảy ra do vấn đề API, giới hạn tốc độ hoặc các vấn đề cụ thể của mô hình. Mô hình đã được tự động nhắc thử lại."
+	},
 	"errorDetails": {
+		"link": "Chi tiết",
 		"title": "Chi tiết lỗi",
 		"copyToClipboard": "Sao chép vào clipboard",
-		"copied": "Đã sao chép!"
+		"copied": "Đã sao chép!",
+		"diagnostics": "Nhận thông tin lỗi chi tiết"
 	},
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
@@ -331,9 +343,9 @@
 			"goToSettingsButton": "Đi tới Cài đặt"
 		},
 		"release": {
-			"heading": "Mới trong phiên bản này:",
-			"contextRewind": "Nén ngữ cảnh được cải thiện hiện cho phép bạn khôi phục bối cảnh trước đó đầy đủ khi cuộn lại đến một điểm kiểm tra",
-			"rooProvider": "Nhà cung cấp Roo Code Cloud hiện giữ lại nội dung lý luận và sử dụng các công cụ gốc theo mặc định để có hiệu suất tốt hơn"
+			"heading": "Tính năng mới:",
+			"skills": "Roo hiện hỗ trợ <skillsLink>Agent Skills</skillsLink> - các gói có thể tái sử dụng gồm các lời nhắc, công cụ và tài nguyên để mở rộng khả năng của Roo.",
+			"nativeToolCalling": "Gọi công cụ gốc hiện được yêu cầu cho tất cả các tác vụ mới. <blogLink>Tìm hiểu thêm</blogLink> về động lực và những gì cần làm nếu bạn gặp sự cố."
 		},
 		"cloudAgents": {
 			"heading": "Mới trên Cloud:",

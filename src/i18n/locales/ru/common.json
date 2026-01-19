@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Помощник по программированию на основе искусственного интеллекта с открытым исходным кодом для планирования, создания и исправления кода."
+		"description": "AI-агент для программирования с открытым исходным кодом, который генерирует код из естественного языка, автоматизирует задачи и выполняет команды терминала. Включает встроенное автодополнение, автоматизацию браузера, автоматический рефакторинг и пользовательские режимы для планирования, программирования и отладки. Поддерживает более 500 AI-моделей, включая Claude (Anthropic), Gemini, Grok, GPT, Codex и GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "тыс",
@@ -99,8 +99,7 @@
 			"errorOutput": "Вывод ошибки: {{output}}",
 			"processExitedWithError": "Процесс Claude Code завершился с кодом {{exitCode}}. Вывод ошибки: {{output}}",
 			"stoppedWithReason": "Claude Code остановился по причине: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Не удалось загрузить учетные данные OAuth. Сначала выполните аутентификацию: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Ключ API Groq",
-			"getGroqApiKey": "Получить ключ API Groq",
-			"claudeCode": {
-				"pathLabel": "Путь к Claude Code",
-				"description": "Необязательный путь к вашему CLI Claude Code. По умолчанию 'claude', если не установлено.",
-				"placeholder": "По умолчанию: claude"
-			}
+			"getGroqApiKey": "Получить ключ API Groq"
 		}
 	},
 	"customModes": {
