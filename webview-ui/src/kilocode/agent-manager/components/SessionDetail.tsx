@@ -438,14 +438,17 @@ function NewAgentForm() {
 						aria-hidden="true"
 					/>
 
-					{/* Bottom bar with images and actions */}
-					<div className="absolute bottom-2 left-3 right-2 z-30 flex items-center justify-between">
-						{/* Image Thumbnails on the left */}
-						<div className="flex items-center gap-1.5">
+					{/* Image thumbnails row - positioned above the action buttons */}
+					{selectedImages.length > 0 && (
+						<div className="absolute bottom-10 left-3 right-2 z-30 flex items-center gap-1.5 pb-1">
 							{selectedImages.map((image, index) => (
 								<ImageThumbnail key={index} src={image} index={index} onRemove={removeImage} />
 							))}
 						</div>
+					)}
+
+					{/* Bottom bar with actions */}
+					<div className="absolute bottom-2 left-3 right-2 z-30 flex items-center justify-end">
 						{/* Actions on the right */}
 						<div className="flex items-center gap-2">
 							<AddImageButton
