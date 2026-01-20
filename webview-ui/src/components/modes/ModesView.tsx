@@ -25,6 +25,9 @@ import {
 } from "@roo/modes"
 import { TOOL_GROUPS } from "@roo/tools"
 
+import { KiloModeModelPicker } from "../kilocode/KiloModeModelPicker" // kilocode_change
+import type { ModelInfo } from "@roo-code/types" // kilocode_change
+
 import { vscode } from "@src/utils/vscode"
 import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -70,6 +73,7 @@ const ModesView = () => {
 	const { t } = useAppTranslation()
 
 	const {
+		apiConfiguration,
 		customModePrompts,
 		listApiConfigMeta,
 		currentApiConfigName,
@@ -87,14 +91,6 @@ const ModesView = () => {
 	// 2. Not syncing with the backend mode state (which would cause flickering)
 	// 3. Still sending the mode change to the backend for persistence
 	const [visualMode, setVisualMode] = useState(mode)
-
-	// kilocode_change start: per-mode Kilo Code model override UI
-	const kiloCodeModels = routerModels?.kilocode ?? {}
-	const hasKiloCodeModels = Object.keys(kiloCodeModels).length > 0
-	const MODE_MODEL_DEFAULT_VALUE = "__default__"
-	const selectedModeModelId = (modeModelOverrides as Record<string, string> | undefined)?.[visualMode] ?? null
-	const selectedModeModelSelectValue = selectedModeModelId ?? MODE_MODEL_DEFAULT_VALUE
-	// kilocode_change end: per-mode Kilo Code model override UI
 
 	// Build modes fresh each render so search reflects inline rename updates immediately
 	const modes = getAllModes(customModes)
@@ -964,50 +960,12 @@ const ModesView = () => {
 					</div>
 
 					{/* kilocode_change start: Per-mode Kilo Code model override */}
-					<div className="mb-3">
-						<div className="font-bold mb-1">Model</div>
-						<div className="text-sm text-vscode-descriptionForeground mb-2">
-							Select the Kilo Code gateway model to use for this mode.
-						</div>
-						<div className="mb-2">
-							<Select
-								value={selectedModeModelSelectValue}
-								onValueChange={(value) => {
-									const modelId = value === MODE_MODEL_DEFAULT_VALUE ? null : value
-									vscode.postMessage({
-										type: "setModeModelOverride",
-										payload: { mode: visualMode, modelId },
-									})
-								}}
-								disabled={!hasKiloCodeModels}>
-								<SelectTrigger className="w-full" data-testid="mode-model-select-trigger">
-									<SelectValue placeholder="Use default" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={MODE_MODEL_DEFAULT_VALUE}>Use default</SelectItem>
-									{Object.keys(kiloCodeModels)
-										.sort((a, b) => a.localeCompare(b))
-										.map((modelId) => (
-											<SelectItem key={modelId} value={modelId}>
-												{modelId}
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
-						</div>
-						{!hasKiloCodeModels && (
-							<div className="text-xs text-vscode-descriptionForeground">
-								Kilo Code models are not available. Configure the Kilo Code provider to fetch models.
-								{selectedModeModelId && (
-									<span>
-										{""}
-										Gateway models unavailable; per-mode model won’t be applied until models can be
-										fetched.
-									</span>
-								)}
-							</div>
-						)}
-					</div>
+					<KiloModeModelPicker
+						modeSlug={visualMode}
+						apiProvider={apiConfiguration?.apiProvider}
+						routerModels={routerModels as unknown as { kilocode?: Record<string, ModelInfo> }}
+						modeModelOverrides={modeModelOverrides as Record<string, string> | undefined}
+					/>
 					{/* kilocode_change end: Per-mode Kilo Code model override */}
 				</div>
 

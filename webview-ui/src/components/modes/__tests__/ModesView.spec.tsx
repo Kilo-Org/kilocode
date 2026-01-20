@@ -278,21 +278,40 @@ describe("PromptsView", () => {
 	})
 
 	// kilocode_change start: per-mode model override UI behavior
-	it("disables per-mode Model select when Kilo Code routerModels are unavailable", () => {
-		renderPromptsView({ routerModels: { kilocode: {} } })
+	it("disables per-mode Model picker when provider is not kilocode (even if models exist)", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "openai" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
 		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
-		// Radix sets data-disabled as an empty string attribute when disabled
-		expect(modelSelectTrigger).toHaveAttribute("data-disabled")
+		expect(modelSelectTrigger).toBeDisabled()
 	})
 
-	it("renders enabled per-mode Model select when Kilo Code routerModels are available", () => {
-		renderPromptsView({ routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } } })
+	it("disables per-mode Model picker when Kilo Code routerModels are unavailable", () => {
+		renderPromptsView({ apiConfiguration: { apiProvider: "kilocode" }, routerModels: { kilocode: {} } })
 		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
-		expect(modelSelectTrigger).not.toHaveAttribute("data-disabled")
+		expect(modelSelectTrigger).toBeDisabled()
+	})
+
+	it("renders enabled per-mode Model picker when provider is kilocode and models exist", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		expect(modelSelectTrigger).not.toBeDisabled()
+	})
+
+	it("shows helper text when provider is not kilocode", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "openai" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+		expect(screen.getByText("Switch provider to Kilo Code to set per-mode model.")).toBeInTheDocument()
 	})
 
 	it("shows helper text when Kilo Code routerModels are missing", () => {
-		renderPromptsView({ routerModels: undefined })
+		renderPromptsView({ apiConfiguration: { apiProvider: "kilocode" }, routerModels: undefined })
 		expect(
 			screen.getByText("Kilo Code models are not available. Configure the Kilo Code provider to fetch models."),
 		).toBeInTheDocument()
@@ -300,6 +319,7 @@ describe("PromptsView", () => {
 
 	it("sends setModeModelOverride when selecting a model", async () => {
 		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
 			modeModelOverrides: {},
 			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
 		})
@@ -307,7 +327,7 @@ describe("PromptsView", () => {
 		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
 		fireEvent.click(modelSelectTrigger)
 
-		const option = await waitFor(() => screen.getByText("kilo-model-b"))
+		const option = await waitFor(() => screen.getByTestId("mode-model-option-kilo-model-b"))
 		fireEvent.click(option)
 
 		expect(vscode.postMessage).toHaveBeenCalledWith({
@@ -318,6 +338,7 @@ describe("PromptsView", () => {
 
 	it("sends setModeModelOverride when selecting Use default", async () => {
 		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
 			modeModelOverrides: { code: "kilo-model-a" },
 			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
 		})
@@ -327,7 +348,7 @@ describe("PromptsView", () => {
 		fireEvent.click(modelSelectTrigger)
 
 		// Pick "Use default" option
-		const defaultOption = await waitFor(() => screen.getByText("Use default"))
+		const defaultOption = await waitFor(() => screen.getByTestId("mode-model-option-default"))
 		fireEvent.click(defaultOption)
 
 		expect(vscode.postMessage).toHaveBeenCalledWith({
