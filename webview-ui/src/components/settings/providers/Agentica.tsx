@@ -1,20 +1,35 @@
 import React, { useState, useEffect, useCallback } from "react"
 import { VSCodeTextField, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import type { ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+import { agenticaDefaultModelId } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
 import { securePasswordStorage } from "@/utils/passwordStorage"
 import PlansView from "../PlansView"
+import { ModelPicker } from "../ModelPicker"
+import type { RouterModels } from "@roo/api"
 
 type AgenticaProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	uriScheme?: string
+	routerModels?: RouterModels
+	organizationAllowList?: OrganizationAllowList
+	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 type DeviceAuthStatus = "idle" | "pending" | "success" | "error"
 
-export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConfigurationField, uriScheme }) => {
+export const Agentica: React.FC<AgenticaProps> = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	uriScheme,
+	routerModels,
+	organizationAllowList = {},
+	modelValidationError,
+	simplifySettings,
+}) => {
 	const [subscription, setSubscription] = useState<any>(null)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -54,7 +69,13 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					setDeviceAuthError(undefined)
 					break
 				case "agenticaDeviceAuthPolling":
-					// Update timer - continue even if it reaches 0 (GitHub will tell us when expired)
+					// Update timer from polling check (every 5 seconds)
+					if (message.deviceAuthTimeRemaining !== undefined) {
+						setDeviceAuthTimeRemaining(message.deviceAuthTimeRemaining)
+					}
+					break
+				case "agenticaDeviceAuthTick":
+					// Update timer from per-second tick for smooth countdown
 					if (message.deviceAuthTimeRemaining !== undefined) {
 						setDeviceAuthTimeRemaining(message.deviceAuthTimeRemaining)
 					}
@@ -203,10 +224,10 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 				<VSCodeButton
 					onClick={handleDeviceAuth}
 					disabled={deviceAuthStatus === "pending"}
-					style={{ width: "100%" }}>
-					<span style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center" }}>
-						<span className="codicon codicon-github" style={{ fontSize: "16px" }} aria-hidden="true"></span>
-						<span>{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}</span>
+					style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+					<span className="codicon codicon-github" style={{ fontSize: "16px", flexShrink: 0 }} aria-hidden="true"></span>
+					<span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+						{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}
 					</span>
 				</VSCodeButton>
 				
@@ -237,15 +258,19 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 							Visit: <a href={deviceAuthVerificationUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--vscode-textLink-foreground)" }}>{deviceAuthVerificationUrl}</a>
 						</div>
 						{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining > 0 && (
-							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
-								Time remaining: {formatTimeRemaining(deviceAuthTimeRemaining)}
+							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "12px" }}>
+								<div style={{ marginBottom: "4px" }}>Time remaining: {formatTimeRemaining(deviceAuthTimeRemaining)}</div>
 							</div>
 						)}
 						{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining <= 0 && (
-							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
-								Waiting for authorization... (code may have expired)
+							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "12px" }}>
+								<div style={{ marginBottom: "4px" }}>Authorization confirmation pending...</div>
+								<div style={{ fontSize: "10px", opacity: 0.85 }}>This can take up to 30 seconds. Do not close this dialog.</div>
 							</div>
 						)}
+						<div style={{ fontSize: "10px", color: "var(--vscode-descriptionForeground)", backgroundColor: "var(--vscode-editor-background)", padding: "8px", borderRadius: "4px", marginBottom: "8px", lineHeight: "1.4" }}>
+							💡 After authorizing on GitHub, confirmation may take up to 30 seconds. This is normal. Keep this window open.
+						</div>
 						<VSCodeButton
 							onClick={handleCancelDeviceAuth}
 							appearance="secondary"
@@ -352,6 +377,20 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 				</div>
 			)}
 
+			{/* Model Selection */}
+			<ModelPicker
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				defaultModelId={agenticaDefaultModelId}
+				models={routerModels?.agentica ?? {}}
+				modelIdKey="agenticaModelId"
+				serviceName="Agentica"
+				serviceUrl="https://api.genlabs.dev/agentica/v1/models"
+				organizationAllowList={organizationAllowList}
+				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
+			/>
+
 			{/* Display subscription status if available */}
 			{subscription && (
 				<div style={{
@@ -361,13 +400,12 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					borderRadius: "6px",
 					border: "1px solid var(--vscode-panel-border)"
 				}}>
-					<div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "4px" }}>
+					<div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
 						Current Plan: {subscription.data.plan_tier.toUpperCase()}
 					</div>
 					<VSCodeButton 
 						onClick={() => setShowPlansView(true)}
-						appearance="secondary"
-						style={{ height: '24px', fontSize: '12px', padding: '0 8px' }}
+						style={{ marginBottom: "8px", width: "100%" }}
 					>
 						Manage Plan
 					</VSCodeButton>

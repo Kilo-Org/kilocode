@@ -1814,6 +1814,13 @@ export class ClineProvider
 				})
 			})
 
+			this.agenticaGithubDeviceAuthService.on("tick", (timeRemaining: number) => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthTick",
+					deviceAuthTimeRemaining: timeRemaining,
+				})
+			})
+
 			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken: string) => {
 				try {
 					// Exchange GitHub access token for Agentica API key

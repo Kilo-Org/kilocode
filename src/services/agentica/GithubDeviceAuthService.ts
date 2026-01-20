@@ -22,6 +22,7 @@ export interface GithubTokenResponse {
 export interface DeviceAuthServiceEvents {
 	started: [data: { userCode: string; verificationUrl: string; expiresIn: number }]
 	polling: [timeRemaining: number]
+	tick: [timeRemaining: number]
 	success: [accessToken: string]
 	denied: []
 	expired: []
@@ -34,6 +35,7 @@ export interface DeviceAuthServiceEvents {
  */
 export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvents> {
 	private pollIntervalId?: NodeJS.Timeout
+	private tickIntervalId?: NodeJS.Timeout
 	private startTime?: number
 	private expiresIn?: number
 	private deviceCode?: string
@@ -201,6 +203,10 @@ export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvent
 			clearInterval(this.pollIntervalId)
 		}
 
+		if (this.tickIntervalId) {
+			clearInterval(this.tickIntervalId)
+		}
+
 		// Poll immediately (don't await to avoid blocking)
 		this.poll().catch((err) => {
 			// Only emit error if not aborted and it's a real error
@@ -230,6 +236,20 @@ export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvent
 				}
 			})
 		}, interval)
+
+		// Emit tick event every second for smooth UI updates between polls
+		this.tickIntervalId = setInterval(() => {
+			if (this.aborted || !this.deviceCode) {
+				this.stopPolling()
+				return
+			}
+
+			if (this.startTime && this.expiresIn) {
+				const elapsed = Date.now() - this.startTime
+				const timeRemaining = this.expiresIn * 1000 - elapsed
+				this.emit("tick", Math.max(0, timeRemaining))
+			}
+		}, 1000)
 	}
 
 	/**
@@ -239,6 +259,10 @@ export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvent
 		if (this.pollIntervalId) {
 			clearInterval(this.pollIntervalId)
 			this.pollIntervalId = undefined
+		}
+		if (this.tickIntervalId) {
+			clearInterval(this.tickIntervalId)
+			this.tickIntervalId = undefined
 		}
 	}
 
