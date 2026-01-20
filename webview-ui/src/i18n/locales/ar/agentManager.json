@@ -14,7 +14,9 @@
 		"shareSession": "مشاركة الجلسة",
 		"shareConfirmMessage": "هل ترغب في مشاركة لقطة من هذه الجلسة علنًا؟",
 		"shareConfirmYes": "نعم",
-		"shareConfirmNo": "لا"
+		"shareConfirmNo": "لا",
+		"options": "خيارات",
+		"configureSetupScript": "سكريبت إعداد Worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -90,7 +92,9 @@
 		"createPRTitle": "إنشاء طلب سحب",
 		"sendTitle": "إرسال الرسالة",
 		"resumeTitle": "استئناف الوكيل",
-		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد"
+		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد",
+		"addImage": "إضافة صورة",
+		"removeImage": "إزالة الصورة"
 	},
 	"status": {
 		"running": "قيد التشغيل",

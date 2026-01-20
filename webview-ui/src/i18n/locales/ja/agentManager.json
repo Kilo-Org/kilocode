@@ -14,7 +14,9 @@
 		"shareSession": "セッションを共有",
 		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
 		"shareConfirmYes": "はい",
-		"shareConfirmNo": "いいえ"
+		"shareConfirmNo": "いいえ",
+		"options": "オプション",
+		"configureSetupScript": "Worktree セットアップスクリプト"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -86,7 +88,9 @@
 		"createPRTitle": "プルリクエストを作成",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
-		"hint": "Enterで送信、Shift+Enterで改行"
+		"hint": "Enterで送信、Shift+Enterで改行",
+		"addImage": "画像を追加",
+		"removeImage": "画像を削除"
 	},
 	"status": {
 		"running": "実行中",

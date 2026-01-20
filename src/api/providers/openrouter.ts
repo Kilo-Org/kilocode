@@ -37,7 +37,6 @@ import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 // kilocode_change start
 type OpenRouterProviderParams = {
 	order?: string[]
-	only?: string[]
 	allow_fallbacks?: boolean
 	data_collection?: "allow" | "deny"
 	sort?: "price" | "throughput" | "latency"
@@ -223,9 +222,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			return {
 				provider: {
 					order: [this.options.openRouterSpecificProvider],
-					only: [this.options.openRouterSpecificProvider],
-					allow_fallbacks: false,
 					data_collection: this.options.openRouterProviderDataCollection,
+					sort: this.options.openRouterProviderSort,
 					zdr: this.options.openRouterZdr,
 				},
 			}
@@ -394,16 +392,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			stream: true,
 			stream_options: { include_usage: true },
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
-			parallel_tool_calls: false, // Ensure only one tool call at a time
-			// Only include provider if openRouterSpecificProvider is not "[default]".
-			...(this.options.openRouterSpecificProvider &&
-				this.options.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME && {
-					provider: {
-						order: [this.options.openRouterSpecificProvider],
-						only: [this.options.openRouterSpecificProvider],
-						allow_fallbacks: false,
-					},
-				}),
 			...(reasoning && { reasoning }),
 			...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
@@ -579,10 +567,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 						yield { type: "reasoning", text: delta.reasoning }
 					}
 				}
-
 				// kilocode_change start
-				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
-					yield { type: "reasoning", text: delta.reasoning_content }
+				else if ("reasoning_content" in delta && typeof delta.reasoning_content === "string") {
+					if (!hasYieldedReasoningFromDetails) {
+						yield { type: "reasoning", text: delta.reasoning_content }
+					}
 				}
 				// kilocode_change end
 

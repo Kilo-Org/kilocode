@@ -59,23 +59,30 @@ describe("condenseCommand", () => {
 	})
 
 	describe("handler", () => {
-		it("should send condenseTaskContextRequest webview message", async () => {
+		it("should call condenseAndWait with task ID", async () => {
 			await condenseCommand.handler(mockContext)
 
-			expect(mockContext.sendWebviewMessage).toHaveBeenCalledTimes(1)
-			expect(mockContext.sendWebviewMessage).toHaveBeenCalledWith({
-				type: "condenseTaskContextRequest",
-				text: "test-task-123",
-			})
+			expect(mockContext.condenseAndWait).toHaveBeenCalledTimes(1)
+			expect(mockContext.condenseAndWait).toHaveBeenCalledWith("test-task-123")
 		})
 
 		it("should add system message before condensing", async () => {
 			await condenseCommand.handler(mockContext)
 
-			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
+			// First call is the "Condensing..." message
 			const addedMessage = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(addedMessage.type).toBe("system")
 			expect(addedMessage.content).toContain("Condensing")
+		})
+
+		it("should add completion message after successful condensation", async () => {
+			await condenseCommand.handler(mockContext)
+
+			// Should have two messages: start and complete
+			expect(mockContext.addMessage).toHaveBeenCalledTimes(2)
+			const completionMessage = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[1][0]
+			expect(completionMessage.type).toBe("system")
+			expect(completionMessage.content).toContain("complete")
 		})
 
 		it("should execute without errors", async () => {
@@ -103,11 +110,30 @@ describe("condenseCommand", () => {
 
 			await condenseCommand.handler(emptyContext)
 
-			expect(emptyContext.sendWebviewMessage).not.toHaveBeenCalled()
+			expect(emptyContext.condenseAndWait).not.toHaveBeenCalled()
 			expect(emptyContext.addMessage).toHaveBeenCalledTimes(1)
 			const addedMessage = (emptyContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(addedMessage.type).toBe("error")
 			expect(addedMessage.content).toContain("No active task")
+		})
+
+		it("should show error message when condensation fails", async () => {
+			const errorContext = createMockContext({
+				input: "/condense",
+				currentTask: {
+					id: "test-task-123",
+					ts: Date.now(),
+					task: "Test task",
+				},
+				condenseAndWait: vi.fn().mockRejectedValue(new Error("Condensation timed out")),
+			})
+
+			await condenseCommand.handler(errorContext)
+
+			expect(errorContext.addMessage).toHaveBeenCalledTimes(2)
+			const errorMessage = (errorContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[1][0]
+			expect(errorMessage.type).toBe("error")
+			expect(errorMessage.content).toContain("Condensation timed out")
 		})
 	})
 })

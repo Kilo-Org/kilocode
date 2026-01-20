@@ -14,7 +14,9 @@
 		"shareSession": "세션 공유",
 		"shareConfirmMessage": "이 세션의 스냅샷을 공개적으로 공유하시겠습니까?",
 		"shareConfirmYes": "예",
-		"shareConfirmNo": "아니요"
+		"shareConfirmNo": "아니요",
+		"options": "옵션",
+		"configureSetupScript": "Worktree 설정 스크립트"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Pull request 생성",
 		"sendTitle": "메시지 보내기",
 		"resumeTitle": "에이전트 재개",
-		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈"
+		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈",
+		"addImage": "이미지 추가",
+		"removeImage": "이미지 제거"
 	},
 	"status": {
 		"running": "실행 중",

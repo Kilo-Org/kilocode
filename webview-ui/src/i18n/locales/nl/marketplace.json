@@ -147,10 +147,24 @@
 			"title": "MCP-server verwijderen",
 			"message": "Weet je zeker dat je de MCP-server \"{{mcpName}}\" wilt verwijderen?"
 		},
+		"skill": {
+			"title": "Skill verwijderen",
+			"message": "Weet je zeker dat je de skill \"{{skillName}}\" wilt verwijderen?"
+		},
 		"cancel": "Annuleren",
 		"confirm": "Verwijderen"
 	},
 	"footer": {
 		"issueText": "Heb je een probleem gevonden met een marketplace-item of heb je suggesties voor nieuwe items? <0>Open een GitHub issue</0> om het ons te laten weten!"
+	},
+	"skills": {
+		"loading": "Skills laden...",
+		"searchPlaceholder": "Skills zoeken...",
+		"allCategories": "Alle",
+		"resultsCount": "{{count}} skills gevonden",
+		"noResults": "Geen skills gevonden die aan je criteria voldoen",
+		"install": "Installeren",
+		"installTitle": "Skill {{name}} installeren",
+		"installing": "Installeren..."
 	}
 }

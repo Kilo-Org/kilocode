@@ -147,10 +147,24 @@
 			"title": "ลบ MCP Server",
 			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "ลบทักษะ",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบทักษะ \"{{skillName}}\"?"
+		},
 		"cancel": "ยกเลิก",
 		"confirm": "ลบ"
 	},
 	"footer": {
 		"issueText": "พบปัญหากับรายการ marketplace หรือมีข้อเสนอแนะสำหรับรายการใหม่? <0>เปิด GitHub issue</0> เพื่อแจ้งให้เราทราบ!"
+	},
+	"skills": {
+		"loading": "กำลังโหลดทักษะ...",
+		"searchPlaceholder": "ค้นหาทักษะ...",
+		"allCategories": "ทั้งหมด",
+		"resultsCount": "พบ {{count}} ทักษะ",
+		"noResults": "ไม่พบทักษะที่ตรงกับเกณฑ์ของคุณ",
+		"install": "ติดตั้ง",
+		"installTitle": "ติดตั้งทักษะ {{name}}",
+		"installing": "กำลังติดตั้ง..."
 	}
 }

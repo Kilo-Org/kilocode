@@ -102,7 +102,7 @@ The Agent Manager requires proper authentication for full functionality, includi
 
 ### BYOK Limitations
 
-**Important:** Bring Your Own Key (BYOK) is not yet supported with the Agent Manager.
+**Important:** Bring Your Own Key (BYOK) is not fully supported with the Agent Manager.
 
 If you're using BYOK with providers like Anthropic, OpenAI, or OpenRouter:
 

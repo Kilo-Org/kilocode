@@ -9,6 +9,7 @@
 		"tokens": "Token 用量",
 		"cache": "缓存",
 		"apiCost": "API 费用",
+		"changes": "变更",
 		"size": "大小",
 		"contextWindow": "上下文长度",
 		"closeAndStart": "关闭任务并开始新任务",
