@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
+				"basic-usage/byok",
 				{
 					type: "category",
 					label: "Autocomplete",
