@@ -1,4 +1,5 @@
 export * from "./anthropic.js"
+export * from "./agentica.js" // kilocode_change
 export * from "./baseten.js"
 export * from "./bedrock.js"
 export * from "./cerebras.js"
@@ -42,6 +43,7 @@ export * from "./deepinfra.js"
 export * from "./minimax.js"
 
 import { anthropicDefaultModelId } from "./anthropic.js"
+import { agenticaDefaultModelId } from "./agentica.js" // kilocode_change
 import { basetenDefaultModelId } from "./baseten.js"
 import { bedrockDefaultModelId } from "./bedrock.js"
 import { cerebrasDefaultModelId } from "./cerebras.js"
@@ -92,6 +94,8 @@ export function getProviderDefaultModelId(
 		// kilocode_change start
 		case "glama":
 			return glamaDefaultModelId
+		case "agentica":
+			return agenticaDefaultModelId
 		// kilocode_change end
 		case "unbound":
 			return unboundDefaultModelId

@@ -11,16 +11,16 @@ import { useGroupedModelIds } from "@/components/ui/hooks/kilocode/usePreferredM
 // import { filterModels } from "./utils/organizationFilters" // kilocode_change: not doing this
 import { cn } from "@src/lib/utils"
 import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-	Button,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+    Button,
 } from "@src/components/ui"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 
@@ -29,299 +29,300 @@ import { ApiErrorMessage } from "./ApiErrorMessage"
 import { KiloModelInfoView } from "../kilocode/settings/KiloModelInfoView"
 
 type ModelIdKey = keyof Pick<
-	ProviderSettings,
-	| "glamaModelId" // kilocode_change
-	| "openRouterModelId"
-	| "unboundModelId"
-	| "requestyModelId"
-	| "openAiModelId"
-	| "litellmModelId"
-	// kilocode_change start
-	| "apiModelId"
-	| "kilocodeModel"
-	| "nanoGptModelId"
-	| "ovhCloudAiEndpointsModelId"
-	| "inceptionLabsModelId"
-	// kilocode_change end
-	| "deepInfraModelId"
-	| "ioIntelligenceModelId"
-	| "vercelAiGatewayModelId"
-	| "apiModelId"
+    ProviderSettings,
+    | "glamaModelId" // kilocode_change
+    | "openRouterModelId"
+    | "unboundModelId"
+    | "requestyModelId"
+    | "openAiModelId"
+    | "litellmModelId"
+    // kilocode_change start
+    | "apiModelId"
+    | "kilocodeModel"
+    | "nanoGptModelId"
+    | "ovhCloudAiEndpointsModelId"
+    | "inceptionLabsModelId"
+    | "agenticaModelId"
+    // kilocode_change end
+    | "deepInfraModelId"
+    | "ioIntelligenceModelId"
+    | "vercelAiGatewayModelId"
+    | "apiModelId"
 >
 
 interface ModelPickerProps {
-	defaultModelId: string
-	models: Record<string, ModelInfo> | null
-	modelIdKey: ModelIdKey
-	serviceName: string
-	serviceUrl: string
-	apiConfiguration: ProviderSettings
-	setApiConfigurationField: <K extends keyof ProviderSettings>(
-		field: K,
-		value: ProviderSettings[K],
-		isUserAction?: boolean,
-	) => void
-	organizationAllowList?: OrganizationAllowList
-	errorMessage?: string
-	simplifySettings?: boolean
-	hidePricing?: boolean
+    defaultModelId: string
+    models: Record<string, ModelInfo> | null
+    modelIdKey: ModelIdKey
+    serviceName: string
+    serviceUrl: string
+    apiConfiguration: ProviderSettings
+    setApiConfigurationField: <K extends keyof ProviderSettings>(
+        field: K,
+        value: ProviderSettings[K],
+        isUserAction?: boolean,
+    ) => void
+    organizationAllowList?: OrganizationAllowList
+    errorMessage?: string
+    simplifySettings?: boolean
+    hidePricing?: boolean
 }
 
 export const ModelPicker = ({
-	defaultModelId,
-	models,
-	modelIdKey,
-	serviceName,
-	serviceUrl,
-	apiConfiguration,
-	setApiConfigurationField,
-	// organizationAllowList, // kilocode_change: unused
-	errorMessage,
-	simplifySettings,
+    defaultModelId,
+    models,
+    modelIdKey,
+    serviceName,
+    serviceUrl,
+    apiConfiguration,
+    setApiConfigurationField,
+    // organizationAllowList, // kilocode_change: unused
+    errorMessage,
+    simplifySettings,
 }: ModelPickerProps) => {
-	const { t } = useAppTranslation()
+    const { t } = useAppTranslation()
 
-	const [open, setOpen] = useState(false)
-	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-	const isInitialized = useRef(false)
-	const searchInputRef = useRef<HTMLInputElement>(null)
-	const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-	const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const [open, setOpen] = useState(false)
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+    const isInitialized = useRef(false)
+    const searchInputRef = useRef<HTMLInputElement>(null)
+    const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-	// kilocode_change start: Use grouped model IDs for section headers
-	const { preferredModelIds, restModelIds } = useGroupedModelIds(models)
-	const modelIds = useMemo(() => [...preferredModelIds, ...restModelIds], [preferredModelIds, restModelIds])
-	const [isPricingExpanded, setIsPricingExpanded] = useState(false)
-	// kilocode_change end
+    // kilocode_change start: Use grouped model IDs for section headers
+    const { preferredModelIds, restModelIds } = useGroupedModelIds(models)
+    const modelIds = useMemo(() => [...preferredModelIds, ...restModelIds], [preferredModelIds, restModelIds])
+    const [isPricingExpanded, setIsPricingExpanded] = useState(false)
+    // kilocode_change end
 
-	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
+    const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
 
-	const [searchValue, setSearchValue] = useState("")
+    const [searchValue, setSearchValue] = useState("")
 
-	const onSelect = useCallback(
-		(modelId: string) => {
-			if (!modelId) {
-				return
-			}
+    const onSelect = useCallback(
+        (modelId: string) => {
+            if (!modelId) {
+                return
+            }
 
-			setOpen(false)
-			setApiConfigurationField(modelIdKey, modelId)
+            setOpen(false)
+            setApiConfigurationField(modelIdKey, modelId)
 
-			// Clear any existing timeout
-			if (selectTimeoutRef.current) {
-				clearTimeout(selectTimeoutRef.current)
-			}
+            // Clear any existing timeout
+            if (selectTimeoutRef.current) {
+                clearTimeout(selectTimeoutRef.current)
+            }
 
-			// Delay to ensure the popover is closed before setting the search value.
-			selectTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
-		},
-		[modelIdKey, setApiConfigurationField],
-	)
+            // Delay to ensure the popover is closed before setting the search value.
+            selectTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
+        },
+        [modelIdKey, setApiConfigurationField],
+    )
 
-	const onOpenChange = useCallback((open: boolean) => {
-		setOpen(open)
+    const onOpenChange = useCallback((open: boolean) => {
+        setOpen(open)
 
-		// Abandon the current search if the popover is closed.
-		if (!open) {
-			// Clear any existing timeout
-			if (closeTimeoutRef.current) {
-				clearTimeout(closeTimeoutRef.current)
-			}
+        // Abandon the current search if the popover is closed.
+        if (!open) {
+            // Clear any existing timeout
+            if (closeTimeoutRef.current) {
+                clearTimeout(closeTimeoutRef.current)
+            }
 
-			// Clear the search value when closing instead of prefilling it
-			closeTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
-		}
-	}, [])
+            // Clear the search value when closing instead of prefilling it
+            closeTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
+        }
+    }, [])
 
-	const onClearSearch = useCallback(() => {
-		setSearchValue("")
-		searchInputRef.current?.focus()
-	}, [])
+    const onClearSearch = useCallback(() => {
+        setSearchValue("")
+        searchInputRef.current?.focus()
+    }, [])
 
-	useEffect(() => {
-		if (!selectedModelId && !isInitialized.current) {
-			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
-			setApiConfigurationField(modelIdKey, initialValue, false) // false = automatic initialization
-		}
+    useEffect(() => {
+        if (!selectedModelId && !isInitialized.current) {
+            const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
+            setApiConfigurationField(modelIdKey, initialValue, false) // false = automatic initialization
+        }
 
-		isInitialized.current = true
-	}, [modelIds, setApiConfigurationField, modelIdKey, selectedModelId, defaultModelId])
+        isInitialized.current = true
+    }, [modelIds, setApiConfigurationField, modelIdKey, selectedModelId, defaultModelId])
 
-	// Cleanup timeouts on unmount to prevent test flakiness
-	useEffect(() => {
-		return () => {
-			if (selectTimeoutRef.current) {
-				clearTimeout(selectTimeoutRef.current)
-			}
-			if (closeTimeoutRef.current) {
-				clearTimeout(closeTimeoutRef.current)
-			}
-		}
-	}, [])
+    // Cleanup timeouts on unmount to prevent test flakiness
+    useEffect(() => {
+        return () => {
+            if (selectTimeoutRef.current) {
+                clearTimeout(selectTimeoutRef.current)
+            }
+            if (closeTimeoutRef.current) {
+                clearTimeout(closeTimeoutRef.current)
+            }
+        }
+    }, [])
 
-	// Use the shared ESC key handler hook
-	useEscapeKey(open, () => setOpen(false))
+    // Use the shared ESC key handler hook
+    useEscapeKey(open, () => setOpen(false))
 
-	return (
-		<>
-			<div>
-				<label className="block font-medium mb-1">{t("settings:modelPicker.label")}</label>
-				<Popover open={open} onOpenChange={onOpenChange}>
-					<PopoverTrigger asChild>
-						<Button
-							variant="combobox"
-							role="combobox"
-							aria-expanded={open}
-							className="w-full justify-between"
-							data-testid="model-picker-button">
-							<div className="truncate">{selectedModelId ?? t("settings:common.select")}</div>
-							<ChevronsUpDown className="opacity-50" />
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-						<Command>
-							<div className="relative">
-								<CommandInput
-									ref={searchInputRef}
-									value={searchValue}
-									onValueChange={setSearchValue}
-									placeholder={t("settings:modelPicker.searchPlaceholder")}
-									className="h-9 mr-4"
-									data-testid="model-input"
-								/>
-								{searchValue.length > 0 && (
-									<div className="absolute right-2 top-0 bottom-0 flex items-center justify-center">
-										<X
-											className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
-											onClick={onClearSearch}
-										/>
-									</div>
-								)}
-							</div>
-							<CommandList>
-								<CommandEmpty>
-									{searchValue && (
-										<div className="py-2 px-1 text-sm">
-											{t("settings:modelPicker.noMatchFound")}
-										</div>
-									)}
-								</CommandEmpty>
-								{/* kilocode_change start: Section headers for recommended and all models */}
-								{preferredModelIds.length > 0 && (
-									<CommandGroup heading={t("settings:modelPicker.recommendedModels")}>
-										{preferredModelIds.map((model) => (
-											<CommandItem
-												key={model}
-												value={model}
-												onSelect={onSelect}
-												data-testid={`model-option-${model}`}
-												className="font-semibold">
-												<span className="truncate" title={model}>
-													{model}
-												</span>
-												<Check
-													className={cn(
-														"size-4 p-0.5 ml-auto",
-														model === selectedModelId ? "opacity-100" : "opacity-0",
-													)}
-												/>
-											</CommandItem>
-										))}
-									</CommandGroup>
-								)}
-								{restModelIds.length > 0 && (
-									<CommandGroup heading={t("settings:modelPicker.allModels")}>
-										{restModelIds.map((model) => (
-											<CommandItem
-												key={model}
-												value={model}
-												onSelect={onSelect}
-												data-testid={`model-option-${model}`}>
-												<span className="truncate" title={model}>
-													{model}
-												</span>
-												<Check
-													className={cn(
-														"size-4 p-0.5 ml-auto",
-														model === selectedModelId ? "opacity-100" : "opacity-0",
-													)}
-												/>
-											</CommandItem>
-										))}
-									</CommandGroup>
-								)}
-								{/* kilocode_change end */}
-							</CommandList>
-							{searchValue && !modelIds.includes(searchValue) && (
-								<div className="p-1 border-t border-vscode-input-border">
-									<CommandItem data-testid="use-custom-model" value={searchValue} onSelect={onSelect}>
-										{t("settings:modelPicker.useCustomModel", { modelId: searchValue })}
-									</CommandItem>
-								</div>
-							)}
-						</Command>
-					</PopoverContent>
-				</Popover>
-			</div>
-			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
-			{selectedModelInfo?.deprecated && (
-				<ApiErrorMessage errorMessage={t("settings:validation.modelDeprecated")} />
-			)}
+    return (
+        <>
+            <div>
+                <label className="block font-medium mb-1">{t("settings:modelPicker.label")}</label>
+                <Popover open={open} onOpenChange={onOpenChange}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="combobox"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-full justify-between"
+                            data-testid="model-picker-button">
+                            <div className="truncate">{selectedModelId ?? t("settings:common.select")}</div>
+                            <ChevronsUpDown className="opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
+                        <Command>
+                            <div className="relative">
+                                <CommandInput
+                                    ref={searchInputRef}
+                                    value={searchValue}
+                                    onValueChange={setSearchValue}
+                                    placeholder={t("settings:modelPicker.searchPlaceholder")}
+                                    className="h-9 mr-4"
+                                    data-testid="model-input"
+                                />
+                                {searchValue.length > 0 && (
+                                    <div className="absolute right-2 top-0 bottom-0 flex items-center justify-center">
+                                        <X
+                                            className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
+                                            onClick={onClearSearch}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            <CommandList>
+                                <CommandEmpty>
+                                    {searchValue && (
+                                        <div className="py-2 px-1 text-sm">
+                                            {t("settings:modelPicker.noMatchFound")}
+                                        </div>
+                                    )}
+                                </CommandEmpty>
+                                {/* kilocode_change start: Section headers for recommended and all models */}
+                                {preferredModelIds.length > 0 && (
+                                    <CommandGroup heading={t("settings:modelPicker.recommendedModels")}>
+                                        {preferredModelIds.map((model) => (
+                                            <CommandItem
+                                                key={model}
+                                                value={model}
+                                                onSelect={onSelect}
+                                                data-testid={`model-option-${model}`}
+                                                className="font-semibold">
+                                                <span className="truncate" title={model}>
+                                                    {model}
+                                                </span>
+                                                <Check
+                                                    className={cn(
+                                                        "size-4 p-0.5 ml-auto",
+                                                        model === selectedModelId ? "opacity-100" : "opacity-0",
+                                                    )}
+                                                />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                                {restModelIds.length > 0 && (
+                                    <CommandGroup heading={t("settings:modelPicker.allModels")}>
+                                        {restModelIds.map((model) => (
+                                            <CommandItem
+                                                key={model}
+                                                value={model}
+                                                onSelect={onSelect}
+                                                data-testid={`model-option-${model}`}>
+                                                <span className="truncate" title={model}>
+                                                    {model}
+                                                </span>
+                                                <Check
+                                                    className={cn(
+                                                        "size-4 p-0.5 ml-auto",
+                                                        model === selectedModelId ? "opacity-100" : "opacity-0",
+                                                    )}
+                                                />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                                {/* kilocode_change end */}
+                            </CommandList>
+                            {searchValue && !modelIds.includes(searchValue) && (
+                                <div className="p-1 border-t border-vscode-input-border">
+                                    <CommandItem data-testid="use-custom-model" value={searchValue} onSelect={onSelect}>
+                                        {t("settings:modelPicker.useCustomModel", { modelId: searchValue })}
+                                    </CommandItem>
+                                </div>
+                            )}
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+            </div>
+            {errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
+            {selectedModelInfo?.deprecated && (
+                <ApiErrorMessage errorMessage={t("settings:validation.modelDeprecated")} />
+            )}
 
-			{simplifySettings ? (
-				<p className="text-xs text-vscode-descriptionForeground m-0">
-					<Info className="size-3 inline mr-1" />
-					{t("settings:modelPicker.simplifiedExplanation")}
-				</p>
-			) : (
-				<div>
-					{
-						// kilocode_change start
-						selectedModelId &&
-							selectedModelInfo &&
-							(apiConfiguration.apiProvider === "kilocode" ||
-							apiConfiguration.apiProvider === "openrouter" ? (
-								<KiloModelInfoView
-									apiConfiguration={apiConfiguration}
-									modelId={selectedModelId}
-									model={selectedModelInfo}
-									isDescriptionExpanded={isDescriptionExpanded}
-									setIsDescriptionExpanded={setIsDescriptionExpanded}
-									isPricingExpanded={isPricingExpanded}
-									setIsPricingExpanded={setIsPricingExpanded}
-								/>
-							) : (
-								<ModelInfoView
-									apiProvider={apiConfiguration.apiProvider}
-									selectedModelId={selectedModelId}
-									modelInfo={selectedModelInfo}
-									isDescriptionExpanded={isDescriptionExpanded}
-									setIsDescriptionExpanded={setIsDescriptionExpanded}
-								/>
-							))
-						// kilocode_change end
-					}
-					<div className="text-sm text-vscode-descriptionForeground">
-						{
-							/*kilocode_change start*/
-							apiConfiguration.apiProvider === "kilocode" ? (
-								<Trans i18nKey="kilocode:settings.provider.automaticFetch" />
-							) : (
-								<Trans
-									i18nKey="settings:modelPicker.automaticFetch"
-									components={{
-										serviceLink: <VSCodeLink href={serviceUrl} className="text-sm" />,
-										defaultModelLink: (
-											<VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm" />
-										),
-									}}
-									values={{ serviceName, defaultModelId }}
-								/>
-							) /*kilocode_change end*/
-						}
-					</div>
-				</div>
-			)}
-		</>
-	)
+            {simplifySettings ? (
+                <p className="text-xs text-vscode-descriptionForeground m-0">
+                    <Info className="size-3 inline mr-1" />
+                    {t("settings:modelPicker.simplifiedExplanation")}
+                </p>
+            ) : (
+                <div>
+                    {
+                        // kilocode_change start
+                        selectedModelId &&
+                        selectedModelInfo &&
+                        (apiConfiguration.apiProvider === "kilocode" ||
+                            apiConfiguration.apiProvider === "openrouter" ? (
+                            <KiloModelInfoView
+                                apiConfiguration={apiConfiguration}
+                                modelId={selectedModelId}
+                                model={selectedModelInfo}
+                                isDescriptionExpanded={isDescriptionExpanded}
+                                setIsDescriptionExpanded={setIsDescriptionExpanded}
+                                isPricingExpanded={isPricingExpanded}
+                                setIsPricingExpanded={setIsPricingExpanded}
+                            />
+                        ) : (
+                            <ModelInfoView
+                                apiProvider={apiConfiguration.apiProvider}
+                                selectedModelId={selectedModelId}
+                                modelInfo={selectedModelInfo}
+                                isDescriptionExpanded={isDescriptionExpanded}
+                                setIsDescriptionExpanded={setIsDescriptionExpanded}
+                            />
+                        ))
+                        // kilocode_change end
+                    }
+                    <div className="text-sm text-vscode-descriptionForeground">
+                        {
+                            /*kilocode_change start*/
+                            apiConfiguration.apiProvider === "kilocode" ? (
+                                <Trans i18nKey="kilocode:settings.provider.automaticFetch" />
+                            ) : (
+                                <Trans
+                                    i18nKey="settings:modelPicker.automaticFetch"
+                                    components={{
+                                        serviceLink: <VSCodeLink href={serviceUrl} className="text-sm" />,
+                                        defaultModelLink: (
+                                            <VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm" />
+                                        ),
+                                    }}
+                                    values={{ serviceName, defaultModelId }}
+                                />
+                            ) /*kilocode_change end*/
+                        }
+                    </div>
+                </div>
+            )}
+        </>
+    )
 }
