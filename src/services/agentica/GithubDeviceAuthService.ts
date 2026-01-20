@@ -108,7 +108,7 @@ export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvent
 		// This ensures we continue polling even if timer reaches 0
 
 		try {
-			const response = await axios.post<GithubTokenResponse>(
+			const response = await axios.post<GithubTokenResponse & { error?: string }>(
 				GITHUB_TOKEN_URL,
 				new URLSearchParams({
 					client_id: this.clientId,
@@ -123,81 +123,73 @@ export class GithubDeviceAuthService extends EventEmitter<DeviceAuthServiceEvent
 				},
 			)
 
-			if (response.data && response.data.access_token) {
-				// Success - user has authorized
+			const data = response.data as any
+
+			// GitHub returns 200 with access_token on success
+			if (data.access_token) {
 				console.log("[GithubDeviceAuthService] Successfully received access token from GitHub")
 				this.stopPolling()
-				this.emit("success", response.data.access_token)
+				this.emit("success", data.access_token)
 				return
-			} else {
-				console.warn("[GithubDeviceAuthService] Unexpected response structure:", response.data)
 			}
+
+			// GitHub returns 200 with error field for pending/error states
+			const errorType = data.error
+
+			if (errorType === "authorization_pending") {
+				// Still pending - emit time remaining and continue polling
+				if (this.startTime && this.expiresIn) {
+					const elapsed = Date.now() - this.startTime
+					const timeRemaining = this.expiresIn * 1000 - elapsed
+					this.emit("polling", Math.max(0, timeRemaining))
+				}
+				return
+			}
+
+			if (errorType === "slow_down") {
+				// GitHub is asking us to slow down - increase poll interval
+				if (this.pollInterval) {
+					this.stopPolling()
+					this.pollInterval = Math.min(this.pollInterval * 1.5, 60000)
+					this.pollIntervalId = setInterval(() => {
+						if (this.aborted || !this.deviceCode) {
+							this.stopPolling()
+							return
+						}
+						this.poll().catch((err) => {
+							if (!this.aborted) {
+								const error = err instanceof Error ? err : new Error(String(err))
+								this.emit("error", error)
+							}
+						})
+					}, this.pollInterval)
+				}
+				return
+			}
+
+			if (errorType === "expired_token") {
+				this.stopPolling()
+				this.emit("expired")
+				return
+			}
+
+			if (errorType === "access_denied") {
+				this.stopPolling()
+				this.emit("denied")
+				return
+			}
+
+			// Unknown response
+			console.warn("[GithubDeviceAuthService] Unexpected response:", data)
 		} catch (error: any) {
 			// Check if aborted before processing error
 			if (this.aborted) {
 				return
 			}
 
-			if (error.response) {
-				const errorType = error.response.data?.error
-
-				if (errorType === "authorization_pending") {
-					// Still pending - emit time remaining and continue polling
-					// Always emit time remaining, even if it's 0 or negative
-					// Continue polling until GitHub explicitly returns expired_token
-					if (this.startTime && this.expiresIn) {
-						const elapsed = Date.now() - this.startTime
-						const timeRemaining = this.expiresIn * 1000 - elapsed
-						// Emit actual time remaining (can be negative) - frontend will handle display
-						this.emit("polling", Math.max(0, timeRemaining))
-					}
-					// Continue polling - don't stop until GitHub returns expired_token
-					return
-				}
-
-				if (errorType === "slow_down") {
-					// GitHub is asking us to slow down - increase poll interval
-					if (this.pollInterval) {
-						const newInterval = Math.min(this.pollInterval * 1.5, 60000) // Max 60 seconds
-						// Update interval and restart with new timing
-						this.stopPolling()
-						this.pollInterval = newInterval
-						// Restart polling with new interval (will be called from the interval callback)
-						const interval = this.pollInterval
-						this.pollIntervalId = setInterval(() => {
-							if (this.aborted || !this.deviceCode) {
-								this.stopPolling()
-								return
-							}
-							this.poll().catch((err) => {
-								if (!this.aborted) {
-									const error = err instanceof Error ? err : new Error(String(err))
-									this.emit("error", error)
-								}
-							})
-						}, interval)
-					}
-					return
-				}
-
-				if (errorType === "expired_token") {
-					this.stopPolling()
-					this.emit("expired")
-					return
-				}
-
-				if (errorType === "access_denied") {
-					this.stopPolling()
-					this.emit("denied")
-					return
-				}
-			}
-
-			// Only emit error for unexpected errors, not for expected ones like authorization_pending
-			if (!error.response || error.response.status >= 500) {
-				const err = error instanceof Error ? error : new Error(String(error))
-				this.emit("error", err)
-			}
+			// Only emit error for network/server errors
+			const err = error instanceof Error ? error : new Error(String(error))
+			this.emit("error", err)
 		}
 	}
 
