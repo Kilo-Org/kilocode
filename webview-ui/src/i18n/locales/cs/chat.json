@@ -7,6 +7,7 @@
 		"tokens": "Tokeny:",
 		"cache": "Cache:",
 		"apiCost": "Cena API:",
+		"changes": "Změny",
 		"size": "Velikost",
 		"condenseContext": "Inteligentně zhustit kontext",
 		"contextWindow": "Délka kontextu:",

@@ -147,6 +147,10 @@
 			"title": "Xóa máy chủ MCP",
 			"message": "Bạn có chắc chắn muốn xóa máy chủ MCP \"{{mcpName}}\" không?"
 		},
+		"skill": {
+			"title": "Xóa kỹ năng",
+			"message": "Bạn có chắc chắn muốn xóa kỹ năng \"{{skillName}}\" không?"
+		},
 		"cancel": "Hủy",
 		"confirm": "Xóa"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Tất cả",
 		"resultsCount": "Tìm thấy {{count}} kỹ năng",
 		"noResults": "Không tìm thấy kỹ năng nào phù hợp với tiêu chí của bạn",
-		"viewOnGitHub": "Xem trên GitHub"
+		"install": "Cài đặt",
+		"installTitle": "Cài đặt kỹ năng {{name}}",
+		"installing": "Đang cài đặt..."
 	}
 }

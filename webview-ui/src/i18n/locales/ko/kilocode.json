@@ -221,34 +221,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "자동완성",
 		"settings": {
+			"codeEditorSuggestions": "코드 편집기 제안",
+			"chatSuggestions": "채팅 제안",
+			"model": "모델",
+			"provider": "제공자",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "제안 자동 트리거",
 				"description": "입력을 멈추면 자동으로 인라인 코드 제안을 표시합니다."
 			},
 			"autoTriggerDelay": {
 				"label": "자동 트리거 지연",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "입력을 멈춘 후 제안이 나타나기까지의 지연 시간(초)입니다. 지연 시간이 짧을수록 제안이 빨라지지만 리소스를 더 많이 사용할 수 있습니다."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "키 바인딩으로 트리거 ({{keybinding}})",
+				"description": "{{keybinding}}을 눌러 커서 위치에서 코드 제안을 요청하세요. <DocsLink>단축키 편집</DocsLink>"
 			},
-			"keybindingNotFound": "찾을 수 없음",
-			"configureAutocompleteProfile": "프로필로 이동하여 프로필 유형이 자동완성인 프로필을 구성하면 모든 모델을 사용할 수 있습니다.",
-			"model": "모델",
-			"provider": "제공자",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "채팅 자동완성 활성화",
+				"description": "채팅 입력 시 자동완성을 표시합니다. Tab을 눌러 제안을 수락하세요."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "제안 일시 중지",
+				"description": "지정된 기간 동안 제안을 일시적으로 중지합니다.",
 				"button": "일시 중지",
 				"unsnooze": "일시 중지 해제",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "제안이 현재 일시 중지되어 있습니다.",
 				"duration": {
 					"1min": "1분",
 					"5min": "5분",
@@ -257,6 +257,7 @@
 					"1hour": "1시간"
 				}
 			},
+			"keybindingNotFound": "찾을 수 없음",
 			"noModelConfigured": {
 				"title": "자동완성 모델이 구성되지 않았습니다",
 				"description": "자동완성을 활성화하려면 다음 지원되는 공급자 중 하나로 프로필을 추가하세요:",
@@ -267,8 +268,7 @@
 				"description": "Kilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가하세요.",
 				"buyCredits": "크레딧 구매 →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "프로필로 이동하여 프로필 유형이 자동완성인 프로필을 구성하면 모든 모델을 사용할 수 있습니다."
 		}
 	},
 	"virtualProvider": {

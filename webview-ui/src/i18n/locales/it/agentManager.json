@@ -14,7 +14,9 @@
 		"shareSession": "Condividi sessione",
 		"shareConfirmMessage": "Vuoi condividere pubblicamente uno snapshot di questa sessione?",
 		"shareConfirmYes": "Sì",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Opzioni",
+		"configureSetupScript": "Script di setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Avvia un nuovo agente",

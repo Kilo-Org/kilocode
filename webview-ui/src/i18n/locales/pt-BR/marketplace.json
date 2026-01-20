@@ -147,6 +147,10 @@
 			"title": "Remover Servidor MCP",
 			"message": "Tem certeza de que deseja remover o servidor MCP \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Remover Habilidade",
+			"message": "Tem certeza de que deseja remover a habilidade \"{{skillName}}\"?"
+		},
 		"cancel": "Cancelar",
 		"confirm": "Remover"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Todas",
 		"resultsCount": "{{count}} habilidades encontradas",
 		"noResults": "Nenhuma habilidade encontrada que corresponda aos seus critérios",
-		"viewOnGitHub": "Ver no GitHub"
+		"install": "Instalar",
+		"installTitle": "Instalar habilidade {{name}}",
+		"installing": "Instalando..."
 	}
 }

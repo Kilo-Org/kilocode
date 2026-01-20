@@ -1137,6 +1137,10 @@
 		"showTimestamps": {
 			"label": "Tijdstempels weergeven",
 			"description": "Toon tijdstempel voor elk bericht in de chatweergave"
+		},
+		"showDiffStats": {
+			"label": "Toon diff-statistieken",
+			"description": "Toon statistieken van toegevoegde/verwijderde regels in de taakkop"
 		}
 	},
 	"ghost": {

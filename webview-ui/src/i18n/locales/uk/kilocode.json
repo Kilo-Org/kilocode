@@ -221,34 +221,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Автодоповнення",
 		"settings": {
-			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
-				"description": "Автоматично показувати вбудовані пропозиції коду, коли ви робите паузу під час введення."
-			},
-			"autoTriggerDelay": {
-				"label": "Затримка Автоматичного Запуску",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
-			},
-			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
-			},
-			"keybindingNotFound": "не знайдено",
-			"configureAutocompleteProfile": "Використовуй будь-яку модель, перейшовши до профілів і налаштувавши Профіль типу Автодоповнення.",
+			"codeEditorSuggestions": "Пропозиції редактора коду",
+			"chatSuggestions": "Пропозиції чату",
 			"model": "Модель",
 			"provider": "Провайдер",
+			"enableAutoTrigger": {
+				"label": "Автоматичний запуск пропозицій",
+				"description": "Автоматично показувати вбудовані пропозиції коду, коли ти робиш паузу під час введення."
+			},
+			"autoTriggerDelay": {
+				"label": "Затримка автоматичного запуску",
+				"description": "Затримка в секундах перед появою пропозицій після паузи введення. Коротша затримка означає швидші пропозиції, але може бути більш ресурсомісткою."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Запуск за комбінацією клавіш ({{keybinding}})",
+				"description": "Натисни {{keybinding}}, щоб запросити пропозицію коду в позиції курсора. <DocsLink>Редагувати комбінацію</DocsLink>"
+			},
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Увімкнути автодоповнення чату",
+				"description": "Показувати пропозиції під час введення в полі чату. Натисни Tab, щоб прийняти пропозиції."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Призупинити пропозиції",
+				"description": "Тимчасово призупинити пропозиції на вказаний період.",
 				"button": "Призупинити",
 				"unsnooze": "Відновити",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Пропозиції наразі призупинені.",
 				"duration": {
 					"1min": "1 хвилина",
 					"5min": "5 хвилин",
@@ -257,18 +257,18 @@
 					"1hour": "1 година"
 				}
 			},
+			"keybindingNotFound": "не знайдено",
 			"noModelConfigured": {
 				"title": "Модель автодоповнення не налаштована",
-				"description": "Щоб увімкнути автодоповнення, додайте профіль з одним із цих підтримуваних провайдерів:",
+				"description": "Щоб увімкнути автодоповнення, додай профіль з одним із цих підтримуваних провайдерів:",
 				"learnMore": "Дізнатися більше про налаштування автодоповнення →"
 			},
 			"noCredits": {
-				"title": "На вашому рахунку немає кредитів",
-				"description": "На вашому рахунку Kilo Code немає кредитів. Щоб використовувати автодоповнення, будь ласка, поповніть свій рахунок.",
+				"title": "На твоєму рахунку немає кредитів",
+				"description": "На твоєму рахунку Kilo Code немає кредитів. Щоб використовувати автодоповнення, будь ласка, поповни свій рахунок.",
 				"buyCredits": "Придбати кредити →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Використовуй будь-яку модель, перейшовши до профілів і налаштувавши Профіль типу Автодоповнення."
 		}
 	},
 	"virtualProvider": {

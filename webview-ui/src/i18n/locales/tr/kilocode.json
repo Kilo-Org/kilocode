@@ -214,34 +214,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Otomatik Tamamlama",
 		"settings": {
+			"codeEditorSuggestions": "Kod Editörü Önerileri",
+			"chatSuggestions": "Sohbet Önerileri",
+			"model": "Model",
+			"provider": "Sağlayıcı",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
-				"description": "Yazmayı duraklattığınızda otomatik olarak satır içi kod önerileri göster."
+				"label": "Önerileri otomatik tetikle",
+				"description": "Yazmayı duraklattığında otomatik olarak satır içi kod önerileri göster."
 			},
 			"autoTriggerDelay": {
 				"label": "Otomatik Tetikleme Gecikmesi",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Yazmayı duraklattıktan sonra önerilerin görünmesi için saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Klavye kısayoluyla tetikle ({{keybinding}})",
+				"description": "İmleç konumunda kod önerisi istemek için {{keybinding}} tuşuna bas. <DocsLink>Kısayolu düzenle</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı",
-			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
-			"model": "Model",
-			"provider": "Sağlayıcı",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Sohbet otomatik tamamlamayı etkinleştir",
+				"description": "Sohbet girişinde yazarken önerileri göster. Önerileri kabul etmek için Tab tuşuna bas."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Önerileri ertele",
+				"description": "Belirli bir süre için önerileri geçici olarak duraklat.",
 				"button": "Ertele",
 				"unsnooze": "Ertelemeyi Kaldır",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Öneriler şu anda ertelenmiş durumda.",
 				"duration": {
 					"1min": "1 dakika",
 					"5min": "5 dakika",
@@ -250,18 +250,18 @@
 					"1hour": "1 saat"
 				}
 			},
+			"keybindingNotFound": "bulunamadı",
 			"noModelConfigured": {
 				"title": "Otomatik tamamlama modeli yapılandırılmadı",
-				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekleyin:",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekle:",
 				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
 			},
 			"noCredits": {
-				"title": "Hesabınızda kredi yok",
-				"description": "Kilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.",
+				"title": "Hesabında kredi yok",
+				"description": "Kilo Code hesabında kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabına kredi ekle.",
 				"buyCredits": "Kredi satın al →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan."
 		}
 	},
 	"virtualProvider": {

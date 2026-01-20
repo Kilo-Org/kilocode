@@ -1,5 +1,40 @@
 # @kilocode/cli
 
+## 0.24.0
+
+### Minor Changes
+
+- [#5176](https://github.com/Kilo-Org/kilocode/pull/5176) [`6765832`](https://github.com/Kilo-Org/kilocode/commit/676583256cb405ef8fb8008f313bfe4a090e9ba0) Thanks [@Drilmo](https://github.com/Drilmo)! - Add image support to Agent Manager
+
+    - Paste images from clipboard (Ctrl/Cmd+V) or select via file browser button
+    - Works in new agent prompts, follow-up messages, and resumed sessions
+    - Support for PNG, JPEG, WebP, and GIF formats (up to 4 images per message)
+    - Click thumbnails to preview, hover to remove
+    - New `newTask` stdin message type for initial prompts with images
+    - Temp image files are automatically cleaned up when extension deactivates
+
+- [#5183](https://github.com/Kilo-Org/kilocode/pull/5183) [`1194a6e`](https://github.com/Kilo-Org/kilocode/commit/1194a6e5c5026944d5a5a094ea3f9ece0d74fd0c) Thanks [@alexandrevilain](https://github.com/alexandrevilain)! - add custom commands support
+
+### Patch Changes
+
+- [#5141](https://github.com/Kilo-Org/kilocode/pull/5141) [`37a489c`](https://github.com/Kilo-Org/kilocode/commit/37a489c8640afea57384f030c6fd0be7bd58c130) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Improve --continue flag reliability by replacing fixed 2-second timeout with Promise-based response handling
+
+- [#5171](https://github.com/Kilo-Org/kilocode/pull/5171) [`49b82ea`](https://github.com/Kilo-Org/kilocode/commit/49b82ea281bf7166c2d1cc830a1e5df909a5fb76) Thanks [@Drilmo](https://github.com/Drilmo)! - Fix missing visual feedback and input blocking during paste operations
+
+    - Display "Pasting image..." loader when pasting images via Cmd+V/Ctrl+V
+    - Display "Pasting text..." loader when pasting large text (10+ lines)
+    - Block keyboard input during paste operations to prevent concurrent writes
+    - Support multiple concurrent paste operations with counter-based tracking
+
+- [#5185](https://github.com/Kilo-Org/kilocode/pull/5185) [`809251d`](https://github.com/Kilo-Org/kilocode/commit/809251d1c829777c5d024d882dad1ec4c269939a) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix session restore race that triggered premature exit
+
+- [#5199](https://github.com/Kilo-Org/kilocode/pull/5199) [`2881689`](https://github.com/Kilo-Org/kilocode/commit/2881689b1854e0762f764928b04ab93c9b99e80f) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI diff display showing partial SEARCH/REPLACE markers and git merge conflict markers during streaming
+
+- [#5198](https://github.com/Kilo-Org/kilocode/pull/5198) [`ae997e2`](https://github.com/Kilo-Org/kilocode/commit/ae997e20268877c9e639090fd3b582d9f32176d3) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Simplify CLI README development instructions to use 4-step process
+
+- Updated dependencies [[`6765832`](https://github.com/Kilo-Org/kilocode/commit/676583256cb405ef8fb8008f313bfe4a090e9ba0), [`cdc3e2e`](https://github.com/Kilo-Org/kilocode/commit/cdc3e2ea32ced833b9d1d1983a4252eda3c0fdf1)]:
+    - @kilocode/core-schemas@0.0.2
+
 ## 0.23.1
 
 ### Patch Changes

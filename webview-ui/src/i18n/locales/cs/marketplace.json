@@ -147,6 +147,10 @@
 			"title": "Odebrat MCP Server",
 			"message": "Jsi si jistý, že chceš odebrat MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Odebrat dovednost",
+			"message": "Jsi si jistý, že chceš odebrat dovednost \"{{skillName}}\"?"
+		},
 		"cancel": "Zrušit",
 		"confirm": "Odebrat"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Vše",
 		"resultsCount": "Nalezeno {{count}} dovedností",
 		"noResults": "Nenalezeny žádné dovednosti odpovídající tvým kritériím",
-		"viewOnGitHub": "Zobrazit na GitHubu"
+		"install": "Instalovat",
+		"installTitle": "Instalovat dovednost {{name}}",
+		"installing": "Instalace..."
 	}
 }

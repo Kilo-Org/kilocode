@@ -7,6 +7,7 @@
 		"tokens": "Tokens:",
 		"cache": "Cache:",
 		"apiCost": "API Cost:",
+		"changes": "التغييرات",
 		"size": "الحجم",
 		"condenseContext": "تلخيص السياق بذكاء",
 		"contextWindow": "طول السياق:",

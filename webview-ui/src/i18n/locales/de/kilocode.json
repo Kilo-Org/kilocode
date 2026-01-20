@@ -216,32 +216,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
+			"codeEditorSuggestions": "Code-Editor-Vorschläge",
+			"chatSuggestions": "Chat-Vorschläge",
 			"model": "Modell",
 			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
-				"description": "Zeigt automatisch Inline-Code-Vorschläge an, wenn Sie beim Tippen pausieren."
+				"label": "Vorschläge automatisch auslösen",
+				"description": "Zeigt automatisch Inline-Code-Vorschläge an, wenn du beim Tippen pausierst."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto-Auslöseverzögerung",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Die Verzögerung in Sekunden, bevor Vorschläge erscheinen, nachdem du beim Tippen pausierst. Eine kürzere Verzögerung bedeutet schnellere Vorschläge, kann aber ressourcenintensiver sein."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Per Tastenkürzel auslösen ({{keybinding}})",
+				"description": "Drücke {{keybinding}}, um einen Code-Vorschlag an deiner Cursorposition anzufordern. <DocsLink>Tastenkürzel bearbeiten</DocsLink>"
 			},
-			"keybindingNotFound": "nicht gefunden",
-			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst.",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Chat-Autovervollständigung aktivieren",
+				"description": "Zeigt Vervollständigungen an, während du im Chat-Eingabefeld tippst. Drücke Tab, um Vorschläge zu akzeptieren."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Vorschläge pausieren",
+				"description": "Vorschläge vorübergehend für eine bestimmte Dauer pausieren.",
 				"button": "Pausieren",
 				"unsnooze": "Fortsetzen",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Vorschläge sind derzeit pausiert.",
 				"duration": {
 					"1min": "1 Minute",
 					"5min": "5 Minuten",
@@ -250,6 +250,7 @@
 					"1hour": "1 Stunde"
 				}
 			},
+			"keybindingNotFound": "nicht gefunden",
 			"noModelConfigured": {
 				"title": "Kein Autocomplete-Modell konfiguriert",
 				"description": "Um Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu:",
@@ -260,8 +261,7 @@
 				"description": "Dein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.",
 				"buyCredits": "Guthaben kaufen →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst."
 		}
 	},
 	"virtualProvider": {

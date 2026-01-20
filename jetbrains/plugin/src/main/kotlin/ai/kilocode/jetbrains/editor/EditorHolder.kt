@@ -1,9 +1,7 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.monitoring.ScopeRegistry
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
@@ -15,12 +13,22 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.debounce
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
+
+private sealed class EditorEvent {
+    data class Activation(val active: Boolean) : EditorEvent()
+    data class Edit(val lines: List<String>, val versionId: Int?) : EditorEvent()
+}
 
 /**
  * Manages the state and behavior of an editor instance
@@ -39,8 +47,35 @@ class EditorHolder(
     val diff: Boolean,
     private val stateManager: EditorAndDocManager,
 ) {
-
     val logger = Logger.getInstance(EditorHolder::class.java)
+    private val editorOperationScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val activationEventChannel = Channel<Boolean>(Channel.CONFLATED)
+    private val editEventChannel = Channel<EditorEvent.Edit>(Channel.CONFLATED)
+     
+    init {
+        ScopeRegistry.register("EditorHolder.editorOperationScope-$id", editorOperationScope)
+        
+        @OptIn(FlowPreview::class)
+        editorOperationScope.launch {
+            activationEventChannel.consumeAsFlow()
+                .debounce(100) // 100ms debounce for activation
+                .collect { active ->
+                    delay(100)
+                    stateManager.didUpdateActive(this@EditorHolder)
+                }
+        }
+        
+        @OptIn(FlowPreview::class)
+        editorOperationScope.launch {
+            editEventChannel.consumeAsFlow()
+                .debounce(50) // 50ms debounce for edits
+                .collect { event ->
+                    document.lines = event.lines
+                    document.versionId = event.versionId ?: (document.versionId + 1)
+                    stateManager.updateDocument(document)
+                }
+        }
+    }
 
     /**
      * Indicates whether this editor is currently active.
@@ -126,10 +161,7 @@ class EditorHolder(
                 editorDocument = file?.let { FileDocumentManager.getInstance().getDocument(it) }
             }
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            delay(100)
-            stateManager.didUpdateActive(this@EditorHolder)
-        }
+        activationEventChannel.trySend(active)
     }
 
     fun revealRange(range: Range) {
@@ -191,7 +223,7 @@ class EditorHolder(
                 editorDocument?.setText(newContent)
             }
         }
-        CoroutineScope(Dispatchers.IO).launch {
+        editorOperationScope.launch {
             delay(1000)
             val file = File(document.uri.path).parentFile
             if (file.exists()) {
@@ -233,9 +265,7 @@ class EditorHolder(
     }
 
     fun updateDocumentContent(lines: List<String>, versionId: Int? = null) {
-        document.lines = lines
-        document.versionId = versionId ?: (document.versionId + 1)
-        debouncedUpdateDocument()
+        editEventChannel.trySend(EditorEvent.Edit(lines, versionId))
     }
 
     /**
@@ -304,5 +334,18 @@ class EditorHolder(
             delay(updateDelay)
             stateManager.updateDocument(document)
         }
+    }
+
+    /**
+     * Disposes resources and cancels ongoing operations.
+     * Should be called when the editor is no longer needed.
+     */
+    fun dispose() {
+        ScopeRegistry.unregister("EditorHolder.editorOperationScope-$id")
+        activationEventChannel.close()
+        editEventChannel.close()
+        editorOperationScope.cancel()
+        editorUpdateJob?.cancel()
+        documentUpdateJob?.cancel()
     }
 }

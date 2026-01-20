@@ -14,7 +14,9 @@
 		"shareSession": "แชร์เซสชัน",
 		"shareConfirmMessage": "คุณต้องการแชร์สแนปช็อตของเซสชันนี้แบบสาธารณะหรือไม่?",
 		"shareConfirmYes": "ใช่",
-		"shareConfirmNo": "ไม่"
+		"shareConfirmNo": "ไม่",
+		"options": "ตัวเลือก",
+		"configureSetupScript": "สคริปต์ตั้งค่า Worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",

@@ -145,7 +145,11 @@
 		},
 		"mcp": {
 			"title": "Usuń serwer MCP",
-			"message": "Czy na pewno chcesz usunąć serwer MCP „{{mcpName}}”?"
+			"message": "Czy na pewno chcesz usunąć serwer MCP \"{{mcpName}}\"?"
+		},
+		"skill": {
+			"title": "Usuń umiejętność",
+			"message": "Czy na pewno chcesz usunąć umiejętność \"{{skillName}}\"?"
 		},
 		"cancel": "Anuluj",
 		"confirm": "Usuń"
@@ -159,6 +163,8 @@
 		"allCategories": "Wszystkie",
 		"resultsCount": "Znaleziono {{count}} umiejętności",
 		"noResults": "Nie znaleziono umiejętności pasujących do twoich kryteriów",
-		"viewOnGitHub": "Zobacz na GitHubie"
+		"install": "Zainstaluj",
+		"installTitle": "Zainstaluj umiejętność {{name}}",
+		"installing": "Instalowanie..."
 	}
 }

@@ -147,6 +147,10 @@
 			"title": "MCPサーバーを削除",
 			"message": "MCPサーバー「{{mcpName}}」を本当に削除しますか？"
 		},
+		"skill": {
+			"title": "スキルを削除",
+			"message": "スキル「{{skillName}}」を本当に削除しますか？"
+		},
 		"cancel": "キャンセル",
 		"confirm": "削除"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "すべて",
 		"resultsCount": "{{count}}個のスキルが見つかりました",
 		"noResults": "条件に一致するスキルが見つかりません",
-		"viewOnGitHub": "GitHubで表示"
+		"install": "インストール",
+		"installTitle": "{{name}}スキルをインストール",
+		"installing": "インストール中..."
 	}
 }
