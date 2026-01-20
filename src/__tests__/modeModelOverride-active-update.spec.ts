@@ -1,4 +1,4 @@
-// kilocode_change new file
+// kilocode_change - new file
 import { webviewMessageHandler } from "../core/webview/webviewMessageHandler"
 
 vi.mock("vscode", () => ({

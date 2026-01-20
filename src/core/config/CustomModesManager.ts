@@ -200,20 +200,6 @@ export class CustomModesManager {
 			if (!result.success) {
 				console.error(`[CustomModesManager] Schema validation failed for ${filePath}:`, result.error)
 
-				// kilocode_change start: ensure schema validation failures always surface a toast
-				// The detailed formatting below should never prevent the user from seeing *some* error.
-				// This also keeps tests deterministic.
-				try {
-					vscode.window.showErrorMessage(t("common:customModes.errors.schemaValidationError", { issues: "" }))
-				} catch (toastError) {
-					// Don't crash the load path if VS Code APIs are unavailable (e.g., tests).
-					console.error(
-						`[CustomModesManager] Failed to show schema validation error message for ${filePath}:`,
-						toastError,
-					)
-				}
-				// kilocode_change end: ensure schema validation failures always surface a toast
-
 				// kilocode_change start: always surface schema validation errors to the user
 				// Previously we only surfaced these for `.kilocodemodes`. This could lead to silent failures when
 				// the global custom modes file is invalid, and it also makes tests flaky.
@@ -231,20 +217,21 @@ export class CustomModesManager {
 					)
 				}
 
-				try {
-					const message = (() => {
-						try {
-							return t("common:customModes.errors.schemaValidationError", { issues })
-						} catch (i18nError) {
-							// Never let i18n failures prevent error surfacing.
-							console.error(
-								`[CustomModesManager] Failed to translate schemaValidationError for ${filePath}:`,
-								i18nError,
-							)
-							return "customModes.errors.schemaValidationError"
-						}
-					})()
+				// Note: show at most one toast. Prefer the detailed message, but never let formatting/i18n failures
+				// prevent error surfacing.
+				const message = (() => {
+					try {
+						return t("common:customModes.errors.schemaValidationError", { issues })
+					} catch (i18nError) {
+						console.error(
+							`[CustomModesManager] Failed to translate schemaValidationError for ${filePath}:`,
+							i18nError,
+						)
+						return "customModes.errors.schemaValidationError"
+					}
+				})()
 
+				try {
 					vscode.window.showErrorMessage(message)
 				} catch (toastError) {
 					// Don't crash the load path if VS Code APIs are unavailable (e.g., tests).

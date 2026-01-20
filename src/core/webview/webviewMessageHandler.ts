@@ -1801,7 +1801,7 @@ export const webviewMessageHandler = async (
 			// If the user sets a per-mode model override for the *current* mode, the active model should update
 			// without requiring a mode switch.
 			const currentMode = (getGlobalState("mode") ?? defaultModeSlug) as string
-			if (mode === currentMode && typeof modelId === "string") {
+			if (mode === currentMode && modelId !== null) {
 				const activeProvider = provider.contextProxy.getProviderSettings()?.apiProvider
 				const gatewayModelsAvailable = (provider as any).getKilocodeGatewayModelsAvailable?.() as
 					| boolean
