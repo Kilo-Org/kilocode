@@ -166,7 +166,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				})
 			},
 			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
-				onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
+			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
 				onWorktreeSessionCreated: (sessionId, worktreePath) => {
 					void this.handleWorktreeSessionCreated(sessionId, worktreePath)
 				},
