@@ -6,7 +6,7 @@ import * as path from "path"
 import * as fs from "fs/promises"
 
 import * as yaml from "yaml"
-import * as vscode from "vscode"
+import type * as vscode from "vscode"
 
 import type { ModeConfig } from "@roo-code/types"
 
@@ -14,18 +14,55 @@ import { fileExistsAtPath } from "../../../utils/fs"
 import { getWorkspacePath } from "../../../utils/path"
 import { GlobalFileNames } from "../../../shared/globalFileNames"
 
-import { CustomModesManager } from "../CustomModesManager"
+// NOTE: CustomModesManager is imported dynamically in beforeEach so our `vi.mock(...)`
+// calls are guaranteed to apply before the module is evaluated.
 
-vi.mock("vscode", () => ({
+// NOTE: `vi.mock()` calls are hoisted, so any bindings referenced from within a mock factory
+// must not be `let`/`const` declared later (TDZ). Use `var` here to keep it hoist-safe.
+// eslint-disable-next-line no-var
+var vscodeMock: {
 	workspace: {
-		workspaceFolders: [],
-		onDidSaveTextDocument: vi.fn(),
-		createFileSystemWatcher: vi.fn(),
-	},
+		workspaceFolders: any[]
+		onDidSaveTextDocument: Mock
+		createFileSystemWatcher: Mock
+	}
 	window: {
-		showErrorMessage: vi.fn(),
-	},
+		showErrorMessage: Mock
+	}
+}
+
+vi.mock("../../../i18n", () => ({
+	// Keep tests deterministic by avoiding reliance on i18n initialization.
+	// Returning the key makes it easy to assert on specific error keys.
+	t: (key: string) => key,
 }))
+
+vi.mock("vscode", () => {
+	// NOTE: `vi.mock` factories are hoisted. Avoid referencing top-level `const` bindings
+	// here, otherwise we can hit TDZ errors when other modules import `vscode`.
+	//
+	// Use a `let` + lazy init so the instance is stable for assertions.
+	vscodeMock ??= {
+		workspace: {
+			workspaceFolders: [],
+			onDidSaveTextDocument: vi.fn(),
+			createFileSystemWatcher: vi.fn(),
+		},
+		window: {
+			showErrorMessage: vi.fn(),
+		},
+	}
+
+	// Mark as ESM to keep `import * as vscode from "vscode"` and `await import("vscode")`
+	// interop consistent across the code under test.
+	return {
+		__esModule: true,
+		...vscodeMock,
+		// Provide a `default` export for compatibility with different interop helpers
+		// (some compiled code paths expect `module.default`).
+		default: vscodeMock,
+	}
+})
 
 vi.mock("fs/promises")
 
@@ -33,7 +70,9 @@ vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
 
 describe("CustomModesManager - YAML Edge Cases", () => {
-	let manager: CustomModesManager
+	let manager: InstanceType<typeof import("../CustomModesManager").CustomModesManager>
+	let vscodeModule: typeof import("vscode")
+	let vscodeApi: typeof import("vscode")
 	let mockContext: vscode.ExtensionContext
 	let mockOnUpdate: Mock
 	let mockWorkspaceFolders: { uri: { fsPath: string } }[]
@@ -50,7 +89,10 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 		})
 	}
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		vscodeModule = await import("vscode")
+		vscodeApi = vscodeModule
+
 		mockOnUpdate = vi.fn()
 		mockContext = {
 			globalState: {
@@ -65,8 +107,8 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 		} as unknown as vscode.ExtensionContext
 
 		mockWorkspaceFolders = [{ uri: { fsPath: "/mock/workspace" } }]
-		;(vscode.workspace as any).workspaceFolders = mockWorkspaceFolders
-		;(vscode.workspace.onDidSaveTextDocument as Mock).mockReturnValue({ dispose: vi.fn() })
+		;(vscodeApi.workspace as any).workspaceFolders = mockWorkspaceFolders
+		;(vscodeApi.workspace.onDidSaveTextDocument as Mock).mockReturnValue({ dispose: vi.fn() })
 		;(getWorkspacePath as Mock).mockReturnValue("/mock/workspace")
 		;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
 			return path === mockSettingsPath || path === mockRoomodes
@@ -86,8 +128,9 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 			onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
 			dispose: vi.fn(),
 		}
-		;(vscode.workspace.createFileSystemWatcher as Mock).mockReturnValue(mockWatcher)
+		;(vscodeApi.workspace.createFileSystemWatcher as Mock).mockReturnValue(mockWatcher)
 
+		const { CustomModesManager } = await import("../CustomModesManager")
 		manager = new CustomModesManager(mockContext, mockOnUpdate)
 	})
 
@@ -269,7 +312,9 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 
 			// Should handle the error gracefully
 			expect(modes).toHaveLength(0)
-			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("customModes.errors.yamlParseError")
+			expect(vscodeApi.window.showErrorMessage).toHaveBeenCalledWith(
+				expect.stringContaining("customModes.errors.yamlParseError"),
+			)
 		})
 	})
 
@@ -290,7 +335,9 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 
 			// Should fallback to empty array and show detailed error
 			expect(modes).toHaveLength(0)
-			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("customModes.errors.yamlParseError")
+			expect(vscodeApi.window.showErrorMessage).toHaveBeenCalledWith(
+				expect.stringContaining("customModes.errors.yamlParseError"),
+			)
 		})
 
 		it("should provide schema validation error messages", async () => {
@@ -310,20 +357,18 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 				[mockSettingsPath]: yaml.stringify({ customModes: [] }),
 			})
 
-			const modes = await manager.getCustomModes()
+			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
-			// Should show schema validation error
-			expect(modes).toHaveLength(0)
-			// kilocode_change start: handle schema validation errors
-			// Some environments/tests may not surface the schema validation toast (e.g. translation layer or mocked vscode instance).
-			// Keep this spec focused on the behavior that matters for parsing: invalid schema yields no modes.
-			const showErrorMessageCalls = (vscode.window.showErrorMessage as Mock).mock.calls
-			if (showErrorMessageCalls.length > 0) {
-				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-					expect.stringContaining("schemaValidationError"),
-				)
-			}
-			// kilocode_change end
+			// Exercise the specific load path that should surface schema validation errors.
+			const loaded = await (manager as any).loadModesFromFile(mockRoomodes)
+
+			expect(loaded).toHaveLength(0)
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				expect.stringContaining("Schema validation failed"),
+				expect.anything(),
+			)
+
+			consoleErrorSpy.mockRestore()
 		})
 	})
 
