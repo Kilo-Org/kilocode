@@ -221,34 +221,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "เติมข้อความอัตโนมัติ",
 		"settings": {
+			"codeEditorSuggestions": "คำแนะนำตัวแก้ไขโค้ด",
+			"chatSuggestions": "คำแนะนำแชท",
+			"model": "โมเดล",
+			"provider": "ผู้ให้บริการ",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "เรียกใช้คำแนะนำอัตโนมัติ",
 				"description": "แสดงคำแนะนำโค้ดแบบอินไลน์โดยอัตโนมัติเมื่อคุณหยุดพิมพ์"
 			},
 			"autoTriggerDelay": {
 				"label": "ความล่าช้าของการเรียกใช้อัตโนมัติ",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "ความล่าช้าเป็นวินาทีก่อนที่คำแนะนำจะปรากฏหลังจากคุณหยุดพิมพ์ ความล่าช้าที่สั้นกว่าหมายถึงคำแนะนำที่เร็วกว่า แต่อาจใช้ทรัพยากรมากกว่า"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "เรียกใช้ด้วยปุ่มลัด ({{keybinding}})",
+				"description": "กด {{keybinding}} เพื่อขอคำแนะนำโค้ดที่ตำแหน่งเคอร์เซอร์ของคุณ <DocsLink>แก้ไขปุ่มลัด</DocsLink>"
 			},
-			"keybindingNotFound": "ไม่พบ",
-			"configureAutocompleteProfile": "ใช้โมเดลใดก็ได้โดยไปที่โปรไฟล์และตั้งค่าโปรไฟล์ประเภทเติมข้อความอัตโนมัติ",
-			"model": "โมเดล",
-			"provider": "ผู้ให้บริการ",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "เปิดใช้งานเติมข้อความอัตโนมัติในแชท",
+				"description": "แสดงคำแนะนำขณะพิมพ์ในช่องแชท กด Tab เพื่อยอมรับคำแนะนำ"
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "หยุดคำแนะนำชั่วคราว",
+				"description": "หยุดคำแนะนำชั่วคราวตามระยะเวลาที่กำหนด",
 				"button": "หยุดชั่วคราว",
 				"unsnooze": "เปิดใช้งานอีกครั้ง",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "คำแนะนำถูกหยุดชั่วคราวอยู่",
 				"duration": {
 					"1min": "1 นาที",
 					"5min": "5 นาที",
@@ -257,6 +257,7 @@
 					"1hour": "1 ชั่วโมง"
 				}
 			},
+			"keybindingNotFound": "ไม่พบ",
 			"noModelConfigured": {
 				"title": "ยังไม่ได้กำหนดค่าโมเดล Autocomplete",
 				"description": "หากต้องการเปิดใช้งาน Autocomplete ให้เพิ่มโปรไฟล์ที่มีผู้ให้บริการที่รองรับเหล่านี้:",
@@ -267,8 +268,7 @@
 				"description": "บัญชี Kilo Code ของคุณไม่มีเครดิต หากต้องการใช้ Autocomplete กรุณาเติมเครดิตในบัญชีของคุณ",
 				"buyCredits": "ซื้อเครดิต →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "ใช้โมเดลใดก็ได้โดยไปที่โปรไฟล์และตั้งค่าโปรไฟล์ประเภทเติมข้อความอัตโนมัติ"
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +307,9 @@
 		},
 		"mcp": {
 			"description": "เซิร์ฟเวอร์ MCP เหล่านี้ได้รับการดูแลโดยชุมชน คลิก <1>ที่นี่</1> เพื่อแก้ไขการตั้งค่า MCP ของคุณ"
+		},
+		"skills": {
+			"description": "เรียกดูและค้นพบทักษะจากชุมชน ทักษะให้คำแนะนำเฉพาะทางสำหรับงานเฉพาะ"
 		}
 	},
 	"modes": {

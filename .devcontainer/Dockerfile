@@ -2,7 +2,7 @@
 # Based on flake.nix dependencies for standardized development environment
 
 # Use official Node.js image matching .nvmrc version
-FROM node:20.19.2-bullseye
+FROM node:20.20.0-bullseye
 
 # Install system dependencies (matching flake.nix packages)
 RUN apt-get update && apt-get install -y \

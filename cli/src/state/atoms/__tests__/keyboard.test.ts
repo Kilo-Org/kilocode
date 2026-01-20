@@ -1394,7 +1394,7 @@ describe("keypress atoms", () => {
 			expect(text).toBe(smallPaste)
 		})
 
-		it("should abbreviate large pastes as references", () => {
+		it("should abbreviate large pastes as references", async () => {
 			// Large paste (10+ lines to trigger abbreviation)
 			const lines = Array.from({ length: 15 }, (_, i) => `line ${i + 1}`)
 			const largePaste = lines.join("\n")
@@ -1409,13 +1409,18 @@ describe("keypress atoms", () => {
 
 			store.set(keyboardHandlerAtom, pasteKey)
 
+			// Wait for async paste operation to complete
+			await vi.waitFor(() => {
+				const text = store.get(textBufferStringAtom)
+				expect(text).toContain("[Pasted text #1 +15 lines]")
+			})
+
 			// Should insert abbreviated reference
 			const text = store.get(textBufferStringAtom)
-			expect(text).toContain("[Pasted text #1 +15 lines]")
 			expect(text).not.toContain("line 1")
 		})
 
-		it("should store full text in references map for large pastes", () => {
+		it("should store full text in references map for large pastes", async () => {
 			const lines = Array.from({ length: 12 }, (_, i) => `content line ${i + 1}`)
 			const largePaste = lines.join("\n")
 			const pasteKey: Key = {
@@ -1429,12 +1434,14 @@ describe("keypress atoms", () => {
 
 			store.set(keyboardHandlerAtom, pasteKey)
 
-			// Full text should be in references map
-			const refs = store.get(pastedTextReferencesAtom)
-			expect(refs.get(1)).toBe(largePaste)
+			// Wait for async paste operation to complete
+			await vi.waitFor(() => {
+				const refs = store.get(pastedTextReferencesAtom)
+				expect(refs.get(1)).toBe(largePaste)
+			})
 		})
 
-		it("should increment reference numbers for multiple large pastes", () => {
+		it("should increment reference numbers for multiple large pastes", async () => {
 			const createLargePaste = (id: number) => {
 				const lines = Array.from({ length: 11 }, (_, i) => `paste${id} line ${i + 1}`)
 				return lines.join("\n")
@@ -1448,6 +1455,12 @@ describe("keypress atoms", () => {
 				meta: false,
 				shift: false,
 				paste: true,
+			})
+
+			// Wait for first paste to complete
+			await vi.waitFor(() => {
+				const text = store.get(textBufferStringAtom)
+				expect(text).toContain("[Pasted text #1 +11 lines]")
 			})
 
 			// Add a space
@@ -1470,12 +1483,14 @@ describe("keypress atoms", () => {
 				paste: true,
 			})
 
-			const text = store.get(textBufferStringAtom)
-			expect(text).toContain("[Pasted text #1 +11 lines]")
-			expect(text).toContain("[Pasted text #2 +11 lines]")
+			// Wait for second paste to complete
+			await vi.waitFor(() => {
+				const text = store.get(textBufferStringAtom)
+				expect(text).toContain("[Pasted text #2 +11 lines]")
+			})
 		})
 
-		it("should handle paste at exactly threshold boundary", () => {
+		it("should handle paste at exactly threshold boundary", async () => {
 			// Exactly 10 lines (threshold)
 			const lines = Array.from({ length: 10 }, (_, i) => `line ${i + 1}`)
 			const boundaryPaste = lines.join("\n")
@@ -1490,9 +1505,11 @@ describe("keypress atoms", () => {
 
 			store.set(keyboardHandlerAtom, pasteKey)
 
-			// Should abbreviate (>= threshold)
-			const text = store.get(textBufferStringAtom)
-			expect(text).toContain("[Pasted text #1 +10 lines]")
+			// Wait for async paste operation to complete
+			await vi.waitFor(() => {
+				const text = store.get(textBufferStringAtom)
+				expect(text).toContain("[Pasted text #1 +10 lines]")
+			})
 		})
 
 		it("should not abbreviate paste just below threshold", () => {

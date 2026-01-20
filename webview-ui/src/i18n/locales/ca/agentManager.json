@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "Vols compartir públicament una instantània d'aquesta sessió?",
 		"shareConfirmYes": "Sí",
 		"shareConfirmNo": "No",
-		"yoloMode": "Mode YOLO"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -95,7 +97,9 @@
 		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar missatge",
 		"resumeTitle": "Reprendre agent",
-		"hint": "Prem Enter per enviar, Shift+Enter per nova línia"
+		"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
+		"addImage": "Afegir imatge",
+		"removeImage": "Eliminar imatge"
 	},
 	"status": {
 		"running": "en execució",

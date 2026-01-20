@@ -81,6 +81,14 @@ function getContextTokensFromMessages(messages: ExtensionChatMessage[]): number 
 				const parsedText = JSON.parse(message.text)
 				const { tokensIn, tokensOut, cacheWrites, cacheReads, apiProtocol } = parsedText
 
+				// Skip placeholder messages that only have apiProtocol but no token data
+				// These are sent at the start of API requests before the response is received
+				const hasValidTokenData = typeof tokensIn === "number" || typeof tokensOut === "number"
+				if (!hasValidTokenData) {
+					// This is a placeholder message, continue searching backwards
+					continue
+				}
+
 				// Calculate context tokens based on API protocol (matches getApiMetrics logic)
 				if (apiProtocol === "anthropic") {
 					return (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)

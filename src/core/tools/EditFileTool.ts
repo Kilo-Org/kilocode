@@ -13,6 +13,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 interface EditFileParams {
 	file_path: string
@@ -284,6 +285,20 @@ export class EditFileTool extends BaseTool<"edit_file"> {
 			}
 
 			const didApprove = await askApproval("tool", completeMessage, undefined, isWriteProtected)
+
+			// kilocode_change start
+			// Track contribution (fire-and-forget)
+			trackContribution({
+				cwd: task.cwd,
+				filePath: relPath,
+				originalContent: currentContent || "",
+				newContent: newContent,
+				status: didApprove ? "accepted" : "rejected",
+				taskId: task.taskId,
+				organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+				kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+			})
+			// kilocode_change end
 
 			if (!didApprove) {
 				// Revert changes if diff view was shown

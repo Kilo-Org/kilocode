@@ -35,6 +35,12 @@ Kilo Code offers a streamlined registration that connects you directly to fronti
 
 Kilo Code provides access to the latest frontier coding models through its built-in provider. The specific models available are automatically updated and managed by the Kilo Code service, ensuring you always have access to the most capable models for coding tasks.
 
+## BYOK support
+
+You can also bring your own key (BYOK) to the Kilo Gateway. We currently support the following providers: Anthropic, OpenAI, Google AI Studio, MiniMax, Mistral AI, xAI, and Z.ai.
+
+You can access the BYOK section of the Kilo Gateway [here](https://app.kilo.ai/byok).
+
 ## Configuration in Kilo Code
 
 Once you've completed the registration process, Kilo Code is automatically configured:
@@ -49,11 +55,11 @@ Kilo Code can route to many different inference providers. For personal accounts
 
 #### Provider Sorting
 
-- Default provider sorting: at time of writing equivalent to prefer providers with lower latency
+- Default provider sorting: at time of writing equivalent to prefer providers with lower price
 - Prefer providers with lower price
 - Prefer providers with higher throughput (i.e. more tokens per seconds)
 - Prefer providers with lower latency (i.e. shorter time to first token)
-- A specific provider can also be chosen. This is not recommended, because it will result in errors when the provider is facing downtime or enforcing rate limits.
+- A specific provider preference can also be chosen.
 
 #### Data Policy
 

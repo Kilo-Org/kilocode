@@ -78,7 +78,33 @@ export function validateAndFixToolResultIds(
 	}
 
 	// Find tool_result blocks in the user message
-	const toolResults = userMessage.content.filter(
+	let toolResults = userMessage.content.filter(
+		(block): block is Anthropic.ToolResultBlockParam => block.type === "tool_result",
+	)
+
+	// Deduplicate tool_result blocks to prevent API protocol violations (GitHub #10465)
+	// This serves as a safety net for any potential race conditions that could generate
+	// duplicate tool_results with the same tool_use_id. The root cause (approval feedback
+	// creating duplicate results) has been fixed in presentAssistantMessage.ts, but this
+	// deduplication remains as a defensive measure for unknown edge cases.
+	const seenToolResultIds = new Set<string>()
+	const deduplicatedContent = userMessage.content.filter((block) => {
+		if (block.type !== "tool_result") {
+			return true
+		}
+		if (seenToolResultIds.has(block.tool_use_id)) {
+			return false // Duplicate - filter out
+		}
+		seenToolResultIds.add(block.tool_use_id)
+		return true
+	})
+
+	userMessage = {
+		...userMessage,
+		content: deduplicatedContent,
+	}
+
+	toolResults = deduplicatedContent.filter(
 		(block): block is Anthropic.ToolResultBlockParam => block.type === "tool_result",
 	)
 
@@ -139,15 +165,12 @@ export function validateAndFixToolResultIds(
 		)
 	}
 
-	// Create a mapping of tool_result IDs to corrected IDs
-	// Strategy: Match by position (first tool_result -> first tool_use, etc.)
-	// This handles most cases where the mismatch is due to ID confusion
-	//
-	// Track which tool_use IDs have been used to prevent duplicates
+	// Match tool_results to tool_uses by position and fix incorrect IDs
 	const usedToolUseIds = new Set<string>()
+	const contentArray = userMessage.content as Anthropic.Messages.ContentBlockParam[]
 
-	const correctedContent = userMessage.content
-		.map((block) => {
+	const correctedContent = contentArray
+		.map((block: Anthropic.Messages.ContentBlockParam) => {
 			if (block.type !== "tool_result") {
 				return block
 			}
@@ -177,17 +200,18 @@ export function validateAndFixToolResultIds(
 			}
 
 			// No corresponding tool_use for this tool_result, or the ID is already used
-			// Filter out this orphaned tool_result by returning null
 			return null
 		})
 		.filter((block): block is NonNullable<typeof block> => block !== null)
 
 	// Add missing tool_result blocks for any tool_use that doesn't have one
-	// After the ID correction above, recalculate which tool_use IDs are now covered
 	const coveredToolUseIds = new Set(
 		correctedContent
-			.filter((b): b is Anthropic.ToolResultBlockParam => b.type === "tool_result")
-			.map((r) => r.tool_use_id),
+			.filter(
+				(b: Anthropic.Messages.ContentBlockParam): b is Anthropic.ToolResultBlockParam =>
+					b.type === "tool_result",
+			)
+			.map((r: Anthropic.ToolResultBlockParam) => r.tool_use_id),
 	)
 
 	const stillMissingToolUseIds = toolUseBlocks.filter((toolUse) => !coveredToolUseIds.has(toolUse.id))

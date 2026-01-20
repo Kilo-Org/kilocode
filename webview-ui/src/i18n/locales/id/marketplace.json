@@ -147,10 +147,24 @@
 			"title": "Hapus Server MCP",
 			"message": "Apakah Anda yakin ingin menghapus server MCP \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Hapus Skill",
+			"message": "Apakah Anda yakin ingin menghapus skill \"{{skillName}}\"?"
+		},
 		"cancel": "Batal",
 		"confirm": "Hapus"
 	},
 	"footer": {
 		"issueText": "Menemukan masalah dengan item marketplace atau punya saran untuk yang baru? <0>Buka GitHub issue</0> untuk memberi tahu kami!"
+	},
+	"skills": {
+		"loading": "Memuat skill...",
+		"searchPlaceholder": "Cari skill...",
+		"allCategories": "Semua",
+		"resultsCount": "{{count}} skill ditemukan",
+		"noResults": "Tidak ada skill yang cocok dengan kriteria Anda",
+		"install": "Instal",
+		"installTitle": "Instal skill {{name}}",
+		"installing": "Menginstal..."
 	}
 }

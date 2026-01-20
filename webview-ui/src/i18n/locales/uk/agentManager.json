@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "Хочете опублікувати знімок цієї сесії?",
 		"shareConfirmYes": "Так",
 		"shareConfirmNo": "Ні",
-		"yoloMode": "Режим YOLO"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
@@ -97,7 +99,9 @@
 		"createPRTitle": "Створити pull request",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
-		"hint": "Enter для надсилання, Shift+Enter для нового рядка"
+		"hint": "Enter для надсилання, Shift+Enter для нового рядка",
+		"addImage": "Додати зображення",
+		"removeImage": "Видалити зображення"
 	},
 	"status": {
 		"running": "виконується",

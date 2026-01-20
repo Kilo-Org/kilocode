@@ -308,6 +308,9 @@
 		},
 		"modes": {
 			"description": "Những chế độ này được cung cấp từ cộng đồng. Nhấp <1>vào đây</1> để chỉnh sửa chế độ tùy chỉnh của riêng bạn."
+		},
+		"skills": {
+			"description": "Duyệt và khám phá các kỹ năng từ cộng đồng. Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể."
 		}
 	},
 	"modes": {

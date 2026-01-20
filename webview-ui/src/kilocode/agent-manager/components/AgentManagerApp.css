@@ -59,6 +59,64 @@
 	text-transform: uppercase;
 }
 
+.am-sidebar-header .am-icon-btn {
+	opacity: 0.6;
+}
+
+.am-sidebar-header .am-icon-btn:hover {
+	opacity: 1;
+}
+
+/* Options Menu Container */
+.am-options-menu-container {
+	position: relative;
+}
+
+.am-options-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin-top: 4px;
+	white-space: nowrap;
+	background: var(--vscode-menu-background, var(--vscode-dropdown-background));
+	border: 1px solid var(--vscode-menu-border, var(--vscode-dropdown-border));
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	z-index: 100;
+	overflow: hidden;
+	padding: 4px 0;
+}
+
+.am-options-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 12px;
+	border: none;
+	background: transparent;
+	color: var(--vscode-menu-foreground, var(--vscode-dropdown-foreground));
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.1s;
+}
+
+.am-options-item:hover {
+	background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+	color: var(--vscode-menu-selectionForeground, var(--vscode-list-hoverForeground));
+}
+
+.am-options-item:focus {
+	outline: none;
+	background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+}
+
+.am-options-item svg {
+	flex-shrink: 0;
+	opacity: 0.7;
+}
+
 /* New Agent Item - Primary action at top of sidebar */
 .am-new-agent-item {
 	display: flex;

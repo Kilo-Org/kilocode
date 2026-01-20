@@ -21,6 +21,11 @@ export const ciTimeoutAtom = atom<number | undefined>(undefined)
 export const ciCompletionDetectedAtom = atom<boolean>(false)
 
 /**
+ * Ignore completion_result messages at or before this timestamp
+ */
+export const ciCompletionIgnoreBeforeTimestampAtom = atom<number>(0)
+
+/**
  * Atom to track if command/message execution has finished
  */
 export const ciCommandFinishedAtom = atom<boolean>(false)
@@ -45,6 +50,7 @@ export const resetCIStateAtom = atom(null, (get, set) => {
 	set(ciModeAtom, false)
 	set(ciTimeoutAtom, undefined)
 	set(ciCompletionDetectedAtom, false)
+	set(ciCompletionIgnoreBeforeTimestampAtom, 0)
 	set(ciCommandFinishedAtom, false)
 	set(ciExitReasonAtom, null)
 })

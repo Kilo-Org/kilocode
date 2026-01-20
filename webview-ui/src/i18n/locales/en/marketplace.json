@@ -147,10 +147,24 @@
 			"title": "Remove MCP Server",
 			"message": "Are you sure you want to remove the MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Remove Skill",
+			"message": "Are you sure you want to remove the skill \"{{skillName}}\"?"
+		},
 		"cancel": "Cancel",
 		"confirm": "Remove"
 	},
 	"footer": {
 		"issueText": "Found a problem with a marketplace item or have suggestions for new ones? <0>Open a GitHub issue</0> to let us know!"
+	},
+	"skills": {
+		"loading": "Loading skills...",
+		"searchPlaceholder": "Search skills...",
+		"allCategories": "All",
+		"resultsCount": "{{count}} skills found",
+		"noResults": "No skills found matching your criteria",
+		"install": "Install",
+		"installTitle": "Install {{name}} Skill",
+		"installing": "Installing..."
 	}
 }

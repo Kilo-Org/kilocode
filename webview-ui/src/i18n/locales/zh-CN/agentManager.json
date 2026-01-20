@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "是否要公开分享此会话的快照？",
 		"shareConfirmYes": "是",
 		"shareConfirmNo": "否",
-		"yoloMode": "YOLO 模式"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -95,7 +97,9 @@
 		"createPRTitle": "创建 Pull Request",
 		"sendTitle": "发送消息",
 		"resumeTitle": "继续代理",
-		"hint": "按 Enter 发送，Shift+Enter 换行"
+		"hint": "按 Enter 发送，Shift+Enter 换行",
+		"addImage": "添加图片",
+		"removeImage": "移除图片"
 	},
 	"status": {
 		"running": "运行中",

@@ -147,10 +147,24 @@
 			"title": "Видалити MCP Server",
 			"message": "Ти впевнений, що хочеш видалити MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Видалити навичку",
+			"message": "Ти впевнений, що хочеш видалити навичку \"{{skillName}}\"?"
+		},
 		"cancel": "Скасувати",
 		"confirm": "Видалити"
 	},
 	"footer": {
 		"issueText": "Знайшов проблему з елементом marketplace або маєш пропозиції щодо нових? <0>Відкрий GitHub issue</0>, щоб повідомити нам!"
+	},
+	"skills": {
+		"loading": "Завантаження навичок...",
+		"searchPlaceholder": "Шукати навички...",
+		"allCategories": "Усі",
+		"resultsCount": "Знайдено {{count}} навичок",
+		"noResults": "Не знайдено навичок, що відповідають твоїм критеріям",
+		"install": "Встановити",
+		"installTitle": "Встановити навичку {{name}}",
+		"installing": "Встановлення..."
 	}
 }

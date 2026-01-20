@@ -173,4 +173,77 @@ describe("CerebrasHandler", () => {
 			// Test fallback token estimation logic
 		})
 	})
+
+	describe("convertToolsForOpenAI", () => {
+		it("should set all tools to strict: false for Cerebras API consistency", () => {
+			// Access the protected method through a test subclass
+			const regularTool = {
+				type: "function",
+				function: {
+					name: "read_file",
+					parameters: {
+						type: "object",
+						properties: {
+							path: { type: "string" },
+						},
+						required: ["path"],
+					},
+				},
+			}
+
+			// MCP tool with the 'mcp--' prefix
+			const mcpTool = {
+				type: "function",
+				function: {
+					name: "mcp--server--tool",
+					parameters: {
+						type: "object",
+						properties: {
+							arg: { type: "string" },
+						},
+					},
+				},
+			}
+
+			// Create a test wrapper to access protected method
+			class TestCerebrasHandler extends CerebrasHandler {
+				public testConvertToolsForOpenAI(tools: any[]) {
+					return this.convertToolsForOpenAI(tools)
+				}
+			}
+
+			const testHandler = new TestCerebrasHandler({ cerebrasApiKey: "test" })
+			const converted = testHandler.testConvertToolsForOpenAI([regularTool, mcpTool])
+
+			// Both tools should have strict: false
+			expect(converted).toHaveLength(2)
+			expect(converted![0].function.strict).toBe(false)
+			expect(converted![1].function.strict).toBe(false)
+		})
+
+		it("should return undefined when tools is undefined", () => {
+			class TestCerebrasHandler extends CerebrasHandler {
+				public testConvertToolsForOpenAI(tools: any[] | undefined) {
+					return this.convertToolsForOpenAI(tools)
+				}
+			}
+
+			const testHandler = new TestCerebrasHandler({ cerebrasApiKey: "test" })
+			expect(testHandler.testConvertToolsForOpenAI(undefined)).toBeUndefined()
+		})
+
+		it("should pass through non-function tools unchanged", () => {
+			class TestCerebrasHandler extends CerebrasHandler {
+				public testConvertToolsForOpenAI(tools: any[]) {
+					return this.convertToolsForOpenAI(tools)
+				}
+			}
+
+			const nonFunctionTool = { type: "other", data: "test" }
+			const testHandler = new TestCerebrasHandler({ cerebrasApiKey: "test" })
+			const converted = testHandler.testConvertToolsForOpenAI([nonFunctionTool])
+
+			expect(converted![0]).toEqual(nonFunctionTool)
+		})
+	})
 })

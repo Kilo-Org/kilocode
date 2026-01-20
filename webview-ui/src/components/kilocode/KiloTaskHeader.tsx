@@ -14,6 +14,7 @@ import { cn } from "@src/lib/utils"
 import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { useTaskDiffStats } from "@/components/ui/hooks/kilocode/useTaskDiffStats"
 
 import Thumbnails from "../common/Thumbnails"
 
@@ -25,6 +26,7 @@ import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode"
 import { TodoListDisplay } from "../chat/TodoListDisplay"
+import DiffStatsDisplay from "./DiffStatsDisplay"
 
 export interface TaskHeaderProps {
 	task: ClineMessage
@@ -60,10 +62,15 @@ const KiloTaskHeader = ({
 	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { showTaskTimeline } = useExtensionState()
+	const { showTaskTimeline, showDiffStats, clineMessages } = useExtensionState()
 	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
+
+	// Aggregate diff stats from all accepted file operations in the current task
+	// Use clineMessages from extension state which contains the full message history with isAnswered flags
+	const diffStats = useTaskDiffStats(clineMessages)
+	const hasDiffStats = diffStats.added > 0 || diffStats.removed > 0
 
 	const textContainerRef = useRef<HTMLDivElement>(null)
 	const textRef = useRef<HTMLDivElement>(null)
@@ -140,6 +147,9 @@ const KiloTaskHeader = ({
 							/>
 							{condenseButton}
 							<ShareButton item={currentTaskItem} disabled={buttonsDisabled} />
+							{showDiffStats !== false && hasDiffStats && (
+								<DiffStatsDisplay added={diffStats.added} removed={diffStats.removed} />
+							)}
 							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
 						</div>
 					</div>
@@ -241,6 +251,13 @@ const KiloTaskHeader = ({
 										<span>${totalCost?.toFixed(2)}</span>
 									</div>
 									<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
+								</div>
+							)}
+
+							{showDiffStats !== false && hasDiffStats && (
+								<div className="flex items-center gap-1 h-[20px]">
+									<span className="font-bold">{t("chat:task.changes")}</span>
+									<DiffStatsDisplay added={diffStats.added} removed={diffStats.removed} />
 								</div>
 							)}
 						</div>

@@ -145,12 +145,26 @@
 		},
 		"mcp": {
 			"title": "Usuń serwer MCP",
-			"message": "Czy na pewno chcesz usunąć serwer MCP „{{mcpName}}”?"
+			"message": "Czy na pewno chcesz usunąć serwer MCP \"{{mcpName}}\"?"
+		},
+		"skill": {
+			"title": "Usuń umiejętność",
+			"message": "Czy na pewno chcesz usunąć umiejętność \"{{skillName}}\"?"
 		},
 		"cancel": "Anuluj",
 		"confirm": "Usuń"
 	},
 	"footer": {
 		"issueText": "Znalazłeś problem z elementem marketplace lub masz sugestie dotyczące nowych elementów? <0>Otwórz issue na GitHub</0>, aby nam o tym powiedzieć!"
+	},
+	"skills": {
+		"loading": "Ładowanie umiejętności...",
+		"searchPlaceholder": "Szukaj umiejętności...",
+		"allCategories": "Wszystkie",
+		"resultsCount": "Znaleziono {{count}} umiejętności",
+		"noResults": "Nie znaleziono umiejętności pasujących do twoich kryteriów",
+		"install": "Zainstaluj",
+		"installTitle": "Zainstaluj umiejętność {{name}}",
+		"installing": "Instalowanie..."
 	}
 }

@@ -1143,6 +1143,10 @@
 		"showTimestamps": {
 			"label": "タイムスタンプを表示",
 			"description": "チャット表示で各メッセージにタイムスタンプを表示する"
+		},
+		"showDiffStats": {
+			"label": "差分統計を表示",
+			"description": "タスクヘッダーに追加/削除された行の統計を表示"
 		}
 	},
 	"ghost": {

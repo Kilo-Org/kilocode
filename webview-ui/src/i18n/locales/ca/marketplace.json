@@ -149,10 +149,24 @@
 			"title": "Eliminar el servidor MCP",
 			"message": "Estàs segur que vols eliminar el servidor MCP \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Eliminar l'habilitat",
+			"message": "Estàs segur que vols eliminar l'habilitat \"{{skillName}}\"?"
+		},
 		"cancel": "Cancel·lar",
 		"confirm": "Eliminar"
 	},
 	"footer": {
 		"issueText": "Has trobat un problema amb un element del marketplace o tens suggeriments per a nous elements? <0>Obre una incidència de GitHub</0> per fer-nos-ho saber!"
+	},
+	"skills": {
+		"loading": "Carregant habilitats...",
+		"searchPlaceholder": "Cercar habilitats...",
+		"allCategories": "Totes",
+		"resultsCount": "{{count}} habilitats trobades",
+		"noResults": "No s'han trobat habilitats que coincideixin amb els teus criteris",
+		"install": "Instal·lar",
+		"installTitle": "Instal·lar habilitat {{name}}",
+		"installing": "Instal·lant..."
 	}
 }

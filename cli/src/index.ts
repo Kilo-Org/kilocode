@@ -46,9 +46,9 @@ program
 		"-p, --parallel",
 		"Run in parallel mode - the agent will create a separate git branch, unless you provide the --existing-branch option",
 	)
-	.option("-eb, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
-	.option("-pv, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
-	.option("-mo, --model <model>", "Override model for the selected provider")
+	.option("-e, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
+	.option("-P, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
+	.option("-M, --model <model>", "Override model for the selected provider")
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
@@ -101,8 +101,10 @@ program
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
+		// BUT NOT in json-io mode, where stdin is used for bidirectional communication
+		// and the prompt will come via a "newTask" message
 		let finalPrompt = prompt || ""
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && !process.stdin.isTTY && !options.jsonIo) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
@@ -188,7 +190,11 @@ program
 
 		// Validate attachments if specified
 		const attachments: string[] = options.attach || []
-		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		const attachRequiresAutoResult = validateAttachRequiresAuto({
+			attach: attachments,
+			auto: options.auto,
+			jsonIo: options.jsonIo,
+		})
 		if (!attachRequiresAutoResult.valid) {
 			console.error(attachRequiresAutoResult.error)
 			process.exit(1)
@@ -216,7 +222,27 @@ program
 		const hasEnvConfig = envConfigExists()
 
 		if (!hasConfig && !hasEnvConfig) {
-			// No config file and no env config - show auth wizard
+			// No config file and no env config
+			// Check if running in agent-manager mode (spawned from VS Code extension)
+			if (process.env.KILO_PLATFORM === "agent-manager") {
+				// Output a welcome message with instructions that the agent manager can detect.
+				// The agent manager will show a localized error dialog with "Run kilocode auth"
+				// and "Run kilocode config" buttons. The instructions here are just for
+				// triggering the cli_configuration_error handler and providing log context.
+				const welcomeMessage = {
+					type: "welcome",
+					timestamp: Date.now(),
+					metadata: {
+						welcomeOptions: {
+							instructions: ["Configuration required: No provider configured."],
+						},
+					},
+				}
+				console.log(JSON.stringify(welcomeMessage))
+				process.exit(1)
+			}
+
+			// Interactive mode - show auth wizard
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()

@@ -147,10 +147,24 @@
 			"title": "Xóa máy chủ MCP",
 			"message": "Bạn có chắc chắn muốn xóa máy chủ MCP \"{{mcpName}}\" không?"
 		},
+		"skill": {
+			"title": "Xóa kỹ năng",
+			"message": "Bạn có chắc chắn muốn xóa kỹ năng \"{{skillName}}\" không?"
+		},
 		"cancel": "Hủy",
 		"confirm": "Xóa"
 	},
 	"footer": {
 		"issueText": "Bạn tìm thấy vấn đề với mục marketplace hoặc có đề xuất cho mục mới? <0>Mở issue GitHub</0> để cho chúng tôi biết!"
+	},
+	"skills": {
+		"loading": "Đang tải kỹ năng...",
+		"searchPlaceholder": "Tìm kiếm kỹ năng...",
+		"allCategories": "Tất cả",
+		"resultsCount": "Tìm thấy {{count}} kỹ năng",
+		"noResults": "Không tìm thấy kỹ năng nào phù hợp với tiêu chí của bạn",
+		"install": "Cài đặt",
+		"installTitle": "Cài đặt kỹ năng {{name}}",
+		"installing": "Đang cài đặt..."
 	}
 }

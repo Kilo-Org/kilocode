@@ -162,6 +162,33 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		return result
 	}
 
+	/**
+	 * Override convertToolsForOpenAI to ensure all tools have consistent strict values.
+	 * Cerebras API requires all tools to have the same strict mode setting.
+	 * We use strict: false for all tools since MCP tools cannot use strict mode
+	 * (they have optional parameters from the MCP server schema).
+	 */
+	protected override convertToolsForOpenAI(tools: any[] | undefined): any[] | undefined {
+		if (!tools) {
+			return undefined
+		}
+
+		return tools.map((tool) => {
+			if (tool.type !== "function") {
+				return tool
+			}
+
+			return {
+				...tool,
+				function: {
+					...tool.function,
+					strict: false,
+					parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
+				},
+			}
+		})
+	}
+
 	async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],

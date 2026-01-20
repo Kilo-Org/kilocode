@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "Chcete veřejně sdílet snímek této relace?",
 		"shareConfirmYes": "Ano",
 		"shareConfirmNo": "Ne",
-		"yoloMode": "Režim YOLO"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -96,7 +98,9 @@
 		"createPRTitle": "Vytvořit pull request",
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
-		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"
+		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek",
+		"addImage": "Přidat obrázek",
+		"removeImage": "Odebrat obrázek"
 	},
 	"status": {
 		"running": "běží",

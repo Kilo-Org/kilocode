@@ -85,5 +85,5 @@ sidebar_position: 1
 ## 后续步骤
 
 - 了解更多关于[自动补全功能](./index.md)
-- 探索自动补全的[触发选项](./index.md#triggering-options)
-- 查看[最佳实践](./index.md#best-practices)以获得最佳效果
+- 探索自动补全的[触发选项](./index.md#触发选项)
+- 查看[最佳实践](./index.md#最佳实践)以获得最佳效果

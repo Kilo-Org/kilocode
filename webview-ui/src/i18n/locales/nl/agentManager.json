@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
 		"shareConfirmYes": "Ja",
 		"shareConfirmNo": "Nee",
-		"yoloMode": "YOLO-modus"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -95,7 +97,9 @@
 		"createPRTitle": "Pull request maken",
 		"sendTitle": "Bericht verzenden",
 		"resumeTitle": "Agent hervatten",
-		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel"
+		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel",
+		"addImage": "Afbeelding toevoegen",
+		"removeImage": "Afbeelding verwijderen"
 	},
 	"status": {
 		"running": "actief",

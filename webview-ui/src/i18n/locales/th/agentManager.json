@@ -15,7 +15,9 @@
 		"shareConfirmMessage": "คุณต้องการแชร์สแนปช็อตของเซสชันนี้แบบสาธารณะหรือไม่?",
 		"shareConfirmYes": "ใช่",
 		"shareConfirmNo": "ไม่",
-		"yoloMode": "โหมด YOLO"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -95,7 +97,9 @@
 		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
-		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"
+		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่",
+		"addImage": "เพิ่มรูปภาพ",
+		"removeImage": "ลบรูปภาพ"
 	},
 	"status": {
 		"running": "กำลังทำงาน",

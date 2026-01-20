@@ -7,6 +7,8 @@ export interface BuildCliArgsOptions {
 	yoloMode?: boolean
 	/** Model ID to use for this session (overrides CLI default) */
 	model?: string
+	/** When true, prompt will be sent via stdin (for multimodal messages with images) */
+	promptViaStdin?: boolean
 }
 
 /**
@@ -35,9 +37,11 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 		args.push(`--session=${options.sessionId}`)
 	}
 
-	// Only add prompt if non-empty
+	// Only add prompt if non-empty and not being sent via stdin
 	// When resuming with --session, an empty prompt means "continue from where we left off"
-	if (prompt) {
+	// When promptViaStdin is true, prompt will be sent as a newTask message via stdin
+	// (used for multimodal messages with images)
+	if (prompt && !options?.promptViaStdin) {
 		args.push(prompt)
 	}
 

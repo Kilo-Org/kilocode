@@ -16,6 +16,14 @@ vi.mock("jotai")
 
 vi.mock("../../../state/hooks/useGitInfo.js")
 vi.mock("../../../state/hooks/useContextUsage.js")
+vi.mock("../../../state/hooks/useSessionCost.js", () => ({
+	useSessionCost: vi.fn(() => ({
+		totalCost: 0,
+		requestCount: 0,
+		hasCostData: false,
+	})),
+	formatSessionCost: vi.fn((cost: number) => `$${cost.toFixed(2)}`),
+}))
 vi.mock("../../../utils/git.js", () => ({
 	isGitWorktree: vi.fn(),
 }))

@@ -36,6 +36,17 @@ export function supportsScrollbackClear(): boolean {
 }
 
 /**
+ * Check if the terminal supports OSC sequences for setting window title (\x1b]0;title\x07)
+ *
+ * Modern terminals support OSC 0 for title setting, but legacy cmd.exe does not.
+ * This uses the same detection logic as scrollback clearing since unsupported
+ * terminals are the same.
+ */
+export function supportsTitleSetting(): boolean {
+	return supportsScrollbackClear()
+}
+
+/**
  * Get the appropriate terminal clear sequence for the current terminal
  *
  * On Windows cmd.exe, the \x1b[3J (clear scrollback buffer) escape sequence
@@ -100,6 +111,14 @@ export async function detectKittyProtocolSupport(): Promise<boolean> {
 
 	return new Promise((resolve) => {
 		if (!process.stdin.isTTY || !process.stdout.isTTY) {
+			kittyDetected = true
+			resolve(false)
+			return
+		}
+
+		// Skip Kitty protocol detection on legacy Windows terminals (cmd.exe)
+		// These terminals don't support the CSI queries and will display raw escape sequences
+		if (!supportsScrollbackClear()) {
 			kittyDetected = true
 			resolve(false)
 			return

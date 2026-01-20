@@ -104,6 +104,9 @@ importers:
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
+      docusaurus-plugin-llms:
+        specifier: ^0.2.2
+        version: 0.2.2(@docusaurus/core@3.9.2(@mdx-js/react@3.1.1(@types/react@19.2.8)(react@19.2.0))(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3))
       posthog-docusaurus:
         specifier: ^2.0.4
         version: 2.0.5
@@ -607,6 +610,9 @@ importers:
       '@google/genai':
         specifier: ^1.35.0
         version: 1.37.0(@modelcontextprotocol/sdk@1.25.2(hono@4.11.4)(zod@4.3.5))
+      '@inquirer/prompts':
+        specifier: ^8.2.0
+        version: 8.2.0(@types/node@25.0.9)
       '@kilocode/core-schemas':
         specifier: workspace:^
         version: link:../packages/core-schemas
@@ -1545,8 +1551,8 @@ importers:
   packages/core-schemas:
     dependencies:
       zod:
-        specifier: ^3.25.61
-        version: 3.25.76
+        specifier: ^4.3.5
+        version: 4.3.5
     devDependencies:
       '@roo-code/config-eslint':
         specifier: workspace:^
@@ -1969,6 +1975,9 @@ importers:
       strip-bom:
         specifier: ^5.0.0
         version: 5.0.0
+      tar-fs:
+        specifier: '>=3.1.1'
+        version: 3.1.1
       tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
@@ -2072,6 +2081,9 @@ importers:
       '@types/string-similarity':
         specifier: ^4.0.2
         version: 4.0.2
+      '@types/tar-fs':
+        specifier: ^2.0.4
+        version: 2.0.4
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
@@ -8648,6 +8660,12 @@ packages:
   '@types/svgo@1.3.6':
     resolution: {integrity: sha512-AZU7vQcy/4WFEuwnwsNsJnFwupIpbllH1++LXScN6uxT1Z4zPzdrWG97w4/I7eFKFTvfy/bHFStWjdBAg2Vjug==}
 
+  '@types/tar-fs@2.0.4':
+    resolution: {integrity: sha512-ipPec0CjTmVDWE+QKr9cTmIIoTl7dFG/yARCM5MqK8i6CNLIG1P8x4kwDsOQY1ChZOZjH0wO9nvfgBvWl4R3kA==}
+
+  '@types/tar-stream@3.1.4':
+    resolution: {integrity: sha512-921gW0+g29mCJX0fRvqeHzBlE/XclDaAG0Ousy1LCghsOhvaKacDeRGEVzQP9IPfKn8Vysy7FEXAIxycpc/CMg==}
+
   '@types/tmp@0.2.6':
     resolution: {integrity: sha512-chhaNf2oKHlRkDGt+tiKE2Z5aJ6qalm7Z9rlLdBwmOiAAf09YQvvoLXjWK4HWPF1xU/fqvMgfNfpVoBscA/tKA==}
 
@@ -11556,6 +11574,12 @@ packages:
   doctrine@3.0.0:
     resolution: {integrity: sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==}
     engines: {node: '>=6.0.0'}
+
+  docusaurus-plugin-llms@0.2.2:
+    resolution: {integrity: sha512-DZlZ6cv9p5poFE00Qg78aurBNWhLa4o0VhH4kI33DUT0y4ydlFEJJbf8Bks9BuuGPFbY/Guebn+hRc2QymMImg==}
+    engines: {node: '>=18.0'}
+    peerDependencies:
+      '@docusaurus/core': ^3.0.0
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -24494,7 +24518,7 @@ snapshots:
 
   '@docusaurus/react-loadable@6.0.0(react@19.2.0)':
     dependencies:
-      '@types/react': 18.3.23
+      '@types/react': 19.2.8
       react: 19.2.0
 
   '@docusaurus/theme-classic@3.9.2(@types/react@19.2.8)(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3)':
@@ -25684,7 +25708,7 @@ snapshots:
   '@libsql/isomorphic-ws@0.1.5':
     dependencies:
       '@types/ws': 8.18.1
-      ws: 8.18.3
+      ws: 8.19.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -29511,7 +29535,7 @@ snapshots:
   '@types/react-router@5.1.20':
     dependencies:
       '@types/history': 4.7.11
-      '@types/react': 18.3.23
+      '@types/react': 19.2.8
 
   '@types/react@18.3.23':
     dependencies:
@@ -29607,6 +29631,15 @@ snapshots:
   '@types/stylis@4.2.5': {}
 
   '@types/svgo@1.3.6': {}
+
+  '@types/tar-fs@2.0.4':
+    dependencies:
+      '@types/node': 20.19.27
+      '@types/tar-stream': 3.1.4
+
+  '@types/tar-stream@3.1.4':
+    dependencies:
+      '@types/node': 20.19.27
 
   '@types/tmp@0.2.6': {}
 
@@ -33034,6 +33067,13 @@ snapshots:
   doctrine@3.0.0:
     dependencies:
       esutils: 2.0.3
+
+  docusaurus-plugin-llms@0.2.2(@docusaurus/core@3.9.2(@mdx-js/react@3.1.1(@types/react@19.2.8)(react@19.2.0))(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3)):
+    dependencies:
+      '@docusaurus/core': 3.9.2(@mdx-js/react@3.1.1(@types/react@19.2.8)(react@19.2.0))(debug@4.4.3)(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3)
+      gray-matter: 4.0.3
+      minimatch: 9.0.5
+      yaml: 2.8.2
 
   dom-accessibility-api@0.5.16: {}
 

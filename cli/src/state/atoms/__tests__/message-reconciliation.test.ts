@@ -227,8 +227,8 @@ describe("Message Reconciliation", () => {
 			expect(messages[0]?.text).toBe("This is a much longer message with more content")
 		})
 
-		it("should always accept partial messages for streaming", () => {
-			// Setup: Add initial message via state
+		it("should NOT accept stale partial messages that would overwrite completed messages (context drop fix)", () => {
+			// Setup: Add initial message via state - this message is COMPLETE (partial=false)
 			const initialState: ExtensionState = {
 				version: "1.0.0",
 				apiConfiguration: {},
@@ -251,8 +251,10 @@ describe("Message Reconciliation", () => {
 
 			store.set(updateExtensionStateAtom, initialState)
 
-			// Try to update with a shorter partial message (streaming restart)
-			const partialMessage: ExtensionChatMessage = {
+			// Try to update with a shorter partial message (stale IPC message arriving late)
+			// This is the BUG scenario: a delayed partial update arrives after the message
+			// has already been completed. Accepting this would cause context loss!
+			const stalePartialMessage: ExtensionChatMessage = {
 				ts: 3000,
 				type: "say",
 				say: "text",
@@ -260,12 +262,13 @@ describe("Message Reconciliation", () => {
 				partial: true,
 			}
 
-			store.set(updateChatMessageByTsAtom, partialMessage)
+			store.set(updateChatMessageByTsAtom, stalePartialMessage)
 
-			// Verify partial message is accepted despite being shorter
+			// Verify the completed message is PRESERVED (stale partial is rejected)
+			// This prevents context drops when delayed IPC messages arrive
 			const messages = store.get(chatMessagesAtom)
-			expect(messages[0]?.text).toBe("New")
-			expect(messages[0]?.partial).toBe(true)
+			expect(messages[0]?.text).toBe("This is a completed message")
+			expect(messages[0]?.partial).toBe(false)
 		})
 	})
 
@@ -531,8 +534,8 @@ describe("Message Reconciliation", () => {
 			expect(messages[0]?.text).toBe("This is a much longer message with more content")
 		})
 
-		it("should always accept partial messages for streaming", () => {
-			// Setup: Add initial message via state
+		it("should NOT accept stale partial messages that would overwrite completed messages (context drop fix)", () => {
+			// Setup: Add initial message via state - this message is COMPLETE (partial=false)
 			const initialState: ExtensionState = {
 				version: "1.0.0",
 				apiConfiguration: {},
@@ -555,8 +558,10 @@ describe("Message Reconciliation", () => {
 
 			store.set(updateExtensionStateAtom, initialState)
 
-			// Try to update with a shorter partial message (streaming restart)
-			const partialMessage: ExtensionChatMessage = {
+			// Try to update with a shorter partial message (stale IPC message arriving late)
+			// This is the BUG scenario: a delayed partial update arrives after the message
+			// has already been completed. Accepting this would cause context loss!
+			const stalePartialMessage: ExtensionChatMessage = {
 				ts: 3000,
 				type: "say",
 				say: "text",
@@ -564,12 +569,13 @@ describe("Message Reconciliation", () => {
 				partial: true,
 			}
 
-			store.set(updateChatMessageByTsAtom, partialMessage)
+			store.set(updateChatMessageByTsAtom, stalePartialMessage)
 
-			// Verify partial message is accepted despite being shorter
+			// Verify the completed message is PRESERVED (stale partial is rejected)
+			// This prevents context drops when delayed IPC messages arrive
 			const messages = store.get(chatMessagesAtom)
-			expect(messages[0]?.text).toBe("New")
-			expect(messages[0]?.partial).toBe(true)
+			expect(messages[0]?.text).toBe("This is a completed message")
+			expect(messages[0]?.partial).toBe(false)
 		})
 	})
 

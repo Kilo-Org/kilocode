@@ -1,9 +1,10 @@
 import { getApiUrl } from "@roo-code/types"
 import { openRouterDefaultModelId } from "@roo-code/types"
 import { z } from "zod"
-import inquirer from "inquirer"
+import { select } from "@inquirer/prompts"
 import { logs } from "../../../services/logs.js"
 import type { KilocodeOrganization, KilocodeProfileData } from "../../types.js"
+import { withRawMode } from "../../utils/terminal.js"
 
 const API_TIMEOUT_MS = 5000
 
@@ -132,14 +133,14 @@ export async function promptOrganizationSelection(organizations: KilocodeOrganiz
 		})),
 	]
 
-	const { accountType } = await inquirer.prompt<{ accountType: string }>([
-		{
-			type: "list",
-			name: "accountType",
+	// Use withRawMode to ensure arrow key navigation works in list prompts
+	const accountType = await withRawMode(() =>
+		select({
 			message: "Select account type:",
 			choices: accountChoices,
-		},
-	])
+			loop: false,
+		}),
+	)
 
 	// Return organization ID if not personal
 	return accountType !== "personal" ? accountType : undefined

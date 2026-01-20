@@ -2032,3 +2032,210 @@ describe("Queued message processing after condense", () => {
 		expect(taskB.messageQueueService.isEmpty()).toBe(true)
 	})
 })
+
+describe("pushToolResultToUserContent", () => {
+	let mockProvider: any
+	let mockApiConfig: ProviderSettings
+
+	beforeEach(() => {
+		mockApiConfig = {
+			apiProvider: "anthropic",
+			apiModelId: "claude-3-5-sonnet-20241022",
+			apiKey: "test-api-key",
+		}
+
+		const storageUri = { fsPath: path.join(os.tmpdir(), "test-storage") }
+		const mockExtensionContext = {
+			globalState: {
+				get: vi.fn().mockImplementation((_key: keyof GlobalState) => undefined),
+				update: vi.fn().mockResolvedValue(undefined),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			globalStorageUri: storageUri,
+			workspaceState: {
+				get: vi.fn().mockImplementation((_key) => undefined),
+				update: vi.fn().mockResolvedValue(undefined),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			secrets: {
+				get: vi.fn().mockResolvedValue(undefined),
+				store: vi.fn().mockResolvedValue(undefined),
+				delete: vi.fn().mockResolvedValue(undefined),
+			},
+			extensionUri: { fsPath: "/mock/extension/path" },
+			extension: { packageJSON: { version: "1.0.0" } },
+		} as unknown as vscode.ExtensionContext
+
+		const mockOutputChannel = {
+			name: "test-output",
+			appendLine: vi.fn(),
+			append: vi.fn(),
+			replace: vi.fn(),
+			clear: vi.fn(),
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+		}
+
+		mockProvider = new ClineProvider(
+			mockExtensionContext,
+			mockOutputChannel,
+			"sidebar",
+			new ContextProxy(mockExtensionContext),
+		) as any
+
+		mockProvider.postMessageToWebview = vi.fn().mockResolvedValue(undefined)
+		mockProvider.postStateToWebview = vi.fn().mockResolvedValue(undefined)
+	})
+
+	it("should add tool_result when not a duplicate", () => {
+		const task = new Task({
+			provider: mockProvider,
+			context: mockProvider.context,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		const toolResult: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "test-id-1",
+			content: "Test result",
+		}
+
+		const added = task.pushToolResultToUserContent(toolResult)
+
+		expect(added).toBe(true)
+		expect(task.userMessageContent).toHaveLength(1)
+		expect(task.userMessageContent[0]).toEqual(toolResult)
+	})
+
+	it("should prevent duplicate tool_result with same tool_use_id", () => {
+		const task = new Task({
+			provider: mockProvider,
+			context: mockProvider.context,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		const toolResult1: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "duplicate-id",
+			content: "First result",
+		}
+
+		const toolResult2: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "duplicate-id",
+			content: "Second result (should be skipped)",
+		}
+
+		// Spy on console.warn to verify warning is logged
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+		// Add first result - should succeed
+		const added1 = task.pushToolResultToUserContent(toolResult1)
+		expect(added1).toBe(true)
+		expect(task.userMessageContent).toHaveLength(1)
+
+		// Add second result with same ID - should be skipped
+		const added2 = task.pushToolResultToUserContent(toolResult2)
+		expect(added2).toBe(false)
+		expect(task.userMessageContent).toHaveLength(1)
+
+		// Verify only the first result is in the array
+		expect(task.userMessageContent[0]).toEqual(toolResult1)
+
+		// Verify warning was logged
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.stringContaining("Skipping duplicate tool_result for tool_use_id: duplicate-id"),
+		)
+
+		warnSpy.mockRestore()
+	})
+
+	it("should allow different tool_use_ids to be added", () => {
+		const task = new Task({
+			provider: mockProvider,
+			context: mockProvider.context,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		const toolResult1: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "id-1",
+			content: "Result 1",
+		}
+
+		const toolResult2: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "id-2",
+			content: "Result 2",
+		}
+
+		const added1 = task.pushToolResultToUserContent(toolResult1)
+		const added2 = task.pushToolResultToUserContent(toolResult2)
+
+		expect(added1).toBe(true)
+		expect(added2).toBe(true)
+		expect(task.userMessageContent).toHaveLength(2)
+		expect(task.userMessageContent[0]).toEqual(toolResult1)
+		expect(task.userMessageContent[1]).toEqual(toolResult2)
+	})
+
+	it("should handle tool_result with is_error flag", () => {
+		const task = new Task({
+			provider: mockProvider,
+			context: mockProvider.context,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		const errorResult: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "error-id",
+			content: "Error message",
+			is_error: true,
+		}
+
+		const added = task.pushToolResultToUserContent(errorResult)
+
+		expect(added).toBe(true)
+		expect(task.userMessageContent).toHaveLength(1)
+		expect(task.userMessageContent[0]).toEqual(errorResult)
+	})
+
+	it("should not interfere with other content types in userMessageContent", () => {
+		const task = new Task({
+			provider: mockProvider,
+			context: mockProvider.context,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		// Add text and image blocks manually
+		task.userMessageContent.push(
+			{ type: "text", text: "Some text" },
+			{ type: "image", source: { type: "base64", media_type: "image/png", data: "base64data" } },
+		)
+
+		const toolResult: Anthropic.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "test-id",
+			content: "Result",
+		}
+
+		const added = task.pushToolResultToUserContent(toolResult)
+
+		expect(added).toBe(true)
+		expect(task.userMessageContent).toHaveLength(3)
+		expect(task.userMessageContent[0].type).toBe("text")
+		expect(task.userMessageContent[1].type).toBe("image")
+		expect(task.userMessageContent[2]).toEqual(toolResult)
+	})
+})

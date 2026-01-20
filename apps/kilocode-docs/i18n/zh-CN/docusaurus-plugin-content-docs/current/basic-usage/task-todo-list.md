@@ -89,7 +89,7 @@ Kilo 通常会跳过简单任务的待办事项列表。开销不值得。
 
 **何时使用**：在长时间工作流中，频繁的中断会拖慢您的进度。
 
-**如何启用**：检查[更新待办事项列表自动批准设置](/features/auto-approving-actions#update-todo-list)。
+**如何启用**：检查[更新待办事项列表自动批准设置](/features/auto-approving-actions#更新待办事项列表)。
 
 **缺点**：控制较少，但执行速度更快。
 

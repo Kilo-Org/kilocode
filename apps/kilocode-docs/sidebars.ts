@@ -93,6 +93,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
+				"basic-usage/byok",
 				"basic-usage/adding-credits",
 				"basic-usage/settings-management",
 			],

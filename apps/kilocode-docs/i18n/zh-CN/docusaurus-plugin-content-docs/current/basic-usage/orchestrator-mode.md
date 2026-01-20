@@ -6,7 +6,7 @@ import YouTubeEmbed from '@site/src/components/YouTubeEmbed';
 
 # 编排模式：协调复杂工作流
 
-编排模式（原称为 Boomerang Tasks）允许您将复杂项目分解为更小、更易管理的部分。您可以将其理解为将工作的各个部分委派给专门的助手。每个子任务都在自己的上下文中运行，通常使用为特定工作定制的不同 Kilo Code 模式（如 [`code`](/basic-usage/using-modes#code-mode-default)、[`architect`](/basic-usage/using-modes#architect-mode) 或 [`debug`](/basic-usage/using-modes#debug-mode)）。
+编排模式（原称为 Boomerang Tasks）允许您将复杂项目分解为更小、更易管理的部分。您可以将其理解为将工作的各个部分委派给专门的助手。每个子任务都在自己的上下文中运行，通常使用为特定工作定制的不同 Kilo Code 模式（如 [`code`](/basic-usage/using-modes#代码模式默认)、[`architect`](/basic-usage/using-modes#架构师模式) 或 [`debug`](/basic-usage/using-modes#调试模式)）。
 
 <YouTubeEmbed
   url="https://www.youtube.com/watch?v=20MmJNeOODo"
@@ -29,7 +29,7 @@ import YouTubeEmbed from '@site/src/components/YouTubeEmbed';
 
 ## 关键注意事项
 
-- **需要批准**：默认情况下，每个子任务的创建和完成都需要你的批准。如果需要，可以通过 [Auto-Approving Actions](/features/auto-approving-actions#subtasks) 设置自动完成此操作。
+- **需要批准**：默认情况下，每个子任务的创建和完成都需要你的批准。如果需要，可以通过 [Auto-Approving Actions](/features/auto-approving-actions#子任务) 设置自动完成此操作。
 - **上下文隔离与传递**：每个子任务都在完全隔离的上下文中运行，具有自己的对话历史。它不会自动继承父任务的上下文。信息必须显式传递：
     - **向下**：在子任务创建时通过初始指令传递。
     - **向上**：在子任务完成时通过最终摘要传递。注意，只有该摘要会返回给父任务。

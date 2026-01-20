@@ -1132,6 +1132,10 @@
 		"showTimestamps": {
 			"label": "Zeitstempel anzeigen",
 			"description": "Zeitstempel für jede Nachricht in der Chat-Ansicht anzeigen"
+		},
+		"showDiffStats": {
+			"label": "Diff-Statistiken anzeigen",
+			"description": "Statistiken zu hinzugefügten/entfernten Zeilen im Aufgaben-Header anzeigen"
 		}
 	},
 	"ghost": {

@@ -25,9 +25,9 @@ export function useMessageQueueProcessor(sessionId: string | null) {
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
 	const setSendingMessage = useSetAtom(setSendingMessageAtom)
 
-	// Send the next queued message
+	// Send the next queued message (including images if present)
 	const sendNextMessage = useCallback(
-		(messageId: string, content: string) => {
+		(messageId: string, content: string, images?: string[]) => {
 			if (!sessionId) return
 
 			setSendingMessage({ sessionId, messageId })
@@ -36,6 +36,7 @@ export function useMessageQueueProcessor(sessionId: string | null) {
 				sessionId,
 				messageId,
 				content,
+				images,
 			})
 		},
 		[sessionId, setSendingMessage],
@@ -78,7 +79,7 @@ export function useMessageQueueProcessor(sessionId: string | null) {
 
 		const queuedMsg = queue.find((msg) => msg.status === "queued")
 		if (queuedMsg) {
-			sendNextMessage(queuedMsg.id, queuedMsg.content)
+			sendNextMessage(queuedMsg.id, queuedMsg.content, queuedMsg.images)
 		}
 	}, [sessionId, queue, sendingMessageId, sendNextMessage])
 }

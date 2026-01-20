@@ -20,7 +20,7 @@ export const cliConfigSchema = z.object({
 	providers: z.array(providerConfigSchema),
 	autoApproval: autoApprovalConfigSchema.optional(),
 	theme: themeIdSchema.optional(),
-	customThemes: z.record(themeSchema).optional(),
+	customThemes: z.record(z.string(), themeSchema).optional(),
 	maxConcurrentFileReads: z.number().min(1).default(DEFAULT_MAX_CONCURRENT_FILE_READS).optional(),
 })
 

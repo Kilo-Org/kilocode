@@ -1,7 +1,7 @@
 name: Docusaurus Build Check
 
 env:
-    NODE_VERSION: 20.19.2
+    NODE_VERSION: 20.20.0
     PNPM_VERSION: 10.8.1
 
 on:
@@ -19,7 +19,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: Install pnpm
               uses: pnpm/action-setup@v4
@@ -27,7 +27,7 @@ jobs:
                   version: ${{ env.PNPM_VERSION }}
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"

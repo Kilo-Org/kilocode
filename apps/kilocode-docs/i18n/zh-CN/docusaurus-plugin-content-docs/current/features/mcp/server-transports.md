@@ -196,4 +196,4 @@ SSE服务器可以部署到远程服务器并通过网络访问：
 
 ## 在Kilo Code中配置传输
 
-有关在Kilo Code中配置STDIO和SSE传输的详细信息，包括示例配置，请参见[理解传输类型](/features/mcp/using-mcp-in-kilo-code#understanding-transport-types)部分。
+有关在Kilo Code中配置STDIO和SSE传输的详细信息，包括示例配置，请参见[理解传输类型](/features/mcp/using-mcp-in-kilo-code#理解传输类型)部分。

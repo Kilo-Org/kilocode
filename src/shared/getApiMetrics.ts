@@ -84,9 +84,12 @@ export function getApiMetrics(messages: ClineMessage[]) {
 		}
 	})
 
-	// Calculate context tokens, from the last API request started or condense
-	// context message.
+	// kilocode_change start - skip placeholder messages without token data
+	// When a new API request starts, a placeholder api_req_started message is created
+	// with only apiProtocol (no token data). We need to skip these placeholders and
+	// find the last message with actual token data to avoid showing 0% context.
 	result.contextTokens = 0
+	let foundValidTokenData = false
 
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const message = messages[i]
@@ -95,22 +98,29 @@ export function getApiMetrics(messages: ClineMessage[]) {
 			try {
 				const parsedText: ParsedApiReqStartedTextType = JSON.parse(message.text)
 				const { tokensIn, tokensOut } = parsedText
+				const hasTokenData = typeof tokensIn === "number" || typeof tokensOut === "number"
 
-				// Since tokensIn now stores TOTAL input tokens (including cache tokens),
-				// we no longer need to add cacheWrites and cacheReads separately.
-				// This applies to both Anthropic and OpenAI protocols.
-				result.contextTokens = (tokensIn || 0) + (tokensOut || 0)
+				if (hasTokenData) {
+					// Since tokensIn now stores TOTAL input tokens (including cache tokens),
+					// we no longer need to add cacheWrites and cacheReads separately.
+					// This applies to both Anthropic and OpenAI protocols.
+					result.contextTokens = (tokensIn || 0) + (tokensOut || 0)
+					foundValidTokenData = true
+				}
 			} catch (error) {
 				console.error("Error parsing JSON:", error)
 				continue
 			}
 		} else if (message.type === "say" && message.say === "condense_context") {
 			result.contextTokens = message.contextCondense?.newContextTokens ?? 0
+			foundValidTokenData = true
 		}
-		if (result.contextTokens) {
+
+		if (foundValidTokenData) {
 			break
 		}
 	}
+	// kilocode_change end
 
 	return result
 }

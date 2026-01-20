@@ -190,6 +190,64 @@ describe("Config Persistence", () => {
 			expect(result.validation.errors).toBeDefined()
 			expect(result.validation.errors!.length).toBeGreaterThan(0)
 		})
+
+		it("should return default config when config file is empty", async () => {
+			// Create an empty config file
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, "")
+
+			// Verify file exists
+			const exists = await configExists()
+			expect(exists).toBe(true)
+
+			// Load config - should return default config instead of throwing
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+			// Default config has empty credentials, so validation should fail
+			expect(result.validation.valid).toBe(false)
+		})
+
+		it("should return default config when config file contains only whitespace", async () => {
+			// Create a config file with only whitespace
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, "   \n\t  \n  ")
+
+			// Verify file exists
+			const exists = await configExists()
+			expect(exists).toBe(true)
+
+			// Load config - should return default config instead of throwing
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+		})
+
+		it("should return default config when config file contains invalid JSON", async () => {
+			// Create a config file with invalid JSON
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, '{ "version": "1.0.0", invalid json }')
+
+			// Verify file exists
+			const exists = await configExists()
+			expect(exists).toBe(true)
+
+			// Load config - should return default config instead of throwing
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+		})
+
+		it("should return default config when config file is truncated JSON", async () => {
+			// Create a config file with truncated JSON (simulating interrupted write)
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, '{ "version": "1.0.0", "mode": "code"')
+
+			// Verify file exists
+			const exists = await configExists()
+			expect(exists).toBe(true)
+
+			// Load config - should return default config instead of throwing
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+		})
 	})
 
 	describe("saveConfig", () => {

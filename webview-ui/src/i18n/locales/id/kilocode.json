@@ -209,32 +209,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
+			"codeEditorSuggestions": "Saran Editor Kode",
+			"chatSuggestions": "Saran Chat",
+			"model": "Model",
+			"provider": "Penyedia",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
-				"description": "Secara otomatis menampilkan saran kode inline saat Anda berhenti mengetik."
+				"label": "Picu Saran Otomatis",
+				"description": "Secara otomatis menampilkan saran kode inline saat kamu berhenti mengetik."
 			},
 			"autoTriggerDelay": {
 				"label": "Penundaan Pemicu Otomatis",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Penundaan dalam detik sebelum saran muncul setelah kamu berhenti mengetik. Penundaan yang lebih pendek berarti saran lebih cepat, tetapi mungkin lebih intensif sumber daya."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Picu dengan Pintasan Keyboard ({{keybinding}})",
+				"description": "Tekan {{keybinding}} untuk meminta saran kode di posisi kursor kamu. <DocsLink>Edit pintasan</DocsLink>"
 			},
-			"keybindingNotFound": "tidak ditemukan",
-			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
-			"model": "Model",
-			"provider": "Penyedia",
 			"enableChatAutocomplete": {
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions.",
-				"label": "Enable Chat Autocomplete"
+				"label": "Aktifkan Autocomplete Chat",
+				"description": "Tampilkan saran saat kamu mengetik di input chat. Tekan Tab untuk menerima saran."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Tunda Saran",
+				"description": "Jeda saran sementara untuk durasi tertentu.",
 				"button": "Tunda",
 				"unsnooze": "Aktifkan Kembali",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Saran saat ini ditunda.",
 				"duration": {
 					"1min": "1 menit",
 					"5min": "5 menit",
@@ -243,18 +243,18 @@
 					"1hour": "1 jam"
 				}
 			},
+			"keybindingNotFound": "tidak ditemukan",
 			"noModelConfigured": {
 				"title": "Tidak ada model autocomplete yang dikonfigurasi",
 				"description": "Untuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini:",
 				"learnMore": "Pelajari lebih lanjut tentang pengaturan autocomplete →"
 			},
 			"noCredits": {
-				"title": "Tidak ada kredit di akun Anda",
-				"description": "Akun Kilo Code Anda tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun Anda.",
+				"title": "Tidak ada kredit di akun kamu",
+				"description": "Akun Kilo Code kamu tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun kamu.",
 				"buyCredits": "Beli kredit →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete."
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Mode-mode ini tersedia dari komunitas. Klik <1>di sini</1> untuk mengedit mode kustom Anda sendiri."
+		},
+		"skills": {
+			"description": "Jelajahi dan temukan skill dari komunitas. Skill menyediakan instruksi khusus untuk tugas-tugas tertentu."
 		}
 	},
 	"modes": {

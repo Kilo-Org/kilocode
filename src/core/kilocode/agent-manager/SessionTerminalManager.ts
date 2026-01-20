@@ -42,12 +42,27 @@ export class SessionTerminalManager {
 	 * Show (or create) a terminal for the given session.
 	 * For worktree sessions, the terminal's cwd is set to the worktree path.
 	 * For local sessions, the terminal's cwd is set to the main workspace folder.
+	 * For remote-only sessions (not in registry), uses the workspace folder.
 	 */
 	showTerminal(sessionId: string): void {
 		const session = this.registry.getSession(sessionId)
+		const workspacePath = this.getWorkspacePath()
+
+		// Handle remote-only sessions (not in registry)
+		// These are sessions from cloud history that haven't been resumed yet
 		if (!session) {
-			this.outputChannel.appendLine(`[AgentManager] showTerminal: session not found (${sessionId})`)
-			vscode.window.showWarningMessage("Session not found")
+			this.outputChannel.appendLine(
+				`[AgentManager] showTerminal: session not in registry (${sessionId}), using workspace folder`,
+			)
+
+			if (!workspacePath) {
+				this.outputChannel.appendLine(`[AgentManager] showTerminal: no workspace folder open`)
+				vscode.window.showWarningMessage("No workspace folder open")
+				return
+			}
+
+			// Create or show terminal for remote session using workspace folder
+			this.showOrCreateTerminal(sessionId, workspacePath, `Agent: Session`)
 			return
 		}
 
@@ -61,7 +76,6 @@ export class SessionTerminalManager {
 				`[AgentManager] showTerminal: derived worktree path from branch ${branchName}: ${worktreePath}`,
 			)
 		}
-		const workspacePath = this.getWorkspacePath()
 		this.outputChannel.appendLine(
 			`[AgentManager] showTerminal: session=${sessionId} parallel=${isParallelSession} worktreePath=${worktreePath ?? "undefined"} workspacePath=${workspacePath ?? "undefined"}`,
 		)
@@ -82,6 +96,18 @@ export class SessionTerminalManager {
 			return
 		}
 
+		// For worktree sessions, use branch name; for local sessions, use session label
+		const terminalName = worktreePath
+			? `Agent: ${session.parallelMode?.branch || session.label}`
+			: `Agent: ${session.label} (local)`
+
+		this.showOrCreateTerminal(sessionId, terminalCwd, terminalName)
+	}
+
+	/**
+	 * Show an existing terminal or create a new one for the session.
+	 */
+	private showOrCreateTerminal(sessionId: string, terminalCwd: string, terminalName: string): void {
 		let entry = this.sessionTerminals.get(sessionId)
 
 		// Check if terminal still exists (user might have closed it)
@@ -103,10 +129,6 @@ export class SessionTerminalManager {
 		}
 
 		if (!entry) {
-			// For worktree sessions, use branch name; for local sessions, use session label
-			const terminalName = worktreePath
-				? `Agent: ${session.parallelMode?.branch || session.label}`
-				: `Agent: ${session.label} (local)`
 			const terminal = vscode.window.createTerminal({
 				cwd: terminalCwd,
 				name: terminalName,

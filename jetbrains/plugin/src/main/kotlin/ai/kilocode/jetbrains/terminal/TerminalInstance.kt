@@ -1,9 +1,7 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.terminal
 
+import ai.kilocode.jetbrains.monitoring.ScopeRegistry
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
 import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
 import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostTerminalShellIntegrationProxy
@@ -51,7 +49,7 @@ class TerminalInstance(
 ) : Disposable {
 
     companion object {
-        private const val DEFAULT_TERMINAL_NAME = "roo-cline"
+        private const val DEFAULT_TERMINAL_NAME = "kilo"
         private const val TERMINAL_TOOL_WINDOW_ID = "Terminal"
     }
 
@@ -91,6 +89,8 @@ class TerminalInstance(
 
         try {
             logger.info("🚀 Initializing terminal instance: $extHostTerminalId (numericId: $numericId)")
+            ScopeRegistry.register("TerminalInstance.scope-$extHostTerminalId", scope)
+            DisposableTracker.register("TerminalInstance-$extHostTerminalId", this)
 
             // 🎯 First register to project's Disposer to avoid memory leaks
             registerToProjectDisposer()
@@ -550,6 +550,9 @@ class TerminalInstance(
             state.markDisposed()
 
             callbackManager.clear()
+            
+            ScopeRegistry.unregister("TerminalInstance.scope-$extHostTerminalId")
+            DisposableTracker.unregister("TerminalInstance-$extHostTerminalId")
             scope.cancel()
 
             // 🎯 Dispose terminalWidget, onTerminalClosed callback will be skipped since state.isDisposed=true

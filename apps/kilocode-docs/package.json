@@ -1,6 +1,6 @@
 {
 	"name": "kilocode-docs",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"scripts": {
 		"docusaurus": "docusaurus",
@@ -23,6 +23,7 @@
 		"@mdx-js/react": "^3.0.0",
 		"@vscode/codicons": "^0.0.36",
 		"clsx": "^2.0.0",
+		"docusaurus-plugin-llms": "^0.2.2",
 		"posthog-docusaurus": "^2.0.4",
 		"prism-react-renderer": "^2.3.0",
 		"react": "^19.0.0",

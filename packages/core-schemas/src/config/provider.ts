@@ -48,7 +48,7 @@ export const openAIProviderSchema = baseProviderSchema.extend({
 	openAiUseAzure: z.boolean().optional(),
 	azureApiVersion: z.string().optional(),
 	openAiStreamingEnabled: z.boolean().optional(),
-	openAiHeaders: z.record(z.string()).optional(),
+	openAiHeaders: z.record(z.string(), z.string()).optional(),
 })
 
 // OpenRouter provider

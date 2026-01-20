@@ -6,6 +6,7 @@ import { z } from "zod"
 export const organizationAllowListSchema = z.object({
 	allowAll: z.boolean(),
 	providers: z.record(
+		z.string(),
 		z.object({
 			allowAll: z.boolean(),
 			models: z.array(z.string()).optional(),
@@ -23,7 +24,7 @@ export const extensionMessageSchema = z.object({
 	state: z.unknown().optional(), // ExtensionState
 	images: z.array(z.string()).optional(),
 	chatMessages: z.array(z.unknown()).optional(), // ExtensionChatMessage[]
-	values: z.record(z.unknown()).optional(),
+	values: z.record(z.string(), z.unknown()).optional(),
 })
 
 /**
