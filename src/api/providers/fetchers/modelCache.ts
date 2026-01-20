@@ -33,7 +33,7 @@ import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 import { getSyntheticModels } from "./synthetic"
 import { getSapAiCoreModels } from "./sap-ai-core"
-// kilocode_change end
+import { getNscaleModels } from "./nscale"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
@@ -174,6 +174,9 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			})
 			break
 		//kilocode_change end
+		case "nscale":
+			models = await getNscaleModels(options.apiKey)
+			break
 		default: {
 			// Ensures router is exhaustively checked if RouterName is a strict union.
 			const exhaustiveCheck: never = provider
