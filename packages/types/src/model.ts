@@ -142,6 +142,12 @@ export const modelInfoSchema = z.object({
 			}),
 		)
 		.optional(),
+	// kilocode_change start
+	// Credits multiplier for billing purposes (e.g., 0 for free models)
+	creditsMultiplier: z.number().optional(),
+	// Flag to indicate if the model requires a paid plan
+	requiresPaidPlan: z.boolean().optional(),
+	// kilocode_change end
 })
 
 export type ModelInfo = z.infer<typeof modelInfoSchema>
