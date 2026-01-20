@@ -432,6 +432,7 @@ export type ExtensionState = Pick<
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"
 	| "modeApiConfigs"
+	| "modeModelOverrides" // kilocode_change
 	| "customModePrompts"
 	| "customSupportPrompts"
 	| "enhancementApiConfigId"

@@ -18,6 +18,8 @@ const mockExtensionState = {
 		{ id: "config1", name: "Config 1" },
 		{ id: "config2", name: "Config 2" },
 	],
+	routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+	modeModelOverrides: {}, // kilocode_change
 	enhancementApiConfigId: "",
 	setEnhancementApiConfigId: vitest.fn(),
 	commitMessageApiConfigId: "", // kilocode_change
@@ -274,4 +276,64 @@ describe("PromptsView", () => {
 		// Verify popover remains closed
 		expect(selectTrigger).toHaveAttribute("aria-expanded", "false")
 	})
+
+	// kilocode_change start: per-mode model override UI behavior
+	it("disables per-mode Model select when Kilo Code routerModels are unavailable", () => {
+		renderPromptsView({ routerModels: { kilocode: {} } })
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		// Radix sets data-disabled as an empty string attribute when disabled
+		expect(modelSelectTrigger).toHaveAttribute("data-disabled")
+	})
+
+	it("renders enabled per-mode Model select when Kilo Code routerModels are available", () => {
+		renderPromptsView({ routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } } })
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		expect(modelSelectTrigger).not.toHaveAttribute("data-disabled")
+	})
+
+	it("shows helper text when Kilo Code routerModels are missing", () => {
+		renderPromptsView({ routerModels: undefined })
+		expect(
+			screen.getByText("Kilo Code models are not available. Configure the Kilo Code provider to fetch models."),
+		).toBeInTheDocument()
+	})
+
+	it("sends setModeModelOverride when selecting a model", async () => {
+		renderPromptsView({
+			modeModelOverrides: {},
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		fireEvent.click(modelSelectTrigger)
+
+		const option = await waitFor(() => screen.getByText("kilo-model-b"))
+		fireEvent.click(option)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "setModeModelOverride",
+			payload: { mode: "code", modelId: "kilo-model-b" },
+		})
+	})
+
+	it("sends setModeModelOverride when selecting Use default", async () => {
+		renderPromptsView({
+			modeModelOverrides: { code: "kilo-model-a" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		// Open the select
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		fireEvent.click(modelSelectTrigger)
+
+		// Pick "Use default" option
+		const defaultOption = await waitFor(() => screen.getByText("Use default"))
+		fireEvent.click(defaultOption)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "setModeModelOverride",
+			payload: { mode: "code", modelId: null },
+		})
+	})
+	// kilocode_change end: per-mode model override UI behavior
 })

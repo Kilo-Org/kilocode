@@ -1047,6 +1047,16 @@ export const webviewMessageHandler = async (
 				}
 			})
 
+			// kilocode_change start: track gateway model availability for per-mode model overrides
+			// Only update the flag when the kilocode provider was part of this fetch.
+			if (!providerFilter || providerFilter === "kilocode") {
+				const kilocodeModels = (routerModels as any)?.kilocode
+				const available =
+					kilocodeModels && typeof kilocodeModels === "object" && Object.keys(kilocodeModels).length > 0
+				;(provider as any).setKilocodeGatewayModelsAvailable?.(Boolean(available))
+			}
+			// kilocode_change end
+
 			provider.postMessageToWebview({
 				type: "routerModels",
 				routerModels,
@@ -1766,6 +1776,33 @@ export const webviewMessageHandler = async (
 		case "mode":
 			await provider.handleModeSwitch(message.text as Mode)
 			break
+		// kilocode_change start: per-mode model override persistence
+		case "setModeModelOverride": {
+			const payload = message.payload as { mode?: string; modelId?: string | null } | undefined
+			const mode = payload?.mode
+			const modelId = payload?.modelId
+
+			if (!mode || typeof mode !== "string") {
+				break
+			}
+
+			const current = getGlobalState("modeModelOverrides") ?? {}
+			const updated: Record<string, string> = { ...current }
+
+			if (modelId === null) {
+				delete updated[mode]
+			} else if (typeof modelId === "string") {
+				updated[mode] = modelId
+			} else {
+				// Ignore invalid payloads for backward compatibility.
+				break
+			}
+
+			await updateGlobalState("modeModelOverrides", updated)
+			await provider.postStateToWebview()
+			break
+		}
+		// kilocode_change end: per-mode model override persistence
 		case "updatePrompt":
 			if (message.promptMode && message.customPrompt !== undefined) {
 				const existingPrompts = getGlobalState("customModePrompts") ?? {}
@@ -2190,6 +2227,9 @@ export const webviewMessageHandler = async (
 							kilocodeOrganizationId: message.apiConfiguration.kilocodeOrganizationId,
 							kilocodeToken: message.apiConfiguration.kilocodeToken,
 						})
+						// kilocode_change start: track gateway model availability for per-mode model overrides
+						;(provider as any).setKilocodeGatewayModelsAvailable?.(Object.keys(models || {}).length > 0)
+						// kilocode_change end
 						provider.postMessageToWebview({
 							type: "routerModels",
 							routerModels: { kilocode: models } as Record<RouterName, ModelRecord>,

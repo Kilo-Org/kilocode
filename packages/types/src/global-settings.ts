@@ -220,6 +220,7 @@ export const globalSettingsSchema = z.object({
 
 	mode: z.string().optional(),
 	modeApiConfigs: z.record(z.string(), z.string()).optional(),
+	modeModelOverrides: z.record(z.string(), z.string()).optional(), // kilocode_change
 	customModes: z.array(modeConfigSchema).optional(),
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
