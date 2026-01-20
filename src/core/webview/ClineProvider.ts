@@ -1027,6 +1027,31 @@ export class ClineProvider
 					}
 				}
 			}
+
+			// kilocode_change start: ensure per-mode model override is applied when restoring tasks from history
+			// When restoring a task, we may activate a provider profile that contains a different model
+			// (e.g., the user's manually-selected model). If a per-mode override exists, it must win.
+			try {
+				const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
+				const modeModelOverride = modeModelOverrides[historyItem.mode]
+				if (modeModelOverride) {
+					// Only apply when we know the gateway model list is available.
+					if (this.getKilocodeGatewayModelsAvailable()) {
+						await this.applyCanonicalModelIdToActiveProviderConfiguration(modeModelOverride)
+					} else {
+						this.log(
+							`[createTaskWithHistoryItem] Skipping per-mode Kilo Code model override for mode '${historyItem.mode}' because gateway models are unavailable`,
+						)
+					}
+				}
+			} catch (error) {
+				this.log(
+					`[createTaskWithHistoryItem] Failed to apply per-mode model override during history restore: ${
+						error instanceof Error ? error.message : String(error)
+					}`,
+				)
+			}
+			// kilocode_change end: ensure per-mode model override is applied when restoring tasks from history
 		}
 
 		const {
