@@ -15,6 +15,7 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
 import { getGlobalRooDirectory } from "../roo-config" // kilocode_change
+import { extractTarball } from "./tarball-utils" // kilocode_change
 
 export interface InstallOptions extends InstallMarketplaceItemOptions {
 	target: "project" | "global"
@@ -408,37 +409,30 @@ export class SimpleInstaller {
 
 	// kilocode_change start - Skill installation methods
 	/**
-	 * Install a skill from the marketplace by downloading its SKILL.md file
-	 * and creating the appropriate directory structure.
+	 * Install a skill from the marketplace by downloading and extracting its tarball.
 	 *
 	 * Skills are installed to:
-	 * - Global: ~/.kilocode/skills/{skill-id}/SKILL.md
-	 * - Project: .kilocode/skills/{skill-id}/SKILL.md
+	 * - Global: ~/.kilocode/skills/{skill-id}/
+	 * - Project: .kilocode/skills/{skill-id}/
+	 *
+	 * The tarball must contain a SKILL.md at the root level (after stripping the top-level directory).
 	 */
 	private async installSkill(
 		item: SkillMarketplaceItem,
 		target: "project" | "global",
 	): Promise<{ filePath: string; line?: number }> {
-		if (!item.rawUrl) {
-			throw new Error("Skill item missing rawUrl")
+		if (!item.content) {
+			throw new Error("Skill item missing content (tarball URL)")
 		}
-
-		// Fetch the SKILL.md content from the raw URL
-		const response = await fetch(item.rawUrl)
-		if (!response.ok) {
-			throw new Error(`Failed to fetch skill content: ${response.statusText}`)
-		}
-		const skillContent = await response.text()
 
 		// Get the skills directory path
 		const skillsDir = await this.getSkillsDirectoryPath(target)
 		const skillDir = path.join(skillsDir, item.id)
+
+		// Extract the tarball to the skill directory (uses imported utility)
+		await extractTarball(item.content, skillDir)
+
 		const skillFilePath = path.join(skillDir, "SKILL.md")
-
-		// Create the skill directory and write the SKILL.md file
-		await fs.mkdir(skillDir, { recursive: true })
-		await fs.writeFile(skillFilePath, skillContent, "utf-8")
-
 		return { filePath: skillFilePath, line: 1 }
 	}
 

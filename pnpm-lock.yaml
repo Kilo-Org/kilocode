@@ -1972,6 +1972,9 @@ importers:
       strip-bom:
         specifier: ^5.0.0
         version: 5.0.0
+      tar-fs:
+        specifier: '>=3.1.1'
+        version: 3.1.1
       tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
@@ -2075,6 +2078,9 @@ importers:
       '@types/string-similarity':
         specifier: ^4.0.2
         version: 4.0.2
+      '@types/tar-fs':
+        specifier: ^2.0.4
+        version: 2.0.4
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
@@ -8650,6 +8656,12 @@ packages:
 
   '@types/svgo@1.3.6':
     resolution: {integrity: sha512-AZU7vQcy/4WFEuwnwsNsJnFwupIpbllH1++LXScN6uxT1Z4zPzdrWG97w4/I7eFKFTvfy/bHFStWjdBAg2Vjug==}
+
+  '@types/tar-fs@2.0.4':
+    resolution: {integrity: sha512-ipPec0CjTmVDWE+QKr9cTmIIoTl7dFG/yARCM5MqK8i6CNLIG1P8x4kwDsOQY1ChZOZjH0wO9nvfgBvWl4R3kA==}
+
+  '@types/tar-stream@3.1.4':
+    resolution: {integrity: sha512-921gW0+g29mCJX0fRvqeHzBlE/XclDaAG0Ousy1LCghsOhvaKacDeRGEVzQP9IPfKn8Vysy7FEXAIxycpc/CMg==}
 
   '@types/tmp@0.2.6':
     resolution: {integrity: sha512-chhaNf2oKHlRkDGt+tiKE2Z5aJ6qalm7Z9rlLdBwmOiAAf09YQvvoLXjWK4HWPF1xU/fqvMgfNfpVoBscA/tKA==}
@@ -29610,6 +29622,15 @@ snapshots:
   '@types/stylis@4.2.5': {}
 
   '@types/svgo@1.3.6': {}
+
+  '@types/tar-fs@2.0.4':
+    dependencies:
+      '@types/node': 20.19.27
+      '@types/tar-stream': 3.1.4
+
+  '@types/tar-stream@3.1.4':
+    dependencies:
+      '@types/node': 20.19.27
 
   '@types/tmp@0.2.6': {}
 

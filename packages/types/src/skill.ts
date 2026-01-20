@@ -22,7 +22,8 @@ export const rawSkillSchema = z.object({
 
 	// URLs for viewing/downloading
 	githubUrl: z.string(),
-	rawUrl: z.string(),
+	// Tarball URL for installation (provided by API)
+	content: z.string(),
 })
 
 export type RawSkill = z.infer<typeof rawSkillSchema>
@@ -43,7 +44,8 @@ export const skillMarketplaceItemSchema = z.object({
 	// Skill-specific fields
 	category: z.string(),
 	githubUrl: z.string(),
-	rawUrl: z.string(),
+	// content is the URL to the tarball (.tar.gz) - used for installation
+	content: z.string(),
 	// Display fields (computed from id and category)
 	displayName: z.string(),
 	displayCategory: z.string(),
