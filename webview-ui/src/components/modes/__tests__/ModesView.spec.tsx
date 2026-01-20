@@ -307,14 +307,12 @@ describe("PromptsView", () => {
 			apiConfiguration: { apiProvider: "openai" },
 			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
 		})
-		expect(screen.getByText("Switch provider to Kilo Code to set per-mode model.")).toBeInTheDocument()
+		expect(screen.getByTestId("mode-model-helper-provider-inactive")).toBeInTheDocument()
 	})
 
 	it("shows helper text when Kilo Code routerModels are missing", () => {
 		renderPromptsView({ apiConfiguration: { apiProvider: "kilocode" }, routerModels: undefined })
-		expect(
-			screen.getByText("Kilo Code models are not available. Configure the Kilo Code provider to fetch models."),
-		).toBeInTheDocument()
+		expect(screen.getByTestId("mode-model-helper-models-unavailable")).toBeInTheDocument()
 	})
 
 	it("sends setModeModelOverride when selecting a model", async () => {

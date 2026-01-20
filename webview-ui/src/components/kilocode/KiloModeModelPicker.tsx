@@ -184,13 +184,22 @@ export const KiloModeModelPicker = ({
 				</Popover>
 			</div>
 			{!isKiloCodeProviderActive ? (
-				<div className="text-xs text-vscode-descriptionForeground">
+				<div
+					className="text-xs text-vscode-descriptionForeground"
+					data-testid="mode-model-helper-provider-inactive">
 					{t("kilocode:modeModelPicker.providerInactive")}
 				</div>
 			) : !hasKiloCodeModels ? (
-				<div className="text-xs text-vscode-descriptionForeground">
+				<div
+					className="text-xs text-vscode-descriptionForeground"
+					data-testid="mode-model-helper-models-unavailable">
 					{t("kilocode:modeModelPicker.modelsUnavailable")}
-					{selectedModeModelId && <span> {t("kilocode:modeModelPicker.overrideWillNotApply")}</span>}
+					{selectedModeModelId && (
+						<span data-testid="mode-model-helper-override-warning">
+							{" "}
+							{t("kilocode:modeModelPicker.overrideWillNotApply")}
+						</span>
+					)}
 				</div>
 			) : null}
 		</div>
