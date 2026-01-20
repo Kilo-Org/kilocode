@@ -85,6 +85,7 @@ export interface CliProcessHandlerCallbacks {
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
+	onWorktreeSessionCreated?: (sessionId: string, worktreePath: string) => void // Called when a worktree session is created
 }
 
 export class CliProcessHandler {
@@ -634,6 +635,12 @@ export class CliProcessHandler {
 			})
 		}
 
+		// Notify when worktree session is created for persistence
+		const finalWorktreePath = worktreeInfo?.path || worktreePath
+		if (parallelMode && finalWorktreePath) {
+			this.callbacks.onWorktreeSessionCreated?.(realSessionId, finalWorktreePath)
+		}
+
 		this.pendingProcess = null
 		this.callbacks.onStateChanged()
 	}
@@ -790,6 +797,12 @@ export class CliProcessHandler {
 		this.callbacks.onPendingSessionChanged(null)
 		this.callbacks.onSessionCreated(sawApiReqStarted ?? false)
 		this.callbacks.onStateChanged()
+
+		// Notify when worktree session is created for persistence
+		const finalWorktreePath = worktreeInfo?.path || resolvedWorktreePath
+		if (parallelMode && finalWorktreePath) {
+			this.callbacks.onWorktreeSessionCreated?.(session.sessionId, finalWorktreePath)
+		}
 	}
 
 	private handleProcessExit(

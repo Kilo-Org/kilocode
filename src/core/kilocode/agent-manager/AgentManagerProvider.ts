@@ -162,8 +162,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 				})
 			},
 			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
-			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
-		}
+				onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
+				onWorktreeSessionCreated: (sessionId, worktreePath) => {
+					void this.handleWorktreeSessionCreated(sessionId, worktreePath)
+				},
+			}
 
 		this.processHandler = new CliProcessHandler(this.registry, callbacks)
 		this.eventProcessor = new KilocodeEventProcessor({
@@ -256,6 +259,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 		const messages = this.sessionMessages.get(newId)
 		if (messages) {
 			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
+		}
+	}
+
+	/**
+	 * Handle worktree session creation by writing the task ID to the worktree.
+	 * This enables session recovery after extension restarts.
+	 */
+	private async handleWorktreeSessionCreated(sessionId: string, worktreePath: string): Promise<void> {
+		try {
+			const manager = this.getWorktreeManager()
+			await manager.writeSessionId(worktreePath, sessionId)
+			this.outputChannel.appendLine(`[AgentManager] Wrote session ID ${sessionId} to worktree ${worktreePath}`)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to write session ID to worktree: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	}
 
