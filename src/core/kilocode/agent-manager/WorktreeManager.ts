@@ -327,8 +327,15 @@ export class WorktreeManager {
 		try {
 			await fs.promises.unlink(sessionIdPath)
 			this.log(`Removed session ID file from ${worktreePath}`)
-		} catch {
-			// File doesn't exist, nothing to remove
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code
+			if (code === "ENOENT") {
+				// File doesn't exist - that's expected and fine
+				this.log(`Session ID file not found at ${sessionIdPath}, nothing to remove`)
+			} else {
+				// Log other errors but don't fail - this is a cleanup operation
+				this.log(`Warning: Failed to remove session ID file at ${sessionIdPath}: ${error}`)
+			}
 		}
 	}
 
@@ -383,8 +390,8 @@ export class WorktreeManager {
 	}
 
 	/**
-		* Ensure .kilocode/worktrees/ directory exists
-		*/
+	 * Ensure .kilocode/worktrees/ directory exists
+	 */
 	private async ensureWorktreesDir(): Promise<void> {
 		if (!fs.existsSync(this.worktreesDir)) {
 			await fs.promises.mkdir(this.worktreesDir, { recursive: true })
