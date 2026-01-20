@@ -14,6 +14,7 @@ import type {
 	ModeConfig,
 } from "../../types/messages.js"
 import { pendingOutputUpdatesAtom } from "./effects.js"
+import { isWaitingForCheckpointRestoreApprovalAtom } from "./ui.js"
 
 /**
  * Atom to hold the complete ExtensionState
@@ -204,6 +205,9 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 	const versionMap = get(messageVersionMapAtom)
 	const streamingSet = get(streamingMessagesSetAtom)
 	const pendingUpdates = get(pendingOutputUpdatesAtom)
+
+	// Clear waiting state for checkpoint restore approval when we receive new state
+	set(isWaitingForCheckpointRestoreApprovalAtom, false)
 
 	set(extensionStateAtom, state)
 

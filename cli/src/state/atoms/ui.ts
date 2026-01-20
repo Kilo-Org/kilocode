@@ -67,6 +67,13 @@ export const yoloModeAtom = atom<boolean>(false)
 export const isCommittingParallelModeAtom = atom<boolean>(false)
 
 /**
+ * Atom to track if we're waiting for a checkpoint restore approval
+ * This is set when we send a requestCheckpointRestoreApproval message
+ * and cleared when we receive the ask message in response
+ */
+export const isWaitingForCheckpointRestoreApprovalAtom = atom<boolean>(false)
+
+/**
  * Atom to track countdown timer for parallel mode commit (in seconds)
  * Starts at 60 and counts down to 0
  */
@@ -87,6 +94,12 @@ export const commitCountdownSecondsAtom = atomWithReset<number>(commitCompletion
  */
 export const isStreamingAtom = atom<boolean>((get) => {
 	const messages = get(chatMessagesAtom)
+	const isWaitingForCheckpointRestoreApproval = get(isWaitingForCheckpointRestoreApprovalAtom)
+
+	// If we're waiting for checkpoint restore approval, show thinking indicator
+	if (isWaitingForCheckpointRestoreApproval) {
+		return true
+	}
 
 	if (messages.length === 0) {
 		return false

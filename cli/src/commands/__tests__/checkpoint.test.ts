@@ -6,6 +6,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { checkpointCommand } from "../checkpoint.js"
 import type { CommandContext } from "../core/types.js"
 import { createMockContext } from "./helpers/mockContext.js"
+import { createStore } from "jotai"
+import { isStreamingAtom, isWaitingForCheckpointRestoreApprovalAtom } from "../../state/atoms/ui.js"
+import { chatMessagesAtom, updateExtensionStateAtom } from "../../state/atoms/extension.js"
+import { sendWebviewMessageAtom } from "../../state/atoms/actions.js"
+import { extensionServiceAtom, isServiceReadyAtom } from "../../state/atoms/service.js"
+import type { ExtensionService } from "../../services/extension.js"
 
 // Mock the generateMessage utility
 vi.mock("../../ui/utils/messages.js", () => ({
@@ -24,6 +30,13 @@ vi.mock("../../services/logs.js", () => ({
 		error: vi.fn(),
 	},
 }))
+
+// Mock the extension service for atom tests
+const mockSendWebviewMessage = vi.fn().mockResolvedValue(undefined)
+const mockExtensionService: Pick<ExtensionService, "sendWebviewMessage" | "isReady"> = {
+	sendWebviewMessage: mockSendWebviewMessage,
+	isReady: () => true,
+}
 
 describe("/checkpoint command", () => {
 	let mockContext: CommandContext
@@ -368,6 +381,182 @@ describe("/checkpoint command", () => {
 				const values = suggestions.map((s) => (typeof s === "string" ? s : s.value))
 				expect(values).toContain("enable")
 			}
+		})
+	})
+})
+
+/**
+ * Tests for checkpoint restore approval waiting state behavior
+ * Verifies that isStreamingAtom correctly handles the waiting state for
+ * checkpoint restore approval, ensuring the "Thinking..." indicator is properly displayed
+ */
+describe("Checkpoint Restore Approval Waiting State", () => {
+	let store: ReturnType<typeof createStore>
+
+	beforeEach(() => {
+		store = createStore()
+		vi.clearAllMocks()
+		// Set up mock extension service
+		store.set(extensionServiceAtom, mockExtensionService as ExtensionService)
+		store.set(isServiceReadyAtom, true)
+	})
+
+	describe("isWaitingForCheckpointRestoreApprovalAtom", () => {
+		it("should default to false", () => {
+			const isWaiting = store.get(isWaitingForCheckpointRestoreApprovalAtom)
+			expect(isWaiting).toBe(false)
+		})
+	})
+
+	describe("when sending requestCheckpointRestoreApproval message", () => {
+		it("should set isWaitingForCheckpointRestoreApprovalAtom to true", async () => {
+			// Send requestCheckpointRestoreApproval message
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(true)
+		})
+
+		it("should make isStreamingAtom return true", async () => {
+			// Verify initial streaming state
+			expect(store.get(isStreamingAtom)).toBe(false)
+
+			// Send requestCheckpointRestoreApproval message
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+
+			expect(store.get(isStreamingAtom)).toBe(true)
+		})
+	})
+
+	describe("when clearing waiting state", () => {
+		it("should clear isWaitingForCheckpointRestoreApprovalAtom when updateExtensionStateAtom is called", async () => {
+			// First, set waiting state
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(true)
+
+			// Call updateExtensionStateAtom
+			await store.set(updateExtensionStateAtom, {
+				version: "1.0.0",
+				apiConfiguration: {},
+				chatMessages: [],
+				mode: "code",
+				customModes: [],
+				taskHistoryFullLength: 0,
+				taskHistoryVersion: 0,
+				renderContext: "cli",
+				telemetrySetting: "disabled",
+				clineMessages: [],
+				sessionId: "test-session-id",
+			})
+
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(false)
+		})
+
+		it("should make isStreamingAtom return false when waiting state is cleared", async () => {
+			// Set waiting state
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+			expect(store.get(isStreamingAtom)).toBe(true)
+
+			// Call updateExtensionStateAtom
+			await store.set(updateExtensionStateAtom, {
+				version: "1.0.0",
+				apiConfiguration: {},
+				chatMessages: [],
+				mode: "code",
+				customModes: [],
+				taskHistoryFullLength: 0,
+				taskHistoryVersion: 0,
+				renderContext: "cli",
+				telemetrySetting: "disabled",
+				clineMessages: [],
+				sessionId: "test-session-id",
+			})
+
+			expect(store.get(isStreamingAtom)).toBe(false)
+		})
+	})
+
+	describe("interactions with other streaming conditions", () => {
+		it("should still return true if both waiting and partial message conditions are met", async () => {
+			// Set up a partial message (streaming)
+			const partialMessage = {
+				type: "say",
+				say: "text",
+				ts: Date.now(),
+				text: "Processing...",
+				partial: true,
+			}
+			store.set(chatMessagesAtom, [partialMessage])
+			expect(store.get(isStreamingAtom)).toBe(true)
+
+			// Send requestCheckpointRestoreApproval message
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+
+			expect(store.get(isStreamingAtom)).toBe(true)
+		})
+
+		it("should return false when not waiting and no streaming conditions met", async () => {
+			// No messages, not waiting
+			expect(store.get(isStreamingAtom)).toBe(false)
+
+			// Add a complete message
+			const completeMessage = {
+				type: "say",
+				say: "text",
+				ts: Date.now(),
+				text: "Done!",
+				partial: false,
+			}
+			store.set(chatMessagesAtom, [completeMessage])
+
+			expect(store.get(isStreamingAtom)).toBe(false)
+		})
+	})
+
+	describe("edge cases", () => {
+		it("should handle multiple requestCheckpointRestoreApproval messages", async () => {
+			// First request
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(true)
+
+			// Second request while already waiting
+			await store.set(sendWebviewMessageAtom, {
+				type: "requestCheckpointRestoreApproval",
+			})
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(true)
+		})
+
+		it("should handle updateExtensionStateAtom when not waiting", async () => {
+			// Not waiting initially
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(false)
+
+			// Call updateExtensionStateAtom
+			await store.set(updateExtensionStateAtom, {
+				version: "1.0.0",
+				apiConfiguration: {},
+				chatMessages: [],
+				mode: "code",
+				customModes: [],
+				taskHistoryFullLength: 0,
+				taskHistoryVersion: 0,
+				renderContext: "cli",
+				telemetrySetting: "disabled",
+				clineMessages: [],
+				sessionId: "test-session-id",
+			})
+
+			expect(store.get(isWaitingForCheckpointRestoreApprovalAtom)).toBe(false)
 		})
 	})
 })

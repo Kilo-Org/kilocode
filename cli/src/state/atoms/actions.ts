@@ -6,7 +6,12 @@
 import { atom } from "jotai"
 import type { WebviewMessage, ProviderSettings, ClineAskResponse } from "../../types/messages.js"
 import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from "./service.js"
-import { resetMessageCutoffAtom, yoloModeAtom, isCancellingAtom } from "./ui.js"
+import {
+	resetMessageCutoffAtom,
+	yoloModeAtom,
+	isCancellingAtom,
+	isWaitingForCheckpointRestoreApprovalAtom,
+} from "./ui.js"
 import { extensionModeAtom, customModesAtom } from "./extension.js"
 import { getAllModes } from "../../constants/modes/defaults.js"
 import { logs } from "../../services/logs.js"
@@ -29,6 +34,11 @@ export const sendWebviewMessageAtom = atom(null, async (get, set, message: Webvi
 		const error = new Error("ExtensionService not ready")
 		set(setServiceErrorAtom, error)
 		throw error
+	}
+
+	// Set waiting state for checkpoint restore approval
+	if (message.type === "requestCheckpointRestoreApproval") {
+		set(isWaitingForCheckpointRestoreApprovalAtom, true)
 	}
 
 	try {
