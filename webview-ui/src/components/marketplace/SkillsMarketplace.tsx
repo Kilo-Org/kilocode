@@ -7,6 +7,7 @@ import { SkillItemCard } from "./components/SkillItemCard"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 
 interface SkillsMarketplaceProps {
 	skills: SkillMarketplaceItem[]
@@ -15,6 +16,7 @@ interface SkillsMarketplaceProps {
 
 export const SkillsMarketplace: React.FC<SkillsMarketplaceProps> = ({ skills, isLoading }) => {
 	const { t } = useAppTranslation()
+	const { marketplaceInstalledMetadata } = useExtensionState()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -106,7 +108,14 @@ export const SkillsMarketplace: React.FC<SkillsMarketplaceProps> = ({ skills, is
 			) : (
 				<div className="flex flex-col gap-2">
 					{filteredSkills.map((skill) => (
-						<SkillItemCard key={skill.id} skill={skill} />
+						<SkillItemCard
+							key={skill.id}
+							skill={skill}
+							installed={{
+								project: marketplaceInstalledMetadata?.project?.[skill.id],
+								global: marketplaceInstalledMetadata?.global?.[skill.id],
+							}}
+						/>
 					))}
 				</div>
 			)}

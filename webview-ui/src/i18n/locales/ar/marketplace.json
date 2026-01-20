@@ -147,6 +147,10 @@
 			"title": "إزالة خادم MCP",
 			"message": "متأكد تبي تحذف خادم MCP \"{{mcpName}}\"؟"
 		},
+		"skill": {
+			"title": "إزالة المهارة",
+			"message": "متأكد تبي تحذف المهارة \"{{skillName}}\"؟"
+		},
 		"cancel": "إلغاء",
 		"confirm": "إزالة"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "الكل",
 		"resultsCount": "{{count}} مهارة تم العثور عليها",
 		"noResults": "لم يتم العثور على مهارات تطابق معاييرك",
-		"viewOnGitHub": "عرض على GitHub"
+		"install": "تثبيت",
+		"installTitle": "تثبيت مهارة {{name}}",
+		"installing": "جارٍ التثبيت..."
 	}
 }

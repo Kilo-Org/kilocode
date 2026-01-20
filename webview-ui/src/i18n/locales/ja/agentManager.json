@@ -14,7 +14,9 @@
 		"shareSession": "セッションを共有",
 		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
 		"shareConfirmYes": "はい",
-		"shareConfirmNo": "いいえ"
+		"shareConfirmNo": "いいえ",
+		"options": "オプション",
+		"configureSetupScript": "Worktree セットアップスクリプト"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",

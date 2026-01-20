@@ -14,7 +14,9 @@
 		"shareSession": "Sessie delen",
 		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nee"
+		"shareConfirmNo": "Nee",
+		"options": "Opties",
+		"configureSetupScript": "Worktree setup-script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",

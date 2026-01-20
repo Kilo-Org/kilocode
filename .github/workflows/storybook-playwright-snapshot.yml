@@ -35,7 +35,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   # Chromatic needs full git history for baseline comparison
                   fetch-depth: 0
@@ -46,13 +46,13 @@ jobs:
                   version: ${{ env.PNPM_VERSION }}
 
             - name: Set up Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
 
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -71,7 +71,7 @@ jobs:
               uses: docker/setup-buildx-action@v3
 
             - name: Cache Docker layers
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: /tmp/.buildx-cache
                   key: ${{ runner.os }}-buildx-${{ hashFiles('apps/playwright-e2e/Dockerfile.playwright-ci') }}

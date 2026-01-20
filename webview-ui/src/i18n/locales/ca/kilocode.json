@@ -213,27 +213,27 @@
 			"chatSuggestions": "Suggeriments del Xat",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Habilitar Autocomplete",
-				"description": "Quan està habilitat, Kilo Code activarà automàticament Autocomplete quan deixis d'escriure. Això pot ser útil per a correccions ràpides i suggeriments."
+				"label": "Activar Suggeriments Automàtics",
+				"description": "Mostra automàticament suggeriments de codi en línia quan deixes d'escriure."
 			},
 			"autoTriggerDelay": {
 				"label": "Retard d'Activació Automàtica",
 				"description": "El retard en segons abans que Kilo Code activi Autocomplete després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot ser més intensiu en recursos."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocompleció Manual ({{keybinding}})",
-				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
+				"label": "Activar amb Drecera ({{keybinding}})",
+				"description": "Prem {{keybinding}} per sol·licitar un suggeriment de codi a la posició del cursor. <DocsLink>Editar drecera</DocsLink>"
 			},
 			"keybindingNotFound": "no trobat",
 			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
 			"provider": "Proveïdor",
 			"enableChatAutocomplete": {
-				"description": "Quan està activat, Kilo Code suggerirà complecions mentre escriviu a l'entrada del xat. Premeu Tab per acceptar els suggeriments.",
-				"label": "Autocompletat d'entrada de xat"
+				"label": "Habilitar Autocompletat del Xat",
+				"description": "Mostra complecions mentre escrius a l'entrada del xat. Prem Tab per acceptar els suggeriments."
 			},
 			"snooze": {
-				"label": "Posposar Autocomplete",
+				"label": "Posposar Suggeriments",
 				"description": "Pausa temporalment els suggeriments d'autocompletat durant un temps especificat.",
 				"button": "Posposar",
 				"unsnooze": "Reactivar",

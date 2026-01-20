@@ -14,7 +14,9 @@
 		"shareSession": "Поделиться сессией",
 		"shareConfirmMessage": "Хотите опубликовать снимок этой сессии?",
 		"shareConfirmYes": "Да",
-		"shareConfirmNo": "Нет"
+		"shareConfirmNo": "Нет",
+		"options": "Параметры",
+		"configureSetupScript": "Скрипт настройки worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",

@@ -728,6 +728,10 @@
 		"showTimestamps": {
 			"label": "Show timestamps",
 			"description": "Show timestamp for every message in the chat view"
+		},
+		"showDiffStats": {
+			"label": "Show diff stats",
+			"description": "Display lines added/removed statistics in the task header"
 		}
 	},
 	"ghost": {

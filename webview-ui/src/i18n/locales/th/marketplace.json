@@ -147,6 +147,10 @@
 			"title": "ลบ MCP Server",
 			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "ลบทักษะ",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบทักษะ \"{{skillName}}\"?"
+		},
 		"cancel": "ยกเลิก",
 		"confirm": "ลบ"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "ทั้งหมด",
 		"resultsCount": "พบ {{count}} ทักษะ",
 		"noResults": "ไม่พบทักษะที่ตรงกับเกณฑ์ของคุณ",
-		"viewOnGitHub": "ดูบน GitHub"
+		"install": "ติดตั้ง",
+		"installTitle": "ติดตั้งทักษะ {{name}}",
+		"installing": "กำลังติดตั้ง..."
 	}
 }

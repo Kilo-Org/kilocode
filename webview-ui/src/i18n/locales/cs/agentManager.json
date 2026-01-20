@@ -14,7 +14,9 @@
 		"shareSession": "Sdílet relaci",
 		"shareConfirmMessage": "Chcete veřejně sdílet snímek této relace?",
 		"shareConfirmYes": "Ano",
-		"shareConfirmNo": "Ne"
+		"shareConfirmNo": "Ne",
+		"options": "Možnosti",
+		"configureSetupScript": "Setup skript worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",

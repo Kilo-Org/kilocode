@@ -14,7 +14,9 @@
 		"shareSession": "Bagikan sesi",
 		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
 		"shareConfirmYes": "Ya",
-		"shareConfirmNo": "Tidak"
+		"shareConfirmNo": "Tidak",
+		"options": "Opsi",
+		"configureSetupScript": "Skrip setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
