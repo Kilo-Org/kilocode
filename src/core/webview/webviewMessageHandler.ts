@@ -1799,6 +1799,24 @@ export const webviewMessageHandler = async (
 			}
 
 			await updateGlobalState("modeModelOverrides", updated)
+
+			// kilocode_change start: apply override immediately when updating the active mode
+			// If the user sets a per-mode model override for the *current* mode, the active model should update
+			// without requiring a mode switch.
+			const currentMode = (getGlobalState("mode") ?? defaultModeSlug) as string
+			if (mode === currentMode && typeof modelId === "string") {
+				const activeProvider = provider.contextProxy.getProviderSettings()?.apiProvider
+				const gatewayModelsAvailable = (provider as any).getKilocodeGatewayModelsAvailable?.() as
+					| boolean
+					| undefined
+
+				// Only apply when Kilo Code provider is active and we know gateway models are available.
+				if (activeProvider === "kilocode" && gatewayModelsAvailable) {
+					await provider.applyCanonicalModelIdToActiveProviderConfiguration(modelId)
+				}
+			}
+			// kilocode_change end
+
 			await provider.postStateToWebview()
 			break
 		}

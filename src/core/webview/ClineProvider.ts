@@ -195,7 +195,8 @@ export class ClineProvider
 		this.kilocodeGatewayModelsAvailable = available
 	}
 
-	private getKilocodeGatewayModelsAvailable(): boolean {
+	// kilocode_change: public getter needed so webview message handlers can safely decide whether to apply per-mode overrides
+	public getKilocodeGatewayModelsAvailable(): boolean {
 		return this.kilocodeGatewayModelsAvailable
 	}
 	// kilocode_change end: per-mode model override fallback when gateway models are unavailable
