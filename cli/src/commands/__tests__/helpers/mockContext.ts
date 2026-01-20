@@ -81,6 +81,7 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		updateModelListFilters: vi.fn(),
 		changeModelListPage: vi.fn(),
 		resetModelListState: vi.fn(),
+		openModelCatalog: vi.fn().mockResolvedValue(undefined),
 	}
 
 	return {
