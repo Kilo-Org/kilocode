@@ -141,7 +141,17 @@ interface PendingEditOperation {
 	createdAt: number
 }
 
-export interface ClineProviderState extends ExtensionState {} // kilocode_change: exported view state shape
+export type ClineProviderState = Omit<
+  ExtensionState,
+  | "clineMessages"
+  | "renderContext"
+  | "hasOpenedModeSelector"
+  | "version"
+  | "shouldShowAnnouncement"
+  | "hasSystemPromptOverride"
+  | "taskHistoryFullLength"
+  | "taskHistoryVersion"
+> // kilocode_change: exported view state shape
 
 export class ClineProvider
 	extends EventEmitter<TaskProviderEvents>

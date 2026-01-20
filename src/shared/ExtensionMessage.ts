@@ -218,6 +218,8 @@ export interface ExtensionMessage {
 		| TasksByIdResponsePayload
 		| TaskHistoryResponsePayload
 		| [string, string] // For file save events [taskId, filePath]
+	agenticaApiKey?: string // Agentica API key from device auth
+	agenticaEmail?: string // Agentica user email from device auth
 	// kilocode_change end
 	// Checkpoint warning message
 	checkpointWarning?: {
