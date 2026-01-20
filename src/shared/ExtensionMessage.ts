@@ -377,7 +377,7 @@ export interface ExtensionMessage {
 	deviceAuthError?: string
 	// kilocode_change end: Device auth data
 	tools?: SerializedCustomToolDefinition[] // For customToolsResult
-
+}
 export type ExtensionState = Pick<
 	GlobalSettings,
 	| "currentApiConfigName"
