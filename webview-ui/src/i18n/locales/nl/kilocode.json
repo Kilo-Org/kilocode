@@ -353,5 +353,15 @@
 			"noDevices": "Geen microfoonapparaten gevonden",
 			"refresh": "Vernieuwen"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Selecteer het Kilo Code gateway-model om voor deze modus te gebruiken.",
+		"searchPlaceholder": "Modellen zoeken",
+		"noMatch": "Geen overeenkomsten gevonden",
+		"useDefault": "Standaard gebruiken",
+		"providerInactive": "Schakel provider naar Kilo Code om per modus een model in te stellen.",
+		"modelsUnavailable": "Kilo Code-modellen zijn niet beschikbaar. Configureer de Kilo Code-provider om modellen op te halen.",
+		"overrideWillNotApply": "Gateway-modellen niet beschikbaar; het per-modusmodel wordt pas toegepast zodra modellen kunnen worden opgehaald."
 	}
 }

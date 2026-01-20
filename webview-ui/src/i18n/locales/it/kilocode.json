@@ -355,5 +355,15 @@
 			"defaultOption": "Impostazione predefinita del sistema",
 			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Modello",
+		"description": "Seleziona il modello gateway di Kilo Code da usare per questa modalità.",
+		"searchPlaceholder": "Cerca modelli",
+		"noMatch": "Nessuna corrispondenza trovata",
+		"useDefault": "Usa predefinito",
+		"providerInactive": "Passa il provider a Kilo Code per impostare un modello per modalità.",
+		"modelsUnavailable": "I modelli Kilo Code non sono disponibili. Configura il provider Kilo Code per recuperare i modelli.",
+		"overrideWillNotApply": "Modelli gateway non disponibili; il modello per modalità non verrà applicato finché non sarà possibile recuperare i modelli."
 	}
 }

@@ -354,5 +354,15 @@
 			"refresh": "Оновити",
 			"noDevices": "Не знайдено пристроїв мікрофона"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Модель",
+		"description": "Вибери gateway-модель Kilo Code для цього режиму.",
+		"searchPlaceholder": "Шукати моделі",
+		"noMatch": "Збігів не знайдено",
+		"useDefault": "Використати за замовчуванням",
+		"providerInactive": "Перемкни провайдера на Kilo Code, щоб встановити модель для режиму.",
+		"modelsUnavailable": "Моделі Kilo Code недоступні. Налаштуй провайдера Kilo Code, щоб отримати моделі.",
+		"overrideWillNotApply": "Gateway-моделі недоступні; модель для режиму не буде застосована, доки моделі не вдасться отримати."
 	}
 }

@@ -355,5 +355,15 @@
 			"refresh": "Odśwież",
 			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Wybierz model gateway Kilo Code używany w tym trybie.",
+		"searchPlaceholder": "Szukaj modeli",
+		"noMatch": "Nie znaleziono dopasowania",
+		"useDefault": "Użyj domyślnego",
+		"providerInactive": "Przełącz dostawcę na Kilo Code, aby ustawić model dla trybu.",
+		"modelsUnavailable": "Modele Kilo Code są niedostępne. Skonfiguruj dostawcę Kilo Code, aby pobrać modele.",
+		"overrideWillNotApply": "Modele gateway są niedostępne; model dla trybu nie zostanie zastosowany, dopóki nie będzie można pobrać modeli."
 	}
 }

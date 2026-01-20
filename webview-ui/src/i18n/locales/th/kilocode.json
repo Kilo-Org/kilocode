@@ -354,5 +354,15 @@
 			"noDevices": "ไม่พบอุปกรณ์ไมโครโฟน",
 			"refresh": "รีเฟรช"
 		}
+	},
+	"modeModelPicker": {
+		"label": "โมเดล",
+		"description": "เลือกโมเดล gateway ของ Kilo Code ที่จะใช้สำหรับโหมดนี้",
+		"searchPlaceholder": "ค้นหาโมเดล",
+		"noMatch": "ไม่พบรายการที่ตรงกัน",
+		"useDefault": "ใช้ค่าเริ่มต้น",
+		"providerInactive": "สลับผู้ให้บริการเป็น Kilo Code เพื่อกำหนดโมเดลแยกตามโหมด",
+		"modelsUnavailable": "โมเดล Kilo Code ไม่พร้อมใช้งาน โปรดตั้งค่าผู้ให้บริการ Kilo Code เพื่อดึงโมเดล",
+		"overrideWillNotApply": "โมเดล gateway ไม่พร้อมใช้งาน; โมเดลแยกตามโหมดจะยังไม่ถูกใช้จนกว่าจะดึงโมเดลได้"
 	}
 }

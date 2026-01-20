@@ -355,5 +355,15 @@
 			"noDevices": "未找到麦克风设备",
 			"refresh": "刷新"
 		}
+	},
+	"modeModelPicker": {
+		"label": "模型",
+		"description": "选择此模式要使用的 Kilo Code 网关模型。",
+		"searchPlaceholder": "搜索模型",
+		"noMatch": "未找到匹配项",
+		"useDefault": "使用默认值",
+		"providerInactive": "切换 provider 到 Kilo Code 以设置按模式的模型。",
+		"modelsUnavailable": "Kilo Code 模型不可用。请配置 Kilo Code provider 以获取模型。",
+		"overrideWillNotApply": "网关模型不可用；在能够获取模型之前，按模式的模型不会生效。"
 	}
 }

@@ -353,5 +353,15 @@
 			"noDevices": "No microphone devices found",
 			"refresh": "Refresh"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Select the Kilo Code gateway model to use for this mode.",
+		"searchPlaceholder": "Search models",
+		"noMatch": "No match found",
+		"useDefault": "Use default",
+		"providerInactive": "Switch provider to Kilo Code to set per-mode model.",
+		"modelsUnavailable": "Kilo Code models are not available. Configure the Kilo Code provider to fetch models.",
+		"overrideWillNotApply": "Gateway models unavailable; per-mode model won’t be applied until models can be fetched."
 	}
 }

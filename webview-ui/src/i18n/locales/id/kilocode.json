@@ -354,5 +354,15 @@
 			"loading": "Memuat perangkat mikrofon...",
 			"refresh": "Segarkan"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Pilih model gateway Kilo Code yang akan digunakan untuk mode ini.",
+		"searchPlaceholder": "Cari model",
+		"noMatch": "Tidak ada yang cocok",
+		"useDefault": "Gunakan default",
+		"providerInactive": "Ganti penyedia ke Kilo Code untuk mengatur model per mode.",
+		"modelsUnavailable": "Model Kilo Code tidak tersedia. Konfigurasikan penyedia Kilo Code untuk mengambil model.",
+		"overrideWillNotApply": "Model gateway tidak tersedia; model per mode tidak akan diterapkan sampai model dapat diambil."
 	}
 }

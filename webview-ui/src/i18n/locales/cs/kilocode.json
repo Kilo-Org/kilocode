@@ -354,5 +354,15 @@
 			"refresh": "Obnovit",
 			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Vyber gateway model Kilo Code pro tento režim.",
+		"searchPlaceholder": "Hledat modely",
+		"noMatch": "Nenalezena shoda",
+		"useDefault": "Použít výchozí",
+		"providerInactive": "Přepni poskytovatele na Kilo Code pro nastavení modelu pro režim.",
+		"modelsUnavailable": "Modely Kilo Code nejsou dostupné. Nakonfiguruj poskytovatele Kilo Code pro načtení modelů.",
+		"overrideWillNotApply": "Gateway modely nejsou dostupné; model pro režim se nepoužije, dokud nepůjde načíst modely."
 	}
 }

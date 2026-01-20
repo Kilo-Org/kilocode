@@ -355,5 +355,15 @@
 			"description": "حدد جهاز الميكروفون لتحويل الكلام إلى نص",
 			"refresh": "تحديث"
 		}
+	},
+	"modeModelPicker": {
+		"label": "النموذج",
+		"description": "اختر نموذج بوابة Kilo Code لاستخدامه في هذا الوضع.",
+		"searchPlaceholder": "ابحث عن النماذج",
+		"noMatch": "لا توجد نتائج",
+		"useDefault": "استخدام الافتراضي",
+		"providerInactive": "بدّل المزود إلى Kilo Code لتعيين نموذج لكل وضع.",
+		"modelsUnavailable": "نماذج Kilo Code غير متاحة. قم بإعداد مزود Kilo Code لجلب النماذج.",
+		"overrideWillNotApply": "نماذج البوابة غير متاحة؛ لن يتم تطبيق نموذج كل وضع حتى يمكن جلب النماذج."
 	}
 }

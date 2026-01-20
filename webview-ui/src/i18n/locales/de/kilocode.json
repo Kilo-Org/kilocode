@@ -354,5 +354,15 @@
 			"noDevices": "Keine Mikrofongeräte gefunden",
 			"refresh": "Aktualisieren"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Modell",
+		"description": "Wähle das Kilo Code Gateway-Modell aus, das für diesen Modus verwendet werden soll.",
+		"searchPlaceholder": "Modelle suchen",
+		"noMatch": "Keine Treffer",
+		"useDefault": "Standard verwenden",
+		"providerInactive": "Wechsle den Anbieter zu Kilo Code, um ein Modell pro Modus festzulegen.",
+		"modelsUnavailable": "Kilo Code-Modelle sind nicht verfügbar. Konfiguriere den Kilo Code-Anbieter, um Modelle abzurufen.",
+		"overrideWillNotApply": "Gateway-Modelle nicht verfügbar; das Modell pro Modus wird erst angewendet, wenn Modelle abgerufen werden können."
 	}
 }

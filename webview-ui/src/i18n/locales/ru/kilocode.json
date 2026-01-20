@@ -355,5 +355,15 @@
 			"noDevices": "Микрофонные устройства не найдены",
 			"defaultOption": "Системные настройки по умолчанию"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Модель",
+		"description": "Выберите gateway-модель Kilo Code для этого режима.",
+		"searchPlaceholder": "Поиск моделей",
+		"noMatch": "Совпадений не найдено",
+		"useDefault": "Использовать по умолчанию",
+		"providerInactive": "Переключите провайдера на Kilo Code, чтобы задать модель для режима.",
+		"modelsUnavailable": "Модели Kilo Code недоступны. Настройте провайдера Kilo Code, чтобы получить модели.",
+		"overrideWillNotApply": "Gateway-модели недоступны; модель для режима не будет применена, пока модели нельзя будет получить."
 	}
 }

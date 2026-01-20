@@ -354,5 +354,15 @@
 			"noDevices": "마이크 장치가 발견되지 않음",
 			"refresh": "새로 고침"
 		}
+	},
+	"modeModelPicker": {
+		"label": "모델",
+		"description": "이 모드에 사용할 Kilo Code 게이트웨이 모델을 선택하세요.",
+		"searchPlaceholder": "모델 검색",
+		"noMatch": "일치하는 항목이 없습니다",
+		"useDefault": "기본값 사용",
+		"providerInactive": "모드별 모델을 설정하려면 제공자를 Kilo Code로 전환하세요.",
+		"modelsUnavailable": "Kilo Code 모델을 사용할 수 없습니다. 모델을 가져오려면 Kilo Code 제공자를 구성하세요.",
+		"overrideWillNotApply": "게이트웨이 모델을 사용할 수 없어, 모델을 가져올 수 있을 때까지 모드별 모델이 적용되지 않습니다."
 	}
 }

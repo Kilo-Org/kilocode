@@ -354,5 +354,15 @@
 			"noDevices": "कोई माइक्रोफ़ोन डिवाइस नहीं मिला",
 			"refresh": "रीफ़्रेश"
 		}
+	},
+	"modeModelPicker": {
+		"label": "मॉडल",
+		"description": "इस मोड के लिए उपयोग करने हेतु Kilo Code gateway मॉडल चुनें।",
+		"searchPlaceholder": "मॉडल खोजें",
+		"noMatch": "कोई मेल नहीं मिला",
+		"useDefault": "डिफ़ॉल्ट उपयोग करें",
+		"providerInactive": "प्रति-मोड मॉडल सेट करने के लिए प्रदाता को Kilo Code पर स्विच करें।",
+		"modelsUnavailable": "Kilo Code मॉडल उपलब्ध नहीं हैं। मॉडल लाने के लिए Kilo Code प्रदाता कॉन्फ़िगर करें।",
+		"overrideWillNotApply": "Gateway मॉडल उपलब्ध नहीं हैं; मॉडल प्राप्त होने तक प्रति-मोड मॉडल लागू नहीं होगा।"
 	}
 }

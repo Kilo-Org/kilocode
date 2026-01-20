@@ -354,5 +354,15 @@
 			"defaultOption": "Paramètre par défaut du système",
 			"refresh": "Actualiser"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Modèle",
+		"description": "Sélectionnez le modèle passerelle Kilo Code à utiliser pour ce mode.",
+		"searchPlaceholder": "Rechercher des modèles",
+		"noMatch": "Aucune correspondance",
+		"useDefault": "Utiliser par défaut",
+		"providerInactive": "Passe le fournisseur sur Kilo Code pour définir un modèle par mode.",
+		"modelsUnavailable": "Les modèles Kilo Code ne sont pas disponibles. Configure le fournisseur Kilo Code pour récupérer les modèles.",
+		"overrideWillNotApply": "Modèles passerelle indisponibles ; le modèle par mode ne sera appliqué que lorsque les modèles pourront être récupérés."
 	}
 }

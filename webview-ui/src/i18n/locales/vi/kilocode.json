@@ -355,5 +355,15 @@
 			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
 			"refresh": "Làm mới"
 		}
+	},
+	"modeModelPicker": {
+		"label": "Mô hình",
+		"description": "Chọn mô hình gateway Kilo Code để dùng cho chế độ này.",
+		"searchPlaceholder": "Tìm mô hình",
+		"noMatch": "Không tìm thấy kết quả phù hợp",
+		"useDefault": "Dùng mặc định",
+		"providerInactive": "Chuyển nhà cung cấp sang Kilo Code để đặt mô hình theo từng chế độ.",
+		"modelsUnavailable": "Mô hình Kilo Code không khả dụng. Hãy cấu hình nhà cung cấp Kilo Code để tải mô hình.",
+		"overrideWillNotApply": "Mô hình gateway không khả dụng; mô hình theo từng chế độ sẽ không được áp dụng cho đến khi có thể tải mô hình."
 	}
 }
