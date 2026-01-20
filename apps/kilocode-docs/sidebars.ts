@@ -24,7 +24,6 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
-				"basic-usage/byok",
 				{
 					type: "category",
 					label: "Autocomplete",
@@ -94,6 +93,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
+				"basic-usage/byok",
 				"basic-usage/adding-credits",
 				"basic-usage/settings-management",
 			],

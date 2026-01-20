@@ -282,7 +282,7 @@
 		"noAssistantMessagesDetails": "El model de llenguatge ha retornat una resposta buida sense text ni crides a eines. Això pot passar a causa de problemes d'API, limitació de velocitat o problemes específics del model. El model ha estat sol·licitat automàticament per tornar-ho a provar."
 	},
 	"errorDetails": {
-		"link": "Details",
+		"link": "Detalls",
 		"title": "Detalls de l'error",
 		"copyToClipboard": "Copiar al porta-retalls",
 		"copied": "Copiat!",
