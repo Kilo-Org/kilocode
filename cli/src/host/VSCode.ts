@@ -2320,9 +2320,11 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 	window.setWorkspace(workspace)
 
 	// Environment mock with identity values
+	// appRoot should point to CLI root (parent of dist) so ripgrep and other binaries can be found in node_modules
+	const appRoot = path.resolve(import.meta.dirname, "..")
 	const env = {
 		appName: `wrapper|cli|cli|${Package.version}`,
-		appRoot: import.meta.dirname,
+		appRoot,
 		language: "en",
 		machineId: identity?.machineId || machineIdSync(),
 		sessionId: identity?.sessionId || "cli-session-id",
