@@ -25,7 +25,7 @@ import { condenseCommand } from "./condense.js"
 import { logoutCommand } from "./logout.js"
 
 /**
- * Initialize all commands
+ * Initialize all built-in commands
  */
 export function initializeCommands(): void {
 	// Register all commands

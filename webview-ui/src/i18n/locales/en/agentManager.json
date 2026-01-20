@@ -14,7 +14,9 @@
 		"shareSession": "Share session",
 		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
 		"shareConfirmYes": "Yes",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Create pull request",
 		"sendTitle": "Send message",
 		"resumeTitle": "Resume agent",
-		"hint": "Press Enter to send, Shift+Enter for new line"
+		"hint": "Press Enter to send, Shift+Enter for new line. Paste images with Ctrl/Cmd+V",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "running",

@@ -14,7 +14,9 @@
 		"shareSession": "सत्र साझा करें",
 		"shareConfirmMessage": "क्या आप इस सत्र का एक स्नैपशॉट सार्वजनिक रूप से साझा करना चाहेंगे?",
 		"shareConfirmYes": "हाँ",
-		"shareConfirmNo": "नहीं"
+		"shareConfirmNo": "नहीं",
+		"options": "विकल्प",
+		"configureSetupScript": "Worktree सेटअप स्क्रिप्ट"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Pull request बनाएं",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
-		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"
+		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter",
+		"addImage": "छवि जोड़ें",
+		"removeImage": "छवि हटाएं"
 	},
 	"status": {
 		"running": "चल रहा है",

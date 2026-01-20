@@ -14,7 +14,9 @@
 		"shareSession": "Udostępnij sesję",
 		"shareConfirmMessage": "Czy chcesz publicznie udostępnić migawkę tej sesji?",
 		"shareConfirmYes": "Tak",
-		"shareConfirmNo": "Nie"
+		"shareConfirmNo": "Nie",
+		"options": "Opcje",
+		"configureSetupScript": "Skrypt setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
@@ -88,7 +90,9 @@
 		"createPRTitle": "Utwórz pull request",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
-		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"
+		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii",
+		"addImage": "Dodaj obraz",
+		"removeImage": "Usuń obraz"
 	},
 	"status": {
 		"running": "działa",

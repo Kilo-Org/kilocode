@@ -14,7 +14,9 @@
 		"shareSession": "Partager la session",
 		"shareConfirmMessage": "Souhaites-tu partager publiquement un instantané de cette session ?",
 		"shareConfirmYes": "Oui",
-		"shareConfirmNo": "Non"
+		"shareConfirmNo": "Non",
+		"options": "Options",
+		"configureSetupScript": "Script de setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Démarrer un nouvel agent",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Créer une pull request",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
-		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"
+		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne",
+		"addImage": "Ajouter une image",
+		"removeImage": "Supprimer l'image"
 	},
 	"status": {
 		"running": "en cours",

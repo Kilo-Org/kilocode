@@ -1136,6 +1136,10 @@
 		"showTimestamps": {
 			"label": "Mostrar marca de temps",
 			"description": "Mostrar la marca de temps per a cada missatge a la vista del xat"
+		},
+		"showDiffStats": {
+			"label": "Mostra estadístiques de diff",
+			"description": "Mostra les estadístiques de línies afegides/eliminades a la capçalera de la tasca"
 		}
 	},
 	"ghost": {

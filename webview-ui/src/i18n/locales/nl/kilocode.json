@@ -306,6 +306,9 @@
 		},
 		"modes": {
 			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
+		},
+		"skills": {
+			"description": "Blader door en ontdek skills van de gemeenschap. Skills bieden gespecialiseerde instructies voor specifieke taken."
 		}
 	},
 	"modes": {

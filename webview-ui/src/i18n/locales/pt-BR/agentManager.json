@@ -14,7 +14,9 @@
 		"shareSession": "Compartilhar sessão",
 		"shareConfirmMessage": "Gostaria de compartilhar publicamente um instantâneo desta sessão?",
 		"shareConfirmYes": "Sim",
-		"shareConfirmNo": "Não"
+		"shareConfirmNo": "Não",
+		"options": "Opções",
+		"configureSetupScript": "Script de setup do worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar um novo agente",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Criar pull request",
 		"sendTitle": "Enviar mensagem",
 		"resumeTitle": "Retomar agente",
-		"hint": "Pressione Enter para enviar, Shift+Enter para nova linha"
+		"hint": "Pressione Enter para enviar, Shift+Enter para nova linha",
+		"addImage": "Adicionar imagem",
+		"removeImage": "Remover imagem"
 	},
 	"status": {
 		"running": "em execução",

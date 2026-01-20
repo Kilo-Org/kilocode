@@ -14,6 +14,7 @@ export * from "./global-settings.js"
 export * from "./history.js"
 export * from "./image-generation.js"
 export * from "./ipc.js"
+export * from "./skill.js" // kilocode_change
 export * from "./marketplace.js"
 export * from "./mcp.js"
 export * from "./message.js"

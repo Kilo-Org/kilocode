@@ -153,29 +153,10 @@ TASK: Complete the user's message naturally.
 			}
 		}
 
-		const clipboardContent = await this.getClipboardContext()
-		if (clipboardContent) {
-			contextParts.push("\n// Clipboard content:")
-			contextParts.push(clipboardContent)
-		}
-
 		contextParts.push("\n// User's message:")
 		contextParts.push(userText)
 
 		return contextParts.join("\n")
-	}
-
-	private async getClipboardContext(): Promise<string | null> {
-		try {
-			const text = await vscode.env.clipboard.readText()
-			// Only include if it's reasonable size and looks like code
-			if (text && text.length > 5 && text.length < 500) {
-				return text
-			}
-		} catch {
-			// Silently ignore clipboard errors
-		}
-		return null
 	}
 
 	public cleanSuggestion(suggestion: string, userText: string): string {

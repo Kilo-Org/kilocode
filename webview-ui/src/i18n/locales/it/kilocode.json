@@ -308,6 +308,9 @@
 		},
 		"modes": {
 			"description": "Queste modalità sono disponibili dalla community. Clicca <1>qui</1> per modificare le tue modalità personalizzate."
+		},
+		"skills": {
+			"description": "Esplora e scopri skill dalla community. Le skill forniscono istruzioni specializzate per compiti specifici."
 		}
 	},
 	"modes": {
