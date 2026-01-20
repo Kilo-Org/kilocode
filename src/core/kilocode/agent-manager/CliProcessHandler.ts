@@ -61,6 +61,7 @@ interface PendingProcessInfo {
 	cliPath?: string // CLI path for error telemetry
 	configurationError?: string // Captured from welcome event instructions (indicates misconfigured CLI)
 	model?: string // Model ID used for this session
+	mode?: string // Mode slug used for this session
 	images?: string[] // Image paths to send with initial prompt via stdin
 }
 
@@ -198,6 +199,7 @@ export class CliProcessHandler {
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
 					model: options?.model,
+					mode: options?.mode,
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
@@ -286,6 +288,7 @@ export class CliProcessHandler {
 				hadShellPath: !!options?.shellPath, // Track for telemetry
 				cliPath,
 				model: options?.model,
+				mode: options?.mode, // Store mode for session creation
 				images: options?.images, // Store images to send with prompt via stdin
 			}
 		}
@@ -590,14 +593,25 @@ export class CliProcessHandler {
 		const provisionalId = `provisional-${Date.now()}`
 		this.pendingProcess.provisionalSessionId = provisionalId
 
-		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath, model } =
-			this.pendingProcess
+		const {
+			prompt,
+			startTime,
+			parallelMode,
+			desiredLabel,
+			gitUrl,
+			parser,
+			worktreeBranch,
+			worktreePath,
+			model,
+			mode,
+		} = this.pendingProcess
 
 		this.registry.createSession(provisionalId, prompt, startTime, {
 			parallelMode,
 			labelOverride: desiredLabel,
 			gitUrl,
 			model,
+			mode,
 		})
 
 		if (parallelMode && (worktreeBranch || worktreePath)) {
@@ -721,6 +735,7 @@ export class CliProcessHandler {
 			gitUrl,
 			provisionalSessionId,
 			model,
+			mode,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
@@ -762,6 +777,7 @@ export class CliProcessHandler {
 				labelOverride: desiredLabel,
 				gitUrl,
 				model,
+				mode,
 			})
 			this.debugLog(`Created new session: ${sessionId}`)
 		}

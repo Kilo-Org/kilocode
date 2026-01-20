@@ -1,6 +1,7 @@
 import React, { useMemo } from "react"
 import { useAtomValue } from "jotai"
-import { availableModesAtom, effectiveModeSlugAtom } from "../state/atoms/modes"
+import { DEFAULT_MODE_SLUG } from "@roo-code/types"
+import { availableModesAtom } from "../state/atoms/modes"
 import { sessionsMapAtom } from "../state/atoms/sessions"
 import { SelectDropdown } from "../../../components/ui/select-dropdown"
 import { vscode } from "../utils/vscode"
@@ -18,10 +19,9 @@ interface SessionModeSelectorProps {
  */
 export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({ sessionId, disabled = false }) => {
 	const availableModes = useAtomValue(availableModesAtom)
-	const effectiveModeSlug = useAtomValue(effectiveModeSlugAtom)
 	const sessionsMap = useAtomValue(sessionsMapAtom)
 
-	// Get the current mode from the session
+	// Get the current mode from the session (each session stores its own mode)
 	const session = sessionsMap[sessionId]
 	const sessionMode = session?.mode
 
@@ -31,8 +31,10 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({ sessio
 	// Check if modes are available
 	const hasModes = availableModes && availableModes.length > 0
 
-	// Get the effective mode value (use session mode or fall back to effectiveModeSlug)
-	const effectiveMode = sessionMode || effectiveModeSlug || ""
+	// Get the effective mode value (use session mode or fall back to default)
+	// Note: We don't use the global effectiveModeSlugAtom here because each session
+	// should have its own mode stored independently
+	const effectiveMode = sessionMode || DEFAULT_MODE_SLUG
 
 	// Get the current mode name for display (truncated)
 	const currentModeName = useMemo(() => {
