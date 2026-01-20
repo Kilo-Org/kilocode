@@ -207,6 +207,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		vi.clearAllMocks()
 		mockClineProvider.getState = vi.fn().mockResolvedValue({
 			apiConfiguration: {
+				apiProvider: "gemini", // kilocode_change: required for gemini to be fetched
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key", // kilocode_change
@@ -303,7 +304,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"nano-gpt": mockModels, // kilocode_change
 				roo: mockModels,
 				chutes: mockModels,
-				ollama: mockModels, // kilocode_change
+				ollama: {}, // kilocode_change: ollama not fetched when apiProvider is gemini
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
@@ -399,7 +400,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
-				gemini: mockModels, // kilocode_change
+				gemini: {}, // kilocode_change: gemini not fetched when apiProvider is not "gemini"
 				requesty: mockModels,
 				glama: mockModels, // kilocode_change
 				synthetic: mockModels, // kilocode_change
@@ -409,7 +410,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				litellm: {},
 				kilocode: mockModels,
 				"nano-gpt": mockModels, // kilocode_change
-				ollama: mockModels, // kilocode_change
+				ollama: {}, // kilocode_change: ollama not fetched when apiProvider is not "ollama"
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
@@ -423,6 +424,25 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 	})
 
 	it("handles individual provider failures gracefully", async () => {
+		// Override beforeEach mock - this test requires apiProvider to NOT be gemini or ollama
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			apiConfiguration: {
+				openRouterApiKey: "openrouter-key",
+				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key", // kilocode_change
+				unboundApiKey: "unbound-key",
+				litellmApiKey: "litellm-key",
+				litellmBaseUrl: "http://localhost:4000",
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				nanoGptApiKey: "nano-gpt-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
+				// kilocode_change end
+			},
+		})
+
 		const mockModels: ModelRecord = {
 			"model-1": {
 				maxTokens: 4096,
@@ -531,6 +551,25 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 	})
 
 	it("handles Error objects and string errors correctly", async () => {
+		// Override beforeEach mock - this test requires apiProvider to NOT be gemini or ollama
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			apiConfiguration: {
+				openRouterApiKey: "openrouter-key",
+				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key", // kilocode_change
+				unboundApiKey: "unbound-key",
+				litellmApiKey: "litellm-key",
+				litellmBaseUrl: "http://localhost:4000",
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				nanoGptApiKey: "nano-gpt-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
+				// kilocode_change end
+			},
+		})
+
 		// Mock providers to fail with different error types
 		// Order matches candidates array in webviewMessageHandler.ts:
 		// 1. openrouter, 2. requesty, 3. glama, 4. unbound, 5. kilocode, 6. vercel-ai-gateway,
