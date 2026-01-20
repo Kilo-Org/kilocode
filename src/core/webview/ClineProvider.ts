@@ -91,6 +91,7 @@ import { t } from "../../i18n"
 
 import { buildApiHandler } from "../../api"
 import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
+import { getModels } from "../../api/providers/fetchers/modelCache" // kilocode_change
 import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
 
 import { ContextProxy } from "../config/ContextProxy"
@@ -199,7 +200,39 @@ export class ClineProvider
 	public getKilocodeGatewayModelsAvailable(): boolean {
 		return this.kilocodeGatewayModelsAvailable
 	}
-	// kilocode_change end: per-mode model override fallback when gateway models are unavailable
+
+	// kilocode_change start: per-mode model override helpers
+	/**
+	 * Best-effort refresh for the `kilocodeGatewayModelsAvailable` gate.
+	 *
+	 * Some sessions may not hit the router model fetch paths that normally update
+	 * this flag, leaving it `false` longer than intended.
+	 */
+	private async ensureKilocodeGatewayModelsAvailable(): Promise<boolean> {
+		if (this.kilocodeGatewayModelsAvailable) {
+			return true
+		}
+
+		const apiConfiguration = this.contextProxy.getProviderSettings()
+		if (apiConfiguration?.apiProvider !== "kilocode") {
+			return false
+		}
+
+		try {
+			const models = await getModels({
+				provider: "kilocode",
+				kilocodeToken: apiConfiguration.kilocodeToken,
+				kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
+			})
+
+			const available = Object.keys(models || {}).length > 0
+			this.setKilocodeGatewayModelsAvailable(available)
+			return available
+		} catch {
+			return false
+		}
+	}
+	// kilocode_change end: per-mode model override helpers
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -1035,8 +1068,15 @@ export class ClineProvider
 				const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
 				const modeModelOverride = modeModelOverrides[historyItem.mode]
 				if (modeModelOverride) {
-					// Only apply when we know the gateway model list is available.
-					if (this.getKilocodeGatewayModelsAvailable()) {
+					const activeProvider = this.contextProxy.getProviderSettings()?.apiProvider
+
+					// Only apply when Kilo Code provider is active and we know the gateway model list is available.
+					const gatewayModelsAvailable =
+						activeProvider === "kilocode" &&
+						(this.getKilocodeGatewayModelsAvailable() ||
+							(await this.ensureKilocodeGatewayModelsAvailable()))
+
+					if (gatewayModelsAvailable) {
 						await this.applyCanonicalModelIdToActiveProviderConfiguration(modeModelOverride)
 					} else {
 						this.log(
@@ -1484,7 +1524,12 @@ export class ClineProvider
 		if (modeModelOverride) {
 			// Only apply when we know the gateway model list is available.
 			// This avoids setting a model that might not exist/resolve when models cannot be fetched.
-			if (this.getKilocodeGatewayModelsAvailable()) {
+			const activeProvider = this.contextProxy.getProviderSettings()?.apiProvider
+			const gatewayModelsAvailable =
+				activeProvider === "kilocode" &&
+				(this.getKilocodeGatewayModelsAvailable() || (await this.ensureKilocodeGatewayModelsAvailable()))
+
+			if (gatewayModelsAvailable) {
 				await this.applyCanonicalModelIdToActiveProviderConfiguration(modeModelOverride)
 			} else {
 				this.log(
@@ -1562,6 +1607,13 @@ export class ClineProvider
 				return
 			}
 
+			// kilocode_change start: per-mode overrides are Kilo Code-specific
+			// Prevent accidentally writing a Kilo Code gateway model id into another provider's model-id field.
+			if (provider !== "kilocode") {
+				return
+			}
+			// kilocode_change end: per-mode overrides are Kilo Code-specific
+
 			const modelIdKey = this.getModelIdKeyForProvider(provider)
 			if (!modelIdKey) {
 				this.log(
@@ -1624,6 +1676,33 @@ export class ClineProvider
 			if (activate) {
 				const { mode } = await this.getState()
 
+				// kilocode_change start: ensure per-mode model override wins when (re)activating profiles
+				let providerSettingsToActivate = providerSettings
+				try {
+					const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<
+						string,
+						string
+					>
+					const modeModelOverride = modeModelOverrides[mode]
+					if (
+						providerSettings.apiProvider === "kilocode" &&
+						modeModelOverride &&
+						(this.getKilocodeGatewayModelsAvailable() ||
+							(await this.ensureKilocodeGatewayModelsAvailable()))
+					) {
+						const modelIdKey = this.getModelIdKeyForProvider("kilocode")
+						if (modelIdKey) {
+							providerSettingsToActivate = {
+								...providerSettings,
+								[modelIdKey]: modeModelOverride,
+							}
+						}
+					}
+				} catch {
+					// non-fatal
+				}
+				// kilocode_change end: ensure per-mode model override wins when (re)activating profiles
+
 				// These promises do the following:
 				// 1. Adds or updates the list of provider profiles.
 				// 2. Sets the current provider profile.
@@ -1638,7 +1717,7 @@ export class ClineProvider
 					this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig()),
 					this.updateGlobalState("currentApiConfigName", name),
 					this.providerSettingsManager.setModeConfig(mode, id),
-					this.contextProxy.setProviderSettings(providerSettings),
+					this.contextProxy.setProviderSettings(providerSettingsToActivate),
 				])
 
 				// Change the provider for the current task.
@@ -1646,12 +1725,12 @@ export class ClineProvider
 				const task = this.getCurrentTask()
 
 				if (task) {
-					task.api = buildApiHandler(providerSettings)
+					task.api = buildApiHandler(providerSettingsToActivate)
 				}
 
-				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+				await TelemetryService.instance.updateIdentity(providerSettingsToActivate.kilocodeToken ?? "") // kilocode_change
 
-				this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
+				this.updateTaskApiHandlerIfNeeded(providerSettingsToActivate, { forceRebuild: true })
 			} else {
 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
 			}
@@ -1692,7 +1771,32 @@ export class ClineProvider
 	}
 
 	async activateProviderProfile(args: { name: string } | { id: string }) {
-		const { name, id, ...providerSettings } = await this.providerSettingsManager.activateProfile(args)
+		const { name, id, ...providerSettingsFromProfile } = await this.providerSettingsManager.activateProfile(args)
+		let providerSettings = providerSettingsFromProfile
+
+		// kilocode_change start: re-apply per-mode model override when switching profiles within the same mode
+		try {
+			const { mode } = await this.getState()
+			const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
+			const modeModelOverride = modeModelOverrides[mode]
+
+			if (
+				providerSettings.apiProvider === "kilocode" &&
+				modeModelOverride &&
+				(this.getKilocodeGatewayModelsAvailable() || (await this.ensureKilocodeGatewayModelsAvailable()))
+			) {
+				const modelIdKey = this.getModelIdKeyForProvider("kilocode")
+				if (modelIdKey) {
+					providerSettings = {
+						...providerSettings,
+						[modelIdKey]: modeModelOverride,
+					}
+				}
+			}
+		} catch {
+			// non-fatal
+		}
+		// kilocode_change end: re-apply per-mode model override when switching profiles within the same mode
 
 		// See `upsertProviderProfile` for a description of what this is doing.
 		await Promise.all([

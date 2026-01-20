@@ -16,6 +16,7 @@ import {
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
 	UpdateGlobalStateMessage,
+	setModeModelOverridePayloadSchema,
 } from "../../shared/WebviewMessage"
 // kilocode_change end
 
@@ -83,6 +84,7 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
+import { z } from "zod" // kilocode_change
 // kilocode_change start
 import {
 	editMessageHandler,
@@ -1778,13 +1780,12 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change start: per-mode model override persistence
 		case "setModeModelOverride": {
-			const payload = message.payload as { mode?: string; modelId?: string | null } | undefined
-			const mode = payload?.mode
-			const modelId = payload?.modelId
-
-			if (!mode || typeof mode !== "string") {
+			const parsed = setModeModelOverridePayloadSchema.safeParse(message.payload)
+			if (!parsed.success) {
 				break
 			}
+
+			const { mode, modelId } = parsed.data
 
 			const current = getGlobalState("modeModelOverrides") ?? {}
 			const updated: Record<string, string> = { ...current }

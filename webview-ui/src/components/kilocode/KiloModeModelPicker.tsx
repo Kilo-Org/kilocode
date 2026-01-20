@@ -7,6 +7,7 @@ import { vscode } from "@src/utils/vscode"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import { prettyModelName } from "@src/utils/prettyModelName"
 import { getGroupedModelIds } from "@src/components/ui/hooks/kilocode/usePreferredModels"
+import { useTranslation } from "react-i18next"
 import {
 	Button,
 	Command,
@@ -33,6 +34,7 @@ export const KiloModeModelPicker = ({
 	routerModels,
 	modeModelOverrides,
 }: KiloModeModelPickerProps) => {
+	const { t } = useTranslation()
 	const isKiloCodeProviderActive = apiProvider === "kilocode"
 
 	const kiloCodeModels = useMemo(() => {
@@ -59,7 +61,9 @@ export const KiloModeModelPicker = ({
 		[kiloCodeModels],
 	)
 
-	const selectedModeModelLabel = selectedModeModelId ? getKiloCodeModelLabel(selectedModeModelId) : "Use default"
+	const selectedModeModelLabel = selectedModeModelId
+		? getKiloCodeModelLabel(selectedModeModelId)
+		: t("kilocode:modeModelPicker.useDefault")
 
 	const [modelPickerOpen, setModelPickerOpen] = useState(false)
 	const [modelSearchValue, setModelSearchValue] = useState("")
@@ -79,9 +83,9 @@ export const KiloModeModelPicker = ({
 
 	return (
 		<div className="mb-3">
-			<div className="font-bold mb-1">Model</div>
+			<div className="font-bold mb-1">{t("kilocode:modeModelPicker.label")}</div>
 			<div className="text-sm text-vscode-descriptionForeground mb-2">
-				Select the Kilo Code gateway model to use for this mode.
+				{t("kilocode:modeModelPicker.description")}
 			</div>
 			<div className="mb-2">
 				<Popover
@@ -111,7 +115,7 @@ export const KiloModeModelPicker = ({
 									ref={modelSearchInputRef}
 									value={modelSearchValue}
 									onValueChange={setModelSearchValue}
-									placeholder="Search models"
+									placeholder={t("kilocode:modeModelPicker.searchPlaceholder")}
 									className="h-9 mr-4"
 									data-testid="mode-model-search-input"
 								/>
@@ -129,7 +133,9 @@ export const KiloModeModelPicker = ({
 							</div>
 							<CommandList>
 								<CommandEmpty>
-									{modelSearchValue && <div className="py-2 px-1 text-sm">No match found</div>}
+									{modelSearchValue && (
+										<div className="py-2 px-1 text-sm">{t("kilocode:modeModelPicker.noMatch")}</div>
+									)}
 								</CommandEmpty>
 								<CommandGroup>
 									<CommandItem
@@ -146,7 +152,7 @@ export const KiloModeModelPicker = ({
 											<Check
 												className={`size-4 ${selectedModeModelId ? "opacity-0" : "opacity-100"}`}
 											/>
-											<span>Use default</span>
+											<span>{t("kilocode:modeModelPicker.useDefault")}</span>
 										</div>
 									</CommandItem>
 									{filteredKiloCodeModelIds.map((modelId) => (
@@ -179,17 +185,12 @@ export const KiloModeModelPicker = ({
 			</div>
 			{!isKiloCodeProviderActive ? (
 				<div className="text-xs text-vscode-descriptionForeground">
-					Switch provider to Kilo Code to set per-mode model.
+					{t("kilocode:modeModelPicker.providerInactive")}
 				</div>
 			) : !hasKiloCodeModels ? (
 				<div className="text-xs text-vscode-descriptionForeground">
-					Kilo Code models are not available. Configure the Kilo Code provider to fetch models.
-					{selectedModeModelId && (
-						<span>
-							{" "}
-							Gateway models unavailable; per-mode model won’t be applied until models can be fetched.
-						</span>
-					)}
+					{t("kilocode:modeModelPicker.modelsUnavailable")}
+					{selectedModeModelId && <span> {t("kilocode:modeModelPicker.overrideWillNotApply")}</span>}
 				</div>
 			) : null}
 		</div>

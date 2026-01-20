@@ -488,10 +488,15 @@ export interface TaskHistoryResponsePayload {
 // kilocode_change end
 
 // kilocode_change start: mode model override message payload
-export interface SetModeModelOverridePayload {
-	mode: string
-	modelId: string | null
-}
+export const setModeModelOverridePayloadSchema = z
+	.object({
+		mode: z.string().min(1),
+		// Allow null so the UI can clear an override.
+		modelId: z.union([z.string().min(1), z.null()]),
+	})
+	.strict()
+
+export type SetModeModelOverridePayload = z.infer<typeof setModeModelOverridePayloadSchema>
 // kilocode_change end: mode model override message payload
 
 export const checkoutDiffPayloadSchema = z.object({
