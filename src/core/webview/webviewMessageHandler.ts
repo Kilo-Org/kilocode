@@ -4372,7 +4372,9 @@ export const webviewMessageHandler = async (
 		// kilocode_change start - Device Auth handlers
 		case "startDeviceAuth":
 		case "cancelDeviceAuth":
-		case "deviceAuthCompleteWithProfile": {
+		case "deviceAuthCompleteWithProfile":
+		case "startAgenticaDeviceAuth":
+		case "cancelAgenticaDeviceAuth": {
 			await deviceAuthMessageHandler(provider, message)
 			break
 		}
