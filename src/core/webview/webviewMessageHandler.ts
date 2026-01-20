@@ -84,7 +84,6 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { z } from "zod" // kilocode_change
 // kilocode_change start
 import {
 	editMessageHandler,
@@ -1792,11 +1791,8 @@ export const webviewMessageHandler = async (
 
 			if (modelId === null) {
 				delete updated[mode]
-			} else if (typeof modelId === "string") {
-				updated[mode] = modelId
 			} else {
-				// Ignore invalid payloads for backward compatibility.
-				break
+				updated[mode] = modelId
 			}
 
 			await updateGlobalState("modeModelOverrides", updated)

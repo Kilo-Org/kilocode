@@ -1644,7 +1644,8 @@ export class ClineProvider
 			return modelIdKeysByProvider[provider]
 		}
 
-		return
+		// Explicitly return undefined for non-typical providers.
+		return undefined
 	}
 	// kilocode_change end
 
