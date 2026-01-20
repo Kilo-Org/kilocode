@@ -8,6 +8,14 @@ import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CliMessage } from "../../types/cli.js"
 
 /**
+ * Types for JSON-IO protocol messages sent from CLI to Agent Manager.
+ * These messages are output to stdout for bidirectional communication.
+ */
+export type JsonIoMessage =
+	| { type: "image_load_error"; errors: Array<{ path: string; error: string }>; message: string }
+	| { type: "modeChanged"; mode: string; previousMode: string | undefined }
+
+/**
  * Convert a CLI message to JSON output format
  */
 function formatCliMessage(message: CliMessage) {
@@ -81,8 +89,8 @@ export function outputJsonMessages(messages: UnifiedMessage[]): void {
 /**
  * Output a raw JSON object to stdout for JSON-IO protocol communication.
  * Used for bidirectional communication with the Agent Manager.
- * @param message - Any JSON-serializable object with a 'type' field
+ * @param message - A typed JSON-IO message
  */
-export function outputJsonIoMessage(message: Record<string, unknown>): void {
+export function outputJsonIoMessage(message: JsonIoMessage): void {
 	console.log(JSON.stringify(message))
 }

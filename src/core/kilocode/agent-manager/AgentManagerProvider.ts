@@ -28,7 +28,7 @@ import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
 import type { ProviderSettings } from "@roo-code/types"
-import { DEFAULT_MODE_SLUG } from "@roo-code/types"
+import { DEFAULT_MODE_SLUG, DEFAULT_MODES } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -1468,15 +1468,18 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private async fetchAndPostAvailableModes(): Promise<void> {
 		try {
-			const modes = await this.provider.getModes()
+			// Get full mode data directly from customModesManager and DEFAULT_MODES
+			// This provides description, iconName, and source which getModes() doesn't include
+			const customModes = await this.provider.customModesManager.getCustomModes()
+			const allModes = [...DEFAULT_MODES, ...customModes]
 			const currentMode = await this.provider.getMode()
 			this.outputChannel.appendLine(
-				`[AgentManager] Fetched ${modes.length} available modes, current: ${currentMode}`,
+				`[AgentManager] Fetched ${allModes.length} available modes, current: ${currentMode}`,
 			)
 
 			this.postMessage({
 				type: "agentManager.availableModes",
-				modes: modes.map((mode) => ({
+				modes: allModes.map((mode) => ({
 					slug: mode.slug,
 					name: mode.name,
 					description: mode.description,

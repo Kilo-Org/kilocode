@@ -2,8 +2,9 @@ import React, { useMemo } from "react"
 import { useAtomValue } from "jotai"
 import { availableModesAtom, effectiveModeSlugAtom } from "../state/atoms/modes"
 import { sessionsMapAtom } from "../state/atoms/sessions"
-import { SelectDropdown, type DropdownOption, DropdownOptionType } from "../../../components/ui/select-dropdown"
+import { SelectDropdown } from "../../../components/ui/select-dropdown"
 import { vscode } from "../utils/vscode"
+import { useModeOptions } from "../hooks/useModeOptions"
 
 interface SessionModeSelectorProps {
 	sessionId: string
@@ -24,51 +25,8 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({ sessio
 	const session = sessionsMap[sessionId]
 	const sessionMode = session?.mode
 
-	// Convert modes to SelectDropdown options (without icons for now)
-	const modeOptions: DropdownOption[] = useMemo(() => {
-		if (!availableModes || availableModes.length === 0) return []
-
-		const opts: DropdownOption[] = []
-
-		// Group organization modes separately if any exist
-		const organizationModes = availableModes.filter((mode) => mode.source === "organization")
-		const otherModes = availableModes.filter((mode) => mode.source !== "organization")
-
-		// Add organization modes section if any exist
-		if (organizationModes.length > 0) {
-			opts.push({
-				value: "org-header",
-				label: "Organization Modes",
-				disabled: true,
-				type: DropdownOptionType.SHORTCUT,
-			})
-			opts.push(
-				...organizationModes.map((mode) => ({
-					value: mode.slug,
-					label: mode.name,
-					description: mode.description,
-					type: DropdownOptionType.ITEM,
-				})),
-			)
-			opts.push({
-				value: "sep-org",
-				label: "separator",
-				type: DropdownOptionType.SEPARATOR,
-			})
-		}
-
-		// Add other modes
-		opts.push(
-			...otherModes.map((mode) => ({
-				value: mode.slug,
-				label: mode.name,
-				description: mode.description,
-				type: DropdownOptionType.ITEM,
-			})),
-		)
-
-		return opts
-	}, [availableModes])
+	// Use shared hook for building mode options
+	const modeOptions = useModeOptions()
 
 	// Check if modes are available
 	const hasModes = availableModes && availableModes.length > 0

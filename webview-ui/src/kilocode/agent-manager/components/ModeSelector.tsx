@@ -1,13 +1,10 @@
-import React, { useMemo } from "react"
+import React from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { CaretDownIcon } from "@radix-ui/react-icons"
-import {
-	availableModesAtom,
-	effectiveModeSlugAtom,
-	setSelectedModeSlugAtom,
-} from "../state/atoms/modes"
-import { SelectDropdown, type DropdownOption, DropdownOptionType } from "../../../components/ui/select-dropdown"
+import { availableModesAtom, effectiveModeSlugAtom, setSelectedModeSlugAtom } from "../state/atoms/modes"
+import { SelectDropdown } from "../../../components/ui/select-dropdown"
+import { useModeOptions } from "../hooks/useModeOptions"
 
 interface ModeSelectorProps {
 	disabled?: boolean
@@ -24,51 +21,10 @@ export function ModeSelector({ disabled = false }: ModeSelectorProps) {
 	const effectiveModeSlug = useAtomValue(effectiveModeSlugAtom)
 	const setSelectedModeSlug = useSetAtom(setSelectedModeSlugAtom)
 
-	// Convert modes to SelectDropdown options (without icons for now)
-	const modeOptions: DropdownOption[] = useMemo(() => {
-		if (!availableModes || availableModes.length === 0) return []
-
-		const opts: DropdownOption[] = []
-
-		// Group organization modes separately if any exist
-		const organizationModes = availableModes.filter((mode) => mode.source === "organization")
-		const otherModes = availableModes.filter((mode) => mode.source !== "organization")
-
-		// Add organization modes section if any exist
-		if (organizationModes.length > 0) {
-			opts.push({
-				value: "org-header",
-				label: t("sessionDetail.organizationModes", "Organization Modes"),
-				disabled: true,
-				type: DropdownOptionType.SHORTCUT,
-			})
-			opts.push(
-				...organizationModes.map((mode) => ({
-					value: mode.slug,
-					label: mode.name,
-					description: mode.description,
-					type: DropdownOptionType.ITEM,
-				})),
-			)
-			opts.push({
-				value: "sep-org",
-				label: "separator",
-				type: DropdownOptionType.SEPARATOR,
-			})
-		}
-
-		// Add other modes
-		opts.push(
-			...otherModes.map((mode) => ({
-				value: mode.slug,
-				label: mode.name,
-				description: mode.description,
-				type: DropdownOptionType.ITEM,
-			})),
-		)
-
-		return opts
-	}, [availableModes, t])
+	// Use shared hook for building mode options
+	const modeOptions = useModeOptions({
+		organizationModesLabel: t("sessionDetail.organizationModes", "Organization Modes"),
+	})
 
 	const handleModeChange = (newMode: string) => {
 		if (newMode === effectiveModeSlug) return
