@@ -306,6 +306,9 @@
 		},
 		"modes": {
 			"description": "These modes are available from the community. Click <1>here</1> to edit your own custom modes."
+		},
+		"skills": {
+			"description": "Browse and discover skills from the community. Skills provide specialized instructions for specific tasks."
 		}
 	},
 	"modes": {

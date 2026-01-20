@@ -17,6 +17,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
@@ -24,6 +25,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.jcef.JBCefApp
+import com.intellij.util.Alarm
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Toolkit
@@ -81,8 +83,11 @@ class RooToolWindowFactory : ToolWindowFactory {
         // System info text for copying - will be updated
         private var systemInfoText = createSystemInfoPlainText()
         
-        // Timer for updating status display
-        private var statusUpdateTimer: java.util.Timer? = null
+        // Alarm for updating status display
+        private val statusUpdateAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, toolWindow.disposable)
+        
+        // Track last status text to avoid unnecessary updates
+        private var lastStatusText: String = ""
 
         /**
          * Get initialization state text from state machine
@@ -346,33 +351,42 @@ class RooToolWindowFactory : ToolWindowFactory {
          * Start timer to update status display
          */
         private fun startStatusUpdateTimer() {
-            statusUpdateTimer = java.util.Timer().apply {
-                scheduleAtFixedRate(object : java.util.TimerTask() {
-                    override fun run() {
-                        ApplicationManager.getApplication().invokeLater {
-                            updateStatusDisplay()
-                        }
-                    }
-                }, 500, 500) // Update every 500ms
+            scheduleNextStatusUpdate()
+        }
+        
+        /**
+         * Schedule next status update
+         */
+        private fun scheduleNextStatusUpdate() {
+            // Only schedule if webview hasn't loaded yet
+            if (webViewManager.getLatestWebView()?.isPageLoaded() == true) {
+                return
             }
+            
+            statusUpdateAlarm.addRequest({
+                updateStatusDisplay()
+                scheduleNextStatusUpdate() // Schedule next update
+            }, 500, ModalityState.defaultModalityState())
         }
         
         /**
          * Stop status update timer
          */
         private fun stopStatusUpdateTimer() {
-            statusUpdateTimer?.cancel()
-            statusUpdateTimer?.purge()
-            statusUpdateTimer = null
+            statusUpdateAlarm.cancelAllRequests()
         }
         
         /**
-         * Update status display
+         * Update status display - only if text actually changed
          */
         private fun updateStatusDisplay() {
             try {
-                placeholderLabel.text = createSystemInfoText()
-                systemInfoText = createSystemInfoPlainText()
+                val newStatusText = createSystemInfoText()
+                if (newStatusText != lastStatusText) {
+                    placeholderLabel.text = newStatusText
+                    systemInfoText = createSystemInfoPlainText()
+                    lastStatusText = newStatusText
+                }
             } catch (e: Exception) {
                 logger.error("Error updating status display", e)
             }
@@ -410,22 +424,26 @@ class RooToolWindowFactory : ToolWindowFactory {
                 }
             }
             
-            // Remove placeholder and buttons before adding webview
-            contentPanel.removeAll()
+            // Batch all UI updates in a single EDT invocation
+            ApplicationManager.getApplication().invokeLater {
+                // Stop status update timer BEFORE modifying UI
+                stopStatusUpdateTimer()
+                
+                // Remove all components at once
+                contentPanel.removeAll()
 
-            // Add WebView component
-            contentPanel.add(webView.browser.component, BorderLayout.CENTER)
+                // Add WebView component
+                contentPanel.add(webView.browser.component, BorderLayout.CENTER)
 
-            setupDragAndDropSupport(webView)
+                // Setup drag and drop
+                setupDragAndDropSupport(webView)
 
-            // Relayout
-            contentPanel.revalidate()
-            contentPanel.repaint()
-            
-            // Stop status update timer since webview is now visible
-            stopStatusUpdateTimer()
+                // Single revalidate/repaint at the end
+                contentPanel.revalidate()
+                contentPanel.repaint()
 
-            logger.info("WebView component added to tool window, placeholder removed")
+                logger.info("WebView component added to tool window, placeholder removed")
+            }
         }
 
         /**
@@ -433,22 +451,8 @@ class RooToolWindowFactory : ToolWindowFactory {
          */
         private fun hideSystemInfo() {
             logger.info("Hiding system info placeholder")
-            
-            // Stop status update timer
-            stopStatusUpdateTimer()
-
-            // Remove all components from content panel except WebView component
-            val components = contentPanel.components
-            for (component in components) {
-                if (component !== webViewManager.getLatestWebView()?.browser?.component) {
-                    contentPanel.remove(component)
-                }
-            }
-
-            // Relayout
-            contentPanel.revalidate()
-            contentPanel.repaint()
-
+            // addWebViewComponent now handles all UI updates in a batched manner
+            // This method is kept for compatibility but does minimal work
             logger.info("System info placeholder hidden")
         }
 

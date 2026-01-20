@@ -14,7 +14,9 @@
 		"shareSession": "Sitzung teilen",
 		"shareConfirmMessage": "Möchtest du einen Schnappschuss dieser Sitzung öffentlich teilen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nein"
+		"shareConfirmNo": "Nein",
+		"options": "Optionen",
+		"configureSetupScript": "Worktree-Setup-Skript"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Einen neuen Agenten starten",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Pull Request erstellen",
 		"sendTitle": "Nachricht senden",
 		"resumeTitle": "Agent fortsetzen",
-		"hint": "Enter zum Senden, Shift+Enter für neue Zeile"
+		"hint": "Enter zum Senden, Shift+Enter für neue Zeile",
+		"addImage": "Bild hinzufügen",
+		"removeImage": "Bild entfernen"
 	},
 	"status": {
 		"running": "läuft",

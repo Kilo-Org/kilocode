@@ -224,31 +224,31 @@
 		"title": "Autocomplete",
 		"settings": {
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "Automatické spouštění návrhů",
 				"description": "Automaticky zobrazovat návrhy kódu při pozastavení psaní."
 			},
 			"autoTriggerDelay": {
 				"label": "Zpoždění Automatického Spuštění",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Zpoždění v sekundách před zobrazením návrhů po pozastavení psaní. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Spustit klávesovou zkratkou ({{keybinding}})",
+				"description": "Stiskni {{keybinding}} pro vyžádání návrhu kódu na pozici kurzoru. <DocsLink>Upravit zkratku</DocsLink>"
 			},
 			"keybindingNotFound": "nenalezeno",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Povolit automatické dokončování v chatu",
+				"description": "Zobrazovat návrhy při psaní v chatovém vstupu. Stiskni Tab pro přijetí návrhů."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Pozastavit návrhy",
+				"description": "Dočasně pozastavit návrhy na určitou dobu.",
 				"button": "Pozastavit",
 				"unsnooze": "Obnovit",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Návrhy jsou momentálně pozastaveny.",
 				"duration": {
 					"1min": "1 minuta",
 					"5min": "5 minut",
@@ -267,8 +267,8 @@
 				"description": "Váš účet Kilo Code nemá žádné kredity. Pro použití automatického dokončování prosím přidejte kredity na svůj účet.",
 				"buyCredits": "Koupit kredity →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"codeEditorSuggestions": "Návrhy v editoru kódu",
+			"chatSuggestions": "Návrhy v chatu"
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +307,9 @@
 		},
 		"modes": {
 			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
+		},
+		"skills": {
+			"description": "Procházejte a objevujte dovednosti od komunity. Dovednosti poskytují specializované instrukce pro konkrétní úkoly."
 		}
 	},
 	"modes": {

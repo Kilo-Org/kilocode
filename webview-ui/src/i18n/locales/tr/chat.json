@@ -9,6 +9,7 @@
 		"tokens": "Tokenlar",
 		"cache": "Önbellek",
 		"apiCost": "API Maliyeti",
+		"changes": "Değişiklikler",
 		"size": "Boyut",
 		"contextWindow": "Bağlam Uzunluğu",
 		"closeAndStart": "Görevi kapat ve yeni bir görev başlat",
@@ -282,7 +283,7 @@
 		"noAssistantMessagesDetails": "Dil modeli herhangi bir metin veya araç çağrısı olmadan boş bir yanıt döndürdü. Bu, API sorunları, hız sınırlaması veya modele özgü sorunlar nedeniyle olabilir. Model otomatik olarak yeniden denemeye yönlendirildi."
 	},
 	"errorDetails": {
-		"link": "Details",
+		"link": "Ayrıntılar",
 		"title": "Hata Detayları",
 		"copyToClipboard": "Panoya Kopyala",
 		"copied": "Kopyalandı!",

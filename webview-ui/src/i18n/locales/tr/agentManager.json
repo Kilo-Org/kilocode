@@ -14,7 +14,9 @@
 		"shareSession": "Oturumu paylaş",
 		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
 		"shareConfirmYes": "Evet",
-		"shareConfirmNo": "Hayır"
+		"shareConfirmNo": "Hayır",
+		"options": "Seçenekler",
+		"configureSetupScript": "Worktree kurulum betiği"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Pull request oluştur",
 		"sendTitle": "Mesaj gönder",
 		"resumeTitle": "Ajanı devam ettir",
-		"hint": "Göndermek için Enter, yeni satır için Shift+Enter"
+		"hint": "Göndermek için Enter, yeni satır için Shift+Enter",
+		"addImage": "Resim ekle",
+		"removeImage": "Resmi kaldır"
 	},
 	"status": {
 		"running": "çalışıyor",
