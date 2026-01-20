@@ -282,6 +282,14 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 		setShowDeleteConfirm(false)
 	}
 
+	const handleAuthenticate = () => {
+		vscode.postMessage({
+			type: "authenticateMcpServer",
+			serverName: server.name,
+			source: server.source || "global",
+		})
+	}
+
 	return (
 		<div style={{ marginBottom: "10px" }}>
 			<div
@@ -320,6 +328,16 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 				<div
 					style={{ display: "flex", alignItems: "center", marginRight: "8px" }}
 					onClick={(e) => e.stopPropagation()}>
+					{server.oauthRequired && server.oauthAuthStatus === "unauthenticated" && (
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={handleAuthenticate}
+							style={{ marginRight: "8px" }}
+							title={t("mcp:authenticate")}>
+							<span className="codicon codicon-key" style={{ fontSize: "14px" }}></span>
+						</Button>
+					)}
 					<Button
 						variant="ghost"
 						size="icon"

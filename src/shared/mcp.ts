@@ -4,6 +4,8 @@ export type McpErrorEntry = {
 	level: "error" | "warn" | "info"
 }
 
+export type McpOAuthAuthStatus = "authenticated" | "unauthenticated" | "pending"
+
 export type McpServer = {
 	name: string
 	config: string
@@ -18,6 +20,8 @@ export type McpServer = {
 	source?: "global" | "project"
 	projectPath?: string
 	instructions?: string
+	oauthRequired?: boolean
+	oauthAuthStatus?: McpOAuthAuthStatus
 }
 
 export type McpTool = {
