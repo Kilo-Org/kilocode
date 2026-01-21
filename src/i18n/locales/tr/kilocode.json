@@ -177,7 +177,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Kilocode CLI sürümün eski ve Agent Manager'ı desteklemiyor. Lütfen en son sürüme güncelle.",
-			"cliNotFound": "Kilocode CLI bulunamadı. Agent Manager'ı kullanmak için lütfen yükle.",
 			"cliMisconfigured": "Kilocode CLI yapılandırılmamış. Giriş yapmak için 'kilocode auth' veya yapılandırmak için 'kilocode config' çalıştır.",
 			"sessionFailed": "Ajan oturumu başlatılamadı",
 			"sessionFailedWithMessage": "Ajan oturumu başlatılamadı: {{message}}"

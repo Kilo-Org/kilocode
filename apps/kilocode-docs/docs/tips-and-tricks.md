@@ -11,7 +11,7 @@ A collection of quick tips to help you get the most out of Kilo Code.
     - Use chat for multi-file changes, refactoring, or when you need to explain intent. Use autocomplete for quick, localized edits where the context is already clear from surrounding code.
     - Steer autocomplete by writing a comment describing what you want before triggering it, or by typing a function signature—autocomplete will fill in the implementation.
     - Treat autocomplete suggestions as drafts: accept them quickly, then refine. It's often faster to fix a 90% correct suggestion than to craft the perfect prompt.
-- If you're not using [MCP](/features/mcp/overview), turn it off in the <Codicon name="notebook" /> Prompts tab to significantly cut down the size of the system prompt.
+- If you're not using [MCP](/features/mcp/overview), turn it off in Settings > Agent Behaviour > MCP Servers to significantly cut down the size of the system prompt.
 - To keep your [custom modes](/agent-behavior/custom-modes) on track, limit the types of files that they're allowed to edit.
 - If you hit the dreaded `input length and max tokens exceed context limit` error, you can recover by deleting a message, rolling back to a previous checkpoint, or switching over to a model with a long context window like Gemini for a message.
 - In general, be thoughtful about your `Max Tokens` setting for thinking models. Every token you allocate to that takes away from space available to store conversation history. Consider only using high `Max Tokens` / `Max Thinking Tokens` settings with modes like Architect and Debug, and keeping Code mode at 16k max tokens or less.
