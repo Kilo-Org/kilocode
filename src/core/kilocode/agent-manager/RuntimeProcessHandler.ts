@@ -650,7 +650,7 @@ export class RuntimeProcessHandler {
 	 * Handle messageUpdated events for real-time streaming updates.
 	 *
 	 * The extension sends messageUpdated events when streaming partial content.
-	 * We merge the updated message into the existing messages by timestamp.
+	 * AgentManagerProvider merges the updated message by timestamp.
 	 */
 	private handleMessageUpdated(sessionId: string, updatedMessage: ClineMessage): void {
 		// Filter out control messages that shouldn't be displayed
@@ -902,44 +902,6 @@ export class RuntimeProcessHandler {
 		const msgType = (message as { type?: string })?.type || "unknown"
 		const msgText = (message as { text?: string })?.text?.slice(0, 50) || ""
 		this.callbacks.onLog(`[IPC→Agent] ${sessionId}: sendMessage(${msgType}) ${msgText ? `"${msgText}..."` : ""}`)
-
-		return new Promise((resolve, reject) => {
-			info.process.send(ipcMessage, (error) => {
-				if (error) {
-					reject(error)
-				} else {
-					resolve()
-				}
-			})
-		})
-	}
-
-	/**
-	 * Send resumeWithHistory IPC message to an active session.
-	 * This writes the session history to local storage and loads it via showTaskWithId.
-	 */
-	private sendResumeWithHistory(
-		sessionId: string,
-		prompt: string,
-		sessionData: SessionData,
-		images?: string[],
-	): Promise<void> {
-		const info = this.activeSessions.get(sessionId)
-		if (!info) {
-			return Promise.reject(new Error(`No active session: ${sessionId}`))
-		}
-
-		const ipcMessage: ParentIPCMessage = {
-			type: "resumeWithHistory",
-			payload: {
-				sessionId,
-				prompt,
-				images,
-				uiMessages: sessionData.uiMessages,
-				apiConversationHistory: sessionData.apiConversationHistory,
-				metadata: sessionData.metadata,
-			},
-		}
 
 		return new Promise((resolve, reject) => {
 			info.process.send(ipcMessage, (error) => {
