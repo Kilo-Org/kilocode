@@ -302,16 +302,12 @@ export class CLI {
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
-			const extensionHost = this.service.getExtensionHost()
-			// In JSON-IO mode, don't set yoloMode on the extension host.
-			// This prevents Task.ts from auto-answering followup questions.
-			// The CLI's approval layer handles YOLO behavior and correctly excludes followups.
-			if (!this.options.jsonInteractive) {
-				extensionHost.sendWebviewMessage({
-					type: "yoloMode",
-					bool: Boolean(this.options.ci || this.options.yolo),
-				})
-			}
+			// NOTE: We intentionally do NOT send yoloMode to the extension host here.
+			// Each CLI instance manages its own yoloMode state locally via yoloModeAtom.
+			// Sending yoloMode to the extension host would pollute the global state,
+			// affecting other sessions (like Agent Manager sessions) that should have
+			// isolated yoloMode per session via the --yolo flag.
+			// See: https://github.com/Kilo-Org/kilocode/pull/4890
 
 			// Request router models after configuration is injected
 			void this.requestRouterModels()

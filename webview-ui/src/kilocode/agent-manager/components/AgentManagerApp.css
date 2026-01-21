@@ -318,6 +318,89 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* Editable title styles */
+.am-title-text {
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 2px 4px;
+	margin: -2px -4px;
+	transition: background-color 0.15s;
+}
+
+.am-title-text:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.am-title-edit-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border: none;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	border-radius: 3px;
+	cursor: pointer;
+	opacity: 0;
+	transition:
+		opacity 0.15s,
+		background-color 0.15s;
+}
+
+.am-header-title:hover .am-title-edit-btn {
+	opacity: 0.7;
+}
+
+.am-title-edit-btn:hover {
+	opacity: 1;
+	background: var(--vscode-toolbar-hoverBackground);
+	color: var(--vscode-foreground);
+}
+
+.am-title-edit-container {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.am-title-input {
+	flex: 1;
+	min-width: 0;
+	padding: 4px 8px;
+	font-size: 18px;
+	font-weight: 600;
+	font-family: inherit;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-focusBorder);
+	border-radius: 4px;
+	outline: none;
+}
+
+.am-title-confirm-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.am-title-confirm-btn:hover {
+	background: var(--vscode-button-hoverBackground);
 }
 
 .am-header-meta {
@@ -646,6 +729,13 @@
 	text-overflow: ellipsis;
 }
 
+/* YOLO mode indicator in session list */
+.am-yolo-indicator {
+	display: inline-flex;
+	align-items: center;
+	color: var(--vscode-charts-yellow, #e2c08d);
+}
+
 .am-ready-to-merge {
 	font-size: calc(var(--vscode-font-size) * 0.8);
 	color: var(--vscode-charts-green);
@@ -676,6 +766,14 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	min-width: 0;
+}
+
+/* YOLO mode badge in session header */
+.am-yolo-badge {
+	display: inline-flex;
+	align-items: center;
+	color: var(--vscode-charts-yellow, #e2c08d);
+	vertical-align: middle;
 }
 
 /* Inline Run Mode Dropdown (next to send button) */
@@ -882,6 +980,87 @@
 
 .am-followup-copy-btn:hover {
 	color: var(--vscode-foreground);
+}
+
+/* YOLO mode active state - yellow highlight */
+.am-run-mode-trigger-inline.am-yolo-active {
+	color: var(--vscode-charts-yellow, #e2c08d);
+	opacity: 1;
+}
+
+.am-run-mode-trigger-inline.am-yolo-active:hover:not(:disabled) {
+	color: var(--vscode-charts-yellow, #e2c08d);
+}
+
+/* Approval buttons for ask messages when YOLO mode is OFF */
+.am-approval-buttons {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.am-approve-btn,
+.am-deny-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 12px;
+	border-radius: 4px;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.am-approve-btn {
+	background: transparent;
+	color: var(--vscode-testing-iconPassed, #73c991);
+	border: 1px solid var(--vscode-testing-iconPassed, #73c991);
+}
+
+.am-approve-btn:hover:not(:disabled) {
+	/* No VS Code variable for success background - rgba matches testing-iconPassed (#73c991) at 15% opacity */
+	background: rgba(115, 201, 145, 0.15);
+}
+
+.am-deny-btn {
+	background: transparent;
+	color: var(--vscode-errorForeground, #f14c4c);
+	border: 1px solid var(--vscode-errorForeground, #f14c4c);
+}
+
+.am-deny-btn:hover:not(:disabled) {
+	/* rgba matches errorForeground (#f14c4c) at 15% opacity */
+	background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.15));
+}
+
+/* Disabled state - grayed out and not clickable */
+.am-approve-btn.am-approval-disabled,
+.am-deny-btn.am-approval-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.am-approve-btn.am-approval-disabled:hover,
+.am-deny-btn.am-approval-disabled:hover {
+	background: inherit;
+}
+
+/* Selected state - shows which button was clicked or auto-approved */
+/* Use higher specificity to override disabled state */
+.am-approve-btn.am-approval-disabled.am-approval-selected,
+.am-approve-btn.am-approval-selected {
+	opacity: 1;
+	background: var(--vscode-testing-iconPassed, #73c991);
+	color: var(--vscode-editor-background);
+	border-color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.am-deny-btn.am-approval-disabled.am-approval-selected,
+.am-deny-btn.am-approval-selected {
+	opacity: 1;
+	background: var(--vscode-errorForeground);
+	color: var(--vscode-editor-background);
+	border-color: var(--vscode-errorForeground);
 }
 
 /* Model Selector Styles */

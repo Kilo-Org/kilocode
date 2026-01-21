@@ -1,5 +1,11 @@
 export interface BuildCliArgsOptions {
 	sessionId?: string
+	/**
+	 * When true (default), adds --yolo flag to auto-approve all tool operations.
+	 * When false, CLI will send ask messages requiring user approval via JSON-IO.
+	 */
+	yoloMode?: boolean
+	/** Model ID to use for this session (overrides CLI default) */
 	model?: string
 	/** When true, prompt will be sent via stdin (for multimodal messages with images) */
 	promptViaStdin?: boolean
@@ -13,8 +19,15 @@ export interface BuildCliArgsOptions {
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
 	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
+	const args = ["--json-io"]
+
 	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
-	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
+	// Default to true for backward compatibility - only omit when explicitly false
+	if (options?.yoloMode !== false) {
+		args.push("--yolo")
+	}
+
+	args.push(`--workspace=${workspace}`)
 
 	if (options?.model) {
 		args.push(`--model=${options.model}`)

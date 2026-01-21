@@ -15,8 +15,9 @@
 		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
 		"shareConfirmYes": "Evet",
 		"shareConfirmNo": "Hayır",
-		"options": "Seçenekler",
-		"configureSetupScript": "Worktree kurulum betiği"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -57,6 +58,12 @@
 		"noBranches": "Dal bulunamadı",
 		"noMatchingBranches": "Aramanla eşleşen dal yok",
 		"openTerminal": "Terminali aç",
+		"yoloModeOn": "YOLO modu açık - tüm işlemler otomatik onaylanır",
+		"yoloModeOff": "YOLO modu kapalı - işlemler için onay gerekli",
+		"toggleYoloMode": "YOLO modunu değiştir",
+		"renameSession": "Oturumu yeniden adlandır",
+		"clickToRename": "Yeniden adlandırmak için tıkla",
+		"confirmRename": "Yeniden adlandırmayı onayla",
 		"selectModel": "Model seç",
 		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
 		"defaultModel": "Varsayılan model",
@@ -75,7 +82,9 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"approve": "Onayla",
+		"deny": "Reddet"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

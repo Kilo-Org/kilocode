@@ -71,12 +71,9 @@ describe("Commander.js Short Flag Validation", () => {
 				const testProgram = new Command()
 				testProgram.exitOverride()
 
-				expect(
-					() => {
-						testProgram.option(flags, description)
-					},
-					`Expected "${flags}" to throw because short flag is multi-character`,
-				).toThrow()
+				expect(() => {
+					testProgram.option(flags, description)
+				}, `Expected "${flags}" to throw because short flag is multi-character`).toThrow()
 			})
 		})
 	})

@@ -307,21 +307,20 @@ export const sendSecondaryButtonClickAtom = atom(null, async (get, set) => {
 })
 
 /**
- * Action atom to toggle YOLO mode
- * Sends the yoloMode message to the extension to enable/disable auto-approval of all operations
+ * Action atom to toggle YOLO mode locally.
+ * Updates the local yoloModeAtom to enable/disable auto-approval of all operations.
+ *
+ * NOTE: We intentionally do NOT send yoloMode to the extension host.
+ * This ensures session isolation - each CLI instance manages its own yoloMode state.
+ * Sending to extension host would pollute global state and affect other sessions.
+ * See: https://github.com/Kilo-Org/kilocode/pull/4890
  */
-export const toggleYoloModeAtom = atom(null, async (get, set) => {
-	const currentValue = get(yoloModeAtom)
-	const newValue = !currentValue
-
-	set(yoloModeAtom, newValue)
-	logs.info(`YOLO mode ${newValue ? "enabled" : "disabled"}`, "actions")
-
-	const message: WebviewMessage = {
-		type: "yoloMode",
-		bool: newValue,
-	}
-	await set(sendWebviewMessageAtom, message)
+export const toggleYoloModeAtom = atom(null, (_get, set) => {
+	set(yoloModeAtom, (currentValue) => {
+		const newValue = !currentValue
+		logs.info(`YOLO mode ${newValue ? "enabled" : "disabled"}`, "actions")
+		return newValue
+	})
 })
 
 /**

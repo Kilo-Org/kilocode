@@ -15,8 +15,9 @@
 		"shareConfirmMessage": "Vuoi condividere pubblicamente uno snapshot di questa sessione?",
 		"shareConfirmYes": "Sì",
 		"shareConfirmNo": "No",
-		"options": "Opzioni",
-		"configureSetupScript": "Script di setup worktree"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Avvia un nuovo agente",
@@ -57,6 +58,12 @@
 		"noBranches": "Nessun branch trovato",
 		"noMatchingBranches": "Nessun branch corrisponde alla tua ricerca",
 		"openTerminal": "Apri terminale",
+		"yoloModeOn": "Modalità YOLO attiva - tutte le operazioni vengono approvate automaticamente",
+		"yoloModeOff": "Modalità YOLO disattiva - approvazione richiesta per le operazioni",
+		"toggleYoloMode": "Attiva/disattiva modalità YOLO",
+		"renameSession": "Rinomina sessione",
+		"clickToRename": "Clicca per rinominare",
+		"confirmRename": "Conferma rinomina",
 		"selectModel": "Seleziona modello",
 		"modelTooltip": "Scegli quale modello AI usare per questa sessione",
 		"defaultModel": "Modello predefinito",
@@ -75,7 +82,9 @@
 		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}",
 		"expandOutput": "Espandi output",
 		"collapseOutput": "Comprimi output",
-		"copyCommand": "Copia comando"
+		"copyCommand": "Copia comando",
+		"approve": "Approva",
+		"deny": "Rifiuta"
 	},
 	"chatInput": {
 		"autoMode": "Agent in esecuzione in modalità completamente automatica - input non consentito",

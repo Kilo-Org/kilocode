@@ -15,8 +15,9 @@
 		"shareConfirmMessage": "คุณต้องการแชร์สแนปช็อตของเซสชันนี้แบบสาธารณะหรือไม่?",
 		"shareConfirmYes": "ใช่",
 		"shareConfirmNo": "ไม่",
-		"options": "ตัวเลือก",
-		"configureSetupScript": "สคริปต์ตั้งค่า Worktree"
+		"yoloMode": "YOLO mode",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -57,6 +58,12 @@
 		"noBranches": "ไม่พบสาขา",
 		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
 		"openTerminal": "เปิดเทอร์มินัล",
+		"yoloModeOn": "โหมด YOLO เปิด - อนุมัติการดำเนินการทั้งหมดโดยอัตโนมัติ",
+		"yoloModeOff": "โหมด YOLO ปิด - ต้องได้รับอนุมัติสำหรับการดำเนินการ",
+		"toggleYoloMode": "สลับโหมด YOLO",
+		"renameSession": "เปลี่ยนชื่อเซสชัน",
+		"clickToRename": "คลิกเพื่อเปลี่ยนชื่อ",
+		"confirmRename": "ยืนยันการเปลี่ยนชื่อ",
 		"selectModel": "เลือกโมเดล",
 		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
 		"defaultModel": "โมเดลเริ่มต้น",
@@ -75,7 +82,9 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
-		"copyCommand": "คัดลอกคำสั่ง"
+		"copyCommand": "คัดลอกคำสั่ง",
+		"approve": "อนุมัติ",
+		"deny": "ปฏิเสธ"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",
