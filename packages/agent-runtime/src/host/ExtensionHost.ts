@@ -13,6 +13,7 @@ export interface ExtensionHostOptions {
 	customModes?: ModeConfig[] // Custom modes configuration
 	appendSystemPrompt?: string // Custom text to append to system prompt
 	appName?: string // App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0')
+	providerSettings?: Record<string, unknown> // Provider settings (API configuration) to use from startup
 }
 
 // Extension module interface
@@ -755,15 +756,20 @@ export class ExtensionHost extends EventEmitter {
 	}
 
 	private initializeState(): void {
+		// Use provider settings if passed (from agent-manager), otherwise use empty defaults
+		const apiConfiguration = this.options.providerSettings
+			? (this.options.providerSettings as ExtensionState["apiConfiguration"])
+			: {
+					apiProvider: "kilocode" as const,
+					kilocodeToken: "",
+					kilocodeModel: "",
+					kilocodeOrganizationId: "",
+				}
+
 		// Create initial state that matches the extension's expected structure
 		this.currentState = {
 			version: "1.0.0",
-			apiConfiguration: {
-				apiProvider: "kilocode",
-				kilocodeToken: "",
-				kilocodeModel: "",
-				kilocodeOrganizationId: "",
-			},
+			apiConfiguration,
 			chatMessages: [],
 			mode: "code",
 			customModes: this.options.customModes || [],
@@ -789,8 +795,11 @@ export class ExtensionHost extends EventEmitter {
 			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),
 		}
 
-		// The CLI will inject the actual configuration through updateState
-		logs.debug("Initial state created, waiting for CLI config injection", "ExtensionHost")
+		if (this.options.providerSettings) {
+			logs.info("Initial state created with provider settings from caller", "ExtensionHost")
+		} else {
+			logs.debug("Initial state created with empty defaults, waiting for config injection", "ExtensionHost")
+		}
 		this.broadcastStateUpdate()
 	}
 

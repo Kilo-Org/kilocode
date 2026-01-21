@@ -27,6 +27,8 @@ export interface ExtensionServiceOptions {
 	appendSystemPrompt?: string
 	/** App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0') */
 	appName?: string
+	/** Provider settings (API configuration) - set during initialization to avoid race conditions */
+	providerSettings?: Record<string, unknown>
 }
 
 /**
@@ -79,13 +81,14 @@ export class ExtensionService extends EventEmitter {
 	private extensionHost: ExtensionHost
 	private messageBridge: MessageBridge
 	private options: Required<
-		Omit<ExtensionServiceOptions, "identity" | "customModes" | "appendSystemPrompt" | "vscodeAppRoot" | "appName">
+		Omit<ExtensionServiceOptions, "identity" | "customModes" | "appendSystemPrompt" | "vscodeAppRoot" | "appName" | "providerSettings">
 	> & {
 		identity?: IdentityInfo
 		customModes?: ModeConfig[]
 		appendSystemPrompt?: string
 		vscodeAppRoot?: string
 		appName?: string
+		providerSettings?: Record<string, unknown>
 	}
 	private isInitialized = false
 	private isDisposed = false
@@ -117,6 +120,7 @@ export class ExtensionService extends EventEmitter {
 			...(options.appendSystemPrompt && { appendSystemPrompt: options.appendSystemPrompt }),
 			...(options.vscodeAppRoot && { vscodeAppRoot: options.vscodeAppRoot }),
 			...(options.appName && { appName: options.appName }),
+			...(options.providerSettings && { providerSettings: options.providerSettings }),
 		}
 
 		// Create extension host
@@ -139,6 +143,9 @@ export class ExtensionService extends EventEmitter {
 		}
 		if (this.options.appName) {
 			hostOptions.appName = this.options.appName
+		}
+		if (this.options.providerSettings) {
+			hostOptions.providerSettings = this.options.providerSettings
 		}
 		this.extensionHost = createExtensionHost(hostOptions)
 

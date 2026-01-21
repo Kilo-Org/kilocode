@@ -174,6 +174,7 @@ async function main(): Promise<void> {
 
 	try {
 		// Create extension service with configuration
+		// Pass providerSettings at creation time to avoid race conditions
 		agent = createExtensionService({
 			workspace: config.workspace,
 			mode: config.mode,
@@ -184,6 +185,7 @@ async function main(): Promise<void> {
 			vscodeAppRoot: config.vscodeAppRoot,
 			appendSystemPrompt: config.appendSystemPrompt,
 			appName: config.appName,
+			providerSettings: config.providerSettings,
 		})
 
 		// Set up event handlers
