@@ -202,6 +202,8 @@ export interface WebviewMessage {
 		| "rooCloudManualUrl"
 		| "claudeCodeSignIn"
 		| "claudeCodeSignOut"
+		| "openAiCodexSignIn"
+		| "openAiCodexSignOut"
 		| "switchOrganization"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
@@ -228,7 +230,6 @@ export interface WebviewMessage {
 		| "setHistoryPreviewCollapsed" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
-		| "mcpButtonClicked"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
 		| "installMarketplaceItemWithParameters"

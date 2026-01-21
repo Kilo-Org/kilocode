@@ -147,8 +147,27 @@
 		"roo": {
 			"authenticationRequired": "El proveïdor Roo requereix autenticació al núvol. Si us plau, inicieu sessió a Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "No esteu autenticat amb OpenAI Codex. Si us plau, inicieu sessió mitjançant el flux OAuth d'OpenAI Codex.",
+			"invalidRequest": "Sol·licitud no vàlida a l'API de Codex. Si us plau, comproveu els paràmetres d'entrada.",
+			"authenticationFailed": "Ha fallat l'autenticació. Si us plau, torneu a autenticar-vos amb OpenAI Codex.",
+			"accessDenied": "Accés denegat. La vostra subscripció a ChatGPT pot no incloure accés a Codex.",
+			"endpointNotFound": "Punt final de l'API de Codex no trobat.",
+			"rateLimitExceeded": "S'ha superat el límit de velocitat. Si us plau, torneu-ho a provar més tard.",
+			"serviceError": "Error del servei OpenAI Codex. Si us plau, torneu-ho a provar més tard.",
+			"genericError": "Error de l'API de Codex ({{status}})",
+			"noResponseBody": "Error de l'API de Codex: No hi ha cos de resposta",
+			"connectionFailed": "Ha fallat la connexió a l'API de Codex: {{message}}",
+			"unexpectedConnectionError": "Error inesperat en connectar amb l'API de Codex",
+			"apiError": "Error de l'API de Codex: {{message}}",
+			"responseFailed": "La resposta ha fallat: {{message}}",
+			"streamProcessingError": "Error en processar el flux de resposta: {{message}}",
+			"unexpectedStreamError": "Error inesperat en processar el flux de resposta",
+			"completionError": "Error de finalització d'OpenAI Codex: {{message}}"
+		},
 		"api": {
-			"invalidKeyInvalidChars": "La clau API conté caràcters no vàlids."
+			"invalidKeyInvalidChars": "La clau API conté caràcters no vàlids.",
+			"apiRequestFailed": "La sol·licitud API ha fallat ({{status}})"
 		},
 		"manual_url_empty": "Si us plau, introdueix una URL de callback vàlida",
 		"manual_url_no_query": "URL de callback no vàlida: falten paràmetres de consulta",
