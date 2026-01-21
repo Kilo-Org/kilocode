@@ -14,6 +14,7 @@ import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
+import { FileModificationNotificationService } from "../../services/file-modification/FileModificationNotificationService" // kilocode_change
 
 interface EditFileParams {
 	file_path: string
@@ -331,6 +332,15 @@ export class EditFileTool extends BaseTool<"edit_file"> {
 			}
 
 			task.didEditFile = true
+
+			// kilocode_change start: Notify file modification service
+			await FileModificationNotificationService.getInstance().notifyFileModified({
+				filePath: relPath,
+				absolutePath: absolutePath,
+				operation: isNewFile ? "create" : "modify",
+				source: isPreventFocusDisruptionEnabled ? "filesystem" : "vscode_api",
+			})
+			// kilocode_change end
 
 			// Get the formatted response message
 			const replacementInfo =
