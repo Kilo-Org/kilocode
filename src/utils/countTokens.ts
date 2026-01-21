@@ -14,11 +14,13 @@ export async function countTokens(
 	content: Anthropic.Messages.ContentBlockParam[],
 	{ useWorker = true }: CountTokensOptions = {},
 ): Promise<number> {
+	// kilocode_change start - disable workers in agent processes
 	// Disable workers in agent processes to avoid worker pool hanging issues
 	// Agent processes are detected by the AGENT_CONFIG environment variable
 	if (process.env.AGENT_CONFIG) {
 		useWorker = false
 	}
+	// kilocode_change end
 
 	// Lazily create the worker pool if it doesn't exist.
 	if (useWorker && typeof pool === "undefined") {

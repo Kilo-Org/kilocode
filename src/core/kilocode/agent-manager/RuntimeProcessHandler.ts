@@ -114,9 +114,10 @@ export class RuntimeProcessHandler {
 		this.vscodeAppRoot = vscodeAppRoot
 	}
 
-	private debugLog(message: string): void {
-		this.callbacks.onDebugLog?.(message)
-	}
+	// Debug logging disabled for performance - re-enable if needed for debugging
+	// private debugLog(message: string): void {
+	// 	this.callbacks.onDebugLog?.(message)
+	// }
 
 	private clearPendingTimeout(): void {
 		if (this.pendingProcess?.timeoutId) {

@@ -159,6 +159,7 @@ async function main() {
 		outdir: "dist/workers",
 	}
 
+	// kilocode_change start - agent-runtime process bundle
 	/**
 	 * Agent Runtime Process Bundle
 	 *
@@ -198,20 +199,21 @@ async function main() {
 			},
 		],
 	}
+	// kilocode_change end
 
-	const [extensionCtx, workerCtx, agentRuntimeCtx] = await Promise.all([
+	const [extensionCtx, workerCtx, agentRuntimeCtx] = await Promise.all([ // kilocode_change
 		esbuild.context(extensionConfig),
 		esbuild.context(workerConfig),
-		esbuild.context(agentRuntimeProcessConfig),
+		esbuild.context(agentRuntimeProcessConfig), // kilocode_change
 	])
 
 	if (watch) {
-		await Promise.all([extensionCtx.watch(), workerCtx.watch(), agentRuntimeCtx.watch()])
+		await Promise.all([extensionCtx.watch(), workerCtx.watch(), agentRuntimeCtx.watch()]) // kilocode_change
 		copyLocales(srcDir, distDir)
 		setupLocaleWatcher(srcDir, distDir)
 	} else {
-		await Promise.all([extensionCtx.rebuild(), workerCtx.rebuild(), agentRuntimeCtx.rebuild()])
-		await Promise.all([extensionCtx.dispose(), workerCtx.dispose(), agentRuntimeCtx.dispose()])
+		await Promise.all([extensionCtx.rebuild(), workerCtx.rebuild(), agentRuntimeCtx.rebuild()]) // kilocode_change
+		await Promise.all([extensionCtx.dispose(), workerCtx.dispose(), agentRuntimeCtx.dispose()]) // kilocode_change
 	}
 }
 

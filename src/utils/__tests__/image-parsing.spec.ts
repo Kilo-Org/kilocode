@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, expect, it } from "vitest"
 import { parseDataUrlToImageBlock, parseDataUrlsToImageBlocks } from "../image-parsing"
 

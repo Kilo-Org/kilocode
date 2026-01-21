@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import type { Anthropic } from "@anthropic-ai/sdk"
 
 type AnthropicMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp"
