@@ -48,7 +48,7 @@ describe("KilocodeEventProcessor", () => {
 		processor.handle(sessionId, textEvent)
 
 		expect(deps.postChatMessages).not.toHaveBeenCalled()
-		expect(deps.log).toHaveBeenCalledWith(sessionId, expect.stringContaining("skipping user input echo"))
+		expect(deps.log).toHaveBeenCalledWith(sessionId, expect.stringContaining("SKIPPING user echo"))
 	})
 
 	it("records api_req_started and then allows subsequent text", () => {
