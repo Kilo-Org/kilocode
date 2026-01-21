@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Servers"
+			"mcp": "MCP Servers",
+			"agentBehaviour": "พฤติกรรมของตัวแทน"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -149,7 +150,13 @@
 	},
 	"docs": "เอกสาร",
 	"rules": {
-		"tooltip": "จัดการ Kilo Code Rules และ Workflows",
+		"tooltip": "จัดการพฤติกรรมของเอเจนต์ ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "กฎ",
+			"workflows": "เวิร์กโฟลว์",
+			"mcps": "MCPs",
+			"modes": "โหมด"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Rules",
