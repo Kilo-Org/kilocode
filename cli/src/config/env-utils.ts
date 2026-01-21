@@ -53,7 +53,7 @@ export const PROVIDER_ENV_VAR = ENV_VARS.PROVIDER
 /**
  * Set of specific environment variables that should not be treated as provider fields
  */
-export const SPECIFIC_ENV_VARS = new Set([
+export const SPECIFIC_ENV_VARS: Set<string> = new Set([
 	PROVIDER_ENV_VAR,
 	ENV_VARS.PROVIDER_TYPE,
 	ENV_VARS.MODE,
