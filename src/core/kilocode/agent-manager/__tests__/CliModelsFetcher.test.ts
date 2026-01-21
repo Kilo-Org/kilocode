@@ -4,11 +4,11 @@ import type { ChildProcess } from "child_process"
 import { fetchAvailableModels, parseModelsOutput, type ModelsApiResponse } from "../CliModelsFetcher"
 
 // Mock child_process
-vi.mock("child_process", () => ({
+vi.mock("cross-spawn", () => ({
 	spawn: vi.fn(),
 }))
 
-import { spawn } from "child_process"
+import { spawn } from "cross-spawn"
 
 const mockSpawn = vi.mocked(spawn)
 

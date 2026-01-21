@@ -1798,6 +1798,9 @@ importers:
       clone-deep:
         specifier: ^4.0.1
         version: 4.0.1
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       default-shell:
         specifier: ^2.2.0
         version: 2.2.0
@@ -2030,6 +2033,9 @@ importers:
       '@types/clone-deep':
         specifier: ^4.0.4
         version: 4.0.4
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -8237,6 +8243,9 @@ packages:
 
   '@types/cookie@0.3.3':
     resolution: {integrity: sha512-LKVP3cgXBT9RYj+t+9FDKwS5tdI+rPBXaNSkma7hvqy35lc7mAokC2zsqWJH0LaqIt3B962nuYI77hsJoT1gow==}
+
+  '@types/cross-spawn@6.0.6':
+    resolution: {integrity: sha512-fXRhhUkG4H3TQk5dBhQ7m/JDdSNHKwR2BBia62lhwEIq9xGiQKLxd6LymNhn47SjXhsUEPmxi+PKw2OkW4LLjA==}
 
   '@types/d3-array@3.2.1':
     resolution: {integrity: sha512-Y2Jn2idRrLzUfAKV2LyRImR+y4oa2AntrgID95SHJxuMUrkNXmanDSed71sRNZysveJVt1hLLemQZIady0FpEg==}
@@ -29144,6 +29153,10 @@ snapshots:
       '@types/node': 20.19.27
 
   '@types/cookie@0.3.3': {}
+
+  '@types/cross-spawn@6.0.6':
+    dependencies:
+      '@types/node': 20.19.27
 
   '@types/d3-array@3.2.1': {}
 

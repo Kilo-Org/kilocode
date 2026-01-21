@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest"
 import * as path from "path"
-import { spawnSync } from "child_process"
+import { sync as spawnSync } from "cross-spawn"
 import { GitExtensionService } from "../GitExtensionService"
 
-vi.mock("child_process")
+vi.mock("cross-spawn")
 vi.mock("vscode", () => ({
 	window: { showInformationMessage: vi.fn() },
 	workspace: {

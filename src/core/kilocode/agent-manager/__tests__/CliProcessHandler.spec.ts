@@ -4,11 +4,12 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import type { ChildProcess } from "node:child_process"
+import { spawn } from "cross-spawn"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "../CliProcessHandler"
 import { AgentRegistry } from "../AgentRegistry"
 
 // Mock child_process module
-vi.mock("node:child_process", () => ({
+vi.mock("cross-spawn", () => ({
 	spawn: vi.fn(),
 }))
 
@@ -79,8 +80,8 @@ describe("CliProcessHandler", () => {
 		handler = new CliProcessHandler(registry, callbacks)
 
 		mockProcess = createMockProcess()
-		const childProcess = await import("node:child_process")
-		spawnMock = childProcess.spawn as ReturnType<typeof vi.fn>
+		const spawn = await import("cross-spawn")
+		spawnMock = spawn.spawn as ReturnType<typeof vi.fn>
 		spawnMock.mockReturnValue(mockProcess)
 	})
 
@@ -327,29 +328,19 @@ describe("CliProcessHandler", () => {
 		describe("Windows .cmd file handling", () => {
 			it("uses cmd.exe for .cmd files on Windows", () => {
 				const originalPlatform = process.platform
-				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+				const expectedCommand = "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
 					const onCliEvent = vi.fn()
-					handler.spawnProcess(
-						"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
-						"/workspace",
-						"test prompt",
-						undefined,
-						onCliEvent,
-					)
+					handler.spawnProcess(expectedCommand, "/workspace", "test prompt", undefined, onCliEvent)
 
 					expect(spawnMock).toHaveBeenCalledWith(
 						expectedCommand,
-						expect.arrayContaining([
-							"/c",
-							"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
-						]),
+						expect.arrayContaining(["--json-io", "--yolo", "--workspace=/workspace", "test prompt"]),
 						expect.objectContaining({ shell: false }),
 					)
 					const args = spawnMock.mock.calls[0]?.[1] as string[]
-					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}
@@ -357,26 +348,19 @@ describe("CliProcessHandler", () => {
 
 			it("uses cmd.exe for .CMD files (case insensitive) on Windows", () => {
 				const originalPlatform = process.platform
-				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+				const expectedCommand = "C:\\Users\\test\\kilocode.CMD"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
 					const onCliEvent = vi.fn()
-					handler.spawnProcess(
-						"C:\\Users\\test\\kilocode.CMD",
-						"/workspace",
-						"test prompt",
-						undefined,
-						onCliEvent,
-					)
+					handler.spawnProcess(expectedCommand, "/workspace", "test prompt", undefined, onCliEvent)
 
 					expect(spawnMock).toHaveBeenCalledWith(
 						expectedCommand,
-						expect.arrayContaining(["/c", "C:\\Users\\test\\kilocode.CMD"]),
+						expect.arrayContaining(["--workspace=/workspace", "test prompt"]),
 						expect.objectContaining({ shell: false }),
 					)
 					const args = spawnMock.mock.calls[0]?.[1] as string[]
-					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}

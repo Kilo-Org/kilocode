@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
 import * as path from "path"
-import { spawnSync } from "child_process"
+import { sync as spawnSync } from "cross-spawn"
 import { shouldExcludeLockFile } from "./exclusionUtils"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { GitProgressOptions, GitChange, GitOptions, GitStatus } from "./types"

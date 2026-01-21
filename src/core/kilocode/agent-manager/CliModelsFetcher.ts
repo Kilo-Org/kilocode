@@ -1,4 +1,4 @@
-import { spawn } from "child_process"
+import { spawn } from "cross-spawn"
 
 /**
  * Model information returned from CLI models command

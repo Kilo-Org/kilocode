@@ -1,6 +1,8 @@
 import * as path from "node:path"
 import * as fs from "node:fs"
-import { execSync, spawnSync } from "node:child_process"
+import { execSync } from "node:child_process"
+import { sync as spawnSync } from "cross-spawn"
+
 import { fileExistsAtPath } from "../../../utils/fs"
 import { getLocalCliPath } from "./CliInstaller"
 import { stripShellControlCodes } from "./ShellOutput"

@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { spawn } from "child_process"
+import { spawn } from "cross-spawn"
 import { Readable } from "stream"
 
 import { chunksToLinesAsync, combine } from "./iterable"

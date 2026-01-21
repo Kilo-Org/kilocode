@@ -115,9 +115,9 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const spawnMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
-		vi.doMock("node:child_process", () => ({
+		vi.doMock("cross-spawn", () => ({
 			spawn: spawnMock,
-			execSync: execSyncMock,
+			sync: execSyncMock,
 		}))
 
 		const module = await import("../AgentManagerProvider")
@@ -132,7 +132,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 	it("spawns kilocode without shell interpolation for prompt arguments", async () => {
 		await (provider as any).startAgentSession('echo "$(whoami)"')
 
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 		expect(spawnMock).toHaveBeenCalledTimes(1)
 		const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
 		expect(cmd).toBe(MOCK_CLI_PATH)
@@ -213,9 +213,9 @@ describe("AgentManagerProvider CLI spawning", () => {
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
-		vi.doMock("node:child_process", () => ({
+		vi.doMock("cross-spawn", () => ({
 			spawn: spawnMock,
-			execSync: vi.fn().mockImplementation(() => {
+			sync: vi.fn().mockImplementation(() => {
 				throw new Error("not found")
 			}),
 		}))
@@ -235,10 +235,9 @@ describe("AgentManagerProvider CLI spawning", () => {
 				string[],
 				Record<string, unknown>,
 			]
-			const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+			const expectedCommand = "c:\\npm\\kilocode.cmd"
 			expect(cmd.toLowerCase()).toBe(expectedCommand.toLowerCase())
-			expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
-			expect(args).toEqual(expect.arrayContaining([cmdPath]))
+			expect(args.slice(0, 3)).toEqual(["--json-io", "--yolo", "--workspace=C:\\tmp\\workspace"])
 			expect(options?.shell).toBe(false)
 
 			windowsProvider.dispose()
@@ -260,7 +259,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("creates session when session_created event is received", async () => {
 		await (provider as any).startAgentSession("test session created")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
 		// Emit session_created event
@@ -589,7 +588,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		it("kills pending process on dispose", async () => {
 			await (provider as any).startAgentSession("pending session")
 
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 			const proc = spawnMock.mock.results[0].value
 
 			const processHandler = (provider as any).processHandler
@@ -604,7 +603,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		it("kills all running processes on dispose", async () => {
 			// Start two sessions and simulate session_created for both
 			await (provider as any).startAgentSession("session 1")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
 			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -624,7 +623,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("clears all timeouts on dispose", async () => {
 			await (provider as any).startAgentSession("session with timeout")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -645,7 +644,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("returns true when a session is running", async () => {
 			await (provider as any).startAgentSession("running")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -654,7 +653,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("returns count of running sessions", async () => {
 			await (provider as any).startAgentSession("running 1")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -720,9 +719,9 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		const spawnMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
-		vi.doMock("node:child_process", () => ({
+		vi.doMock("cross-spawn", () => ({
 			spawn: spawnMock,
-			execSync: execSyncMock,
+			sync: execSyncMock,
 		}))
 
 		const module = await import("../AgentManagerProvider")
@@ -772,7 +771,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 	it("stores gitUrl on created session", async () => {
 		await (provider as any).startAgentSession("test prompt")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
 		// Emit session_created event
@@ -973,9 +972,9 @@ describe("AgentManagerProvider telemetry", () => {
 		const spawnMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
-		vi.doMock("node:child_process", () => ({
+		vi.doMock("cross-spawn", () => ({
 			spawn: spawnMock,
-			execSync: execSyncMock,
+			sync: execSyncMock,
 		}))
 
 		const module = await import("../AgentManagerProvider")
@@ -989,7 +988,7 @@ describe("AgentManagerProvider telemetry", () => {
 
 	it("tracks session started telemetry when session_created event is received", async () => {
 		await (provider as any).startAgentSession("test telemetry")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
 		// Emit session_created event
@@ -1003,7 +1002,7 @@ describe("AgentManagerProvider telemetry", () => {
 
 	it("tracks session started with worktree flag for parallel mode sessions", async () => {
 		await (provider as any).startAgentSession("test parallel", { parallelMode: true })
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const spawnMock = (await import("cross-spawn")).spawn as unknown as Mock
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
 		// Emit session_created event

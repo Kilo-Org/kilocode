@@ -1,4 +1,6 @@
-import { spawn, ChildProcess } from "node:child_process"
+import { ChildProcess } from "node:child_process"
+import { spawn } from "cross-spawn"
+
 import * as path from "node:path"
 import {
 	CliOutputParser,
@@ -212,8 +214,8 @@ export class CliProcessHandler {
 		// On Windows, batch files must be launched via cmd.exe to handle paths with spaces reliably.
 		const isWindowsBatch =
 			process.platform === "win32" && [".cmd", ".bat"].includes(path.extname(cliPath).toLowerCase())
-		const spawnCommand = isWindowsBatch ? process.env.ComSpec || "cmd.exe" : cliPath
-		const spawnArgs = isWindowsBatch ? ["/d", "/s", "/c", cliPath, ...cliArgs] : cliArgs
+		const spawnCommand = cliPath
+		const spawnArgs = cliArgs
 
 		this.debugLog(`Command: ${spawnCommand} ${spawnArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
