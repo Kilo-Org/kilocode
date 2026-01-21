@@ -125,6 +125,12 @@ export const Agentica: React.FC<AgenticaProps> = ({
         }
     }
 
+    // Refresh Agentica models callback – defined before useEffect to avoid TDZ
+    const refreshAgenticaModels = useCallback(() => {
+        if (!apiConfiguration.agenticaApiKey) return
+        vscode.postMessage({ type: "flushRouterModels", text: "agentica" })
+    }, [apiConfiguration.agenticaApiKey])
+
     // Fetch subscription status when credentials are provided (API key or email/password)
     // Models are fetched via routerModels (dynamic provider)
     useEffect(() => {
@@ -162,12 +168,6 @@ export const Agentica: React.FC<AgenticaProps> = ({
         }
     }
 
-    // Trigger models refresh via routerModels when API key changes
-    const refreshAgenticaModels = useCallback(() => {
-        if (!apiConfiguration.agenticaApiKey) return
-        // Request router models refresh for agentica provider
-        vscode.postMessage({ type: "flushRouterModels", text: "agentica" })
-    }, [apiConfiguration.agenticaApiKey])
 
 
     const handleDeviceAuth = useCallback(() => {
