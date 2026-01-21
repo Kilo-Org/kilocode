@@ -979,7 +979,12 @@ export const webviewMessageHandler = async (
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
 				},
-			]
+				// kilocode_change: Agentica dynamic provider
+				{
+					key: "agentica",
+					options: { provider: "agentica", apiKey: apiConfiguration.agenticaApiKey },
+				},
+				]
 			// kilocode_change end
 
 			// IO Intelligence is conditional on api key
