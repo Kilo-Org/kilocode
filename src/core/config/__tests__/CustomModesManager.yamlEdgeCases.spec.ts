@@ -524,5 +524,67 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 				},
 			])
 		})
+
+		it("should sync YAML-defined mode model overrides into globalState without deleting existing overrides", async () => {
+			// Existing overrides should be preserved unless YAML explicitly sets a mode.model.
+			;(mockContext.globalState.get as Mock).mockImplementation((key: string) => {
+				if (key === "modeModelOverrides") return { code: "kilocode/existing" }
+				if (key === "customModes") return [] // no stored org modes
+				return undefined
+			})
+
+			const yamlWithModel = yaml.stringify({
+				customModes: [
+					{
+						slug: "yaml-model-mode",
+						name: "YAML Model Mode",
+						roleDefinition: "Test role",
+						model: "kilocode/from-yaml",
+						groups: ["read"],
+					},
+				],
+			})
+
+			mockFsReadFile({
+				[mockRoomodes]: yamlWithModel,
+				[mockSettingsPath]: yaml.stringify({ customModes: [] }),
+			})
+
+			await manager.getCustomModes()
+
+			expect(mockContext.globalState.update).toHaveBeenCalledWith("modeModelOverrides", {
+				code: "kilocode/existing",
+				"yaml-model-mode": "kilocode/from-yaml",
+			})
+		})
+
+		it("should not delete overrides when YAML mode.model is omitted", async () => {
+			;(mockContext.globalState.get as Mock).mockImplementation((key: string) => {
+				if (key === "modeModelOverrides") return { code: "kilocode/existing" }
+				if (key === "customModes") return []
+				return undefined
+			})
+
+			const yamlWithoutModel = yaml.stringify({
+				customModes: [
+					{
+						slug: "yaml-no-model-mode",
+						name: "YAML No Model Mode",
+						roleDefinition: "Test role",
+						groups: ["read"],
+					},
+				],
+			})
+
+			mockFsReadFile({
+				[mockRoomodes]: yamlWithoutModel,
+				[mockSettingsPath]: yaml.stringify({ customModes: [] }),
+			})
+
+			await manager.getCustomModes()
+
+			// Because there is no `model` field, sync should be a no-op and avoid writing.
+			expect(mockContext.globalState.update).not.toHaveBeenCalledWith("modeModelOverrides", expect.anything())
+		})
 	})
 })

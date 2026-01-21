@@ -305,10 +305,14 @@ export class CustomModesManager {
 	 * Derive a `modeModelOverrides` object from merged custom modes.
 	 *
 	 * Behavior:
-	 * - For any mode slug that exists in `mergedModes`:
-	 *   - If `mode.model` is defined, set/overwrite the override.
-	 *   - If `mode.model` is not defined, delete any existing override for that slug.
-	 * - For slugs that do not exist in `mergedModes`, keep existing overrides as-is.
+	 * - If `mode.model` is defined for a mode slug that exists in `mergedModes`, set/overwrite the override.
+	 * - If `mode.model` is not defined, leave any existing override untouched.
+	 *
+	 * Rationale:
+	 * - Custom modes YAML/JSON typically won't specify a model. Deleting overrides in that case would
+	 *   unintentionally wipe UI-selected per-mode models.
+	 * - This function is called on every custom modes refresh (file watcher + startup), so it must be
+	 *   conservative and only apply explicit declarations.
 	 *
 	 * This lets YAML/JSON mode definitions control overrides for the modes they define,
 	 * while still allowing UI-driven overrides for built-in modes that are not present
@@ -322,16 +326,25 @@ export class CustomModesManager {
 			const updated: Record<string, string> = { ...current }
 
 			for (const mode of mergedModes) {
-				// Only manage overrides for modes that are represented in custom modes files.
-				// (built-in modes with no YAML entry should remain controlled via UI state).
+				// Only apply explicit declarations.
+				// NOTE: We intentionally do NOT delete overrides when `mode.model` is absent.
 				if (mode.model) {
 					updated[mode.slug] = mode.model
-				} else {
-					delete updated[mode.slug]
 				}
 			}
 
+			// Avoid unnecessary writes (helps reduce churn from file watcher updates).
+			const isEqual =
+				Object.keys(updated).length === Object.keys(current).length &&
+				Object.keys(updated).every((k) => updated[k] === current[k])
+			if (isEqual) {
+				return
+			}
+
 			await this.context.globalState.update("modeModelOverrides", updated)
+			logger.debug("Synced modeModelOverrides from custom modes", {
+				updatedKeys: Object.keys(updated),
+			})
 		} catch (error) {
 			logger.error("Failed to sync modeModelOverrides from custom modes", {
 				error: error instanceof Error ? error.message : String(error),

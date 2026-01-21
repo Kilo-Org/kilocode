@@ -267,6 +267,19 @@ export class ClineProvider
 		this.providerSettingsManager = new ProviderSettingsManager(this.context)
 
 		this.customModesManager = new CustomModesManager(this.context, async () => {
+			// kilocode_change start: keep ContextProxy state in sync with CustomModesManager globalState writes
+			// CustomModesManager updates `context.globalState` directly (not through ContextProxy).
+			// To ensure the webview reflects YAML-defined mode model overrides immediately (no reload),
+			// mirror `modeModelOverrides` into ContextProxy before posting state.
+			try {
+				const overridesFromGlobalState =
+					this.context.globalState.get<Record<string, string>>("modeModelOverrides") ?? {}
+				await this.contextProxy.setValue("modeModelOverrides", overridesFromGlobalState)
+			} catch {
+				// non-fatal
+			}
+			// kilocode_change end
+
 			await this.postStateToWebview()
 		})
 
