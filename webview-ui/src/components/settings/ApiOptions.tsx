@@ -26,6 +26,7 @@ import {
     syntheticDefaultModelId,
     ovhCloudAiEndpointsDefaultModelId,
     inceptionDefaultModelId,
+    agenticaDefaultModelId,
     MODEL_SELECTION_ENABLED,
     // kilocode_change end
     mistralDefaultModelId,
@@ -427,6 +428,7 @@ const ApiOptions = ({
                 synthetic: { field: "apiModelId", default: syntheticDefaultModelId },
                 ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
                 inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId },
+                agentica: { field: "agenticaModelId", default: agenticaDefaultModelId },
                 // kilocode_change end
             }
 
