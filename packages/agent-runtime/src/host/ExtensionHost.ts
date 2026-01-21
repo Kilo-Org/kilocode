@@ -358,6 +358,10 @@ export class ExtensionHost extends EventEmitter {
 	}
 
 	private async setupVSCodeAPIMock(): Promise<void> {
+		// Use memory-only storage when providerSettings is provided (agent-manager mode)
+		// This avoids file I/O and CLI path dependencies
+		const useMemoryOnlyStorage = !!this.options.providerSettings
+
 		// Create VSCode API mock with extension root path for assets and identity
 		this.vscodeAPI = createVSCodeAPIMock(
 			this.options.extensionRootPath,
@@ -365,6 +369,7 @@ export class ExtensionHost extends EventEmitter {
 			this.options.identity,
 			this.options.vscodeAppRoot,
 			this.options.appName,
+			useMemoryOnlyStorage,
 		) as VSCodeAPIMock
 
 		// Set global vscode object for the extension
