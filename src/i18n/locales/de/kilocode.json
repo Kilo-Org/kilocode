@@ -177,7 +177,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Deine Kilocode CLI-Version ist veraltet und unterstützt den Agent Manager nicht. Bitte aktualisiere auf die neueste Version.",
-			"cliNotFound": "Kilocode CLI nicht gefunden. Bitte installiere es, um den Agent Manager zu nutzen.",
 			"cliMisconfigured": "Kilocode CLI ist nicht konfiguriert. Bitte führe 'kilocode auth' aus, um dich anzumelden, oder 'kilocode config' zum Konfigurieren.",
 			"sessionFailed": "Agent-Sitzung konnte nicht gestartet werden",
 			"sessionFailedWithMessage": "Agent-Sitzung konnte nicht gestartet werden: {{message}}"

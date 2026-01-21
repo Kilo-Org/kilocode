@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useContext } from "react"
-import { SKILLS_MARKETPLACE_ENABLED } from "@roo-code/types" // kilocode_change
 import { Button } from "@/components/ui/button"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { MarketplaceViewStateManager } from "./MarketplaceViewStateManager"
@@ -174,18 +173,14 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 								}>
 								Modes
 							</button>
-							{/* kilocode_change start - Skills tab button or filler div */}
-							{SKILLS_MARKETPLACE_ENABLED ? (
-								<button
-									className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
-									onClick={() =>
-										manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skills" } })
-									}>
-									Skills
-								</button>
-							) : (
-								<div className="flex-1" />
-							)}
+							{/* kilocode_change start - Skills tab button */}
+							<button
+								className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
+								onClick={() =>
+									manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skills" } })
+								}>
+								Skills
+							</button>
 							{/* kilocode_change end */}
 						</div>
 					</div>
@@ -211,7 +206,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 						/>
 					)}
 					{/* kilocode_change start - Skills marketplace tab content */}
-					{SKILLS_MARKETPLACE_ENABLED && state.activeTab === "skills" && (
+					{state.activeTab === "skills" && (
 						<SkillsMarketplace skills={stateManager.getSkills()} isLoading={state.isFetching} />
 					)}
 					{/* kilocode_change end */}
