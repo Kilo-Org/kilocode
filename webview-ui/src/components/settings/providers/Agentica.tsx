@@ -17,6 +17,7 @@ type AgenticaProps = {
     organizationAllowList?: OrganizationAllowList
     modelValidationError?: string
     simplifySettings?: boolean
+    onModelsLoaded?: (models: Record<string, any>) => void
 }
 
 type DeviceAuthStatus = "idle" | "pending" | "success" | "error"
@@ -29,6 +30,7 @@ export const Agentica: React.FC<AgenticaProps> = ({
     organizationAllowList = ORGANIZATION_ALLOW_ALL,
     modelValidationError,
     simplifySettings,
+    onModelsLoaded,
 }) => {
     const [subscription, setSubscription] = useState<any>(null)
     const [loading, setLoading] = useState(false)
@@ -39,6 +41,8 @@ export const Agentica: React.FC<AgenticaProps> = ({
     const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
     const [deviceAuthError, setDeviceAuthError] = useState<string>()
     const [showPlansView, setShowPlansView] = useState(false)
+    const [agenticaModels, setAgenticaModels] = useState<Record<string, any>>({})
+    const [modelsLoading, setModelsLoading] = useState(false)
 
     // Load stored password on component mount
     useEffect(() => {
@@ -125,10 +129,11 @@ export const Agentica: React.FC<AgenticaProps> = ({
         }
     }
 
-    // Fetch subscription status when credentials are provided (API key or email/password)
+    // Fetch subscription status and models when credentials are provided (API key or email/password)
     useEffect(() => {
         if (apiConfiguration.agenticaApiKey) {
             fetchSubscriptionWithApiKey()
+            fetchAgenticaModels()
         } else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
             fetchSubscription()
         }
@@ -157,6 +162,43 @@ export const Agentica: React.FC<AgenticaProps> = ({
             setError("Failed to fetch subscription status")
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchAgenticaModels = async () => {
+        if (!apiConfiguration.agenticaApiKey) return
+
+        setModelsLoading(true)
+        try {
+            const response = await fetch("https://api.genlabs.dev/agentica/v1/models", {
+                headers: {
+                    "Authorization": `Bearer ${apiConfiguration.agenticaApiKey}`,
+                },
+            })
+            if (!response.ok) {
+                throw new Error(`Failed to fetch models: ${response.statusText}`)
+            }
+            const data = await response.json()
+            const models = data.data?.reduce((acc: Record<string, any>, model: any) => {
+                acc[model.id] = {
+                    contextWindow: model.context_window || 128000,
+                    maxTokens: model.max_tokens,
+                    supportsImages: model.supports_images || false,
+                    supportsPromptCache: false,
+                    inputPrice: model.pricing?.input || 0,
+                    outputPrice: model.pricing?.output || 0,
+                    description: model.description,
+                }
+                return acc
+            }, {}) || {}
+            setAgenticaModels(models)
+            if (onModelsLoaded) {
+                onModelsLoaded(models)
+            }
+        } catch (err: any) {
+            console.error("Failed to fetch Agentica models:", err)
+        } finally {
+            setModelsLoading(false)
         }
     }
 
@@ -226,7 +268,7 @@ export const Agentica: React.FC<AgenticaProps> = ({
                     disabled={deviceAuthStatus === "pending"}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                     <span className="codicon codicon-github" style={{ fontSize: "16px", flexShrink: 0 }} aria-hidden="true"></span>
-                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <span style={{ whiteSpace: "nowrap" }}>
                         {deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}
                     </span>
                 </VSCodeButton>
@@ -382,7 +424,7 @@ export const Agentica: React.FC<AgenticaProps> = ({
                 apiConfiguration={apiConfiguration}
                 setApiConfigurationField={setApiConfigurationField}
                 defaultModelId={agenticaDefaultModelId}
-                models={routerModels?.agentica ?? {}}
+                models={agenticaModels || routerModels?.agentica ?? {}}
                 modelIdKey="agenticaModelId"
                 serviceName="Agentica"
                 serviceUrl="https://api.genlabs.dev/agentica/v1/models"
