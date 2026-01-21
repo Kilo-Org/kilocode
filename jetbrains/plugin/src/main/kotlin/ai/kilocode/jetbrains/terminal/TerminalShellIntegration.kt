@@ -129,7 +129,7 @@ class TerminalShellIntegration(
     private inner class TerminalShellEventListener : ShellEventListener {
 
         override fun onShellExecutionStart(commandLine: String, cwd: String) {
-            logger.info("$LOG_PREFIX_START Command execution started: '$commandLine' in directory '$cwd' (terminal: $extHostTerminalId)")
+            logger.info("$LOG_PREFIX_START Command execution started: '$commandLine' in directory '$cwd' (terminal: $extHostTerminalId, numericId: $numericId)")
 
             safeRpcCall("Notify ExtHost command start") {
                 extHostProxy.shellExecutionStart(
@@ -144,7 +144,7 @@ class TerminalShellIntegration(
 
         override fun onShellExecutionEnd(commandLine: String, exitCode: Int?) {
             val actualExitCode = exitCode ?: DEFAULT_EXIT_CODE
-            logger.info("$LOG_PREFIX_END Command execution finished: '$commandLine' (exit code: $actualExitCode) (terminal: $extHostTerminalId)")
+            logger.info("$LOG_PREFIX_END Command execution finished: '$commandLine' (exit code: $actualExitCode) (terminal: $extHostTerminalId, numericId: $numericId)")
 
             safeRpcCall("Notify ExtHost command end") {
                 extHostProxy.shellExecutionEnd(
@@ -158,8 +158,6 @@ class TerminalShellIntegration(
         }
 
         override fun onShellExecutionData(data: String) {
-            logger.debug("$LOG_PREFIX_DATA Clean output data: ${data.length} chars (terminal: $extHostTerminalId)")
-
             safeRpcCall("Send shellExecutionData") {
                 extHostProxy.shellExecutionData(
                     instanceId = numericId,
@@ -169,7 +167,7 @@ class TerminalShellIntegration(
         }
 
         override fun onCwdChange(cwd: String) {
-            logger.info("$LOG_PREFIX_CWD Working directory changed to: '$cwd' (terminal: $extHostTerminalId)")
+            logger.info("$LOG_PREFIX_CWD Working directory changed to: '$cwd' (terminal: $extHostTerminalId, numericId: $numericId)")
 
             safeRpcCall("Notify ExtHost directory change") {
                 extHostProxy.cwdChange(

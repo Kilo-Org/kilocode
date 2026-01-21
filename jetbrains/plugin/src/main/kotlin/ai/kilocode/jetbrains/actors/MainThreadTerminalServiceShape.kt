@@ -196,8 +196,6 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override suspend fun createTerminal(extHostTerminalId: String, config: Map<String, Any?>) {
-        logger.info("🚀 Creating terminal: $extHostTerminalId, config: $config")
-
         try {
             // Check if terminal already exists
             if (terminalManager.containsTerminal(extHostTerminalId)) {
@@ -209,14 +207,12 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             val pluginContext = PluginContext.getInstance(project)
             val rpcProtocol = pluginContext.getRPCProtocol()
             if (rpcProtocol == null) {
-                logger.error("❌ Unable to get RPC protocol instance, terminal creation failed: $extHostTerminalId")
+                logger.error("Unable to get RPC protocol instance, terminal creation failed: $extHostTerminalId")
                 throw IllegalStateException("RPC protocol not initialized")
             }
-            logger.info("✅ Got RPC protocol instance: ${rpcProtocol.javaClass.simpleName}")
 
             // Allocate numeric ID
             val numericId = terminalManager.allocateNumericId()
-            logger.info("🔢 Allocated terminal numeric ID: $numericId")
 
             // Create terminal instance
             val terminalConfig = TerminalConfig.fromMap(config)
@@ -230,7 +226,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
 
             logger.info("✅ Terminal created successfully: $extHostTerminalId (numericId: $numericId)")
         } catch (e: Exception) {
-            logger.error("❌ Failed to create terminal: $extHostTerminalId", e)
+            logger.error("Failed to create terminal: $extHostTerminalId", e)
             // Clean up possibly created resources
             terminalManager.unregisterTerminal(extHostTerminalId)
             throw e
