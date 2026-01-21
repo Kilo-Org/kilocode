@@ -39,6 +39,7 @@ import {
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
 	glamaDefaultModelId, // kilocode_change
+	agenticaDefaultModelId, // kilocode_change
 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
@@ -1846,6 +1847,7 @@ export class ClineProvider
 						apiProvider: "agentica",
 						agenticaApiKey,
 						agenticaEmail: agenticaEmail || apiConfiguration?.agenticaEmail,
+						agenticaModelId: apiConfiguration?.agenticaModelId || agenticaDefaultModelId,
 					})
 
 					this.postMessageToWebview({
