@@ -19,120 +19,107 @@ interface SecurePasswordMessage {
  * Type for pending request callbacks
  */
 type PromiseCallbacks = {
-    resolve: (value: string | null) => void
-    reject: (reason: any) => void
+    resolve: (value: string | null | PromiseLike<string | null>) => void
+    reject: (reason?: any) => void
+}
+
+// Simple object-based storage for pending requests (avoids Map initialization issues in webview)
+const pendingRequests: Record<string, PromiseCallbacks> = {}
+
+// Message handler for secure password responses
+function handlePasswordMessage(event: MessageEvent) {
+    const message: SecurePasswordMessage = event.data
+
+    if (message.type === 'securePasswordRetrieved') {
+        const request = pendingRequests[message.key]
+        if (request) {
+            delete pendingRequests[message.key]
+            if (message.error) {
+                request.reject(new Error(message.error))
+            } else {
+                request.resolve(message.password || null)
+            }
+        }
+    }
+}
+
+// Initialize message listener
+if (typeof window !== 'undefined') {
+    window.addEventListener('message', handlePasswordMessage)
 }
 
 /**
- * Promise-based wrapper for secure password operations
+ * Store password securely through VS Code extension
  */
-class SecurePasswordManager {
-    private pendingRequests = new Map<string, PromiseCallbacks>()
-    
-    constructor() {
-        // Listen for responses from the extension
-        if (typeof window !== 'undefined' && (window as any).vscode) {
-            window.addEventListener('message', this.handleMessage.bind(this))
-        }
-    }
-    
-    private handleMessage(event: MessageEvent) {
-        const message: SecurePasswordMessage = event.data
-        
-        if (message.type === 'securePasswordRetrieved') {
-            const mapInstance = this.pendingRequests as any
-            const request = mapInstance.get(message.key)
-            if (request) {
-                mapInstance.delete(message.key)
-                if (message.error) {
-                    request.reject(new Error(message.error))
-                } else {
-                    request.resolve(message.password || null)
-                }
-            }
-        }
-    }
-    
-    /**
-     * Store password securely through VS Code extension
-     */
-    async storePassword(key: string, password: string): Promise<void> {
-        if (typeof window !== 'undefined' && (window as any).vscode) {
-            (window as any).vscode.postMessage({
-                type: 'storeSecurePassword',
-                key: key,
-                password: password
-            })
-        } else {
-            // Fallback to sessionStorage in development
-            try {
-                sessionStorage.setItem(key, password)
-            } catch (error) {
-                console.error('Failed to store password in fallback storage:', error)
-            }
-        }
-    }
-    
-    /**
-     * Retrieve password securely through VS Code extension
-     */
-    async getPassword(key: string): Promise<string | null> {
-        if (typeof window !== 'undefined' && (window as any).vscode) {
-            return new Promise((resolve, reject) => {
-                // Create callbacks object
-                const callbacks: PromiseCallbacks = { resolve, reject }
-                
-                // Store callbacks using explicit any casting
-                const mapInstance = this.pendingRequests as any
-                mapInstance.set(key, callbacks)
-                
-                // Send request to extension
-                (window as any).vscode.postMessage({
-                    type: 'getSecurePassword',
-                    key: key
-                })
-                
-                // Set timeout for request
-                setTimeout(() => {
-                    if (mapInstance.has(key)) {
-                        mapInstance.delete(key)
-                        reject(new Error('Password retrieval timeout'))
-                    }
-                }, 5000)
-            })
-        } else {
-            // Fallback to sessionStorage in development
-            try {
-                return sessionStorage.getItem(key)
-            } catch (error) {
-                console.error('Failed to retrieve password from fallback storage:', error)
-                return null
-            }
-        }
-    }
-    
-    /**
-     * Clear password securely through VS Code extension
-     */
-    async clearPassword(key: string): Promise<void> {
-        if (typeof window !== 'undefined' && (window as any).vscode) {
-            (window as any).vscode.postMessage({
-                type: 'clearSecurePassword',
-                key: key
-            })
-        } else {
-            // Fallback to sessionStorage in development
-            try {
-                sessionStorage.removeItem(key)
-            } catch (error) {
-                console.error('Failed to clear password from fallback storage:', error)
-            }
+async function storePasswordSecure(key: string, password: string): Promise<void> {
+    if (typeof window !== 'undefined' && (window as any).vscode) {
+        (window as any).vscode.postMessage({
+            type: 'storeSecurePassword',
+            key: key,
+            password: password
+        })
+    } else {
+        // Fallback to sessionStorage in development
+        try {
+            sessionStorage.setItem(key, password)
+        } catch (error) {
+            console.error('Failed to store password in fallback storage:', error)
         }
     }
 }
 
-// Create singleton instance
-const securePasswordManager = new SecurePasswordManager()
+/**
+ * Retrieve password securely through VS Code extension
+ */
+async function getPasswordSecure(key: string): Promise<string | null> {
+    if (typeof window !== 'undefined' && (window as any).vscode) {
+        return new Promise((resolve, reject) => {
+            // Store callbacks
+            pendingRequests[key] = { resolve, reject }
+
+            // Send request to extension
+            ;(window as any).vscode.postMessage({
+                type: 'getSecurePassword',
+                key: key
+            })
+
+            // Set timeout for request
+            setTimeout(() => {
+                if (pendingRequests[key]) {
+                    delete pendingRequests[key]
+                    reject(new Error('Password retrieval timeout'))
+                }
+            }, 5000)
+        })
+    } else {
+        // Fallback to sessionStorage in development
+        try {
+            return sessionStorage.getItem(key)
+        } catch (error) {
+            console.error('Failed to retrieve password from fallback storage:', error)
+            return null
+        }
+    }
+}
+
+/**
+ * Clear password securely through VS Code extension
+ */
+async function clearPasswordSecure(key: string): Promise<void> {
+    if (typeof window !== 'undefined' && (window as any).vscode) {
+        (window as any).vscode.postMessage({
+            type: 'clearSecurePassword',
+            key: key
+        })
+    } else {
+        // Fallback to sessionStorage in development
+        try {
+            sessionStorage.removeItem(key)
+        } catch (error) {
+            console.error('Failed to clear password from fallback storage:', error)
+        }
+    }
+}
 
 /**
  * Enhanced password storage that works with VS Code extension backend
@@ -145,7 +132,7 @@ export const securePasswordStorage = {
      */
     async storePassword(key: string, password: string): Promise<void> {
         try {
-            await securePasswordManager.storePassword(key, password)
+            await storePasswordSecure(key, password)
         } catch (error) {
             console.error('Failed to store password securely:', error)
             throw error
@@ -159,7 +146,7 @@ export const securePasswordStorage = {
      */
     async getPassword(key: string): Promise<string | null> {
         try {
-            return await securePasswordManager.getPassword(key)
+            return await getPasswordSecure(key)
         } catch (error) {
             console.error('Failed to retrieve password securely:', error)
             // Fallback to sessionStorage
@@ -178,7 +165,7 @@ export const securePasswordStorage = {
      */
     async clearPassword(key: string): Promise<void> {
         try {
-            await securePasswordManager.clearPassword(key)
+            await clearPasswordSecure(key)
         } catch (error) {
             console.error('Failed to clear password securely:', error)
             // Fallback to sessionStorage
