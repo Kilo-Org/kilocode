@@ -25,7 +25,10 @@ vi.mock("vscode", () => {
 		Test: 3,
 	}
 	const ThemeIcon = vi.fn()
-	return { window, Uri, workspace, ExtensionMode, ThemeIcon }
+	const env = {
+		appRoot: "/mock/vscode/app/root",
+	}
+	return { window, Uri, workspace, ExtensionMode, ThemeIcon, env }
 })
 
 describe("AgentManagerProvider IPC paths", () => {
