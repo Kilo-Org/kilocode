@@ -35,7 +35,6 @@ import type { ProviderName } from "./types/messages.js"
 import { getSelectedModelId } from "./utils/providers.js"
 import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
-import { resolveExtensionPaths } from "./utils/extension-paths.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
 import { randomUUID } from "crypto"
@@ -112,15 +111,10 @@ export class CLI {
 			const identityManager = getIdentityManager()
 			const identity = identityManager.getIdentity()
 
-			// Resolve extension paths for agent-runtime
-			const extensionPaths = resolveExtensionPaths()
-
 			// Create ExtensionService with identity
 			const serviceOptions: Parameters<typeof createExtensionService>[0] = {
 				workspace: this.options.workspace || process.cwd(),
 				mode: this.options.mode || "code",
-				extensionBundlePath: extensionPaths.extensionBundlePath,
-				extensionRootPath: extensionPaths.extensionRootPath,
 			}
 
 			if (identity) {
