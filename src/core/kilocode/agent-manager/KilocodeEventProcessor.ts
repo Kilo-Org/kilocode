@@ -1,6 +1,6 @@
 import type { KilocodeStreamEvent, KilocodePayload } from "./CliOutputParser"
 import type { ClineMessage } from "@roo-code/types"
-import { CliProcessHandler } from "./CliProcessHandler"
+import { RuntimeProcessHandler } from "./RuntimeProcessHandler"
 import { AgentRegistry } from "./AgentRegistry"
 
 /**
@@ -12,7 +12,7 @@ export interface StateEventPayload {
 }
 
 interface Dependencies {
-	processHandler: CliProcessHandler
+	processHandler: RuntimeProcessHandler
 	registry: AgentRegistry
 	sessionMessages: Map<string, ClineMessage[]>
 	firstApiReqStarted: Map<string, boolean>
@@ -24,7 +24,7 @@ interface Dependencies {
 }
 
 export class KilocodeEventProcessor {
-	private readonly processHandler: CliProcessHandler
+	private readonly processHandler: RuntimeProcessHandler
 	private readonly registry: AgentRegistry
 	private readonly sessionMessages: Map<string, ClineMessage[]>
 	private readonly firstApiReqStarted: Map<string, boolean>

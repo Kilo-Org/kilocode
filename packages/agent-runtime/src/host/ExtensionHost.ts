@@ -1,17 +1,19 @@
 import { EventEmitter } from "events"
 import { createVSCodeAPIMock, type IdentityInfo, type ExtensionContext } from "./VSCode.js"
-import { logs } from "../services/logs.js"
-import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/messages.js"
-import { getTelemetryService } from "../services/telemetry/index.js"
+import { logs } from "../utils/logger.js"
+import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/index.js"
+import { getTelemetryService } from "../utils/telemetry.js"
 import { argsToMessage } from "../utils/safe-stringify.js"
 
 export interface ExtensionHostOptions {
 	workspacePath: string
 	extensionBundlePath: string // Direct path to extension.js
 	extensionRootPath: string // Root path for extension assets
+	vscodeAppRoot?: string // VS Code app root path (for finding bundled binaries like ripgrep)
 	identity?: IdentityInfo // Identity information for VSCode environment
 	customModes?: ModeConfig[] // Custom modes configuration
 	appendSystemPrompt?: string // Custom text to append to system prompt
+	appName?: string // App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0')
 }
 
 // Extension module interface
@@ -364,6 +366,8 @@ export class ExtensionHost extends EventEmitter {
 			this.options.extensionRootPath,
 			this.options.workspacePath,
 			this.options.identity,
+			this.options.vscodeAppRoot,
+			this.options.appName,
 		) as VSCodeAPIMock
 
 		// Set global vscode object for the extension
@@ -470,9 +474,10 @@ export class ExtensionHost extends EventEmitter {
 		try {
 			logs.info(`Loading extension from: ${extensionPath}`, "ExtensionHost")
 
-			// Use createRequire to load CommonJS module from ES module context
+			// Use createRequire to load CommonJS module
+			// We use extensionPath as the base since that's what we're loading from
 			const { createRequire } = await import("module")
-			const require = createRequire(import.meta.url)
+			const require = createRequire(extensionPath)
 
 			// Get Module class for interception
 			const Module = await import("module")

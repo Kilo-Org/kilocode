@@ -3,7 +3,7 @@ import * as path from "path"
 import * as fs from "fs"
 
 /**
- * Centralized path management for Kilo Code CLI
+ * Centralized path management for Kilo Code agent runtime
  * All configuration and logs are stored in ~/.kilocode/
  */
 export class KiloCodePaths {

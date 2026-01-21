@@ -31,7 +31,11 @@ let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerP
 
 describe("AgentManagerProvider CLI spawning", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
-	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
+	const mockContext = {
+		extensionUri: { fsPath: "/mock/extension/path" },
+		extensionPath: "",
+		extensionMode: 1 /* Development */,
+	} as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
 	let mockWindow: {
 		showErrorMessage: Mock
@@ -69,6 +73,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		// Mock CliInstaller so getLocalCliPath returns our mock path
 		vi.doMock("../CliInstaller", () => ({
 			getLocalCliPath: () => MOCK_CLI_PATH,
+			canInstallCli: () => false,
 		}))
 
 		// Mock fileExistsAtPath to return true only for MOCK_CLI_PATH
@@ -110,13 +115,21 @@ describe("AgentManagerProvider CLI spawning", () => {
 			stderr = new EventEmitter()
 			kill = vi.fn()
 			pid = 1234
+			exitCode: number | null = null // Process hasn't exited yet
+			// IPC send method for forked processes - calls callback immediately with no error
+			send = vi.fn().mockImplementation((msg: unknown, callback?: (err: Error | null) => void) => {
+				if (callback) callback(null)
+				return true
+			})
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
+		const forkMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
+			fork: forkMock,
 			execSync: execSyncMock,
 		}))
 
@@ -129,15 +142,21 @@ describe("AgentManagerProvider CLI spawning", () => {
 		provider.dispose()
 	})
 
-	it("spawns kilocode without shell interpolation for prompt arguments", async () => {
+	it("forks agent-runtime process for session", async () => {
 		await (provider as any).startAgentSession('echo "$(whoami)"')
 
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-		expect(spawnMock).toHaveBeenCalledTimes(1)
-		const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
-		expect(cmd).toBe(MOCK_CLI_PATH)
-		expect(args[args.length - 1]).toBe('echo "$(whoami)"')
-		expect(options?.shell).not.toBe(true)
+		// RuntimeProcessHandler uses fork instead of spawn
+		const forkMock = (await import("node:child_process")).fork as unknown as Mock
+		expect(forkMock).toHaveBeenCalledTimes(1)
+		const [entryPath, args, options] = forkMock.mock.calls[0] as unknown as [
+			string,
+			string[],
+			Record<string, unknown>,
+		]
+		// Entry path should be the agent-runtime process entry point
+		expect(entryPath).toBeDefined()
+		// Options should include IPC stdio configuration
+		expect(options?.stdio).toContain("ipc")
 	})
 
 	// Windows-specific test - runs only on Windows CI
@@ -210,11 +229,18 @@ describe("AgentManagerProvider CLI spawning", () => {
 			stderr = new EventEmitter()
 			kill = vi.fn()
 			pid = 1234
+			exitCode: number | null = null
+			send = vi.fn().mockImplementation((msg: unknown, callback?: (err: Error | null) => void) => {
+				if (callback) callback(null)
+				return true
+			})
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
+		const forkMock = vi.fn(() => new TestProc())
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
+			fork: forkMock,
 			execSync: vi.fn().mockImplementation(() => {
 				throw new Error("not found")
 			}),
@@ -258,22 +284,21 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect((provider as any).registry.getSessions()).toHaveLength(0)
 	})
 
-	it("creates session when session_created event is received", async () => {
+	it("creates session when ready event is received", async () => {
 		await (provider as any).startAgentSession("test session created")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+		const forkMock = (await import("node:child_process")).fork as unknown as Mock
+		const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
-		// Emit session_created event
-		const sessionCreatedEvent = '{"event":"session_created","sessionId":"cli-session-123","timestamp":1234567890}\n'
-		proc.stdout.emit("data", Buffer.from(sessionCreatedEvent))
+		// Emit IPC ready message - session is created on ready in RuntimeProcessHandler
+		proc.emit("message", { type: "ready" })
 
 		// Pending session should be cleared
 		expect((provider as any).registry.pendingSession).toBeNull()
 
-		// Session should be created with CLI's sessionId
+		// Session should be created with auto-generated sessionId
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions).toHaveLength(1)
-		expect(sessions[0].sessionId).toBe("cli-session-123")
+		expect(sessions[0].sessionId).toMatch(/^agent_/)
 	})
 
 	it("waits for pending processes to clear before resolving multi-version sequencing", async () => {
@@ -589,8 +614,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 		it("kills pending process on dispose", async () => {
 			await (provider as any).startAgentSession("pending session")
 
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc = spawnMock.mock.results[0].value
+			const forkMock = (await import("node:child_process")).fork as unknown as Mock
+			const proc = forkMock.mock.results[0].value
 
 			const processHandler = (provider as any).processHandler
 			expect(processHandler.pendingProcess).not.toBeNull()
@@ -604,13 +629,16 @@ describe("AgentManagerProvider CLI spawning", () => {
 		it("kills all running processes on dispose", async () => {
 			// Start two sessions and simulate session_created for both
 			await (provider as any).startAgentSession("session 1")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
-			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+			const forkMock = (await import("node:child_process")).fork as unknown as Mock
+			const proc1 = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
+			// Emit IPC ready message followed by session_created
+			proc1.emit("message", { type: "ready" })
+			proc1.emit("message", { type: "session_created", sessionId: "session-1" })
 
 			await (provider as any).startAgentSession("session 2")
-			const proc2 = spawnMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
-			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
+			const proc2 = forkMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
+			proc2.emit("message", { type: "ready" })
+			proc2.emit("message", { type: "session_created", sessionId: "session-2" })
 
 			const processHandler = (provider as any).processHandler
 			expect(processHandler.activeSessions.size).toBe(2)
@@ -624,9 +652,10 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("clears all timeouts on dispose", async () => {
 			await (provider as any).startAgentSession("session with timeout")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
-			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+			const forkMock = (await import("node:child_process")).fork as unknown as Mock
+			const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc.emit("message", { type: "ready" })
+			proc.emit("message", { type: "session_created", sessionId: "session-1" })
 
 			const processHandler = (provider as any).processHandler
 			expect(processHandler.activeSessions.size).toBe(1)
@@ -645,22 +674,25 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("returns true when a session is running", async () => {
 			await (provider as any).startAgentSession("running")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
-			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+			const forkMock = (await import("node:child_process")).fork as unknown as Mock
+			const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc.emit("message", { type: "ready" })
+			proc.emit("message", { type: "session_created", sessionId: "session-1" })
 
 			expect((provider as any).hasRunningSessions()).toBe(true)
 		})
 
 		it("returns count of running sessions", async () => {
 			await (provider as any).startAgentSession("running 1")
-			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
-			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+			const forkMock = (await import("node:child_process")).fork as unknown as Mock
+			const proc1 = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc1.emit("message", { type: "ready" })
+			proc1.emit("message", { type: "session_created", sessionId: "session-1" })
 
 			await (provider as any).startAgentSession("running 2")
-			const proc2 = spawnMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter }
-			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
+			const proc2 = forkMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter }
+			proc2.emit("message", { type: "ready" })
+			proc2.emit("message", { type: "session_created", sessionId: "session-2" })
 
 			expect((provider as any).getRunningSessionCount()).toBe(2)
 		})
@@ -669,7 +701,11 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 describe("AgentManagerProvider gitUrl filtering", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
-	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
+	const mockContext = {
+		extensionUri: { fsPath: "/mock/extension/path" },
+		extensionPath: "",
+		extensionMode: 1 /* Development */,
+	} as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
 	let mockGetRemoteUrl: Mock
 
@@ -699,6 +735,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		// Mock CliInstaller so getLocalCliPath returns our mock path
 		vi.doMock("../CliInstaller", () => ({
 			getLocalCliPath: () => MOCK_CLI_PATH,
+			canInstallCli: () => false,
 		}))
 
 		vi.doMock("../../../../utils/fs", () => ({
@@ -715,13 +752,20 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			stderr = new EventEmitter()
 			kill = vi.fn()
 			pid = 1234
+			exitCode: number | null = null
+			send = vi.fn().mockImplementation((msg: unknown, callback?: (err: Error | null) => void) => {
+				if (callback) callback(null)
+				return true
+			})
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
+		const forkMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
+			fork: forkMock,
 			execSync: execSyncMock,
 		}))
 
@@ -772,11 +816,12 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 	it("stores gitUrl on created session", async () => {
 		await (provider as any).startAgentSession("test prompt")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+		const forkMock = (await import("node:child_process")).fork as unknown as Mock
+		const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
-		// Emit session_created event
-		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+		// Emit IPC ready message followed by session_created
+		proc.emit("message", { type: "ready" })
+		proc.emit("message", { type: "session_created", sessionId: "session-1" })
 
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions[0].gitUrl).toBe("https://github.com/org/repo.git")
@@ -923,7 +968,11 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 describe("AgentManagerProvider telemetry", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
-	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
+	const mockContext = {
+		extensionUri: { fsPath: "/mock/extension/path" },
+		extensionPath: "",
+		extensionMode: 1 /* Development */,
+	} as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
 
 	beforeEach(async () => {
@@ -953,6 +1002,7 @@ describe("AgentManagerProvider telemetry", () => {
 		// Mock CliInstaller so getLocalCliPath returns our mock path
 		vi.doMock("../CliInstaller", () => ({
 			getLocalCliPath: () => MOCK_CLI_PATH,
+			canInstallCli: () => false,
 		}))
 
 		vi.doMock("../../../../utils/fs", () => ({
@@ -968,13 +1018,20 @@ describe("AgentManagerProvider telemetry", () => {
 			stderr = new EventEmitter()
 			kill = vi.fn()
 			pid = 1234
+			exitCode: number | null = null
+			send = vi.fn().mockImplementation((msg: unknown, callback?: (err: Error | null) => void) => {
+				if (callback) callback(null)
+				return true
+			})
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
+		const forkMock = vi.fn(() => new TestProc())
 		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
 
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
+			fork: forkMock,
 			execSync: execSyncMock,
 		}))
 
@@ -989,28 +1046,28 @@ describe("AgentManagerProvider telemetry", () => {
 
 	it("tracks session started telemetry when session_created event is received", async () => {
 		await (provider as any).startAgentSession("test telemetry")
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+		const forkMock = (await import("node:child_process")).fork as unknown as Mock
+		const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
-		// Emit session_created event
-		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-telemetry-1"}\n'))
+		// Emit IPC ready message - session is created on ready, not on session_created
+		proc.emit("message", { type: "ready" })
 
 		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
-			"session-telemetry-1",
+			expect.any(String), // RuntimeProcessHandler generates session ID
 			false, // useWorktree = false (no parallel mode)
 		)
 	})
 
 	it("tracks session started with worktree flag for parallel mode sessions", async () => {
 		await (provider as any).startAgentSession("test parallel", { parallelMode: true })
-		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+		const forkMock = (await import("node:child_process")).fork as unknown as Mock
+		const proc = forkMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
-		// Emit session_created event
-		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-parallel-1"}\n'))
+		// Emit IPC ready message - session is created on ready
+		proc.emit("message", { type: "ready" })
 
 		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
-			"session-parallel-1",
+			expect.any(String), // RuntimeProcessHandler generates session ID
 			true, // useWorktree = true (parallel mode enabled)
 		)
 	})

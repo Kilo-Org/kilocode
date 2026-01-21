@@ -1,6 +1,6 @@
 import { EventEmitter } from "events"
-import { logs } from "../services/logs.js"
-import type { ExtensionMessage, WebviewMessage } from "../types/messages.js"
+import { logs } from "../utils/logger.js"
+import type { ExtensionMessage, WebviewMessage } from "../types/index.js"
 
 export interface IPCMessage {
 	id: string

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from "vitest"
 import type { KilocodeStreamEvent } from "../CliOutputParser"
 import { KilocodeEventProcessor } from "../KilocodeEventProcessor"
-import { CliProcessHandler } from "../CliProcessHandler"
+import { RuntimeProcessHandler } from "../RuntimeProcessHandler"
 import { AgentRegistry } from "../AgentRegistry"
 import type { ClineMessage } from "@roo-code/types"
 
 function createDeps() {
 	const processHandler = {
 		stopProcess: vi.fn(),
-	} as unknown as CliProcessHandler
+	} as unknown as RuntimeProcessHandler
 	const registry = {
 		updateSessionStatus: vi.fn(),
 	} as unknown as AgentRegistry

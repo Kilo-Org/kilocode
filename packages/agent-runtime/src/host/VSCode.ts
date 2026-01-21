@@ -1,9 +1,11 @@
 import * as fs from "fs"
 import * as path from "path"
-import { logs } from "../services/logs.js"
+import { logs } from "../utils/logger.js"
 import { KiloCodePaths } from "../utils/paths.js"
 import { Package } from "../constants/package.js"
-import { machineIdSync } from "node-machine-id"
+// Use default import for CommonJS module compatibility
+import nodeMachineId from "node-machine-id"
+const { machineIdSync } = nodeMachineId
 
 // Identity information for VSCode environment
 export interface IdentityInfo {
@@ -1993,6 +1995,22 @@ export class WindowAPI {
 			// Set up webview mock that captures messages from the extension
 			const mockWebview = {
 				postMessage: (message: unknown): Thenable<boolean> => {
+					// Debug: log what messages are being posted
+					const msgObj = message as {
+						type?: string
+						state?: { chatMessages?: unknown[]; clineMessages?: unknown[] }
+					}
+					if (msgObj.type === "state" && msgObj.state) {
+						const chatCount = msgObj.state.chatMessages?.length || 0
+						const clineCount = msgObj.state.clineMessages?.length || 0
+						const lastMsg =
+							msgObj.state.chatMessages?.[chatCount - 1] || msgObj.state.clineMessages?.[clineCount - 1]
+						logs.info(
+							`[WEBVIEW postMessage] state: chatMessages=${chatCount}, clineMessages=${clineCount}, lastType=${(lastMsg as { type?: string; say?: string; ask?: string })?.type}, lastSay=${(lastMsg as { say?: string })?.say}, lastAsk=${(lastMsg as { ask?: string })?.ask}`,
+							"VSCode.Window",
+						)
+					}
+
 					// Forward extension messages to ExtensionHost for CLI consumption
 					if ((global as unknown as { __extensionHost?: unknown }).__extensionHost) {
 						;(
@@ -2310,7 +2328,13 @@ export class CommandsAPI {
 }
 
 // Main VSCode API mock
-export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: string, identity?: IdentityInfo) {
+export function createVSCodeAPIMock(
+	extensionRootPath: string,
+	workspacePath: string,
+	identity?: IdentityInfo,
+	vscodeAppRoot?: string,
+	appName?: string,
+) {
 	const context = new ExtensionContext(extensionRootPath, workspacePath)
 	const workspace = new WorkspaceAPI(workspacePath, context)
 	const window = new WindowAPI()
@@ -2320,9 +2344,14 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 	window.setWorkspace(workspace)
 
 	// Environment mock with identity values
+	// Use vscodeAppRoot if provided (for finding bundled binaries like ripgrep)
+	// appName format: wrapper|<source>|<type>|<version>
+	// - source: 'cli' for direct CLI, 'agent-manager' for spawned agents
+	// - type: 'cli' for CLI process
+	const resolvedAppName = appName || `wrapper|cli|cli|${Package.version}`
 	const env = {
-		appName: `wrapper|cli|cli|${Package.version}`,
-		appRoot: import.meta.dirname,
+		appName: resolvedAppName,
+		appRoot: vscodeAppRoot || import.meta.dirname,
 		language: "en",
 		machineId: identity?.machineId || machineIdSync(),
 		sessionId: identity?.sessionId || "cli-session-id",

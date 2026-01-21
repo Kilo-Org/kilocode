@@ -1228,7 +1228,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// state.
 					askTs = await this.nextClineMessageTimestamp_kilocode()
 					this.lastMessageTs = askTs
-					console.log(`Task#ask: new partial ask -> ${type} @ ${askTs}`)
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, partial, isProtected })
 					// console.log("Task#ask: current ask promise was ignored (#2)")
 					throw new AskIgnoredError("new partial")
@@ -1253,7 +1252,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// So in this case we must make sure that the message ts is
 					// never altered after first setting it.
 					askTs = lastMessage.ts
-					console.log(`Task#ask: updating previous partial ask -> ${type} @ ${askTs}`)
 					this.lastMessageTs = askTs
 					lastMessage.text = text
 					lastMessage.partial = false
@@ -1267,7 +1265,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
 					askTs = await this.nextClineMessageTimestamp_kilocode() // kilocode_change
-					console.log(`Task#ask: new complete ask -> ${type} @ ${askTs}`)
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 				}
@@ -1344,12 +1341,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const isStatusMutable = !partial && isBlocking && !isMessageQueued && approval.decision === "ask"
 
-		if (isBlocking) {
-			console.log(`Task#ask will block -> type: ${type}`)
-		}
-
 		if (isStatusMutable) {
-			console.log(`Task#ask: status is mutable -> type: ${type}`)
 			const statusMutationTimeout = 2_000
 
 			if (isInteractiveAsk(type)) {
@@ -1388,8 +1380,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				)
 			}
 		} else if (isMessageQueued) {
-			console.log(`Task#ask: will process message queue -> type: ${type}`)
-
 			const message = this.messageQueueService.dequeueMessage()
 
 			if (message) {
@@ -2200,7 +2190,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	 */
 	public cancelCurrentRequest(): void {
 		if (this.currentRequestAbortController) {
-			console.log(`[Task#${this.taskId}.${this.instanceId}] Aborting current HTTP request`)
 			this.currentRequestAbortController.abort()
 			this.currentRequestAbortController = undefined
 		}
@@ -2252,8 +2241,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public dispose(): void {
-		console.log(`[Task#dispose] disposing task ${this.taskId}.${this.instanceId}`)
-
 		// Cancel any in-progress HTTP request
 		try {
 			this.cancelCurrentRequest()
@@ -3396,9 +3383,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 								// Check if task was aborted during the backoff
 								if (this.abort) {
-									console.log(
-										`[Task#${this.taskId}.${this.instanceId}] Task aborted during mid-stream retry backoff`,
-									)
 									// Abort the entire task
 									this.abortReason = "user_cancelled"
 									await this.abortTask()
@@ -3683,9 +3667,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 						// Check if task was aborted during the backoff
 						if (this.abort) {
-							console.log(
-								`[Task#${this.taskId}.${this.instanceId}] Task aborted during empty-assistant retry backoff`,
-							)
 							break
 						}
 
@@ -4086,7 +4067,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		options: { skipProviderRateLimit?: boolean } = {},
 	): ApiStream {
 		const state = await this.providerRef.deref()?.getState()
-
 		const {
 			apiConfiguration,
 			autoApprovalEnabled,
@@ -4360,7 +4340,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Set up abort handling - store listener reference for cleanup
 		// to avoid accumulating listeners on the AbortSignal
 		const abortCleanupListener = () => {
-			console.log(`[Task#${this.taskId}.${this.instanceId}] AbortSignal triggered for current request`)
 			this.currentRequestAbortController = undefined
 		}
 		abortSignal.addEventListener("abort", abortCleanupListener)

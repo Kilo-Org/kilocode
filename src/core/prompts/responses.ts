@@ -258,15 +258,35 @@ Otherwise, if you have not completed the task and do not need additional informa
 // to avoid circular dependency
 const formatImagesIntoBlocks = (images?: string[]): Anthropic.ImageBlockParam[] => {
 	return images
-		? images.map((dataUrl) => {
-				// data:image/png;base64,base64string
-				const [rest, base64] = dataUrl.split(",")
-				const mimeType = rest.split(":")[1].split(";")[0]
-				return {
-					type: "image",
-					source: { type: "base64", media_type: mimeType, data: base64 },
-				} as Anthropic.ImageBlockParam
-			})
+		? images
+				.map((dataUrl) => {
+					// data:image/png;base64,base64string
+					if (!dataUrl || typeof dataUrl !== "string") {
+						return null
+					}
+					const parts = dataUrl.split(",")
+					if (parts.length < 2) {
+						return null
+					}
+					const [rest, base64] = parts
+					const restParts = rest?.split(":")
+					if (!restParts || restParts.length < 2) {
+						return null
+					}
+					const mimeTypeParts = restParts[1]?.split(";")
+					if (!mimeTypeParts || mimeTypeParts.length < 1) {
+						return null
+					}
+					const mimeType = mimeTypeParts[0]
+					if (!mimeType || !base64) {
+						return null
+					}
+					return {
+						type: "image",
+						source: { type: "base64", media_type: mimeType, data: base64 },
+					} as Anthropic.ImageBlockParam
+				})
+				.filter((block): block is Anthropic.ImageBlockParam => block !== null)
 		: []
 }
 
