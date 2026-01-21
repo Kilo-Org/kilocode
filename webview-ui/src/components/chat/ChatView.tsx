@@ -181,6 +181,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const stickyFollowRef = useRef<boolean>(false)
 	const [showScrollToBottom, setShowScrollToBottom] = useState(false)
 	const [isAtBottom, setIsAtBottom] = useState(false)
+	// Track previous message count to detect when new content is added
+	const prevMessagesCountRef = useRef<number>(groupedMessages.length)
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [checkpointWarning, setCheckpointWarning] = useState<
@@ -1266,6 +1268,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return () => el.removeEventListener("scroll", onScroll)
 	}, [])
 
+	// Maintain sticky follow when new content is added and user was at bottom
+	useEffect(() => {
+		const currentCount = groupedMessages.length
+		const prevCount = prevMessagesCountRef.current
+		
+		// If new content was added and user was at bottom, maintain sticky follow
+		if (currentCount > prevCount && isAtBottom) {
+			stickyFollowRef.current = true
+		}
+		
+		// Update previous count for next comparison
+		prevMessagesCountRef.current = currentCount
+	}, [groupedMessages.length, isAtBottom])
+
 	//kilocode_change
 	// Effect to clear checkpoint warning when messages appear or task changes
 	useEffect(() => {
@@ -1668,6 +1684,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									setIsAtBottom(isAtBottom)
 									// Only show the scroll-to-bottom button if not at bottom
 									setShowScrollToBottom(!isAtBottom)
+									// If user moves away from bottom, disable sticky follow
+									// (but don't re-enable it here - that's handled by the effect below)
+									if (!isAtBottom) {
+										stickyFollowRef.current = false
+									}
 								}}
 								atBottomThreshold={10}
 								initialTopMostItemIndex={groupedMessages.length - 1}
