@@ -292,7 +292,11 @@ export const webviewMessageHandler = async (
 				)
 
 				hasCheckpoint = checkpoints.length > 0
+			} else {
+				console.log("[webviewMessageHandler] Edit - Message not found in clineMessages!")
 			}
+		} else {
+			console.log("[webviewMessageHandler] Edit - No currentCline available!")
 		}
 
 		// Send message to webview to show edit confirmation dialog

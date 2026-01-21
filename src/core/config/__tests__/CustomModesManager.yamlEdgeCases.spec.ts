@@ -16,35 +16,21 @@ import { GlobalFileNames } from "../../../shared/globalFileNames"
 
 import { CustomModesManager } from "../CustomModesManager"
 
-// Create a mutable workspace mock that can be modified in tests
-const mockWorkspace = vi.hoisted(() => ({
-	workspaceFolders: [] as { uri: { fsPath: string } }[],
-	onDidSaveTextDocument: vi.fn(),
-	createFileSystemWatcher: vi.fn(),
-}))
-
 vi.mock("vscode", () => ({
-	workspace: mockWorkspace,
+	workspace: {
+		workspaceFolders: [],
+		onDidSaveTextDocument: vi.fn(),
+		createFileSystemWatcher: vi.fn(),
+	},
 	window: {
 		showErrorMessage: vi.fn(),
 	},
-}))
-
-// Mock i18n to return a predictable format for testing
-vi.mock("../../../i18n", () => ({
-	t: vi.fn((key: string) => {
-		// Return the key without namespace prefix for easier assertions
-		return key.includes(":") ? key.split(":")[1] : key
-	}),
 }))
 
 vi.mock("fs/promises")
 
 vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
-vi.mock("../../../utils/globalContext", () => ({
-	ensureSettingsDirectoryExists: vi.fn().mockResolvedValue("/mock/settings/settings"),
-}))
 
 describe("CustomModesManager - YAML Edge Cases", () => {
 	let manager: CustomModesManager
@@ -79,8 +65,7 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 		} as unknown as vscode.ExtensionContext
 
 		mockWorkspaceFolders = [{ uri: { fsPath: "/mock/workspace" } }]
-		// Update the mutable mock workspace folders
-		mockWorkspace.workspaceFolders = mockWorkspaceFolders
+		;(vscode.workspace as any).workspaceFolders = mockWorkspaceFolders
 		;(vscode.workspace.onDidSaveTextDocument as Mock).mockReturnValue({ dispose: vi.fn() })
 		;(getWorkspacePath as Mock).mockReturnValue("/mock/workspace")
 		;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
@@ -309,9 +294,6 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 		})
 
 		it("should provide schema validation error messages", async () => {
-			// Create fresh manager to avoid cache issues from previous tests
-			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
-
 			const invalidSchema = yaml.stringify({
 				customModes: [
 					{
@@ -323,24 +305,16 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 				],
 			})
 
-			// Use path.join to ensure path format matches what the code uses
-			const roomodesPath = path.join("/mock/workspace", ".kilocodemodes")
-
 			mockFsReadFile({
-				[roomodesPath]: invalidSchema,
+				[mockRoomodes]: invalidSchema,
 				[mockSettingsPath]: yaml.stringify({ customModes: [] }),
 			})
 
-			// Update fileExistsAtPath to recognize the roomodes path
-			;(fileExistsAtPath as Mock).mockImplementation(async (p: string) => {
-				return p === mockSettingsPath || p === roomodesPath
-			})
+			const modes = await manager.getCustomModes()
 
-			const modes = await freshManager.getCustomModes()
-
-			// Should show schema validation error (i18n mock strips namespace prefix)
+			// Should show schema validation error
 			expect(modes).toHaveLength(0)
-			expect(vscode.window.showErrorMessage).toHaveBeenCalled()
+			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("customModes.errors.schemaValidationError")
 		})
 	})
 
