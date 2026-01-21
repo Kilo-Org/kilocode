@@ -145,13 +145,32 @@
 			"authenticationRequired": "Dostawca Roo wymaga uwierzytelnienia w chmurze. Zaloguj się do Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "Klucz API zawiera nieprawidłowe znaki."
+			"invalidKeyInvalidChars": "Klucz API zawiera nieprawidłowe znaki.",
+			"apiRequestFailed": "Żądanie API nie powiodło się ({{status}})"
 		},
 		"manual_url_empty": "Wprowadź prawidłowy URL callback",
 		"manual_url_no_query": "Nieprawidłowy URL callback: brak parametrów zapytania",
 		"manual_url_missing_params": "Nieprawidłowy URL callback: brak wymaganych parametrów (code i state)",
 		"manual_url_auth_failed": "Ręczne uwierzytelnienie URL nie powiodło się",
-		"manual_url_auth_error": "Uwierzytelnienie nie powiodło się"
+		"manual_url_auth_error": "Uwierzytelnienie nie powiodło się",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Nie wybrano zawartości terminala",

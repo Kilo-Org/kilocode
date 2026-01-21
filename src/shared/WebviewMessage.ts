@@ -202,6 +202,8 @@ export interface WebviewMessage {
 		| "rooCloudManualUrl"
 		| "claudeCodeSignIn"
 		| "claudeCodeSignOut"
+		| "openAiCodexSignIn"
+		| "openAiCodexSignOut"
 		| "switchOrganization"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
