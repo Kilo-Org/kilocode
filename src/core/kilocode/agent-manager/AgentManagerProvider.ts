@@ -125,9 +125,20 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.showAgentError(error)
 			},
 			onChatMessages: (sessionId, messages) => {
-				// Cache messages so they're available when switching sessions
-				this.sessionMessages.set(sessionId, messages)
-				this.postMessage({ type: "agentManager.chatMessages", sessionId, messages })
+				// Merge incoming messages with existing history (for resumed sessions)
+				// Use timestamp as key to deduplicate and preserve order
+				const existingMessages = this.sessionMessages.get(sessionId) || []
+				const existingByTs = new Map(existingMessages.map((m) => [m.ts, m]))
+
+				// Add incoming messages, updating existing ones by timestamp
+				for (const msg of messages) {
+					existingByTs.set(msg.ts, msg)
+				}
+
+				// Sort by timestamp and cache
+				const mergedMessages = Array.from(existingByTs.values()).sort((a, b) => a.ts - b.ts)
+				this.sessionMessages.set(sessionId, mergedMessages)
+				this.postMessage({ type: "agentManager.chatMessages", sessionId, messages: mergedMessages })
 			},
 			onSessionCreated: (sawApiReqStarted: boolean) => {
 				// Initialize messages for the new session with the initial prompt
@@ -143,7 +154,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 						say: "user_feedback",
 						text: latestSession.prompt,
 					}
-					this.sessionMessages.set(latestSession.sessionId, [initialMessage])
+					// For resumed sessions, preserve existing messages and append the new prompt
+					// For new sessions, start with just the initial message
+					const existingMessages = this.sessionMessages.get(latestSession.sessionId) || []
+					this.outputChannel.appendLine(
+						`[AgentManager] onSessionCreated: sessionId=${latestSession.sessionId}, existingMessages=${existingMessages.length}`,
+					)
+					const updatedMessages = [...existingMessages, initialMessage]
+					this.sessionMessages.set(latestSession.sessionId, updatedMessages)
+
+					// Post updated messages to webview (important for resumed sessions with history)
+					this.postMessage({
+						type: "agentManager.chatMessages",
+						sessionId: latestSession.sessionId,
+						messages: updatedMessages,
+					})
+
 					// Transfer api_req_started flag captured during pending phase
 					// This ensures KilocodeEventProcessor knows the user echo already happened
 					if (sawApiReqStarted) {
@@ -318,6 +344,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					void this.resumeSession(
 						message.sessionId as string,
 						message.content as string,
+						message.sessionLabel as string | undefined,
 						message.images as string[] | undefined,
 					)
 					break
@@ -1229,13 +1256,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Resume a completed session by spawning a new CLI process with --session flag.
+	 * Supports both local sessions (in registry) and remote sessions (from server).
 	 */
-	public async resumeSession(sessionId: string, content: string, images?: string[]): Promise<void> {
+	public async resumeSession(
+		sessionId: string,
+		content: string,
+		sessionLabel?: string,
+		images?: string[],
+	): Promise<void> {
 		const session = this.registry.getSession(sessionId)
-		if (!session) {
-			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not found, cannot resume`)
-			return
-		}
 
 		// If session is still running, send as regular message instead
 		if (this.processHandler.hasStdin(sessionId)) {
@@ -1250,8 +1279,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
 
-		// Handle parallel mode session resumption
-		if (session.parallelMode?.enabled && session.parallelMode.branch) {
+		// Handle local session with parallel mode
+		if (session?.parallelMode?.enabled && session.parallelMode.branch) {
 			const worktreeInfo = await this.prepareWorktreeForResume(session)
 			if (worktreeInfo) {
 				await this.spawnAgentWithCommonSetup(content, {
@@ -1268,10 +1297,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.outputChannel.appendLine(`[AgentManager] Failed to prepare worktree, resuming without parallel mode`)
 		}
 
+		// Resume session - works for both local and remote sessions
+		// The sessionId triggers --session=<id> flag which loads conversation from server
 		await this.spawnAgentWithCommonSetup(content, {
-			sessionId, // This triggers --session=<id> flag
-			parallelMode: session.parallelMode?.enabled,
-			gitUrl: session.gitUrl,
+			sessionId,
+			label: sessionLabel || session?.label,
+			parallelMode: session?.parallelMode?.enabled,
+			gitUrl: session?.gitUrl,
 			images, // Pass base64 images directly
 		})
 	}
