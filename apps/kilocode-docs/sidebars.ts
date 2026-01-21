@@ -233,6 +233,7 @@ const sidebars: SidebarsConfig = {
 						"contributing/architecture/track-repo-url",
 						"contributing/architecture/vercel-ai-gateway",
 						"contributing/architecture/voice-transcription",
+						"contributing/architecture/model-o11y",
 					],
 				},
 			],
