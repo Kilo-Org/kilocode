@@ -19,7 +19,6 @@ import {
 	SquareTerminal,
 	FlaskConical,
 	AlertTriangle,
-	Globe,
 	Info,
 	Bot, // kilocode_change
 	MessageSquare,
@@ -77,7 +76,7 @@ import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
 import { TerminalSettings } from "./TerminalSettings"
 import { ExperimentalSettings } from "./ExperimentalSettings"
-import { LanguageSettings } from "./LanguageSettings"
+// kilocode_change: removed LanguageSettings import - moved to display tab
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
@@ -100,6 +99,7 @@ export const settingsTabTriggerActive =
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
 }
+// kilocode_change start - removed "language" from sectionNames, moved to display tab
 const sectionNames = [
 	"providers",
 	"autoApprove",
@@ -117,9 +117,10 @@ const sectionNames = [
 	"prompts",
 	"ui",
 	"experimental",
-	"language",
+	// "language", // kilocode_change - moved to display tab
 	"about",
 ] as const
+// kilocode_change end
 
 type SectionName = (typeof sectionNames)[number] // kilocode_change
 
@@ -751,7 +752,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			{ id: "prompts", icon: MessageSquare },
 			// { id: "ui", icon: Glasses }, // kilocode_change: we have our own display section
 			{ id: "experimental", icon: FlaskConical },
-			{ id: "language", icon: Globe },
+			// { id: "language", icon: Globe }, // kilocode_change - moved to display tab
 			// { id: "mcp", icon: Server }, // kilocode_change - merged into agentBehaviour
 			{ id: "about", icon: Info },
 		],
@@ -1088,6 +1089,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							showTimestamps={cachedState.showTimestamps} // kilocode_change
 							showDiffStats={cachedState.showDiffStats} // kilocode_change
 							hideCostBelowThreshold={hideCostBelowThreshold}
+							language={language || "en"} // kilocode_change - moved from LanguageSettings
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
@@ -1212,10 +1214,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 						/>
 					)}
 
-					{/* Language Section */}
-					{activeTab === "language" && (
-						<LanguageSettings language={language || "en"} setCachedStateField={setCachedStateField} />
-					)}
+					{/* kilocode_change: removed Language Section - moved to display tab */}
 
 					{/* About Section */}
 					{activeTab === "about" && (

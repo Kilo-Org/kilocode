@@ -4,13 +4,16 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Monitor } from "lucide-react"
 import { telemetryClient } from "@/utils/TelemetryClient"
+import type { Language } from "@roo-code/types"
+
+import { LANGUAGES } from "@roo/language"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { TaskTimeline } from "../chat/TaskTimeline"
 import { generateSampleTimelineData } from "../../utils/timeline/mockData"
-import { Slider } from "../ui"
+import { Slider, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
@@ -18,6 +21,7 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTimestamps?: boolean
 	showDiffStats?: boolean // kilocode_change
 	reasoningBlockCollapsed: boolean
+	language: string // kilocode_change - moved from LanguageSettings
 	setCachedStateField: SetCachedStateField<
 		| "showTaskTimeline"
 		| "sendMessageOnEnter"
@@ -26,15 +30,23 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "hideCostBelowThreshold"
 		| "showTimestamps"
 		| "showDiffStats"
+		| "language" // kilocode_change
 	>
 	hideCostBelowThreshold?: number
 }
+
+// kilocode_change start: sort languages
+function getSortedLanguages() {
+	return Object.entries(LANGUAGES).toSorted((a, b) => a[0].localeCompare(b[0]))
+}
+// kilocode_change end
 
 export const DisplaySettings = ({
 	showTaskTimeline,
 	showTimestamps,
 	showDiffStats,
 	sendMessageOnEnter,
+	language,
 	setCachedStateField,
 	reasoningBlockCollapsed,
 	hideCostBelowThreshold,
@@ -120,7 +132,7 @@ export const DisplaySettings = ({
 						{t("settings:display.showDiffStats.description")}
 					</div>
 				</div>
-				{/* Send Message on Enter Setting */}
+			{/* Send Message on Enter Setting */}
 				<div className="flex flex-col gap-1">
 					<VSCodeCheckbox
 						checked={sendMessageOnEnter}
@@ -132,6 +144,25 @@ export const DisplaySettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:display.sendMessageOnEnter.description")}
 					</div>
+				</div>
+				{/* kilocode_change: Language selector moved from LanguageSettings */}
+				<div className="mt-4">
+					<div className="font-medium mb-2">{t("settings:sections.language")}</div>
+					<Select value={language} onValueChange={(value) => setCachedStateField("language", value as Language)}>
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder={t("settings:common.select")} />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								{getSortedLanguages().map(([code, name]) => (
+									<SelectItem key={code} value={code}>
+										{name}
+										<span className="text-muted-foreground">({code})</span>
+									</SelectItem>
+								))}
+							</SelectGroup>
+						</SelectContent>
+					</Select>
 				</div>
 			</Section>
 
