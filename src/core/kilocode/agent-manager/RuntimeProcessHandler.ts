@@ -589,7 +589,14 @@ export class RuntimeProcessHandler {
 			type: string
 			state?: unknown
 			chatMessages?: ClineMessage[]
+			chatMessage?: ClineMessage // For messageUpdated events (note: chatMessage not clineMessage)
 			[key: string]: unknown
+		}
+
+		// Handle messageUpdated events for real-time streaming
+		if (extMsg.type === "messageUpdated" && extMsg.chatMessage) {
+			this.handleMessageUpdated(sessionId, extMsg.chatMessage)
+			return
 		}
 
 		if (extMsg.type === "state" && extMsg.state) {
@@ -637,6 +644,27 @@ export class RuntimeProcessHandler {
 				this.checkAndSendPendingContinuation(sessionId, chatMessages)
 			}
 		}
+	}
+
+	/**
+	 * Handle messageUpdated events for real-time streaming updates.
+	 *
+	 * The extension sends messageUpdated events when streaming partial content.
+	 * We merge the updated message into the existing messages by timestamp.
+	 */
+	private handleMessageUpdated(sessionId: string, updatedMessage: ClineMessage): void {
+		// Filter out control messages that shouldn't be displayed
+		if (updatedMessage.type === "ask" && updatedMessage.ask === "completion_result") {
+			return
+		}
+
+		// Log the streaming update
+		const msgType = `${updatedMessage.type}:${updatedMessage.say || updatedMessage.ask || "?"}`
+		const textPreview = updatedMessage.text?.slice(0, 40) || "(no text)"
+		this.callbacks.onLog(`[Streaming] ${sessionId}: ${msgType} "${textPreview}"`)
+
+		// Pass to callback - AgentManagerProvider merges by timestamp
+		this.callbacks.onChatMessages(sessionId, [updatedMessage])
 	}
 
 	/**
