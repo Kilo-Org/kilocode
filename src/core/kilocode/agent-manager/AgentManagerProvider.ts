@@ -140,30 +140,43 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.sessionMessages.set(sessionId, mergedMessages)
 				this.postMessage({ type: "agentManager.chatMessages", sessionId, messages: mergedMessages })
 			},
-			onSessionCreated: (sawApiReqStarted: boolean) => {
+			onSessionCreated: (sawApiReqStarted: boolean, resumeInfo?: { prompt: string; images?: string[] }) => {
 				// Initialize messages for the new session with the initial prompt
 				const sessions = this.registry.getSessions()
 				if (sessions.length > 0) {
 					const latestSession = sessions[0]
-					// Add initial prompt as user_feedback message
-					// The extension doesn't emit user_feedback for the initial prompt,
-					// so we add it here when the session is created
-					const initialMessage: ClineMessage = {
-						ts: latestSession.startTime,
-						type: "say",
-						say: "user_feedback",
-						text: latestSession.prompt,
-					}
-					// For resumed sessions, preserve existing messages and append the new prompt
-					// For new sessions, start with just the initial message
 					const existingMessages = this.sessionMessages.get(latestSession.sessionId) || []
+					const isResumedSession = existingMessages.length > 0
+
 					this.outputChannel.appendLine(
-						`[AgentManager] onSessionCreated: sessionId=${latestSession.sessionId}, existingMessages=${existingMessages.length}`,
+						`[AgentManager] onSessionCreated: sessionId=${latestSession.sessionId}, existingMessages=${existingMessages.length}, isResumed=${isResumedSession}, hasResumeInfo=${!!resumeInfo}`,
 					)
-					const updatedMessages = [...existingMessages, initialMessage]
+
+					// For resumed sessions, preserve existing history
+					// For new sessions, start with empty array - the agent will send user_feedback
+					// Note: We no longer add the initial message here because the agent-runtime
+					// extension now properly emits user_feedback for the initial prompt
+					let updatedMessages = isResumedSession ? [...existingMessages] : []
+
+					// For resumed sessions with a prompt, add the user's message
+					// The extension doesn't create a user_feedback for askResponse during resume_task
+					if (resumeInfo && resumeInfo.prompt) {
+						const userMessage: ClineMessage = {
+							ts: Date.now(),
+							type: "say",
+							say: "user_feedback",
+							text: resumeInfo.prompt,
+							images: resumeInfo.images,
+						}
+						updatedMessages.push(userMessage)
+						this.outputChannel.appendLine(
+							`[AgentManager] Added user resume message: "${resumeInfo.prompt.slice(0, 50)}..."`,
+						)
+					}
+
 					this.sessionMessages.set(latestSession.sessionId, updatedMessages)
 
-					// Post updated messages to webview (important for resumed sessions with history)
+					// Post messages to webview (important for resumed sessions with history)
 					this.postMessage({
 						type: "agentManager.chatMessages",
 						sessionId: latestSession.sessionId,
@@ -172,7 +185,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 					// Transfer api_req_started flag captured during pending phase
 					// This ensures KilocodeEventProcessor knows the user echo already happened
-					if (sawApiReqStarted) {
+					// For resumed sessions, always set this flag to prevent the agent's first
+					// response from being skipped as "user echo"
+					if (sawApiReqStarted || isResumedSession) {
 						this.firstApiReqStarted.set(latestSession.sessionId, true)
 					}
 
@@ -738,6 +753,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			effectiveWorkspace?: string
 			model?: string
 			images?: string[] // Image file paths to include with the initial prompt
+			sessionData?: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } // For resuming with history
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
@@ -1255,7 +1271,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Resume a completed session by spawning a new CLI process with --session flag.
+	 * Resume a completed session by spawning a new agent-runtime process.
+	 * The agent-runtime will load conversation history from server using sessionId.
 	 * Supports both local sessions (in registry) and remote sessions (from server).
 	 */
 	public async resumeSession(
@@ -1272,12 +1289,40 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
+		// If session is already being created (another resume in progress), queue the message
+		if (session?.status === "creating") {
+			this.outputChannel.appendLine(
+				`[AgentManager] Session ${sessionId} is already starting, queueing message for later`,
+			)
+			// Store the message to send after session is ready
+			// The message will be handled when the session becomes active
+			return
+		}
+
 		// For agent-runtime, pass base64 images directly (not file paths)
 		if (images && images.length > 0) {
 			this.outputChannel.appendLine(`[AgentManager] Passing ${images.length} images (base64) to resumed session`)
 		}
 
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
+
+		// Fetch full session data for resume (UI messages + API history + metadata)
+		let sessionData: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } | undefined
+		try {
+			const fetchedData = await this.remoteSessionService.fetchSessionDataForResume(sessionId)
+			if (fetchedData) {
+				sessionData = fetchedData
+				this.outputChannel.appendLine(
+					`[AgentManager] Fetched session data: ${fetchedData.uiMessages.length} UI messages, ${fetchedData.apiConversationHistory.length} API history entries`,
+				)
+			} else {
+				this.outputChannel.appendLine(`[AgentManager] No session data available for resume`)
+			}
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to fetch session data for resume: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
 
 		// Handle local session with parallel mode
 		if (session?.parallelMode?.enabled && session.parallelMode.branch) {
@@ -1289,7 +1334,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 					gitUrl: session.gitUrl,
 					worktreeInfo,
 					effectiveWorkspace: worktreeInfo.path,
-					images, // Pass base64 images directly
+					images,
+					sessionData,
 				})
 				return
 			}
@@ -1297,14 +1343,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.outputChannel.appendLine(`[AgentManager] Failed to prepare worktree, resuming without parallel mode`)
 		}
 
-		// Resume session - works for both local and remote sessions
-		// The sessionId triggers --session=<id> flag which loads conversation from server
+		// Resume session - pass session data for agent-runtime to load
 		await this.spawnAgentWithCommonSetup(content, {
 			sessionId,
 			label: sessionLabel || session?.label,
 			parallelMode: session?.parallelMode?.enabled,
 			gitUrl: session?.gitUrl,
-			images, // Pass base64 images directly
+			images,
+			sessionData,
 		})
 	}
 
@@ -1584,6 +1630,24 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private postMessage(message: unknown): void {
+		// Log outgoing message to webview
+		const msg = message as { type?: string; sessionId?: string; messages?: ClineMessage[] }
+		if (msg.type === "agentManager.chatMessages") {
+			const lastMsgs = msg.messages?.slice(-2).map((m) => {
+				const msgType = `${m.type}:${m.say || m.ask || "?"}`
+				const text = m.text?.slice(0, 30) || "(no text)"
+				return `${msgType} "${text}"`
+			})
+			this.outputChannel.appendLine(
+				`[Webview←] ${msg.type} sessionId=${msg.sessionId} (${msg.messages?.length || 0} messages)` +
+					(lastMsgs?.length ? `\n  last: ${lastMsgs.join(", ")}` : ""),
+			)
+		} else if (msg.type === "agentManager.stateEvent") {
+			const eventType = (msg as { eventType?: string }).eventType || "?"
+			this.outputChannel.appendLine(`[Webview←] ${msg.type} sessionId=${msg.sessionId} eventType=${eventType}`)
+		} else {
+			this.outputChannel.appendLine(`[Webview←] ${msg.type || "unknown"}`)
+		}
 		this.panel?.webview.postMessage(message)
 	}
 

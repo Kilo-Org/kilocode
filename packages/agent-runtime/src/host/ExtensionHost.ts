@@ -215,7 +215,12 @@ export class ExtensionHost extends EventEmitter {
 		return false
 	}
 
-	async activate(): Promise<ExtensionAPI> {
+	async activate(resumeData?: {
+		sessionId: string
+		uiMessages: unknown[]
+		apiConversationHistory: unknown[]
+		metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+	}): Promise<ExtensionAPI> {
 		if (this.isActivated) {
 			return this.getAPI()
 		}
@@ -229,6 +234,12 @@ export class ExtensionHost extends EventEmitter {
 
 			// Setup VSCode API mock
 			await this.setupVSCodeAPIMock()
+
+			// Pre-seed task history for resume BEFORE loading extension
+			// This ensures the extension can find the task when showTaskWithId is called
+			if (resumeData) {
+				await this.preSeedTaskHistoryForResume(resumeData)
+			}
 
 			// Load the extension (console already intercepted)
 			await this.loadExtension()
@@ -1113,6 +1124,135 @@ export class ExtensionHost extends EventEmitter {
 
 		// Broadcast the updated state
 		this.broadcastStateUpdate()
+	}
+
+	/**
+	 * Write task history files to local storage so showTaskWithId can load them.
+	 * This is used for resuming sessions when the history is passed from the parent process.
+	 */
+	public async writeTaskHistory(
+		taskId: string,
+		uiMessages: unknown[],
+		apiConversationHistory: unknown[],
+	): Promise<void> {
+		const fs = await import("fs/promises")
+		const path = await import("path")
+
+		// Get the global storage path from the vscode mock context
+		const globalStoragePath = this.vscodeAPI?.context?.globalStoragePath
+		if (!globalStoragePath) {
+			throw new Error("Cannot write task history: globalStoragePath not available")
+		}
+
+		const tasksDir = path.join(globalStoragePath, "tasks")
+		const taskDir = path.join(tasksDir, taskId)
+
+		// Create task directory if it doesn't exist
+		await fs.mkdir(taskDir, { recursive: true })
+
+		// Write UI messages
+		const uiMessagesPath = path.join(taskDir, "ui_messages.json")
+		await fs.writeFile(uiMessagesPath, JSON.stringify(uiMessages, null, 2), "utf-8")
+
+		// Write API conversation history
+		const apiHistoryPath = path.join(taskDir, "api_conversation_history.json")
+		await fs.writeFile(apiHistoryPath, JSON.stringify(apiConversationHistory, null, 2), "utf-8")
+
+		logs.info("Task history written to local storage", "ExtensionHost", {
+			taskId,
+			taskDir,
+			uiMessagesCount: uiMessages.length,
+			apiHistoryCount: apiConversationHistory.length,
+		})
+	}
+
+	/**
+	 * Pre-seed task history for resume BEFORE extension activation.
+	 * This ensures the extension can find the task when showTaskWithId is called.
+	 * Called by activate() when resumeData is provided.
+	 */
+	private async preSeedTaskHistoryForResume(resumeData: {
+		sessionId: string
+		uiMessages: unknown[]
+		apiConversationHistory: unknown[]
+		metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+	}): Promise<void> {
+		logs.info("Pre-seeding task history for resume", "ExtensionHost", {
+			sessionId: resumeData.sessionId,
+			uiMessagesCount: resumeData.uiMessages.length,
+			apiHistoryCount: resumeData.apiConversationHistory.length,
+		})
+
+		// 1. Add HistoryItem to globalState
+		await this.addHistoryItemForResume(
+			resumeData.sessionId,
+			resumeData.metadata.title,
+			new Date(resumeData.metadata.createdAt).getTime(),
+			resumeData.metadata.mode || "code",
+		)
+
+		// 2. Write task files to disk
+		await this.writeTaskHistory(
+			resumeData.sessionId,
+			resumeData.uiMessages,
+			resumeData.apiConversationHistory,
+		)
+
+		logs.info("Task history pre-seeded successfully", "ExtensionHost")
+	}
+
+	/**
+	 * Add a HistoryItem to the taskHistory global state.
+	 * This is required before calling showTaskWithId, as the extension looks up
+	 * the task in taskHistory to get metadata before loading from files.
+	 */
+	public async addHistoryItemForResume(
+		taskId: string,
+		task: string,
+		ts: number,
+		mode: string,
+	): Promise<void> {
+		const globalState = this.vscodeAPI?.context?.globalState
+		if (!globalState) {
+			throw new Error("Cannot add history item: globalState not available")
+		}
+
+		// Get existing task history
+		const taskHistory = (globalState.get("taskHistory") as unknown[]) || []
+
+		// Check if this task already exists in history
+		const existingIndex = taskHistory.findIndex(
+			(item: unknown) => (item as { id?: string }).id === taskId
+		)
+
+		// Create the HistoryItem with minimal required fields
+		const historyItem = {
+			id: taskId,
+			number: existingIndex >= 0 ? (taskHistory[existingIndex] as { number?: number }).number || 0 : taskHistory.length + 1,
+			ts,
+			task,
+			tokensIn: 0,
+			tokensOut: 0,
+			totalCost: 0,
+			mode,
+		}
+
+		if (existingIndex >= 0) {
+			// Update existing entry
+			taskHistory[existingIndex] = historyItem
+		} else {
+			// Add new entry at the beginning (most recent first)
+			taskHistory.unshift(historyItem)
+		}
+
+		// Update global state
+		await globalState.update("taskHistory", taskHistory)
+
+		logs.info("History item added for resume", "ExtensionHost", {
+			taskId,
+			task: task.substring(0, 50) + (task.length > 50 ? "..." : ""),
+			mode,
+		})
 	}
 
 	// Methods for webview provider registration (called from VSCode API mock)

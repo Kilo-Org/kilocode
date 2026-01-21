@@ -246,9 +246,15 @@ export class ExtensionService extends EventEmitter {
 	 * Initialize the extension service
 	 * This activates the extension host and prepares the service for use
 	 *
+	 * @param resumeData - Optional resume data to pre-seed before extension activation
 	 * @throws {Error} If initialization fails
 	 */
-	async initialize(): Promise<void> {
+	async initialize(resumeData?: {
+		sessionId: string
+		uiMessages: unknown[]
+		apiConversationHistory: unknown[]
+		metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+	}): Promise<void> {
 		if (this.isInitialized) {
 			logs.warn("Extension service already initialized", "ExtensionService")
 			return
@@ -261,8 +267,8 @@ export class ExtensionService extends EventEmitter {
 		try {
 			logs.info("Initializing Extension Service...", "ExtensionService")
 
-			// Activate extension host
-			await this.extensionHost.activate()
+			// Activate extension host (with optional resume data for pre-seeding)
+			await this.extensionHost.activate(resumeData)
 
 			this.isInitialized = true
 			logs.info("Extension Service initialized successfully", "ExtensionService")

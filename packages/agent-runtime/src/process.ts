@@ -89,14 +89,52 @@ interface AgentConfig {
 
 	// App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0')
 	appName?: string
+
+	// Resume data for pre-seeding task history before extension activation
+	// This ensures the extension can find the task when showTaskWithId is called
+	resumeData?: {
+		sessionId: string
+		prompt: string
+		images?: string[]
+		uiMessages: unknown[]
+		apiConversationHistory: unknown[]
+		metadata: {
+			sessionId: string
+			title: string
+			createdAt: string
+			mode: string | null
+		}
+	}
+}
+
+/**
+ * Session metadata for constructing a HistoryItem
+ */
+interface SessionMetadata {
+	sessionId: string
+	title: string
+	createdAt: string
+	mode: string | null
+}
+
+/**
+ * Session data for resuming a session with history
+ */
+interface ResumeSessionData {
+	sessionId: string
+	prompt: string
+	images?: string[]
+	uiMessages: unknown[] // ClineMessage[]
+	apiConversationHistory: unknown[] // Anthropic.MessageParam[]
+	metadata: SessionMetadata
 }
 
 /**
  * IPC message types from parent
  */
 interface ParentMessage {
-	type: "sendMessage" | "shutdown" | "injectConfig"
-	payload?: WebviewMessage | Partial<ExtensionState>
+	type: "sendMessage" | "shutdown" | "injectConfig" | "resumeWithHistory"
+	payload?: WebviewMessage | Partial<ExtensionState> | ResumeSessionData
 }
 
 /**
@@ -110,10 +148,48 @@ interface ChildMessage {
 }
 
 /**
+ * Summarize message payload for logging
+ */
+function summarizeMessage(message: ChildMessage): string {
+	if (message.type === "message" && message.payload) {
+		const p = message.payload as {
+			type?: string
+			state?: { clineMessages?: Array<{ type?: string; say?: string; ask?: string; text?: string }> }
+		}
+		if (p.type === "state" && p.state?.clineMessages) {
+			const msgs = p.state.clineMessages
+			const lastMsg = msgs[msgs.length - 1]
+			const lastMsgType = lastMsg ? `${lastMsg.type}:${lastMsg.say || lastMsg.ask || "?"}` : ""
+			const lastMsgText = lastMsg?.text?.slice(0, 30) || ""
+			return `(state: ${msgs.length} msgs, last=${lastMsgType} "${lastMsgText}")`
+		}
+		return `(${p.type || "unknown"})`
+	}
+	if (message.type === "stateChange" && message.state) {
+		const s = message.state as { clineMessages?: Array<{ type?: string; say?: string; ask?: string; text?: string }> }
+		if (s.clineMessages) {
+			const msgs = s.clineMessages
+			const lastMsg = msgs[msgs.length - 1]
+			const lastMsgType = lastMsg ? `${lastMsg.type}:${lastMsg.say || lastMsg.ask || "?"}` : ""
+			const lastMsgText = lastMsg?.text?.slice(0, 30) || ""
+			return `(${msgs.length} msgs, last=${lastMsgType} "${lastMsgText}")`
+		}
+	}
+	if (message.type === "error" && message.error) {
+		return `(${message.error.message?.slice(0, 50)})`
+	}
+	return ""
+}
+
+/**
  * Send message to parent process
  */
 function sendToParent(message: ChildMessage): void {
 	if (process.send) {
+		// Log outgoing message to parent (except verbose ones)
+		if (message.type !== "stateChange" || !message.state) {
+			logs.debug(`[IPC→Parent] ${message.type} ${summarizeMessage(message)}`, "AgentProcess")
+		}
 		process.send(message)
 	} else {
 		// Not running as a child process - use standard logger
@@ -225,6 +301,46 @@ async function main(): Promise<void> {
 				logs.error("Failed to inject configuration", "AgentProcess", { error })
 			}
 
+			// If this is a resume, load the task (but don't send askResponse yet)
+			// The askResponse will be sent by the parent process after it sees
+			// the extension is in ask:resume_task or ask:resume_completed_task state
+			if (config.resumeData) {
+				try {
+					logs.info("Resuming session after activation", "AgentProcess", {
+						sessionId: config.resumeData.sessionId,
+						uiMessagesCount: config.resumeData.uiMessages?.length,
+						apiHistoryCount: config.resumeData.apiConversationHistory?.length,
+						prompt: config.resumeData.prompt?.slice(0, 50),
+					})
+
+					// Load the task using showTaskWithId (history was pre-seeded during activation)
+					// This triggers resumeTaskFromHistory() which ends with await this.ask(askType)
+					logs.debug(`[Ext→] showTaskWithId(${config.resumeData.sessionId})`, "AgentProcess")
+					await agent!.sendWebviewMessage({
+						type: "showTaskWithId",
+						text: config.resumeData.sessionId,
+					})
+					logs.debug(`[Ext←] showTaskWithId completed`, "AgentProcess")
+
+					// NOTE: We do NOT send askResponse here because the extension's
+					// resumeTaskFromHistory() is async and calls await this.ask() which
+					// waits for user input. If we send askResponse before ask() is waiting,
+					// the response gets lost. The parent process will send askResponse
+					// when it sees ask:resume_task or ask:resume_completed_task in the state.
+					logs.info("Task loaded, waiting for extension to reach ask state", "AgentProcess")
+				} catch (error) {
+					logs.error("Failed to resume session", "AgentProcess", { error })
+					sendToParent({
+						type: "error",
+						error: {
+							message: error instanceof Error ? error.message : String(error),
+							stack: error instanceof Error ? error.stack : undefined,
+						},
+					})
+				}
+			}
+
+			logs.debug("[IPC→Parent] ready", "AgentProcess")
 			sendToParent({ type: "ready" })
 		})
 
@@ -254,15 +370,24 @@ async function main(): Promise<void> {
 			})
 		})
 
-		// Initialize the agent
-		await agent.initialize()
+		// Initialize the agent (with optional resume data for pre-seeding)
+		await agent.initialize(config.resumeData)
 
 		// Set up message handler from parent
 		process.on("message", async (msg: ParentMessage) => {
+			// Log incoming message from parent
+			const payloadType = (msg.payload as { type?: string } | undefined)?.type || ""
+			const payloadText = (msg.payload as { text?: string } | undefined)?.text?.slice(0, 50) || ""
+			logs.debug(
+				`[IPC←Parent] ${msg.type}${payloadType ? `(${payloadType})` : ""} ${payloadText ? `"${payloadText}..."` : ""}`,
+				"AgentProcess",
+			)
+
 			try {
 				switch (msg.type) {
 					case "sendMessage":
 						if (msg.payload && agent) {
+							logs.debug(`[Ext→] sendWebviewMessage(${payloadType})`, "AgentProcess")
 							await agent.sendWebviewMessage(msg.payload as WebviewMessage)
 						}
 						break
@@ -271,6 +396,61 @@ async function main(): Promise<void> {
 						if (msg.payload && agent) {
 							const extensionHost = agent.getExtensionHost()
 							await extensionHost.injectConfiguration(msg.payload as Partial<ExtensionState>)
+						}
+						break
+
+					case "resumeWithHistory":
+						if (msg.payload && agent) {
+							const resumeData = msg.payload as ResumeSessionData
+							logs.info("Resuming session with history", "AgentProcess", {
+								sessionId: resumeData.sessionId,
+								uiMessagesCount: resumeData.uiMessages.length,
+								apiHistoryCount: resumeData.apiConversationHistory.length,
+							})
+
+							try {
+								const extensionHost = agent.getExtensionHost()
+
+								// 1. Add HistoryItem to taskHistory global state (required for showTaskWithId)
+								await extensionHost.addHistoryItemForResume(
+									resumeData.sessionId,
+									resumeData.metadata.title,
+									new Date(resumeData.metadata.createdAt).getTime(),
+									resumeData.metadata.mode || "code",
+								)
+
+								// 2. Write session data to local task directory so showTaskWithId can load it
+								await extensionHost.writeTaskHistory(
+									resumeData.sessionId,
+									resumeData.uiMessages,
+									resumeData.apiConversationHistory,
+								)
+
+								// 3. Load the task using showTaskWithId
+								// This is awaited, so the task is fully loaded when it completes
+								await agent.sendWebviewMessage({
+									type: "showTaskWithId",
+									text: resumeData.sessionId,
+								})
+
+								// 4. Send the continuation message to resume the conversation
+								// The task is now loaded and ready to accept user input
+								await agent.sendWebviewMessage({
+									type: "askResponse",
+									askResponse: "messageResponse",
+									text: resumeData.prompt,
+									images: resumeData.images,
+								})
+							} catch (error) {
+								logs.error("Failed to resume session with history", "AgentProcess", { error })
+								sendToParent({
+									type: "error",
+									error: {
+										message: error instanceof Error ? error.message : String(error),
+										stack: error instanceof Error ? error.stack : undefined,
+									},
+								})
+							}
 						}
 						break
 

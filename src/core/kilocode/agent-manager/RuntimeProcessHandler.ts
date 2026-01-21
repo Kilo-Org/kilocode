@@ -50,8 +50,27 @@ interface AgentIPCMessage {
  * IPC messages to the agent process
  */
 interface ParentIPCMessage {
-	type: "sendMessage" | "shutdown" | "injectConfig"
+	type: "sendMessage" | "shutdown" | "injectConfig" | "resumeWithHistory"
 	payload?: unknown
+}
+
+/**
+ * Session metadata for constructing a HistoryItem
+ */
+interface SessionMetadata {
+	sessionId: string
+	title: string
+	createdAt: string
+	mode: string | null
+}
+
+/**
+ * Session data for resuming with history
+ */
+interface SessionData {
+	uiMessages: ClineMessage[]
+	apiConversationHistory: unknown[] // Anthropic.MessageParam[]
+	metadata: SessionMetadata
 }
 
 /**
@@ -71,6 +90,7 @@ interface PendingProcessInfo {
 	timeoutId?: NodeJS.Timeout
 	model?: string
 	images?: string[]
+	sessionData?: SessionData // For resuming with history
 }
 
 interface ActiveProcessInfo {
@@ -90,7 +110,7 @@ export interface RuntimeProcessHandlerCallbacks {
 			| { type: "payment_required"; message: string; payload?: KilocodePayload },
 	) => void
 	onChatMessages: (sessionId: string, messages: ClineMessage[]) => void
-	onSessionCreated: (sawApiReqStarted: boolean) => void
+	onSessionCreated: (sawApiReqStarted: boolean, resumeInfo?: { prompt: string; images?: string[] }) => void
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void
@@ -101,6 +121,8 @@ export class RuntimeProcessHandler {
 	private pendingProcess: PendingProcessInfo | null = null
 	// Track whether we've sent api_req_started for each session
 	private sentApiReqStarted: Set<string> = new Set()
+	// Track pending resume continuations - sent after session is loaded from server
+	private pendingResumeContinuation: Map<string, { prompt: string; images?: string[] }> = new Map()
 	// VS Code app root path for finding bundled binaries
 	private vscodeAppRoot?: string
 
@@ -190,6 +212,7 @@ export class RuntimeProcessHandler {
 			model?: string
 			images?: string[]
 			autoApprove?: boolean
+			sessionData?: SessionData // For resuming with history
 		},
 	): Record<string, unknown> {
 		const config: Record<string, unknown> = {
@@ -224,6 +247,19 @@ export class RuntimeProcessHandler {
 		// Format: wrapper|<source>|<type>|<version>
 		config.appName = `wrapper|agent-manager|cli|${Package.version}`
 
+		// Add resume data if this is a resume with history
+		// This pre-seeds the session data BEFORE extension activation to avoid race conditions
+		if (options?.sessionData && options?.sessionId) {
+			config.resumeData = {
+				sessionId: options.sessionId,
+				prompt: prompt,
+				images: options.images,
+				uiMessages: options.sessionData.uiMessages,
+				apiConversationHistory: options.sessionData.apiConversationHistory,
+				metadata: options.sessionData.metadata,
+			}
+		}
+
 		return config
 	}
 
@@ -249,6 +285,7 @@ export class RuntimeProcessHandler {
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 					model?: string
 					images?: string[]
+					sessionData?: SessionData // For resuming with history
 			  }
 			| undefined,
 		onEvent: (sessionId: string, event: StreamEvent) => void,
@@ -319,6 +356,7 @@ export class RuntimeProcessHandler {
 				gitUrl: options?.gitUrl,
 				model: options?.model,
 				images: options?.images,
+				sessionData: options?.sessionData,
 			}
 
 			// Set up timeout for pending session
@@ -364,6 +402,14 @@ export class RuntimeProcessHandler {
 		msg: AgentIPCMessage,
 		onEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
+		const sessionId = this.getSessionIdForProcess(proc) || this.pendingProcess?.desiredSessionId || "pending"
+
+		// Log incoming IPC message from agent (except verbose log messages)
+		if (msg.type !== "log") {
+			const payloadSummary = this.summarizePayload(msg)
+			this.callbacks.onLog(`[IPC←Agent] ${sessionId}: ${msg.type} ${payloadSummary}`)
+		}
+
 		switch (msg.type) {
 			case "ready":
 				this.handleAgentReady(proc, onEvent)
@@ -388,6 +434,35 @@ export class RuntimeProcessHandler {
 	}
 
 	/**
+	 * Summarize payload for logging (avoid huge dumps)
+	 */
+	private summarizePayload(msg: AgentIPCMessage): string {
+		if (msg.type === "message" && msg.payload) {
+			const p = msg.payload as { type?: string; state?: { clineMessages?: ClineMessage[] } }
+			if (p.type === "state" && p.state?.clineMessages) {
+				const msgs = p.state.clineMessages
+				const lastMsg = msgs[msgs.length - 1]
+				const lastMsgDesc = lastMsg ? `last=${lastMsg.type}:${lastMsg.say || lastMsg.ask || "?"}` : ""
+				return `(state: ${msgs.length} msgs, ${lastMsgDesc})`
+			}
+			return `(${p.type || "unknown"})`
+		}
+		if (msg.type === "stateChange" && msg.state) {
+			const s = msg.state as { clineMessages?: ClineMessage[] }
+			if (s.clineMessages) {
+				const msgs = s.clineMessages
+				const lastMsg = msgs[msgs.length - 1]
+				const lastMsgDesc = lastMsg ? `last=${lastMsg.type}:${lastMsg.say || lastMsg.ask || "?"}` : ""
+				return `(${msgs.length} msgs, ${lastMsgDesc})`
+			}
+		}
+		if (msg.type === "error" && msg.error) {
+			return `(${msg.error.message?.slice(0, 50)})`
+		}
+		return ""
+	}
+
+	/**
 	 * Handle agent "ready" message - similar to session_created
 	 */
 	private handleAgentReady(proc: ChildProcess, onEvent: (sessionId: string, event: StreamEvent) => void): void {
@@ -400,6 +475,9 @@ export class RuntimeProcessHandler {
 		// Generate or use provided session ID
 		const sessionId = this.pendingProcess.desiredSessionId || this.generateSessionId()
 		const prompt = this.pendingProcess.prompt
+
+		// Check if this is a resume (desiredSessionId means we're resuming an existing session)
+		const isResume = !!this.pendingProcess.desiredSessionId
 
 		// Create the session in registry
 		this.registry.createSession(sessionId, prompt, Date.now(), {
@@ -422,6 +500,7 @@ export class RuntimeProcessHandler {
 		// Capture data before clearing pendingProcess
 		const images = this.pendingProcess.images
 		const capturedPrompt = this.pendingProcess.prompt
+		const sessionData = this.pendingProcess.sessionData
 
 		// Move to active sessions
 		this.activeSessions.set(sessionId, {
@@ -435,7 +514,11 @@ export class RuntimeProcessHandler {
 
 		this.callbacks.onStateChanged()
 		this.callbacks.onPendingSessionChanged(null)
-		this.callbacks.onSessionCreated(false)
+
+		// Pass resume info if this is a resumed session with history
+		const resumeInfo =
+			isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
+		this.callbacks.onSessionCreated(false, resumeInfo)
 
 		// Send session_created event
 		const sessionCreatedEvent: SessionCreatedStreamEvent = {
@@ -445,12 +528,47 @@ export class RuntimeProcessHandler {
 		}
 		onEvent(sessionId, sessionCreatedEvent)
 
-		// Send the initial task message
-		this.sendMessage(sessionId, {
-			type: "newTask",
-			text: capturedPrompt,
-			images: images,
-		})
+		if (isResume && sessionData) {
+			// For resumed sessions with history data:
+			// The resume data was pre-seeded via AgentConfig.resumeData during initialization
+			// The agent will send showTaskWithId to load the task, then reach ask:resume_task state
+			// We store the pending continuation and send askResponse when we see the ask state
+			this.callbacks.onLog(
+				`[AgentManager] Session ${sessionId} resumed with ${sessionData.uiMessages.length} UI messages and ${sessionData.apiConversationHistory.length} API history entries (via config)`,
+			)
+
+			// Mark api_req_started as already sent for resumed sessions
+			// This prevents an empty "Kilo said" message when we receive the loaded history
+			this.sentApiReqStarted.add(sessionId)
+
+			// Store pending continuation - will be sent when we see ask:resume_task or ask:resume_completed_task
+			this.pendingResumeContinuation.set(sessionId, {
+				prompt: capturedPrompt,
+				images: images,
+			})
+			this.callbacks.onLog(
+				`[AgentManager] Stored pending resume continuation for ${sessionId}, waiting for ask:resume_task state`,
+			)
+		} else if (isResume) {
+			// For resumed sessions without history data: try sessionSelect (fallback)
+			// This might not work if SessionManager isn't available in agent-runtime
+			this.pendingResumeContinuation.set(sessionId, {
+				prompt: capturedPrompt,
+				images: images,
+			})
+			this.callbacks.onLog(`[AgentManager] Resuming session ${sessionId}, loading history from server...`)
+			this.sendMessage(sessionId, {
+				type: "sessionSelect",
+				sessionId: sessionId,
+			})
+		} else {
+			// For new sessions: send newTask as before
+			this.sendMessage(sessionId, {
+				type: "newTask",
+				text: capturedPrompt,
+				images: images,
+			})
+		}
 	}
 
 	/**
@@ -479,13 +597,27 @@ export class RuntimeProcessHandler {
 			const state = extMsg.state as { chatMessages?: ClineMessage[]; clineMessages?: ClineMessage[] }
 			// Handle both property names - extension uses clineMessages internally
 			const chatMessages = state.chatMessages || state.clineMessages
+
+			this.callbacks.onLog(
+				`[ExtMsg] ${sessionId}: state update with ${chatMessages?.length || 0} messages (sentApiReqStarted=${this.sentApiReqStarted.has(sessionId)})`,
+			)
+
 			if (chatMessages && chatMessages.length > 0) {
+				// Log last few message types and content for debugging
+				const lastMsgs = chatMessages.slice(-3).map((m) => {
+					const msgType = `${m.type}:${m.say || m.ask || "?"}`
+					const text = m.text?.slice(0, 40) || "(no text)"
+					return `${msgType} "${text}"`
+				})
+				this.callbacks.onLog(`[ExtMsg] ${sessionId}: last 3 messages:\n  - ${lastMsgs.join("\n  - ")}`)
+
 				// Filter out control messages that shouldn't be displayed
 				const filteredMessages = this.filterDisplayableMessages(chatMessages)
 
 				// Send api_req_started the first time we get actual content
 				// The webview state machine needs this to transition from "creating" to "streaming"
 				if (!this.sentApiReqStarted.has(sessionId)) {
+					this.callbacks.onLog(`[ExtMsg] ${sessionId}: sending synthetic api_req_started`)
 					this.sentApiReqStarted.add(sessionId)
 					const stateEvent: KilocodeStreamEvent = {
 						streamEventType: "kilocode",
@@ -499,7 +631,50 @@ export class RuntimeProcessHandler {
 				}
 
 				this.callbacks.onChatMessages(sessionId, filteredMessages)
+
+				// Check if we have a pending resume continuation for this session
+				// Send askResponse when extension reaches ask:resume_task or ask:resume_completed_task state
+				this.checkAndSendPendingContinuation(sessionId, chatMessages)
 			}
+		}
+	}
+
+	/**
+	 * Check for and send pending resume continuation if session is in resume_task state.
+	 *
+	 * The extension's resumeTaskFromHistory() calls `await this.ask(askType)` which waits
+	 * for user input. We need to send the askResponse AFTER the extension reaches this
+	 * waiting state, not before, otherwise the response is lost.
+	 *
+	 * We detect this by checking if the last message is ask:resume_task or ask:resume_completed_task.
+	 */
+	private checkAndSendPendingContinuation(sessionId: string, messages: ClineMessage[]): void {
+		const pendingContinuation = this.pendingResumeContinuation.get(sessionId)
+		if (!pendingContinuation || messages.length === 0) {
+			return
+		}
+
+		// Check if the last message is ask:resume_task or ask:resume_completed_task
+		const lastMessage = messages[messages.length - 1]
+		const isResumeAsk =
+			lastMessage.type === "ask" &&
+			(lastMessage.ask === "resume_task" || lastMessage.ask === "resume_completed_task")
+
+		if (isResumeAsk) {
+			// Extension is now waiting for user input via await this.ask()
+			// Safe to send the askResponse now
+			this.callbacks.onLog(
+				`[AgentManager] Session ${sessionId} reached ${lastMessage.ask} state, sending continuation with prompt: "${pendingContinuation.prompt.slice(0, 50)}..."`,
+			)
+			this.pendingResumeContinuation.delete(sessionId)
+
+			// Send askResponse to continue the conversation
+			this.sendMessage(sessionId, {
+				type: "askResponse",
+				askResponse: "messageResponse",
+				text: pendingContinuation.prompt,
+				images: pendingContinuation.images,
+			})
 		}
 	}
 
@@ -523,6 +698,10 @@ export class RuntimeProcessHandler {
 			// Filter out control messages that shouldn't be displayed
 			const filteredMessages = this.filterDisplayableMessages(chatMessages)
 			this.callbacks.onChatMessages(sessionId, filteredMessages)
+
+			// Check if we have a pending resume continuation for this session
+			// Send askResponse when extension reaches ask:resume_task or ask:resume_completed_task state
+			this.checkAndSendPendingContinuation(sessionId, chatMessages)
 		}
 	}
 
@@ -614,6 +793,7 @@ export class RuntimeProcessHandler {
 			// Exit of active session
 			this.activeSessions.delete(sessionId)
 			this.sentApiReqStarted.delete(sessionId)
+			this.pendingResumeContinuation.delete(sessionId)
 
 			// Update session status based on exit code
 			if (code === 0) {
@@ -690,6 +870,49 @@ export class RuntimeProcessHandler {
 			payload: message,
 		}
 
+		// Log outgoing IPC message to agent
+		const msgType = (message as { type?: string })?.type || "unknown"
+		const msgText = (message as { text?: string })?.text?.slice(0, 50) || ""
+		this.callbacks.onLog(`[IPC→Agent] ${sessionId}: sendMessage(${msgType}) ${msgText ? `"${msgText}..."` : ""}`)
+
+		return new Promise((resolve, reject) => {
+			info.process.send(ipcMessage, (error) => {
+				if (error) {
+					reject(error)
+				} else {
+					resolve()
+				}
+			})
+		})
+	}
+
+	/**
+	 * Send resumeWithHistory IPC message to an active session.
+	 * This writes the session history to local storage and loads it via showTaskWithId.
+	 */
+	private sendResumeWithHistory(
+		sessionId: string,
+		prompt: string,
+		sessionData: SessionData,
+		images?: string[],
+	): Promise<void> {
+		const info = this.activeSessions.get(sessionId)
+		if (!info) {
+			return Promise.reject(new Error(`No active session: ${sessionId}`))
+		}
+
+		const ipcMessage: ParentIPCMessage = {
+			type: "resumeWithHistory",
+			payload: {
+				sessionId,
+				prompt,
+				images,
+				uiMessages: sessionData.uiMessages,
+				apiConversationHistory: sessionData.apiConversationHistory,
+				metadata: sessionData.metadata,
+			},
+		}
+
 		return new Promise((resolve, reject) => {
 			info.process.send(ipcMessage, (error) => {
 				if (error) {
@@ -756,6 +979,7 @@ export class RuntimeProcessHandler {
 			}
 		}
 		this.activeSessions.clear()
+		this.pendingResumeContinuation.clear()
 	}
 
 	/**
