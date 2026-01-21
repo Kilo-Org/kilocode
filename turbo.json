@@ -11,6 +11,7 @@
 			"cache": false
 		},
 		"build": {
+			"dependsOn": ["^build"],
 			"outputs": ["dist/**"],
 			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts"]
 		},
