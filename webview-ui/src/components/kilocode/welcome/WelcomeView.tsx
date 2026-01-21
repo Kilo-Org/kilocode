@@ -42,7 +42,9 @@ const WelcomeView = () => {
 	}, [])
 
 	const handleSubmit = useCallback(() => {
-		const error = apiConfiguration ? validateApiConfiguration(apiConfiguration) : undefined
+		// Skip validation for Agentica if API key is present (device auth already validated)
+		const skipValidation = apiConfiguration?.apiProvider === "agentica" && apiConfiguration?.agenticaApiKey
+		const error = !skipValidation && apiConfiguration ? validateApiConfiguration(apiConfiguration) : undefined
 
 		if (error) {
 			setErrorMessage(error)
