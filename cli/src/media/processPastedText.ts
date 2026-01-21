@@ -22,7 +22,6 @@ export function expandPastedTextReferences(text: string, pastedTextReferences: R
 	return text.replace(PASTED_TEXT_REFERENCE_REGEX, (match, refNum) => {
 		const content = pastedTextReferences[parseInt(refNum, 10)]
 		if (content === undefined) return match
-		// Normalize tabs to spaces when expanding
-		return content.replace(/\t/g, "  ")
+		return content
 	})
 }
