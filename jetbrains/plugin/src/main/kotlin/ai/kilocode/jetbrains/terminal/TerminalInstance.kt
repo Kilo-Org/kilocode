@@ -198,25 +198,19 @@ class TerminalInstance(
     private fun createCustomRunner(): LocalTerminalDirectRunner {
         return object : LocalTerminalDirectRunner(project) {
             override fun createProcess(options: ShellStartupOptions): PtyProcess {
-                logger.info("🔧 Custom createProcess method called...")
-                logger.info("Startup options: $options")
-
                 val originalProcess = super.createProcess(options)
-                logger.info("✅ Original Process created: ${originalProcess.javaClass.name}")
-
-                return createProxyPtyProcess(originalProcess)
+                val proxyProcess = createProxyPtyProcess(originalProcess)
+                return proxyProcess
             }
 
             override fun createShellTerminalWidget(
                 parent: Disposable,
                 startupOptions: ShellStartupOptions,
             ): TerminalWidget {
-                logger.info("🔧 Custom createShellTerminalWidget method called...")
                 return super.createShellTerminalWidget(parent, startupOptions)
             }
 
             override fun configureStartupOptions(baseOptions: ShellStartupOptions): ShellStartupOptions {
-                logger.info("🔧 Custom configureStartupOptions method called...")
                 return super.configureStartupOptions(baseOptions)
             }
         }
@@ -228,12 +222,15 @@ class TerminalInstance(
     private fun createStartupOptions(): ShellStartupOptions {
         val fullShellCommand = buildShellCommand()
 
-        logger.info("🔧 Shell config: shellPath=${config.shellPath}, shellArgs=${config.shellArgs}")
-        logger.info("🔧 Full shell command: $fullShellCommand")
+        // Add extension marker to environment so WeCoderTerminalCustomizer can detect it
+        val envWithMarker = (config.env?.toMutableMap() ?: mutableMapOf()).apply {
+            put("KILOCODE_EXTENSION_TERMINAL", "true")
+        }
 
         return ShellStartupOptions.Builder()
             .workingDirectory(config.cwd ?: project.basePath)
             .shellCommand(fullShellCommand)
+            .envVariables(envWithMarker)
             .build()
     }
 
@@ -280,8 +277,6 @@ class TerminalInstance(
      * Create proxy PtyProcess to intercept input/output streams
      */
     private fun createProxyPtyProcess(originalProcess: PtyProcess): PtyProcess {
-        logger.info("🔧 Creating proxy PtyProcess to intercept input/output streams...")
-
         val rawDataCallback = createRawDataCallback()
         return ProxyPtyProcess(originalProcess, rawDataCallback)
     }
@@ -292,13 +287,11 @@ class TerminalInstance(
     private fun createRawDataCallback(): ProxyPtyProcessCallback {
         return object : ProxyPtyProcessCallback {
             override fun onRawData(data: String, streamType: String) {
-                logger.debug("📥 Raw data [$streamType]: ${data.length} chars")
-
                 try {
                     sendRawDataToExtHost(data)
                     terminalShellIntegration.appendRawOutput(data)
                 } catch (e: Exception) {
-                    logger.error("❌ Failed to process raw data (terminal: $extHostTerminalId)", e)
+                    logger.error("Failed to process raw data (terminal: $extHostTerminalId)", e)
                 }
             }
         }
@@ -310,11 +303,11 @@ class TerminalInstance(
     private fun sendRawDataToExtHost(data: String) {
         val extHostTerminalServiceProxy =
             rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalService)
+        
         extHostTerminalServiceProxy.acceptTerminalProcessData(
             id = numericId,
             data = data,
         )
-        logger.debug("✅ Sent raw data to exthost: ${data.length} chars (terminal: $extHostTerminalId)")
     }
 
     /**
