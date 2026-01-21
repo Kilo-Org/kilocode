@@ -138,6 +138,7 @@ your-project/
 
 There are community efforts to build and share agent skills. Some resources include:
 
+- [Agent-Skill](https://agent-skills.cc)- Curated, practical Agent Skills you can actually use.
 - [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
 - [Skill Specification](https://agentskills.io/home) - Agent Skills specification
 
