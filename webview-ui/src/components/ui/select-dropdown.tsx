@@ -272,7 +272,7 @@ export const SelectDropdown = React.memo(
 						align={align}
 						sideOffset={sideOffset}
 						container={portalContainer}
-						className={cn("p-0 overflow-hidden", contentClassName)}>
+						className={cn("p-0", contentClassName)}>
 						<div className="flex flex-col w-full">
 							{/* Search input */}
 							{!disableSearch && (
@@ -296,9 +296,8 @@ export const SelectDropdown = React.memo(
 								</div>
 							)}
 
-							{/* Dropdown items - Use windowing for large lists */}
-							{/* kilocode_change: different max height: max-h-82 */}
-							<div className="max-h-82 overflow-y-auto">
+							{/* Dropdown items */}
+							<div>
 								{groupedOptions.length === 0 && searchValue ? (
 									<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
 								) : (
