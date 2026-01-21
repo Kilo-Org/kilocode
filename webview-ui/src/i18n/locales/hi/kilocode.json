@@ -136,7 +136,13 @@
 	},
 	"docs": "दस्तावेज़",
 	"rules": {
-		"tooltip": "Kilo Code नियम और वर्कफ़्लो प्रबंधित करें",
+		"tooltip": "एजेंट व्यवहार प्रबंधित करें ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "नियम",
+			"workflows": "वर्कफ़्लो",
+			"mcps": "MCPs",
+			"modes": "मोड्स"
+		},
 		"ariaLabel": "Kilo Code नियम",
 		"tabs": {
 			"rules": "नियम",

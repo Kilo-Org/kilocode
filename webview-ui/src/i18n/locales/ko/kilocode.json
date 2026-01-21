@@ -150,7 +150,13 @@
 	},
 	"docs": "문서",
 	"rules": {
-		"tooltip": "Kilo Code 규칙 및 워크플로우 관리",
+		"tooltip": "에이전트 동작 관리 ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "규칙",
+			"workflows": "워크플로우",
+			"mcps": "MCPs",
+			"modes": "모드"
+		},
 		"ariaLabel": "Kilo Code 규칙",
 		"tabs": {
 			"rules": "규칙",

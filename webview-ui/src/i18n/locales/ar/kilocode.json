@@ -145,7 +145,13 @@
 	},
 	"docs": "التوثيق",
 	"rules": {
-		"tooltip": "إدارة قواعد وسير العمل في Kilo Code",
+		"tooltip": "إدارة سلوك الوكيل ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "القواعد",
+			"workflows": "سير العمل",
+			"mcps": "MCPs",
+			"modes": "الأوضاع"
+		},
 		"ariaLabel": "قواعد Kilo Code",
 		"tabs": {
 			"rules": "القواعد",

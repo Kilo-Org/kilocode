@@ -136,7 +136,13 @@
 	},
 	"docs": "Dokumentasi",
 	"rules": {
-		"tooltip": "Kelola Aturan & Alur Kerja Kilo Code",
+		"tooltip": "Kelola Perilaku Agen ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Aturan",
+			"workflows": "Alur Kerja",
+			"mcps": "MCPs",
+			"modes": "Mode"
+		},
 		"ariaLabel": "Aturan Kilo Code",
 		"tabs": {
 			"rules": "Aturan",

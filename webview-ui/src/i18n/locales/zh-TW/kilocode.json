@@ -145,7 +145,13 @@
 	},
 	"docs": "文件",
 	"rules": {
-		"tooltip": "管理 Kilo Code 規則和工作流程",
+		"tooltip": "管理代理行為（{{types}}）",
+		"agentBehaviourTypes": {
+			"rules": "規則",
+			"workflows": "工作流程",
+			"mcps": "MCP",
+			"modes": "模式"
+		},
 		"ariaLabel": "Kilo Code 規則",
 		"tabs": {
 			"rules": "規則",

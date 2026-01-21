@@ -150,7 +150,13 @@
 	},
 	"docs": "ドキュメント",
 	"rules": {
-		"tooltip": "Kilo Codeルールとワークフローを管理",
+		"tooltip": "エージェントの挙動を管理 ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "ルール",
+			"workflows": "ワークフロー",
+			"mcps": "MCP",
+			"modes": "モード"
+		},
 		"ariaLabel": "Kilo Codeルール",
 		"tabs": {
 			"rules": "ルール",

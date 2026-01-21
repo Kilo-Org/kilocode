@@ -149,7 +149,13 @@
 	},
 	"docs": "Documentatie",
 	"rules": {
-		"tooltip": "Beheer Kilo Code Regels & Workflows",
+		"tooltip": "Agentgedrag beheren ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regels",
+			"workflows": "Workflows",
+			"mcps": "MCP's",
+			"modes": "Modi"
+		},
 		"ariaLabel": "Kilo Code Regels",
 		"tabs": {
 			"rules": "Regels",

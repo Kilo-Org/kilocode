@@ -143,7 +143,13 @@
 	},
 	"docs": "Belgeler",
 	"rules": {
-		"tooltip": "Kilo Code Kuralları ve İş Akışlarını Yönet",
+		"tooltip": "Ajan Davranışını Yönet ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları",
+			"mcps": "MCP'ler",
+			"modes": "Modlar"
+		},
 		"ariaLabel": "Kilo Code Kuralları",
 		"tabs": {
 			"rules": "Kurallar",

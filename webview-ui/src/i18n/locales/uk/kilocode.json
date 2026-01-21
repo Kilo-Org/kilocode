@@ -150,7 +150,13 @@
 	},
 	"docs": "Документація",
 	"rules": {
-		"tooltip": "Керувати Kilo Code Rules та Workflows",
+		"tooltip": "Керувати поведінкою агента ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Правила",
+			"workflows": "Робочі процеси",
+			"mcps": "MCP",
+			"modes": "Режими"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Правила",

@@ -150,7 +150,13 @@
 	},
 	"docs": "Docs",
 	"rules": {
-		"tooltip": "Manage Kilo Code Rules & Workflows",
+		"tooltip": "Manage Agent Behaviour ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Rules",
+			"workflows": "Workflows",
+			"mcps": "MCPs",
+			"modes": "Modes"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Rules",

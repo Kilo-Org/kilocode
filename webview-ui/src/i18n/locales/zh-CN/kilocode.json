@@ -150,7 +150,13 @@
 	},
 	"docs": "文档",
 	"rules": {
-		"tooltip": "管理 Kilo Code 规则和工作流",
+		"tooltip": "管理智能体行为（{{types}}）",
+		"agentBehaviourTypes": {
+			"rules": "规则",
+			"workflows": "工作流",
+			"mcps": "MCP",
+			"modes": "模式"
+		},
 		"ariaLabel": "Kilo Code 规则",
 		"tabs": {
 			"rules": "规则",

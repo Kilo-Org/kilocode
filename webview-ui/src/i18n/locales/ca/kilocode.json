@@ -136,7 +136,13 @@
 	},
 	"docs": "Documentació",
 	"rules": {
-		"tooltip": "Gestionar Regles i Fluxos de Treball de Kilo Code",
+		"tooltip": "Gestionar el comportament de l'agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regles",
+			"workflows": "Fluxos de Treball",
+			"mcps": "MCPs",
+			"modes": "Modes"
+		},
 		"ariaLabel": "Regles de Kilo Code",
 		"tabs": {
 			"rules": "Regles",

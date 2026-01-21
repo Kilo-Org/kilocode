@@ -143,7 +143,13 @@
 	},
 	"docs": "Dokumentation",
 	"rules": {
-		"tooltip": "Kilo Code Regeln & Workflows verwalten",
+		"tooltip": "Agentenverhalten verwalten ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regeln",
+			"workflows": "Workflows",
+			"mcps": "MCPs",
+			"modes": "Modi"
+		},
 		"ariaLabel": "Kilo Code Regeln",
 		"tabs": {
 			"rules": "Regeln",

@@ -12,6 +12,13 @@ import McpView from "@src/components/mcp/McpView"
 
 const KiloRulesToggleModal: React.FC = () => {
 	const { t } = useTranslation()
+	// kilocode_change - tooltip now reflects Agent Behaviour scope
+	const agentBehaviourTypes = [
+		t("kilocode:rules.agentBehaviourTypes.rules"),
+		t("kilocode:rules.agentBehaviourTypes.workflows"),
+		t("kilocode:rules.agentBehaviourTypes.mcps"),
+		t("kilocode:rules.agentBehaviourTypes.modes"),
+	].join(", ")
 
 	const [isVisible, setIsVisible] = useState(false)
 	const buttonRef = useRef<HTMLDivElement>(null)
@@ -48,7 +55,7 @@ const KiloRulesToggleModal: React.FC = () => {
 								onClick={() => setIsVisible(!isVisible)}
 							/>
 						</TooltipTrigger>
-						<TooltipContent>{t("kilocode:rules.tooltip")}</TooltipContent>
+						<TooltipContent>{t("kilocode:rules.tooltip", { types: agentBehaviourTypes })}</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
 			</div>
