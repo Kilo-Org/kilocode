@@ -180,14 +180,20 @@ export const Agentica: React.FC<AgenticaProps> = ({
             }
             const data = await response.json()
             const models = data.data?.reduce((acc: Record<string, any>, model: any) => {
+                // Only include pricing for premium models (category === "premium")
+                const isPremium = model.category === "premium"
                 acc[model.id] = {
                     contextWindow: model.context_window || 128000,
                     maxTokens: model.max_tokens,
                     supportsImages: model.supports_images || false,
                     supportsPromptCache: false,
-                    inputPrice: model.pricing?.input || 0,
-                    outputPrice: model.pricing?.output || 0,
+                    // Pricing is in USD per token; convert to USD per million tokens for display
+                    inputPrice: isPremium ? (model.pricing?.prompt_per_token_usd || 0) * 1_000_000 : undefined,
+                    outputPrice: isPremium ? (model.pricing?.completion_per_token_usd || 0) * 1_000_000 : undefined,
                     description: model.description,
+                    name: model.name,
+                    category: model.category,
+                    provider: model.provider,
                 }
                 return acc
             }, {}) || {}
@@ -266,12 +272,34 @@ export const Agentica: React.FC<AgenticaProps> = ({
                 <VSCodeButton
                     onClick={handleDeviceAuth}
                     disabled={deviceAuthStatus === "pending"}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    <span className="codicon codicon-github" style={{ fontSize: "16px", flexShrink: 0 }} aria-hidden="true"></span>
-                    <span style={{ whiteSpace: "nowrap" }}>
-                        {deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}
+                    style={{ width: "100%" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        {deviceAuthStatus === "pending" ? (
+                            <span className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: "16px" }} aria-hidden="true"></span>
+                        ) : (
+                            <span className="codicon codicon-github" style={{ fontSize: "16px" }} aria-hidden="true"></span>
+                        )}
+                        <span>
+                            {deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}
+                        </span>
                     </span>
                 </VSCodeButton>
+
+                {/* Show loading state while waiting for device code */}
+                {deviceAuthStatus === "pending" && !deviceAuthCode && (
+                    <div style={{
+                        padding: "12px",
+                        backgroundColor: "var(--vscode-editor-inactiveSelectionBackground)",
+                        borderRadius: "6px",
+                        border: "1px solid var(--vscode-panel-border)",
+                        textAlign: "center"
+                    }}>
+                        <span className="codicon codicon-loading codicon-modifier-spin" style={{ marginRight: "8px" }}></span>
+                        <span style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)" }}>
+                            Connecting to GitHub...
+                        </span>
+                    </div>
+                )}
 
                 {deviceAuthStatus === "pending" && deviceAuthCode && deviceAuthVerificationUrl && (
                     <div style={{

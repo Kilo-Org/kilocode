@@ -548,12 +548,20 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		// kilocode_change start: agentica provider
+		// Note: agentica models are fetched locally in the Agentica component, not via routerModels.
+		// We just return the model ID here; ModelPicker passes the model info via props.
+		case "agentica": {
+			const id = apiConfiguration.agenticaModelId ?? defaultModelId
+			return { id, info: undefined }
+		}
+		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
 			provider satisfies
-				"anthropic" | "gemini-cli" | "qwen-code" | "fake-ai" | "human-relay" | "kilocode" | "agentica" // kilocode_change: support agentica
+				"anthropic" | "gemini-cli" | "qwen-code" | "fake-ai" | "human-relay" | "kilocode" // kilocode_change
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 
