@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Серверы"
+			"mcp": "MCP Серверы",
+			"agentBehaviour": "Поведение агента"
 		},
 		"provider": {
 			"account": "Аккаунт Kilo Code",
@@ -142,7 +143,13 @@
 	},
 	"docs": "Документация",
 	"rules": {
-		"tooltip": "Управление правилами и рабочими процессами Kilo Code",
+		"tooltip": "Управлять поведением агента ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Правила",
+			"workflows": "Рабочие процессы",
+			"mcps": "MCP",
+			"modes": "Режимы"
+		},
 		"ariaLabel": "Правила Kilo Code",
 		"tabs": {
 			"rules": "Правила",

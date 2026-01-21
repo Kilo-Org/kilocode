@@ -141,6 +141,24 @@
 		"roo": {
 			"authenticationRequired": "يتطلب موفر Roo المصادقة السحابية. يرجى تسجيل الدخول إلى Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "ما سجلت دخول في OpenAI Codex. سجل دخولك باستخدام OAuth الخاص بـ OpenAI Codex.",
+			"invalidRequest": "طلب غير صحيح لـ Codex API. تأكد من معاملات الإدخال.",
+			"authenticationFailed": "فشل تسجيل الدخول. سجل دخولك مرة ثانية في OpenAI Codex.",
+			"accessDenied": "الوصول ممنوع. اشتراكك في ChatGPT قد لا يشمل الوصول لـ Codex.",
+			"endpointNotFound": "نقطة نهاية Codex API غير موجودة.",
+			"rateLimitExceeded": "تجاوزت حد الطلبات. جرّب مرة ثانية لاحقاً.",
+			"serviceError": "خطأ في خدمة OpenAI Codex. جرّب مرة ثانية لاحقاً.",
+			"genericError": "خطأ في Codex API ({{status}})",
+			"noResponseBody": "خطأ Codex API: لا يوجد محتوى في الاستجابة",
+			"connectionFailed": "فشل الاتصال بـ Codex API: {{message}}",
+			"unexpectedConnectionError": "خطأ غير متوقع في الاتصال بـ Codex API",
+			"apiError": "خطأ Codex API: {{message}}",
+			"responseFailed": "فشلت الاستجابة: {{message}}",
+			"streamProcessingError": "خطأ في معالجة تدفق الاستجابة: {{message}}",
+			"unexpectedStreamError": "خطأ غير متوقع في معالجة تدفق الاستجابة",
+			"completionError": "خطأ في إكمال OpenAI Codex: {{message}}"
+		},
 		"message": {
 			"no_active_task_to_delete": "لم يتم العثور على مهمة نشطة. لا يمكن حذف الرسائل.",
 			"invalid_timestamp_for_deletion": "طابع زمني غير صحيح مقدم للحذف.",
@@ -156,7 +174,8 @@
 		"manual_url_auth_failed": "فشل في المصادقة",
 		"manual_url_auth_error": "حدث خطأ في المصادقة",
 		"api": {
-			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة."
+			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة.",
+			"apiRequestFailed": "فشل طلب API ({{status}})"
 		}
 	},
 	"warnings": {

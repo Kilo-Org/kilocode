@@ -23,11 +23,11 @@ MCP server configurations can be managed at two levels:
 
 ### Editing MCP Settings Files
 
-You can edit both global and project-level MCP configuration files directly from the Kilo Code MCP settings view.
+You can edit both global and project-level MCP configuration files directly from the Kilo Code settings.
 
 1. Click the <Codicon name="gear" /> icon in the top navigation of the Kilo Code pane to open `Settings`.
-2. Click the `MCP Servers` tab on the left side
-3. Choose the `Installed` servers
+2. Click the `Agent Behaviour` tab on the left side
+3. Select the `MCP Servers` sub-tab
 4. Click the appropriate button:
     - **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
     - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
@@ -174,7 +174,7 @@ To set the maximum time to wait for a response after a tool call to the MCP serv
 MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
 
 1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/features/auto-approving-actions)
-2. In the MCP server settings, locate the specific tool you want to auto-approve
+2. Navigate to Settings > Agent Behaviour > MCP Servers, then locate the specific tool you want to auto-approve
 3. Check the `Always allow` checkbox next to the tool name
 
 <img src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-7.png" alt="Always allow checkbox for MCP tools" width="120" />
