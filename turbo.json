@@ -4,7 +4,7 @@
 		"lint": {},
 		"check-types": {},
 		"test": {
-			"dependsOn": ["@roo-code/types#build"]
+			"dependsOn": ["^build"]
 		},
 		"format": {},
 		"clean": {
