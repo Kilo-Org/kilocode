@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP-Server"
+			"mcp": "MCP-Server",
+			"agentBehaviour": "Agentenverhalten"
 		},
 		"provider": {
 			"account": "Kilo Code Konto",
@@ -142,7 +143,13 @@
 	},
 	"docs": "Dokumentation",
 	"rules": {
-		"tooltip": "Kilo Code Regeln & Workflows verwalten",
+		"tooltip": "Agentenverhalten verwalten ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regeln",
+			"workflows": "Workflows",
+			"mcps": "MCPs",
+			"modes": "Modi"
+		},
 		"ariaLabel": "Kilo Code Regeln",
 		"tabs": {
 			"rules": "Regeln",

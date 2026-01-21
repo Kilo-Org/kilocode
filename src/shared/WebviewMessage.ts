@@ -230,7 +230,6 @@ export interface WebviewMessage {
 		| "setHistoryPreviewCollapsed" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
-		| "mcpButtonClicked"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
 		| "installMarketplaceItemWithParameters"

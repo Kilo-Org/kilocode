@@ -1,5 +1,14 @@
 # kilo-code
 
+## 4.151.0
+
+### Minor Changes
+
+- [#5270](https://github.com/Kilo-Org/kilocode/pull/5270) [`6839f7c`](https://github.com/Kilo-Org/kilocode/commit/6839f7c76438b159873c5c88523324515809b8a0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for OpenAI Codex subscriptions (thanks Roo)
+
+    - Fix: Reset invalid model selection when using OpenAI Codex provider (PR #10777 by @hannesrudolph)
+    - Add OpenAI - ChatGPT Plus/Pro Provider that gives subscription-based access to Codex models without per-token costs (PR #10736 by @hannesrudolph)
+
 ## 4.150.0
 
 ### Minor Changes

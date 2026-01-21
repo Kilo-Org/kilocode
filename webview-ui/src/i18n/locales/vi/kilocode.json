@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Máy chủ MCP"
+			"mcp": "Máy chủ MCP",
+			"agentBehaviour": "Hành vi của Agent"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -142,7 +143,13 @@
 	},
 	"docs": "Tài liệu",
 	"rules": {
-		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
+		"tooltip": "Quản lý hành vi của agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Quy tắc",
+			"workflows": "Quy trình làm việc",
+			"mcps": "MCPs",
+			"modes": "Chế độ"
+		},
 		"ariaLabel": "Quy tắc Kilo Code",
 		"tabs": {
 			"rules": "Quy tắc",
