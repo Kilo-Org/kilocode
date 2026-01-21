@@ -1001,7 +1001,7 @@ export class RuntimeProcessHandler {
 		}
 
 		// Stop all active sessions
-		for (const [sessionId, info] of this.activeSessions) {
+		for (const info of this.activeSessions.values()) {
 			if (info.process.exitCode === null) {
 				info.process.kill("SIGTERM")
 			}

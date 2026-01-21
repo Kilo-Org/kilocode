@@ -148,7 +148,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		// RuntimeProcessHandler uses fork instead of spawn
 		const forkMock = (await import("node:child_process")).fork as unknown as Mock
 		expect(forkMock).toHaveBeenCalledTimes(1)
-		const [entryPath, args, options] = forkMock.mock.calls[0] as unknown as [
+		const [entryPath, _args, options] = forkMock.mock.calls[0] as unknown as [
 			string,
 			string[],
 			Record<string, unknown>,
