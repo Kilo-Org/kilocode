@@ -4,29 +4,16 @@
 name: IDE Integration Check
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'jetbrains/plugin/src/main/resources/META-INF/plugin.xml.template'
-      - 'src/package.json'
-      - 'scripts/check-jetbrains-vscode-commands.sh'
-      - '.github/workflows/check-jetbrains-vscode-integration.yml'
-  pull_request:
-    paths:
-      - 'jetbrains/plugin/src/main/resources/META-INF/plugin.xml.template'
-      - 'src/package.json'
-      - 'scripts/check-jetbrains-vscode-commands.sh'
-      - '.github/workflows/check-jetbrains-vscode-integration.yml'
+    pull_request:
 
 jobs:
-  check-commands:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    check-commands:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Check JetBrains and VSCode command consistency
-        run: |
-          echo "Running command consistency check..."
-          bash scripts/check-jetbrains-vscode-commands.sh
+            - name: Check JetBrains and VSCode command consistency
+              run: |
+                  echo "Running command consistency check..."
+                  bash scripts/check-jetbrains-vscode-commands.sh

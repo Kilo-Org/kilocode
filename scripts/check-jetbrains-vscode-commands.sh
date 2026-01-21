@@ -18,6 +18,53 @@ NC='\033[0m' # No Color
 JETBRAINS_XML="jetbrains/plugin/src/main/resources/META-INF/plugin.xml.template"
 VSCODE_PACKAGE="src/package.json"
 
+# Commands that are intentionally platform-specific and should be excluded from comparison
+# JetBrains-only commands (in kilocode. format)
+JETBRAINS_ONLY_COMMANDS=(
+    "kilocode.generateCommitMessage"  # JetBrains has its own commit message integration
+    "kilocode.RightClickMenu"         # JetBrains-specific menu group
+    "kilocode.RightClick.Chat"        # JetBrains-specific menu group
+)
+
+# VSCode-only commands (in kilocode. format for comparison)
+VSCODE_ONLY_COMMANDS=(
+    "kilocode.acceptInput"
+    "kilocode.addToContext"
+    "kilocode.agentManagerOpen"
+    "kilocode.explainCode"
+    "kilocode.exportSettings"
+    "kilocode.fixCode"
+    "kilocode.focusChatInput"
+    "kilocode.generateTerminalCommand"
+    "kilocode.helpButtonClicked"
+    "kilocode.importSettings"
+    "kilocode.improveCode"
+    "kilocode.marketplaceButtonClicked"
+    "kilocode.newTask"
+    "kilocode.open"
+    "kilocode.openInNewTab"
+    "kilocode.popoutButtonClicked"
+    "kilocode.promptsButtonClicked"
+    "kilocode.setCustomStoragePath"
+    "kilocode.terminalAddToContext"
+    "kilocode.terminalExplainCommand"
+    "kilocode.terminalFixCommand"
+    "kilocode.toggleAutoApprove"
+)
+
+# Function to check if a command is in an exclusion list
+is_excluded() {
+    local cmd="$1"
+    shift
+    local exclusions=("$@")
+    for excluded in "${exclusions[@]}"; do
+        if [[ "$cmd" == "$excluded" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Check if files exist
 if [[ ! -f "$JETBRAINS_XML" ]]; then
     echo -e "${RED}Error: JetBrains plugin.xml.template not found at $JETBRAINS_XML${NC}"
@@ -43,7 +90,7 @@ fi
 
 # Extract VSCode commands (command field in JSON with kilo-code. prefix)
 # VSCode uses kilo-code. prefix (with hyphen)
-VSCODE_COMMANDS=$(grep -oE '"command":\s*"kilo-code\.[a-zA-Z0-9][a-zA-Z0-9_-]*"' "$VSCODE_PACKAGE" 2>/dev/null | sed 's/"command":\s*"//;s/"$//' | grep -v '^$' | sort -u || true)
+VSCODE_COMMANDS=$(grep -oE '"command":\s*"kilo-code\.[a-zA-Z0-9][a-zA-Z0-9_-]*"' "$VSCODE_PACKAGE" 2>/dev/null | sed -E 's/"command":[[:space:]]*"//;s/"$//' | grep -v '^$' | sort -u || true)
 
 if [[ -z "$VSCODE_COMMANDS" ]]; then
     echo -e "${YELLOW}Warning: No commands found in VSCode package.json${NC}"
@@ -92,15 +139,40 @@ VSCODE_NORMALIZED=$(echo "$VSCODE_COMMANDS" | while read cmd; do
 done | sort -u)
 
 # Find missing commands (in JetBrains but not in VSCode)
-MISSING_IN_VSCODE=$(comm -23 <(echo "$JETBRAINS_NORMALIZED") <(echo "$VSCODE_NORMALIZED"))
+MISSING_IN_VSCODE_RAW=$(comm -23 <(echo "$JETBRAINS_NORMALIZED") <(echo "$VSCODE_NORMALIZED"))
 
 # Find extra commands (in VSCode but not in JetBrains)
-EXTRA_IN_VSCODE=$(comm -13 <(echo "$JETBRAINS_NORMALIZED") <(echo "$VSCODE_NORMALIZED"))
+EXTRA_IN_VSCODE_RAW=$(comm -13 <(echo "$JETBRAINS_NORMALIZED") <(echo "$VSCODE_NORMALIZED"))
+
+# Filter out excluded commands
+MISSING_IN_VSCODE=""
+while IFS= read -r cmd; do
+    [[ -z "$cmd" ]] && continue
+    if ! is_excluded "$cmd" "${JETBRAINS_ONLY_COMMANDS[@]}"; then
+        MISSING_IN_VSCODE="${MISSING_IN_VSCODE}${cmd}"$'\n'
+    fi
+done <<< "$MISSING_IN_VSCODE_RAW"
+MISSING_IN_VSCODE=$(echo "$MISSING_IN_VSCODE" | grep -v '^$' || true)
+
+EXTRA_IN_VSCODE=""
+while IFS= read -r cmd; do
+    [[ -z "$cmd" ]] && continue
+    if ! is_excluded "$cmd" "${VSCODE_ONLY_COMMANDS[@]}"; then
+        EXTRA_IN_VSCODE="${EXTRA_IN_VSCODE}${cmd}"$'\n'
+    fi
+done <<< "$EXTRA_IN_VSCODE_RAW"
+EXTRA_IN_VSCODE=$(echo "$EXTRA_IN_VSCODE" | grep -v '^$' || true)
 
 # Report results
 echo "=========================================="
 echo "Command Consistency Check Results"
 echo "=========================================="
+echo ""
+
+# Show excluded commands info
+echo -e "${YELLOW}Platform-specific commands (excluded from comparison):${NC}"
+echo "  JetBrains-only: ${#JETBRAINS_ONLY_COMMANDS[@]} commands"
+echo "  VSCode-only: ${#VSCODE_ONLY_COMMANDS[@]} commands"
 echo ""
 
 # Check for issues
@@ -110,6 +182,7 @@ if [[ -n "$MISSING_IN_VSCODE" ]]; then
     HAS_ISSUES=1
     echo -e "${RED}Commands missing in VSCode (present in JetBrains):${NC}"
     echo "$MISSING_IN_VSCODE" | while read cmd; do
+        [[ -z "$cmd" ]] && continue
         vscode_version=$(convert_to_vscode_format "$cmd")
         echo "  - JetBrains: $cmd"
         echo "    Expected in VSCode: $vscode_version"
@@ -121,6 +194,7 @@ if [[ -n "$EXTRA_IN_VSCODE" ]]; then
     HAS_ISSUES=1
     echo -e "${RED}Extra commands in VSCode (not present in JetBrains):${NC}"
     echo "$EXTRA_IN_VSCODE" | while read cmd; do
+        [[ -z "$cmd" ]] && continue
         # Convert back to VSCode format for display
         vscode_original=$(convert_to_vscode_format "$cmd")
         jetbrains_version=$(convert_to_jetbrains_format "$vscode_original")
@@ -144,5 +218,6 @@ else
     echo "Extra in VSCode: $(echo "$EXTRA_IN_VSCODE" | grep -c '^' || echo 0) commands"
     echo ""
     echo "Please update the missing commands in the appropriate configuration file."
+    echo "Or add them to the exclusion lists if they are intentionally platform-specific."
     exit 1
 fi
