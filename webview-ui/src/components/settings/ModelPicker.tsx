@@ -96,7 +96,7 @@ export const ModelPicker = ({
     // kilocode_change end
 
     const { id: selectedModelId, info: hookModelInfo } = useSelectedModel(apiConfiguration)
-    // kilocode_change: Fall back to models prop if hook doesn't have info (e.g., agentica fetches models locally)
+    // kilocode_change: Fall back to models prop if hook doesn't have info (dynamic providers may have stale cache)
     const selectedModelInfo = hookModelInfo ?? (selectedModelId && models ? models[selectedModelId] : undefined)
 
     const [searchValue, setSearchValue] = useState("")

@@ -549,11 +549,10 @@ function getSelectedModel({
 		}
 		// kilocode_change end
 		// kilocode_change start: agentica provider
-		// Note: agentica models are fetched locally in the Agentica component, not via routerModels.
-		// We just return the model ID here; ModelPicker passes the model info via props.
 		case "agentica": {
 			const id = apiConfiguration.agenticaModelId ?? defaultModelId
-			return { id, info: undefined }
+			const info = routerModels.agentica?.[id]
+			return { id, info }
 		}
 		// kilocode_change end
 		// case "anthropic":

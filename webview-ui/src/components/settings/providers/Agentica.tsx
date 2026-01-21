@@ -17,7 +17,6 @@ type AgenticaProps = {
     organizationAllowList?: OrganizationAllowList
     modelValidationError?: string
     simplifySettings?: boolean
-    onModelsLoaded?: (models: Record<string, any>) => void
 }
 
 type DeviceAuthStatus = "idle" | "pending" | "success" | "error"
@@ -30,7 +29,6 @@ export const Agentica: React.FC<AgenticaProps> = ({
     organizationAllowList = ORGANIZATION_ALLOW_ALL,
     modelValidationError,
     simplifySettings,
-    onModelsLoaded,
 }) => {
     const [subscription, setSubscription] = useState<any>(null)
     const [loading, setLoading] = useState(false)
@@ -41,8 +39,6 @@ export const Agentica: React.FC<AgenticaProps> = ({
     const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
     const [deviceAuthError, setDeviceAuthError] = useState<string>()
     const [showPlansView, setShowPlansView] = useState(false)
-    const [agenticaModels, setAgenticaModels] = useState<Record<string, any>>({})
-    const [modelsLoading, setModelsLoading] = useState(false)
 
     // Load stored password on component mount
     useEffect(() => {
@@ -129,15 +125,16 @@ export const Agentica: React.FC<AgenticaProps> = ({
         }
     }
 
-    // Fetch subscription status and models when credentials are provided (API key or email/password)
+    // Fetch subscription status when credentials are provided (API key or email/password)
+    // Models are fetched via routerModels (dynamic provider)
     useEffect(() => {
         if (apiConfiguration.agenticaApiKey) {
             fetchSubscriptionWithApiKey()
-            fetchAgenticaModels()
+            refreshAgenticaModels()
         } else if (apiConfiguration.agenticaEmail && apiConfiguration.agenticaPassword) {
             fetchSubscription()
         }
-    }, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword])
+    }, [apiConfiguration.agenticaApiKey, apiConfiguration.agenticaEmail, apiConfiguration.agenticaPassword, refreshAgenticaModels])
 
     const handlePlansViewClose = useCallback(() => {
         setShowPlansView(false)
@@ -165,48 +162,12 @@ export const Agentica: React.FC<AgenticaProps> = ({
         }
     }
 
-    const fetchAgenticaModels = async () => {
+    // Trigger models refresh via routerModels when API key changes
+    const refreshAgenticaModels = useCallback(() => {
         if (!apiConfiguration.agenticaApiKey) return
-
-        setModelsLoading(true)
-        try {
-            const response = await fetch("https://api.genlabs.dev/agentica/v1/models", {
-                headers: {
-                    "Authorization": `Bearer ${apiConfiguration.agenticaApiKey}`,
-                },
-            })
-            if (!response.ok) {
-                throw new Error(`Failed to fetch models: ${response.statusText}`)
-            }
-            const data = await response.json()
-            const models = data.data?.reduce((acc: Record<string, any>, model: any) => {
-                // Only include pricing for premium models (category === "premium")
-                const isPremium = model.category === "premium"
-                acc[model.id] = {
-                    contextWindow: model.context_window || 128000,
-                    maxTokens: model.max_tokens,
-                    supportsImages: model.supports_images || false,
-                    supportsPromptCache: false,
-                    // Pricing is in USD per token; convert to USD per million tokens for display
-                    inputPrice: isPremium ? (model.pricing?.prompt_per_token_usd || 0) * 1_000_000 : undefined,
-                    outputPrice: isPremium ? (model.pricing?.completion_per_token_usd || 0) * 1_000_000 : undefined,
-                    description: model.description,
-                    name: model.name,
-                    category: model.category,
-                    provider: model.provider,
-                }
-                return acc
-            }, {}) || {}
-            setAgenticaModels(models)
-            if (onModelsLoaded) {
-                onModelsLoaded(models)
-            }
-        } catch (err: any) {
-            console.error("Failed to fetch Agentica models:", err)
-        } finally {
-            setModelsLoading(false)
-        }
-    }
+        // Request router models refresh for agentica provider
+        vscode.postMessage({ type: "flushRouterModels", text: "agentica" })
+    }, [apiConfiguration.agenticaApiKey])
 
 
     const handleDeviceAuth = useCallback(() => {
@@ -452,7 +413,7 @@ export const Agentica: React.FC<AgenticaProps> = ({
                 apiConfiguration={apiConfiguration}
                 setApiConfigurationField={setApiConfigurationField}
                 defaultModelId={agenticaDefaultModelId}
-                models={agenticaModels || routerModels?.agentica ?? {}}
+                models={routerModels?.agentica ?? {}}
                 modelIdKey="agenticaModelId"
                 serviceName="Agentica"
                 serviceUrl="https://api.genlabs.dev/agentica/v1/models"
