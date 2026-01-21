@@ -65,6 +65,11 @@ export const modeConfigSchema = z.object({
 	slug: z.string().regex(/^[a-zA-Z0-9-]+$/, "Slug must contain only letters numbers and dashes"),
 	name: z.string().min(1, "Name is required"),
 	roleDefinition: z.string().min(1, "Role definition is required"),
+	// kilocode_change start: allow per-mode model override to be defined in YAML/JSON custom modes
+	// This field is read from custom modes files and then mapped to persisted `modeModelOverrides`.
+	// It is intentionally provider-agnostic (canonical model id).
+	model: z.string().min(1).optional(),
+	// kilocode_change end
 	whenToUse: z.string().optional(),
 	description: z.string().optional(),
 	customInstructions: z.string().optional(),
