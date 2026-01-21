@@ -30,10 +30,10 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-// Mock i18n to return the key without namespace prefix
+// Mock i18n to return a predictable format for testing
 vi.mock("../../../i18n", () => ({
 	t: vi.fn((key: string) => {
-		// Strip namespace prefix (e.g., "common:customModes.errors.foo" -> "customModes.errors.foo")
+		// Return the key without namespace prefix for easier assertions
 		return key.includes(":") ? key.split(":")[1] : key
 	}),
 }))
@@ -308,9 +308,10 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("customModes.errors.yamlParseError")
 		})
 
-		// TODO: This test is flaky - needs investigation into why showErrorMessage isn't called
-		// The paths look correct but the error message flow isn't being triggered
-		it.skip("should provide schema validation error messages", async () => {
+		it("should provide schema validation error messages", async () => {
+			// Create fresh manager to avoid cache issues from previous tests
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
 			const invalidSchema = yaml.stringify({
 				customModes: [
 					{
@@ -322,16 +323,23 @@ describe("CustomModesManager - YAML Edge Cases", () => {
 				],
 			})
 
+			// Use path.join to ensure path format matches what the code uses
+			const roomodesPath = path.join("/mock/workspace", ".kilocodemodes")
+
 			mockFsReadFile({
-				[mockRoomodes]: invalidSchema,
+				[roomodesPath]: invalidSchema,
 				[mockSettingsPath]: yaml.stringify({ customModes: [] }),
 			})
 
-			const modes = await manager.getCustomModes()
+			// Update fileExistsAtPath to recognize the roomodes path
+			;(fileExistsAtPath as Mock).mockImplementation(async (p: string) => {
+				return p === mockSettingsPath || p === roomodesPath
+			})
 
-			// Should show schema validation error
+			const modes = await freshManager.getCustomModes()
+
+			// Should show schema validation error (i18n mock strips namespace prefix)
 			expect(modes).toHaveLength(0)
-			// The error message includes the validation issues, so use toHaveBeenCalled or a partial match
 			expect(vscode.window.showErrorMessage).toHaveBeenCalled()
 		})
 	})

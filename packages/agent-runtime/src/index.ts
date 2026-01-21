@@ -85,11 +85,8 @@ export type {
 // ============================================
 // Utilities
 // ============================================
-export { logs, setLogger, getLogger } from "./utils/logger.js"
+export { logs, setLogger, getLogger, createIPCLogger } from "./utils/logger.js"
 export type { Logger } from "./utils/logger.js"
-
-export { setTelemetryService, getTelemetryService } from "./utils/telemetry.js"
-export type { TelemetryService } from "./utils/telemetry.js"
 
 export { KiloCodePaths } from "./utils/paths.js"
 export { resolveExtensionPaths } from "./utils/extension-paths.js"

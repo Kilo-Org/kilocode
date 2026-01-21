@@ -23,6 +23,7 @@ import {
 	type ExtensionState as RuntimeExtensionState,
 } from "@kilocode/agent-runtime"
 import { logs } from "./logs.js"
+import { TelemetryService } from "./telemetry/TelemetryService.js"
 import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/messages.js"
 import type { IdentityInfo } from "@kilocode/agent-runtime"
 import { EventEmitter } from "events"
@@ -103,7 +104,11 @@ export class ExtensionService extends EventEmitter {
 		// Forward events from runtime with type casting
 		this._runtime.on("ready", (api) => this.emit("ready", this.wrapExtensionAPI(api)))
 		this._runtime.on("stateChange", (state) => this.emit("stateChange", state as ExtensionState))
-		this._runtime.on("message", (message) => this.emit("message", message as ExtensionMessage))
+		this._runtime.on("message", (message) => {
+			const extMessage = message as ExtensionMessage
+			TelemetryService.getInstance().trackExtensionMessageReceived(extMessage.type)
+			this.emit("message", extMessage)
+		})
 		this._runtime.on("error", (error) => this.emit("error", error))
 		this._runtime.on("warning", (warning) => this.emit("warning", warning))
 		this._runtime.on("disposed", () => this.emit("disposed"))
@@ -145,6 +150,7 @@ export class ExtensionService extends EventEmitter {
 	}
 
 	async sendWebviewMessage(message: WebviewMessage): Promise<void> {
+		TelemetryService.getInstance().trackExtensionMessageSent(message.type)
 		return this._runtime.sendWebviewMessage(message as unknown as RuntimeWebviewMessage)
 	}
 

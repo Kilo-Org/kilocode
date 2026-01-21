@@ -69,3 +69,26 @@ export const logs = {
 		globalLogger.error(message, context, meta)
 	},
 }
+
+/**
+ * Create a logger that forwards logs to a parent process via IPC.
+ * Used by forked agent processes to send logs back to the parent.
+ */
+export function createIPCLogger(): Logger {
+	return {
+		debug(message: string, context?: string, meta?: Record<string, unknown>): void {
+			if (process.env.DEBUG) {
+				process.send?.({ type: "log", level: "debug", message, context, meta })
+			}
+		},
+		info(message: string, context?: string, meta?: Record<string, unknown>): void {
+			process.send?.({ type: "log", level: "info", message, context, meta })
+		},
+		warn(message: string, context?: string, meta?: Record<string, unknown>): void {
+			process.send?.({ type: "log", level: "warn", message, context, meta })
+		},
+		error(message: string, context?: string, meta?: Record<string, unknown>): void {
+			process.send?.({ type: "log", level: "error", message, context, meta })
+		},
+	}
+}

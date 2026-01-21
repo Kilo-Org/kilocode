@@ -47,7 +47,7 @@
  */
 
 import { createExtensionService, type ExtensionService } from "./services/extension.js"
-import { logs, setLogger, type Logger } from "./utils/logger.js"
+import { logs, setLogger, createIPCLogger } from "./utils/logger.js"
 import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig, ProviderSettings } from "./types/index.js"
 
 /**
@@ -110,36 +110,14 @@ interface ChildMessage {
 }
 
 /**
- * Create a logger that forwards to parent process
- */
-function createIPCLogger(): Logger {
-	return {
-		debug(message: string, context?: string, meta?: Record<string, unknown>): void {
-			if (process.env.DEBUG) {
-				process.send?.({ type: "log", level: "debug", message, context, meta })
-			}
-		},
-		info(message: string, context?: string, meta?: Record<string, unknown>): void {
-			process.send?.({ type: "log", level: "info", message, context, meta })
-		},
-		warn(message: string, context?: string, meta?: Record<string, unknown>): void {
-			process.send?.({ type: "log", level: "warn", message, context, meta })
-		},
-		error(message: string, context?: string, meta?: Record<string, unknown>): void {
-			process.send?.({ type: "log", level: "error", message, context, meta })
-		},
-	}
-}
-
-/**
  * Send message to parent process
  */
 function sendToParent(message: ChildMessage): void {
 	if (process.send) {
 		process.send(message)
 	} else {
-		// Not running as a child process - log to console
-		console.log("[AgentProcess]", JSON.stringify(message))
+		// Not running as a child process - use standard logger
+		logs.debug("IPC message (no parent)", "AgentProcess", { message })
 	}
 }
 

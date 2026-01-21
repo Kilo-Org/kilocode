@@ -2,7 +2,6 @@ import { EventEmitter } from "events"
 import { createVSCodeAPIMock, type IdentityInfo, type ExtensionContext } from "./VSCode.js"
 import { logs } from "../utils/logger.js"
 import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/index.js"
-import { getTelemetryService } from "../utils/telemetry.js"
 import { argsToMessage } from "../utils/safe-stringify.js"
 
 export interface ExtensionHostOptions {
@@ -316,9 +315,6 @@ export class ExtensionHost extends EventEmitter {
 				logs.debug(`Queued message ${message.type} - webview not ready`, "ExtensionHost")
 				return
 			}
-
-			// Track extension message sent
-			getTelemetryService().trackExtensionMessageSent(message.type)
 
 			// Handle webviewDidLaunch for CLI state synchronization
 			if (message.type === "webviewDidLaunch") {
@@ -647,9 +643,6 @@ export class ExtensionHost extends EventEmitter {
 							const oldestIds = Array.from(processedMessageIds).slice(0, 50)
 							oldestIds.forEach((id) => processedMessageIds.delete(id))
 						}
-
-						// Track extension message received
-						getTelemetryService().trackExtensionMessageReceived(message.type)
 
 						// Only forward specific message types that are important for CLI
 						switch (message.type) {
