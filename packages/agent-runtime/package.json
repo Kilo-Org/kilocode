@@ -8,11 +8,13 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
 		"./process": {
 			"types": "./dist/process.d.ts",
-			"import": "./dist/process.js"
+			"import": "./dist/process.js",
+			"default": "./dist/process.js"
 		}
 	},
 	"scripts": {

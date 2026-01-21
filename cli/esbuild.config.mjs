@@ -91,6 +91,7 @@ const __dirname = __dirname__(__filename);
 	},
 	external: [
 		// Keep these as external dependencies (will be installed via npm)
+		"@kilocode/agent-runtime",
 		"@anthropic-ai/bedrock-sdk",
 		"@anthropic-ai/sdk",
 		"@anthropic-ai/vertex-sdk",

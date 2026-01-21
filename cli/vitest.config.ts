@@ -31,5 +31,20 @@ export default defineConfig({
 
 		// Reporters
 		reporters: ["verbose"],
+
+		// Ensure workspace dependencies are properly resolved
+		deps: {
+			optimizer: {
+				web: {
+					// Don't try to optimize workspace packages
+					exclude: ["@kilocode/agent-runtime", "@kilocode/core-schemas"],
+				},
+			},
+		},
+	},
+	// Ensure workspace packages are resolved correctly
+	resolve: {
+		// Resolve workspace packages from their source
+		conditions: ["import", "module", "default"],
 	},
 })

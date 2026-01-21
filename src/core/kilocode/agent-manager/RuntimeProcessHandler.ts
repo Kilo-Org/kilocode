@@ -80,7 +80,6 @@ interface ActiveProcessInfo {
 
 export interface RuntimeProcessHandlerCallbacks {
 	onLog: (message: string) => void
-	onDebugLog?: (message: string) => void
 	onSessionLog: (sessionId: string, line: string) => void
 	onStateChanged: () => void
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
@@ -113,11 +112,6 @@ export class RuntimeProcessHandler {
 	) {
 		this.vscodeAppRoot = vscodeAppRoot
 	}
-
-	// Debug logging disabled for performance - re-enable if needed for debugging
-	// private debugLog(message: string): void {
-	// 	this.callbacks.onDebugLog?.(message)
-	// }
 
 	private clearPendingTimeout(): void {
 		if (this.pendingProcess?.timeoutId) {
@@ -283,19 +277,13 @@ export class RuntimeProcessHandler {
 					worktreePath: options.worktreeInfo.path,
 					parentBranch: options.worktreeInfo.parentBranch,
 				})
-				this.debugLog(
-					`Updated parallel mode info for resumed session ${options!.sessionId}: branch=${options.worktreeInfo.branch}`,
-				)
 			}
-
-			this.debugLog(`Resuming session ${options!.sessionId}, setting to creating state`)
 			this.callbacks.onStateChanged()
 		} else {
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
 				gitUrl: options?.gitUrl,
 			})
-			this.debugLog(`Pending session created, waiting for agent ready signal`)
 			this.callbacks.onPendingSessionChanged(pendingSession)
 		}
 
@@ -304,7 +292,6 @@ export class RuntimeProcessHandler {
 
 		// Get process entry point path
 		const entryPath = this.getProcessEntryPath()
-		this.debugLog(`Forking agent process from: ${entryPath}`)
 
 		try {
 			// Fork the agent-runtime process
@@ -356,18 +343,6 @@ export class RuntimeProcessHandler {
 			proc.on("error", (error) => {
 				this.handleProcessError(proc, error)
 			})
-
-			// Capture stderr for debugging
-			proc.stderr?.on("data", (data: Buffer) => {
-				const stderr = data.toString()
-				this.debugLog(`Agent stderr: ${stderr}`)
-			})
-
-			// Capture stdout for debugging (should be minimal since we use IPC)
-			proc.stdout?.on("data", (data: Buffer) => {
-				const stdout = data.toString()
-				this.debugLog(`Agent stdout: ${stdout}`)
-			})
 		} catch (error) {
 			this.callbacks.onLog(`Failed to fork agent process: ${error}`)
 			this.callbacks.onStartSessionFailed({
@@ -389,9 +364,6 @@ export class RuntimeProcessHandler {
 		msg: AgentIPCMessage,
 		onEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
-		const sessionId = this.getSessionIdForProcess(proc)
-		this.debugLog(`[IPC IN] Agent message: type=${msg.type}, sessionId=${sessionId || "pending"}`)
-
 		switch (msg.type) {
 			case "ready":
 				this.handleAgentReady(proc, onEvent)
@@ -409,16 +381,9 @@ export class RuntimeProcessHandler {
 				this.handleAgentError(proc, msg.error, onEvent)
 				break
 
-			case "warning":
-				this.debugLog(`Agent warning: ${msg.error?.message}`)
-				break
-
 			case "log":
 				this.handleAgentLog(proc, msg)
 				break
-
-			default:
-				this.debugLog(`Unknown agent message type: ${msg.type}`)
 		}
 	}
 
@@ -436,8 +401,6 @@ export class RuntimeProcessHandler {
 		const sessionId = this.pendingProcess.desiredSessionId || this.generateSessionId()
 		const prompt = this.pendingProcess.prompt
 
-		this.debugLog(`Agent ready, creating session: ${sessionId}`)
-
 		// Create the session in registry
 		this.registry.createSession(sessionId, prompt, Date.now(), {
 			parallelMode: this.pendingProcess.parallelMode,
@@ -454,9 +417,6 @@ export class RuntimeProcessHandler {
 				worktreePath: this.pendingProcess.worktreeInfo.path,
 				parentBranch: this.pendingProcess.worktreeInfo.parentBranch,
 			})
-			this.debugLog(
-				`Updated parallel mode info for session ${sessionId}: branch=${this.pendingProcess.worktreeInfo.branch}, path=${this.pendingProcess.worktreeInfo.path}`,
-			)
 		}
 
 		// Capture data before clearing pendingProcess
@@ -503,7 +463,6 @@ export class RuntimeProcessHandler {
 	): void {
 		const sessionId = this.getSessionIdForProcess(proc)
 		if (!sessionId) {
-			this.debugLog(`Received message from unknown process`)
 			return
 		}
 
@@ -515,10 +474,6 @@ export class RuntimeProcessHandler {
 			[key: string]: unknown
 		}
 
-		this.debugLog(
-			`Extension message type: ${extMsg.type}, hasState: ${!!extMsg.state}, hasChatMessages: ${!!extMsg.chatMessages}`,
-		)
-
 		if (extMsg.type === "state" && extMsg.state) {
 			// State update - extract chat messages if present
 			const state = extMsg.state as { chatMessages?: ClineMessage[]; clineMessages?: ClineMessage[] }
@@ -528,19 +483,9 @@ export class RuntimeProcessHandler {
 				// Filter out control messages that shouldn't be displayed
 				const filteredMessages = this.filterDisplayableMessages(chatMessages)
 
-				this.debugLog(
-					`Forwarding ${filteredMessages.length} chat messages to webview (filtered ${chatMessages.length - filteredMessages.length})`,
-				)
-				// Log the last message to see what's being sent
-				const lastMsg = filteredMessages[filteredMessages.length - 1]
-				this.debugLog(
-					`Last message: type=${lastMsg?.type}, say=${lastMsg?.say}, text=${lastMsg?.text?.slice(0, 100)}...`,
-				)
-
 				// Send api_req_started the first time we get actual content
 				// The webview state machine needs this to transition from "creating" to "streaming"
 				if (!this.sentApiReqStarted.has(sessionId)) {
-					this.debugLog(`Sending api_req_started state event for session ${sessionId}`)
 					this.sentApiReqStarted.add(sessionId)
 					const stateEvent: KilocodeStreamEvent = {
 						streamEventType: "kilocode",
@@ -554,22 +499,7 @@ export class RuntimeProcessHandler {
 				}
 
 				this.callbacks.onChatMessages(sessionId, filteredMessages)
-			} else {
-				this.debugLog(`State message has no chatMessages or clineMessages`)
 			}
-		}
-
-		// Convert to kilocode event for compatibility
-		if (extMsg.chatMessages || extMsg.state) {
-			const kilocodeEvent: KilocodeStreamEvent = {
-				streamEventType: "kilocode",
-				payload: {
-					ts: Date.now(),
-					say: extMsg.type === "state" ? "text" : undefined,
-					text: JSON.stringify(extMsg),
-				},
-			}
-			onEvent(sessionId, kilocodeEvent)
 		}
 	}
 
@@ -579,11 +509,10 @@ export class RuntimeProcessHandler {
 	private handleStateChange(
 		proc: ChildProcess,
 		state: unknown,
-		onEvent: (sessionId: string, event: StreamEvent) => void,
+		_onEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		const sessionId = this.getSessionIdForProcess(proc)
 		if (!sessionId) {
-			this.debugLog(`State change from unknown process`)
 			return
 		}
 
@@ -593,12 +522,7 @@ export class RuntimeProcessHandler {
 		if (chatMessages) {
 			// Filter out control messages that shouldn't be displayed
 			const filteredMessages = this.filterDisplayableMessages(chatMessages)
-			this.debugLog(
-				`State change: forwarding ${filteredMessages.length} chat messages (filtered ${chatMessages.length - filteredMessages.length})`,
-			)
 			this.callbacks.onChatMessages(sessionId, filteredMessages)
-		} else {
-			this.debugLog(`State change has no chatMessages or clineMessages`)
 		}
 	}
 
@@ -641,12 +565,8 @@ export class RuntimeProcessHandler {
 	 */
 	private handleAgentLog(proc: ChildProcess, msg: AgentIPCMessage): void {
 		const sessionId = this.getSessionIdForProcess(proc)
-		const logMsg = `[${msg.level}] ${msg.context || "Agent"}: ${msg.message}`
-
-		// Always log to debug output for visibility
-		this.debugLog(logMsg)
-
 		if (sessionId) {
+			const logMsg = `[${msg.level}] ${msg.context || "Agent"}: ${msg.message}`
 			this.callbacks.onSessionLog(sessionId, logMsg)
 		}
 	}
@@ -679,8 +599,6 @@ export class RuntimeProcessHandler {
 		onEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		const sessionId = this.getSessionIdForProcess(proc)
-
-		this.debugLog(`Agent process exited: code=${code}, signal=${signal}`)
 
 		if (this.pendingProcess?.process === proc) {
 			// Exit during pending state
