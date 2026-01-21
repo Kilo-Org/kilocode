@@ -46,7 +46,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Servers"
+			"mcp": "MCP Servers",
+			"agentBehaviour": "Agent Behaviour"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
@@ -176,6 +177,21 @@
 		"newFile": {
 			"newWorkflowFile": "New workflow file...",
 			"newRuleFile": "New rule file..."
+		}
+	},
+	"skills": {
+		"title": "Skills",
+		"description": "Skills provide specialized instructions for specific tasks. They can be scoped to specific modes or available globally.",
+		"sections": {
+			"globalSkills": "Global Skills",
+			"projectSkills": "Project Skills"
+		},
+		"emptyState": "No skills installed",
+		"deleteDialog": {
+			"title": "Delete Skill",
+			"description": "Are you sure you want to delete the skill \"{{skillName}}\"? This action cannot be undone.",
+			"cancel": "Cancel",
+			"delete": "Delete"
 		}
 	},
 	"taskTimeline": {

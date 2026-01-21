@@ -4376,6 +4376,72 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		// kilocode_change start - Skills tab handlers
+		case "refreshSkills": {
+			const skillsManager = provider.getSkillsManager()
+			if (skillsManager) {
+				const allSkills = skillsManager.getAllSkills()
+				const globalSkills = allSkills.filter((s) => s.source === "global")
+				const projectSkills = allSkills.filter((s) => s.source === "project")
+				await provider.postMessageToWebview({
+					type: "skillsData",
+					globalSkills,
+					projectSkills,
+				})
+			}
+			break
+		}
+		case "deleteSkill": {
+			const { skillName, source, mode } = message as {
+				skillName?: string
+				source?: "global" | "project"
+				mode?: string
+			}
+			if (!skillName || !source) {
+				break
+			}
+
+			const skillsManager = provider.getSkillsManager()
+			if (!skillsManager) {
+				break
+			}
+
+			try {
+				// Construct the skill directory path
+				const skillsDirName = mode ? `skills-${mode}` : "skills"
+				let skillDir: string
+
+				if (source === "global") {
+					const { getGlobalRooDirectory } = await import("../../services/roo-config")
+					skillDir = path.join(getGlobalRooDirectory(), skillsDirName, skillName)
+				} else {
+					// Project skill
+					skillDir = path.join(provider.cwd, ".kilocode", skillsDirName, skillName)
+				}
+
+				// Delete the skill directory
+				await fs.rm(skillDir, { recursive: true })
+
+				// Refresh skills
+				await skillsManager.discoverSkills()
+
+				// Send updated skills data
+				const allSkills = skillsManager.getAllSkills()
+				const globalSkills = allSkills.filter((s) => s.source === "global")
+				const projectSkills = allSkills.filter((s) => s.source === "project")
+				await provider.postMessageToWebview({
+					type: "skillsData",
+					globalSkills,
+					projectSkills,
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error deleting skill ${skillName}: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to delete skill: ${errorMessage}`)
+			}
+			break
+		}
+		// kilocode_change end - Skills tab handlers
 		case "downloadErrorDiagnostics": {
 			const currentTask = provider.getCurrentTask()
 			if (!currentTask) {

@@ -298,6 +298,10 @@ export interface WebviewMessage {
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
 		| "refreshCustomTools"
+		// kilocode_change start - Skills tab messages
+		| "refreshSkills"
+		| "deleteSkill"
+	// kilocode_change end
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -334,6 +338,7 @@ export interface WebviewMessage {
 	filename?: string // kilocode_change
 	ruleType?: string // kilocode_change
 	notificationId?: string // kilocode_change
+	skillName?: string // kilocode_change: For deleteSkill
 	commandIds?: string[] // kilocode_change: For getKeybindings
 	// kilocode_change end
 	serverName?: string

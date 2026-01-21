@@ -35,6 +35,7 @@ import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
 import { STTSegment, MicrophoneDevice } from "./sttContract" // kilocode_change: STT segment type and microphone device
+import { SkillMetadata } from "./skills" // kilocode_change: Skills tab data
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -202,6 +203,7 @@ export interface ExtensionMessage {
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 		| "claudeCodeRateLimits"
 		| "customToolsResult"
+		| "skillsData" // kilocode_change: Skills tab data
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -309,6 +311,9 @@ export interface ExtensionMessage {
 	localRules?: ClineRulesToggles
 	globalWorkflows?: ClineRulesToggles
 	localWorkflows?: ClineRulesToggles
+	// kilocode_change: Skills tab data
+	globalSkills?: SkillMetadata[]
+	projectSkills?: SkillMetadata[]
 	marketplaceItems?: MarketplaceItem[]
 	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
