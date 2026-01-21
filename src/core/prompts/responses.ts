@@ -6,6 +6,7 @@ import { RooProtectedController } from "../protect/RooProtectedController"
 import * as vscode from "vscode"
 import { ToolProtocol, isNativeProtocol, TOOL_PROTOCOL } from "@roo-code/types"
 import { Package } from "../../shared/package"
+import { parseDataUrlsToImageBlocks } from "../../utils/image-parsing"
 
 export const formatResponse = {
 	// kilocode_change start
@@ -255,40 +256,8 @@ Otherwise, if you have not completed the task and do not need additional informa
 	},
 }
 
-// to avoid circular dependency
-const formatImagesIntoBlocks = (images?: string[]): Anthropic.ImageBlockParam[] => {
-	return images
-		? images
-				.map((dataUrl) => {
-					// data:image/png;base64,base64string
-					if (!dataUrl || typeof dataUrl !== "string") {
-						return null
-					}
-					const parts = dataUrl.split(",")
-					if (parts.length < 2) {
-						return null
-					}
-					const [rest, base64] = parts
-					const restParts = rest?.split(":")
-					if (!restParts || restParts.length < 2) {
-						return null
-					}
-					const mimeTypeParts = restParts[1]?.split(";")
-					if (!mimeTypeParts || mimeTypeParts.length < 1) {
-						return null
-					}
-					const mimeType = mimeTypeParts[0]
-					if (!mimeType || !base64) {
-						return null
-					}
-					return {
-						type: "image",
-						source: { type: "base64", media_type: mimeType, data: base64 },
-					} as Anthropic.ImageBlockParam
-				})
-				.filter((block): block is Anthropic.ImageBlockParam => block !== null)
-		: []
-}
+// Alias for backward compatibility
+const formatImagesIntoBlocks = parseDataUrlsToImageBlocks
 
 const toolUseInstructionsReminder = `# Reminder: Instructions for Tool Use
 

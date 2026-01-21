@@ -1,236 +1,170 @@
-import path from "path"
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { ExtensionService } from "../extension.js"
-import type { ExtensionMessage, WebviewMessage } from "../../types/messages.js"
+
+// vi.hoisted() is hoisted above vi.mock() calls, so these classes are available to mock factories
+const { MockExtensionHost, MockMessageBridge, MockIPCChannel } = vi.hoisted(() => {
+	// We need to create mock classes without extending EventEmitter
+	// since EventEmitter import would not be available at hoist time.
+	// Instead, we'll create simple objects with the methods we need.
+
+	class MockIPCChannel {
+		private listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map()
+
+		on(event: string, listener: (...args: unknown[]) => void) {
+			if (!this.listeners.has(event)) {
+				this.listeners.set(event, new Set())
+			}
+			this.listeners.get(event)!.add(listener)
+			return this
+		}
+
+		emit(event: string, ...args: unknown[]) {
+			const eventListeners = this.listeners.get(event)
+			if (eventListeners) {
+				for (const listener of eventListeners) {
+					listener(...args)
+				}
+			}
+			return true
+		}
+
+		removeListener(event: string, listener: (...args: unknown[]) => void) {
+			const eventListeners = this.listeners.get(event)
+			if (eventListeners) {
+				eventListeners.delete(listener)
+			}
+			return this
+		}
+
+		send() {}
+		respond() {}
+	}
+
+	class MockExtensionHost {
+		private listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map()
+		private _webviewReady = false
+		private _currentState = {}
+
+		on(event: string, listener: (...args: unknown[]) => void) {
+			if (!this.listeners.has(event)) {
+				this.listeners.set(event, new Set())
+			}
+			this.listeners.get(event)!.add(listener)
+			return this
+		}
+
+		emit(event: string, ...args: unknown[]) {
+			const eventListeners = this.listeners.get(event)
+			if (eventListeners) {
+				for (const listener of eventListeners) {
+					listener(...args)
+				}
+			}
+			return true
+		}
+
+		removeListener(event: string, listener: (...args: unknown[]) => void) {
+			const eventListeners = this.listeners.get(event)
+			if (eventListeners) {
+				eventListeners.delete(listener)
+			}
+			return this
+		}
+
+		listenerCount(event: string) {
+			return this.listeners.get(event)?.size ?? 0
+		}
+
+		async activate() {
+			// Emit activated event after a short delay
+			setTimeout(() => {
+				this.emit("activated", this.getAPI())
+			}, 10)
+			return this.getAPI()
+		}
+
+		async deactivate() {}
+
+		getAPI() {
+			return {
+				getState: () => this._currentState,
+				sendMessage: () => {},
+				updateState: () => {},
+			}
+		}
+
+		async sendWebviewMessage() {}
+
+		async injectConfiguration() {}
+
+		async syncConfigurationMessages() {}
+
+		markWebviewReady(): void {
+			this._webviewReady = true
+		}
+
+		isWebviewReady(): boolean {
+			return this._webviewReady
+		}
+
+		isInInitialSetup(): boolean {
+			return false
+		}
+	}
+
+	class MockMessageBridge {
+		private tuiChannel = new MockIPCChannel()
+		private extChannel = new MockIPCChannel()
+
+		async sendWebviewMessage() {}
+		async sendExtensionMessage() {}
+		getTUIChannel() {
+			return this.tuiChannel
+		}
+		getExtensionChannel() {
+			return this.extChannel
+		}
+		dispose() {}
+	}
+
+	return { MockExtensionHost, MockMessageBridge, MockIPCChannel }
+})
 
 // Mock the extension-paths module
-vi.mock("../../utils/extension-paths.js", () => ({
+vi.mock("../utils/extension-paths.js", () => ({
 	resolveExtensionPaths: () => ({
 		extensionBundlePath: "/mock/extension/dist/extension.js",
 		extensionRootPath: "/mock/extension",
 	}),
 }))
 
-// Type definitions for mocks
-interface MockExtensionModule {
-	activate: ReturnType<typeof vi.fn>
-	deactivate: ReturnType<typeof vi.fn>
-}
+// Mock the ExtensionHost
+vi.mock("../host/ExtensionHost.js", () => ({
+	ExtensionHost: MockExtensionHost,
+	createExtensionHost: () => new MockExtensionHost(),
+}))
 
-interface MockVSCodeAPI {
-	context: {
-		subscriptions: unknown[]
-		secrets: {
-			get: ReturnType<typeof vi.fn>
-			store: ReturnType<typeof vi.fn>
-		}
-		globalState: {
-			get: ReturnType<typeof vi.fn>
-			update: ReturnType<typeof vi.fn>
-		}
-		workspaceState: {
-			get: ReturnType<typeof vi.fn>
-			update: ReturnType<typeof vi.fn>
-		}
-		extensionPath: string
-		extensionUri: { fsPath: string }
-	}
-	window: {
-		registerWebviewViewProvider: ReturnType<typeof vi.fn>
-		showInformationMessage: ReturnType<typeof vi.fn>
-		showErrorMessage: ReturnType<typeof vi.fn>
-		showWarningMessage: ReturnType<typeof vi.fn>
-		createOutputChannel: ReturnType<typeof vi.fn>
-	}
-	workspace: {
-		workspaceFolders: Array<{ uri: { fsPath: string } }>
-		onDidChangeConfiguration: ReturnType<typeof vi.fn>
-		getConfiguration: ReturnType<typeof vi.fn>
-	}
-	commands: {
-		registerCommand: ReturnType<typeof vi.fn>
-	}
-	Uri: {
-		file: ReturnType<typeof vi.fn>
-		joinPath: ReturnType<typeof vi.fn>
-	}
-	EventEmitter: ReturnType<typeof vi.fn>
-}
+// Mock the IPC module
+vi.mock("../communication/ipc.js", () => ({
+	MessageBridge: MockMessageBridge,
+	IPCChannel: MockIPCChannel,
+	createMessageBridge: () => new MockMessageBridge(),
+}))
 
-// Extend global type for test mocks
-declare global {
-	// eslint-disable-next-line no-var
-	var __extensionHost:
-		| {
-				registerWebviewProvider: (
-					name: string,
-					provider: { handleCLIMessage: ReturnType<typeof vi.fn> },
-				) => void
-		  }
-		| undefined
-	// eslint-disable-next-line no-var
-	var vscode: MockVSCodeAPI | undefined
-}
+// Now import the ExtensionService which will use our mocks
+import { ExtensionService } from "../services/extension.js"
+import type { ExtensionMessage, WebviewMessage } from "../types/index.js"
 
 describe("ExtensionService - requestSingleCompletion", () => {
 	let service: ExtensionService
-	let mockExtensionModule: MockExtensionModule
-	let originalRequire: NodeJS.Require
-	let mockVSCodeAPI: MockVSCodeAPI
 
 	beforeEach(() => {
-		// Create a mock VSCode API
-		mockVSCodeAPI = {
-			context: {
-				subscriptions: [],
-				secrets: {
-					get: vi.fn(async () =>
-						JSON.stringify({
-							currentApiConfigName: "default",
-							apiConfigs: {
-								default: {
-									id: "test-id",
-									apiProvider: "anthropic",
-									apiKey: "test-api-key",
-									apiModelId: "claude-3-5-sonnet-20241022",
-								},
-							},
-							modeApiConfigs: {},
-							migrations: {
-								rateLimitSecondsMigrated: true,
-								diffSettingsMigrated: true,
-								openAiHeadersMigrated: true,
-								consecutiveMistakeLimitMigrated: true,
-								todoListEnabledMigrated: true,
-								morphApiKeyMigrated: true,
-							},
-						}),
-					),
-					store: vi.fn(async () => {}),
-				},
-				globalState: {
-					get: vi.fn(),
-					update: vi.fn(),
-				},
-				workspaceState: {
-					get: vi.fn(),
-					update: vi.fn(),
-				},
-				extensionPath: "/mock/extension",
-				extensionUri: { fsPath: "/mock/extension" },
-			},
-			window: {
-				registerWebviewViewProvider: vi.fn(),
-				showInformationMessage: vi.fn(),
-				showErrorMessage: vi.fn(),
-				showWarningMessage: vi.fn(),
-				createOutputChannel: vi.fn(() => ({
-					appendLine: vi.fn(),
-					append: vi.fn(),
-					clear: vi.fn(),
-					dispose: vi.fn(),
-				})),
-			},
-			workspace: {
-				workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
-				onDidChangeConfiguration: vi.fn(),
-				getConfiguration: vi.fn(() => ({
-					get: vi.fn(),
-					update: vi.fn(),
-				})),
-			},
-			commands: {
-				registerCommand: vi.fn(),
-			},
-			Uri: {
-				file: vi.fn((filePath: string) => ({ fsPath: filePath })),
-				joinPath: vi.fn((uri: { fsPath: string }, ...paths: string[]) => ({
-					fsPath: path.join(uri.fsPath, ...paths),
-				})),
-			},
-			EventEmitter: vi.fn(() => ({
-				event: vi.fn(),
-				fire: vi.fn(),
-				dispose: vi.fn(),
-			})),
-		}
-
-		// Create a mock extension module
-		mockExtensionModule = {
-			activate: vi.fn(async (_context) => {
-				// Register a mock webview provider
-				if (global.__extensionHost) {
-					const mockProvider = {
-						handleCLIMessage: vi.fn(async () => {}),
-					}
-					global.__extensionHost.registerWebviewProvider("kilo-code.SidebarProvider", mockProvider)
-				}
-
-				return {
-					getState: vi.fn(() => ({
-						version: "1.0.0",
-						apiConfiguration: {
-							apiProvider: "anthropic",
-							apiKey: "test-api-key",
-							apiModelId: "claude-3-5-sonnet-20241022",
-						},
-						clineMessages: [],
-						mode: "code",
-						customModes: [],
-						taskHistoryFullLength: 0,
-						taskHistoryVersion: 0,
-						renderContext: "cli",
-						telemetrySetting: "disabled",
-						cwd: "/mock/workspace",
-						mcpServers: [],
-						listApiConfigMeta: [],
-						currentApiConfigName: "default",
-					})),
-					sendMessage: vi.fn(),
-					updateState: vi.fn(),
-					startNewTask: vi.fn(),
-					cancelTask: vi.fn(),
-					condense: vi.fn(),
-					condenseTaskContext: vi.fn(),
-					handleTerminalOperation: vi.fn(),
-				}
-			}),
-			deactivate: vi.fn(async () => {}),
-		}
-
-		// Mock the module loading system
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const Module = require("module") as { prototype: { require: NodeJS.Require } }
-		originalRequire = Module.prototype.require
-
-		Module.prototype.require = function (this: NodeJS.Module, id: string) {
-			if (id === "/mock/extension/dist/extension.js") {
-				return mockExtensionModule
-			}
-			if (id === "vscode" || id === "vscode-mock") {
-				return mockVSCodeAPI
-			}
-			return originalRequire.call(this, id)
-		} as NodeJS.Require
-
-		// Set global vscode
-		global.vscode = mockVSCodeAPI
+		vi.clearAllMocks()
 	})
 
 	afterEach(async () => {
 		if (service) {
 			await service.dispose()
 		}
-
-		// Restore original require
-		if (originalRequire) {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const Module = require("module") as { prototype: { require: typeof require } }
-			Module.prototype.require = originalRequire
-		}
-
-		// Clean up global vscode
-		delete global.vscode
 	})
 
 	describe("Error Handling", () => {
@@ -251,7 +185,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			// Mock sendWebviewMessage to fail
 			vi.spyOn(service, "sendWebviewMessage").mockRejectedValue(new Error("Send failed"))
@@ -268,7 +204,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			// Use a very short timeout for testing
 			const completionPromise = service.requestSingleCompletion("test", 100)
@@ -284,7 +222,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			const customTimeout = 200
 			const completionPromise = service.requestSingleCompletion("test", customTimeout)
@@ -299,7 +239,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			const initialListenerCount = service.listenerCount("message")
 
@@ -325,7 +267,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			// Capture request IDs
 			const requestIds: string[] = []
@@ -377,7 +321,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			let capturedRequestId: string | undefined
 			const originalSend = service.sendWebviewMessage.bind(service)
@@ -408,7 +354,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			let capturedRequestId: string | undefined
 			const originalSend = service.sendWebviewMessage.bind(service)
@@ -439,7 +387,9 @@ describe("ExtensionService - requestSingleCompletion", () => {
 			})
 
 			await service.initialize()
-			service.getExtensionHost().markWebviewReady()
+
+			// Wait for activation event
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			const initialListenerCount = service.listenerCount("message")
 
