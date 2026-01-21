@@ -2212,10 +2212,9 @@ export const webviewMessageHandler = async (
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
 				// kilocode_change end
 
-				// Ensure state is posted to webview after profile update to reflect organization mode changes
-				if (organizationChanged) {
-					await provider.postStateToWebview()
-				}
+				// Always post state to webview after profile update, not just when organization changed
+				// This ensures the welcome view receives the state message to complete the activation flow
+				await provider.postStateToWebview()
 
 				// kilocode_change: Reload ghost model when API provider settings change
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
