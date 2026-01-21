@@ -198,6 +198,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const userRespondedRef = useRef<boolean>(false)
 	const [currentFollowUpTs, setCurrentFollowUpTs] = useState<number | null>(null)
 
+	// Track previous content height to detect when new content is added
+	const prevContentHeightRef = useRef<number>(0)
+	// Track if content was recently added (within a short window)
+	const contentJustAddedRef = useRef<boolean>(false)
+
 	const clineAskRef = useRef(clineAsk)
 	useEffect(() => {
 		clineAskRef.current = clineAsk
@@ -1266,6 +1271,35 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return () => el.removeEventListener("scroll", onScroll)
 	}, [])
 
+	// Track content height changes to detect when new content (like auto-approve section) is added
+	useEffect(() => {
+		const el = scrollContainerRef.current
+		if (!el) return
+
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const newHeight = entry.contentRect.height
+				const heightDiff = newHeight - prevContentHeightRef.current
+
+				// If content height increased significantly (more than 10px), content was just added
+				if (heightDiff > 10) {
+					contentJustAddedRef.current = true
+
+					// Reset the flag after a short delay to allow followOutput to use it
+					setTimeout(() => {
+						contentJustAddedRef.current = false
+					}, 100)
+				}
+
+				prevContentHeightRef.current = newHeight
+			}
+		})
+
+		observer.observe(el)
+
+		return () => observer.disconnect()
+	}, [])
+
 	//kilocode_change
 	// Effect to clear checkpoint warning when messages appear or task changes
 	useEffect(() => {
@@ -1663,7 +1697,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								increaseViewportBy={{ top: 400, bottom: 400 }} // kilocode_change: use more modest numbers to see if they reduce gray screen incidence
 								data={groupedMessages}
 								itemContent={itemContent}
-								followOutput={(isAtBottom: boolean) => isAtBottom || stickyFollowRef.current}
+								followOutput={(isAtBottom: boolean) => {
+								// If already at bottom or sticky follow is enabled, scroll
+								if (isAtBottom || stickyFollowRef.current) {
+									return true
+								}
+								// If content was just added and user was near bottom, continue scrolling
+								if (contentJustAddedRef.current) {
+									contentJustAddedRef.current = false
+									return true
+								}
+								return false
+							}}
 								atBottomStateChange={(isAtBottom: boolean) => {
 									setIsAtBottom(isAtBottom)
 									// Only show the scroll-to-bottom button if not at bottom
