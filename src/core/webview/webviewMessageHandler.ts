@@ -474,6 +474,18 @@ export const webviewMessageHandler = async (
 			const customModes = await provider.customModesManager.getCustomModes()
 			await updateGlobalState("customModes", customModes)
 
+			// kilocode_change start: ensure modeModelOverrides stored via ExtensionContext.globalState are mirrored into ContextProxy state
+			// CustomModesManager updates `context.globalState` directly (not through ContextProxy), so we need to
+			// mirror `modeModelOverrides` into ContextProxy so the webview can render it immediately.
+			try {
+				const overridesFromGlobalState =
+					provider.context.globalState.get<Record<string, string>>("modeModelOverrides") ?? {}
+				await updateGlobalState("modeModelOverrides", overridesFromGlobalState)
+			} catch {
+				// non-fatal
+			}
+			// kilocode_change end
+
 			// kilocode_change start: Fetch organization modes on startup
 			// Fetch organization modes on startup if an organization is selected
 			await fetchAndRefreshOrganizationModesOnStartup(provider, updateGlobalState)
@@ -1795,23 +1807,6 @@ export const webviewMessageHandler = async (
 			}
 
 			await updateGlobalState("modeModelOverrides", updated)
-
-			// kilocode_change start: apply override immediately when updating the active mode
-			// If the user sets a per-mode model override for the *current* mode, the active model should update
-			// without requiring a mode switch.
-			const currentMode = (getGlobalState("mode") ?? defaultModeSlug) as string
-			if (mode === currentMode && modelId !== null) {
-				const activeProvider = provider.contextProxy.getProviderSettings()?.apiProvider
-				const gatewayModelsAvailable = (provider as any).getKilocodeGatewayModelsAvailable?.() as
-					| boolean
-					| undefined
-
-				// Only apply when Kilo Code provider is active and we know gateway models are available.
-				if (activeProvider === "kilocode" && gatewayModelsAvailable) {
-					await provider.applyCanonicalModelIdToActiveProviderConfiguration(modelId)
-				}
-			}
-			// kilocode_change end
 
 			await provider.postStateToWebview()
 			break

@@ -83,7 +83,7 @@ describe("webviewMessageHandler: setModeModelOverride", () => {
 		} as any
 	}
 
-	it("applies the per-mode override immediately when updating the current mode", async () => {
+	it("does not apply the per-mode override immediately when updating the current mode (only on mode switch)", async () => {
 		const provider = makeProvider({ apiProvider: "kilocode", gatewayModelsAvailable: true, mode: "code" })
 
 		await webviewMessageHandler(provider, {
@@ -94,7 +94,7 @@ describe("webviewMessageHandler: setModeModelOverride", () => {
 		expect(provider.contextProxy.setValue).toHaveBeenCalledWith("modeModelOverrides", {
 			code: "kilocode/model-x",
 		})
-		expect(provider.applyCanonicalModelIdToActiveProviderConfiguration).toHaveBeenCalledWith("kilocode/model-x")
+		expect(provider.applyCanonicalModelIdToActiveProviderConfiguration).not.toHaveBeenCalled()
 	})
 
 	it("does not apply immediately when provider is not kilocode", async () => {

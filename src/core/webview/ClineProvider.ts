@@ -1677,33 +1677,6 @@ export class ClineProvider
 			if (activate) {
 				const { mode } = await this.getState()
 
-				// kilocode_change start: ensure per-mode model override wins when (re)activating profiles
-				let providerSettingsToActivate = providerSettings
-				try {
-					const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<
-						string,
-						string
-					>
-					const modeModelOverride = modeModelOverrides[mode]
-					if (
-						providerSettings.apiProvider === "kilocode" &&
-						modeModelOverride &&
-						(this.getKilocodeGatewayModelsAvailable() ||
-							(await this.ensureKilocodeGatewayModelsAvailable()))
-					) {
-						const modelIdKey = this.getModelIdKeyForProvider("kilocode")
-						if (modelIdKey) {
-							providerSettingsToActivate = {
-								...providerSettings,
-								[modelIdKey]: modeModelOverride,
-							}
-						}
-					}
-				} catch {
-					// non-fatal
-				}
-				// kilocode_change end: ensure per-mode model override wins when (re)activating profiles
-
 				// These promises do the following:
 				// 1. Adds or updates the list of provider profiles.
 				// 2. Sets the current provider profile.
@@ -1718,7 +1691,7 @@ export class ClineProvider
 					this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig()),
 					this.updateGlobalState("currentApiConfigName", name),
 					this.providerSettingsManager.setModeConfig(mode, id),
-					this.contextProxy.setProviderSettings(providerSettingsToActivate),
+					this.contextProxy.setProviderSettings(providerSettings),
 				])
 
 				// Change the provider for the current task.
@@ -1726,12 +1699,12 @@ export class ClineProvider
 				const task = this.getCurrentTask()
 
 				if (task) {
-					task.api = buildApiHandler(providerSettingsToActivate)
+					task.api = buildApiHandler(providerSettings)
 				}
 
-				await TelemetryService.instance.updateIdentity(providerSettingsToActivate.kilocodeToken ?? "") // kilocode_change
+				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
 
-				this.updateTaskApiHandlerIfNeeded(providerSettingsToActivate, { forceRebuild: true })
+				this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
 			} else {
 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
 			}
@@ -1774,30 +1747,7 @@ export class ClineProvider
 	async activateProviderProfile(args: { name: string } | { id: string }) {
 		const { name, id, ...providerSettingsFromProfile } = await this.providerSettingsManager.activateProfile(args)
 		let providerSettings = providerSettingsFromProfile
-
-		// kilocode_change start: re-apply per-mode model override when switching profiles within the same mode
-		try {
-			const { mode } = await this.getState()
-			const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
-			const modeModelOverride = modeModelOverrides[mode]
-
-			if (
-				providerSettings.apiProvider === "kilocode" &&
-				modeModelOverride &&
-				(this.getKilocodeGatewayModelsAvailable() || (await this.ensureKilocodeGatewayModelsAvailable()))
-			) {
-				const modelIdKey = this.getModelIdKeyForProvider("kilocode")
-				if (modelIdKey) {
-					providerSettings = {
-						...providerSettings,
-						[modelIdKey]: modeModelOverride,
-					}
-				}
-			}
-		} catch {
-			// non-fatal
-		}
-		// kilocode_change end: re-apply per-mode model override when switching profiles within the same mode
+		// kilocode_change: do NOT re-apply per-mode override here; it should only happen during mode switches.
 
 		// See `upsertProviderProfile` for a description of what this is doing.
 		await Promise.all([
