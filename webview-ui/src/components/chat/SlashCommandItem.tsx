@@ -62,7 +62,8 @@ export const SlashCommandItem: React.FC<SlashCommandItemProps> = ({ command, onD
 							size="icon"
 							tabIndex={-1}
 							onClick={handleEdit}
-							className="size-6 flex items-center justify-center opacity-60 hover:opacity-100">
+							className="size-6 flex items-center justify-center opacity-60 hover:opacity-100"
+							ariaLabel={t("chat:slashCommands.editCommand")}>
 							<Edit className="w-4 h-4" />
 						</Button>
 					</StandardTooltip>
@@ -73,7 +74,8 @@ export const SlashCommandItem: React.FC<SlashCommandItemProps> = ({ command, onD
 							size="icon"
 							tabIndex={-1}
 							onClick={handleDelete}
-							className="size-6 flex items-center justify-center opacity-60 hover:opacity-100 hover:text-red-400">
+							className="size-6 flex items-center justify-center opacity-60 hover:opacity-100 hover:text-red-400"
+							ariaLabel={t("chat:slashCommands.deleteCommand")}>
 							<Trash2 className="w-4 h-4" />
 						</Button>
 					</StandardTooltip>

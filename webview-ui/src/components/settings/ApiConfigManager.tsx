@@ -227,7 +227,8 @@ const ApiConfigManager = ({
 								size="icon"
 								disabled={!inputValue.trim()}
 								onClick={handleSave}
-								data-testid="save-rename-button">
+								data-testid="save-rename-button"
+								ariaLabel={t("settings:common.save")}>
 								<span className="codicon codicon-check" />
 							</Button>
 						</StandardTooltip>
@@ -236,7 +237,8 @@ const ApiConfigManager = ({
 								variant="ghost"
 								size="icon"
 								onClick={handleCancel}
-								data-testid="cancel-rename-button">
+								data-testid="cancel-rename-button"
+								ariaLabel={t("settings:common.cancel")}>
 								<span className="codicon codicon-close" />
 							</Button>
 						</StandardTooltip>
@@ -284,7 +286,12 @@ const ApiConfigManager = ({
 							data-testid="select-component"
 						/>
 						<StandardTooltip content={t("settings:providers.addProfile")}>
-							<Button variant="ghost" size="icon" onClick={handleAdd} data-testid="add-profile-button">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={handleAdd}
+								data-testid="add-profile-button"
+								ariaLabel={t("settings:providers.addProfile")}>
 								<span className="codicon codicon-add" />
 							</Button>
 						</StandardTooltip>
@@ -295,7 +302,8 @@ const ApiConfigManager = ({
 										variant="ghost"
 										size="icon"
 										onClick={handleStartRename}
-										data-testid="rename-profile-button">
+										data-testid="rename-profile-button"
+										ariaLabel={t("settings:providers.renameProfile")}>
 										<span className="codicon codicon-edit" />
 									</Button>
 								</StandardTooltip>
@@ -310,7 +318,12 @@ const ApiConfigManager = ({
 										size="icon"
 										onClick={handleDelete}
 										data-testid="delete-profile-button"
-										disabled={isOnlyProfile}>
+										disabled={isOnlyProfile}
+										ariaLabel={
+											isOnlyProfile
+												? t("settings:providers.cannotDeleteOnlyProfile")
+												: t("settings:providers.deleteProfile")
+										}>
 										<span className="codicon codicon-trash" />
 									</Button>
 								</StandardTooltip>

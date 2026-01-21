@@ -173,7 +173,13 @@ const PromptsSettings = ({
 							content={t("prompts:supportPrompts.resetPrompt", {
 								promptType: activeSupportOption,
 							})}>
-							<Button variant="ghost" size="icon" onClick={() => handleSupportReset(activeSupportOption)}>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => handleSupportReset(activeSupportOption)}
+								ariaLabel={t("prompts:supportPrompts.resetPrompt", {
+									promptType: activeSupportOption,
+								})}>
 								<span className="codicon codicon-discard"></span>
 							</Button>
 						</StandardTooltip>

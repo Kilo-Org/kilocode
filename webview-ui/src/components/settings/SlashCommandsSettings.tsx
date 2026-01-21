@@ -164,7 +164,8 @@ export const SlashCommandsSettings: React.FC = () => {
 								size="icon"
 								onClick={() => handleCreateCommand("global", globalNewName)}
 								disabled={!globalNewName.trim()}
-								className="size-6 flex items-center justify-center opacity-60 hover:opacity-100">
+								className="size-6 flex items-center justify-center opacity-60 hover:opacity-100"
+								ariaLabel={t("chat:slashCommands.createCommand")}>
 								<Plus className="w-4 h-4" />
 							</Button>
 						</div>
@@ -206,7 +207,8 @@ export const SlashCommandsSettings: React.FC = () => {
 									size="icon"
 									onClick={() => handleCreateCommand("project", workspaceNewName)}
 									disabled={!workspaceNewName.trim()}
-									className="size-6 flex items-center justify-center opacity-60 hover:opacity-100">
+									className="size-6 flex items-center justify-center opacity-60 hover:opacity-100"
+									ariaLabel={t("chat:slashCommands.createCommand")}>
 									<Plus className="w-4 h-4" />
 								</Button>
 							</div>
