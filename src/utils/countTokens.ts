@@ -15,8 +15,8 @@ export async function countTokens(
 	{ useWorker = true }: CountTokensOptions = {},
 ): Promise<number> {
 	// kilocode_change start - disable workers in agent processes
-	// Disable workers in agent processes to avoid worker pool hanging issues
-	// Agent processes are detected by the AGENT_CONFIG environment variable
+	// Disable workers in agent processes to avoid worker pool hanging issues.
+	// AGENT_CONFIG is set by the agent manager when spawning agent processes.
 	if (process.env.AGENT_CONFIG) {
 		useWorker = false
 	}

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config"
+import path from "path"
 
 export default defineConfig({
 	test: {
@@ -46,5 +47,9 @@ export default defineConfig({
 	resolve: {
 		// Resolve workspace packages from their source
 		conditions: ["import", "module", "default"],
+		alias: {
+			// Resolve agent-runtime from source during tests (avoids needing dist/ to exist)
+			"@kilocode/agent-runtime": path.resolve(__dirname, "../packages/agent-runtime/src"),
+		},
 	},
 })
