@@ -225,7 +225,7 @@ export class ClineProvider
 				kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 			})
 
-			const available = Object.keys(models || {}).length > 0
+			const available = Object.keys(models).length > 0
 			this.setKilocodeGatewayModelsAvailable(available)
 			return available
 		} catch {

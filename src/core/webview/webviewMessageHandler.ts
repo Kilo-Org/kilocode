@@ -1051,10 +1051,9 @@ export const webviewMessageHandler = async (
 			// kilocode_change start: track gateway model availability for per-mode model overrides
 			// Only update the flag when the kilocode provider was part of this fetch.
 			if (!providerFilter || providerFilter === "kilocode") {
-				const kilocodeModels = (routerModels as any)?.kilocode
-				const available =
-					kilocodeModels && typeof kilocodeModels === "object" && Object.keys(kilocodeModels).length > 0
-				;(provider as any).setKilocodeGatewayModelsAvailable?.(Boolean(available))
+				const kilocodeModels = routerModels.kilocode
+				const available = Object.keys(kilocodeModels).length > 0
+				provider.setKilocodeGatewayModelsAvailable(Boolean(available))
 			}
 			// kilocode_change end
 
@@ -2243,7 +2242,7 @@ export const webviewMessageHandler = async (
 							kilocodeToken: message.apiConfiguration.kilocodeToken,
 						})
 						// kilocode_change start: track gateway model availability for per-mode model overrides
-						;(provider as any).setKilocodeGatewayModelsAvailable?.(Object.keys(models || {}).length > 0)
+						provider.setKilocodeGatewayModelsAvailable(Object.keys(models).length > 0)
 						// kilocode_change end
 						provider.postMessageToWebview({
 							type: "routerModels",
