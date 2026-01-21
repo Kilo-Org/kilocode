@@ -4,7 +4,6 @@ import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 import { agenticaDefaultModelId, ORGANIZATION_ALLOW_ALL } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
-import { securePasswordStorage } from "@/utils/passwordStorage"
 import PlansView from "../PlansView"
 import { ModelPicker } from "../ModelPicker"
 import type { RouterModels } from "@roo/api"
@@ -39,21 +38,6 @@ export const Agentica: React.FC<AgenticaProps> = ({
     const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
     const [deviceAuthError, setDeviceAuthError] = useState<string>()
     const [showPlansView, setShowPlansView] = useState(false)
-
-    // Load stored password on component mount
-    useEffect(() => {
-        const loadStoredPassword = async () => {
-            try {
-                const storedPassword = await securePasswordStorage.getPassword('agentica')
-                if (storedPassword && !apiConfiguration.agenticaPassword) {
-                    setApiConfigurationField("agenticaPassword", storedPassword)
-                }
-            } catch (error) {
-                console.error('Failed to load stored password:', error)
-            }
-        }
-        loadStoredPassword()
-    }, [apiConfiguration.agenticaPassword, setApiConfigurationField])
 
     // Listen for device auth messages from extension
     useEffect(() => {
@@ -197,14 +181,6 @@ export const Agentica: React.FC<AgenticaProps> = ({
         if (!apiConfiguration.agenticaEmail || !apiConfiguration.agenticaPassword) {
             setError("Please enter both email and password")
             return
-        }
-
-        try {
-            // Store password securely
-            await securePasswordStorage.storePassword('agentica', apiConfiguration.agenticaPassword)
-        } catch (error) {
-            console.error('Failed to store password securely:', error)
-            // Continue with login even if password storage fails
         }
 
         await fetchSubscription()
