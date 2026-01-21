@@ -1,6 +1,7 @@
 import * as crypto from "crypto"
 import * as path from "path"
 import * as fs from "fs"
+import { logs } from "./logger.js"
 
 /**
  * Centralized path management for Kilo Code agent runtime
@@ -119,15 +120,12 @@ export class KiloCodePaths {
 	}
 
 	/**
-	 * Ensure a directory exists, creating it if necessary
+	 * Ensure a directory exists, creating it if necessary.
+	 * Throws if the directory cannot be created.
 	 */
 	static ensureDirectoryExists(dirPath: string): void {
-		try {
-			if (!fs.existsSync(dirPath)) {
-				fs.mkdirSync(dirPath, { recursive: true })
-			}
-		} catch {
-			// Silent fail - let the calling code handle errors
+		if (!fs.existsSync(dirPath)) {
+			fs.mkdirSync(dirPath, { recursive: true })
 		}
 	}
 
@@ -139,23 +137,27 @@ export class KiloCodePaths {
 	}
 
 	/**
-	 * Load workspace map (maps absolute paths to folder names)
+	 * Load workspace map (maps absolute paths to folder names).
+	 * Returns empty map if file doesn't exist or cannot be parsed.
 	 */
 	static getWorkspaceMap(): Record<string, string> {
-		try {
-			const mapPath = this.getWorkspaceMapPath()
-			if (fs.existsSync(mapPath)) {
-				const content = fs.readFileSync(mapPath, "utf-8")
-				return JSON.parse(content)
-			}
-		} catch {
-			// Return empty map on error
+		const mapPath = this.getWorkspaceMapPath()
+		if (!fs.existsSync(mapPath)) {
+			return {}
 		}
-		return {}
+
+		try {
+			const content = fs.readFileSync(mapPath, "utf-8")
+			return JSON.parse(content)
+		} catch (error) {
+			logs.warn(`Failed to load workspace map: ${error}`, "KiloCodePaths")
+			return {}
+		}
 	}
 
 	/**
-	 * Update workspace map with a new workspace entry
+	 * Update workspace map with a new workspace entry.
+	 * Logs warning if update fails but does not throw (map is for convenience, not critical).
 	 */
 	static updateWorkspaceMap(workspacePath: string, folderName: string): void {
 		try {
@@ -169,8 +171,8 @@ export class KiloCodePaths {
 			// Save updated map
 			const mapPath = this.getWorkspaceMapPath()
 			fs.writeFileSync(mapPath, JSON.stringify(map, null, 2))
-		} catch {
-			// Silent fail - map is optional
+		} catch (error) {
+			logs.warn(`Failed to update workspace map: ${error}`, "KiloCodePaths")
 		}
 	}
 

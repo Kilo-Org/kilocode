@@ -10,87 +10,67 @@ export interface ExtensionPaths {
 /**
  * Resolves extension paths for the agent runtime.
  *
- * The extension can be located in different places:
- * 1. Via KILOCODE_DEV_CLI_PATH environment variable (development mode)
- * 2. Via KILOCODE_EXTENSION_PATH environment variable (explicit path)
- * 3. Relative to the CLI dist folder (bundled with CLI)
- * 4. In a specified custom path (for Agent Manager use)
+ * Resolution order:
+ * 1. Explicit customPath parameter (for Agent Manager)
+ * 2. KILOCODE_EXTENSION_PATH environment variable
+ * 3. KILOCODE_DEV_CLI_PATH environment variable (development mode)
+ * 4. Relative to CLI dist folder (production CLI)
  *
  * @param customPath - Optional custom path to the extension root
+ * @throws Error if extension cannot be found
  */
 export function resolveExtensionPaths(customPath?: string): ExtensionPaths {
-	// If a custom path is provided, use it
+	// 1. Explicit custom path (Agent Manager always provides this)
 	if (customPath) {
-		const extensionRootPath = customPath
-		const extensionBundlePath = path.join(extensionRootPath, "dist", "extension.js")
 		return {
-			extensionBundlePath,
-			extensionRootPath,
+			extensionRootPath: customPath,
+			extensionBundlePath: path.join(customPath, "dist", "extension.js"),
 		}
 	}
 
-	// Check for explicit extension path environment variable
+	// 2. Explicit environment variable
 	const explicitPath = process.env.KILOCODE_EXTENSION_PATH
 	if (explicitPath) {
 		const extensionBundlePath = path.join(explicitPath, "dist", "extension.js")
-		if (existsSync(extensionBundlePath)) {
-			return {
-				extensionBundlePath,
-				extensionRootPath: explicitPath,
-			}
+		if (!existsSync(extensionBundlePath)) {
+			throw new Error(
+				`KILOCODE_EXTENSION_PATH is set to "${explicitPath}" but extension.js not found at ${extensionBundlePath}`,
+			)
+		}
+		return {
+			extensionRootPath: explicitPath,
+			extensionBundlePath,
 		}
 	}
 
-	// Get the directory where this compiled file is located
-	const currentFile = fileURLToPath(import.meta.url)
-	const currentDir = path.dirname(currentFile)
-
-	// Check if we're in a utils subdirectory or directly in dist
-	const isInUtilsSubdir = currentDir.endsWith("utils")
-
-	// Navigate to dist directory
-	const distDir = isInUtilsSubdir ? path.resolve(currentDir, "..") : currentDir
-
-	// Development mode: KILOCODE_DEV_CLI_PATH is set by launch.json
+	// 3. Development mode via launch.json
 	const devCliPath = process.env.KILOCODE_DEV_CLI_PATH
 	if (devCliPath) {
-		// Derive workspace root from the dev CLI path (cli/dist/index.js -> workspace root)
 		const workspaceRoot = path.resolve(path.dirname(devCliPath), "..", "..")
-		const devExtensionPath = path.join(workspaceRoot, "src", "dist", "extension.js")
-		const devExtensionRoot = path.join(workspaceRoot, "src")
-
-		if (existsSync(devExtensionPath)) {
-			return {
-				extensionBundlePath: devExtensionPath,
-				extensionRootPath: devExtensionRoot,
-			}
-		}
-	}
-
-	// Production mode: extension is bundled in dist/kilocode/
-	// Try multiple locations since we might be invoked from different contexts
-	const possibleRoots = [
-		path.join(distDir, "kilocode"), // agent-runtime dist
-		path.join(distDir, "..", "kilocode"), // one level up
-		path.join(distDir, "..", "..", "cli", "dist", "kilocode"), // CLI bundled
-	]
-
-	for (const extensionRootPath of possibleRoots) {
+		const extensionRootPath = path.join(workspaceRoot, "src")
 		const extensionBundlePath = path.join(extensionRootPath, "dist", "extension.js")
-		if (existsSync(extensionBundlePath)) {
-			return {
-				extensionBundlePath,
-				extensionRootPath,
-			}
+
+		if (!existsSync(extensionBundlePath)) {
+			throw new Error(
+				`KILOCODE_DEV_CLI_PATH is set but extension.js not found at ${extensionBundlePath}. ` +
+					`Run 'pnpm build' in the src directory first.`,
+			)
 		}
+		return { extensionRootPath, extensionBundlePath }
 	}
 
-	// Fallback: return default CLI structure (may not exist)
+	// 4. Production CLI: extension bundled at dist/kilocode/
+	const currentDir = path.dirname(fileURLToPath(import.meta.url))
+	const distDir = currentDir.endsWith("utils") ? path.resolve(currentDir, "..") : currentDir
 	const extensionRootPath = path.join(distDir, "kilocode")
 	const extensionBundlePath = path.join(extensionRootPath, "dist", "extension.js")
 
-	return {
-		extensionBundlePath,
-		extensionRootPath,
+	if (!existsSync(extensionBundlePath)) {
+		throw new Error(
+			`Extension not found at ${extensionBundlePath}. ` +
+				`Either pass explicit paths, set KILOCODE_EXTENSION_PATH, or ensure the CLI is properly built.`,
+		)
 	}
+
+	return { extensionRootPath, extensionBundlePath }
 }
