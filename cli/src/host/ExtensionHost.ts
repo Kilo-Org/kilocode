@@ -785,7 +785,7 @@ export class ExtensionHost extends EventEmitter {
 				multiFileApplyDiff: false,
 				powerSteering: false,
 				imageGeneration: false,
-				runSlashCommand: false,
+				runSlashCommand: true,
 			},
 			// Add appendSystemPrompt from CLI options
 			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),

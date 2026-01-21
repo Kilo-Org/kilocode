@@ -9,9 +9,11 @@
  */
 
 import type { ExtensionChatMessage } from "../types/messages.js"
+import type { SlashCommandPolicy } from "../commands/core/types.js"
 import type { AutoApprovalConfig } from "../config/types.js"
 import { CI_MODE_MESSAGES } from "../constants/ci.js"
 import { logs } from "./logs.js"
+import { checkAllowedTools } from "./slashCommandTools.js"
 
 /**
  * Result of an approval decision
@@ -316,6 +318,7 @@ export function getApprovalDecision(
 	config: AutoApprovalConfig,
 	isCIMode: boolean,
 	isYoloMode: boolean = false,
+	slashCommandPolicy?: SlashCommandPolicy | null,
 ): ApprovalDecision {
 	// Only process ask messages
 	if (message.type !== "ask") {
@@ -325,6 +328,14 @@ export function getApprovalDecision(
 	// Don't process partial or already answered messages
 	if (message.partial || message.isAnswered) {
 		return { action: "manual" }
+	}
+
+	const policyDecision = checkAllowedTools(message, slashCommandPolicy)
+	if (!policyDecision.allowed) {
+		return {
+			action: "auto-reject",
+			message: policyDecision.reason ?? CI_MODE_MESSAGES.AUTO_REJECTED,
+		}
 	}
 
 	const askType = message.ask

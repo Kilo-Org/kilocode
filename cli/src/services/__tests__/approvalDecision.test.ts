@@ -7,6 +7,7 @@ import { getApprovalDecision } from "../approvalDecision.js"
 import type { AutoApprovalConfig } from "../../config/types.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { CI_MODE_MESSAGES } from "../../constants/ci.js"
+import type { SlashCommandPolicy } from "../../commands/core/types.js"
 
 // Helper to create a base config with all options disabled
 const createBaseConfig = (): AutoApprovalConfig => ({
@@ -186,6 +187,36 @@ describe("approvalDecision", () => {
 				const message = createMessage("tool", JSON.stringify({ tool: "access_mcp_resource" }))
 				const config = { ...createBaseConfig(), mcp: { enabled: true } }
 				const decision = getApprovalDecision(message, config, false)
+				expect(decision.action).toBe("auto-approve")
+			})
+		})
+
+		describe("slash command allowed-tools gating", () => {
+			it("should auto-reject disallowed tools even when config allows", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "readFile", path: "src/index.ts" }))
+				const config = { ...createBaseConfig(), read: { enabled: true, outside: true } }
+				const policy: SlashCommandPolicy = {
+					commandName: "audit",
+					scope: "project",
+					sourcePath: "/tmp/audit.md",
+					allowedTools: [{ type: "write", raw: "Write" }],
+				}
+
+				const decision = getApprovalDecision(message, config, false, false, policy)
+				expect(decision.action).toBe("auto-reject")
+			})
+
+			it("should allow tools when policy permits and config allows", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "readFile", path: "src/index.ts" }))
+				const config = { ...createBaseConfig(), read: { enabled: true, outside: true } }
+				const policy: SlashCommandPolicy = {
+					commandName: "audit",
+					scope: "project",
+					sourcePath: "/tmp/audit.md",
+					allowedTools: [{ type: "read", patterns: ["src/**"], raw: "Read(src/**)" }],
+				}
+
+				const decision = getApprovalDecision(message, config, false, false, policy)
 				expect(decision.action).toBe("auto-approve")
 			})
 		})

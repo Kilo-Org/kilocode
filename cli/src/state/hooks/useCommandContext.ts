@@ -31,6 +31,7 @@ import {
 	isParallelModeAtom,
 	chatMessagesAtom,
 	currentTaskAtom,
+	cwdAtom,
 } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
@@ -47,6 +48,11 @@ import {
 	changeModelListPageAtom,
 	resetModelListStateAtom,
 } from "../atoms/modelList.js"
+import {
+	setActiveSlashCommandPolicyAtom,
+	clearActiveSlashCommandPolicyAtom,
+	setPendingModelOverrideAtom,
+} from "../atoms/slashCommands.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
 import { useCondense } from "./useCondense.js"
@@ -109,6 +115,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const routerModels = useAtomValue(routerModelsAtom)
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
+	const workspacePath = useAtomValue(cwdAtom) || process.cwd()
 	const kilocodeDefaultModel = (extensionState?.kilocodeDefaultModel as string) || ""
 	const customModes = extensionState?.customModes || []
 	const isParallelMode = useAtomValue(isParallelModeAtom)
@@ -141,6 +148,9 @@ export function useCommandContext(): UseCommandContextReturn {
 	const updateModelListFilters = useSetAtom(updateModelListFiltersAtom)
 	const changeModelListPage = useSetAtom(changeModelListPageAtom)
 	const resetModelListState = useSetAtom(resetModelListStateAtom)
+	const setSlashCommandPolicy = useSetAtom(setActiveSlashCommandPolicyAtom)
+	const clearSlashCommandPolicy = useSetAtom(clearActiveSlashCommandPolicyAtom)
+	const setPendingModelOverride = useSetAtom(setPendingModelOverrideAtom)
 
 	// Get condense function
 	const { condenseAndWait } = useCondense()
@@ -157,6 +167,7 @@ export function useCommandContext(): UseCommandContextReturn {
 				input,
 				args,
 				options,
+				workspacePath,
 				config,
 				sendMessage: async (message: unknown) => {
 					await sendMessage(message as Parameters<typeof sendMessage>[0])
@@ -243,6 +254,15 @@ export function useCommandContext(): UseCommandContextReturn {
 				chatMessages: chatMessages as unknown as ExtensionMessage[],
 				// Current task context
 				currentTask,
+				setSlashCommandPolicy: (policy) => {
+					setSlashCommandPolicy(policy)
+				},
+				clearSlashCommandPolicy: () => {
+					clearSlashCommandPolicy()
+				},
+				setPendingModelOverride: (override) => {
+					setPendingModelOverride(override)
+				},
 				// Model list context
 				modelListPageIndex,
 				modelListFilters,
@@ -288,6 +308,10 @@ export function useCommandContext(): UseCommandContextReturn {
 			previousTaskHistoryPage,
 			chatMessages,
 			currentTask,
+			workspacePath,
+			setSlashCommandPolicy,
+			clearSlashCommandPolicy,
+			setPendingModelOverride,
 			modelListPageIndex,
 			modelListFilters,
 			updateModelListFilters,

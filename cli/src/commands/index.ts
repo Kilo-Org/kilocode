@@ -22,6 +22,8 @@ import { themeCommand } from "./theme.js"
 import { checkpointCommand } from "./checkpoint.js"
 import { sessionCommand } from "./session.js"
 import { condenseCommand } from "./condense.js"
+import { commandsCommand } from "./commands.js"
+import { registerCustomSlashCommands } from "../services/customSlashCommands.js"
 
 /**
  * Initialize all built-in commands
@@ -43,4 +45,12 @@ export function initializeCommands(): void {
 	commandRegistry.register(checkpointCommand)
 	commandRegistry.register(sessionCommand)
 	commandRegistry.register(condenseCommand)
+	commandRegistry.register(commandsCommand)
+}
+
+/**
+ * Initialize custom slash commands from disk.
+ */
+export async function initializeCustomCommands(workspacePath: string | null): Promise<void> {
+	await registerCustomSlashCommands(workspacePath)
 }

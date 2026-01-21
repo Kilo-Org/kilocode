@@ -50,6 +50,44 @@ kilocode -c
 kilocode --continue
 ```
 
+### Custom Slash Commands
+
+You can define reusable prompts as custom slash commands. Commands are Markdown files where the filename
+becomes the command name (e.g., `audit.md` → `/audit`).
+
+- Project commands: `.kilocode/commands/`
+- User commands: `~/.kilocode/cli/commands/`
+Legacy user commands in `~/.kilocode/commands/` are still loaded for backwards compatibility.
+
+Example command file:
+
+```md
+---
+description: Audit code for security issues
+argument-hint: "<path> [level]"
+allowed-tools:
+    - Read(src/**)
+    - Bash(git diff)
+model: anthropic/claude-sonnet-4.5
+disable-model-invocation: false
+---
+
+Review $1 for security issues at level $2. Use $ARGUMENTS for all args.
+```
+
+Usage:
+
+```bash
+/audit src high
+```
+
+Notes:
+
+- `$ARGUMENTS` expands to all arguments as a single string.
+- `$1`, `$2`, ... expand to positional arguments.
+- `allowed-tools` restricts which tool actions the command can trigger.
+- Use `/commands` to list or reload custom commands.
+
 ### Parallel mode
 
 Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.

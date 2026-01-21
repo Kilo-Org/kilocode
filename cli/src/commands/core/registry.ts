@@ -81,6 +81,21 @@ class CommandRegistry {
 		this.commands.clear()
 		this.aliases.clear()
 	}
+
+	/**
+	 * Unregister a command by name or alias
+	 */
+	unregister(nameOrAlias: string): void {
+		const command = this.get(nameOrAlias)
+		if (!command) {
+			return
+		}
+
+		this.commands.delete(command.name)
+		for (const alias of command.aliases) {
+			this.aliases.delete(alias)
+		}
+	}
 }
 
 // Export singleton instance

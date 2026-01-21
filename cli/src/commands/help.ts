@@ -34,6 +34,17 @@ export const helpCommand: Command = {
 			// Show detailed help for specific command
 			const helpText = [`**${command.name}** - ${command.description}`, "", `**Usage:** ${command.usage}`, ""]
 
+			if (command.custom?.argumentHint) {
+				helpText.push(`**Argument Hint:** ${command.custom.argumentHint}`)
+				helpText.push("")
+			}
+
+			if (command.custom) {
+				const scopeLabel = command.custom.scope === "project" ? "Project" : "User"
+				helpText.push(`**Source:** ${scopeLabel}`)
+				helpText.push("")
+			}
+
 			if (command.aliases.length > 0) {
 				helpText.push(`**Aliases:** ${command.aliases.join(", ")}`)
 				helpText.push("")
@@ -86,7 +97,8 @@ export const helpCommand: Command = {
 		if (categories.chat && categories.chat.length > 0) {
 			helpText.push("**Chat:**")
 			categories.chat.forEach((cmd) => {
-				helpText.push(`  /${cmd.name} - ${cmd.description}`)
+				const scopeLabel = cmd.custom ? ` [${cmd.custom.scope}]` : ""
+				helpText.push(`  /${cmd.name}${scopeLabel} - ${cmd.description}`)
 			})
 			helpText.push("")
 		}
@@ -95,7 +107,8 @@ export const helpCommand: Command = {
 		if (categories.settings && categories.settings.length > 0) {
 			helpText.push("**Settings:**")
 			categories.settings.forEach((cmd) => {
-				helpText.push(`  /${cmd.name} - ${cmd.description}`)
+				const scopeLabel = cmd.custom ? ` [${cmd.custom.scope}]` : ""
+				helpText.push(`  /${cmd.name}${scopeLabel} - ${cmd.description}`)
 			})
 			helpText.push("")
 		}
@@ -104,7 +117,8 @@ export const helpCommand: Command = {
 		if (categories.navigation && categories.navigation.length > 0) {
 			helpText.push("**Navigation:**")
 			categories.navigation.forEach((cmd) => {
-				helpText.push(`  /${cmd.name} - ${cmd.description}`)
+				const scopeLabel = cmd.custom ? ` [${cmd.custom.scope}]` : ""
+				helpText.push(`  /${cmd.name}${scopeLabel} - ${cmd.description}`)
 			})
 			helpText.push("")
 		}
@@ -113,7 +127,8 @@ export const helpCommand: Command = {
 		if (categories.system && categories.system.length > 0) {
 			helpText.push("**System:**")
 			categories.system.forEach((cmd) => {
-				helpText.push(`  /${cmd.name} - ${cmd.description}`)
+				const scopeLabel = cmd.custom ? ` [${cmd.custom.scope}]` : ""
+				helpText.push(`  /${cmd.name}${scopeLabel} - ${cmd.description}`)
 			})
 			helpText.push("")
 		}

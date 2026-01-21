@@ -40,6 +40,20 @@ export class KiloCodePaths {
 	}
 
 	/**
+	 * Get user-level custom command directory
+	 */
+	static getUserCommandsDir(): string {
+		return path.join(this.getKiloCodeDir(), "commands")
+	}
+
+	/**
+	 * Get legacy user-level custom command directory (~/.kilocode/commands)
+	 */
+	static getLegacyUserCommandsDir(): string {
+		return path.join(this.getHomeDir(), this.BASE_DIR_NAME, "commands")
+	}
+
+	/**
 	 * Get tasks base directory
 	 */
 	static getTasksDir(): string {

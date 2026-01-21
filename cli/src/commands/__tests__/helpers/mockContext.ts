@@ -31,6 +31,7 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		input: "",
 		args: [],
 		options: {},
+		workspacePath: "/workspace",
 		config: {} as CLIConfig,
 		sendMessage: vi.fn().mockResolvedValue(undefined),
 		addMessage: vi.fn(),
@@ -73,6 +74,9 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		chatMessages: [],
 		// Current task context
 		currentTask: null,
+		setSlashCommandPolicy: vi.fn(),
+		clearSlashCommandPolicy: vi.fn(),
+		setPendingModelOverride: vi.fn(),
 		modelListPageIndex: 0,
 		modelListFilters: {
 			sort: "preferred",

@@ -19,8 +19,7 @@ import { JsonRenderer } from "./JsonRenderer.js"
 import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { StatusIndicator } from "./components/StatusIndicator.js"
-import { initializeCommands } from "../commands/index.js"
-import { initializeCustomCommands } from "../commands/custom.js"
+import { initializeCommands, initializeCustomCommands } from "../commands/index.js"
 import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
 import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
@@ -30,6 +29,7 @@ import { useProfile } from "../state/hooks/useProfile.js"
 import { useTaskHistory } from "../state/hooks/useTaskHistory.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
+import { useSlashCommandCleanup } from "../state/hooks/useSlashCommandCleanup.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
@@ -91,6 +91,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Approval monitor hook for centralized approval handling
 	useApprovalMonitor()
 
+	// Slash command cleanup hook (policy + model restore)
+	useSlashCommandCleanup()
+
 	// Profile hook for handling profile/balance data responses
 	useProfile()
 
@@ -122,6 +125,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const promptExecutedRef = useRef(false)
 	const welcomeShownRef = useRef(false)
 	const autoUpdatedCheckedRef = useRef(false)
+	const customCommandsLoadedRef = useRef(false)
 
 	// Initialize CI mode atoms
 	useEffect(() => {
@@ -149,15 +153,26 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.parallel, setIsParallelMode])
 
-	// Initialize workspace path for shell commands and load custom commands
+	// Initialize workspace path for shell commands
 	useEffect(() => {
-		const workspace = options.workspace || process.cwd()
 		if (options.workspace) {
 			setWorkspacePath(options.workspace)
 		}
-		// Load custom commands from ~/.kilocode/commands/ and .kilocode/commands/
-		void initializeCustomCommands(workspace)
 	}, [options.workspace, setWorkspacePath])
+
+	// Initialize custom slash commands once workspace is known
+	useEffect(() => {
+		if (customCommandsLoadedRef.current) {
+			return
+		}
+
+		const workspacePath = options.workspace || process.cwd()
+		customCommandsLoadedRef.current = true
+
+		void initializeCustomCommands(workspacePath).catch((error) => {
+			logs.error("Failed to initialize custom slash commands", "UI", { error })
+		})
+	}, [options.workspace])
 
 	// Handle CI mode exit
 	useEffect(() => {

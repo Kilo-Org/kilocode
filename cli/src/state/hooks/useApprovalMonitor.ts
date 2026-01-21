@@ -13,9 +13,9 @@
  * @module useApprovalMonitor
  */
 
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { useAtomValue, useSetAtom, useStore } from "jotai"
-import { lastAskMessageAtom, yoloModeAtom } from "../atoms/ui.js"
+import { lastAskMessageAtom, yoloModeAtom, addMessageAtom } from "../atoms/ui.js"
 import { setPendingApprovalAtom, clearPendingApprovalAtom, approvalProcessingAtom } from "../atoms/approval.js"
 import {
 	autoApproveReadAtom,
@@ -40,8 +40,14 @@ import { ciModeAtom } from "../atoms/ci.js"
 import { useApprovalHandler } from "./useApprovalHandler.js"
 import { getApprovalDecision } from "../../services/approvalDecision.js"
 import type { AutoApprovalConfig } from "../../config/types.js"
+import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { useApprovalTelemetry } from "./useApprovalTelemetry.js"
+import { activeSlashCommandPolicyAtom } from "../atoms/slashCommands.js"
+import { parseCommand } from "../../commands/core/parser.js"
+import { getCustomSlashCommands, executeCustomSlashCommand } from "../../services/customSlashCommands.js"
+import { checkAllowedTools } from "../../services/slashCommandTools.js"
+import { useCommandContext } from "./useCommandContext.js"
 
 /**
  * Hook that monitors messages and orchestrates approval flow
@@ -69,6 +75,7 @@ export function useApprovalMonitor(): void {
 	const lastAskMessage = useAtomValue(lastAskMessageAtom)
 	const setPendingApproval = useSetAtom(setPendingApprovalAtom)
 	const clearPendingApproval = useSetAtom(clearPendingApprovalAtom)
+	const addMessage = useSetAtom(addMessageAtom)
 
 	// Get all config values
 	const autoApproveRead = useAtomValue(autoApproveReadAtom)
@@ -90,12 +97,15 @@ export function useApprovalMonitor(): void {
 	const autoApproveTodo = useAtomValue(autoApproveTodoAtom)
 	const isCIMode = useAtomValue(ciModeAtom)
 	const isYoloMode = useAtomValue(yoloModeAtom)
+	const slashCommandPolicy = useAtomValue(activeSlashCommandPolicyAtom)
 
 	const { approve, reject } = useApprovalHandler()
+	const { createContext } = useCommandContext()
 	const approvalTelemetry = useApprovalTelemetry()
 
 	// Track if we've already handled auto-approval for this message timestamp
 	const autoApprovalHandledRef = useRef<Set<number>>(new Set())
+	const runSlashCommandHandledRef = useRef<Set<number>>(new Set())
 
 	// Build config object with proper nested structure
 	const config: AutoApprovalConfig = {
@@ -137,6 +147,68 @@ export function useApprovalMonitor(): void {
 			timeout: autoApproveQuestionTimeout,
 		},
 	}
+
+	const handleRunSlashCommand = useCallback(
+		async (toolData: RunSlashCommandToolData, message: ExtensionChatMessage) => {
+			const rawCommand = toolData.command || ""
+			const commandName = rawCommand.replace(/^\//, "").trim().toLowerCase()
+
+			if (!commandName) {
+				await reject("runSlashCommand missing command name")
+				addMessage({
+					id: Date.now().toString(),
+					type: "error",
+					content: "runSlashCommand request missing a command name.",
+					ts: Date.now(),
+				})
+				return
+			}
+
+			const policyDecision = checkAllowedTools(message, slashCommandPolicy)
+			if (!policyDecision.allowed) {
+				await reject(policyDecision.reason)
+				addMessage({
+					id: Date.now().toString(),
+					type: "error",
+					content: policyDecision.reason || `Slash command "/${commandName}" is not allowed.`,
+					ts: Date.now(),
+				})
+				return
+			}
+
+			const commandDefinition = getCustomSlashCommands().find((cmd) => cmd.name === commandName)
+			if (!commandDefinition) {
+				await reject(`Unknown slash command "/${commandName}"`)
+				addMessage({
+					id: Date.now().toString(),
+					type: "error",
+					content: `runSlashCommand could not find "/${commandName}".`,
+					ts: Date.now(),
+				})
+				return
+			}
+
+			if (commandDefinition.metadata.disableModelInvocation) {
+				await reject(`Slash command "/${commandName}" cannot be invoked by the model.`)
+				addMessage({
+					id: Date.now().toString(),
+					type: "error",
+					content: `Slash command "/${commandName}" is disabled for model invocation.`,
+					ts: Date.now(),
+				})
+				return
+			}
+
+			const argString = toolData.args?.trim()
+			const input = argString ? `/${commandName} ${argString}` : `/${commandName}`
+			const parsed = parseCommand(input)
+			const context = createContext(input, parsed?.args ?? [], parsed?.options ?? {}, () => {})
+
+			await executeCustomSlashCommand(commandDefinition, context)
+			await approve(`Executed /${commandName}`)
+		},
+		[addMessage, approve, reject, createContext, slashCommandPolicy],
+	)
 
 	// Track the last message we set as pending (full message snapshot for comparison)
 	const lastPendingRef = useRef<{
@@ -196,10 +268,23 @@ export function useApprovalMonitor(): void {
 		// Handle auto-approval once per message timestamp, but ONLY for complete messages
 		// This allows the approval modal to show for partial messages while preventing premature auto-approval
 		if (!lastAskMessage.partial && !autoApprovalHandledRef.current.has(lastAskMessage.ts)) {
+			if (lastAskMessage.ask === "tool") {
+				const toolData = parseToolData(lastAskMessage)
+				if (toolData?.tool === "runSlashCommand") {
+					if (!runSlashCommandHandledRef.current.has(lastAskMessage.ts)) {
+						runSlashCommandHandledRef.current.add(lastAskMessage.ts)
+						void handleRunSlashCommand(toolData, lastAskMessage).catch((error) => {
+							logs.error("Failed to handle runSlashCommand tool request", "useApprovalMonitor", { error })
+						})
+					}
+					return
+				}
+			}
+
 			autoApprovalHandledRef.current.add(lastAskMessage.ts)
 
 			// Get approval decision from service
-			const decision = getApprovalDecision(lastAskMessage, config, isCIMode, isYoloMode)
+			const decision = getApprovalDecision(lastAskMessage, config, isCIMode, isYoloMode, slashCommandPolicy)
 
 			// Execute based on decision
 			if (decision.action === "auto-approve") {
@@ -253,9 +338,13 @@ export function useApprovalMonitor(): void {
 		clearPendingApproval,
 		approve,
 		reject,
+		addMessage,
 		config,
 		isCIMode,
 		isYoloMode,
+		slashCommandPolicy,
+		createContext,
+		handleRunSlashCommand,
 		store,
 		approvalTelemetry,
 	])
@@ -269,6 +358,27 @@ export function useApprovalMonitor(): void {
 				const toKeep = timestamps.slice(-100)
 				autoApprovalHandledRef.current = new Set(toKeep)
 			}
+			if (runSlashCommandHandledRef.current.size > 100) {
+				const timestamps = Array.from(runSlashCommandHandledRef.current)
+				const toKeep = timestamps.slice(-100)
+				runSlashCommandHandledRef.current = new Set(toKeep)
+			}
 		}
 	}, [lastAskMessage?.ts])
+}
+
+interface RunSlashCommandToolData {
+	tool: string
+	command?: string
+	args?: string
+	description?: string
+}
+
+function parseToolData(message: ExtensionChatMessage): RunSlashCommandToolData | null {
+	if (!message.text) return null
+	try {
+		return JSON.parse(message.text) as RunSlashCommandToolData
+	} catch {
+		return null
+	}
 }

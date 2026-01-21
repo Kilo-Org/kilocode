@@ -10,6 +10,51 @@ import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/task
 import type { ModelListFilters } from "../../state/atoms/modelList.js"
 import type { HistoryItem } from "@roo-code/types"
 
+export type CustomCommandScope = "project" | "user"
+
+export type AllowedToolType =
+	| "read"
+	| "write"
+	| "bash"
+	| "browser"
+	| "mcp"
+	| "mode"
+	| "subtask"
+	| "todo"
+	| "slashCommand"
+
+export interface AllowedToolRule {
+	type: AllowedToolType
+	patterns?: string[]
+	raw: string
+}
+
+export interface CustomCommandMetadata {
+	scope: CustomCommandScope
+	sourcePath: string
+	argumentHint?: string
+	allowedTools?: AllowedToolRule[] | null
+	model?: string
+	disableModelInvocation?: boolean
+}
+
+export interface SlashCommandPolicy {
+	commandName: string
+	scope: CustomCommandScope
+	sourcePath: string
+	allowedTools: AllowedToolRule[] | null
+	model?: string
+	disableModelInvocation?: boolean
+}
+
+export interface PendingModelOverride {
+	commandName: string
+	providerId: string
+	providerName: string
+	previousModelId: string
+	overrideModelId: string
+}
+
 export interface Command {
 	name: string
 	aliases: string[]
@@ -21,6 +66,7 @@ export interface Command {
 	options?: CommandOption[]
 	arguments?: ArgumentDefinition[]
 	priority?: number // 1-10 scale, default 5. Higher = appears first in suggestions
+	custom?: CustomCommandMetadata
 }
 
 export interface CommandOption {
@@ -36,6 +82,7 @@ export interface CommandContext {
 	input: string
 	args: string[]
 	options: Record<string, string | number | boolean>
+	workspacePath: string
 	config: CLIConfig
 	sendMessage: (message: CliMessage) => Promise<void>
 	addMessage: (message: CliMessage) => void
@@ -80,6 +127,9 @@ export interface CommandContext {
 	chatMessages: ExtensionMessage[]
 	// Current task context
 	currentTask: HistoryItem | null
+	setSlashCommandPolicy: (policy: SlashCommandPolicy | null) => void
+	clearSlashCommandPolicy: () => void
+	setPendingModelOverride: (override: PendingModelOverride | null) => void
 	// Model list context
 	modelListPageIndex: number
 	modelListFilters: ModelListFilters
