@@ -156,23 +156,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 					// For new sessions, start with empty array - the agent will send user_feedback
 					// Note: We no longer add the initial message here because the agent-runtime
 					// extension now properly emits user_feedback for the initial prompt
-					let updatedMessages = isResumedSession ? [...existingMessages] : []
-
-					// For resumed sessions with a prompt, add the user's message
-					// The extension doesn't create a user_feedback for askResponse during resume_task
-					if (resumeInfo && resumeInfo.prompt) {
-						const userMessage: ClineMessage = {
-							ts: Date.now(),
-							type: "say",
-							say: "user_feedback",
-							text: resumeInfo.prompt,
-							images: resumeInfo.images,
-						}
-						updatedMessages.push(userMessage)
-						this.outputChannel.appendLine(
-							`[AgentManager] Added user resume message: "${resumeInfo.prompt.slice(0, 50)}..."`,
-						)
-					}
+					// (including for resumed sessions - resumeTaskFromHistory calls say("user_feedback"))
+					const updatedMessages = isResumedSession ? [...existingMessages] : []
 
 					this.sessionMessages.set(latestSession.sessionId, updatedMessages)
 
