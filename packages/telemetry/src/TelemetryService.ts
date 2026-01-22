@@ -101,7 +101,7 @@ export class TelemetryService {
 			cacheWriteTokens: number
 			cacheReadTokens: number
 			cost?: number
-			// kilocode_change start
+			// kilocode_change start Extended LLM observability metrics
 			completionTime?: number
 			inferenceProvider?: string
 			// kilocode_change end
@@ -109,6 +109,24 @@ export class TelemetryService {
 	): void {
 		this.captureEvent(TelemetryEventName.LLM_COMPLETION, { taskId, ...properties })
 	}
+
+	// kilocode_change start - Separate method for LLM errors
+	public captureLlmError(
+		taskId: string,
+		properties: {
+			inputTokens?: number
+			outputTokens?: number
+			cacheWriteTokens?: number
+			cacheReadTokens?: number
+			completionTime?: number
+			inferenceProvider?: string
+			errorType: string
+			errorMessage?: string
+		},
+	): void {
+		this.captureEvent(TelemetryEventName.LLM_ERROR, { taskId, ...properties })
+	}
+	// kilocode_change end
 
 	public captureModeSwitch(taskId: string, newMode: string): void {
 		this.captureEvent(TelemetryEventName.MODE_SWITCH, { taskId, newMode })

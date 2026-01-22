@@ -35,6 +35,7 @@ export enum TelemetryEventName {
 
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
+	LLM_ERROR = "LLM Error",
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
 	BLOCKED_BY_CONTENT_FILTER_ERROR = "Blocked By Content Filter Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
@@ -312,8 +313,28 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			cacheReadTokens: z.number().optional(),
 			cacheWriteTokens: z.number().optional(),
 			cost: z.number().optional(),
+			// kilocode_change start Extended LLM observability metrics
+			completionTime: z.number().optional(),
+			inferenceProvider: z.string().optional(),
+			// kilocode_change end
 		}),
 	}),
+	// kilocode_change start - Separate event for LLM errors
+	z.object({
+		type: z.literal(TelemetryEventName.LLM_ERROR),
+		properties: z.object({
+			...telemetryPropertiesSchema.shape,
+			inputTokens: z.number().optional(),
+			outputTokens: z.number().optional(),
+			cacheReadTokens: z.number().optional(),
+			cacheWriteTokens: z.number().optional(),
+			completionTime: z.number().optional(),
+			inferenceProvider: z.string().optional(),
+			errorType: z.string(),
+			errorMessage: z.string().optional(),
+		}),
+	}),
+	// kilocode_change end
 ])
 
 export type RooCodeTelemetryEvent = z.infer<typeof rooCodeTelemetryEventSchema>
