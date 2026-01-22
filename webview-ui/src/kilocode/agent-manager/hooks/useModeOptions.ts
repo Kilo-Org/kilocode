@@ -26,9 +26,7 @@ export function useModeOptions(_params?: UseModeOptionsParams): DropdownOption[]
 		const opts: DropdownOption[] = []
 
 		// TODO: Organization modes are temporarily disabled in Agent Manager
-		// They require additional work to properly pass API configuration to agent processes
-		// See: https://github.com/Kilo-Org/kilocode/issues/XXXX
-		// const organizationModes = availableModes.filter((mode) => mode.source === "organization")
+		// Disabled for now and will be re-enabled when organization modes are supported in agent manager
 		const otherModes = availableModes.filter((mode) => mode.source !== "organization")
 
 		// Add other modes (excluding organization modes for now)
