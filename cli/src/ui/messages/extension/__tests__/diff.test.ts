@@ -509,3 +509,454 @@ line 3`
 		expect(result.length).toBeGreaterThan(0)
 	})
 })
+
+describe("parseDiffContent - partial/streaming markers", () => {
+	describe("should filter out partial SEARCH/REPLACE markers from streaming", () => {
+		it("should filter partial start marker '<<<<'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+${replaceMarker}
+<<<<`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the partial marker '<<<<'
+			const hasPartialMarker = result.some((l) => l.content.includes("<<<<"))
+			expect(hasPartialMarker).toBe(false)
+
+			// Should still have the actual diff content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(1)
+			expect(additions).toHaveLength(1)
+		})
+
+		it("should filter incomplete start marker '<<<<<<< S'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+${replaceMarker}
+<<<<<<< S`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the incomplete marker
+			const hasIncompleteMarker = result.some((l) => l.content === "<<<<<<< S")
+			expect(hasIncompleteMarker).toBe(false)
+		})
+
+		it("should filter partial end marker '>>>>>>'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+>>>>>>`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the partial marker '>>>>>>'
+			const hasPartialMarker = result.some((l) => l.content === ">>>>>>")
+			expect(hasPartialMarker).toBe(false)
+
+			// Should still have the actual diff content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(1)
+			expect(additions).toHaveLength(1)
+		})
+
+		it("should filter content that is only partial markers", () => {
+			// This simulates streaming where only partial content has arrived
+			const diff = `<<<<<<< S`
+
+			const result = parseDiffContent(diff)
+
+			// Should return empty or filter out the partial marker
+			const hasPartialMarker = result.some((l) => l.content.startsWith("<<<<"))
+			expect(hasPartialMarker).toBe(false)
+		})
+
+		it("should handle multiple partial markers in streaming content", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old line 1
+old line 2
+${separator}
+new line 1
+${replaceMarker}
+<<<<
+<<<<<<< S
+>>>>>>`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain any partial markers
+			const hasPartialStartMarker = result.some(
+				(l) => l.content.startsWith("<<<<") && !l.content.startsWith("<<<<<<< SEARCH"),
+			)
+			const hasPartialEndMarker = result.some(
+				(l) => l.content.startsWith(">>>>") && !l.content.startsWith(">>>>>>> REPLACE"),
+			)
+			expect(hasPartialStartMarker).toBe(false)
+			expect(hasPartialEndMarker).toBe(false)
+
+			// Should still have the actual diff content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(2)
+			expect(additions).toHaveLength(1)
+		})
+
+		it("should handle trailing partial marker after valid diff", () => {
+			// Real-world case from the bug report
+			const searchMarker = "<<<<<<< SEARCH"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
+"addImage": "Add image",
+"removeImage": "Remove image"
+${separator}
+"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
+"addImage": "Afegir imatge",
+"removeImage": "Eliminar imatge"
+>>>>>>`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the partial marker
+			const hasPartialMarker = result.some((l) => l.content === ">>>>>>")
+			expect(hasPartialMarker).toBe(false)
+
+			// Should have the correct number of changes
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(3)
+			expect(additions).toHaveLength(3)
+		})
+
+		it("should handle content with only '<<<<' (no complete SEARCH marker)", () => {
+			// When streaming starts and only partial marker has arrived
+			const diff = `<<<<`
+
+			const result = parseDiffContent(diff)
+
+			// Should filter out the partial marker
+			expect(result.every((l) => !l.content.includes("<<<<"))).toBe(true)
+		})
+
+		it("should not filter legitimate content that happens to start with < or >", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+<div>old content</div>
+${separator}
+<div>new content</div>
+${replaceMarker}`
+
+			const result = parseDiffContent(diff)
+
+			// Should preserve the HTML content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(1)
+			expect(additions).toHaveLength(1)
+			expect(deletions[0].content).toBe("<div>old content</div>")
+			expect(additions[0].content).toBe("<div>new content</div>")
+		})
+
+		it("should handle partial equals marker", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const diff = `${searchMarker}
+-------
+old content
+===`
+
+			const result = parseDiffContent(diff)
+
+			// Partial equals should be filtered if it looks like a marker
+			// But actual content with === should be preserved
+			const deletions = result.filter((l) => l.type === "deletion")
+			expect(deletions).toHaveLength(1)
+			expect(deletions[0].content).toBe("old content")
+		})
+
+		it("should filter git merge conflict start marker '<<<<<<< Updated upstream'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+${replaceMarker}
+<<<<<<< Updated upstream`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the git conflict marker
+			const hasGitMarker = result.some((l) => l.content.includes("<<<<<<< Updated upstream"))
+			expect(hasGitMarker).toBe(false)
+
+			// Should still have the actual diff content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(1)
+			expect(additions).toHaveLength(1)
+		})
+
+		it("should filter git merge conflict end marker '>>>>>>> Stashed changes'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+${replaceMarker}
+>>>>>>> Stashed changes`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the git conflict marker
+			const hasGitMarker = result.some((l) => l.content.includes(">>>>>>> Stashed changes"))
+			expect(hasGitMarker).toBe(false)
+
+			// Should still have the actual diff content
+			const deletions = result.filter((l) => l.type === "deletion")
+			const additions = result.filter((l) => l.type === "addition")
+			expect(deletions).toHaveLength(1)
+			expect(additions).toHaveLength(1)
+		})
+
+		it("should filter git merge conflict marker '<<<<<<< HEAD'", () => {
+			const diff = `<<<<<<< HEAD`
+
+			const result = parseDiffContent(diff)
+
+			// Should filter out the git conflict marker
+			const hasGitMarker = result.some((l) => l.content.includes("<<<<<<< HEAD"))
+			expect(hasGitMarker).toBe(false)
+		})
+
+		it("should filter git merge conflict marker with branch name '>>>>>>> feature/branch-name'", () => {
+			const searchMarker = "<<<<<<< SEARCH"
+			const replaceMarker = ">>>>>>> REPLACE"
+			const separator = "======="
+			const diff = `${searchMarker}
+-------
+old content
+${separator}
+new content
+${replaceMarker}
+>>>>>>> feature/branch-name`
+
+			const result = parseDiffContent(diff)
+
+			// Should not contain the git conflict marker
+			const hasGitMarker = result.some((l) => l.content.includes(">>>>>>> feature/branch-name"))
+			expect(hasGitMarker).toBe(false)
+		})
+	})
+})
+
+describe("parseDiffContent - unified diff format with git conflict markers", () => {
+	it("should filter git conflict markers from unified diff deletions", () => {
+		const diff = `@@ -10,7 +10,3 @@
+ import { logs } from "../../services/logs.js"
+-<<<<<<< Updated upstream
+-=======
+-import { convertImagesToDataUrls } from "../../media/image-utils.js"
+->>>>>>> Stashed changes
+ 
+ export interface StdinMessage {`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain any git conflict markers
+		const hasGitMarker = result.some(
+			(l) =>
+				l.content.includes("<<<<<<< Updated upstream") ||
+				l.content.includes(">>>>>>> Stashed changes") ||
+				l.content === "=======",
+		)
+		expect(hasGitMarker).toBe(false)
+
+		// Should still have the legitimate content
+		const hasLegitimateContent = result.some((l) => l.content.includes("import { logs }"))
+		expect(hasLegitimateContent).toBe(true)
+	})
+
+	it("should filter git conflict markers from unified diff additions", () => {
+		const diff = `@@ -1,3 +1,7 @@
+ line 1
++<<<<<<< HEAD
++new content from HEAD
++=======
++new content from branch
++>>>>>>> feature-branch
+ line 2`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain any git conflict markers
+		const hasGitMarker = result.some(
+			(l) =>
+				l.content.includes("<<<<<<< HEAD") ||
+				l.content.includes(">>>>>>> feature-branch") ||
+				l.content === "=======",
+		)
+		expect(hasGitMarker).toBe(false)
+	})
+
+	it("should filter ======= separator from unified diff", () => {
+		const diff = `@@ -1,3 +1,3 @@
+ line 1
+-=======
++new line
+ line 2`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain the separator as content
+		const hasSeparator = result.some((l) => l.content === "=======")
+		expect(hasSeparator).toBe(false)
+
+		// Should have the new line
+		const hasNewLine = result.some((l) => l.content === "new line" && l.type === "addition")
+		expect(hasNewLine).toBe(true)
+	})
+
+	it("should filter escaped git conflict markers (with backslash prefix)", () => {
+		const diff = `@@ -1,7 +1,3 @@
+ import { logs } from "../../services/logs.js"
+-\\<<<<<<< Updated upstream
+-\\=======
+-import { convertImagesToDataUrls } from "../../media/image-utils.js"
+-\\>>>>>>> Stashed changes
+ 
+ export interface StdinMessage {`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain any escaped git conflict markers
+		const hasEscapedMarker = result.some(
+			(l) =>
+				l.content.includes("\\<<<<<<< Updated upstream") ||
+				l.content.includes("\\=======") ||
+				l.content.includes("\\>>>>>>> Stashed changes"),
+		)
+		expect(hasEscapedMarker).toBe(false)
+
+		// Should still have the legitimate content
+		const hasLegitimateContent = result.some((l) => l.content.includes("import { logs }"))
+		expect(hasLegitimateContent).toBe(true)
+	})
+
+	it("should filter escaped partial markers", () => {
+		const diff = `@@ -1,3 +1,1 @@
+	line 1
+-\\<<<<
+-\\>>>>>>`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain escaped partial markers
+		const hasEscapedPartialMarker = result.some((l) => l.content === "\\<<<<" || l.content === "\\>>>>>>")
+		expect(hasEscapedPartialMarker).toBe(false)
+	})
+
+	it("should filter partial markers with leading whitespace (bug report case)", () => {
+		// This is the exact case from the bug report where markers appear with indentation
+		// e.g., "               <<<<" or "               <<<<<<< S"
+		const diff = `@@ -1,3 +1,1 @@
+	line 1
+-               <<<<
+-               <<<<<<< S`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain partial markers even with leading whitespace
+		const hasPartialMarker = result.some((l) => l.content.includes("<<<<") || l.content.includes("<<<<<<< S"))
+		expect(hasPartialMarker).toBe(false)
+	})
+
+	it("should filter markers with tabs and spaces", () => {
+		const diff = `@@ -1,2 +1,1 @@
+	line 1
+-		<<<<`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain partial markers with tab indentation
+		const hasPartialMarker = result.some((l) => l.content.includes("<<<<"))
+		expect(hasPartialMarker).toBe(false)
+	})
+
+	it("should filter partial markers appearing as additions (exact bug report case)", () => {
+		// This reproduces the exact bug from the report where >>>>>> appears as an addition
+		// The output showed: "      92 + >>>>>>"
+		const diff = `@@ -89,3 +89,4 @@
+	"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
+-"addImage": "Add image",
+-"removeImage": "Remove image"
++"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
++"addImage": "Afegir imatge",
++"removeImage": "Eliminar imatge"
++>>>>>>`
+
+		const result = parseDiffContent(diff)
+
+		// Should not contain the partial marker as an addition
+		const hasPartialMarker = result.some((l) => l.type === "addition" && l.content === ">>>>>>")
+		expect(hasPartialMarker).toBe(false)
+
+		// Should still have the legitimate additions
+		const hasLegitimateAddition = result.some((l) => l.type === "addition" && l.content.includes("Afegir imatge"))
+		expect(hasLegitimateAddition).toBe(true)
+	})
+
+	it("should filter partial markers appearing as only content (empty diff case)", () => {
+		// This reproduces the case where the entire diff content is just a partial marker
+		// The output showed: "⏺︎ Update( webview-ui/src/i18n/locales/es/agentManager.json)\n           <<<<"
+		const diff = `           <<<<`
+
+		const result = parseDiffContent(diff)
+
+		// Should return empty or no partial markers
+		const hasPartialMarker = result.some((l) => l.content.includes("<<<<"))
+		expect(hasPartialMarker).toBe(false)
+	})
+
+	it("should filter <<<<<<< S partial marker appearing as only content", () => {
+		// This reproduces: "⏺︎ Update( webview-ui/src/i18n/locales/pt-BR/agentManager.json)\n           <<<<<<< S"
+		const diff = `           <<<<<<< S`
+
+		const result = parseDiffContent(diff)
+
+		// Should return empty or no partial markers
+		const hasPartialMarker = result.some((l) => l.content.includes("<<<<"))
+		expect(hasPartialMarker).toBe(false)
+	})
+})

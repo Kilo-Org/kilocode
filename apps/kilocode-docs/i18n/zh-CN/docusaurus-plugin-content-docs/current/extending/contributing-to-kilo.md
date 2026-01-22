@@ -8,7 +8,7 @@ Kilo Code 是一个开源项目，欢迎所有技能水平的开发者贡献代�
 
 1. **代码贡献**：实现新功能或修复错误
 2. **文档**：改进现有文档或创建新指南
-3. **自定义模式**：创建并分享专用模式
+3. **市场贡献**：通过 [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) 创建并分享自定义模式、技能和 MCP 服务器
 4. **错误报告**：报告你遇到的问题
 5. **功能请求**：建议新功能或改进
 6. **社区支持**：在社区中帮助其他用户
@@ -69,15 +69,21 @@ git checkout -b your-branch-name
     - 测试步骤
     - 截图（如适用）
 
-## 创建自定义模式
+## 为 Kilo Marketplace 做贡献
 
-自定义模式是扩展 Kilo Code 功能的强大方式。要创建并分享自定义模式：
+[Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) 是一个社区驱动的代理工具仓库，用于扩展 Kilo Code 的功能。你可以贡献：
 
-1. 按照 [自定义模式文档](/agent-behavior/custom-modes) 创建你的模式
+- **技能（Skills）**：模块化的工作流程和领域专业知识，教代理如何执行特定任务
+- **MCP 服务器**：标准化的集成，将代理连接到外部工具和服务
+- **模式（Modes）**：具有定制工具访问权限的自定义代理个性和行为
 
-2. 彻底测试你的模式
+贡献方式：
 
-3. 通过提交 [GitHub Discussion](https://github.com/Kilo-Org/kilocode/discussions) 与社区分享你的模式
+1. 按照 [自定义模式](/agent-behavior/custom-modes)、[技能](/agent-behavior/skills) 或 [MCP 服务器](/features/mcp/overview) 的文档创建你的资源
+
+2. 彻底测试你的贡献
+
+3. 向 [Kilo Marketplace 仓库](https://github.com/Kilo-Org/kilo-marketplace) 提交拉取请求
 
 ## 文档贡献
 

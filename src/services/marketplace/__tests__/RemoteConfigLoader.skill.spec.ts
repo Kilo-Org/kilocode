@@ -65,7 +65,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "A test skill"
     category: "testing"
     githubUrl: "https://github.com/test/test-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/test-skill/main/SKILL.md"`
+    content: "https://github.com/test/test-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -91,7 +91,7 @@ describe("RemoteConfigLoader - Skills", () => {
 				description: "A test skill",
 				category: "testing",
 				githubUrl: "https://github.com/test/test-skill",
-				rawUrl: "https://raw.githubusercontent.com/test/test-skill/main/SKILL.md",
+				content: "https://github.com/test/test-skill/tarball/main",
 				displayName: "Test Skill",
 				displayCategory: "Testing",
 			})
@@ -105,7 +105,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "An awesome skill"
     category: "code-generation"
     githubUrl: "https://github.com/test/my-awesome-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/my-awesome-skill/main/SKILL.md"`
+    content: "https://github.com/test/my-awesome-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -124,7 +124,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "A translation skill"
     category: "localization"
     githubUrl: "https://github.com/test/translation"
-    rawUrl: "https://raw.githubusercontent.com/test/translation/main/SKILL.md"`
+    content: "https://github.com/test/translation/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -143,17 +143,17 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "First skill"
     category: "category-a"
     githubUrl: "https://github.com/test/skill-one"
-    rawUrl: "https://raw.githubusercontent.com/test/skill-one/main/SKILL.md"
+    content: "https://github.com/test/skill-one/tarball/main"
   - id: "skill-two"
     description: "Second skill"
     category: "category-b"
     githubUrl: "https://github.com/test/skill-two"
-    rawUrl: "https://raw.githubusercontent.com/test/skill-two/main/SKILL.md"
+    content: "https://github.com/test/skill-two/tarball/main"
   - id: "skill-three"
     description: "Third skill"
     category: "category-a"
     githubUrl: "https://github.com/test/skill-three"
-    rawUrl: "https://raw.githubusercontent.com/test/skill-three/main/SKILL.md"`
+    content: "https://github.com/test/skill-three/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -183,7 +183,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "A test skill"
     category: "testing"
     githubUrl: "https://github.com/test/test-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/test-skill/main/SKILL.md"`
+    content: "https://github.com/test/test-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -216,7 +216,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "A cached skill"
     category: "caching"
     githubUrl: "https://github.com/test/cached-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/cached-skill/main/SKILL.md"`
+    content: "https://github.com/test/cached-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -260,7 +260,7 @@ describe("RemoteConfigLoader - Skills", () => {
 			// Missing required fields
 			const invalidSkillsYaml = `items:
   - id: "invalid-skill"
-    # Missing description, category, githubUrl, rawUrl`
+    # Missing description, category, githubUrl, content`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, invalidSkillsYaml))
 
@@ -277,7 +277,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "The skill we want"
     category: "targeting"
     githubUrl: "https://github.com/test/target-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/target-skill/main/SKILL.md"`
+    content: "https://github.com/test/target-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 
@@ -291,7 +291,7 @@ describe("RemoteConfigLoader - Skills", () => {
 				description: "The skill we want",
 				category: "targeting",
 				githubUrl: "https://github.com/test/target-skill",
-				rawUrl: "https://raw.githubusercontent.com/test/target-skill/main/SKILL.md",
+				content: "https://github.com/test/target-skill/tarball/main",
 				displayName: "Target Skill",
 				displayCategory: "Targeting",
 			})
@@ -307,7 +307,7 @@ describe("RemoteConfigLoader - Skills", () => {
     description: "A skill"
     category: "testing"
     githubUrl: "https://github.com/test/my-skill"
-    rawUrl: "https://raw.githubusercontent.com/test/my-skill/main/SKILL.md"`
+    content: "https://github.com/test/my-skill/tarball/main"`
 
 			mockedAxios.get.mockImplementation(createMockImplementation(mockModesYaml, mockMcpsYaml, mockSkillsYaml))
 

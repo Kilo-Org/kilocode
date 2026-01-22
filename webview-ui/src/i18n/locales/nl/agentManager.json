@@ -14,7 +14,9 @@
 		"shareSession": "Sessie delen",
 		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nee"
+		"shareConfirmNo": "Nee",
+		"options": "Opties",
+		"configureSetupScript": "Worktree setup-script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -73,7 +75,9 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer invouwen",
-		"copyCommand": "Opdracht kopiëren"
+		"copyCommand": "Opdracht kopiëren",
+		"thinking": "Denkt na",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

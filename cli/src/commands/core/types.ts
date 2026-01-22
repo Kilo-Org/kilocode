@@ -86,6 +86,8 @@ export interface CommandContext {
 	updateModelListFilters: (filters: Partial<ModelListFilters>) => void
 	changeModelListPage: (pageIndex: number) => void
 	resetModelListState: () => void
+	// Condense context
+	condenseAndWait: (taskId: string) => Promise<void>
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void

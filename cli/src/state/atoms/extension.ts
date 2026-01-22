@@ -338,14 +338,23 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 		existingMessage.metadata !== updatedMessage.metadata
 
 	// Always update if:
-	// 1. Message is partial (streaming update)
+	// 1. Message is partial (streaming update) - BUT NOT if existing message is already complete
 	// 2. New version has more content
-	// 3. Partial flag changed (partial=true -> partial=false transition)
+	// 3. Partial flag changed from partial=true -> partial=false (completion)
+	// 4. Content changed but length stayed the same (e.g. cost updated from 0.0010 -> 0.0020)
 	const partialFlagChanged = existingMessage.partial !== updatedMessage.partial
 
-	// 4. Content changed but length stayed the same (e.g. cost updated from 0.0010 -> 0.0020)
+	// BUG FIX: Don't allow stale partial updates to overwrite completed messages
+	// This prevents context drops when delayed IPC messages arrive after a message has completed
+	const isStalePartialUpdate = existingMessage.partial === false && updatedMessage.partial === true
+
+	// Skip stale partial updates that would revert a completed message back to partial
+	if (isStalePartialUpdate && newVersion <= currentVersion) {
+		return
+	}
+
 	if (
-		updatedMessage.partial ||
+		(updatedMessage.partial && !isStalePartialUpdate) ||
 		newVersion > currentVersion ||
 		partialFlagChanged ||
 		(contentChanged && newVersion === currentVersion)

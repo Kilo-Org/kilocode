@@ -6,10 +6,10 @@ sidebar_label: 安装Kilo Code
 
 Kilo Code是一款VS Code扩展，可将AI编程助手直接集成到编辑器中。可通过以下方式安装：
 
-- [**VS Code应用商店（推荐）**](#vs-code-marketplace) - VS Code用户最快捷的安装方式
-- [**Cursor应用商店**](#cursor-marketplace) - Cursor用户的推荐安装方式
-- [**Open VSX注册表**](#open-vsx-registry) - 适用于VSCodium/Windsurf等兼容VS Code的编辑器
-- [**手动安装.vsix文件**](#manual-installation-from-vsix) - 从GitHub Release直接安装
+- [**VS Code应用商店（推荐）**](#vs-code应用商店) - VS Code用户最快捷的安装方式
+- [**Cursor应用商店**](#cursor应用商店) - Cursor用户的推荐安装方式
+- [**Open VSX注册表**](#open-vsx注册表) - 适用于VSCodium/Windsurf等兼容VS Code的编辑器
+- [**手动安装.vsix文件**](#手动安装vsix文件) - 从GitHub Release直接安装
 
 ## VS Code应用商店
 

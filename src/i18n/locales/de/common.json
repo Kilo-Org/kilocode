@@ -144,8 +144,27 @@
 		"roo": {
 			"authenticationRequired": "Roo-Anbieter erfordert Cloud-Authentifizierung. Bitte melde dich bei Roo Code Cloud an."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Nicht bei OpenAI Codex authentifiziert. Bitte melde dich über den OpenAI Codex OAuth-Flow an.",
+			"invalidRequest": "Ungültige Anfrage an die Codex-API. Bitte überprüfe deine Eingabeparameter.",
+			"authenticationFailed": "Authentifizierung fehlgeschlagen. Bitte authentifiziere dich erneut bei OpenAI Codex.",
+			"accessDenied": "Zugriff verweigert. Dein ChatGPT-Abonnement enthält möglicherweise keinen Codex-Zugang.",
+			"endpointNotFound": "Codex-API-Endpunkt nicht gefunden.",
+			"rateLimitExceeded": "Ratenlimit überschritten. Bitte versuche es später erneut.",
+			"serviceError": "OpenAI Codex Dienstfehler. Bitte versuche es später erneut.",
+			"genericError": "Codex-API-Fehler ({{status}})",
+			"noResponseBody": "Codex-API-Fehler: Kein Antworttext",
+			"connectionFailed": "Verbindung zur Codex-API fehlgeschlagen: {{message}}",
+			"unexpectedConnectionError": "Unerwarteter Fehler beim Verbinden mit der Codex-API",
+			"apiError": "Codex-API-Fehler: {{message}}",
+			"responseFailed": "Antwort fehlgeschlagen: {{message}}",
+			"streamProcessingError": "Fehler beim Verarbeiten des Antwort-Streams: {{message}}",
+			"unexpectedStreamError": "Unerwarteter Fehler beim Verarbeiten des Antwort-Streams",
+			"completionError": "OpenAI Codex Vervollständigungsfehler: {{message}}"
+		},
 		"api": {
-			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen."
+			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen.",
+			"apiRequestFailed": "API-Anfrage fehlgeschlagen ({{status}})"
 		},
 		"manual_url_empty": "Bitte gib eine gültige Callback-URL ein",
 		"manual_url_no_query": "Ungültige Callback-URL: Query-Parameter fehlen",

@@ -141,6 +141,24 @@
 		"roo": {
 			"authenticationRequired": "Провайдер Roo вимагає автентифікації в хмарі. Будь ласка, увійди в Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Не автентифіковано з OpenAI Codex. Будь ласка, увійди, використовуючи OAuth потік OpenAI Codex.",
+			"invalidRequest": "Недійсний запит до Codex API. Будь ласка, перевір параметри вводу.",
+			"authenticationFailed": "Автентифікація не вдалася. Будь ласка, повторно автентифікуйся з OpenAI Codex.",
+			"accessDenied": "Доступ заборонено. Твоя підписка ChatGPT може не включати доступ до Codex.",
+			"endpointNotFound": "Кінцеву точку Codex API не знайдено.",
+			"rateLimitExceeded": "Перевищено ліміт швидкості. Будь ласка, спробуй пізніше.",
+			"serviceError": "Помилка сервісу OpenAI Codex. Будь ласка, спробуй пізніше.",
+			"genericError": "Помилка Codex API ({{status}})",
+			"noResponseBody": "Помилка Codex API: Немає тіла відповіді",
+			"connectionFailed": "Не вдалося підключитися до Codex API: {{message}}",
+			"unexpectedConnectionError": "Неочікувана помилка підключення до Codex API",
+			"apiError": "Помилка Codex API: {{message}}",
+			"responseFailed": "Відповідь не вдалася: {{message}}",
+			"streamProcessingError": "Помилка обробки потоку відповіді: {{message}}",
+			"unexpectedStreamError": "Неочікувана помилка обробки потоку відповіді",
+			"completionError": "Помилка завершення OpenAI Codex: {{message}}"
+		},
 		"message": {
 			"no_active_task_to_delete": "Не знайдено активного завдання. Неможливо видалити повідомлення.",
 			"invalid_timestamp_for_deletion": "Надано недійсний timestamp для видалення.",
@@ -156,7 +174,8 @@
 		"manual_url_auth_failed": "Автентифікація не вдалася",
 		"manual_url_auth_error": "Сталася помилка автентифікації",
 		"api": {
-			"invalidKeyInvalidChars": "API ключ містить недопустимі символи."
+			"invalidKeyInvalidChars": "API ключ містить недопустимі символи.",
+			"apiRequestFailed": "Запит до API не вдався ({{status}})"
 		}
 	},
 	"warnings": {

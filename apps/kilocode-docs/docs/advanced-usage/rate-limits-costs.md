@@ -46,6 +46,6 @@ If you set the rate limit to 10 seconds, Kilo Code will wait at least 10 seconds
 - **Use Custom Instructions:** Provide custom instructions to guide Kilo Code's behavior and reduce the need for lengthy explanations in each prompt.
 - **Choose the Right Model:** Some models are more cost-effective than others. Consider using a smaller, faster model for tasks that don't require the full power of a larger model.
 - **Use Modes:** Different modes can access different tools, for example `Architect` can't modify code, which makes it a safe choice when analyzing a complex codebase, without worrying about accidentally allowing expensive operations.
-- **Disable MCP If Not Used:** If you're not using MCP (Model Context Protocol) features, consider [disabling it in the MCP settings](/features/mcp/using-mcp-in-kilo-code) to significantly reduce the size of the system prompt and save tokens.
+- **Disable MCP If Not Used:** If you're not using MCP (Model Context Protocol) features, consider [disabling it in Settings > Agent Behaviour > MCP Servers](/features/mcp/using-mcp-in-kilo-code) to significantly reduce the size of the system prompt and save tokens.
 
 By understanding and managing your API usage, you can use Kilo Code effectively and efficiently.

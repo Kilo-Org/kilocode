@@ -147,6 +147,10 @@
 			"title": "MCP सर्वर हटाएं",
 			"message": "क्या आप वाकई MCP सर्वर \"{{mcpName}}\" को हटाना चाहते हैं?"
 		},
+		"skill": {
+			"title": "स्किल हटाएं",
+			"message": "क्या आप वाकई स्किल \"{{skillName}}\" को हटाना चाहते हैं?"
+		},
 		"cancel": "रद्द करें",
 		"confirm": "हटाएं"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "सभी",
 		"resultsCount": "{{count}} स्किल्स मिले",
 		"noResults": "आपके मापदंडों से मेल खाने वाले कोई स्किल्स नहीं मिले",
-		"viewOnGitHub": "GitHub पर देखें"
+		"install": "इंस्टॉल करें",
+		"installTitle": "{{name}} स्किल इंस्टॉल करें",
+		"installing": "इंस्टॉल हो रहा है..."
 	}
 }

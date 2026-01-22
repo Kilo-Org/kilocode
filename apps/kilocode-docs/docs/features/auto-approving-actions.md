@@ -213,11 +213,11 @@ The delay controls how long Kilo Code waits before trying again:
 
 **Setting:** "Always approve MCP tools"
 
-**Description:** "Enable auto-approval of individual MCP tools in the MCP Servers view (requires both this setting and the tool's individual 'Always allow' checkbox)"
+**Description:** "Enable auto-approval of individual MCP tools in the Agent Behaviour > MCP Servers view (requires both this setting and the tool's individual 'Always allow' checkbox)"
 
 **Risk level:** Medium-High (depends on configured MCP tools)
 
-This setting works in conjunction with individual tool permissions in the MCP Servers view. Both this global setting and the tool-specific permission must be enabled for auto-approval.
+This setting works in conjunction with individual tool permissions in the Agent Behaviour > MCP Servers view. Both this global setting and the tool-specific permission must be enabled for auto-approval.
 :::
 
 ### Mode Switching

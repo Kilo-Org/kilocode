@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La réponse du modèle s'est terminée de manière inattendue (aucun message d'assistant). Cela peut être un signe de limitation du taux de requêtes.",
 		"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}",
 		"maxCompletionTokens": "Le nombre maximum de jetons de complétion a été atteint.",
+		"contentFilter": "La requête a été bloquée par le filtre de contenu.",
 		"disableApplyDiff": "Si cette erreur persiste, veuillez désactiver l'Édition par Différences dans les Paramètres Avancés.",
 		"disableEditFile": "Si cette erreur persiste, veuillez désactiver la fonctionnalité expérimentale Application Rapide."
 	},
@@ -177,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Ta version de Kilocode CLI est obsolète et ne prend pas en charge le Gestionnaire d'Agents. Mets-la à jour vers la dernière version.",
-			"cliNotFound": "Kilocode CLI introuvable. Installe-le pour utiliser le Gestionnaire d'Agents.",
 			"cliMisconfigured": "Kilocode CLI n'est pas configuré. Exécute 'kilocode auth' pour te connecter ou 'kilocode config' pour configurer.",
 			"sessionFailed": "Échec du démarrage de la session de l'agent",
 			"sessionFailedWithMessage": "Échec du démarrage de la session de l'agent : {{message}}"

@@ -147,6 +147,10 @@
 			"title": "Remove MCP Server",
 			"message": "Are you sure you want to remove the MCP server \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Remove Skill",
+			"message": "Are you sure you want to remove the skill \"{{skillName}}\"?"
+		},
 		"cancel": "Cancel",
 		"confirm": "Remove"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "All",
 		"resultsCount": "{{count}} skills found",
 		"noResults": "No skills found matching your criteria",
-		"viewOnGitHub": "View on GitHub"
+		"install": "Install",
+		"installTitle": "Install {{name}} Skill",
+		"installing": "Installing..."
 	}
 }

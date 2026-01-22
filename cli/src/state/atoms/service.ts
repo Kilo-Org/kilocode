@@ -3,9 +3,7 @@
  */
 
 import { atom } from "jotai"
-import type { ExtensionService } from "../../services/extension.js"
-import type { ExtensionAPI } from "../../host/ExtensionHost.js"
-import type { MessageBridge } from "../../communication/ipc.js"
+import type { ExtensionService, ExtensionAPI, MessageBridge } from "../../services/extension.js"
 
 /**
  * Atom to hold the ExtensionService instance

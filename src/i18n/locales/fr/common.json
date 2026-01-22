@@ -145,13 +145,32 @@
 			"authenticationRequired": "Le fournisseur Roo nécessite une authentification cloud. Veuillez vous connecter à Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "La clé API contient des caractères invalides."
+			"invalidKeyInvalidChars": "La clé API contient des caractères invalides.",
+			"apiRequestFailed": "La requête API a échoué ({{status}})"
 		},
 		"manual_url_empty": "Veuillez entrer une URL de callback valide",
 		"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
 		"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
 		"manual_url_auth_failed": "Authentification par URL manuelle échouée",
-		"manual_url_auth_error": "Échec de l'authentification"
+		"manual_url_auth_error": "Échec de l'authentification",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",

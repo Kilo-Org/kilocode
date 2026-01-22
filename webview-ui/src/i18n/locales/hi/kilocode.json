@@ -31,7 +31,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP सर्वर"
+			"mcp": "MCP सर्वर",
+			"agentBehaviour": "एजेंट व्यवहार",
+			"skills": "कौशल"
 		},
 		"provider": {
 			"account": "Kilo Code खाता",
@@ -135,7 +137,14 @@
 	},
 	"docs": "दस्तावेज़",
 	"rules": {
-		"tooltip": "Kilo Code नियम और वर्कफ़्लो प्रबंधित करें",
+		"tooltip": "एजेंट व्यवहार प्रबंधित करें ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "नियम",
+			"workflows": "वर्कफ़्लो",
+			"mcps": "MCPs",
+			"modes": "मोड्स",
+			"skills": "कौशल"
+		},
 		"ariaLabel": "Kilo Code नियम",
 		"tabs": {
 			"rules": "नियम",
@@ -207,34 +216,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "ऑटोकम्पलीट",
 		"settings": {
+			"codeEditorSuggestions": "कोड एडिटर सुझाव",
+			"chatSuggestions": "चैट सुझाव",
+			"model": "मॉडल",
+			"provider": "प्रदाता",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "सुझाव स्वचालित रूप से ट्रिगर करें",
 				"description": "टाइपिंग रोकने पर स्वचालित रूप से इनलाइन कोड सुझाव दिखाएं।"
 			},
 			"autoTriggerDelay": {
 				"label": "ऑटो ट्रिगर देरी",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "टाइपिंग रोकने के बाद सुझाव दिखने से पहले सेकंड में देरी। कम देरी का मतलब तेज़ सुझाव है, लेकिन यह अधिक संसाधन-गहन हो सकता है।"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "कीबाइंडिंग पर ट्रिगर करें ({{keybinding}})",
+				"description": "अपने कर्सर की स्थिति पर कोड सुझाव का अनुरोध करने के लिए {{keybinding}} दबाएं। <DocsLink>शॉर्टकट संपादित करें</DocsLink>"
 			},
-			"keybindingNotFound": "नहीं मिला",
-			"configureAutocompleteProfile": "प्रोफाइल में जाकर और ऑटोकम्पलीट प्रोफाइल टाइप की एक प्रोफाइल कॉन्फ़िगर करके किसी भी मॉडल का उपयोग करें।",
-			"model": "मॉडल",
-			"provider": "प्रदाता",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "चैट ऑटोकम्पलीट सक्षम करें",
+				"description": "चैट इनपुट में टाइप करते समय सुझाव दिखाएं। सुझाव स्वीकार करने के लिए Tab दबाएं।"
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "सुझाव स्नूज़ करें",
+				"description": "निर्दिष्ट अवधि के लिए सुझावों को अस्थायी रूप से रोकें।",
 				"button": "स्नूज़",
 				"unsnooze": "अनस्नूज़",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "सुझाव वर्तमान में स्नूज़ हैं।",
 				"duration": {
 					"1min": "1 मिनट",
 					"5min": "5 मिनट",
@@ -243,6 +252,7 @@
 					"1hour": "1 घंटा"
 				}
 			},
+			"keybindingNotFound": "नहीं मिला",
 			"noModelConfigured": {
 				"title": "कोई ऑटोकम्पलीट मॉडल कॉन्फ़िगर नहीं है",
 				"description": "ऑटोकम्पलीट सक्षम करने के लिए, इन समर्थित प्रदाताओं में से एक के साथ प्रोफ़ाइल जोड़ें:",
@@ -253,8 +263,7 @@
 				"description": "आपके Kilo Code खाते में कोई क्रेडिट नहीं है। ऑटोकम्पलीट का उपयोग करने के लिए, कृपया अपने खाते में क्रेडिट जोड़ें।",
 				"buyCredits": "क्रेडिट खरीदें →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "प्रोफाइल में जाकर और ऑटोकम्पलीट प्रोफाइल टाइप की एक प्रोफाइल कॉन्फ़िगर करके किसी भी मॉडल का उपयोग करें।"
 		}
 	},
 	"virtualProvider": {
@@ -353,6 +362,18 @@
 			"description": "स्पीच-टू-टेक्स्ट के लिए माइक्रोफ़ोन डिवाइस चुनें",
 			"noDevices": "कोई माइक्रोफ़ोन डिवाइस नहीं मिला",
 			"refresh": "रीफ़्रेश"
+		}
+	},
+	"skills": {
+		"description": "कौशल विशिष्ट कार्यों के लिए विशेष निर्देश प्रदान करते हैं। जब तुम्हारे अनुरोध से संबंधित हों तो ये स्वचालित रूप से लागू होते हैं।",
+		"noSkills": "कोई कौशल इंस्टॉल नहीं है",
+		"projectSkills": "प्रोजेक्ट कौशल",
+		"globalSkills": "वैश्विक कौशल",
+		"deleteDialog": {
+			"title": "कौशल हटाएं",
+			"description": "क्या तुम वाकई \"{{skillName}}\" कौशल को हटाना चाहते हो? यह क्रिया पूर्ववत नहीं की जा सकती।",
+			"cancel": "रद्द करें",
+			"delete": "हटाएं"
 		}
 	}
 }

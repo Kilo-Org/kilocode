@@ -1,6 +1,6 @@
 import type { KilocodeStreamEvent, KilocodePayload } from "./CliOutputParser"
 import type { ClineMessage } from "@roo-code/types"
-import { CliProcessHandler } from "./CliProcessHandler"
+import { RuntimeProcessHandler } from "./RuntimeProcessHandler"
 import { AgentRegistry } from "./AgentRegistry"
 
 /**
@@ -12,7 +12,7 @@ export interface StateEventPayload {
 }
 
 interface Dependencies {
-	processHandler: CliProcessHandler
+	processHandler: RuntimeProcessHandler
 	registry: AgentRegistry
 	sessionMessages: Map<string, ClineMessage[]>
 	firstApiReqStarted: Map<string, boolean>
@@ -24,7 +24,7 @@ interface Dependencies {
 }
 
 export class KilocodeEventProcessor {
-	private readonly processHandler: CliProcessHandler
+	private readonly processHandler: RuntimeProcessHandler
 	private readonly registry: AgentRegistry
 	private readonly sessionMessages: Map<string, ClineMessage[]>
 	private readonly firstApiReqStarted: Map<string, boolean>
@@ -51,32 +51,40 @@ export class KilocodeEventProcessor {
 		const messageType = payload.type === "ask" ? "ask" : payload.type === "say" ? "say" : null
 		const isCommandOutput = payload.ask === "command_output" || payload.say === "command_output"
 
+		// Log incoming event
+		const eventDesc = `${messageType}:${payload.say || payload.ask || "?"}`
+		const contentPreview = (payload.content as string)?.slice(0, 30) || (payload.text as string)?.slice(0, 30) || ""
+		this.log(sessionId, `[Event←] ${eventDesc} ${contentPreview ? `"${contentPreview}..."` : "(no content)"}`)
+
 		if (!messageType) {
 			// Unknown payloads (e.g., session_created) are logged but not shown as chat
 			const evtName = (payload as { event?: string }).event || payload.type || "event"
-			this.log(sessionId, `event:${evtName}`)
+			this.log(sessionId, `[Event] Skipping unknown: ${evtName}`)
 			return
 		}
 
 		// Track first api_req_started to identify user echo
 		if (payload.say === "api_req_started") {
+			const wasSet = this.firstApiReqStarted.get(sessionId)
 			this.firstApiReqStarted.set(sessionId, true)
 			// Only notify webview for NEW requests, not usage updates
 			// Usage updates have tokensIn/tokensOut in metadata
 			const meta = payload.metadata as Record<string, unknown> | undefined
 			const isUsageUpdate = meta && (meta.tokensIn !== undefined || meta.tokensOut !== undefined)
 			if (!isUsageUpdate) {
+				this.log(sessionId, `[Event] api_req_started → posting stateEvent (wasSet=${wasSet})`)
 				this.postStateEvent(sessionId, { eventType: "api_req_started" })
 			}
 			// We don't render api_req_started/finished as chat rows
 			return
 		}
 		if (payload.say === "api_req_finished") {
+			this.log(sessionId, `[Event] Skipping api_req_finished`)
 			return
 		}
 		// Skip echo of initial user prompt (say:text before first api_req_started)
 		if (payload.say === "text" && !this.firstApiReqStarted.get(sessionId)) {
-			this.log(sessionId, `skipping user input echo: ${(payload.content as string)?.slice(0, 50)}`)
+			this.log(sessionId, `[Event] SKIPPING user echo (firstApiReqStarted=false): "${(payload.content as string)?.slice(0, 50)}"`)
 			return
 		}
 

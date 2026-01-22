@@ -159,18 +159,61 @@ async function main() {
 		outdir: "dist/workers",
 	}
 
-	const [extensionCtx, workerCtx] = await Promise.all([
+	// kilocode_change start - agent-runtime process bundle
+	/**
+	 * Agent Runtime Process Bundle
+	 *
+	 * This bundles the agent-runtime process.ts into a standalone file that can be
+	 * forked by the Agent Manager. fork() requires a physical .js file on disk,
+	 * so we bundle it separately from the main extension.
+	 *
+	 * @type {import('esbuild').BuildOptions}
+	 */
+	const agentRuntimeDir = path.join(srcDir, "..", "packages/agent-runtime")
+	const agentRuntimeProcessConfig = {
+		...buildOptions,
+		entryPoints: [path.join(agentRuntimeDir, "src/process.ts")],
+		outfile: "dist/agent-runtime-process.js",
+		// The agent-runtime process loads the main extension bundle dynamically,
+		// so vscode APIs come from the extension, not from direct imports
+		external: ["vscode"],
+		// Use CJS format - works reliably with fork() and dynamic require() in dependencies
+		format: "cjs",
+		// Ensure we can resolve workspace packages
+		plugins: [
+			{
+				name: "resolve-workspace-packages",
+				setup(build) {
+					// Resolve @roo-code/types and other workspace packages
+					build.onResolve({ filter: /^@roo-code\// }, (args) => {
+						const packageName = args.path
+						const packagePath = path.join(srcDir, "..", "packages", packageName.replace("@roo-code/", ""))
+						return { path: path.join(packagePath, "src/index.ts") }
+					})
+					build.onResolve({ filter: /^@kilocode\// }, (args) => {
+						const packageName = args.path
+						const packagePath = path.join(srcDir, "..", "packages", packageName.replace("@kilocode/", ""))
+						return { path: path.join(packagePath, "src/index.ts") }
+					})
+				},
+			},
+		],
+	}
+	// kilocode_change end
+
+	const [extensionCtx, workerCtx, agentRuntimeCtx] = await Promise.all([ // kilocode_change
 		esbuild.context(extensionConfig),
 		esbuild.context(workerConfig),
+		esbuild.context(agentRuntimeProcessConfig), // kilocode_change
 	])
 
 	if (watch) {
-		await Promise.all([extensionCtx.watch(), workerCtx.watch()])
+		await Promise.all([extensionCtx.watch(), workerCtx.watch(), agentRuntimeCtx.watch()]) // kilocode_change
 		copyLocales(srcDir, distDir)
 		setupLocaleWatcher(srcDir, distDir)
 	} else {
-		await Promise.all([extensionCtx.rebuild(), workerCtx.rebuild()])
-		await Promise.all([extensionCtx.dispose(), workerCtx.dispose()])
+		await Promise.all([extensionCtx.rebuild(), workerCtx.rebuild(), agentRuntimeCtx.rebuild()]) // kilocode_change
+		await Promise.all([extensionCtx.dispose(), workerCtx.dispose(), agentRuntimeCtx.dispose()]) // kilocode_change
 	}
 }
 

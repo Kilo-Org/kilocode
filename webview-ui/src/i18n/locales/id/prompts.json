@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Mode Organisasi",
-		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Kilo Code Dashboard.",
+		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Mode organisasi tidak dapat diedit"
 	},
 	"tools": {

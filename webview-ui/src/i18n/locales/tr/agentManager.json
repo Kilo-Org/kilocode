@@ -14,7 +14,9 @@
 		"shareSession": "Oturumu paylaş",
 		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
 		"shareConfirmYes": "Evet",
-		"shareConfirmNo": "Hayır"
+		"shareConfirmNo": "Hayır",
+		"options": "Seçenekler",
+		"configureSetupScript": "Worktree kurulum betiği"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -73,7 +75,9 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"thinking": "Düşünüyor",
+		"thinkingSeconds": "{{count}}sn"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

@@ -145,13 +145,32 @@
 			"authenticationRequired": "Nhà cung cấp Roo yêu cầu xác thực đám mây. Vui lòng đăng nhập vào Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ."
+			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ.",
+			"apiRequestFailed": "Yêu cầu API thất bại ({{status}})"
 		},
 		"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
 		"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
 		"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
 		"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
-		"manual_url_auth_error": "Xác thực thất bại"
+		"manual_url_auth_error": "Xác thực thất bại",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Không có nội dung terminal được chọn",

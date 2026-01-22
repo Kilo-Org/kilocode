@@ -149,6 +149,10 @@
 			"title": "Supprimer le serveur MCP",
 			"message": "Êtes-vous sûr de vouloir supprimer le serveur MCP « {{mcpName}} » ?"
 		},
+		"skill": {
+			"title": "Supprimer la compétence",
+			"message": "Es-tu sûr de vouloir supprimer la compétence « {{skillName}} » ?"
+		},
 		"cancel": "Annuler",
 		"confirm": "Supprimer"
 	},
@@ -161,6 +165,8 @@
 		"allCategories": "Toutes",
 		"resultsCount": "{{count}} compétences trouvées",
 		"noResults": "Aucune compétence ne correspond à tes critères",
-		"viewOnGitHub": "Voir sur GitHub"
+		"install": "Installer",
+		"installTitle": "Installer la compétence {{name}}",
+		"installing": "Installation..."
 	}
 }

@@ -15,7 +15,6 @@ export function getPlatformDiagnostics(): { platform: "darwin" | "win32" | "linu
 }
 
 export type AgentManagerLoginIssueType =
-	| "cli_not_found"
 	| "cli_outdated"
 	| "cli_spawn_error"
 	| "cli_configuration_error"

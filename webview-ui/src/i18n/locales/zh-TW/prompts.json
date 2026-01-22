@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "組織模式",
-		"description": "此模式由你的組織提供，無法在此編輯。若要修改此模式，請前往 Kilo Code Dashboard。",
+		"description": "此模式由你的組織提供，無法在此編輯。若要修改此模式，請前往 <dashboardLink>Kilo Code Dashboard</dashboardLink>。",
 		"cannotEdit": "無法編輯組織模式"
 	},
 	"tools": {

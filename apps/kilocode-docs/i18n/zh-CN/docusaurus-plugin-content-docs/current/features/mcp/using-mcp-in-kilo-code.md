@@ -68,7 +68,7 @@ MCP支持两种服务器通信的传输类型：
 - 设置更简单（不需要HTTP服务器）
 - 作为本地机器上的子进程运行
 
-有关STDIO传输工作原理的深入信息，请参见[STDIO传输](/features/mcp/server-transports#stdio-transport)。
+有关STDIO传输工作原理的深入信息，请参见[STDIO传输](/features/mcp/server-transports#stdio传输)。
 
 STDIO配置示例：
 
@@ -98,7 +98,7 @@ STDIO配置示例：
 - 需要网络访问
 - 允许集中部署和管理
 
-有关SSE传输工作原理的深入信息，请参见[SSE传输](/features/mcp/server-transports#sse-transport)。
+有关SSE传输工作原理的深入信息，请参见[SSE传输](/features/mcp/server-transports#sse传输)。
 
 SSE配置示例：
 
@@ -157,7 +157,7 @@ MCP工具自动批准按工具进行，默认禁用。要配置自动批准：
 Kilo Code不附带任何预安装的MCP服务器。你需要单独查找并安装它们。
 
 - **社区仓库**：在GitHub上查看社区维护的MCP服务器列表
-- **询问Kilo Code**：你可以请Kilo Code帮助你查找甚至创建MCP服务器（当"[启用MCP服务器创建](#enabling-or-disabling-mcp-server-creation)"启用时）
+- **询问Kilo Code**：你可以请Kilo Code帮助你查找甚至创建MCP服务器
 - **自行构建**：使用SDK创建自定义MCP服务器，使用你自己的工具扩展Kilo Code
 
 有关完整的SDK文档，请访问[MCP GitHub仓库](https://github.com/modelcontextprotocol/)。

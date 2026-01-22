@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Organisatiemodus",
-		"description": "Deze modus wordt geleverd door je organisatie en kan hier niet worden bewerkt. Om deze modus te wijzigen, bezoek het Kilo Code Dashboard.",
+		"description": "Deze modus wordt geleverd door je organisatie en kan hier niet worden bewerkt. Om deze modus te wijzigen, bezoek het <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Organisatiemodi kunnen niet worden bewerkt"
 	},
 	"tools": {

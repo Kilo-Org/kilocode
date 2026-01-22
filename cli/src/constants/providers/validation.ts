@@ -8,6 +8,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	kilocode: ["kilocodeToken", "kilocodeModel"],
 	anthropic: ["apiKey", "apiModelId"],
 	"openai-native": ["openAiNativeApiKey", "apiModelId"],
+	"openai-codex": ["apiModelId"],
 	openrouter: ["openRouterApiKey", "openRouterModelId"],
 	ollama: ["ollamaBaseUrl", "ollamaModelId"],
 	lmstudio: ["lmStudioBaseUrl", "lmStudioModelId"],

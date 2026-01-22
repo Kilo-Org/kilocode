@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCPサーバー"
+			"mcp": "MCPサーバー",
+			"agentBehaviour": "エージェントの動作",
+			"skills": "スキル"
 		},
 		"provider": {
 			"account": "Kilo Code アカウント",
@@ -149,7 +151,14 @@
 	},
 	"docs": "ドキュメント",
 	"rules": {
-		"tooltip": "Kilo Codeルールとワークフローを管理",
+		"tooltip": "エージェントの挙動を管理 ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "ルール",
+			"workflows": "ワークフロー",
+			"mcps": "MCP",
+			"modes": "モード",
+			"skills": "スキル"
+		},
 		"ariaLabel": "Kilo Codeルール",
 		"tabs": {
 			"rules": "ルール",
@@ -354,6 +363,18 @@
 			"loading": "マイクデバイスを読み込んでいます...",
 			"noDevices": "マイクデバイスが見つかりません",
 			"refresh": "更新"
+		}
+	},
+	"skills": {
+		"description": "スキルは特定のタスクに対する専門的な指示を提供します。リクエストに関連する場合、自動的に適用されます。",
+		"noSkills": "スキルがインストールされていません",
+		"projectSkills": "プロジェクトスキル",
+		"globalSkills": "グローバルスキル",
+		"deleteDialog": {
+			"title": "スキルを削除",
+			"description": "スキル「{{skillName}}」を削除してもよろしいですか？この操作は元に戻せません。",
+			"cancel": "キャンセル",
+			"delete": "削除"
 		}
 	}
 }

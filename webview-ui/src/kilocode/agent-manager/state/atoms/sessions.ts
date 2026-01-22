@@ -47,6 +47,7 @@ export interface RemoteSession {
 	created_at: string
 	updated_at: string
 	git_url?: string
+	last_model?: string | null
 }
 
 // Core atoms
@@ -114,6 +115,7 @@ function toAgentSession(remote: RemoteSession): AgentSession {
 		endTime: Number.isNaN(updatedTime) ? 0 : updatedTime,
 		source: "remote",
 		gitUrl: remote.git_url,
+		model: remote.last_model ?? undefined,
 	}
 }
 

@@ -55,6 +55,7 @@ export const cliOptionsSchema = z.object({
 	fork: z.string().optional(),
 	noSplash: z.boolean().optional(),
 	appendSystemPrompt: z.string().optional(),
+	appendSystemPromptFile: z.string().optional(),
 })
 
 // Inferred types

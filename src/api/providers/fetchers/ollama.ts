@@ -45,7 +45,7 @@ export const parseOllamaModel = (
 	// kilocode_change end
 ): ModelInfo => {
 	// kilocode_change start
-	const contextKey = Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
+	const contextKey = rawModel.model_info && Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
 	const contextLengthFromModelInfo =
 		contextKey && typeof rawModel.model_info[contextKey] === "number" ? rawModel.model_info[contextKey] : undefined
 

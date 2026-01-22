@@ -14,7 +14,9 @@
 		"shareSession": "Compartir sessió",
 		"shareConfirmMessage": "Vols compartir públicament una instantània d'aquesta sessió?",
 		"shareConfirmYes": "Sí",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Opcions",
+		"configureSetupScript": "Script de setup del worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -73,7 +75,9 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir sortida",
 		"collapseOutput": "Replegar sortida",
-		"copyCommand": "Copiar comanda"
+		"copyCommand": "Copiar comanda",
+		"thinking": "Pensant",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",

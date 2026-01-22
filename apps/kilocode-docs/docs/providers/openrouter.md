@@ -40,7 +40,7 @@ OpenRouter can route to many different inference providers and this can be contr
 - Prefer providers with lower price
 - Prefer providers with higher throughput (i.e. more tokens per seconds)
 - Prefer providers with lower latency (i.e. shorter time to first token)
-- A specific provider can also be chosen. This is not recommended, because it will result in errors when the provider is facing downtime or enforcing rate limits.
+- A specific provider preference can also be chosen.
 
 ### Data Policy
 

@@ -1137,6 +1137,10 @@
 		"showTimestamps": {
 			"label": "Pokaż znaczniki czasu",
 			"description": "Pokaż znacznik czasu dla każdej wiadomości w widoku czatu"
+		},
+		"showDiffStats": {
+			"label": "Pokaż statystyki diff",
+			"description": "Wyświetl statystyki dodanych/usuniętych linii w nagłówku zadania"
 		}
 	},
 	"ghost": {

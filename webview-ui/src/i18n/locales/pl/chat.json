@@ -9,6 +9,7 @@
 		"tokens": "Tokeny",
 		"cache": "Pamięć podręczna",
 		"apiCost": "Koszt API",
+		"changes": "Zmiany",
 		"size": "Rozmiar",
 		"contextWindow": "Okno kontekstu",
 		"closeAndStart": "Zamknij zadanie i rozpocznij nowe",
@@ -281,7 +282,7 @@
 		"noAssistantMessagesDetails": "Model językowy zwrócił pustą odpowiedź bez żadnego tekstu ani wywołań narzędzi. Może się to zdarzyć z powodu problemów z API, limitów szybkości lub problemów specyficznych dla modelu. Model został automatycznie poproszony o ponowną próbę."
 	},
 	"errorDetails": {
-		"link": "Details",
+		"link": "Szczegóły",
 		"title": "Szczegóły błędu",
 		"copyToClipboard": "Kopiuj do schowka",
 		"copied": "Skopiowano!",

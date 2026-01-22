@@ -119,7 +119,7 @@ export class RemoteConfigLoader {
 				description: rawSkill.description,
 				category: rawSkill.category,
 				githubUrl: rawSkill.githubUrl,
-				rawUrl: rawSkill.rawUrl,
+				content: rawSkill.content,
 				displayName: kebabToTitleCase(rawSkill.id),
 				displayCategory: kebabToTitleCase(rawSkill.category),
 			}),

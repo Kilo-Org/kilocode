@@ -26,6 +26,14 @@ vi.mock("delay", () => ({
 
 import delay from "delay"
 
+vi.mock("uuid", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("uuid")>()
+	return {
+		...actual,
+		v7: vi.fn(() => "00000000-0000-7000-8000-000000000000"),
+	}
+})
+
 vi.mock("execa", () => ({
 	execa: vi.fn(),
 }))

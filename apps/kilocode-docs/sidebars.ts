@@ -62,6 +62,7 @@ const sidebars: SidebarsConfig = {
 								"providers/anthropic",
 								"providers/bedrock",
 								"providers/cerebras", // kilocode_change
+								"providers/openai-chatgpt-plus-pro", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
 								"providers/deepseek",
@@ -93,6 +94,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
+				"basic-usage/byok",
 				"basic-usage/adding-credits",
 				"basic-usage/settings-management",
 			],
@@ -232,6 +234,7 @@ const sidebars: SidebarsConfig = {
 						"contributing/architecture/track-repo-url",
 						"contributing/architecture/vercel-ai-gateway",
 						"contributing/architecture/voice-transcription",
+						"contributing/architecture/model-o11y",
 					],
 				},
 			],

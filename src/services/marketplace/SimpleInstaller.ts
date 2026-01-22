@@ -2,10 +2,20 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
 import * as yaml from "yaml"
-import type { MarketplaceItem, MarketplaceItemType, InstallMarketplaceItemOptions, McpParameter } from "@roo-code/types"
+// kilocode_change start - Added SkillMarketplaceItem import
+import type {
+	MarketplaceItem,
+	MarketplaceItemType,
+	InstallMarketplaceItemOptions,
+	McpParameter,
+	SkillMarketplaceItem,
+} from "@roo-code/types"
+// kilocode_change end
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
+import { getGlobalRooDirectory } from "../roo-config" // kilocode_change
+import { extractTarball } from "./tarball-utils" // kilocode_change
 
 export interface InstallOptions extends InstallMarketplaceItemOptions {
 	target: "project" | "global"
@@ -28,8 +38,7 @@ export class SimpleInstaller {
 				return await this.installMcp(item, target, options)
 			// kilocode_change start - Handle skill type
 			case "skill":
-				// Skills are not installable through the marketplace - they are managed separately
-				throw new Error("Skills cannot be installed through the marketplace installer")
+				return await this.installSkill(item, target)
 			// kilocode_change end
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
@@ -299,8 +308,8 @@ export class SimpleInstaller {
 				break
 			// kilocode_change start - Handle skill type
 			case "skill":
-				// Skills are not removable through the marketplace - they are managed separately
-				throw new Error("Skills cannot be removed through the marketplace installer")
+				await this.removeSkill(item, target)
+				break
 			// kilocode_change end
 			default:
 				throw new Error(`Unsupported item type: ${(item as any).type}`)
@@ -397,4 +406,72 @@ export class SimpleInstaller {
 			return path.join(globalSettingsPath, GlobalFileNames.mcpSettings)
 		}
 	}
+
+	// kilocode_change start - Skill installation methods
+	/**
+	 * Install a skill from the marketplace by downloading and extracting its tarball.
+	 *
+	 * Skills are installed to:
+	 * - Global: ~/.kilocode/skills/{skill-id}/
+	 * - Project: .kilocode/skills/{skill-id}/
+	 *
+	 * The tarball must contain a SKILL.md at the root level (after stripping the top-level directory).
+	 */
+	private async installSkill(
+		item: SkillMarketplaceItem,
+		target: "project" | "global",
+	): Promise<{ filePath: string; line?: number }> {
+		if (!item.content) {
+			throw new Error("Skill item missing content (tarball URL)")
+		}
+
+		// Get the skills directory path
+		const skillsDir = await this.getSkillsDirectoryPath(target)
+		const skillDir = path.join(skillsDir, item.id)
+
+		// Extract the tarball to the skill directory (uses imported utility)
+		await extractTarball(item.content, skillDir)
+
+		const skillFilePath = path.join(skillDir, "SKILL.md")
+		return { filePath: skillFilePath, line: 1 }
+	}
+
+	/**
+	 * Remove an installed skill by deleting its directory
+	 */
+	private async removeSkill(item: SkillMarketplaceItem, target: "project" | "global"): Promise<void> {
+		const skillsDir = await this.getSkillsDirectoryPath(target)
+		const skillDir = path.join(skillsDir, item.id)
+
+		try {
+			// Check if the directory exists before attempting to remove
+			const stat = await fs.stat(skillDir)
+			if (stat.isDirectory()) {
+				// Remove the entire skill directory
+				await fs.rm(skillDir, { recursive: true })
+			}
+		} catch (error: any) {
+			if (error.code !== "ENOENT") {
+				throw error
+			}
+			// Directory doesn't exist, nothing to remove
+		}
+	}
+
+	/**
+	 * Get the skills directory path for the given target
+	 */
+	private async getSkillsDirectoryPath(target: "project" | "global"): Promise<string> {
+		if (target === "project") {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+			if (!workspaceFolder) {
+				throw new Error("No workspace folder found")
+			}
+			return path.join(workspaceFolder.uri.fsPath, ".kilocode", "skills")
+		} else {
+			const globalDir = getGlobalRooDirectory()
+			return path.join(globalDir, "skills")
+		}
+	}
+	// kilocode_change end
 }

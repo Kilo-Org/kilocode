@@ -147,6 +147,10 @@
 			"title": "MCP Sunucusunu Kaldır",
 			"message": "\"{{mcpName}}\" MCP sunucusunu kaldırmak istediğinizden emin misiniz?"
 		},
+		"skill": {
+			"title": "Beceriyi Kaldır",
+			"message": "\"{{skillName}}\" becerisini kaldırmak istediğinizden emin misiniz?"
+		},
 		"cancel": "İptal",
 		"confirm": "Kaldır"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "Tümü",
 		"resultsCount": "{{count}} beceri bulundu",
 		"noResults": "Kriterlerinize uyan beceri bulunamadı",
-		"viewOnGitHub": "GitHub'da görüntüle"
+		"install": "Yükle",
+		"installTitle": "{{name}} becerisini yükle",
+		"installing": "Yükleniyor..."
 	}
 }

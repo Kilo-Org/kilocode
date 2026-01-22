@@ -150,13 +150,32 @@
 			"authenticationRequired": "Roo 提供商需要云认证。请登录 Roo Code Cloud。"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API 密钥包含无效字符。"
+			"invalidKeyInvalidChars": "API 密钥包含无效字符.",
+			"apiRequestFailed": "API 请求失败 ({{status}})"
 		},
 		"manual_url_empty": "请输入有效的回调 URL",
 		"manual_url_no_query": "无效的回调 URL：缺少查询参数",
 		"manual_url_missing_params": "无效的回调 URL：缺少必需参数（code 和 state）",
 		"manual_url_auth_failed": "手动 URL 身份验证失败",
-		"manual_url_auth_error": "身份验证失败"
+		"manual_url_auth_error": "身份验证失败",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "没有选择终端内容",

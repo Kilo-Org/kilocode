@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from "vitest"
 import type { KilocodeStreamEvent } from "../CliOutputParser"
 import { KilocodeEventProcessor } from "../KilocodeEventProcessor"
-import { CliProcessHandler } from "../CliProcessHandler"
+import { RuntimeProcessHandler } from "../RuntimeProcessHandler"
 import { AgentRegistry } from "../AgentRegistry"
 import type { ClineMessage } from "@roo-code/types"
 
 function createDeps() {
 	const processHandler = {
 		stopProcess: vi.fn(),
-	} as unknown as CliProcessHandler
+	} as unknown as RuntimeProcessHandler
 	const registry = {
 		updateSessionStatus: vi.fn(),
 	} as unknown as AgentRegistry
@@ -48,7 +48,7 @@ describe("KilocodeEventProcessor", () => {
 		processor.handle(sessionId, textEvent)
 
 		expect(deps.postChatMessages).not.toHaveBeenCalled()
-		expect(deps.log).toHaveBeenCalledWith(sessionId, expect.stringContaining("skipping user input echo"))
+		expect(deps.log).toHaveBeenCalledWith(sessionId, expect.stringContaining("SKIPPING user echo"))
 	})
 
 	it("records api_req_started and then allows subsequent text", () => {

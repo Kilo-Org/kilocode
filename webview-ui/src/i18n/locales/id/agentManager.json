@@ -14,7 +14,9 @@
 		"shareSession": "Bagikan sesi",
 		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
 		"shareConfirmYes": "Ya",
-		"shareConfirmNo": "Tidak"
+		"shareConfirmNo": "Tidak",
+		"options": "Opsi",
+		"configureSetupScript": "Skrip setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -73,7 +75,9 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
-		"copyCommand": "Salin perintah"
+		"copyCommand": "Salin perintah",
+		"thinking": "Berpikir",
+		"thinkingSeconds": "{{count}}d"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

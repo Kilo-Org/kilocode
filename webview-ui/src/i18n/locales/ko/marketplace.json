@@ -147,6 +147,10 @@
 			"title": "MCP 서버 제거",
 			"message": "정말로 '{{mcpName}}' MCP 서버를 제거하시겠습니까?"
 		},
+		"skill": {
+			"title": "스킬 제거",
+			"message": "정말로 '{{skillName}}' 스킬을 제거하시겠습니까?"
+		},
 		"cancel": "취소",
 		"confirm": "제거"
 	},
@@ -159,6 +163,8 @@
 		"allCategories": "전체",
 		"resultsCount": "{{count}}개 스킬 발견",
 		"noResults": "조건에 맞는 스킬을 찾을 수 없습니다",
-		"viewOnGitHub": "GitHub에서 보기"
+		"install": "설치",
+		"installTitle": "{{name}} 스킬 설치",
+		"installing": "설치 중..."
 	}
 }

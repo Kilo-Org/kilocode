@@ -249,9 +249,7 @@ export {
 // ============================================================================
 // Type Re-exports
 // ============================================================================
-export type { ExtensionService } from "../../services/extension.js"
-export type { ExtensionAPI } from "../../host/ExtensionHost.js"
-export type { MessageBridge } from "../../communication/ipc.js"
+export type { ExtensionService, ExtensionAPI, MessageBridge } from "../../services/extension.js"
 export type {
 	ExtensionMessage,
 	WebviewMessage,

@@ -31,7 +31,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Servidores MCP"
+			"mcp": "Servidores MCP",
+			"agentBehaviour": "Comportamiento del Agente",
+			"skills": "Habilidades"
 		},
 		"provider": {
 			"account": "Cuenta de Kilo Code",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Documentos",
 	"rules": {
-		"tooltip": "Gestionar Reglas y Flujos de Trabajo de Kilo Code",
+		"tooltip": "Gestionar el comportamiento del agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Reglas",
+			"workflows": "Flujos de Trabajo",
+			"mcps": "MCPs",
+			"modes": "Modos",
+			"skills": "Habilidades"
+		},
 		"ariaLabel": "Reglas de Kilo Code",
 		"tabs": {
 			"rules": "Reglas",
@@ -214,34 +223,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Autocompletado",
 		"settings": {
+			"codeEditorSuggestions": "Sugerencias del Editor de Código",
+			"chatSuggestions": "Sugerencias del Chat",
+			"model": "Modelo",
+			"provider": "Proveedor",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "Activar sugerencias automáticamente",
 				"description": "Mostrar automáticamente sugerencias de código en línea cuando dejas de escribir."
 			},
 			"autoTriggerDelay": {
 				"label": "Retraso de Activación Automática",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "El retraso en segundos antes de que aparezcan las sugerencias después de dejar de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede consumir más recursos."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Activar con atajo de teclado ({{keybinding}})",
+				"description": "Presiona {{keybinding}} para solicitar una sugerencia de código en la posición del cursor. <DocsLink>Editar atajo</DocsLink>"
 			},
-			"keybindingNotFound": "no encontrado",
-			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado.",
-			"model": "Modelo",
-			"provider": "Proveedor",
 			"enableChatAutocomplete": {
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions.",
-				"label": "Enable Chat Autocomplete"
+				"label": "Activar autocompletado del chat",
+				"description": "Mostrar sugerencias mientras escribes en el campo de entrada del chat. Presiona Tab para aceptar sugerencias."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Pausar sugerencias",
+				"description": "Pausar temporalmente las sugerencias durante un tiempo determinado.",
 				"button": "Posponer",
 				"unsnooze": "Reactivar",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Las sugerencias están actualmente pausadas.",
 				"duration": {
 					"1min": "1 minuto",
 					"5min": "5 minutos",
@@ -250,6 +259,7 @@
 					"1hour": "1 hora"
 				}
 			},
+			"keybindingNotFound": "no encontrado",
 			"noModelConfigured": {
 				"title": "No hay modelo de autocompletado configurado",
 				"description": "Para habilitar el autocompletado, añade un perfil con uno de estos proveedores compatibles:",
@@ -260,8 +270,7 @@
 				"description": "Tu cuenta de Kilo Code no tiene créditos. Para usar el autocompletado, por favor añade créditos a tu cuenta.",
 				"buyCredits": "Comprar créditos →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado."
 		}
 	},
 	"virtualProvider": {
@@ -353,6 +362,18 @@
 			"loading": "Cargando dispositivos de micrófono...",
 			"refresh": "Actualizar",
 			"noDevices": "No se encontraron dispositivos de micrófono"
+		}
+	},
+	"skills": {
+		"description": "Las habilidades proporcionan instrucciones especializadas para tareas específicas. Se aplican automáticamente cuando son relevantes para tu solicitud.",
+		"noSkills": "No hay habilidades instaladas",
+		"projectSkills": "Habilidades del Proyecto",
+		"globalSkills": "Habilidades Globales",
+		"deleteDialog": {
+			"title": "Eliminar Habilidad",
+			"description": "¿Estás seguro de que quieres eliminar la habilidad \"{{skillName}}\"? Esta acción no se puede deshacer.",
+			"cancel": "Cancelar",
+			"delete": "Eliminar"
 		}
 	}
 }

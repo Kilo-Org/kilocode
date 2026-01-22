@@ -16,6 +16,7 @@ export { Moonshot } from "./Moonshot"
 export { NanoGpt } from "./NanoGpt" // kilocode_change
 export { Ollama } from "./Ollama"
 export { OpenAI } from "./OpenAI"
+export { OpenAICodex } from "./OpenAICodex"
 export { OpenAICompatible } from "./OpenAICompatible"
 export { OpenRouter } from "./OpenRouter"
 export { QwenCode } from "./QwenCode"

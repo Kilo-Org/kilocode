@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Tryb organizacji",
-		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Kilo Code Dashboard.",
+		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Tryby organizacji nie mogą być edytowane"
 	},
 	"tools": {

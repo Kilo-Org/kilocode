@@ -32,6 +32,7 @@ import {
 	taskHistoryErrorAtom,
 	resolveTaskHistoryRequestAtom,
 } from "./taskHistory.js"
+import { resolveCondenseRequestAtom } from "./condense.js"
 import { validateModelOnRouterModelsUpdateAtom } from "./modelValidation.js"
 import { validateModeOnCustomModesUpdateAtom } from "./modeValidation.js"
 import { logs } from "../../services/logs.js"
@@ -398,6 +399,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			case "condenseTaskContextResponse": {
 				const taskId = message.text
 				logs.info(`Context condensation completed for task: ${taskId || "current task"}`, "effects")
+				// Resolve any pending condense request for this task
+				if (taskId) {
+					set(resolveCondenseRequestAtom, { taskId })
+				}
 				break
 			}
 

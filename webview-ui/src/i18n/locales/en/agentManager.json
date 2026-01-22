@@ -14,7 +14,9 @@
 		"shareSession": "Share session",
 		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
 		"shareConfirmYes": "Yes",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -73,7 +75,9 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"copyCommand": "Copy command"
+		"copyCommand": "Copy command",
+		"thinking": "Thinking",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",

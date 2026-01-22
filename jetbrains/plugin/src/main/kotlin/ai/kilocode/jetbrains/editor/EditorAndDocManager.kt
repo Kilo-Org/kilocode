@@ -1,9 +1,7 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.monitoring.ScopeRegistry
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import ai.kilocode.jetbrains.plugin.SystemObjectProvider
 import ai.kilocode.jetbrains.util.URI
 import com.intellij.diff.DiffContentFactory
@@ -32,14 +30,25 @@ import com.intellij.openapi.vfs.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.debounce
 import java.io.File
 import java.io.FileInputStream
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
+
+private data class FileEvent(
+    val uri: String,
+    val added: Boolean,
+    val isText: Boolean
+)
 
 @Service(Service.Level.PROJECT)
 class EditorAndDocManager(val project: Project) : Disposable {
@@ -57,8 +66,22 @@ class EditorAndDocManager(val project: Project) : Disposable {
 
     private var job: Job? = null
     private val editorStateService: EditorStateService = EditorStateService(project)
+    
+    private val fileEventScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val fileEventChannel = Channel<FileEvent>(Channel.CONFLATED)
 
     init {
+        ScopeRegistry.register("EditorAndDocManager.fileEventScope", fileEventScope)
+        
+        @OptIn(FlowPreview::class)
+        fileEventScope.launch {
+            fileEventChannel.consumeAsFlow()
+                .debounce(50) // 50ms debounce
+                .collect { event ->
+                    sync2ExtHost(URI.file(event.uri), event.added, event.isText)
+                }
+        }
+        
         ideaEditorListener = object : FileEditorManagerListener {
             // Update and synchronize editor state when file is opened
             override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
@@ -79,14 +102,19 @@ class EditorAndDocManager(val project: Project) : Disposable {
                             if (older == null) {
                                 val uri = URI.file(editor.file.path)
                                 val isText = FileDocumentManager.getInstance().getDocument(file) != null
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    val handle = sync2ExtHost(uri, false, isText)
-                                    handle.ideaEditor = editor
-                                    val group = tabManager.createTabGroup(EditorGroupColumn.BESIDE.value, true)
-                                    val options = TabOptions(isActive = true)
-                                    val tab = group.addTab(EditorTabInput(uri, uri.path, ""), options)
-                                    handle.tab = tab
-                                    handle.group = group
+                                fileEventChannel.trySend(FileEvent(uri.toString(), false, isText))
+                                // Store editor reference for later use
+                                fileEventScope.launch {
+                                    delay(100) // Wait for debounced sync to complete
+                                    val handle = getEditorHandleByUri(uri, false)
+                                    if (handle != null) {
+                                        handle.ideaEditor = editor
+                                        val group = tabManager.createTabGroup(EditorGroupColumn.BESIDE.value, true)
+                                        val options = TabOptions(isActive = true)
+                                        val tab = group.addTab(EditorTabInput(uri, uri.path, ""), options)
+                                        handle.tab = tab
+                                        handle.group = group
+                                    }
                                 }
                             }
                         }
@@ -478,6 +506,9 @@ class EditorAndDocManager(val project: Project) : Disposable {
     }
 
     override fun dispose() {
+        ScopeRegistry.unregister("EditorAndDocManager.fileEventScope")
+        fileEventChannel.close()
+        fileEventScope.cancel()
         messageBusConnection.dispose()
     }
 
@@ -499,7 +530,7 @@ class EditorAndDocManager(val project: Project) : Disposable {
 
     private fun scheduleUpdate() {
         job?.cancel()
-        job = CoroutineScope(Dispatchers.IO).launch {
+        job = fileEventScope.launch {
             delay(10)
             processUpdates()
         }

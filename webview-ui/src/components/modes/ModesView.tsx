@@ -66,7 +66,9 @@ function getGroupName(group: GroupEntry): ToolGroup {
 	return Array.isArray(group) ? group[0] : group
 }
 
-const ModesView = () => {
+// kilocode_change start - add hideHeader prop
+const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
+	// kilocode_change end
 	const { t } = useAppTranslation()
 
 	const {
@@ -601,12 +603,16 @@ const ModesView = () => {
 
 	return (
 		<div>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<MessageSquare className="w-4" />
-					<div>{t("prompts:title")}</div>
-				</div>
-			</SectionHeader>
+			{/* kilocode_change start - conditionally render header */}
+			{!hideHeader && (
+				<SectionHeader>
+					<div className="flex items-center gap-2">
+						<MessageSquare className="w-4" />
+						<div>{t("prompts:title")}</div>
+					</div>
+				</SectionHeader>
+			)}
+			{/* kilocode_change end */}
 
 			<Section>
 				<div>
@@ -717,9 +723,6 @@ const ModesView = () => {
 					</div>
 
 					<div className="flex items-center gap-1 mb-3">
-						{isOrganizationMode && <OrganizationModeWarning />} {/* kilocode_change start */}
-						{/* Only show name and delete for custom modes that are not organization modes */}
-						{/* kilocode_change end */}
 						{isRenamingMode ? (
 							<>
 								<VSCodeTextField
@@ -923,6 +926,10 @@ const ModesView = () => {
 							</>
 						)}
 					</div>
+
+					{/* kilocode_change start */}
+					{isOrganizationMode && <OrganizationModeWarning />}
+					{/* kilocode_change end */}
 
 					{/* API Configuration - Moved Here */}
 					<div className="mb-3">

@@ -1137,6 +1137,10 @@
 		"showTimestamps": {
 			"label": "Hiển thị dấu thời gian",
 			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
+		},
+		"showDiffStats": {
+			"label": "Hiển thị thống kê diff",
+			"description": "Hiển thị thống kê số dòng thêm/xóa trong tiêu đề tác vụ"
 		}
 	},
 	"ghost": {

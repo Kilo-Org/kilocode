@@ -3,6 +3,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import os from "os"
 import crypto from "crypto"
+import { v7 as uuidv7 } from "uuid"
 import EventEmitter from "events"
 
 import { AskIgnoredError } from "./AskIgnoredError"
@@ -460,7 +461,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			)
 		}
 
-		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
+		this.taskId = historyItem ? historyItem.id : uuidv7()
 		this.taskIsFavorited = historyItem?.isFavorited // kilocode_change
 		this.rootTaskId = historyItem ? historyItem.rootTaskId : rootTask?.taskId
 		this.parentTaskId = historyItem ? historyItem.parentTaskId : parentTask?.taskId
@@ -488,7 +489,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		})
 
 		this.apiConfiguration = apiConfiguration
-		this.api = buildApiHandler(apiConfiguration)
+		this.api = buildApiHandler(this.apiConfiguration)
 		// kilocode_change start: Listen for model changes in virtual quota fallback
 		if (this.api instanceof VirtualQuotaFallbackHandler) {
 			this.api.on("handlerChanged", () => {
@@ -1545,7 +1546,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public updateApiConfiguration(newApiConfiguration: ProviderSettings): void {
 		// Update the configuration and rebuild the API handler
 		this.apiConfiguration = newApiConfiguration
-		this.api = buildApiHandler(newApiConfiguration)
+		this.api = buildApiHandler(this.apiConfiguration)
 
 		// IMPORTANT: Do NOT change the parser based on the new configuration!
 		// The task's tool protocol is locked at creation time and must remain

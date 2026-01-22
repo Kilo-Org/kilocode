@@ -9,6 +9,7 @@
 		"tokens": "Token",
 		"cache": "Cache",
 		"apiCost": "Biaya API",
+		"changes": "Perubahan",
 		"size": "Ukuran",
 		"condenseContext": "Kondensasi konteks secara cerdas",
 		"contextWindow": "Panjang Konteks",
@@ -311,7 +312,7 @@
 	},
 	"troubleMessage": "Kilo Code mengalami masalah...",
 	"errorDetails": {
-		"link": "Details",
+		"link": "Detail",
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
 		"copied": "Disalin!",

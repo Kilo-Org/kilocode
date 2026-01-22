@@ -12,6 +12,7 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
+import { getGlobalRooDirectory } from "../roo-config" // kilocode_change
 
 import { RemoteConfigLoader } from "./RemoteConfigLoader"
 import { SimpleInstaller } from "./SimpleInstaller"
@@ -284,6 +285,29 @@ export class MarketplaceManager {
 			} catch (error) {
 				// File doesn't exist or can't be read, skip
 			}
+
+			// kilocode_change start - Check skills in .kilocode/skills/
+			const projectSkillsPath = path.join(workspaceFolder.uri.fsPath, ".kilocode", "skills")
+			try {
+				const entries = await fs.readdir(projectSkillsPath, { withFileTypes: true })
+				for (const entry of entries) {
+					if (entry.isDirectory()) {
+						// Check if SKILL.md exists in the directory
+						const skillFilePath = path.join(projectSkillsPath, entry.name, "SKILL.md")
+						try {
+							await fs.access(skillFilePath)
+							metadata[entry.name] = {
+								type: "skill",
+							}
+						} catch {
+							// SKILL.md doesn't exist, skip
+						}
+					}
+				}
+			} catch (error) {
+				// Directory doesn't exist or can't be read, skip
+			}
+			// kilocode_change end
 		} catch (error) {
 			console.error("Error checking project installations:", error)
 		}
@@ -329,6 +353,29 @@ export class MarketplaceManager {
 			} catch (error) {
 				// File doesn't exist or can't be read, skip
 			}
+
+			// kilocode_change start - Check global skills
+			const globalSkillsPath = path.join(getGlobalRooDirectory(), "skills")
+			try {
+				const entries = await fs.readdir(globalSkillsPath, { withFileTypes: true })
+				for (const entry of entries) {
+					if (entry.isDirectory()) {
+						// Check if SKILL.md exists in the directory
+						const skillFilePath = path.join(globalSkillsPath, entry.name, "SKILL.md")
+						try {
+							await fs.access(skillFilePath)
+							metadata[entry.name] = {
+								type: "skill",
+							}
+						} catch {
+							// SKILL.md doesn't exist, skip
+						}
+					}
+				}
+			} catch (error) {
+				// Directory doesn't exist or can't be read, skip
+			}
+			// kilocode_change end
 		} catch (error) {
 			console.error("Error checking global installations:", error)
 		}

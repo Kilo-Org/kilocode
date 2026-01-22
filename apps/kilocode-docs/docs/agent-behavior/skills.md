@@ -34,9 +34,10 @@ Skills are loaded from multiple locations, allowing both personal skills and pro
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilocode` directory within your Home directory. 
-* Mac and Linux: `~/.kilocode/skills/`
-* Windows: `\Users\<yourUser>\.kilocode\`
+Global skills are located in the `.kilocode` directory within your Home directory.
+
+- Mac and Linux: `~/.kilocode/skills/`
+- Windows: `\Users\<yourUser>\.kilocode\`
 
 ```
 ~/.kilocode/
@@ -246,10 +247,10 @@ These additional files can be referenced from your skill's instructions, allowin
 
 ## Finding Skills
 
-There are community efforts to build and share agent skills. Some resources include:
+You can discover and install community-created skills through:
 
-- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
-- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
+- **Kilo Marketplace** - Browse skills directly in the Kilo Code extension via the Marketplace tab, or explore the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) on GitHub
+- [Agent Skills Specification](https://agentskills.io/home) - The open specification that skills follow, enabling interoperability across different AI agents
 
 ## Troubleshooting
 
@@ -282,6 +283,28 @@ If the agent confirms the skill is available, you're ready to use it. If not, ch
 | "missing required 'name' field" | No `name` in frontmatter                     | Add `name: your-skill-name`                      |
 | "name doesn't match directory"  | Mismatch between frontmatter and folder name | Make `name` match exactly                        |
 | Skill not appearing             | Wrong directory structure                    | Verify path follows `skills/skill-name/SKILL.md` |
+
+## Contributing to the Marketplace
+
+Have you created a skill that others might find useful? Share it with the community by contributing to the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace)!
+
+### How to Submit Your Skill
+
+1. **Prepare your skill**: Ensure your skill directory contains a valid `SKILL.md` file with proper frontmatter
+2. **Test thoroughly**: Verify your skill works correctly across different scenarios and modes
+3. **Fork the marketplace repository**: Visit [github.com/Kilo-Org/kilo-marketplace](https://github.com/Kilo-Org/kilo-marketplace) and create a fork
+4. **Add your skill**: Place your skill directory in the appropriate location following the repository's structure
+5. **Submit a pull request**: Create a PR with a clear description of what your skill does and when it's useful
+
+### Submission Guidelines
+
+- Follow the [Agent Skills specification](https://agentskills.io/specification) for your `SKILL.md` file
+- Include a clear `name` and `description` in the frontmatter
+- Document any dependencies or requirements (scripts, external tools, etc.)
+- If your skill includes bundled resources (scripts, templates), ensure they are well-documented
+- Follow the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
+
+For more details on contributing to Kilo Code, see the [Contributing Guide](/contributing).
 
 ## Related
 

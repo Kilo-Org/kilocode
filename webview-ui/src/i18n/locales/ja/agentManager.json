@@ -14,7 +14,9 @@
 		"shareSession": "セッションを共有",
 		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
 		"shareConfirmYes": "はい",
-		"shareConfirmNo": "いいえ"
+		"shareConfirmNo": "いいえ",
+		"options": "オプション",
+		"configureSetupScript": "Worktree セットアップスクリプト"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -73,7 +75,9 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}",
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
-		"copyCommand": "コマンドをコピー"
+		"copyCommand": "コマンドをコピー",
+		"thinking": "思考中",
+		"thinkingSeconds": "{{count}}秒"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",
