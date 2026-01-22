@@ -301,7 +301,12 @@ export interface WebviewMessage {
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
 		| "refreshCustomTools"
+		| "storeSecurePassword" // kilocode_change
+		| "getSecurePassword" // kilocode_change
+		| "clearSecurePassword" // kilocode_change
 	text?: string
+	key?: string // kilocode_change: For secure password operations
+	password?: string // kilocode_change: For secure password operations
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
