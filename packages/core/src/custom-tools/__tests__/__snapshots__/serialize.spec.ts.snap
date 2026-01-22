@@ -1,0 +1,146 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Serialization snapshots > should correctly serialize all fixtures 1`] = `
+[
+  {
+    "description": "Simple tool",
+    "name": "simple",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "The input value",
+          "type": "string",
+        },
+      },
+      "required": [
+        "value",
+      ],
+      "type": "object",
+    },
+    "source": undefined,
+  },
+  {
+    "description": "Cached tool",
+    "name": "cached",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "source": undefined,
+  },
+  {
+    "description": "Legacy tool using args",
+    "name": "legacy",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "description": "The input string",
+          "type": "string",
+        },
+      },
+      "required": [
+        "input",
+      ],
+      "type": "object",
+    },
+    "source": undefined,
+  },
+  {
+    "description": "Tool A",
+    "name": "multi_toolA",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "source": undefined,
+  },
+  {
+    "description": "Tool B",
+    "name": "multi_toolB",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "source": undefined,
+  },
+  {
+    "description": "Valid",
+    "name": "mixed_validTool",
+    "parameters": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "source": undefined,
+  },
+]
+`;
+
+exports[`Serialization snapshots > should correctly serialize cached tool 1`] = `
+{
+  "description": "Cached tool",
+  "name": "cached",
+  "parameters": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object",
+  },
+  "source": undefined,
+}
+`;
+
+exports[`Serialization snapshots > should correctly serialize legacy tool (using args) 1`] = `
+{
+  "description": "Legacy tool using args",
+  "name": "legacy",
+  "parameters": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "input": {
+        "description": "The input string",
+        "type": "string",
+      },
+    },
+    "required": [
+      "input",
+    ],
+    "type": "object",
+  },
+  "source": undefined,
+}
+`;
+
+exports[`Serialization snapshots > should correctly serialize simple tool 1`] = `
+{
+  "description": "Simple tool",
+  "name": "simple",
+  "parameters": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "value": {
+        "description": "The input value",
+        "type": "string",
+      },
+    },
+    "required": [
+      "value",
+    ],
+    "type": "object",
+  },
+  "source": undefined,
+}
+`;

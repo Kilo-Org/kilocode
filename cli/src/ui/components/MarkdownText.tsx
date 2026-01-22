@@ -1,10 +1,79 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Text } from "ink"
-import { parse, setOptions } from "marked"
-import TerminalRenderer, { type TerminalRendererOptions } from "marked-terminal"
+import { Marked, type MarkedExtension } from "marked"
+import { markedTerminal, type TerminalRendererOptions } from "marked-terminal"
+import chalk, { type ChalkInstance } from "chalk"
+import type { Theme } from "../../types/theme.js"
 
 export type MarkdownTextProps = TerminalRendererOptions & {
 	children: string
+	theme?: Theme
+}
+
+/**
+ * Named chalk color methods that return ChalkInstance
+ */
+type ChalkColorMethod =
+	| "black"
+	| "red"
+	| "green"
+	| "yellow"
+	| "blue"
+	| "magenta"
+	| "cyan"
+	| "white"
+	| "gray"
+	| "grey"
+	| "blackBright"
+	| "redBright"
+	| "greenBright"
+	| "yellowBright"
+	| "blueBright"
+	| "magentaBright"
+	| "cyanBright"
+	| "whiteBright"
+
+/**
+ * Convert a color string (hex or named) to a chalk function
+ */
+const colorToChalk = (color: string): ChalkInstance => {
+	// If it starts with #, it's a hex color
+	if (color.startsWith("#")) {
+		return chalk.hex(color)
+	}
+	// Otherwise, it's a named color - use chalk's named color methods
+	// Check if it's a valid color method name
+	if (isChalkColorMethod(color)) {
+		return chalk[color]
+	}
+	return chalk.white
+}
+
+/**
+ * Type guard to check if a string is a valid chalk color method
+ */
+const isChalkColorMethod = (color: string): color is ChalkColorMethod => {
+	const validColors: ChalkColorMethod[] = [
+		"black",
+		"red",
+		"green",
+		"yellow",
+		"blue",
+		"magenta",
+		"cyan",
+		"white",
+		"gray",
+		"grey",
+		"blackBright",
+		"redBright",
+		"greenBright",
+		"yellowBright",
+		"blueBright",
+		"magentaBright",
+		"cyanBright",
+		"whiteBright",
+	]
+	return validColors.includes(color as ChalkColorMethod)
 }
 
 /**
@@ -108,7 +177,7 @@ const calculateAdaptiveSpeed = (
  * @param options - Optional TerminalRenderer configuration
  * @returns Rendered markdown text with typewriter animation for streaming content
  */
-export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, ...options }) => {
+export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...options }) => {
 	// State for displayed text (what user sees)
 	const [displayedText, setDisplayedText] = useState("")
 
@@ -238,13 +307,28 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, ...options
 	}
 
 	try {
-		// Configure marked to use the terminal renderer
-		setOptions({
-			renderer: new TerminalRenderer(options),
-		})
+		// Merge theme colors with user options if theme is provided
+		const rendererOptions: TerminalRendererOptions = theme
+			? {
+					...options,
+					text: colorToChalk(theme.markdown.text),
+					heading: colorToChalk(theme.markdown.heading),
+					strong: colorToChalk(theme.markdown.strong),
+					em: colorToChalk(theme.markdown.em),
+					code: colorToChalk(theme.markdown.code),
+					blockquote: colorToChalk(theme.markdown.blockquote),
+					link: colorToChalk(theme.markdown.link),
+					list: colorToChalk(theme.markdown.list),
+				}
+			: options
+
+		// Create a new Marked instance with the terminal renderer
+		// Note: @types/marked-terminal is outdated and incorrectly types markedTerminal()
+		// as returning TerminalRenderer, but it actually returns a MarkedExtension
+		const marked = new Marked(markedTerminal(rendererOptions) as unknown as MarkedExtension)
 
 		// Parse markdown on the displayed text (efficient - only once per update)
-		const rendered = parse(textToDisplay) as string
+		const rendered = marked.parse(textToDisplay) as string
 		return <Text>{rendered.trim()}</Text>
 	} catch {
 		// Fallback to plain text if markdown parsing fails

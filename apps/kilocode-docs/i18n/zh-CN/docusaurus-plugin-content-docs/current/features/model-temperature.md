@@ -36,7 +36,7 @@ Kilo Code 对大多数模型使用 0.0 的默认温度，以优化代码生成�
 - **询问模式 (0.7-1.0)：** 用于需要多样化和有见地的解释或开放式问题
 - **调试模式 (0.0-0.3)：** 用于以一致的精度排除故障
 
-这些是起点——重要的是[尝试不同的设置](#experimentation)以找到最适合您特定需求和偏好的设置。
+这些是起点——重要的是[尝试不同的设置](#实验)以找到最适合您特定需求和偏好的设置。
 
 ## 如何调整温度
 
@@ -89,5 +89,5 @@ Kilo Code 在实现温度处理时考虑了以下因素：
 ## 相关功能
 
 - 适用于 Kilo Code 支持的所有 [API 提供商](/providers/openai)
-- 补充[自定义指令](/advanced-usage/custom-instructions)以微调响应
-- 与您创建的[自定义模式](/features/custom-modes)一起使用
+- 补充[自定义指令](/agent-behavior/custom-instructions)以微调响应
+- 与您创建的[自定义模式](/agent-behavior/custom-modes)一起使用

@@ -1,4 +1,5 @@
 import path from "path"
+import * as fs from "fs/promises"
 import { isBinaryFile } from "isbinaryfile"
 import type { FileEntry, LineRange } from "@roo-code/types"
 import { isNativeProtocol, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
@@ -25,7 +26,7 @@ import {
 	processImageFile,
 	ImageMemoryTracker,
 } from "./helpers/imageHelpers"
-import { validateFileTokenBudget, truncateFileContent } from "./helpers/fileTokenBudget"
+import { FILE_READ_BUDGET_PERCENT, readFileWithTokenBudget } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
@@ -110,13 +111,26 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 		const { handleError, pushToolResult, toolProtocol } = callbacks
 		const fileEntries = params.files
 		const modelInfo = task.api.getModel().info
-		const protocol = resolveToolProtocol(task.apiConfiguration, modelInfo)
+		// Use the task's locked protocol for consistent output formatting throughout the task
+		const protocol = resolveToolProtocol(task.apiConfiguration, modelInfo, task.taskToolProtocol)
 		const useNative = isNativeProtocol(protocol)
 
 		if (!fileEntries || fileEntries.length === 0) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("read_file")
 			const errorMsg = await task.sayAndCreateMissingParamError("read_file", "args (containing valid file paths)")
+			const errorResult = useNative ? `Error: ${errorMsg}` : `<files><error>${errorMsg}</error></files>`
+			pushToolResult(errorResult)
+			return
+		}
+
+		// Enforce maxConcurrentFileReads limit
+		const { maxConcurrentFileReads = 5 } = (await task.providerRef.deref()?.getState()) ?? {}
+		if (fileEntries.length > maxConcurrentFileReads) {
+			task.consecutiveMistakeCount++
+			task.recordToolError("read_file")
+			const errorMsg = `Too many files requested. You attempted to read ${fileEntries.length} files, but the concurrent file reads limit is ${maxConcurrentFileReads}. Please read files in batches of ${maxConcurrentFileReads} or fewer.`
+			await task.say("error", errorMsg)
 			const errorResult = useNative ? `Error: ${errorMsg}` : `<files><error>${errorMsg}</error></files>`
 			pushToolResult(errorResult)
 			return
@@ -194,7 +208,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			}
 
 			if (filesToApprove.length > 1) {
-				const { maxReadFileLine = -1 } = (await task.providerRef.deref()?.getState()) ?? {}
+				const { maxReadFileLine = 500 /*kilocode_change*/ } = (await task.providerRef.deref()?.getState()) ?? {}
 
 				const batchFiles = filesToApprove.map((fileResult) => {
 					const relPath = fileResult.path
@@ -282,7 +296,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 				const relPath = fileResult.path
 				const fullPath = path.resolve(task.cwd, relPath)
 				const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
-				const { maxReadFileLine = -1 } = (await task.providerRef.deref()?.getState()) ?? {}
+				const { maxReadFileLine = 500 /*kilocode_change*/ } = (await task.providerRef.deref()?.getState()) ?? {}
 
 				let lineSnippet = ""
 				if (fileResult.lineRanges && fileResult.lineRanges.length > 0) {
@@ -325,7 +339,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			const imageMemoryTracker = new ImageMemoryTracker()
 			const state = await task.providerRef.deref()?.getState()
 			const {
-				maxReadFileLine = -1,
+				maxReadFileLine = 500 /*kilocode_change*/,
 				maxImageFileSize = DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 				maxTotalImageSize = DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
 			} = state ?? {}
@@ -337,6 +351,20 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 				const fullPath = path.resolve(task.cwd, relPath)
 
 				try {
+					// Check if the path is a directory before attempting to read it
+					const stats = await fs.stat(fullPath)
+					if (stats.isDirectory()) {
+						const errorMsg = `Cannot read '${relPath}' because it is a directory. To view the contents of a directory, use the list_files tool instead.`
+						updateFileResult(relPath, {
+							status: "error",
+							error: errorMsg,
+							xmlContent: `<file><path>${relPath}</path><error>Error reading file: ${errorMsg}</error></file>`,
+							nativeContent: `File: ${relPath}\nError: Error reading file: ${errorMsg}`,
+						})
+						await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
+						continue
+					}
+
 					const [totalLines, isBinary] = await Promise.all([countFileLines(fullPath), isBinaryFile(fullPath)])
 
 					if (isBinary) {
@@ -386,7 +414,38 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						}
 
 						if (supportedBinaryFormats && supportedBinaryFormats.includes(fileExtension)) {
-							// Fall through to extractTextFromFile
+							// Use extractTextFromFile for supported binary formats (PDF, DOCX, etc.)
+							try {
+								const content = await extractTextFromFile(fullPath)
+								const numberedContent = addLineNumbers(content)
+								const lines = content.split("\n")
+								const lineCount = lines.length
+								const lineRangeAttr = lineCount > 0 ? ` lines="1-${lineCount}"` : ""
+
+								await task.fileContextTracker.trackFileContext(relPath, "read_tool" as RecordSource)
+
+								updateFileResult(relPath, {
+									xmlContent:
+										lineCount > 0
+											? `<file><path>${relPath}</path>\n<content${lineRangeAttr}>\n${numberedContent}</content>\n</file>`
+											: `<file><path>${relPath}</path>\n<content/><notice>File is empty</notice>\n</file>`,
+									nativeContent:
+										lineCount > 0
+											? `File: ${relPath}\nLines 1-${lineCount}:\n${numberedContent}`
+											: `File: ${relPath}\nNote: File is empty`,
+								})
+								continue
+							} catch (error) {
+								const errorMsg = error instanceof Error ? error.message : String(error)
+								updateFileResult(relPath, {
+									status: "error",
+									error: `Error extracting text: ${errorMsg}`,
+									xmlContent: `<file><path>${relPath}</path><error>Error extracting text: ${errorMsg}</error></file>`,
+									nativeContent: `File: ${relPath}\nError: Error extracting text: ${errorMsg}`,
+								})
+								await task.say("error", `Error extracting text from ${relPath}: ${errorMsg}`)
+								continue
+							}
 						} else {
 							const fileFormat = fileExtension.slice(1) || "bin"
 							updateFileResult(relPath, {
@@ -492,48 +551,54 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							settings: task.apiConfiguration,
 						}) ?? ANTHROPIC_DEFAULT_MAX_TOKENS
 
-					const budgetResult = await validateFileTokenBudget(
-						fullPath,
-						contextWindow - maxOutputTokens,
-						contextTokens || 0,
-					)
+					// Calculate available token budget (60% of remaining context)
+					const remainingTokens = contextWindow - maxOutputTokens - (contextTokens || 0)
+					const safeReadBudget = Math.floor(remainingTokens * FILE_READ_BUDGET_PERCENT)
 
-					let content = await extractTextFromFile(fullPath)
+					let content: string
 					let xmlInfo = ""
-
 					let nativeInfo = ""
 
-					if (budgetResult.shouldTruncate && budgetResult.maxChars !== undefined) {
-						const truncateResult = truncateFileContent(
-							content,
-							budgetResult.maxChars,
-							content.length,
-							budgetResult.isPreview,
-						)
-						content = truncateResult.content
-
-						let displayedLines = content.length === 0 ? 0 : content.split(/\r?\n/).length
-						if (displayedLines > 0 && content.endsWith("\n")) {
-							displayedLines--
-						}
-						const lineRangeAttr = displayedLines > 0 ? ` lines="1-${displayedLines}"` : ""
-						xmlInfo =
-							content.length > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
-						xmlInfo += `<notice>${truncateResult.notice}</notice>\n`
-
-						nativeInfo =
-							content.length > 0
-								? `Lines 1-${displayedLines}:\n${content}\n\nNote: ${truncateResult.notice}`
-								: `Note: ${truncateResult.notice}`
+					if (safeReadBudget <= 0) {
+						// No budget available
+						content = ""
+						const notice = "No available context budget for file reading"
+						xmlInfo = `<content/>\n<notice>${notice}</notice>\n`
+						nativeInfo = `Note: ${notice}`
 					} else {
-						const lineRangeAttr = ` lines="1-${totalLines}"`
-						xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
+						// Read file with incremental token counting
+						const result = await readFileWithTokenBudget(fullPath, {
+							budgetTokens: safeReadBudget,
+						})
 
-						if (totalLines === 0) {
-							xmlInfo += `<notice>File is empty</notice>\n`
-							nativeInfo = "Note: File is empty"
+						content = addLineNumbers(result.content)
+
+						if (!result.complete) {
+							// File was truncated
+							const notice = `File truncated: showing ${result.lineCount} lines (${result.tokenCount} tokens) due to context budget. Use line_range to read specific sections.`
+							const lineRangeAttr = result.lineCount > 0 ? ` lines="1-${result.lineCount}"` : ""
+							xmlInfo =
+								result.lineCount > 0
+									? `<content${lineRangeAttr}>\n${content}</content>\n<notice>${notice}</notice>\n`
+									: `<content/>\n<notice>${notice}</notice>\n`
+							nativeInfo =
+								result.lineCount > 0
+									? `Lines 1-${result.lineCount}:\n${content}\n\nNote: ${notice}`
+									: `Note: ${notice}`
 						} else {
-							nativeInfo = `Lines 1-${totalLines}:\n${content}`
+							// Full file read
+							const lineRangeAttr = ` lines="1-${result.lineCount}"`
+							xmlInfo =
+								result.lineCount > 0
+									? `<content${lineRangeAttr}>\n${content}</content>\n`
+									: `<content/>`
+
+							if (result.lineCount === 0) {
+								xmlInfo += `<notice>File is empty</notice>\n`
+								nativeInfo = "Note: File is empty"
+							} else {
+								nativeInfo = `Lines 1-${result.lineCount}:\n${content}`
+							}
 						}
 					}
 

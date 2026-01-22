@@ -6,6 +6,8 @@ import {
 	formatByteSize,
 	isMcpServerData,
 	parseMcpServerData,
+	formatUnknownMessageContent,
+	getToolIcon,
 } from "../utils.js"
 import type { ExtensionChatMessage } from "../../../../types/messages.js"
 
@@ -368,5 +370,152 @@ describe("parseMcpServerData", () => {
 
 		const result = parseMcpServerData(message)
 		expect(result).toBe(null)
+	})
+})
+
+describe("formatUnknownMessageContent", () => {
+	describe("fallback behavior", () => {
+		it("should return fallback when text is undefined", () => {
+			expect(formatUnknownMessageContent(undefined, "fallback message")).toBe("fallback message")
+		})
+
+		it("should return fallback when text is empty string", () => {
+			expect(formatUnknownMessageContent("", "fallback message")).toBe("fallback message")
+		})
+	})
+
+	describe("plain text handling", () => {
+		it("should return plain text as-is", () => {
+			expect(formatUnknownMessageContent("Hello world", "fallback")).toBe("Hello world")
+		})
+
+		it("should return text that doesn't start with { or [", () => {
+			expect(formatUnknownMessageContent("Some message", "fallback")).toBe("Some message")
+		})
+
+		it("should handle text with leading whitespace that is not JSON", () => {
+			expect(formatUnknownMessageContent("  plain text", "fallback")).toBe("  plain text")
+		})
+	})
+
+	describe("JSON object formatting", () => {
+		it("should format valid JSON object with pretty printing", () => {
+			const input = '{"key":"value"}'
+			const expected = JSON.stringify({ key: "value" }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should format nested JSON objects", () => {
+			const input = '{"outer":{"inner":"value"}}'
+			const expected = JSON.stringify({ outer: { inner: "value" } }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should format JSON with leading whitespace", () => {
+			const input = '  {"key":"value"}'
+			const expected = JSON.stringify({ key: "value" }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+	})
+
+	describe("JSON array formatting", () => {
+		it("should format valid JSON array with pretty printing", () => {
+			const input = '["item1","item2"]'
+			const expected = JSON.stringify(["item1", "item2"], null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should format array of objects", () => {
+			const input = '[{"id":1},{"id":2}]'
+			const expected = JSON.stringify([{ id: 1 }, { id: 2 }], null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should format JSON array with leading whitespace", () => {
+			const input = '  ["a","b"]'
+			const expected = JSON.stringify(["a", "b"], null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+	})
+
+	describe("invalid JSON handling", () => {
+		it("should return text as-is when JSON parsing fails for object-like text", () => {
+			const input = "{invalid json}"
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(input)
+		})
+
+		it("should return text as-is when JSON parsing fails for array-like text", () => {
+			const input = "[invalid array"
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(input)
+		})
+
+		it("should return text as-is for truncated JSON", () => {
+			const input = '{"key": "val'
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(input)
+		})
+	})
+
+	describe("edge cases", () => {
+		it("should handle JSON with special characters", () => {
+			const input = '{"message":"Hello\\nWorld"}'
+			const expected = JSON.stringify({ message: "Hello\nWorld" }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should handle empty JSON object", () => {
+			const input = "{}"
+			const expected = "{}"
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should handle empty JSON array", () => {
+			const input = "[]"
+			const expected = "[]"
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should handle JSON with null values", () => {
+			const input = '{"key":null}'
+			const expected = JSON.stringify({ key: null }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should handle JSON with boolean values", () => {
+			const input = '{"active":true,"disabled":false}'
+			const expected = JSON.stringify({ active: true, disabled: false }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+
+		it("should handle JSON with numeric values", () => {
+			const input = '{"count":42,"price":19.99}'
+			const expected = JSON.stringify({ count: 42, price: 19.99 }, null, 2)
+			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
+		})
+	})
+})
+
+describe("getToolIcon", () => {
+	it("should return 🗑️ for deleteFile tool", () => {
+		expect(getToolIcon("deleteFile")).toBe("🗑️")
+	})
+
+	it("should return ± for editedExistingFile tool", () => {
+		expect(getToolIcon("editedExistingFile")).toBe("±")
+	})
+
+	it("should return ± for appliedDiff tool", () => {
+		expect(getToolIcon("appliedDiff")).toBe("±")
+	})
+
+	it("should return 📄 for newFileCreated tool", () => {
+		expect(getToolIcon("newFileCreated")).toBe("📄")
+	})
+
+	it("should return 📝 for readFile tool", () => {
+		expect(getToolIcon("readFile")).toBe("📝")
+	})
+
+	it("should return ⚙ for unknown tools", () => {
+		expect(getToolIcon("unknownTool")).toBe("⚙")
 	})
 })

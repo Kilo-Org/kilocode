@@ -1,10 +1,12 @@
 import { basename } from "node:path"
-import { render, Instance } from "ink"
+import { render, Instance, type RenderOptions } from "ink"
 import React from "react"
 import { createStore } from "jotai"
 import { createExtensionService, ExtensionService } from "./services/extension.js"
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
+import { initializeSyntaxHighlighter } from "./ui/utils/syntaxHighlight.js"
+import { supportsTitleSetting } from "./ui/utils/terminalCapabilities.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
@@ -13,8 +15,8 @@ import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import {
 	addPendingRequestAtom,
+	removePendingRequestAtom,
 	TaskHistoryData,
-	taskHistoryDataAtom,
 	updateTaskHistoryFiltersAtom,
 } from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
@@ -23,6 +25,7 @@ import { getTelemetryService, getIdentityManager } from "./services/telemetry/in
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
+import { finishWithOnTaskCompleted } from "./pr/on-task-completed.js"
 import { isGitWorktree } from "./utils/git.js"
 import { Package } from "./constants/package.js"
 import type { CLIOptions } from "./types/cli.js"
@@ -33,6 +36,8 @@ import { getSelectedModelId } from "./utils/providers.js"
 import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
+import { randomUUID } from "crypto"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -65,10 +70,18 @@ export class CLI {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 			logs.info(`Version: ${Package.version}`, "CLI")
 
+			// Initialize syntax highlighter early so it's ready when diffs are displayed
+			// This runs in the background and doesn't block startup
+			void initializeSyntaxHighlighter().then(() => {
+				logs.debug("Syntax highlighter initialized", "CLI")
+			})
+
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
 			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
-			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			if (supportsTitleSetting()) {
+				process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			}
 
 			// Create Jotai store
 			this.store = createStore()
@@ -114,6 +127,10 @@ export class CLI {
 
 			if (this.options.customModes) {
 				serviceOptions.customModes = this.options.customModes
+			}
+
+			if (this.options.appendSystemPrompt) {
+				serviceOptions.appendSystemPrompt = this.options.appendSystemPrompt
 			}
 
 			this.service = createExtensionService(serviceOptions)
@@ -169,6 +186,11 @@ export class CLI {
 							console.log(JSON.stringify(message))
 						}
 					},
+					onSessionTitleGenerated: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
 					platform: "cli",
 					getOrganizationId: async () => {
 						const state = this.service?.getState()
@@ -206,7 +228,7 @@ export class CLI {
 								}
 
 								// Otherwise, fetch the task from history using promise-based request/response pattern
-								const requestId = crypto.randomUUID()
+								const requestId = randomUUID()
 
 								// Create a promise that will be resolved when the response arrives
 								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
@@ -256,8 +278,15 @@ export class CLI {
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
+					// Set flag BEFORE restoring session to prevent race condition
+					// The session restoration triggers async state updates that may contain
+					// historical completion_result messages. Without this flag set first,
+					// the CI exit logic may trigger before the prompt can execute.
+					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					await this.sessionService?.restoreSession(this.options.session)
 				} else if (this.options.fork) {
+					// Set flag BEFORE forking session (same race condition as restore)
+					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
 					await this.sessionService?.forkSession(this.options.fork)
 				}
@@ -325,6 +354,13 @@ export class CLI {
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.jsonInteractive || this.options.ci || !process.stdin.isTTY
+		const renderOptions: RenderOptions = {
+			// Enable Ink's incremental renderer to avoid redrawing the entire screen on every update.
+			// This reduces flickering for frequently updating UIs.
+			incrementalRendering: true,
+			exitOnCtrlC: false,
+			...(shouldDisableStdin ? { stdout: process.stdout, stderr: process.stderr } : {}),
+		}
 
 		this.ui = render(
 			React.createElement(App, {
@@ -341,15 +377,11 @@ export class CLI {
 					parallel: this.options.parallel || false,
 					worktreeBranch: this.options.worktreeBranch || undefined,
 					noSplash: this.options.noSplash || false,
+					attachments: this.options.attachments,
 				},
 				onExit: () => this.dispose(),
 			}),
-			shouldDisableStdin
-				? {
-						stdout: process.stdout,
-						stderr: process.stderr,
-					}
-				: undefined,
+			renderOptions,
 		)
 
 		// Wait for UI to exit
@@ -414,7 +446,8 @@ export class CLI {
 		// Determine exit code based on signal type and CI mode
 		let exitCode = 0
 
-		let beforeExit = () => {}
+		// beforeExit may be an async cleanup function or a sync one. Default to noop.
+		let beforeExit: (() => Promise<void>) | (() => void) = async () => {}
 
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
@@ -450,7 +483,25 @@ export class CLI {
 
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
-				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				const cleanup = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				if (typeof cleanup === "function") {
+					beforeExit = cleanup as (() => Promise<void>) | (() => void)
+				} else {
+					beforeExit = async () => {}
+				}
+			}
+
+			// Handle --on-task-completed flag (only if not in parallel mode, which has its own flow)
+			if (this.options.onTaskCompleted && !this.options.parallel) {
+				const onTaskCompletedBeforeExit = await finishWithOnTaskCompleted(this, {
+					cwd: this.options.workspace || process.cwd(),
+					prompt: this.options.onTaskCompleted,
+				})
+				const originalBeforeExit = beforeExit
+				beforeExit = () => {
+					originalBeforeExit()
+					onTaskCompletedBeforeExit()
+				}
 			}
 
 			// Shutdown telemetry service before exiting
@@ -480,7 +531,12 @@ export class CLI {
 
 			exitCode = 1
 		} finally {
-			beforeExit()
+			try {
+				// Await cleanup in case it's async; catch and log errors but don't prevent process.exit
+				await Promise.resolve(beforeExit())
+			} catch (err) {
+				logs.error("Error during beforeExit cleanup", "CLI", { error: err })
+			}
 
 			// Exit process with appropriate code
 			process.exit(exitCode)
@@ -600,23 +656,36 @@ export class CLI {
 				favoritesOnly: false,
 			})
 
-			// Send task history request to extension
-			await this.store.set(sendWebviewMessageAtom, {
-				type: "taskHistoryRequest",
-				payload: {
-					requestId: Date.now().toString(),
-					workspace: "current",
-					sort: "newest",
-					favoritesOnly: false,
-					pageIndex: 0,
-				},
+			// Create a unique request ID for tracking the response
+			const requestId = `${Date.now()}-${Math.random()}`
+			const TASK_HISTORY_TIMEOUT_MS = 5000
+
+			// Fetch task history with Promise-based response handling
+			const taskHistoryData = await new Promise<TaskHistoryData>((resolve, reject) => {
+				// Set up timeout
+				const timeout = setTimeout(() => {
+					this.store!.set(removePendingRequestAtom, requestId)
+					reject(new Error(`Task history request timed out after ${TASK_HISTORY_TIMEOUT_MS}ms`))
+				}, TASK_HISTORY_TIMEOUT_MS)
+
+				// Register the pending request - it will be resolved when the response arrives
+				this.store!.set(addPendingRequestAtom, { requestId, resolve, reject, timeout })
+
+				// Send task history request to extension
+				this.store!.set(sendWebviewMessageAtom, {
+					type: "taskHistoryRequest",
+					payload: {
+						requestId,
+						workspace: "current",
+						sort: "newest",
+						favoritesOnly: false,
+						pageIndex: 0,
+					},
+				}).catch((err) => {
+					this.store!.set(removePendingRequestAtom, requestId)
+					reject(err)
+				})
 			})
-
-			// Wait for the data to arrive (the response will update taskHistoryDataAtom through effects)
-			await new Promise((resolve) => setTimeout(resolve, 2000))
-
-			// Get the task history data
-			const taskHistoryData = this.store.get(taskHistoryDataAtom)
 
 			if (!taskHistoryData || !taskHistoryData.historyItems || taskHistoryData.historyItems.length === 0) {
 				logs.warn("No previous tasks found for workspace", "CLI", { workspace })
@@ -647,7 +716,12 @@ export class CLI {
 			logs.info("Task resume initiated", "CLI", { taskId: lastTask.id, task: lastTask.task })
 		} catch (error) {
 			logs.error("Failed to resume conversation", "CLI", { error, workspace })
-			console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			if (errorMessage.includes("timed out")) {
+				console.error("\nFailed to fetch task history (request timed out). Please try again.\n")
+			} else {
+				console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			}
 			process.exit(1)
 		}
 	}
@@ -664,6 +738,31 @@ export class CLI {
 	 */
 	getStore(): ReturnType<typeof createStore> | null {
 		return this.store
+	}
+
+	/**
+	 * Returns true if the CLI should show an exit confirmation prompt for SIGINT.
+	 */
+	shouldConfirmExitOnSigint(): boolean {
+		return (
+			!!this.store &&
+			!this.options.ci &&
+			!this.options.json &&
+			!this.options.jsonInteractive &&
+			process.stdin.isTTY
+		)
+	}
+
+	/**
+	 * Trigger the exit confirmation prompt. Returns true if handled.
+	 */
+	requestExitConfirmation(): boolean {
+		if (!this.shouldConfirmExitOnSigint()) {
+			return false
+		}
+
+		this.store?.set(triggerExitConfirmationAtom)
+		return true
 	}
 
 	/**

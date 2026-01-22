@@ -42,8 +42,24 @@ export type ExtensionChatMessage = ClineMessage
 export type { RouterName, ModelInfo, ModelRecord, RouterModels }
 
 // ============================================
-// CLI-SPECIFIC TYPES (Keep these)
+// CLI-SPECIFIC TYPES from core-schemas
 // ============================================
+export {
+	// Extension message schemas
+	organizationAllowListSchema,
+	extensionMessageSchema,
+	extensionStateSchema,
+	// Extension message types (also exported for backward compat)
+	type OrganizationAllowList,
+	type Mode,
+} from "@kilocode/core-schemas"
+
+// ============================================
+// CLI-SPECIFIC TYPES (Interface definitions for complex types
+// that require imports from @roo-code/types)
+// ============================================
+
+// ExtensionMessage interface with proper typing
 export interface ExtensionMessage {
 	type: string
 	action?: string
@@ -55,19 +71,7 @@ export interface ExtensionMessage {
 	[key: string]: unknown
 }
 
-// Organization Allow List for provider validation
-export interface OrganizationAllowList {
-	allowAll: boolean
-	providers: Record<
-		string,
-		{
-			allowAll: boolean
-			models?: string[]
-		}
-	>
-}
-
-// CLI-specific ExtensionState
+// CLI-specific ExtensionState with proper typing
 export interface ExtensionState {
 	version: string
 	apiConfiguration: ProviderSettings
@@ -85,9 +89,8 @@ export interface ExtensionState {
 	telemetrySetting: string
 	renderContext: "sidebar" | "editor" | "cli"
 	cwd?: string
-	organizationAllowList?: OrganizationAllowList
+	organizationAllowList?: import("@kilocode/core-schemas").OrganizationAllowList
 	routerModels?: RouterModels
+	appendSystemPrompt?: string // Custom text to append to system prompt (CLI only)
 	[key: string]: unknown
 }
-
-export type Mode = string

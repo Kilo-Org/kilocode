@@ -1,24 +1,8 @@
 // kilocode_change - new file: FFmpeg-based PCM16 audio capture for OpenAI Realtime API
 import { EventEmitter } from "events"
-import { spawn, ChildProcess, execSync } from "child_process"
+import { spawn, ChildProcess } from "child_process"
 import * as os from "os"
-
-/**
- * Global cache for FFmpeg path (shared across all instances)
- * undefined = not yet checked, null = not found, string = found path
- */
-let cachedFFmpegPath: string | null | undefined = undefined
-
-// Platform-specific fallback paths
-const fallbackPaths: Record<string, string[]> = {
-	darwin: ["/usr/local/bin/ffmpeg", "/opt/homebrew/bin/ffmpeg"],
-	linux: ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"],
-	win32: [
-		"C:\\ffmpeg\\bin\\ffmpeg.exe",
-		"C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
-		"C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe",
-	],
-}
+import { findFFmpeg } from "./FFmpegDeviceEnumerator"
 
 /**
  * Calculate RMS energy of PCM16 audio frame
@@ -61,13 +45,15 @@ export class FFmpegCaptureService extends EventEmitter {
 	private platform: string
 	private captureStartTime: number = 0
 	private audioChunkCount: number = 0
+	private deviceId: string | undefined
 
-	constructor() {
+	constructor(deviceId?: string) {
 		super()
 		this.platform = os.platform()
+		this.deviceId = deviceId
 
 		// Resolve FFmpeg path once (cached globally)
-		const result = FFmpegCaptureService.findFFmpeg()
+		const result = findFFmpeg()
 
 		if (!result.available) {
 			console.error("❌ [FFmpegCapture] FFmpeg not found during initialization")
@@ -87,7 +73,7 @@ export class FFmpegCaptureService extends EventEmitter {
 		}
 
 		// Get FFmpeg path from global cache
-		const result = FFmpegCaptureService.findFFmpeg()
+		const result = findFFmpeg()
 		if (!result.available || !result.path) {
 			throw new Error(
 				"FFmpeg not found. Please install FFmpeg to use speech-to-text.\n" +
@@ -220,47 +206,6 @@ export class FFmpegCaptureService extends EventEmitter {
 		return this.isCapturing
 	}
 
-	/**
-	 * Find FFmpeg executable using platform-specific fallback paths
-	 * Results are cached globally across all instances
-	 */
-	static findFFmpeg(forceRecheck = false): { available: boolean; path?: string; error?: string } {
-		if (cachedFFmpegPath !== undefined && !forceRecheck) {
-			return {
-				available: cachedFFmpegPath !== null,
-				path: cachedFFmpegPath || undefined,
-				error: cachedFFmpegPath === null ? "FFmpeg not found" : undefined,
-			}
-		}
-
-		const platform = os.platform()
-		try {
-			execSync("ffmpeg -version", { stdio: "ignore" })
-			cachedFFmpegPath = "ffmpeg"
-			return { available: true, path: "ffmpeg" }
-		} catch {
-			console.log(`🎙️ [FFmpeg] ❌ 'ffmpeg' not in PATH, trying fallback paths...`)
-		}
-
-		const platformPaths = fallbackPaths[platform] || []
-		for (const fallbackPath of platformPaths) {
-			try {
-				execSync(`"${fallbackPath}" -version`, { stdio: "ignore" })
-				cachedFFmpegPath = fallbackPath
-				return { available: true, path: fallbackPath }
-			} catch {
-				continue
-			}
-		}
-
-		// Cache the "not found" result to avoid repeated path checks
-		cachedFFmpegPath = null
-		return {
-			available: false,
-			error: "FFmpeg not found. Install from https://ffmpeg.org/download.html",
-		}
-	}
-
 	private buildFFmpegArgs(): string[] {
 		const baseArgs = this.getPlatformInputArgs()
 
@@ -283,14 +228,17 @@ export class FFmpegCaptureService extends EventEmitter {
 	private getPlatformInputArgs(): string[] {
 		switch (this.platform) {
 			case "darwin": // macOS
-				return ["-f", "avfoundation", "-i", ":default"]
+				// AVFoundation: device ID is already stored in format ":deviceId" (e.g., ":3")
+				// or use ":default" if no device selected
+				return ["-f", "avfoundation", "-i", this.deviceId || ":default"]
 
 			case "linux":
-				// Try pulse first, fallback to alsa
-				return ["-f", "pulse", "-i", "default"]
+				// PulseAudio: device ID is stored as just the number (e.g., "0")
+				return ["-f", "pulse", "-i", this.deviceId || "default"]
 
 			case "win32": // Windows
-				return ["-f", "dshow", "-i", "audio=default"]
+				// DirectShow: device ID is stored as the device name, need to format as "audio=Device Name"
+				return ["-f", "dshow", "-i", this.deviceId ? `audio=${this.deviceId}` : "audio=default"]
 
 			default:
 				throw new Error(`Unsupported platform: ${this.platform}`)

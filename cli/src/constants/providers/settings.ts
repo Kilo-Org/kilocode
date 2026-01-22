@@ -810,6 +810,9 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("openAiNativeBaseUrl", config, "Default"),
 			]
 
+		case "openai-codex":
+			return [createFieldConfig("apiModelId", config, "gpt-4o")]
+
 		case "bedrock":
 			return [
 				createFieldConfig("awsAccessKey", config),
@@ -988,16 +991,6 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				},
 			]
 
-		case "human-relay":
-			return [
-				{
-					field: "apiModelId",
-					label: "Model",
-					value: "human",
-					actualValue: "human",
-					type: "text",
-				},
-			]
 		case "minimax":
 			return [
 				createFieldConfig("minimaxBaseUrl", config, "https://api.minimax.io/anthropic"),
@@ -1010,6 +1003,17 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					label: "Model",
 					value: "fake-model",
 					actualValue: "fake-model",
+					type: "text",
+				},
+			]
+
+		case "human-relay":
+			return [
+				{
+					field: "apiModelId",
+					label: "Model",
+					value: "human-relay-model",
+					actualValue: "human-relay-model",
 					type: "text",
 				},
 			]
@@ -1054,6 +1058,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	kilocode: "anthropic/claude-sonnet-4",
 	anthropic: "claude-3-5-sonnet-20241022",
 	"openai-native": "gpt-4o",
+	"openai-codex": "gpt-4o",
 	openrouter: "anthropic/claude-3-5-sonnet",
 	bedrock: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 	gemini: "gemini-1.5-pro-latest",
@@ -1088,9 +1093,9 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	roo: "gpt-4o",
 	"vercel-ai-gateway": "gpt-4o",
 	"virtual-quota-fallback": "gpt-4o",
-	"human-relay": "human",
 	minimax: "MiniMax-M2",
 	"fake-ai": "fake-model",
+	"human-relay": "human-relay-model",
 	ovhcloud: "gpt-oss-120b",
 	inception: "gpt-4o",
 	synthetic: "synthetic-model",

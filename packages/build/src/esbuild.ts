@@ -158,6 +158,58 @@ export function copyWasms(srcDir: string, distDir: string): void {
 	})
 
 	console.log(`[copyWasms] Copied ${wasmFiles.length} tree-sitter language wasms to ${distDir}`)
+
+	// Copy esbuild-wasm files for custom tool transpilation (cross-platform).
+	copyEsbuildWasmFiles(nodeModulesDir, distDir)
+}
+
+/**
+ * Copy esbuild-wasm files to the dist/bin directory.
+ *
+ * This function copies the esbuild-wasm CLI and WASM binary, which provides
+ * a cross-platform esbuild implementation that works on all platforms.
+ *
+ * Files copied:
+ * - bin/esbuild (Node.js CLI script)
+ * - esbuild.wasm (WASM binary)
+ * - wasm_exec_node.js (Go WASM runtime for Node.js)
+ * - wasm_exec.js (Go WASM runtime dependency)
+ */
+function copyEsbuildWasmFiles(nodeModulesDir: string, distDir: string): void {
+	const esbuildWasmDir = path.join(nodeModulesDir, "esbuild-wasm")
+
+	if (!fs.existsSync(esbuildWasmDir)) {
+		throw new Error(`Directory does not exist: ${esbuildWasmDir}`)
+	}
+
+	// Create bin directory in dist.
+	const binDir = path.join(distDir, "bin")
+	fs.mkdirSync(binDir, { recursive: true })
+
+	// Files to copy - the esbuild CLI script expects wasm_exec_node.js and esbuild.wasm
+	// to be one directory level up from the bin directory (i.e., in distDir directly).
+	// wasm_exec_node.js requires wasm_exec.js, so we need to copy that too.
+	const filesToCopy = [
+		{ src: path.join(esbuildWasmDir, "bin", "esbuild"), dest: path.join(binDir, "esbuild") },
+		{ src: path.join(esbuildWasmDir, "esbuild.wasm"), dest: path.join(distDir, "esbuild.wasm") },
+		{ src: path.join(esbuildWasmDir, "wasm_exec_node.js"), dest: path.join(distDir, "wasm_exec_node.js") },
+		{ src: path.join(esbuildWasmDir, "wasm_exec.js"), dest: path.join(distDir, "wasm_exec.js") },
+	]
+
+	for (const { src, dest } of filesToCopy) {
+		fs.copyFileSync(src, dest)
+
+		// Make CLI executable.
+		if (src.endsWith("esbuild")) {
+			try {
+				fs.chmodSync(dest, 0o755)
+			} catch {
+				// Ignore chmod errors on Windows.
+			}
+		}
+	}
+
+	console.log(`[copyWasms] Copied ${filesToCopy.length} esbuild-wasm files to ${distDir}`)
 }
 
 export function copyLocales(srcDir: string, distDir: string): void {

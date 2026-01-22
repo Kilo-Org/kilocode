@@ -1,8 +1,3 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
-// kilocode_change - new file
 package ai.kilocode.jetbrains.actions
 
 import ai.kilocode.jetbrains.git.CommitMessageService
@@ -27,7 +22,6 @@ import kotlinx.coroutines.runBlocking
 
 class GitCommitMessageAction : AnAction(I18n.t("kilocode:commitMessage.ui.generateButton")) {
     private val logger: Logger = Logger.getInstance(GitCommitMessageAction::class.java)
-    private val commitMessageService = CommitMessageService.getInstance()
     private val fileDiscoveryService = FileDiscoveryService()
 
     override fun getActionUpdateThread(): ActionUpdateThread {
@@ -106,7 +100,7 @@ class GitCommitMessageAction : AnAction(I18n.t("kilocode:commitMessage.ui.genera
 
                     indicator.text = I18n.t("kilocode:commitMessage.progress.generating")
                     val result = runBlocking {
-                        commitMessageService.generateCommitMessage(project, workspacePath, files.ifEmpty { null })
+                        CommitMessageService.getInstance(project).generateCommitMessage(project, workspacePath, files.ifEmpty { null })
                     }
 
                     ApplicationManager.getApplication().invokeLater {
@@ -158,7 +152,7 @@ class GitCommitMessageAction : AnAction(I18n.t("kilocode:commitMessage.ui.genera
 
                     indicator.text = I18n.t("kilocode:commitMessage.progress.generating")
                     val result = runBlocking {
-                        commitMessageService.generateCommitMessage(project, workspacePath, files.ifEmpty { null })
+                        CommitMessageService.getInstance(project).generateCommitMessage(project, workspacePath, files.ifEmpty { null })
                     }
 
                     ApplicationManager.getApplication().invokeLater {

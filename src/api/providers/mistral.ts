@@ -2,15 +2,27 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import { Mistral } from "@mistralai/mistralai"
 import OpenAI from "openai"
 
-import { type MistralModelId, mistralDefaultModelId, mistralModels, MISTRAL_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import {
+	type MistralModelId,
+	mistralDefaultModelId,
+	mistralModels,
+	MISTRAL_DEFAULT_TEMPERATURE,
+	ApiProviderError,
+} from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { ApiHandlerOptions } from "../../shared/api"
 
 import { convertToMistralMessages } from "../transform/mistral-format"
 import { ApiStream } from "../transform/stream"
+import { handleProviderError } from "./utils/error-handler"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import { DEFAULT_HEADERS } from "./constants" // kilocode_change
+import { streamSse } from "../../services/continuedev/core/fetch/stream" // kilocode_change
+import type { CompletionUsage } from "./openrouter" // kilocode_change
+import type { FimHandler } from "./kilocode/FimHandler" // kilocode_change
 
 // Type helper to handle thinking chunks from Mistral API
 // The SDK includes ThinkChunk but TypeScript has trouble with the discriminated union
@@ -43,6 +55,7 @@ type MistralTool = {
 export class MistralHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: Mistral
+	private readonly providerName = "Mistral"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -96,7 +109,15 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 		// Temporary debug log for QA
 		// console.log("[MISTRAL DEBUG] Raw API request body:", requestOptions)
 
-		const response = await this.client.chat.stream(requestOptions)
+		let response
+		try {
+			response = await this.client.chat.stream(requestOptions)
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "createMessage")
+			TelemetryService.instance.captureException(apiError)
+			throw new Error(`Mistral completion error: ${errorMessage}`)
+		}
 
 		for await (const event of response) {
 			const delta = event.data.choices[0]?.delta
@@ -181,9 +202,9 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
-		try {
-			const { id: model, temperature } = this.getModel()
+		const { id: model, temperature } = this.getModel()
 
+		try {
 			const response = await this.client.chat.complete({
 				model,
 				messages: [{ role: "user", content: prompt }],
@@ -202,11 +223,94 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 
 			return content || ""
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Mistral completion error: ${error.message}`)
-			}
-
-			throw error
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "completePrompt")
+			TelemetryService.instance.captureException(apiError)
+			throw new Error(`Mistral completion error: ${errorMessage}`)
 		}
 	}
+
+	// kilocode_change start
+	fimSupport(): FimHandler | undefined {
+		const modelId = this.options.apiModelId ?? mistralDefaultModelId
+		if (!modelId.startsWith("codestral-")) {
+			return undefined
+		}
+
+		return {
+			streamFim: this.streamFim.bind(this),
+			getModel: () => this.getModel(),
+			getTotalCost: (usage: CompletionUsage) => {
+				// Calculate cost based on model pricing
+				const { info } = this.getModel()
+				const inputCost = ((usage.prompt_tokens ?? 0) / 1_000_000) * (info.inputPrice ?? 0)
+				const outputCost = ((usage.completion_tokens ?? 0) / 1_000_000) * (info.outputPrice ?? 0)
+				return inputCost + outputCost
+			},
+		}
+	}
+
+	private async *streamFim(
+		prefix: string,
+		suffix: string,
+		_taskId?: string,
+		onUsage?: (usage: CompletionUsage) => void,
+	): AsyncGenerator<string> {
+		const { id: model, maxTokens } = this.getModel()
+
+		// Get the base URL for the model
+		// copy pasted from constructor, be sure to keep in sync
+		const baseUrl = model.startsWith("codestral-")
+			? this.options.mistralCodestralUrl || "https://codestral.mistral.ai"
+			: "https://api.mistral.ai"
+
+		const endpoint = new URL("v1/fim/completions", baseUrl)
+
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			Authorization: `Bearer ${this.options.mistralApiKey}`,
+		}
+
+		// temperature: 0.2 is mentioned as a sane example in mistral's docs
+		const temperature = 0.2
+		const requestMaxTokens = 256
+
+		const response = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({
+				model,
+				prompt: prefix,
+				suffix,
+				max_tokens: Math.min(requestMaxTokens, maxTokens ?? requestMaxTokens),
+				temperature,
+				stream: true,
+			}),
+			headers,
+		})
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			throw new Error(`FIM streaming failed: ${response.status} ${response.statusText} - ${errorText}`)
+		}
+
+		for await (const data of streamSse(response)) {
+			const content = data.choices?.[0]?.delta?.content
+			if (content) {
+				yield content
+			}
+
+			// Call usage callback when available
+			// Note: Mistral FIM API returns usage in the final chunk with prompt_tokens and completion_tokens
+			if (data.usage && onUsage) {
+				onUsage({
+					prompt_tokens: data.usage.prompt_tokens,
+					completion_tokens: data.usage.completion_tokens,
+					total_tokens: data.usage.total_tokens,
+				})
+			}
+		}
+	}
+	// kilocode_change end
 }

@@ -13,8 +13,9 @@ import {
 	updateRouterModelsAtom,
 	chatMessagesAtom,
 	updateChatMessagesAtom,
+	taskResumedViaContinueOrSessionAtom,
 } from "./extension.js"
-import { ciCompletionDetectedAtom } from "./ci.js"
+import { ciCompletionDetectedAtom, ciCompletionIgnoreBeforeTimestampAtom } from "./ci.js"
 import {
 	updateProfileDataAtom,
 	updateBalanceDataAtom,
@@ -31,6 +32,7 @@ import {
 	taskHistoryErrorAtom,
 	resolveTaskHistoryRequestAtom,
 } from "./taskHistory.js"
+import { resolveCondenseRequestAtom } from "./condense.js"
 import { validateModelOnRouterModelsUpdateAtom } from "./modelValidation.js"
 import { validateModeOnCustomModesUpdateAtom } from "./modeValidation.js"
 import { logs } from "../../services/logs.js"
@@ -394,6 +396,16 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 			}
 
+			case "condenseTaskContextResponse": {
+				const taskId = message.text
+				logs.info(`Context condensation completed for task: ${taskId || "current task"}`, "effects")
+				// Resolve any pending condense request for this task
+				if (taskId) {
+					set(resolveCondenseRequestAtom, { taskId })
+				}
+				break
+			}
+
 			case "commandExecutionStatus": {
 				// Handle command execution status messages
 				// Store output updates and apply them when the ask appears
@@ -605,11 +617,22 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 		if (message.state?.chatMessages) {
 			const lastMessage = message.state.chatMessages[message.state.chatMessages.length - 1]
 			if (lastMessage?.type === "ask" && lastMessage?.ask === "completion_result") {
-				logs.info("Completion result detected in state update", "effects")
+				const completionIgnoreBeforeTimestamp = get(ciCompletionIgnoreBeforeTimestampAtom)
+				const taskResumedViaSession = get(taskResumedViaContinueOrSessionAtom)
+				const isHistoricalCompletion =
+					lastMessage.ts !== undefined && lastMessage.ts <= completionIgnoreBeforeTimestamp
 
-				set(ciCompletionDetectedAtom, true)
+				// Skip completion detection if session was just restored via --session or --continue
+				// The historical completion_result from the previous task should not trigger CI exit
+				if (taskResumedViaSession || isHistoricalCompletion) {
+					logs.debug("Skipping completion_result detection - historical completion_result", "effects")
+				} else {
+					logs.info("Completion result detected in state update", "effects")
 
-				SessionManager.init()?.doSync(true)
+					set(ciCompletionDetectedAtom, true)
+
+					SessionManager.init()?.doSync(true)
+				}
 			}
 		}
 	} catch (error) {

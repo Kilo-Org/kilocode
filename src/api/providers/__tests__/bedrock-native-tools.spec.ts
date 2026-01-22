@@ -91,21 +91,91 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			const bedrockTools = convertToolsForBedrock(testTools)
 
 			expect(bedrockTools).toHaveLength(2)
-			expect(bedrockTools[0]).toEqual({
-				toolSpec: {
-					name: "read_file",
-					description: "Read a file from the filesystem",
-					inputSchema: {
-						json: {
+
+			// Check structure and key properties (normalizeToolSchema adds additionalProperties: false)
+			const tool = bedrockTools[0]
+			expect(tool.toolSpec.name).toBe("read_file")
+			expect(tool.toolSpec.description).toBe("Read a file from the filesystem")
+			expect(tool.toolSpec.inputSchema.json.type).toBe("object")
+			expect(tool.toolSpec.inputSchema.json.properties.path.type).toBe("string")
+			expect(tool.toolSpec.inputSchema.json.properties.path.description).toBe("The path to the file")
+			expect(tool.toolSpec.inputSchema.json.required).toEqual(["path"])
+			// normalizeToolSchema adds additionalProperties: false by default
+			expect(tool.toolSpec.inputSchema.json.additionalProperties).toBe(false)
+		})
+
+		it("should transform type arrays to anyOf for JSON Schema 2020-12 compliance", () => {
+			const convertToolsForBedrock = (handler as any).convertToolsForBedrock.bind(handler)
+
+			// Tools with type: ["string", "null"] syntax (valid in draft-07 but not 2020-12)
+			const toolsWithNullableTypes = [
+				{
+					type: "function" as const,
+					function: {
+						name: "execute_command",
+						description: "Execute a command",
+						parameters: {
 							type: "object",
 							properties: {
-								path: { type: "string", description: "The path to the file" },
+								command: { type: "string", description: "The command to execute" },
+								cwd: {
+									type: ["string", "null"],
+									description: "Working directory (optional)",
+								},
 							},
-							required: ["path"],
+							required: ["command", "cwd"],
 						},
 					},
 				},
-			})
+				{
+					type: "function" as const,
+					function: {
+						name: "read_file",
+						description: "Read files",
+						parameters: {
+							type: "object",
+							properties: {
+								files: {
+									type: "array",
+									items: {
+										type: "object",
+										properties: {
+											path: { type: "string" },
+											line_ranges: {
+												type: ["array", "null"],
+												items: { type: "integer" },
+												description: "Optional line ranges",
+											},
+										},
+										required: ["path", "line_ranges"],
+									},
+								},
+							},
+							required: ["files"],
+						},
+					},
+				},
+			]
+
+			const bedrockTools = convertToolsForBedrock(toolsWithNullableTypes)
+
+			expect(bedrockTools).toHaveLength(2)
+
+			// First tool: cwd should be transformed from type: ["string", "null"] to anyOf
+			const executeCommandSchema = bedrockTools[0].toolSpec.inputSchema.json as any
+			expect(executeCommandSchema.properties.cwd.anyOf).toEqual([{ type: "string" }, { type: "null" }])
+			expect(executeCommandSchema.properties.cwd.type).toBeUndefined()
+			expect(executeCommandSchema.properties.cwd.description).toBe("Working directory (optional)")
+
+			// Second tool: line_ranges should be transformed from type: ["array", "null"] to anyOf
+			// with items moved inside the array variant (required by GPT-5-mini strict schema validation)
+			const readFileSchema = bedrockTools[1].toolSpec.inputSchema.json as any
+			const lineRanges = readFileSchema.properties.files.items.properties.line_ranges
+			expect(lineRanges.anyOf).toEqual([{ type: "array", items: { type: "integer" } }, { type: "null" }])
+			expect(lineRanges.type).toBeUndefined()
+			// items should now be inside the array variant, not at root
+			expect(lineRanges.items).toBeUndefined()
+			expect(lineRanges.description).toBe("Optional line ranges")
 		})
 
 		it("should filter non-function tools", () => {

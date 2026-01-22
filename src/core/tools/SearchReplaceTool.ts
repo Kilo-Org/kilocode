@@ -105,6 +105,8 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			let fileContent: string
 			try {
 				fileContent = await fs.readFile(absolutePath, "utf8")
+				// Normalize line endings to LF for consistent matching
+				fileContent = fileContent.replace(/\r\n/g, "\n")
 			} catch (error) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("search_replace")
@@ -114,8 +116,12 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				return
 			}
 
+			// Normalize line endings in search/replace strings to match file content
+			const normalizedOldString = old_string.replace(/\r\n/g, "\n")
+			const normalizedNewString = new_string.replace(/\r\n/g, "\n")
+
 			// Check for exact match (literal string, not regex)
-			const matchCount = fileContent.split(old_string).length - 1
+			const matchCount = fileContent.split(normalizedOldString).length - 1
 
 			if (matchCount === 0) {
 				task.consecutiveMistakeCount++
@@ -142,7 +148,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			}
 
 			// Apply the single replacement
-			const newContent = fileContent.replace(old_string, new_string)
+			const newContent = fileContent.replace(normalizedOldString, normalizedNewString)
 
 			// Check if any changes were made
 			if (newContent === fileContent) {

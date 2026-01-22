@@ -1,9 +1,6 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.core
 
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -34,7 +31,9 @@ class ExtensionSocketServer() : ISocketServer {
 
     // Server thread
     private var serverThread: Thread? = null
-
+    
+    private val clientThreads = ConcurrentHashMap<Socket, Thread>()
+    
     // Current project path
     private var projectPath: String = ""
 
@@ -69,6 +68,8 @@ class ExtensionSocketServer() : ISocketServer {
 
             isRunning = true
             logger.info("Starting socket server on port: $port")
+            
+            DisposableTracker.register("ExtensionSocketServer", this)
 
             // Start the thread to accept connections
             serverThread = thread(start = true, name = "ExtensionSocketServer") {
@@ -105,12 +106,30 @@ class ExtensionSocketServer() : ISocketServer {
             Thread.currentThread().interrupt()
         }
 
+        // Interrupt all client handler threads
+        clientThreads.forEach { (socket, thread) ->
+            try {
+                thread.interrupt()
+            } catch (e: Exception) {
+                logger.warn("Failed to interrupt client handler thread", e)
+            }
+        }
+
+        // Wait for client handler threads to finish
+        clientThreads.forEach { (socket, thread) ->
+            try {
+                thread.join(2000) // Wait up to 2 seconds per thread
+            } catch (e: InterruptedException) {
+                logger.warn("Interrupted while waiting for client handler thread to finish")
+                Thread.currentThread().interrupt()
+            }
+        }
+        clientThreads.clear()
+
         // Close all client managers and wait for them to finish
         clientManagers.forEach { (socket, manager) ->
             try {
-                logger.info("Disposing client manager for socket: ${socket.inetAddress}")
                 manager.dispose()
-                logger.info("Client manager disposed for socket: ${socket.inetAddress}")
             } catch (e: Exception) {
                 logger.warn("Failed to dispose client manager", e)
             }
@@ -135,6 +154,8 @@ class ExtensionSocketServer() : ISocketServer {
         serverThread = null
         serverSocket = null
 
+        DisposableTracker.unregister("ExtensionSocketServer")
+
         logger.info("Socket server stopped completely")
     }
 
@@ -156,6 +177,9 @@ class ExtensionSocketServer() : ISocketServer {
                 // Create extension host manager
                 val manager = ExtensionHostManager(clientSocket, projectPath, project)
                 clientManagers[clientSocket] = manager
+                
+                // Register with PluginContext for access from UI
+                project.getService(PluginContext::class.java).setExtensionHostManager(manager)
 
                 handleClient(clientSocket, manager)
             } catch (e: IOException) {
@@ -317,6 +341,9 @@ class ExtensionSocketServer() : ISocketServer {
             // Create extension host manager
             val manager = ExtensionHostManager(clientSocket, projectPath, project)
             clientManagers[clientSocket] = manager
+            
+            // Register with PluginContext for access from UI
+            project.getService(PluginContext::class.java).setExtensionHostManager(manager)
 
             // Start connection handling in background thread
             thread(start = true, name = "DebugHostHandler") {

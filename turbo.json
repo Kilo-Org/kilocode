@@ -2,15 +2,18 @@
 	"$schema": "https://turbo.build/schema.json",
 	"tasks": {
 		"lint": {},
-		"check-types": {},
+		"check-types": {
+			"dependsOn": ["^build"]
+		},
 		"test": {
-			"dependsOn": ["@roo-code/types#build"]
+			"dependsOn": ["^build"]
 		},
 		"format": {},
 		"clean": {
 			"cache": false
 		},
 		"build": {
+			"dependsOn": ["^build"],
 			"outputs": ["dist/**"],
 			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts"]
 		},
@@ -37,6 +40,9 @@
 		},
 		"jetbrains:run": {
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
+		},
+		"jetbrains-host:build": {
+			"dependsOn": ["@kilo-code/jetbrains-host#bundle:package"]
 		},
 		"cli:build": {
 			"dependsOn": ["@kilocode/cli#build"]

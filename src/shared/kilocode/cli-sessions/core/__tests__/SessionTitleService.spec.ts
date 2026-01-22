@@ -227,6 +227,26 @@ describe("SessionTitleService", () => {
 				title: "Test title",
 			})
 		})
+
+		it("emits session_title_generated event", async () => {
+			const onSessionTitleGenerated = vi.fn()
+			const serviceWithCallback = new SessionTitleService({
+				sessionClient: mockSessionClient as any,
+				stateManager: mockStateManager as any,
+				extensionMessenger: mockExtensionMessenger as any,
+				logger: mockLogger as any,
+				onSessionTitleGenerated,
+			})
+
+			await serviceWithCallback.updateTitle("session-123", "Test title")
+
+			expect(onSessionTitleGenerated).toHaveBeenCalledWith({
+				sessionId: "session-123",
+				title: "Test title",
+				timestamp: expect.any(Number),
+				event: "session_title_generated",
+			})
+		})
 	})
 
 	describe("generateAndUpdateTitle", () => {

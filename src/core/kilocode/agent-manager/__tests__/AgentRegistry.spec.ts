@@ -289,10 +289,13 @@ describe("AgentRegistry", () => {
 			expect(result).toBeUndefined()
 		})
 
-		it("returns undefined when updating session without parallelMode enabled", () => {
+		it("enables parallelMode when updating a session without parallelMode", () => {
 			const session = registry.createSession("session-1", "no parallel mode")
 			const result = registry.updateParallelModeInfo(session.sessionId, { branch: "test" })
-			expect(result).toBeUndefined()
+			expect(result?.parallelMode).toEqual({
+				enabled: true,
+				branch: "test",
+			})
 		})
 
 		it("preserves parallelMode info in getState", () => {

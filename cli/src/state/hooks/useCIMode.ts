@@ -5,7 +5,13 @@
 
 import { useAtomValue, useSetAtom } from "jotai"
 import { useEffect, useState, useCallback, useRef } from "react"
-import { ciCompletionDetectedAtom, ciCommandFinishedAtom, ciExitReasonAtom } from "../atoms/ci.js"
+import {
+	ciCompletionDetectedAtom,
+	ciCompletionIgnoreBeforeTimestampAtom,
+	ciCommandFinishedAtom,
+	ciExitReasonAtom,
+} from "../atoms/ci.js"
+import { taskResumedViaContinueOrSessionAtom } from "../atoms/extension.js"
 import { useExtensionMessage } from "./useExtensionMessage.js"
 import { logs } from "../../services/logs.js"
 
@@ -67,8 +73,9 @@ export function useCIMode(options: UseCIModeOptions): UseCIModeReturn {
 	const { enabled, timeout } = options
 
 	const completionDetected = useAtomValue(ciCompletionDetectedAtom)
+	const completionIgnoreBeforeTimestamp = useAtomValue(ciCompletionIgnoreBeforeTimestampAtom)
 	const commandFinished = useAtomValue(ciCommandFinishedAtom)
-
+	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
 	// Write atoms
 	const setCommandFinished = useSetAtom(ciCommandFinishedAtom)
 	const setExitReason = useSetAtom(ciExitReasonAtom)
@@ -86,9 +93,17 @@ export function useCIMode(options: UseCIModeOptions): UseCIModeReturn {
 	// Get extension messages to monitor for completion_result
 	const { lastMessage } = useExtensionMessage()
 
+	const isHistoricalCompletion = lastMessage?.ts !== undefined && lastMessage.ts <= completionIgnoreBeforeTimestamp
+
 	// Monitor for completion_result messages
 	useEffect(() => {
 		if (!enabled || !lastMessage || exitTriggeredRef.current) return
+
+		// Skip if session was just restored - the completion_result is historical
+		if (taskResumedViaSession || isHistoricalCompletion) {
+			logs.debug("CI mode: Skipping completion_result check - historical message", "useCIMode")
+			return
+		}
 
 		// Check if this is a completion_result message
 		if (lastMessage.type === "ask" && lastMessage.ask === "completion_result") {
@@ -98,7 +113,7 @@ export function useCIMode(options: UseCIModeOptions): UseCIModeReturn {
 			setShouldExit(true)
 			exitTriggeredRef.current = true
 		}
-	}, [enabled, lastMessage])
+	}, [enabled, lastMessage, taskResumedViaSession, isHistoricalCompletion])
 
 	// Monitor for command finished
 	useEffect(() => {
@@ -115,12 +130,18 @@ export function useCIMode(options: UseCIModeOptions): UseCIModeReturn {
 	useEffect(() => {
 		if (!enabled || !completionDetected || exitTriggeredRef.current) return
 
+		// Skip if session was just restored - the completion_result is historical
+		if (taskResumedViaSession || isHistoricalCompletion) {
+			logs.debug("CI mode: Skipping completion detected atom - historical message", "useCIMode")
+			return
+		}
+
 		logs.info("CI mode: completion detected via atom", "useCIMode")
 		setLocalExitReason("completion_result")
 		setExitReason("completion_result")
 		setShouldExit(true)
 		exitTriggeredRef.current = true
-	}, [enabled, completionDetected])
+	}, [enabled, completionDetected, taskResumedViaSession, isHistoricalCompletion])
 
 	// Setup timeout if provided
 	useEffect(() => {

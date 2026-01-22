@@ -1,9 +1,9 @@
-import { ModelInfo, toolNames } from "@roo-code/types"
+import { ModelInfo } from "@roo-code/types"
 import { z } from "zod"
 
 export const ModelSettingsSchema = z.object({
-	included_tools: z.array(z.enum(toolNames)).nullish(),
-	excluded_tools: z.array(z.enum(toolNames)).nullish(),
+	included_tools: z.array(z.string()).nullish(),
+	excluded_tools: z.array(z.string()).nullish(),
 })
 
 export const VersionedModelSettingsSchema = z.record(z.string(), ModelSettingsSchema)

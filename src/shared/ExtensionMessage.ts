@@ -1,3 +1,4 @@
+import { z } from "zod"
 import type {
 	GlobalSettings,
 	ProviderSettingsEntry,
@@ -15,7 +16,12 @@ import type {
 	OrganizationAllowList,
 	ShareVisibility,
 	QueuedMessage,
+	SerializedCustomToolDefinition,
+	InstallMarketplaceItemOptions,
+	RooCodeSettings,
+	PromptComponent,
 } from "@roo-code/types"
+import { marketplaceItemSchema } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
 
@@ -33,7 +39,7 @@ import {
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
-import { STTSegment } from "./sttContract" // kilocode_change: STT segment type
+import { STTSegment, MicrophoneDevice } from "./sttContract" // kilocode_change: STT segment type and microphone device
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -116,10 +122,10 @@ export interface ExtensionMessage {
 		| "deleteCustomModeCheck"
 		| "currentCheckpointUpdated"
 		| "checkpointInitWarning"
+		| "insertTextToChatArea" // kilocode_change
 		| "showHumanRelayDialog"
 		| "humanRelayResponse"
 		| "humanRelayCancel"
-		| "insertTextToChatArea" // kilocode_change
 		| "browserToolEnabled"
 		| "browserConnectionResult"
 		| "remoteBrowserEnabled"
@@ -138,6 +144,9 @@ export interface ExtensionMessage {
 		| "stt:transcript" // kilocode_change: STT transcript update
 		| "stt:volume" // kilocode_change: STT volume level
 		| "stt:stopped" // kilocode_change: STT session stopped
+		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
+		| "stt:devices" // kilocode_change: Microphone devices list
+		| "stt:deviceSelected" // kilocode_change: Device selection confirmation
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -196,6 +205,8 @@ export interface ExtensionMessage {
 		| "deviceAuthFailed" // kilocode_change: Device auth failed
 		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
+		| "claudeCodeRateLimits"
+		| "customToolsResult"
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -220,7 +231,6 @@ export interface ExtensionMessage {
 		| "promptsButtonClicked" // kilocode_change
 		| "profileButtonClicked" // kilocode_change
 		| "marketplaceButtonClicked"
-		| "mcpButtonClicked" // kilocode_change
 		| "cloudButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
@@ -275,6 +285,9 @@ export interface ExtensionMessage {
 	isFinal?: boolean // kilocode_change: STT transcript is final
 	level?: number // kilocode_change: STT volume level (0-1)
 	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
+	devices?: MicrophoneDevice[] // kilocode_change: Microphone devices list
+	device?: MicrophoneDevice | null // kilocode_change: Selected microphone device
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
@@ -360,6 +373,7 @@ export interface ExtensionMessage {
 	deviceAuthUserEmail?: string
 	deviceAuthError?: string
 	// kilocode_change end: Device auth data
+	tools?: SerializedCustomToolDefinition[] // For customToolsResult
 }
 
 export type ExtensionState = Pick<
@@ -378,13 +392,11 @@ export type ExtensionState = Pick<
 	| "alwaysAllowWriteProtected"
 	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
-	| "alwaysApproveResubmit"
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowFollowupQuestions"
 	| "alwaysAllowExecute"
-	| "alwaysAllowUpdateTodoList"
 	| "followupAutoApproveTimeoutMs"
 	| "allowedCommands"
 	| "deniedCommands"
@@ -458,6 +470,8 @@ export type ExtensionState = Pick<
 	| "includeCurrentTime"
 	| "includeCurrentCost"
 	| "maxGitStatusFiles"
+	| "requestDelaySeconds"
+	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -476,13 +490,13 @@ export type ExtensionState = Pick<
 	taskHistoryVersion: number // kilocode_change
 
 	writeDelayMs: number
-	requestDelaySeconds: number
 
 	enableCheckpoints: boolean
 	checkpointTimeout: number // Timeout for checkpoint initialization in seconds (default: 15)
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
+	enableSubfolderRules: boolean // Whether to load rules from subdirectories
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
 	showAutoApproveMenu: boolean // kilocode_change: Whether to show the auto-approve menu in the chat view
 	maxImageFileSize: number // Maximum size of image files to process in MB
@@ -511,9 +525,11 @@ export type ExtensionState = Pick<
 
 	cloudUserInfo: CloudUserInfo | null
 	cloudIsAuthenticated: boolean
+	cloudAuthSkipModel?: boolean // Flag indicating auth completed without model selection (user should pick 3rd-party provider)
 	cloudApiUrl?: string
 	cloudOrganizations?: CloudOrganizationMembership[]
 	sharingEnabled: boolean
+	publicSharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
 	organizationSettingsVersion?: number
 
@@ -537,10 +553,352 @@ export type ExtensionState = Pick<
 	remoteControlEnabled: boolean
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
-	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
+	virtualQuotaActiveModel?: { id: string; info: ModelInfo; activeProfileNumber?: number } // kilocode_change: Add virtual quota active model for UI display with profile number
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	showDiffStats?: boolean // kilocode_change: Show diff stats in task header
+	claudeCodeIsAuthenticated?: boolean
+	openAiCodexIsAuthenticated?: boolean
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
+	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
+}
+
+export interface Command {
+	name: string
+	source: "global" | "project" | "built-in"
+	filePath?: string
+	description?: string
+	argumentHint?: string
+}
+
+/**
+ * WebviewMessage
+ * Webview | CLI -> Extension
+ */
+
+export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse" | "objectResponse"
+
+export type AudioType = "notification" | "celebration" | "progress_loop"
+
+export interface UpdateTodoListPayload {
+	todos: any[]
+}
+
+export type EditQueuedMessagePayload = Pick<QueuedMessage, "id" | "text" | "images">
+
+export interface WebviewMessage {
+	type:
+		| "updateTodoList"
+		| "deleteMultipleTasksWithIds"
+		| "currentApiConfigName"
+		| "saveApiConfiguration"
+		| "upsertApiConfiguration"
+		| "deleteApiConfiguration"
+		| "loadApiConfiguration"
+		| "loadApiConfigurationById"
+		| "renameApiConfiguration"
+		| "getListApiConfiguration"
+		| "customInstructions"
+		| "webviewDidLaunch"
+		| "newTask"
+		| "askResponse"
+		| "terminalOperation"
+		| "clearTask"
+		| "didShowAnnouncement"
+		| "selectImages"
+		| "exportCurrentTask"
+		| "shareCurrentTask"
+		| "showTaskWithId"
+		| "deleteTaskWithId"
+		| "exportTaskWithId"
+		| "importSettings"
+		| "exportSettings"
+		| "resetState"
+		| "flushRouterModels"
+		| "requestRouterModels"
+		| "requestOpenAiModels"
+		| "requestOllamaModels"
+		| "requestLmStudioModels"
+		| "requestRooModels"
+		| "requestRooCreditBalance"
+		| "requestVsCodeLmModels"
+		| "requestHuggingFaceModels"
+		| "openImage"
+		| "saveImage"
+		| "openFile"
+		| "openMention"
+		| "cancelTask"
+		| "cancelAutoApproval"
+		| "updateVSCodeSetting"
+		| "getVSCodeSetting"
+		| "vsCodeSetting"
+		| "updateCondensingPrompt"
+		| "playSound"
+		| "playTts"
+		| "stopTts"
+		| "ttsEnabled"
+		| "ttsSpeed"
+		| "openKeyboardShortcuts"
+		| "openMcpSettings"
+		| "openProjectMcpSettings"
+		| "restartMcpServer"
+		| "refreshAllMcpServers"
+		| "toggleToolAlwaysAllow"
+		| "toggleToolEnabledForPrompt"
+		| "toggleMcpServer"
+		| "updateMcpTimeout"
+		| "enhancePrompt"
+		| "enhancedPrompt"
+		| "draggedImages"
+		| "deleteMessage"
+		| "deleteMessageConfirm"
+		| "submitEditedMessage"
+		| "editMessageConfirm"
+		| "enableMcpServerCreation"
+		| "remoteControlEnabled"
+		| "taskSyncEnabled"
+		| "searchCommits"
+		| "setApiConfigPassword"
+		| "mode"
+		| "updatePrompt"
+		| "getSystemPrompt"
+		| "copySystemPrompt"
+		| "systemPrompt"
+		| "enhancementApiConfigId"
+		| "autoApprovalEnabled"
+		| "updateCustomMode"
+		| "deleteCustomMode"
+		| "setopenAiCustomModelInfo"
+		| "openCustomModesSettings"
+		| "checkpointDiff"
+		| "checkpointRestore"
+		| "deleteMcpServer"
+		| "codebaseIndexEnabled"
+		| "telemetrySetting"
+		| "testBrowserConnection"
+		| "browserConnectionResult"
+		| "searchFiles"
+		| "toggleApiConfigPin"
+		| "hasOpenedModeSelector"
+		| "clearCloudAuthSkipModel"
+		| "cloudButtonClicked"
+		| "rooCloudSignIn"
+		| "cloudLandingPageSignIn"
+		| "rooCloudSignOut"
+		| "rooCloudManualUrl"
+		| "claudeCodeSignIn"
+		| "claudeCodeSignOut"
+		| "openAiCodexSignIn"
+		| "openAiCodexSignOut"
+		| "switchOrganization"
+		| "condenseTaskContextRequest"
+		| "requestIndexingStatus"
+		| "startIndexing"
+		| "clearIndexData"
+		| "indexingStatusUpdate"
+		| "indexCleared"
+		| "focusPanelRequest"
+		| "openExternal"
+		| "filterMarketplaceItems"
+		| "marketplaceButtonClicked"
+		| "installMarketplaceItem"
+		| "installMarketplaceItemWithParameters"
+		| "cancelMarketplaceInstall"
+		| "removeInstalledMarketplaceItem"
+		| "marketplaceInstallResult"
+		| "fetchMarketplaceData"
+		| "switchTab"
+		| "shareTaskSuccess"
+		| "exportMode"
+		| "exportModeResult"
+		| "importMode"
+		| "importModeResult"
+		| "checkRulesDirectory"
+		| "checkRulesDirectoryResult"
+		| "saveCodeIndexSettingsAtomic"
+		| "requestCodeIndexSecretStatus"
+		| "requestCommands"
+		| "openCommandFile"
+		| "deleteCommand"
+		| "createCommand"
+		| "insertTextIntoTextarea"
+		| "showMdmAuthRequiredNotification"
+		| "imageGenerationSettings"
+		| "queueMessage"
+		| "removeQueuedMessage"
+		| "editQueuedMessage"
+		| "dismissUpsell"
+		| "getDismissedUpsells"
+		| "updateSettings"
+		| "allowedCommands"
+		| "deniedCommands"
+		| "killBrowserSession"
+		| "openBrowserSessionPanel"
+		| "showBrowserSessionPanelAtStep"
+		| "refreshBrowserSessionPanel"
+		| "browserPanelDidLaunch"
+		| "openDebugApiHistory"
+		| "openDebugUiHistory"
+		| "downloadErrorDiagnostics"
+		| "requestClaudeCodeRateLimits"
+		| "refreshCustomTools"
+		| "requestModes"
+		| "switchMode"
+		| "debugSetting"
+	text?: string
+	editedMessageContent?: string
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
+	disabled?: boolean
+	context?: string
+	dataUri?: string
+	askResponse?: ClineAskResponse
+	apiConfiguration?: ProviderSettings
+	images?: string[]
+	bool?: boolean
+	value?: number
+	stepIndex?: number
+	isLaunchAction?: boolean
+	forceShow?: boolean
+	commands?: string[]
+	audioType?: AudioType
+	serverName?: string
+	toolName?: string
+	alwaysAllow?: boolean
+	isEnabled?: boolean
+	mode?: string
+	promptMode?: string | "enhance"
+	customPrompt?: PromptComponent
+	dataUrls?: string[]
+
+	values?: Record<string, any>
+	query?: string
+	setting?: string
+	slug?: string
+	modeConfig?: ModeConfig
+	timeout?: number
+	payload?: WebViewMessagePayload
+	source?: "global" | "project"
+	requestId?: string
+	ids?: string[]
+	hasSystemPromptOverride?: boolean
+	terminalOperation?: "continue" | "abort"
+	messageTs?: number
+	restoreCheckpoint?: boolean
+	historyPreviewCollapsed?: boolean
+	filters?: { type?: string; search?: string; tags?: string[] }
+
+	settings?: any
+	url?: string // For openExternal
+	mpItem?: MarketplaceItem
+	mpInstallOptions?: InstallMarketplaceItemOptions
+
+	config?: Record<string, any> // Add config to the payload
+	visibility?: ShareVisibility // For share visibility
+	hasContent?: boolean // For checkRulesDirectoryResult
+	checkOnly?: boolean // For deleteCustomMode check
+	upsellId?: string // For dismissUpsell
+	list?: string[] // For dismissedUpsells response
+	organizationId?: string | null // For organization switching
+	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
+	codeIndexSettings?: {
+		// Global state settings
+		codebaseIndexEnabled: boolean
+		codebaseIndexQdrantUrl: string
+		codebaseIndexEmbedderProvider:
+			| "openai"
+			| "ollama"
+			| "openai-compatible"
+			| "gemini"
+			| "mistral"
+			| "vercel-ai-gateway"
+			| "bedrock"
+			| "openrouter"
+		codebaseIndexEmbedderBaseUrl?: string
+		codebaseIndexEmbedderModelId: string
+		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
+		codebaseIndexOpenAiCompatibleBaseUrl?: string
+		codebaseIndexBedrockRegion?: string
+		codebaseIndexBedrockProfile?: string
+		codebaseIndexSearchMaxResults?: number
+		codebaseIndexSearchMinScore?: number
+		codebaseIndexOpenRouterSpecificProvider?: string // OpenRouter provider routing
+
+		// Secret settings
+		codeIndexOpenAiKey?: string
+		codeIndexQdrantApiKey?: string
+		codebaseIndexOpenAiCompatibleApiKey?: string
+		codebaseIndexGeminiApiKey?: string
+		codebaseIndexMistralApiKey?: string
+		codebaseIndexVercelAiGatewayApiKey?: string
+		codebaseIndexOpenRouterApiKey?: string
+	}
+	updatedSettings?: RooCodeSettings
+}
+
+export const checkoutDiffPayloadSchema = z.object({
+	ts: z.number().optional(),
+	previousCommitHash: z.string().optional(),
+	commitHash: z.string(),
+	mode: z.enum(["full", "checkpoint", "from-init", "to-current"]),
+})
+
+export type CheckpointDiffPayload = z.infer<typeof checkoutDiffPayloadSchema>
+
+export const checkoutRestorePayloadSchema = z.object({
+	ts: z.number(),
+	commitHash: z.string(),
+	mode: z.enum(["preview", "restore"]),
+})
+
+export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
+
+export interface IndexingStatusPayload {
+	state: "Standby" | "Indexing" | "Indexed" | "Error"
+	message: string
+}
+
+export interface IndexClearedPayload {
+	success: boolean
+	error?: string
+}
+
+export const installMarketplaceItemWithParametersPayloadSchema = z.object({
+	item: marketplaceItemSchema,
+	parameters: z.record(z.string(), z.any()),
+})
+
+export type InstallMarketplaceItemWithParametersPayload = z.infer<
+	typeof installMarketplaceItemWithParametersPayloadSchema
+>
+
+export type WebViewMessagePayload =
+	| CheckpointDiffPayload
+	| CheckpointRestorePayload
+	| IndexingStatusPayload
+	| IndexClearedPayload
+	| InstallMarketplaceItemWithParametersPayload
+	| UpdateTodoListPayload
+	| EditQueuedMessagePayload
+
+export interface IndexingStatus {
+	systemStatus: string
+	message?: string
+	processedItems: number
+	totalItems: number
+	currentItemUnit?: string
+	workspacePath?: string
+}
+
+export interface IndexingStatusUpdateMessage {
+	type: "indexingStatusUpdate"
+	values: IndexingStatus
+}
+
+export interface LanguageModelChatSelector {
+	vendor?: string
+	family?: string
+	version?: string
+	id?: string
 }
 
 export interface ClineSayTool {

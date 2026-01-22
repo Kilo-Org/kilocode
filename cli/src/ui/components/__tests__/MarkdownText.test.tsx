@@ -288,4 +288,168 @@ const code = "example";
 			vi.useRealTimers()
 		})
 	})
+
+	describe("Theme support", () => {
+		it("should render with hex color theme", () => {
+			const theme = {
+				id: "test",
+				name: "Test",
+				type: "dark" as const,
+				brand: { primary: "#00ff00", secondary: "#ff00ff" },
+				semantic: {
+					success: "#00ff00",
+					error: "#ff0000",
+					warning: "#ffff00",
+					info: "#00ffff",
+					neutral: "#888888",
+				},
+				interactive: {
+					prompt: "#ffffff",
+					selection: "#444444",
+					hover: "#555555",
+					disabled: "#333333",
+					focus: "#666666",
+				},
+				messages: { user: "#00ff00", assistant: "#0000ff", system: "#888888", error: "#ff0000" },
+				actions: { approve: "#00ff00", reject: "#ff0000", cancel: "#888888", pending: "#ffff00" },
+				code: {
+					addition: "#00ff00",
+					deletion: "#ff0000",
+					modification: "#ffff00",
+					context: "#888888",
+					lineNumber: "#444444",
+				},
+				markdown: {
+					text: "#ffffff",
+					heading: "#00ff00",
+					strong: "#ff0000",
+					em: "#ffff00",
+					code: "#00ffff",
+					blockquote: "#888888",
+					link: "#0000ff",
+					list: "#ff00ff",
+				},
+				ui: {
+					border: { default: "#444444", active: "#00ff00", warning: "#ffff00", error: "#ff0000" },
+					text: { primary: "#ffffff", secondary: "#cccccc", dimmed: "#888888", highlight: "#00ff00" },
+					background: { default: "#000000", elevated: "#111111" },
+				},
+				status: { online: "#00ff00", offline: "#ff0000", busy: "#ffff00", idle: "#888888" },
+			}
+
+			const { lastFrame } = render(<MarkdownText theme={theme}>Hello World</MarkdownText>)
+			expect(lastFrame()).toContain("Hello World")
+		})
+
+		it("should render with named color theme", () => {
+			const theme = {
+				id: "test",
+				name: "Test",
+				type: "light" as const,
+				brand: { primary: "green", secondary: "magenta" },
+				semantic: { success: "green", error: "red", warning: "yellow", info: "cyan", neutral: "gray" },
+				interactive: { prompt: "white", selection: "gray", hover: "gray", disabled: "gray", focus: "gray" },
+				messages: { user: "green", assistant: "blue", system: "gray", error: "red" },
+				actions: { approve: "green", reject: "red", cancel: "gray", pending: "yellow" },
+				code: {
+					addition: "green",
+					deletion: "red",
+					modification: "yellow",
+					context: "gray",
+					lineNumber: "gray",
+				},
+				markdown: {
+					text: "white",
+					heading: "green",
+					strong: "red",
+					em: "yellow",
+					code: "cyan",
+					blockquote: "gray",
+					link: "blue",
+					list: "magenta",
+				},
+				ui: {
+					border: { default: "gray", active: "green", warning: "yellow", error: "red" },
+					text: { primary: "white", secondary: "gray", dimmed: "gray", highlight: "green" },
+					background: { default: "black", elevated: "gray" },
+				},
+				status: { online: "green", offline: "red", busy: "yellow", idle: "gray" },
+			}
+
+			const { lastFrame } = render(<MarkdownText theme={theme}>Hello World</MarkdownText>)
+			expect(lastFrame()).toContain("Hello World")
+		})
+
+		it("should fall back to white for unknown color names", () => {
+			const theme = {
+				id: "test",
+				name: "Test",
+				type: "custom" as const,
+				brand: { primary: "invalidcolor", secondary: "invalidcolor" },
+				semantic: {
+					success: "invalidcolor",
+					error: "invalidcolor",
+					warning: "invalidcolor",
+					info: "invalidcolor",
+					neutral: "invalidcolor",
+				},
+				interactive: {
+					prompt: "invalidcolor",
+					selection: "invalidcolor",
+					hover: "invalidcolor",
+					disabled: "invalidcolor",
+					focus: "invalidcolor",
+				},
+				messages: {
+					user: "invalidcolor",
+					assistant: "invalidcolor",
+					system: "invalidcolor",
+					error: "invalidcolor",
+				},
+				actions: {
+					approve: "invalidcolor",
+					reject: "invalidcolor",
+					cancel: "invalidcolor",
+					pending: "invalidcolor",
+				},
+				code: {
+					addition: "invalidcolor",
+					deletion: "invalidcolor",
+					modification: "invalidcolor",
+					context: "invalidcolor",
+					lineNumber: "invalidcolor",
+				},
+				markdown: {
+					text: "invalidcolor",
+					heading: "invalidcolor",
+					strong: "invalidcolor",
+					em: "invalidcolor",
+					code: "invalidcolor",
+					blockquote: "invalidcolor",
+					link: "invalidcolor",
+					list: "invalidcolor",
+				},
+				ui: {
+					border: {
+						default: "invalidcolor",
+						active: "invalidcolor",
+						warning: "invalidcolor",
+						error: "invalidcolor",
+					},
+					text: {
+						primary: "invalidcolor",
+						secondary: "invalidcolor",
+						dimmed: "invalidcolor",
+						highlight: "invalidcolor",
+					},
+					background: { default: "invalidcolor", elevated: "invalidcolor" },
+				},
+				status: { online: "invalidcolor", offline: "invalidcolor", busy: "invalidcolor", idle: "invalidcolor" },
+			}
+
+			// Should still render without throwing errors
+			const { lastFrame } = render(<MarkdownText theme={theme}>Hello World</MarkdownText>)
+			expect(lastFrame()).toContain("Hello World")
+		})
+	})
 })

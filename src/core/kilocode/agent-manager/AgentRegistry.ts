@@ -2,6 +2,7 @@ import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelM
 
 export interface CreateSessionOptions {
 	parallelMode?: boolean
+	model?: string
 }
 
 const MAX_SESSIONS = 10
@@ -67,6 +68,7 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
+			model: options?.model,
 		}
 
 		this.sessions.set(sessionId, session)
@@ -152,13 +154,16 @@ export class AgentRegistry {
 		info: Partial<Omit<ParallelModeInfo, "enabled">>,
 	): AgentSession | undefined {
 		const session = this.sessions.get(id)
-		if (!session || !session.parallelMode?.enabled) {
+		if (!session) {
 			return undefined
 		}
 
+		const currentParallelMode = session.parallelMode ?? { enabled: true }
+
 		session.parallelMode = {
-			...session.parallelMode,
+			...currentParallelMode,
 			...info,
+			enabled: true,
 		}
 
 		return session
@@ -214,19 +219,26 @@ export class AgentRegistry {
 	 * Used when upgrading a provisional session to a real session ID.
 	 */
 	public renameSession(oldId: string, newId: string): boolean {
-		const session = this.sessions.get(oldId)
-		if (!session) {
+		if (oldId === newId) {
+			return this.sessions.has(oldId)
+		}
+
+		const oldSession = this.sessions.get(oldId)
+		if (!oldSession) {
 			return false
 		}
 
-		// Update the session's internal ID
-		session.sessionId = newId
-
-		// Move in the map
-		this.sessions.delete(oldId)
-		this.sessions.set(newId, session)
-
-		// Update selectedId if it was pointing to the old ID
+		const targetSession = this.sessions.get(newId)
+		if (targetSession) {
+			// Prefer keeping the target session object (e.g. resuming an existing session),
+			// but merge in any provisional logs so early streaming isn't lost.
+			targetSession.logs = [...oldSession.logs, ...targetSession.logs]
+			this.sessions.delete(oldId)
+		} else {
+			this.sessions.delete(oldId)
+			oldSession.sessionId = newId
+			this.sessions.set(newId, oldSession)
+		}
 		if (this._selectedId === oldId) {
 			this._selectedId = newId
 		}

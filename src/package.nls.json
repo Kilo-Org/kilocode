@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
-	"extension.description": "Open Source AI coding assistant for planning, building, and fixing code.",
+	"extension.displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
+	"extension.description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -43,7 +43,7 @@
 	"settings.enableCodeActions.description": "Enable Kilo Code quick fixes",
 	"settings.autoImportSettingsPath.description": "Path to a Kilo Code configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/kilo-code-settings.json'). Leave empty to disable auto-import.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Maximum number of files to index for the @ file search feature. Higher values provide better search results in large projects but may use more memory. Default: 10,000.",
-	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Maximum time in seconds to wait for API responses (0 = no timeout, 1-86400s, default: 600s). Higher values are recommended for local providers like LM Studio and Ollama that may need more processing time.",
 	"settings.newTaskRequireTodos.description": "Require todos parameter when creating new tasks with the new_task tool",
 	"settings.enableSettingsSync.description": "Enable synchronization of Kilo Code settings across devices via VS Code Settings Sync. When enabled, your API configurations, custom modes, and preferences will automatically sync when you sign in to VS Code Settings Sync.",

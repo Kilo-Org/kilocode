@@ -14,7 +14,9 @@
 		"shareSession": "Share session",
 		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
 		"shareConfirmYes": "Yes",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -27,7 +29,6 @@
 		"refreshButtonTitle": "Refresh messages",
 		"starting": "Starting...",
 		"startAriaLabel": "Start agent with provided prompt",
-		"keyboardHint": "Press Enter to start, Shift+Enter for new line",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -54,7 +55,12 @@
 		"otherBranches": "Other branches",
 		"branchPickerTooltip": "Switch base branch",
 		"noBranches": "No branches found",
-		"noMatchingBranches": "No branches match your search"
+		"noMatchingBranches": "No branches match your search",
+		"openTerminal": "Open terminal",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -79,9 +85,12 @@
 		"cancelTitle": "Cancel agent",
 		"finishToBranchTitle": "Finish worktree and prepare branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finish worktree and prepare branch",
+		"createPRTitle": "Create pull request",
 		"sendTitle": "Send message",
 		"resumeTitle": "Resume agent",
-		"hint": "Press Enter to send, Shift+Enter for new line"
+		"hint": "Press Enter to send, Shift+Enter for new line. Paste images with Ctrl/Cmd+V",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "running",

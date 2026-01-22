@@ -2,13 +2,10 @@ import * as vscode from "vscode"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { AutocompleteContext, VisibleCodeContext } from "../types"
-import { ApiStreamChunk } from "../../../api/transform/stream"
 import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
+import { postprocessGhostSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 
-/**
- * Service for providing FIM-based autocomplete suggestions in ChatTextArea
- */
 export class ChatTextAreaAutocomplete {
 	private model: GhostModel
 	private providerSettingsManager: ProviderSettingsManager
@@ -24,14 +21,6 @@ export class ChatTextAreaAutocomplete {
 		return this.model.reload(this.providerSettingsManager)
 	}
 
-	/**
-	 * Check if we can successfully make a FIM request.
-	 * Validates that model is loaded, has valid API handler, and supports FIM.
-	 */
-	isFimAvailable(): boolean {
-		return this.model.hasValidCredentials() && this.model.supportsFim()
-	}
-
 	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
 		const startTime = Date.now()
 
@@ -41,9 +30,6 @@ export class ChatTextAreaAutocomplete {
 			modelId: this.model.getModelName(),
 			provider: this.model.getProviderDisplayName(),
 		}
-
-		// Capture suggestion requested
-		this.telemetry.captureSuggestionRequested(context)
 
 		if (!this.model.loaded) {
 			const loaded = await this.initialize()
@@ -56,6 +42,9 @@ export class ChatTextAreaAutocomplete {
 		if (!this.model.hasValidCredentials()) {
 			return { suggestion: "" }
 		}
+
+		// Capture suggestion requested
+		this.telemetry.captureSuggestionRequested(context)
 
 		const prefix = await this.buildPrefix(userText, visibleCodeContext)
 		const suffix = ""
@@ -147,9 +136,6 @@ TASK: Complete the user's message naturally.
 - Return ONLY the completion text (what comes next), no explanations.`
 	}
 
-	/**
-	 * Build the prefix for FIM completion with visible code context and additional sources
-	 */
 	private async buildPrefix(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
 		const contextParts: string[] = []
 
@@ -167,79 +153,36 @@ TASK: Complete the user's message naturally.
 			}
 		}
 
-		const clipboardContent = await this.getClipboardContext()
-		if (clipboardContent) {
-			contextParts.push("\n// Clipboard content:")
-			contextParts.push(clipboardContent)
-		}
-
 		contextParts.push("\n// User's message:")
 		contextParts.push(userText)
 
 		return contextParts.join("\n")
 	}
 
-	/**
-	 * Get clipboard content for context
-	 */
-	private async getClipboardContext(): Promise<string | null> {
-		try {
-			const text = await vscode.env.clipboard.readText()
-			// Only include if it's reasonable size and looks like code
-			if (text && text.length > 5 && text.length < 500) {
-				return text
-			}
-		} catch {
-			// Silently ignore clipboard errors
+	public cleanSuggestion(suggestion: string, userText: string): string {
+		let cleaned = postprocessGhostSuggestion({
+			suggestion: removePrefixOverlap(suggestion, userText),
+			prefix: userText,
+			suffix: "", // Chat textarea has no suffix
+			model: this.model.getModelName() ?? "unknown",
+		})
+
+		if (cleaned === undefined) {
+			return ""
 		}
-		return null
-	}
 
-	/**
-	 * Clean the suggestion by removing any leading repetition of user text
-	 * and filtering out unwanted patterns like comments
-	 */
-	private cleanSuggestion(suggestion: string, userText: string): string {
-		let cleaned = suggestion
+		// Filter suggestions that look like code rather than natural language
+		if (cleaned.match(/^(\/\/|\/\*|\*|#)/)) {
+			return ""
+		}
 
-		cleaned = removePrefixOverlap(cleaned, userText)
-
+		// Chat-specific: truncate at first newline for single-line suggestions
 		const firstNewline = cleaned.indexOf("\n")
 		if (firstNewline !== -1) {
 			cleaned = cleaned.substring(0, firstNewline)
 		}
-		cleaned = cleaned.trimEnd() // Do NOT trim the end of the suggestion
-
-		// Filter out suggestions that start with comment patterns
-		// This happens because the context uses // prefixes for labels
-		if (this.isUnwantedSuggestion(cleaned)) {
-			return ""
-		}
+		cleaned = cleaned.trimEnd()
 
 		return cleaned
-	}
-
-	/**
-	 * Check if suggestion should be filtered out
-	 */
-	public isUnwantedSuggestion(suggestion: string): boolean {
-		// Filter comment-starting suggestions
-		if (suggestion.startsWith("//") || suggestion.startsWith("/*") || suggestion.startsWith("*")) {
-			return true
-		}
-
-		// Filter suggestions that look like code rather than natural language
-		// This includes preprocessor directives (#include) and markdown headers
-		// Chat is for natural language, not formatted documents
-		if (suggestion.startsWith("#")) {
-			return true
-		}
-
-		// Filter suggestions that are just punctuation or whitespace
-		if (suggestion.length < 2 || /^[\s\p{P}]+$/u.test(suggestion)) {
-			return true
-		}
-
-		return false
 	}
 }

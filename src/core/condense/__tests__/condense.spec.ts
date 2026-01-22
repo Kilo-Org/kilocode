@@ -86,7 +86,19 @@ describe("Condense", () => {
 			// Verify we have a summary message
 			const summaryMessage = result.messages.find((msg) => msg.isSummary)
 			expect(summaryMessage).toBeTruthy()
-			expect(summaryMessage?.content).toBe("Mock summary of the conversation")
+			// Summary content is now always an array with a synthetic reasoning block + text block
+			// for DeepSeek-reasoner compatibility
+			expect(Array.isArray(summaryMessage?.content)).toBe(true)
+			const contentArray = summaryMessage?.content as Anthropic.Messages.ContentBlockParam[]
+			expect(contentArray).toHaveLength(2)
+			expect(contentArray[0]).toEqual({
+				type: "reasoning",
+				text: "Condensing conversation context. The summary below captures the key information from the prior conversation.",
+			})
+			expect(contentArray[1]).toEqual({
+				type: "text",
+				text: "Mock summary of the conversation",
+			})
 
 			// With non-destructive condensing, all messages are retained (tagged but not deleted)
 			// Use getEffectiveApiHistory to verify the effective view matches the old behavior

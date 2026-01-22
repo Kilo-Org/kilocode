@@ -14,15 +14,6 @@ export interface IFimProvider {
 	supportsFim(): boolean
 
 	/**
-	 * Complete code between a prefix and suffix (non-streaming)
-	 * @param prefix - The code before the cursor/insertion point
-	 * @param suffix - The code after the cursor/insertion point
-	 * @param taskId - Optional task ID for tracking
-	 * @returns The completed code string
-	 */
-	completeFim(prefix: string, suffix: string, taskId?: string): Promise<string>
-
-	/**
 	 * Stream code completion between a prefix and suffix
 	 * @param prefix - The code before the cursor/insertion point
 	 * @param suffix - The code after the cursor/insertion point

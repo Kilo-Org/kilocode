@@ -54,6 +54,17 @@ export const ansiLightTheme: Theme = {
 		lineNumber: "gray",
 	},
 
+	markdown: {
+		text: "#444",
+		heading: "blue",
+		strong: "#000",
+		em: "#444",
+		code: "green",
+		blockquote: "gray",
+		link: "blue",
+		list: "#444",
+	},
+
 	ui: {
 		border: {
 			default: "#e1e4e8",

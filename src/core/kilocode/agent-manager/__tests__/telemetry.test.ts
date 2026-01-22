@@ -117,25 +117,9 @@ describe("Agent Manager Telemetry", () => {
 		it("does not capture when TelemetryService has no instance", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(false)
 
-			captureAgentManagerLoginIssue({ issueType: "cli_not_found" })
+			captureAgentManagerLoginIssue({ issueType: "cli_outdated" })
 
 			expect(TelemetryService.instance.captureEvent).not.toHaveBeenCalled()
-		})
-
-		it("captures cli_not_found issue with hasNpm", () => {
-			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
-
-			const props: AgentManagerLoginIssueProperties = {
-				issueType: "cli_not_found",
-				hasNpm: true,
-			}
-
-			captureAgentManagerLoginIssue(props)
-
-			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
-				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
-				props,
-			)
 		})
 
 		it("captures cli_outdated issue with hasNpm false", () => {
@@ -200,6 +184,26 @@ describe("Agent Manager Telemetry", () => {
 			)
 		})
 
+		it("captures session_timeout with enhanced diagnostic fields", () => {
+			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
+
+			const props: AgentManagerLoginIssueProperties = {
+				issueType: "session_timeout",
+				platform: "darwin",
+				shell: "zsh",
+				hasStderr: true,
+				stderrPreview: "error: git command not found",
+				hadShellPath: false,
+			}
+
+			captureAgentManagerLoginIssue(props)
+
+			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
+				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
+				props,
+			)
+		})
+
 		it("captures api_error issue", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
 
@@ -231,14 +235,13 @@ describe("Agent Manager Telemetry", () => {
 			)
 		})
 
-		it("captures cli_not_found with platform and shell diagnostics", () => {
+		it("captures cli_configuration_error issue with platform diagnostics", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
 
 			const props: AgentManagerLoginIssueProperties = {
-				issueType: "cli_not_found",
-				hasNpm: true,
+				issueType: "cli_configuration_error",
 				platform: "darwin",
-				shell: "zsh",
+				shell: "fish",
 			}
 
 			captureAgentManagerLoginIssue(props)
@@ -248,6 +251,7 @@ describe("Agent Manager Telemetry", () => {
 				props,
 			)
 		})
+
 	})
 
 	describe("getPlatformDiagnostics", () => {

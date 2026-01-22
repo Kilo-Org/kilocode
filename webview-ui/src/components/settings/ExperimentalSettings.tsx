@@ -17,6 +17,8 @@ import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
 import { FastApplySettings } from "./FastApplySettings" // kilocode_change: Use Fast Apply version
 import { ImageGenerationSettings } from "./ImageGenerationSettings"
+import { CustomToolsSettings } from "./CustomToolsSettings"
+import { STTSettings } from "./STTSettings" // kilocode_change: STT microphone settings
 
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
@@ -122,6 +124,22 @@ export const ExperimentalSettings = ({
 							)
 						}
 						// kilocode_change end
+						if (config[0] === "SPEECH_TO_TEXT") {
+							const enabled = experiments[EXPERIMENT_IDS.SPEECH_TO_TEXT] ?? false
+							return (
+								<React.Fragment key={config[0]}>
+									<ExperimentalFeature
+										key={config[0]}
+										experimentKey={config[0]}
+										enabled={enabled}
+										onChange={(enabled) =>
+											setExperimentEnabled(EXPERIMENT_IDS.SPEECH_TO_TEXT, enabled)
+										}
+									/>
+									{enabled && <STTSettings />}
+								</React.Fragment>
+							)
+						}
 						if (
 							config[0] === "IMAGE_GENERATION" &&
 							setImageGenerationProvider &&
@@ -145,6 +163,15 @@ export const ExperimentalSettings = ({
 									setKiloCodeImageApiKey={setKiloCodeImageApiKey}
 									setImageGenerationSelectedModel={setImageGenerationSelectedModel}
 									currentProfileKilocodeToken={currentProfileKilocodeToken}
+								/>
+							)
+						}
+						if (config[0] === "CUSTOM_TOOLS") {
+							return (
+								<CustomToolsSettings
+									key={config[0]}
+									enabled={experiments[EXPERIMENT_IDS.CUSTOM_TOOLS] ?? false}
+									onChange={(enabled) => setExperimentEnabled(EXPERIMENT_IDS.CUSTOM_TOOLS, enabled)}
 								/>
 							)
 						}

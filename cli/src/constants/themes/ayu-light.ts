@@ -54,6 +54,17 @@ export const ayuLightTheme: Theme = {
 		lineNumber: "#a6aaaf",
 	},
 
+	markdown: {
+		text: "#5c6166",
+		heading: "#55b4d4",
+		strong: "#000000",
+		em: "#5c6166",
+		code: "#86b300",
+		blockquote: "#a6aaaf",
+		link: "#55b4d4",
+		list: "#5c6166",
+	},
+
 	ui: {
 		border: {
 			default: "#e1e4e8",

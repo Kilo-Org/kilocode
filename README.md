@@ -9,12 +9,13 @@
 # 🚀 Kilo
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 750k+ Kilo Coders. 6.1 trillion tokens used per month.
+> #1 on OpenRouter. 1M+ Kilo Coders. 20T+ tokens processed
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
 - 🧪 Run terminal commands
 - 🌐 Automate the browser
+- ⚡ Inline autocomplete suggestions
 - 🤖 Latest AI models
 - 🎁 API keys optional
 - 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5
@@ -29,6 +30,7 @@
 ## Key Features
 
 - **Code Generation:** Kilo can generate code using natural language.
+- **Inline Autocomplete:** Get intelligent code completions as you type, powered by AI.
 - **Task Automation:** Kilo can automate repetitive coding tasks.
 - **Automated Refactoring:** Kilo can refactor and improve existing code.
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.

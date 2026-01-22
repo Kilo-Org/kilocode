@@ -43,6 +43,7 @@ describe("SessionManager", () => {
 	let mockOnSessionCreated: any
 	let mockOnSessionRestored: any
 	let mockOnSessionSynced: any
+	let mockOnSessionTitleGenerated: any
 	let mockGetOrganizationId: any
 	let mockGetMode: any
 	let mockGetModel: any
@@ -127,6 +128,7 @@ describe("SessionManager", () => {
 		mockOnSessionCreated = vi.fn()
 		mockOnSessionRestored = vi.fn()
 		mockOnSessionSynced = vi.fn()
+		mockOnSessionTitleGenerated = vi.fn()
 		mockGetOrganizationId = vi.fn().mockResolvedValue("org-123")
 		mockGetMode = vi.fn().mockResolvedValue("code")
 		mockGetModel = vi.fn().mockResolvedValue("gpt-4")
@@ -144,6 +146,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -177,6 +180,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -208,6 +212,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -259,6 +264,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -373,6 +379,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -402,6 +409,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
@@ -423,6 +431,7 @@ describe("SessionManager", () => {
 				onSessionCreated: mockOnSessionCreated,
 				onSessionRestored: mockOnSessionRestored,
 				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,

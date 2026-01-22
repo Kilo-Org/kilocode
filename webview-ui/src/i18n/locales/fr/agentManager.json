@@ -14,7 +14,9 @@
 		"shareSession": "Partager la session",
 		"shareConfirmMessage": "Souhaites-tu partager publiquement un instantané de cette session ?",
 		"shareConfirmYes": "Oui",
-		"shareConfirmNo": "Non"
+		"shareConfirmNo": "Non",
+		"options": "Options",
+		"configureSetupScript": "Script de setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Démarrer un nouvel agent",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Mode YOLO - les opérations d'outils sont approuvées automatiquement",
 		"starting": "Démarrage...",
 		"startAriaLabel": "Démarrer l'agent avec le prompt fourni",
-		"keyboardHint": "Appuyez sur Entrée pour démarrer, Shift+Entrée pour nouvelle ligne",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -54,7 +55,12 @@
 		"otherBranches": "Autres branches",
 		"branchPickerTooltip": "Changer de branche de base",
 		"noBranches": "Aucune branche trouvée",
-		"noMatchingBranches": "Aucune branche ne correspond à ta recherche"
+		"noMatchingBranches": "Aucune branche ne correspond à ta recherche",
+		"openTerminal": "Ouvrir le terminal",
+		"selectModel": "Sélectionner le modèle",
+		"modelTooltip": "Choisis quel modèle d'IA utiliser pour cette session",
+		"defaultModel": "Modèle par défaut",
+		"loadingModels": "Chargement..."
 	},
 	"messages": {
 		"waiting": "En attente de la réponse de l'agent...",
@@ -79,9 +85,12 @@
 		"cancelTitle": "Annuler l'agent",
 		"finishToBranchTitle": "Terminer le worktree et préparer la branch : {{branch}}",
 		"finishToBranchTitleNoBranch": "Terminer le worktree et préparer la branch",
+		"createPRTitle": "Créer une pull request",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
-		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"
+		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne",
+		"addImage": "Ajouter une image",
+		"removeImage": "Supprimer l'image"
 	},
 	"status": {
 		"running": "en cours",

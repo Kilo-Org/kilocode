@@ -19,8 +19,17 @@ export const historyItemSchema = z.object({
 	size: z.number().optional(),
 	workspace: z.string().optional(),
 	isFavorited: z.boolean().optional(), // kilocode_change
-	fileNotfound: z.boolean().optional(), // kilocode_change
 	mode: z.string().optional(),
+	/**
+	 * The tool protocol used by this task. Once a task uses tools with a specific
+	 * protocol (XML or Native), it is permanently locked to that protocol.
+	 *
+	 * - "xml": Tool calls are parsed from XML text (no tool IDs)
+	 * - "native": Tool calls come as tool_call chunks with IDs
+	 *
+	 * This ensures task resumption works correctly even when NTC settings change.
+	 */
+	toolProtocol: z.enum(["xml", "native"]).optional(),
 	status: z.enum(["active", "completed", "delegated"]).optional(),
 	delegatedToId: z.string().optional(), // Last child this parent delegated to
 	childIds: z.array(z.string()).optional(), // All children spawned by this task

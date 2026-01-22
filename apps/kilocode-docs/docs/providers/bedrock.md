@@ -4,7 +4,7 @@ sidebar_label: AWS Bedrock
 
 # Using AWS Bedrock With Kilo Code
 
-Kilo Code supports accessing models through Amazon Bedrock, a fully managed service that makes a selection of high-performing foundation models (FMs) from leading AI companies available via a single API.
+Kilo Code supports accessing models through Amazon Bedrock, a fully managed service that makes a selection of high-performing foundation models (FMs) from leading AI companies available via a single API. This provider connects directly to AWS Bedrock and authenticates with the provided credentials.
 
 **Website:** [https://aws.amazon.com/bedrock/](https://aws.amazon.com/bedrock/)
 
@@ -20,13 +20,16 @@ Kilo Code supports accessing models through Amazon Bedrock, a fully managed serv
 
 ## Getting Credentials
 
-You have two main options for configuring AWS credentials:
+You have three options for configuring AWS credentials:
 
-1.  **AWS Access Keys (Recommended for Development):**
+1.  **Bedrock API Key:**
+    - Create a Bedrock-specific API key in the AWS Console. This is a simple service-specific authentication method.
+    - See the [AWS documentation on Bedrock credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_bedrock.html) for instructions on creating an API key.
+2.  **AWS Access Keys (Recommended for Development):**
     - Create an IAM user with the necessary permissions (at least `bedrock:InvokeModel`).
     - Generate an access key ID and secret access key for that user.
     - _(Optional)_ Create a session token if required by your IAM configuration.
-2.  **AWS Profile:**
+3.  **AWS Profile:**
     - Configure an AWS profile using the AWS CLI or by manually editing your AWS credentials file. See the [AWS CLI documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) for details.
 
 ## Supported Models
@@ -75,6 +78,8 @@ Refer to the [Amazon Bedrock documentation](https://docs.aws.amazon.com/bedrock/
 1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Bedrock" from the "API Provider" dropdown.
 3.  **Select Authentication Method:**
+    - **Bedrock API Key:**
+        - Enter your Bedrock API key directly. This is the simplest setup option.
     - **AWS Credentials:**
         - Enter your "AWS Access Key" and "AWS Secret Key."
         - (Optional) Enter your "AWS Session Token" if you're using temporary credentials.

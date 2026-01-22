@@ -211,7 +211,7 @@ Kilo Code 提供了一个内置界面，用于管理您的自定义规则，而�
 
 ## 相关功能
 
-- [自定义模式](/features/custom-modes)
-- [自定义指令](/advanced-usage/custom-instructions)
-- [设置管理](/features/settings-management)
+- [自定义模式](/agent-behavior/custom-modes)
+- [自定义指令](/agent-behavior/custom-instructions)
+- [设置管理](/basic-usage/settings-management)
 - [自动批准设置](/features/auto-approving-actions)

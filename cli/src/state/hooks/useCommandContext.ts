@@ -25,7 +25,13 @@ import {
 	selectProviderAtom,
 	configAtom,
 } from "../atoms/config.js"
-import { routerModelsAtom, extensionStateAtom, isParallelModeAtom, chatMessagesAtom } from "../atoms/extension.js"
+import {
+	routerModelsAtom,
+	extensionStateAtom,
+	isParallelModeAtom,
+	chatMessagesAtom,
+	currentTaskAtom,
+} from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import {
@@ -43,6 +49,7 @@ import {
 } from "../atoms/modelList.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
+import { useCondense } from "./useCondense.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
 
 const TERMINAL_CLEAR_DELAY_MS = 500
@@ -107,6 +114,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const config = useAtomValue(configAtom)
 	const chatMessages = useAtomValue(chatMessagesAtom)
+	const currentTask = useAtomValue(currentTaskAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -133,6 +141,9 @@ export function useCommandContext(): UseCommandContextReturn {
 	const updateModelListFilters = useSetAtom(updateModelListFiltersAtom)
 	const changeModelListPage = useSetAtom(changeModelListPageAtom)
 	const resetModelListState = useSetAtom(resetModelListStateAtom)
+
+	// Get condense function
+	const { condenseAndWait } = useCondense()
 
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
@@ -230,12 +241,16 @@ export function useCommandContext(): UseCommandContextReturn {
 				previousTaskHistoryPage,
 				sendWebviewMessage: sendMessage,
 				chatMessages: chatMessages as unknown as ExtensionMessage[],
+				// Current task context
+				currentTask,
 				// Model list context
 				modelListPageIndex,
 				modelListFilters,
 				updateModelListFilters,
 				changeModelListPage,
 				resetModelListState,
+				// Condense context
+				condenseAndWait,
 			}
 		},
 		[
@@ -272,11 +287,13 @@ export function useCommandContext(): UseCommandContextReturn {
 			nextTaskHistoryPage,
 			previousTaskHistoryPage,
 			chatMessages,
+			currentTask,
 			modelListPageIndex,
 			modelListFilters,
 			updateModelListFilters,
 			changeModelListPage,
 			resetModelListState,
+			condenseAndWait,
 		],
 	)
 

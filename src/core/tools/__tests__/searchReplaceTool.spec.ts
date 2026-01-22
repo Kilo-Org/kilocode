@@ -379,4 +379,48 @@ describe("searchReplaceTool", () => {
 			expect(mockCline.fileContextTracker.trackFileContext).toHaveBeenCalledWith(testFilePath, "roo_edited")
 		})
 	})
+
+	describe("CRLF normalization", () => {
+		it("normalizes CRLF to LF when reading file", async () => {
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
+
+			await executeSearchReplaceTool(
+				{ old_string: "Line 2", new_string: "Modified Line 2" },
+				{ fileContent: contentWithCRLF },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("normalizes CRLF in old_string to match LF-normalized file content", async () => {
+			// File has CRLF line endings
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
+			// Search string also has CRLF (simulating what the model might send)
+			const searchWithCRLF = "Line 1\r\nLine 2"
+
+			await executeSearchReplaceTool(
+				{ old_string: searchWithCRLF, new_string: "Modified Lines" },
+				{ fileContent: contentWithCRLF },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+
+		it("matches LF old_string against CRLF file content after normalization", async () => {
+			// File has CRLF line endings
+			const contentWithCRLF = "Line 1\r\nLine 2\r\nLine 3"
+			// Search string has LF (typical model output)
+			const searchWithLF = "Line 1\nLine 2"
+
+			await executeSearchReplaceTool(
+				{ old_string: searchWithLF, new_string: "Modified Lines" },
+				{ fileContent: contentWithCRLF },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+		})
+	})
 })

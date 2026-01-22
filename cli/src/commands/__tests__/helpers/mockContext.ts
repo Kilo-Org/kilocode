@@ -71,6 +71,8 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		previousTaskHistoryPage: vi.fn().mockResolvedValue(null),
 		sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
 		chatMessages: [],
+		// Current task context
+		currentTask: null,
 		modelListPageIndex: 0,
 		modelListFilters: {
 			sort: "preferred",
@@ -79,6 +81,8 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		updateModelListFilters: vi.fn(),
 		changeModelListPage: vi.fn(),
 		resetModelListState: vi.fn(),
+		// Condense context
+		condenseAndWait: vi.fn().mockResolvedValue(undefined),
 	}
 
 	return {

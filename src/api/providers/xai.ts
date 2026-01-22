@@ -1,7 +1,8 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import { type XAIModelId, xaiDefaultModelId, xaiModels } from "@roo-code/types"
+import { type XAIModelId, xaiDefaultModelId, xaiModels, ApiProviderError } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -15,7 +16,6 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason" // kilocode_change
 import { handleOpenAIError } from "./utils/openai-error-handler"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 const XAI_DEFAULT_TEMPERATURE = 0
 
@@ -81,16 +81,16 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 		try {
 			stream = await this.client.chat.completions.create(requestOptions)
 		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "createMessage")
+			TelemetryService.instance.captureException(apiError)
 			throw handleOpenAIError(error, this.providerName)
 		}
 
-		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 			const finishReason = chunk.choices[0]?.finish_reason
-
-			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 			if (delta?.content) {
 				yield {
@@ -164,6 +164,9 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "completePrompt")
+			TelemetryService.instance.captureException(apiError)
 			throw handleOpenAIError(error, this.providerName)
 		}
 	}

@@ -1,7 +1,3 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.plugin
 
 import ai.kilocode.jetbrains.core.ExtensionProcessManager
@@ -9,6 +5,9 @@ import ai.kilocode.jetbrains.core.ExtensionSocketServer
 import ai.kilocode.jetbrains.core.ExtensionUnixDomainSocketServer
 import ai.kilocode.jetbrains.core.ISocketServer
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.monitoring.ScopeRegistry
+import ai.kilocode.jetbrains.monitoring.ThreadMonitor
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import ai.kilocode.jetbrains.util.ExtensionUtils
 import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.util.PluginResourceUtil
@@ -31,6 +30,7 @@ import com.intellij.ui.jcef.JBCefApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -39,6 +39,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 
 /**
  * WeCode IDEA plugin entry class
@@ -65,8 +66,9 @@ class WecoderPlugin : StartupActivity.DumbAware {
                 LOG.info("Project closed: ${project.name}")
                 // Clean up resources for closed project
                 try {
-                    val pluginService = getInstance(project)
-                    pluginService.dispose()
+                    // Use getServiceIfCreated to avoid initializing service during disposal
+                    val pluginService = project.getServiceIfCreated(WecoderPluginService::class.java)
+                    pluginService?.dispose()
                 } catch (e: Exception) {
                     LOG.error("Failed to dispose plugin for closed project: ${project.name}", e)
                 }
@@ -191,12 +193,25 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
     // Whether initialized
     @Volatile
     private var isInitialized = false
+    
+    // Disposal state
+    @Volatile
+    private var isDisposing = false
+    
+    @Volatile
+    private var isDisposed = false
 
     // Plugin initialization complete flag
     private var initializationComplete = CompletableFuture<Boolean>()
 
+    private val boundedIODispatcher = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors() * 2,
+        { r -> Thread(r, "KiloCode-IO").apply { isDaemon = true } }
+    ).asCoroutineDispatcher()
+
     // Coroutine scope
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val coroutineScope = CoroutineScope(boundedIODispatcher + SupervisorJob())
+    private val threadMonitor = ThreadMonitor()
 
     // Service instances
     private val socketServer = ExtensionSocketServer()
@@ -265,6 +280,12 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
      * Initialize plugin service
      */
     fun initialize(project: Project) {
+        // Check if disposing or disposed
+        if (isDisposing || isDisposed) {
+            LOG.warn("Cannot initialize: service is disposing or disposed")
+            return
+        }
+        
         // Check if already initialized for the same project
         if (isInitialized && this.currentProject == project) {
             LOG.info("WecoderPluginService already initialized for project: ${project.name}")
@@ -294,6 +315,8 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
 
         // Register to system object provider
         systemObjectProvider.register("pluginService", this)
+        threadMonitor.startMonitoring()
+        ScopeRegistry.register("WecoderPluginService", coroutineScope)
 
         // Start initialization in background thread
         coroutineScope.launch {
@@ -481,20 +504,38 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
      * Close service
      */
     override fun dispose() {
+        if (isDisposed) {
+            LOG.warn("Service already disposed")
+            return
+        }
+        
         if (!isInitialized) {
+            isDisposed = true
             return
         }
 
+        isDisposing = true
         LOG.info("Disposing WecoderPluginService")
+
+        threadMonitor.dispose()
+        ScopeRegistry.unregister("WecoderPluginService")
 
         currentProject?.getService(WebViewManager::class.java)?.dispose()
 
         // Cancel all coroutines
         coroutineScope.cancel()
 
+        try {
+            (boundedIODispatcher as? java.util.concurrent.ExecutorService)?.shutdown()
+        } catch (e: Exception) {
+            LOG.error("Error shutting down bounded IO dispatcher", e)
+        }
+        
         // Clean up resources
         cleanup()
 
+        isDisposed = true
+        isDisposing = false
         LOG.info("WecoderPluginService disposed")
     }
 }
