@@ -75,7 +75,9 @@
 		"usingTool": "도구 사용 중: **{{tool}}** {{details}}",
 		"expandOutput": "출력 펼치기",
 		"collapseOutput": "출력 접기",
-		"copyCommand": "명령 복사"
+		"copyCommand": "명령 복사",
+		"thinking": "생각 중",
+		"thinkingSeconds": "{{count}}초"
 	},
 	"chatInput": {
 		"autoMode": "에이전트가 완전 자동 모드로 실행 중 - 입력이 허용되지 않습니다",

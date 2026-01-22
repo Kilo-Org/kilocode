@@ -17,6 +17,7 @@ import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
 import { CommandExecutionBlock } from "./CommandExecutionBlock"
+import { ReasoningBlock } from "./ReasoningBlock"
 import { vscode } from "../utils/vscode"
 import {
 	MessageCircle,
@@ -282,6 +283,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 				title = t("messages.error")
 				content = <SimpleMarkdown content={messageText} />
 				break
+			}
+			case "reasoning": {
+				// Return early - reasoning block has its own wrapper
+				return (
+					<ReasoningBlock
+						content={messageText}
+						ts={message.ts}
+						isStreaming={message.partial ?? false}
+						isLast={isLast}
+					/>
+				)
 			}
 			case "api_req_finished":
 			case "checkpoint_saved":

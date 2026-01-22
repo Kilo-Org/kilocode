@@ -84,6 +84,21 @@ if (process.env.AGENT_CONFIG) {
 }
 ```
 
+### State Management Pattern
+
+The Agent Manager follows a **read-shared, write-isolated** pattern:
+
+- **Read**: Get config (models, API settings) from extension via `provider.getState()`
+- **Write**: Inject state via `AGENT_CONFIG` env var when spawning - each agent gets isolated config
+
+```typescript
+fork(agentRuntimePath, [], {
+  env: { AGENT_CONFIG: JSON.stringify({ workspace, providerSettings, mode, sessionId }) }
+})
+```
+
+This ensures parallel agents have independent state with no race conditions or file I/O conflicts.
+
 ## Build Commands
 
 ```bash

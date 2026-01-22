@@ -75,7 +75,9 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer invouwen",
-		"copyCommand": "Opdracht kopiëren"
+		"copyCommand": "Opdracht kopiëren",
+		"thinking": "Denkt na",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",
