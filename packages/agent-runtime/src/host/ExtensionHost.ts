@@ -10,6 +10,7 @@ export interface ExtensionHostOptions {
 	extensionRootPath: string // Root path for extension assets
 	vscodeAppRoot?: string // VS Code app root path (for finding bundled binaries like ripgrep)
 	identity?: IdentityInfo // Identity information for VSCode environment
+	mode?: string // Initial mode slug (e.g., "code", "architect", "debug")
 	customModes?: ModeConfig[] // Custom modes configuration
 	appendSystemPrompt?: string // Custom text to append to system prompt
 	appName?: string // App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0')
@@ -800,11 +801,14 @@ export class ExtensionHost extends EventEmitter {
 		}
 
 		// Create initial state that matches the extension's expected structure
+		const initialMode = this.options.mode || "code"
+		logs.info(`Setting initial mode to: ${initialMode}`, "ExtensionHost")
+
 		this.currentState = {
 			version: "1.0.0",
 			apiConfiguration,
 			chatMessages: [],
-			mode: "code",
+			mode: initialMode,
 			customModes,
 			taskHistoryFullLength: 0,
 			taskHistoryVersion: 0,
