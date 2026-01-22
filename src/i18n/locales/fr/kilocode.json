@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La réponse du modèle s'est terminée de manière inattendue (aucun message d'assistant). Cela peut être un signe de limitation du taux de requêtes.",
 		"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}",
 		"maxCompletionTokens": "Le nombre maximum de jetons de complétion a été atteint.",
+		"contentFilter": "La requête a été bloquée par le filtre de contenu.",
 		"disableApplyDiff": "Si cette erreur persiste, veuillez désactiver l'Édition par Différences dans les Paramètres Avancés.",
 		"disableEditFile": "Si cette erreur persiste, veuillez désactiver la fonctionnalité expérimentale Application Rapide."
 	},

@@ -9,6 +9,7 @@ import BottomButton from "../BottomButton"
 import KiloRulesWorkflowsView from "./KiloRulesWorkflowsView"
 import ModesView from "@src/components/modes/ModesView"
 import McpView from "@src/components/mcp/McpView"
+import InstalledSkillsView from "@src/components/kilocode/settings/InstalledSkillsView"
 
 const KiloRulesToggleModal: React.FC = () => {
 	const { t } = useTranslation()
@@ -18,6 +19,7 @@ const KiloRulesToggleModal: React.FC = () => {
 		t("kilocode:rules.agentBehaviourTypes.workflows"),
 		t("kilocode:rules.agentBehaviourTypes.mcps"),
 		t("kilocode:rules.agentBehaviourTypes.modes"),
+		t("kilocode:rules.agentBehaviourTypes.skills"),
 	].join(", ")
 
 	const [isVisible, setIsVisible] = useState(false)
@@ -26,7 +28,7 @@ const KiloRulesToggleModal: React.FC = () => {
 	const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 	const [arrowPosition, setArrowPosition] = useState(0)
 	const [menuPosition, setMenuPosition] = useState(0)
-	const [currentView, setCurrentView] = useState<"modes" | "mcp" | "rule" | "workflow">("rule")
+	const [currentView, setCurrentView] = useState<"modes" | "mcp" | "rule" | "workflow" | "skills">("rule")
 
 	useClickAway(modalRef, () => {
 		setIsVisible(false)
@@ -109,6 +111,11 @@ const KiloRulesToggleModal: React.FC = () => {
 								onClick={() => setCurrentView("workflow")}>
 								{t("kilocode:rules.tabs.workflows")}
 							</StyledTabButton>
+							<StyledTabButton
+								$isActive={currentView === "skills"}
+								onClick={() => setCurrentView("skills")}>
+								{t("kilocode:settings.sections.skills")}
+							</StyledTabButton>
 						</div>
 					</div>
 
@@ -124,6 +131,7 @@ const KiloRulesToggleModal: React.FC = () => {
 						{currentView === "mcp" && <McpView hideHeader onDone={() => {}} />}
 						{currentView === "rule" && <KiloRulesWorkflowsView type="rule" />}
 						{currentView === "workflow" && <KiloRulesWorkflowsView type="workflow" />}
+						{currentView === "skills" && <InstalledSkillsView />}
 					</div>
 				</div>
 			)}
