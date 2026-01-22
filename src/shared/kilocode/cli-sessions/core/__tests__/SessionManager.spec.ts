@@ -299,7 +299,18 @@ describe("SessionManager", () => {
 
 			await manager.restoreSession("session-123")
 
-			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", false, undefined)
+			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", undefined)
+		})
+
+		it("restoreSession passes options to lifecycleService", async () => {
+			mockLifecycleService.restoreSession.mockResolvedValue(undefined)
+
+			await manager.restoreSession("session-123", { rethrowError: true, skipGitRestore: true })
+
+			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", {
+				rethrowError: true,
+				skipGitRestore: true,
+			})
 		})
 
 		it("shareSession delegates to lifecycleService", async () => {
@@ -324,7 +335,17 @@ describe("SessionManager", () => {
 
 			await manager.forkSession("share-or-session-123")
 
-			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", false, undefined)
+			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", undefined)
+		})
+
+		it("forkSession passes rethrowError option to lifecycleService", async () => {
+			mockLifecycleService.forkSession.mockResolvedValue(undefined)
+
+			await manager.forkSession("share-or-session-123", { rethrowError: true })
+
+			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", {
+				rethrowError: true,
+			})
 		})
 
 		it("getSessionFromTask delegates to lifecycleService", async () => {

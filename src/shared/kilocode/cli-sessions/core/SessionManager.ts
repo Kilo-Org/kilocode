@@ -47,6 +47,11 @@ export interface RestoreSessionOptions {
 	 * Useful when you want to resume a session without modifying the working directory.
 	 */
 	skipGitRestore?: boolean | undefined
+	/**
+	 * Whether to rethrow errors instead of catching them.
+	 * @default false
+	 */
+	rethrowError?: boolean | undefined
 }
 
 export interface SessionManagerDependencies extends TrpcClientDependencies {
@@ -219,11 +224,10 @@ export class SessionManager {
 	 * Delegates to SessionLifecycleService.
 	 *
 	 * @param sessionId - The session ID to restore
-	 * @param rethrowError - Whether to rethrow errors (default: false)
-	 * @param options - Optional restore options (e.g., skipGitRestore)
+	 * @param options - Optional restore options (e.g., skipGitRestore, rethrowError)
 	 */
-	async restoreSession(sessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
-		return this.lifecycleService.restoreSession(sessionId, rethrowError, options)
+	async restoreSession(sessionId: string, options?: RestoreSessionOptions): Promise<void> {
+		return this.lifecycleService.restoreSession(sessionId, options)
 	}
 
 	/**
@@ -246,12 +250,14 @@ export class SessionManager {
 	 * Forks a session by share ID or session ID.
 	 * Delegates to SessionLifecycleService.
 	 *
+	 * Note: Forked sessions always skip git restore since the git state is from
+	 * the original author's environment and wouldn't apply to this workspace.
+	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
-	 * @param rethrowError - Whether to rethrow errors (default: false)
-	 * @param options - Optional restore options (e.g., skipGitRestore)
+	 * @param options - Optional options (only rethrowError is used; skipGitRestore is always true for forks)
 	 */
-	async forkSession(shareOrSessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
-		return this.lifecycleService.forkSession(shareOrSessionId, rethrowError, options)
+	async forkSession(shareOrSessionId: string, options?: Pick<RestoreSessionOptions, "rethrowError">): Promise<void> {
+		return this.lifecycleService.forkSession(shareOrSessionId, options)
 	}
 
 	/**

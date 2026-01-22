@@ -52,7 +52,7 @@ program
 	.option("-M, --model <model>", "Override model for the selected provider")
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
-	.option("--no-git-restore", "Resume session without applying git changes (requires --session or --fork)")
+	.option("--no-git-restore", "Resume session without applying git changes (requires --session)")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
 	.option("--append-system-prompt-file <path>", "Read custom instructions from a file to append to the system prompt")
@@ -154,10 +154,11 @@ program
 			process.exit(1)
 		}
 
-		// Validate that --no-git-restore requires --session or --fork
+		// Validate that --no-git-restore requires --session
 		// Note: Commander.js converts --no-git-restore to options.gitRestore = false
-		if (options.gitRestore === false && !options.session && !options.fork) {
-			console.error("Error: --no-git-restore option requires --session or --fork flag")
+		// Fork always skips git restore, so --no-git-restore is not applicable
+		if (options.gitRestore === false && !options.session) {
+			console.error("Error: --no-git-restore option requires --session flag")
 			process.exit(1)
 		}
 

@@ -4271,7 +4271,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService?.forkSession(message.shareId, true)
+				await sessionService?.forkSession(message.shareId, { rethrowError: true })
 
 				await provider.postStateToWebview()
 
@@ -4293,7 +4293,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService?.restoreSession(message.sessionId, true)
+				await sessionService?.restoreSession(message.sessionId, { rethrowError: true })
 
 				await provider.postStateToWebview()
 			} catch (error) {

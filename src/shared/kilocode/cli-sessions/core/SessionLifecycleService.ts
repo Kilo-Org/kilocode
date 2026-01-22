@@ -99,7 +99,7 @@ export class SessionLifecycleService {
 				sessionId: lastSession.sessionId,
 			})
 
-			await this.restoreSession(lastSession.sessionId, true)
+			await this.restoreSession(lastSession.sessionId, { rethrowError: true })
 
 			this.logger.info("Successfully restored persisted session", LOG_SOURCES.SESSION_LIFECYCLE, {
 				sessionId: lastSession.sessionId,
@@ -118,10 +118,9 @@ export class SessionLifecycleService {
 	 * Restores a session by ID from the cloud.
 	 *
 	 * @param sessionId - The session ID to restore
-	 * @param rethrowError - Whether to rethrow errors (default: false)
-	 * @param options - Optional restore options (e.g., skipGitRestore)
+	 * @param options - Optional restore options (e.g., skipGitRestore, rethrowError)
 	 */
-	async restoreSession(sessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
+	async restoreSession(sessionId: string, options?: RestoreSessionOptions): Promise<void> {
 		try {
 			this.logger.info("Restoring session", LOG_SOURCES.SESSION_LIFECYCLE, { sessionId })
 
@@ -292,7 +291,7 @@ export class SessionLifecycleService {
 				sessionId,
 			})
 
-			if (rethrowError) {
+			if (options?.rethrowError) {
 				throw error
 			}
 		}
@@ -339,17 +338,24 @@ export class SessionLifecycleService {
 	/**
 	 * Forks a session by share ID or session ID.
 	 *
+	 * Note: Forked sessions always skip git restore since the git state is from
+	 * the original author's environment and wouldn't apply to this workspace.
+	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
-	 * @param rethrowError - Whether to rethrow errors (default: false)
-	 * @param options - Optional restore options (e.g., skipGitRestore)
+	 * @param options - Optional options (only rethrowError is used; skipGitRestore is always true for forks)
 	 */
-	async forkSession(shareOrSessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
+	async forkSession(shareOrSessionId: string, options?: Pick<RestoreSessionOptions, "rethrowError">): Promise<void> {
 		const { session_id } = await this.sessionClient.fork({
 			share_or_session_id: shareOrSessionId,
 			created_on_platform: this.platform,
 		})
 
-		await this.restoreSession(session_id, rethrowError, options)
+		// Always skip git restore for forked sessions - the git state is from
+		// the original author's environment and wouldn't apply to this workspace
+		await this.restoreSession(session_id, {
+			rethrowError: options?.rethrowError,
+			skipGitRestore: true,
+		})
 	}
 
 	/**
