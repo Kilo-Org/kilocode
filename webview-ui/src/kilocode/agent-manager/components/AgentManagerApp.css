@@ -495,6 +495,61 @@
 	border-radius: 3px;
 }
 
+/* Reasoning Block */
+.am-reasoning-block {
+	padding: 10px 20px;
+}
+
+.am-reasoning-block:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.am-reasoning-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	user-select: none;
+	padding-right: 8px;
+}
+
+.am-reasoning-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--vscode-foreground);
+}
+
+.am-reasoning-elapsed {
+	font-size: calc(var(--vscode-font-size) * 0.85);
+	color: var(--vscode-descriptionForeground);
+	margin-top: 1px;
+}
+
+.am-reasoning-content {
+	border-left: 1px solid var(--vscode-descriptionForeground);
+	margin-left: 8px;
+	margin-top: 10px;
+	padding-left: 16px;
+	padding-bottom: 4px;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.8;
+}
+
+.am-reasoning-chevron {
+	transition: transform 0.2s;
+	opacity: 0;
+	color: var(--vscode-descriptionForeground);
+}
+
+.am-reasoning-block:hover .am-reasoning-chevron {
+	opacity: 1;
+}
+
+.am-reasoning-chevron.am-collapsed {
+	transform: rotate(180deg);
+}
+
 /* Forms */
 .am-center-form {
 	display: flex;
