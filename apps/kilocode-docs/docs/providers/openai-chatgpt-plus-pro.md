@@ -14,6 +14,7 @@ sidebar_label: ChatGPT Plus/Pro
 ## Tips and Notes
 
 - **Subscription Required:** You need an active ChatGPT Plus or Pro subscription. This provider won't work with free ChatGPT accounts. See [OpenAI's ChatGPT plans](https://openai.com/chatgpt/pricing) for more information.
+- **Authentication Errors:** If you receive a CSRF or other error when completing OAuth authentication, ensure you do not have another application already listening on port 1455. You can check on Linux and Mac by using `lsof -i :1455`.
 - **No API Costs:** Usage through this provider counts against your ChatGPT subscription, not separately billed API usage.
 - **Sign Out:** To disconnect, use the "Sign Out" button in the provider settings.
 
