@@ -58,6 +58,24 @@ Capture these metrics per LLM API call:
 - Success / Failure
 - Error type and message (if failed)
 - Token counts
+- Error classification (see below)
+
+#### Error Classification
+
+Errors should be classified to distinguish between system issues (actionable by us) and user-attributable issues (not actionable by us):
+
+| Category         | Description                          | Examples                                                   | Actionable |
+| ---------------- | ------------------------------------ | ---------------------------------------------------------- | ---------- |
+| **System Error** | Infrastructure or provider failures  | Provider outages, network failures, internal server errors | Yes        |
+| **Rate Limit**   | Provider-side throttling             | 429 errors, quota exceeded on provider side                | Partially  |
+| **User Error**   | User configuration or account issues | Invalid API key, out of credits, expired subscription      | No         |
+| **Model Error**  | Model-generated invalid output       | Malformed JSON, invalid tool calls, schema violations      | Yes        |
+
+This classification enables:
+
+- Accurate SLO calculations (excluding user errors from error budgets)
+- Targeted alerting (only page for system errors)
+- Better root cause analysis (quickly identify if issue is on our side)
 
 #### Dashboards
 
