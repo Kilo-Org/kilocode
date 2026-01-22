@@ -1,5 +1,5 @@
 ---
-"@roo-code/types": patch
+"kilo-code": patch
 ---
 
-Set default max credits per session to $10
+Set default max cost per session to $10

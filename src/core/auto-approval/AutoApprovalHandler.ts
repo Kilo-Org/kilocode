@@ -105,7 +105,7 @@ export class AutoApprovalHandler {
 			data: string,
 		) => Promise<{ response: ClineAskResponse; text?: string; images?: string[] }>,
 	): Promise<AutoApprovalResult> {
-		const maxCost = state?.allowedMaxCost || Infinity
+		const maxCost = state?.allowedMaxCost ?? 10 // kilocode_change: default to $10 per session
 
 		// Calculate total cost from messages after the last reset point
 		const messagesAfterReset = messages.slice(this.lastResetMessageIndex)
