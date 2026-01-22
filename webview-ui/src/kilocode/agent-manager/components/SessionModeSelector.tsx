@@ -1,5 +1,6 @@
 import React, { useMemo } from "react"
 import { useAtomValue } from "jotai"
+import { useTranslation } from "react-i18next"
 import { DEFAULT_MODE_SLUG } from "@roo-code/types"
 import { availableModesAtom } from "../state/atoms/modes"
 import { sessionsMapAtom } from "../state/atoms/sessions"
@@ -18,6 +19,7 @@ interface SessionModeSelectorProps {
  * Compact design to fit in the toolbar without overflow.
  */
 export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({ sessionId, disabled = false }) => {
+	const { t } = useTranslation("agentManager")
 	const availableModes = useAtomValue(availableModesAtom)
 	const sessionsMap = useAtomValue(sessionsMapAtom)
 
@@ -64,7 +66,7 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({ sessio
 				options={modeOptions}
 				onChange={handleModeChange}
 				disabled={disabled}
-				title="Select Mode"
+				title={t("sessionDetail.selectMode", "Select Mode")}
 				triggerClassName="am-session-mode-trigger"
 				contentClassName="am-session-mode-content"
 				align="end"

@@ -88,7 +88,7 @@ interface ModeChangedMessage {
 	type: "agentManager.modeChanged"
 	sessionId: string
 	mode: string
-	previousMode: string
+	previousMode?: string
 }
 
 type ExtensionMessage =

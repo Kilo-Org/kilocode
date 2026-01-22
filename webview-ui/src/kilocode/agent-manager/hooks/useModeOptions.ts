@@ -15,43 +15,23 @@ interface UseModeOptionsParams {
  * @param params.organizationModesLabel - Optional translated label for organization modes header
  * @returns Array of dropdown options for the mode selector
  */
-export function useModeOptions(params?: UseModeOptionsParams): DropdownOption[] {
+export function useModeOptions(_params?: UseModeOptionsParams): DropdownOption[] {
 	const availableModes = useAtomValue(availableModesAtom)
-	const organizationModesLabel = params?.organizationModesLabel ?? "Organization Modes"
+	// TODO: Re-enable when organization modes are supported
+	// const organizationModesLabel = params?.organizationModesLabel ?? "Organization Modes"
 
 	return useMemo(() => {
 		if (!availableModes || availableModes.length === 0) return []
 
 		const opts: DropdownOption[] = []
 
-		// Group organization modes separately if any exist
-		const organizationModes = availableModes.filter((mode) => mode.source === "organization")
+		// TODO: Organization modes are temporarily disabled in Agent Manager
+		// They require additional work to properly pass API configuration to agent processes
+		// See: https://github.com/Kilo-Org/kilocode/issues/XXXX
+		// const organizationModes = availableModes.filter((mode) => mode.source === "organization")
 		const otherModes = availableModes.filter((mode) => mode.source !== "organization")
 
-		// Add organization modes section if any exist
-		if (organizationModes.length > 0) {
-			opts.push({
-				value: "org-header",
-				label: organizationModesLabel,
-				disabled: true,
-				type: DropdownOptionType.SHORTCUT,
-			})
-			opts.push(
-				...organizationModes.map((mode) => ({
-					value: mode.slug,
-					label: mode.name,
-					description: mode.description,
-					type: DropdownOptionType.ITEM,
-				})),
-			)
-			opts.push({
-				value: "sep-org",
-				label: "separator",
-				type: DropdownOptionType.SEPARATOR,
-			})
-		}
-
-		// Add other modes
+		// Add other modes (excluding organization modes for now)
 		opts.push(
 			...otherModes.map((mode) => ({
 				value: mode.slug,
@@ -62,5 +42,5 @@ export function useModeOptions(params?: UseModeOptionsParams): DropdownOption[] 
 		)
 
 		return opts
-	}, [availableModes, organizationModesLabel])
+	}, [availableModes])
 }
