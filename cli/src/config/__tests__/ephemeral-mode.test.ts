@@ -82,6 +82,14 @@ describe("Ephemeral Mode", () => {
 			// No KILO_PROVIDER_TYPE set, so env config doesn't exist
 			expect(isEphemeralMode()).toBe(false)
 		})
+
+		it("should return false when env var is undefined and env config exists", () => {
+			setEphemeralMode(false)
+			// KILO_EPHEMERAL_MODE is not set (undefined)
+			process.env.KILO_PROVIDER_TYPE = "anthropic"
+			// Ephemeral mode should be opt-in, not enabled by default
+			expect(isEphemeralMode()).toBe(false)
+		})
 	})
 
 	describe("integration with config persistence", () => {
