@@ -342,8 +342,8 @@ export class SessionLifecycleService {
 	/**
 	 * Forks a session by share ID or session ID.
 	 *
-	 * Note: Forked sessions always restore git state since the exact git context
-	 * is required to continue the forked session properly.
+	 * Note: Forked sessions attempt to restore git state but will continue
+	 * with the current HEAD if git restore fails (same behavior as --session).
 	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
 	 */
@@ -353,11 +353,10 @@ export class SessionLifecycleService {
 			created_on_platform: this.platform,
 		})
 
-		// Always restore git state for forked sessions - the exact git context
-		// is required to continue the forked session properly
+		// Attempt to restore git state for forked sessions
+		// If git restore fails, continue with current HEAD (throwOnGitError defaults to false)
 		await this.restoreSession(session_id, {
 			rethrowError: true,
-			throwOnGitError: true,
 		})
 	}
 

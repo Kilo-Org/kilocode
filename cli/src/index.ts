@@ -156,7 +156,7 @@ program
 
 		// Validate that --no-git-restore requires --session
 		// Note: Commander.js converts --no-git-restore to options.gitRestore = false
-		// Fork always restores git state (required for exact context), so --no-git-restore is not applicable
+		// Fork attempts git restore but continues with current HEAD on failure, so --no-git-restore is not applicable
 		if (options.gitRestore === false && !options.session) {
 			console.error("Error: --no-git-restore option requires --session flag")
 			process.exit(1)
