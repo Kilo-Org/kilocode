@@ -598,8 +598,15 @@ function autoCompleteOrphanedPartialTools(messages: ExtensionChatMessage[]): Ext
 		}
 
 		// Condition 2: Check if the tool message has non-empty content
-		// Tool messages store their content in the 'text' field
-		const hasContent = msg.text && msg.text.trim().length > 0
+		// Tool messages store their content as JSON in the 'text' field with a 'content' property
+		let hasContent = false
+		try {
+			const parsed = JSON.parse(msg.text || "{}")
+			hasContent = parsed.content && parsed.content.trim().length > 0
+		} catch {
+			// If parsing fails, fall back to checking text directly
+			hasContent = Boolean(msg.text && msg.text.trim().length > 0)
+		}
 
 		// If either condition is true, mark the partial tool as complete
 		if (hasSubsequentMessage || hasContent) {
