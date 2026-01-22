@@ -30,6 +30,8 @@ import { DEFAULT_HEADERS } from "./constants" // kilocode-change
 // Get extension version for User-Agent header
 const extensionVersion: string = require("../../package.json").version ?? "unknown"
 
+const DEFAULT_CODEX_INSTRUCTIONS = "You are a helpful assistant." // kilocode_change
+
 export type OpenAiCodexModel = ReturnType<OpenAiCodexHandler["getModel"]>
 
 /**
@@ -298,7 +300,7 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 			input: formattedInput,
 			stream: true,
 			store: false,
-			instructions: systemPrompt,
+			instructions: this.resolveInstructions(systemPrompt), // kilocode_change
 			// Only include encrypted reasoning content when reasoning effort is set
 			...(reasoningEffort ? { include: ["reasoning.encrypted_content"] } : {}),
 			...(reasoningEffort
@@ -335,6 +337,15 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 
 		return body
 	}
+
+	// kilocode_change start
+	private resolveInstructions(systemPrompt?: string): string {
+		if (systemPrompt && systemPrompt.trim().length > 0) {
+			return systemPrompt
+		}
+		return DEFAULT_CODEX_INSTRUCTIONS
+	}
+	// kilocode_change end
 
 	private async *executeRequest(
 		requestBody: any,
@@ -1040,8 +1051,9 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 						content: [{ type: "input_text", text: prompt }],
 					},
 				],
-				stream: false,
+				stream: true, // kilocode_change
 				store: false,
+				instructions: this.resolveInstructions(), // kilocode_change
 				...(reasoningEffort ? { include: ["reasoning.encrypted_content"] } : {}),
 			}
 
@@ -1086,25 +1098,20 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 				)
 			}
 
-			const responseData = await response.json()
+			// kilocode_change start
+			if (!response.body) {
+				throw new Error(t("common:errors.openAiCodex.noResponseBody"))
+			}
 
-			if (responseData?.output && Array.isArray(responseData.output)) {
-				for (const outputItem of responseData.output) {
-					if (outputItem.type === "message" && outputItem.content) {
-						for (const content of outputItem.content) {
-							if (content.type === "output_text" && content.text) {
-								return content.text
-							}
-						}
-					}
+			let text = ""
+			for await (const chunk of this.handleStreamResponse(response.body, model)) {
+				if (chunk.type === "text") {
+					text += chunk.text
 				}
 			}
 
-			if (responseData?.text) {
-				return responseData.text
-			}
-
-			return ""
+			return text
+			// kilocode_change end
 		} catch (error) {
 			const errorModel = this.getModel()
 			const errorMessage = error instanceof Error ? error.message : String(error)
