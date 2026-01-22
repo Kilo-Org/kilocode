@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Режим організації",
-		"description": "Цей режим надає твоя організація і його не можна редагувати тут. Щоб змінити цей режим, відкрий Kilo Code Dashboard.",
+		"description": "Цей режим надає твоя організація і його не можна редагувати тут. Щоб змінити цей режим, відкрий <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Режими організації не можна редагувати"
 	},
 	"tools": {

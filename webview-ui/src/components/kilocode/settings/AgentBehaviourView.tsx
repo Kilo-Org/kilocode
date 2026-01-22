@@ -55,13 +55,7 @@ const AgentBehaviourView = () => {
 
 			<Section>
 				{/* Tab buttons */}
-				<div
-					style={{
-						display: "flex",
-						gap: "1px",
-						padding: "0 20px 0 20px",
-						borderBottom: "1px solid var(--vscode-panel-border)",
-					}}>
+				<div className="flex flex-wrap gap-[1px] px-5 border-b border-vscode-panel-border">
 					<TabButton isActive={activeTab === "modes"} onClick={() => setActiveTab("modes")}>
 						{t("settings:sections.modes")}
 					</TabButton>
@@ -80,7 +74,7 @@ const AgentBehaviourView = () => {
 				</div>
 
 				{/* Content */}
-				<div style={{ width: "100%" }}>
+				<div className="w-full">
 					{activeTab === "modes" && <ModesView hideHeader />}
 					{activeTab === "mcp" && <McpView hideHeader onDone={() => {}} />}
 					{activeTab === "rules" && <KiloRulesWorkflowsView type="rule" />}
