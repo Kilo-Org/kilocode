@@ -139,7 +139,7 @@ Webhook triggers are accessible from the main sidebar with an entry named **Webh
 
 ### Configuration
 
-Webhook triggers utilize [agent environment profiles](/docs/advanced-usage/cloud-agent#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+Webhook triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
 
 Webhook triggers do not support manual env var or setup command overrides at this time.
 
