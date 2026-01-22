@@ -299,7 +299,7 @@ describe("SessionManager", () => {
 
 			await manager.restoreSession("session-123")
 
-			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", false)
+			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", false, undefined)
 		})
 
 		it("shareSession delegates to lifecycleService", async () => {
@@ -324,7 +324,7 @@ describe("SessionManager", () => {
 
 			await manager.forkSession("share-or-session-123")
 
-			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", false)
+			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", false, undefined)
 		})
 
 		it("getSessionFromTask delegates to lifecycleService", async () => {
