@@ -1194,14 +1194,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 			} else {
 				this.log(sessionId, "No changes to commit")
 				if (branch) {
-					void vscode.window.showInformationMessage(
-						`Parallel mode complete (no changes). Branch: ${branch}`,
-						"Copy Branch Name",
-					).then((selection) => {
-						if (selection === "Copy Branch Name") {
-							void vscode.env.clipboard.writeText(branch)
-						}
-					})
+					void vscode.window
+						.showInformationMessage(
+							`Parallel mode complete (no changes). Branch: ${branch}`,
+							"Copy Branch Name",
+						)
+						.then((selection) => {
+							if (selection === "Copy Branch Name") {
+								void vscode.env.clipboard.writeText(branch)
+							}
+						})
 				}
 			}
 		} catch (error) {
@@ -1425,6 +1427,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Determine the mode to use for resume: prefer session metadata, fall back to local session mode
+		const resumeMode = sessionData?.metadata?.mode || session?.mode
+		if (resumeMode) {
+			this.outputChannel.appendLine(`[AgentManager] Resuming with mode: ${resumeMode}`)
+		}
+
 		// Handle local session with parallel mode
 		if (session?.parallelMode?.enabled && session.parallelMode.branch) {
 			const worktreeInfo = await this.prepareWorktreeForResume(session)
@@ -1438,6 +1446,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					images,
 					sessionData,
 					model: session.model,
+					mode: resumeMode ?? undefined,
 				})
 				return
 			}
@@ -1454,6 +1463,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			images,
 			sessionData,
 			model: session?.model,
+			mode: resumeMode ?? undefined,
 		})
 	}
 
