@@ -284,6 +284,60 @@ const App = () => {
 	// Tell the extension that we are ready to receive messages.
 	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
 
+	// Accessibility: Hide Radix UI focus management iframes from screen readers
+	useEffect(() => {
+		const isFocusIframe = (element: Element): boolean => {
+			if (element.tagName !== "IFRAME") return false
+			const src = element.getAttribute("src")
+			const style = element.getAttribute("style") || ""
+			// Radix UI focus management iframes are usually about:blank and have specific styles
+			return (
+				src === "about:blank" ||
+				(style.includes("position: absolute") && style.includes("z-index: -1")) ||
+				(style.includes("background: transparent") &&
+					style.includes("border: none") &&
+					style.includes("z-index: -1"))
+			)
+		}
+
+		const hideFocusIframes = () => {
+			const iframes = document.querySelectorAll("iframe")
+			iframes.forEach((iframe) => {
+				if (isFocusIframe(iframe) && !iframe.hasAttribute("aria-hidden")) {
+					iframe.setAttribute("aria-hidden", "true")
+				}
+			})
+		}
+
+		// Hide existing iframes
+		hideFocusIframes()
+
+		// Watch for new iframes
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				mutation.addedNodes.forEach((node) => {
+					if (node.nodeType === Node.ELEMENT_NODE) {
+						const element = node as Element
+						if (isFocusIframe(element)) {
+							element.setAttribute("aria-hidden", "true")
+						}
+						// Also check child iframes
+						const iframes = element.querySelectorAll("iframe")
+						iframes.forEach((iframe) => {
+							if (isFocusIframe(iframe)) {
+								iframe.setAttribute("aria-hidden", "true")
+							}
+						})
+					}
+				})
+			})
+		})
+
+		observer.observe(document.body, { childList: true, subtree: true })
+
+		return () => observer.disconnect()
+	}, [])
+
 	// Initialize source map support for better error reporting
 	useEffect(() => {
 		// Initialize source maps for better error reporting in production

@@ -1812,7 +1812,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				</div>
 			)} */}
 
-			<div id="roo-portal" />
+			<div id="roo-portal" aria-hidden="true" />
 			{/* kilocode_change: disable  */}
 			{/* <CloudUpsellDialog open={isUpsellOpen} onOpenChange={closeUpsell} onConnect={handleConnect} /> */}
 		</div>
