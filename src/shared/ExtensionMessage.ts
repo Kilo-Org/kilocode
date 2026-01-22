@@ -209,8 +209,6 @@ export interface ExtensionMessage {
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 		| "claudeCodeRateLimits"
 		| "customToolsResult"
-		| "modes"
-		| "taskWithAggregatedCosts"
 		| "openAiCodexRateLimits"
 	text?: string
 	// kilocode_change start
