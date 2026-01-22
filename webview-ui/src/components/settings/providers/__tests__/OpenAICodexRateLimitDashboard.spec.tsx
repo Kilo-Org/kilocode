@@ -2,6 +2,29 @@ import { render, screen, waitFor } from "@/utils/test-utils"
 
 import { OpenAICodexRateLimitDashboard } from "../OpenAICodexRateLimitDashboard"
 
+vi.mock("@src/i18n/TranslationContext", () => ({
+	useAppTranslation: () => ({
+		t: (key: string, options?: Record<string, any>) => {
+			switch (key) {
+				case "settings:providers.openAiCodexRateLimits.title":
+					return `Usage Limits for Codex${options?.planLabel ?? ""}`
+				case "settings:providers.openAiCodexRateLimits.plan.withType":
+					return ` (${options?.planType ?? ""})`
+				case "settings:providers.openAiCodexRateLimits.plan.default":
+					return ""
+				case "settings:providers.openAiCodexRateLimits.window.fiveHour":
+					return "5h limit"
+				case "settings:providers.openAiCodexRateLimits.window.weekly":
+					return "Weekly limit"
+				case "settings:providers.openAiCodexRateLimits.usedPercent":
+					return `${options?.percent ?? ""}% used`
+				default:
+					return key
+			}
+		},
+	}),
+}))
+
 const { postMessageMock } = vi.hoisted(() => ({
 	postMessageMock: vi.fn(),
 }))
