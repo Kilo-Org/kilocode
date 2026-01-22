@@ -10,6 +10,7 @@ export interface ExtensionHostOptions {
 	extensionRootPath: string // Root path for extension assets
 	vscodeAppRoot?: string // VS Code app root path (for finding bundled binaries like ripgrep)
 	identity?: IdentityInfo // Identity information for VSCode environment
+	mode?: string // Initial mode slug (e.g., "code", "architect", "debug")
 	customModes?: ModeConfig[] // Custom modes configuration
 	appendSystemPrompt?: string // Custom text to append to system prompt
 	appName?: string // App name for API identification (e.g., 'wrapper|agent-manager|cli|1.0.0')
@@ -782,13 +783,33 @@ export class ExtensionHost extends EventEmitter {
 					kilocodeOrganizationId: "",
 				}
 
+		const customModes = this.options.customModes || []
+		const customModeSlugs = customModes.map((m) => `${m.slug}(${m.source || "local"})`).join(", ")
+		logs.info(`ExtensionHost received ${customModes.length} custom modes: [${customModeSlugs}]`, "ExtensionHost")
+
+		// Store customModes in globalState so CustomModesManager can find organization modes
+		// This is critical for organization modes to work in agent processes
+		if (this.vscodeAPI?.context?.globalState && customModes.length > 0) {
+			this.vscodeAPI.context.globalState.update("customModes", customModes).catch((error) => {
+				logs.warn("Failed to store customModes in globalState", "ExtensionHost", { error })
+			})
+			logs.info(`Stored ${customModes.length} custom modes in globalState`, "ExtensionHost")
+		} else if (customModes.length === 0) {
+			logs.info("No custom modes to store in globalState", "ExtensionHost")
+		} else {
+			logs.warn("Cannot store customModes - globalState not available", "ExtensionHost")
+		}
+
 		// Create initial state that matches the extension's expected structure
+		const initialMode = this.options.mode || "code"
+		logs.info(`Setting initial mode to: ${initialMode}`, "ExtensionHost")
+
 		this.currentState = {
 			version: "1.0.0",
 			apiConfiguration,
 			chatMessages: [],
-			mode: "code",
-			customModes: this.options.customModes || [],
+			mode: initialMode,
+			customModes,
 			taskHistoryFullLength: 0,
 			taskHistoryVersion: 0,
 			renderContext: "cli",
@@ -1192,11 +1213,7 @@ export class ExtensionHost extends EventEmitter {
 		)
 
 		// 2. Write task files to disk
-		await this.writeTaskHistory(
-			resumeData.sessionId,
-			resumeData.uiMessages,
-			resumeData.apiConversationHistory,
-		)
+		await this.writeTaskHistory(resumeData.sessionId, resumeData.uiMessages, resumeData.apiConversationHistory)
 
 		logs.info("Task history pre-seeded successfully", "ExtensionHost")
 	}
@@ -1206,12 +1223,7 @@ export class ExtensionHost extends EventEmitter {
 	 * This is required before calling showTaskWithId, as the extension looks up
 	 * the task in taskHistory to get metadata before loading from files.
 	 */
-	public async addHistoryItemForResume(
-		taskId: string,
-		task: string,
-		ts: number,
-		mode: string,
-	): Promise<void> {
+	public async addHistoryItemForResume(taskId: string, task: string, ts: number, mode: string): Promise<void> {
 		const globalState = this.vscodeAPI?.context?.globalState
 		if (!globalState) {
 			throw new Error("Cannot add history item: globalState not available")
@@ -1221,14 +1233,15 @@ export class ExtensionHost extends EventEmitter {
 		const taskHistory = (globalState.get("taskHistory") as unknown[]) || []
 
 		// Check if this task already exists in history
-		const existingIndex = taskHistory.findIndex(
-			(item: unknown) => (item as { id?: string }).id === taskId
-		)
+		const existingIndex = taskHistory.findIndex((item: unknown) => (item as { id?: string }).id === taskId)
 
 		// Create the HistoryItem with minimal required fields
 		const historyItem = {
 			id: taskId,
-			number: existingIndex >= 0 ? (taskHistory[existingIndex] as { number?: number }).number || 0 : taskHistory.length + 1,
+			number:
+				existingIndex >= 0
+					? (taskHistory[existingIndex] as { number?: number }).number || 0
+					: taskHistory.length + 1,
 			ts,
 			task,
 			tokensIn: 0,

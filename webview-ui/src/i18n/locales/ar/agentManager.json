@@ -64,7 +64,9 @@
 		"selectModel": "اختر النموذج",
 		"modelTooltip": "اختر نموذج الذكاء الاصطناعي لهذه الجلسة",
 		"defaultModel": "النموذج الافتراضي",
-		"loadingModels": "جاري التحميل..."
+		"loadingModels": "جاري التحميل...",
+		"selectMode": "اختر الوضع",
+		"modeTooltip": "الوضع: {{mode}}"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",

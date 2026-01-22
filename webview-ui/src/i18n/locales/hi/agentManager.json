@@ -60,7 +60,9 @@
 		"selectModel": "मॉडल चुनें",
 		"modelTooltip": "इस सत्र के लिए कौन सा AI मॉडल उपयोग करना है चुनें",
 		"defaultModel": "डिफ़ॉल्ट मॉडल",
-		"loadingModels": "लोड हो रहा है..."
+		"loadingModels": "लोड हो रहा है...",
+		"selectMode": "मोड चुनें",
+		"modeTooltip": "मोड: {{mode}}"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",

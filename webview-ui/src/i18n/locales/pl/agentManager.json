@@ -62,7 +62,9 @@
 		"selectModel": "Wybierz model",
 		"modelTooltip": "Wybierz, którego modelu AI użyć w tej sesji",
 		"defaultModel": "Domyślny model",
-		"loadingModels": "Ładowanie..."
+		"loadingModels": "Ładowanie...",
+		"selectMode": "Wybierz tryb",
+		"modeTooltip": "Tryb: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",

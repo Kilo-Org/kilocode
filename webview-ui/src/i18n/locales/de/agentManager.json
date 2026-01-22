@@ -60,7 +60,9 @@
 		"selectModel": "Modell auswählen",
 		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
 		"defaultModel": "Standard-Modell",
-		"loadingModels": "Wird geladen..."
+		"loadingModels": "Wird geladen...",
+		"selectMode": "Modus auswählen",
+		"modeTooltip": "Modus: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",

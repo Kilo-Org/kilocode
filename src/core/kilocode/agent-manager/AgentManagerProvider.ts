@@ -27,7 +27,8 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
-import { getModelId, type ProviderSettings } from "@roo-code/types"
+import { getModelId, type ModeConfig, type ProviderSettings } from "@roo-code/types"
+import { DEFAULT_MODE_SLUG, DEFAULT_MODES } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -193,12 +194,28 @@ export class AgentManagerProvider implements vscode.Disposable {
 					eventType: "ask_completion_result",
 				})
 			},
-				onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
-				onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
-				onWorktreeSessionCreated: (sessionId, worktreePath) => {
-					void this.handleWorktreeSessionCreated(sessionId, worktreePath)
-				},
-			}
+			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
+			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
+			onModeChanged: (sessionId, mode, previousMode) => {
+				this.outputChannel.appendLine(
+					`[AgentManager] Mode changed for session ${sessionId}: ${previousMode} -> ${mode}`,
+				)
+				// Update session mode in registry
+				this.registry.updateSessionMode(sessionId, mode)
+				// Notify webview of mode change
+				this.postMessage({
+					type: "agentManager.modeChanged",
+					sessionId,
+					mode,
+					previousMode,
+				})
+				// Also post updated state to ensure UI is in sync
+				this.postStateToWebview()
+			},
+			onWorktreeSessionCreated: (sessionId, worktreePath) => {
+				void this.handleWorktreeSessionCreated(sessionId, worktreePath)
+			},
+		}
 
 		// Pass extension path for agent-runtime resolution in development
 		const extensionPath = this.context.extensionUri.fsPath
@@ -329,6 +346,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					this.postStateToWebview()
 					void this.fetchAndPostRemoteSessions()
 					void this.fetchAndPostAvailableModels()
+					void this.fetchAndPostAvailableModes()
 					break
 				case "agentManager.refreshModels":
 					void this.fetchAndPostAvailableModels(true)
@@ -421,6 +439,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 					// Handle image click from ImageThumbnail component
 					void openImage(message.text as string)
 					break
+				case "agentManager.setMode":
+					void this.setSessionMode(message.sessionId as string, message.mode as string)
+					break
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Error handling message: ${error}`)
@@ -445,7 +466,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		const validatedMessage: StartSessionMessage = parseResult.data
-		const { prompt, parallelMode = false, existingBranch, model, images } = validatedMessage
+		const { prompt, parallelMode = false, existingBranch, model, mode, images } = validatedMessage
 
 		// For agent-runtime, pass base64 images directly (not file paths)
 		// The extension expects base64 data URLs in the format "data:image/png;base64,..."
@@ -471,6 +492,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				mode,
 				images,
 			})
 			return
@@ -489,6 +511,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
+				mode,
 				images, // Send images to all versions
 			})
 
@@ -635,6 +658,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			labelOverride?: string
 			existingBranch?: string
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect")
 			images?: string[] // Image file paths to include with the initial prompt
 		},
 	): Promise<void> {
@@ -701,6 +725,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				worktreeInfo,
 				effectiveWorkspace,
 				model: options?.model,
+				mode: options?.mode,
 				images: options?.images, // Images are sent with prompt via stdin newTask message
 			},
 			onSetupFailed,
@@ -709,6 +734,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
 		const { apiConfiguration } = await this.provider.getState()
+		// Log API configuration details for debugging
+		const hasKilocodeToken = !!apiConfiguration?.kilocodeToken
+		const apiProvider = apiConfiguration?.apiProvider || "none"
+		this.outputChannel.appendLine(
+			`[AgentManager] getApiConfigurationForCli: provider=${apiProvider}, hasKilocodeToken=${hasKilocodeToken}`,
+		)
 		return apiConfiguration
 	}
 
@@ -756,8 +787,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			effectiveWorkspace?: string
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect")
 			images?: string[] // Image file paths to include with the initial prompt
-			sessionData?: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } // For resuming with history
+			sessionData?: {
+				uiMessages: ClineMessage[]
+				apiConversationHistory: unknown[]
+				metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+			} // For resuming with history
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
@@ -783,6 +819,26 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Fetch custom modes (including organization modes) to pass to the agent process
+		// This ensures the agent has access to all mode configurations without needing to fetch them
+		let customModes: ModeConfig[] | undefined
+		try {
+			customModes = await this.provider.customModesManager.getCustomModes()
+			const modeSlugs = customModes.map((m) => `${m.slug}(${m.source || "local"})`).join(", ")
+			this.outputChannel.appendLine(
+				`[AgentManager] Fetched ${customModes.length} custom modes for agent process: [${modeSlugs}]`,
+			)
+			this.outputChannel.appendLine(
+				`[AgentManager] Requested mode for session: ${options.mode || "code"} (default)`,
+			)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to fetch custom modes: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
+
 		// RuntimeProcessHandler uses fork() with agent-runtime, cliPath is ignored
 		this.processHandler.spawnProcess(
 			"", // cliPath not used - RuntimeProcessHandler forks agent-runtime
@@ -791,6 +847,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			{
 				...options,
 				apiConfiguration,
+				customModes,
 				// Pass worktree info for session state tracking
 				worktreeInfo: options.worktreeInfo,
 			},
@@ -1137,14 +1194,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 			} else {
 				this.log(sessionId, "No changes to commit")
 				if (branch) {
-					void vscode.window.showInformationMessage(
-						`Parallel mode complete (no changes). Branch: ${branch}`,
-						"Copy Branch Name",
-					).then((selection) => {
-						if (selection === "Copy Branch Name") {
-							void vscode.env.clipboard.writeText(branch)
-						}
-					})
+					void vscode.window
+						.showInformationMessage(
+							`Parallel mode complete (no changes). Branch: ${branch}`,
+							"Copy Branch Name",
+						)
+						.then((selection) => {
+							if (selection === "Copy Branch Name") {
+								void vscode.env.clipboard.writeText(branch)
+							}
+						})
 				}
 			}
 		} catch (error) {
@@ -1196,6 +1255,27 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// Use buildRuntimeMessage to send base64 images directly (not file paths)
 		const message = this.buildRuntimeMessage(content, images)
 		await this.safeWriteToStdin(sessionId, message, "message")
+	}
+
+	/**
+	 * Set the mode for a running agent session via IPC.
+	 * This sends a "mode" webview message to the agent process which calls handleModeSwitch().
+	 */
+	private async setSessionMode(sessionId: string, mode: string): Promise<void> {
+		if (!this.processHandler.hasStdin(sessionId)) {
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, cannot set mode`)
+			return
+		}
+
+		// Send as a webview message - the extension expects { type: "mode", text: mode }
+		const message = { type: "mode", text: mode }
+		try {
+			await this.processHandler.writeToStdin(sessionId, message)
+			this.outputChannel.appendLine(`[AgentManager] Set mode to ${mode} for session ${sessionId}`)
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : "Unknown error"
+			this.outputChannel.appendLine(`[AgentManager] Failed to set mode for session ${sessionId}: ${errorMsg}`)
+		}
 	}
 
 	/**
@@ -1324,7 +1404,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
 
 		// Fetch full session data for resume (UI messages + API history + metadata)
-		let sessionData: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } | undefined
+		let sessionData:
+			| {
+					uiMessages: ClineMessage[]
+					apiConversationHistory: unknown[]
+					metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+			  }
+			| undefined
 		try {
 			const fetchedData = await this.remoteSessionService.fetchSessionDataForResume(sessionId)
 			if (fetchedData) {
@@ -1341,6 +1427,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Determine the mode to use for resume: prefer session metadata, fall back to local session mode
+		const resumeMode = sessionData?.metadata?.mode || session?.mode
+		if (resumeMode) {
+			this.outputChannel.appendLine(`[AgentManager] Resuming with mode: ${resumeMode}`)
+		}
+
 		// Handle local session with parallel mode
 		if (session?.parallelMode?.enabled && session.parallelMode.branch) {
 			const worktreeInfo = await this.prepareWorktreeForResume(session)
@@ -1354,6 +1446,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					images,
 					sessionData,
 					model: session.model,
+					mode: resumeMode ?? undefined,
 				})
 				return
 			}
@@ -1370,6 +1463,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			images,
 			sessionData,
 			model: session?.model,
+			mode: resumeMode ?? undefined,
 		})
 	}
 
@@ -1607,6 +1701,44 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Fetch available modes from ClineProvider and post to webview
+	 */
+	private async fetchAndPostAvailableModes(): Promise<void> {
+		try {
+			// Get full mode data directly from customModesManager and DEFAULT_MODES
+			// This provides description, iconName, and source which getModes() doesn't include
+			const customModes = await this.provider.customModesManager.getCustomModes()
+			const allModes = [...DEFAULT_MODES, ...customModes]
+			const currentMode = await this.provider.getMode()
+			this.outputChannel.appendLine(
+				`[AgentManager] Fetched ${allModes.length} available modes, current: ${currentMode}`,
+			)
+
+			this.postMessage({
+				type: "agentManager.availableModes",
+				modes: allModes.map((mode) => ({
+					slug: mode.slug,
+					name: mode.name,
+					description: mode.description,
+					iconName: mode.iconName,
+					source: mode.source as "global" | "project" | "organization" | undefined,
+				})),
+				currentMode,
+			})
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Error fetching modes: ${error instanceof Error ? error.message : String(error)}`,
+			)
+			// Send empty modes array on error
+			this.postMessage({
+				type: "agentManager.availableModes",
+				modes: [],
+				currentMode: DEFAULT_MODE_SLUG,
+			})
+		}
+	}
+
+	/**
 	 * Post models to the webview in the expected format.
 	 */
 	private postModelsToWebview(cached: { provider: string; currentModel: string; models: ModelRecord }): void {
@@ -1683,6 +1815,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		const { localServerUrl, csp, reactRefreshScript } = viteConfig
 
+		// Include both shared base styles (index.css with codicons) and agent-manager specific styles
+		const baseStylesUri = getUri(webview, this.context.extensionUri, ["webview-ui", "build", "assets", "index.css"])
 		const stylesUri = getUri(webview, this.context.extensionUri, [
 			"webview-ui",
 			"build",
@@ -1699,6 +1833,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					<meta charset="utf-8">
 					<meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
 					<meta http-equiv="Content-Security-Policy" content="${csp.join("; ")}">
+					<link rel="stylesheet" type="text/css" href="${baseStylesUri}">
 					<link rel="stylesheet" type="text/css" href="${stylesUri}">
 					<title>Agent Manager</title>
 				</head>
