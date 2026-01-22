@@ -54,6 +54,19 @@ export interface RestoreSessionOptions {
 	rethrowError?: boolean | undefined
 }
 
+/**
+ * Options for forking a session.
+ * Note: skipGitRestore is not available here because forked sessions always skip git restore
+ * since the git state is from the original author's environment.
+ */
+export interface ForkSessionOptions {
+	/**
+	 * Whether to rethrow errors instead of catching them.
+	 * @default false
+	 */
+	rethrowError?: boolean | undefined
+}
+
 export interface SessionManagerDependencies extends TrpcClientDependencies {
 	platform: string
 	pathProvider: IPathProvider
@@ -254,9 +267,9 @@ export class SessionManager {
 	 * the original author's environment and wouldn't apply to this workspace.
 	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
-	 * @param options - Optional options (only rethrowError is used; skipGitRestore is always true for forks)
+	 * @param options - Optional options (only rethrowError is available; skipGitRestore is always true for forks)
 	 */
-	async forkSession(shareOrSessionId: string, options?: Pick<RestoreSessionOptions, "rethrowError">): Promise<void> {
+	async forkSession(shareOrSessionId: string, options?: ForkSessionOptions): Promise<void> {
 		return this.lifecycleService.forkSession(shareOrSessionId, options)
 	}
 
