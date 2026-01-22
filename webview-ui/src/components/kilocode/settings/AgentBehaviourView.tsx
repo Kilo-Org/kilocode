@@ -8,6 +8,7 @@ import { Section } from "@src/components/settings/Section"
 import ModesView from "@src/components/modes/ModesView"
 import McpView from "@src/components/mcp/McpView"
 import KiloRulesWorkflowsView from "@src/components/kilocode/rules/KiloRulesWorkflowsView"
+import InstalledSkillsView from "@src/components/kilocode/settings/InstalledSkillsView"
 
 const StyledTabButton = styled.button<{ isActive: boolean }>`
 	background: none;
@@ -40,7 +41,7 @@ const TabButton = ({
 )
 
 const AgentBehaviourView = () => {
-	const [activeTab, setActiveTab] = useState<"modes" | "mcp" | "rules" | "workflows">("modes")
+	const [activeTab, setActiveTab] = useState<"modes" | "mcp" | "rules" | "workflows" | "skills">("modes")
 	const { t } = useAppTranslation()
 
 	return (
@@ -73,6 +74,9 @@ const AgentBehaviourView = () => {
 					<TabButton isActive={activeTab === "workflows"} onClick={() => setActiveTab("workflows")}>
 						{t("kilocode:rules.tabs.workflows")}
 					</TabButton>
+					<TabButton isActive={activeTab === "skills"} onClick={() => setActiveTab("skills")}>
+						{t("kilocode:settings.sections.skills")}
+					</TabButton>
 				</div>
 
 				{/* Content */}
@@ -81,6 +85,7 @@ const AgentBehaviourView = () => {
 					{activeTab === "mcp" && <McpView hideHeader onDone={() => {}} />}
 					{activeTab === "rules" && <KiloRulesWorkflowsView type="rule" />}
 					{activeTab === "workflows" && <KiloRulesWorkflowsView type="workflow" />}
+					{activeTab === "skills" && <InstalledSkillsView />}
 				</div>
 			</Section>
 		</div>

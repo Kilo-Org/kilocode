@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers",
-			"agentBehaviour": "พฤติกรรมของตัวแทน"
+			"agentBehaviour": "พฤติกรรมของตัวแทน",
+			"skills": "ทักษะ"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -155,7 +156,8 @@
 			"rules": "กฎ",
 			"workflows": "เวิร์กโฟลว์",
 			"mcps": "MCPs",
-			"modes": "โหมด"
+			"modes": "โหมด",
+			"skills": "ทักษะ"
 		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"loading": "กำลังโหลดอุปกรณ์ไมโครโฟน...",
 			"noDevices": "ไม่พบอุปกรณ์ไมโครโฟน",
 			"refresh": "รีเฟรช"
+		}
+	},
+	"skills": {
+		"description": "ทักษะให้คำแนะนำเฉพาะทางสำหรับงานเฉพาะ ทักษะจะถูกนำไปใช้โดยอัตโนมัติเมื่อเกี่ยวข้องกับคำขอของคุณ",
+		"noSkills": "ยังไม่มีทักษะที่ติดตั้ง",
+		"projectSkills": "ทักษะโปรเจกต์",
+		"globalSkills": "ทักษะทั่วไป",
+		"deleteDialog": {
+			"title": "ลบทักษะ",
+			"description": "คุณแน่ใจหรือไม่ว่าต้องการลบทักษะ \"{{skillName}}\"? การกระทำนี้ไม่สามารถยกเลิกได้",
+			"cancel": "ยกเลิก",
+			"delete": "ลบ"
 		}
 	}
 }

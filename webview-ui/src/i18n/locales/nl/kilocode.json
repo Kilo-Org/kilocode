@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP-servers",
-			"agentBehaviour": "Agentgedrag"
+			"agentBehaviour": "Agentgedrag",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
@@ -154,7 +155,8 @@
 			"rules": "Regels",
 			"workflows": "Workflows",
 			"mcps": "MCP's",
-			"modes": "Modi"
+			"modes": "Modi",
+			"skills": "Skills"
 		},
 		"ariaLabel": "Kilo Code Regels",
 		"tabs": {
@@ -359,6 +361,18 @@
 			"loading": "Microfoonapparaten laden...",
 			"noDevices": "Geen microfoonapparaten gevonden",
 			"refresh": "Vernieuwen"
+		}
+	},
+	"skills": {
+		"description": "Skills bieden gespecialiseerde instructies voor specifieke taken. Ze worden automatisch toegepast wanneer ze relevant zijn voor je verzoek.",
+		"noSkills": "Geen skills geïnstalleerd",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill Verwijderen",
+			"description": "Weet je zeker dat je de skill \"{{skillName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+			"cancel": "Annuleren",
+			"delete": "Verwijderen"
 		}
 	}
 }

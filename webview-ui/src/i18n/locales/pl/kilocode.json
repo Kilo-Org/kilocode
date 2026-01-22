@@ -32,7 +32,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "Serwery MCP",
-			"agentBehaviour": "Zachowanie agenta"
+			"agentBehaviour": "Zachowanie agenta",
+			"skills": "Umiejętności"
 		},
 		"provider": {
 			"account": "Konto Kilo Code",
@@ -148,7 +149,8 @@
 			"rules": "Reguły",
 			"workflows": "Przepływy Pracy",
 			"mcps": "MCPs",
-			"modes": "Tryby"
+			"modes": "Tryby",
+			"skills": "Umiejętności"
 		},
 		"ariaLabel": "Reguły Kilo Code",
 		"tabs": {
@@ -361,6 +363,18 @@
 			"loading": "Ładowanie urządzeń mikrofonowych...",
 			"refresh": "Odśwież",
 			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
+		}
+	},
+	"skills": {
+		"description": "Umiejętności dostarczają specjalistyczne instrukcje dla konkretnych zadań. Są automatycznie stosowane, gdy są istotne dla twojego zapytania.",
+		"noSkills": "Brak zainstalowanych umiejętności",
+		"projectSkills": "Umiejętności Projektu",
+		"globalSkills": "Umiejętności Globalne",
+		"deleteDialog": {
+			"title": "Usuń Umiejętność",
+			"description": "Czy na pewno chcesz usunąć umiejętność \"{{skillName}}\"? Tej akcji nie można cofnąć.",
+			"cancel": "Anuluj",
+			"delete": "Usuń"
 		}
 	}
 }
