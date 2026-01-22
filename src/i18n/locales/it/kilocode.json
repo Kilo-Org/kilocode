@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La risposta del modello è terminata inaspettatamente (nessun messaggio dell'assistente). Questo potrebbe essere un segno di limitazione del tasso di richieste.",
 		"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}",
 		"maxCompletionTokens": "È stato raggiunto il numero massimo di token di completamento.",
+		"contentFilter": "La richiesta è stata bloccata dal filtro dei contenuti.",
 		"disableApplyDiff": "Se questo errore continua a verificarsi, disabilita Modifica Tramite Diff nelle Impostazioni Avanzate.",
 		"disableEditFile": "Se questo errore continua a verificarsi, disabilita la funzione sperimentale Applicazione Rapida."
 	},

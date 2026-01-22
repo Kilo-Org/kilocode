@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Modo de organización",
-		"description": "Este modo es proporcionado por tu organización y no se puede editar aquí. Para modificar este modo, visita el Kilo Code Dashboard.",
+		"description": "Este modo es proporcionado por tu organización y no se puede editar aquí. Para modificar este modo, visita el <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Los modos de organización no se pueden editar"
 	},
 	"tools": {

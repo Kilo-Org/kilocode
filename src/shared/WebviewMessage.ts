@@ -188,6 +188,7 @@ export interface WebviewMessage {
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
 		| "refreshRules" // kilocode_change
+		| "refreshSkills" // kilocode_change
 		| "toggleRule" // kilocode_change
 		| "createRuleFile" // kilocode_change
 		| "deleteRuleFile" // kilocode_change

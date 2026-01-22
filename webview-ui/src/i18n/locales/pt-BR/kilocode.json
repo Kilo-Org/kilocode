@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "Servidores MCP",
-			"agentBehaviour": "Comportamento do Agente"
+			"agentBehaviour": "Comportamento do Agente",
+			"skills": "Habilidades"
 		},
 		"provider": {
 			"account": "Conta Kilo Code",
@@ -148,7 +149,8 @@
 			"rules": "Regras",
 			"workflows": "Fluxos de Trabalho",
 			"mcps": "MCPs",
-			"modes": "Modos"
+			"modes": "Modos",
+			"skills": "Habilidades"
 		},
 		"ariaLabel": "Regras do Kilo Code",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"description": "Selecione o dispositivo de microfone para conversão de fala em texto",
 			"noDevices": "Nenhum dispositivo de microfone encontrado",
 			"refresh": "Atualizar"
+		}
+	},
+	"skills": {
+		"description": "As habilidades fornecem instruções especializadas para tarefas específicas. Elas são aplicadas automaticamente quando relevantes para sua solicitação.",
+		"noSkills": "Nenhuma habilidade instalada",
+		"projectSkills": "Habilidades do Projeto",
+		"globalSkills": "Habilidades Globais",
+		"deleteDialog": {
+			"title": "Excluir Habilidade",
+			"description": "Tem certeza de que deseja excluir a habilidade \"{{skillName}}\"? Esta ação não pode ser desfeita.",
+			"cancel": "Cancelar",
+			"delete": "Excluir"
 		}
 	}
 }

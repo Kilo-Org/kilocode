@@ -723,9 +723,6 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 					</div>
 
 					<div className="flex items-center gap-1 mb-3">
-						{isOrganizationMode && <OrganizationModeWarning />} {/* kilocode_change start */}
-						{/* Only show name and delete for custom modes that are not organization modes */}
-						{/* kilocode_change end */}
 						{isRenamingMode ? (
 							<>
 								<VSCodeTextField
@@ -929,6 +926,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 							</>
 						)}
 					</div>
+
+					{/* kilocode_change start */}
+					{isOrganizationMode && <OrganizationModeWarning />}
+					{/* kilocode_change end */}
 
 					{/* API Configuration - Moved Here */}
 					<div className="mb-3">

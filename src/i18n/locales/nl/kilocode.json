@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Het model reageerde onverwacht (geen assistent berichten). Dit kan een teken zijn van snelheidsbeperking.",
 		"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat je verbonden bent en bent aangemeld bij de geselecteerde provider.\n\n{{error}}",
 		"maxCompletionTokens": "Het maximum aantal completion tokens is bereikt.",
+		"contentFilter": "Het verzoek is geblokkeerd door het inhoudsfilter.",
 		"disableApplyDiff": "Als deze fout zich blijft voordoen, schakel dan Bewerken via Diffs uit in de Geavanceerde Instellingen.",
 		"disableEditFile": "Als deze fout zich blijft voordoen, schakel dan de experimentele Fast Apply functie uit."
 	},
