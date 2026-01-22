@@ -2924,6 +2924,13 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		// kilocode_change start
+		case "refreshSkills": {
+			await provider.postSkillsDataToWebview()
+			break
+		}
+		// kilocode_change end
+
 		case "toggleRule": {
 			if (message.rulePath && typeof message.enabled === "boolean" && typeof message.isGlobal === "boolean") {
 				await toggleRule(
@@ -3075,6 +3082,45 @@ export const webviewMessageHandler = async (
 			} catch (error) {
 				provider.log(`Claude Code sign out failed: ${error}`)
 				vscode.window.showErrorMessage("Claude Code sign out failed.")
+			}
+			break
+		}
+		case "openAiCodexSignIn": {
+			try {
+				const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+				const authUrl = openAiCodexOAuthManager.startAuthorizationFlow()
+
+				// Open the authorization URL in the browser
+				await vscode.env.openExternal(vscode.Uri.parse(authUrl))
+
+				// Wait for the callback in a separate promise (non-blocking)
+				openAiCodexOAuthManager
+					.waitForCallback()
+					.then(async () => {
+						vscode.window.showInformationMessage("Successfully signed in to OpenAI Codex")
+						await provider.postStateToWebview()
+					})
+					.catch((error) => {
+						provider.log(`OpenAI Codex OAuth callback failed: ${error}`)
+						if (!String(error).includes("timed out")) {
+							vscode.window.showErrorMessage(`OpenAI Codex sign in failed: ${error.message || error}`)
+						}
+					})
+			} catch (error) {
+				provider.log(`OpenAI Codex OAuth failed: ${error}`)
+				vscode.window.showErrorMessage("OpenAI Codex sign in failed.")
+			}
+			break
+		}
+		case "openAiCodexSignOut": {
+			try {
+				const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+				await openAiCodexOAuthManager.clearCredentials()
+				vscode.window.showInformationMessage("Signed out from OpenAI Codex")
+				await provider.postStateToWebview()
+			} catch (error) {
+				provider.log(`OpenAI Codex sign out failed: ${error}`)
+				vscode.window.showErrorMessage("OpenAI Codex sign out failed.")
 			}
 			break
 		}
@@ -3645,6 +3691,19 @@ export const webviewMessageHandler = async (
 			if (marketplaceManager && message.mpItem && message.mpInstallOptions) {
 				try {
 					await marketplaceManager.removeInstalledMarketplaceItem(message.mpItem, message.mpInstallOptions)
+
+					// kilocode_change start: Force skills refresh after skill deletion
+					// If the removed item is a skill, force a refresh of the SkillsManager
+					// to ensure the cache is updated before sending data to the webview
+					if (message.mpItem.type === "skill") {
+						const skillsManager = provider.getSkillsManager()
+						if (skillsManager) {
+							await skillsManager.discoverSkills()
+						}
+						await provider.postSkillsDataToWebview()
+					}
+					// kilocode_change end
+
 					await provider.postStateToWebview()
 
 					// Send success message to webview

@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Phản hồi của mô hình kết thúc bất ngờ (không có tin nhắn trợ lý). Điều này có thể là dấu hiệu của giới hạn tốc độ.",
 		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}",
 		"maxCompletionTokens": "Đã đạt đến số lượng token hoàn thành tối đa.",
+		"contentFilter": "Yêu cầu đã bị chặn bởi bộ lọc nội dung.",
 		"disableApplyDiff": "Nếu lỗi này tiếp tục xảy ra, vui lòng tắt Chỉnh sửa Thông qua Diffs trong Cài đặt Nâng cao.",
 		"disableEditFile": "Nếu lỗi này tiếp tục xảy ra, vui lòng tắt tính năng thử nghiệm Fast Apply."
 	},
@@ -177,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Phiên bản Kilocode CLI của bạn đã cũ và không hỗ trợ Agent Manager. Vui lòng cập nhật lên phiên bản mới nhất.",
-			"cliNotFound": "Không tìm thấy Kilocode CLI. Vui lòng cài đặt để sử dụng Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI chưa được cấu hình. Chạy 'kilocode auth' để đăng nhập hoặc 'kilocode config' để cấu hình.",
 			"sessionFailed": "Không thể khởi động phiên agent",
 			"sessionFailedWithMessage": "Không thể khởi động phiên agent: {{message}}"

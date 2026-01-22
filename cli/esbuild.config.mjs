@@ -91,6 +91,8 @@ const __dirname = __dirname__(__filename);
 	},
 	external: [
 		// Keep these as external dependencies (will be installed via npm)
+		// NOTE: @kilocode/agent-runtime is intentionally NOT external - it must be bundled
+		// so that import.meta.url in extension-paths.ts resolves to the CLI's dist folder
 		"@anthropic-ai/bedrock-sdk",
 		"@anthropic-ai/sdk",
 		"@anthropic-ai/vertex-sdk",

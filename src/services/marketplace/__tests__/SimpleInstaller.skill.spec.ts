@@ -8,6 +8,7 @@ import * as os from "os"
 import type { SkillMarketplaceItem } from "@roo-code/types"
 import type { CustomModesManager } from "../../../core/config/CustomModesManager"
 import * as path from "path"
+import * as tarballUtils from "../tarball-utils"
 
 vi.mock("fs/promises", () => ({
 	readFile: vi.fn(),
@@ -15,8 +16,13 @@ vi.mock("fs/promises", () => ({
 	mkdir: vi.fn(),
 	rm: vi.fn(),
 	stat: vi.fn(),
+	access: vi.fn(),
+	unlink: vi.fn(),
 }))
-vi.mock("os")
+vi.mock("os", () => ({
+	homedir: vi.fn(),
+	tmpdir: vi.fn(),
+}))
 vi.mock("vscode", () => ({
 	workspace: {
 		workspaceFolders: [
@@ -30,8 +36,12 @@ vi.mock("vscode", () => ({
 }))
 vi.mock("../../../utils/globalContext")
 vi.mock("../../../utils/fs")
+vi.mock("../tarball-utils", () => ({
+	extractTarball: vi.fn(),
+}))
 
 const mockFs = vi.mocked(fs)
+const mockExtractTarball = vi.mocked(tarballUtils.extractTarball)
 
 describe("SimpleInstaller - Skill Installation", () => {
 	let installer: SimpleInstaller
@@ -48,12 +58,12 @@ describe("SimpleInstaller - Skill Installation", () => {
 		installer = new SimpleInstaller(mockContext, mockCustomModesManager)
 		vi.clearAllMocks()
 
-		// Mock mkdir to always succeed
-		mockFs.mkdir.mockResolvedValue(undefined as any)
 		// Mock rm to always succeed
 		mockFs.rm.mockResolvedValue(undefined as any)
 		// Mock os.homedir
 		vi.mocked(os.homedir).mockReturnValue("/home/user")
+		// Mock extractTarball to succeed by default
+		mockExtractTarball.mockResolvedValue(undefined)
 	})
 
 	describe("installSkill", () => {
@@ -64,87 +74,79 @@ describe("SimpleInstaller - Skill Installation", () => {
 			type: "skill",
 			category: "testing",
 			githubUrl: "https://github.com/test/skill",
-			rawUrl: "https://raw.githubusercontent.com/test/skill/main/SKILL.md",
+			content: "https://example.com/skills/test-skill.tar.gz",
 			displayName: "Test Skill",
 			displayCategory: "Testing",
 		}
-
-		const mockSkillContent = `---
-name: test-skill
-description: A test skill for testing
----
-
-# Test Skill
-
-This is a test skill.`
-
-		beforeEach(() => {
-			// Mock global fetch
-			global.fetch = vi.fn()
-		})
 
 		afterEach(() => {
 			vi.restoreAllMocks()
 		})
 
-		it("should install skill to project directory", async () => {
-			// Mock successful fetch
-			vi.mocked(global.fetch).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(mockSkillContent),
-			} as Response)
-			mockFs.writeFile.mockResolvedValueOnce(undefined as any)
-
+		it("should install skill to project directory by calling extractTarball", async () => {
 			const result = await installer.installItem(mockSkillItem, { target: "project" })
 
 			expect(result.filePath).toBe(path.join("/test/workspace", ".kilocode", "skills", "test-skill", "SKILL.md"))
 			expect(result.line).toBe(1)
-			expect(mockFs.mkdir).toHaveBeenCalledWith(
+
+			// Verify extractTarball was called with correct arguments
+			expect(mockExtractTarball).toHaveBeenCalledWith(
+				"https://example.com/skills/test-skill.tar.gz",
 				path.join("/test/workspace", ".kilocode", "skills", "test-skill"),
-				{ recursive: true },
-			)
-			expect(mockFs.writeFile).toHaveBeenCalledWith(
-				path.join("/test/workspace", ".kilocode", "skills", "test-skill", "SKILL.md"),
-				mockSkillContent,
-				"utf-8",
 			)
 		})
 
-		it("should install skill to global directory", async () => {
-			// Mock successful fetch
-			vi.mocked(global.fetch).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(mockSkillContent),
-			} as Response)
-			mockFs.writeFile.mockResolvedValueOnce(undefined as any)
-
+		it("should install skill to global directory by calling extractTarball", async () => {
 			const result = await installer.installItem(mockSkillItem, { target: "global" })
 
 			expect(result.filePath).toBe(path.join("/home/user", ".kilocode", "skills", "test-skill", "SKILL.md"))
-			expect(mockFs.mkdir).toHaveBeenCalledWith(path.join("/home/user", ".kilocode", "skills", "test-skill"), {
-				recursive: true,
-			})
-		})
 
-		it("should throw error when rawUrl is missing", async () => {
-			const noUrlSkill: SkillMarketplaceItem = {
-				...mockSkillItem,
-				rawUrl: undefined as any,
-			}
-
-			await expect(installer.installItem(noUrlSkill, { target: "project" })).rejects.toThrow(
-				"Skill item missing rawUrl",
+			// Verify extractTarball was called with global path
+			expect(mockExtractTarball).toHaveBeenCalledWith(
+				"https://example.com/skills/test-skill.tar.gz",
+				path.join("/home/user", ".kilocode", "skills", "test-skill"),
 			)
 		})
 
-		it("should throw error when fetch fails", async () => {
-			vi.mocked(global.fetch).mockResolvedValueOnce({
-				ok: false,
-				statusText: "Not Found",
-			} as Response)
+		it("should throw error when content (tarball URL) is missing", async () => {
+			const noContentSkill: SkillMarketplaceItem = {
+				...mockSkillItem,
+				content: undefined as any,
+			}
+
+			await expect(installer.installItem(noContentSkill, { target: "project" })).rejects.toThrow(
+				"Skill item missing content (tarball URL)",
+			)
+
+			// extractTarball should not be called
+			expect(mockExtractTarball).not.toHaveBeenCalled()
+		})
+
+		it("should propagate error when extractTarball fails", async () => {
+			const extractionError = new Error("Failed to fetch skill tarball: Not Found")
+			mockExtractTarball.mockRejectedValueOnce(extractionError)
 
 			await expect(installer.installItem(mockSkillItem, { target: "project" })).rejects.toThrow(
-				"Failed to fetch skill content: Not Found",
+				"Failed to fetch skill tarball: Not Found",
+			)
+		})
+
+		it("should propagate extraction errors from extractTarball", async () => {
+			const extractionError = new Error("Extraction failed: corrupted tarball")
+			mockExtractTarball.mockRejectedValueOnce(extractionError)
+
+			await expect(installer.installItem(mockSkillItem, { target: "project" })).rejects.toThrow(
+				"Extraction failed: corrupted tarball",
+			)
+		})
+
+		it("should propagate SKILL.md missing error from extractTarball", async () => {
+			const notFoundError = new Error("ENOENT: no such file or directory") as any
+			notFoundError.code = "ENOENT"
+			mockExtractTarball.mockRejectedValueOnce(notFoundError)
+
+			await expect(installer.installItem(mockSkillItem, { target: "project" })).rejects.toThrow(
+				"ENOENT: no such file or directory",
 			)
 		})
 	})
@@ -157,7 +159,7 @@ This is a test skill.`
 			type: "skill",
 			category: "testing",
 			githubUrl: "https://github.com/test/skill",
-			rawUrl: "https://raw.githubusercontent.com/test/skill/main/SKILL.md",
+			content: "https://example.com/skills/test-skill.tar.gz",
 			displayName: "Test Skill",
 			displayCategory: "Testing",
 		}

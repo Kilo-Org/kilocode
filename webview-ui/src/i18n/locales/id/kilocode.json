@@ -31,7 +31,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Server MCP"
+			"mcp": "Server MCP",
+			"agentBehaviour": "Perilaku Agen",
+			"skills": "Skill"
 		},
 		"provider": {
 			"account": "Akun Kilo Code",
@@ -135,7 +137,14 @@
 	},
 	"docs": "Dokumentasi",
 	"rules": {
-		"tooltip": "Kelola Aturan & Alur Kerja Kilo Code",
+		"tooltip": "Kelola Perilaku Agen ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Aturan",
+			"workflows": "Alur Kerja",
+			"mcps": "MCPs",
+			"modes": "Mode",
+			"skills": "Skill"
+		},
 		"ariaLabel": "Aturan Kilo Code",
 		"tabs": {
 			"rules": "Aturan",
@@ -353,6 +362,18 @@
 			"noDevices": "Tidak ada perangkat mikrofon yang ditemukan",
 			"loading": "Memuat perangkat mikrofon...",
 			"refresh": "Segarkan"
+		}
+	},
+	"skills": {
+		"description": "Skill menyediakan instruksi khusus untuk tugas-tugas tertentu. Skill diterapkan secara otomatis saat relevan dengan permintaan kamu.",
+		"noSkills": "Tidak ada skill yang terinstal",
+		"projectSkills": "Skill Proyek",
+		"globalSkills": "Skill Global",
+		"deleteDialog": {
+			"title": "Hapus Skill",
+			"description": "Apakah kamu yakin ingin menghapus skill \"{{skillName}}\"? Tindakan ini tidak dapat dibatalkan.",
+			"cancel": "Batal",
+			"delete": "Hapus"
 		}
 	}
 }
