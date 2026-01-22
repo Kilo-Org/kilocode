@@ -60,7 +60,9 @@
 		"selectModel": "เลือกโมเดล",
 		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
 		"defaultModel": "โมเดลเริ่มต้น",
-		"loadingModels": "กำลังโหลด..."
+		"loadingModels": "กำลังโหลด...",
+		"selectMode": "เลือกโหมด",
+		"modeTooltip": "โหมด: {{mode}}"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -75,7 +77,9 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
-		"copyCommand": "คัดลอกคำสั่ง"
+		"copyCommand": "คัดลอกคำสั่ง",
+		"thinking": "กำลังคิด",
+		"thinkingSeconds": "{{count}} วินาที"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",

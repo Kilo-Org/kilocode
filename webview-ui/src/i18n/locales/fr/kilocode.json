@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Serveurs MCP"
+			"mcp": "Serveurs MCP",
+			"agentBehaviour": "Comportement de l'Agent",
+			"skills": "Compétences"
 		},
 		"provider": {
 			"account": "Compte Kilo Code",
@@ -149,7 +151,14 @@
 	},
 	"docs": "Documentation",
 	"rules": {
-		"tooltip": "Gérer les Règles et Flux de Travail Kilo Code",
+		"tooltip": "Gérer le comportement de l'agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Règles",
+			"workflows": "Flux de Travail",
+			"mcps": "MCPs",
+			"modes": "Modes",
+			"skills": "Compétences"
+		},
 		"ariaLabel": "Règles Kilo Code",
 		"tabs": {
 			"rules": "Règles",
@@ -353,6 +362,18 @@
 			"noDevices": "Aucun périphérique de microphone trouvé",
 			"defaultOption": "Paramètre par défaut du système",
 			"refresh": "Actualiser"
+		}
+	},
+	"skills": {
+		"description": "Les compétences fournissent des instructions spécialisées pour des tâches spécifiques. Elles sont automatiquement appliquées lorsqu'elles sont pertinentes pour ta demande.",
+		"noSkills": "Aucune compétence installée",
+		"projectSkills": "Compétences du Projet",
+		"globalSkills": "Compétences Globales",
+		"deleteDialog": {
+			"title": "Supprimer la Compétence",
+			"description": "Es-tu sûr de vouloir supprimer la compétence \"{{skillName}}\" ? Cette action est irréversible.",
+			"cancel": "Annuler",
+			"delete": "Supprimer"
 		}
 	}
 }

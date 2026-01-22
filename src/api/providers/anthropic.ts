@@ -94,10 +94,18 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			toolProtocol === TOOL_PROTOCOL.NATIVE &&
 			metadata?.tool_choice !== "none"
 
+		const isHaikuInstruct = modelId.toLowerCase().includes("haiku") && thinking?.type !== "enabled" // kilocode_change
+
 		const nativeToolParams = shouldIncludeNativeTools
 			? {
 					tools: convertOpenAIToolsToAnthropic(metadata.tools!),
-					tool_choice: convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
+					tool_choice:
+						// kilocode_change start
+						// Haiku will often forget to call tools and output random XML when tool_choice is not any
+						isHaikuInstruct
+							? { type: "any" as const, disable_parallel_tool_use: !metadata.parallelToolCalls }
+							: // kilocode_change end
+								convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
 				}
 			: {}
 

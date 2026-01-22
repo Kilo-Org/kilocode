@@ -124,9 +124,9 @@ OpenRouter 免费提供了几种具有慷慨额度的模型。**注意：** 你�
 
 **使用适当的模式来限制昂贵的操作：**
 
-- **[询问模式](/basic-usage/using-modes#ask-mode)：** 信息收集，无需代码更改
-- **[架构师模式](/basic-usage/using-modes#architect-mode)：** 规划，无需昂贵的文件操作
-- **[调试模式](/basic-usage/using-modes#debug-mode)：** 专注的故障排除
+- **[询问模式](/basic-usage/using-modes#问答模式)：** 信息收集，无需代码更改
+- **[架构师模式](/basic-usage/using-modes#架构师模式)：** 规划，无需昂贵的文件操作
+- **[调试模式](/basic-usage/using-modes#调试模式)：** 专注的故障排除
 
 **用于预算控制的自定义模式：**
 

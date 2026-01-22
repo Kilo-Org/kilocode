@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Tools",
 		"resources": "Bronnen",
-		"logs": "Logboeken"
+		"logs": "Logboeken",
+		"authDebug": "Auth Debug"
 	},
 	"emptyState": {
 		"noTools": "Geen tools gevonden",
@@ -54,7 +55,23 @@
 	},
 	"serverStatus": {
 		"retrying": "Opnieuw proberen...",
-		"retryConnection": "Verbinding opnieuw proberen"
+		"retryConnection": "Verbinding opnieuw proberen",
+		"signIn": "Aanmelden",
+		"signingIn": "Bezig met aanmelden..."
+	},
+	"authDebug": {
+		"title": "OAuth Debug-informatie",
+		"status": "Status",
+		"tokenExpires": "Token verloopt",
+		"scopes": "Scopes",
+		"refreshInfo": "Refresh Token-info",
+		"hasRefreshToken": "Heeft Refresh Token",
+		"canRefresh": "Kan automatisch vernieuwen",
+		"tokenIssuedAt": "Token uitgegeven op",
+		"nextRefreshAt": "Volgende vernieuwing op",
+		"lastRefreshAt": "Laatste vernieuwing op",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	},
 	"refreshMCP": "MCP-servers vernieuwen",
 	"execution": {

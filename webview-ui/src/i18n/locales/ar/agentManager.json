@@ -64,7 +64,9 @@
 		"selectModel": "اختر النموذج",
 		"modelTooltip": "اختر نموذج الذكاء الاصطناعي لهذه الجلسة",
 		"defaultModel": "النموذج الافتراضي",
-		"loadingModels": "جاري التحميل..."
+		"loadingModels": "جاري التحميل...",
+		"selectMode": "اختر الوضع",
+		"modeTooltip": "الوضع: {{mode}}"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",
@@ -79,7 +81,9 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
 		"expandOutput": "توسيع المخرجات",
 		"collapseOutput": "طي المخرجات",
-		"copyCommand": "نسخ الأمر"
+		"copyCommand": "نسخ الأمر",
+		"thinking": "يفكّر",
+		"thinkingSeconds": "{{count}}ث"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",

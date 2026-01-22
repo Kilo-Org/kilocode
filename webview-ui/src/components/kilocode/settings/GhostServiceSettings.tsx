@@ -28,6 +28,7 @@ type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 
 // Get the list of supported provider keys from AUTOCOMPLETE_PROVIDER_MODELS
 const SUPPORTED_AUTOCOMPLETE_PROVIDER_KEYS = Array.from(AUTOCOMPLETE_PROVIDER_MODELS.keys())
+const GHOST_SERVICE_KEYBINDING_COMMAND_IDS = ["kilo-code.ghost.generateSuggestions"]
 
 export const GhostServiceSettingsView = ({
 	ghostServiceSettings,
@@ -45,7 +46,7 @@ export const GhostServiceSettingsView = ({
 		model,
 		hasKilocodeProfileWithNoBalance,
 	} = ghostServiceSettings || {}
-	const keybindings = useKeybindings(["kilo-code.ghost.generateSuggestions"])
+	const keybindings = useKeybindings(GHOST_SERVICE_KEYBINDING_COMMAND_IDS)
 	const [snoozeDuration, setSnoozeDuration] = useState<number>(300)
 	const [currentTime, setCurrentTime] = useState<number>(Date.now())
 

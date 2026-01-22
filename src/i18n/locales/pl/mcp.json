@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Nie udało się odłączyć {{count}} serwera(ów) MCP. Sprawdź dane wyjściowe, aby uzyskać szczegóły.",
 		"toolNotFound": "Narzędzie '{{toolName}}' nie istnieje na serwerze '{{serverName}}'. Dostępne narzędzia: {{availableTools}}",
 		"serverNotFound": "Serwer MCP '{{serverName}}' nie jest skonfigurowany. Dostępne serwery: {{availableServers}}",
-		"toolDisabled": "Narzędzie '{{toolName}}' na serwerze '{{serverName}}' jest wyłączone. Dostępne włączone narzędzia: {{availableTools}}"
+		"toolDisabled": "Narzędzie '{{toolName}}' na serwerze '{{serverName}}' jest wyłączone. Dostępne włączone narzędzia: {{availableTools}}",
+		"oauth_signin_failed": "Logowanie OAuth nie powiodło się. Spróbuj ponownie.",
+		"oauth_failed": "Uwierzytelnianie OAuth nie powiodło się dla {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Ponowne uruchamianie serwera MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Serwery MCP są już odświeżane.",
 		"refreshing_all": "Odświeżanie wszystkich serwerów MCP...",
 		"all_refreshed": "Wszystkie serwery MCP zostały odświeżone.",
-		"project_config_deleted": "Plik konfiguracyjny MCP projektu został usunięty. Wszystkie serwery MCP projektu zostały odłączone."
+		"project_config_deleted": "Plik konfiguracyjny MCP projektu został usunięty. Wszystkie serwery MCP projektu zostały odłączone.",
+		"oauth_required": "Wymagane uwierzytelnianie OAuth do połączenia z '{{serverUrl}}'",
+		"oauth_success": "Uwierzytelnianie OAuth powiodło się dla '{{serverUrl}}'"
 	}
 }

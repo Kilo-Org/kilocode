@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Chế độ của tổ chức",
-		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Kilo Code Dashboard.",
+		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Không thể chỉnh sửa các chế độ của tổ chức"
 	},
 	"tools": {

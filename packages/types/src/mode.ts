@@ -131,6 +131,11 @@ export const customSupportPromptsSchema = z.record(z.string(), z.string().option
 export type CustomSupportPrompts = z.infer<typeof customSupportPromptsSchema>
 
 /**
+ * DEFAULT_MODE_SLUG - The default mode slug used throughout the application
+ */
+export const DEFAULT_MODE_SLUG = "code"
+
+/**
  * DEFAULT_MODES
  */
 

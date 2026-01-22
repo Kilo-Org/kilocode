@@ -27,6 +27,7 @@ export interface AgentSession {
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
 	model?: string // Model ID used for this session
+	mode?: string // Mode slug used for this session (e.g., "code", "architect")
 }
 
 /**
@@ -47,6 +48,7 @@ export interface RemoteSession {
 	created_at: string
 	updated_at: string
 	git_url?: string
+	last_model?: string | null
 }
 
 // Core atoms
@@ -114,6 +116,7 @@ function toAgentSession(remote: RemoteSession): AgentSession {
 		endTime: Number.isNaN(updatedTime) ? 0 : updatedTime,
 		source: "remote",
 		gitUrl: remote.git_url,
+		model: remote.last_model ?? undefined,
 	}
 }
 
@@ -201,6 +204,23 @@ export const updateSessionStatusAtom = atom(
 				exitCode: payload.exitCode,
 				error: payload.error,
 				endTime: payload.status !== "running" ? Date.now() : session.endTime,
+			},
+		})
+	},
+)
+
+export const updateSessionModeAtom = atom(
+	null,
+	(get, set, payload: { sessionId: string; mode: string }) => {
+		const current = get(sessionsMapAtom)
+		const session = current[payload.sessionId]
+		if (!session) return
+
+		set(sessionsMapAtom, {
+			...current,
+			[payload.sessionId]: {
+				...session,
+				mode: payload.mode,
 			},
 		})
 	},

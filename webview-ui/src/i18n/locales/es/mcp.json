@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Herramientas",
 		"resources": "Recursos",
-		"logs": "Registros"
+		"logs": "Registros",
+		"authDebug": "Depuración de Auth"
 	},
 	"emptyState": {
 		"noTools": "No se encontraron herramientas",
@@ -54,7 +55,23 @@
 	},
 	"serverStatus": {
 		"retrying": "Reintentando...",
-		"retryConnection": "Reintentar conexión"
+		"retryConnection": "Reintentar conexión",
+		"signIn": "Iniciar sesión",
+		"signingIn": "Iniciando sesión..."
+	},
+	"authDebug": {
+		"title": "Información de depuración OAuth",
+		"status": "Estado",
+		"tokenExpires": "Token expira",
+		"scopes": "Scopes",
+		"refreshInfo": "Información del token de actualización",
+		"hasRefreshToken": "Tiene token de actualización",
+		"canRefresh": "Puede actualizarse automáticamente",
+		"tokenIssuedAt": "Token emitido el",
+		"nextRefreshAt": "Próxima actualización",
+		"lastRefreshAt": "Última actualización",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	},
 	"refreshMCP": "Actualizar Servidores MCP",
 	"execution": {

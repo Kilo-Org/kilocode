@@ -117,25 +117,9 @@ describe("Agent Manager Telemetry", () => {
 		it("does not capture when TelemetryService has no instance", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(false)
 
-			captureAgentManagerLoginIssue({ issueType: "cli_not_found" })
+			captureAgentManagerLoginIssue({ issueType: "cli_outdated" })
 
 			expect(TelemetryService.instance.captureEvent).not.toHaveBeenCalled()
-		})
-
-		it("captures cli_not_found issue with hasNpm", () => {
-			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
-
-			const props: AgentManagerLoginIssueProperties = {
-				issueType: "cli_not_found",
-				hasNpm: true,
-			}
-
-			captureAgentManagerLoginIssue(props)
-
-			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
-				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
-				props,
-			)
 		})
 
 		it("captures cli_outdated issue with hasNpm false", () => {
@@ -268,23 +252,6 @@ describe("Agent Manager Telemetry", () => {
 			)
 		})
 
-		it("captures cli_not_found with platform and shell diagnostics", () => {
-			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
-
-			const props: AgentManagerLoginIssueProperties = {
-				issueType: "cli_not_found",
-				hasNpm: true,
-				platform: "darwin",
-				shell: "zsh",
-			}
-
-			captureAgentManagerLoginIssue(props)
-
-			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
-				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
-				props,
-			)
-		})
 	})
 
 	describe("getPlatformDiagnostics", () => {

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.149.0",
+	"version": "4.151.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -132,11 +132,6 @@
 				"command": "kilo-code.plusButtonClicked",
 				"title": "%command.newTask.title%",
 				"icon": "$(add)"
-			},
-			{
-				"command": "kilo-code.mcpButtonClicked",
-				"title": "%command.mcpServers.title%",
-				"icon": "$(server)"
 			},
 			{
 				"command": "kilo-code.importSettings",
@@ -365,11 +360,6 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
-					"group": "navigation@2",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.marketplaceButtonClicked",
 					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
@@ -404,11 +394,6 @@
 				{
 					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@1",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
-					"command": "kilo-code.mcpButtonClicked",
-					"group": "navigation@2",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{

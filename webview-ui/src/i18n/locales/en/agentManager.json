@@ -60,7 +60,9 @@
 		"selectModel": "Select model",
 		"modelTooltip": "Choose which AI model to use for this session",
 		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"loadingModels": "Loading...",
+		"selectMode": "Select mode",
+		"modeTooltip": "Mode: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -75,7 +77,9 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"copyCommand": "Copy command"
+		"copyCommand": "Copy command",
+		"thinking": "Thinking",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",
