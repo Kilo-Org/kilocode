@@ -38,6 +38,17 @@ export type {
 	DeleteSessionOutput,
 } from "./SessionClient.js"
 
+/**
+ * Options for restoring a session.
+ */
+export interface RestoreSessionOptions {
+	/**
+	 * If true, skip restoring git state (checkout, patch application).
+	 * Useful when you want to resume a session without modifying the working directory.
+	 */
+	skipGitRestore?: boolean | undefined
+}
+
 export interface SessionManagerDependencies extends TrpcClientDependencies {
 	platform: string
 	pathProvider: IPathProvider
@@ -206,9 +217,13 @@ export class SessionManager {
 	/**
 	 * Restores a session by ID from the cloud.
 	 * Delegates to SessionLifecycleService.
+	 *
+	 * @param sessionId - The session ID to restore
+	 * @param rethrowError - Whether to rethrow errors (default: false)
+	 * @param options - Optional restore options (e.g., skipGitRestore)
 	 */
-	async restoreSession(sessionId: string, rethrowError = false): Promise<void> {
-		return this.lifecycleService.restoreSession(sessionId, rethrowError)
+	async restoreSession(sessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
+		return this.lifecycleService.restoreSession(sessionId, rethrowError, options)
 	}
 
 	/**
@@ -230,9 +245,13 @@ export class SessionManager {
 	/**
 	 * Forks a session by share ID or session ID.
 	 * Delegates to SessionLifecycleService.
+	 *
+	 * @param shareOrSessionId - The share ID or session ID to fork
+	 * @param rethrowError - Whether to rethrow errors (default: false)
+	 * @param options - Optional restore options (e.g., skipGitRestore)
 	 */
-	async forkSession(shareOrSessionId: string, rethrowError = false): Promise<void> {
-		return this.lifecycleService.forkSession(shareOrSessionId, rethrowError)
+	async forkSession(shareOrSessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
+		return this.lifecycleService.forkSession(shareOrSessionId, rethrowError, options)
 	}
 
 	/**

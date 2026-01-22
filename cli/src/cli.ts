@@ -283,12 +283,16 @@ export class CLI {
 					// historical completion_result messages. Without this flag set first,
 					// the CI exit logic may trigger before the prompt can execute.
 					this.store.set(taskResumedViaContinueOrSessionAtom, true)
-					await this.sessionService?.restoreSession(this.options.session)
+					await this.sessionService?.restoreSession(this.options.session, true, {
+						skipGitRestore: this.options.skipGitRestore,
+					})
 				} else if (this.options.fork) {
 					// Set flag BEFORE forking session (same race condition as restore)
 					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-					await this.sessionService?.forkSession(this.options.fork)
+					await this.sessionService?.forkSession(this.options.fork, true, {
+						skipGitRestore: this.options.skipGitRestore,
+					})
 				}
 			}
 

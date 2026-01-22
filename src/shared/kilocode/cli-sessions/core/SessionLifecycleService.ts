@@ -7,6 +7,7 @@ import type { IExtensionMessenger } from "../types/IExtensionMessenger.js"
 import type { ITaskDataProvider } from "../types/ITaskDataProvider.js"
 import type { SessionClient, ShareSessionOutput } from "./SessionClient.js"
 import { SessionWithSignedUrls, CliSessionSharedState } from "./SessionClient.js"
+import type { RestoreSessionOptions } from "./SessionManager.js"
 import type { SessionPersistenceManager } from "../utils/SessionPersistenceManager.js"
 import type { SessionStateManager } from "./SessionStateManager.js"
 import type { SessionTitleService } from "./SessionTitleService.js"
@@ -118,8 +119,9 @@ export class SessionLifecycleService {
 	 *
 	 * @param sessionId - The session ID to restore
 	 * @param rethrowError - Whether to rethrow errors (default: false)
+	 * @param options - Optional restore options (e.g., skipGitRestore)
 	 */
-	async restoreSession(sessionId: string, rethrowError = false): Promise<void> {
+	async restoreSession(sessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
 		try {
 			this.logger.info("Restoring session", LOG_SOURCES.SESSION_LIFECYCLE, { sessionId })
 
@@ -187,6 +189,16 @@ export class SessionLifecycleService {
 						let fileContent = fetchResult.content
 
 						if (filename === "git_state") {
+							// Skip git restoration if flag is set
+							if (options?.skipGitRestore) {
+								this.logger.info(
+									"Skipping git state restoration (--no-git-restore flag)",
+									LOG_SOURCES.SESSION_LIFECYCLE,
+									{ sessionId },
+								)
+								continue
+							}
+
 							const gitState = fileContent as GitRestoreState
 
 							await this.gitStateService.executeGitRestore(gitState)
@@ -329,14 +341,15 @@ export class SessionLifecycleService {
 	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
 	 * @param rethrowError - Whether to rethrow errors (default: false)
+	 * @param options - Optional restore options (e.g., skipGitRestore)
 	 */
-	async forkSession(shareOrSessionId: string, rethrowError = false): Promise<void> {
+	async forkSession(shareOrSessionId: string, rethrowError = false, options?: RestoreSessionOptions): Promise<void> {
 		const { session_id } = await this.sessionClient.fork({
 			share_or_session_id: shareOrSessionId,
 			created_on_platform: this.platform,
 		})
 
-		await this.restoreSession(session_id, rethrowError)
+		await this.restoreSession(session_id, rethrowError, options)
 	}
 
 	/**

@@ -32,6 +32,7 @@ export interface CLIOptions {
 	model?: string
 	session?: string
 	fork?: string
+	skipGitRestore?: boolean
 	noSplash?: boolean
 	appendSystemPrompt?: string
 	appendSystemPromptFile?: string
