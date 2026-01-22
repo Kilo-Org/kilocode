@@ -55,9 +55,9 @@ export interface RestoreSessionOptions {
 	/**
 	 * If true, throw errors when git operations (checkout, patch apply) fail
 	 * instead of logging warnings and continuing.
-	 * Use this for --session to fail fast if git restore fails.
-	 * For --fork, this should be false to allow fallback behavior.
-	 * @default true
+	 * Use this for --fork where exact git context is required.
+	 * For --session, this should be false to allow session recovery without git changes.
+	 * @default false
 	 */
 	throwOnGitError?: boolean | undefined
 }

@@ -359,7 +359,7 @@ describe("SessionLifecycleService", () => {
 
 			await service.restoreSession("session-123")
 
-			expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(gitState, { throwOnError: true })
+			expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(gitState, { throwOnError: false })
 		})
 
 		it("creates history item and registers with extension", async () => {
@@ -598,7 +598,7 @@ describe("SessionLifecycleService", () => {
 						branch: "main",
 						patch: "diff content",
 					},
-					{ throwOnError: true },
+					{ throwOnError: false },
 				)
 			})
 
@@ -657,13 +657,13 @@ describe("SessionLifecycleService", () => {
 				await expect(service.restoreSession("session-123", { rethrowError: false })).resolves.toBeUndefined()
 			})
 
-			it("passes throwOnError: true to executeGitRestore by default", async () => {
+			it("passes throwOnError: false to executeGitRestore by default", async () => {
 				mockSessionClient.get.mockResolvedValue(mockSessionWithGit)
 
 				await service.restoreSession("session-123")
 
 				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(expect.any(Object), {
-					throwOnError: true,
+					throwOnError: false,
 				})
 			})
 
