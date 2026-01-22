@@ -75,7 +75,9 @@
 		"usingTool": "Utilisation de l'outil : **{{tool}}** {{details}}",
 		"expandOutput": "Développer la sortie",
 		"collapseOutput": "Réduire la sortie",
-		"copyCommand": "Copier la commande"
+		"copyCommand": "Copier la commande",
+		"thinking": "Réflexion",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode entièrement automatique - aucune entrée autorisée",

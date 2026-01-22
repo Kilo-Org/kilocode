@@ -79,7 +79,9 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
 		"expandOutput": "توسيع المخرجات",
 		"collapseOutput": "طي المخرجات",
-		"copyCommand": "نسخ الأمر"
+		"copyCommand": "نسخ الأمر",
+		"thinking": "يفكّر",
+		"thinkingSeconds": "{{count}}ث"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",
