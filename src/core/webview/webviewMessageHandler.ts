@@ -1065,7 +1065,8 @@ export const webviewMessageHandler = async (
 			if (!providerFilter || providerFilter === "kilocode") {
 				const kilocodeModels = routerModels.kilocode
 				const available = Object.keys(kilocodeModels).length > 0
-				provider.setKilocodeGatewayModelsAvailable(Boolean(available))
+				// Some unit tests use partial provider mocks that don't implement this helper.
+				provider.setKilocodeGatewayModelsAvailable?.(Boolean(available))
 			}
 			// kilocode_change end
 
@@ -2237,7 +2238,8 @@ export const webviewMessageHandler = async (
 							kilocodeToken: message.apiConfiguration.kilocodeToken,
 						})
 						// kilocode_change start: track gateway model availability for per-mode model overrides
-						provider.setKilocodeGatewayModelsAvailable(Object.keys(models).length > 0)
+						// Some unit tests use partial provider mocks that don't implement this helper.
+						provider.setKilocodeGatewayModelsAvailable?.(Object.keys(models).length > 0)
 						// kilocode_change end
 						provider.postMessageToWebview({
 							type: "routerModels",
