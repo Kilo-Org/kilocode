@@ -1824,6 +1824,11 @@ export class ClineProvider
 
 			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken: string) => {
 				try {
+					// Notify user we're now exchanging the token with Agentica
+					this.postMessageToWebview({
+						type: "agenticaDeviceAuthExchanging",
+					})
+
 					// Exchange GitHub access token for Agentica API key
 					const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
 					const baseUrl = apiConfiguration?.agenticaBaseUrl || "https://api.genlabs.dev/agentica/v1" // kilocode_change

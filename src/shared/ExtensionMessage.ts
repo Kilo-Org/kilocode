@@ -202,6 +202,7 @@ export interface ExtensionMessage {
     | "agenticaDeviceAuthStarted" // kilocode_change: Agentica GitHub device auth initiated
     | "agenticaDeviceAuthTick" // kilocode_change: Agentica GitHub device auth tick/countdown
     | "agenticaDeviceAuthPolling" // kilocode_change: Agentica GitHub device auth polling update
+    | "agenticaDeviceAuthExchanging" // kilocode_change: Agentica GitHub device auth token exchange started
     | "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub device auth successful
     | "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub device auth failed
     | "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub device auth cancelled

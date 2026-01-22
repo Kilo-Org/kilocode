@@ -22,6 +22,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 	const [deviceAuthVerificationUrl, setDeviceAuthVerificationUrl] = useState<string>()
 	const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
 	const [deviceAuthError, setDeviceAuthError] = useState<string>()
+	const [deviceAuthStep, setDeviceAuthStep] = useState<"waiting" | "authenticating">("waiting")
 
 	// Load stored password on component mount
 	useEffect(() => {
@@ -50,12 +51,24 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					setDeviceAuthVerificationUrl(message.deviceAuthVerificationUrl)
 					setDeviceAuthTimeRemaining(message.deviceAuthExpiresIn * 1000)
 					setDeviceAuthError(undefined)
+					setDeviceAuthStep("waiting")
 					break
 				case "agenticaDeviceAuthPolling":
 					// Update timer - continue even if it reaches 0 (GitHub will tell us when expired)
 					if (message.deviceAuthTimeRemaining !== undefined) {
 						setDeviceAuthTimeRemaining(message.deviceAuthTimeRemaining)
 					}
+					setDeviceAuthStep("waiting")
+					break
+				case "agenticaDeviceAuthTick":
+					// Smooth timer updates every second
+					if (message.deviceAuthTimeRemaining !== undefined) {
+						setDeviceAuthTimeRemaining(message.deviceAuthTimeRemaining)
+					}
+					break
+				case "agenticaDeviceAuthExchanging":
+					// User authenticated, now exchanging token with Agentica
+					setDeviceAuthStep("authenticating")
 					break
 				case "agenticaDeviceAuthComplete":
 					console.log("[Agentica] Device auth complete", message)
@@ -146,6 +159,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 		setDeviceAuthVerificationUrl(undefined)
 		setDeviceAuthTimeRemaining(undefined)
 		setDeviceAuthError(undefined)
+		setDeviceAuthStep("waiting")
 	}, [])
 
 	const formatTimeRemaining = (ms: number) => {
@@ -200,48 +214,68 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					<span>{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub (Device Flow)"}</span>
 				</VSCodeButton>
 				
-				{deviceAuthStatus === "pending" && deviceAuthCode && deviceAuthVerificationUrl && (
+				{deviceAuthStatus === "pending" && (
 					<div style={{
 						padding: "12px",
 						backgroundColor: "var(--vscode-editor-inactiveSelectionBackground)",
 						borderRadius: "6px",
 						border: "1px solid var(--vscode-panel-border)"
 					}}>
-						<div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", color: "var(--vscode-foreground)" }}>
-							Enter this code on GitHub:
-						</div>
-						<div style={{
-							fontSize: "24px",
-							fontWeight: "700",
-							letterSpacing: "4px",
-							textAlign: "center",
-							padding: "12px",
-							backgroundColor: "var(--vscode-editor-background)",
-							borderRadius: "4px",
-							marginBottom: "8px",
-							fontFamily: "monospace"
-						}}>
-							{deviceAuthCode}
-						</div>
-						<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", marginBottom: "8px", textAlign: "center" }}>
-							Visit: <a href={deviceAuthVerificationUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--vscode-textLink-foreground)" }}>{deviceAuthVerificationUrl}</a>
-						</div>
-						{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining > 0 && (
-							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
-								Time remaining: {formatTimeRemaining(deviceAuthTimeRemaining)}
+						{deviceAuthStep === "waiting" && deviceAuthCode && deviceAuthVerificationUrl && (
+							<>
+								<div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", color: "var(--vscode-foreground)" }}>
+									Enter this code on GitHub:
+								</div>
+								<div style={{
+									fontSize: "24px",
+									fontWeight: "700",
+									letterSpacing: "4px",
+									textAlign: "center",
+									padding: "12px",
+									backgroundColor: "var(--vscode-editor-background)",
+									borderRadius: "4px",
+									marginBottom: "8px",
+									fontFamily: "monospace"
+								}}>
+									{deviceAuthCode}
+								</div>
+								<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", marginBottom: "8px", textAlign: "center" }}>
+									Visit: <a href={deviceAuthVerificationUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--vscode-textLink-foreground)" }}>{deviceAuthVerificationUrl}</a>
+								</div>
+								<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+									<span className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: "12px" }} aria-hidden="true"></span>
+									Waiting for token
+								</div>
+								{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining > 0 && (
+									<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
+										Code expires in: {formatTimeRemaining(deviceAuthTimeRemaining)}
+									</div>
+								)}
+								{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining <= 0 && (
+									<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
+										Code may have expired
+									</div>
+								)}
+								<VSCodeButton
+									onClick={handleCancelDeviceAuth}
+									appearance="secondary"
+									style={{ width: "100%" }}>
+									Cancel
+								</VSCodeButton>
+							</>
+						)}
+
+						{deviceAuthStep === "authenticating" && (
+							<div style={{ textAlign: "center" }}>
+								<div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>
+									<span className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: "14px" }} aria-hidden="true"></span>
+									<span style={{ fontSize: "12px", fontWeight: "600", color: "var(--vscode-foreground)" }}>Authenticating with Agentica</span>
+								</div>
+								<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)" }}>
+									Exchanging token...
+								</div>
 							</div>
 						)}
-						{deviceAuthTimeRemaining !== undefined && deviceAuthTimeRemaining <= 0 && (
-							<div style={{ fontSize: "11px", color: "var(--vscode-descriptionForeground)", textAlign: "center", marginBottom: "8px" }}>
-								Waiting for authorization... (code may have expired)
-							</div>
-						)}
-						<VSCodeButton
-							onClick={handleCancelDeviceAuth}
-							appearance="secondary"
-							style={{ width: "100%" }}>
-							Cancel
-						</VSCodeButton>
 					</div>
 				)}
 
