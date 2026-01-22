@@ -164,6 +164,7 @@ export interface ExtensionMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "rulesData" // kilocode_change
+		| "skillsData" // kilocode_change
 		| "marketplaceInstallResult"
 		| "marketplaceRemoveResult"
 		| "marketplaceData"
@@ -313,6 +314,7 @@ export interface ExtensionMessage {
 	localRules?: ClineRulesToggles
 	globalWorkflows?: ClineRulesToggles
 	localWorkflows?: ClineRulesToggles
+	skills?: Array<{ name: string; description: string; path: string; source: "global" | "project"; mode?: string }> // kilocode_change
 	marketplaceItems?: MarketplaceItem[]
 	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
@@ -745,6 +747,7 @@ export interface WebviewMessage {
 		| "requestModes"
 		| "switchMode"
 		| "debugSetting"
+		| "refreshSkills" // kilocode_change
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"

@@ -75,7 +75,9 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
-		"copyCommand": "คัดลอกคำสั่ง"
+		"copyCommand": "คัดลอกคำสั่ง",
+		"thinking": "กำลังคิด",
+		"thinkingSeconds": "{{count}} วินาที"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",

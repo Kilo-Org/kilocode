@@ -193,9 +193,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 					eventType: "ask_completion_result",
 				})
 			},
-			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
-			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
-		}
+				onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
+				onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
+				onWorktreeSessionCreated: (sessionId, worktreePath) => {
+					void this.handleWorktreeSessionCreated(sessionId, worktreePath)
+				},
+			}
 
 		// Pass extension path for agent-runtime resolution in development
 		const extensionPath = this.context.extensionUri.fsPath
@@ -298,6 +301,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 		const messages = this.sessionMessages.get(newId)
 		if (messages) {
 			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
+		}
+	}
+
+	/**
+	 * Handle worktree session creation by writing the task ID to the worktree.
+	 * This enables session recovery after extension restarts.
+	 */
+	private async handleWorktreeSessionCreated(sessionId: string, worktreePath: string): Promise<void> {
+		try {
+			const manager = this.getWorktreeManager()
+			await manager.writeSessionId(worktreePath, sessionId)
+			this.outputChannel.appendLine(`[AgentManager] Wrote session ID ${sessionId} to worktree ${worktreePath}`)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to write session ID to worktree: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	}
 
@@ -1104,17 +1123,30 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 				if (result.completedByAgent) {
 					this.log(sessionId, "Agent committed changes successfully")
+					// Show completion message only on success
+					this.showWorktreeCompletionMessage(branch)
 				} else if (result.success) {
 					this.log(sessionId, "Used fallback commit message")
+					// Show completion message only on success
+					this.showWorktreeCompletionMessage(branch)
 				} else {
 					this.log(sessionId, `Commit failed: ${result.error}`)
+					// Don't show completion message on failure - show error instead
+					vscode.window.showErrorMessage(`Failed to commit changes: ${result.error}`)
 				}
 			} else {
 				this.log(sessionId, "No changes to commit")
+				if (branch) {
+					void vscode.window.showInformationMessage(
+						`Parallel mode complete (no changes). Branch: ${branch}`,
+						"Copy Branch Name",
+					).then((selection) => {
+						if (selection === "Copy Branch Name") {
+							void vscode.env.clipboard.writeText(branch)
+						}
+					})
+				}
 			}
-
-			// Show completion message
-			this.showWorktreeCompletionMessage(branch)
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error)
 			this.outputChannel.appendLine(`[AgentManager] Error finishing worktree session: ${errorMsg}`)
@@ -1321,6 +1353,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					effectiveWorkspace: worktreeInfo.path,
 					images,
 					sessionData,
+					model: session.model,
 				})
 				return
 			}
@@ -1336,6 +1369,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			gitUrl: session?.gitUrl,
 			images,
 			sessionData,
+			model: session?.model,
 		})
 	}
 

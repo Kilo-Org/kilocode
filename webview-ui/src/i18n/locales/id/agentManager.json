@@ -75,7 +75,9 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
-		"copyCommand": "Salin perintah"
+		"copyCommand": "Salin perintah",
+		"thinking": "Berpikir",
+		"thinkingSeconds": "{{count}}d"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

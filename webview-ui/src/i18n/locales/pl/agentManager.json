@@ -77,7 +77,9 @@
 		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}",
 		"expandOutput": "Rozwiń wyjście",
 		"collapseOutput": "Zwiń wyjście",
-		"copyCommand": "Kopiuj polecenie"
+		"copyCommand": "Kopiuj polecenie",
+		"thinking": "Myślenie",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",

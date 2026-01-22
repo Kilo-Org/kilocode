@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP-Server",
-			"agentBehaviour": "Agentenverhalten"
+			"agentBehaviour": "Agentenverhalten",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Konto",
@@ -148,7 +149,8 @@
 			"rules": "Regeln",
 			"workflows": "Workflows",
 			"mcps": "MCPs",
-			"modes": "Modi"
+			"modes": "Modi",
+			"skills": "Skills"
 		},
 		"ariaLabel": "Kilo Code Regeln",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"description": "Wählen Sie das Mikrofon-Gerät für die Sprache-zu-Text-Umwandlung aus",
 			"noDevices": "Keine Mikrofongeräte gefunden",
 			"refresh": "Aktualisieren"
+		}
+	},
+	"skills": {
+		"description": "Skills bieten spezialisierte Anweisungen für bestimmte Aufgaben. Sie werden automatisch angewendet, wenn sie für deine Anfrage relevant sind.",
+		"noSkills": "Keine Skills installiert",
+		"projectSkills": "Projekt-Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill löschen",
+			"description": "Bist du sicher, dass du den Skill \"{{skillName}}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+			"cancel": "Abbrechen",
+			"delete": "Löschen"
 		}
 	}
 }

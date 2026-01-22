@@ -19,6 +19,7 @@
 		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
 		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
 		"maxCompletionTokens": "The maximum number of completion tokens was reached.",
+		"contentFilter": "The request was blocked by the content filter.",
 		"disableApplyDiff": "If this error keep reoccuring, please disable Editing Through Diffs in Advanced Settings.",
 		"disableEditFile": "If this error keep reoccuring, please disable the Fast Apply experimental feature."
 	},

@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La resposta del model ha acabat de forma inesperada (cap missatge de l'assistent). Això pot ser un signe de limitació de freqüència.",
 		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}",
 		"maxCompletionTokens": "S'ha arribat al nombre màxim de tokens de compleció.",
+		"contentFilter": "La sol·licitud ha estat bloquejada pel filtre de contingut.",
 		"disableApplyDiff": "Si aquest error continua apareixent, desactiva l'Edició Mitjançant Diferències a la Configuració Avançada.",
 		"disableEditFile": "Si aquest error continua apareixent, desactiva la funció experimental d'Aplicació Ràpida."
 	},

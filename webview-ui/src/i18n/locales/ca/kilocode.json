@@ -32,7 +32,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "Servidors MCP",
-			"agentBehaviour": "Comportament de l'Agent"
+			"agentBehaviour": "Comportament de l'Agent",
+			"skills": "Habilitats"
 		},
 		"provider": {
 			"account": "Compte de Kilo Code",
@@ -141,7 +142,8 @@
 			"rules": "Regles",
 			"workflows": "Fluxos de Treball",
 			"mcps": "MCPs",
-			"modes": "Modes"
+			"modes": "Modes",
+			"skills": "Habilitats"
 		},
 		"ariaLabel": "Regles de Kilo Code",
 		"tabs": {
@@ -361,6 +363,18 @@
 			"loading": "Carregant dispositius de micròfon...",
 			"noDevices": "No s'han trobat dispositius de micròfon",
 			"refresh": "Actualitza"
+		}
+	},
+	"skills": {
+		"description": "Les habilitats proporcionen instruccions especialitzades per a tasques específiques. S'apliquen automàticament quan són rellevants per a la teva sol·licitud.",
+		"noSkills": "No hi ha habilitats instal·lades",
+		"projectSkills": "Habilitats del Projecte",
+		"globalSkills": "Habilitats Globals",
+		"deleteDialog": {
+			"title": "Eliminar Habilitat",
+			"description": "Estàs segur que vols eliminar l'habilitat \"{{skillName}}\"? Aquesta acció no es pot desfer.",
+			"cancel": "Cancel·lar",
+			"delete": "Eliminar"
 		}
 	}
 }

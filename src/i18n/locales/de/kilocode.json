@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Raten-Limitierung sein.",
 		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}",
 		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht.",
+		"contentFilter": "Die Anfrage wurde durch den Inhaltsfilter blockiert.",
 		"disableApplyDiff": "Falls dieser Fehler weiterhin auftritt, deaktiviere bitte 'Bearbeitung durch Diffs' in den erweiterten Einstellungen.",
 		"disableEditFile": "Falls dieser Fehler weiterhin auftritt, deaktiviere bitte die experimentelle Funktion 'Schnelles Anwenden'."
 	},

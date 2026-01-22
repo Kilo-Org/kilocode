@@ -15,6 +15,7 @@
 		"noAssistantMessages": "模型回應意外結束（沒有助理訊息）。這可能是頻率限制的跡象。",
 		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
 		"maxCompletionTokens": "已達到完成 Token 數量上限。",
+		"contentFilter": "請求已被內容篩選器阻擋。",
 		"disableApplyDiff": "如果此錯誤持續發生，請在進階設定中停用「透過差異編輯」功能。",
 		"disableEditFile": "如果此錯誤持續發生，請停用「快速套用」實驗性功能。"
 	},
