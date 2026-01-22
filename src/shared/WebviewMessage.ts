@@ -91,6 +91,7 @@ export interface WebviewMessage {
 		| "requestHuggingFaceModels"
 		| "requestSapAiCoreModels" // kilocode_change
 		| "requestSapAiCoreDeployments" // kilocode_change
+		| "requestOpenAiCodexRateLimits"
 		| "openImage"
 		| "saveImage"
 		| "openFile"
