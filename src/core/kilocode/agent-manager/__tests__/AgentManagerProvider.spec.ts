@@ -1082,4 +1082,409 @@ describe("AgentManagerProvider telemetry", () => {
 			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
 		})
 	})
+
+	describe("BUG: finishWorktreeSession completion message behavior", () => {
+		it("should NOT show completion popup when commit fails", async () => {
+			// This test reproduces the bug where the completion popup is shown
+			// even when the commit fails
+			vi.resetModules()
+
+			const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+			const mockProvider = {
+				getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+			}
+
+			const mockShowInformationMessage = vi.fn().mockResolvedValue(undefined)
+			const mockShowErrorMessage = vi.fn().mockResolvedValue(undefined)
+
+			const mockWindow = {
+				showErrorMessage: mockShowErrorMessage,
+				showWarningMessage: vi.fn().mockResolvedValue(undefined),
+				showInformationMessage: mockShowInformationMessage,
+				ViewColumn: { One: 1 },
+				onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+				createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+			}
+
+			vi.doMock("vscode", () => ({
+				workspace: { workspaceFolders: [mockWorkspaceFolder] },
+				window: mockWindow,
+				env: { openExternal: vi.fn(), clipboard: { writeText: vi.fn() } },
+				Uri: { parse: vi.fn(), joinPath: vi.fn() },
+				ViewColumn: { One: 1 },
+				ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+			}))
+
+			vi.doMock("../CliInstaller", () => ({
+				getLocalCliPath: () => MOCK_CLI_PATH,
+			}))
+
+			vi.doMock("../../../../utils/fs", () => ({
+				fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
+			}))
+
+			vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+				getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+			}))
+
+			vi.doMock("../WorktreeManager", () => ({
+				WorktreeManager: vi.fn().mockImplementation(() => ({
+					createWorktree: vi.fn().mockResolvedValue({
+						branch: "test-branch-123",
+						path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+						parentBranch: "main",
+					}),
+					commitChanges: vi.fn().mockResolvedValue({ success: true }),
+					removeWorktree: vi.fn().mockResolvedValue(undefined),
+					discoverWorktrees: vi.fn().mockResolvedValue([]),
+					ensureGitExclude: vi.fn().mockResolvedValue(undefined),
+					stageAllChanges: vi.fn().mockResolvedValue(true), // Has changes to commit
+				})),
+				WorktreeError: class WorktreeError extends Error {
+					constructor(
+						public code: string,
+						message: string,
+					) {
+						super(message)
+					}
+				},
+			}))
+
+			class TestProc extends EventEmitter {
+				stdout = new EventEmitter()
+				stderr = new EventEmitter()
+				stdin = { write: vi.fn() }
+				kill = vi.fn()
+				pid = 1234
+			}
+
+			const spawnMock = vi.fn(() => new TestProc())
+			const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
+
+			vi.doMock("node:child_process", () => ({
+				spawn: spawnMock,
+				execSync: execSyncMock,
+			}))
+
+			// Mock AgentTaskRunner to simulate a FAILED commit
+			vi.doMock("../AgentTaskRunner", () => ({
+				AgentTaskRunner: vi.fn().mockImplementation(() => ({
+					executeTask: vi.fn().mockResolvedValue({
+						success: false,
+						completedByAgent: false,
+						error: "Session not found in activeSessions",
+					}),
+				})),
+				AgentTasks: {
+					createCommitTask: vi.fn().mockReturnValue({
+						name: "commit-changes",
+						instruction: "test instruction",
+						timeoutMs: 60_000,
+						checkComplete: vi.fn().mockResolvedValue(false),
+						fallback: vi.fn().mockResolvedValue(undefined),
+					}),
+				},
+			}))
+
+			// Import the module with mocks applied
+			const module = await import("../AgentManagerProvider")
+			const TestAgentManagerProvider = module.AgentManagerProvider
+			const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 } as any
+			const mockOutputChannel = { appendLine: vi.fn() } as any
+			const testProvider = new TestAgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			try {
+				const registry = (testProvider as any).registry
+				const sessionId = "session-fail-commit"
+				const worktreePath = "/tmp/worktree-path"
+				const branch = "new-1768857996469"
+
+				// Create a running worktree session
+				registry.createSession(sessionId, "test worktree session", undefined, { parallelMode: true })
+				registry.updateSessionStatus(sessionId, "running")
+				registry.updateParallelModeInfo(sessionId, { branch, worktreePath })
+				;(testProvider as any).sessionMessages.set(sessionId, [])
+
+				// Call finishWorktreeSession
+				await (testProvider as any).finishWorktreeSession(sessionId)
+
+				// BUG: The completion popup should NOT be shown when commit fails
+				// Currently this test FAILS because showInformationMessage IS called
+				// even when the commit fails
+				const completionCalls = mockShowInformationMessage.mock.calls.filter(
+					(call: any[]) => call[0]?.includes("Parallel mode complete"),
+				)
+				expect(completionCalls.length).toBe(0)
+
+				// Instead, an error message should be shown
+				// (This assertion will fail until the bug is fixed)
+				expect(mockShowErrorMessage).toHaveBeenCalledWith(
+					expect.stringContaining("Failed to commit changes"),
+				)
+			} finally {
+				testProvider.dispose()
+			}
+		})
+
+		it("should show completion popup when commit succeeds", async () => {
+			vi.resetModules()
+
+			const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+			const mockProvider = {
+				getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+			}
+
+			const mockShowInformationMessage = vi.fn().mockResolvedValue(undefined)
+			const mockShowErrorMessage = vi.fn().mockResolvedValue(undefined)
+
+			const mockWindow = {
+				showErrorMessage: mockShowErrorMessage,
+				showWarningMessage: vi.fn().mockResolvedValue(undefined),
+				showInformationMessage: mockShowInformationMessage,
+				ViewColumn: { One: 1 },
+				onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+				createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+			}
+
+			vi.doMock("vscode", () => ({
+				workspace: { workspaceFolders: [mockWorkspaceFolder] },
+				window: mockWindow,
+				env: { openExternal: vi.fn(), clipboard: { writeText: vi.fn() } },
+				Uri: { parse: vi.fn(), joinPath: vi.fn() },
+				ViewColumn: { One: 1 },
+				ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+			}))
+
+			vi.doMock("../CliInstaller", () => ({
+				getLocalCliPath: () => MOCK_CLI_PATH,
+			}))
+
+			vi.doMock("../../../../utils/fs", () => ({
+				fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
+			}))
+
+			vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+				getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+			}))
+
+			vi.doMock("../WorktreeManager", () => ({
+				WorktreeManager: vi.fn().mockImplementation(() => ({
+					createWorktree: vi.fn().mockResolvedValue({
+						branch: "test-branch-123",
+						path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+						parentBranch: "main",
+					}),
+					commitChanges: vi.fn().mockResolvedValue({ success: true }),
+					removeWorktree: vi.fn().mockResolvedValue(undefined),
+					discoverWorktrees: vi.fn().mockResolvedValue([]),
+					ensureGitExclude: vi.fn().mockResolvedValue(undefined),
+					stageAllChanges: vi.fn().mockResolvedValue(true), // Has changes to commit
+				})),
+				WorktreeError: class WorktreeError extends Error {
+					constructor(
+						public code: string,
+						message: string,
+					) {
+						super(message)
+					}
+				},
+			}))
+
+			class TestProc extends EventEmitter {
+				stdout = new EventEmitter()
+				stderr = new EventEmitter()
+				stdin = { write: vi.fn() }
+				kill = vi.fn()
+				pid = 1234
+			}
+
+			const spawnMock = vi.fn(() => new TestProc())
+			const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
+
+			vi.doMock("node:child_process", () => ({
+				spawn: spawnMock,
+				execSync: execSyncMock,
+			}))
+
+			// Mock AgentTaskRunner to simulate a SUCCESSFUL commit
+			vi.doMock("../AgentTaskRunner", () => ({
+				AgentTaskRunner: vi.fn().mockImplementation(() => ({
+					executeTask: vi.fn().mockResolvedValue({
+						success: true,
+						completedByAgent: true,
+					}),
+				})),
+				AgentTasks: {
+					createCommitTask: vi.fn().mockReturnValue({
+						name: "commit-changes",
+						instruction: "test instruction",
+						timeoutMs: 60_000,
+						checkComplete: vi.fn().mockResolvedValue(true),
+						fallback: vi.fn().mockResolvedValue(undefined),
+					}),
+				},
+			}))
+
+			// Import the module with mocks applied
+			const module = await import("../AgentManagerProvider")
+			const TestAgentManagerProvider = module.AgentManagerProvider
+			const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 } as any
+			const mockOutputChannel = { appendLine: vi.fn() } as any
+			const testProvider = new TestAgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			try {
+				const registry = (testProvider as any).registry
+				const sessionId = "session-success-commit"
+				const worktreePath = "/tmp/worktree-path"
+				const branch = "new-success-branch"
+
+				// Create a running worktree session
+				registry.createSession(sessionId, "test worktree session", undefined, { parallelMode: true })
+				registry.updateSessionStatus(sessionId, "running")
+				registry.updateParallelModeInfo(sessionId, { branch, worktreePath })
+				;(testProvider as any).sessionMessages.set(sessionId, [])
+
+				// Call finishWorktreeSession
+				await (testProvider as any).finishWorktreeSession(sessionId)
+
+				// The completion popup SHOULD be shown when commit succeeds
+				const completionCalls = mockShowInformationMessage.mock.calls.filter(
+					(call: any[]) => call[0]?.includes("Parallel mode complete"),
+				)
+				expect(completionCalls.length).toBe(1)
+
+				// No error message should be shown
+				expect(mockShowErrorMessage).not.toHaveBeenCalled()
+			} finally {
+				testProvider.dispose()
+			}
+		})
+
+		it("should show no-changes completion message when there are no changes", async () => {
+			vi.resetModules()
+
+			const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+			const mockProvider = {
+				getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+			}
+
+			const mockShowInformationMessage = vi.fn().mockResolvedValue(undefined)
+			const mockShowErrorMessage = vi.fn().mockResolvedValue(undefined)
+
+			const mockWindow = {
+				showErrorMessage: mockShowErrorMessage,
+				showWarningMessage: vi.fn().mockResolvedValue(undefined),
+				showInformationMessage: mockShowInformationMessage,
+				ViewColumn: { One: 1 },
+				onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+				createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+			}
+
+			vi.doMock("vscode", () => ({
+				workspace: { workspaceFolders: [mockWorkspaceFolder] },
+				window: mockWindow,
+				env: { openExternal: vi.fn(), clipboard: { writeText: vi.fn() } },
+				Uri: { parse: vi.fn(), joinPath: vi.fn() },
+				ViewColumn: { One: 1 },
+				ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+			}))
+
+			vi.doMock("../CliInstaller", () => ({
+				getLocalCliPath: () => MOCK_CLI_PATH,
+			}))
+
+			vi.doMock("../../../../utils/fs", () => ({
+				fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
+			}))
+
+			vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+				getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+			}))
+
+			vi.doMock("../WorktreeManager", () => ({
+				WorktreeManager: vi.fn().mockImplementation(() => ({
+					createWorktree: vi.fn().mockResolvedValue({
+						branch: "test-branch-123",
+						path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+						parentBranch: "main",
+					}),
+					commitChanges: vi.fn().mockResolvedValue({ success: true }),
+					removeWorktree: vi.fn().mockResolvedValue(undefined),
+					discoverWorktrees: vi.fn().mockResolvedValue([]),
+					ensureGitExclude: vi.fn().mockResolvedValue(undefined),
+					stageAllChanges: vi.fn().mockResolvedValue(false), // No changes to commit
+				})),
+				WorktreeError: class WorktreeError extends Error {
+					constructor(
+						public code: string,
+						message: string,
+					) {
+						super(message)
+					}
+				},
+			}))
+
+			class TestProc extends EventEmitter {
+				stdout = new EventEmitter()
+				stderr = new EventEmitter()
+				stdin = { write: vi.fn() }
+				kill = vi.fn()
+				pid = 1234
+			}
+
+			const spawnMock = vi.fn(() => new TestProc())
+			const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
+
+			vi.doMock("node:child_process", () => ({
+				spawn: spawnMock,
+				execSync: execSyncMock,
+			}))
+
+			vi.doMock("../AgentTaskRunner", () => ({
+				AgentTaskRunner: vi.fn().mockImplementation(() => ({
+					executeTask: vi.fn().mockResolvedValue({
+						success: true,
+						completedByAgent: true,
+					}),
+				})),
+				AgentTasks: {
+					createCommitTask: vi.fn().mockReturnValue({
+						name: "commit-changes",
+						instruction: "test instruction",
+						timeoutMs: 60_000,
+						checkComplete: vi.fn().mockResolvedValue(true),
+						fallback: vi.fn().mockResolvedValue(undefined),
+					}),
+				},
+			}))
+
+			const module = await import("../AgentManagerProvider")
+			const TestAgentManagerProvider = module.AgentManagerProvider
+			const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 } as any
+			const mockOutputChannel = { appendLine: vi.fn() } as any
+			const testProvider = new TestAgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			try {
+				const registry = (testProvider as any).registry
+				const sessionId = "session-no-changes"
+				const worktreePath = "/tmp/worktree-path"
+				const branch = "new-no-changes-branch"
+
+				registry.createSession(sessionId, "test worktree session", undefined, { parallelMode: true })
+				registry.updateSessionStatus(sessionId, "running")
+				registry.updateParallelModeInfo(sessionId, { branch, worktreePath })
+				;(testProvider as any).sessionMessages.set(sessionId, [])
+
+				await (testProvider as any).finishWorktreeSession(sessionId)
+
+				const completionCalls = mockShowInformationMessage.mock.calls.filter(
+					(call: any[]) => call[0]?.includes("Parallel mode complete (no changes)"),
+				)
+				expect(completionCalls.length).toBe(1)
+				expect(mockShowErrorMessage).not.toHaveBeenCalled()
+			} finally {
+				testProvider.dispose()
+			}
+		})
+	})
 })

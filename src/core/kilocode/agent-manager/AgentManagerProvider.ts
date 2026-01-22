@@ -1104,17 +1104,30 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 				if (result.completedByAgent) {
 					this.log(sessionId, "Agent committed changes successfully")
+					// Show completion message only on success
+					this.showWorktreeCompletionMessage(branch)
 				} else if (result.success) {
 					this.log(sessionId, "Used fallback commit message")
+					// Show completion message only on success
+					this.showWorktreeCompletionMessage(branch)
 				} else {
 					this.log(sessionId, `Commit failed: ${result.error}`)
+					// Don't show completion message on failure - show error instead
+					vscode.window.showErrorMessage(`Failed to commit changes: ${result.error}`)
 				}
 			} else {
 				this.log(sessionId, "No changes to commit")
+				if (branch) {
+					void vscode.window.showInformationMessage(
+						`Parallel mode complete (no changes). Branch: ${branch}`,
+						"Copy Branch Name",
+					).then((selection) => {
+						if (selection === "Copy Branch Name") {
+							void vscode.env.clipboard.writeText(branch)
+						}
+					})
+				}
 			}
-
-			// Show completion message
-			this.showWorktreeCompletionMessage(branch)
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error)
 			this.outputChannel.appendLine(`[AgentManager] Error finishing worktree session: ${errorMsg}`)
