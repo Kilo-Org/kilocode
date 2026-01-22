@@ -291,8 +291,8 @@ export interface WebviewMessage {
 		| "singleCompletion" // kilocode_change
 		| "openDebugApiHistory"
 		| "openDebugUiHistory"
-		| "startDeviceAuth" // kilocode_change: Start KiloCode device auth flow
-		| "cancelDeviceAuth" // kilocode_change: Cancel KiloCode device auth flow
+		| "startDeviceAuth" // kilocode_change: Start device auth flow
+		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 		| "startAgenticaDeviceAuth" // kilocode_change: Start Agentica GitHub device auth flow
 		| "cancelAgenticaDeviceAuth" // kilocode_change: Cancel Agentica GitHub device auth flow
