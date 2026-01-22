@@ -324,6 +324,7 @@ export class RuntimeProcessHandler {
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
 					model: options?.model,
+					mode: options?.mode,
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
