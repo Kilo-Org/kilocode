@@ -96,11 +96,25 @@ export function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettin
 }
 
 export function getModelIdForProvider(provider: ProviderConfig): string {
+	// Handle providers not in core-schemas union via dynamic property access
+	// These are defined in @roo-code/types but not yet in @kilocode/core-schemas
+	const providerType = provider.provider as string
+	const providerWithDynamicProps = provider as Record<string, unknown>
+
+	if (providerType === "nano-gpt") {
+		return (providerWithDynamicProps.nanoGptModelId as string) || ""
+	}
+	if (providerType === "sap-ai-core") {
+		return (providerWithDynamicProps.sapAiCoreModelId as string) || ""
+	}
+	if (providerType === "baseten") {
+		return (providerWithDynamicProps.apiModelId as string) || ""
+	}
+
 	switch (provider.provider) {
 		case "kilocode":
 			return provider.kilocodeModel || ""
 		case "anthropic":
-			return provider.apiModelId || ""
 		case "openai-native":
 		case "openai-codex":
 			return provider.apiModelId || ""

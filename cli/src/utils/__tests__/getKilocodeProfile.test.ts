@@ -127,6 +127,35 @@ describe("getKilocodeProfile", () => {
 		await expect(getKilocodeProfile("test-token")).rejects.toThrow("Failed to fetch profile: Invalid JSON")
 	})
 
+	it("should reject invalid profile schema", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				user: { name: 123 },
+				organizations: [],
+			}),
+		})
+
+		await expect(getKilocodeProfile("test-token")).rejects.toThrow("Failed to fetch profile:")
+	})
+
+	it("should normalize null profile fields", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				user: { name: null, email: null, image: null },
+				organizations: null,
+			}),
+		})
+
+		const result = await getKilocodeProfile("test-token")
+
+		expect(result.user?.name).toBeUndefined()
+		expect(result.user?.email).toBeUndefined()
+		expect(result.user?.image).toBeUndefined()
+		expect(result.organizations).toBeUndefined()
+	})
+
 	it("should handle empty token gracefully", async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
