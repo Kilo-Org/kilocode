@@ -76,7 +76,9 @@
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}",
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
-		"copyCommand": "Kopírovat příkaz"
+		"copyCommand": "Kopírovat příkaz",
+		"thinking": "Přemýšlení",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",

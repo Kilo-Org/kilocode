@@ -1334,6 +1334,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					effectiveWorkspace: worktreeInfo.path,
 					images,
 					sessionData,
+					model: session.model,
 				})
 				return
 			}
@@ -1349,6 +1350,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			gitUrl: session?.gitUrl,
 			images,
 			sessionData,
+			model: session?.model,
 		})
 	}
 
