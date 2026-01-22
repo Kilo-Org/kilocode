@@ -27,7 +27,7 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
-import { getModelId, type ProviderSettings } from "@roo-code/types"
+import { getModelId, type ModeConfig, type ProviderSettings } from "@roo-code/types"
 import { DEFAULT_MODE_SLUG, DEFAULT_MODES } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
@@ -764,7 +764,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 			model?: string
 			mode?: string // Mode slug (e.g., "code", "architect")
 			images?: string[] // Image file paths to include with the initial prompt
-			sessionData?: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } // For resuming with history
+			sessionData?: {
+				uiMessages: ClineMessage[]
+				apiConversationHistory: unknown[]
+				metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+			} // For resuming with history
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
@@ -790,6 +794,20 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Fetch custom modes (including organization modes) to pass to the agent process
+		// This ensures the agent has access to all mode configurations without needing to fetch them
+		let customModes: ModeConfig[] | undefined
+		try {
+			customModes = await this.provider.customModesManager.getCustomModes()
+			this.outputChannel.appendLine(`[AgentManager] Fetched ${customModes.length} custom modes for agent process`)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to fetch custom modes: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
+
 		// RuntimeProcessHandler uses fork() with agent-runtime, cliPath is ignored
 		this.processHandler.spawnProcess(
 			"", // cliPath not used - RuntimeProcessHandler forks agent-runtime
@@ -798,6 +816,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			{
 				...options,
 				apiConfiguration,
+				customModes,
 				// Pass worktree info for session state tracking
 				worktreeInfo: options.worktreeInfo,
 			},
@@ -1338,7 +1357,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
 
 		// Fetch full session data for resume (UI messages + API history + metadata)
-		let sessionData: { uiMessages: ClineMessage[]; apiConversationHistory: unknown[]; metadata: { sessionId: string; title: string; createdAt: string; mode: string | null } } | undefined
+		let sessionData:
+			| {
+					uiMessages: ClineMessage[]
+					apiConversationHistory: unknown[]
+					metadata: { sessionId: string; title: string; createdAt: string; mode: string | null }
+			  }
+			| undefined
 		try {
 			const fetchedData = await this.remoteSessionService.fetchSessionDataForResume(sessionId)
 			if (fetchedData) {

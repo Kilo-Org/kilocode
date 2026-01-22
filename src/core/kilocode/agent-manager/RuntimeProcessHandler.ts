@@ -23,7 +23,7 @@ import type {
 	ErrorStreamEvent,
 	CompleteStreamEvent,
 } from "./CliOutputParser"
-import type { ClineMessage, ProviderSettings } from "@roo-code/types"
+import type { ClineMessage, ModeConfig, ProviderSettings } from "@roo-code/types"
 import { Package } from "../../../shared/package"
 
 /**
@@ -213,6 +213,7 @@ export class RuntimeProcessHandler {
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			model?: string
 			mode?: string // Mode slug (e.g., "code", "architect", "debug")
+			customModes?: ModeConfig[] // Custom modes including organization modes
 			images?: string[]
 			autoApprove?: boolean
 			sessionData?: SessionData // For resuming with history
@@ -222,6 +223,7 @@ export class RuntimeProcessHandler {
 			workspace,
 			providerSettings: options?.apiConfiguration || {},
 			mode: options?.mode || "code", // Use provided mode or default to "code"
+			customModes: options?.customModes, // Pass custom modes to agent process
 			autoApprove: options?.autoApprove ?? true, // Default to auto-approve for agent manager
 			sessionId: options?.sessionId,
 		}
@@ -288,6 +290,7 @@ export class RuntimeProcessHandler {
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 					model?: string
 					mode?: string // Mode slug (e.g., "code", "architect", "debug")
+					customModes?: ModeConfig[] // Custom modes including organization modes
 					images?: string[]
 					sessionData?: SessionData // For resuming with history
 			  }
