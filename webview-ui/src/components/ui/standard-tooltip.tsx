@@ -1,4 +1,4 @@
-import { ReactNode } from "react"
+import React, { ReactNode } from "react"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip"
 
@@ -21,6 +21,31 @@ interface StandardTooltipProps {
 	asChild?: boolean
 	/** Maximum width of the tooltip content */
 	maxWidth?: number | string
+}
+
+function enhanceButtonAccessibility(children: ReactNode, tooltipContent: ReactNode): ReactNode {
+	// Only enhance single React elements
+	if (!React.isValidElement(children)) {
+		return children
+	}
+
+	const element = children
+
+	// Check if it's a button-like element
+	const isButtonLike =
+		element.type === "button" ||
+		(element.type === "input" && element.props?.type === "button") ||
+		element.props?.role === "button" ||
+		(element.type as any)?.displayName === "Button"
+
+	// If it's button-like and doesn't have aria-label, add one with tooltip content
+	if (isButtonLike && !element.props?.["aria-label"] && typeof tooltipContent === "string") {
+		return React.cloneElement(element as React.ReactElement<any>, {
+			"aria-label": tooltipContent.trim(),
+		})
+	}
+
+	return children
 }
 
 /**
@@ -57,11 +82,13 @@ export function StandardTooltip({
 		return <>{children}</>
 	}
 
+	const enhancedChildren = enhanceButtonAccessibility(children, content)
+
 	const style = maxWidth ? { maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth } : undefined
 
 	return (
 		<Tooltip>
-			<TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
+			<TooltipTrigger asChild={asChild}>{enhancedChildren}</TooltipTrigger>
 			<TooltipContent side={side} align={align} sideOffset={sideOffset} className={className} style={style}>
 				{content}
 			</TooltipContent>
