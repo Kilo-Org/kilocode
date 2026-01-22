@@ -158,6 +158,7 @@ export class McpAuthorizationDiscovery {
 			}
 		} catch (e) {
 			// Ignore and try next
+			console.warn(`Failed to fetch RFC 8414 metadata:`, e)
 		}
 
 		// Try OIDC Discovery
@@ -174,6 +175,7 @@ export class McpAuthorizationDiscovery {
 			}
 		} catch (e) {
 			// Ignore fetch errors
+			console.warn(`Failed to fetch OIDC metadata:`, e)
 		}
 
 		throw new Error(`Failed to discover authorization server metadata for ${issuerUrl}`)
