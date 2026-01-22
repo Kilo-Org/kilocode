@@ -1053,7 +1053,7 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 				],
 				stream: true, // kilocode_change
 				store: false,
-				instructions: this.resolveInstructions(), // kilocode_change
+				instructions: this.ensureInstructions(), // kilocode_change
 				...(reasoningEffort ? { include: ["reasoning.encrypted_content"] } : {}),
 			}
 
