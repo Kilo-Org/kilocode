@@ -1,13 +1,13 @@
 import * as fs from "fs"
 import * as path from "path"
 import { logs } from "../services/logs.js"
+import { MAX_CLIPBOARD_IMAGE_AGE_MS } from "../constants/timeouts.js"
 import {
 	buildDataUrl,
 	detectImageFormat,
 	generateClipboardFilename,
 	getClipboardDir,
 	parseClipboardInfo,
-	MAX_CLIPBOARD_IMAGE_AGE_MS,
 	getUnsupportedClipboardPlatformMessage,
 	type ClipboardImageResult,
 	type ClipboardInfoResult,
