@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 0.25.0
+
+### Minor Changes
+
+- [#5237](https://github.com/Kilo-Org/kilocode/pull/5237) [`a65f7aa`](https://github.com/Kilo-Org/kilocode/commit/a65f7aa64b51905db890d53935bae24aebf42eba) Thanks [@eshurakov](https://github.com/eshurakov)! - Add --append-system-prompt-file option to read custom instructions from a file
+
+### Patch Changes
+
+- [#5230](https://github.com/Kilo-Org/kilocode/pull/5230) [`3d21b02`](https://github.com/Kilo-Org/kilocode/commit/3d21b02685792c008d92599afe71b0381bf55de8) Thanks [@eshurakov](https://github.com/eshurakov)! - Add async condense context handling with completion and error feedback in auto mode
+
+- [#5212](https://github.com/Kilo-Org/kilocode/pull/5212) [`66f2f22`](https://github.com/Kilo-Org/kilocode/commit/66f2f22f1f162d26ccecd31f23124f9dc869cf68) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI context drops caused by stale partial updates overwriting completed messages
+
+    When delayed IPC messages with `partial=true` arrived after a message had already been completed (`partial=false`), the stale update would overwrite the completed message, causing context loss. This fix adds a check to prevent partial updates from reverting completed messages back to partial state.
+
 ## 0.24.0
 
 ### Minor Changes

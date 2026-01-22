@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Kuruluş Modu",
-		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Kilo Code Dashboard'u ziyaret et.",
+		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için <dashboardLink>Kilo Code Dashboard</dashboardLink>'u ziyaret et.",
 		"cannotEdit": "Kuruluş modları düzenlenemez"
 	},
 	"tools": {

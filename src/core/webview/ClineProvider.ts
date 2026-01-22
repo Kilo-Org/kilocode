@@ -1957,6 +1957,11 @@ export class ClineProvider
 			})
 		}
 	}
+
+	async postSkillsDataToWebview() {
+		const skills = this.skillsManager?.getAllSkills() ?? []
+		this.postMessageToWebview({ type: "skillsData", skills })
+	}
 	// kilocode_change end
 
 	/**
@@ -2428,6 +2433,14 @@ export class ClineProvider
 				try {
 					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
 					return await claudeCodeOAuthManager.isAuthenticated()
+				} catch {
+					return false
+				}
+			})(),
+			openAiCodexIsAuthenticated: await (async () => {
+				try {
+					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+					return await openAiCodexOAuthManager.isAuthenticated()
 				} catch {
 					return false
 				}

@@ -433,8 +433,8 @@ describe("ExtensionService", () => {
 			const api = service.getExtensionAPI()
 			expect(api).not.toBeNull()
 			expect(api).toHaveProperty("getState")
-			expect(api).toHaveProperty("sendMessage")
-			expect(api).toHaveProperty("updateState")
+			expect(api).toHaveProperty("sendWebviewMessage")
+			expect(api).toHaveProperty("injectConfiguration")
 		})
 
 		it("should return null API before initialization", () => {

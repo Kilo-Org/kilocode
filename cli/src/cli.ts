@@ -78,7 +78,7 @@ export class CLI {
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
-			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
+			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " ⎇" : ""}`
 			if (supportsTitleSetting()) {
 				process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 			}

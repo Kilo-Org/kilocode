@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Režim organizace",
-		"description": "Tento režim je poskytován tvou organizací a nelze ho zde upravovat. Pro úpravu tohoto režimu navštiv Kilo Code Dashboard.",
+		"description": "Tento režim je poskytován tvou organizací a nelze ho zde upravovat. Pro úpravu tohoto režimu navštiv <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Režimy organizace nelze upravovat"
 	},
 	"tools": {
