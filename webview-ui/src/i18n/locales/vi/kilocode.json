@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Máy chủ MCP"
+			"mcp": "Máy chủ MCP",
+			"agentBehaviour": "Hành vi của Agent",
+			"skills": "Kỹ năng"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -142,7 +144,14 @@
 	},
 	"docs": "Tài liệu",
 	"rules": {
-		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
+		"tooltip": "Quản lý hành vi của agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Quy tắc",
+			"workflows": "Quy trình làm việc",
+			"mcps": "MCPs",
+			"modes": "Chế độ",
+			"skills": "Kỹ năng"
+		},
 		"ariaLabel": "Quy tắc Kilo Code",
 		"tabs": {
 			"rules": "Quy tắc",
@@ -365,5 +374,17 @@
 		"providerInactive": "Chuyển nhà cung cấp sang Kilo Code để đặt mô hình theo từng chế độ.",
 		"modelsUnavailable": "Mô hình Kilo Code không khả dụng. Hãy cấu hình nhà cung cấp Kilo Code để tải mô hình.",
 		"overrideWillNotApply": "Mô hình gateway không khả dụng; mô hình theo từng chế độ sẽ không được áp dụng cho đến khi có thể tải mô hình."
+	},
+	"skills": {
+		"description": "Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể. Chúng được tự động áp dụng khi liên quan đến yêu cầu của bạn.",
+		"noSkills": "Chưa cài đặt kỹ năng nào",
+		"projectSkills": "Kỹ năng Dự án",
+		"globalSkills": "Kỹ năng Toàn cầu",
+		"deleteDialog": {
+			"title": "Xóa Kỹ năng",
+			"description": "Bạn có chắc chắn muốn xóa kỹ năng \"{{skillName}}\"? Hành động này không thể hoàn tác.",
+			"cancel": "Hủy",
+			"delete": "Xóa"
+		}
 	}
 }

@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP сервери"
+			"mcp": "MCP сервери",
+			"agentBehaviour": "Поведінка агента",
+			"skills": "Навички"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -149,7 +151,14 @@
 	},
 	"docs": "Документація",
 	"rules": {
-		"tooltip": "Керувати Kilo Code Rules та Workflows",
+		"tooltip": "Керувати поведінкою агента ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Правила",
+			"workflows": "Робочі процеси",
+			"mcps": "MCP",
+			"modes": "Режими",
+			"skills": "Навички"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Правила",
@@ -364,5 +373,17 @@
 		"providerInactive": "Перемкни провайдера на Kilo Code, щоб встановити модель для режиму.",
 		"modelsUnavailable": "Моделі Kilo Code недоступні. Налаштуй провайдера Kilo Code, щоб отримати моделі.",
 		"overrideWillNotApply": "Gateway-моделі недоступні; модель для режиму не буде застосована, доки моделі не вдасться отримати."
+	},
+	"skills": {
+		"description": "Навички надають спеціалізовані інструкції для конкретних завдань. Вони автоматично застосовуються, коли відповідають твоєму запиту.",
+		"noSkills": "Навички не встановлено",
+		"projectSkills": "Навички проєкту",
+		"globalSkills": "Глобальні навички",
+		"deleteDialog": {
+			"title": "Видалити навичку",
+			"description": "Ти впевнений, що хочеш видалити навичку \"{{skillName}}\"? Цю дію неможливо скасувати.",
+			"cancel": "Скасувати",
+			"delete": "Видалити"
+		}
 	}
 }

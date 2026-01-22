@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP-Server"
+			"mcp": "MCP-Server",
+			"agentBehaviour": "Agentenverhalten",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Konto",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Dokumentation",
 	"rules": {
-		"tooltip": "Kilo Code Regeln & Workflows verwalten",
+		"tooltip": "Agentenverhalten verwalten ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regeln",
+			"workflows": "Workflows",
+			"mcps": "MCPs",
+			"modes": "Modi",
+			"skills": "Skills"
+		},
 		"ariaLabel": "Kilo Code Regeln",
 		"tabs": {
 			"rules": "Regeln",
@@ -364,5 +373,17 @@
 		"providerInactive": "Wechsle den Anbieter zu Kilo Code, um ein Modell pro Modus festzulegen.",
 		"modelsUnavailable": "Kilo Code-Modelle sind nicht verfügbar. Konfiguriere den Kilo Code-Anbieter, um Modelle abzurufen.",
 		"overrideWillNotApply": "Gateway-Modelle nicht verfügbar; das Modell pro Modus wird erst angewendet, wenn Modelle abgerufen werden können."
+	},
+	"skills": {
+		"description": "Skills bieten spezialisierte Anweisungen für bestimmte Aufgaben. Sie werden automatisch angewendet, wenn sie für deine Anfrage relevant sind.",
+		"noSkills": "Keine Skills installiert",
+		"projectSkills": "Projekt-Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill löschen",
+			"description": "Bist du sicher, dass du den Skill \"{{skillName}}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+			"cancel": "Abbrechen",
+			"delete": "Löschen"
+		}
 	}
 }

@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP-servers"
+			"mcp": "MCP-servers",
+			"agentBehaviour": "Agentgedrag",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
@@ -148,7 +150,14 @@
 	},
 	"docs": "Documentatie",
 	"rules": {
-		"tooltip": "Beheer Kilo Code Regels & Workflows",
+		"tooltip": "Agentgedrag beheren ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regels",
+			"workflows": "Workflows",
+			"mcps": "MCP's",
+			"modes": "Modi",
+			"skills": "Skills"
+		},
 		"ariaLabel": "Kilo Code Regels",
 		"tabs": {
 			"rules": "Regels",
@@ -363,5 +372,17 @@
 		"providerInactive": "Schakel provider naar Kilo Code om per modus een model in te stellen.",
 		"modelsUnavailable": "Kilo Code-modellen zijn niet beschikbaar. Configureer de Kilo Code-provider om modellen op te halen.",
 		"overrideWillNotApply": "Gateway-modellen niet beschikbaar; het per-modusmodel wordt pas toegepast zodra modellen kunnen worden opgehaald."
+	},
+	"skills": {
+		"description": "Skills bieden gespecialiseerde instructies voor specifieke taken. Ze worden automatisch toegepast wanneer ze relevant zijn voor je verzoek.",
+		"noSkills": "Geen skills geïnstalleerd",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill Verwijderen",
+			"description": "Weet je zeker dat je de skill \"{{skillName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+			"cancel": "Annuleren",
+			"delete": "Verwijderen"
+		}
 	}
 }

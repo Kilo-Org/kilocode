@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Server MCP"
+			"mcp": "Server MCP",
+			"agentBehaviour": "Comportamento dell'Agente",
+			"skills": "Competenze"
 		},
 		"provider": {
 			"account": "Account Kilo Code",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Documentazione",
 	"rules": {
-		"tooltip": "Gestisci Regole e Flussi di Lavoro di Kilo Code",
+		"tooltip": "Gestisci il comportamento dell'agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regole",
+			"workflows": "Flussi di Lavoro",
+			"mcps": "MCPs",
+			"modes": "Modalità",
+			"skills": "Competenze"
+		},
 		"ariaLabel": "Regole di Kilo Code",
 		"tabs": {
 			"rules": "Regole",
@@ -365,5 +374,17 @@
 		"providerInactive": "Passa il provider a Kilo Code per impostare un modello per modalità.",
 		"modelsUnavailable": "I modelli Kilo Code non sono disponibili. Configura il provider Kilo Code per recuperare i modelli.",
 		"overrideWillNotApply": "Modelli gateway non disponibili; il modello per modalità non verrà applicato finché non sarà possibile recuperare i modelli."
+	},
+	"skills": {
+		"description": "Le competenze forniscono istruzioni specializzate per compiti specifici. Vengono applicate automaticamente quando sono pertinenti alla tua richiesta.",
+		"noSkills": "Nessuna competenza installata",
+		"projectSkills": "Competenze del Progetto",
+		"globalSkills": "Competenze Globali",
+		"deleteDialog": {
+			"title": "Elimina Competenza",
+			"description": "Sei sicuro di voler eliminare la competenza \"{{skillName}}\"? Questa azione non può essere annullata.",
+			"cancel": "Annulla",
+			"delete": "Elimina"
+		}
 	}
 }

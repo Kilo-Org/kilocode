@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Servers"
+			"mcp": "MCP Servers",
+			"agentBehaviour": "พฤติกรรมของตัวแทน",
+			"skills": "ทักษะ"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -149,7 +151,14 @@
 	},
 	"docs": "เอกสาร",
 	"rules": {
-		"tooltip": "จัดการ Kilo Code Rules และ Workflows",
+		"tooltip": "จัดการพฤติกรรมของเอเจนต์ ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "กฎ",
+			"workflows": "เวิร์กโฟลว์",
+			"mcps": "MCPs",
+			"modes": "โหมด",
+			"skills": "ทักษะ"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Rules",
@@ -364,5 +373,17 @@
 		"providerInactive": "สลับผู้ให้บริการเป็น Kilo Code เพื่อกำหนดโมเดลแยกตามโหมด",
 		"modelsUnavailable": "โมเดล Kilo Code ไม่พร้อมใช้งาน โปรดตั้งค่าผู้ให้บริการ Kilo Code เพื่อดึงโมเดล",
 		"overrideWillNotApply": "โมเดล gateway ไม่พร้อมใช้งาน; โมเดลแยกตามโหมดจะยังไม่ถูกใช้จนกว่าจะดึงโมเดลได้"
+	},
+	"skills": {
+		"description": "ทักษะให้คำแนะนำเฉพาะทางสำหรับงานเฉพาะ ทักษะจะถูกนำไปใช้โดยอัตโนมัติเมื่อเกี่ยวข้องกับคำขอของคุณ",
+		"noSkills": "ยังไม่มีทักษะที่ติดตั้ง",
+		"projectSkills": "ทักษะโปรเจกต์",
+		"globalSkills": "ทักษะทั่วไป",
+		"deleteDialog": {
+			"title": "ลบทักษะ",
+			"description": "คุณแน่ใจหรือไม่ว่าต้องการลบทักษะ \"{{skillName}}\"? การกระทำนี้ไม่สามารถยกเลิกได้",
+			"cancel": "ยกเลิก",
+			"delete": "ลบ"
+		}
 	}
 }

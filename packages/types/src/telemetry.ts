@@ -36,6 +36,7 @@ export enum TelemetryEventName {
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
+	BLOCKED_BY_CONTENT_FILTER_ERROR = "Blocked By Content Filter Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	MEMORY_WARNING_SHOWN = "Memory Warning Shown",

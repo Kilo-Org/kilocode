@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP 서버"
+			"mcp": "MCP 서버",
+			"agentBehaviour": "에이전트 동작",
+			"skills": "스킬"
 		},
 		"provider": {
 			"account": "Kilo Code 계정",
@@ -149,7 +151,14 @@
 	},
 	"docs": "문서",
 	"rules": {
-		"tooltip": "Kilo Code 규칙 및 워크플로우 관리",
+		"tooltip": "에이전트 동작 관리 ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "규칙",
+			"workflows": "워크플로우",
+			"mcps": "MCPs",
+			"modes": "모드",
+			"skills": "스킬"
+		},
 		"ariaLabel": "Kilo Code 규칙",
 		"tabs": {
 			"rules": "규칙",
@@ -364,5 +373,17 @@
 		"providerInactive": "모드별 모델을 설정하려면 제공자를 Kilo Code로 전환하세요.",
 		"modelsUnavailable": "Kilo Code 모델을 사용할 수 없습니다. 모델을 가져오려면 Kilo Code 제공자를 구성하세요.",
 		"overrideWillNotApply": "게이트웨이 모델을 사용할 수 없어, 모델을 가져올 수 있을 때까지 모드별 모델이 적용되지 않습니다."
+	},
+	"skills": {
+		"description": "스킬은 특정 작업에 대한 전문 지침을 제공합니다. 요청과 관련이 있을 때 자동으로 적용됩니다.",
+		"noSkills": "설치된 스킬 없음",
+		"projectSkills": "프로젝트 스킬",
+		"globalSkills": "전역 스킬",
+		"deleteDialog": {
+			"title": "스킬 삭제",
+			"description": "\"{{skillName}}\" 스킬을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+			"cancel": "취소",
+			"delete": "삭제"
+		}
 	}
 }

@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Modelin yanıtı beklenmedik şekilde sona erdi (asistan mesajı yok). Bu hız sınırlamasının bir işareti olabilir.",
 		"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}",
 		"maxCompletionTokens": "Maksimum tamamlama token sayısına ulaşıldı.",
+		"contentFilter": "İstek içerik filtresi tarafından engellendi.",
 		"disableApplyDiff": "Bu hata tekrar ederse, lütfen Gelişmiş Ayarlar'dan Fark Üzerinden Düzenleme özelliğini devre dışı bırakın.",
 		"disableEditFile": "Bu hata tekrar ederse, lütfen Hızlı Uygulama deneysel özelliğini devre dışı bırakın."
 	},
@@ -177,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Kilocode CLI sürümün eski ve Agent Manager'ı desteklemiyor. Lütfen en son sürüme güncelle.",
-			"cliNotFound": "Kilocode CLI bulunamadı. Agent Manager'ı kullanmak için lütfen yükle.",
 			"cliMisconfigured": "Kilocode CLI yapılandırılmamış. Giriş yapmak için 'kilocode auth' veya yapılandırmak için 'kilocode config' çalıştır.",
 			"sessionFailed": "Ajan oturumu başlatılamadı",
 			"sessionFailedWithMessage": "Ajan oturumu başlatılamadı: {{message}}"

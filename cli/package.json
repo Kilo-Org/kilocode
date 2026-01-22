@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.24.0",
+	"version": "0.25.0",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "dist/index.js",
@@ -40,6 +40,7 @@
 		"@aws-sdk/credential-providers": "^3.966.0",
 		"@google/genai": "^1.35.0",
 		"@inquirer/prompts": "^8.2.0",
+		"@kilocode/agent-runtime": "workspace:^",
 		"@kilocode/core-schemas": "workspace:^",
 		"@lmstudio/sdk": "^1.5.0",
 		"@mistralai/mistralai": "^1.11.0",

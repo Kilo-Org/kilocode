@@ -68,7 +68,6 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
 	promptsButtonClicked: "settings", // kilocode_change: Navigate to settings with modes section
-	mcpButtonClicked: "mcp", // kilocode_change
 	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
 

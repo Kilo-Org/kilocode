@@ -75,7 +75,9 @@
 		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}",
 		"expandOutput": "Ausgabe erweitern",
 		"collapseOutput": "Ausgabe einklappen",
-		"copyCommand": "Befehl kopieren"
+		"copyCommand": "Befehl kopieren",
+		"thinking": "Denke nach",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent läuft im Vollautomatik-Modus - keine Eingabe möglich",

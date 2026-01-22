@@ -31,7 +31,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP सर्वर"
+			"mcp": "MCP सर्वर",
+			"agentBehaviour": "एजेंट व्यवहार",
+			"skills": "कौशल"
 		},
 		"provider": {
 			"account": "Kilo Code खाता",
@@ -135,7 +137,14 @@
 	},
 	"docs": "दस्तावेज़",
 	"rules": {
-		"tooltip": "Kilo Code नियम और वर्कफ़्लो प्रबंधित करें",
+		"tooltip": "एजेंट व्यवहार प्रबंधित करें ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "नियम",
+			"workflows": "वर्कफ़्लो",
+			"mcps": "MCPs",
+			"modes": "मोड्स",
+			"skills": "कौशल"
+		},
 		"ariaLabel": "Kilo Code नियम",
 		"tabs": {
 			"rules": "नियम",
@@ -364,5 +373,17 @@
 		"providerInactive": "प्रति-मोड मॉडल सेट करने के लिए प्रदाता को Kilo Code पर स्विच करें।",
 		"modelsUnavailable": "Kilo Code मॉडल उपलब्ध नहीं हैं। मॉडल लाने के लिए Kilo Code प्रदाता कॉन्फ़िगर करें।",
 		"overrideWillNotApply": "Gateway मॉडल उपलब्ध नहीं हैं; मॉडल प्राप्त होने तक प्रति-मोड मॉडल लागू नहीं होगा।"
+	},
+	"skills": {
+		"description": "कौशल विशिष्ट कार्यों के लिए विशेष निर्देश प्रदान करते हैं। जब तुम्हारे अनुरोध से संबंधित हों तो ये स्वचालित रूप से लागू होते हैं।",
+		"noSkills": "कोई कौशल इंस्टॉल नहीं है",
+		"projectSkills": "प्रोजेक्ट कौशल",
+		"globalSkills": "वैश्विक कौशल",
+		"deleteDialog": {
+			"title": "कौशल हटाएं",
+			"description": "क्या तुम वाकई \"{{skillName}}\" कौशल को हटाना चाहते हो? यह क्रिया पूर्ववत नहीं की जा सकती।",
+			"cancel": "रद्द करें",
+			"delete": "हटाएं"
+		}
 	}
 }

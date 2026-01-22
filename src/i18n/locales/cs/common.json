@@ -141,6 +141,24 @@
 		"roo": {
 			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Nejsi přihlášen k OpenAI Codex. Prosím přihlas se pomocí OpenAI Codex OAuth.",
+			"invalidRequest": "Neplatný požadavek na Codex API. Zkontroluj prosím své vstupní parametry.",
+			"authenticationFailed": "Autentizace selhala. Prosím znovu se přihlas k OpenAI Codex.",
+			"accessDenied": "Přístup odepřen. Tvé předplatné ChatGPT možná nezahrnuje přístup k Codex.",
+			"endpointNotFound": "Endpoint Codex API nebyl nalezen.",
+			"rateLimitExceeded": "Překročen limit rychlosti. Zkus to prosím později.",
+			"serviceError": "Chyba služby OpenAI Codex. Zkus to prosím později.",
+			"genericError": "Chyba Codex API ({{status}})",
+			"noResponseBody": "Chyba Codex API: Žádné tělo odpovědi",
+			"connectionFailed": "Nepodařilo se připojit k Codex API: {{message}}",
+			"unexpectedConnectionError": "Neočekávaná chyba při připojování k Codex API",
+			"apiError": "Chyba Codex API: {{message}}",
+			"responseFailed": "Odpověď selhala: {{message}}",
+			"streamProcessingError": "Chyba při zpracování proudu odpovědi: {{message}}",
+			"unexpectedStreamError": "Neočekávaná chyba při zpracování proudu odpovědi",
+			"completionError": "Chyba dokončení OpenAI Codex: {{message}}"
+		},
 		"message": {
 			"no_active_task_to_delete": "Nebyla nalezena aktivní úloha. Nelze smazat zprávy.",
 			"invalid_timestamp_for_deletion": "Pro smazání byl poskytnut neplatný časový údaj.",
@@ -156,7 +174,8 @@
 		"manual_url_auth_failed": "Ověření se nezdařilo",
 		"manual_url_auth_error": "Došlo k chybě ověření",
 		"api": {
-			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky."
+			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky.",
+			"apiRequestFailed": "API požadavek selhal ({{status}})"
 		}
 	},
 	"warnings": {

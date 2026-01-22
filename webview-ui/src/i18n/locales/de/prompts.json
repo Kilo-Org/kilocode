@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Organisations-Modus",
-		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das Kilo Code Dashboard.",
+		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "Organisations-Modi können nicht bearbeitet werden"
 	},
 	"tools": {

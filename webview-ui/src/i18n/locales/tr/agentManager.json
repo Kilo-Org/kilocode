@@ -75,7 +75,9 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"thinking": "Düşünüyor",
+		"thinkingSeconds": "{{count}}sn"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

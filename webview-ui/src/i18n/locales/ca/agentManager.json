@@ -75,7 +75,9 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir sortida",
 		"collapseOutput": "Replegar sortida",
-		"copyCommand": "Copiar comanda"
+		"copyCommand": "Copiar comanda",
+		"thinking": "Pensant",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",

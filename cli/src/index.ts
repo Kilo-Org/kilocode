@@ -5,7 +5,8 @@ import { loadEnvFile } from "./utils/env-loader.js"
 loadEnvFile()
 
 import { Command } from "commander"
-import { existsSync } from "fs"
+import { existsSync, readFileSync } from "fs"
+import { resolve } from "path"
 import { CLI } from "./cli.js"
 import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
@@ -53,6 +54,7 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option("--append-system-prompt-file <path>", "Read custom instructions from a file to append to the system prompt")
 	.option("--on-task-completed <prompt>", "Send a custom prompt to the agent when the task completes")
 	.option(
 		"--attach <path>",
@@ -210,6 +212,32 @@ program
 			}
 		}
 
+		// Handle --append-system-prompt-file option
+		let combinedSystemPrompt = options.appendSystemPrompt || ""
+
+		if (options.appendSystemPromptFile) {
+			// resolve() handles both absolute and relative paths:
+			// - Absolute paths (e.g., /home/user/file.md) → returned as-is
+			// - Relative paths (e.g., ./file.md) → resolved from process.cwd()
+			const filePath = resolve(options.appendSystemPromptFile)
+
+			if (!existsSync(filePath)) {
+				console.error(`Error: System prompt file not found: ${filePath}`)
+				process.exit(1)
+			}
+
+			try {
+				const fileContent = readFileSync(filePath, "utf-8")
+				// Combine: inline text first, then file content
+				combinedSystemPrompt = combinedSystemPrompt ? `${combinedSystemPrompt}\n\n${fileContent}` : fileContent
+			} catch (error) {
+				console.error(
+					`Error reading system prompt file: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				process.exit(1)
+			}
+		}
+
 		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
@@ -311,7 +339,7 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
-			appendSystemPrompt: options.appendSystemPrompt,
+			appendSystemPrompt: combinedSystemPrompt || undefined,
 			attachments: attachments.length > 0 ? attachments : undefined,
 			onTaskCompleted: options.onTaskCompleted,
 		})
