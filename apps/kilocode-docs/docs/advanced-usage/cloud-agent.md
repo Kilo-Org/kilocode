@@ -147,7 +147,7 @@ Webhook triggers do not support manual env var or setup command overrides at thi
 
 Webhook triggers are designed for low-volume invocations from trusted sources and are best suited for short-lived tasks.
 
-- **Personal webhooks**: Execute in the same sandbox container as a users Cloud Agent sessions. You can view/join invocations live.
+- **Personal webhooks**: Execute in the same sandbox container as a user's Cloud Agent sessions. You can view/join invocations live.
 - **Organization webhooks**: Execute in dedicated compute resources as a bot user, similar to Code Review sessions. You can share/fork the sessions when they're complete.
 
 Additional limits:
