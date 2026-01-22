@@ -1,0 +1,63 @@
+{
+	"name": "@kilocode/agent-runtime",
+	"version": "0.0.1",
+	"description": "Core agent runtime for Kilo Code - enables running agents without CLI",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./process": {
+			"types": "./dist/process.d.ts",
+			"import": "./dist/process.js",
+			"default": "./dist/process.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"build:watch": "tsc --watch",
+		"check-types": "tsc --noEmit",
+		"clean": "rimraf dist .turbo",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@kilocode/core-schemas": "workspace:^",
+		"@roo-code/types": "workspace:^",
+		"node-machine-id": "^1.1.12"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@roo-code/config-typescript": "workspace:^",
+		"@types/node": "~25.0.3",
+		"rimraf": "^6.1.2",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.16"
+	},
+	"peerDependencies": {
+		"@roo-code/cloud": "workspace:^",
+		"@roo-code/telemetry": "workspace:^"
+	},
+	"peerDependenciesMeta": {
+		"@roo-code/cloud": {
+			"optional": true
+		},
+		"@roo-code/telemetry": {
+			"optional": true
+		}
+	},
+	"engines": {
+		"node": ">=20.20.0"
+	},
+	"keywords": [
+		"agent",
+		"runtime",
+		"kilo-code",
+		"vscode",
+		"extension"
+	]
+}

@@ -62,6 +62,7 @@ const sidebars: SidebarsConfig = {
 								"providers/anthropic",
 								"providers/bedrock",
 								"providers/cerebras", // kilocode_change
+								"providers/openai-chatgpt-plus-pro", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
 								"providers/deepseek",
