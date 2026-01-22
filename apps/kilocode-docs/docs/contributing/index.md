@@ -13,7 +13,7 @@ There are many ways to contribute to Kilo Code:
 
 1. **Code Contributions**: Implement new features or fix bugs
 2. **Documentation**: Improve existing docs or create new guides
-3. **Custom Modes**: Create and share specialized modes
+3. **Marketplace Contributions**: Create and share custom modes, skills, and MCP servers via the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace)
 4. **Bug Reports**: Report issues you encounter
 5. **Feature Requests**: Suggest new features or improvements
 6. **Community Support**: Help other users in the community
@@ -78,15 +78,21 @@ git checkout -b your-branch-name
     - Testing steps
     - Screenshots (if applicable)
 
-## Creating Custom Modes
+## Contributing to the Kilo Marketplace
 
-Custom modes are a powerful way to extend Kilo Code's capabilities. To create and share a custom mode:
+The [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) is a community-driven repository of agent tooling that extends Kilo Code's capabilities. You can contribute:
 
-1. Follow the [Custom Modes documentation](/agent-behavior/custom-modes) to create your mode
+- **Skills**: Modular workflows and domain expertise that teach agents how to perform specific tasks
+- **MCP Servers**: Standardized integrations that connect agents to external tools and services
+- **Modes**: Custom agent personalities and behaviors with tailored tool access
 
-2. Test your mode thoroughly
+To contribute:
 
-3. Share your mode with the community by submitting a [GitHub Discussion](https://github.com/Kilo-Org/kilocode/discussions)
+1. Follow the documentation for [Custom Modes](/agent-behavior/custom-modes), [Skills](/agent-behavior/skills), or [MCP Servers](/features/mcp/overview) to create your resource
+
+2. Test your contribution thoroughly
+
+3. Submit a pull request to the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace)
 
 ## Engineering Specs
 

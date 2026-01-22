@@ -177,7 +177,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "你的 Kilocode CLI 版本已過時且不支援 Agent Manager。請更新至最新版本。",
-			"cliNotFound": "找不到 Kilocode CLI。請安裝以使用 Agent Manager。",
 			"cliMisconfigured": "Kilocode CLI 未設定。請執行 'kilocode auth' 登入或 'kilocode config' 進行設定。",
 			"sessionFailed": "啟動代理工作階段失敗",
 			"sessionFailedWithMessage": "啟動代理工作階段失敗: {{message}}"

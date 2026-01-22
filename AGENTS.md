@@ -18,6 +18,71 @@ Key source directories:
 - `src/api/providers/` - AI provider implementations (50+ providers)
 - `src/core/tools/` - Tool implementations (ReadFile, ApplyDiff, ExecuteCommand, etc.)
 - `src/services/` - Services (MCP, browser, checkpoints, code-index)
+- `packages/agent-runtime/` - Standalone agent runtime (runs extension without VS Code)
+
+## Agent Runtime Architecture
+
+The `@kilocode/agent-runtime` package enables running Kilo Code agents as isolated Node.js processes without VS Code.
+
+### How It Works
+
+```
+┌─────────────────────┐     fork()      ┌─────────────────────┐
+│  CLI / Manager      │ ───────────────▶│  Agent Process      │
+│                     │◀───── IPC ─────▶│  (extension host)   │
+└─────────────────────┘                 └─────────────────────┘
+```
+
+1. **ExtensionHost**: Hosts the Kilo Code extension with a complete VS Code API mock
+2. **MessageBridge**: Bidirectional IPC communication (request/response with timeout)
+3. **ExtensionService**: Orchestrates host and bridge lifecycle
+
+### Spawning Agents
+
+Agents are forked processes configured via the `AGENT_CONFIG` environment variable:
+
+```typescript
+import { fork } from "child_process"
+
+const agent = fork(require.resolve("@kilocode/agent-runtime/process"), [], {
+  env: {
+    AGENT_CONFIG: JSON.stringify({
+      workspace: "/path/to/project",
+      providerSettings: { apiProvider: "anthropic", apiKey: "..." },
+      mode: "code",
+      autoApprove: false,
+    }),
+  },
+  stdio: ["pipe", "pipe", "pipe", "ipc"],
+})
+
+agent.on("message", (msg) => {
+  if (msg.type === "ready") {
+    agent.send({ type: "sendMessage", payload: { type: "newTask", text: "Fix the bug" } })
+  }
+})
+```
+
+### Message Protocol
+
+| Direction | Type | Description |
+|-----------|------|-------------|
+| Parent → Agent | `sendMessage` | Send user message to extension |
+| Parent → Agent | `injectConfig` | Update extension configuration |
+| Parent → Agent | `shutdown` | Gracefully terminate agent |
+| Agent → Parent | `ready` | Agent initialized |
+| Agent → Parent | `message` | Extension message |
+| Agent → Parent | `stateChange` | State updated |
+
+### Detecting Agent Context
+
+Code running in agent processes can check for the `AGENT_CONFIG` environment variable. This is set by the agent manager when spawning processes:
+
+```typescript
+if (process.env.AGENT_CONFIG) {
+  // Running as spawned agent - disable worker pools, etc.
+}
+```
 
 ## Build Commands
 

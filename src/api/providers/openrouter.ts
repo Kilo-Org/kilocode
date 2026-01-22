@@ -567,10 +567,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 						yield { type: "reasoning", text: delta.reasoning }
 					}
 				}
-
 				// kilocode_change start
-				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
-					yield { type: "reasoning", text: delta.reasoning_content }
+				else if ("reasoning_content" in delta && typeof delta.reasoning_content === "string") {
+					if (!hasYieldedReasoningFromDetails) {
+						yield { type: "reasoning", text: delta.reasoning_content }
+					}
 				}
 				// kilocode_change end
 
