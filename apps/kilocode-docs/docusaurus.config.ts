@@ -97,6 +97,17 @@ const config: Config = {
 		[
 			"@docusaurus/plugin-client-redirects",
 			{
+				createRedirects(existingPath) {
+					// Redirect old /contributing/specs/spec-* paths to /contributing/architecture/*
+					if (existingPath.startsWith("/contributing/architecture/")) {
+						const filename = existingPath.replace("/contributing/architecture/", "")
+						return [
+							`/contributing/specs/spec-${filename}`, // spec- prefix
+							`/contributing/specs/${filename}`, // without prefix
+						]
+					}
+					return undefined
+				},
 				redirects: [
 					// Files moved from advanced-usage to features
 					{
@@ -109,7 +120,11 @@ const config: Config = {
 					},
 					{
 						to: "/agent-behavior/custom-instructions",
-						from: ["/advanced-usage/custom-instructions", "/features/custom-instructions", "/customization/custom-instructions"],
+						from: [
+							"/advanced-usage/custom-instructions",
+							"/features/custom-instructions",
+							"/customization/custom-instructions",
+						],
 					},
 					{
 						to: "/agent-behavior/custom-modes",
@@ -154,6 +169,11 @@ const config: Config = {
 					{
 						to: "/features/api-configuration-profiles",
 						from: ["/advanced-usage/api-configuration-profiles"],
+					},
+
+					{
+						to: "/slack",
+						from: ["/advanced-usage/slackbot"],
 					},
 
 					// MCP related redirects
@@ -238,6 +258,16 @@ const config: Config = {
 						from: ["/extending/development-environment"],
 					},
 				],
+			},
+		],
+		[
+			"docusaurus-plugin-llms",
+			{
+				id: "llms-txt",
+				name: "Kilo Code Documentation",
+				description: "Comprehensive documentation for Kilo Code, an AI-powered coding assistant for VS Code, Jetbrains, CLI & Cloud",
+				url: "https://kilo.ai/docs",
+				email: "hi@kilocode.ai",
 			},
 		],
 	],

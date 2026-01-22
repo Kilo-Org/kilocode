@@ -31,7 +31,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Sunucuları"
+			"mcp": "MCP Sunucuları",
+			"agentBehaviour": "Ajan Davranışı"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -142,7 +143,13 @@
 	},
 	"docs": "Belgeler",
 	"rules": {
-		"tooltip": "Kilo Code Kuralları ve İş Akışlarını Yönet",
+		"tooltip": "Ajan Davranışını Yönet ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları",
+			"mcps": "MCP'ler",
+			"modes": "Modlar"
+		},
 		"ariaLabel": "Kilo Code Kuralları",
 		"tabs": {
 			"rules": "Kurallar",
@@ -214,36 +221,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Otomatik Tamamlama",
 		"settings": {
-			"triggers": "Tetikleyiciler",
-			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
+			"codeEditorSuggestions": "Kod Editörü Önerileri",
+			"chatSuggestions": "Sohbet Önerileri",
+			"model": "Model",
+			"provider": "Sağlayıcı",
 			"enableAutoTrigger": {
-				"label": "Autocomplete'i Etkinleştir",
-				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
+				"label": "Önerileri otomatik tetikle",
+				"description": "Yazmayı duraklattığında otomatik olarak satır içi kod önerileri göster."
 			},
 			"autoTriggerDelay": {
 				"label": "Otomatik Tetikleme Gecikmesi",
-				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
+				"description": "Yazmayı duraklattıktan sonra önerilerin görünmesi için saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
+				"label": "Klavye kısayoluyla tetikle ({{keybinding}})",
+				"description": "İmleç konumunda kod önerisi istemek için {{keybinding}} tuşuna bas. <DocsLink>Kısayolu düzenle</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı",
-			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
-			"model": "Model",
-			"provider": "Sağlayıcı",
 			"enableChatAutocomplete": {
-				"label": "Sohbet Girişi Otomatik Tamamlama",
-				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+				"label": "Sohbet otomatik tamamlamayı etkinleştir",
+				"description": "Sohbet girişinde yazarken önerileri göster. Önerileri kabul etmek için Tab tuşuna bas."
 			},
 			"snooze": {
-				"label": "Otomatik Tamamlamayı Ertele",
-				"description": "Otomatik tamamlama önerilerini belirli bir süre için geçici olarak duraklat.",
+				"label": "Önerileri ertele",
+				"description": "Belirli bir süre için önerileri geçici olarak duraklat.",
 				"button": "Ertele",
 				"unsnooze": "Ertelemeyi Kaldır",
-				"currentlySnoozed": "Otomatik tamamlama şu anda ertelenmiş durumda.",
+				"currentlySnoozed": "Öneriler şu anda ertelenmiş durumda.",
 				"duration": {
 					"1min": "1 dakika",
 					"5min": "5 dakika",
@@ -252,16 +257,18 @@
 					"1hour": "1 saat"
 				}
 			},
+			"keybindingNotFound": "bulunamadı",
 			"noModelConfigured": {
 				"title": "Otomatik tamamlama modeli yapılandırılmadı",
-				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekleyin:",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekle:",
 				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
 			},
 			"noCredits": {
-				"title": "Hesabınızda kredi yok",
-				"description": "Kilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.",
+				"title": "Hesabında kredi yok",
+				"description": "Kilo Code hesabında kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabına kredi ekle.",
 				"buyCredits": "Kredi satın al →"
-			}
+			},
+			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan."
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +314,9 @@
 		},
 		"modes": {
 			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"skills": {
+			"description": "Topluluktan becerilere göz atın ve keşfedin. Beceriler, belirli görevler için özel talimatlar sağlar."
 		}
 	},
 	"modes": {
@@ -342,6 +352,14 @@
 			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
 		},
 		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
-		"errorState": "Hata nedeniyle kullanılamıyor"
+		"errorState": "Hata nedeniyle kullanılamıyor",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Sistem Varsayılanı",
+			"description": "Konuşma-yazma için mikrofon cihazını seçin",
+			"noDevices": "Mikrofon cihazı bulunamadı",
+			"loading": "Mikrofon cihazları yükleniyor...",
+			"refresh": "Yenile"
+		}
 	}
 }

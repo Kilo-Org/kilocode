@@ -24,7 +24,15 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
-				"basic-usage/autocomplete",
+				{
+					type: "category",
+					label: "Autocomplete",
+					link: {
+						type: "doc",
+						id: "basic-usage/autocomplete/index",
+					},
+					items: ["basic-usage/autocomplete/mistral-setup"],
+				},
 				"basic-usage/context-mentions",
 				{
 					type: "category",
@@ -54,6 +62,7 @@ const sidebars: SidebarsConfig = {
 								"providers/anthropic",
 								"providers/bedrock",
 								"providers/cerebras", // kilocode_change
+								"providers/openai-chatgpt-plus-pro", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
 								"providers/deepseek",
@@ -85,6 +94,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
+				"basic-usage/byok",
 				"basic-usage/adding-credits",
 				"basic-usage/settings-management",
 			],
@@ -135,6 +145,7 @@ const sidebars: SidebarsConfig = {
 			label: "Agent Behavior",
 			items: [
 				"agent-behavior/prompt-engineering",
+				"agent-behavior/agents-md",
 				"agent-behavior/custom-modes",
 				"agent-behavior/custom-rules",
 				"agent-behavior/custom-instructions",
@@ -170,7 +181,6 @@ const sidebars: SidebarsConfig = {
 				"features/auto-launch-configuration",
 				"advanced-usage/auto-cleanup",
 				"advanced-usage/integrations",
-				"advanced-usage/slackbot",
 				"advanced-usage/appbuilder",
 				"advanced-usage/cloud-agent",
 				"advanced-usage/code-reviews",
@@ -206,20 +216,25 @@ const sidebars: SidebarsConfig = {
 			label: "Contributing",
 			items: [
 				"contributing/index",
-				"contributing/architecture",
 				"contributing/development-environment",
 				{
 					type: "category",
-					label: "Engineering Specs",
+					label: "Architecture",
 					items: [
-						"contributing/specs/index",
-						"contributing/specs/spec-template",
-						"contributing/specs/spec-enterprise-mcp-controls",
-						"contributing/specs/spec-onboarding-engagement-improvements",
-						"contributing/specs/spec-organization-modes-library",
-						"contributing/specs/spec-security-reviews",
-						"contributing/specs/spec-track-repo-url",
-						"contributing/specs/spec-voice-transcription",
+						{
+							type: "doc",
+							id: "contributing/architecture/index",
+							label: "Overview",
+						},
+						"contributing/architecture/annual-billing",
+						"contributing/architecture/enterprise-mcp-controls",
+						"contributing/architecture/onboarding-engagement-improvements",
+						"contributing/architecture/organization-modes-library",
+						"contributing/architecture/security-reviews",
+						"contributing/architecture/track-repo-url",
+						"contributing/architecture/vercel-ai-gateway",
+						"contributing/architecture/voice-transcription",
+						"contributing/architecture/model-o11y",
 					],
 				},
 			],
@@ -248,6 +263,7 @@ const sidebars: SidebarsConfig = {
 			],
 		},
 		"cli",
+		"slack",
 	],
 }
 

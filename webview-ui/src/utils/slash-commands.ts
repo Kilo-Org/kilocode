@@ -29,8 +29,12 @@ export function getSupportedSlashCommands(
 			description: "Create a new Kilo rule with context from your conversation",
 		},
 		{ name: "reportbug", description: "Create a KiloCode GitHub issue" },
+		// kilocode_change start
 		{ name: "smol", description: "Condenses your current context window" },
-		{ name: "session", description: "Session management <fork|share>" }, // kilocode_change
+		{ name: "condense", description: "Condenses your current context window" },
+		{ name: "compact", description: "Condenses your current context window" },
+		{ name: "session", description: "Session management <fork|share|show>" },
+		// kilocode_change end
 	]
 
 	// Add mode-switching commands dynamically

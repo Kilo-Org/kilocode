@@ -9,7 +9,7 @@
 			"incentive": "$1 di credito gratuito"
 		},
 		"openrouter": {
-			"description": "Un'interfaccia unificata per LLMs"
+			"description": "Un'interfaccia unificata per gli LLM"
 		},
 		"roo": {
 			"description": "I migliori modelli gratuiti per iniziare",
@@ -18,25 +18,30 @@
 	},
 	"chooseProvider": "Per fare la sua magia, Kilo Code ha bisogno di una chiave API.",
 	"providerSignup": {
+		"heading": "Scegli il tuo provider",
+		"chooseProvider": "Roo ha bisogno di un provider LLM per funzionare. Scegline uno per iniziare, puoi aggiungerne altri in seguito.",
 		"rooCloudProvider": "Provider Roo Code Cloud",
-		"rooCloudDescription": "Il modo più semplice per usare Roo. Un mix curato di modelli gratuiti e a pagamento a basso costo",
-		"learnMore": "scopri di più",
-		"useAnotherProvider": "Usa un altro provider",
+		"rooCloudDescription": "Il modo più semplice per iniziare è con il Provider Roo Code Cloud: un mix curato di modelli gratuiti e a pagamento a basso costo.",
+		"learnMore": "Scopri di più",
+		"useAnotherProvider": "Provider di terze parti",
 		"useAnotherProviderDescription": "Inserisci una chiave API e inizia.",
-		"noApiKeys": "Non vuoi occuparti di chiavi? Scegli il Provider Roo Code Cloud.",
-		"getStarted": "Inizia"
+		"noApiKeys": "Non vuoi affrontare le chiavi API e gli account separati?",
+		"backToRoo": "Scegli il Provider Roo Code Cloud.",
+		"goBack": "Indietro",
+		"finish": "Fine"
 	},
 	"waitingForCloud": {
-		"heading": "Ti stiamo portando a Roo Code Cloud...",
-		"description": "Completa l'iscrizione nel tuo browser e tornerai qui automaticamente.",
-		"noPrompt": "Se non ti viene chiesto di aprire un URL, <clickHere>fai clic qui</clickHere>.",
-		"havingTrouble": "Se hai completato l'iscrizione ma hai problemi, <clickHere>fai clic qui</clickHere>.",
+		"heading": "Accesso a Roo Code Cloud...",
+		"description": "Ti porteremo al tuo browser per registrarti a Roo Code Cloud. Poi ti riporteremo qui per terminare.",
+		"noPrompt": "Se non ti viene chiesto di aprire un URL, <clickHere>clicca qui</clickHere>.",
+		"havingTrouble": "Se hai completato la registrazione ma hai problemi, <clickHere>clicca qui</clickHere>.",
 		"pasteUrl": "Incolla l'URL di callback dal tuo browser:",
-		"invalidURL": "Questo non sembra un URL di callback valido. Copia quello che Roo Code Cloud mostra nel tuo browser.",
+		"docsLink": "Non funziona? <DocsLink>Consulta la documentazione</DocsLink>.",
+		"invalidURL": "Non sembra un URL di callback valido. Per favore copia quello che Roo Code Cloud sta mostrando nel tuo browser.",
 		"goBack": "Indietro"
 	},
-	"startRouter": "Consigliamo di utilizzare un router LLM:",
-	"startCustom": "Oppure puoi utilizzare la tua chiave API:",
+	"startRouter": "Ti consigliamo di usare un router LLM:",
+	"startCustom": "Oppure puoi portare la tua chiave API:",
 	"telemetry": {
 		"helpImprove": "Aiuta a migliorare Kilo Code",
 		"helpImproveMessage": "Kilo Code raccoglie dati di errori e utilizzo per aiutarci a correggere bug e migliorare l'estensione. Questa telemetria non raccoglie codice, prompts o informazioni personali. Puoi disattivare questo nelle <settingsLink>impostazioni</settingsLink>."

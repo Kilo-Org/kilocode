@@ -10,7 +10,7 @@ Before you begin, choose one of the following development environment options:
 
 1. **Git** - For version control
 2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
-3. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
+3. **Node.js** (version [v20.20.0](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
 4. **pnpm** - Package manager (https://pnpm.io/)
 5. **Visual Studio Code** - Our recommended IDE for development
 

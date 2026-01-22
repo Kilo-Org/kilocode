@@ -5,7 +5,7 @@ sidebar_label: Deploy
 
 # Deploy
 
-Kilo Deploy lets you ship **Next.js** applications directly from Kilo Code, with:
+Kilo Deploy lets you ship **Next.js** and **static sites** directly from Kilo Code, with:
 
 - **One-click deployment** from the Kilo Code dashboard
 - **No manual configuration** — deployment settings are generated for you
@@ -14,14 +14,24 @@ Kilo Deploy lets you ship **Next.js** applications directly from Kilo Code, with
 
 ---
 
+## Supported Platforms
+
+- **Next.js 14** — latest minor
+- **Next.js 15** — all versions
+- **Next.js 16** — partial support (some features may not work)
+- **Static Sites** — pre-built HTML/CSS/JS
+- **Static Site Generators** — Hugo, Jekyll, Eleventy (built during deployment)
+
+**Package managers:** npm, pnpm, yarn, bun — automatically detected.
+
+---
+
 ## Prerequisites
 
-- Your project must use **Next.js 15** (all minor/patch versions) or the **latest minor of Next.js 14**
-- You must enable the **GitHub Integration**
-    - Go to **Integrations → GitHub**
-    - Click **Configure** and follow the prompts to connect GitHub to Kilo Code
+Enable the **GitHub Integration** before deploying:
 
-Deploy supports all major package managers: **npm, pnpm, yarn, bun**. Kilo Code automatically detects which one your project uses and runs the correct build command.
+1. Go to **Integrations → GitHub**
+2. Click **Configure** and follow the prompts to connect GitHub to Kilo Code
 
 ---
 

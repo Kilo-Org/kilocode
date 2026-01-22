@@ -149,7 +149,7 @@ describe("GhostServiceSettingsView", () => {
 		renderComponent()
 
 		// Check that trigger settings are visible
-		expect(screen.getByText(/kilocode:ghost.settings.triggers/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:ghost.settings.codeEditorSuggestions/)).toBeInTheDocument()
 		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
 	})
 

@@ -1,7 +1,12 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { parseMentions } from "./index"
+import { parseMentions, ParseMentionsResult } from "./index"
 import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
+
+export interface ProcessUserContentMentionsResult {
+	content: Anthropic.Messages.ContentBlockParam[]
+	mode?: string // Mode from the first slash command that has one
+}
 
 /**
  * Process mentions in user content, specifically within task and feedback tags
@@ -26,7 +31,10 @@ export async function processUserContentMentions({
 	includeDiagnosticMessages?: boolean
 	maxDiagnosticMessages?: number
 	maxReadFileLine?: number
-}) {
+}): Promise<ProcessUserContentMentionsResult> {
+	// Track the first mode found from slash commands
+	let commandMode: string | undefined
+
 	// Process userContent array, which contains various block types:
 	// TextBlockParam, ImageBlockParam, ToolUseBlockParam, and ToolResultBlockParam.
 	// We need to apply parseMentions() to:
@@ -37,7 +45,7 @@ export async function processUserContentMentions({
 	// (see askFollowupQuestion), we place all user generated content in
 	// these tags so they can effectively be used as markers for when we
 	// should parse mentions).
-	return Promise.all(
+	const content = await Promise.all(
 		userContent.map(async (block) => {
 			const shouldProcessMentions = (text: string) =>
 				text.includes("<task>") ||
@@ -47,10 +55,33 @@ export async function processUserContentMentions({
 
 			if (block.type === "text") {
 				if (shouldProcessMentions(block.text)) {
+					const result = await parseMentions(
+						block.text,
+						cwd,
+						urlContentFetcher,
+						fileContextTracker,
+						rooIgnoreController,
+						showRooIgnoredFiles,
+						includeDiagnosticMessages,
+						maxDiagnosticMessages,
+						maxReadFileLine,
+					)
+					// Capture the first mode found
+					if (!commandMode && result.mode) {
+						commandMode = result.mode
+					}
 					return {
 						...block,
-						text: await parseMentions(
-							block.text,
+						text: result.text,
+					}
+				}
+
+				return block
+			} else if (block.type === "tool_result") {
+				if (typeof block.content === "string") {
+					if (shouldProcessMentions(block.content)) {
+						const result = await parseMentions(
+							block.content,
 							cwd,
 							urlContentFetcher,
 							fileContextTracker,
@@ -59,27 +90,14 @@ export async function processUserContentMentions({
 							includeDiagnosticMessages,
 							maxDiagnosticMessages,
 							maxReadFileLine,
-						),
-					}
-				}
-
-				return block
-			} else if (block.type === "tool_result") {
-				if (typeof block.content === "string") {
-					if (shouldProcessMentions(block.content)) {
+						)
+						// Capture the first mode found
+						if (!commandMode && result.mode) {
+							commandMode = result.mode
+						}
 						return {
 							...block,
-							content: await parseMentions(
-								block.content,
-								cwd,
-								urlContentFetcher,
-								fileContextTracker,
-								rooIgnoreController,
-								showRooIgnoredFiles,
-								includeDiagnosticMessages,
-								maxDiagnosticMessages,
-								maxReadFileLine,
-							),
+							content: result.text,
 						}
 					}
 
@@ -88,19 +106,24 @@ export async function processUserContentMentions({
 					const parsedContent = await Promise.all(
 						block.content.map(async (contentBlock) => {
 							if (contentBlock.type === "text" && shouldProcessMentions(contentBlock.text)) {
+								const result = await parseMentions(
+									contentBlock.text,
+									cwd,
+									urlContentFetcher,
+									fileContextTracker,
+									rooIgnoreController,
+									showRooIgnoredFiles,
+									includeDiagnosticMessages,
+									maxDiagnosticMessages,
+									maxReadFileLine,
+								)
+								// Capture the first mode found
+								if (!commandMode && result.mode) {
+									commandMode = result.mode
+								}
 								return {
 									...contentBlock,
-									text: await parseMentions(
-										contentBlock.text,
-										cwd,
-										urlContentFetcher,
-										fileContextTracker,
-										rooIgnoreController,
-										showRooIgnoredFiles,
-										includeDiagnosticMessages,
-										maxDiagnosticMessages,
-										maxReadFileLine,
-									),
+									text: result.text,
 								}
 							}
 
@@ -117,4 +140,6 @@ export async function processUserContentMentions({
 			return block
 		}),
 	)
+
+	return { content, mode: commandMode }
 }

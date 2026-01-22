@@ -31,7 +31,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Servidores MCP"
+			"mcp": "Servidores MCP",
+			"agentBehaviour": "Comportamiento del Agente"
 		},
 		"provider": {
 			"account": "Cuenta de Kilo Code",
@@ -142,7 +143,13 @@
 	},
 	"docs": "Documentos",
 	"rules": {
-		"tooltip": "Gestionar Reglas y Flujos de Trabajo de Kilo Code",
+		"tooltip": "Gestionar el comportamiento del agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Reglas",
+			"workflows": "Flujos de Trabajo",
+			"mcps": "MCPs",
+			"modes": "Modos"
+		},
 		"ariaLabel": "Reglas de Kilo Code",
 		"tabs": {
 			"rules": "Reglas",
@@ -214,36 +221,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Autocompletado",
 		"settings": {
-			"triggers": "Activadores",
-			"keybindingDescription": "Las funciones de Autocomplete pueden activarse mediante comandos. Puedes configurar los <DocsLink>Atajos de Teclado aquí</DocsLink>.",
+			"codeEditorSuggestions": "Sugerencias del Editor de Código",
+			"chatSuggestions": "Sugerencias del Chat",
+			"model": "Modelo",
+			"provider": "Proveedor",
 			"enableAutoTrigger": {
-				"label": "Pausar para Completar",
-				"description": "Cuando está habilitado, Kilo Code activará automáticamente Autocomplete cuando dejes de escribir. Esto puede ser útil para correcciones rápidas y sugerencias."
+				"label": "Activar sugerencias automáticamente",
+				"description": "Mostrar automáticamente sugerencias de código en línea cuando dejas de escribir."
 			},
 			"autoTriggerDelay": {
 				"label": "Retraso de Activación Automática",
-				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
+				"description": "El retraso en segundos antes de que aparezcan las sugerencias después de dejar de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede consumir más recursos."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocompletado Manual ({{keybinding}})",
-				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"
+				"label": "Activar con atajo de teclado ({{keybinding}})",
+				"description": "Presiona {{keybinding}} para solicitar una sugerencia de código en la posición del cursor. <DocsLink>Editar atajo</DocsLink>"
 			},
-			"keybindingNotFound": "no encontrado",
-			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado.",
-			"model": "Modelo",
-			"provider": "Proveedor",
 			"enableChatAutocomplete": {
-				"description": "Cuando está habilitado, Kilo Code sugerirá completaciones mientras escribes en el campo de chat. Presiona Tab para aceptar las sugerencias.",
-				"label": "Autocompletado de Entrada de Chat"
+				"label": "Activar autocompletado del chat",
+				"description": "Mostrar sugerencias mientras escribes en el campo de entrada del chat. Presiona Tab para aceptar sugerencias."
 			},
 			"snooze": {
-				"label": "Posponer Autocompletado",
-				"description": "Pausar temporalmente las sugerencias de autocompletado durante un tiempo especificado.",
+				"label": "Pausar sugerencias",
+				"description": "Pausar temporalmente las sugerencias durante un tiempo determinado.",
 				"button": "Posponer",
 				"unsnooze": "Reactivar",
-				"currentlySnoozed": "El autocompletado está actualmente pospuesto.",
+				"currentlySnoozed": "Las sugerencias están actualmente pausadas.",
 				"duration": {
 					"1min": "1 minuto",
 					"5min": "5 minutos",
@@ -252,6 +257,7 @@
 					"1hour": "1 hora"
 				}
 			},
+			"keybindingNotFound": "no encontrado",
 			"noModelConfigured": {
 				"title": "No hay modelo de autocompletado configurado",
 				"description": "Para habilitar el autocompletado, añade un perfil con uno de estos proveedores compatibles:",
@@ -261,7 +267,8 @@
 				"title": "No hay créditos en tu cuenta",
 				"description": "Tu cuenta de Kilo Code no tiene créditos. Para usar el autocompletado, por favor añade créditos a tu cuenta.",
 				"buyCredits": "Comprar créditos →"
-			}
+			},
+			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado."
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +314,9 @@
 		},
 		"modes": {
 			"description": "Estos modos están disponibles en la comunidad. Haz clic <1>aquí</1> para editar tus propios modos personalizados."
+		},
+		"skills": {
+			"description": "Explora y descubre habilidades de la comunidad. Las habilidades proporcionan instrucciones especializadas para tareas específicas."
 		}
 	},
 	"modes": {
@@ -342,6 +352,14 @@
 			"ffmpegMessage": "Ayúdame a instalar FFmpeg"
 		},
 		"misconfiguredState": "No disponible debido a la configuración",
-		"errorState": "No disponible debido a un error"
+		"errorState": "No disponible debido a un error",
+		"microphone": {
+			"label": "Micrófono",
+			"description": "Seleccione el dispositivo de micrófono para convertir voz a texto",
+			"defaultOption": "Predeterminado del sistema",
+			"loading": "Cargando dispositivos de micrófono...",
+			"refresh": "Actualizar",
+			"noDevices": "No se encontraron dispositivos de micrófono"
+		}
 	}
 }

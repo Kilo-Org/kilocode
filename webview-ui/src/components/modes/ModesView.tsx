@@ -66,7 +66,9 @@ function getGroupName(group: GroupEntry): ToolGroup {
 	return Array.isArray(group) ? group[0] : group
 }
 
-const ModesView = () => {
+// kilocode_change start - add hideHeader prop
+const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
+	// kilocode_change end
 	const { t } = useAppTranslation()
 
 	const {
@@ -601,12 +603,16 @@ const ModesView = () => {
 
 	return (
 		<div>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<MessageSquare className="w-4" />
-					<div>{t("prompts:title")}</div>
-				</div>
-			</SectionHeader>
+			{/* kilocode_change start - conditionally render header */}
+			{!hideHeader && (
+				<SectionHeader>
+					<div className="flex items-center gap-2">
+						<MessageSquare className="w-4" />
+						<div>{t("prompts:title")}</div>
+					</div>
+				</SectionHeader>
+			)}
+			{/* kilocode_change end */}
 
 			<Section>
 				<div>
@@ -1290,7 +1296,7 @@ const ModesView = () => {
 											// Open or create an empty file
 											vscode.postMessage({
 												type: "openFile",
-												text: `./.roo/rules-${currentMode.slug}/rules.md`,
+												text: `./.kilocode/rules-${currentMode.slug}/rules.md`, // kilocode_change
 												values: {
 													create: true,
 													content: "",

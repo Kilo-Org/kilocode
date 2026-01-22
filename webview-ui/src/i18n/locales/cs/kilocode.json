@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP servery"
+			"mcp": "MCP servery",
+			"agentBehaviour": "Chování agenta"
 		},
 		"provider": {
 			"account": "Účet Kilo Code",
@@ -142,7 +143,13 @@
 	},
 	"docs": "Dokumentace",
 	"rules": {
-		"tooltip": "Spravovat Kilo Code Rules a Workflows",
+		"tooltip": "Spravovat chování agenta ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Pravidla",
+			"workflows": "Pracovní postupy",
+			"mcps": "MCP",
+			"modes": "Režimy"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Pravidla",
@@ -223,34 +230,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Spouštěče",
-			"keybindingDescription": "Funkce Autocomplete lze spustit pomocí příkazů. Můžeš nakonfigurovat <DocsLink>Klávesové Zkratky zde</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Povolit Autocomplete",
-				"description": "Když je povoleno, Kilo Code automaticky spustí Autocomplete, když přestaneš psát. To může být užitečné pro rychlé opravy a návrhy."
+				"label": "Automatické spouštění návrhů",
+				"description": "Automaticky zobrazovat návrhy kódu při pozastavení psaní."
 			},
 			"autoTriggerDelay": {
 				"label": "Zpoždění Automatického Spuštění",
-				"description": "Zpoždění v sekundách před tím, než Kilo Code spustí Autocomplete poté, co přestaneš psát. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
+				"description": "Zpoždění v sekundách před zobrazením návrhů po pozastavení psaní. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Ruční dokončování ({{keybinding}})",
-				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"label": "Spustit klávesovou zkratkou ({{keybinding}})",
+				"description": "Stiskni {{keybinding}} pro vyžádání návrhu kódu na pozici kurzoru. <DocsLink>Upravit zkratku</DocsLink>"
 			},
 			"keybindingNotFound": "nenalezeno",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel",
 			"enableChatAutocomplete": {
-				"label": "Automatické doplňování při psaní zpráv",
-				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+				"label": "Povolit automatické dokončování v chatu",
+				"description": "Zobrazovat návrhy při psaní v chatovém vstupu. Stiskni Tab pro přijetí návrhů."
 			},
 			"snooze": {
-				"label": "Pozastavit Autocomplete",
-				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"label": "Pozastavit návrhy",
+				"description": "Dočasně pozastavit návrhy na určitou dobu.",
 				"button": "Pozastavit",
 				"unsnooze": "Obnovit",
-				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"currentlySnoozed": "Návrhy jsou momentálně pozastaveny.",
 				"duration": {
 					"1min": "1 minuta",
 					"5min": "5 minut",
@@ -268,7 +273,9 @@
 				"title": "Na vašem účtu nejsou žádné kredity",
 				"description": "Váš účet Kilo Code nemá žádné kredity. Pro použití automatického dokončování prosím přidejte kredity na svůj účet.",
 				"buyCredits": "Koupit kredity →"
-			}
+			},
+			"codeEditorSuggestions": "Návrhy v editoru kódu",
+			"chatSuggestions": "Návrhy v chatu"
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +314,9 @@
 		},
 		"modes": {
 			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
+		},
+		"skills": {
+			"description": "Procházejte a objevujte dovednosti od komunity. Dovednosti poskytují specializované instrukce pro konkrétní úkoly."
 		}
 	},
 	"modes": {
@@ -342,6 +352,14 @@
 			"ffmpegMessage": "Pomozte mi nainstalovat FFmpeg"
 		},
 		"misconfiguredState": "Nedostupné kvůli konfiguraci",
-		"errorState": "Nedostupné kvůli chybě"
+		"errorState": "Nedostupné kvůli chybě",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Vyberte mikrofonní zařízení pro převod řeči na text",
+			"defaultOption": "Výchozí nastavení systému",
+			"loading": "Načítání mikrofonních zařízení...",
+			"refresh": "Obnovit",
+			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
 	}
 }

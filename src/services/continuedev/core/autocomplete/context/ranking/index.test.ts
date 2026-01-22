@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { rankAndOrderSnippets, fillPromptWithSnippets } from "./index"
-import { AutocompleteSnippetDeprecated } from "../../types"
+import { RankedSnippet } from "../../types"
 
 // vibecoded
 describe("rankAndOrderSnippets", () => {
@@ -16,7 +16,7 @@ describe("rankAndOrderSnippets", () => {
 		} as any
 
 		// Create test snippets with different levels of similarity to the cursor context
-		const snippets: AutocompleteSnippetDeprecated[] = [
+		const snippets: RankedSnippet[] = [
 			{
 				filepath: "utils.ts",
 				range: {
@@ -71,7 +71,7 @@ describe("rankAndOrderSnippets", () => {
 describe("fillPromptWithSnippets", () => {
 	it("should fill token budget with snippets until limit is reached", () => {
 		// Create snippets with required properties (including score)
-		const snippets: Required<AutocompleteSnippetDeprecated>[] = [
+		const snippets: Required<RankedSnippet>[] = [
 			{
 				filepath: "math.ts",
 				range: {

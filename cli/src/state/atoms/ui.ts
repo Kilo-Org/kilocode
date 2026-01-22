@@ -239,6 +239,23 @@ export const followupSuggestionsAtom = atom<FollowupSuggestion[]>([])
 export const showFollowupSuggestionsAtom = atom<boolean>(false)
 
 /**
+ * Derived atom that hides followup suggestions when slash-command autocomplete or file-mention autocomplete is active.
+ * This prevents the followup menu (and its selection index) from intercepting "/" commands.
+ */
+export const followupSuggestionsMenuVisibleAtom = atom<boolean>((get) => {
+	if (!get(showFollowupSuggestionsAtom)) return false
+	if (get(followupSuggestionsAtom).length === 0) return false
+
+	// If the user starts a "/" command, show command autocomplete instead of followups.
+	if (get(showAutocompleteAtom)) return false
+
+	// If file-mention autocomplete is active, it should take precedence as well.
+	if (get(fileMentionSuggestionsAtom).length > 0) return false
+
+	return true
+})
+
+/**
  * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
  * This atom is kept for backward compatibility but will be removed in a future version.
  * Note: The new selectedIndexAtom starts at 0, but followup mode logic handles -1 for "no selection"
@@ -310,6 +327,7 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 		"use_mcp_server",
 		"payment_required_prompt",
 		"checkpoint_restore",
+		"api_req_failed", // Rate limit/quota exhaustion errors - enables auto-retry
 	]
 
 	const lastMessage = messages[messages.length - 1]

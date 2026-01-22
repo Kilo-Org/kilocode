@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP 服务器"
+			"mcp": "MCP 服务器",
+			"agentBehaviour": "代理行为"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -149,7 +150,13 @@
 	},
 	"docs": "文档",
 	"rules": {
-		"tooltip": "管理 Kilo Code 规则和工作流",
+		"tooltip": "管理智能体行为（{{types}}）",
+		"agentBehaviourTypes": {
+			"rules": "规则",
+			"workflows": "工作流",
+			"mcps": "MCP",
+			"modes": "模式"
+		},
 		"ariaLabel": "Kilo Code 规则",
 		"tabs": {
 			"rules": "规则",
@@ -223,7 +230,8 @@
 	"ghost": {
 		"title": "自动补全",
 		"settings": {
-			"triggers": "触发器",
+			"codeEditorSuggestions": "代码编辑器建议",
+			"chatSuggestions": "聊天建议",
 			"keybindingDescription": "自动补全功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
 			"enableAutoTrigger": {
 				"label": "启用自动补全",
@@ -307,6 +315,9 @@
 		},
 		"modes": {
 			"description": "这些模式来自社区。点击<1>此处</1>编辑您自己的自定义模式。"
+		},
+		"skills": {
+			"description": "浏览和发现来自社区的技能。技能为特定任务提供专业指导。"
 		}
 	},
 	"modes": {
@@ -342,6 +353,14 @@
 			"ffmpegMessage": "帮我安装 FFmpeg"
 		},
 		"misconfiguredState": "因配置问题而不可用",
-		"errorState": "因错误而不可用"
+		"errorState": "因错误而不可用",
+		"microphone": {
+			"label": "麦克风",
+			"defaultOption": "系统默认",
+			"description": "选择用于语音转文字的麦克风设备",
+			"loading": "正在加载麦克风设备...",
+			"noDevices": "未找到麦克风设备",
+			"refresh": "刷新"
+		}
 	}
 }

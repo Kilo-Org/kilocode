@@ -5,7 +5,8 @@ import { loadEnvFile } from "./utils/env-loader.js"
 loadEnvFile()
 
 import { Command } from "commander"
-import { existsSync } from "fs"
+import { existsSync, readFileSync } from "fs"
+import { resolve } from "path"
 import { CLI } from "./cli.js"
 import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
@@ -13,11 +14,15 @@ import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
-import { loadCustomModes } from "./config/customModes.js"
+import { loadCustomModes, getSearchedPaths } from "./config/customModes.js"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
+import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+
+// Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
+logs.info(`CLI started from: ${import.meta.url}`)
 
 const program = new Command()
 let cli: CLI | null = null
@@ -42,14 +47,31 @@ program
 		"-p, --parallel",
 		"Run in parallel mode - the agent will create a separate git branch, unless you provide the --existing-branch option",
 	)
-	.option("-eb, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
-	.option("-pv, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
-	.option("-mo, --model <model>", "Override model for the selected provider")
+	.option("-e, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
+	.option("-P, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
+	.option("-M, --model <model>", "Override model for the selected provider")
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
+	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option("--append-system-prompt-file <path>", "Read custom instructions from a file to append to the system prompt")
+	.option("--on-task-completed <prompt>", "Send a custom prompt to the agent when the task completes")
+	.option(
+		"--attach <path>",
+		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
+		accumulateAttachments,
+		[] as string[],
+	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
+		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
+		// This is a defensive check for cases where Commander.js routing might not work as expected
+		// (e.g., when spawned as a child process with stdin disconnected)
+		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		if (SUBCOMMANDS.includes(prompt)) {
+			return
+		}
+
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
@@ -69,13 +91,22 @@ program
 
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
-			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
+			const searchedPaths = getSearchedPaths()
+			console.error(`Error: Mode "${options.mode}" not found.\n`)
+			console.error("The CLI searched for custom modes in:")
+			for (const searched of searchedPaths) {
+				const status = searched.found ? `found, ${searched.modesCount} mode(s)` : "not found"
+				console.error(`  • ${searched.type === "global" ? "Global" : "Project"}: ${searched.path} (${status})`)
+			}
+			console.error(`\nAvailable modes: ${allValidModes.join(", ")}`)
 			process.exit(1)
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
+		// BUT NOT in json-io mode, where stdin is used for bidirectional communication
+		// and the prompt will come via a "newTask" message
 		let finalPrompt = prompt || ""
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && !process.stdin.isTTY && !options.jsonIo) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
@@ -134,6 +165,18 @@ program
 			process.exit(1)
 		}
 
+		// Validate that --on-task-completed requires --auto
+		if (options.onTaskCompleted && !options.auto) {
+			console.error("Error: --on-task-completed option requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate --on-task-completed prompt is not empty
+		if (options.onTaskCompleted !== undefined && options.onTaskCompleted.trim() === "") {
+			console.error("Error: --on-task-completed requires a non-empty prompt")
+			process.exit(1)
+		}
+
 		// Validate provider if specified
 		if (options.provider) {
 			// Load config to check if provider exists
@@ -143,6 +186,54 @@ program
 			if (!providerExists) {
 				const availableIds = config.providers.map((p) => p.id).join(", ")
 				console.error(`Error: Provider "${options.provider}" not found. Available providers: ${availableIds}`)
+				process.exit(1)
+			}
+		}
+
+		// Validate attachments if specified
+		const attachments: string[] = options.attach || []
+		const attachRequiresAutoResult = validateAttachRequiresAuto({
+			attach: attachments,
+			auto: options.auto,
+			jsonIo: options.jsonIo,
+		})
+		if (!attachRequiresAutoResult.valid) {
+			console.error(attachRequiresAutoResult.error)
+			process.exit(1)
+		}
+
+		if (attachments.length > 0) {
+			const validationResult = validateAttachments(attachments)
+			if (!validationResult.valid) {
+				for (const error of validationResult.errors) {
+					console.error(error)
+				}
+				process.exit(1)
+			}
+		}
+
+		// Handle --append-system-prompt-file option
+		let combinedSystemPrompt = options.appendSystemPrompt || ""
+
+		if (options.appendSystemPromptFile) {
+			// resolve() handles both absolute and relative paths:
+			// - Absolute paths (e.g., /home/user/file.md) → returned as-is
+			// - Relative paths (e.g., ./file.md) → resolved from process.cwd()
+			const filePath = resolve(options.appendSystemPromptFile)
+
+			if (!existsSync(filePath)) {
+				console.error(`Error: System prompt file not found: ${filePath}`)
+				process.exit(1)
+			}
+
+			try {
+				const fileContent = readFileSync(filePath, "utf-8")
+				// Combine: inline text first, then file content
+				combinedSystemPrompt = combinedSystemPrompt ? `${combinedSystemPrompt}\n\n${fileContent}` : fileContent
+			} catch (error) {
+				console.error(
+					`Error reading system prompt file: ${error instanceof Error ? error.message : String(error)}`,
+				)
 				process.exit(1)
 			}
 		}
@@ -159,7 +250,27 @@ program
 		const hasEnvConfig = envConfigExists()
 
 		if (!hasConfig && !hasEnvConfig) {
-			// No config file and no env config - show auth wizard
+			// No config file and no env config
+			// Check if running in agent-manager mode (spawned from VS Code extension)
+			if (process.env.KILO_PLATFORM === "agent-manager") {
+				// Output a welcome message with instructions that the agent manager can detect.
+				// The agent manager will show a localized error dialog with "Run kilocode auth"
+				// and "Run kilocode config" buttons. The instructions here are just for
+				// triggering the cli_configuration_error handler and providing log context.
+				const welcomeMessage = {
+					type: "welcome",
+					timestamp: Date.now(),
+					metadata: {
+						welcomeOptions: {
+							instructions: ["Configuration required: No provider configured."],
+						},
+					},
+				}
+				console.log(JSON.stringify(welcomeMessage))
+				process.exit(1)
+			}
+
+			// Interactive mode - show auth wizard
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()
@@ -228,6 +339,9 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
+			appendSystemPrompt: combinedSystemPrompt || undefined,
+			attachments: attachments.length > 0 ? attachments : undefined,
+			onTaskCompleted: options.onTaskCompleted,
 		})
 		await cli.start()
 		await cli.dispose()
@@ -259,7 +373,13 @@ program
 	.description("Run a system compatibility check for the Kilo Code CLI")
 	.argument("[mode]", `The mode to debug (${DEBUG_MODES.join(", ")})`, "")
 	.action(async (mode: string) => {
-		if (!mode || !DEBUG_MODES.includes(mode)) {
+		// If no mode is provided, show available debug modes (helpful UX)
+		if (!mode) {
+			console.log(`Available debug modes: ${DEBUG_MODES.join(", ")}`)
+			process.exit(0)
+		}
+
+		if (!DEBUG_MODES.includes(mode)) {
 			console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
 			process.exit(1)
 		}
@@ -271,6 +391,17 @@ program
 		}
 
 		await debugFunction()
+	})
+
+// Models command - list available models as JSON for programmatic use
+program
+	.command("models")
+	.description("List available models for the current provider as JSON")
+	.option("--provider <id>", "Use specific provider instead of default")
+	.option("--json", "Output as JSON (default)", true)
+	.action(async (options: { provider?: string; json?: boolean }) => {
+		const { modelsApiCommand } = await import("./commands/models-api.js")
+		await modelsApiCommand(options)
 	})
 
 // Handle process termination signals

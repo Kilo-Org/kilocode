@@ -30,6 +30,11 @@ describe("Slash Command Matching", () => {
 			const results = getMatchingSlashCommands("")
 			expect(results.length).toBeGreaterThan(0)
 		})
+
+		it("should include condense aliases in results", () => {
+			const results = getMatchingSlashCommands("cond")
+			expect(results.some((r) => r.name === "condense")).toBe(true)
+		})
 	})
 
 	describe("validateSlashCommand - case insensitivity", () => {
@@ -37,6 +42,12 @@ describe("Slash Command Matching", () => {
 			expect(validateSlashCommand("newtask")).toBe("full")
 			expect(validateSlashCommand("NEWTASK")).toBe("full")
 			expect(validateSlashCommand("NewTask")).toBe("full")
+		})
+
+		it("should validate condense aliases", () => {
+			expect(validateSlashCommand("smol")).toBe("full")
+			expect(validateSlashCommand("condense")).toBe("full")
+			expect(validateSlashCommand("compact")).toBe("full")
 		})
 
 		it("should validate partial matches regardless of case", () => {
@@ -68,6 +79,28 @@ describe("Slash Command Matching", () => {
 			const result = insertSlashCommand("/new", "newtask")
 			expect(result.newValue).toBe("/newtask ")
 			expect(result.commandIndex).toBe(0)
+		})
+	})
+
+	describe("getMatchingSlashCommands - underscore and camelCase", () => {
+		it("should match underscore delimited commands with acronym query", () => {
+			const results = getMatchingSlashCommands("nf", [], { new_file_creation: true }, {})
+			expect(results.some((r) => r.name === "new_file_creation")).toBe(true)
+		})
+
+		it("should match camelCase commands with acronym query", () => {
+			const results = getMatchingSlashCommands("gr", [], { gitRebase: true }, {})
+			expect(results.some((r) => r.name === "gitRebase")).toBe(true)
+		})
+
+		it("should match camelCase commands with mixed case query", () => {
+			const results = getMatchingSlashCommands("GitR", [], { gitRebase: true }, {})
+			expect(results.some((r) => r.name === "gitRebase")).toBe(true)
+		})
+
+		it("should match PascalCase commands with acronym query", () => {
+			const results = getMatchingSlashCommands("NFC", [], { NewFileCreation: true }, {})
+			expect(results.some((r) => r.name === "NewFileCreation")).toBe(true)
 		})
 	})
 })

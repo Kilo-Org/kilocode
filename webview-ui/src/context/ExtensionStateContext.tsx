@@ -38,6 +38,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setSendMessageOnEnter: (value: boolean) => void // kilocode_change
 	showTimestamps?: boolean // kilocode_change
 	setShowTimestamps: (value: boolean) => void // kilocode_change
+	showDiffStats?: boolean // kilocode_change
+	setShowDiffStats: (value: boolean) => void // kilocode_change
 	hideCostBelowThreshold?: number // kilocode_change
 	setHideCostBelowThreshold: (value: number) => void // kilocode_change
 	hoveringTaskTimeline?: boolean // kilocode_change
@@ -83,6 +85,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	cloudIsAuthenticated: boolean
 	cloudOrganizations?: CloudOrganizationMembership[]
 	sharingEnabled: boolean
+	publicSharingEnabled: boolean
 	maxConcurrentFileReads?: number
 	allowVeryLargeReads?: boolean // kilocode_change
 	mdmCompliant?: boolean
@@ -118,6 +121,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setBrowserToolEnabled: (value: boolean) => void
 	setShowRooIgnoredFiles: (value: boolean) => void
 	setShowAutoApproveMenu: (value: boolean) => void // kilocode_change
+	setEnableSubfolderRules: (value: boolean) => void
 	setShowAnnouncement: (value: boolean) => void
 	setAllowedCommands: (value: string[]) => void
 	setDeniedCommands: (value: string[]) => void
@@ -156,10 +160,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setTaskSyncEnabled: (value: boolean) => void
 	featureRoomoteControlEnabled: boolean
 	setFeatureRoomoteControlEnabled: (value: boolean) => void
-	alwaysApproveResubmit?: boolean
-	setAlwaysApproveResubmit: (value: boolean) => void
-	requestDelaySeconds: number
-	setRequestDelaySeconds: (value: number) => void
 	setCurrentApiConfigName: (value: string) => void
 	setListApiConfigMeta: (value: ProviderSettingsEntry[]) => void
 	mode: Mode
@@ -206,8 +206,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
 	routerModels?: RouterModels
-	alwaysAllowUpdateTodoList?: boolean
-	setAlwaysAllowUpdateTodoList: (value: boolean) => void
 	includeDiagnosticMessages?: boolean
 	setIncludeDiagnosticMessages: (value: boolean) => void
 	maxDiagnosticMessages?: number
@@ -273,7 +271,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		remoteControlEnabled: false,
 		taskSyncEnabled: false,
 		featureRoomoteControlEnabled: false,
-		alwaysApproveResubmit: false,
 		alwaysAllowWrite: true, // kilocode_change
 		alwaysAllowReadOnly: true, // kilocode_change
 		requestDelaySeconds: 5,
@@ -300,8 +297,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		telemetrySetting: "unset",
 		showRooIgnoredFiles: true, // Default to showing .rooignore'd files with lock symbol (current behavior).
 		showAutoApproveMenu: false, // kilocode_change
+		enableSubfolderRules: false, // Default to disabled - must be enabled to load rules from subdirectories
 		renderContext: "sidebar",
-		maxReadFileLine: -1, // Default max read file line limit
+		maxReadFileLine: 500 /*kilocode_change*/, // Default max read file line limit
 		maxImageFileSize: 5, // Default max image file size in MB
 		maxTotalImageSize: 20, // Default max total image size in MB
 		pinnedApiConfigs: {}, // Empty object for pinned API configs
@@ -315,6 +313,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		showTaskTimeline: true, // kilocode_change
 		sendMessageOnEnter: true, // kilocode_change
 		showTimestamps: true, // kilocode_change
+		showDiffStats: true, // kilocode_change
 		kilocodeDefaultModel: openRouterDefaultModelId,
 		reasoningBlockCollapsed: true, // Default to collapsed
 		enterBehavior: "send", // Default: Enter sends, Shift+Enter creates newline
@@ -322,6 +321,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		cloudIsAuthenticated: false,
 		cloudOrganizations: [],
 		sharingEnabled: false,
+		publicSharingEnabled: false,
 		organizationAllowList: ORGANIZATION_ALLOW_ALL,
 		organizationSettingsVersion: -1,
 		autoCondenseContext: true,
@@ -341,7 +341,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			codebaseIndexSearchMinScore: undefined,
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
-		alwaysAllowUpdateTodoList: true,
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
 		openRouterImageApiKey: "",
@@ -638,8 +637,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setTaskSyncEnabled: (value) => setState((prevState) => ({ ...prevState, taskSyncEnabled: value }) as any),
 		setFeatureRoomoteControlEnabled: (value) =>
 			setState((prevState) => ({ ...prevState, featureRoomoteControlEnabled: value })),
-		setAlwaysApproveResubmit: (value) => setState((prevState) => ({ ...prevState, alwaysApproveResubmit: value })),
-		setRequestDelaySeconds: (value) => setState((prevState) => ({ ...prevState, requestDelaySeconds: value })),
 		setCurrentApiConfigName: (value) => setState((prevState) => ({ ...prevState, currentApiConfigName: value })),
 		setListApiConfigMeta,
 		setMode: (value: Mode) => setState((prevState) => ({ ...prevState, mode: value })),
@@ -666,6 +663,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, hideCostBelowThreshold: value })),
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 		setShowTimestamps: (value) => setState((prevState) => ({ ...prevState, showTimestamps: value })),
+		setShowDiffStats: (value) => setState((prevState) => ({ ...prevState, showDiffStats: value })), // kilocode_change
 		setYoloMode: (value) => setState((prevState) => ({ ...prevState, yoloMode: value })), // kilocode_change
 		// kilocode_change end
 		setAutoApprovalEnabled: (value) => setState((prevState) => ({ ...prevState, autoApprovalEnabled: value })),
@@ -675,6 +673,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setBrowserToolEnabled: (value) => setState((prevState) => ({ ...prevState, browserToolEnabled: value })),
 		setTelemetrySetting: (value) => setState((prevState) => ({ ...prevState, telemetrySetting: value })),
 		setShowRooIgnoredFiles: (value) => setState((prevState) => ({ ...prevState, showRooIgnoredFiles: value })),
+		setEnableSubfolderRules: (value) => setState((prevState) => ({ ...prevState, enableSubfolderRules: value })),
 		setRemoteBrowserEnabled: (value) => setState((prevState) => ({ ...prevState, remoteBrowserEnabled: value })),
 		setAwsUsePromptCache: (value) => setState((prevState) => ({ ...prevState, awsUsePromptCache: value })),
 		setMaxReadFileLine: (value) => setState((prevState) => ({ ...prevState, maxReadFileLine: value })),
@@ -719,10 +718,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, systemNotificationsEnabled: value })),
 		dismissedNotificationIds: state.dismissedNotificationIds || [], // kilocode_change
 		// kilocode_change end
-		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
-		setAlwaysAllowUpdateTodoList: (value) => {
-			setState((prevState) => ({ ...prevState, alwaysAllowUpdateTodoList: value }))
-		},
 		includeDiagnosticMessages: state.includeDiagnosticMessages,
 		setIncludeDiagnosticMessages: (value) => {
 			setState((prevState) => ({ ...prevState, includeDiagnosticMessages: value }))

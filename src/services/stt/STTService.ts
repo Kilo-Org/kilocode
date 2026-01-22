@@ -25,6 +25,7 @@ export class STTService {
 	// Services
 	private audioCapture: FFmpegCaptureService
 	private transcriptionClient: OpenAIWhisperClient | null = null
+	private selectedDeviceId: string | undefined
 
 	// Segment-based state
 	private textSegments: STTSegment[] = [] // All confirmed/polished segments
@@ -49,11 +50,23 @@ export class STTService {
 		emitter: STTEventEmitter,
 		providerSettingsManager: ProviderSettingsManager,
 		codeGlossary: VisibleCodeGlossary | null = null,
+		deviceId?: string,
 	) {
 		this.emitter = emitter
 		this.providerSettingsManager = providerSettingsManager
 		this.codeGlossary = codeGlossary
-		this.audioCapture = new FFmpegCaptureService()
+		this.selectedDeviceId = deviceId
+		this.audioCapture = new FFmpegCaptureService(deviceId)
+	}
+
+	/**
+	 * Set the microphone device to use for audio capture
+	 */
+	async setMicrophoneDevice(device: { id: string } | null): Promise<void> {
+		this.selectedDeviceId = device?.id
+		if (!this.isActive) {
+			this.audioCapture = new FFmpegCaptureService(this.selectedDeviceId)
+		}
 	}
 
 	async start(config: STTProviderConfig, language?: string): Promise<void> {

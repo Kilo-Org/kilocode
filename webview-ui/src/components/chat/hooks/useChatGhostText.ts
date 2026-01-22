@@ -13,6 +13,9 @@ interface UseChatGhostTextReturn {
 	ghostText: string
 	handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean // Returns true if event was handled
 	handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+	handleFocus: () => void
+	handleBlur: () => void
+	handleSelect: () => void
 	clearGhostText: () => void
 }
 
@@ -25,9 +28,39 @@ export function useChatGhostText({
 	enableChatAutocomplete = true,
 }: UseChatGhostTextOptions): UseChatGhostTextReturn {
 	const [ghostText, setGhostText] = useState<string>("")
+	const isFocusedRef = useRef<boolean>(false)
 	const completionDebounceRef = useRef<NodeJS.Timeout | null>(null)
 	const completionRequestIdRef = useRef<string>("")
+	const completionPrefixRef = useRef<string>("") // Track the prefix used for the current request
 	const skipNextCompletionRef = useRef<boolean>(false) // Skip completion after accepting suggestion
+	const savedGhostTextRef = useRef<string>("") // Store ghost text when blurring to restore on focus
+	const savedPrefixRef = useRef<string>("") // Store the prefix associated with saved ghost text
+
+	/**
+	 * Idempotent function to synchronize ghost text visibility based on current state.
+	 * This is the single source of truth for whether ghost text should be shown.
+	 */
+	const syncGhostTextVisibility = useCallback(() => {
+		const textArea = textAreaRef.current
+		if (!textArea) return
+
+		const currentText = textArea.value
+		const isCursorAtEnd =
+			textArea.selectionStart === currentText.length && textArea.selectionEnd === currentText.length
+
+		// Ghost text should only be visible when:
+		// 1. The textarea is focused
+		// 2. The cursor is at the end of the text
+		// 3. We have saved ghost text that matches the current prefix
+		const shouldShowGhostText =
+			isFocusedRef.current && isCursorAtEnd && savedGhostTextRef.current && currentText === savedPrefixRef.current
+
+		if (shouldShowGhostText) {
+			setGhostText(savedGhostTextRef.current)
+		} else {
+			setGhostText("")
+		}
+	}, [textAreaRef])
 
 	// Handle chat completion result messages
 	useEffect(() => {
@@ -35,17 +68,36 @@ export function useChatGhostText({
 			const message = event.data
 			if (message.type === "chatCompletionResult") {
 				// Only update if this is the response to our latest request
-				if (message.requestId === completionRequestIdRef.current) {
-					setGhostText(message.text || "")
+				// and the textarea is still focused
+				if (message.requestId === completionRequestIdRef.current && isFocusedRef.current) {
+					const textArea = textAreaRef.current
+					if (!textArea) return
+
+					// Verify the current text still matches the prefix used for this request
+					const currentText = textArea.value
+					const expectedPrefix = completionPrefixRef.current
+
+					// Also verify cursor is at the end (since we only show suggestions at the end)
+					const isCursorAtEnd = textArea.selectionStart === currentText.length
+
+					if (currentText === expectedPrefix && isCursorAtEnd) {
+						// Store the new ghost text and sync visibility
+						savedGhostTextRef.current = message.text || ""
+						savedPrefixRef.current = currentText
+						syncGhostTextVisibility()
+					}
+					// If prefix doesn't match or cursor not at end, discard the suggestion silently
 				}
 			}
 		}
 
 		window.addEventListener("message", messageHandler)
 		return () => window.removeEventListener("message", messageHandler)
-	}, [])
+	}, [textAreaRef, syncGhostTextVisibility])
 
 	const clearGhostText = useCallback(() => {
+		savedGhostTextRef.current = ""
+		savedPrefixRef.current = ""
 		setGhostText("")
 	}, [])
 
@@ -70,7 +122,7 @@ export function useChatGhostText({
 					type: "chatCompletionAccepted",
 					suggestionLength: ghostText.length,
 				})
-				setGhostText("")
+				clearGhostText()
 				return true
 			}
 
@@ -91,25 +143,28 @@ export function useChatGhostText({
 					type: "chatCompletionAccepted",
 					suggestionLength: word.length,
 				})
-				setGhostText(remainder)
+				// Update saved ghost text with remainder and sync
+				savedGhostTextRef.current = remainder
+				savedPrefixRef.current = textArea.value
+				syncGhostTextVisibility()
 				return true
 			}
 
 			// Escape: Clear ghost text
 			if (event.key === "Escape" && ghostText) {
-				setGhostText("")
+				clearGhostText()
 			}
 			return false
 		},
-		[ghostText, textAreaRef],
+		[ghostText, textAreaRef, clearGhostText, syncGhostTextVisibility],
 	)
 
 	const handleInputChange = useCallback(
 		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
 			const newValue = e.target.value
 
-			// Clear any existing ghost text when typing
-			setGhostText("")
+			// Clear saved ghost text since the text has changed
+			clearGhostText()
 
 			// Clear any pending completion request
 			if (completionDebounceRef.current) {
@@ -122,13 +177,15 @@ export function useChatGhostText({
 				// Don't request a new completion - wait for user to type more
 			} else if (
 				enableChatAutocomplete &&
+				isFocusedRef.current &&
 				newValue.length >= 5 &&
 				!newValue.startsWith("/") &&
 				!newValue.includes("@")
 			) {
-				// Request new completion after debounce (only if feature is enabled)
+				// Request new completion after debounce (only if feature is enabled and textarea is focused)
 				const requestId = generateRequestId()
 				completionRequestIdRef.current = requestId
+				completionPrefixRef.current = newValue // Store the prefix used for this request
 				completionDebounceRef.current = setTimeout(() => {
 					vscode.postMessage({
 						type: "requestChatCompletion",
@@ -138,8 +195,28 @@ export function useChatGhostText({
 				}, 300) // 300ms debounce
 			}
 		},
-		[enableChatAutocomplete],
+		[enableChatAutocomplete, clearGhostText],
 	)
+
+	const handleFocus = useCallback(() => {
+		isFocusedRef.current = true
+		syncGhostTextVisibility()
+	}, [syncGhostTextVisibility])
+
+	const handleBlur = useCallback(() => {
+		isFocusedRef.current = false
+		syncGhostTextVisibility()
+
+		// Cancel any pending completion requests
+		if (completionDebounceRef.current) {
+			clearTimeout(completionDebounceRef.current)
+			completionDebounceRef.current = null
+		}
+	}, [syncGhostTextVisibility])
+
+	const handleSelect = useCallback(() => {
+		syncGhostTextVisibility()
+	}, [syncGhostTextVisibility])
 
 	useEffect(() => {
 		return () => {
@@ -153,6 +230,9 @@ export function useChatGhostText({
 		ghostText,
 		handleKeyDown,
 		handleInputChange,
+		handleFocus,
+		handleBlur,
+		handleSelect,
 		clearGhostText,
 	}
 }

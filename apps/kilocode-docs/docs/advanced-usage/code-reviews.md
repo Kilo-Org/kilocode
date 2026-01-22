@@ -159,5 +159,4 @@ The Review Agent is ideal for:
 - The agent reviews **only the changed files**, not the entire repository.
 - Some highly dynamic or domain-specific code may require additional context in custom instructions.
 - The agent will only run on **selected repositories**.
-- **PRs from forks are not supported**. Only pull requests from branches within the same repository can be automatically reviewed.
 - During beta, review capacity may be throttled for extremely large PRs.

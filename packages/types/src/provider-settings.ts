@@ -21,6 +21,7 @@ import {
 	ioIntelligenceModels,
 	mistralModels,
 	moonshotModels,
+	openAiCodexModels,
 	openAiNativeModels,
 	qwenCodeModels,
 	sambaNovaModels,
@@ -147,6 +148,7 @@ export const providerNames = [
 	"mistral",
 	"moonshot",
 	"minimax",
+	"openai-codex",
 	"openai-native",
 	"qwen-code",
 	"roo",
@@ -226,10 +228,7 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
 })
 
-const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
-	claudeCodePath: z.string().optional(),
-	claudeCodeMaxOutputTokens: z.number().int().min(1).max(200000).optional(),
-})
+const claudeCodeSchema = apiModelIdProviderModelSchema.extend({})
 
 // kilocode_change start
 const glamaSchema = baseProviderSettingsSchema.extend({
@@ -254,7 +253,6 @@ const openRouterSchema = baseProviderSettingsSchema.extend({
 	openRouterModelId: z.string().optional(),
 	openRouterBaseUrl: z.string().optional(),
 	openRouterSpecificProvider: z.string().optional(),
-	openRouterUseMiddleOutTransform: z.boolean().optional(),
 	// kilocode_change start
 	openRouterProviderDataCollection: openRouterProviderDataCollectionSchema.optional(),
 	openRouterProviderSort: openRouterProviderSortSchema.optional(),
@@ -279,6 +277,7 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsBedrockEndpointEnabled: z.boolean().optional(),
 	awsBedrockEndpoint: z.string().optional(),
 	awsBedrock1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
+	awsBedrockServiceTier: z.enum(["STANDARD", "FLEX", "PRIORITY"]).optional(), // AWS Bedrock service tier selection
 })
 
 const vertexSchema = apiModelIdProviderModelSchema.extend({
@@ -288,6 +287,7 @@ const vertexSchema = apiModelIdProviderModelSchema.extend({
 	vertexRegion: z.string().optional(),
 	enableUrlContext: z.boolean().optional(),
 	enableGrounding: z.boolean().optional(),
+	vertex1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
 })
 
 const openAiSchema = baseProviderSettingsSchema.extend({
@@ -342,6 +342,10 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliProjectId: z.string().optional(),
 })
 // kilocode_change end
+
+const openAiCodexSchema = apiModelIdProviderModelSchema.extend({
+	// No additional settings needed - uses OAuth authentication
+})
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
 	openAiNativeApiKey: z.string().optional(),
@@ -553,6 +557,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	vsCodeLmSchema.merge(z.object({ apiProvider: z.literal("vscode-lm") })),
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
+	openAiCodexSchema.merge(z.object({ apiProvider: z.literal("openai-codex") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })), // kilocode_change
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
@@ -613,6 +618,7 @@ export const providerSettingsSchema = z.object({
 	...ovhcloudSchema.shape,
 	...inceptionSchema.shape,
 	// kilocode_change end
+	...openAiCodexSchema.shape,
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,
@@ -706,6 +712,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	kilocode: "kilocodeModel",
 	bedrock: "apiModelId",
 	vertex: "apiModelId",
+	"openai-codex": "apiModelId",
 	"openai-native": "openAiModelId",
 	ollama: "ollamaModelId",
 	lmstudio: "lmStudioModelId",
@@ -777,7 +784,7 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "openai" | "gemini">, // kilocode_change: add gemini
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "openai" | "gemini">,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
@@ -844,6 +851,11 @@ export const MODELS_BY_PROVIDER: Record<
 		id: "minimax",
 		label: "MiniMax",
 		models: Object.keys(minimaxModels),
+	},
+	"openai-codex": {
+		id: "openai-codex",
+		label: "OpenAI - ChatGPT Plus/Pro",
+		models: Object.keys(openAiCodexModels),
 	},
 	"openai-native": {
 		id: "openai-native",

@@ -14,6 +14,7 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
+	OpenAiCodexHandler,
 	LmStudioHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
@@ -55,6 +56,8 @@ import {
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
+import type { FimHandler } from "./providers/kilocode/FimHandler" // kilocode_change
+export type { FimHandler } from "./providers/kilocode/FimHandler"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -137,6 +140,14 @@ export interface ApiHandler {
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
 
+	// kilocode_change start
+	/**
+	 * Returns a FimHandler if the provider supports FIM (Fill-In-the-Middle) completions,
+	 * or undefined if FIM is not supported.
+	 */
+	fimSupport?: () => FimHandler | undefined
+	// kilocode_change end
+
 	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }
 
@@ -176,6 +187,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new LmStudioHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
+		case "openai-codex":
+			return new OpenAiCodexHandler(options)
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "deepseek":

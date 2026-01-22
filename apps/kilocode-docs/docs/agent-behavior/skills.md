@@ -34,7 +34,10 @@ Skills are loaded from multiple locations, allowing both personal skills and pro
 
 ### Global Skills (User-Level)
 
-Located in `~/.kilocode/skills/`:
+Global skills are located in the `.kilocode` directory within your Home directory.
+
+- Mac and Linux: `~/.kilocode/skills/`
+- Windows: `\Users\<yourUser>\.kilocode\`
 
 ```
 ~/.kilocode/
@@ -65,6 +68,48 @@ your-project/
         └── linting-rules/
             └── SKILL.md
 ```
+
+## Mode-Specific Skills
+
+To create a skill that only appears in a specific mode:
+
+```bash
+# For Code mode only
+mkdir -p ~/.kilocode/skills-code/typescript-patterns
+
+# For Architect mode only
+mkdir -p ~/.kilocode/skills-architect/microservices
+```
+
+The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
+
+## Priority and Overrides
+
+When multiple skills share the same name, Kilo Code uses these priority rules:
+
+1. **Project skills override global skills** - A project skill with the same name takes precedence
+2. **Mode-specific skills override generic skills** - A skill in `skills-code/` overrides the same skill in `skills/` when in Code mode
+
+This allows you to:
+
+- Define global skills for personal use
+- Override them per-project when needed
+- Customize behavior for specific modes
+
+## When Skills Are Loaded
+
+Skills are discovered when Kilo Code initializes:
+
+- When VSCode starts
+- When you reload the VSCode window (`Cmd+Shift+P` → "Developer: Reload Window")
+
+Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the Kilo Code extension.
+
+**Adding or modifying skills requires reloading VSCode for changes to take effect.**
+
+## Using Symlinks
+
+You can symlink skills directories to share skills across machines or from a central repository. When using symlinks, the skill's `name` field must match the **symlink name**, not the target directory name.
 
 ## SKILL.md Format
 
@@ -153,30 +198,6 @@ my-skill/
 
 These additional files can be referenced from your skill's instructions, allowing the agent to read documentation, execute scripts, or use templates as needed.
 
-## Priority and Overrides
-
-When multiple skills share the same name, Kilo Code uses these priority rules:
-
-1. **Project skills override global skills** - A project skill with the same name takes precedence
-2. **Mode-specific skills override generic skills** - A skill in `skills-code/` overrides the same skill in `skills/` when in Code mode
-
-This allows you to:
-
-- Define global skills for personal use
-- Override them per-project when needed
-- Customize behavior for specific modes
-
-## When Skills Are Loaded
-
-Skills are discovered when Kilo Code initializes:
-
-- When VSCode starts
-- When you reload the VSCode window (`Cmd+Shift+P` → "Developer: Reload Window")
-
-Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the Kilo Code extension.
-
-**Adding or modifying skills requires reloading VSCode for changes to take effect.**
-
 ## Example: Creating a Skill
 
 1. Create the skill directory:
@@ -224,44 +245,12 @@ Skills directories are monitored for changes to `SKILL.md` files. However, the m
 
 4. The skill will now be available in all modes
 
-## Mode-Specific Skills
-
-To create a skill that only appears in a specific mode:
-
-```bash
-# For Code mode only
-mkdir -p ~/.kilocode/skills-code/typescript-patterns
-
-# For Architect mode only
-mkdir -p ~/.kilocode/skills-architect/microservices
-```
-
-The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
-
-## Using Symlinks
-
-You can symlink skills directories to share skills across machines or from a central repository:
-
-```bash
-# Symlink entire skills directory
-ln -s /path/to/shared/skills ~/.kilocode/skills
-
-# Or symlink individual skills
-ln -s /path/to/shared/api-design ~/.kilocode/skills/api-design
-```
-
-When using symlinks, the skill's `name` field must match the **symlink name**, not the target directory name.
-
 ## Finding Skills
 
-There are community efforts to build and share agent skills. Some resources include:
+You can discover and install community-created skills through:
 
-- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
-- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
-
-### Creating Your Own
-
-Skills are simple Markdown files with frontmatter. Start with your existing prompt templates or instructions and convert them to the skill format.
+- **Kilo Marketplace** - Browse skills directly in the Kilo Code extension via the Marketplace tab, or explore the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) on GitHub
+- [Agent Skills Specification](https://agentskills.io/home) - The open specification that skills follow, enabling interoperability across different AI agents
 
 ## Troubleshooting
 
@@ -275,6 +264,18 @@ Skills are simple Markdown files with frontmatter. Start with your existing prom
 
 4. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory, not nested further.
 
+### Verifying a Skill is Activated
+
+To confirm a skill is properly loaded and available to the agent, you can ask the agent directly. Simply send a message like:
+
+- "Do you have access to skill X?"
+- "Is the skill called X loaded?"
+- "What skills do you have available?"
+
+The agent will respond with information about whether the skill is loaded and accessible. This is the most reliable way to verify that a skill has been activated after adding it or reloading VSCode.
+
+If the agent confirms the skill is available, you're ready to use it. If not, check the troubleshooting steps above to identify and resolve the issue.
+
 ### Common Errors
 
 | Error                           | Cause                                        | Solution                                         |
@@ -282,6 +283,28 @@ Skills are simple Markdown files with frontmatter. Start with your existing prom
 | "missing required 'name' field" | No `name` in frontmatter                     | Add `name: your-skill-name`                      |
 | "name doesn't match directory"  | Mismatch between frontmatter and folder name | Make `name` match exactly                        |
 | Skill not appearing             | Wrong directory structure                    | Verify path follows `skills/skill-name/SKILL.md` |
+
+## Contributing to the Marketplace
+
+Have you created a skill that others might find useful? Share it with the community by contributing to the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace)!
+
+### How to Submit Your Skill
+
+1. **Prepare your skill**: Ensure your skill directory contains a valid `SKILL.md` file with proper frontmatter
+2. **Test thoroughly**: Verify your skill works correctly across different scenarios and modes
+3. **Fork the marketplace repository**: Visit [github.com/Kilo-Org/kilo-marketplace](https://github.com/Kilo-Org/kilo-marketplace) and create a fork
+4. **Add your skill**: Place your skill directory in the appropriate location following the repository's structure
+5. **Submit a pull request**: Create a PR with a clear description of what your skill does and when it's useful
+
+### Submission Guidelines
+
+- Follow the [Agent Skills specification](https://agentskills.io/specification) for your `SKILL.md` file
+- Include a clear `name` and `description` in the frontmatter
+- Document any dependencies or requirements (scripts, external tools, etc.)
+- If your skill includes bundled resources (scripts, templates), ensure they are well-documented
+- Follow the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
+
+For more details on contributing to Kilo Code, see the [Contributing Guide](/contributing).
 
 ## Related
 

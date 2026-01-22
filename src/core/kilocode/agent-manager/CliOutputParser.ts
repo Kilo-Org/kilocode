@@ -254,7 +254,11 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 	}
 
 	// Detect session_title_generated event from CLI (format: { event: "session_title_generated", sessionId: "...", title: "...", timestamp: ... })
-	if (parsed.event === "session_title_generated" && typeof parsed.sessionId === "string" && typeof parsed.title === "string") {
+	if (
+		parsed.event === "session_title_generated" &&
+		typeof parsed.sessionId === "string" &&
+		typeof parsed.title === "string"
+	) {
 		return {
 			streamEventType: "session_title_generated",
 			sessionId: parsed.sessionId as string,

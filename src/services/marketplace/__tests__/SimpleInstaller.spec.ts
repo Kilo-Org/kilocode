@@ -15,6 +15,7 @@ vi.mock("fs/promises", () => ({
 	writeFile: vi.fn(),
 	mkdir: vi.fn(),
 	rm: vi.fn(),
+	stat: vi.fn(), // kilocode_change
 }))
 vi.mock("os")
 vi.mock("vscode", () => ({

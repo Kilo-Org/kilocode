@@ -38,7 +38,8 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Máy chủ MCP"
+			"mcp": "Máy chủ MCP",
+			"agentBehaviour": "Hành vi của Agent"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -142,7 +143,13 @@
 	},
 	"docs": "Tài liệu",
 	"rules": {
-		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
+		"tooltip": "Quản lý hành vi của agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Quy tắc",
+			"workflows": "Quy trình làm việc",
+			"mcps": "MCPs",
+			"modes": "Chế độ"
+		},
 		"ariaLabel": "Quy tắc Kilo Code",
 		"tabs": {
 			"rules": "Quy tắc",
@@ -216,7 +223,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Bộ Kích Hoạt",
+			"codeEditorSuggestions": "Gợi ý Trình soạn thảo Mã",
+			"chatSuggestions": "Gợi ý Trò chuyện",
 			"keybindingDescription": "Các tính năng Autocomplete có thể được kích hoạt bằng lệnh. Bạn có thể cấu hình <DocsLink>Phím Tắt ở đây</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Bật Autocomplete",
@@ -307,6 +315,9 @@
 		},
 		"modes": {
 			"description": "Những chế độ này được cung cấp từ cộng đồng. Nhấp <1>vào đây</1> để chỉnh sửa chế độ tùy chỉnh của riêng bạn."
+		},
+		"skills": {
+			"description": "Duyệt và khám phá các kỹ năng từ cộng đồng. Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể."
 		}
 	},
 	"modes": {
@@ -342,6 +353,14 @@
 			"ffmpegReason": "Bạn cần cài đặt FFmpeg. <ffmpegLink>Nhấp vào đây</ffmpegLink> để Kilo giúp bạn cài đặt FFmpeg."
 		},
 		"misconfiguredState": "Không khả dụng do cấu hình",
-		"errorState": "Không khả dụng do lỗi"
+		"errorState": "Không khả dụng do lỗi",
+		"microphone": {
+			"label": "Micro",
+			"defaultOption": "Mặc định hệ thống",
+			"noDevices": "Không tìm thấy thiết bị micro nào",
+			"loading": "Đang tải các thiết bị microphone...",
+			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
+			"refresh": "Làm mới"
+		}
 	}
 }
