@@ -8,6 +8,7 @@ import { Fzf } from "fzf"
 import ignore from "ignore"
 import fs from "fs/promises"
 import path from "path"
+import { FILE_SEARCH_CACHE_TTL_MS } from "../constants/timeouts.js"
 
 export interface FileSearchResult {
 	/** Relative path from workspace root */
@@ -32,7 +33,7 @@ class FileSearchService {
 	private cacheTimestamp = new Map<string, number>()
 
 	/** Cache TTL in milliseconds (5 minutes) */
-	private readonly CACHE_TTL = 5 * 60 * 1000
+	private readonly CACHE_TTL = FILE_SEARCH_CACHE_TTL_MS
 
 	/**
 	 * Search files matching query with fuzzy matching

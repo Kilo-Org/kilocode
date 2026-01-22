@@ -8,6 +8,7 @@ import * as os from "os"
 import { TelemetryEvent, type BaseProperties } from "./events.js"
 import { getIdentityManager, type UserIdentity } from "./identity.js"
 import { logs } from "../logs.js"
+import { TELEMETRY_FLUSH_INTERVAL_MS } from "../../constants/timeouts.js"
 
 /**
  * Event queue item
@@ -59,7 +60,7 @@ export class TelemetryClient {
 	constructor(config: TelemetryConfig) {
 		this.config = {
 			batchSize: 10,
-			flushInterval: 5000, // 5 seconds
+			flushInterval: TELEMETRY_FLUSH_INTERVAL_MS,
 			maxRetries: 3,
 			...config,
 		}
@@ -408,7 +409,7 @@ export class TelemetryClient {
 			this.flush().catch((error) => {
 				logs.error("Error during scheduled flush", "TelemetryClient", { error })
 			})
-		}, this.config.flushInterval || 5000)
+		}, this.config.flushInterval || TELEMETRY_FLUSH_INTERVAL_MS)
 	}
 
 	/**

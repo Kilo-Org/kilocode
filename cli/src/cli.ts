@@ -38,6 +38,7 @@ import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
 import { randomUUID } from "crypto"
+import { TASK_HISTORY_REQUEST_TIMEOUT_MS } from "./constants/timeouts.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -234,7 +235,7 @@ export class CLI {
 								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
 									const timeout = setTimeout(() => {
 										reject(new Error("Task history request timed out"))
-									}, 5000) // 5 second timeout as fallback
+									}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 									this.store?.set(addPendingRequestAtom, {
 										requestId,
@@ -658,15 +659,13 @@ export class CLI {
 
 			// Create a unique request ID for tracking the response
 			const requestId = `${Date.now()}-${Math.random()}`
-			const TASK_HISTORY_TIMEOUT_MS = 5000
-
 			// Fetch task history with Promise-based response handling
 			const taskHistoryData = await new Promise<TaskHistoryData>((resolve, reject) => {
 				// Set up timeout
 				const timeout = setTimeout(() => {
 					this.store!.set(removePendingRequestAtom, requestId)
-					reject(new Error(`Task history request timed out after ${TASK_HISTORY_TIMEOUT_MS}ms`))
-				}, TASK_HISTORY_TIMEOUT_MS)
+					reject(new Error(`Task history request timed out after ${TASK_HISTORY_REQUEST_TIMEOUT_MS}ms`))
+				}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 				// Register the pending request - it will be resolved when the response arrives
 				this.store!.set(addPendingRequestAtom, { requestId, resolve, reject, timeout })

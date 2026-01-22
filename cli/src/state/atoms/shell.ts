@@ -6,6 +6,7 @@ import { atom } from "jotai"
 import { addMessageAtom, inputModeAtom, type InputMode } from "./ui.js"
 import { exec } from "child_process"
 import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.js"
+import { SHELL_COMMAND_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 // ============================================================================
 // Workspace Path Atom
@@ -150,7 +151,7 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		// Execute command and capture output
 		const childProcess = exec(command, {
 			cwd: executionDir,
-			timeout: 30000, // 30 second timeout
+			timeout: SHELL_COMMAND_TIMEOUT_MS,
 		})
 
 		let stdout = ""

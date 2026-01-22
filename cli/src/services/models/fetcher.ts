@@ -3,9 +3,7 @@ import { createExtensionService, type ExtensionService } from "../../services/ex
 import { mapProviderToApiConfig } from "../../config/mapper.js"
 import type { ProviderConfig } from "../../config/types.js"
 import type { RouterModels, ExtensionMessage } from "../../types/messages.js"
-
-/** Default timeout for router models request (30 seconds) */
-const ROUTER_MODELS_TIMEOUT_MS = 30000
+import { EXTENSION_SERVICE_READY_TIMEOUT_MS, ROUTER_MODELS_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 /**
  * Fetch router models from the extension
@@ -46,7 +44,7 @@ export async function fetchRouterModels(
 			await new Promise<void>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					reject(new Error("Extension service ready timeout"))
-				}, 10000)
+				}, EXTENSION_SERVICE_READY_TIMEOUT_MS)
 
 				service!.once("ready", () => {
 					clearTimeout(timeout)

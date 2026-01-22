@@ -14,9 +14,7 @@ import { isStreamingAtom, isCancellingAtom } from "../../state/atoms/ui.js"
 import { hasResumeTaskAtom } from "../../state/atoms/extension.js"
 import { exitPromptVisibleAtom, pendingImagePastesAtom, pendingTextPastesAtom } from "../../state/atoms/keyboard.js"
 import { useEffect } from "react"
-
-/** Safety timeout to auto-reset cancelling state if extension doesn't respond */
-const CANCELLING_SAFETY_TIMEOUT_MS = 10_000
+import { CANCELLING_SAFETY_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 export interface StatusIndicatorProps {
 	/** Whether the indicator is disabled */

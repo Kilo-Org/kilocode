@@ -20,6 +20,7 @@ import {
 import { extensionServiceAtom } from "../atoms/service.js"
 import { logs } from "../../services/logs.js"
 import type { TaskHistoryRequestPayload } from "../../types/messages.js"
+import { TASK_HISTORY_REQUEST_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 export function useTaskHistory() {
 	const service = useAtomValue(extensionServiceAtom)
@@ -85,7 +86,7 @@ export function useTaskHistory() {
 				const timeout = setTimeout(() => {
 					removePendingRequest(requestId)
 					reject(new Error("Request timeout - no response received"))
-				}, 5000)
+				}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 				// Store the resolver using the action atom
 				addPendingRequest({ requestId, resolve, reject, timeout })
@@ -135,7 +136,7 @@ export function useTaskHistory() {
 				const timeout = setTimeout(() => {
 					removePendingRequest(requestId)
 					reject(new Error("Request timeout - no response received"))
-				}, 5000)
+				}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 				// Store the resolver using the action atom
 				addPendingRequest({ requestId, resolve, reject, timeout })

@@ -11,6 +11,7 @@
 import type { ExtensionChatMessage } from "../types/messages.js"
 import type { AutoApprovalConfig } from "../config/types.js"
 import { CI_MODE_MESSAGES } from "../constants/ci.js"
+import { DEFAULT_RETRY_DELAY_MS } from "../constants/timeouts.js"
 import { logs } from "./logs.js"
 
 /**
@@ -280,7 +281,7 @@ function getRetryApprovalDecision(
 		// In non-CI mode, apply retry delay
 		return {
 			action: "auto-approve",
-			delay: (config.retry?.delay ?? 10) * 1000,
+			delay: config.retry?.delay ? config.retry.delay * 1000 : DEFAULT_RETRY_DELAY_MS,
 		}
 	}
 

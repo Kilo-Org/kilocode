@@ -17,6 +17,7 @@ import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 import { commitCompletionTimeout } from "../../parallel/parallel.js"
+import { UI_ERROR_MESSAGE_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -566,7 +567,7 @@ export const setErrorAtom = atom(null, (get, set, error: string | null) => {
 	if (error) {
 		setTimeout(() => {
 			set(errorAtom, null)
-		}, 5000)
+		}, UI_ERROR_MESSAGE_TIMEOUT_MS)
 	}
 })
 

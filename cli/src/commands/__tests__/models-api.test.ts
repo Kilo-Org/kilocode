@@ -10,6 +10,7 @@ import type { RouterModels } from "../../types/messages.js"
 import type { CLIConfig } from "../../config/types.js"
 import type { ModelInfo } from "../../constants/providers/models.js"
 import { sortModelsByPreference } from "../../constants/providers/models.js"
+import { ROUTER_MODELS_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 // Capture console.log output
 let consoleOutput: string[] = []
@@ -394,8 +395,7 @@ describe("models-api command", () => {
 
 	describe("timeout handling", () => {
 		it("should have a default timeout of 30 seconds", () => {
-			const ROUTER_MODELS_TIMEOUT = 30000
-			expect(ROUTER_MODELS_TIMEOUT).toBe(30000)
+			expect(ROUTER_MODELS_TIMEOUT_MS).toBe(30000)
 		})
 	})
 })
