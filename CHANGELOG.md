@@ -1,5 +1,40 @@
 # kilo-code
 
+## 4.152.0
+
+### Minor Changes
+
+- [#5211](https://github.com/Kilo-Org/kilocode/pull/5211) [`a94f8f0`](https://github.com/Kilo-Org/kilocode/commit/a94f8f06c561027158356858bf6642927794b2a9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add mode selection to Agent Manager for CLI sessions
+
+    - Mode selector in new agent form allows selecting mode (code, architect, debug, etc.) when starting sessions
+    - Mode selector in session header allows switching modes during running sessions via CLI JSON-IO API
+    - Modes are fetched from extension and synced with CLI sessions
+    - Model selector moved below textarea in new agent form for better layout
+
+- [#5264](https://github.com/Kilo-Org/kilocode/pull/5264) [`61af1e7`](https://github.com/Kilo-Org/kilocode/commit/61af1e74c24e8a2af99b218da69d51b3000d2f0f) Thanks [@markijbema](https://github.com/markijbema)! - Centralize Agent behaviour settings by removing the top bar MCP button and moving Mode, MCP, Rules, and Workflows configuration into the Agent Behaviour area.
+
+### Patch Changes
+
+- [#5312](https://github.com/Kilo-Org/kilocode/pull/5312) [`322d891`](https://github.com/Kilo-Org/kilocode/commit/322d891c5461deada1cc1c5057bde5cf7eb774d1) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add loading spinner to agent manager API request messages
+
+- [#5233](https://github.com/Kilo-Org/kilocode/pull/5233) [`86bcfee`](https://github.com/Kilo-Org/kilocode/commit/86bcfee20a672d9e06a86b86c7d7cec28d0a8913) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add session persistence for Agent Manager worktrees
+
+- [#5313](https://github.com/Kilo-Org/kilocode/pull/5313) [`c882b95`](https://github.com/Kilo-Org/kilocode/commit/c882b9558c39abffbdced575939be7b2125be0e2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed agent-manager mode creating `.kilocode-agent` directory in user workspaces. Agent storage now uses OS temp directory instead, keeping workspaces clean.
+
+- [#5315](https://github.com/Kilo-Org/kilocode/pull/5315) [`f0a9036`](https://github.com/Kilo-Org/kilocode/commit/f0a9036b766ab8a0b1158be804bdeb256f476596) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix model selection not showing in resumed sessions in Agent Manager
+
+- [#5232](https://github.com/Kilo-Org/kilocode/pull/5232) [`cc04a57`](https://github.com/Kilo-Org/kilocode/commit/cc04a5719ca5b457e38b7bacdab2c6dac92cf297) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix parallel mode completion messaging when commits fail.
+
+- [#5151](https://github.com/Kilo-Org/kilocode/pull/5151) [`5565a7c`](https://github.com/Kilo-Org/kilocode/commit/5565a7c15544630b11297f40f4e948588943b893) Thanks [@Senneseph](https://github.com/Senneseph)! - Fix: Check that `model_info` field exists before attempting to call Object.keys() on it.
+
+- [#5314](https://github.com/Kilo-Org/kilocode/pull/5314) [`f202bd5`](https://github.com/Kilo-Org/kilocode/commit/f202bd55756a0382dc6abb619ddbb1e7451343b5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Display reasoning as collapsible block in Agent Manager instead of plain text
+
+- [#5287](https://github.com/Kilo-Org/kilocode/pull/5287) [`4662b02`](https://github.com/Kilo-Org/kilocode/commit/4662b02f0a8fa2b5cb95120c6c1ef7984508d0f3) Thanks [@markijbema](https://github.com/markijbema)! - Add Skills tab to Agent Behaviour settings for viewing and managing installed skills
+
+- [#5297](https://github.com/Kilo-Org/kilocode/pull/5297) [`f6badf7`](https://github.com/Kilo-Org/kilocode/commit/f6badf709982890fca245b1e079d041efddbfc26) Thanks [@jrf0110](https://github.com/jrf0110)! - feat(mcp): implement oauth 2.1 authorization for http transports
+
+- [#5254](https://github.com/Kilo-Org/kilocode/pull/5254) [`9348a3d`](https://github.com/Kilo-Org/kilocode/commit/9348a3d33d68ff61340e90a2647c1026752ea66a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Force tool use when using Haiku with the Anthropic provider
+
 ## 4.151.0
 
 ### Minor Changes

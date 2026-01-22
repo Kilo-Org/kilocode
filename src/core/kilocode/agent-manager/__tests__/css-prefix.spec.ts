@@ -3,13 +3,22 @@
  *
  * The agent manager runs in the same webview context as other UI.
  * All its CSS classes must be prefixed with "am-" to avoid conflicts.
+ *
+ * @vitest-environment node
  */
 
-import fs from "fs"
-import path from "path"
+import fs from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, it, expect } from "vitest"
 
-const CSS_FILE = path.resolve(__dirname, "../components/AgentManagerApp.css")
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+// CSS file is in webview-ui, navigate from src/core/kilocode/agent-manager/__tests__
+const CSS_FILE = path.resolve(
+	__dirname,
+	"../../../../../webview-ui/src/kilocode/agent-manager/components/AgentManagerApp.css",
+)
 
 describe("Agent Manager CSS Prefix", () => {
 	it("all class selectors should use am- prefix", () => {

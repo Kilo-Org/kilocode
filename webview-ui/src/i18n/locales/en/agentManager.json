@@ -60,7 +60,9 @@
 		"selectModel": "Select model",
 		"modelTooltip": "Choose which AI model to use for this session",
 		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"loadingModels": "Loading...",
+		"selectMode": "Select mode",
+		"modeTooltip": "Mode: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",

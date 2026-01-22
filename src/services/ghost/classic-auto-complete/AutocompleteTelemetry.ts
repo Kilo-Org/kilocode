@@ -84,14 +84,12 @@ export class AutocompleteTelemetry {
 	}
 
 	private captureEvent(event: TelemetryEventName, properties?: Record<string, unknown>): void {
-		// also log to console:
 		if (TelemetryService.hasInstance()) {
 			const propsWithType = {
 				...properties,
 				autocompleteType: this.autocompleteType,
 			}
 			TelemetryService.instance.captureEvent(event, propsWithType)
-			console.log(`Autocomplete Telemetry event: ${event}`, propsWithType)
 		}
 	}
 

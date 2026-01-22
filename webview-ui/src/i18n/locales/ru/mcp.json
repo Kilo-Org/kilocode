@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Инструменты",
 		"resources": "Ресурсы",
-		"logs": "Логи"
+		"logs": "Логи",
+		"authDebug": "Отладка OAuth"
 	},
 	"emptyState": {
 		"noTools": "Инструменты не найдены",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "Повторная попытка...",
-		"retryConnection": "Повторить подключение"
+		"retryConnection": "Повторить подключение",
+		"signIn": "Войти",
+		"signingIn": "Вход..."
 	},
 	"refreshMCP": "Обновить MCP серверы",
 	"execution": {
 		"running": "Выполняется",
 		"completed": "Завершено",
 		"error": "Ошибка"
+	},
+	"authDebug": {
+		"title": "Отладочная информация OAuth",
+		"status": "Статус",
+		"tokenExpires": "Срок действия токена",
+		"scopes": "Scopes",
+		"refreshInfo": "Информация о Refresh Token",
+		"hasRefreshToken": "Есть Refresh Token",
+		"canRefresh": "Возможно автообновление",
+		"tokenIssuedAt": "Токен выдан",
+		"nextRefreshAt": "Следующее обновление",
+		"lastRefreshAt": "Последнее обновление",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	}
 }

@@ -71,9 +71,21 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 
 ---
 
-## Environment Variables & Startup Commands
+## Agent Environment Profiles
 
-You can customize each Cloud Agent session by defining:
+Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:
+
+- Environment variables (plaintext)
+- Secrets (encrypted at rest; decrypted only by the cloud agent)
+- Setup commands (which Cloud Agent will execute before starting a session)
+
+Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
+
+---
+
+## Environment Variables & Secrets & Startup Commands
+
+You can customize each Cloud Agent session by also defining env vars and startup commands on the fly. These will override any Agent Environment Profile you've selected:
 
 ### Environment Variables
 
@@ -113,7 +125,62 @@ Cloud Agents are great for:
 
 ---
 
-## Limitations and Guidance
+## Webhook Triggers
+
+Webhook triggers allow you to initiate cloud agent sessions via HTTP requests. This enables integration with external services and automation workflows.
+
+:::note
+Webhook triggers are currently in beta and subject to change.
+:::
+
+### Accessing Webhooks
+
+Webhook triggers are accessible from the main sidebar with an entry named **Webhook** and link to [https://app.kilo.ai/cloud/webhooks](https://app.kilo.ai/cloud/webhooks) for personal accounts. Organization-level webhook configurations are available through your organization's sidebar.
+
+### Configuration
+
+Webhook triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+
+Webhook triggers do not support manual env var or setup command overrides at this time.
+
+### Trigger Limits and Guidance
+
+Webhook triggers are designed for low-volume invocations from trusted sources and are best suited for short-lived tasks.
+
+- **Personal webhooks**: Execute in the same sandbox container as a user's Cloud Agent sessions. You can view/join invocations live.
+- **Organization webhooks**: Execute in dedicated compute resources as a bot user, similar to Code Review sessions. You can share/fork the sessions when they're complete.
+
+Additional limits:
+
+- **Payload size**: max **256 KB** per request body (larger payloads return `413`)
+- **Content types**: binary and multipart payloads are rejected (`415`) such as `multipart/*`, `application/octet-stream`, `image/*`, `audio/*`, `video/*`, `application/pdf`, `application/zip`
+- **Retention**: only the **most recent 100 requests per trigger** are retained
+- **In-flight cap**: at most **20 requests per trigger** can be in `captured` or `inprogress` at once (returns `429`)
+
+The webhook endpoint will return rate limit responses when the number of queued or processing requests exceeds system capacity.
+
+### Webhook Prompt Template Variables
+
+You can reference request data in a trigger’s prompt template using these placeholders:
+
+- `{{body}}` - raw request body (string)
+- `{{bodyJson}}` - pretty-printed JSON if parseable, otherwise raw body
+- `{{method}}` - HTTP method (GET, POST, etc.)
+- `{{path}}` - request path
+- `{{headers}}` - JSON-formatted request headers
+- `{{query}}` - query string without leading `?` (empty if none)
+- `{{sourceIp}}` - client IP if provided (falls back to `unknown`)
+- `{{timestamp}}` - capture timestamp (ISO string)
+
+### Security Considerations
+
+:::warning
+Care should be taken when deciding to use webhooks as they are susceptible to prompt injection attacks. Especially in scenarios where webhook payloads may contain untrusted input. At this time we recommend using webhooks only for trusted sources.
+:::
+
+---
+
+## General Cloud Agent Limitations and Guidance
 
 - Each message can run for **up to 15 minutes**.
   Break large tasks into smaller steps; use a `plan.md` or `todo.md` file to keep scope clear.

@@ -60,7 +60,9 @@
 		"selectModel": "Pilih model",
 		"modelTooltip": "Pilih model AI mana yang akan digunakan untuk sesi ini",
 		"defaultModel": "Model default",
-		"loadingModels": "Memuat..."
+		"loadingModels": "Memuat...",
+		"selectMode": "Pilih mode",
+		"modeTooltip": "Mode: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

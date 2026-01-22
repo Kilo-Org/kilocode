@@ -60,7 +60,9 @@
 		"selectModel": "Chọn mô hình",
 		"modelTooltip": "Chọn mô hình AI để sử dụng cho phiên này",
 		"defaultModel": "Mô hình mặc định",
-		"loadingModels": "Đang tải..."
+		"loadingModels": "Đang tải...",
+		"selectMode": "Chọn chế độ",
+		"modeTooltip": "Chế độ: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

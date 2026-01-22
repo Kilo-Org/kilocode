@@ -15,6 +15,7 @@ import { addToQueueAtom } from "../state/atoms/messageQueue"
 import { useImagePaste } from "../hooks/useImagePaste"
 import { ImageThumbnail } from "./ImageThumbnail"
 import { AddImageButton } from "./AddImageButton"
+import { SessionModeSelector } from "./SessionModeSelector"
 
 interface ChatInputProps {
 	sessionId: string
@@ -288,6 +289,8 @@ If any step fails, ask the user for help.`
 								acceptedMimeTypes={acceptedMimeTypes}
 								disabled={!canAddMore}
 							/>
+							{/* Mode selector for running sessions */}
+							<SessionModeSelector sessionId={sessionId} disabled={false} />
 							{/* Model indicator (read-only) - disabled SelectDropdown for visual consistency */}
 							{modelId && modelOptions.length > 0 && (
 								<div className="am-model-selector mr-1">

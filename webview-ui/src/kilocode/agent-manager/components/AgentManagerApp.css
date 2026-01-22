@@ -991,3 +991,94 @@
 .am-model-indicator svg {
 	flex-shrink: 0;
 }
+
+/* Session Mode Selector - Compact design for toolbar */
+.am-session-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100px; /* Limit width to prevent overflow */
+	flex-shrink: 1;
+}
+
+.am-session-mode-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 6px !important;
+	min-height: 28px !important;
+	max-width: 100px !important;
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	border-radius: 4px !important;
+	color: var(--vscode-descriptionForeground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+	opacity: 0.6 !important;
+}
+
+.am-session-mode-trigger:hover:not(:disabled) {
+	opacity: 1 !important;
+	color: var(--vscode-foreground) !important;
+	background-color: rgba(255, 255, 255, 0.03) !important;
+	border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.am-session-mode-trigger:disabled {
+	opacity: 0.4 !important;
+	cursor: not-allowed !important;
+}
+
+/* Truncate the mode name in the trigger */
+.am-session-mode-trigger span {
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+	max-width: 70px !important;
+}
+
+.am-session-mode-content {
+	max-height: 300px !important;
+	min-width: 180px !important;
+	overflow-y: auto !important;
+	overscroll-behavior: contain !important;
+}
+
+/* Mode Selector for New Agent Form */
+.am-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	width: 100%;
+}
+
+.am-mode-selector-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+	width: 100% !important;
+	background: var(--vscode-input-background) !important;
+	border: 1px solid var(--vscode-input-border) !important;
+	border-radius: 4px !important;
+	color: var(--vscode-input-foreground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+}
+
+.am-mode-selector-trigger:hover:not(:disabled) {
+	border-color: var(--vscode-focusBorder) !important;
+}
+
+.am-mode-selector-trigger:disabled {
+	opacity: 0.5 !important;
+	cursor: not-allowed !important;
+}
+
+.am-mode-selector-content {
+	max-height: 300px !important;
+	min-width: 200px !important;
+	overflow-y: auto !important;
+	overscroll-behavior: contain !important;
+}

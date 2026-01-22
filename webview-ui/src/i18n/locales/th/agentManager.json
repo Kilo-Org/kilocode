@@ -60,7 +60,9 @@
 		"selectModel": "เลือกโมเดล",
 		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
 		"defaultModel": "โมเดลเริ่มต้น",
-		"loadingModels": "กำลังโหลด..."
+		"loadingModels": "กำลังโหลด...",
+		"selectMode": "เลือกโหมด",
+		"modeTooltip": "โหมด: {{mode}}"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",

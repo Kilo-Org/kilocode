@@ -62,7 +62,9 @@
 		"selectModel": "Выбрать модель",
 		"modelTooltip": "Выбери, какую AI-модель использовать для этой сессии",
 		"defaultModel": "Модель по умолчанию",
-		"loadingModels": "Загрузка..."
+		"loadingModels": "Загрузка...",
+		"selectMode": "Выбрать режим",
+		"modeTooltip": "Режим: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",

@@ -17,6 +17,7 @@ import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
 import { CommandExecutionBlock } from "./CommandExecutionBlock"
+import { ProgressIndicator } from "./ProgressIndicator"
 import { ReasoningBlock } from "./ReasoningBlock"
 import { vscode } from "../utils/vscode"
 import {
@@ -250,11 +251,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 	if (message.type === "say") {
 		switch (message.say) {
 			case "api_req_started": {
-				icon = <ArrowRightLeft size={16} className="opacity-70" />
 				title = t("messages.apiRequest")
 				const info = safeJsonParse<{ cost?: number }>(messageText)
-				if (info?.cost !== undefined) {
-					extraInfo = <span className="am-message-cost">${info.cost.toFixed(4)}</span>
+				const hasCost = info?.cost !== undefined && info.cost !== null
+				// Show spinner when this is the last message and no cost yet (API request in progress)
+				if (hasCost) {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
+					extraInfo = <span className="am-message-cost">${info.cost!.toFixed(4)}</span>
+				} else if (isLast) {
+					icon = <ProgressIndicator />
+				} else {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
 				}
 				// Don't show content for API req started, just header
 				content = null

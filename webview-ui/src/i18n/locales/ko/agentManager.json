@@ -60,7 +60,9 @@
 		"selectModel": "모델 선택",
 		"modelTooltip": "이 세션에 사용할 AI 모델 선택",
 		"defaultModel": "기본 모델",
-		"loadingModels": "로딩 중..."
+		"loadingModels": "로딩 중...",
+		"selectMode": "모드 선택",
+		"modeTooltip": "모드: {{mode}}"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",
