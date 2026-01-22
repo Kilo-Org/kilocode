@@ -339,7 +339,7 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 	}
 
 	// kilocode_change start
-	private resolveInstructions(systemPrompt?: string): string {
+	private ensureInstructions(systemPrompt?: string): string {
 		if (systemPrompt && systemPrompt.trim().length > 0) {
 			return systemPrompt
 		}
