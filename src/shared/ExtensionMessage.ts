@@ -208,8 +208,12 @@ export interface ExtensionMessage {
     | "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
     | "claudeCodeRateLimits"
     | "customToolsResult"
+    | "securePasswordRetrieved" // kilocode_change
     text?: string
     // kilocode_change start
+    key?: string // For secure password operations
+    password?: string | null // For secure password operations
+    error?: string // Error message for secure password retrieval
     completionRequestId?: string // Correlation ID from request
     completionText?: string // The completed text
     completionError?: string // Error message if failed
