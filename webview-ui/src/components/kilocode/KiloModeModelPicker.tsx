@@ -27,6 +27,16 @@ type KiloModeModelPickerProps = {
 	apiProvider?: string
 	routerModels?: { kilocode?: Record<string, ModelInfo> }
 	modeModelOverrides?: Record<string, string>
+	/**
+	 * Optional controlled value.
+	 * If provided, the picker will NOT persist the selection automatically.
+	 */
+	selectedModelId?: string | null
+	/**
+	 * Optional controlled handler.
+	 * If provided, the picker will call this instead of posting a webview message.
+	 */
+	onSelectModelId?: (modelId: string | null) => void
 }
 
 export const KiloModeModelPicker = ({
@@ -34,6 +44,8 @@ export const KiloModeModelPicker = ({
 	apiProvider,
 	routerModels,
 	modeModelOverrides,
+	selectedModelId: controlledSelectedModelId,
+	onSelectModelId,
 }: KiloModeModelPickerProps) => {
 	const { t } = useTranslation()
 	const isKiloCodeProviderActive = apiProvider === "kilocode"
@@ -44,7 +56,8 @@ export const KiloModeModelPicker = ({
 	const hasKiloCodeModels = Object.keys(kiloCodeModels).length > 0
 	const isModeModelPickerEnabled = isKiloCodeProviderActive && hasKiloCodeModels
 
-	const selectedModeModelId = modeModelOverrides?.[modeSlug] ?? null
+	const selectedModeModelId =
+		controlledSelectedModelId !== undefined ? controlledSelectedModelId : (modeModelOverrides?.[modeSlug] ?? null)
 
 	const { preferredModelIds, restModelIds } = useMemo(() => {
 		return getGroupedModelIds(kiloCodeModels)
@@ -142,10 +155,14 @@ export const KiloModeModelPicker = ({
 									<CommandItem
 										value="__default__"
 										onSelect={() => {
-											vscode.postMessage({
-												type: "setModeModelOverride",
-												payload: { mode: modeSlug, modelId: null },
-											})
+											if (onSelectModelId) {
+												onSelectModelId(null)
+											} else {
+												vscode.postMessage({
+													type: "setModeModelOverride",
+													payload: { mode: modeSlug, modelId: null },
+												})
+											}
 											setModelPickerOpen(false)
 										}}
 										data-testid="mode-model-option-default">
@@ -161,10 +178,14 @@ export const KiloModeModelPicker = ({
 											key={modelId}
 											value={`${getKiloCodeModelLabel(modelId)} ${modelId}`}
 											onSelect={() => {
-												vscode.postMessage({
-													type: "setModeModelOverride",
-													payload: { mode: modeSlug, modelId },
-												})
+												if (onSelectModelId) {
+													onSelectModelId(modelId)
+												} else {
+													vscode.postMessage({
+														type: "setModeModelOverride",
+														payload: { mode: modeSlug, modelId },
+													})
+												}
 												setModelPickerOpen(false)
 											}}
 											data-testid={`mode-model-option-${modelId}`}>
