@@ -1212,8 +1212,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Set the mode for a running agent session via stdin.
-	 * This sends a setMode message to the CLI which updates the mode in the CLI's config.
+	 * Set the mode for a running agent session via IPC.
+	 * This sends a "mode" webview message to the agent process which calls handleModeSwitch().
 	 */
 	private async setSessionMode(sessionId: string, mode: string): Promise<void> {
 		if (!this.processHandler.hasStdin(sessionId)) {
@@ -1221,7 +1221,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		const message = { type: "setMode", mode }
+		// Send as a webview message - the extension expects { type: "mode", text: mode }
+		const message = { type: "mode", text: mode }
 		try {
 			await this.processHandler.writeToStdin(sessionId, message)
 			this.outputChannel.appendLine(`[AgentManager] Set mode to ${mode} for session ${sessionId}`)
