@@ -799,7 +799,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 		let customModes: ModeConfig[] | undefined
 		try {
 			customModes = await this.provider.customModesManager.getCustomModes()
-			this.outputChannel.appendLine(`[AgentManager] Fetched ${customModes.length} custom modes for agent process`)
+			const modeSlugs = customModes.map((m) => `${m.slug}(${m.source || "local"})`).join(", ")
+			this.outputChannel.appendLine(
+				`[AgentManager] Fetched ${customModes.length} custom modes for agent process: [${modeSlugs}]`,
+			)
+			this.outputChannel.appendLine(
+				`[AgentManager] Requested mode for session: ${options.mode || "code"} (default)`,
+			)
 		} catch (error) {
 			this.outputChannel.appendLine(
 				`[AgentManager] Failed to fetch custom modes: ${

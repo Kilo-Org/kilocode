@@ -783,6 +783,8 @@ export class ExtensionHost extends EventEmitter {
 				}
 
 		const customModes = this.options.customModes || []
+		const customModeSlugs = customModes.map((m) => `${m.slug}(${m.source || "local"})`).join(", ")
+		logs.info(`ExtensionHost received ${customModes.length} custom modes: [${customModeSlugs}]`, "ExtensionHost")
 
 		// Store customModes in globalState so CustomModesManager can find organization modes
 		// This is critical for organization modes to work in agent processes
@@ -790,7 +792,11 @@ export class ExtensionHost extends EventEmitter {
 			this.vscodeAPI.context.globalState.update("customModes", customModes).catch((error) => {
 				logs.warn("Failed to store customModes in globalState", "ExtensionHost", { error })
 			})
-			logs.debug(`Stored ${customModes.length} custom modes in globalState`, "ExtensionHost")
+			logs.info(`Stored ${customModes.length} custom modes in globalState`, "ExtensionHost")
+		} else if (customModes.length === 0) {
+			logs.info("No custom modes to store in globalState", "ExtensionHost")
+		} else {
+			logs.warn("Cannot store customModes - globalState not available", "ExtensionHost")
 		}
 
 		// Create initial state that matches the extension's expected structure

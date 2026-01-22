@@ -166,7 +166,9 @@ function summarizeMessage(message: ChildMessage): string {
 		return `(${p.type || "unknown"})`
 	}
 	if (message.type === "stateChange" && message.state) {
-		const s = message.state as { clineMessages?: Array<{ type?: string; say?: string; ask?: string; text?: string }> }
+		const s = message.state as {
+			clineMessages?: Array<{ type?: string; say?: string; ask?: string; text?: string }>
+		}
 		if (s.clineMessages) {
 			const msgs = s.clineMessages
 			const lastMsg = msgs[msgs.length - 1]
@@ -244,7 +246,13 @@ async function main(): Promise<void> {
 		process.exit(1)
 	}
 
-	logs.info("Starting agent process", "AgentProcess", { workspace: config.workspace })
+	const customModeSlugs = config.customModes?.map((m) => m.slug).join(", ") || "none"
+	logs.info("Starting agent process", "AgentProcess", {
+		workspace: config.workspace,
+		mode: config.mode,
+		customModesCount: config.customModes?.length || 0,
+		customModeSlugs,
+	})
 
 	let agent: ExtensionService | null = null
 

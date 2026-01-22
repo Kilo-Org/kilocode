@@ -221,10 +221,18 @@ export class RuntimeProcessHandler {
 			sessionData?: SessionData // For resuming with history
 		},
 	): Record<string, unknown> {
+		const modeToUse = options?.mode || "code"
+		const customModesCount = options?.customModes?.length || 0
+		const customModeSlugs = options?.customModes?.map((m) => m.slug).join(", ") || "none"
+
+		this.callbacks.onLog(
+			`[buildAgentConfig] mode=${modeToUse}, customModes=${customModesCount} [${customModeSlugs}]`,
+		)
+
 		const config: Record<string, unknown> = {
 			workspace,
 			providerSettings: options?.apiConfiguration || {},
-			mode: options?.mode || "code", // Use provided mode or default to "code"
+			mode: modeToUse, // Use provided mode or default to "code"
 			customModes: options?.customModes, // Pass custom modes to agent process
 			autoApprove: options?.autoApprove ?? true, // Default to auto-approve for agent manager
 			sessionId: options?.sessionId,
