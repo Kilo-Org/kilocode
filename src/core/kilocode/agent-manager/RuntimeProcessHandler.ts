@@ -225,8 +225,17 @@ export class RuntimeProcessHandler {
 		const customModesCount = options?.customModes?.length || 0
 		const customModeSlugs = options?.customModes?.map((m) => m.slug).join(", ") || "none"
 
+		// Log API configuration details for debugging
+		const apiConfig = options?.apiConfiguration
+		const hasKilocodeToken = !!apiConfig?.kilocodeToken
+		const hasApiProvider = !!apiConfig?.apiProvider
+		const apiProvider = apiConfig?.apiProvider || "none"
+
 		this.callbacks.onLog(
 			`[buildAgentConfig] mode=${modeToUse}, customModes=${customModesCount} [${customModeSlugs}]`,
+		)
+		this.callbacks.onLog(
+			`[buildAgentConfig] apiConfig: provider=${apiProvider}, hasKilocodeToken=${hasKilocodeToken}, hasApiProvider=${hasApiProvider}`,
 		)
 
 		const config: Record<string, unknown> = {

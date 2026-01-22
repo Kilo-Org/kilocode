@@ -715,6 +715,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
 		const { apiConfiguration } = await this.provider.getState()
+		// Log API configuration details for debugging
+		const hasKilocodeToken = !!apiConfiguration?.kilocodeToken
+		const apiProvider = apiConfiguration?.apiProvider || "none"
+		this.outputChannel.appendLine(
+			`[AgentManager] getApiConfigurationForCli: provider=${apiProvider}, hasKilocodeToken=${hasKilocodeToken}`,
+		)
 		return apiConfiguration
 	}
 
