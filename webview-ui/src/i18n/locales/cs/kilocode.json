@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP servery",
-			"agentBehaviour": "Chování agenta"
+			"agentBehaviour": "Chování agenta",
+			"skills": "Dovednosti"
 		},
 		"provider": {
 			"account": "Účet Kilo Code",
@@ -148,7 +149,8 @@
 			"rules": "Pravidla",
 			"workflows": "Pracovní postupy",
 			"mcps": "MCP",
-			"modes": "Režimy"
+			"modes": "Režimy",
+			"skills": "Dovednosti"
 		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"loading": "Načítání mikrofonních zařízení...",
 			"refresh": "Obnovit",
 			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
+	},
+	"skills": {
+		"description": "Dovednosti poskytují specializované instrukce pro konkrétní úkoly. Jsou automaticky aplikovány, když jsou relevantní pro tvůj požadavek.",
+		"noSkills": "Žádné dovednosti nainstalovány",
+		"projectSkills": "Dovednosti projektu",
+		"globalSkills": "Globální dovednosti",
+		"deleteDialog": {
+			"title": "Smazat dovednost",
+			"description": "Opravdu chceš smazat dovednost \"{{skillName}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"delete": "Smazat"
 		}
 	}
 }

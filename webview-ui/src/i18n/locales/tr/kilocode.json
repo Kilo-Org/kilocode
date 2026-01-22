@@ -32,7 +32,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP Sunucuları",
-			"agentBehaviour": "Ajan Davranışı"
+			"agentBehaviour": "Ajan Davranışı",
+			"skills": "Beceriler"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -148,7 +149,8 @@
 			"rules": "Kurallar",
 			"workflows": "İş Akışları",
 			"mcps": "MCP'ler",
-			"modes": "Modlar"
+			"modes": "Modlar",
+			"skills": "Beceriler"
 		},
 		"ariaLabel": "Kilo Code Kuralları",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"noDevices": "Mikrofon cihazı bulunamadı",
 			"loading": "Mikrofon cihazları yükleniyor...",
 			"refresh": "Yenile"
+		}
+	},
+	"skills": {
+		"description": "Beceriler, belirli görevler için özel talimatlar sağlar. İsteğinle ilgili olduğunda otomatik olarak uygulanırlar.",
+		"noSkills": "Yüklü beceri yok",
+		"projectSkills": "Proje Becerileri",
+		"globalSkills": "Global Beceriler",
+		"deleteDialog": {
+			"title": "Beceriyi Sil",
+			"description": "\"{{skillName}}\" becerisini silmek istediğinden emin misin? Bu işlem geri alınamaz.",
+			"cancel": "İptal",
+			"delete": "Sil"
 		}
 	}
 }

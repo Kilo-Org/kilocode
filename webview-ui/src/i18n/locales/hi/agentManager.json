@@ -75,7 +75,9 @@
 		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}",
 		"expandOutput": "आउटपुट विस्तार करें",
 		"collapseOutput": "आउटपुट संक्षिप्त करें",
-		"copyCommand": "कमांड कॉपी करें"
+		"copyCommand": "कमांड कॉपी करें",
+		"thinking": "विचार कर रहा है",
+		"thinkingSeconds": "{{count}} सेकंड"
 	},
 	"chatInput": {
 		"autoMode": "एजेंट पूर्ण-स्वचालित मोड में चल रहा है - इनपुट की अनुमति नहीं है",

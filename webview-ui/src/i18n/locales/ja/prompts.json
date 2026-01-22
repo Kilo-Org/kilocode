@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "組織モード",
-		"description": "このモードは組織によって提供されており、ここでは編集できません。このモードを変更するには、Kilo Code Dashboardにアクセスしてください。",
+		"description": "このモードは組織によって提供されており、ここでは編集できません。このモードを変更するには、<dashboardLink>Kilo Code Dashboard</dashboardLink>にアクセスしてください。",
 		"cannotEdit": "組織モードは編集できません"
 	},
 	"tools": {

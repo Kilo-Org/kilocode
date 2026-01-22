@@ -613,6 +613,9 @@ importers:
       '@inquirer/prompts':
         specifier: ^8.2.0
         version: 8.2.0(@types/node@25.0.9)
+      '@kilocode/agent-runtime':
+        specifier: workspace:^
+        version: link:../packages/agent-runtime
       '@kilocode/core-schemas':
         specifier: workspace:^
         version: link:../packages/core-schemas
@@ -1422,6 +1425,43 @@ importers:
       mkdirp:
         specifier: ^3.0.1
         version: 3.0.1
+
+  packages/agent-runtime:
+    dependencies:
+      '@kilocode/core-schemas':
+        specifier: workspace:^
+        version: link:../core-schemas
+      '@roo-code/cloud':
+        specifier: workspace:^
+        version: link:../cloud
+      '@roo-code/telemetry':
+        specifier: workspace:^
+        version: link:../telemetry
+      '@roo-code/types':
+        specifier: workspace:^
+        version: link:../types
+      node-machine-id:
+        specifier: ^1.1.12
+        version: 1.1.12
+    devDependencies:
+      '@roo-code/config-eslint':
+        specifier: workspace:^
+        version: link:../config-eslint
+      '@roo-code/config-typescript':
+        specifier: workspace:^
+        version: link:../config-typescript
+      '@types/node':
+        specifier: ~25.0.3
+        version: 25.0.9
+      rimraf:
+        specifier: ^6.1.2
+        version: 6.1.2
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.17(@opentelemetry/api@1.9.0)(@types/node@25.0.9)(jiti@2.4.2)(jsdom@27.4.0)(lightningcss@1.30.1)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/build:
     dependencies:

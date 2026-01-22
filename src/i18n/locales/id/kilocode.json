@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Respons model berakhir secara tidak terduga (tidak ada pesan asisten). Ini mungkin merupakan tanda pembatasan laju.",
 		"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan Anda terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}",
 		"maxCompletionTokens": "Jumlah maksimum token penyelesaian telah tercapai.",
+		"contentFilter": "Permintaan diblokir oleh filter konten.",
 		"disableApplyDiff": "Jika kesalahan ini terus terjadi, silakan nonaktifkan Editing Through Diffs di Pengaturan Lanjutan.",
 		"disableEditFile": "Jika kesalahan ini terus terjadi, silakan nonaktifkan fitur eksperimental Fast Apply."
 	},
@@ -177,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Versi Kilocode CLI kamu sudah usang dan tidak mendukung Agent Manager. Harap perbarui ke versi terbaru.",
-			"cliNotFound": "Kilocode CLI tidak ditemukan. Harap instal untuk menggunakan Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI belum dikonfigurasi. Jalankan 'kilocode auth' untuk masuk atau 'kilocode config' untuk mengonfigurasi.",
 			"sessionFailed": "Gagal memulai sesi agen",
 			"sessionFailedWithMessage": "Gagal memulai sesi agen: {{message}}"

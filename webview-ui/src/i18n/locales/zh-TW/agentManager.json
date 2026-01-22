@@ -75,7 +75,9 @@
 		"usingTool": "正在使用工具：**{{tool}}** {{details}}",
 		"expandOutput": "展開輸出",
 		"collapseOutput": "收合輸出",
-		"copyCommand": "複製指令"
+		"copyCommand": "複製指令",
+		"thinking": "思考中",
+		"thinkingSeconds": "{{count}} 秒"
 	},
 	"chatInput": {
 		"autoMode": "Agent 正在全自動模式下執行 - 不允許輸入",
