@@ -291,8 +291,7 @@ export class CLI {
 					// Set flag BEFORE forking session (same race condition as restore)
 					this.store.set(taskResumedViaContinueOrSessionAtom, true)
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-					// Fork always skips git restore (git state is from original author's environment)
-					await this.sessionService?.forkSession(this.options.fork, { rethrowError: true })
+					await this.sessionService?.forkSession(this.options.fork)
 				}
 			}
 

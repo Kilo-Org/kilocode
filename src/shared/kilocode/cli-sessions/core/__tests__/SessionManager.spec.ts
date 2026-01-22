@@ -335,17 +335,7 @@ describe("SessionManager", () => {
 
 			await manager.forkSession("share-or-session-123")
 
-			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", undefined)
-		})
-
-		it("forkSession passes rethrowError option to lifecycleService", async () => {
-			mockLifecycleService.forkSession.mockResolvedValue(undefined)
-
-			await manager.forkSession("share-or-session-123", { rethrowError: true })
-
-			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", {
-				rethrowError: true,
-			})
+			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123")
 		})
 
 		it("getSessionFromTask delegates to lifecycleService", async () => {

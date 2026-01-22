@@ -733,32 +733,19 @@ describe("SessionLifecycleService", () => {
 			await service.forkSession("share-or-session-123")
 
 			expect(service.restoreSession).toHaveBeenCalledWith("forked-session-123", {
-				rethrowError: undefined,
-				skipGitRestore: true,
-			})
-		})
-
-		it("passes rethrowError to restoreSession", async () => {
-			mockSessionClient.fork.mockResolvedValue({ session_id: "forked-session-123" })
-			vi.mocked(service.restoreSession).mockResolvedValue(undefined)
-
-			await service.forkSession("share-or-session-123", { rethrowError: true })
-
-			expect(service.restoreSession).toHaveBeenCalledWith("forked-session-123", {
 				rethrowError: true,
 				skipGitRestore: true,
 			})
 		})
 
-		it("always skips git restore for forked sessions", async () => {
+		it("always skips git restore and rethrows errors for forked sessions", async () => {
 			mockSessionClient.fork.mockResolvedValue({ session_id: "forked-session-123" })
 			vi.mocked(service.restoreSession).mockResolvedValue(undefined)
 
-			// Even without options, skipGitRestore should be true
 			await service.forkSession("share-or-session-123")
 
 			expect(service.restoreSession).toHaveBeenCalledWith("forked-session-123", {
-				rethrowError: undefined,
+				rethrowError: true,
 				skipGitRestore: true,
 			})
 		})

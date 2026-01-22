@@ -248,7 +248,7 @@ async function forkSession(context: CommandContext, id: string): Promise<void> {
 
 		await refreshTerminal()
 
-		await sessionService?.forkSession(id, { rethrowError: true })
+		await sessionService?.forkSession(id)
 
 		// Success message handled by restoreSession via extension messages
 	} catch (error) {

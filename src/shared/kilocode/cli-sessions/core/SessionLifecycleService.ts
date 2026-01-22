@@ -7,7 +7,7 @@ import type { IExtensionMessenger } from "../types/IExtensionMessenger.js"
 import type { ITaskDataProvider } from "../types/ITaskDataProvider.js"
 import type { SessionClient, ShareSessionOutput } from "./SessionClient.js"
 import { SessionWithSignedUrls, CliSessionSharedState } from "./SessionClient.js"
-import type { RestoreSessionOptions, ForkSessionOptions } from "./SessionManager.js"
+import type { RestoreSessionOptions } from "./SessionManager.js"
 import type { SessionPersistenceManager } from "../utils/SessionPersistenceManager.js"
 import type { SessionStateManager } from "./SessionStateManager.js"
 import type { SessionTitleService } from "./SessionTitleService.js"
@@ -342,9 +342,8 @@ export class SessionLifecycleService {
 	 * the original author's environment and wouldn't apply to this workspace.
 	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
-	 * @param options - Optional options (only rethrowError is available; skipGitRestore is always true for forks)
 	 */
-	async forkSession(shareOrSessionId: string, options?: ForkSessionOptions): Promise<void> {
+	async forkSession(shareOrSessionId: string): Promise<void> {
 		const { session_id } = await this.sessionClient.fork({
 			share_or_session_id: shareOrSessionId,
 			created_on_platform: this.platform,
@@ -353,7 +352,7 @@ export class SessionLifecycleService {
 		// Always skip git restore for forked sessions - the git state is from
 		// the original author's environment and wouldn't apply to this workspace
 		await this.restoreSession(session_id, {
-			rethrowError: options?.rethrowError,
+			rethrowError: true,
 			skipGitRestore: true,
 		})
 	}
