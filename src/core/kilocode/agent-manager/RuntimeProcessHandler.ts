@@ -89,6 +89,7 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	timeoutId?: NodeJS.Timeout
 	model?: string
+	mode?: string // Mode slug (e.g., "code", "architect", "debug")
 	images?: string[]
 	sessionData?: SessionData // For resuming with history
 }
@@ -114,6 +115,7 @@ export interface RuntimeProcessHandlerCallbacks {
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void
+	onModeChanged?: (sessionId: string, mode: string, previousMode: string) => void
 }
 
 export class RuntimeProcessHandler {
@@ -210,6 +212,7 @@ export class RuntimeProcessHandler {
 			apiConfiguration?: ProviderSettings
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect", "debug")
 			images?: string[]
 			autoApprove?: boolean
 			sessionData?: SessionData // For resuming with history
@@ -218,7 +221,7 @@ export class RuntimeProcessHandler {
 		const config: Record<string, unknown> = {
 			workspace,
 			providerSettings: options?.apiConfiguration || {},
-			mode: "code",
+			mode: options?.mode || "code", // Use provided mode or default to "code"
 			autoApprove: options?.autoApprove ?? true, // Default to auto-approve for agent manager
 			sessionId: options?.sessionId,
 		}
@@ -284,6 +287,7 @@ export class RuntimeProcessHandler {
 					shellPath?: string // Ignored - for CliProcessHandler compatibility
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 					model?: string
+					mode?: string // Mode slug (e.g., "code", "architect", "debug")
 					images?: string[]
 					sessionData?: SessionData // For resuming with history
 			  }
@@ -355,6 +359,7 @@ export class RuntimeProcessHandler {
 				worktreeInfo: options?.worktreeInfo,
 				gitUrl: options?.gitUrl,
 				model: options?.model,
+				mode: options?.mode,
 				images: options?.images,
 				sessionData: options?.sessionData,
 			}
@@ -485,6 +490,7 @@ export class RuntimeProcessHandler {
 			labelOverride: this.pendingProcess.desiredLabel,
 			gitUrl: this.pendingProcess.gitUrl,
 			model: this.pendingProcess.model,
+			mode: this.pendingProcess.mode,
 		})
 		this.registry.updateSessionStatus(sessionId, "running")
 
@@ -516,8 +522,7 @@ export class RuntimeProcessHandler {
 		this.callbacks.onPendingSessionChanged(null)
 
 		// Pass resume info if this is a resumed session with history
-		const resumeInfo =
-			isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
+		const resumeInfo = isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
 		this.callbacks.onSessionCreated(false, resumeInfo)
 
 		// Send session_created event
