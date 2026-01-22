@@ -4,6 +4,11 @@
  * Also handles Windows terminal compatibility for proper display rendering
  */
 
+import {
+	TERMINAL_CAPABILITIES_PROGRESSIVE_TIMEOUT_MS,
+	TERMINAL_CAPABILITIES_TIMEOUT_MS,
+} from "../../constants/timeouts.js"
+
 /**
  * Check if running on Windows platform
  */
@@ -157,7 +162,7 @@ export async function detectKittyProtocolSupport(): Promise<boolean> {
 				// indication the terminal probably supports kitty and we just need to
 				// wait a bit longer for a response.
 				clearTimeout(timeoutId)
-				timeoutId = setTimeout(onTimeout, 1000)
+				timeoutId = setTimeout(onTimeout, TERMINAL_CAPABILITIES_PROGRESSIVE_TIMEOUT_MS)
 			}
 
 			// Check for device attributes response (CSI ? <attrs> c)
@@ -188,7 +193,7 @@ export async function detectKittyProtocolSupport(): Promise<boolean> {
 		// Timeout after 200ms
 		// When a iterm2 terminal does not have focus this can take over 90s on a
 		// fast macbook so we need a somewhat longer threshold than would be ideal.
-		timeoutId = setTimeout(onTimeout, 200)
+		timeoutId = setTimeout(onTimeout, TERMINAL_CAPABILITIES_TIMEOUT_MS)
 	})
 }
 

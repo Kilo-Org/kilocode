@@ -1,8 +1,9 @@
 import { logs } from "../services/logs.js"
 import type { CLI } from "../cli.js"
 import { getTelemetryService } from "../services/telemetry/index.js"
+import { TASK_COMPLETION_TIMEOUT_MS } from "../constants/timeouts.js"
 
-export const onTaskCompletedTimeout = 90000 // 90 seconds for task completion
+export const onTaskCompletedTimeout = TASK_COMPLETION_TIMEOUT_MS // 90 seconds for task completion
 
 /**
  * Validate the on-task-completed prompt string.

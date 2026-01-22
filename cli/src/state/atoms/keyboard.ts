@@ -63,6 +63,7 @@ import {
 } from "./shell.js"
 import { saveClipboardImage, clipboardHasImage, cleanupOldClipboardImages } from "../../media/clipboard.js"
 import { logs } from "../../services/logs.js"
+import { CLIPBOARD_STATUS_ERROR_TIMEOUT_MS, CLIPBOARD_STATUS_SUCCESS_TIMEOUT_MS } from "../../constants/timeouts.js"
 
 // Export shell atoms for backward compatibility
 export {
@@ -1202,7 +1203,7 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 			// Insert at current cursor position
 			set(insertTextAtom, insertText)
 
-			setClipboardStatusWithTimeout(set, `Image #${refNumber} attached`, 2000)
+			setClipboardStatusWithTimeout(set, `Image #${refNumber} attached`, CLIPBOARD_STATUS_SUCCESS_TIMEOUT_MS)
 			logs.debug(`Inserted clipboard image #${refNumber}: ${result.filePath}`, "clipboard")
 
 			// Clean up old clipboard images in the background
@@ -1212,13 +1213,17 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 				})
 			})
 		} else {
-			setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
+			setClipboardStatusWithTimeout(
+				set,
+				result.error || "Failed to save clipboard image",
+				CLIPBOARD_STATUS_ERROR_TIMEOUT_MS,
+			)
 		}
 	} catch (error) {
 		setClipboardStatusWithTimeout(
 			set,
 			`Clipboard error: ${error instanceof Error ? error.message : String(error)}`,
-			3000,
+			CLIPBOARD_STATUS_ERROR_TIMEOUT_MS,
 		)
 	} finally {
 		// Decrement pending paste counter when done

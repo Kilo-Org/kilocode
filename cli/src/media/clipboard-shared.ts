@@ -7,7 +7,6 @@ import { promisify } from "util"
 export const execFileAsync = promisify(execFile)
 
 export const CLIPBOARD_DIR = "kilocode-clipboard"
-export const MAX_CLIPBOARD_IMAGE_AGE_MS = 60 * 60 * 1000
 
 export interface ClipboardImageResult {
 	success: boolean

@@ -3,6 +3,7 @@ import { logs } from "../services/logs.js"
 import type { CLI } from "../cli.js"
 import { simpleGit } from "simple-git"
 import { getTelemetryService } from "../services/telemetry/index.js"
+import { COMMIT_COMPLETION_TIMEOUT_MS } from "../constants/timeouts.js"
 
 /**
  * Helper function to commit changes with a fallback message
@@ -16,7 +17,7 @@ async function commitWithFallback(cwd: string): Promise<void> {
 	logs.info("Changes committed with fallback message", "ParallelMode")
 }
 
-export const commitCompletionTimeout = 40000
+export const commitCompletionTimeout = COMMIT_COMPLETION_TIMEOUT_MS
 
 /**
  * Poll git status to check if commit is complete

@@ -16,6 +16,7 @@ import {
 	prettyModelName,
 } from "../constants/providers/models.js"
 import { MODEL_LIST_PAGE_SIZE, type ModelListFilters } from "../state/atoms/modelList.js"
+import { MODEL_REFRESH_DELAY_MS } from "../constants/timeouts.js"
 
 /**
  * Sort options for model list
@@ -76,7 +77,7 @@ async function ensureRouterModels(context: CommandContext): Promise<boolean> {
 		try {
 			await refreshRouterModels()
 			// Wait a bit for the models to be loaded
-			await new Promise((resolve) => setTimeout(resolve, 1000))
+			await new Promise((resolve) => setTimeout(resolve, MODEL_REFRESH_DELAY_MS))
 			return true
 		} catch (error) {
 			addMessage({

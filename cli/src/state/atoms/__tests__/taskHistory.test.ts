@@ -8,6 +8,7 @@ import {
 	type TaskHistoryData,
 } from "../taskHistory.js"
 import type { HistoryItem } from "@roo-code/types"
+import { TASK_HISTORY_REQUEST_TIMEOUT_MS } from "../../../constants/timeouts.js"
 
 /**
  * Creates a minimal mock HistoryItem for testing
@@ -41,7 +42,7 @@ describe("taskHistory atoms", () => {
 		it("should add a pending request to the map", () => {
 			const resolve = vi.fn()
 			const reject = vi.fn()
-			const timeout = setTimeout(() => {}, 5000)
+			const timeout = setTimeout(() => {}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 			store.set(addPendingRequestAtom, {
 				requestId: "test-123",
@@ -63,7 +64,7 @@ describe("taskHistory atoms", () => {
 			const resolve = vi.fn()
 			const reject = vi.fn()
 			const timeoutCallback = vi.fn()
-			const timeout = setTimeout(timeoutCallback, 5000)
+			const timeout = setTimeout(timeoutCallback, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 			// Add the request first
 			store.set(addPendingRequestAtom, {
@@ -95,7 +96,7 @@ describe("taskHistory atoms", () => {
 		it("should resolve a pending request with data", () => {
 			const resolve = vi.fn()
 			const reject = vi.fn()
-			const timeout = setTimeout(() => {}, 5000)
+			const timeout = setTimeout(() => {}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 			// Add the request
 			store.set(addPendingRequestAtom, {
@@ -129,7 +130,7 @@ describe("taskHistory atoms", () => {
 		it("should reject a pending request with error", () => {
 			const resolve = vi.fn()
 			const reject = vi.fn()
-			const timeout = setTimeout(() => {}, 5000)
+			const timeout = setTimeout(() => {}, TASK_HISTORY_REQUEST_TIMEOUT_MS)
 
 			// Add the request
 			store.set(addPendingRequestAtom, {
@@ -172,7 +173,7 @@ describe("taskHistory atoms", () => {
 
 	describe("Promise-based task history flow", () => {
 		it("should resolve promise when response arrives before timeout", async () => {
-			const TIMEOUT_MS = 5000
+			const TIMEOUT_MS = TASK_HISTORY_REQUEST_TIMEOUT_MS
 			const requestId = "flow-test-1"
 
 			// Simulate the flow used in CLI.resumeConversation
@@ -200,7 +201,7 @@ describe("taskHistory atoms", () => {
 		})
 
 		it("should reject promise when timeout occurs", async () => {
-			const TIMEOUT_MS = 5000
+			const TIMEOUT_MS = TASK_HISTORY_REQUEST_TIMEOUT_MS
 			const requestId = "flow-test-2"
 
 			// Simulate the flow used in CLI.resumeConversation

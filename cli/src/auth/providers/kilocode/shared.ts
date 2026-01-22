@@ -5,8 +5,7 @@ import { select } from "@inquirer/prompts"
 import { logs } from "../../../services/logs.js"
 import type { KilocodeOrganization, KilocodeProfileData } from "../../types.js"
 import { withRawMode } from "../../utils/terminal.js"
-
-const API_TIMEOUT_MS = 5000
+import { KILOCODE_API_REQUEST_TIMEOUT_MS } from "../../../constants/timeouts.js"
 
 const defaultsSchema = z.object({
 	defaultModel: z.string().nullish(),
@@ -92,7 +91,7 @@ export async function getKilocodeDefaultModel(kilocodeToken: string, organizatio
 			Authorization: `Bearer ${kilocodeToken}`,
 		}
 
-		const response = await fetchWithTimeout(url, { headers }, API_TIMEOUT_MS)
+		const response = await fetchWithTimeout(url, { headers }, KILOCODE_API_REQUEST_TIMEOUT_MS)
 
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
