@@ -16,8 +16,7 @@
 			"preLaunchTask": "${defaultBuildTask}",
 			"env": {
 				"NODE_ENV": "development",
-				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js"
+				"VSCODE_DEBUG_MODE": "true"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": {
@@ -41,8 +40,7 @@
 			"preLaunchTask": "${defaultBuildTask}",
 			"env": {
 				"NODE_ENV": "development",
-				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js"
+				"VSCODE_DEBUG_MODE": "true"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
@@ -59,7 +57,6 @@
 			"env": {
 				"NODE_ENV": "development",
 				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js",
 				"KILOCODE_BACKEND_BASE_URL": "${input:kilocodeBackendBaseUrl}"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
