@@ -75,7 +75,9 @@
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}",
 		"expandOutput": "Mở rộng đầu ra",
 		"collapseOutput": "Thu gọn đầu ra",
-		"copyCommand": "Sao chép lệnh"
+		"copyCommand": "Sao chép lệnh",
+		"thinking": "Đang suy nghĩ",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",
