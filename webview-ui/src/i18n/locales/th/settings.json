@@ -334,6 +334,37 @@
 		"apiKeyStorageNotice": "คีย์ API จะถูกเก็บไว้อย่างปลอดภัยในที่เก็บข้อมูลลับของ VSCode",
 		"glamaApiKey": "คีย์ API ของ Glama",
 		"getGlamaApiKey": "รับคีย์ API ของ Glama",
+		"openAiCodexRateLimits": {
+			"title": "ขีดจำกัดการใช้งานของ Codex{{planLabel}}",
+			"loading": "กำลังโหลดขีดจำกัดการใช้งาน...",
+			"loadError": "โหลดขีดจำกัดการใช้งานไม่สำเร็จ",
+			"retry": "ลองอีกครั้ง",
+			"usedPercent": "ใช้ไปแล้ว {{percent}}%",
+			"resetsIn": "จะรีเซ็ตใน {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "ตอนนี้",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}ด {{hours}}ชม",
+				"hoursMinutes": "{{hours}}ชม {{minutes}}น",
+				"minutes": "{{minutes}}น"
+			},
+			"window": {
+				"usage": "การใช้งาน",
+				"fiveHour": "ขีดจำกัด 5 ชม",
+				"oneHour": "ขีดจำกัด 1 ชม",
+				"daily": "ขีดจำกัดรายวัน",
+				"weekly": "ขีดจำกัดรายสัปดาห์",
+				"days": "ขีดจำกัด {{days}} วัน",
+				"hours": "ขีดจำกัด {{hours}} ชม",
+				"minutes": "ขีดจำกัด {{minutes}} น"
+			}
+		},
 		"useCustomBaseUrl": "ใช้ URL พื้นฐานที่กำหนดเอง",
 		"useReasoning": "เปิดใช้งานการให้เหตุผล",
 		"useHostHeader": "ใช้ส่วนหัวโฮสต์ที่กำหนดเอง",

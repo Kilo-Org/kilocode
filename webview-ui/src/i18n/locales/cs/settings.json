@@ -323,6 +323,37 @@
 		"apiKeyStorageNotice": "Klíče API jsou bezpečně uloženy v tajném úložišti VSCode",
 		"glamaApiKey": "Klíč API Glama",
 		"getGlamaApiKey": "Získat klíč API Glama",
+		"openAiCodexRateLimits": {
+			"title": "Limity využití pro Codex{{planLabel}}",
+			"loading": "Načítání limitů využití...",
+			"loadError": "Nepodařilo se načíst limity využití",
+			"retry": "Zkusit znovu",
+			"usedPercent": "Využito {{percent}} %",
+			"resetsIn": "Reset za {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Nyní",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}} d {{hours}} h",
+				"hoursMinutes": "{{hours}} h {{minutes}} min",
+				"minutes": "{{minutes}} min"
+			},
+			"window": {
+				"usage": "Využití",
+				"fiveHour": "limit 5 h",
+				"oneHour": "limit 1 h",
+				"daily": "denní limit",
+				"weekly": "týdenní limit",
+				"days": "limit {{days}} d",
+				"hours": "limit {{hours}} h",
+				"minutes": "limit {{minutes}} min"
+			}
+		},
 		"useCustomBaseUrl": "Použít vlastní základní URL",
 		"useReasoning": "Povolit uvažování",
 		"useHostHeader": "Použít vlastní hlavičku Host",
