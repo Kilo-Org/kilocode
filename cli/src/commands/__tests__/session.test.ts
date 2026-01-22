@@ -622,7 +622,7 @@ describe("sessionCommand", () => {
 			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockContext.replaceMessages).toHaveBeenCalledTimes(1)
 			expect(mockContext.refreshTerminal).toHaveBeenCalled()
-			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123", { rethrowError: true })
+			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123")
 			// restoreSession is now called internally by forkSession, not by the command handler
 
 			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -676,7 +676,7 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123", { rethrowError: true })
+			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123")
 		})
 	})
 
