@@ -125,6 +125,8 @@ export class RuntimeProcessHandler {
 	private sentApiReqStarted: Set<string> = new Set()
 	// Track pending resume continuations - sent after session is loaded from server
 	private pendingResumeContinuation: Map<string, { prompt: string; images?: string[] }> = new Map()
+	// Track current mode for each session to detect mode changes
+	private sessionModes: Map<string, string> = new Map()
 	// VS Code app root path for finding bundled binaries
 	private vscodeAppRoot?: string
 
@@ -608,14 +610,31 @@ export class RuntimeProcessHandler {
 		}
 
 		if (extMsg.type === "state" && extMsg.state) {
-			// State update - extract chat messages if present
-			const state = extMsg.state as { chatMessages?: ClineMessage[]; clineMessages?: ClineMessage[] }
+			// State update - extract chat messages and mode if present
+			const state = extMsg.state as {
+				chatMessages?: ClineMessage[]
+				clineMessages?: ClineMessage[]
+				mode?: string
+			}
 			// Handle both property names - extension uses clineMessages internally
 			const chatMessages = state.chatMessages || state.clineMessages
 
 			this.callbacks.onLog(
 				`[ExtMsg] ${sessionId}: state update with ${chatMessages?.length || 0} messages (sentApiReqStarted=${this.sentApiReqStarted.has(sessionId)})`,
 			)
+
+			// Check for mode changes and notify callback
+			if (state.mode) {
+				const previousMode = this.sessionModes.get(sessionId)
+				if (previousMode && previousMode !== state.mode) {
+					this.callbacks.onLog(`[ExtMsg] ${sessionId}: mode changed from ${previousMode} to ${state.mode}`)
+					this.sessionModes.set(sessionId, state.mode)
+					this.callbacks.onModeChanged?.(sessionId, state.mode, previousMode)
+				} else if (!previousMode) {
+					// First time seeing mode for this session, just track it
+					this.sessionModes.set(sessionId, state.mode)
+				}
+			}
 
 			if (chatMessages && chatMessages.length > 0) {
 				// Log last few message types and content for debugging
@@ -830,6 +849,7 @@ export class RuntimeProcessHandler {
 			this.activeSessions.delete(sessionId)
 			this.sentApiReqStarted.delete(sessionId)
 			this.pendingResumeContinuation.delete(sessionId)
+			this.sessionModes.delete(sessionId)
 
 			// Update session status based on exit code
 			if (code === 0) {
