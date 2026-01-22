@@ -197,36 +197,53 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
 
     override suspend fun createTerminal(extHostTerminalId: String, config: Map<String, Any?>) {
         try {
+            logger.info("🚀 [DEBUG] createTerminal called: extHostTerminalId=$extHostTerminalId")
+            logger.info("🔧 [DEBUG] Terminal config: $config")
+            
             // Check if terminal already exists
             if (terminalManager.containsTerminal(extHostTerminalId)) {
-                logger.warn("Terminal already exists: $extHostTerminalId")
+                logger.warn("⚠️ [DEBUG] Terminal already exists: $extHostTerminalId")
                 return
             }
 
             // Get RPC protocol instance
+            logger.debug("🔧 [DEBUG] Getting RPC protocol instance...")
             val pluginContext = PluginContext.getInstance(project)
             val rpcProtocol = pluginContext.getRPCProtocol()
             if (rpcProtocol == null) {
-                logger.error("Unable to get RPC protocol instance, terminal creation failed: $extHostTerminalId")
+                logger.error("❌ [DEBUG] Unable to get RPC protocol instance, terminal creation failed: $extHostTerminalId")
                 throw IllegalStateException("RPC protocol not initialized")
             }
+            logger.debug("✅ [DEBUG] RPC protocol instance obtained")
 
             // Allocate numeric ID
             val numericId = terminalManager.allocateNumericId()
+            logger.info("🔧 [DEBUG] Allocated numeric ID: $numericId for terminal: $extHostTerminalId")
 
             // Create terminal instance
+            logger.debug("🔧 [DEBUG] Creating TerminalConfig from map...")
             val terminalConfig = TerminalConfig.fromMap(config)
+            logger.debug("✅ [DEBUG] TerminalConfig created: name=${terminalConfig.name}, cwd=${terminalConfig.cwd}")
+            
+            logger.debug("🔧 [DEBUG] Creating TerminalInstance...")
             val terminalInstance = TerminalInstance(extHostTerminalId, numericId, project, terminalConfig, rpcProtocol)
+            logger.debug("✅ [DEBUG] TerminalInstance created")
 
             // Initialize terminal
+            logger.info("🔧 [DEBUG] Initializing terminal instance...")
             terminalInstance.initialize()
+            logger.info("✅ [DEBUG] Terminal instance initialized")
 
             // Register to manager
+            logger.debug("🔧 [DEBUG] Registering terminal to manager...")
             terminalManager.registerTerminal(extHostTerminalId, terminalInstance)
+            logger.debug("✅ [DEBUG] Terminal registered to manager")
 
             logger.info("✅ Terminal created successfully: $extHostTerminalId (numericId: $numericId)")
         } catch (e: Exception) {
-            logger.error("Failed to create terminal: $extHostTerminalId", e)
+            logger.error("❌ [DEBUG] Failed to create terminal: $extHostTerminalId", e)
+            logger.error("❌ [DEBUG] Exception type: ${e.javaClass.name}, message: ${e.message}")
+            logger.error("❌ [DEBUG] Stack trace:", e)
             // Clean up possibly created resources
             terminalManager.unregisterTerminal(extHostTerminalId)
             throw e

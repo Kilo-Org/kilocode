@@ -78,12 +78,15 @@ class ProxyInputStream(
     private val streamType: String,
     private val callback: ProxyPtyProcessCallback?,
 ) : java.io.InputStream() {
+    
+    private val logger = com.intellij.openapi.diagnostic.Logger.getInstance(ProxyInputStream::class.java)
 
     override fun read(): Int {
         val result = originalStream.read()
         if (result != -1 && callback != null) {
             // Convert single byte to string and callback
             val dataString = String(byteArrayOf(result.toByte()), Charsets.UTF_8)
+            logger.debug("🔧 [DEBUG] ProxyInputStream.read() single byte: streamType=$streamType, byte=$result, char='$dataString'")
             callback.onRawData(dataString, streamType)
         }
         return result
@@ -94,6 +97,7 @@ class ProxyInputStream(
         if (result > 0 && callback != null) {
             // Convert to string and callback
             val dataString = String(b, 0, result, Charsets.UTF_8)
+            logger.debug("🔧 [DEBUG] ProxyInputStream.read(ByteArray) captured: streamType=$streamType, bytes=$result, data='${dataString.take(100)}'")
             callback.onRawData(dataString, streamType)
         }
         return result
@@ -104,6 +108,7 @@ class ProxyInputStream(
         if (result > 0 && callback != null) {
             // Convert to string and callback
             val dataString = String(b, off, result, Charsets.UTF_8)
+            logger.debug("🔧 [DEBUG] ProxyInputStream.read(ByteArray, off, len) captured: streamType=$streamType, bytes=$result, data='${dataString.take(100)}'")
             callback.onRawData(dataString, streamType)
         }
         return result

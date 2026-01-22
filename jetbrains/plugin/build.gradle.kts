@@ -15,7 +15,7 @@ buildscript {
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.0.21"
+    id("org.jetbrains.kotlin.jvm") version "2.2.0"
     id("org.jetbrains.intellij.platform") version "2.10.0"
     id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.7"
@@ -94,7 +94,9 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 
     intellijPlatform {
-        create(properties("platformType"), properties("platformVersion"))
+        // Use intellijIdea() instead of create() for 2025.3+
+        // The old create(platformType, platformVersion) API is deprecated
+        intellijIdea(properties("platformVersion"))
 
         // Bundled plugins
         bundledPlugins(
@@ -106,9 +108,6 @@ dependencies {
 
         // Plugin verifier
         pluginVerifier()
-
-        // Instrumentation tools
-        instrumentationTools()
     }
 }
 
@@ -174,7 +173,7 @@ tasks {
         doLast {
             if (ext.get("debugMode") != "idea" && ext.get("debugMode") != "none") {
                 val distributionFile = archiveFile.get().asFile
-                val sandboxPluginsDir = layout.buildDirectory.get().asFile.resolve("idea-sandbox/IC-2024.3/plugins")
+                val sandboxPluginsDir = layout.buildDirectory.get().asFile.resolve("idea-sandbox/IC-2025.3/plugins")
                 val jetbrainsDir = sandboxPluginsDir.resolve("jetbrains")
 
                 if (jetbrainsDir.exists() && distributionFile.exists()) {
