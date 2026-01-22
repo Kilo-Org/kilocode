@@ -150,7 +150,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 				...style,
 			}}>
 			{isExpanded && (
-				<div className="flex flex-col gap-2 py-4">
+				<div id="auto-approve-expanded-content" className="flex flex-col gap-2 py-4">
 					<div
 						style={{
 							color: "var(--vscode-descriptionForeground)",
@@ -187,20 +187,13 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 					alignItems: "center",
 					gap: "8px",
 					padding: "2px 0 0 0",
-					cursor: "pointer",
-				}}
-				onClick={toggleExpanded}>
+				}}>
 				<div onClick={(e) => e.stopPropagation()}>
 					<StandardTooltip
 						content={!hasEnabledOptions ? t("chat:autoApprove.selectOptionsFirst") : undefined}>
 						<VSCodeCheckbox
 							checked={effectiveAutoApprovalEnabled}
 							disabled={!hasEnabledOptions}
-							aria-label={
-								hasEnabledOptions
-									? t("chat:autoApprove.toggleAriaLabel")
-									: t("chat:autoApprove.disabledAriaLabel")
-							}
 							onChange={() => {
 								if (hasEnabledOptions) {
 									const newValue = !(autoApprovalEnabled ?? false)
@@ -211,17 +204,42 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 									})
 								}
 								// If no options enabled, do nothing
-							}}
-						/>
+							}}>
+							<span
+								style={{
+									position: "absolute",
+									left: "-10000px",
+									width: "1px",
+									height: "1px",
+									overflow: "hidden",
+								}}>
+								{hasEnabledOptions
+									? `Toggle auto-approval for: ${enabledActionsList}`
+									: t("chat:autoApprove.disabledAriaLabel")}
+							</span>
+						</VSCodeCheckbox>
 					</StandardTooltip>
 				</div>
 				<div
+					role="button"
+					tabIndex={0}
+					aria-expanded={isExpanded}
+					aria-controls="auto-approve-expanded-content"
+					aria-label={`Toggle ${t("chat:autoApprove.title")} settings panel`}
 					style={{
 						display: "flex",
 						alignItems: "center",
 						gap: "4px",
 						flex: 1,
 						minWidth: 0,
+						cursor: "pointer",
+					}}
+					onClick={toggleExpanded}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault()
+							toggleExpanded()
+						}
 					}}>
 					<span
 						style={{
