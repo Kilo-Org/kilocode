@@ -8,6 +8,7 @@ Bring Your Own Key (BYOK) lets you use your own API keys when using the Kilo Gat
 
 A user or organization may want to use BYOK to:
 
+- Utilize new models quickly, Kilo Gateway supports most new models in minutes
 - Use subscriptions with third-party AI providers, for example [Z.AI](https://z.ai/subscribe) or [Minimax](https://platform.minimax.io/subscribe/coding-plan)
 - Attribute usage against existing provider commitments or agreements
 - Use existing credits with a provider

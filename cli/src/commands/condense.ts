@@ -13,7 +13,7 @@ export const condenseCommand: Command = {
 	category: "chat",
 	priority: 6,
 	handler: async (context) => {
-		const { sendWebviewMessage, addMessage, currentTask } = context
+		const { condenseAndWait, addMessage, currentTask } = context
 
 		const now = Date.now()
 
@@ -34,10 +34,23 @@ export const condenseCommand: Command = {
 			ts: now,
 		})
 
-		// Send request to extension with the task ID
-		await sendWebviewMessage({
-			type: "condenseTaskContextRequest",
-			text: currentTask.id,
-		})
+		try {
+			// Send request to extension and wait for completion
+			await condenseAndWait(currentTask.id)
+
+			addMessage({
+				id: `condense-complete-${Date.now()}`,
+				type: "system",
+				content: "Context condensation complete.",
+				ts: Date.now(),
+			})
+		} catch (error) {
+			addMessage({
+				id: `condense-error-${Date.now()}`,
+				type: "error",
+				content: `Context condensation failed: ${error instanceof Error ? error.message : String(error)}`,
+				ts: Date.now(),
+			})
+		}
 	},
 }

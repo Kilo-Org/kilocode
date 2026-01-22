@@ -312,7 +312,7 @@
 	},
 	"troubleMessage": "Kilo Code mengalami masalah...",
 	"errorDetails": {
-		"link": "Details",
+		"link": "Detail",
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
 		"copied": "Disalin!",

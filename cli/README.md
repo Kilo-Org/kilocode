@@ -70,6 +70,22 @@ kilocode --parallel --auto "improve xyz"
 kilocode --parallel --auto "improve abc"
 ```
 
+### Custom System Prompt
+
+Append custom instructions to the system prompt:
+
+```bash
+# Inline text
+kilocode --append-system-prompt "Always use TypeScript strict mode"
+
+# From a file
+kilocode --append-system-prompt-file ./prompts/custom-instructions.md
+
+# Both (inline text first, then file content)
+kilocode --append-system-prompt "Context: Production deployment" \
+         --append-system-prompt-file ./prompts/deploy-guidelines.md
+```
+
 ### Autonomous mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.

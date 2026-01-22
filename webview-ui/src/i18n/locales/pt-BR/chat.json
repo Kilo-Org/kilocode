@@ -282,7 +282,7 @@
 		"noAssistantMessagesDetails": "O modelo de linguagem retornou uma resposta vazia sem texto ou chamadas de ferramentas. Isso pode acontecer devido a problemas de API, limitação de taxa ou problemas específicos do modelo. O modelo foi automaticamente solicitado a tentar novamente."
 	},
 	"errorDetails": {
-		"link": "Details",
+		"link": "Detalhes",
 		"title": "Detalhes do erro",
 		"copyToClipboard": "Copiar para área de transferência",
 		"copied": "Copiado!",
