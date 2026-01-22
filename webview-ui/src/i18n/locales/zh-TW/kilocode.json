@@ -33,7 +33,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP 伺服器"
+			"mcp": "MCP 伺服器",
+			"agentBehaviour": "代理行為",
+			"skills": "技能"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -144,7 +146,14 @@
 	},
 	"docs": "文件",
 	"rules": {
-		"tooltip": "管理 Kilo Code 規則和工作流程",
+		"tooltip": "管理代理行為（{{types}}）",
+		"agentBehaviourTypes": {
+			"rules": "規則",
+			"workflows": "工作流程",
+			"mcps": "MCP",
+			"modes": "模式",
+			"skills": "技能"
+		},
 		"ariaLabel": "Kilo Code 規則",
 		"tabs": {
 			"rules": "規則",
@@ -353,6 +362,18 @@
 			"refresh": "重新整理",
 			"defaultOption": "系統預設",
 			"noDevices": "找不到麥克風設備"
+		}
+	},
+	"skills": {
+		"description": "技能為特定任務提供專業指導。當與你的請求相關時，它們會自動套用。",
+		"noSkills": "尚未安裝任何技能",
+		"projectSkills": "專案技能",
+		"globalSkills": "全域技能",
+		"deleteDialog": {
+			"title": "刪除技能",
+			"description": "確定要刪除技能「{{skillName}}」嗎？此操作無法復原。",
+			"cancel": "取消",
+			"delete": "刪除"
 		}
 	}
 }

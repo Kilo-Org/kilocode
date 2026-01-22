@@ -34,7 +34,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "خوادم MCP"
+			"mcp": "خوادم MCP",
+			"agentBehaviour": "سلوك الوكيل",
+			"skills": "المهارات"
 		},
 		"codeIndex": {
 			"embeddingBatchSizeLabel": "حجم دفعة التضمين",
@@ -144,7 +146,14 @@
 	},
 	"docs": "التوثيق",
 	"rules": {
-		"tooltip": "إدارة قواعد وسير العمل في Kilo Code",
+		"tooltip": "إدارة سلوك الوكيل ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "القواعد",
+			"workflows": "سير العمل",
+			"mcps": "MCPs",
+			"modes": "الأوضاع",
+			"skills": "المهارات"
+		},
 		"ariaLabel": "قواعد Kilo Code",
 		"tabs": {
 			"rules": "القواعد",
@@ -354,6 +363,18 @@
 			"loading": "جارٍ تحميل أجهزة الميكروفون...",
 			"description": "حدد جهاز الميكروفون لتحويل الكلام إلى نص",
 			"refresh": "تحديث"
+		}
+	},
+	"skills": {
+		"description": "توفر المهارات تعليمات متخصصة لمهام محددة. يتم تطبيقها تلقائيًا عندما تكون ذات صلة بطلبك.",
+		"noSkills": "لا توجد مهارات مثبتة",
+		"projectSkills": "مهارات المشروع",
+		"globalSkills": "المهارات العامة",
+		"deleteDialog": {
+			"title": "حذف المهارة",
+			"description": "هل أنت متأكد أنك تريد حذف المهارة \"{{skillName}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+			"cancel": "إلغاء",
+			"delete": "حذف"
 		}
 	}
 }
