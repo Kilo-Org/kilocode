@@ -498,5 +498,5 @@ export function applyEnvOverrides(config: CLIConfig): CLIConfig {
  */
 export function isEphemeralMode(): boolean {
 	// CLI argument takes precedence, fall back to environment variable (only when env config exists)
-	return cliEphemeralMode || (envConfigExists() && process.env.KILO_EPHEMERAL_MODE === "true")
+	return cliEphemeralMode || (envConfigExists() && process.env.KILO_EPHEMERAL_MODE !== "false")
 }
