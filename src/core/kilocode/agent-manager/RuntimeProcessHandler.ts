@@ -116,6 +116,7 @@ export interface RuntimeProcessHandlerCallbacks {
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void
 	onModeChanged?: (sessionId: string, mode: string, previousMode: string) => void
+	onWorktreeSessionCreated?: (sessionId: string, worktreePath: string) => void // Called when a worktree session is created
 }
 
 export class RuntimeProcessHandler {
@@ -168,6 +169,14 @@ export class RuntimeProcessHandler {
 	 */
 	private getProcessEntryPath(): string {
 		const fs = require("fs")
+
+		// Development: Check for explicit dev path override (set in launch.json)
+		// This ensures F5 debugging uses the locally built agent-runtime from the current workspace
+		const devPath = process.env.KILOCODE_DEV_AGENT_RUNTIME_PATH
+		if (devPath && fs.existsSync(devPath)) {
+			this.callbacks.onLog(`Using dev agent-runtime process: ${devPath}`)
+			return devPath
+		}
 
 		// Production: Check for bundled file in extension's dist directory
 		// The esbuild config bundles agent-runtime/src/process.ts to dist/agent-runtime-process.js
@@ -525,6 +534,10 @@ export class RuntimeProcessHandler {
 
 		// Clear pending state
 		this.registry.clearPendingSession()
+
+		// Capture worktree info before clearing pendingProcess
+		const worktreeInfo = this.pendingProcess.worktreeInfo
+		const parallelMode = this.pendingProcess.parallelMode
 		this.pendingProcess = null
 
 		this.callbacks.onStateChanged()
@@ -533,6 +546,11 @@ export class RuntimeProcessHandler {
 		// Pass resume info if this is a resumed session with history
 		const resumeInfo = isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
 		this.callbacks.onSessionCreated(false, resumeInfo)
+
+		// Notify when worktree session is created for persistence
+		if (parallelMode && worktreeInfo?.path) {
+			this.callbacks.onWorktreeSessionCreated?.(sessionId, worktreeInfo.path)
+		}
 
 		// Send session_created event
 		const sessionCreatedEvent: SessionCreatedStreamEvent = {

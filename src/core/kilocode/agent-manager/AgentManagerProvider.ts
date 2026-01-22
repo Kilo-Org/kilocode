@@ -212,6 +212,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				// Also post updated state to ensure UI is in sync
 				this.postStateToWebview()
 			},
+			onWorktreeSessionCreated: (sessionId, worktreePath) => {
+				void this.handleWorktreeSessionCreated(sessionId, worktreePath)
+			},
 		}
 
 		// Pass extension path for agent-runtime resolution in development
@@ -315,6 +318,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 		const messages = this.sessionMessages.get(newId)
 		if (messages) {
 			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
+		}
+	}
+
+	/**
+	 * Handle worktree session creation by writing the task ID to the worktree.
+	 * This enables session recovery after extension restarts.
+	 */
+	private async handleWorktreeSessionCreated(sessionId: string, worktreePath: string): Promise<void> {
+		try {
+			const manager = this.getWorktreeManager()
+			await manager.writeSessionId(worktreePath, sessionId)
+			this.outputChannel.appendLine(`[AgentManager] Wrote session ID ${sessionId} to worktree ${worktreePath}`)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to write session ID to worktree: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	}
 
@@ -1418,6 +1437,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					effectiveWorkspace: worktreeInfo.path,
 					images,
 					sessionData,
+					model: session.model,
 				})
 				return
 			}
@@ -1433,6 +1453,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			gitUrl: session?.gitUrl,
 			images,
 			sessionData,
+			model: session?.model,
 		})
 	}
 

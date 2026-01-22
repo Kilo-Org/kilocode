@@ -1,5 +1,7 @@
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
+import * as crypto from "crypto"
 import { logs } from "../utils/logger.js"
 import { KiloCodePaths } from "../utils/paths.js"
 import { Package } from "../constants/package.js"
@@ -949,13 +951,17 @@ export class ExtensionContext {
 		this.extensionUri = Uri.file(extensionPath)
 
 		if (useMemoryOnlyStorage) {
-			// Use in-memory only storage - no file I/O, no CLI path dependency
-			// This is for agent-manager where all config comes via IPC
-			this.globalStoragePath = path.join(workspacePath, ".kilocode-agent")
-			this.globalStorageUri = Uri.file(this.globalStoragePath)
-			this.storagePath = path.join(workspacePath, ".kilocode-agent", "workspace")
+			// Use temp directory for agent-manager mode to avoid polluting user workspace
+			// Each agent gets a unique session ID for isolation
+			// Config comes via IPC, so persistence isn't needed - temp dir is cleaned by OS
+			const sessionId = process.env.AGENT_SESSION_ID || crypto.randomUUID()
+			const tempBase = path.join(os.tmpdir(), "kilocode-agent", sessionId)
+
+			this.globalStoragePath = tempBase
+			this.globalStorageUri = Uri.file(tempBase)
+			this.storagePath = path.join(tempBase, "workspace")
 			this.storageUri = Uri.file(this.storagePath)
-			this.logPath = path.join(workspacePath, ".kilocode-agent", "logs")
+			this.logPath = path.join(tempBase, "logs")
 			this.logUri = Uri.file(this.logPath)
 
 			// Use pure in-memory mementos (no file backing)

@@ -84,6 +84,21 @@ if (process.env.AGENT_CONFIG) {
 }
 ```
 
+### State Management Pattern
+
+The Agent Manager follows a **read-shared, write-isolated** pattern:
+
+- **Read**: Get config (models, API settings) from extension via `provider.getState()`
+- **Write**: Inject state via `AGENT_CONFIG` env var when spawning - each agent gets isolated config
+
+```typescript
+fork(agentRuntimePath, [], {
+  env: { AGENT_CONFIG: JSON.stringify({ workspace, providerSettings, mode, sessionId }) }
+})
+```
+
+This ensures parallel agents have independent state with no race conditions or file I/O conflicts.
+
 ## Build Commands
 
 ```bash
@@ -199,7 +214,13 @@ Keep changes to core extension code minimal to reduce merge conflicts during ups
 
     - Never disable any lint rules without explicit user approval
 
-3. Styling Guidelines:
+3. Error Handling:
+
+    - Never use empty catch blocks - always log or handle the error
+    - Handle expected errors explicitly, or omit try-catch if the error should propagate
+    - Consider user impact when deciding whether to throw or log errors
+
+4. Styling Guidelines:
 
     - Use Tailwind CSS classes instead of inline style objects for new markup
     - VSCode CSS variables must be added to webview-ui/src/index.css before using them in Tailwind classes

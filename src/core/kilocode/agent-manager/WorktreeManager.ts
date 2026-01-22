@@ -15,6 +15,7 @@ export interface WorktreeInfo {
 	path: string
 	parentBranch: string
 	createdAt: number
+	sessionId?: string // Session ID from .kilocode/session-id file, if present
 }
 
 export interface CreateWorktreeResult {
@@ -56,6 +57,9 @@ export function generateBranchName(prompt: string): string {
 	return `${sanitized || "kilo"}-${timestamp}`
 }
 
+const KILOCODE_DIR = ".kilocode"
+const SESSION_ID_FILE = "session-id"
+
 export class WorktreeManager {
 	private readonly projectRoot: string
 	private readonly worktreesDir: string
@@ -64,7 +68,7 @@ export class WorktreeManager {
 
 	constructor(projectRoot: string, outputChannel: vscode.OutputChannel) {
 		this.projectRoot = projectRoot
-		this.worktreesDir = path.join(projectRoot, ".kilocode", "worktrees")
+		this.worktreesDir = path.join(projectRoot, KILOCODE_DIR, "worktrees")
 		this.git = simpleGit(projectRoot)
 		this.outputChannel = outputChannel
 	}
@@ -249,10 +253,11 @@ export class WorktreeManager {
 
 		try {
 			const git = simpleGit(wtPath)
-			const [branch, stat, parentBranch] = await Promise.all([
+			const [branch, stat, parentBranch, sessionId] = await Promise.all([
 				git.revparse(["--abbrev-ref", "HEAD"]),
 				fs.promises.stat(wtPath),
 				this.getDefaultBranch(),
+				this.readSessionId(wtPath),
 			])
 
 			return {
@@ -260,6 +265,7 @@ export class WorktreeManager {
 				path: wtPath,
 				parentBranch,
 				createdAt: stat.birthtimeMs,
+				sessionId,
 			}
 		} catch (error) {
 			this.log(`Failed to get info for worktree ${wtPath}: ${error}`)
@@ -273,6 +279,114 @@ export class WorktreeManager {
 	async getWorktreeDiff(worktreePath: string, parentBranch: string): Promise<string> {
 		const git = simpleGit(worktreePath)
 		return git.diff([`${parentBranch}...HEAD`])
+	}
+
+	/**
+	 * Write a session ID to the worktree's .kilocode/session-id file.
+	 * This creates a mapping between the worktree and its associated session,
+	 * enabling session recovery after extension restarts.
+	 */
+	async writeSessionId(worktreePath: string, sessionId: string): Promise<void> {
+		const kilocodeDir = path.join(worktreePath, KILOCODE_DIR)
+		const sessionIdPath = path.join(kilocodeDir, SESSION_ID_FILE)
+
+		// Ensure .kilocode directory exists in the worktree
+		if (!fs.existsSync(kilocodeDir)) {
+			await fs.promises.mkdir(kilocodeDir, { recursive: true })
+		}
+
+		await fs.promises.writeFile(sessionIdPath, sessionId, "utf-8")
+		this.log(`Wrote session ID ${sessionId} to ${sessionIdPath}`)
+
+		// Ensure .kilocode/ is excluded from git in the worktree
+		await this.ensureWorktreeGitExclude(worktreePath)
+	}
+
+	/**
+	 * Read the session ID from a worktree's .kilocode/session-id file.
+	 * Returns undefined if the file doesn't exist or can't be read.
+	 */
+	async readSessionId(worktreePath: string): Promise<string | undefined> {
+		const sessionIdPath = path.join(worktreePath, KILOCODE_DIR, SESSION_ID_FILE)
+
+		try {
+			const sessionId = await fs.promises.readFile(sessionIdPath, "utf-8")
+			return sessionId.trim()
+		} catch {
+			return undefined
+		}
+	}
+
+	/**
+	 * Remove the session ID file from a worktree.
+	 * Called when a session is explicitly closed/removed.
+	 */
+	async removeSessionId(worktreePath: string): Promise<void> {
+		const sessionIdPath = path.join(worktreePath, KILOCODE_DIR, SESSION_ID_FILE)
+
+		try {
+			await fs.promises.unlink(sessionIdPath)
+			this.log(`Removed session ID file from ${worktreePath}`)
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code
+			if (code === "ENOENT") {
+				// File doesn't exist - that's expected and fine
+				this.log(`Session ID file not found at ${sessionIdPath}, nothing to remove`)
+			} else {
+				// Log other errors but don't fail - this is a cleanup operation
+				this.log(`Warning: Failed to remove session ID file at ${sessionIdPath}: ${error}`)
+			}
+		}
+	}
+
+	/**
+	 * Ensure .kilocode/ directory is excluded from git within a worktree.
+	 * This prevents the session-id file from being committed.
+	 *
+	 * Git worktrees share the main repository's .git/info/exclude file,
+	 * so we need to add the exclude entry there, not in the worktree's git dir.
+	 */
+	private async ensureWorktreeGitExclude(worktreePath: string): Promise<void> {
+		const entry = `${KILOCODE_DIR}/`
+
+		// In a worktree, .git is a file pointing to the main repo's .git/worktrees/<name>
+		const gitFile = path.join(worktreePath, ".git")
+
+		try {
+			const gitFileContent = await fs.promises.readFile(gitFile, "utf-8")
+			const match = gitFileContent.match(/^gitdir:\s*(.+)$/m)
+
+			if (!match) {
+				this.log(`Warning: Could not parse .git file in worktree ${worktreePath}`)
+				return
+			}
+
+			// The worktree gitdir is like: /path/to/repo/.git/worktrees/<name>
+			// We need to go up to the main .git directory: /path/to/repo/.git
+			const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
+			const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
+			const excludePath = path.join(mainGitDir, "info", "exclude")
+
+			// Ensure the info directory exists
+			const infoDir = path.join(mainGitDir, "info")
+			if (!fs.existsSync(infoDir)) {
+				await fs.promises.mkdir(infoDir, { recursive: true })
+			}
+
+			let content = ""
+			if (fs.existsSync(excludePath)) {
+				content = await fs.promises.readFile(excludePath, "utf-8")
+				if (content.includes(entry)) return
+			}
+
+			const addition = content.endsWith("\n") || content === "" ? "" : "\n"
+			const excludeEntry = `${addition}\n# Kilo Code session metadata\n${entry}\n`
+
+			await fs.promises.appendFile(excludePath, excludeEntry)
+			this.log(`Added ${entry} to main repo git exclude: ${excludePath}`)
+		} catch (error) {
+			this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
+		}
 	}
 
 	/**
