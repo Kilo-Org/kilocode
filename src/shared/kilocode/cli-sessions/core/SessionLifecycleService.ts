@@ -200,7 +200,11 @@ export class SessionLifecycleService {
 
 							const gitState = fileContent as GitRestoreState
 
-							await this.gitStateService.executeGitRestore(gitState)
+							// throwOnGitError defaults to true for --session (fail fast)
+							// forkSession passes false to allow fallback behavior
+							await this.gitStateService.executeGitRestore(gitState, {
+								throwOnError: options?.throwOnGitError !== false,
+							})
 
 							continue
 						}

@@ -26,6 +26,18 @@ export interface GitRestoreState {
 }
 
 /**
+ * Options for git restore operations.
+ */
+export interface GitRestoreOptions {
+	/**
+	 * If true, throw errors instead of logging warnings and continuing.
+	 * Use this for --session to fail fast if git restore fails.
+	 * @default false
+	 */
+	throwOnError?: boolean
+}
+
+/**
  * Dependencies required by GitStateService.
  */
 export interface GitStateServiceDependencies {
@@ -167,8 +179,9 @@ export class GitStateService {
 	 * 3. Apply the patch from a temp file
 	 * 4. Pop the stash
 	 * @param gitState The git state to restore
+	 * @param options Optional restore options (e.g., throwOnError)
 	 */
-	async executeGitRestore(gitState: GitRestoreState): Promise<void> {
+	async executeGitRestore(gitState: GitRestoreState, options?: GitRestoreOptions): Promise<void> {
 		try {
 			const cwd = this.getWorkspaceDir() || process.cwd()
 			const git = simpleGit(cwd)
@@ -257,6 +270,10 @@ export class GitStateService {
 					head: gitState.head.substring(0, 8),
 					error: error instanceof Error ? error.message : String(error),
 				})
+
+				if (options?.throwOnError) {
+					throw error
+				}
 			}
 
 			try {
@@ -282,6 +299,10 @@ export class GitStateService {
 				this.logger.warn(`Failed to apply patch`, LOG_SOURCES.GIT_STATE, {
 					error: error instanceof Error ? error.message : String(error),
 				})
+
+				if (options?.throwOnError) {
+					throw error
+				}
 			}
 
 			try {
@@ -303,6 +324,10 @@ export class GitStateService {
 			this.logger.error(`Failed to restore git state`, LOG_SOURCES.GIT_STATE, {
 				error: error instanceof Error ? error.message : String(error),
 			})
+
+			if (options?.throwOnError) {
+				throw error
+			}
 		}
 	}
 }

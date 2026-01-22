@@ -857,6 +857,134 @@ describe("GitStateService", () => {
 				expect.any(Object),
 			)
 		})
+
+		describe("throwOnError option", () => {
+			it("throws on checkout failure when throwOnError is true", async () => {
+				const mockStash = vi.fn().mockResolvedValue(undefined)
+				const checkoutError = new Error("checkout failed")
+				const mockGit = {
+					stashList: vi.fn().mockResolvedValueOnce({ total: 0 }).mockResolvedValueOnce({ total: 1 }),
+					stash: mockStash,
+					revparse: vi.fn().mockResolvedValue("current-head"),
+					checkout: vi.fn().mockRejectedValue(checkoutError),
+					applyPatch: vi.fn(),
+				}
+				mockSimpleGit.mockReturnValue(mockGit as any)
+
+				await expect(
+					service.executeGitRestore(
+						{
+							head: "target-head",
+							patch: "patch content",
+							branch: "main",
+						},
+						{ throwOnError: true },
+					),
+				).rejects.toThrow("checkout failed")
+			})
+
+			it("throws on patch failure when throwOnError is true", async () => {
+				const mockStash = vi.fn().mockResolvedValue(undefined)
+				const patchError = new Error("patch failed")
+				const mockGit = {
+					stashList: vi.fn().mockResolvedValueOnce({ total: 0 }).mockResolvedValueOnce({ total: 1 }),
+					stash: mockStash,
+					revparse: vi.fn().mockResolvedValue("current-head"),
+					checkout: vi.fn(),
+					applyPatch: vi.fn().mockRejectedValue(patchError),
+				}
+				mockSimpleGit.mockReturnValue(mockGit as any)
+
+				await expect(
+					service.executeGitRestore(
+						{
+							head: "target-head",
+							patch: "patch content",
+							branch: "main",
+						},
+						{ throwOnError: true },
+					),
+				).rejects.toThrow("patch failed")
+			})
+
+			it("does not throw on checkout failure when throwOnError is false", async () => {
+				const mockStash = vi.fn().mockResolvedValue(undefined)
+				const mockGit = {
+					stashList: vi.fn().mockResolvedValueOnce({ total: 0 }).mockResolvedValueOnce({ total: 1 }),
+					stash: mockStash,
+					revparse: vi.fn().mockResolvedValue("current-head"),
+					checkout: vi.fn().mockRejectedValue(new Error("checkout failed")),
+					applyPatch: vi.fn(),
+				}
+				mockSimpleGit.mockReturnValue(mockGit as any)
+
+				await expect(
+					service.executeGitRestore(
+						{
+							head: "target-head",
+							patch: "patch content",
+							branch: "main",
+						},
+						{ throwOnError: false },
+					),
+				).resolves.not.toThrow()
+
+				expect(mockLogger.warn).toHaveBeenCalledWith(
+					"Failed to checkout",
+					LOG_SOURCES.GIT_STATE,
+					expect.any(Object),
+				)
+			})
+
+			it("does not throw on patch failure when throwOnError is false", async () => {
+				const mockStash = vi.fn().mockResolvedValue(undefined)
+				const mockGit = {
+					stashList: vi.fn().mockResolvedValueOnce({ total: 0 }).mockResolvedValueOnce({ total: 1 }),
+					stash: mockStash,
+					revparse: vi.fn().mockResolvedValue("current-head"),
+					checkout: vi.fn(),
+					applyPatch: vi.fn().mockRejectedValue(new Error("patch failed")),
+				}
+				mockSimpleGit.mockReturnValue(mockGit as any)
+
+				await expect(
+					service.executeGitRestore(
+						{
+							head: "target-head",
+							patch: "patch content",
+							branch: "main",
+						},
+						{ throwOnError: false },
+					),
+				).resolves.not.toThrow()
+
+				expect(mockLogger.warn).toHaveBeenCalledWith(
+					"Failed to apply patch",
+					LOG_SOURCES.GIT_STATE,
+					expect.any(Object),
+				)
+			})
+
+			it("does not throw by default (throwOnError undefined)", async () => {
+				const mockStash = vi.fn().mockResolvedValue(undefined)
+				const mockGit = {
+					stashList: vi.fn().mockResolvedValueOnce({ total: 0 }).mockResolvedValueOnce({ total: 1 }),
+					stash: mockStash,
+					revparse: vi.fn().mockResolvedValue("current-head"),
+					checkout: vi.fn().mockRejectedValue(new Error("checkout failed")),
+					applyPatch: vi.fn(),
+				}
+				mockSimpleGit.mockReturnValue(mockGit as any)
+
+				await expect(
+					service.executeGitRestore({
+						head: "target-head",
+						patch: "patch content",
+						branch: "main",
+					}),
+				).resolves.not.toThrow()
+			})
+		})
 	})
 
 	describe("Configuration", () => {

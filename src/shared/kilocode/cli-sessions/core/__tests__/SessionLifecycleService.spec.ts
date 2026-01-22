@@ -359,7 +359,7 @@ describe("SessionLifecycleService", () => {
 
 			await service.restoreSession("session-123")
 
-			expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(gitState)
+			expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(gitState, { throwOnError: true })
 		})
 
 		it("creates history item and registers with extension", async () => {
@@ -592,11 +592,14 @@ describe("SessionLifecycleService", () => {
 
 				await service.restoreSession("session-123", { skipGitRestore: false })
 
-				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith({
-					head: "abc123",
-					branch: "main",
-					patch: "diff content",
-				})
+				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(
+					{
+						head: "abc123",
+						branch: "main",
+						patch: "diff content",
+					},
+					{ throwOnError: true },
+				)
 			})
 
 			it("restores git state when skipGitRestore is undefined", async () => {
@@ -652,6 +655,36 @@ describe("SessionLifecycleService", () => {
 				mockSessionClient.get.mockRejectedValue(new Error("Test error"))
 
 				await expect(service.restoreSession("session-123", { rethrowError: false })).resolves.toBeUndefined()
+			})
+
+			it("passes throwOnError: true to executeGitRestore by default", async () => {
+				mockSessionClient.get.mockResolvedValue(mockSessionWithGit)
+
+				await service.restoreSession("session-123")
+
+				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(expect.any(Object), {
+					throwOnError: true,
+				})
+			})
+
+			it("passes throwOnError: true when throwOnGitError is true", async () => {
+				mockSessionClient.get.mockResolvedValue(mockSessionWithGit)
+
+				await service.restoreSession("session-123", { throwOnGitError: true })
+
+				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(expect.any(Object), {
+					throwOnError: true,
+				})
+			})
+
+			it("passes throwOnError: false when throwOnGitError is false", async () => {
+				mockSessionClient.get.mockResolvedValue(mockSessionWithGit)
+
+				await service.restoreSession("session-123", { throwOnGitError: false })
+
+				expect(mockGitStateService.executeGitRestore).toHaveBeenCalledWith(expect.any(Object), {
+					throwOnError: false,
+				})
 			})
 		})
 	})

@@ -52,6 +52,14 @@ export interface RestoreSessionOptions {
 	 * @default false
 	 */
 	rethrowError?: boolean | undefined
+	/**
+	 * If true, throw errors when git operations (checkout, patch apply) fail
+	 * instead of logging warnings and continuing.
+	 * Use this for --session to fail fast if git restore fails.
+	 * For --fork, this should be false to allow fallback behavior.
+	 * @default true
+	 */
+	throwOnGitError?: boolean | undefined
 }
 
 export interface SessionManagerDependencies extends TrpcClientDependencies {
