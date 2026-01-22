@@ -114,6 +114,7 @@ export interface RuntimeProcessHandlerCallbacks {
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void
+	onWorktreeSessionCreated?: (sessionId: string, worktreePath: string) => void // Called when a worktree session is created
 }
 
 export class RuntimeProcessHandler {
@@ -518,6 +519,10 @@ export class RuntimeProcessHandler {
 
 		// Clear pending state
 		this.registry.clearPendingSession()
+
+		// Capture worktree info before clearing pendingProcess
+		const worktreeInfo = this.pendingProcess.worktreeInfo
+		const parallelMode = this.pendingProcess.parallelMode
 		this.pendingProcess = null
 
 		this.callbacks.onStateChanged()
@@ -526,6 +531,11 @@ export class RuntimeProcessHandler {
 		// Pass resume info if this is a resumed session with history
 		const resumeInfo = isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
 		this.callbacks.onSessionCreated(false, resumeInfo)
+
+		// Notify when worktree session is created for persistence
+		if (parallelMode && worktreeInfo?.path) {
+			this.callbacks.onWorktreeSessionCreated?.(sessionId, worktreeInfo.path)
+		}
 
 		// Send session_created event
 		const sessionCreatedEvent: SessionCreatedStreamEvent = {
