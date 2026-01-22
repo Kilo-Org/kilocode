@@ -71,6 +71,35 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 
 ---
 
+## Webhook Triggers
+
+Webhook triggers allow you to initiate cloud agent sessions via HTTP POST requests. This enables integration with external services, automation workflows, and event-driven architectures.
+
+### Accessing Webhooks
+
+Webhook triggers are accessible from the main sidebar with an entry named **Webhook** and link to <https://app.kilo.ai/cloud/webhooks> for personal accounts. Organization-level webhook configurations are available through your organization's settings.
+
+### Configuration
+
+Webhook triggers utilize [agent environment profiles](/docs/advanced-usage/cloud-agent#environment-variables--startup-commands) to configure the execution environment for triggered sessions.
+
+### Limits and Guidance
+
+Webhook triggers are designed for low-volume, event-driven invocations and are best suited for short-lived tasks.
+
+- **Personal webhooks**: Execute using shared compute resources, similar to regular cloud agent invocations (e.g., the same sandbox container)
+- **Organization webhooks**: Execute in dedicated compute resources as a bot user, similar to Code Review sessions
+
+The system stores the last 100 webhook triggers received along with their execution status. The webhook endpoint will return rate limit responses when the number of queued or processing triggers exceeds system capacity.
+
+### Security Considerations
+
+:::warning
+Care should be taken to prevent prompt injection attacks. Webhook payloads may contain untrusted input, so validate and sanitize all data before passing it to the agent. Consider using input validation, content filtering, and limiting the agent's access to sensitive resources when processing webhook-triggered sessions.
+:::
+
+---
+
 ## Environment Variables & Startup Commands
 
 You can customize each Cloud Agent session by defining:
