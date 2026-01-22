@@ -120,6 +120,9 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			// and properly updates the snapshot to prevent redundant emissions
 			task.emitFinalTokenUsageUpdate()
 
+			// kilocode_change: session metrics (Phase 1b)
+			task.captureSessionMetricsOnce("explicit_completion")
+
 			TelemetryService.instance.captureTaskCompleted(task.taskId)
 			task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
 
@@ -240,6 +243,9 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 				// Force final token usage update before emitting TaskCompleted for consistency
 				task.emitFinalTokenUsageUpdate()
+
+				// kilocode_change: session metrics (Phase 1b)
+				task.captureSessionMetricsOnce("explicit_completion")
 
 				TelemetryService.instance.captureTaskCompleted(task.taskId)
 				task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
