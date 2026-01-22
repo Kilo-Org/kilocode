@@ -1098,19 +1098,59 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 				)
 			}
 
-			// kilocode_change start
+			// kilocode_change start - Parse SSE stream and extract text from final response.done event
 			if (!response.body) {
 				throw new Error(t("common:errors.openAiCodex.noResponseBody"))
 			}
 
-			let text = ""
-			for await (const chunk of this.handleStreamResponse(response.body, model)) {
-				if (chunk.type === "text") {
-					text += chunk.text
+			const reader = response.body.getReader()
+			const decoder = new TextDecoder()
+			let buffer = ""
+
+			try {
+				while (true) {
+					const { done, value } = await reader.read()
+					if (done) break
+
+					buffer += decoder.decode(value, { stream: true })
+					const lines = buffer.split("\n")
+					buffer = lines.pop() || ""
+
+					for (const line of lines) {
+						if (!line.startsWith("data: ")) continue
+						const data = line.slice(6).trim()
+						if (data === "[DONE]") continue
+
+						try {
+							const parsed = JSON.parse(data)
+							// Extract text from the final response.done/response.completed event
+							if (parsed.type === "response.done" || parsed.type === "response.completed") {
+								const output = parsed.response?.output
+								if (Array.isArray(output)) {
+									for (const item of output) {
+										if (item.type === "message" && Array.isArray(item.content)) {
+											for (const content of item.content) {
+												if (content.type === "output_text" && content.text) {
+													return content.text
+												}
+											}
+										}
+										if (item.type === "text" && item.text) {
+											return item.text
+										}
+									}
+								}
+							}
+						} catch {
+							// Ignore JSON parse errors
+						}
+					}
 				}
+			} finally {
+				reader.releaseLock()
 			}
 
-			return text
+			return ""
 			// kilocode_change end
 		} catch (error) {
 			const errorModel = this.getModel()
