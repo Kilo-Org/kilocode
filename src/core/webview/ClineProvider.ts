@@ -2254,6 +2254,7 @@ export class ClineProvider
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
+			alwaysAllowUpdateTodoList,
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext,
@@ -2285,6 +2286,7 @@ export class ClineProvider
 			fuzzyMatchThreshold,
 			// mcpEnabled,  // kilocode_change: always true
 			enableMcpServerCreation,
+			alwaysApproveResubmit,
 			requestDelaySeconds,
 			currentApiConfigName,
 			listApiConfigMeta,
@@ -2350,6 +2352,7 @@ export class ClineProvider
 			openRouterImageApiKey,
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
+			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
@@ -2424,6 +2427,7 @@ export class ClineProvider
 			alwaysAllowMcp: alwaysAllowMcp ?? false,
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
+			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
 			isBrowserSessionActive,
 			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
@@ -2474,6 +2478,8 @@ export class ClineProvider
 			fuzzyMatchThreshold: fuzzyMatchThreshold ?? 1.0,
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: enableMcpServerCreation ?? true,
+			alwaysApproveResubmit: alwaysApproveResubmit ?? false,
+			requestDelaySeconds: requestDelaySeconds ?? 10,
 			currentApiConfigName: currentApiConfigName ?? "default",
 			listApiConfigMeta: listApiConfigMeta ?? [],
 			pinnedApiConfigs: pinnedApiConfigs ?? {},
@@ -2591,6 +2597,7 @@ export class ClineProvider
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
+			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			claudeCodeIsAuthenticated: await (async () => {
@@ -2738,6 +2745,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
+			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
 			isBrowserSessionActive,
 			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
@@ -2807,6 +2815,7 @@ export class ClineProvider
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,
+			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform,
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
 			telemetrySetting: getEffectiveTelemetrySetting(stateValues.telemetrySetting), // kilocode_change
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
@@ -3623,11 +3632,12 @@ export class ClineProvider
 						alwaysAllowReadOnly: !!state.alwaysAllowReadOnly,
 						alwaysAllowReadOnlyOutsideWorkspace: !!state.alwaysAllowReadOnlyOutsideWorkspace,
 						alwaysAllowSubtasks: !!state.alwaysAllowSubtasks,
-
+						alwaysAllowUpdateTodoList: !!state.alwaysAllowUpdateTodoList,
 						alwaysAllowWrite: !!state.alwaysAllowWrite,
 						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
 						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
 						alwaysAllowDelete: !!state.alwaysAllowDelete, // kilocode_change
+						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
 						yoloMode: !!state.yoloMode,
 					},
 				}
