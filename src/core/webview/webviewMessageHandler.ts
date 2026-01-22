@@ -4403,9 +4403,59 @@ export const webviewMessageHandler = async (
 				log: (msg) => provider.log(msg),
 			})
 			break
-		}
+			}
 
-		default: {
+			// kilocode_change start - Secure password storage handlers
+			case "storeSecurePassword": {
+			try {
+				const { key, password } = message
+				if (key && password) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					await SecurePasswordStorage.storePasswordForService("agentica", key, password)
+				}
+			} catch (error) {
+				provider.log(`Error storing secure password: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+			}
+			case "getSecurePassword": {
+			try {
+				const { key } = message
+				if (key) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					const password = await SecurePasswordStorage.getPasswordForService("agentica", key)
+					await provider.postMessageToWebview({
+						type: "securePasswordRetrieved",
+						key,
+						password
+					})
+				}
+			} catch (error) {
+				provider.log(`Error retrieving secure password: ${error instanceof Error ? error.message : String(error)}`)
+				await provider.postMessageToWebview({
+					type: "securePasswordRetrieved",
+					key: message.key,
+					password: null,
+					error: error instanceof Error ? error.message : String(error)
+				})
+			}
+			break
+			}
+			case "clearSecurePassword": {
+			try {
+				const { key } = message
+				if (key) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					await SecurePasswordStorage.clearPasswordForService("agentica", key)
+				}
+			} catch (error) {
+				provider.log(`Error clearing secure password: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+			}
+			// kilocode_change end
+
+			default: {
 			// console.log(`Unhandled message type: ${message.type}`)
 			//
 			// Currently unhandled:

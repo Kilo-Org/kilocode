@@ -62,4 +62,12 @@ describe("checkExistKey", () => {
 		}
 		expect(checkExistKey(config)).toBe(false)
 	})
+
+	it("should return true when Agentica API key is set", () => {
+		const config: ProviderSettings = {
+			apiProvider: "agentica",
+			agenticaApiKey: "agentica-key",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
 })
