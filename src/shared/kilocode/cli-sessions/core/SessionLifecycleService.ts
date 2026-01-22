@@ -342,8 +342,8 @@ export class SessionLifecycleService {
 	/**
 	 * Forks a session by share ID or session ID.
 	 *
-	 * Note: Forked sessions always skip git restore since the git state is from
-	 * the original author's environment and wouldn't apply to this workspace.
+	 * Note: Forked sessions always restore git state since the exact git context
+	 * is required to continue the forked session properly.
 	 *
 	 * @param shareOrSessionId - The share ID or session ID to fork
 	 */
@@ -353,11 +353,11 @@ export class SessionLifecycleService {
 			created_on_platform: this.platform,
 		})
 
-		// Always skip git restore for forked sessions - the git state is from
-		// the original author's environment and wouldn't apply to this workspace
+		// Always restore git state for forked sessions - the exact git context
+		// is required to continue the forked session properly
 		await this.restoreSession(session_id, {
 			rethrowError: true,
-			skipGitRestore: true,
+			throwOnGitError: true,
 		})
 	}
 

@@ -759,7 +759,7 @@ describe("SessionLifecycleService", () => {
 			})
 		})
 
-		it("calls restoreSession with forked session ID and always skips git restore", async () => {
+		it("calls restoreSession with forked session ID and always restores git state", async () => {
 			mockSessionClient.fork.mockResolvedValue({ session_id: "forked-session-123" })
 			vi.mocked(service.restoreSession).mockResolvedValue(undefined)
 
@@ -767,11 +767,11 @@ describe("SessionLifecycleService", () => {
 
 			expect(service.restoreSession).toHaveBeenCalledWith("forked-session-123", {
 				rethrowError: true,
-				skipGitRestore: true,
+				throwOnGitError: true,
 			})
 		})
 
-		it("always skips git restore and rethrows errors for forked sessions", async () => {
+		it("always restores git state and rethrows errors for forked sessions", async () => {
 			mockSessionClient.fork.mockResolvedValue({ session_id: "forked-session-123" })
 			vi.mocked(service.restoreSession).mockResolvedValue(undefined)
 
@@ -779,7 +779,7 @@ describe("SessionLifecycleService", () => {
 
 			expect(service.restoreSession).toHaveBeenCalledWith("forked-session-123", {
 				rethrowError: true,
-				skipGitRestore: true,
+				throwOnGitError: true,
 			})
 		})
 	})
