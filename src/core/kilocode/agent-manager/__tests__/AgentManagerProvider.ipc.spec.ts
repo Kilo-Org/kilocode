@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mocked } from "vitest"
 import * as vscode from "vscode"
 import { AgentManagerProvider } from "../AgentManagerProvider"
 import { AgentRegistry } from "../AgentRegistry"
-import type { CliProcessHandler } from "../CliProcessHandler"
+import type { RuntimeProcessHandler } from "../RuntimeProcessHandler"
 
 // Minimal mocks for VS Code APIs
 vi.mock("vscode", () => {
@@ -25,12 +25,15 @@ vi.mock("vscode", () => {
 		Test: 3,
 	}
 	const ThemeIcon = vi.fn()
-	return { window, Uri, workspace, ExtensionMode, ThemeIcon }
+	const env = {
+		appRoot: "/mock/vscode/app/root",
+	}
+	return { window, Uri, workspace, ExtensionMode, ThemeIcon, env }
 })
 
 describe("AgentManagerProvider IPC paths", () => {
 	let provider: AgentManagerProvider
-	let mockProcessHandler: Mocked<CliProcessHandler>
+	let mockProcessHandler: Mocked<RuntimeProcessHandler>
 	let mockPanel: any
 	let output: string[]
 	let registry: AgentRegistry
@@ -44,7 +47,7 @@ describe("AgentManagerProvider IPC paths", () => {
 			writeToStdin: vi.fn(),
 			stopProcess: vi.fn(),
 			hasProcess: vi.fn(),
-		} as unknown as Mocked<CliProcessHandler>
+		} as unknown as Mocked<RuntimeProcessHandler>
 
 		mockPanel = {
 			webview: { postMessage: vi.fn() },
@@ -63,7 +66,7 @@ describe("AgentManagerProvider IPC paths", () => {
 		} as unknown as vscode.OutputChannel
 
 		const context = {
-			extensionUri: vscode.Uri.joinPath({} as any, "") as any,
+			extensionUri: { fsPath: "/mock/extension/path" } as any,
 			asAbsolutePath: (p: string) => p,
 			extensionMode: 1, // Development mode
 		} as unknown as vscode.ExtensionContext

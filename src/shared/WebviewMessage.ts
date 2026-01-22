@@ -188,6 +188,7 @@ export interface WebviewMessage {
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
 		| "refreshRules" // kilocode_change
+		| "refreshSkills" // kilocode_change
 		| "toggleRule" // kilocode_change
 		| "createRuleFile" // kilocode_change
 		| "deleteRuleFile" // kilocode_change
@@ -202,6 +203,8 @@ export interface WebviewMessage {
 		| "rooCloudManualUrl"
 		| "claudeCodeSignIn"
 		| "claudeCodeSignOut"
+		| "openAiCodexSignIn"
+		| "openAiCodexSignOut"
 		| "switchOrganization"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
@@ -217,6 +220,7 @@ export interface WebviewMessage {
 		| "showTaskTimeline" // kilocode_change
 		| "sendMessageOnEnter" // kilocode_change
 		| "showTimestamps" // kilocode_change
+		| "showDiffStats" // kilocode_change
 		| "hideCostBelowThreshold" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change
@@ -227,7 +231,6 @@ export interface WebviewMessage {
 		| "setHistoryPreviewCollapsed" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
-		| "mcpButtonClicked"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
 		| "installMarketplaceItemWithParameters"
@@ -304,7 +307,7 @@ export interface WebviewMessage {
 	shareId?: string // kilocode_change - for sessionFork
 	sessionId?: string // kilocode_change - for sessionSelect
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" // kilocode_change
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" | "skills" // kilocode_change
 	disabled?: boolean
 	context?: string
 	dataUri?: string

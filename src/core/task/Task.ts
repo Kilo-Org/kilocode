@@ -3,6 +3,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import os from "os"
 import crypto from "crypto"
+import { v7 as uuidv7 } from "uuid"
 import EventEmitter from "events"
 
 import { AskIgnoredError } from "./AskIgnoredError"
@@ -141,7 +142,7 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
-import { mergeApiMessages, addOrMergeUserContent } from "./kilocode"
+import { addOrMergeUserContent } from "./kilocode"
 import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
 import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
@@ -360,6 +361,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		| Anthropic.ToolResultBlockParam // kilocode_change
 	)[] = []
 	userMessageContentReady = false
+
+	/**
+	 * Push a tool_result block to userMessageContent, preventing duplicates.
+	 * This is critical for native tool protocol where duplicate tool_use_ids cause API errors.
+	 *
+	 * @param toolResult - The tool_result block to add
+	 * @returns true if added, false if duplicate was skipped
+	 */
+	public pushToolResultToUserContent(toolResult: Anthropic.ToolResultBlockParam): boolean {
+		const existingResult = this.userMessageContent.find(
+			(block): block is Anthropic.ToolResultBlockParam =>
+				block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+		)
+		if (existingResult) {
+			console.warn(
+				`[Task#pushToolResultToUserContent] Skipping duplicate tool_result for tool_use_id: ${toolResult.tool_use_id}`,
+			)
+			return false
+		}
+		this.userMessageContent.push(toolResult)
+		return true
+	}
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didToolFailInCurrentTurn = false
@@ -438,7 +461,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			)
 		}
 
-		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
+		this.taskId = historyItem ? historyItem.id : uuidv7()
 		this.taskIsFavorited = historyItem?.isFavorited // kilocode_change
 		this.rootTaskId = historyItem ? historyItem.rootTaskId : rootTask?.taskId
 		this.parentTaskId = historyItem ? historyItem.parentTaskId : parentTask?.taskId
@@ -466,7 +489,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		})
 
 		this.apiConfiguration = apiConfiguration
-		this.api = buildApiHandler(apiConfiguration)
+		this.api = buildApiHandler(this.apiConfiguration)
 		// kilocode_change start: Listen for model changes in virtual quota fallback
 		if (this.api instanceof VirtualQuotaFallbackHandler) {
 			this.api.on("handlerChanged", () => {
@@ -842,18 +865,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const thoughtSignature = handler.getThoughtSignature?.()
 			const reasoningSummary = handler.getSummary?.()
 			const reasoningDetails = handler.getReasoningDetails?.()
-
-			// kilocode_change start: prevent consecutive same-role messages, this happens when returning from subtask
-			const lastMessage = this.apiConversationHistory.at(-1)
-			if (lastMessage && lastMessage.role === message.role) {
-				this.apiConversationHistory[this.apiConversationHistory.length - 1] = mergeApiMessages(
-					lastMessage,
-					message,
-				)
-				await this.saveApiConversationHistory()
-				return
-			}
-			// kilocode_change end
 
 			// Start from the original assistant message
 			const messageWithTs: any = {
@@ -1521,6 +1532,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
 	}
 
+	public supersedePendingAsk(): void {
+		this.lastMessageTs = Date.now()
+	}
+
 	/**
 	 * Updates the API configuration but preserves the locked tool protocol.
 	 * The task's tool protocol is locked at creation time and should NOT change
@@ -1531,7 +1546,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public updateApiConfiguration(newApiConfiguration: ProviderSettings): void {
 		// Update the configuration and rebuild the API handler
 		this.apiConfiguration = newApiConfiguration
-		this.api = buildApiHandler(newApiConfiguration)
+		this.api = buildApiHandler(this.apiConfiguration)
 
 		// IMPORTANT: Do NOT change the parser based on the new configuration!
 		// The task's tool protocol is locked at creation time and must remain
@@ -2566,7 +2581,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				showRooIgnoredFiles = false,
 				includeDiagnosticMessages = true,
 				maxDiagnosticMessages = 50,
-				maxReadFileLine = -1,
+				maxReadFileLine = 500 /*kilocode_change*/,
 			} = (await this.providerRef.deref()?.getState()) ?? {}
 
 			// kilocode_change start
@@ -4298,7 +4313,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customModes: state?.customModes,
 				experiments: state?.experiments,
 				apiConfiguration,
-				maxReadFileLine: state?.maxReadFileLine ?? -1,
+				maxReadFileLine: state?.maxReadFileLine ?? 500 /*kilocode_change*/,
 				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				// kilocode_change start

@@ -1138,6 +1138,10 @@
 		"showTimestamps": {
 			"label": "顯示時間戳記",
 			"description": "在聊天檢視中顯示每則訊息的時間戳記"
+		},
+		"showDiffStats": {
+			"label": "顯示差異統計",
+			"description": "在任務標題中顯示新增/刪除的行數統計"
 		}
 	},
 	"ghost": {

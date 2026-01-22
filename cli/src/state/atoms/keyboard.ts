@@ -124,6 +124,20 @@ export const getImageReferencesAtom = atom((get) => {
 export const clipboardStatusAtom = atom<string | null>(null)
 let clipboardStatusTimer: NodeJS.Timeout | null = null
 
+/**
+ * Tracks the number of image paste operations currently in progress.
+ * When > 0, input should be disabled and a loader should be shown.
+ * Uses a counter instead of boolean to support multiple concurrent pastes.
+ */
+export const pendingImagePastesAtom = atom<number>(0)
+
+/**
+ * Tracks the number of text paste operations currently in progress.
+ * When > 0, input should be disabled and a loader should be shown.
+ * Uses a counter instead of boolean to support multiple concurrent pastes.
+ */
+export const pendingTextPastesAtom = atom<number>(0)
+
 function setClipboardStatusWithTimeout(set: Setter, message: string, timeoutMs: number): void {
 	if (clipboardStatusTimer) {
 		clearTimeout(clipboardStatusTimer)
@@ -851,7 +865,7 @@ async function handleShellKeys(get: Getter, set: Setter, key: Key): Promise<void
  * Unified text input keyboard handler
  * Handles both normal (single-line) and multiline text input
  */
-function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
+function handleTextInputKeys(get: Getter, set: Setter, key: Key): void {
 	// Check if we should enter history mode
 	const isEmpty = get(textBufferIsEmptyAtom)
 	const isInHistoryMode = get(historyModeAtom)
@@ -983,14 +997,17 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 	}
 
 	if (key.paste) {
-		handlePaste(set, key.sequence)
+		// Fire-and-forget async paste with error handling
+		handlePaste(set, key.sequence).catch((err) =>
+			logs.error("Unhandled text paste error", "clipboard", { error: err }),
+		)
 		return
 	}
 
 	return
 }
 
-function handlePaste(set: Setter, text: string): void {
+async function handlePaste(set: Setter, text: string): Promise<void> {
 	// Quick line count check - avoid processing large text unnecessarily
 	let lineCount = 0
 	for (let i = 0; i < text.length; i++) {
@@ -999,16 +1016,31 @@ function handlePaste(set: Setter, text: string): void {
 	}
 	lineCount++ // Account for last line (no trailing newline)
 
-	if (lineCount >= PASTE_LINE_THRESHOLD) {
-		// Store original text - normalize tabs only when expanding
-		const actualLineCount = text.split("\n").length
-		const refNumber = set(addPastedTextReferenceAtom, text)
-		const reference = formatPastedTextReference(refNumber, actualLineCount)
-		set(insertTextAtom, reference + " ")
-	} else {
-		// Small paste - normalize tabs to prevent border corruption
-		const normalizedText = text.replace(/\t/g, "  ")
-		set(insertTextAtom, normalizedText)
+	const isLargePaste = lineCount >= PASTE_LINE_THRESHOLD
+
+	// For large pastes, show loader and block input
+	if (isLargePaste) {
+		set(pendingTextPastesAtom, (count) => count + 1)
+		// Allow React to render the loader before processing
+		await new Promise((resolve) => setTimeout(resolve, 0))
+	}
+
+	try {
+		if (isLargePaste) {
+			// Store original text - normalize tabs only when expanding
+			const actualLineCount = text.split("\n").length
+			const refNumber = set(addPastedTextReferenceAtom, text)
+			const reference = formatPastedTextReference(refNumber, actualLineCount)
+			set(insertTextAtom, reference + " ")
+		} else {
+			// Small paste - normalize tabs to prevent border corruption
+			const normalizedText = text.replace(/\t/g, "  ")
+			set(insertTextAtom, normalizedText)
+		}
+	} finally {
+		if (isLargePaste) {
+			set(pendingTextPastesAtom, (count) => Math.max(0, count - 1))
+		}
 	}
 }
 
@@ -1122,6 +1154,11 @@ export const triggerClipboardImagePasteAtom = atom(null, async (get, set, fallba
  */
 async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?: string): Promise<void> {
 	logs.debug("handleClipboardImagePaste called", "clipboard")
+
+	// Increment pending paste counter to show loader and block input
+	// Using a counter allows multiple concurrent pastes - loader only hides when all complete
+	set(pendingImagePastesAtom, (count) => count + 1)
+
 	try {
 		// Check if clipboard has an image
 		logs.debug("Checking clipboard for image...", "clipboard")
@@ -1183,6 +1220,10 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 			`Clipboard error: ${error instanceof Error ? error.message : String(error)}`,
 			3000,
 		)
+	} finally {
+		// Decrement pending paste counter when done
+		// Loader only hides when all concurrent pastes complete (counter reaches 0)
+		set(pendingImagePastesAtom, (count) => Math.max(0, count - 1))
 	}
 }
 
@@ -1196,7 +1237,14 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 		return
 	}
 
-	// Priority 2: Determine current mode and route to mode-specific handler
+	// Priority 2: Block input while pasting images or text
+	// This prevents user input during async paste processing
+	// Uses counters to support multiple concurrent pastes
+	if (get(pendingImagePastesAtom) > 0 || get(pendingTextPastesAtom) > 0) {
+		return
+	}
+
+	// Priority 3: Determine current mode and route to mode-specific handler
 	const isApprovalPending = get(isApprovalPendingAtom)
 	const isFollowupVisible = get(followupSuggestionsMenuVisibleAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)

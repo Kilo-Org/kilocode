@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La resposta del model ha acabat de forma inesperada (cap missatge de l'assistent). Això pot ser un signe de limitació de freqüència.",
 		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}",
 		"maxCompletionTokens": "S'ha arribat al nombre màxim de tokens de compleció.",
+		"contentFilter": "La sol·licitud ha estat bloquejada pel filtre de contingut.",
 		"disableApplyDiff": "Si aquest error continua apareixent, desactiva l'Edició Mitjançant Diferències a la Configuració Avançada.",
 		"disableEditFile": "Si aquest error continua apareixent, desactiva la funció experimental d'Aplicació Ràpida."
 	},
@@ -177,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "La teva versió de Kilocode CLI està desactualitzada i no és compatible amb el Gestor d'Agents. Si us plau, actualitza a la versió més recent.",
-			"cliNotFound": "No s'ha trobat Kilocode CLI. Si us plau, instal·la'l per utilitzar el Gestor d'Agents.",
 			"cliMisconfigured": "Kilocode CLI no està configurat. Executa 'kilocode auth' per iniciar sessió o 'kilocode config' per configurar.",
 			"sessionFailed": "Error en iniciar la sessió de l'agent",
 			"sessionFailedWithMessage": "Error en iniciar la sessió de l'agent: {{message}}"

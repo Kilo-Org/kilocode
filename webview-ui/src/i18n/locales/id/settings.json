@@ -1158,6 +1158,10 @@
 		"showTimestamps": {
 			"label": "Tampilkan stempel waktu",
 			"description": "Tampilkan stempel waktu untuk setiap pesan di tampilan obrolan"
+		},
+		"showDiffStats": {
+			"label": "Tampilkan statistik diff",
+			"description": "Tampilkan statistik baris ditambahkan/dihapus di header tugas"
 		}
 	},
 	"ghost": {

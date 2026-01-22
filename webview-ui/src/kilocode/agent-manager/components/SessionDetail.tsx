@@ -23,8 +23,11 @@ import { sessionMachineUiStateAtom, selectedSessionMachineStateAtom } from "../s
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { BranchPicker } from "./BranchPicker"
+import { ImageThumbnail } from "./ImageThumbnail"
+import { AddImageButton } from "./AddImageButton"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
+import { useImagePaste } from "../hooks/useImagePaste"
 import {
 	Loader2,
 	SendHorizontal,
@@ -242,6 +245,7 @@ function PendingSessionView({
 function NewAgentForm() {
 	const { t } = useTranslation("agentManager")
 	const [promptText, setPromptText] = useState("")
+	const [selectedImages, setSelectedImages] = useState<string[]>([])
 	const [runMode, setRunMode] = useAtom(preferredRunModeAtom)
 	const [versionCount, setVersionCount] = useAtom(versionCountAtom)
 	const setSelectedModelId = useSetAtom(setSelectedModelIdAtom)
@@ -302,7 +306,17 @@ function NewAgentForm() {
 	}, [isDropdownOpen, isVersionDropdownOpen])
 
 	const trimmedPrompt = promptText.trim()
-	const isEmpty = trimmedPrompt.length === 0
+	const hasText = trimmedPrompt.length > 0
+	const hasImages = selectedImages.length > 0
+	const isEmpty = !hasText && !hasImages
+
+	// Use shared hook for image paste handling
+	const { handlePaste, handleFileSelect, openFileBrowser, removeImage, canAddMore, fileInputRef, acceptedMimeTypes } =
+		useImagePaste({
+			selectedImages,
+			setSelectedImages,
+			disabled: isStarting,
+		})
 
 	const handleStart = () => {
 		if (isEmpty || isStarting) return
@@ -312,14 +326,18 @@ function NewAgentForm() {
 		// Generate labels for multi-version mode
 		const labels = isMultiVersion ? generateVersionLabels(trimmedPrompt.slice(0, 50), versionCount) : undefined
 
+		// Prepare images array (only include if there are images)
+		const images = hasImages ? selectedImages : undefined
+
 		vscode.postMessage({
 			type: "agentManager.startSession",
-			prompt: trimmedPrompt,
+			prompt: trimmedPrompt || "", // Can be empty if only images
 			parallelMode: effectiveRunMode === "worktree",
 			versions: versionCount,
 			labels,
 			existingBranch: selectedBranch || undefined,
 			model: effectiveModelId || undefined,
+			images,
 		})
 	}
 
@@ -371,10 +389,13 @@ function NewAgentForm() {
 						"rounded",
 					)}>
 					<DynamicTextArea
+						// Key changes when images are added/removed to trigger resize recalculation
+						key={hasImages ? "with-images" : "no-images"}
 						autoFocus
 						value={promptText}
 						onChange={(e) => setPromptText(e.target.value)}
 						onKeyDown={handleKeyDown}
+						onPaste={handlePaste}
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("sessionDetail.startNewAgent")}
@@ -384,7 +405,8 @@ function NewAgentForm() {
 						maxRows={12}
 						style={{
 							paddingTop: "12px",
-							paddingBottom: "40px",
+							// Add extra padding when images are present to make room for the image row
+							paddingBottom: hasImages ? "76px" : "40px",
 							paddingLeft: "16px",
 							paddingRight: "36px",
 						}}
@@ -419,156 +441,184 @@ function NewAgentForm() {
 						aria-hidden="true"
 					/>
 
-					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
-						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
-							<StandardTooltip
-								content={
-									isMultiVersion
-										? t("sessionDetail.versionsHelperText", { count: versionCount })
-										: effectiveRunMode === "local"
-											? t("sessionDetail.runModeLocal")
-											: t("sessionDetail.runModeWorktree")
-								}>
-								<button
-									className={cn("am-run-mode-trigger-inline", isMultiVersion && "am-locked")}
-									onClick={() => !isMultiVersion && setIsDropdownOpen(!isDropdownOpen)}
-									disabled={isStarting || isMultiVersion}
-									type="button">
-									{effectiveRunMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-									{!isMultiVersion && (
-										<ChevronDown
-											size={10}
-											className={cn("am-chevron", isDropdownOpen && "am-open")}
-										/>
-									)}
-								</button>
-							</StandardTooltip>
-							{isDropdownOpen && !isMultiVersion && (
-								<div className="am-run-mode-menu-inline">
-									<button
-										className={cn(
-											"am-run-mode-option-inline",
-											runMode === "local" && "am-selected",
-										)}
-										onClick={() => handleSelectMode("local")}
-										type="button">
-										<Folder size={12} />
-										<span>{t("sessionDetail.runModeLocal")}</span>
-										{runMode === "local" && <span className="am-checkmark">✓</span>}
-									</button>
-									<button
-										className={cn(
-											"am-run-mode-option-inline",
-											runMode === "worktree" && "am-selected",
-										)}
-										onClick={() => handleSelectMode("worktree")}
-										type="button">
-										<GitBranch size={12} />
-										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
-										{runMode === "worktree" && <span className="am-checkmark">✓</span>}
-									</button>
-								</div>
-							)}
+					{/* Image thumbnails row - positioned above the action buttons */}
+					{selectedImages.length > 0 && (
+						<div className="absolute bottom-10 left-3 right-2 z-30 flex items-center gap-1.5 pb-1">
+							{selectedImages.map((image, index) => (
+								<ImageThumbnail key={index} src={image} index={index} onRemove={removeImage} />
+							))}
 						</div>
+					)}
 
-						<div ref={versionDropdownRef} className="am-run-mode-dropdown-inline relative">
-							<StandardTooltip content={t("sessionDetail.versionsTooltip")}>
-								<button
-									className="am-run-mode-trigger-inline"
-									onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
-									disabled={isStarting}
-									type="button"
-									title={t("sessionDetail.versions")}>
-									<Layers size={14} />
-									<span className="am-version-count">{versionCount}</span>
-									<ChevronDown
-										size={10}
-										className={cn("am-chevron", isVersionDropdownOpen && "am-open")}
-									/>
-								</button>
-							</StandardTooltip>
-							{isVersionDropdownOpen && (
-								<div className="am-run-mode-menu-inline">
-									{VERSION_COUNT_OPTIONS.map((count) => (
+					{/* Bottom bar with actions */}
+					<div className="absolute bottom-2 left-3 right-2 z-30 flex items-center justify-end">
+						{/* Actions on the right */}
+						<div className="flex items-center gap-2">
+							<AddImageButton
+								onClick={openFileBrowser}
+								onFileSelect={handleFileSelect}
+								fileInputRef={fileInputRef}
+								acceptedMimeTypes={acceptedMimeTypes}
+								disabled={!canAddMore}
+							/>
+							<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
+								<StandardTooltip
+									content={
+										isMultiVersion
+											? t("sessionDetail.versionsHelperText", { count: versionCount })
+											: effectiveRunMode === "local"
+												? t("sessionDetail.runModeLocal")
+												: t("sessionDetail.runModeWorktree")
+									}>
+									<button
+										className={cn("am-run-mode-trigger-inline", isMultiVersion && "am-locked")}
+										onClick={() => !isMultiVersion && setIsDropdownOpen(!isDropdownOpen)}
+										disabled={isStarting || isMultiVersion}
+										type="button">
+										{effectiveRunMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+										{!isMultiVersion && (
+											<ChevronDown
+												size={10}
+												className={cn("am-chevron", isDropdownOpen && "am-open")}
+											/>
+										)}
+									</button>
+								</StandardTooltip>
+								{isDropdownOpen && !isMultiVersion && (
+									<div className="am-run-mode-menu-inline">
 										<button
-											key={count}
 											className={cn(
 												"am-run-mode-option-inline",
-												versionCount === count && "am-selected",
+												runMode === "local" && "am-selected",
 											)}
-											onClick={() => handleSelectVersionCount(count)}
+											onClick={() => handleSelectMode("local")}
 											type="button">
-											<span>{t("sessionDetail.versionCount", { count })}</span>
-											{versionCount === count && <span className="am-checkmark">✓</span>}
+											<Folder size={12} />
+											<span>{t("sessionDetail.runModeLocal")}</span>
+											{runMode === "local" && <span className="am-checkmark">✓</span>}
 										</button>
-									))}
+										<button
+											className={cn(
+												"am-run-mode-option-inline",
+												runMode === "worktree" && "am-selected",
+											)}
+											onClick={() => handleSelectMode("worktree")}
+											type="button">
+											<GitBranch size={12} />
+											<span className="am-run-mode-label">
+												{t("sessionDetail.runModeWorktree")}
+											</span>
+											{runMode === "worktree" && <span className="am-checkmark">✓</span>}
+										</button>
+									</div>
+								)}
+							</div>
+
+							<div ref={versionDropdownRef} className="am-run-mode-dropdown-inline relative">
+								<StandardTooltip content={t("sessionDetail.versionsTooltip")}>
+									<button
+										className="am-run-mode-trigger-inline"
+										onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
+										disabled={isStarting}
+										type="button"
+										title={t("sessionDetail.versions")}>
+										<Layers size={14} />
+										<span className="am-version-count">{versionCount}</span>
+										<ChevronDown
+											size={10}
+											className={cn("am-chevron", isVersionDropdownOpen && "am-open")}
+										/>
+									</button>
+								</StandardTooltip>
+								{isVersionDropdownOpen && (
+									<div className="am-run-mode-menu-inline">
+										{VERSION_COUNT_OPTIONS.map((count) => (
+											<button
+												key={count}
+												className={cn(
+													"am-run-mode-option-inline",
+													versionCount === count && "am-selected",
+												)}
+												onClick={() => handleSelectVersionCount(count)}
+												type="button">
+												<span>{t("sessionDetail.versionCount", { count })}</span>
+												{versionCount === count && <span className="am-checkmark">✓</span>}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+
+							{/* Model selector - show loading spinner while fetching, then SelectDropdown */}
+							{modelsLoading ? (
+								<div className="am-run-mode-trigger-inline opacity-70">
+									<Loader2 size={14} className="am-spinning" />
+									<span className="text-sm">{t("sessionDetail.loadingModels")}</span>
 								</div>
+							) : hasModels ? (
+								<div className="am-model-selector">
+									<SelectDropdown
+										value={effectiveModelId || ""}
+										options={modelOptions}
+										onChange={(value) => setSelectedModelId(value)}
+										disabled={isStarting}
+										placeholder={t("sessionDetail.selectModel")}
+										title={t("sessionDetail.modelTooltip")}
+										triggerClassName="am-model-selector-trigger"
+										contentClassName="am-model-selector-content"
+										align="end"
+									/>
+								</div>
+							) : null}
+
+							{effectiveRunMode === "worktree" && !isMultiVersion && (
+								<StandardTooltip content={t("sessionDetail.branchPickerTooltip")}>
+									<button
+										className="am-run-mode-trigger-inline"
+										onClick={() => setIsBranchPickerOpen(true)}
+										disabled={isStarting}
+										type="button"
+										title={t("sessionDetail.selectBranch")}>
+										<GitBranch size={14} />
+										<span className="truncate max-w-[80px] text-sm">
+											{selectedBranch || t("sessionDetail.selectBranch")}
+										</span>
+										<ChevronDown size={10} className="am-chevron" />
+									</button>
+								</StandardTooltip>
 							)}
+
+							<button
+								className={cn(
+									"relative inline-flex items-center justify-center",
+									"bg-transparent border-none p-1.5",
+									"rounded-md min-w-[28px] min-h-[28px]",
+									"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+									"transition-all duration-150",
+									"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+									"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+									"active:bg-[rgba(255,255,255,0.1)]",
+									!isEmpty && !isStarting && "cursor-pointer",
+									(isEmpty || isStarting) &&
+										"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
+								)}
+								onClick={handleStart}
+								disabled={isEmpty || isStarting}
+								aria-label={
+									isStarting ? t("sessionDetail.starting") : t("sessionDetail.startAriaLabel")
+								}
+								title={
+									isMultiVersion
+										? t("sessionDetail.launchVersions", { count: versionCount })
+										: t("sessionDetail.startAgent")
+								}>
+								{isStarting ? (
+									<Loader2 size={16} className="am-spinning" />
+								) : (
+									<SendHorizontal size={16} />
+								)}
+							</button>
 						</div>
-
-						{/* Model selector - show loading spinner while fetching, then SelectDropdown */}
-						{modelsLoading ? (
-							<div className="am-run-mode-trigger-inline opacity-70">
-								<Loader2 size={14} className="am-spinning" />
-								<span className="text-sm">{t("sessionDetail.loadingModels")}</span>
-							</div>
-						) : hasModels ? (
-							<div className="am-model-selector">
-								<SelectDropdown
-									value={effectiveModelId || ""}
-									options={modelOptions}
-									onChange={(value) => setSelectedModelId(value)}
-									disabled={isStarting}
-									placeholder={t("sessionDetail.selectModel")}
-									title={t("sessionDetail.modelTooltip")}
-									triggerClassName="am-model-selector-trigger"
-									contentClassName="am-model-selector-content"
-									align="end"
-								/>
-							</div>
-						) : null}
-
-						{effectiveRunMode === "worktree" && !isMultiVersion && (
-							<StandardTooltip content={t("sessionDetail.branchPickerTooltip")}>
-								<button
-									className="am-run-mode-trigger-inline"
-									onClick={() => setIsBranchPickerOpen(true)}
-									disabled={isStarting}
-									type="button"
-									title={t("sessionDetail.selectBranch")}>
-									<GitBranch size={14} />
-									<span className="truncate max-w-[80px] text-sm">
-										{selectedBranch || t("sessionDetail.selectBranch")}
-									</span>
-									<ChevronDown size={10} className="am-chevron" />
-								</button>
-							</StandardTooltip>
-						)}
-
-						<button
-							className={cn(
-								"relative inline-flex items-center justify-center",
-								"bg-transparent border-none p-1.5",
-								"rounded-md min-w-[28px] min-h-[28px]",
-								"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
-								"transition-all duration-150",
-								"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-								"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-								"active:bg-[rgba(255,255,255,0.1)]",
-								!isEmpty && !isStarting && "cursor-pointer",
-								(isEmpty || isStarting) &&
-									"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
-							)}
-							onClick={handleStart}
-							disabled={isEmpty || isStarting}
-							aria-label={isStarting ? t("sessionDetail.starting") : t("sessionDetail.startAriaLabel")}
-							title={
-								isMultiVersion
-									? t("sessionDetail.launchVersions", { count: versionCount })
-									: t("sessionDetail.startAgent")
-							}>
-							{isStarting ? <Loader2 size={16} className="am-spinning" /> : <SendHorizontal size={16} />}
-						</button>
 					</div>
 				</div>
 			</div>

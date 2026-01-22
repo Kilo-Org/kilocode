@@ -70,6 +70,22 @@ kilocode --parallel --auto "improve xyz"
 kilocode --parallel --auto "improve abc"
 ```
 
+### Custom System Prompt
+
+Append custom instructions to the system prompt:
+
+```bash
+# Inline text
+kilocode --append-system-prompt "Always use TypeScript strict mode"
+
+# From a file
+kilocode --append-system-prompt-file ./prompts/custom-instructions.md
+
+# Both (inline text first, then file content)
+kilocode --append-system-prompt "Context: Production deployment" \
+         --append-system-prompt-file ./prompts/deploy-guidelines.md
+```
+
 ### Autonomous mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
@@ -276,49 +292,4 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### Getting Started
-
-To build and run the CLI locally off your branch:
-
-#### Build the VS Code extension
-
-```shell
-cd src
-pnpm bundle
-pnpm vsix
-pnpm vsix:unpacked
-cd ..
-```
-
-#### Install CLI dependencies
-
-```shell
-cd cli
-pnpm install
-pnpm deps:install
-```
-
-#### Build the CLI
-
-```shell
-pnpm clean
-pnpm clean:kilocode
-pnpm copy:kilocode
-pnpm build
-```
-
-#### Configure CLI settings
-
-```shell
-pnpm start config
-```
-
-#### Run the built CLI
-
-```shell
-pnpm start
-```
-
-### Using DevTools
-
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
+See [Development Guide](cli/docs/DEVELOPMENT.md) for setup instructions.

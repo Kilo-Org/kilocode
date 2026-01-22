@@ -1143,6 +1143,10 @@
 		"showTimestamps": {
 			"label": "Mostra timestamp",
 			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
+		},
+		"showDiffStats": {
+			"label": "Mostra statistiche diff",
+			"description": "Visualizza le statistiche delle righe aggiunte/rimosse nell'intestazione dell'attività"
 		}
 	},
 	"ghost": {

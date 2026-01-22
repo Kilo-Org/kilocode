@@ -777,6 +777,10 @@
 		"showTimestamps": {
 			"label": "Zobrazit časová razítka",
 			"description": "Zobrazit časové razítko pro každou zprávu v zobrazení chatu"
+		},
+		"showDiffStats": {
+			"label": "Zobrazit statistiky diff",
+			"description": "Zobrazit statistiky přidaných/odebraných řádků v záhlaví úkolu"
 		}
 	},
 	"ghost": {

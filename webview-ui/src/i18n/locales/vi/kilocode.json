@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Máy chủ MCP"
+			"mcp": "Máy chủ MCP",
+			"agentBehaviour": "Hành vi của Agent",
+			"skills": "Kỹ năng"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -142,7 +144,14 @@
 	},
 	"docs": "Tài liệu",
 	"rules": {
-		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
+		"tooltip": "Quản lý hành vi của agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Quy tắc",
+			"workflows": "Quy trình làm việc",
+			"mcps": "MCPs",
+			"modes": "Chế độ",
+			"skills": "Kỹ năng"
+		},
 		"ariaLabel": "Quy tắc Kilo Code",
 		"tabs": {
 			"rules": "Quy tắc",
@@ -308,6 +317,9 @@
 		},
 		"modes": {
 			"description": "Những chế độ này được cung cấp từ cộng đồng. Nhấp <1>vào đây</1> để chỉnh sửa chế độ tùy chỉnh của riêng bạn."
+		},
+		"skills": {
+			"description": "Duyệt và khám phá các kỹ năng từ cộng đồng. Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể."
 		}
 	},
 	"modes": {
@@ -351,6 +363,18 @@
 			"loading": "Đang tải các thiết bị microphone...",
 			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
 			"refresh": "Làm mới"
+		}
+	},
+	"skills": {
+		"description": "Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể. Chúng được tự động áp dụng khi liên quan đến yêu cầu của bạn.",
+		"noSkills": "Chưa cài đặt kỹ năng nào",
+		"projectSkills": "Kỹ năng Dự án",
+		"globalSkills": "Kỹ năng Toàn cầu",
+		"deleteDialog": {
+			"title": "Xóa Kỹ năng",
+			"description": "Bạn có chắc chắn muốn xóa kỹ năng \"{{skillName}}\"? Hành động này không thể hoàn tác.",
+			"cancel": "Hủy",
+			"delete": "Xóa"
 		}
 	}
 }

@@ -11,8 +11,7 @@ import {
 	existsSync,
 } from "fs"
 import * as path from "path"
-import { KiloCodePaths } from "../utils/paths.js"
-import { safeStringify } from "../utils/safe-stringify.js"
+import { KiloCodePaths, safeStringify } from "@kilocode/agent-runtime"
 
 export type LogLevel = "info" | "debug" | "error" | "warn"
 

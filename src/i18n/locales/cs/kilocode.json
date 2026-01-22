@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Odpověď modelu neočekávaně skončila (žádné zprávy asistenta). Může to být známka omezení počtu požadavků.",
 		"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.\n\n{{error}}",
 		"maxCompletionTokens": "Bylo dosaženo maximálního počtu completion tokenů.",
+		"contentFilter": "Požadavek byl zablokován filtrem obsahu.",
 		"disableApplyDiff": "Pokud se tato chyba opakuje, zakažte prosím Úpravy pomocí rozdílů v pokročilém nastavení.",
 		"disableEditFile": "Pokud se tato chyba opakuje, zakažte prosím experimentální funkci Rychlé použití."
 	},
@@ -105,7 +106,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Tvoje verze Kilocode CLI je zastaralá a nepodporuje Agent Manager. Prosím aktualizuj na nejnovější verzi.",
-			"cliNotFound": "Kilocode CLI nenalezeno. Prosím nainstaluj ho pro použití Agent Manageru.",
 			"cliMisconfigured": "Kilocode CLI není nakonfigurováno. Spusť 'kilocode auth' pro přihlášení nebo 'kilocode config' pro konfiguraci.",
 			"sessionFailed": "Nepodařilo se spustit relaci agenta",
 			"sessionFailedWithMessage": "Nepodařilo se spustit relaci agenta: {{message}}"

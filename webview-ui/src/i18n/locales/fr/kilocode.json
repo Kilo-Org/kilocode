@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Serveurs MCP"
+			"mcp": "Serveurs MCP",
+			"agentBehaviour": "Comportement de l'Agent",
+			"skills": "Compétences"
 		},
 		"provider": {
 			"account": "Compte Kilo Code",
@@ -149,7 +151,14 @@
 	},
 	"docs": "Documentation",
 	"rules": {
-		"tooltip": "Gérer les Règles et Flux de Travail Kilo Code",
+		"tooltip": "Gérer le comportement de l'agent ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Règles",
+			"workflows": "Flux de Travail",
+			"mcps": "MCPs",
+			"modes": "Modes",
+			"skills": "Compétences"
+		},
 		"ariaLabel": "Règles Kilo Code",
 		"tabs": {
 			"rules": "Règles",
@@ -221,34 +230,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Autocomplétion",
 		"settings": {
+			"codeEditorSuggestions": "Suggestions de l'éditeur de code",
+			"chatSuggestions": "Suggestions du chat",
+			"model": "Modèle",
+			"provider": "Fournisseur",
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
-				"description": "Afficher automatiquement des suggestions de code en ligne lorsque vous faites une pause dans la saisie."
+				"label": "Déclencher automatiquement les suggestions",
+				"description": "Afficher automatiquement des suggestions de code en ligne lorsque tu fais une pause dans la saisie."
 			},
 			"autoTriggerDelay": {
 				"label": "Délai de Déclenchement Automatique",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Le délai en secondes avant que les suggestions n'apparaissent après une pause de frappe. Un délai plus court signifie des suggestions plus rapides, mais peut être plus gourmand en ressources."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Déclencher par raccourci clavier ({{keybinding}})",
+				"description": "Appuie sur {{keybinding}} pour demander une suggestion de code à la position du curseur. <DocsLink>Modifier le raccourci</DocsLink>"
 			},
-			"keybindingNotFound": "introuvable",
-			"configureAutocompleteProfile": "Utilise n'importe quel modèle en allant dans les profils et en configurant un Profil du Type de Profil Autocomplétion.",
-			"model": "Modèle",
-			"provider": "Fournisseur",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Activer l'autocomplétion du chat",
+				"description": "Afficher les suggestions pendant la saisie dans le champ de chat. Appuie sur Tab pour accepter les suggestions."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Mettre en pause les suggestions",
+				"description": "Mettre temporairement en pause les suggestions pour une durée spécifiée.",
 				"button": "Mettre en pause",
 				"unsnooze": "Réactiver",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Les suggestions sont actuellement en pause.",
 				"duration": {
 					"1min": "1 minute",
 					"5min": "5 minutes",
@@ -257,18 +266,18 @@
 					"1hour": "1 heure"
 				}
 			},
+			"keybindingNotFound": "introuvable",
 			"noModelConfigured": {
 				"title": "Aucun modèle d'autocomplétion configuré",
-				"description": "Pour activer l'autocomplétion, ajoutez un profil avec l'un de ces fournisseurs pris en charge :",
+				"description": "Pour activer l'autocomplétion, ajoute un profil avec l'un de ces fournisseurs pris en charge :",
 				"learnMore": "En savoir plus sur la configuration de l'autocomplétion →"
 			},
 			"noCredits": {
-				"title": "Aucun crédit sur votre compte",
-				"description": "Votre compte Kilo Code n'a pas de crédits. Pour utiliser l'autocomplétion, veuillez ajouter des crédits à votre compte.",
+				"title": "Aucun crédit sur ton compte",
+				"description": "Ton compte Kilo Code n'a pas de crédits. Pour utiliser l'autocomplétion, ajoute des crédits à ton compte.",
 				"buyCredits": "Acheter des crédits →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"configureAutocompleteProfile": "Utilise n'importe quel modèle en allant dans les profils et en configurant un Profil du Type de Profil Autocomplétion."
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +316,9 @@
 		},
 		"modes": {
 			"description": "Ces modes sont disponibles auprès de la communauté. Cliquez <1>ici</1> pour modifier vos propres modes personnalisés."
+		},
+		"skills": {
+			"description": "Parcourez et découvrez des compétences de la communauté. Les compétences fournissent des instructions spécialisées pour des tâches spécifiques."
 		}
 	},
 	"modes": {
@@ -350,6 +362,18 @@
 			"noDevices": "Aucun périphérique de microphone trouvé",
 			"defaultOption": "Paramètre par défaut du système",
 			"refresh": "Actualiser"
+		}
+	},
+	"skills": {
+		"description": "Les compétences fournissent des instructions spécialisées pour des tâches spécifiques. Elles sont automatiquement appliquées lorsqu'elles sont pertinentes pour ta demande.",
+		"noSkills": "Aucune compétence installée",
+		"projectSkills": "Compétences du Projet",
+		"globalSkills": "Compétences Globales",
+		"deleteDialog": {
+			"title": "Supprimer la Compétence",
+			"description": "Es-tu sûr de vouloir supprimer la compétence \"{{skillName}}\" ? Cette action est irréversible.",
+			"cancel": "Annuler",
+			"delete": "Supprimer"
 		}
 	}
 }

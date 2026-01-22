@@ -1137,6 +1137,10 @@
 		"showTimestamps": {
 			"label": "타임스탬프 표시",
 			"description": "채팅 화면에서 각 메시지의 타임스탬프 표시"
+		},
+		"showDiffStats": {
+			"label": "diff 통계 표시",
+			"description": "작업 헤더에 추가/삭제된 줄 통계 표시"
 		}
 	},
 	"ghost": {

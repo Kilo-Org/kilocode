@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Server MCP"
+			"mcp": "Server MCP",
+			"agentBehaviour": "Comportamento dell'Agente",
+			"skills": "Competenze"
 		},
 		"provider": {
 			"account": "Account Kilo Code",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Documentazione",
 	"rules": {
-		"tooltip": "Gestisci Regole e Flussi di Lavoro di Kilo Code",
+		"tooltip": "Gestisci il comportamento dell'agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regole",
+			"workflows": "Flussi di Lavoro",
+			"mcps": "MCPs",
+			"modes": "Modalità",
+			"skills": "Competenze"
+		},
 		"ariaLabel": "Regole di Kilo Code",
 		"tabs": {
 			"rules": "Regole",
@@ -308,6 +317,9 @@
 		},
 		"modes": {
 			"description": "Queste modalità sono disponibili dalla community. Clicca <1>qui</1> per modificare le tue modalità personalizzate."
+		},
+		"skills": {
+			"description": "Esplora e scopri skill dalla community. Le skill forniscono istruzioni specializzate per compiti specifici."
 		}
 	},
 	"modes": {
@@ -351,6 +363,18 @@
 			"refresh": "Aggiorna",
 			"defaultOption": "Impostazione predefinita del sistema",
 			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
+		}
+	},
+	"skills": {
+		"description": "Le competenze forniscono istruzioni specializzate per compiti specifici. Vengono applicate automaticamente quando sono pertinenti alla tua richiesta.",
+		"noSkills": "Nessuna competenza installata",
+		"projectSkills": "Competenze del Progetto",
+		"globalSkills": "Competenze Globali",
+		"deleteDialog": {
+			"title": "Elimina Competenza",
+			"description": "Sei sicuro di voler eliminare la competenza \"{{skillName}}\"? Questa azione non può essere annullata.",
+			"cancel": "Annulla",
+			"delete": "Elimina"
 		}
 	}
 }

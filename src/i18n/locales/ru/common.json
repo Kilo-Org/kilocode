@@ -145,13 +145,32 @@
 			"authenticationRequired": "Провайдер Roo требует облачной аутентификации. Войдите в Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API-ключ содержит недопустимые символы."
+			"invalidKeyInvalidChars": "API-ключ содержит недопустимые символы.",
+			"apiRequestFailed": "Запрос API не удался ({{status}})"
 		},
 		"manual_url_empty": "Введи действительный URL обратного вызова",
 		"manual_url_no_query": "Недействительный URL обратного вызова: отсутствуют параметры запроса",
 		"manual_url_missing_params": "Недействительный URL обратного вызова: отсутствуют обязательные параметры (code и state)",
 		"manual_url_auth_failed": "Ручная аутентификация по URL не удалась",
-		"manual_url_auth_error": "Аутентификация не удалась"
+		"manual_url_auth_error": "Аутентификация не удалась",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Не выбрано содержимое терминала",

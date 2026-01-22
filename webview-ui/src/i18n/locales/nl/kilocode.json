@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP-servers"
+			"mcp": "MCP-servers",
+			"agentBehaviour": "Agentgedrag",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
@@ -148,7 +150,14 @@
 	},
 	"docs": "Documentatie",
 	"rules": {
-		"tooltip": "Beheer Kilo Code Regels & Workflows",
+		"tooltip": "Agentgedrag beheren ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regels",
+			"workflows": "Workflows",
+			"mcps": "MCP's",
+			"modes": "Modi",
+			"skills": "Skills"
+		},
 		"ariaLabel": "Kilo Code Regels",
 		"tabs": {
 			"rules": "Regels",
@@ -306,6 +315,9 @@
 		},
 		"modes": {
 			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
+		},
+		"skills": {
+			"description": "Blader door en ontdek skills van de gemeenschap. Skills bieden gespecialiseerde instructies voor specifieke taken."
 		}
 	},
 	"modes": {
@@ -349,6 +361,18 @@
 			"loading": "Microfoonapparaten laden...",
 			"noDevices": "Geen microfoonapparaten gevonden",
 			"refresh": "Vernieuwen"
+		}
+	},
+	"skills": {
+		"description": "Skills bieden gespecialiseerde instructies voor specifieke taken. Ze worden automatisch toegepast wanneer ze relevant zijn voor je verzoek.",
+		"noSkills": "Geen skills geïnstalleerd",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill Verwijderen",
+			"description": "Weet je zeker dat je de skill \"{{skillName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+			"cancel": "Annuleren",
+			"delete": "Verwijderen"
 		}
 	}
 }

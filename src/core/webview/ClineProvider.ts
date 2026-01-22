@@ -1960,6 +1960,11 @@ export class ClineProvider
 			})
 		}
 	}
+
+	async postSkillsDataToWebview() {
+		const skills = this.skillsManager?.getAllSkills() ?? []
+		this.postMessageToWebview({ type: "skillsData", skills })
+	}
 	// kilocode_change end
 
 	/**
@@ -2337,7 +2342,7 @@ export class ClineProvider
 			language, // kilocode_change
 			enableSubfolderRules: enableSubfolderRules ?? false,
 			renderContext: this.renderContext,
-			maxReadFileLine: maxReadFileLine ?? -1,
+			maxReadFileLine: maxReadFileLine ?? 500 /*kilocode_change*/,
 			maxImageFileSize: maxImageFileSize ?? 5,
 			maxTotalImageSize: maxTotalImageSize ?? 20,
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
@@ -2431,6 +2436,14 @@ export class ClineProvider
 				try {
 					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
 					return await claudeCodeOAuthManager.isAuthenticated()
+				} catch {
+					return false
+				}
+			})(),
+			openAiCodexIsAuthenticated: await (async () => {
+				try {
+					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+					return await openAiCodexOAuthManager.isAuthenticated()
 				} catch {
 					return false
 				}
@@ -2650,7 +2663,7 @@ export class ClineProvider
 			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
 			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
 			enableSubfolderRules: stateValues.enableSubfolderRules ?? false,
-			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
+			maxReadFileLine: stateValues.maxReadFileLine ?? 500 /*kilocode_change*/,
 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,

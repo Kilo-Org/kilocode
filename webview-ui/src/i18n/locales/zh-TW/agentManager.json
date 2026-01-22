@@ -14,7 +14,9 @@
 		"shareSession": "分享工作階段",
 		"shareConfirmMessage": "是否要公開分享此工作階段的快照？",
 		"shareConfirmYes": "是",
-		"shareConfirmNo": "否"
+		"shareConfirmNo": "否",
+		"options": "選項",
+		"configureSetupScript": "Worktree 設定腳本"
 	},
 	"sessionDetail": {
 		"startNewAgent": "啟動新代理",
@@ -86,7 +88,9 @@
 		"createPRTitle": "建立 Pull Request",
 		"sendTitle": "傳送訊息",
 		"resumeTitle": "繼續代理",
-		"hint": "按 Enter 傳送，Shift+Enter 換行"
+		"hint": "按 Enter 傳送，Shift+Enter 換行",
+		"addImage": "新增圖片",
+		"removeImage": "移除圖片"
 	},
 	"status": {
 		"running": "執行中",

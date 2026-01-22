@@ -38,7 +38,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP servery"
+			"mcp": "MCP servery",
+			"agentBehaviour": "Chování agenta",
+			"skills": "Dovednosti"
 		},
 		"provider": {
 			"account": "Účet Kilo Code",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Dokumentace",
 	"rules": {
-		"tooltip": "Spravovat Kilo Code Rules a Workflows",
+		"tooltip": "Spravovat chování agenta ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Pravidla",
+			"workflows": "Pracovní postupy",
+			"mcps": "MCP",
+			"modes": "Režimy",
+			"skills": "Dovednosti"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Pravidla",
@@ -224,31 +233,31 @@
 		"title": "Autocomplete",
 		"settings": {
 			"enableAutoTrigger": {
-				"label": "Auto-trigger Suggestions",
+				"label": "Automatické spouštění návrhů",
 				"description": "Automaticky zobrazovat návrhy kódu při pozastavení psaní."
 			},
 			"autoTriggerDelay": {
 				"label": "Zpoždění Automatického Spuštění",
-				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "Zpoždění v sekundách před zobrazením návrhů po pozastavení psaní. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Trigger on Keybinding ({{keybinding}})",
-				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Spustit klávesovou zkratkou ({{keybinding}})",
+				"description": "Stiskni {{keybinding}} pro vyžádání návrhu kódu na pozici kurzoru. <DocsLink>Upravit zkratku</DocsLink>"
 			},
 			"keybindingNotFound": "nenalezeno",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel",
 			"enableChatAutocomplete": {
-				"label": "Enable Chat Autocomplete",
-				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Povolit automatické dokončování v chatu",
+				"description": "Zobrazovat návrhy při psaní v chatovém vstupu. Stiskni Tab pro přijetí návrhů."
 			},
 			"snooze": {
-				"label": "Snooze Suggestions",
-				"description": "Temporarily pause suggestions for a specified duration.",
+				"label": "Pozastavit návrhy",
+				"description": "Dočasně pozastavit návrhy na určitou dobu.",
 				"button": "Pozastavit",
 				"unsnooze": "Obnovit",
-				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"currentlySnoozed": "Návrhy jsou momentálně pozastaveny.",
 				"duration": {
 					"1min": "1 minuta",
 					"5min": "5 minut",
@@ -267,8 +276,8 @@
 				"description": "Váš účet Kilo Code nemá žádné kredity. Pro použití automatického dokončování prosím přidejte kredity na svůj účet.",
 				"buyCredits": "Koupit kredity →"
 			},
-			"codeEditorSuggestions": "Code Editor Suggestions",
-			"chatSuggestions": "Chat Suggestions"
+			"codeEditorSuggestions": "Návrhy v editoru kódu",
+			"chatSuggestions": "Návrhy v chatu"
 		}
 	},
 	"virtualProvider": {
@@ -307,6 +316,9 @@
 		},
 		"modes": {
 			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
+		},
+		"skills": {
+			"description": "Procházejte a objevujte dovednosti od komunity. Dovednosti poskytují specializované instrukce pro konkrétní úkoly."
 		}
 	},
 	"modes": {
@@ -350,6 +362,18 @@
 			"loading": "Načítání mikrofonních zařízení...",
 			"refresh": "Obnovit",
 			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
+	},
+	"skills": {
+		"description": "Dovednosti poskytují specializované instrukce pro konkrétní úkoly. Jsou automaticky aplikovány, když jsou relevantní pro tvůj požadavek.",
+		"noSkills": "Žádné dovednosti nainstalovány",
+		"projectSkills": "Dovednosti projektu",
+		"globalSkills": "Globální dovednosti",
+		"deleteDialog": {
+			"title": "Smazat dovednost",
+			"description": "Opravdu chceš smazat dovednost \"{{skillName}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"delete": "Smazat"
 		}
 	}
 }

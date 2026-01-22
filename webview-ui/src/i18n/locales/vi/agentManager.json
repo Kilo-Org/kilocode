@@ -14,7 +14,9 @@
 		"shareSession": "Chia sẻ phiên",
 		"shareConfirmMessage": "Bạn có muốn chia sẻ công khai một ảnh chụp của phiên này không?",
 		"shareConfirmYes": "Có",
-		"shareConfirmNo": "Không"
+		"shareConfirmNo": "Không",
+		"options": "Tùy chọn",
+		"configureSetupScript": "Script thiết lập worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Tạo pull request",
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
-		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"
+		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng",
+		"addImage": "Thêm hình ảnh",
+		"removeImage": "Xóa hình ảnh"
 	},
 	"status": {
 		"running": "đang chạy",

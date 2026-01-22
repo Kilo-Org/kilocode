@@ -14,7 +14,9 @@
 		"shareSession": "Bagikan sesi",
 		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
 		"shareConfirmYes": "Ya",
-		"shareConfirmNo": "Tidak"
+		"shareConfirmNo": "Tidak",
+		"options": "Opsi",
+		"configureSetupScript": "Skrip setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -86,7 +88,9 @@
 		"createPRTitle": "Buat pull request",
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
-		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"
+		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru",
+		"addImage": "Tambah gambar",
+		"removeImage": "Hapus gambar"
 	},
 	"status": {
 		"running": "berjalan",
