@@ -2,6 +2,56 @@
 
 The Kilo Code CLI can be fully configured using environment variables, allowing you to run it in ephemeral environments without a `config.json` file.
 
+## CI / Non-Interactive Mode
+
+When running in non-interactive mode (CI/CD pipelines, automated scripts, piped input), the CLI **cannot** launch the interactive authentication wizard. You must configure the CLI via environment variables or a config file before running.
+
+### Non-Interactive Mode Detection
+
+The CLI automatically detects non-interactive mode when any of the following conditions are true:
+
+| Condition                      | Example                                |
+| ------------------------------ | -------------------------------------- |
+| `--auto` flag is set           | `kilocode --auto "task"`               |
+| `--json` flag is set           | `kilocode --auto --json "task"`        |
+| `--json-io` flag is set        | `kilocode --json-io`                   |
+| stdin is not a TTY             | `echo "task" \| kilocode --auto`       |
+| CI environment variable is set | `CI=true`, `GITHUB_ACTIONS=true`, etc. |
+
+### Supported CI Environments
+
+The following CI environment variables are automatically detected:
+
+- `CI` (Generic)
+- `GITHUB_ACTIONS`
+- `GITLAB_CI`
+- `JENKINS_URL`
+- `CIRCLECI`
+- `TRAVIS`
+- `BUILDKITE`
+- `CODEBUILD_BUILD_ID` (AWS CodeBuild)
+- `TF_BUILD` (Azure Pipelines)
+- `TEAMCITY_VERSION`
+
+### CI Setup Example
+
+```yaml
+# GitHub Actions example
+jobs:
+    kilocode:
+        runs-on: ubuntu-latest
+        env:
+            KILO_PROVIDER_TYPE: anthropic
+            KILO_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+            KILO_API_MODEL_ID: claude-sonnet-4-20250514
+        steps:
+            - uses: actions/checkout@v4
+            - name: Run Kilo Code
+              run: kilocode --auto "Analyze this codebase"
+```
+
+If configuration is missing in non-interactive mode, the CLI will exit with a clear error message explaining how to configure it.
+
 ## Core Configuration
 
 | Variable         | Description                                                      | Default | Required |

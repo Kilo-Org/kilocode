@@ -20,6 +20,7 @@ import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
 import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+import { isNonInteractiveMode, getNonInteractiveReason, emitConfigRequiredError } from "./utils/interactive.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -267,6 +268,24 @@ program
 					},
 				}
 				console.log(JSON.stringify(welcomeMessage))
+				process.exit(1)
+			}
+
+			// Check if we're in non-interactive mode before attempting auth wizard
+			const nonInteractiveOptions = {
+				auto: options.auto,
+				json: options.json,
+				jsonIo: options.jsonIo,
+			}
+
+			if (isNonInteractiveMode(nonInteractiveOptions)) {
+				// Cannot run auth wizard in non-interactive mode
+				const reason = getNonInteractiveReason(nonInteractiveOptions)
+				emitConfigRequiredError({
+					json: options.json,
+					jsonIo: options.jsonIo,
+					reason,
+				})
 				process.exit(1)
 			}
 
