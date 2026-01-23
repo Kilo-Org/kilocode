@@ -15,7 +15,7 @@ import type {
 	OrganizationAllowList,
 	ShareVisibility,
 	QueuedMessage,
-	SerializedCustomToolDefinition, // kilocode_change
+	SerializedCustomToolDefinition,
 } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
@@ -117,10 +117,10 @@ export interface ExtensionMessage {
 		| "deleteCustomModeCheck"
 		| "currentCheckpointUpdated"
 		| "checkpointInitWarning"
+		| "insertTextToChatArea" // kilocode_change
 		| "showHumanRelayDialog"
 		| "humanRelayResponse"
 		| "humanRelayCancel"
-		| "insertTextToChatArea" // kilocode_change
 		| "browserToolEnabled"
 		| "browserConnectionResult"
 		| "remoteBrowserEnabled"
@@ -202,495 +202,439 @@ export interface ExtensionMessage {
 		| "agenticaDeviceAuthStarted" // kilocode_change: Agentica GitHub device auth initiated
 		| "agenticaDeviceAuthTick" // kilocode_change: Agentica GitHub device auth tick/countdown
 		| "agenticaDeviceAuthPolling" // kilocode_change: Agentica GitHub device auth polling update
-		| "agenticaDeviceAuthExchanging" // kilocode_change: Agentica GitHub device auth token exchange started
-		| "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub device auth successful
-		| "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub device auth failed
-		| "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub device auth cancelled
-		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
-		| "customToolsResult" // kilocode_change: Custom tools list
-	text?: string
+		| "agenticaDeviceAuthExchanging" // kilocode_change: Agentica GitHub device auth token exc		e started
+	| "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub dev		auth successful
+	| "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub devic		th failed
+	| "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub devi		uth cancelled
+	| "chat		letionResult" // kiloc	change: FIM co	tion result for chat text	a
+	| "claudeCodeRateLimits"
+	| "customToolsResult"
+   	securePasswordRetrieved" // kilocode_change
+  	xt?: string
 	// kilocode_change start
-	completionRequestId?: string // Correlation ID from request
-	completionText?: string // The completed text
+	key?: s	g // For s		e password operations
+	pas		d?: string | null // For secu		assword operations
+	erro		string // Error message for s		e password retrieval
+	completionRequestId?: string // Corre	on ID from request
+	completionText?: string // The complet	ext
 	completionError?: string // Error message if failed
-	payload?:
-		| ProfileDataResponsePayload
-		| BalanceDataResponsePayload
-		| TasksByIdResponsePayload
-		| TaskHistoryResponsePayload
-		| [string, string] // For file save events [taskId, filePath]
-	// kilocode_change end
-	// Checkpoint warning message
+   	load?:
+	| ProfileDat	ponsePayload
+	| BalanceData	onsePayload
+	| Task		ponsePayload
+	| TaskHistoryResponse		    | [string, s	g]	For file 		 events [taskId, fileP		
+	agenticaApiKey?: stri		/ Agentica API key from d		e auth
+	agenticaEmail?: string // Agentic		er email from device auth
+	// kilocode_ch		 end
+	// Checkpoint warnin		ssage
 	checkpointWarning?: {
-		type: "WAIT_TIMEOUT" | "INIT_TIMEOUT"
-		timeout: number
+				: "WAIT_TIMEOUT" | "INI		MEOUT"
+		timeou		umber
 	}
-	action?:
-		| "chatButtonClicked"
-		| "settingsButtonClicked"
-		| "historyButtonClicked"
-		| "promptsButtonClicked" // kilocode_change
-		| "profileButtonClicked" // kilocode_change
-		| "marketplaceButtonClicked"
-		| "mcpButtonClicked" // kilocode_change
-		| "cloudButtonClicked"
-		| "didBecomeVisible"
-		| "focusInput"
-		| "switchTab"
-		| "focusChatInput" // kilocode_change
-		| "toggleAutoApprove"
-	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
+   		ion?:
+	| "c		uttonClicked"
+	| "settingsButtonCli		"
+	| "historyButton	ked"
+	| "promptsButtonClicked" // kilocode_change
+	| "profileButtonClicked" // kilocode_change
+		arketplaceButtonClicked	  | "mcpButtonClic	 // kilocode_change
+ 	 "cloudButtonClicked"		didBecomeVisib		| "focusInput"
+   		chTab"
+	| "	sCh	put" // kilocode_change
+		oggleAutoApprove"
+	invoke	newChat" | "sendMessage"	primaryButtonClick" | "seco	yButtonClick" | "setChatBoxMe	e"
 	state?: ExtensionState
 	images?: string[]
 	filePaths?: string[]
-	openedTabs?: Array<{
-		label: string
-		isActive: boolean
-		path?: string
+	opened	?: Array<{
+		label: st		     isActi		ean
+		pat		ng
 	}>
-	clineMessage?: ClineMessage
-	routerModels?: RouterModels
-	openAiModels?: string[]
-	ollamaModels?: ModelRecord
-	lmStudioModels?: ModelRecord
-	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
-	huggingFaceModels?: Array<{
-		id: string
-		object: string
-		created: number
-		owned_by: string
-		providers: Array<{
+	cl		ge?: ClineMessage		terModels?: RouterM			enAiModels?: stri			amaModels?: ModelRecord
+	lmStudioM			lRecord
+	vsCodeLmModel			?: string; family?: string; version?:			: string }[]
+	hugging			 Array<{
+   						object				 created: numbe			ne		rin	   	roviders: Array<{
 			provider: string
-			status: "live" | "staging" | "error"
-			supports_tools?: boolean
-			supports_structured_output?: boolean
-			context_length?: number
+  		  status: "live" | "staging" | "error"
+			supp	_tools?: boolean
+			supports_structured_ou	?: boolean
+			context_length?: 	er
 			pricing?: {
 				input: number
 				output: number
-			}
-		}>
-	}>
-	sapAiCoreModels?: ModelRecord // kilocode_change
-	sapAiCoreDeployments?: DeploymentRecord // kilocode_change
+					  }>
+   		sapAiCoreModels?: Mo	ecord // kiloc	change
+	sapAiCo	ployments?: DeploymentRecord 	ilocode_change
 	mcpServers?: McpServer[]
-	commits?: GitCommit[]
+	commit	GitCommit[]
 	listApiConfig?: ProviderSettingsEntry[]
-	apiConfiguration?: ProviderSettings // kilocode_change: For profileConfigurationForEditing response
+	apiConfiguration?: Provid	ttings // kilocode_change: For profileConfigurationForEditing 	onse
 	mode?: Mode
 	customMode?: ModeConfig
-	slug?: string
+	slug?	ring
 	success?: boolean
 	values?: Record<string, any>
-	sessionId?: string // kilocode_change: STT session ID
+	sessionId?: strin	 kilocode_change: STT session ID
 	segments?: STTSegment[] // kilocode_change: STT transcript segments (complete state)
-	isFinal?: boolean // kilocode_change: STT transcript is final
-	level?: number // kilocode_change: STT volume level (0-1)
-	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
-	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
-	devices?: MicrophoneDevice[] // kilocode_change: Microphone devices list
-	device?: MicrophoneDevice | null // kilocode_change: Selected microphone device
-	requestId?: string
-	promptText?: string
-	results?: { path: string; type: "file" | "folder"; label?: string }[]
+	isFinal?: boolean // kilocode_chan	STT transcript is final
+	level?: number // kilocode_change: STT volume	el (0-1)
+	reason?: "completed" | "cancelled" | "error" // kilocode_change: ST	op reason
+	speec	extStatus?: { availa	 boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilo	_change: Speech	text availability status response
+	devices?: MicrophoneDevice[	 kilocode_change: Microphone devices list
+	device?: Micro	eDevice | null // kiloco		e: Selected mic		device
+	request		ing
+	promptTe	 string
+	results?:	ath: string; type: "file" | "fol	; label?: string }[]
 	error?: string
-	mcpMarketplaceCatalog?: McpMarketplaceCatalog // kilocode_change
-	mcpDownloadDetails?: McpDownloadResponse // kilocode_change
-	notificationOptions?: {
-		title?: string
+	mcpMarketpla	talog?: McpMarket	eCatalog // 	code_change
+	mcpDownloadDetails?: McpDownloadRespon	/ kilocode_change
+	noti	tionOptions?: {
+		t	?: string
 		subtitle?: string
-		message: string
-	} // kilocode_change
-	url?: string // kilocode_change
-	keybindings?: Record<string, string> // kilocode_change
+		me	e: string
+   	/ kilocode_change
+	url?: str	// kilocode_change
+	keybindin	 Record<string, string> // kilo	_change
 	setting?: string
-	value?: any
-	hasContent?: boolean // For checkRulesDirectoryResult
-	items?: MarketplaceItem[]
-	userInfo?: CloudUserInfo
+	val	 any
+	hasContent?: boolean // Fo	eckRulesDirectoryResult
+	items?: M	tplaceItem[]
+	userInfo?: CloudUser	
 	organizationAllowList?: OrganizationAllowList
-	tab?: string
+	tab?:	ing
 	// kilocode_change: Rules data
-	globalRules?: ClineRulesToggles
-	localRules?: ClineRulesToggles
-	globalWorkflows?: ClineRulesToggles
-	localWorkflows?: ClineRulesToggles
-	marketplaceItems?: MarketplaceItem[]
-	organizationMcps?: MarketplaceItem[]
-	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
-	fixedCode?: string | null // For mermaidFixResponse // kilocode_change
-	errors?: string[]
-	visibility?: ShareVisibility
-	rulesFolderPath?: string
-	settings?: any
-	messageTs?: number
-	hasCheckpoint?: boolean
-	context?: string
-	// kilocode_change start: Notifications
+	globalRules?: ClineRulesTogg	    localRules?: C	RulesToggles
+	globalWorkfl	: ClineRulesToggles
+	l	Workflows?: Cli	lesToggles
+	mark	aceItems?: MarketplaceIt	
+	organization	?: MarketplaceItem[]
+	marketplaceInst	dMetadata?: MarketplaceI		Metadata
+  		ode?: string |		 For mermaidFixR		// kilocode			errors?: string[]
+ 			y?: ShareVisibilit		le	der	?: string
+	settings?	y
+	messageTs?: num	    hasCheckpoint?: boolean
+	c	xt?: string
+	// kilocode_change start	tifications
 	notifications?: Array<{
 		id: string
 		title: string
 		message: string
 		action?: {
-			actionText: string
-			actionURL: string
-		}
+			actionTex	tring
+			actionURL: s		      }
 	}>
-	// kilocode_change end
-	commands?: Command[]
-	queuedMessages?: QueuedMessage[]
-	list?: string[] // For dismissedUpsells
-	organizationId?: string | null // For organizationSwitchResult
-	// kilocode_change start: Managed Indexer
-	managedIndexerEnabled?: boolean
-	managedIndexerState?: Array<{
-		workspaceFolderPath: string
-		workspaceFolderName: string
-		gitBranch: string | null
-		projectId: string | null
-		isIndexing: boolean
-		hasManifest: boolean
-		manifestFileCount: number
+	// kiloco		e end
+	commands?: Command		ueuedMessages?: QueuedMes		   list?: string[] // For		edUpsells
+	organi		?: string | null // F		izationSwitchResult
+	//		e_change start: Mana		xer
+	ma			Enabled?: boo			agedIndexerState			       workspaceFo			ring
+	   				Name: string
+	 				ring | null
+					tring | null
+	  			: 		  	  hasManifest: boolean
+		manifestFile	t: number
 		hasWatcher: boolean
 		error?: {
-			type: string
-			message: string
+			type: str	            message: string
 			timestamp: string
-			context?: {
+				ext?: {
 				filePath?: string
 				branch?: string
-				operation?: string
+		 	   operation?: string
 			}
-		}
-	}> // kilocode_change end: Managed Indexer
-	browserSessionMessages?: ClineMessage[] // For browser session panel updates
-	isBrowserSessionActive?: boolean // For browser session panel updates
-	stepIndex?: number // For browserSessionNavigate: the target step index to display
+	   	   }> // kilocode_change	: Managed Indexer
+	browserSessio	sages?: ClineMessage[] // For	wser session panel updates
+	is	serSessionActive?: boolea	 For browser session panel up	s
+	stepIndex?: number 	or browserSessionNavigate: the target ste	dex to display
 	// kilocode_change start: Device auth data
 	deviceAuthCode?: string
-	deviceAuthVerificationUrl?: string
-	deviceAuthExpiresIn?: number
-	deviceAuthTimeRemaining?: number
-	deviceAuthToken?: string
-	deviceAuthUserEmail?: string
-	deviceAuthError?: string
-	// kilocode_change end: Device auth data
-	// kilocode_change start: Agentica device auth data
-	agenticaDeviceAuthCode?: string
-	agenticaDeviceAuthVerificationUrl?: string
-	agenticaDeviceAuthExpiresIn?: number
-	agenticaDeviceAuthTimeRemaining?: number
-	agenticaDeviceAuthToken?: string
-	agenticaApiKey?: string
-	agenticaEmail?: string
-	agenticaDeviceAuthError?: string
-	// kilocode_change end: Agentica device auth data
-	tools?: SerializedCustomToolDefinition[] // kilocode_change: For customToolsResult
+	deviceAut	ificationUrl?: s	g
+	deviceAuthExpiresIn	umber
+	deviceAuthTi	maining?: number
+		ceAuthToken?: string
+  	viceAuthUserEmail?: s	g
+	deviceAuthError?: 	ng
+	// kilocode_change end: D	e auth data
+	tools?: 	alizedCustomToolDefinition[] // For cust	olsResult
 }
-
-export type ExtensionState = Pick<
-	GlobalSettings,
+export ty	xtensionState = Pick<
+	GlobalSetti	
 	| "currentApiConfigName"
 	| "listApiConfigMeta"
-	| "pinnedApiConfigs"
-	| "customInstructions"
-	| "dismissedUpsells"
-	| "autoApprovalEnabled"
-	| "yoloMode" // kilocode_change
-	| "alwaysAllowReadOnly"
-	| "alwaysAllowReadOnlyOutsideWorkspace"
-	| "alwaysAllowWrite"
-	| "alwaysAllowWriteOutsideWorkspace"
-	| "alwaysAllowWriteProtected"
-	| "alwaysAllowDelete" // kilocode_change
-	| "alwaysAllowBrowser"
-	| "alwaysApproveResubmit"
+	| "pinnedApiCon	"
+	| "customInstruct	"
+	| "dismissedU	ls"
+	| "autoApprovalEna	"
+	| "yoloMode" // ki	de_change
+	| "alwaysAllowReadO	
+	| "alwaysAllowRead	OutsideWorkspace"
+	| "alwaysAl	rite"
+	| "alwaysA	WriteOutsideWorkspa	    | "alwaysAllowWrite	ected"
+	| "alway	owDelete" // kilocode_c	e
+	| "alwaysAllowBrow	
 	| "alwaysAllowMcp"
-	| "alwaysAllowModeSwitch"
+	| "alwaysAllowM	witch"
 	| "alwaysAllowSubtasks"
-	| "alwaysAllowFollowupQuestions"
+	| "alwa	lowFollowupQuestions"
 	| "alwaysAllowExecute"
-	| "alwaysAllowUpdateTodoList"
-	| "followupAutoApproveTimeoutMs"
-	| "allowedCommands"
-	| "deniedCommands"
-	| "allowedMaxRequests"
-	| "allowedMaxCost"
-	| "browserToolEnabled"
-	| "browserViewportSize"
-	| "showAutoApproveMenu" // kilocode_change
-	| "hideCostBelowThreshold" // kilocode_change
+  	"followupAutoApproveTime	s"
+	| "allowedComma	
+	| "deniedC	nds"
+	| "a	edMaxRequests"
+  	"allowedMaxCost"	 | "browserToolEnabled"
+   	browserViewportSize"
+	| "showAutoApprove	" // kilocode_change
+	| "	CostBelowThreshold" // kilocode_c	e
 	| "screenshotQuality"
-	| "remoteBrowserEnabled"
-	| "cachedChromeHostUrl"
-	| "remoteBrowserHost"
+	| "r	eBrowserEnabled"
+	| "cachedChromeH	rl"
+	| "remoteBrowserH	
 	| "ttsEnabled"
-	| "ttsSpeed"
+	| "tts	d"
 	| "soundEnabled"
-	| "soundVolume"
-	| "maxConcurrentFileReads"
-	| "allowVeryLargeReads" // kilocode_change
-	| "terminalOutputLineLimit"
-	| "terminalOutputCharacterLimit"
-	| "terminalShellIntegrationTimeout"
+		oundVolume"
+	| "m	ncurrentFileReads"
+ 	 "allowVeryLargeRead	/ kilocode_change
+	| "termina	putLineLimit"
+	| "te	alOutputCharacte	it"
+	| "terminalShell	grationTimeout"
 	| "terminalShellIntegrationDisabled"
-	| "terminalCommandDelay"
+	| "termin	mmandDelay"
 	| "terminalPowershellCounter"
-	| "terminalZshClearEolMark"
+	| "terminalZshCl	olMark"
 	| "terminalZshOhMy"
 	| "terminalZshP10k"
-	| "terminalZdotdir"
+	| "terminalZdot	
 	| "terminalCompressProgressBar"
 	| "diagnosticsEnabled"
-	| "diffEnabled"
-	| "fuzzyMatchThreshold"
-	| "morphApiKey" // kilocode_change: Morph fast apply - global setting
-	| "fastApplyModel" // kilocode_change: Fast Apply model selection
-	| "fastApplyApiProvider" // kilocode_change: Fast Apply model api base url
-	// | "experiments" // Optional in GlobalSettings, required here.
+ 	 "diffEnabled	  | "fuzzyMatchThre	d"
+	| "morphApiKey"	kilocode_change: Morph fa	pply - global setting
+	|	stApplyModel" // kilocode_change: Fast Apply	el selection
+	| "fastApplyApiProvider" 	ilocode_change: Fast Apply model api base	
+	// | "experiments" // Optional in Global	ings, required here.
 	| "language"
-	| "modeApiConfigs"
+	| "mod	Configs"
 	| "customModePrompts"
-	| "customSupportPrompts"
+	| "customSu	tPrompts"
 	| "enhancementApiConfigId"
-	| "localWorkflowToggles" // kilocode_change
-	| "globalRulesToggles" // kilocode_change
-	| "localRulesToggles" // kilocode_change
-	| "globalWorkflowToggles" // kilocode_change
-	| "commitMessageApiConfigId" // kilocode_change
-	| "terminalCommandApiConfigId" // kilocode_change
+	| "	lWorkflowToggles" // kilocode_change
+	| "	alRulesToggles" // kilocode_change
+	|	calRulesToggles" // kilocode_change
+	| "globalWork	Toggles" // kilocode_change
+	| "commitMessageApiConfigId	 kilocode_change
+	| "terminalCommandApiConfigId" // kilo	_change
 	| "dismissedNotificationIds" // kilocode_change
 	| "ghostServiceSettings" // kilocode_change
-	| "autoPurgeEnabled" // kilocode_change
-	| "autoPurgeDefaultRetentionDays" // kilocode_change
-	| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
-	| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
-	| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
-	| "autoPurgeLastRunTimestamp" // kilocode_change
-	| "condensingApiConfigId"
-	| "customCondensingPrompt"
-	| "yoloGatekeeperApiConfigId" // kilocode_change: AI gatekeeper for YOLO mode
-	| "codebaseIndexConfig"
-	| "codebaseIndexModels"
-	| "profileThresholds"
-	| "systemNotificationsEnabled" // kilocode_change
-	| "includeDiagnosticMessages"
+	|	toPurgeEnabled" // kilocod	ange
+	| "autoPurgeDefaul	entionDays" // kilocode_change
+	| "autoPurgeFavoritedTaskRetentionDays" // 	code_change
+	| "autoP	CompletedTaskRetentionDa	// kilocode_change
+   	autoPurgeIncompleteTaskRetentionDays" // kilocode_	ge
+	| "autoPurgeLastRunTime	p" // kilocode_change
+		ondensingApiConfigId"
+	| 	tomCondensingPrompt"
+	| "yoloGatekeeperA	nfigId" // kilocode_change: AI g	eeper for YOLO mode
+	| "c	aseIndexConfig"
+  	"codebaseIndexModels"
+ 	 "profileThresholds"
+  	"systemNotificationsEn	d" // kilocode_change
+  	"includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
 	| "imageGenerationProvider"
-	| "openRouterImageGenerationSelectedModel"
-	| "includeTaskHistoryInEnhance"
-	| "reasoningBlockCollapsed"
+	| "openRouterIma	nerationSelectedModel"
+	| "	udeTaskHistoryInEnhance"
+	|	asoningBlockCollapsed"
 	| "enterBehavior"
-	| "includeCurrentTime"
-	| "includeCurrentCost"
-	| "maxGitStatusFiles"
-	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
+	| "includeCurrentTi	    | "includeCurrentCost"
+	| "m	tStatusFiles"
+	|	questDelaySeconds"
+	| "selectedMi	honeDevice" // kilocode_change: Selected microphone device for STT
 > & {
 	version: string
-	clineMessages: ClineMessage[]
-	currentTaskItem?: HistoryItem
-	currentTaskTodos?: TodoItem[] // Initial todos for the current task
-	apiConfiguration: ProviderSettings
-	uriScheme?: string
-	uiKind?: string // kilocode_change
+  	ineMessages: ClineMessage[]
+ 	urrentTaskItem?: HistoryItem
+		entTaskTodos?: TodoItem[] // Initial todos for th	rrent task
+	apiConfiguration: ProviderSettin	   uriScheme?: string
+	uiKind?: string // kilocode	nge
 
-	kiloCodeWrapperProperties?: KiloCodeWrapperProperties // kilocode_change: Wrapper information
+	kiloCodeWrapperProperties?: KiloCodeWrapperProperties // kilocode_change: Wrapper i	mation
 
 	kilocodeDefaultModel: string
 	shouldShowAnnouncement: boolean
 
-	taskHistoryFullLength: number // kilocode_change
+	taskHistoryFu	ngth: number // kilocode_change
 	taskHistoryVersion: number // kilocode_change
 
 	writeDelayMs: number
-	requestDelaySeconds: number
 
 	enableCheckpoints: boolean
-	checkpointTimeout: number // Timeout for checkpoint initialization in seconds (default: 15)
-	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
-	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
-	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
-	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
-	showAutoApproveMenu: boolean // kilocode_change: Whether to show the auto-approve menu in the chat view
-	maxImageFileSize: number // Maximum size of image files to process in MB
-	maxTotalImageSize: number // Maximum total size for all images in a single read operation in MB
+	checkpointTimeout: number // Timeout for checkpoint i	alization in seconds (default: 15)
+	maxOpenTabsContext: number // Maximu	mber of VSCode open tabs to include in context (0-500)
+	maxWorkspaceFiles: number // M	um number of files to include in current working directory details (0-500)
+	showRooIgnoredFiles: bool	// Whether to show .kilocodeignore'd files in listings
+	enableSubfolde	es: boolean // Whether to load rules from subdirectories
+	maxReadFileLine: number // Maximum n	r of lines to read from a file before truncating
+	showAutoApproveMenu: 	ean // kilocode_chan	Whether to show the auto-approve m	in the chat	w
+	maxImageFileSize: nu	 // Maximum size of image files to process in MB
+	maxTotalImageSize: number // Maximum total size for all images in a single re	peration in MB
 
-	experiments: Experiments // Map of experiment IDs to their enabled state
+	experiments: Experimen	/ Map of experiment IDs to their en	d state
 
-	mcpEnabled: boolean
-	enableMcpServerCreation: boolean
+	mcpEnable	oolean
+	enableMcp	erCreation: boolean
 
 	mode: Mode
 	customModes: ModeConfig[]
-	toolRequirements?: Record<string, boolean> // Map of tool names to their requirements (e.g. {"apply_diff": true} if diffEnabled)
+  	olRequirements?: Record<string, bo	n> // Map of tool names to their requirements 	. {"apply_diff": true} if diffEnabled)
 
-	cwd?: string // Current working directory
-	telemetrySetting: TelemetrySetting
-	telemetryKey?: string
+	cwd?	ring // Current working directory
+	telemetrySetti	TelemetrySetting
+	telemetryKey?: 	ng
 	machineId?: string
 
-	renderContext: "sidebar" | "editor"
+   	derContext: "sidebar" | "editor"
 	settingsImportedAt?: number
 	historyPreviewCollapsed?: boolean
-	showTaskTimeline?: boolean // kilocode_change
-	sendMessageOnEnter?: boolean // kilocode_change
-	hideCostBelowThreshold?: number // kilocode_change
+	showTaskTimeline?:	lean // kilocode_chan	   sendMessageOnEnter?: boolean // kilocode_change
+	hideCostBelowThreshold?:	ber // kilocode_change
 
-	cloudUserInfo: CloudUserInfo | null
-	cloudIsAuthenticated: boolean
-	cloudApiUrl?: string
-	cloudOrganizations?: CloudOrganizationMembership[]
-	sharingEnabled: boolean
-	organizationAllowList: OrganizationAllowList
-	organizationSettingsVersion?: number
+	cl	serInfo: CloudUserInfo | null
+	cloudIsAuth	cated: boolean
+	cloudAuthSkipModel?	olean // Flag indicating auth completed without model selection (	 should pick 3rd-party provid	    cloudApiUrl?: string
+	cloudO	izations?: CloudOrganizationMembershi	    sharingEnabled: boolean
+	publicSharingEnabled: boolean
+	organizationAllowList: Orga	tionAllowList
+	organizationSettingsVers	: number
 
-	isBrowserSessionActive: boolean // Actual browser session state
+	isBrowserSessionA	e: boolean // Actual browser se	n state
 
-	autoCondenseContext: boolean
-	autoCondenseContextPercent: number
-	marketplaceItems?: MarketplaceItem[]
-	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
-	profileThresholds: Record<string, number>
-	hasOpenedModeSelector: boolean
-	openRouterImageApiKey?: string
+	autoCondenseCont	 boolean
+	autoCondenseContextPercent: n	r
+	marketplaceItems?: Market	eItem[]
+	marketplaceInstalledM	ata?: { project: Rec	string, any>; global: Rec	string, any> }
+	profileThreshol	Record<string, number>
+	hasOpenedModeSelector: boolean	 openRouterImageApiKey?: 	ng
 	kiloCodeImageApiKey?: string
-	openRouterUseMiddleOutTransform?: boolean
+  	enRouterUseMiddleOutTransform?: boolean
 	messageQueue?: QueuedMessage[]
 	lastShownAnnouncementId?: string
 	apiModelId?: string
 	mcpServers?: McpServer[]
-	hasSystemPromptOverride?: boolean
+	hasSy	PromptOverride?: boolean
 	mdmCompliant?: boolean
-	remoteControlEnabled: boolean
+	remoteControlEnabled: 	ean
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
-	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
-	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
-	debug?: boolean
-	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
-	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
+	virtualQuotaActiveModel?: { id: stri	info: ModelInfo;	iveProfileNumber?: number } // kilocode_change: Add virtual quota active model for UI display with profile number
+	showTimestamps?: boolean // kilocode_change: Show tim	mps in chat messages
+	showDiffStats?: boolean // kilocode_change: Show diff stats in task header
+	claudeCodeIsAuthenticated?: b	an
+   		ug?: boolean
+	speech		xtStatus?: { ava		le: boolean; reason		openaiKeyMissing" |		mpegNotInstal		 } // kilocode_change:		ech-to-text availabili		tatus with failure reas		   appendSystemP		t?: string // k		ode_change: 		om text to appe		o system prompt (C		nly)
 }
 
-export interface ClineSayTool {
-	tool:
-		| "editedExistingFile"
-		| "appliedDiff"
-		| "newFileCreated"
-		| "codebaseSearch"
-		| "readFile"
-		| "fetchInstructions"
-		| "listFilesTopLevel"
-		| "listFilesRecursive"
-		| "searchFiles"
-		| "switchMode"
-		| "newTask"
-		| "finishTask"
-		| "generateImage"
-		| "imageGenerated"
-		| "runSlashCommand"
-		| "updateTodoList"
-		| "deleteFile" // kilocode_change: Handles both files and directories
+export inte		e ClineSayTool {
+   		l:
+	| "editedExi		gFile"
+	| "appliedDiff"
+	| "newFileCreated"
+	| "codebaseSearc	   | "readFile	  | "fetchInst	ions"
+	| "list	sTopLevel"
+	| "listFilesRecursive"
+	| "searchFi	
+	| "switchMode"
+	| "newTask"
+	| "fini	sk"
+	| "gene	Image"
+	| "imageGe	ted"
+	| "ru	shCommand"
+	|	dateTodoList"
+	| "deleteFi	// kilocode_change: Ha	s both files and directories
 	path?: string
 	diff?: string
 	content?: string
-	// Unified diff statistics computed by the extension
+   	Unified diff statist	computed by the	ension
 	diffStats?: { added: number; removed: number }
 	regex?: string
-	filePattern?: string
-	mode?: string
-	reason?: string
-	isOutsideWorkspace?: boolean
-	isProtected?: boolean
-	additionalFileCount?: number // Number of additional files in the same read_file request
-	lineNumber?: number
+	fi	ttern?: st		 mode?: string		son?: string
+	isO		rkspace?: boo		 isProtected?: boole	  	itionalFileCount?: numb	/ Number of additiona		in the same r		 request
+	lineNum		mber
 	query?: string
-	// kilocode_change start: Directory stats - only present when deleting directories
-	stats?: {
-		files: number
-		directories: number
+	/		de_change st		ectory stats - on	res	when deleting directo		 stats?: {
+  		les: number
+				ies: number
 		size: number
-		isComplete: boolean
+   		omplete: boolean
 	}
 	// kilocode_change end
-	batchFiles?: Array<{
+	batchFil		ay<{
 		path: string
-		lineSnippet: string
-		isOutsideWorkspace?: boolean
-		key: string
-		content?: string
-	}>
-	batchDiffs?: Array<{
-		path: string
-		changeCount: number
-		key: string
-		content: string
-		// Per-file unified diff statistics computed by the extension
-		diffStats?: { added: number; removed: number }
+		lineSnippet: 		       isOutside			boolean
+							content?: s		  }	  b	Diffs?: Array<{
+  	  path: string
+		ch	Count: number
+	  		tring
+		content		
+		// Per-fi		ed diff statistics 		 by the extens	  	  diffStats?: { added: 	er; removed: number }
 		diffs?: Array<{
-			content: string
+			content: st	
 			startLine?: number
-		}>
-	}>
-	question?: string
-	// kilocode_change start
-	fastApplyResult?: {
+	   		}>
+	questi	 string
+	//	ocode_change sta	   fastApplyResult?: {
 		description?: string
 		tokensIn?: number
-		tokensOut?: number
-		cost?: number
-	}
-	// kilocode_change end
-	imageData?: string // Base64 encoded image data for generated images
+		tokensOut?:	ber
+	  	st?: numb	   }
+		ilocode_	ge end
+  	ageData?: strin	 Base64 encod	mage data 	generated	ges
 	// Properties for runSlashCommand tool
 	command?: string
 	args?: string
 	source?: string
-	description?: string
-}
+	description?: stri	
 
-// Must keep in sync with system prompt.
-export const browserActions = [
-	"launch",
+// Must keep in sync	h system prompt.
+exp	const browserA	ns = [
+	"la	",
 	"click",
 	"hover",
 	"type",
 	"press",
-	"scroll_down",
+	"scroll_d	,
 	"scroll_up",
-	"resize",
-	"close",
-	"screenshot",
-] as const
+ 	resize",
+	"	e",
+	"screenshot"	as const
 
-export type BrowserAction = (typeof browserActions)[number]
+export type BrowserA	n = (typeof browserActi	[number]
 
 export interface ClineSayBrowserAction {
-	action: BrowserAction
-	coordinate?: string
+	action: Brow	ction
+	coordinat	string
 	size?: string
 	text?: string
-	executedCoordinate?: string
+  	ecutedCoordinate?:	ing
 }
 
-export type BrowserActionResult = {
+export type 	serActionResu	 {
 	screenshot?: string
 	logs?: string
-	currentUrl?: string
-	currentMousePosition?: string
-	viewportWidth?: number
-	viewportHeight?: number
+	current	: string
+	curr	ousePosition?: str	    viewportWidth?:	ber
+	viewportHeigh	number
 }
 
-export interface ClineAskUseMcpServer {
-	serverName: string
-	type: "use_mcp_tool" | "access_mcp_resource"
-	toolName?: string
-	arguments?: string
+export int	ce ClineAskUse	erver {
+	serverN	 string
+	type: "use_	tool" | "access_mcp_resourc	   toolName?: string
+  	guments?: string
 	uri?: string
-	response?: string
+	r	nse?: string
 }
 
-export interface ClineApiReqInfo {
+export interface	neApiReqInfo {
 	request?: string
 	tokensIn?: number
 	tokensOut?: number
