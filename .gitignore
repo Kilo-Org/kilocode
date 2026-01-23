@@ -1,3 +1,5 @@
+
+#
 .pnpm-store
 dist
 out
@@ -28,6 +30,9 @@ docs/_site/
 .env
 .env.*
 !.env.*.sample
+
+# venv
+env/
 
 # Logging
 logs

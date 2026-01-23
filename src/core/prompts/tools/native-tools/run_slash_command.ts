@@ -1,10 +1,12 @@
+// kilocode_change start
 import type OpenAI from "openai"
 
-const RUN_SLASH_COMMAND_DESCRIPTION = `Execute a slash command to get specific instructions or content. Slash commands are predefined templates that provide detailed guidance for common tasks.`
+const RUN_SLASH_COMMAND_DESCRIPTION = `Execute a workflow to get specific instructions or content. Workflows are predefined templates stored in .kilocode/workflows/ that provide detailed guidance for common tasks. Always shows workflow content; requires user approval unless auto-execute experiment is enabled.`
 
-const COMMAND_PARAMETER_DESCRIPTION = `Name of the slash command to run (e.g., init, test, deploy)`
+const COMMAND_PARAMETER_DESCRIPTION = `Name of the workflow to execute (without .md extension)`
 
-const ARGS_PARAMETER_DESCRIPTION = `Optional additional context or arguments for the command`
+const ARGS_PARAMETER_DESCRIPTION = `Optional additional arguments or context to pass to the workflow`
+// kilocode_change end
 
 export default {
 	type: "function",

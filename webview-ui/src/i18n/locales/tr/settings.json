@@ -986,7 +986,7 @@
 			"name": "Autocomplete",
 			"description": "Editörünüzde doğrudan hızlı kod önerileri ve iyileştirmeler için Autocomplete özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Görev (Cmd+I) ve bağlamsal iyileştirmeler için Autocomplete içerir."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Model tarafından başlatılan slash komutlarını etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code iş akışlarını yürütmek için slash komutlarınızı çalıştırabilir."
 		},
