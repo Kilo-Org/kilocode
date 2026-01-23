@@ -121,6 +121,16 @@ Run `bd prime` for workflow context, or install hooks (`bd hooks install`) for a
 
 For full workflow details: `bd prime`
 
+## GitHub Workflow
+
+- Use the GitHub CLI (`gh`) for interacting with GitHub (issues, PRs, reviews, releases) instead of the web UI when practical.
+  - Examples: `gh issue list`, `gh issue view <id>`, `gh pr create`, `gh pr checkout <id>`, `gh pr review`.
+- Sign any GitHub comments you leave (issues/PRs/reviews) with your full name.
+  - Example (end of comment): `— Full Name`
+- Sign your commits with your full name.
+  - Ensure your Git author name is your full name (not a handle): `git config user.name "Full Name"`.
+  - Include a sign-off line in commits: `git commit -s ...` (adds `Signed-off-by: Full Name`).
+
 ## Skills
 
 - **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
