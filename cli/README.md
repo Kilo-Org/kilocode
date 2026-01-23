@@ -292,4 +292,4 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-See [Development Guide](cli/docs/DEVELOPMENT.md) for setup instructions.
+See [Development Guide](docs/DEVELOPMENT.md) for setup instructions.
