@@ -102,149 +102,104 @@ class ArgumentSuggestionCache {
 
 const cache = new ArgumentSuggestionCache()
 
+import Fuse from "fuse.js"
+import chalk from "chalk"
+
 // ============================================================================
 // SHARED UTILITIES - Scoring & Matching
 // ============================================================================
 
 /**
- * Simple fuzzy matching algorithm
- * Returns a score between 0 and 1
+ * Fuse.js options for command/argument fuzzy matching
  */
-function fuzzyMatch(text: string, query: string): number {
-	let textIndex = 0
-	let queryIndex = 0
-	let matches = 0
-
-	while (textIndex < text.length && queryIndex < query.length) {
-		if (text[textIndex] === query[queryIndex]) {
-			matches++
-			queryIndex++
-		}
-		textIndex++
-	}
-
-	return queryIndex === query.length ? matches / text.length : 0
+const FUSE_OPTIONS = {
+	includeScore: true,
+	includeMatches: true,
+	threshold: 0.4,
+	minMatchCharLength: 2,
+	ignoreLocation: true,
+	keys: ["name", "description", "aliases", "value"], // Common keys
 }
 
 /**
- * Calculate match score for text against query
- * Higher score = better match
- * Used for both commands and arguments
+ * Singleton Fuse instances to avoid re-indexing
+ */
+let fuseCommands: Fuse<Command> | null = null
+let fuseArguments: Fuse<ArgumentSuggestion> | null = null
+
+// Cache keys for the current usage of the singletons
+let lastCommandList: Command[] = []
+
+/**
+ * Get or create Fuse instance for commands
+ */
+function getCommandFuse(commands: Command[]): Fuse<Command> {
+	if (!fuseCommands || commands !== lastCommandList) {
+		fuseCommands = new Fuse(commands, {
+			...FUSE_OPTIONS,
+			keys: ["name", "description", "aliases"],
+		})
+		lastCommandList = commands
+	}
+	return fuseCommands
+}
+
+/**
+ * Calculate match score using Fuse.js
+ * Returns 0-100 (higher is better)
  */
 function calculateMatchScore(
 	text: string,
 	query: string,
 	context?: { isCommand?: boolean; description?: string },
 ): number {
-	// If query is empty, return a default score
-	if (!query) {
-		return context?.isCommand ? 50 : 100
-	}
+	if (!query) return context?.isCommand ? 50 : 100
 
-	const lowerText = text.toLowerCase()
-	const lowerQuery = query.toLowerCase()
+	// We don't use this single-item check for Fuse usually, 
+	// but for compatibility with existing architecture if called individually:
+	// (This function is mainly used by filterAndScore for arguments)
 
-	// Exact match
-	if (lowerText === lowerQuery) {
-		return 100
-	}
+	// Fallback/Fast check for exact match
+	if (text.toLowerCase() === query.toLowerCase()) return 100
+	if (text.toLowerCase().startsWith(query.toLowerCase())) return 90
 
-	// Starts with query
-	if (lowerText.startsWith(lowerQuery)) {
-		return 90
-	}
-
-	// For commands, check aliases
-	if (context?.isCommand) {
-		// This will be handled by the command-specific function
-	}
-
-	// Contains query
-	if (lowerText.includes(lowerQuery)) {
-		return 70
-	}
-
-	// Description contains query (for commands)
-	if (context?.description && context.description.toLowerCase().includes(lowerQuery)) {
-		return 50
-	}
-
-	// Fuzzy match
-	const fuzzyScore = fuzzyMatch(lowerText, lowerQuery)
-	if (fuzzyScore > 0.5) {
-		return Math.floor(fuzzyScore * 40)
-	}
-
-	return 0
+	return 0 // Fuse is handled in bulk usually, but if individual:
 }
 
 /**
- * Highlight matching parts of text
- * For now, just returns the text - UI handles highlighting
+ * Highlight matching parts of text using ANSI codes
  */
-function highlightMatch(text: string): string {
-	return text
+function highlightMatch(text: string, indices?: readonly [number, number][]): string {
+	if (!indices || indices.length === 0) return text
+
+	let result = ""
+	let lastIndex = 0
+
+	// Sort indices by start to be sure
+	const sortedIndices = [...indices].sort((a, b) => a[0] - b[0])
+
+	for (const [start, end] of sortedIndices) {
+		// Append non-matched part
+		result += text.substring(lastIndex, start)
+		// Append matched part with color (using cyan as generic highlight)
+		// Note: We use raw console codes or a library if available. 
+		// The file imports: currently nothing for color.
+		// We should validly import chalk or use CLI theme if passed.
+		// Since we don't have access to 'theme' here easily without context, 
+		// we'll use a safe basic color or rely on the UI to colorize validation.
+		// BUT the requirement was "ANSI-safe highlighting".
+		// Let's use standard ANSI cyan: \u001b[36m ... \u001b[39m
+		result += `\u001b[36m${text.substring(start, end + 1)}\u001b[39m`
+		lastIndex = end + 1
+	}
+
+	result += text.substring(lastIndex)
+	return result
 }
 
 // ============================================================================
 // COMMAND SUGGESTIONS
 // ============================================================================
-
-/**
- * Calculate match score for a command
- * Higher score = better match
- *
- * Note: Exact matches return score 100 and are included in suggestions.
- * This allows users to see visual confirmation that they've typed a valid command.
- */
-function calculateCommandMatchScore(command: Command, query: string): number {
-	// If query is empty, return a default score to show all commands
-	if (!query) {
-		return 50
-	}
-
-	const name = command.name.toLowerCase()
-	const description = command.description.toLowerCase()
-
-	// Exact match - return highest score to show user they've typed a valid command
-	if (name === query) {
-		return 100
-	}
-
-	// Starts with query
-	if (name.startsWith(query)) {
-		return 90
-	}
-
-	// Check aliases
-	for (const alias of command.aliases) {
-		const lowerAlias = alias.toLowerCase()
-		if (lowerAlias === query) {
-			return 85
-		}
-		if (lowerAlias.startsWith(query)) {
-			return 80
-		}
-	}
-
-	// Contains query
-	if (name.includes(query)) {
-		return 70
-	}
-
-	// Description contains query
-	if (description.includes(query)) {
-		return 50
-	}
-
-	// Fuzzy match
-	const fuzzyScore = fuzzyMatch(name, query)
-	if (fuzzyScore > 0.5) {
-		return Math.floor(fuzzyScore * 40)
-	}
-
-	return 0
-}
 
 /**
  * Get command suggestions based on input
@@ -253,24 +208,58 @@ export function getSuggestions(input: string): CommandSuggestion[] {
 	// Remove leading slash
 	const query = input.startsWith("/") ? input.slice(1) : input
 
-	// Get matching commands
-	const matches: CommandSuggestion[] = []
-	const lowerQuery = query.toLowerCase()
+	// Get all commands
+	const commands = commandRegistry.getAll()
 
-	for (const command of commandRegistry.getAll()) {
-		const score = calculateCommandMatchScore(command, lowerQuery)
-		if (score === 0) continue
-		matches.push({
+	// If no query, return all with default score
+	if (!query) {
+		return commands.map(command => ({
 			command,
-			matchScore: score,
-			highlightedName: highlightMatch(command.name),
-		})
+			matchScore: 50,
+			highlightedName: command.name
+		})).sort((a, b) => a.command.name.localeCompare(b.command.name))
+	}
+
+	// Use Fuse for matching
+	const fuse = getCommandFuse(commands)
+	const fuseResults = fuse.search(query)
+
+	// Map Fuse results to suggestions
+	const suggestions: CommandSuggestion[] = fuseResults.map(result => ({
+		command: result.item,
+		// Fuse score is 0 (perfect) to 1 (mismatch). We invert to 0-100.
+		matchScore: result.score !== undefined ? (1 - result.score) * 100 : 0,
+		highlightedName: highlightMatch(result.item.name, result.matches?.find(m => m.key === "name")?.indices)
+	}))
+
+	// Fallback Logic: If no Fuse matches, check for prefix matches (legacy behavior)
+	// This ensures backward compatibility for habits like "in" -> "init"
+	if (suggestions.length === 0) {
+		const lowerQuery = query.toLowerCase()
+		for (const command of commands) {
+			if (command.name.toLowerCase().startsWith(lowerQuery)) {
+				suggestions.push({
+					command,
+					matchScore: 90, // High score for prefix
+					highlightedName: command.name // No highlight (or simple prefix highlight?)
+				})
+			} else {
+				// Check aliases
+				if (command.aliases.some(a => a.toLowerCase().startsWith(lowerQuery))) {
+					suggestions.push({
+						command,
+						matchScore: 85,
+						highlightedName: command.name
+					})
+				}
+			}
+		}
 	}
 
 	// Sort by match score (descending), then by priority (descending), then alphabetically
-	matches.sort((a, b) => {
+	suggestions.sort((a, b) => {
 		// Primary: Sort by match score (descending)
-		if (b.matchScore !== a.matchScore) {
+		if (Math.abs(b.matchScore - a.matchScore) > 1) { // Fuzzy epsilon
 			return b.matchScore - a.matchScore
 		}
 
@@ -285,7 +274,7 @@ export function getSuggestions(input: string): CommandSuggestion[] {
 		return a.command.name.localeCompare(b.command.name)
 	})
 
-	return matches
+	return suggestions
 }
 
 /**
@@ -566,16 +555,40 @@ function filterAndScore(suggestions: ArgumentSuggestion[], query: string): Argum
 		return suggestions
 	}
 
-	const lowerQuery = query.toLowerCase()
+	// Reuse or create Fuse instance for these arguments
+	// Note: Since arguments change often, we might not want to cache the Fuse instance persistently 
+	// unless the suggestions array is reference-stable.
+	// For now, we create a fresh one or check a simple cache (omitted for safety).
+	// Actually, let's use a new Fuse instance for arguments to ensure correctness, 
+	// as arguments lists are usually small matching operations.
 
-	return suggestions
-		.map((s) => ({
-			...s,
-			matchScore: calculateMatchScore(s.value, lowerQuery),
-			highlightedValue: highlightMatch(s.value),
-		}))
-		.filter((s) => s.matchScore > 0)
-		.sort((a, b) => b.matchScore - a.matchScore)
+	// Performance Note: For small lists (<100 items), creating new Fuse is negligible.
+	const fuse = new Fuse(suggestions, {
+		...FUSE_OPTIONS,
+		keys: ["value", "description"]
+	})
+
+	const results = fuse.search(query)
+
+	const fuseMapped = results.map(result => ({
+		...result.item,
+		matchScore: result.score !== undefined ? (1 - result.score) * 100 : 0,
+		highlightedValue: highlightMatch(result.item.value, result.matches?.find(m => m.key === "value")?.indices)
+	}))
+
+	// Fallback for arguments
+	if (fuseMapped.length === 0) {
+		const lowerQuery = query.toLowerCase()
+		return suggestions.filter(s => s.value.toLowerCase().includes(lowerQuery) || s.description?.toLowerCase().includes(lowerQuery))
+			.map(s => ({
+				...s,
+				matchScore: s.value.toLowerCase().startsWith(lowerQuery) ? 90 : 50,
+				highlightedValue: s.value
+			}))
+			.sort((a, b) => b.matchScore - a.matchScore)
+	}
+
+	return fuseMapped.sort((a, b) => b.matchScore - a.matchScore)
 }
 
 /**
