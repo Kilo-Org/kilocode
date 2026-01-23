@@ -31,7 +31,7 @@ export interface GitRestoreState {
 export interface GitRestoreOptions {
 	/**
 	 * If true, throw errors instead of logging warnings and continuing.
-	 * Use this for --session to fail fast if git restore fails.
+	 * Use this when exact git context is required.
 	 * @default false
 	 */
 	throwOnError?: boolean
@@ -187,6 +187,7 @@ export class GitStateService {
 			const git = simpleGit(cwd)
 
 			let shouldPop = false
+			let checkoutSucceeded = true
 
 			try {
 				const stashListBefore = await git.stashList()
@@ -270,38 +271,49 @@ export class GitStateService {
 					head: gitState.head.substring(0, 8),
 					error: error instanceof Error ? error.message : String(error),
 				})
+				checkoutSucceeded = false
 
 				if (options?.throwOnError) {
 					throw error
 				}
 			}
 
-			try {
-				const tempDir = mkdtempSync(path.join(tmpdir(), "kilocode-git-patches"))
-				const patchFile = path.join(tempDir, `${Date.now()}.patch`)
-
-				try {
-					writeFileSync(patchFile, gitState.patch)
-
-					await git.applyPatch(patchFile)
-
-					this.logger.debug(`Applied patch`, LOG_SOURCES.GIT_STATE, {
-						patchSize: gitState.patch.length,
-					})
-				} finally {
-					try {
-						rmSync(tempDir, { recursive: true, force: true })
-					} catch {
-						// Ignore error
-					}
-				}
-			} catch (error) {
-				this.logger.warn(`Failed to apply patch`, LOG_SOURCES.GIT_STATE, {
-					error: error instanceof Error ? error.message : String(error),
+			if (!checkoutSucceeded) {
+				this.logger.warn(`Skipping patch apply due to checkout failure`, LOG_SOURCES.GIT_STATE, {
+					branch: gitState.branch,
+					head: gitState.head.substring(0, 8),
 				})
+			} else {
+				try {
+					const tempDir = mkdtempSync(path.join(tmpdir(), "kilocode-git-patches"))
+					const patchFile = path.join(tempDir, `${Date.now()}.patch`)
 
-				if (options?.throwOnError) {
-					throw error
+					try {
+						writeFileSync(patchFile, gitState.patch)
+
+						await git.applyPatch(patchFile)
+
+						this.logger.debug(`Applied patch`, LOG_SOURCES.GIT_STATE, {
+							patchSize: gitState.patch.length,
+						})
+					} finally {
+						try {
+							rmSync(tempDir, { recursive: true, force: true })
+						} catch (cleanupError) {
+							this.logger.warn(`Failed to clean up patch temp directory`, LOG_SOURCES.GIT_STATE, {
+								path: tempDir,
+								error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+							})
+						}
+					}
+				} catch (error) {
+					this.logger.warn(`Failed to apply patch`, LOG_SOURCES.GIT_STATE, {
+						error: error instanceof Error ? error.message : String(error),
+					})
+
+					if (options?.throwOnError) {
+						throw error
+					}
 				}
 			}
 

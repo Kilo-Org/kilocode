@@ -809,6 +809,12 @@ describe("GitStateService", () => {
 				LOG_SOURCES.GIT_STATE,
 				expect.any(Object),
 			)
+			expect(mockGit.applyPatch).not.toHaveBeenCalled()
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				"Skipping patch apply due to checkout failure",
+				LOG_SOURCES.GIT_STATE,
+				expect.any(Object),
+			)
 		})
 
 		it("handles patch failure gracefully", async () => {
