@@ -146,6 +146,59 @@
 			"action": "지금 구매",
 			"viewAll": "모든 가격 옵션 보기"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "예측 가능한 AI 지출과 증가하는 보너스 크레딧을 위해 구독하세요",
+			"recommended": "추천",
+			"perMonth": "/월",
+			"action": "구독하기",
+			"learnMore": "Kilo Pass에 대해 자세히 알아보기",
+			"yourSubscription": "내 Kilo Pass",
+			"status": {
+				"active": "활성",
+				"canceled": "취소됨",
+				"past_due": "연체",
+				"trialing": "체험 중",
+				"paused": "일시 중지",
+				"cancelling": "취소 중"
+			},
+			"tiers": {
+				"tier_19": "스타터",
+				"tier_49": "프로",
+				"tier_199": "엑스퍼트"
+			},
+			"cadence": {
+				"monthly": "월간",
+				"yearly": "연간"
+			},
+			"nextBilling": "다음 결제일: {{date}}",
+			"activeUntil": "만료일: {{date}}",
+			"streak": "{{count}}개월 연속",
+			"streakPlural": "{{count}}개월 연속",
+			"bonusCredits": "+${{amount}} 보너스 ({{date}})",
+			"manage": "구독 관리",
+			"boost": {
+				"mode": "부스트 모드",
+				"unlocked": "부스트 해제됨!",
+				"unlockProgress": "부스트 해제까지 ${{amount}}",
+				"monthlyUsage": "월간 사용량",
+				"nextBoost": "다음 부스트",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "<amount>${{amount}}</amount>를 사용하여 Boost 잠금 해제"
+			},
+			"refills": "{{days}}일 후 충전됨",
+			"passActiveUntil": "패스 유효기간",
+			"creditsNote": "패스 크레딧은 만료되지 않습니다. 사용하지 않은 부스트 크레딧은 충전 시 만료됩니다.",
+			"promo": "<boost>Boost 모드</boost>를 잠금 해제하여 최대 50% 무료 크레딧을 받으세요.",
+			"plans": {
+				"monthly": "월간",
+				"perMonth": "/월",
+				"includesCredits": "<highlight>${{price}}/월</highlight> Pass 크레딧 포함",
+				"upToBoost": "최대 <highlight>{{percent}}%</highlight> Boost 크레딧",
+				"firstMonthBoost": "첫 달: <highlight>+{{percent}}%</highlight> Boost 크레딧"
+			},
+			"subscriptionNote": "Pass 크레딧은 만료되지 않습니다. Boost 크레딧은 한 달간의 Pass 크레딧을 소비한 후 잠금 해제되며 각 월간 주기 종료 시 만료됩니다."
+		},
 		"detailedUsage": "상세 사용량",
 		"createOrganization": "상세 사용량 추적을 위한 조직 생성"
 	},

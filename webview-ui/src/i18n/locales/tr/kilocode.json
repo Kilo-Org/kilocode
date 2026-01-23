@@ -139,6 +139,59 @@
 			"action": "Şimdi Satın Al",
 			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Artan bonus kredilerle öngörülebilir AI harcaması için abone olun",
+			"recommended": "Önerilen",
+			"perMonth": "/ay",
+			"action": "Abone ol",
+			"learnMore": "Kilo Pass hakkında daha fazla bilgi edinin",
+			"yourSubscription": "Kilo Pass'ınız",
+			"status": {
+				"active": "Aktif",
+				"canceled": "İptal Edildi",
+				"past_due": "Vadesi Geçmiş",
+				"trialing": "Deneme",
+				"paused": "Duraklatıldı",
+				"cancelling": "İptal Ediliyor"
+			},
+			"tiers": {
+				"tier_19": "Başlangıç",
+				"tier_49": "Pro",
+				"tier_199": "Uzman"
+			},
+			"cadence": {
+				"monthly": "Aylık",
+				"yearly": "Yıllık"
+			},
+			"nextBilling": "Sonraki fatura: {{date}}",
+			"activeUntil": "Aktif bitiş: {{date}}",
+			"streak": "{{count}} ay üst üste",
+			"streakPlural": "{{count}} ay üst üste",
+			"bonusCredits": "+${{amount}} bonus {{date}}",
+			"manage": "Aboneliği Yönet",
+			"boost": {
+				"mode": "Boost Modu",
+				"unlocked": "Boost Kilidi Açıldı!",
+				"unlockProgress": "Boost kilidini açmak için ${{amount}}",
+				"monthlyUsage": "Aylık Kullanım",
+				"nextBoost": "Sonraki Boost",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Boost'u açmak için <amount>${{amount}}</amount> kullan"
+			},
+			"refills": "{{days}} gün içinde yenilenir",
+			"passActiveUntil": "Pass aktif bitiş",
+			"creditsNote": "Pass kredileri hiçbir zaman sona ermez. Kullanılmayan boost kredileri yenilemede sona erer.",
+			"promo": "%50'ye kadar ücretsiz kredi için <boost>Boost Modu</boost>'nu aç.",
+			"plans": {
+				"monthly": "Aylık",
+				"perMonth": "/ay",
+				"includesCredits": "<highlight>${{price}}/ay</highlight> Pass kredisi içerir",
+				"upToBoost": "<highlight>{{percent}}%</highlight>'e kadar Boost kredisi",
+				"firstMonthBoost": "İlk ay: <highlight>+{{percent}}%</highlight> Boost kredisi"
+			},
+			"subscriptionNote": "Pass kredileri asla sona ermez. Boost kredileri bir aylık Pass kredisi tüketildikten sonra açılır ve her aylık döngünün sonunda sona erer."
+		},
 		"detailedUsage": "Detaylı Kullanım",
 		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"
 	},

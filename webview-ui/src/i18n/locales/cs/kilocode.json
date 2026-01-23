@@ -139,6 +139,59 @@
 			"action": "Koupit nyní",
 			"viewAll": "Zobrazit všechny cenové možnosti"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Předplaťte si předvídatelné náklady na AI s rostoucími bonusovými kredity",
+			"recommended": "Doporučeno",
+			"perMonth": "/měsíc",
+			"action": "Předplatit",
+			"learnMore": "Více o Kilo Pass",
+			"yourSubscription": "Tvůj Kilo Pass",
+			"status": {
+				"active": "Aktivní",
+				"canceled": "Zrušeno",
+				"past_due": "Po splatnosti",
+				"trialing": "Zkušební",
+				"paused": "Pozastaveno",
+				"cancelling": "Ruší se"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Měsíční",
+				"yearly": "Roční"
+			},
+			"nextBilling": "Další platba: {{date}}",
+			"activeUntil": "Aktivní do: {{date}}",
+			"streak": "{{count}} měsíc v řadě",
+			"streakPlural": "{{count}} měsíců v řadě",
+			"bonusCredits": "+${{amount}} bonus dne {{date}}",
+			"manage": "Spravovat předplatné",
+			"boost": {
+				"mode": "Boost režim",
+				"unlocked": "Boost odemčen!",
+				"unlockProgress": "${{amount}} pro odemčení Boost",
+				"monthlyUsage": "Měsíční využití",
+				"nextBoost": "Další Boost",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Použij <amount>${{amount}}</amount> pro odemknutí Boost"
+			},
+			"refills": "Doplní se za {{days}} dní",
+			"passActiveUntil": "Pass aktivní do",
+			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší při doplnění.",
+			"promo": "Odemkni <boost>Boost Mode</boost> pro až 50% kreditů zdarma.",
+			"plans": {
+				"monthly": "Měsíčně",
+				"perMonth": "/měsíc",
+				"includesCredits": "Zahrnuje <highlight>${{price}}/měsíc</highlight> Pass kreditů",
+				"upToBoost": "Až <highlight>{{percent}}%</highlight> Boost kreditů",
+				"firstMonthBoost": "První měsíc: <highlight>+{{percent}}%</highlight> Boost kreditů"
+			},
+			"subscriptionNote": "Pass kredity nikdy nevyprší. Boost kredity se odemknou po spotřebování měsíce Pass kreditů a vyprší na konci každého měsíčního cyklu."
+		},
 		"detailedUsage": "Podrobné využití",
 		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"
 	},
