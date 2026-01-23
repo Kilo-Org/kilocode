@@ -584,5 +584,20 @@ describe("DiffViewProvider", () => {
 				expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled()
 			})
 		})
+
+		describe("update in CLI mode", () => {
+			it("should avoid delete edit when finalizing in CLI mode", async () => {
+				process.env.KILO_CLI_MODE = "true"
+				mockWorkspaceEdit.delete.mockClear()
+				vi.mocked(vscode.workspace.applyEdit).mockClear()
+
+				;(diffViewProvider as any).originalContent = "old\ncontent\n"
+				await diffViewProvider.update("new\ncontent\n", true)
+
+				// In CLI mode, finalization should skip the delete edit path
+				expect(mockWorkspaceEdit.delete).not.toHaveBeenCalled()
+				expect(vscode.workspace.applyEdit).toHaveBeenCalledTimes(2)
+			})
+		})
 	})
 })

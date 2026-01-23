@@ -159,6 +159,30 @@ export class DiffViewProvider {
 		this.streamedLines = accumulatedLines
 
 		if (isFinal) {
+			// In CLI mode, avoid multiple applyEdit calls that can duplicate content in the mock workspace
+			// (VS Code applies WorkspaceEdit in-memory; the CLI mock writes to disk, so multiple passes risk duplication)
+			if (process.env.KILO_CLI_MODE === "true") {
+				// Preserve empty last line if original content had one.
+				const hasEmptyLastLine = this.originalContent?.endsWith("\n")
+
+				if (hasEmptyLastLine && !accumulatedContent.endsWith("\n")) {
+					accumulatedContent += "\n"
+				}
+
+				const finalEdit = new vscode.WorkspaceEdit()
+				finalEdit.replace(
+					document.uri,
+					new vscode.Range(0, 0, document.lineCount, 0),
+					this.stripAllBOMs(accumulatedContent),
+				)
+				await vscode.workspace.applyEdit(finalEdit)
+
+				// Clear all decorations at the end (after applying final edit).
+				this.fadedOverlayController.clear()
+				this.activeLineController.clear()
+				return
+			}
+
 			// Handle any remaining lines if the new content is shorter than the
 			// original.
 			if (this.streamedLines.length < document.lineCount) {
