@@ -139,6 +139,7 @@ import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rule
 import { processUserContentMentions } from "../mentions/processUserContentMentions"
 import { getMessagesSinceLastSummary, summarizeConversation, getEffectiveApiHistory } from "../condense"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
+import { captureLlmErrorTelemetry, isLlmErrorTelemetryCaptured } from "./llm-error-telemetry"
 
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
@@ -3369,6 +3370,23 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// Cline instance to finish aborting (error is thrown here when
 					// any function in the for loop throws due to this.abort).
 					if (!this.abandoned) {
+						// kilocode_change start: Phase 1a LLM observability - fallback mid-stream API failure telemetry
+						// attemptApiRequest() captures mid-stream failures, but depending on consumption/iteration patterns
+						// (and especially in tests), the error can surface here without having been reported yet.
+						if (!isLlmErrorTelemetryCaptured(error)) {
+							captureLlmErrorTelemetry({
+								taskId: this.taskId,
+								error,
+								apiRequestStartTime,
+								inferenceProvider,
+								inputTokens,
+								outputTokens,
+								cacheWriteTokens,
+								cacheReadTokens,
+							})
+						}
+						// kilocode_change end
+
 						// Determine cancellation reason
 						const cancelReason: ClineApiReqCancelReason = this.abort ? "user_cancelled" : "streaming_failed"
 
@@ -4350,6 +4368,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Reset the flag after using it
 		this.skipPrevResponseIdOnce = false
 
+		// kilocode_change start: Phase 1a LLM observability - track request timing for error telemetry
+		const apiRequestStartTime = performance.now()
+		// kilocode_change end
+
 		// The provider accepts reasoning items alongside standard messages; cast to the expected parameter type.
 		const stream = this.api.createMessage(
 			systemPrompt,
@@ -4390,6 +4412,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
 			this.isWaitingForFirstChunk = false
+
+			// kilocode_change start: Phase 1a LLM observability - track first-chunk API request failures
+			// Only track non-user-cancel failures; aborts are not "API errors" and would be noisy.
+			if (!abortSignal.aborted && !this.abort) {
+				captureLlmErrorTelemetry({
+					taskId: this.taskId,
+					error,
+					apiRequestStartTime,
+					// No token usage available when the request fails before streaming usage.
+				})
+			}
+			// kilocode_change end
+
 			// kilocode_change start
 			if (apiConfiguration?.apiProvider === "kilocode" && isAnyRecognizedKiloCodeError(error)) {
 				const { response } = await (isPaymentRequiredError(error)
@@ -4465,14 +4500,29 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		// No error, so we can continue to yield all remaining chunks.
-		// (Needs to be placed outside of try/catch since it we want caller to
-		// handle errors not with api_req_failed as that is reserved for first
-		// chunk failures only.)
-		// This delegates to another generator or iterable object. In this case,
-		// it's saying "yield all remaining values from this iterator". This
-		// effectively passes along all subsequent chunks from the original
-		// stream.
-		yield* iterator
+		// NOTE: We *do* wrap this in a try/catch to ensure mid-stream failures are also tracked.
+		// The caller still handles the error (we rethrow), but telemetry should not depend on
+		// where the stream is consumed. // kilocode_change
+		try {
+			// This delegates to another generator or iterable object. In this case,
+			// it's saying "yield all remaining values from this iterator". This
+			// effectively passes along all subsequent chunks from the original stream.
+			yield* iterator
+		} catch (error) {
+			// kilocode_change start: Phase 1a LLM observability - track post-first-chunk API failures
+			// Only track non-user-cancel failures; aborts are not "API errors" and would be noisy.
+			if (!abortSignal.aborted && !this.abort) {
+				captureLlmErrorTelemetry({
+					taskId: this.taskId,
+					error,
+					apiRequestStartTime,
+					// Token usage might be partially available in the caller, but is not reliably accessible here.
+				})
+			}
+			// kilocode_change end
+
+			throw error
+		}
 
 		// kilocode_change start
 		if (apiConfiguration?.rateLimitAfter) {
