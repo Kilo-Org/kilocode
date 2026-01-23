@@ -63,6 +63,7 @@ export const globalSettingsSchema = z.object({
 	imageGenerationProvider: z.enum(["openrouter", "kilocode"]).optional(), // kilocode_change: Updated from "roo" to "kilocode"
 	openRouterImageApiKey: z.string().optional(),
 	openRouterImageGenerationSelectedModel: z.string().optional(),
+	openRouterUseMiddleOutTransform: z.boolean().optional(), // kilocode_change
 	kiloCodeImageApiKey: z.string().optional(),
 
 	condensingApiConfigId: z.string().optional(),
@@ -83,6 +84,8 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowMcp: z.boolean().optional(),
 	alwaysAllowModeSwitch: z.boolean().optional(),
 	alwaysAllowSubtasks: z.boolean().optional(),
+	alwaysAllowUpdateTodoList: z.boolean().optional(), // kilocode_change
+	alwaysApproveResubmit: z.boolean().optional(), // kilocode_change
 	alwaysAllowExecute: z.boolean().optional(),
 	alwaysAllowFollowupQuestions: z.boolean().optional(),
 	followupAutoApproveTimeoutMs: z.number().optional(),

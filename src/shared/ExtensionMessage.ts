@@ -300,7 +300,6 @@ export interface ExtensionMessage {
     requestId?: string
     promptText?: string
     results?: { path: string; type: "file" | "folder"; label?: string }[]
-    error?: string
     mcpMarketplaceCatalog?: McpMarketplaceCatalog // kilocode_change
     mcpDownloadDetails?: McpDownloadResponse // kilocode_change
     notificationOptions?: {
@@ -403,6 +402,8 @@ export type ExtensionState = Pick<
     | "alwaysAllowMcp"
     | "alwaysAllowModeSwitch"
     | "alwaysAllowSubtasks"
+    | "alwaysAllowUpdateTodoList" // kilocode_change
+    | "alwaysApproveResubmit" // kilocode_change
     | "alwaysAllowFollowupQuestions"
     | "alwaysAllowExecute"
     | "followupAutoApproveTimeoutMs"
@@ -472,6 +473,7 @@ export type ExtensionState = Pick<
     | "maxDiagnosticMessages"
     | "imageGenerationProvider"
     | "openRouterImageGenerationSelectedModel"
+    | "openRouterUseMiddleOutTransform" // kilocode_change
     | "includeTaskHistoryInEnhance"
     | "reasoningBlockCollapsed"
     | "enterBehavior"
