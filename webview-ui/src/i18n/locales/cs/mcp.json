@@ -26,7 +26,8 @@
 	"tabs": {
 		"tools": "Nástroje",
 		"resources": "Zdroje",
-		"logs": "Logy"
+		"logs": "Logy",
+		"authDebug": "Ladění Auth"
 	},
 	"emptyState": {
 		"noTools": "Nenalezeny žádné nástroje",
@@ -55,11 +56,27 @@
 	},
 	"serverStatus": {
 		"retrying": "Opakování...",
-		"retryConnection": "Opakovat připojení"
+		"retryConnection": "Opakovat připojení",
+		"signIn": "Přihlásit se",
+		"signingIn": "Přihlašování..."
 	},
 	"execution": {
 		"running": "Běží",
 		"completed": "Dokončeno",
 		"error": "Chyba"
+	},
+	"authDebug": {
+		"title": "OAuth Ladící informace",
+		"status": "Stav",
+		"tokenExpires": "Token vyprší",
+		"scopes": "Rozsahy",
+		"refreshInfo": "Informace o refresh tokenu",
+		"hasRefreshToken": "Má refresh token",
+		"canRefresh": "Automatické obnovení",
+		"tokenIssuedAt": "Token vydán",
+		"nextRefreshAt": "Další obnovení",
+		"lastRefreshAt": "Poslední obnovení",
+		"tokenEndpoint": "Token endpoint",
+		"clientId": "Client ID"
 	}
 }

@@ -111,6 +111,7 @@ export interface WebviewMessage {
 		| "openMcpSettings"
 		| "openProjectMcpSettings"
 		| "restartMcpServer"
+		| "mcpServerOAuthSignIn" // kilocode_change: MCP OAuth sign-in
 		| "refreshAllMcpServers"
 		| "toggleToolAlwaysAllow"
 		| "toggleToolEnabledForPrompt"

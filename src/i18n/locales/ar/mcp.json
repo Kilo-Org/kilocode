@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "فشل في قطع الاتصال عن {{count}} خادم MCP. تحقق من المخرجات للحصول على التفاصيل.",
 		"toolNotFound": "الأداة '{{toolName}}' غير موجودة في الخادم '{{serverName}}'. الأدوات المتاحة: {{availableTools}}",
 		"serverNotFound": "خادم MCP '{{serverName}}' غير مكوّن. الخوادم المتاحة: {{availableServers}}",
-		"toolDisabled": "الأداة '{{toolName}}' في الخادم '{{serverName}}' معطلة. الأدوات المفعلة المتاحة: {{availableTools}}"
+		"toolDisabled": "الأداة '{{toolName}}' في الخادم '{{serverName}}' معطلة. الأدوات المفعلة المتاحة: {{availableTools}}",
+		"oauth_signin_failed": "فشل تسجيل الدخول OAuth. يرجى المحاولة مرة أخرى.",
+		"oauth_failed": "فشل مصادقة OAuth لـ {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "جاري إعادة تشغيل خادم MCP: {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "الخوادم قيد التحديث حالياً.",
 		"refreshing_all": "جاري تحديث كل خوادم MCP...",
 		"all_refreshed": "تم تحديث جميع خوادم MCP.",
-		"project_config_deleted": "تم حذف ملف إعدادات MCP الخاص بالمشروع. تم فصل جميع الخوادم المرتبطة بالمشروع."
+		"project_config_deleted": "تم حذف ملف إعدادات MCP الخاص بالمشروع. تم فصل جميع الخوادم المرتبطة بالمشروع.",
+		"oauth_required": "مصادقة OAuth مطلوبة للاتصال بـ '{{serverUrl}}'",
+		"oauth_success": "نجحت مصادقة OAuth لـ '{{serverUrl}}'"
 	}
 }

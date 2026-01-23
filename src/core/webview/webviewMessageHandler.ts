@@ -1532,6 +1532,29 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start: MCP OAuth sign-in handler
+		case "mcpServerOAuthSignIn": {
+			try {
+				const mcpHub = provider.getMcpHub()
+				if (!mcpHub) {
+					provider.log("MCP Hub not available for OAuth sign-in")
+					break
+				}
+				if (!message.serverName) {
+					provider.log("Server name required for OAuth sign-in")
+					break
+				}
+				// Trigger OAuth flow for the specified server
+				await mcpHub.initiateOAuthSignIn(message.serverName, message.source as "global" | "project")
+			} catch (error) {
+				provider.log(
+					`Failed to initiate OAuth sign-in for ${message.serverName}: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+				vscode.window.showErrorMessage(t("mcp:errors.oauth_signin_failed"))
+			}
+			break
+		}
+		// kilocode_change end
 		case "toggleToolAlwaysAllow": {
 			try {
 				await provider

@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "ล้มเหลวในการตัดการเชื่อมต่อเซิร์ฟเวอร์ MCP {{count}} ตัว ตรวจสอบผลลัพธ์สำหรับรายละเอียด",
 		"toolNotFound": "เครื่องมือ '{{toolName}}' ไม่มีอยู่บนเซิร์ฟเวอร์ '{{serverName}}' เครื่องมือที่ใช้ได้: {{availableTools}}",
 		"serverNotFound": "เซิร์ฟเวอร์ MCP '{{serverName}}' ไม่ได้รับการกำหนดค่า เซิร์ฟเวอร์ที่ใช้ได้: {{availableServers}}",
-		"toolDisabled": "เครื่องมือ '{{toolName}}' บนเซิร์ฟเวอร์ '{{serverName}}' ถูกปิดใช้งาน เครื่องมือที่เปิดใช้งานที่ใช้ได้: {{availableTools}}"
+		"toolDisabled": "เครื่องมือ '{{toolName}}' บนเซิร์ฟเวอร์ '{{serverName}}' ถูกปิดใช้งาน เครื่องมือที่เปิดใช้งานที่ใช้ได้: {{availableTools}}",
+		"oauth_signin_failed": "การลงชื่อเข้าใช้ OAuth ล้มเหลว โปรดลองอีกครั้ง",
+		"oauth_failed": "การยืนยันตัวตน OAuth ล้มเหลวสำหรับ {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "กำลังรีสตาร์ทเซิร์ฟเวอร์ MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "เซิร์ฟเวอร์ MCP กำลังรีเฟรชอยู่แล้ว",
 		"refreshing_all": "กำลังรีเฟรชเซิร์ฟเวอร์ MCP ทั้งหมด...",
 		"all_refreshed": "เซิร์ฟเวอร์ MCP ทั้งหมดได้รับการรีเฟรชแล้ว",
-		"project_config_deleted": "ลบไฟล์กำหนดค่า MCP ของโปรเจ็กต์แล้ว เซิร์ฟเวอร์ MCP ของโปรเจ็กต์ทั้งหมดถูกตัดการเชื่อมต่อ"
+		"project_config_deleted": "ลบไฟล์กำหนดค่า MCP ของโปรเจ็กต์แล้ว เซิร์ฟเวอร์ MCP ของโปรเจ็กต์ทั้งหมดถูกตัดการเชื่อมต่อ",
+		"oauth_required": "ต้องการยืนยันตัวตน OAuth เพื่อเชื่อมต่อกับ '{{serverUrl}}'",
+		"oauth_success": "ยืนยันตัวตน OAuth สำเร็จสำหรับ '{{serverUrl}}'"
 	}
 }
