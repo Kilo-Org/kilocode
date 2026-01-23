@@ -13,6 +13,7 @@ import type {
 	McpServer,
 	ModeConfig,
 } from "../../types/messages.js"
+import type { PendingOutputUpdate } from "./effects.js"
 import { pendingOutputUpdatesAtom } from "./effects.js"
 
 /**
@@ -630,7 +631,7 @@ function reconcileMessages(
 	incoming: ExtensionChatMessage[],
 	versionMap: Map<number, number>,
 	streamingSet: Set<number>,
-	pendingUpdates?: Map<string, { output: string; command?: string; completed?: boolean }>,
+	pendingUpdates?: Map<string, PendingOutputUpdate>,
 ): ExtensionChatMessage[] {
 	// Create lookup map for current messages
 	const currentMap = new Map<number, ExtensionChatMessage>()
@@ -725,7 +726,7 @@ function reconcileMessages(
  */
 function deduplicateCommandOutputAsks(
 	messages: ExtensionChatMessage[],
-	pendingUpdates?: Map<string, { output: string; command?: string; completed?: boolean }>,
+	pendingUpdates?: Map<string, PendingOutputUpdate>,
 ): ExtensionChatMessage[] {
 	const result: ExtensionChatMessage[] = []
 	let mostRecentUnansweredAsk: ExtensionChatMessage | null = null
@@ -755,7 +756,7 @@ function deduplicateCommandOutputAsks(
 				if (pendingUpdates && pendingUpdates.size > 0) {
 					// Find the active (non-completed) pending update
 					let activeExecutionId: string | null = null
-					let activeUpdate: { output: string; command?: string; completed?: boolean } | null = null
+					let activeUpdate: PendingOutputUpdate | null = null
 
 					for (const [execId, update] of pendingUpdates.entries()) {
 						if (!update.completed) {
@@ -778,6 +779,7 @@ function deduplicateCommandOutputAsks(
 								executionId: activeExecutionId,
 								command: activeUpdate.command || "",
 								output: activeUpdate.output || "",
+								...(activeUpdate.pid !== undefined && { pid: activeUpdate.pid }),
 							}),
 							partial: !activeUpdate.completed,
 							isAnswered: activeUpdate.completed || false,

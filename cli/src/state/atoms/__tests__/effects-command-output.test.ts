@@ -31,12 +31,14 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 	it("should synthesize command_output ask immediately on start and update on exit", () => {
 		const executionId = "test-exec-123"
 		const command = "sleep 10"
+		const pid = 4242
 
 		// Simulate command started
 		const startedStatus: CommandExecutionStatus = {
 			status: "started",
 			executionId,
 			command,
+			pid,
 		}
 
 		const startedMessage: ExtensionMessage = {
@@ -52,6 +54,7 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 		expect(pendingUpdates.get(executionId)).toEqual({
 			output: "",
 			command: "sleep 10",
+			pid,
 		})
 
 		// Verify synthetic command_output ask was created IMMEDIATELY
@@ -70,6 +73,7 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 			executionId: "test-exec-123",
 			command: "sleep 10",
 			output: "",
+			pid,
 		})
 
 		// Simulate command exited without any output
@@ -93,6 +97,7 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 			output: "",
 			command: "sleep 10",
 			completed: true,
+			pid,
 		})
 
 		// Verify the ask was updated to mark as complete (not partial)
