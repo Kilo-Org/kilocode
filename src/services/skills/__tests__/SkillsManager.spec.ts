@@ -819,6 +819,181 @@ description: A test skill
 		})
 	})
 
+	// kilocode_change start - Tests for multi-directory skills support
+	describe("multi-directory skills support", () => {
+		const claudeSkillsDir = p(PROJECT_DIR, ".claude", "skills")
+
+		it("should discover skills from .claude directory", async () => {
+			const claudeSkillDir = p(claudeSkillsDir, "claude-skill")
+			const claudeSkillMd = p(claudeSkillDir, "SKILL.md")
+
+			mockDirectoryExists.mockImplementation(async (dir: string) => {
+				return dir === claudeSkillsDir
+			})
+
+			mockRealpath.mockImplementation(async (pathArg: string) => pathArg)
+
+			mockReaddir.mockImplementation(async (dir: string) => {
+				if (dir === claudeSkillsDir) {
+					return ["claude-skill"]
+				}
+				return []
+			})
+
+			mockStat.mockImplementation(async (pathArg: string) => {
+				if (pathArg === claudeSkillDir) {
+					return { isDirectory: () => true }
+				}
+				throw new Error("Not found")
+			})
+
+			mockFileExists.mockImplementation(async (file: string) => {
+				return file === claudeSkillMd
+			})
+
+			mockReadFile.mockImplementation(async (file: string) => {
+				if (file === claudeSkillMd) {
+					return `---
+name: claude-skill
+description: A skill from .claude directory
+---
+
+# Claude Skill
+
+Instructions here...`
+				}
+				throw new Error("File not found")
+			})
+
+			await skillsManager.discoverSkills()
+
+			const skills = skillsManager.getAllSkills()
+			expect(skills).toHaveLength(1)
+			expect(skills[0].name).toBe("claude-skill")
+			expect(skills[0].source).toBe("project")
+		})
+
+		it("should prefer .kilocode over .claude for same skill name", async () => {
+			const kilocodeSkillDir = p(projectSkillsDir, "shared-skill")
+			const kilocodeSkillMd = p(kilocodeSkillDir, "SKILL.md")
+			const claudeSkillDir = p(claudeSkillsDir, "shared-skill")
+			const claudeSkillMd = p(claudeSkillDir, "SKILL.md")
+
+			mockDirectoryExists.mockImplementation(async (dir: string) => {
+				return dir === projectSkillsDir || dir === claudeSkillsDir
+			})
+
+			mockRealpath.mockImplementation(async (pathArg: string) => pathArg)
+
+			mockReaddir.mockImplementation(async (dir: string) => {
+				if (dir === projectSkillsDir || dir === claudeSkillsDir) {
+					return ["shared-skill"]
+				}
+				return []
+			})
+
+			mockStat.mockImplementation(async (pathArg: string) => {
+				if (pathArg === kilocodeSkillDir || pathArg === claudeSkillDir) {
+					return { isDirectory: () => true }
+				}
+				throw new Error("Not found")
+			})
+
+			mockFileExists.mockImplementation(async (file: string) => {
+				return file === kilocodeSkillMd || file === claudeSkillMd
+			})
+
+			mockReadFile.mockImplementation(async (file: string) => {
+				if (file === kilocodeSkillMd) {
+					return `---
+name: shared-skill
+description: Skill from .kilocode
+---
+
+# Kilocode version`
+				}
+				if (file === claudeSkillMd) {
+					return `---
+name: shared-skill
+description: Skill from .claude
+---
+
+# Claude version`
+				}
+				throw new Error("File not found")
+			})
+
+			await skillsManager.discoverSkills()
+
+			const skills = skillsManager.getSkillsForMode("code")
+			const sharedSkill = skills.find((s) => s.name === "shared-skill")
+
+			// .kilocode should take precedence (first-wins for same source)
+			expect(sharedSkill?.description).toBe("Skill from .kilocode")
+		})
+
+		it("should merge skills from both directories", async () => {
+			const kilocodeSkillDir = p(projectSkillsDir, "kilocode-only")
+			const kilocodeSkillMd = p(kilocodeSkillDir, "SKILL.md")
+			const claudeSkillDir = p(claudeSkillsDir, "claude-only")
+			const claudeSkillMd = p(claudeSkillDir, "SKILL.md")
+
+			mockDirectoryExists.mockImplementation(async (dir: string) => {
+				return dir === projectSkillsDir || dir === claudeSkillsDir
+			})
+
+			mockRealpath.mockImplementation(async (pathArg: string) => pathArg)
+
+			mockReaddir.mockImplementation(async (dir: string) => {
+				if (dir === projectSkillsDir) {
+					return ["kilocode-only"]
+				}
+				if (dir === claudeSkillsDir) {
+					return ["claude-only"]
+				}
+				return []
+			})
+
+			mockStat.mockImplementation(async (pathArg: string) => {
+				if (pathArg === kilocodeSkillDir || pathArg === claudeSkillDir) {
+					return { isDirectory: () => true }
+				}
+				throw new Error("Not found")
+			})
+
+			mockFileExists.mockImplementation(async (file: string) => {
+				return file === kilocodeSkillMd || file === claudeSkillMd
+			})
+
+			mockReadFile.mockImplementation(async (file: string) => {
+				if (file === kilocodeSkillMd) {
+					return `---
+name: kilocode-only
+description: Only in .kilocode
+---
+
+# Kilocode Only`
+				}
+				if (file === claudeSkillMd) {
+					return `---
+name: claude-only
+description: Only in .claude
+---
+
+# Claude Only`
+				}
+				throw new Error("File not found")
+			})
+
+			await skillsManager.discoverSkills()
+
+			const skills = skillsManager.getSkillsForMode("code")
+			expect(skills).toHaveLength(2)
+			expect(skills.map((s) => s.name).sort()).toEqual(["claude-only", "kilocode-only"])
+		})
+	})
+	// kilocode_change end
+
 	describe("dispose", () => {
 		it("should clean up resources", async () => {
 			await skillsManager.dispose()
