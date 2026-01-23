@@ -647,6 +647,7 @@ export const providerSettingsSchema = z.object({
 	...vercelAiGatewaySchema.shape,
 	...sapAiCoreSchema.shape, // kilocode_change
 	...codebaseIndexProviderSchema.shape,
+	...inceptionSchema.shape,
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
