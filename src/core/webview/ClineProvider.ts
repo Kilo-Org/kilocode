@@ -120,7 +120,7 @@ import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
 import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService" // kilocode_change
-import { delay } from "../../utils/delay" // kilocode_change
+import { delay } from "../../shared/delay" // kilocode_change
 // kilocode_change end
 
 /**
