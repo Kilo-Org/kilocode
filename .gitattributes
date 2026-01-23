@@ -21,3 +21,6 @@ webview-ui/src/i18n/locales/** linguist-generated=true
 src/i18n/locales/en/** linguist-generated=false
 webview-ui/src/i18n/locales/en/** linguist-generated=false
 # This approach uses gitattributes' last-match-wins rule to exclude English while including all other locales
+
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads
