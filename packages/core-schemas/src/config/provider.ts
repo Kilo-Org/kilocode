@@ -289,7 +289,7 @@ export const zaiProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("zai"),
 	apiModelId: z.string().optional(),
 	zaiApiKey: z.string().optional(),
-	zaiApiLine: z.enum(["international_coding", "china_coding"]).optional(),
+	zaiApiLine: z.enum(["international_coding", "china_coding", "international_api", "china_api"]).optional(),
 })
 
 // Fireworks provider
