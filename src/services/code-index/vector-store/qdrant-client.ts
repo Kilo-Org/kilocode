@@ -25,6 +25,13 @@ export class QdrantVectorStore implements IVectorStore {
 	 * @param url Optional URL to the Qdrant server
 	 */
 	constructor(workspacePath: string, url: string, vectorSize: number, apiKey?: string) {
+		// kilocode_change start - Validate vectorSize to prevent RangeError (issue #5325)
+		if (typeof vectorSize !== 'number' || !Number.isFinite(vectorSize) || vectorSize <= 0 || vectorSize > 100000) {
+			console.error(`[QdrantVectorStore] Invalid vectorSize: ${vectorSize} (type: ${typeof vectorSize}). Expected positive finite number <= 100000.`)
+			throw new RangeError(`Invalid vector size: ${vectorSize}. Expected a positive finite number <= 100000.`)
+		}
+		// kilocode_change end
+
 		// Parse the URL to determine the appropriate QdrantClient configuration
 		const parsedUrl = this.parseQdrantUrl(url)
 
@@ -630,6 +637,14 @@ export class QdrantVectorStore implements IVectorStore {
 			// Use uuidv5 to generate a consistent UUID from a constant string
 			const metadataId = uuidv5("__indexing_metadata__", QDRANT_CODE_BLOCK_NAMESPACE)
 
+			// kilocode_change start - Debug logging for issue #5325
+			console.log(`[QdrantVectorStore] markIndexingComplete called with vectorSize: ${this.vectorSize}, type: ${typeof this.vectorSize}`)
+			if (this.vectorSize <= 0 || !Number.isFinite(this.vectorSize) || this.vectorSize > 100000) {
+				console.error(`[QdrantVectorStore] Invalid vectorSize detected in markIndexingComplete: ${this.vectorSize}. This will cause RangeError.`)
+				throw new RangeError(`Invalid vector size: ${this.vectorSize}. Expected a positive finite number <= 100000.`)
+			}
+			// kilocode_change end
+
 			await this.client.upsert(this.collectionName, {
 				points: [
 					{
@@ -660,6 +675,14 @@ export class QdrantVectorStore implements IVectorStore {
 			// Create a metadata point with a deterministic UUID to mark indexing as incomplete
 			// Use uuidv5 to generate a consistent UUID from a constant string
 			const metadataId = uuidv5("__indexing_metadata__", QDRANT_CODE_BLOCK_NAMESPACE)
+
+			// kilocode_change start - Debug logging for issue #5325
+			console.log(`[QdrantVectorStore] markIndexingIncomplete called with vectorSize: ${this.vectorSize}, type: ${typeof this.vectorSize}`)
+			if (this.vectorSize <= 0 || !Number.isFinite(this.vectorSize) || this.vectorSize > 100000) {
+				console.error(`[QdrantVectorStore] Invalid vectorSize detected in markIndexingIncomplete: ${this.vectorSize}. This will cause RangeError.`)
+				throw new RangeError(`Invalid vector size: ${this.vectorSize}. Expected a positive finite number <= 100000.`)
+			}
+			// kilocode_change end
 
 			await this.client.upsert(this.collectionName, {
 				points: [

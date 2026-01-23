@@ -25,6 +25,13 @@ export class LanceDBVectorStore implements IVectorStore {
 	private lancedbModule: any = null
 
 	constructor(workspacePath: string, vectorSize: number, dbDirectory: string, lancedbManager: LanceDBManager) {
+		// kilocode_change start - Validate vectorSize to prevent RangeError (issue #5325)
+		if (typeof vectorSize !== 'number' || !Number.isFinite(vectorSize) || vectorSize <= 0 || vectorSize > 100000) {
+			console.error(`[LanceDBVectorStore] Invalid vectorSize: ${vectorSize} (type: ${typeof vectorSize}). Expected positive finite number <= 100000.`)
+			throw new RangeError(`Invalid vector size: ${vectorSize}. Expected a positive finite number <= 100000.`)
+		}
+		// kilocode_change end
+
 		this.vectorSize = vectorSize
 		this.workspacePath = workspacePath
 		const basename = path.basename(workspacePath)
@@ -113,6 +120,13 @@ export class LanceDBVectorStore implements IVectorStore {
 	 * @returns An array containing sample data.
 	 */
 	private _createSampleData() {
+		// kilocode_change start - Debug logging for issue #5325
+		console.log(`[LanceDBVectorStore] _createSampleData called with vectorSize: ${this.vectorSize}, type: ${typeof this.vectorSize}`)
+		if (this.vectorSize <= 0 || !Number.isFinite(this.vectorSize) || this.vectorSize > 100000) {
+			console.error(`[LanceDBVectorStore] Invalid vectorSize detected: ${this.vectorSize}. This will cause RangeError.`)
+			throw new RangeError(`Invalid vector size: ${this.vectorSize}. Expected a positive finite number <= 100000.`)
+		}
+		// kilocode_change end
 		return [
 			{
 				id: "sample",
