@@ -12,6 +12,7 @@ import {
 	pastedTextReferencesAtom,
 	clearPastedTextReferencesAtom,
 } from "../atoms/keyboard.js"
+import { runUserPromptSubmitHooksAtom } from "../atoms/hooks.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
@@ -70,6 +71,7 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const clearImageReferences = useSetAtom(clearImageReferencesAtom)
 	const pastedTextReferences = useAtomValue(pastedTextReferencesAtom)
 	const clearPastedTextReferences = useSetAtom(clearPastedTextReferencesAtom)
+	const runUserPromptSubmitHooks = useSetAtom(runUserPromptSubmitHooksAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
 
@@ -83,6 +85,23 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 			setIsSending(true)
 
 			try {
+				// Run UserPromptSubmit hooks before processing
+				const hookResult = await runUserPromptSubmitHooks({ prompt: trimmedText })
+				if (hookResult.blocked) {
+					logs.info("User prompt blocked by hook", "useMessageHandler", {
+						reason: hookResult.blockReason,
+					})
+					const blockedMessage: CliMessage = {
+						id: `hook-blocked-${Date.now()}`,
+						type: "error",
+						content: `Message blocked: ${hookResult.blockReason || "Blocked by hook"}`,
+						ts: Date.now(),
+					}
+					addMessage(blockedMessage)
+					setIsSending(false)
+					return
+				}
+
 				// Expand [Pasted text #N +X lines] references with full content
 				const pastedTextRefsObject = Object.fromEntries(pastedTextReferences)
 				const expandedText = expandPastedTextReferences(trimmedText, pastedTextRefsObject)
@@ -162,6 +181,7 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 			clearImageReferences,
 			pastedTextReferences,
 			clearPastedTextReferences,
+			runUserPromptSubmitHooks,
 		],
 	)
 

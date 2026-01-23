@@ -38,6 +38,8 @@ import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
 import { randomUUID } from "crypto"
+import { loadHooks, runSessionStartHooks, runSessionEndHooks, type HooksConfig } from "./hooks/index.js"
+import { setHooksConfigAtom, setHooksSessionIdAtom, setHooksWorkspaceAtom } from "./state/atoms/hooks.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -49,9 +51,32 @@ export class CLI {
 	private options: CLIOptions
 	private isInitialized = false
 	private sessionService: SessionManager | null = null
+	private hooksConfig: HooksConfig = {}
+	private sessionId: string | null = null
 
 	constructor(options: CLIOptions = {}) {
 		this.options = options
+	}
+
+	/**
+	 * Get the loaded hooks configuration
+	 */
+	getHooksConfig(): HooksConfig {
+		return this.hooksConfig
+	}
+
+	/**
+	 * Get the current session ID
+	 */
+	getSessionId(): string | null {
+		return this.sessionId
+	}
+
+	/**
+	 * Get the workspace path
+	 */
+	getWorkspace(): string {
+		return this.options.workspace || process.cwd()
 	}
 
 	/**
@@ -90,6 +115,17 @@ export class CLI {
 			// Initialize telemetry service first to get identity
 			let config = await this.store.set(loadConfigAtom, this.options.mode)
 			logs.debug("CLI configuration loaded", "CLI", { mode: this.options.mode })
+
+			// Load lifecycle hooks from global and project configs
+			const workspace = this.options.workspace || process.cwd()
+			this.hooksConfig = await loadHooks(workspace)
+			logs.debug("Hooks configuration loaded", "CLI", {
+				events: Object.keys(this.hooksConfig),
+			})
+
+			// Set hooks config in store for access from atoms and hooks
+			this.store.set(setHooksConfigAtom, this.hooksConfig)
+			this.store.set(setHooksWorkspaceAtom, workspace)
 
 			// Apply provider and model overrides from CLI
 			if (this.options.provider || this.options.model) {
@@ -326,6 +362,19 @@ export class CLI {
 				await this.resumeLastConversation()
 			}
 
+			// Generate session ID for hooks context
+			this.sessionId = randomUUID()
+			this.store.set(setHooksSessionIdAtom, this.sessionId)
+
+			// Run SessionStart hooks
+			const isResume = Boolean(this.options.continue || this.options.session || this.options.fork)
+			await runSessionStartHooks(this.hooksConfig, {
+				workspace: this.options.workspace || process.cwd(),
+				session_id: this.sessionId,
+				isResume,
+			})
+			logs.debug("SessionStart hooks executed", "CLI", { isResume })
+
 			this.isInitialized = true
 			logs.info("Kilo Code CLI initialized successfully", "CLI")
 		} catch (error) {
@@ -451,6 +500,15 @@ export class CLI {
 
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
+
+			// Run SessionEnd hooks before cleanup
+			const exitReason = signal || (this.options.ci ? "ci_exit" : "user_exit")
+			await runSessionEndHooks(this.hooksConfig, {
+				workspace: this.options.workspace || process.cwd(),
+				session_id: this.sessionId || undefined,
+				reason: exitReason,
+			})
+			logs.debug("SessionEnd hooks executed", "CLI", { reason: exitReason })
 
 			await this.sessionService?.doSync(true)
 
