@@ -414,6 +414,234 @@ describe("ZAiHandler", () => {
 		})
 	})
 
+	describe("Request/Response Logging", () => {
+		it("should log endpoint and auth details for international_coding endpoint", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.5",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// Verify the baseURL matches the international_coding endpoint
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://api.z.ai/api/coding/paas/v4",
+				}),
+			)
+
+			// Verify API key is passed (mocked as 'test-zai-api-key')
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					apiKey: "test-zai-api-key",
+				}),
+			)
+		})
+
+		it("should log endpoint and auth details for china_coding endpoint", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.5",
+				zaiApiKey: "china-api-key",
+				zaiApiLine: "china_coding",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// Verify the baseURL matches the china_coding endpoint
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://open.bigmodel.cn/api/coding/paas/v4",
+				}),
+			)
+
+			// Verify API key is passed
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					apiKey: "china-api-key",
+				}),
+			)
+		})
+
+		it("should log request parameters including model, tokens, and thinking mode", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.7"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+				enableReasoningEffort: true,
+				reasoningEffort: "medium",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithModel.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			// Verify the request parameters are properly constructed
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).toMatchObject({
+				model: modelId,
+				temperature: ZAI_DEFAULT_TEMPERATURE,
+				stream: true,
+				stream_options: { include_usage: true },
+				thinking: { type: "enabled" }, // GLM-4.7 with reasoning enabled
+			})
+		})
+
+		it("should log response characteristics including reasoning content", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.7",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+				enableReasoningEffort: true,
+				reasoningEffort: "medium",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						next: vitest
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [{ delta: { reasoning_content: "This is reasoning" } }],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: { choices: [{ delta: { content: "This is the response" } }] },
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [{ delta: {} }],
+									usage: { prompt_tokens: 100, completion_tokens: 50 },
+								},
+							})
+							.mockResolvedValueOnce({ done: true }),
+					}),
+				}
+			})
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify reasoning content was captured
+			expect(chunks).toContainEqual(expect.objectContaining({ type: "reasoning" }))
+
+			// Verify text content was captured
+			expect(chunks).toContainEqual(
+				expect.objectContaining({
+					type: "text",
+					text: "This is the response",
+				}),
+			)
+
+			// Verify usage was captured
+			expect(chunks).toContainEqual(
+				expect.objectContaining({
+					type: "usage",
+					inputTokens: 100,
+					outputTokens: 50,
+				}),
+			)
+		})
+
+		it("should verify Z.ai API response is correctly parsed from Z.ai API format", async () => {
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: "glm-4.5",
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_coding",
+			})
+
+			// Simulate Z.ai-specific response format with reasoning_content
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						next: vitest
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [{ delta: { reasoning_content: "Thinking..." } }],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [{ delta: { content: "Here is my response" } }],
+								},
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: {
+									choices: [{ delta: {}, finish_reason: "stop" }],
+									usage: { prompt_tokens: 50, completion_tokens: 30 },
+								},
+							})
+							.mockResolvedValueOnce({ done: true }),
+					}),
+				}
+			})
+
+			const chunks: any[] = []
+			for await (const chunk of handlerWithModel.createMessage("system", [])) {
+				chunks.push(chunk)
+			}
+
+			// Verify reasoning_content is correctly parsed from Z.ai response
+			const reasoningChunk = chunks.find((c) => c.type === "reasoning" && c.text?.includes("Thinking"))
+			expect(reasoningChunk).toBeDefined()
+
+			// Verify text content is correctly parsed
+			const textChunk = chunks.find((c) => c.type === "text" && c.text?.includes("Here is my response"))
+			expect(textChunk).toBeDefined()
+
+			// Verify usage metrics are correctly parsed
+			const usageChunk = chunks.find((c) => c.type === "usage")
+			expect(usageChunk).toMatchObject({
+				type: "usage",
+				inputTokens: 50,
+				outputTokens: 30,
+			})
+		})
+	})
+
 	describe("GLM-4.7 Thinking Mode", () => {
 		it("should enable thinking by default for GLM-4.7 (default reasoningEffort is medium)", async () => {
 			const handlerWithModel = new ZAiHandler({
