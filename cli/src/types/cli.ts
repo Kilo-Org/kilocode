@@ -33,6 +33,7 @@ export interface CLIOptions {
 	session?: string
 	fork?: string
 	noSplash?: boolean
+	ephemeral?: boolean
 	appendSystemPrompt?: string
 	appendSystemPromptFile?: string
 	attachments?: string[] | undefined

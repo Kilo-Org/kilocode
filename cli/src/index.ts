@@ -15,7 +15,7 @@ import openConfigFile from "./config/openConfig.js"
 import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
 import { loadCustomModes, getSearchedPaths } from "./config/customModes.js"
-import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
+import { envConfigExists, getMissingEnvVars, setEphemeralMode } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
@@ -53,6 +53,7 @@ program
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
+	.option("--ephemeral", "Run in ephemeral mode (prevent config.json updates)", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
 	.option("--append-system-prompt-file <path>", "Read custom instructions from a file to append to the system prompt")
 	.option("--on-task-completed <prompt>", "Send a custom prompt to the agent when the task completes")
@@ -188,6 +189,11 @@ program
 				console.error(`Error: Provider "${options.provider}" not found. Available providers: ${availableIds}`)
 				process.exit(1)
 			}
+		}
+
+		// Set ephemeral mode if CLI flag is provided
+		if (options.ephemeral) {
+			setEphemeralMode(true)
 		}
 
 		// Validate attachments if specified
@@ -339,6 +345,7 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
+			ephemeral: options.ephemeral,
 			appendSystemPrompt: combinedSystemPrompt || undefined,
 			attachments: attachments.length > 0 ? attachments : undefined,
 			onTaskCompleted: options.onTaskCompleted,
