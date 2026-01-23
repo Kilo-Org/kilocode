@@ -1,5 +1,4 @@
 ---
-"@kilocode/agent-runtime": patch
 "kilo-code": patch
 ---
 

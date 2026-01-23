@@ -1506,7 +1506,10 @@ export class WorkspaceAPI {
 					// File doesn't exist, start with empty content
 				}
 
-				const originalLines = content.split("\n")
+				// Normalize line endings to LF for consistent offset calculation
+				// This handles Windows CRLF files correctly
+				const normalizedContent = content.replace(/\r\n/g, "\n")
+				const originalLines = normalizedContent.split("\n")
 				const getOffset = (line: number, character: number): number => {
 					let offset = 0
 					for (let i = 0; i < line && i < originalLines.length; i++) {
@@ -1522,7 +1525,7 @@ export class WorkspaceAPI {
 					return b.range.start.character - a.range.start.character
 				})
 
-				let updatedContent = content
+				let updatedContent = normalizedContent
 				for (const textEdit of sortedEdits) {
 					const startOffset = getOffset(textEdit.range.start.line, textEdit.range.start.character)
 					const endOffset = getOffset(textEdit.range.end.line, textEdit.range.end.character)

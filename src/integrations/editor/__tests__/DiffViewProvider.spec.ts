@@ -590,13 +590,31 @@ describe("DiffViewProvider", () => {
 				process.env.KILO_CLI_MODE = "true"
 				mockWorkspaceEdit.delete.mockClear()
 				vi.mocked(vscode.workspace.applyEdit).mockClear()
-
 				;(diffViewProvider as any).originalContent = "old\ncontent\n"
 				await diffViewProvider.update("new\ncontent\n", true)
 
 				// In CLI mode, finalization should skip the delete edit path
 				expect(mockWorkspaceEdit.delete).not.toHaveBeenCalled()
 				expect(vscode.workspace.applyEdit).toHaveBeenCalledTimes(2)
+			})
+
+			it("should preserve CRLF line endings when finalizing in CLI mode", async () => {
+				process.env.KILO_CLI_MODE = "true"
+				mockWorkspaceEdit.delete.mockClear()
+				mockWorkspaceEdit.replace.mockClear()
+				vi.mocked(vscode.workspace.applyEdit).mockClear()
+
+				// Original content has CRLF line endings
+				;(diffViewProvider as any).originalContent = "old\r\ncontent\r\n"
+				// New content doesn't have trailing newline
+				await diffViewProvider.update("new\r\ncontent", true)
+
+				// In CLI mode, should preserve CRLF when adding trailing newline
+				expect(mockWorkspaceEdit.replace).toHaveBeenCalled()
+				const replaceCall = mockWorkspaceEdit.replace.mock.calls.find(
+					(call: [unknown, unknown, string]) => call[2] && call[2].endsWith("\r\n"),
+				)
+				expect(replaceCall).toBeDefined()
 			})
 		})
 	})

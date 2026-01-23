@@ -50,4 +50,38 @@ describe("WorkspaceAPI.applyEdit", () => {
 		const finalContent = fs.readFileSync(filePath, "utf-8")
 		expect(finalContent).toBe("one\ntwo\nbeta\n")
 	})
+
+	it("handles Windows CRLF line endings correctly", async () => {
+		const vscode = createVSCodeAPIMock(tempDir, tempDir)
+		const edit = new WorkspaceEdit()
+		const uri = Uri.file(filePath)
+
+		// Write file with Windows CRLF line endings
+		fs.writeFileSync(filePath, "alpha\r\nbeta\r\ngamma\r\n", "utf-8")
+		// Replace "beta" on line 1
+		edit.replace(uri, new Range(new Position(1, 0), new Position(1, 4)), "REPLACED")
+
+		await vscode.workspace.applyEdit(edit)
+
+		const finalContent = fs.readFileSync(filePath, "utf-8")
+		// Content is normalized to LF
+		expect(finalContent).toBe("alpha\nREPLACED\ngamma\n")
+	})
+
+	it("handles mixed line endings correctly", async () => {
+		const vscode = createVSCodeAPIMock(tempDir, tempDir)
+		const edit = new WorkspaceEdit()
+		const uri = Uri.file(filePath)
+
+		// Write file with mixed line endings (CRLF and LF)
+		fs.writeFileSync(filePath, "line1\r\nline2\nline3\r\n", "utf-8")
+		// Replace "line2" on line 1
+		edit.replace(uri, new Range(new Position(1, 0), new Position(1, 5)), "MODIFIED")
+
+		await vscode.workspace.applyEdit(edit)
+
+		const finalContent = fs.readFileSync(filePath, "utf-8")
+		// Content is normalized to LF
+		expect(finalContent).toBe("line1\nMODIFIED\nline3\n")
+	})
 })

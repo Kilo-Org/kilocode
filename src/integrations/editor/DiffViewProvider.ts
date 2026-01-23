@@ -162,11 +162,14 @@ export class DiffViewProvider {
 			// In CLI mode, avoid multiple applyEdit calls that can duplicate content in the mock workspace
 			// (VS Code applies WorkspaceEdit in-memory; the CLI mock writes to disk, so multiple passes risk duplication)
 			if (process.env.KILO_CLI_MODE === "true") {
+				// Detect original EOL style to preserve it
+				const originalEOL = this.originalContent?.includes("\r\n") ? "\r\n" : "\n"
+
 				// Preserve empty last line if original content had one.
 				const hasEmptyLastLine = this.originalContent?.endsWith("\n")
 
 				if (hasEmptyLastLine && !accumulatedContent.endsWith("\n")) {
-					accumulatedContent += "\n"
+					accumulatedContent += originalEOL
 				}
 
 				const finalEdit = new vscode.WorkspaceEdit()
