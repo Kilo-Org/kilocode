@@ -503,11 +503,14 @@ export class CLI {
 
 			// Run SessionEnd hooks before cleanup
 			const exitReason = signal || (this.options.ci ? "ci_exit" : "user_exit")
-			await runSessionEndHooks(this.hooksConfig, {
+			const sessionEndInput: { workspace: string; reason: string; session_id?: string } = {
 				workspace: this.options.workspace || process.cwd(),
-				session_id: this.sessionId || undefined,
 				reason: exitReason,
-			})
+			}
+			if (this.sessionId) {
+				sessionEndInput.session_id = this.sessionId
+			}
+			await runSessionEndHooks(this.hooksConfig, sessionEndInput)
 			logs.debug("SessionEnd hooks executed", "CLI", { reason: exitReason })
 
 			await this.sessionService?.doSync(true)
