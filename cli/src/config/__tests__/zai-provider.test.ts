@@ -127,27 +127,28 @@ describe("Z.ai Provider Configuration", () => {
 			expect(result.errors?.some((e) => e.includes("zaiApiLine"))).toBe(true)
 		})
 
-		it("should reject Z.ai with invalid apiLine value", async () => {
-			const config: CLIConfig = {
-				version: "1.0.0",
-				mode: "code",
-				telemetry: false,
-				provider: "zai-invalid",
-				providers: [
-					{
-						id: "zai-invalid",
-						provider: "zai",
-						apiModelId: "glm-4.7",
-						zaiApiKey: "test-api-key-123",
-						zaiApiLine: "invalid_endpoint" as any,
-					},
-				],
+		it("should accept Z.ai with all valid apiLine values", async () => {
+			const validLines = ["international_coding", "china_coding", "international_api", "china_api"]
+
+			for (const line of validLines) {
+				const config: CLIConfig = {
+					version: "1.0.0",
+					mode: "code",
+					telemetry: false,
+					provider: `zai-${line}`,
+					providers: [
+						{
+							id: `zai-${line}`,
+							provider: "zai",
+							apiModelId: "glm-4.7",
+							zaiApiKey: "test-api-key-123",
+							zaiApiLine: line as Parameters<typeof validateConfig>[0]["providers"][0]["zaiApiLine"],
+						},
+					],
+				}
+				const result = await validateConfig(config)
+				expect(result.valid).toBe(true, `Failed for zaiApiLine: ${line}`)
 			}
-			const result = await validateConfig(config)
-			// Schema should accept any string value, but for actual CLI operation,
-			// the handler would validate the enum in the types module
-			// For now just verify that all valid values pass
-			expect(result.valid).toBe(true)
 		})
 
 		it("should reject Z.ai without required apiKey", async () => {
