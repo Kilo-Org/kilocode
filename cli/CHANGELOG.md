@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 0.25.1
+
+### Patch Changes
+
+- [#5250](https://github.com/Kilo-Org/kilocode/pull/5250) [`96c2b39`](https://github.com/Kilo-Org/kilocode/commit/96c2b391744beb5b1a1665638587cc67706f6773) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix intermittent issue where list_files and search_files tools show "Total: 0 items" or "Found: 0 matches"
+
+- [#5227](https://github.com/Kilo-Org/kilocode/pull/5227) [`12d96fa`](https://github.com/Kilo-Org/kilocode/commit/12d96fa41da4ce1ae3dce03d7180f59f1e154ff8) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Replace verbose "(git worktree)" indicator with compact "⎇" symbol in CLI status bar and terminal title
+
 ## 0.25.0
 
 ### Minor Changes

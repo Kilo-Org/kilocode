@@ -17,6 +17,7 @@ import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 import { commitCompletionTimeout } from "../../parallel/parallel.js"
+import { logs } from "../../services/logs.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -142,6 +143,56 @@ export const isStreamingAtom = atom<boolean>((get) => {
  * the extension to process the cancellation request
  */
 export const isCancellingAtom = atom<boolean>(false)
+
+/**
+ * Derived atom to check if the task is actively processing but not streaming.
+ * This fills the gap when isStreamingAtom returns false but the task is still running.
+ *
+ * Returns true when:
+ * - The last message is `checkpoint_saved` (task just saved a checkpoint, will continue)
+ * - OR the last message is `api_req_started` with a cost (API call finished, task will continue)
+ *
+ * This is more precise than checking for "any non-completion message" because it only
+ * triggers for specific messages that indicate the task is actively processing.
+ */
+export const isProcessingAtom = atom<boolean>((get) => {
+	const messages = get(chatMessagesAtom)
+
+	if (messages.length === 0) {
+		return false
+	}
+
+	const lastMessage = messages[messages.length - 1]
+	if (!lastMessage) {
+		return false
+	}
+
+	// If streaming, let isStreamingAtom handle it
+	const isStreaming = get(isStreamingAtom)
+	if (isStreaming) {
+		return false
+	}
+
+	// After checkpoint_saved, the task is still running
+	if (lastMessage.say === "checkpoint_saved") {
+		return true
+	}
+
+	// After api_req_started with cost (finished API call), the task is processing the response
+	if (lastMessage.say === "api_req_started" && lastMessage.text) {
+		try {
+			const apiReqInfo = JSON.parse(lastMessage.text)
+			// If there's a cost, the API call has finished and the task is processing
+			if (apiReqInfo.cost !== undefined && apiReqInfo.cost > 0) {
+				return true
+			}
+		} catch (error) {
+			logs.debug("Failed to parse api_req_started message in isProcessingAtom", "UIAtoms", { error })
+		}
+	}
+
+	return false
+})
 
 // ============================================================================
 // Input Mode System

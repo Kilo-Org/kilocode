@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La respuesta del modelo terminó inesperadamente (sin mensajes del asistente). Esto puede ser una señal de limitación de tasa.",
 		"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}",
 		"maxCompletionTokens": "Se alcanzó el número máximo de tokens de finalización.",
+		"contentFilter": "La solicitud fue bloqueada por el filtro de contenido.",
 		"disableApplyDiff": "Si este error sigue ocurriendo, por favor desactiva la Edición a través de Diferencias en Configuración Avanzada.",
 		"disableEditFile": "Si este error sigue ocurriendo, por favor desactiva la función experimental de Aplicación Rápida."
 	},

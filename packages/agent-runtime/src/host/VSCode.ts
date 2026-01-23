@@ -1,5 +1,7 @@
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
+import * as crypto from "crypto"
 import { logs } from "../utils/logger.js"
 import { KiloCodePaths } from "../utils/paths.js"
 import { Package } from "../constants/package.js"
@@ -949,13 +951,17 @@ export class ExtensionContext {
 		this.extensionUri = Uri.file(extensionPath)
 
 		if (useMemoryOnlyStorage) {
-			// Use in-memory only storage - no file I/O, no CLI path dependency
-			// This is for agent-manager where all config comes via IPC
-			this.globalStoragePath = path.join(workspacePath, ".kilocode-agent")
-			this.globalStorageUri = Uri.file(this.globalStoragePath)
-			this.storagePath = path.join(workspacePath, ".kilocode-agent", "workspace")
+			// Use temp directory for agent-manager mode to avoid polluting user workspace
+			// Each agent gets a unique session ID for isolation
+			// Config comes via IPC, so persistence isn't needed - temp dir is cleaned by OS
+			const sessionId = process.env.AGENT_SESSION_ID || crypto.randomUUID()
+			const tempBase = path.join(os.tmpdir(), "kilocode-agent", sessionId)
+
+			this.globalStoragePath = tempBase
+			this.globalStorageUri = Uri.file(tempBase)
+			this.storagePath = path.join(tempBase, "workspace")
 			this.storageUri = Uri.file(this.storagePath)
-			this.logPath = path.join(workspacePath, ".kilocode-agent", "logs")
+			this.logPath = path.join(tempBase, "logs")
 			this.logUri = Uri.file(this.logPath)
 
 			// Use pure in-memory mementos (no file backing)
@@ -1500,36 +1506,35 @@ export class WorkspaceAPI {
 					// File doesn't exist, start with empty content
 				}
 
+				// Normalize line endings to LF for consistent offset calculation
+				// This handles Windows CRLF files correctly
+				const normalizedContent = content.replace(/\r\n/g, "\n")
+				const originalLines = normalizedContent.split("\n")
+				const getOffset = (line: number, character: number): number => {
+					let offset = 0
+					for (let i = 0; i < line && i < originalLines.length; i++) {
+						offset += (originalLines[i]?.length || 0) + 1
+					}
+					return offset + character
+				}
+
 				// Apply edits in reverse order to maintain correct positions
-				const sortedEdits = edits.sort((a, b) => {
+				const sortedEdits = [...edits].sort((a, b) => {
 					const lineDiff = b.range.start.line - a.range.start.line
 					if (lineDiff !== 0) return lineDiff
 					return b.range.start.character - a.range.start.character
 				})
 
-				const lines = content.split("\n")
+				let updatedContent = normalizedContent
 				for (const textEdit of sortedEdits) {
-					const startLine = textEdit.range.start.line
-					const startChar = textEdit.range.start.character
-					const endLine = textEdit.range.end.line
-					const endChar = textEdit.range.end.character
-
-					if (startLine === endLine) {
-						// Single line edit
-						const line = lines[startLine] || ""
-						lines[startLine] = line.substring(0, startChar) + textEdit.newText + line.substring(endChar)
-					} else {
-						// Multi-line edit
-						const firstLine = lines[startLine] || ""
-						const lastLine = lines[endLine] || ""
-						const newContent =
-							firstLine.substring(0, startChar) + textEdit.newText + lastLine.substring(endChar)
-						lines.splice(startLine, endLine - startLine + 1, newContent)
-					}
+					const startOffset = getOffset(textEdit.range.start.line, textEdit.range.start.character)
+					const endOffset = getOffset(textEdit.range.end.line, textEdit.range.end.character)
+					updatedContent =
+						updatedContent.slice(0, startOffset) + textEdit.newText + updatedContent.slice(endOffset)
 				}
 
 				// Write back to file
-				const newContent = lines.join("\n")
+				const newContent = updatedContent
 				fs.writeFileSync(filePath, newContent, "utf-8")
 
 				// Update the in-memory document object to reflect the new content

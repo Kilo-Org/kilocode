@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "{{count}}個のMCPサーバーの切断に失敗しました。詳細は出力を確認してください。",
 		"toolNotFound": "ツール '{{toolName}}' はサーバー '{{serverName}}' に存在しません。利用可能なツール: {{availableTools}}",
 		"serverNotFound": "MCPサーバー '{{serverName}}' は設定されていません。利用可能なサーバー: {{availableServers}}",
-		"toolDisabled": "サーバー '{{serverName}}' のツール '{{toolName}}' は無効です。利用可能な有効なツール: {{availableTools}}"
+		"toolDisabled": "サーバー '{{serverName}}' のツール '{{toolName}}' は無効です。利用可能な有効なツール: {{availableTools}}",
+		"oauth_signin_failed": "OAuthサインインに失敗しました。もう一度お試しください。",
+		"oauth_failed": "{{serverUrl}}のOAuth認証に失敗しました: {{error}}"
 	},
 	"info": {
 		"server_restarting": "MCPサーバー{{serverName}}を再起動中...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCPサーバーはすでに更新中です。",
 		"refreshing_all": "すべてのMCPサーバーを更新しています...",
 		"all_refreshed": "すべてのMCPサーバーが更新されました。",
-		"project_config_deleted": "プロジェクトMCP設定ファイルが削除されました。すべてのプロジェクトMCPサーバーが切断されました。"
+		"project_config_deleted": "プロジェクトMCP設定ファイルが削除されました。すべてのプロジェクトMCPサーバーが切断されました。",
+		"oauth_required": "'{{serverUrl}}'への接続にはOAuth認証が必要です",
+		"oauth_success": "'{{serverUrl}}'のOAuth認証に成功しました"
 	}
 }

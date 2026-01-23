@@ -60,7 +60,9 @@
 		"selectModel": "Selecionar modelo",
 		"modelTooltip": "Escolha qual modelo de IA usar para esta sessão",
 		"defaultModel": "Modelo padrão",
-		"loadingModels": "Carregando..."
+		"loadingModels": "Carregando...",
+		"selectMode": "Selecionar modo",
+		"modeTooltip": "Modo: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",
@@ -75,7 +77,9 @@
 		"usingTool": "Usando ferramenta: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir saída",
 		"collapseOutput": "Recolher saída",
-		"copyCommand": "Copiar comando"
+		"copyCommand": "Copiar comando",
+		"thinking": "Pensando",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agente executando em modo totalmente automático - entrada não permitida",

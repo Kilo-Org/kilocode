@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP 서버",
-			"agentBehaviour": "에이전트 동작"
+			"agentBehaviour": "에이전트 동작",
+			"skills": "스킬"
 		},
 		"provider": {
 			"account": "Kilo Code 계정",
@@ -155,7 +156,8 @@
 			"rules": "규칙",
 			"workflows": "워크플로우",
 			"mcps": "MCPs",
-			"modes": "모드"
+			"modes": "모드",
+			"skills": "스킬"
 		},
 		"ariaLabel": "Kilo Code 규칙",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"defaultOption": "시스템 기본값",
 			"noDevices": "마이크 장치가 발견되지 않음",
 			"refresh": "새로 고침"
+		}
+	},
+	"skills": {
+		"description": "스킬은 특정 작업에 대한 전문 지침을 제공합니다. 요청과 관련이 있을 때 자동으로 적용됩니다.",
+		"noSkills": "설치된 스킬 없음",
+		"projectSkills": "프로젝트 스킬",
+		"globalSkills": "전역 스킬",
+		"deleteDialog": {
+			"title": "스킬 삭제",
+			"description": "\"{{skillName}}\" 스킬을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+			"cancel": "취소",
+			"delete": "삭제"
 		}
 	}
 }

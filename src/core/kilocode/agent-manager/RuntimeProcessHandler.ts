@@ -23,7 +23,7 @@ import type {
 	ErrorStreamEvent,
 	CompleteStreamEvent,
 } from "./CliOutputParser"
-import type { ClineMessage, ProviderSettings } from "@roo-code/types"
+import type { ClineMessage, ModeConfig, ProviderSettings } from "@roo-code/types"
 import { Package } from "../../../shared/package"
 
 /**
@@ -89,6 +89,7 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	timeoutId?: NodeJS.Timeout
 	model?: string
+	mode?: string // Mode slug (e.g., "code", "architect", "debug")
 	images?: string[]
 	sessionData?: SessionData // For resuming with history
 }
@@ -114,6 +115,8 @@ export interface RuntimeProcessHandlerCallbacks {
 	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void
+	onModeChanged?: (sessionId: string, mode: string, previousMode: string) => void
+	onWorktreeSessionCreated?: (sessionId: string, worktreePath: string) => void // Called when a worktree session is created
 }
 
 export class RuntimeProcessHandler {
@@ -123,6 +126,8 @@ export class RuntimeProcessHandler {
 	private sentApiReqStarted: Set<string> = new Set()
 	// Track pending resume continuations - sent after session is loaded from server
 	private pendingResumeContinuation: Map<string, { prompt: string; images?: string[] }> = new Map()
+	// Track current mode for each session to detect mode changes
+	private sessionModes: Map<string, string> = new Map()
 	// VS Code app root path for finding bundled binaries
 	private vscodeAppRoot?: string
 
@@ -164,6 +169,14 @@ export class RuntimeProcessHandler {
 	 */
 	private getProcessEntryPath(): string {
 		const fs = require("fs")
+
+		// Development: Check for explicit dev path override (set in launch.json)
+		// This ensures F5 debugging uses the locally built agent-runtime from the current workspace
+		const devPath = process.env.KILOCODE_DEV_AGENT_RUNTIME_PATH
+		if (devPath && fs.existsSync(devPath)) {
+			this.callbacks.onLog(`Using dev agent-runtime process: ${devPath}`)
+			return devPath
+		}
 
 		// Production: Check for bundled file in extension's dist directory
 		// The esbuild config bundles agent-runtime/src/process.ts to dist/agent-runtime-process.js
@@ -210,15 +223,22 @@ export class RuntimeProcessHandler {
 			apiConfiguration?: ProviderSettings
 			worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			model?: string
+			mode?: string // Mode slug (e.g., "code", "architect", "debug")
+			customModes?: ModeConfig[] // Custom modes including organization modes
 			images?: string[]
 			autoApprove?: boolean
 			sessionData?: SessionData // For resuming with history
 		},
 	): Record<string, unknown> {
+		const modeToUse = options?.mode || "code"
+
+		this.callbacks.onLog(`[buildAgentConfig] mode=${modeToUse}`)
+
 		const config: Record<string, unknown> = {
 			workspace,
 			providerSettings: options?.apiConfiguration || {},
-			mode: "code",
+			mode: modeToUse, // Use provided mode or default to "code"
+			customModes: options?.customModes, // Pass custom modes to agent process
 			autoApprove: options?.autoApprove ?? true, // Default to auto-approve for agent manager
 			sessionId: options?.sessionId,
 		}
@@ -284,6 +304,8 @@ export class RuntimeProcessHandler {
 					shellPath?: string // Ignored - for CliProcessHandler compatibility
 					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 					model?: string
+					mode?: string // Mode slug (e.g., "code", "architect", "debug")
+					customModes?: ModeConfig[] // Custom modes including organization modes
 					images?: string[]
 					sessionData?: SessionData // For resuming with history
 			  }
@@ -302,6 +324,7 @@ export class RuntimeProcessHandler {
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
 					model: options?.model,
+					mode: options?.mode,
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
@@ -355,6 +378,7 @@ export class RuntimeProcessHandler {
 				worktreeInfo: options?.worktreeInfo,
 				gitUrl: options?.gitUrl,
 				model: options?.model,
+				mode: options?.mode,
 				images: options?.images,
 				sessionData: options?.sessionData,
 			}
@@ -485,6 +509,7 @@ export class RuntimeProcessHandler {
 			labelOverride: this.pendingProcess.desiredLabel,
 			gitUrl: this.pendingProcess.gitUrl,
 			model: this.pendingProcess.model,
+			mode: this.pendingProcess.mode,
 		})
 		this.registry.updateSessionStatus(sessionId, "running")
 
@@ -510,15 +535,23 @@ export class RuntimeProcessHandler {
 
 		// Clear pending state
 		this.registry.clearPendingSession()
+
+		// Capture worktree info before clearing pendingProcess
+		const worktreeInfo = this.pendingProcess.worktreeInfo
+		const parallelMode = this.pendingProcess.parallelMode
 		this.pendingProcess = null
 
 		this.callbacks.onStateChanged()
 		this.callbacks.onPendingSessionChanged(null)
 
 		// Pass resume info if this is a resumed session with history
-		const resumeInfo =
-			isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
+		const resumeInfo = isResume && sessionData ? { prompt: capturedPrompt, images: images } : undefined
 		this.callbacks.onSessionCreated(false, resumeInfo)
+
+		// Notify when worktree session is created for persistence
+		if (parallelMode && worktreeInfo?.path) {
+			this.callbacks.onWorktreeSessionCreated?.(sessionId, worktreeInfo.path)
+		}
 
 		// Send session_created event
 		const sessionCreatedEvent: SessionCreatedStreamEvent = {
@@ -600,14 +633,31 @@ export class RuntimeProcessHandler {
 		}
 
 		if (extMsg.type === "state" && extMsg.state) {
-			// State update - extract chat messages if present
-			const state = extMsg.state as { chatMessages?: ClineMessage[]; clineMessages?: ClineMessage[] }
+			// State update - extract chat messages and mode if present
+			const state = extMsg.state as {
+				chatMessages?: ClineMessage[]
+				clineMessages?: ClineMessage[]
+				mode?: string
+			}
 			// Handle both property names - extension uses clineMessages internally
 			const chatMessages = state.chatMessages || state.clineMessages
 
 			this.callbacks.onLog(
 				`[ExtMsg] ${sessionId}: state update with ${chatMessages?.length || 0} messages (sentApiReqStarted=${this.sentApiReqStarted.has(sessionId)})`,
 			)
+
+			// Check for mode changes and notify callback
+			if (state.mode) {
+				const previousMode = this.sessionModes.get(sessionId)
+				if (previousMode && previousMode !== state.mode) {
+					this.callbacks.onLog(`[ExtMsg] ${sessionId}: mode changed from ${previousMode} to ${state.mode}`)
+					this.sessionModes.set(sessionId, state.mode)
+					this.callbacks.onModeChanged?.(sessionId, state.mode, previousMode)
+				} else if (!previousMode) {
+					// First time seeing mode for this session, just track it
+					this.sessionModes.set(sessionId, state.mode)
+				}
+			}
 
 			if (chatMessages && chatMessages.length > 0) {
 				// Log last few message types and content for debugging
@@ -822,6 +872,7 @@ export class RuntimeProcessHandler {
 			this.activeSessions.delete(sessionId)
 			this.sentApiReqStarted.delete(sessionId)
 			this.pendingResumeContinuation.delete(sessionId)
+			this.sessionModes.delete(sessionId)
 
 			// Update session status based on exit code
 			if (code === 0) {

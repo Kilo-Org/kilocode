@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "断开 {{count}} 个 MCP 服务器失败。请查看输出了解详情。",
 		"toolNotFound": "工具 '{{toolName}}' 在服务器 '{{serverName}}' 上不存在。可用工具: {{availableTools}}",
 		"serverNotFound": "MCP 服务器 '{{serverName}}' 未配置。可用服务器: {{availableServers}}",
-		"toolDisabled": "服务器 '{{serverName}}' 上的工具 '{{toolName}}' 已禁用。可用的已启用工具: {{availableTools}}"
+		"toolDisabled": "服务器 '{{serverName}}' 上的工具 '{{toolName}}' 已禁用。可用的已启用工具: {{availableTools}}",
+		"oauth_signin_failed": "OAuth 登录失败。请重试。",
+		"oauth_failed": "{{serverUrl}} 的 OAuth 认证失败: {{error}}"
 	},
 	"info": {
 		"server_restarting": "正在重启{{serverName}}MCP服务器...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP 服务器已在刷新中。",
 		"refreshing_all": "正在刷新所有 MCP 服务器...",
 		"all_refreshed": "所有 MCP 服务器已刷新。",
-		"project_config_deleted": "项目MCP配置文件已删除。所有项目MCP服务器已断开连接。"
+		"project_config_deleted": "项目MCP配置文件已删除。所有项目MCP服务器已断开连接。",
+		"oauth_required": "连接 '{{serverUrl}}' 需要 OAuth 认证",
+		"oauth_success": "'{{serverUrl}}' 的 OAuth 认证成功"
 	}
 }

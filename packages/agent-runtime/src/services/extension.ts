@@ -81,7 +81,10 @@ export class ExtensionService extends EventEmitter {
 	private extensionHost: ExtensionHost
 	private messageBridge: MessageBridge
 	private options: Required<
-		Omit<ExtensionServiceOptions, "identity" | "customModes" | "appendSystemPrompt" | "vscodeAppRoot" | "appName" | "providerSettings">
+		Omit<
+			ExtensionServiceOptions,
+			"identity" | "customModes" | "appendSystemPrompt" | "vscodeAppRoot" | "appName" | "providerSettings"
+		>
 	> & {
 		identity?: IdentityInfo
 		customModes?: ModeConfig[]
@@ -131,6 +134,9 @@ export class ExtensionService extends EventEmitter {
 		}
 		if (this.options.identity) {
 			hostOptions.identity = this.options.identity
+		}
+		if (this.options.mode) {
+			hostOptions.mode = this.options.mode
 		}
 		if (this.options.customModes) {
 			hostOptions.customModes = this.options.customModes

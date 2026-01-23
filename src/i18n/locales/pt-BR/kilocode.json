@@ -15,6 +15,7 @@
 		"noAssistantMessages": "A resposta do modelo terminou inesperadamente (nenhuma mensagem do assistente). Isso pode ser um sinal de limitação de taxa.",
 		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
 		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido.",
+		"contentFilter": "A solicitação foi bloqueada pelo filtro de conteúdo.",
 		"disableApplyDiff": "Se este erro continuar ocorrendo, desabilite a opção Edição Através de Diffs nas Configurações Avançadas.",
 		"disableEditFile": "Se este erro continuar ocorrendo, desabilite o recurso experimental Fast Apply."
 	},

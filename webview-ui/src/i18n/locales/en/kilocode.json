@@ -47,7 +47,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers",
-			"agentBehaviour": "Agent Behaviour"
+			"agentBehaviour": "Agent Behaviour",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
@@ -155,7 +156,8 @@
 			"rules": "Rules",
 			"workflows": "Workflows",
 			"mcps": "MCPs",
-			"modes": "Modes"
+			"modes": "Modes",
+			"skills": "Skills"
 		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
@@ -359,6 +361,18 @@
 			"loading": "Loading microphone devices...",
 			"noDevices": "No microphone devices found",
 			"refresh": "Refresh"
+		}
+	},
+	"skills": {
+		"description": "Skills provide specialized instructions for specific tasks. They are automatically applied when relevant to your request.",
+		"noSkills": "No skills installed",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Global Skills",
+		"deleteDialog": {
+			"title": "Delete Skill",
+			"description": "Are you sure you want to delete the skill \"{{skillName}}\"? This action cannot be undone.",
+			"cancel": "Cancel",
+			"delete": "Delete"
 		}
 	}
 }
