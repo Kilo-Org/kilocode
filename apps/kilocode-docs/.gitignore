@@ -10,6 +10,7 @@
 .cache-loader
 *.js
 !src/**/*.js
+!scripts/**/*.js
 
 # Misc
 .DS_Store
