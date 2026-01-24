@@ -1059,6 +1059,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	anthropic: "claude-3-5-sonnet-20241022",
 	"openai-native": "gpt-4o",
 	"openai-codex": "gpt-4o",
+	"openai-responses": "gpt-4o",
 	openrouter: "anthropic/claude-3-5-sonnet",
 	bedrock: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 	gemini: "gemini-1.5-pro-latest",

@@ -406,8 +406,8 @@ function NewAgentForm() {
 						aria-label={t("sessionDetail.startNewAgent")}
 						disabled={isStarting}
 						placeholder={t("sessionDetail.placeholderTask")}
-						minRows={5}
-						maxRows={12}
+						minRows={8}
+						maxRows={20}
 						style={{
 							paddingTop: "12px",
 							// Add extra padding when images are present to make room for the image row

@@ -20,6 +20,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	deepseek: ["deepSeekApiKey", "apiModelId"],
 	xai: ["xaiApiKey", "apiModelId"],
 	openai: ["openAiApiKey"],
+	"openai-responses": ["openAiApiKey"],
 	cerebras: ["cerebrasApiKey", "apiModelId"],
 	glama: ["glamaApiKey", "glamaModelId"],
 	"nano-gpt": ["nanoGptApiKey", "nanoGptModelId"],

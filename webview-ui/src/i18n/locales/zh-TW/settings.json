@@ -95,6 +95,7 @@
 		"mistralApiKeyLabel": "API 金鑰：",
 		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
 		"openaiCompatibleProvider": "OpenAI 相容",
+		"openaiCompatibleResponsesProvider": "OpenAI 相容 (Responses)",
 		"openAiKeyLabel": "OpenAI API 金鑰",
 		"openAiKeyPlaceholder": "輸入您的 OpenAI API 金鑰",
 		"openAiCompatibleBaseUrlLabel": "基礎 URL",
