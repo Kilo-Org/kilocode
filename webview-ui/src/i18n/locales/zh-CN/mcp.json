@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "工具",
 		"resources": "资源",
-		"logs": "日志"
+		"logs": "日志",
+		"authDebug": "认证调试"
 	},
 	"emptyState": {
 		"noTools": "未找到工具",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "重试中...",
-		"retryConnection": "重试连接"
+		"retryConnection": "重试连接",
+		"signIn": "登录",
+		"signingIn": "登录中..."
 	},
 	"refreshMCP": "刷新 MCP 服务器",
 	"execution": {
 		"running": "运行中",
 		"completed": "已完成",
 		"error": "错误"
+	},
+	"authDebug": {
+		"title": "OAuth 调试信息",
+		"status": "状态",
+		"tokenExpires": "Token 过期时间",
+		"scopes": "权限范围",
+		"refreshInfo": "刷新 Token 信息",
+		"hasRefreshToken": "有刷新 Token",
+		"canRefresh": "可自动刷新",
+		"tokenIssuedAt": "Token 签发时间",
+		"nextRefreshAt": "下次刷新时间",
+		"lastRefreshAt": "上次刷新时间",
+		"tokenEndpoint": "Token 端点",
+		"clientId": "Client ID"
 	}
 }

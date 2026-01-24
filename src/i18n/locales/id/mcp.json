@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Gagal memutus koneksi {{count}} server MCP. Periksa output untuk detailnya.",
 		"toolNotFound": "Tool '{{toolName}}' tidak ada di server '{{serverName}}'. Tool yang tersedia: {{availableTools}}",
 		"serverNotFound": "Server MCP '{{serverName}}' tidak dikonfigurasi. Server yang tersedia: {{availableServers}}",
-		"toolDisabled": "Tool '{{toolName}}' di server '{{serverName}}' dinonaktifkan. Tool aktif yang tersedia: {{availableTools}}"
+		"toolDisabled": "Tool '{{toolName}}' di server '{{serverName}}' dinonaktifkan. Tool aktif yang tersedia: {{availableTools}}",
+		"oauth_signin_failed": "OAuth sign-in gagal. Silakan coba lagi.",
+		"oauth_failed": "Autentikasi OAuth gagal untuk {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Merestart server MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Server MCP sudah sedang di-refresh.",
 		"refreshing_all": "Me-refresh semua server MCP...",
 		"all_refreshed": "Semua server MCP telah di-refresh.",
-		"project_config_deleted": "File konfigurasi MCP proyek dihapus. Semua server MCP proyek telah diputus koneksinya."
+		"project_config_deleted": "File konfigurasi MCP proyek dihapus. Semua server MCP proyek telah diputus koneksinya.",
+		"oauth_required": "Autentikasi OAuth diperlukan untuk terhubung ke '{{serverUrl}}'",
+		"oauth_success": "Autentikasi OAuth berhasil untuk '{{serverUrl}}'"
 	}
 }
