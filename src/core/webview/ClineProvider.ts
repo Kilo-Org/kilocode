@@ -1791,7 +1791,22 @@ export class ClineProvider
 			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, id)
 			const apiConversationHistoryFilePath = path.join(taskDirPath, GlobalFileNames.apiConversationHistory)
 			const uiMessagesFilePath = path.join(taskDirPath, GlobalFileNames.uiMessages)
-			const fileExists = await fileExistsAtPath(apiConversationHistoryFilePath)
+			
+			// kilocode_change start
+			// Retry mechanism to handle temporary file not found issues
+			let fileExists = false
+			const maxRetries = 3
+			const retryDelay = 1000 // 1 second
+
+			for (let i = 0; i < maxRetries; i++) {
+				fileExists = await fileExistsAtPath(apiConversationHistoryFilePath)
+				if (fileExists) {
+					break
+				}
+				this.log(`[getTaskWithId] File not found, retrying in ${retryDelay}ms (attempt ${i + 1}/${maxRetries})`)
+				await new Promise(resolve => setTimeout(resolve, retryDelay))
+			}
+			// kilocode_change end
 
 			if (fileExists) {
 				const apiConversationHistory = JSON.parse(await fs.readFile(apiConversationHistoryFilePath, "utf8"))
