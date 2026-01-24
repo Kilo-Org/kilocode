@@ -854,29 +854,29 @@ export const webviewMessageHandler = async (
 			const routerModels: Record<RouterName, ModelRecord> = providerFilter
 				? ({} as Record<RouterName, ModelRecord>)
 				: {
-					// kilocode_change start
-					ovhcloud: {},
-					inception: {},
-					kilocode: {},
-					agentica: {},
-					gemini: {},
-					// kilocode_change end
-					openrouter: {},
-					"vercel-ai-gateway": {},
-					huggingface: {},
-					litellm: {},
-					deepinfra: {},
-					"io-intelligence": {},
-					requesty: {},
-					unbound: {},
-					glama: {}, // kilocode_change
-					ollama: {},
-					lmstudio: {},
-					roo: {},
-					synthetic: {}, // kilocode_change
-					"sap-ai-core": {}, // kilocode_change
-					chutes: {},
-					"nano-gpt": {}, // kilocode_change
+						// kilocode_change start
+						ovhcloud: {},
+						inception: {},
+						kilocode: {},
+						agentica: {},
+						gemini: {},
+						// kilocode_change end
+						openrouter: {},
+						"vercel-ai-gateway": {},
+						huggingface: {},
+						litellm: {},
+						deepinfra: {},
+						"io-intelligence": {},
+						requesty: {},
+						unbound: {},
+						glama: {}, // kilocode_change
+						ollama: {},
+						lmstudio: {},
+						roo: {},
+						synthetic: {}, // kilocode_change
+						"sap-ai-core": {}, // kilocode_change
+						chutes: {},
+						"nano-gpt": {}, // kilocode_change
 				}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
