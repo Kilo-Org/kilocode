@@ -15,6 +15,7 @@
 		"noAssistantMessages": "การตอบสนองของโมเดลสิ้นสุดอย่างไม่คาดคิด (ไม่มีข้อความจากผู้ช่วย) อาจเป็นสัญญาณของการจำกัดอัตรา",
 		"notLoggedInError": "ไม่สามารถดำเนินการตามคำขอได้ โปรดตรวจสอบว่าคุณได้เชื่อมต่อและเข้าสู่ระบบด้วยผู้ให้บริการที่เลือกแล้ว\n\n{{error}}",
 		"maxCompletionTokens": "จำนวนโทเค็นการตอบสนองสูงสุดถูกใช้หมดแล้ว",
+		"contentFilter": "คำขอถูกบล็อกโดยตัวกรองเนื้อหา",
 		"disableApplyDiff": "หากข้อผิดพลาดนี้เกิดขึ้นซ้ำ กรุณาปิดใช้งาน Editing Through Diffs ในการตั้งค่าขั้นสูง",
 		"disableEditFile": "หากข้อผิดพลาดนี้เกิดขึ้นซ้ำ กรุณาปิดใช้งานฟีเจอร์ทดลอง Fast Apply"
 	},
@@ -105,7 +106,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "เวอร์ชัน Kilocode CLI ของคุณล้าสมัยและไม่รองรับ Agent Manager โปรดอัปเดตเป็นเวอร์ชันล่าสุด",
-			"cliNotFound": "ไม่พบ Kilocode CLI โปรดติดตั้งเพื่อใช้งาน Agent Manager",
 			"cliMisconfigured": "Kilocode CLI ยังไม่ได้ตั้งค่า เรียกใช้ 'kilocode auth' เพื่อลงชื่อเข้าใช้ หรือ 'kilocode config' เพื่อตั้งค่า",
 			"sessionFailed": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ",
 			"sessionFailedWithMessage": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ: {{message}}"

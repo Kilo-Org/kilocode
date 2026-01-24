@@ -1,14 +1,8 @@
 import React, { useState } from "react"
 import { Trans } from "react-i18next"
-import {
-	VSCodeCheckbox,
-	VSCodeLink,
-	VSCodePanels,
-	VSCodePanelTab,
-	VSCodePanelView,
-} from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
-import { McpServer } from "@roo/mcp"
+import { McpServer, McpAuthStatus } from "@roo/mcp"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -22,6 +16,10 @@ import {
 	DialogDescription,
 	DialogFooter,
 	ToggleSwitch,
+	Tabs,
+	TabsList,
+	TabsTrigger,
+	TabsContent,
 	// StandardTooltip, // kilocode_change: not used
 } from "@src/components/ui"
 import { buildDocLink } from "@src/utils/docLinks"
@@ -262,6 +260,16 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 		})
 	}
 
+	// kilocode_change start: OAuth sign-in handler
+	const handleOAuthSignIn = () => {
+		vscode.postMessage({
+			type: "mcpServerOAuthSignIn",
+			serverName: server.name,
+			source: server.source || "global",
+		})
+	}
+	// kilocode_change end
+
 	const handleTimeoutChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
 		const seconds = parseInt(event.target.value)
 		setTimeoutValue(seconds)
@@ -371,22 +379,32 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 								fontSize: "13px",
 								borderRadius: "0 0 4px 4px",
 							}}>
-							<VSCodePanels style={{ marginBottom: "10px" }}>
-								<VSCodePanelTab id="tools">
-									{t("mcp:tabs.tools")} ({server.tools?.length || 0})
-								</VSCodePanelTab>
-								<VSCodePanelTab id="resources">
-									{t("mcp:tabs.resources")} (
-									{[...(server.resourceTemplates || []), ...(server.resources || [])].length || 0})
-								</VSCodePanelTab>
-								{server.instructions && (
-									<VSCodePanelTab id="instructions">{t("mcp:instructions")}</VSCodePanelTab>
-								)}
-								<VSCodePanelTab id="logs">
-									{t("mcp:tabs.logs")} ({server.errorHistory?.length || 0})
-								</VSCodePanelTab>
+							{/* kilocode_change start: Replace VSCodePanels with Radix UI Tabs for independent tab overflow */}
+							<Tabs defaultValue="tools" style={{ marginBottom: "10px" }}>
+								<div className="overflow-x-auto scrollbar-hide">
+									<TabsList className="w-max min-w-full">
+										<TabsTrigger value="tools">
+											{t("mcp:tabs.tools")} ({server.tools?.length || 0})
+										</TabsTrigger>
+										<TabsTrigger value="resources">
+											{t("mcp:tabs.resources")} (
+											{[...(server.resourceTemplates || []), ...(server.resources || [])]
+												.length || 0}
+											)
+										</TabsTrigger>
+										{server.instructions && (
+											<TabsTrigger value="instructions">{t("mcp:instructions")}</TabsTrigger>
+										)}
+										<TabsTrigger value="logs">
+											{t("mcp:tabs.logs")} ({server.errorHistory?.length || 0})
+										</TabsTrigger>
+										{server.authStatus?.method === "oauth" && (
+											<TabsTrigger value="auth-debug">Auth</TabsTrigger>
+										)}
+									</TabsList>
+								</div>
 
-								<VSCodePanelView id="tools-view">
+								<TabsContent value="tools">
 									{server.tools && server.tools.length > 0 ? (
 										<div
 											style={{
@@ -411,9 +429,9 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 											{t("mcp:emptyState.noTools")}
 										</div>
 									)}
-								</VSCodePanelView>
+								</TabsContent>
 
-								<VSCodePanelView id="resources-view">
+								<TabsContent value="resources">
 									{(server.resources && server.resources.length > 0) ||
 									(server.resourceTemplates && server.resourceTemplates.length > 0) ? (
 										<div
@@ -438,19 +456,19 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 											{t("mcp:emptyState.noResources")}
 										</div>
 									)}
-								</VSCodePanelView>
+								</TabsContent>
 
 								{server.instructions && (
-									<VSCodePanelView id="instructions-view">
+									<TabsContent value="instructions">
 										<div style={{ padding: "10px 0", fontSize: "12px" }}>
 											<div className="opacity-80 whitespace-pre-wrap break-words">
 												{server.instructions}
 											</div>
 										</div>
-									</VSCodePanelView>
+									</TabsContent>
 								)}
 
-								<VSCodePanelView id="logs-view">
+								<TabsContent value="logs">
 									{server.errorHistory && server.errorHistory.length > 0 ? (
 										<div
 											style={{
@@ -471,8 +489,15 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 											{t("mcp:emptyState.noLogs")}
 										</div>
 									)}
-								</VSCodePanelView>
-							</VSCodePanels>
+								</TabsContent>
+
+								{server.authStatus?.method === "oauth" && (
+									<TabsContent value="auth-debug">
+										<OAuthDebugInfo authStatus={server.authStatus} />
+									</TabsContent>
+								)}
+							</Tabs>
+							{/* kilocode_change end */}
 
 							{/* Network Timeout */}
 							<div style={{ padding: "10px 7px" }}>
@@ -540,15 +565,30 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 										</React.Fragment>
 									))}
 							</div>
-							<Button
-								variant="secondary"
-								onClick={handleRestart}
-								disabled={server.status === "connecting"}
-								style={{ width: "calc(100% - 20px)", margin: "0 10px 10px 10px" }}>
-								{server.status === "connecting"
-									? t("mcp:serverStatus.retrying")
-									: t("mcp:serverStatus.retryConnection")}
-							</Button>
+							{/* kilocode_change start: OAuth sign-in button */}
+							{server.authStatus?.status === "required" ? (
+								<Button
+									variant="secondary"
+									onClick={handleOAuthSignIn}
+									disabled={server.status === "connecting"}
+									style={{ width: "calc(100% - 20px)", margin: "0 10px 10px 10px" }}>
+									<span className="codicon codicon-sign-in" style={{ marginRight: "6px" }}></span>
+									{server.status === "connecting"
+										? t("mcp:serverStatus.signingIn")
+										: t("mcp:serverStatus.signIn")}
+								</Button>
+							) : (
+								<Button
+									variant="secondary"
+									onClick={handleRestart}
+									disabled={server.status === "connecting"}
+									style={{ width: "calc(100% - 20px)", margin: "0 10px 10px 10px" }}>
+									{server.status === "connecting"
+										? t("mcp:serverStatus.retrying")
+										: t("mcp:serverStatus.retryConnection")}
+								</Button>
+							)}
+							{/* kilocode_change end */}
 						</div>
 					)}
 
@@ -574,5 +614,223 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 		</div>
 	)
 }
+
+// kilocode_change start: OAuth Debug Info Component
+/**
+ * Formats a timestamp to a human-readable date/time string
+ */
+const formatTimestamp = (timestamp?: number): string => {
+	if (!timestamp) return "N/A"
+	return new Date(timestamp).toLocaleString()
+}
+
+/**
+ * Formats a timestamp to a relative time string (e.g., "in 5 minutes", "2 hours ago")
+ */
+const formatRelativeTime = (timestamp?: number): string => {
+	if (!timestamp) return "N/A"
+
+	const now = Date.now()
+	const diff = timestamp - now
+	const absDiff = Math.abs(diff)
+
+	const minutes = Math.floor(absDiff / (1000 * 60))
+	const hours = Math.floor(absDiff / (1000 * 60 * 60))
+	const days = Math.floor(absDiff / (1000 * 60 * 60 * 24))
+
+	if (diff > 0) {
+		// Future
+		if (minutes < 1) return "in less than a minute"
+		if (minutes < 60) return `in ${minutes} minute${minutes === 1 ? "" : "s"}`
+		if (hours < 24) return `in ${hours} hour${hours === 1 ? "" : "s"}`
+		return `in ${days} day${days === 1 ? "" : "s"}`
+	} else {
+		// Past
+		if (minutes < 1) return "just now"
+		if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`
+		if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`
+		return `${days} day${days === 1 ? "" : "s"} ago`
+	}
+}
+
+/**
+ * Component to display OAuth debug information for an MCP server
+ */
+const OAuthDebugInfo = ({ authStatus }: { authStatus: McpAuthStatus }) => {
+	const { t } = useAppTranslation()
+	const debug = authStatus.debug
+
+	const infoRowStyle: React.CSSProperties = {
+		display: "flex",
+		justifyContent: "space-between",
+		padding: "6px 0",
+		borderBottom: "1px solid var(--vscode-widget-border)",
+	}
+
+	const labelStyle: React.CSSProperties = {
+		color: "var(--vscode-descriptionForeground)",
+		fontSize: "12px",
+	}
+
+	const valueStyle: React.CSSProperties = {
+		fontSize: "12px",
+		textAlign: "right",
+		maxWidth: "60%",
+		wordBreak: "break-all",
+	}
+
+	return (
+		<div style={{ padding: "10px 0", width: "100%" }}>
+			<div style={{ marginBottom: "12px" }}>
+				<h4 style={{ margin: "0 0 8px 0", fontSize: "13px" }}>{t("mcp:authDebug.title")}</h4>
+			</div>
+
+			{/* Auth Status */}
+			<div style={infoRowStyle}>
+				<span style={labelStyle}>{t("mcp:authDebug.status")}</span>
+				<span
+					style={{
+						...valueStyle,
+						color:
+							authStatus.status === "authenticated"
+								? "var(--vscode-testing-iconPassed)"
+								: authStatus.status === "expired"
+									? "var(--vscode-testing-iconFailed)"
+									: "var(--vscode-charts-yellow)",
+					}}>
+					{authStatus.status}
+				</span>
+			</div>
+
+			{/* Token Expiration */}
+			<div style={infoRowStyle}>
+				<span style={labelStyle}>{t("mcp:authDebug.tokenExpires")}</span>
+				<span style={valueStyle}>
+					{authStatus.expiresAt ? (
+						<>
+							{formatTimestamp(authStatus.expiresAt)}
+							<br />
+							<span style={{ color: "var(--vscode-descriptionForeground)", fontSize: "11px" }}>
+								({formatRelativeTime(authStatus.expiresAt)})
+							</span>
+						</>
+					) : (
+						"N/A"
+					)}
+				</span>
+			</div>
+
+			{/* Scopes */}
+			{authStatus.scopes && authStatus.scopes.length > 0 && (
+				<div style={infoRowStyle}>
+					<span style={labelStyle}>{t("mcp:authDebug.scopes")}</span>
+					<span style={valueStyle}>{authStatus.scopes.join(", ")}</span>
+				</div>
+			)}
+
+			{/* Debug Info Section */}
+			{debug && (
+				<>
+					<div style={{ margin: "16px 0 8px 0" }}>
+						<h4 style={{ margin: "0", fontSize: "13px" }}>{t("mcp:authDebug.refreshInfo")}</h4>
+					</div>
+
+					{/* Has Refresh Token */}
+					<div style={infoRowStyle}>
+						<span style={labelStyle}>{t("mcp:authDebug.hasRefreshToken")}</span>
+						<span
+							style={{
+								...valueStyle,
+								color: debug.hasRefreshToken
+									? "var(--vscode-testing-iconPassed)"
+									: "var(--vscode-testing-iconFailed)",
+							}}>
+							{debug.hasRefreshToken ? "Yes" : "No"}
+						</span>
+					</div>
+
+					{/* Can Refresh */}
+					<div style={infoRowStyle}>
+						<span style={labelStyle}>{t("mcp:authDebug.canRefresh")}</span>
+						<span
+							style={{
+								...valueStyle,
+								color: debug.canRefresh
+									? "var(--vscode-testing-iconPassed)"
+									: "var(--vscode-testing-iconFailed)",
+							}}>
+							{debug.canRefresh ? "Yes" : "No"}
+						</span>
+					</div>
+
+					{/* Token Issued At */}
+					<div style={infoRowStyle}>
+						<span style={labelStyle}>{t("mcp:authDebug.tokenIssuedAt")}</span>
+						<span style={valueStyle}>
+							{debug.issuedAt ? (
+								<>
+									{formatTimestamp(debug.issuedAt)}
+									<br />
+									<span style={{ color: "var(--vscode-descriptionForeground)", fontSize: "11px" }}>
+										({formatRelativeTime(debug.issuedAt)})
+									</span>
+								</>
+							) : (
+								"N/A"
+							)}
+						</span>
+					</div>
+
+					{/* Next Refresh At */}
+					{debug.nextRefreshAt && (
+						<div style={infoRowStyle}>
+							<span style={labelStyle}>{t("mcp:authDebug.nextRefreshAt")}</span>
+							<span style={valueStyle}>
+								{formatTimestamp(debug.nextRefreshAt)}
+								<br />
+								<span style={{ color: "var(--vscode-descriptionForeground)", fontSize: "11px" }}>
+									({formatRelativeTime(debug.nextRefreshAt)})
+								</span>
+							</span>
+						</div>
+					)}
+
+					{/* Last Refresh At */}
+					{debug.lastRefreshAt && (
+						<div style={infoRowStyle}>
+							<span style={labelStyle}>{t("mcp:authDebug.lastRefreshAt")}</span>
+							<span style={valueStyle}>
+								{formatTimestamp(debug.lastRefreshAt)}
+								<br />
+								<span style={{ color: "var(--vscode-descriptionForeground)", fontSize: "11px" }}>
+									({formatRelativeTime(debug.lastRefreshAt)})
+								</span>
+							</span>
+						</div>
+					)}
+
+					{/* Token Endpoint */}
+					{debug.tokenEndpoint && (
+						<div style={infoRowStyle}>
+							<span style={labelStyle}>{t("mcp:authDebug.tokenEndpoint")}</span>
+							<span style={{ ...valueStyle, fontSize: "11px" }}>{debug.tokenEndpoint}</span>
+						</div>
+					)}
+
+					{/* Client ID */}
+					{debug.clientId && (
+						<div style={infoRowStyle}>
+							<span style={labelStyle}>{t("mcp:authDebug.clientId")}</span>
+							<span style={{ ...valueStyle, fontSize: "11px" }}>
+								{debug.clientId.length > 50 ? `${debug.clientId.substring(0, 50)}...` : debug.clientId}
+							</span>
+						</div>
+					)}
+				</>
+			)}
+		</div>
+	)
+}
+// kilocode_change end
 
 export default McpView

@@ -211,7 +211,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					disabled={deviceAuthStatus === "pending"}
 					style={{ width: "100%", display: "flex", gap: "8px", alignItems: "center", justifyContent: "center" }}>
 					<span className="codicon codicon-github" style={{ fontSize: "16px" }} aria-hidden="true"></span>
-					<span>{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub (Device Flow)"}</span>
+					<span>{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}</span>
 				</VSCodeButton>
 				
 				{deviceAuthStatus === "pending" && (

@@ -14,7 +14,7 @@ try {
 
 import type { CloudUserInfo, AuthState } from "@roo-code/types"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
-import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
+import { TelemetryService, PostHogTelemetryClient, DebugTelemetryClient } from "@roo-code/telemetry" // kilocode_change: added DebugTelemetryClient
 import { customToolRegistry } from "@roo-code/core"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
@@ -27,6 +27,7 @@ import { ClineProvider } from "./core/webview/ClineProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { claudeCodeOAuthManager } from "./integrations/claude-code/oauth"
+import { openAiCodexOAuthManager } from "./integrations/openai-codex/oauth"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
 import { registerCommitMessageProvider } from "./services/commit-message"
@@ -110,11 +111,24 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Initialize telemetry service.
 	const telemetryService = TelemetryService.createInstance()
 
+	// kilocode_change start: use DebugTelemetryClient in development mode, optionally also PostHog if API key is present
 	try {
-		telemetryService.register(new PostHogTelemetryClient())
+		if (process.env.NODE_ENV === "development") {
+			telemetryService.register(new DebugTelemetryClient())
+			console.info("[DebugTelemetry] Using DebugTelemetryClient for development")
+
+			// Also register PostHog if API key is present for local testing
+			if (process.env.KILOCODE_POSTHOG_API_KEY) {
+				telemetryService.register(new PostHogTelemetryClient())
+				console.info("[Telemetry] Also using PostHogTelemetryClient (API key present)")
+			}
+		} else {
+			telemetryService.register(new PostHogTelemetryClient())
+		}
 	} catch (error) {
-		console.warn("Failed to register PostHogTelemetryClient:", error.message)
+		console.warn("Failed to register TelemetryClient:", error.message)
 	}
+	// kilocode_change end
 
 	// Create logger for cloud services.
 	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
@@ -156,6 +170,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize Claude Code OAuth manager for direct API access.
 	claudeCodeOAuthManager.initialize(context, (message) => outputChannel.appendLine(message))
+
+	// Initialize OpenAI Codex OAuth manager for ChatGPT subscription-based access.
+	openAiCodexOAuthManager.initialize(context, (message) => outputChannel.appendLine(message))
 
 	// Get default commands from configuration.
 	const defaultCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []

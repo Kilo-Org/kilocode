@@ -95,6 +95,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter Sağlayıcı Yönlendirmesi",
 		"openRouterProviderRoutingDescription": "OpenRouter, gömme modeliniz için mevcut en iyi sağlayıcılara istekleri yönlendirir. Varsayılan olarak, istekler çalışma süresini en üst düzeye çıkarmak için en iyi sağlayıcılar arasında dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
+		"openaiCompatibleResponsesProvider": "OpenAI Uyumlu (Responses)",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
 		"openAiCompatibleBaseUrlLabel": "Temel URL",

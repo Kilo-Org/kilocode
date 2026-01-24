@@ -6,7 +6,7 @@
 import * as fs from "fs-extra"
 import * as path from "path"
 import * as crypto from "crypto"
-import { KiloCodePaths } from "../../utils/paths.js"
+import { KiloCodePaths } from "@kilocode/agent-runtime"
 import { logs } from "../logs.js"
 import { getApiUrl } from "@roo-code/types"
 import { machineIdSync } from "node-machine-id"

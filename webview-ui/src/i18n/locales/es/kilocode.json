@@ -31,7 +31,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Servidores MCP"
+			"mcp": "Servidores MCP",
+			"agentBehaviour": "Comportamiento del Agente",
+			"skills": "Habilidades"
 		},
 		"provider": {
 			"account": "Cuenta de Kilo Code",
@@ -142,7 +144,14 @@
 	},
 	"docs": "Documentos",
 	"rules": {
-		"tooltip": "Gestionar Reglas y Flujos de Trabajo de Kilo Code",
+		"tooltip": "Gestionar el comportamiento del agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Reglas",
+			"workflows": "Flujos de Trabajo",
+			"mcps": "MCPs",
+			"modes": "Modos",
+			"skills": "Habilidades"
+		},
 		"ariaLabel": "Reglas de Kilo Code",
 		"tabs": {
 			"rules": "Reglas",
@@ -353,6 +362,18 @@
 			"loading": "Cargando dispositivos de micrófono...",
 			"refresh": "Actualizar",
 			"noDevices": "No se encontraron dispositivos de micrófono"
+		}
+	},
+	"skills": {
+		"description": "Las habilidades proporcionan instrucciones especializadas para tareas específicas. Se aplican automáticamente cuando son relevantes para tu solicitud.",
+		"noSkills": "No hay habilidades instaladas",
+		"projectSkills": "Habilidades del Proyecto",
+		"globalSkills": "Habilidades Globales",
+		"deleteDialog": {
+			"title": "Eliminar Habilidad",
+			"description": "¿Estás seguro de que quieres eliminar la habilidad \"{{skillName}}\"? Esta acción no se puede deshacer.",
+			"cancel": "Cancelar",
+			"delete": "Eliminar"
 		}
 	}
 }

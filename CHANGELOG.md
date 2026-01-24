@@ -1,5 +1,81 @@
 # kilo-code
 
+## 4.153.0
+
+### Minor Changes
+
+- [#5330](https://github.com/Kilo-Org/kilocode/pull/5330) [`957df89`](https://github.com/Kilo-Org/kilocode/commit/957df89a92d951c409952e16948694488abce474) Thanks [@qbiecom](https://github.com/qbiecom)! - Added OpenAI Compatible (Responses) provider
+
+### Patch Changes
+
+- [#5337](https://github.com/Kilo-Org/kilocode/pull/5337) [`fbe1e77`](https://github.com/Kilo-Org/kilocode/commit/fbe1e77e56e27d075f93a32006abf2fef9ee08e2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Increased Agent Manager initial prompt input size for easier editing of longer prompts
+
+- [#5340](https://github.com/Kilo-Org/kilocode/pull/5340) [`1e7e7ef`](https://github.com/Kilo-Org/kilocode/commit/1e7e7efd42d5a735442ceb55e321271057735f7b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed CLI file duplication bug where content was written twice when creating or editing files
+
+## 4.152.0
+
+### Minor Changes
+
+- [#5211](https://github.com/Kilo-Org/kilocode/pull/5211) [`a94f8f0`](https://github.com/Kilo-Org/kilocode/commit/a94f8f06c561027158356858bf6642927794b2a9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add mode selection to Agent Manager for CLI sessions
+
+    - Mode selector in new agent form allows selecting mode (code, architect, debug, etc.) when starting sessions
+    - Mode selector in session header allows switching modes during running sessions via CLI JSON-IO API
+    - Modes are fetched from extension and synced with CLI sessions
+    - Model selector moved below textarea in new agent form for better layout
+
+- [#5264](https://github.com/Kilo-Org/kilocode/pull/5264) [`61af1e7`](https://github.com/Kilo-Org/kilocode/commit/61af1e74c24e8a2af99b218da69d51b3000d2f0f) Thanks [@markijbema](https://github.com/markijbema)! - Centralize Agent behaviour settings by removing the top bar MCP button and moving Mode, MCP, Rules, and Workflows configuration into the Agent Behaviour area.
+
+### Patch Changes
+
+- [#5312](https://github.com/Kilo-Org/kilocode/pull/5312) [`322d891`](https://github.com/Kilo-Org/kilocode/commit/322d891c5461deada1cc1c5057bde5cf7eb774d1) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add loading spinner to agent manager API request messages
+
+- [#5233](https://github.com/Kilo-Org/kilocode/pull/5233) [`86bcfee`](https://github.com/Kilo-Org/kilocode/commit/86bcfee20a672d9e06a86b86c7d7cec28d0a8913) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add session persistence for Agent Manager worktrees
+
+- [#5313](https://github.com/Kilo-Org/kilocode/pull/5313) [`c882b95`](https://github.com/Kilo-Org/kilocode/commit/c882b9558c39abffbdced575939be7b2125be0e2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fixed agent-manager mode creating `.kilocode-agent` directory in user workspaces. Agent storage now uses OS temp directory instead, keeping workspaces clean.
+
+- [#5315](https://github.com/Kilo-Org/kilocode/pull/5315) [`f0a9036`](https://github.com/Kilo-Org/kilocode/commit/f0a9036b766ab8a0b1158be804bdeb256f476596) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix model selection not showing in resumed sessions in Agent Manager
+
+- [#5232](https://github.com/Kilo-Org/kilocode/pull/5232) [`cc04a57`](https://github.com/Kilo-Org/kilocode/commit/cc04a5719ca5b457e38b7bacdab2c6dac92cf297) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix parallel mode completion messaging when commits fail.
+
+- [#5151](https://github.com/Kilo-Org/kilocode/pull/5151) [`5565a7c`](https://github.com/Kilo-Org/kilocode/commit/5565a7c15544630b11297f40f4e948588943b893) Thanks [@Senneseph](https://github.com/Senneseph)! - Fix: Check that `model_info` field exists before attempting to call Object.keys() on it.
+
+- [#5314](https://github.com/Kilo-Org/kilocode/pull/5314) [`f202bd5`](https://github.com/Kilo-Org/kilocode/commit/f202bd55756a0382dc6abb619ddbb1e7451343b5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Display reasoning as collapsible block in Agent Manager instead of plain text
+
+- [#5287](https://github.com/Kilo-Org/kilocode/pull/5287) [`4662b02`](https://github.com/Kilo-Org/kilocode/commit/4662b02f0a8fa2b5cb95120c6c1ef7984508d0f3) Thanks [@markijbema](https://github.com/markijbema)! - Add Skills tab to Agent Behaviour settings for viewing and managing installed skills
+
+- [#5297](https://github.com/Kilo-Org/kilocode/pull/5297) [`f6badf7`](https://github.com/Kilo-Org/kilocode/commit/f6badf709982890fca245b1e079d041efddbfc26) Thanks [@jrf0110](https://github.com/jrf0110)! - feat(mcp): implement oauth 2.1 authorization for http transports
+
+- [#5254](https://github.com/Kilo-Org/kilocode/pull/5254) [`9348a3d`](https://github.com/Kilo-Org/kilocode/commit/9348a3d33d68ff61340e90a2647c1026752ea66a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Force tool use when using Haiku with the Anthropic provider
+
+## 4.151.0
+
+### Minor Changes
+
+- [#5270](https://github.com/Kilo-Org/kilocode/pull/5270) [`6839f7c`](https://github.com/Kilo-Org/kilocode/commit/6839f7c76438b159873c5c88523324515809b8a0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for OpenAI Codex subscriptions (thanks Roo)
+
+    - Fix: Reset invalid model selection when using OpenAI Codex provider (PR #10777 by @hannesrudolph)
+    - Add OpenAI - ChatGPT Plus/Pro Provider that gives subscription-based access to Codex models without per-token costs (PR #10736 by @hannesrudolph)
+
+## 4.150.0
+
+### Minor Changes
+
+- [#5239](https://github.com/Kilo-Org/kilocode/pull/5239) [`ff1500d`](https://github.com/Kilo-Org/kilocode/commit/ff1500d75f4cefee6b7fd7fd1e126339b147255d) Thanks [@markijbema](https://github.com/markijbema)! - Added Skills Marketplace tab alongside existing MCP and Modes marketplace tabs
+
+### Patch Changes
+
+- [#5193](https://github.com/Kilo-Org/kilocode/pull/5193) [`ff3cbe5`](https://github.com/Kilo-Org/kilocode/commit/ff3cbe521bbcccfc18a7b37cd69a190c0291badb) Thanks [@mayef](https://github.com/mayef)! - Fix Cerebras provider to ensure all tools have consistent strict mode values
+
+- [#5208](https://github.com/Kilo-Org/kilocode/pull/5208) [`f770cec`](https://github.com/Kilo-Org/kilocode/commit/f770cecf01d037ed9da31114603940f2a66a145a) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix terminal button showing "Session not found" for remote sessions in Agent Manager
+
+- [#5213](https://github.com/Kilo-Org/kilocode/pull/5213) [`553fc58`](https://github.com/Kilo-Org/kilocode/commit/553fc58293a73b62793ca9e05921bf6e413e0c85) Thanks [@jrf0110](https://github.com/jrf0110)! - Add AI Attribution line tracking to the EditFileTool
+
+- [#5240](https://github.com/Kilo-Org/kilocode/pull/5240) [`6d297fb`](https://github.com/Kilo-Org/kilocode/commit/6d297fb8fe1d33aa58b941a0bb903c1847996407) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Fix Autocomplete
+
+- [#5044](https://github.com/Kilo-Org/kilocode/pull/5044) [`2ee6e82`](https://github.com/Kilo-Org/kilocode/commit/2ee6e822b6d7fabb2d136dd03117c469b00ee51d) Thanks [@jrf0110](https://github.com/jrf0110)! - Add GitHub-style diff stats display to task header showing lines added/removed in real-time
+
+- [#5228](https://github.com/Kilo-Org/kilocode/pull/5228) [`b834a25`](https://github.com/Kilo-Org/kilocode/commit/b834a25ea075fac7b95762e2355cf04d05d2633e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fallbacks are now allowed when selecting a specific OpenRouter provider
+
 ## 4.149.0
 
 ### Minor Changes
