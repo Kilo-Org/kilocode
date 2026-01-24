@@ -169,6 +169,49 @@ describe("NativeToolCallParser", () => {
 					])
 				}
 			})
+
+			it("should preserve rawInput with original line_ranges format for API history", () => {
+				const toolCall = {
+					id: "toolu_123",
+					name: "read_file" as const,
+					arguments: JSON.stringify({
+						files: [
+							{
+								path: "src/core/task/Task.ts",
+								line_ranges: [
+									[1920, 1990],
+									[2060, 2120],
+								],
+							},
+						],
+					}),
+				}
+
+				const result = NativeToolCallParser.parseToolCall(toolCall)
+
+				expect(result).not.toBeNull()
+				expect(result?.type).toBe("tool_use")
+				if (result?.type === "tool_use") {
+					// Verify nativeArgs has converted format (lineRanges with objects)
+					const nativeArgs = result.nativeArgs as {
+						files: Array<{ path: string; lineRanges?: Array<{ start: number; end: number }> }>
+					}
+					expect(nativeArgs.files[0].lineRanges).toEqual([
+						{ start: 1920, end: 1990 },
+						{ start: 2060, end: 2120 },
+					])
+
+					// Verify rawInput preserves original format (line_ranges with tuples)
+					expect(result.rawInput).toBeDefined()
+					const rawInput = result.rawInput as {
+						files: Array<{ path: string; line_ranges?: Array<[number, number]> }>
+					}
+					expect(rawInput.files[0].line_ranges).toEqual([
+						[1920, 1990],
+						[2060, 2120],
+					])
+				}
+			})
 		})
 	})
 
