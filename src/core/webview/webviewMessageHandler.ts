@@ -2916,14 +2916,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 
-		case "openPlansView": // kilocode_change
-			provider.postMessageToWebview({
-				type: "switchTab",
-				tab: "settings",
-				values: { targetSection: "about" }, // Open settings - you can change the tab as needed
-			})
-			break
-
 		case "fetchMcpMarketplace": {
 			await provider.fetchMcpMarketplace(message.bool)
 			break
