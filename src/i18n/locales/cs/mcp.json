@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Nepodařilo se odpojit {{count}} server(ů) MCP. Zkontroluj výstup pro podrobnosti.",
 		"toolNotFound": "Nástroj '{{toolName}}' neexistuje na serveru '{{serverName}}'. Dostupné nástroje: {{availableTools}}",
 		"serverNotFound": "Server MCP '{{serverName}}' není nakonfigurován. Dostupné servery: {{availableServers}}",
-		"toolDisabled": "Nástroj '{{toolName}}' na serveru '{{serverName}}' je zakázán. Dostupné povolené nástroje: {{availableTools}}"
+		"toolDisabled": "Nástroj '{{toolName}}' na serveru '{{serverName}}' je zakázán. Dostupné povolené nástroje: {{availableTools}}",
+		"oauth_signin_failed": "OAuth přihlášení selhalo. Zkuste to prosím znovu.",
+		"oauth_failed": "OAuth autentizace selhala pro {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Restartování serveru MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Servery MCP se již obnovují.",
 		"refreshing_all": "Obnovování všech serverů MCP...",
 		"all_refreshed": "Všechny servery MCP byly obnoveny.",
-		"project_config_deleted": "Konfigurační soubor MCP projektu byl smazán. Všechny servery MCP projektu byly odpojeny."
+		"project_config_deleted": "Konfigurační soubor MCP projektu byl smazán. Všechny servery MCP projektu byly odpojeny.",
+		"oauth_required": "Pro připojení k '{{serverUrl}}' je vyžadována OAuth autentizace",
+		"oauth_success": "OAuth autentizace pro '{{serverUrl}}' byla úspěšná"
 	}
 }

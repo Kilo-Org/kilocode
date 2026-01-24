@@ -24,9 +24,19 @@ Skills can be:
 
 The workflow is:
 
-1. **Discovery**: Skills are scanned from designated directories when Kilo Code initializes
-2. **Activation**: When a mode is active, relevant skills are included in the system prompt
-3. **Execution**: The AI agent follows the skill's instructions for applicable tasks
+1. **Discovery**: Skills are scanned from designated directories when Kilo Code initializes. Only the metadata (name, description, and file path) is read at this stage—not the full instructions.
+2. **Prompt inclusion**: When a mode is active, the metadata for relevant skills is included in the system prompt. The agent sees a list of available skills with their descriptions.
+3. **On-demand loading**: When the agent determines that a task matches a skill's description, it reads the full `SKILL.md` file into context and follows the instructions.
+
+### How the Agent Decides to Use a Skill
+
+The agent (LLM) decides whether to use a skill based on the skill's `description` field. There's no keyword matching or semantic search—the agent evaluates your request against all available skill descriptions and determines if one "clearly and unambiguously applies."
+
+This means:
+
+- **Description wording matters**: Write descriptions that match how users phrase requests
+- **Explicit invocation always works**: Saying "use the api-design skill" will trigger it since the agent sees the skill name
+- **Vague descriptions lead to uncertain matching**: Be specific about when the skill should be used
 
 ## Skill Locations
 
@@ -34,9 +44,10 @@ Skills are loaded from multiple locations, allowing both personal skills and pro
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilocode` directory within your Home directory. 
-* Mac and Linux: `~/.kilocode/skills/`
-* Windows: `\Users\<yourUser>\.kilocode\`
+Global skills are located in the `.kilocode` directory within your Home directory.
+
+- Mac and Linux: `~/.kilocode/skills/`
+- Windows: `\Users\<yourUser>\.kilocode\`
 
 ```
 ~/.kilocode/
@@ -124,10 +135,8 @@ description: A brief description of what this skill does and when to use it
 
 Your detailed instructions for the AI agent go here.
 
-These instructions will be included in the system prompt when:
-
-1. The skill is discovered in a valid location
-2. The current mode matches (or the skill is generic)
+The agent will read this content when it decides to use the skill based on
+your request matching the description above.
 
 ## Example Usage
 
@@ -246,10 +255,10 @@ These additional files can be referenced from your skill's instructions, allowin
 
 ## Finding Skills
 
-There are community efforts to build and share agent skills. Some resources include:
+You can discover and install community-created skills through:
 
-- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
-- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
+- **Kilo Marketplace** - Browse skills directly in the Kilo Code extension via the Marketplace tab, or explore the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) on GitHub
+- [Agent Skills Specification](https://agentskills.io/home) - The open specification that skills follow, enabling interoperability across different AI agents
 
 ## Troubleshooting
 
@@ -263,7 +272,7 @@ There are community efforts to build and share agent skills. Some resources incl
 
 4. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory, not nested further.
 
-### Verifying a Skill is Activated
+### Verifying a Skill is Available
 
 To confirm a skill is properly loaded and available to the agent, you can ask the agent directly. Simply send a message like:
 
@@ -271,9 +280,15 @@ To confirm a skill is properly loaded and available to the agent, you can ask th
 - "Is the skill called X loaded?"
 - "What skills do you have available?"
 
-The agent will respond with information about whether the skill is loaded and accessible. This is the most reliable way to verify that a skill has been activated after adding it or reloading VSCode.
+The agent will respond with information about whether the skill is loaded and accessible. This is the most reliable way to verify that a skill is available after adding it or reloading VSCode.
 
 If the agent confirms the skill is available, you're ready to use it. If not, check the troubleshooting steps above to identify and resolve the issue.
+
+### Checking if a Skill Was Used
+
+To see if a skill was actually used during a conversation, look for a `read_file` tool call in the chat that targets a `SKILL.md` file. When the agent decides to use a skill, it reads the full skill file into context—this appears as a file read operation in the conversation.
+
+There's currently no dedicated UI indicator showing "Skill X was activated." The `read_file` call is the most reliable way to confirm a skill was used.
 
 ### Common Errors
 
@@ -282,6 +297,28 @@ If the agent confirms the skill is available, you're ready to use it. If not, ch
 | "missing required 'name' field" | No `name` in frontmatter                     | Add `name: your-skill-name`                      |
 | "name doesn't match directory"  | Mismatch between frontmatter and folder name | Make `name` match exactly                        |
 | Skill not appearing             | Wrong directory structure                    | Verify path follows `skills/skill-name/SKILL.md` |
+
+## Contributing to the Marketplace
+
+Have you created a skill that others might find useful? Share it with the community by contributing to the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace)!
+
+### How to Submit Your Skill
+
+1. **Prepare your skill**: Ensure your skill directory contains a valid `SKILL.md` file with proper frontmatter
+2. **Test thoroughly**: Verify your skill works correctly across different scenarios and modes
+3. **Fork the marketplace repository**: Visit [github.com/Kilo-Org/kilo-marketplace](https://github.com/Kilo-Org/kilo-marketplace) and create a fork
+4. **Add your skill**: Place your skill directory in the appropriate location following the repository's structure
+5. **Submit a pull request**: Create a PR with a clear description of what your skill does and when it's useful
+
+### Submission Guidelines
+
+- Follow the [Agent Skills specification](https://agentskills.io/specification) for your `SKILL.md` file
+- Include a clear `name` and `description` in the frontmatter
+- Document any dependencies or requirements (scripts, external tools, etc.)
+- If your skill includes bundled resources (scripts, templates), ensure they are well-documented
+- Follow the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
+
+For more details on contributing to Kilo Code, see the [Contributing Guide](/contributing).
 
 ## Related
 

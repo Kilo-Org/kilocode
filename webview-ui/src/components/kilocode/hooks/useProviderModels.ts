@@ -15,6 +15,8 @@ import {
 	mistralModels,
 	openAiNativeDefaultModelId,
 	openAiNativeModels,
+	openAiCodexDefaultModelId,
+	openAiCodexModels,
 	vertexDefaultModelId,
 	vertexModels,
 	xaiDefaultModelId,
@@ -169,6 +171,14 @@ export const getModelsByProvider = ({
 				defaultModel: openAiNativeDefaultModelId,
 			}
 		}
+
+		case "openai-codex": {
+			return {
+				models: openAiCodexModels,
+				defaultModel: openAiCodexDefaultModelId,
+			}
+		}
+
 		case "mistral": {
 			return {
 				models: mistralModels,

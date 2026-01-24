@@ -94,6 +94,7 @@
 		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
+		"openaiCompatibleResponsesProvider": "Tương thích OpenAI (Responses)",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
 		"openAiCompatibleBaseUrlLabel": "URL cơ sở",

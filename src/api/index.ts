@@ -14,6 +14,7 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
+	OpenAiCodexHandler,
 	LmStudioHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
@@ -51,6 +52,7 @@ import {
 	DeepInfraHandler,
 	MiniMaxHandler,
 	BasetenHandler,
+	OpenAiCompatibleResponsesHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -186,8 +188,12 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new LmStudioHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
+		case "openai-codex":
+			return new OpenAiCodexHandler(options)
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
+		case "openai-responses": // kilocode_change
+			return new OpenAiCompatibleResponsesHandler(options) // kilocode_change
 		case "deepseek":
 			return new DeepSeekHandler(options)
 		case "doubao":

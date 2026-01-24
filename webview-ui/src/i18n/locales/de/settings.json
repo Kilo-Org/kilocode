@@ -99,6 +99,7 @@
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
 		"openaiCompatibleProvider": "OpenAI-kompatibel",
+		"openaiCompatibleResponsesProvider": "OpenAI-kompatibel (Responses)",
 		"openAiKeyLabel": "OpenAI API-Schlüssel",
 		"openAiKeyPlaceholder": "Gib deinen OpenAI API-Schlüssel ein",
 		"openAiCompatibleBaseUrlLabel": "Basis-URL",

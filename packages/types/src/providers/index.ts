@@ -28,6 +28,7 @@ export * from "./moonshot.js"
 export * from "./nano-gpt.js" // kilocode_change
 export * from "./ollama.js"
 export * from "./openai.js"
+export * from "./openai-codex.js"
 export * from "./openrouter.js"
 export * from "./qwen-code.js"
 export * from "./requesty.js"
@@ -60,6 +61,7 @@ import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
 import { litellmDefaultModelId } from "./lite-llm.js"
 import { mistralDefaultModelId } from "./mistral.js"
 import { moonshotDefaultModelId } from "./moonshot.js"
+import { openAiCodexDefaultModelId } from "./openai-codex.js"
 import { openRouterDefaultModelId } from "./openrouter.js"
 import { qwenCodeDefaultModelId } from "./qwen-code.js"
 import { requestyDefaultModelId } from "./requesty.js"
@@ -129,6 +131,10 @@ export function getProviderDefaultModelId(
 			return options?.isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
 		case "openai-native":
 			return "gpt-4o" // Based on openai-native patterns
+		case "openai-responses": // kilocode_change
+			return "gpt-4o" // OpenAI-compatible Responses API // kilocode_change
+		case "openai-codex":
+			return openAiCodexDefaultModelId
 		case "mistral":
 			return mistralDefaultModelId
 		case "openai":

@@ -1,37 +1,26 @@
 import { useRef, useState, useEffect } from "react"
 import { useWindowSize, useClickAway } from "react-use"
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useTranslation } from "react-i18next"
 import styled from "styled-components"
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip"
-import { vscode } from "@/utils/vscode"
 import BottomButton from "../BottomButton"
 
-import RulesWorkflowsSection from "./RulesWorkflowsSection"
-
-const sortedRules = (data: Record<string, unknown> | undefined) =>
-	Object.entries(data || {})
-		.map(([path, enabled]): [string, boolean] => [path, enabled as boolean])
-		.sort(([a], [b]) => a.localeCompare(b))
-
-interface DescriptionWithLinkProps {
-	children: React.ReactNode
-	href: string
-	linkText: string
-}
-
-const DescriptionWithLink: React.FC<DescriptionWithLinkProps> = ({ children, href, linkText }) => (
-	<p>
-		{children}{" "}
-		<VSCodeLink href={href} style={{ display: "inline" }} className="text-xs">
-			{linkText}
-		</VSCodeLink>
-	</p>
-)
+import KiloRulesWorkflowsView from "./KiloRulesWorkflowsView"
+import ModesView from "@src/components/modes/ModesView"
+import McpView from "@src/components/mcp/McpView"
+import InstalledSkillsView from "@src/components/kilocode/settings/InstalledSkillsView"
 
 const KiloRulesToggleModal: React.FC = () => {
 	const { t } = useTranslation()
+	// kilocode_change - tooltip now reflects Agent Behaviour scope
+	const agentBehaviourTypes = [
+		t("kilocode:rules.agentBehaviourTypes.rules"),
+		t("kilocode:rules.agentBehaviourTypes.workflows"),
+		t("kilocode:rules.agentBehaviourTypes.mcps"),
+		t("kilocode:rules.agentBehaviourTypes.modes"),
+		t("kilocode:rules.agentBehaviourTypes.skills"),
+	].join(", ")
 
 	const [isVisible, setIsVisible] = useState(false)
 	const buttonRef = useRef<HTMLDivElement>(null)
@@ -39,50 +28,7 @@ const KiloRulesToggleModal: React.FC = () => {
 	const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 	const [arrowPosition, setArrowPosition] = useState(0)
 	const [menuPosition, setMenuPosition] = useState(0)
-	const [currentView, setCurrentView] = useState<"rule" | "workflow">("rule")
-	const [localRules, setLocalRules] = useState<[string, boolean][]>([])
-	const [globalRules, setGlobalRules] = useState<[string, boolean][]>([])
-	const [localWorkflows, setLocalWorkflows] = useState<[string, boolean][]>([])
-	const [globalWorkflows, setGlobalWorkflows] = useState<[string, boolean][]>([])
-
-	useEffect(() => {
-		if (isVisible) {
-			vscode.postMessage({ type: "refreshRules" })
-		}
-	}, [isVisible])
-
-	useEffect(() => {
-		const handleMessage = (event: MessageEvent) => {
-			const message = event.data
-			if (message.type === "rulesData") {
-				setLocalRules(sortedRules(message.localRules))
-				setGlobalRules(sortedRules(message.globalRules))
-				setLocalWorkflows(sortedRules(message.localWorkflows))
-				setGlobalWorkflows(sortedRules(message.globalWorkflows))
-			}
-		}
-
-		window.addEventListener("message", handleMessage)
-		return () => window.removeEventListener("message", handleMessage)
-	}, [])
-
-	const toggleRule = (isGlobal: boolean, rulePath: string, enabled: boolean) => {
-		vscode.postMessage({
-			type: "toggleRule",
-			rulePath,
-			enabled,
-			isGlobal,
-		})
-	}
-
-	const toggleWorkflow = (isGlobal: boolean, workflowPath: string, enabled: boolean) => {
-		vscode.postMessage({
-			type: "toggleWorkflow",
-			workflowPath,
-			enabled,
-			isGlobal,
-		})
-	}
+	const [currentView, setCurrentView] = useState<"modes" | "mcp" | "rule" | "workflow" | "skills">("rule")
 
 	useClickAway(modalRef, () => {
 		setIsVisible(false)
@@ -111,19 +57,22 @@ const KiloRulesToggleModal: React.FC = () => {
 								onClick={() => setIsVisible(!isVisible)}
 							/>
 						</TooltipTrigger>
-						<TooltipContent>{t("kilocode:rules.tooltip")}</TooltipContent>
+						<TooltipContent>{t("kilocode:rules.tooltip", { types: agentBehaviourTypes })}</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
 			</div>
 
 			{isVisible && (
 				<div
-					className="fixed left-[15px] right-[15px] border border-[var(--vscode-editorGroup-border)] p-3 rounded z-[1000] overflow-y-auto"
+					className="fixed left-[15px] right-[15px] border border-[var(--vscode-editorGroup-border)] p-3 rounded z-[1000]"
 					style={{
 						bottom: `calc(100vh - ${menuPosition}px + 6px)`,
 						background: "var(--vscode-editor-background)",
-						maxHeight: "calc(100vh - 100px)",
-						overscrollBehavior: "contain",
+						// Keep the modal a consistent height to avoid “jumpy” resizing between tabs.
+						height: "min(520px, calc(100vh - 100px))",
+						overflow: "hidden",
+						display: "flex",
+						flexDirection: "column",
 					}}>
 					<div
 						className="fixed w-[10px] h-[10px] z-[-1] rotate-45 border-r border-b border-[var(--vscode-editorGroup-border)]"
@@ -146,6 +95,14 @@ const KiloRulesToggleModal: React.FC = () => {
 								gap: "1px",
 								borderBottom: "1px solid var(--vscode-panel-border)",
 							}}>
+							<StyledTabButton
+								$isActive={currentView === "modes"}
+								onClick={() => setCurrentView("modes")}>
+								{t("settings:sections.modes")}
+							</StyledTabButton>
+							<StyledTabButton $isActive={currentView === "mcp"} onClick={() => setCurrentView("mcp")}>
+								{t("kilocode:settings.sections.mcp")}
+							</StyledTabButton>
 							<StyledTabButton $isActive={currentView === "rule"} onClick={() => setCurrentView("rule")}>
 								{t("kilocode:rules.tabs.rules")}
 							</StyledTabButton>
@@ -154,42 +111,28 @@ const KiloRulesToggleModal: React.FC = () => {
 								onClick={() => setCurrentView("workflow")}>
 								{t("kilocode:rules.tabs.workflows")}
 							</StyledTabButton>
+							<StyledTabButton
+								$isActive={currentView === "skills"}
+								onClick={() => setCurrentView("skills")}>
+								{t("kilocode:settings.sections.skills")}
+							</StyledTabButton>
 						</div>
 					</div>
 
-					<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
-						{currentView === "rule" ? (
-							<DescriptionWithLink
-								href="https://kilo.ai/docs/advanced-usage/custom-rules"
-								linkText={t("kilocode:docs")}>
-								{t("kilocode:rules.description.rules")}
-							</DescriptionWithLink>
-						) : (
-							<DescriptionWithLink
-								href="https://kilo.ai/docs/features/slash-commands/workflows"
-								linkText={t("kilocode:docs")}>
-								{t("kilocode:rules.description.workflows")}{" "}
-								<span className="text-[var(--vscode-foreground)] font-bold">/workflow-name</span>{" "}
-								{t("kilocode:rules.description.workflowsInChat")}
-							</DescriptionWithLink>
-						)}
+					<div
+						data-testid="kilo-rules-toggle-modal-content"
+						style={{
+							flex: 1,
+							overflowY: "auto",
+							overflowX: "hidden",
+							overscrollBehavior: "contain",
+						}}>
+						{currentView === "modes" && <ModesView hideHeader />}
+						{currentView === "mcp" && <McpView hideHeader onDone={() => {}} />}
+						{currentView === "rule" && <KiloRulesWorkflowsView type="rule" />}
+						{currentView === "workflow" && <KiloRulesWorkflowsView type="workflow" />}
+						{currentView === "skills" && <InstalledSkillsView />}
 					</div>
-
-					<RulesWorkflowsSection
-						type={currentView}
-						globalItems={currentView === "rule" ? globalRules : globalWorkflows}
-						localItems={currentView === "rule" ? localRules : localWorkflows}
-						toggleGlobal={(path: string, enabled: boolean) =>
-							currentView === "rule"
-								? toggleRule(true, path, enabled)
-								: toggleWorkflow(true, path, enabled)
-						}
-						toggleLocal={(path: string, enabled: boolean) =>
-							currentView === "rule"
-								? toggleRule(false, path, enabled)
-								: toggleWorkflow(false, path, enabled)
-						}
-					/>
 				</div>
 			)}
 		</div>

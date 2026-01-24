@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Не вдалося відключити {{count}} сервер(ів) MCP. Перевір вивід для деталей.",
 		"toolNotFound": "Інструмент '{{toolName}}' не існує на сервері '{{serverName}}'. Доступні інструменти: {{availableTools}}",
 		"serverNotFound": "Сервер MCP '{{serverName}}' не налаштований. Доступні сервери: {{availableServers}}",
-		"toolDisabled": "Інструмент '{{toolName}}' на сервері '{{serverName}}' вимкнено. Доступні увімкнені інструменти: {{availableTools}}"
+		"toolDisabled": "Інструмент '{{toolName}}' на сервері '{{serverName}}' вимкнено. Доступні увімкнені інструменти: {{availableTools}}",
+		"oauth_signin_failed": "Помилка входу OAuth. Будь ласка, спробуйте ще раз.",
+		"oauth_failed": "Помилка автентифікації OAuth для {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Сервери MCP вже оновлюються.",
 		"refreshing_all": "Оновлення всіх серверів MCP...",
 		"all_refreshed": "Усі сервери MCP оновлено.",
-		"project_config_deleted": "Файл конфігурації MCP проекту видалено. Усі сервери MCP проекту відключено."
+		"project_config_deleted": "Файл конфігурації MCP проекту видалено. Усі сервери MCP проекту відключено.",
+		"oauth_required": "Для підключення до '{{serverUrl}}' потрібна автентифікація OAuth",
+		"oauth_success": "Автентифікація OAuth для '{{serverUrl}}' успішна"
 	}
 }

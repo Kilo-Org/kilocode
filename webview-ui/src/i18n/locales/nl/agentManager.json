@@ -60,7 +60,9 @@
 		"selectModel": "Model selecteren",
 		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
 		"defaultModel": "Standaardmodel",
-		"loadingModels": "Laden..."
+		"loadingModels": "Laden...",
+		"selectMode": "Selecteer modus",
+		"modeTooltip": "Modus: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",
@@ -75,7 +77,9 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer invouwen",
-		"copyCommand": "Opdracht kopiëren"
+		"copyCommand": "Opdracht kopiëren",
+		"thinking": "Denkt na",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

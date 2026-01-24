@@ -62,7 +62,9 @@
 		"selectModel": "Вибрати модель",
 		"modelTooltip": "Вибери, яку AI-модель використовувати для цієї сесії",
 		"defaultModel": "Модель за замовчуванням",
-		"loadingModels": "Завантаження..."
+		"loadingModels": "Завантаження...",
+		"selectMode": "Вибрати режим",
+		"modeTooltip": "Режим: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",
@@ -77,7 +79,9 @@
 		"usingTool": "Використання інструменту: **{{tool}}** {{details}}",
 		"expandOutput": "Розгорнути вивід",
 		"collapseOutput": "Згорнути вивід",
-		"copyCommand": "Копіювати команду"
+		"copyCommand": "Копіювати команду",
+		"thinking": "Думаю",
+		"thinkingSeconds": "{{count}}с"
 	},
 	"chatInput": {
 		"autoMode": "Агент працює в повністю автоматичному режимі - введення заборонено",

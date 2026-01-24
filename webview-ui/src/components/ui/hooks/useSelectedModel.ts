@@ -28,6 +28,7 @@ import {
 	openRouterDefaultModelId,
 	claudeCodeModels,
 	normalizeClaudeCodeModelId,
+	openAiCodexModels,
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
@@ -346,6 +347,18 @@ function getSelectedModel({
 			const info = customInfo ? { ...nativeToolDefaults, ...customInfo } : openAiModelInfoSaneDefaults
 			return { id, info }
 		}
+		// kilocode_change start
+		case "openai-responses": {
+			const id = apiConfiguration.openAiModelId ?? ""
+			const customInfo = apiConfiguration?.openAiCustomModelInfo
+			const nativeToolDefaults = {
+				supportsNativeTools: openAiModelInfoSaneDefaults.supportsNativeTools,
+				defaultToolProtocol: openAiModelInfoSaneDefaults.defaultToolProtocol,
+			}
+			const info = customInfo ? { ...nativeToolDefaults, ...customInfo } : openAiModelInfoSaneDefaults
+			return { id, info }
+		}
+		// kilocode_change end
 		// kilocode_change start - improved context window handling
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
@@ -509,6 +522,11 @@ function getSelectedModel({
 		case "qwen-code": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = qwenCodeModels[id as keyof typeof qwenCodeModels]
+			return { id, info }
+		}
+		case "openai-codex": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = openAiCodexModels[id as keyof typeof openAiCodexModels]
 			return { id, info }
 		}
 		case "vercel-ai-gateway": {

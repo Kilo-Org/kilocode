@@ -18,6 +18,8 @@ import {
 	effectiveModelIdAtom,
 	setSelectedModelIdAtom,
 } from "../state/atoms/models"
+import { effectiveModeSlugAtom } from "../state/atoms/modes"
+import { CaretDownIcon } from "@radix-ui/react-icons"
 import { SelectDropdown, type DropdownOption } from "../../../components/ui/select-dropdown"
 import { sessionMachineUiStateAtom, selectedSessionMachineStateAtom } from "../state/atoms/stateMachine"
 import { MessageList } from "./MessageList"
@@ -25,6 +27,7 @@ import { ChatInput } from "./ChatInput"
 import { BranchPicker } from "./BranchPicker"
 import { ImageThumbnail } from "./ImageThumbnail"
 import { AddImageButton } from "./AddImageButton"
+import { ModeSelector } from "./ModeSelector"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
 import { useImagePaste } from "../hooks/useImagePaste"
@@ -252,6 +255,7 @@ function NewAgentForm() {
 	const modelsConfig = useAtomValue(modelsConfigAtom)
 	const modelsLoading = useAtomValue(modelsLoadingAtom)
 	const effectiveModelId = useAtomValue(effectiveModelIdAtom)
+	const effectiveModeSlug = useAtomValue(effectiveModeSlugAtom)
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -337,6 +341,7 @@ function NewAgentForm() {
 			labels,
 			existingBranch: selectedBranch || undefined,
 			model: effectiveModelId || undefined,
+			mode: effectiveModeSlug || undefined,
 			images,
 		})
 	}
@@ -401,8 +406,8 @@ function NewAgentForm() {
 						aria-label={t("sessionDetail.startNewAgent")}
 						disabled={isStarting}
 						placeholder={t("sessionDetail.placeholderTask")}
-						minRows={5}
-						maxRows={12}
+						minRows={8}
+						maxRows={20}
 						style={{
 							paddingTop: "12px",
 							// Add extra padding when images are present to make room for the image row
@@ -461,6 +466,7 @@ function NewAgentForm() {
 								acceptedMimeTypes={acceptedMimeTypes}
 								disabled={!canAddMore}
 							/>
+							<ModeSelector disabled={isStarting} />
 							<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
 								<StandardTooltip
 									content={
@@ -549,28 +555,6 @@ function NewAgentForm() {
 								)}
 							</div>
 
-							{/* Model selector - show loading spinner while fetching, then SelectDropdown */}
-							{modelsLoading ? (
-								<div className="am-run-mode-trigger-inline opacity-70">
-									<Loader2 size={14} className="am-spinning" />
-									<span className="text-sm">{t("sessionDetail.loadingModels")}</span>
-								</div>
-							) : hasModels ? (
-								<div className="am-model-selector">
-									<SelectDropdown
-										value={effectiveModelId || ""}
-										options={modelOptions}
-										onChange={(value) => setSelectedModelId(value)}
-										disabled={isStarting}
-										placeholder={t("sessionDetail.selectModel")}
-										title={t("sessionDetail.modelTooltip")}
-										triggerClassName="am-model-selector-trigger"
-										contentClassName="am-model-selector-content"
-										align="end"
-									/>
-								</div>
-							) : null}
-
 							{effectiveRunMode === "worktree" && !isMultiVersion && (
 								<StandardTooltip content={t("sessionDetail.branchPickerTooltip")}>
 									<button
@@ -620,6 +604,31 @@ function NewAgentForm() {
 							</button>
 						</div>
 					</div>
+				</div>
+
+				{/* Model selector below textarea - like in the main sidebar */}
+				<div className="mt-2 flex items-center justify-start">
+					{modelsLoading ? (
+						<div className="am-model-selector-trigger opacity-70 flex items-center gap-1.5">
+							<Loader2 size={14} className="am-spinning" />
+							<span className="text-xs">{t("sessionDetail.loadingModels")}</span>
+						</div>
+					) : hasModels ? (
+						<div className="am-model-selector">
+							<SelectDropdown
+								value={effectiveModelId || ""}
+								options={modelOptions}
+								onChange={(value) => setSelectedModelId(value)}
+								disabled={isStarting}
+								placeholder={t("sessionDetail.selectModel")}
+								title={t("sessionDetail.modelTooltip")}
+								triggerClassName="am-model-selector-trigger"
+								contentClassName="am-model-selector-content"
+								align="start"
+								triggerIcon={CaretDownIcon}
+							/>
+						</div>
+					) : null}
 				</div>
 			</div>
 

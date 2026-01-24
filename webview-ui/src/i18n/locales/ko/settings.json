@@ -94,6 +94,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter 공급자 라우팅",
 		"openRouterProviderRoutingDescription": "OpenRouter는 임베딩 모델에 가장 적합한 공급자로 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자 간에 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
 		"openaiCompatibleProvider": "OpenAI 호환",
+		"openaiCompatibleResponsesProvider": "OpenAI 호환 (Responses)",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
 		"openAiCompatibleBaseUrlLabel": "기본 URL",
