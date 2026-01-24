@@ -85,131 +85,131 @@ export interface LanguageModelChatSelector {
 // 'settingsButtonClicked' or 'hello'. Webview will hold state.
 export interface ExtensionMessage {
 	type:
-	| "action"
-	| "state"
-	| "selectedImages"
-	| "theme"
-	| "workspaceUpdated"
-	| "invoke"
-	| "messageUpdated"
-	| "mcpServers"
-	| "enhancedPrompt"
-	| "commitSearchResults"
-	| "listApiConfig"
-	| "routerModels"
-	| "openAiModels"
-	| "ollamaModels"
-	| "lmStudioModels"
-	| "vsCodeLmModels"
-	| "huggingFaceModels"
-	| "sapAiCoreModels" // kilocode_change
-	| "sapAiCoreDeployments" // kilocode_change
-	| "vsCodeLmApiAvailable"
-	| "updatePrompt"
-	| "systemPrompt"
-	| "autoApprovalEnabled"
-	| "yoloMode" // kilocode_change
-	| "updateCustomMode"
-	| "deleteCustomMode"
-	| "exportModeResult"
-	| "importModeResult"
-	| "checkRulesDirectoryResult"
-	| "deleteCustomModeCheck"
-	| "currentCheckpointUpdated"
-	| "checkpointInitWarning"
-	| "insertTextToChatArea" // kilocode_change
-	| "showHumanRelayDialog"
-	| "humanRelayResponse"
-	| "humanRelayCancel"
-	| "browserToolEnabled"
-	| "browserConnectionResult"
-	| "remoteBrowserEnabled"
-	| "ttsStart"
-	| "ttsStop"
-	| "maxReadFileLine"
-	| "fileSearchResults"
-	| "toggleApiConfigPin"
-	| "mcpMarketplaceCatalog" // kilocode_change
-	| "mcpDownloadDetails" // kilocode_change
-	| "showSystemNotification" // kilocode_change
-	| "openInBrowser" // kilocode_change
-	| "acceptInput"
-	| "focusChatInput" // kilocode_change
-	| "stt:started" // kilocode_change: STT session started
-	| "stt:transcript" // kilocode_change: STT transcript update
-	| "stt:volume" // kilocode_change: STT volume level
-	| "stt:stopped" // kilocode_change: STT session stopped
-	| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
-	| "stt:devices" // kilocode_change: Microphone devices list
-	| "stt:deviceSelected" // kilocode_change: Device selection confirmation
-	| "setHistoryPreviewCollapsed"
-	| "commandExecutionStatus"
-	| "mcpExecutionStatus"
-	| "vsCodeSetting"
-	| "profileDataResponse" // kilocode_change
-	| "balanceDataResponse" // kilocode_change
-	| "updateProfileData" // kilocode_change
-	| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
-	| "authenticatedUser"
-	| "condenseTaskContextStarted"
-	| "condenseTaskContextResponse"
-	| "singleRouterModelFetchResponse"
-	| "rooCreditBalance"
-	| "indexingStatusUpdate"
-	| "indexCleared"
-	| "codebaseIndexConfig"
-	| "rulesData" // kilocode_change
-	| "marketplaceInstallResult"
-	| "marketplaceRemoveResult"
-	| "marketplaceData"
-	| "mermaidFixResponse" // kilocode_change
-	| "tasksByIdResponse" // kilocode_change
-	| "taskHistoryResponse" // kilocode_change
-	| "shareTaskSuccess"
-	| "codeIndexSettingsSaved"
-	| "codeIndexSecretStatus"
-	| "showDeleteMessageDialog"
-	| "showEditMessageDialog"
-	| "kilocodeNotificationsResponse" // kilocode_change
-	| "usageDataResponse" // kilocode_change
-	| "keybindingsResponse" // kilocode_change
-	| "autoPurgeEnabled" // kilocode_change
-	| "autoPurgeDefaultRetentionDays" // kilocode_change
-	| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
-	| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
-	| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
-	| "manualPurge" // kilocode_change
-	| "commands"
-	| "insertTextIntoTextarea"
-	| "dismissedUpsells"
-	| "interactionRequired"
-	| "managedIndexerState" // kilocode_change
-	| "managedIndexerEnabled" // kilocode_change
-	| "browserSessionUpdate"
-	| "browserSessionNavigate"
-	| "organizationSwitchResult"
-	| "showTimestamps" // kilocode_change
-	| "apiMessagesSaved" // kilocode_change: File save event for API messages
-	| "taskMessagesSaved" // kilocode_change: File save event for task messages
-	| "taskMetadataSaved" // kilocode_change: File save event for task metadata
-	| "managedIndexerState" // kilocode_change
-	| "singleCompletionResult" // kilocode_change
-	| "deviceAuthStarted" // kilocode_change: Device auth initiated
-	| "deviceAuthPolling" // kilocode_change: Device auth polling update
-	| "deviceAuthComplete" // kilocode_change: Device auth successful
-	| "deviceAuthFailed" // kilocode_change: Device auth failed
-	| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
-	| "agenticaDeviceAuthStarted" // kilocode_change: Agentica GitHub device auth initiated
-	| "agenticaDeviceAuthTick" // kilocode_change: Agentica GitHub device auth tick/countdown
-	| "agenticaDeviceAuthPolling" // kilocode_change: Agentica GitHub device auth polling update
-	| "agenticaDeviceAuthExchanging" // kilocode_change: Agentica GitHub device auth token exchange started
-	| "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub device auth successful
-	| "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub device auth failed
-	| "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub device auth cancelled
-	| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
-	| "claudeCodeRateLimits"
-	| "customToolsResult"
-	| "securePasswordRetrieved" // kilocode_change
+		| "action"
+		| "state"
+		| "selectedImages"
+		| "theme"
+		| "workspaceUpdated"
+		| "invoke"
+		| "messageUpdated"
+		| "mcpServers"
+		| "enhancedPrompt"
+		| "commitSearchResults"
+		| "listApiConfig"
+		| "routerModels"
+		| "openAiModels"
+		| "ollamaModels"
+		| "lmStudioModels"
+		| "vsCodeLmModels"
+		| "huggingFaceModels"
+		| "sapAiCoreModels" // kilocode_change
+		| "sapAiCoreDeployments" // kilocode_change
+		| "vsCodeLmApiAvailable"
+		| "updatePrompt"
+		| "systemPrompt"
+		| "autoApprovalEnabled"
+		| "yoloMode" // kilocode_change
+		| "updateCustomMode"
+		| "deleteCustomMode"
+		| "exportModeResult"
+		| "importModeResult"
+		| "checkRulesDirectoryResult"
+		| "deleteCustomModeCheck"
+		| "currentCheckpointUpdated"
+		| "checkpointInitWarning"
+		| "insertTextToChatArea" // kilocode_change
+		| "showHumanRelayDialog"
+		| "humanRelayResponse"
+		| "humanRelayCancel"
+		| "browserToolEnabled"
+		| "browserConnectionResult"
+		| "remoteBrowserEnabled"
+		| "ttsStart"
+		| "ttsStop"
+		| "maxReadFileLine"
+		| "fileSearchResults"
+		| "toggleApiConfigPin"
+		| "mcpMarketplaceCatalog" // kilocode_change
+		| "mcpDownloadDetails" // kilocode_change
+		| "showSystemNotification" // kilocode_change
+		| "openInBrowser" // kilocode_change
+		| "acceptInput"
+		| "focusChatInput" // kilocode_change
+		| "stt:started" // kilocode_change: STT session started
+		| "stt:transcript" // kilocode_change: STT transcript update
+		| "stt:volume" // kilocode_change: STT volume level
+		| "stt:stopped" // kilocode_change: STT session stopped
+		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
+		| "stt:devices" // kilocode_change: Microphone devices list
+		| "stt:deviceSelected" // kilocode_change: Device selection confirmation
+		| "setHistoryPreviewCollapsed"
+		| "commandExecutionStatus"
+		| "mcpExecutionStatus"
+		| "vsCodeSetting"
+		| "profileDataResponse" // kilocode_change
+		| "balanceDataResponse" // kilocode_change
+		| "updateProfileData" // kilocode_change
+		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
+		| "authenticatedUser"
+		| "condenseTaskContextStarted"
+		| "condenseTaskContextResponse"
+		| "singleRouterModelFetchResponse"
+		| "rooCreditBalance"
+		| "indexingStatusUpdate"
+		| "indexCleared"
+		| "codebaseIndexConfig"
+		| "rulesData" // kilocode_change
+		| "marketplaceInstallResult"
+		| "marketplaceRemoveResult"
+		| "marketplaceData"
+		| "mermaidFixResponse" // kilocode_change
+		| "tasksByIdResponse" // kilocode_change
+		| "taskHistoryResponse" // kilocode_change
+		| "shareTaskSuccess"
+		| "codeIndexSettingsSaved"
+		| "codeIndexSecretStatus"
+		| "showDeleteMessageDialog"
+		| "showEditMessageDialog"
+		| "kilocodeNotificationsResponse" // kilocode_change
+		| "usageDataResponse" // kilocode_change
+		| "keybindingsResponse" // kilocode_change
+		| "autoPurgeEnabled" // kilocode_change
+		| "autoPurgeDefaultRetentionDays" // kilocode_change
+		| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
+		| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
+		| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
+		| "manualPurge" // kilocode_change
+		| "commands"
+		| "insertTextIntoTextarea"
+		| "dismissedUpsells"
+		| "interactionRequired"
+		| "managedIndexerState" // kilocode_change
+		| "managedIndexerEnabled" // kilocode_change
+		| "browserSessionUpdate"
+		| "browserSessionNavigate"
+		| "organizationSwitchResult"
+		| "showTimestamps" // kilocode_change
+		| "apiMessagesSaved" // kilocode_change: File save event for API messages
+		| "taskMessagesSaved" // kilocode_change: File save event for task messages
+		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
+		| "managedIndexerState" // kilocode_change
+		| "singleCompletionResult" // kilocode_change
+		| "deviceAuthStarted" // kilocode_change: Device auth initiated
+		| "deviceAuthPolling" // kilocode_change: Device auth polling update
+		| "deviceAuthComplete" // kilocode_change: Device auth successful
+		| "deviceAuthFailed" // kilocode_change: Device auth failed
+		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
+		| "agenticaDeviceAuthStarted" // kilocode_change: Agentica GitHub device auth initiated
+		| "agenticaDeviceAuthTick" // kilocode_change: Agentica GitHub device auth tick/countdown
+		| "agenticaDeviceAuthPolling" // kilocode_change: Agentica GitHub device auth polling update
+		| "agenticaDeviceAuthExchanging" // kilocode_change: Agentica GitHub device auth token exchange started
+		| "agenticaDeviceAuthComplete" // kilocode_change: Agentica GitHub device auth successful
+		| "agenticaDeviceAuthFailed" // kilocode_change: Agentica GitHub device auth failed
+		| "agenticaDeviceAuthCancelled" // kilocode_change: Agentica GitHub device auth cancelled
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
+		| "claudeCodeRateLimits"
+		| "customToolsResult"
+		| "securePasswordRetrieved" // kilocode_change
 	text?: string
 	// kilocode_change start
 	key?: string // For secure password operations
@@ -219,11 +219,11 @@ export interface ExtensionMessage {
 	completionText?: string // The completed text
 	completionError?: string // Error message if failed
 	payload?:
-	| ProfileDataResponsePayload
-	| BalanceDataResponsePayload
-	| TasksByIdResponsePayload
-	| TaskHistoryResponsePayload
-	| [string, string] // For file save events [taskId, filePath]
+		| ProfileDataResponsePayload
+		| BalanceDataResponsePayload
+		| TasksByIdResponsePayload
+		| TaskHistoryResponsePayload
+		| [string, string] // For file save events [taskId, filePath]
 	agenticaApiKey?: string // Agentica API key from device auth
 	agenticaEmail?: string // Agentica user email from device auth
 	// kilocode_change end
@@ -233,19 +233,19 @@ export interface ExtensionMessage {
 		timeout: number
 	}
 	action?:
-	| "chatButtonClicked"
-	| "settingsButtonClicked"
-	| "historyButtonClicked"
-	| "promptsButtonClicked" // kilocode_change
-	| "profileButtonClicked" // kilocode_change
-	| "marketplaceButtonClicked"
-	| "mcpButtonClicked" // kilocode_change
-	| "cloudButtonClicked"
-	| "didBecomeVisible"
-	| "focusInput"
-	| "switchTab"
-	| "focusChatInput" // kilocode_change
-	| "toggleAutoApprove"
+		| "chatButtonClicked"
+		| "settingsButtonClicked"
+		| "historyButtonClicked"
+		| "promptsButtonClicked" // kilocode_change
+		| "profileButtonClicked" // kilocode_change
+		| "marketplaceButtonClicked"
+		| "mcpButtonClicked" // kilocode_change
+		| "cloudButtonClicked"
+		| "didBecomeVisible"
+		| "focusInput"
+		| "switchTab"
+		| "focusChatInput" // kilocode_change
+		| "toggleAutoApprove"
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -574,23 +574,23 @@ export type ExtensionState = Pick<
 
 export interface ClineSayTool {
 	tool:
-	| "editedExistingFile"
-	| "appliedDiff"
-	| "newFileCreated"
-	| "codebaseSearch"
-	| "readFile"
-	| "fetchInstructions"
-	| "listFilesTopLevel"
-	| "listFilesRecursive"
-	| "searchFiles"
-	| "switchMode"
-	| "newTask"
-	| "finishTask"
-	| "generateImage"
-	| "imageGenerated"
-	| "runSlashCommand"
-	| "updateTodoList"
-	| "deleteFile" // kilocode_change: Handles both files and directories
+		| "editedExistingFile"
+		| "appliedDiff"
+		| "newFileCreated"
+		| "codebaseSearch"
+		| "readFile"
+		| "fetchInstructions"
+		| "listFilesTopLevel"
+		| "listFilesRecursive"
+		| "searchFiles"
+		| "switchMode"
+		| "newTask"
+		| "finishTask"
+		| "generateImage"
+		| "imageGenerated"
+		| "runSlashCommand"
+		| "updateTodoList"
+		| "deleteFile" // kilocode_change: Handles both files and directories
 	path?: string
 	diff?: string
 	content?: string
