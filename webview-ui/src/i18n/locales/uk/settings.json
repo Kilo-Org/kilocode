@@ -128,6 +128,7 @@
 		"openRouterProviderRoutingLabel": "Маршрутизація провайдера OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter направляє запити до найкращих доступних провайдерів для вашої моделі вбудовувань. За замовчуванням запити розподіляються між провідними провайдерами для максимального часу безвідмовної роботи. Однак ви можете вибрати конкретного провайдера для використання цієї моделі.",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
+		"openaiCompatibleResponsesProvider": "Сумісний з OpenAI (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
 		"openaiKeyLabel": "Ключ OpenAI:",

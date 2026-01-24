@@ -104,7 +104,10 @@ export const isInternalProvider = (key: string): key is InternalProvider =>
  * Custom providers are completely configurable within Roo Code settings.
  */
 
-export const customProviders = ["openai"] as const
+export const customProviders = [
+	"openai",
+	"openai-responses", // kilocode_change
+] as const
 
 export type CustomProvider = (typeof customProviders)[number]
 
@@ -150,6 +153,7 @@ export const providerNames = [
 	"minimax",
 	"openai-codex",
 	"openai-native",
+	"openai-responses", // kilocode_change
 	"qwen-code",
 	"roo",
 	// kilocode_change start
@@ -303,6 +307,22 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiHostHeader: z.string().optional(), // Keep temporarily for backward compatibility during migration.
 	openAiHeaders: z.record(z.string(), z.string()).optional(),
 })
+
+// kilocode_change start
+const openAiResponsesSchema = baseProviderSettingsSchema.extend({
+	openAiBaseUrl: z.string().optional(),
+	openAiApiKey: z.string().optional(),
+	openAiLegacyFormat: z.boolean().optional(),
+	openAiR1FormatEnabled: z.boolean().optional(),
+	openAiModelId: z.string().optional(),
+	openAiCustomModelInfo: modelInfoSchema.nullish(),
+	openAiUseAzure: z.boolean().optional(),
+	azureApiVersion: z.string().optional(),
+	openAiStreamingEnabled: z.boolean().optional(),
+	openAiHostHeader: z.string().optional(), // Keep temporarily for backward compatibility during migration.
+	openAiHeaders: z.record(z.string(), z.string()).optional(),
+})
+// kilocode_change end
 
 const ollamaSchema = baseProviderSettingsSchema.extend({
 	ollamaModelId: z.string().optional(),
@@ -553,6 +573,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
 	vertexSchema.merge(z.object({ apiProvider: z.literal("vertex") })),
 	openAiSchema.merge(z.object({ apiProvider: z.literal("openai") })),
+	openAiResponsesSchema.merge(z.object({ apiProvider: z.literal("openai-responses") })), // kilocode_change
 	ollamaSchema.merge(z.object({ apiProvider: z.literal("ollama") })),
 	vsCodeLmSchema.merge(z.object({ apiProvider: z.literal("vscode-lm") })),
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
@@ -606,6 +627,7 @@ export const providerSettingsSchema = z.object({
 	...bedrockSchema.shape,
 	...vertexSchema.shape,
 	...openAiSchema.shape,
+	...openAiResponsesSchema.shape, // kilocode_change
 	...ollamaSchema.shape,
 	...vsCodeLmSchema.shape,
 	...lmStudioSchema.shape,
@@ -785,7 +807,15 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "openai" | "gemini">,
+	Exclude<
+		ProviderName,
+		| "fake-ai"
+		| "human-relay"
+		| "gemini-cli"
+		| "openai"
+		| "openai-responses" // kilocode_change
+		| "gemini"
+	>,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {

@@ -113,6 +113,7 @@
 		"openRouterProviderRoutingLabel": "Směrování poskytovatele OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model vkládání. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatibilní s OpenAI (Responses)",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Základní URL",
