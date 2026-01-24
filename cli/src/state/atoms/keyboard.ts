@@ -1182,8 +1182,14 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 		}
 
 		// Save the image to a file in temp directory
-		const result = await saveClipboardImage()
-		if (result.success && result.filePath) {
+		const results = await saveClipboardImage()
+
+		for (const result of results) {
+			if (!result.success || !result.filePath) {
+				setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
+				continue
+			}
+
 			// Add image to references and get its number
 			const refNumber = set(addImageReferenceAtom, result.filePath)
 
@@ -1211,8 +1217,6 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
 				})
 			})
-		} else {
-			setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
 		}
 	} catch (error) {
 		setClipboardStatusWithTimeout(

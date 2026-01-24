@@ -14,6 +14,7 @@ import {
 	type SaveClipboardResult,
 } from "./clipboard-shared.js"
 import { hasClipboardImageMacOS, saveClipboardImageMacOS } from "./clipboard-macos.js"
+import { hasClipboardImageLinux, isLinuxClipboardSupported, saveClipboardImagesLinux } from "./clipboard-linux.js"
 
 export {
 	buildDataUrl,
@@ -28,13 +29,18 @@ export {
 }
 
 export async function isClipboardSupported(): Promise<boolean> {
-	return process.platform === "darwin"
+	if (process.platform === "darwin") return true
+	if (process.platform === "linux") return await isLinuxClipboardSupported()
+	return false
 }
 
 export async function clipboardHasImage(): Promise<boolean> {
 	try {
 		if (process.platform === "darwin") {
 			return await hasClipboardImageMacOS()
+		}
+		if (process.platform === "linux") {
+			return await hasClipboardImageLinux()
 		}
 		return false
 	} catch (error) {
@@ -47,21 +53,30 @@ export async function clipboardHasImage(): Promise<boolean> {
 	}
 }
 
-export async function saveClipboardImage(): Promise<SaveClipboardResult> {
+export async function saveClipboardImage(): Promise<SaveClipboardResult[]> {
+	if (process.platform === "linux") {
+		return await saveClipboardImagesLinux()
+	}
+
 	if (process.platform !== "darwin") {
-		return {
-			success: false,
-			error: getUnsupportedClipboardPlatformMessage(),
-		}
+		return [
+			{
+				success: false,
+				error: getUnsupportedClipboardPlatformMessage(),
+			},
+		]
 	}
 
 	try {
-		return await saveClipboardImageMacOS()
+		const result = await saveClipboardImageMacOS()
+		return [result]
 	} catch (error) {
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : String(error),
-		}
+		return [
+			{
+				success: false,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		]
 	}
 }
 

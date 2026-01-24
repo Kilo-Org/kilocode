@@ -120,6 +120,11 @@ describe("clipboard utility", () => {
 			expect(await isClipboardSupported()).toBe(true)
 		})
 
+		it("should return true for linux", async () => {
+			Object.defineProperty(process, "platform", { value: "linux" })
+			expect(await isClipboardSupported()).toBe(true)
+		})
+
 		it("should return false for win32", async () => {
 			Object.defineProperty(process, "platform", { value: "win32" })
 			expect(await isClipboardSupported()).toBe(false)
