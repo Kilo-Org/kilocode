@@ -32,6 +32,7 @@ import {
 	ChutesHandler,
 	LiteLLMHandler,
 	// kilocode_change start
+	AgenticaHandler,
 	VirtualQuotaFallbackHandler,
 	GeminiCliHandler,
 	SyntheticHandler,
@@ -241,6 +242,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new OVHcloudAIEndpointsHandler(options)
 		case "sap-ai-core":
 			return new SapAiCoreHandler(options)
+		case "agentica":
+			return new AgenticaHandler(options)
 		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)
@@ -257,7 +260,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "baseten":
 			return new BasetenHandler(options)
 		default:
-			apiProvider satisfies "gemini-cli" | "agentica" | undefined // kilocode_change: allow agentica to fall through
+			apiProvider satisfies "gemini-cli" | undefined // kilocode_change
 			return new AnthropicHandler(options)
 	}
 }
