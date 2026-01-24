@@ -94,6 +94,7 @@
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
 		"openaiCompatibleProvider": "OpenAI संगत",
+		"openaiCompatibleResponsesProvider": "OpenAI संगत (Responses)",
 		"openAiKeyLabel": "OpenAI API कुंजी",
 		"openAiKeyPlaceholder": "अपना OpenAI API कुंजी दर्ज करें",
 		"openAiCompatibleBaseUrlLabel": "आधार URL",

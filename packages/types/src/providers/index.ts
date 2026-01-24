@@ -127,6 +127,8 @@ export function getProviderDefaultModelId(
 			return options?.isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
 		case "openai-native":
 			return "gpt-4o" // Based on openai-native patterns
+		case "openai-responses": // kilocode_change
+			return "gpt-4o" // OpenAI-compatible Responses API // kilocode_change
 		case "openai-codex":
 			return openAiCodexDefaultModelId
 		case "mistral":

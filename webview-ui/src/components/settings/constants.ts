@@ -78,6 +78,7 @@ export const PROVIDERS = [
 	{ value: "openai-native", label: "OpenAI", proxy: false },
 	{ value: "openai-codex", label: "OpenAI - ChatGPT Plus/Pro", proxy: false },
 	{ value: "openai", label: "OpenAI Compatible", proxy: true },
+	{ value: "openai-responses", label: "OpenAI Compatible (Responses)", proxy: true }, // kilocode_change
 	{ value: "qwen-code", label: "Qwen Code", proxy: false },
 	{ value: "vertex", label: "GCP Vertex AI", proxy: false },
 	{ value: "bedrock", label: "Amazon Bedrock", proxy: false },
