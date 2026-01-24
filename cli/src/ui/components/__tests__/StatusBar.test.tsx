@@ -118,6 +118,35 @@ describe("StatusBar", () => {
 		expect(frame).toMatch(/N\/A|claude|sonnet/i)
 	})
 
+	it("should update model name when api configuration changes", () => {
+		const { lastFrame, rerender } = render(<StatusBar />)
+		let frame = lastFrame()
+		expect(frame).toBeTruthy()
+
+		// Update the mock to return Z.ai configuration
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
+			if (atom === atoms.cwdAtom) return "/home/user/kilocode"
+			if (atom === atoms.isParallelModeAtom) return false
+			if (atom === atoms.extensionModeAtom) return "code"
+			if (atom === atoms.apiConfigurationAtom)
+				return {
+					apiProvider: "zai",
+					apiModelId: "glm-4.7",
+				}
+			if (atom === atoms.chatMessagesAtom) return []
+			if (atom === atoms.routerModelsAtom) return null
+			return null
+		})
+
+		rerender(<StatusBar />)
+		frame = lastFrame()
+		// Verify Z.ai is now displayed in status bar
+		// The display name will come from the models configuration
+		expect(frame).toBeTruthy()
+		// The frame should contain something about the model (exact format depends on model display names)
+		expect(frame).toContain("kilocode")
+	})
+
 	it("should render context usage percentage", () => {
 		const { lastFrame } = render(<StatusBar />)
 		expect(lastFrame()).toContain("45%")

@@ -2036,6 +2036,8 @@ describe("ClineProvider", () => {
 				listConfig: vi
 					.fn()
 					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
+				// kilocode_change: added getProfile mock for upsertApiConfiguration
+				getProfile: vi.fn().mockRejectedValue(new Error("Config not found")),
 			} as any
 
 			// Mock getState to provide necessary data

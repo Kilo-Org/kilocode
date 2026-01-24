@@ -2229,9 +2229,14 @@ export const webviewMessageHandler = async (
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
 				// kilocode_change end
 
-				// Ensure state is posted to webview after profile update to reflect organization mode changes
-				if (organizationChanged) {
+				// Always post state to webview after profile update to reflect provider changes immediately in status bar
+				// This ensures CLI status bar updates when provider is selected via /provider select command
+				// kilocode_change: Wrap in try-catch to handle errors gracefully
+				try {
 					await provider.postStateToWebview()
+				} catch (error) {
+					// Log error but don't re-throw - the profile was already updated
+					console.error("Failed to post state after upsertApiConfiguration:", error)
 				}
 
 				// kilocode_change: Reload ghost model when API provider settings change
