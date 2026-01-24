@@ -120,7 +120,7 @@ import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
 import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService" // kilocode_change
-import { delay } from "../../shared/delay" // kilocode_change
+
 // kilocode_change end
 
 /**
@@ -731,7 +731,7 @@ export class ClineProvider
 		if (!visibleProvider) {
 			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
 			// Wait briefly for the view to become visible
-			await delay(100)
+			await new Promise((resolve) => setTimeout(resolve, 100)) // kilocode_change
 			visibleProvider = ClineProvider.getVisibleInstance()
 		}
 
