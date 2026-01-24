@@ -173,7 +173,13 @@ tasks {
         doLast {
             if (ext.get("debugMode") != "idea" && ext.get("debugMode") != "none") {
                 val distributionFile = archiveFile.get().asFile
-                val sandboxPluginsDir = layout.buildDirectory.get().asFile.resolve("idea-sandbox/IC-2025.3/plugins")
+                // Dynamically find the sandbox plugins directory - the name depends on SDK version and platform type
+                val sandboxDir = layout.buildDirectory.get().asFile.resolve("idea-sandbox")
+                val sandboxPluginsDir = sandboxDir.listFiles()
+                    ?.filter { it.isDirectory && it.name.matches(Regex("I[CU]-\\d+\\.\\d+.*")) }
+                    ?.maxByOrNull { it.name }
+                    ?.resolve("plugins")
+                    ?: throw IllegalStateException("Could not find sandbox plugins directory in ${sandboxDir.absolutePath}")
                 val jetbrainsDir = sandboxPluginsDir.resolve("jetbrains")
 
                 if (jetbrainsDir.exists() && distributionFile.exists()) {
