@@ -2916,11 +2916,10 @@ export const webviewMessageHandler = async (
 			}
 			break
 
-		case "openPlansView": // kilocode_change
+		case "openPlansView": // kilocode_change: Open Agentica plans UI
 			provider.postMessageToWebview({
 				type: "switchTab",
 				tab: "settings",
-				values: { targetSection: "about" }, // Open settings - you can change the tab as needed
 			})
 			break
 
