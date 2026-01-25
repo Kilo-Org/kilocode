@@ -127,6 +127,7 @@
 		"openRouterProviderRoutingLabel": "توجيه مزود OpenRouter",
 		"openRouterProviderRoutingDescription": "يوجه OpenRouter الطلبات إلى أفضل المزودين المتاحين لنموذج التضمين الخاص بك. افتراضيًا، يتم موازنة التحميل للطلبات عبر أفضل المزودين لزيادة وقت التشغيل. ومع ذلك، يمكنك اختيار مزود معين لاستخدامه مع هذا النموذج.",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
+		"openaiCompatibleResponsesProvider": "متوافق مع OpenAI (Responses)",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
 		"openAiCompatibleBaseUrlLabel": "الرابط الأساسي",

@@ -10,7 +10,7 @@ import { useTheme } from "../../state/hooks/useTheme.js"
 import { HotkeyBadge } from "./HotkeyBadge.js"
 import { ThinkingAnimation } from "./ThinkingAnimation.js"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, isCancellingAtom } from "../../state/atoms/ui.js"
+import { isStreamingAtom, isCancellingAtom, isProcessingAtom } from "../../state/atoms/ui.js"
 import { hasResumeTaskAtom } from "../../state/atoms/extension.js"
 import { exitPromptVisibleAtom, pendingImagePastesAtom, pendingTextPastesAtom } from "../../state/atoms/keyboard.js"
 import { useEffect } from "react"
@@ -38,6 +38,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const theme = useTheme()
 	const { hotkeys, shouldShow } = useHotkeys()
 	const isStreaming = useAtomValue(isStreamingAtom)
+	const isProcessing = useAtomValue(isProcessingAtom)
 	const isCancelling = useAtomValue(isCancellingAtom)
 	const setIsCancelling = useSetAtom(isCancellingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
@@ -84,7 +85,9 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 						{isCancelling && !isPastingImage && !isPastingText && (
 							<ThinkingAnimation text="Cancelling..." />
 						)}
-						{isStreaming && !isCancelling && !isPastingImage && !isPastingText && <ThinkingAnimation />}
+						{(isStreaming || isProcessing) && !isCancelling && !isPastingImage && !isPastingText && (
+							<ThinkingAnimation />
+						)}
 						{hasResumeTask && !isPastingImage && !isPastingText && (
 							<Text color={theme.ui.text.dimmed}>Task ready to resume</Text>
 						)}

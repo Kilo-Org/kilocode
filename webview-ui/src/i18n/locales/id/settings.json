@@ -94,6 +94,7 @@
 		"mistralApiKeyLabel": "Kunci API:",
 		"mistralApiKeyPlaceholder": "Masukkan kunci API Mistral Anda",
 		"openaiCompatibleProvider": "OpenAI Compatible",
+		"openaiCompatibleResponsesProvider": "OpenAI Compatible (Responses)",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Masukkan kunci API OpenAI kamu",
 		"openAiCompatibleBaseUrlLabel": "Base URL",

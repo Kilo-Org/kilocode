@@ -9,6 +9,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	anthropic: "Anthropic",
 	"openai-native": "OpenAI",
 	"openai-codex": "OpenAI - ChatGPT Plus/Pro",
+	"openai-responses": "OpenAI Compatible (Responses)",
 	openrouter: "OpenRouter",
 	bedrock: "Amazon Bedrock",
 	gemini: "Google Gemini",
