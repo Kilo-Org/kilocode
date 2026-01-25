@@ -450,6 +450,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "litellmModelId"
 		case "openai":
 			return "openAiModelId"
+		case "openai-responses":
+			return "openAiModelId"
 		case "ollama":
 			return "ollamaModelId"
 		case "lmstudio":

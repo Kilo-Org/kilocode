@@ -20,6 +20,11 @@ describe("Provider and Model CLI Options", () => {
 			expect(field).toBe("openAiModelId")
 		})
 
+		it("should return correct model field for openai-responses provider", () => {
+			const field = getModelIdKey("openai-responses")
+			expect(field).toBe("openAiModelId")
+		})
+
 		it("should return correct model field for openai-native provider", () => {
 			const field = getModelIdKey("openai-native")
 			expect(field).toBe("apiModelId")
@@ -176,6 +181,7 @@ describe("Provider and Model CLI Options", () => {
 				{ name: "kilocode", expectedField: "kilocodeModel" },
 				{ name: "anthropic", expectedField: "apiModelId" },
 				{ name: "openai", expectedField: "openAiModelId" },
+				{ name: "openai-responses", expectedField: "openAiModelId" },
 				{ name: "openai-native", expectedField: "apiModelId" },
 				{ name: "openrouter", expectedField: "openRouterModelId" },
 				{ name: "ollama", expectedField: "ollamaModelId" },
