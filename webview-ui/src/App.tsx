@@ -165,14 +165,14 @@ const App = () => {
 		(e: MessageEvent) => {
 			const message: ExtensionMessage = e.data
 
-			if (message.type === "action" && message.action) {
-				// kilocode_change: Handle openPlansModal
-				if (message.action === "openPlansModal") {
-					setPlansModalOpen(true)
-					return
-				}
-				// kilocode_change end
+			// kilocode_change: Handle openPlansModal
+			if (message.type === "openPlansModal") {
+				setPlansModalOpen(true)
+				return
+			}
+			// kilocode_change end
 
+			if (message.type === "action" && message.action) {
 				// kilocode_change begin
 				if (message.action === "focusChatInput") {
 					if (tab !== "chat") {

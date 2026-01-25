@@ -391,7 +391,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 						</div>
 						<VSCodeButton
 							appearance="secondary"
-							onClick={() => vscode.postMessage({ type: "action", action: "openPlansModal" })}
+							onClick={() => vscode.postMessage({ type: "openPlansModal" })}
 							style={{ fontSize: "12px", padding: "4px 12px" }}>
 							Manage Plan
 						</VSCodeButton>
