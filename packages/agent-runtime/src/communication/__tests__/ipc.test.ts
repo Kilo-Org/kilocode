@@ -176,9 +176,12 @@ describe("MessageBridge", () => {
 		const handler = vi.fn()
 		bridge.on("extensionRequest", handler)
 
-		bridge.getTUIChannel().request({ test: true }).catch(() => {
-			// Ignore timeout
-		})
+		bridge
+			.getTUIChannel()
+			.request({ test: true })
+			.catch(() => {
+				// Ignore timeout
+			})
 
 		// TUI sends -> routes to extension -> extension emits "request" -> bridge emits "extensionRequest"
 		expect(handler).toHaveBeenCalledTimes(1)
@@ -188,9 +191,12 @@ describe("MessageBridge", () => {
 		const handler = vi.fn()
 		bridge.on("tuiRequest", handler)
 
-		bridge.getExtensionChannel().request({ test: true }).catch(() => {
-			// Ignore timeout
-		})
+		bridge
+			.getExtensionChannel()
+			.request({ test: true })
+			.catch(() => {
+				// Ignore timeout
+			})
 
 		// Extension sends -> routes to TUI -> TUI emits "request" -> bridge emits "tuiRequest"
 		expect(handler).toHaveBeenCalledTimes(1)

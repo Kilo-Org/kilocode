@@ -365,6 +365,16 @@
 			"refresh": "Actualitza"
 		}
 	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Selecciona el model de passarel·la de Kilo Code que s'utilitzarà per a aquest mode.",
+		"searchPlaceholder": "Cerca models",
+		"noMatch": "No s'ha trobat cap coincidència",
+		"useDefault": "Utilitza el predeterminat",
+		"providerInactive": "Canvia el proveïdor a Kilo Code per establir un model per mode.",
+		"modelsUnavailable": "Els models de Kilo Code no estan disponibles. Configura el proveïdor de Kilo Code per obtenir models.",
+		"overrideWillNotApply": "Els models de passarel·la no estan disponibles; el model per mode no s'aplicarà fins que es puguin obtenir els models."
+	},
 	"skills": {
 		"description": "Les habilitats proporcionen instruccions especialitzades per a tasques específiques. S'apliquen automàticament quan són rellevants per a la teva sol·licitud.",
 		"noSkills": "No hi ha habilitats instal·lades",

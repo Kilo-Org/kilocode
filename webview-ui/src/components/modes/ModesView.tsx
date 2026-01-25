@@ -25,6 +25,9 @@ import {
 } from "@roo/modes"
 import { TOOL_GROUPS } from "@roo/tools"
 
+import { KiloModeModelPicker } from "../kilocode/KiloModeModelPicker" // kilocode_change
+import type { ModelInfo } from "@roo-code/types" // kilocode_change
+
 import { vscode } from "@src/utils/vscode"
 import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -72,9 +75,12 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 	const { t } = useAppTranslation()
 
 	const {
+		apiConfiguration,
 		customModePrompts,
 		listApiConfigMeta,
 		currentApiConfigName,
+		routerModels,
+		modeModelOverrides, // kilocode_change
 		mode,
 		customInstructions,
 		setCustomInstructions,
@@ -323,6 +329,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 	const [newModeCustomInstructions, setNewModeCustomInstructions] = useState("")
 	const [newModeGroups, setNewModeGroups] = useState<GroupEntry[]>(availableGroups)
 	const [newModeSource, setNewModeSource] = useState<ModeSource>("global")
+	const [newModeModelId, setNewModeModelId] = useState<string | null>(null) // kilocode_change
 
 	// Field-specific error states
 	const [nameError, setNameError] = useState<string>("")
@@ -342,6 +349,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 		setNewModeWhenToUse("")
 		setNewModeCustomInstructions("")
 		setNewModeSource("global")
+		setNewModeModelId(null) // kilocode_change
 		// Reset error states
 		setNameError("")
 		setSlugError("")
@@ -433,6 +441,14 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 		}
 
 		updateCustomMode(newModeSlug, newMode)
+		// kilocode_change start: persist model selection after mode is created
+		if (newModeModelId) {
+			vscode.postMessage({
+				type: "setModeModelOverride",
+				payload: { mode: newModeSlug, modelId: newModeModelId },
+			})
+		}
+		// kilocode_change end
 		// Immediately select the newly created mode in the UI
 		setVisualMode(newModeSlug)
 		switchMode(newModeSlug)
@@ -448,6 +464,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 		newModeCustomInstructions,
 		newModeGroups,
 		newModeSource,
+		newModeModelId,
 		updateCustomMode,
 	])
 
@@ -959,6 +976,15 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 							</Select>
 						</div>
 					</div>
+
+					{/* kilocode_change start: Per-mode Kilo Code model override */}
+					<KiloModeModelPicker
+						modeSlug={visualMode}
+						apiProvider={apiConfiguration?.apiProvider}
+						routerModels={routerModels as unknown as { kilocode?: Record<string, ModelInfo> }}
+						modeModelOverrides={modeModelOverrides as Record<string, string> | undefined}
+					/>
+					{/* kilocode_change end: Per-mode Kilo Code model override */}
 				</div>
 
 				{/* Role Definition section */}
@@ -1485,7 +1511,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 			</Section>
 
 			{isCreateModeDialogOpen && (
-				<div className="fixed inset-0 flex justify-end bg-black/50 z-[1000]">
+				<div className="fixed inset-0 flex justify-end bg-black/50 z-[1000]" data-testid="create-mode-dialog">
 					<div className="w-[calc(100vw-100px)] h-full bg-vscode-editor-background shadow-md flex flex-col relative">
 						<div className="flex-1 p-5 overflow-y-auto min-h-0">
 							<Button
@@ -1505,6 +1531,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 										handleNameChange(e.target.value)
 									}}
 									className="w-full"
+									data-testid="create-mode-name-input"
 								/>
 								{nameError && (
 									<div className="text-xs text-vscode-errorForeground mt-1">{nameError}</div>
@@ -1519,6 +1546,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 										setNewModeSlug(e.target.value)
 									}}
 									className="w-full"
+									data-testid="create-mode-slug-input"
 								/>
 								<div className="text-xs text-vscode-descriptionForeground mt-1">
 									{t("prompts:createModeDialog.slug.description")}
@@ -1554,6 +1582,18 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 								</VSCodeRadioGroup>
 							</div>
 
+							{/* kilocode_change start: per-mode model override (create mode dialog) */}
+							<div data-testid="create-mode-model-picker">
+								<KiloModeModelPicker
+									modeSlug={newModeSlug}
+									apiProvider={apiConfiguration?.apiProvider}
+									routerModels={routerModels as unknown as { kilocode?: Record<string, ModelInfo> }}
+									selectedModelId={newModeModelId}
+									onSelectModelId={setNewModeModelId}
+								/>
+							</div>
+							{/* kilocode_change end: per-mode model override (create mode dialog) */}
+
 							<div style={{ marginBottom: "16px" }}>
 								<div style={{ fontWeight: "bold", marginBottom: "4px" }}>
 									{t("prompts:createModeDialog.roleDefinition.label")}
@@ -1574,6 +1614,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 									}}
 									rows={4}
 									className="w-full"
+									data-testid="create-mode-role-definition-textarea"
 								/>
 								{roleDefinitionError && (
 									<div className="text-xs text-vscode-errorForeground mt-1">
@@ -1666,7 +1707,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 							<Button variant="secondary" onClick={() => setIsCreateModeDialogOpen(false)}>
 								{t("prompts:createModeDialog.buttons.cancel")}
 							</Button>
-							<Button variant="primary" onClick={handleCreateMode}>
+							<Button
+								variant="primary"
+								onClick={handleCreateMode}
+								data-testid="create-mode-submit-button">
 								{t("prompts:createModeDialog.buttons.create")}
 							</Button>
 						</div>

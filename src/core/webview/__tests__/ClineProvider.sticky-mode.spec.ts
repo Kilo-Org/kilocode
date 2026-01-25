@@ -300,6 +300,69 @@ describe("ClineProvider - Sticky Mode", () => {
 			await provider.resolveWebviewView(mockWebviewView)
 		})
 
+		// kilocode_change start: per-mode model override tests
+		it("applies per-mode model override on mode switch when gateway models are available", async () => {
+			const baseModel = "kilo-model-a"
+			const overrideModel = "kilo-model-b"
+
+			// Ensure we start with a known provider/model.
+			await provider.contextProxy.setProviderSettings({
+				apiProvider: "kilocode",
+				kilocodeModel: baseModel,
+			} as any)
+
+			// Configure override for the target mode.
+			await provider.setValue("modeModelOverrides", {
+				architect: overrideModel,
+			} as any)
+
+			// Avoid filesystem-backed ProviderSettingsManager behavior in this test.
+			;(provider as any).providerSettingsManager = {
+				getModeConfigId: vi.fn().mockResolvedValue(undefined),
+				listConfig: vi
+					.fn()
+					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "kilocode" }]),
+				setModeConfig: vi.fn().mockResolvedValue(undefined),
+			}
+
+			// Step 6 gate: only apply overrides when gateway models are available.
+			provider.setKilocodeGatewayModelsAvailable(true)
+
+			await provider.handleModeSwitch("architect")
+
+			expect(provider.contextProxy.getProviderSettings().apiProvider).toBe("kilocode")
+			expect(provider.contextProxy.getProviderSettings().kilocodeModel).toBe(overrideModel)
+		})
+
+		it("does not apply per-mode model override on mode switch when gateway models are unavailable", async () => {
+			const baseModel = "kilo-model-a"
+			const overrideModel = "kilo-model-b"
+
+			await provider.contextProxy.setProviderSettings({
+				apiProvider: "kilocode",
+				kilocodeModel: baseModel,
+			} as any)
+
+			await provider.setValue("modeModelOverrides", {
+				architect: overrideModel,
+			} as any)
+			;(provider as any).providerSettingsManager = {
+				getModeConfigId: vi.fn().mockResolvedValue(undefined),
+				listConfig: vi
+					.fn()
+					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "kilocode" }]),
+				setModeConfig: vi.fn().mockResolvedValue(undefined),
+			}
+
+			provider.setKilocodeGatewayModelsAvailable(false)
+
+			await provider.handleModeSwitch("architect")
+
+			// Override should NOT be applied because gateway models are unavailable.
+			expect(provider.contextProxy.getProviderSettings().kilocodeModel).toBe(baseModel)
+		})
+		// kilocode_change end: per-mode model override tests
+
 		it("should save mode to task metadata when switching modes", async () => {
 			// Create a mock task
 			const mockTask = new Task({

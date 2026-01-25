@@ -302,6 +302,7 @@ export interface WebviewMessage {
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
 		| "refreshCustomTools"
+		| "setModeModelOverride" // kilocode_change
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -489,6 +490,18 @@ export interface TaskHistoryResponsePayload {
 }
 // kilocode_change end
 
+// kilocode_change start: mode model override message payload
+export const setModeModelOverridePayloadSchema = z
+	.object({
+		mode: z.string().min(1),
+		// Allow null so the UI can clear an override.
+		modelId: z.union([z.string().min(1), z.null()]),
+	})
+	.strict()
+
+export type SetModeModelOverridePayload = z.infer<typeof setModeModelOverridePayloadSchema>
+// kilocode_change end: mode model override message payload
+
 export const checkoutDiffPayloadSchema = z.object({
 	ts: z.number().optional(),
 	previousCommitHash: z.string().optional(),
@@ -542,6 +555,7 @@ export type WebViewMessagePayload =
 	| TasksByIdRequestPayload
 	| TaskHistoryRequestPayload
 	| RequestCheckpointRestoreApprovalPayload
+	| SetModeModelOverridePayload // kilocode_change
 	// kilocode_change end
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload

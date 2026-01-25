@@ -14,6 +14,7 @@ import {
 	type TaskProviderEvents,
 	type GlobalState,
 	type ProviderName,
+	type ModelIdKey, // kilocode_change
 	type ProviderSettings,
 	type RooCodeSettings,
 	type ProviderSettingsEntry,
@@ -45,6 +46,8 @@ import {
 	DEFAULT_MODES,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 	getModelId,
+	modelIdKeysByProvider, // kilocode_change
+	isTypicalProvider, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -88,6 +91,7 @@ import { t } from "../../i18n"
 
 import { buildApiHandler } from "../../api"
 import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
+import { getModels } from "../../api/providers/fetchers/modelCache" // kilocode_change
 import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
 
 import { ContextProxy } from "../config/ContextProxy"
@@ -176,6 +180,60 @@ export class ClineProvider
 	private cloudOrganizationsCacheTimestamp: number | null = null
 	private static readonly CLOUD_ORGANIZATIONS_CACHE_DURATION_MS = 5 * 1000 // 5 seconds
 
+	// kilocode_change start: per-mode model override fallback when gateway models are unavailable
+	/**
+	 * Tracks whether the Kilo Code gateway model list is currently available.
+	 *
+	 * This is updated opportunistically whenever we receive a routerModels payload that includes
+	 * the `kilocode` key.
+	 *
+	 * Default is false to ensure we *do not* apply per-mode model overrides unless we know the
+	 * gateway model list is present.
+	 */
+	private kilocodeGatewayModelsAvailable: boolean = false
+
+	public setKilocodeGatewayModelsAvailable(available: boolean): void {
+		this.kilocodeGatewayModelsAvailable = available
+	}
+
+	// kilocode_change: public getter needed so webview message handlers can safely decide whether to apply per-mode overrides
+	public getKilocodeGatewayModelsAvailable(): boolean {
+		return this.kilocodeGatewayModelsAvailable
+	}
+
+	// kilocode_change start: per-mode model override helpers
+	/**
+	 * Best-effort refresh for the `kilocodeGatewayModelsAvailable` gate.
+	 *
+	 * Some sessions may not hit the router model fetch paths that normally update
+	 * this flag, leaving it `false` longer than intended.
+	 */
+	private async ensureKilocodeGatewayModelsAvailable(): Promise<boolean> {
+		if (this.kilocodeGatewayModelsAvailable) {
+			return true
+		}
+
+		const apiConfiguration = this.contextProxy.getProviderSettings()
+		if (apiConfiguration?.apiProvider !== "kilocode") {
+			return false
+		}
+
+		try {
+			const models = await getModels({
+				provider: "kilocode",
+				kilocodeToken: apiConfiguration.kilocodeToken,
+				kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
+			})
+
+			const available = Object.keys(models).length > 0
+			this.setKilocodeGatewayModelsAvailable(available)
+			return available
+		} catch {
+			return false
+		}
+	}
+	// kilocode_change end: per-mode model override helpers
+
 	public isViewLaunched = false
 	public settingsImportedAt?: number
 	public readonly latestAnnouncementId = "dec-2025-v3.38.0-skills-native-tool-calling" // v3.38.0 Skills & Native Tool Calling Required
@@ -209,6 +267,19 @@ export class ClineProvider
 		this.providerSettingsManager = new ProviderSettingsManager(this.context)
 
 		this.customModesManager = new CustomModesManager(this.context, async () => {
+			// kilocode_change start: keep ContextProxy state in sync with CustomModesManager globalState writes
+			// CustomModesManager updates `context.globalState` directly (not through ContextProxy).
+			// To ensure the webview reflects YAML-defined mode model overrides immediately (no reload),
+			// mirror `modeModelOverrides` into ContextProxy before posting state.
+			try {
+				const overridesFromGlobalState =
+					this.context.globalState.get<Record<string, string>>("modeModelOverrides") ?? {}
+				await this.contextProxy.setValue("modeModelOverrides", overridesFromGlobalState)
+			} catch {
+				// non-fatal
+			}
+			// kilocode_change end
+
 			await this.postStateToWebview()
 		})
 
@@ -1002,6 +1073,38 @@ export class ClineProvider
 					}
 				}
 			}
+
+			// kilocode_change start: ensure per-mode model override is applied when restoring tasks from history
+			// When restoring a task, we may activate a provider profile that contains a different model
+			// (e.g., the user's manually-selected model). If a per-mode override exists, it must win.
+			try {
+				const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
+				const modeModelOverride = modeModelOverrides[historyItem.mode]
+				if (modeModelOverride) {
+					const activeProvider = this.contextProxy.getProviderSettings()?.apiProvider
+
+					// Only apply when Kilo Code provider is active and we know the gateway model list is available.
+					const gatewayModelsAvailable =
+						activeProvider === "kilocode" &&
+						(this.getKilocodeGatewayModelsAvailable() ||
+							(await this.ensureKilocodeGatewayModelsAvailable()))
+
+					if (gatewayModelsAvailable) {
+						await this.applyCanonicalModelIdToActiveProviderConfiguration(modeModelOverride)
+					} else {
+						this.log(
+							`[createTaskWithHistoryItem] Skipping per-mode Kilo Code model override for mode '${historyItem.mode}' because gateway models are unavailable`,
+						)
+					}
+				}
+			} catch (error) {
+				this.log(
+					`[createTaskWithHistoryItem] Failed to apply per-mode model override during history restore: ${
+						error instanceof Error ? error.message : String(error)
+					}`,
+				)
+			}
+			// kilocode_change end: ensure per-mode model override is applied when restoring tasks from history
 		}
 
 		const {
@@ -1428,6 +1531,27 @@ export class ClineProvider
 			}
 		}
 
+		// kilocode_change start - Apply per-mode model override after profile activation
+		const modeModelOverrides = (this.getGlobalState("modeModelOverrides") ?? {}) as Record<string, string>
+		const modeModelOverride = modeModelOverrides[newMode]
+		if (modeModelOverride) {
+			// Only apply when we know the gateway model list is available.
+			// This avoids setting a model that might not exist/resolve when models cannot be fetched.
+			const activeProvider = this.contextProxy.getProviderSettings()?.apiProvider
+			const gatewayModelsAvailable =
+				activeProvider === "kilocode" &&
+				(this.getKilocodeGatewayModelsAvailable() || (await this.ensureKilocodeGatewayModelsAvailable()))
+
+			if (gatewayModelsAvailable) {
+				await this.applyCanonicalModelIdToActiveProviderConfiguration(modeModelOverride)
+			} else {
+				this.log(
+					`[handleModeSwitch] Skipping per-mode Kilo Code model override for mode '${newMode}' because gateway models are unavailable`,
+				)
+			}
+		}
+		// kilocode_change end
+
 		await this.postStateToWebview()
 	}
 
@@ -1478,6 +1602,65 @@ export class ClineProvider
 			;(task as any).apiConfiguration = providerSettings
 		}
 	}
+
+	// kilocode_change start
+	/**
+	 * Apply a canonical (provider-agnostic) model id to the currently-active provider configuration.
+	 *
+	 * This is intentionally minimal and safe:
+	 * - If provider is missing/unknown or we cannot determine the provider-specific model id key,
+	 *   this no-ops without throwing.
+	 * - Does not depend on webview-only state.
+	 */
+	public async applyCanonicalModelIdToActiveProviderConfiguration(canonicalModelId: string): Promise<void> {
+		try {
+			const apiConfiguration = this.contextProxy.getProviderSettings()
+			const provider = apiConfiguration?.apiProvider
+			if (!provider) {
+				return
+			}
+
+			// kilocode_change start: per-mode overrides are Kilo Code-specific
+			// Prevent accidentally writing a Kilo Code gateway model id into another provider's model-id field.
+			if (provider !== "kilocode") {
+				return
+			}
+			// kilocode_change end: per-mode overrides are Kilo Code-specific
+
+			const modelIdKey = this.getModelIdKeyForProvider(provider)
+			if (!modelIdKey) {
+				this.log(
+					`[applyCanonicalModelIdToActiveProviderConfiguration] No model id key for provider '${provider}', skipping`,
+				)
+				return
+			}
+
+			const updatedProviderSettings: ProviderSettings = {
+				...apiConfiguration,
+				[modelIdKey]: canonicalModelId,
+			}
+
+			await this.contextProxy.setProviderSettings(updatedProviderSettings)
+			this.updateTaskApiHandlerIfNeeded(updatedProviderSettings)
+		} catch (error) {
+			this.log(
+				`[applyCanonicalModelIdToActiveProviderConfiguration] Failed to apply canonical model id: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
+	}
+
+	private getModelIdKeyForProvider(provider: ProviderName): ModelIdKey | undefined {
+		// Prefer the shared, canonical mapping from @roo-code/types when available.
+		if (isTypicalProvider(provider)) {
+			return modelIdKeysByProvider[provider]
+		}
+
+		// Explicitly return undefined for non-typical providers.
+		return undefined
+	}
+	// kilocode_change end
 
 	getProviderProfileEntries(): ProviderSettingsEntry[] {
 		return this.contextProxy.getValues().listApiConfigMeta || []
@@ -1575,7 +1758,9 @@ export class ClineProvider
 	}
 
 	async activateProviderProfile(args: { name: string } | { id: string }) {
-		const { name, id, ...providerSettings } = await this.providerSettingsManager.activateProfile(args)
+		const { name, id, ...providerSettingsFromProfile } = await this.providerSettingsManager.activateProfile(args)
+		let providerSettings = providerSettingsFromProfile
+		// kilocode_change: do NOT re-apply per-mode override here; it should only happen during mode switches.
 
 		// See `upsertProviderProfile` for a description of what this is doing.
 		await Promise.all([
@@ -2128,6 +2313,7 @@ export class ClineProvider
 			mode,
 			customModePrompts,
 			customSupportPrompts,
+			modeModelOverrides, // kilocode_change
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId, // kilocode_change
@@ -2316,6 +2502,7 @@ export class ClineProvider
 			mode: mode ?? defaultModeSlug,
 			customModePrompts: customModePrompts ?? {},
 			customSupportPrompts: customSupportPrompts ?? {},
+			modeModelOverrides: modeModelOverrides ?? {}, // kilocode_change
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId, // kilocode_change
@@ -2749,6 +2936,7 @@ export class ClineProvider
 				}
 			})(),
 			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
+			modeModelOverrides: stateValues.modeModelOverrides ?? {}, // kilocode_change
 		}
 	}
 

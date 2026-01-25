@@ -200,14 +200,47 @@ export class CustomModesManager {
 			if (!result.success) {
 				console.error(`[CustomModesManager] Schema validation failed for ${filePath}:`, result.error)
 
-				// Show user-friendly error for .roomodes files
-				if (filePath.endsWith(ROOMODES_FILENAME)) {
-					const issues = result.error.issues
+				// kilocode_change start: always surface schema validation errors to the user
+				// Previously we only surfaced these for `.kilocodemodes`. This could lead to silent failures when
+				// the global custom modes file is invalid, and it also makes tests flaky.
+				let issues = ""
+
+				try {
+					issues = result.error.issues
 						.map((issue) => `• ${issue.path.join(".")}: ${issue.message}`)
 						.join("\n")
-
-					vscode.window.showErrorMessage(t("common:customModes.errors.schemaValidationError", { issues }))
+				} catch (formatError) {
+					// If formatting the issues fails for any reason, still surface the error to the user.
+					console.error(
+						`[CustomModesManager] Failed to format schema validation issues for ${filePath}:`,
+						formatError,
+					)
 				}
+
+				// Note: show at most one toast. Prefer the detailed message, but never let formatting/i18n failures
+				// prevent error surfacing.
+				const message = (() => {
+					try {
+						return t("common:customModes.errors.schemaValidationError", { issues })
+					} catch (i18nError) {
+						console.error(
+							`[CustomModesManager] Failed to translate schemaValidationError for ${filePath}:`,
+							i18nError,
+						)
+						return "customModes.errors.schemaValidationError"
+					}
+				})()
+
+				try {
+					vscode.window.showErrorMessage(message)
+				} catch (toastError) {
+					// Don't crash the load path if VS Code APIs are unavailable (e.g., tests).
+					console.error(
+						`[CustomModesManager] Failed to show schema validation error message for ${filePath}:`,
+						toastError,
+					)
+				}
+				// kilocode_change end: always surface schema validation errors to the user
 
 				return []
 			}
@@ -266,6 +299,59 @@ export class CustomModesManager {
 
 		return merged
 	}
+
+	// kilocode_change start: YAML-defined per-mode model override support
+	/**
+	 * Derive a `modeModelOverrides` object from merged custom modes.
+	 *
+	 * Behavior:
+	 * - If `mode.model` is defined for a mode slug that exists in `mergedModes`, set/overwrite the override.
+	 * - If `mode.model` is not defined, leave any existing override untouched.
+	 *
+	 * Rationale:
+	 * - Custom modes YAML/JSON typically won't specify a model. Deleting overrides in that case would
+	 *   unintentionally wipe UI-selected per-mode models.
+	 * - This function is called on every custom modes refresh (file watcher + startup), so it must be
+	 *   conservative and only apply explicit declarations.
+	 *
+	 * This lets YAML/JSON mode definitions control overrides for the modes they define,
+	 * while still allowing UI-driven overrides for built-in modes that are not present
+	 * in custom modes files.
+	 */
+	private async syncModeModelOverridesFromCustomModes(mergedModes: ModeConfig[]): Promise<void> {
+		try {
+			const current = (this.context.globalState.get<Record<string, string>>("modeModelOverrides") ??
+				{}) as Record<string, string>
+
+			const updated: Record<string, string> = { ...current }
+
+			for (const mode of mergedModes) {
+				// Only apply explicit declarations.
+				// NOTE: We intentionally do NOT delete overrides when `mode.model` is absent.
+				if (mode.model) {
+					updated[mode.slug] = mode.model
+				}
+			}
+
+			// Avoid unnecessary writes (helps reduce churn from file watcher updates).
+			const isEqual =
+				Object.keys(updated).length === Object.keys(current).length &&
+				Object.keys(updated).every((k) => updated[k] === current[k])
+			if (isEqual) {
+				return
+			}
+
+			await this.context.globalState.update("modeModelOverrides", updated)
+			logger.debug("Synced modeModelOverrides from custom modes", {
+				updatedKeys: Object.keys(updated),
+			})
+		} catch (error) {
+			logger.error("Failed to sync modeModelOverrides from custom modes", {
+				error: error instanceof Error ? error.message : String(error),
+			})
+		}
+	}
+	// kilocode_change end: YAML-defined per-mode model override support
 
 	public async getCustomModesFilePath(): Promise<string> {
 		const settingsDir = await ensureSettingsDirectoryExists(this.context)
@@ -331,6 +417,9 @@ export class CustomModesManager {
 				)
 				// kilocode_change end
 				await this.context.globalState.update("customModes", mergedModes)
+				// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+				await this.syncModeModelOverridesFromCustomModes(mergedModes)
+				// kilocode_change end
 				this.clearCache()
 				await this.onUpdate()
 			} catch (error) {
@@ -363,6 +452,9 @@ export class CustomModesManager {
 					// Merge with organization modes preserved
 					const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
 					await this.context.globalState.update("customModes", mergedModes)
+					// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+					await this.syncModeModelOverridesFromCustomModes(mergedModes)
+					// kilocode_change end
 					// kilocode_change end
 					this.clearCache()
 					await this.onUpdate()
@@ -386,6 +478,9 @@ export class CustomModesManager {
 						// Merge with organization modes preserved
 						const mergedModes = await this.mergeCustomModes([], settingsModes, organizationModes)
 						await this.context.globalState.update("customModes", mergedModes)
+						// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+						await this.syncModeModelOverridesFromCustomModes(mergedModes)
+						// kilocode_change end
 						// kilocode_change end
 						this.clearCache()
 						await this.onUpdate()
@@ -424,6 +519,9 @@ export class CustomModesManager {
 		// kilocode_change end
 
 		await this.context.globalState.update("customModes", mergedModes)
+		// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+		await this.syncModeModelOverridesFromCustomModes(mergedModes)
+		// kilocode_change end
 
 		this.cachedModes = mergedModes
 		this.cachedAt = now
@@ -539,6 +637,9 @@ export class CustomModesManager {
 		// kilocode_change end
 
 		await this.context.globalState.update("customModes", mergedModes)
+		// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+		await this.syncModeModelOverridesFromCustomModes(mergedModes)
+		// kilocode_change end
 
 		this.clearCache()
 
@@ -1153,6 +1254,9 @@ export class CustomModesManager {
 		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
 
 		await this.context.globalState.update("customModes", mergedModes)
+		// kilocode_change start: derive per-mode model overrides from YAML/JSON custom modes
+		await this.syncModeModelOverridesFromCustomModes(mergedModes)
+		// kilocode_change end
 		this.clearCache()
 		await this.onUpdate()
 	}

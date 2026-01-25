@@ -90,10 +90,7 @@ describe("parseDataUrlToImageBlock", () => {
 
 describe("parseDataUrlsToImageBlocks", () => {
 	it("should parse multiple valid data URLs", () => {
-		const dataUrls = [
-			"data:image/png;base64,iVBORw0KGgo",
-			"data:image/jpeg;base64,/9j/4AAQ",
-		]
+		const dataUrls = ["data:image/png;base64,iVBORw0KGgo", "data:image/jpeg;base64,/9j/4AAQ"]
 		const result = parseDataUrlsToImageBlocks(dataUrls)
 
 		expect(result).toHaveLength(2)
@@ -110,11 +107,7 @@ describe("parseDataUrlsToImageBlocks", () => {
 	})
 
 	it("should filter out invalid data URLs", () => {
-		const dataUrls = [
-			"data:image/png;base64,validBase64",
-			"invalid-url",
-			"data:image/jpeg;base64,anotherValid",
-		]
+		const dataUrls = ["data:image/png;base64,validBase64", "invalid-url", "data:image/jpeg;base64,anotherValid"]
 		const result = parseDataUrlsToImageBlocks(dataUrls)
 
 		expect(result).toHaveLength(2)

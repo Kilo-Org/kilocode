@@ -364,6 +364,16 @@
 			"refresh": "Yenile"
 		}
 	},
+	"modeModelPicker": {
+		"label": "Model",
+		"description": "Bu mod için kullanılacak Kilo Code gateway modelini seç.",
+		"searchPlaceholder": "Modelleri ara",
+		"noMatch": "Eşleşme bulunamadı",
+		"useDefault": "Varsayılanı kullan",
+		"providerInactive": "Mod başına model ayarlamak için sağlayıcıyı Kilo Code'a geçir.",
+		"modelsUnavailable": "Kilo Code modelleri kullanılamıyor. Modelleri almak için Kilo Code sağlayıcısını yapılandır.",
+		"overrideWillNotApply": "Gateway modelleri kullanılamıyor; modeller alınana kadar mod başına model uygulanmayacak."
+	},
 	"skills": {
 		"description": "Beceriler, belirli görevler için özel talimatlar sağlar. İsteğinle ilgili olduğunda otomatik olarak uygulanırlar.",
 		"noSkills": "Yüklü beceri yok",

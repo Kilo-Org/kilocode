@@ -365,6 +365,16 @@
 			"refresh": "更新"
 		}
 	},
+	"modeModelPicker": {
+		"label": "モデル",
+		"description": "このモードで使用する Kilo Code gateway モデルを選択します。",
+		"searchPlaceholder": "モデルを検索",
+		"noMatch": "一致するものが見つかりません",
+		"useDefault": "既定を使用",
+		"providerInactive": "モードごとのモデルを設定するには、プロバイダーを Kilo Code に切り替えてください。",
+		"modelsUnavailable": "Kilo Code モデルは利用できません。モデルを取得するために Kilo Code プロバイダーを設定してください。",
+		"overrideWillNotApply": "Gateway モデルが利用できないため、モデルを取得できるようになるまでモードごとのモデルは適用されません。"
+	},
 	"skills": {
 		"description": "スキルは特定のタスクに対する専門的な指示を提供します。リクエストに関連する場合、自動的に適用されます。",
 		"noSkills": "スキルがインストールされていません",

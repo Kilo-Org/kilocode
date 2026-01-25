@@ -1,6 +1,7 @@
 // npx vitest src/components/modes/__tests__/ModesView.spec.tsx
 
 import { render, screen, fireEvent, waitFor } from "@/utils/test-utils"
+import { within } from "@testing-library/react" // kilocode_change
 import ModesView from "../ModesView"
 import { ExtensionStateContext } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
@@ -18,6 +19,8 @@ const mockExtensionState = {
 		{ id: "config1", name: "Config 1" },
 		{ id: "config2", name: "Config 2" },
 	],
+	routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+	modeModelOverrides: {}, // kilocode_change
 	enhancementApiConfigId: "",
 	setEnhancementApiConfigId: vitest.fn(),
 	commitMessageApiConfigId: "", // kilocode_change
@@ -274,4 +277,150 @@ describe("PromptsView", () => {
 		// Verify popover remains closed
 		expect(selectTrigger).toHaveAttribute("aria-expanded", "false")
 	})
+
+	// kilocode_change start: per-mode model override UI behavior
+	it("disables per-mode Model picker when provider is not kilocode (even if models exist)", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "openai" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		expect(modelSelectTrigger).toBeDisabled()
+	})
+
+	it("disables per-mode Model picker when Kilo Code routerModels are unavailable", () => {
+		renderPromptsView({ apiConfiguration: { apiProvider: "kilocode" }, routerModels: { kilocode: {} } })
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		expect(modelSelectTrigger).toBeDisabled()
+	})
+
+	it("renders enabled per-mode Model picker when provider is kilocode and models exist", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		expect(modelSelectTrigger).not.toBeDisabled()
+	})
+
+	it("shows helper text when provider is not kilocode", () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "openai" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+		expect(screen.getByTestId("mode-model-helper-provider-inactive")).toBeInTheDocument()
+	})
+
+	it("shows helper text when Kilo Code routerModels are missing", () => {
+		renderPromptsView({ apiConfiguration: { apiProvider: "kilocode" }, routerModels: undefined })
+		expect(screen.getByTestId("mode-model-helper-models-unavailable")).toBeInTheDocument()
+	})
+
+	it("sends setModeModelOverride when selecting a model", async () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			modeModelOverrides: {},
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		fireEvent.click(modelSelectTrigger)
+
+		const option = await waitFor(() => screen.getByTestId("mode-model-option-kilo-model-b"))
+		fireEvent.click(option)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "setModeModelOverride",
+			payload: { mode: "code", modelId: "kilo-model-b" },
+		})
+	})
+
+	it("sends setModeModelOverride when selecting Use default", async () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			modeModelOverrides: { code: "kilo-model-a" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		// Open the select
+		const modelSelectTrigger = screen.getByTestId("mode-model-select-trigger")
+		fireEvent.click(modelSelectTrigger)
+
+		// Pick "Use default" option
+		const defaultOption = await waitFor(() => screen.getByTestId("mode-model-option-default"))
+		fireEvent.click(defaultOption)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "setModeModelOverride",
+			payload: { mode: "code", modelId: null },
+		})
+	})
+	// kilocode_change end: per-mode model override UI behavior
+
+	// kilocode_change start: create mode dialog should include per-mode model picker
+	it("renders per-mode Model picker in the create mode dialog", async () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		// Open the create mode dialog
+		fireEvent.click(screen.getByTestId("add-mode-button"))
+
+		// Ensure the dialog and model picker render
+		expect(await screen.findByTestId("create-mode-dialog")).toBeInTheDocument()
+		const createModelPicker = await screen.findByTestId("create-mode-model-picker")
+		expect(createModelPicker).toBeInTheDocument()
+		// Under the hood it uses the same trigger test id, but we must scope to the create dialog picker
+		expect(within(createModelPicker).getByTestId("mode-model-select-trigger")).toBeInTheDocument()
+	})
+
+	it("persists selected model when creating a new mode", async () => {
+		renderPromptsView({
+			apiConfiguration: { apiProvider: "kilocode" },
+			routerModels: { kilocode: { "kilo-model-a": {}, "kilo-model-b": {} } },
+		})
+
+		// Open the create mode dialog
+		fireEvent.click(screen.getByTestId("add-mode-button"))
+		await screen.findByTestId("create-mode-dialog")
+
+		// Fill required name/slug (the dialog starts blank due to resetFormState)
+		const nameInput = screen.getByTestId("create-mode-name-input")
+		fireEvent.change(nameInput, { target: { value: "My Custom Mode" } })
+
+		// Fill required role definition so modeConfigSchema passes
+		const roleDefinition = await screen.findByTestId("create-mode-role-definition-textarea")
+		// VSCodeTextArea's handler reads from e.target.value (not event.detail), so we must set the element's value.
+		Object.defineProperty(roleDefinition, "value", { value: "Some role definition", writable: true })
+		fireEvent(roleDefinition, new Event("change", { bubbles: true }))
+
+		// Select a model in the create dialog (should not persist yet)
+		const createModelPicker = await screen.findByTestId("create-mode-model-picker")
+		const modelSelectTrigger = within(createModelPicker).getByTestId("mode-model-select-trigger")
+		fireEvent.click(modelSelectTrigger)
+		const option = await screen.findByTestId("mode-model-option-kilo-model-b")
+		fireEvent.click(option)
+
+		// Create the mode (should persist selection)
+		fireEvent.click(screen.getByTestId("create-mode-submit-button"))
+
+		// Find the generated slug in the updateCustomMode call
+		const updateCustomModeCall = await waitFor(() => {
+			const call = (vscode.postMessage as any).mock.calls.find(
+				(args: any[]) => args?.[0]?.type === "updateCustomMode",
+			)
+			expect(call).toBeTruthy()
+			return call
+		})
+
+		const createdSlug = updateCustomModeCall[0].slug as string
+
+		// Ensure we persisted the mode model override for the created slug
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "setModeModelOverride",
+			payload: { mode: createdSlug, modelId: "kilo-model-b" },
+		})
+	})
+	// kilocode_change end: create mode dialog should include per-mode model picker
 })

@@ -364,6 +364,16 @@
 			"refresh": "Atualizar"
 		}
 	},
+	"modeModelPicker": {
+		"label": "Modelo",
+		"description": "Selecione o modelo de gateway do Kilo Code para usar neste modo.",
+		"searchPlaceholder": "Pesquisar modelos",
+		"noMatch": "Nenhuma correspondência encontrada",
+		"useDefault": "Usar padrão",
+		"providerInactive": "Altere o provedor para Kilo Code para definir o modelo por modo.",
+		"modelsUnavailable": "Os modelos do Kilo Code não estão disponíveis. Configure o provedor do Kilo Code para buscar modelos.",
+		"overrideWillNotApply": "Modelos de gateway indisponíveis; o modelo por modo não será aplicado até que os modelos possam ser buscados."
+	},
 	"skills": {
 		"description": "As habilidades fornecem instruções especializadas para tarefas específicas. Elas são aplicadas automaticamente quando relevantes para sua solicitação.",
 		"noSkills": "Nenhuma habilidade instalada",

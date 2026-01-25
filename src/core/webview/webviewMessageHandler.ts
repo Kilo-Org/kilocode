@@ -16,6 +16,7 @@ import {
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
 	UpdateGlobalStateMessage,
+	setModeModelOverridePayloadSchema,
 } from "../../shared/WebviewMessage"
 // kilocode_change end
 
@@ -472,6 +473,18 @@ export const webviewMessageHandler = async (
 			// Load custom modes first
 			const customModes = await provider.customModesManager.getCustomModes()
 			await updateGlobalState("customModes", customModes)
+
+			// kilocode_change start: ensure modeModelOverrides stored via ExtensionContext.globalState are mirrored into ContextProxy state
+			// CustomModesManager updates `context.globalState` directly (not through ContextProxy), so we need to
+			// mirror `modeModelOverrides` into ContextProxy so the webview can render it immediately.
+			try {
+				const overridesFromGlobalState =
+					provider.context.globalState.get<Record<string, string>>("modeModelOverrides") ?? {}
+				await updateGlobalState("modeModelOverrides", overridesFromGlobalState)
+			} catch {
+				// non-fatal
+			}
+			// kilocode_change end
 
 			// kilocode_change start: Fetch organization modes on startup
 			// Fetch organization modes on startup if an organization is selected
@@ -1046,6 +1059,16 @@ export const webviewMessageHandler = async (
 					})
 				}
 			})
+
+			// kilocode_change start: track gateway model availability for per-mode model overrides
+			// Only update the flag when the kilocode provider was part of this fetch.
+			if (!providerFilter || providerFilter === "kilocode") {
+				const kilocodeModels = routerModels.kilocode
+				const available = Object.keys(kilocodeModels).length > 0
+				// Some unit tests use partial provider mocks that don't implement this helper.
+				provider.setKilocodeGatewayModelsAvailable?.(Boolean(available))
+			}
+			// kilocode_change end
 
 			provider.postMessageToWebview({
 				type: "routerModels",
@@ -1789,6 +1812,30 @@ export const webviewMessageHandler = async (
 		case "mode":
 			await provider.handleModeSwitch(message.text as Mode)
 			break
+		// kilocode_change start: per-mode model override persistence
+		case "setModeModelOverride": {
+			const parsed = setModeModelOverridePayloadSchema.safeParse(message.payload)
+			if (!parsed.success) {
+				break
+			}
+
+			const { mode, modelId } = parsed.data
+
+			const current = getGlobalState("modeModelOverrides") ?? {}
+			const updated: Record<string, string> = { ...current }
+
+			if (modelId === null) {
+				delete updated[mode]
+			} else {
+				updated[mode] = modelId
+			}
+
+			await updateGlobalState("modeModelOverrides", updated)
+
+			await provider.postStateToWebview()
+			break
+		}
+		// kilocode_change end: per-mode model override persistence
 		case "updatePrompt":
 			if (message.promptMode && message.customPrompt !== undefined) {
 				const existingPrompts = getGlobalState("customModePrompts") ?? {}
@@ -2213,6 +2260,10 @@ export const webviewMessageHandler = async (
 							kilocodeOrganizationId: message.apiConfiguration.kilocodeOrganizationId,
 							kilocodeToken: message.apiConfiguration.kilocodeToken,
 						})
+						// kilocode_change start: track gateway model availability for per-mode model overrides
+						// Some unit tests use partial provider mocks that don't implement this helper.
+						provider.setKilocodeGatewayModelsAvailable?.(Object.keys(models).length > 0)
+						// kilocode_change end
 						provider.postMessageToWebview({
 							type: "routerModels",
 							routerModels: { kilocode: models } as Record<RouterName, ModelRecord>,
