@@ -2713,6 +2713,7 @@ describe("ClineProvider - Router Models", () => {
 		// Mock getState to return API configuration
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
+				apiProvider: "gemini", // kilocode_change: required for gemini to be fetched
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				unboundApiKey: "unbound-key",
@@ -2798,7 +2799,7 @@ describe("ClineProvider - Router Models", () => {
 				litellm: mockModels,
 				kilocode: mockModels,
 				"nano-gpt": mockModels, // kilocode_change
-				ollama: mockModels, // kilocode_change
+				ollama: {}, // kilocode_change: ollama not fetched when apiProvider is gemini
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
@@ -2815,6 +2816,7 @@ describe("ClineProvider - Router Models", () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
+		// Note: This test intentionally does NOT set apiProvider to test when gemini/ollama are not fetched
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
 				openRouterApiKey: "openrouter-key",
@@ -2825,9 +2827,7 @@ describe("ClineProvider - Router Models", () => {
 				litellmBaseUrl: "http://localhost:4000",
 				// kilocode_change start
 				chutesApiKey: "chutes-key",
-				geminiApiKey: "gemini-key",
-				googleGeminiBaseUrl: "https://gemini.example.com",
-				nanoGptApiKey: "nano-gpt-key", // kilocode_change
+				nanoGptApiKey: "nano-gpt-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				inceptionLabsApiKey: "inception-key",
 				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
@@ -2842,14 +2842,13 @@ describe("ClineProvider - Router Models", () => {
 		const { getModels } = await import("../../../api/providers/fetchers/modelCache")
 
 		// Mock some providers to succeed and others to fail
+		// Note: gemini and ollama are NOT fetched because apiProvider is not set
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
-			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini success
 			.mockRejectedValueOnce(new Error("Requesty API error")) //
 			.mockResolvedValueOnce(mockModels) // kilocode_change glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
 			.mockResolvedValueOnce(mockModels) // deepinfra success
 			.mockResolvedValueOnce(mockModels) // nano-gpt success // kilocode_change
@@ -2868,7 +2867,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
-				gemini: mockModels, // kilocode_change
+				gemini: {}, // kilocode_change: not fetched when apiProvider is not "gemini"
 				requesty: {},
 				glama: mockModels, // kilocode_change
 				unbound: {},
@@ -3024,7 +3023,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
-				gemini: mockModels, // kilocode_change
+				gemini: {}, // kilocode_change: gemini not fetched when apiProvider is not "gemini"
 				requesty: mockModels,
 				glama: mockModels, // kilocode_change
 				unbound: mockModels,
@@ -3033,7 +3032,7 @@ describe("ClineProvider - Router Models", () => {
 				litellm: {},
 				kilocode: mockModels,
 				"nano-gpt": mockModels, // kilocode_change
-				ollama: mockModels, // kilocode_change
+				ollama: {}, // kilocode_change: ollama not fetched when apiProvider is not "ollama"
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change

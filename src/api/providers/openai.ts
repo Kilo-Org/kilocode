@@ -9,6 +9,14 @@ import {
 	NATIVE_TOOL_DEFAULTS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
+	openAiNativeModels,
+	anthropicModels,
+	geminiModels,
+	mistralModels,
+	deepSeekModels,
+	qwenCodeModels,
+	vertexModels,
+	bedrockModels,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -165,11 +173,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				...(reasoning && reasoning),
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
 			}
 
 			// Add max_tokens if needed
@@ -244,11 +258,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					: enabledLegacyFormat
 						? [systemMessage, ...convertToSimpleMessages(messages)]
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// Add max_tokens if needed
@@ -386,11 +406,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -421,11 +447,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -604,4 +636,61 @@ export async function getOpenAiModels(baseUrl?: string, apiKey?: string, openAiH
 	} catch (error) {
 		return []
 	}
+}
+
+export function getOpenAiModelInfo(modelId: string): ModelInfo | undefined {
+	const models: Record<string, ModelInfo>[] = [
+		openAiNativeModels,
+		anthropicModels,
+		geminiModels,
+		mistralModels,
+		deepSeekModels,
+		qwenCodeModels,
+		vertexModels,
+		bedrockModels,
+	]
+
+	// Helper function to sanitize and return model info
+	const sanitizeModelInfo = (info: ModelInfo): ModelInfo => {
+		if (info.tiers) {
+			return {
+				...info,
+				tiers: info.tiers.map((tier) => ({
+					...tier,
+					// Replace Infinity/null with Number.MAX_SAFE_INTEGER (essentially unlimited)
+					contextWindow:
+						tier.contextWindow === Infinity || tier.contextWindow === null
+							? Number.MAX_SAFE_INTEGER
+							: tier.contextWindow,
+				})),
+			}
+		}
+		return info
+	}
+
+	// Try exact match first
+	for (const modelMap of models) {
+		if (modelId in modelMap) {
+			return sanitizeModelInfo(modelMap[modelId])
+		}
+	}
+
+	// Normalize search ID: remove provider prefix (e.g., "google/", "anthropic/") and convert to lowercase
+	const normalizedSearchId = modelId.replace(/^[a-z-]+\//i, "").toLowerCase()
+
+	// Try fuzzy matching: find models where the key contains the normalized search ID
+	// or where the normalized search ID contains the model key's base name
+	for (const modelMap of models) {
+		const keys = Object.keys(modelMap)
+		for (const key of keys) {
+			const normalizedKey = key.toLowerCase()
+			// Check if key contains search term or search term contains key's base (without date suffix)
+			const keyBase = normalizedKey.replace(/-\d{8}$/, "") // Remove date suffixes like -20241022
+			if (normalizedKey.includes(normalizedSearchId) || normalizedSearchId.includes(keyBase)) {
+				return sanitizeModelInfo(modelMap[key])
+			}
+		}
+	}
+
+	return undefined
 }
