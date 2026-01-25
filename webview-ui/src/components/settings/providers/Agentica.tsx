@@ -4,6 +4,7 @@ import type { ProviderSettings } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { AgenticaClient } from "@/services/AgenticaClient"
 import { securePasswordStorage } from "@/utils/passwordStorage"
+import PlansView from "../PlansView" // kilocode_change: Import PlansView for modal
 
 type AgenticaProps = {
 	apiConfiguration: ProviderSettings
@@ -23,6 +24,8 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 	const [deviceAuthTimeRemaining, setDeviceAuthTimeRemaining] = useState<number>()
 	const [deviceAuthError, setDeviceAuthError] = useState<string>()
 	const [deviceAuthStep, setDeviceAuthStep] = useState<"waiting" | "authenticating">("waiting")
+	// kilocode_change: Local state for plans modal
+	const [plansModalOpen, setPlansModalOpen] = useState(false)
 
 	// Load stored password on component mount
 	useEffect(() => {
@@ -391,7 +394,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 						</div>
 						<VSCodeButton
 							appearance="secondary"
-							onClick={() => vscode.postMessage({ type: "openPlansModal" })}
+							onClick={() => setPlansModalOpen(true)}
 							style={{ fontSize: "12px", padding: "4px 12px" }}>
 							Manage Plan
 						</VSCodeButton>
@@ -418,6 +421,37 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					{" "}to get started with Agentica.
 				</div>
 			</div>
+
+			{/* kilocode_change: PlansView Modal */}
+			{plansModalOpen && (
+				<div
+					style={{
+						position: "fixed",
+						inset: 0,
+						backgroundColor: "rgba(0, 0, 0, 0.5)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						zIndex: 1000,
+					}}
+					onClick={() => setPlansModalOpen(false)}>
+					<div
+						style={{
+							backgroundColor: "var(--vscode-editor-background)",
+							borderRadius: "8px",
+							boxShadow: "0 5px 40px rgba(0, 0, 0, 0.3)",
+							width: "90%",
+							maxWidth: "900px",
+							maxHeight: "90vh",
+							overflow: "hidden",
+							display: "flex",
+							flexDirection: "column",
+						}}
+						onClick={(e) => e.stopPropagation()}>
+						<PlansView onDone={() => setPlansModalOpen(false)} />
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

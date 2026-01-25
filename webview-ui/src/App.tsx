@@ -14,7 +14,6 @@ import { ExtensionStateContextProvider, useExtensionState } from "./context/Exte
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
-import PlansView from "./components/settings/PlansView" // kilocode_change: Import PlansView for modal
 import WelcomeView from "./components/kilocode/welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
 import McpView from "./components/mcp/McpView" // kilocode_change
@@ -126,9 +125,6 @@ const App = () => {
 		images: [],
 	})
 
-	// kilocode_change: Add plansModalOpen state for modal view
-	const [plansModalOpen, setPlansModalOpen] = useState(false)
-
 	const settingsRef = useRef<SettingsViewRef>(null)
 	const chatViewRef = useRef<ChatViewRef & { focusInput: () => void }>(null) // kilocode_change
 
@@ -164,13 +160,6 @@ const App = () => {
 	const onMessage = useCallback(
 		(e: MessageEvent) => {
 			const message: ExtensionMessage = e.data
-
-			// kilocode_change: Handle openPlansModal
-			if (message.type === "openPlansModal") {
-				setPlansModalOpen(true)
-				return
-			}
-			// kilocode_change end
 
 			if (message.type === "action" && message.action) {
 				// kilocode_change begin
@@ -447,37 +436,6 @@ const App = () => {
 					}}
 				/>
 			)}
-			{/* kilocode_change: PlansView Modal */}
-			{plansModalOpen && (
-				<div
-					style={{
-						position: "fixed",
-						inset: 0,
-						backgroundColor: "rgba(0, 0, 0, 0.5)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						zIndex: 1000,
-					}}
-					onClick={() => setPlansModalOpen(false)}>
-					<div
-						style={{
-							backgroundColor: "var(--vscode-editor-background)",
-							borderRadius: "8px",
-							boxShadow: "0 5px 40px rgba(0, 0, 0, 0.3)",
-							width: "90%",
-							maxWidth: "900px",
-							maxHeight: "90vh",
-							overflow: "hidden",
-							display: "flex",
-							flexDirection: "column",
-						}}
-						onClick={(e) => e.stopPropagation()}>
-						<PlansView onDone={() => setPlansModalOpen(false)} />
-					</div>
-				</div>
-			)}
-			{/* kilocode_change end */}
 			{/* kilocode_change */}
 			{/* Chat, and history view contain their own bottom controls, settings doesn't need it */}
 			{!["chat", "settings", "history"].includes(tab) && (
