@@ -2921,6 +2921,7 @@ export const webviewMessageHandler = async (
 				type: "action",
 				action: "switchTab",
 				tab: "settings",
+				values: { section: "plans" },
 			})
 			break
 
