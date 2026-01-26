@@ -212,6 +212,12 @@
 			"label": "瀏覽器",
 			"description": "自動執行瀏覽器操作而無需核准 — 注意：僅適用於模型支援電腦使用時"
 		},
+		"retry": {
+			"label": "重試",
+			"description": "當模型未能提供回應或達到速率限制時，自動重試請求。",
+			"delayLabel": "重試之間的基礎延遲（秒）",
+			"retriesLabel": "API 請求的最大自動重試次數"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "在 MCP 伺服器檢視中啟用個別 MCP 工具的自動核准（需要此設定和工具的「始終允許」核取方塊）"
