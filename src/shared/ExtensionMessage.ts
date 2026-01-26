@@ -399,6 +399,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowFollowupQuestions"
 	| "alwaysAllowExecute"
+	| "alwaysAllowRalph" // kilocode_change
 	| "followupAutoApproveTimeoutMs"
 	| "allowedCommands"
 	| "deniedCommands"
@@ -474,6 +475,9 @@ export type ExtensionState = Pick<
 	| "maxGitStatusFiles"
 	| "requestDelaySeconds"
 	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
+	| "ralphEnabled" // kilocode_change
+	| "ralphLoopLimit" // kilocode_change
+	| "ralphCompletionDelimiter" // kilocode_change
 > & {
 	version: string
 	clineMessages: ClineMessage[]

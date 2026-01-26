@@ -302,6 +302,9 @@ export interface WebviewMessage {
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
 		| "refreshCustomTools"
+		| "ralphEnabled" // kilocode_change
+		| "ralphLoopLimit" // kilocode_change
+		| "ralphCompletionDelimiter" // kilocode_change
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
