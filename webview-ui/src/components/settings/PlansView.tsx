@@ -22,7 +22,7 @@ const PlansView: React.FC<PlansViewProps> = ({ onDone }) => {
     const [userCredits, setUserCredits] = useState(0)
 
     const client = new AgenticaClient(
-        `${apiConfiguration?.agenticaEmail || ""}|${apiConfiguration?.agenticaPassword || ""}`,
+        apiConfiguration?.agenticaApiKey || `${apiConfiguration?.agenticaEmail || ""}|${apiConfiguration?.agenticaPassword || ""}`,
         apiConfiguration?.agenticaBaseUrl,
     )
 

@@ -77,6 +77,13 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					console.log("[Agentica] Device auth complete", message)
 					setDeviceAuthStatus("success")
 					setDeviceAuthError(undefined)
+					// Update API key from GitHub auth response
+					if (message.agenticaApiKey) {
+						setApiConfigurationField("agenticaApiKey", message.agenticaApiKey)
+					}
+					if (message.agenticaEmail) {
+						setApiConfigurationField("agenticaEmail", message.agenticaEmail)
+					}
 					// Reset after a moment
 					setTimeout(() => {
 						setDeviceAuthStatus("idle")
@@ -98,7 +105,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 		return () => window.removeEventListener("message", handleMessage)
 	}, [])
 
-	// Fetch subscription status when credentials are provided (API key or email/password)
+	// Fetch subscription status when credentials are provided (API key takes priority over email/password)
 	useEffect(() => {
 		if (apiConfiguration.agenticaApiKey) {
 			fetchSubscriptionWithApiKey()
