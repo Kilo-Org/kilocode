@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 0.26.0
+
+### Minor Changes
+
+- [#5330](https://github.com/Kilo-Org/kilocode/pull/5330) [`957df89`](https://github.com/Kilo-Org/kilocode/commit/957df89a92d951c409952e16948694488abce474) Thanks [@qbiecom](https://github.com/qbiecom)! - Added OpenAI Compatible (Responses) provider
+
+### Patch Changes
+
+- [#5302](https://github.com/Kilo-Org/kilocode/pull/5302) [`292c885`](https://github.com/Kilo-Org/kilocode/commit/292c885fc73424b2fbe2c36311f57662b495770e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Keep "Thinking..." indicator visible in CLI after checkpoint saves and API calls complete
+
 ## 0.25.1
 
 ### Patch Changes
