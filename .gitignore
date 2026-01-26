@@ -71,3 +71,6 @@ qdrant_storage/
 .secrets
 # Architect plans
 ./plans/
+
+# Git worktrees
+.worktrees/

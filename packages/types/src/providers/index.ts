@@ -16,6 +16,7 @@ export * from "./synthetic.js"
 export * from "./inception.js"
 export * from "./minimax.js"
 export * from "./glama.js"
+export * from "./apertis.js"
 // kilocode_change end
 export * from "./groq.js"
 export * from "./huggingface.js"
@@ -54,6 +55,7 @@ import { featherlessDefaultModelId } from "./featherless.js"
 import { fireworksDefaultModelId } from "./fireworks.js"
 import { geminiDefaultModelId } from "./gemini.js"
 import { glamaDefaultModelId } from "./glama.js" // kilocode_change
+import { apertisDefaultModelId } from "./apertis.js" // kilocode_change
 import { groqDefaultModelId } from "./groq.js"
 import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
 import { litellmDefaultModelId } from "./lite-llm.js"
@@ -94,6 +96,8 @@ export function getProviderDefaultModelId(
 		// kilocode_change start
 		case "glama":
 			return glamaDefaultModelId
+		case "apertis":
+			return apertisDefaultModelId
 		// kilocode_change end
 		case "unbound":
 			return unboundDefaultModelId

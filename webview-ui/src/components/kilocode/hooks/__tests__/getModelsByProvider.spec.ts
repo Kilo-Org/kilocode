@@ -22,6 +22,7 @@ describe("getModelsByProvider", () => {
 	}
 
 	const routerModels: RouterModels = {
+		apertis: { "test-model": testModel }, // kilocode_change
 		openrouter: { "test-model": testModel },
 		requesty: { "test-model": testModel },
 		glama: { "test-model": testModel },

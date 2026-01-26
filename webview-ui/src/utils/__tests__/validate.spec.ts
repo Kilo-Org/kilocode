@@ -81,6 +81,7 @@ describe("Model Validation Functions", () => {
 		"vercel-ai-gateway": {},
 		huggingface: {},
 		// kilocode_change start
+		apertis: {},
 		ovhcloud: {},
 		gemini: {},
 		inception: {},

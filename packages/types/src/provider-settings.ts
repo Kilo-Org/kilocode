@@ -50,6 +50,7 @@ export const dynamicProviders = [
 	"huggingface",
 	"litellm",
 	// kilocode_change start
+	"apertis",
 	"kilocode",
 	"ovhcloud",
 	"gemini",
@@ -161,8 +162,7 @@ export const providerNames = [
 	"minimax",
 	"gemini-cli",
 	"virtual-quota-fallback",
-	"synthetic",
-	"inception",
+	// Note: apertis, synthetic, inception are in dynamicProviders, no need to duplicate here
 	// kilocode_change end
 	"sambanova",
 	"vertex",
@@ -246,6 +246,15 @@ const nanoGptSchema = baseProviderSettingsSchema.extend({
 	nanoGptApiKey: z.string().optional(),
 	nanoGptModelId: z.string().optional(),
 	nanoGptModelList: nanoGptModelListSchema.optional(),
+})
+
+const apertisSchema = baseProviderSettingsSchema.extend({
+	apertisApiKey: z.string().optional(),
+	apertisModelId: z.string().optional(),
+	apertisBaseUrl: z.string().optional(),
+	apertisInstructions: z.string().optional(),
+	apertisReasoningEffort: z.enum(["low", "medium", "high"]).optional(),
+	apertisReasoningSummary: z.enum(["auto", "concise", "detailed"]).optional(),
 })
 
 export const openRouterProviderDataCollectionSchema = z.enum(["allow", "deny"])
@@ -593,6 +602,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
+	apertisSchema.merge(z.object({ apiProvider: z.literal("apertis") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
@@ -633,6 +643,7 @@ export const providerSettingsSchema = z.object({
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
 	// kilocode_change start
+	...apertisSchema.shape,
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
@@ -708,6 +719,7 @@ export const modelIdKeys = [
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
 	"sapAiCoreModelId", // kilocode_change
+	"apertisModelId", // kilocode_change
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -756,6 +768,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	ovhcloud: "ovhCloudAiEndpointsModelId",
 	inception: "inceptionLabsModelId",
 	"sap-ai-core": "sapAiCoreModelId",
+	apertis: "apertisModelId",
 	// kilocode_change end
 	groq: "apiModelId",
 	baseten: "apiModelId",
@@ -929,6 +942,7 @@ export const MODELS_BY_PROVIDER: Record<
 	inception: { id: "inception", label: "Inception", models: [] },
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
+	apertis: { id: "apertis", label: "Apertis", models: [] },
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
