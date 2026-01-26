@@ -3,7 +3,6 @@ import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { AlertTriangle } from "lucide-react"
 
 import type { ProviderSettingsEntry, OrganizationAllowList, ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
-import { MODEL_SELECTION_ENABLED } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import {
@@ -376,29 +375,27 @@ const ApiConfigManager = ({
 								}}
 							/>
 						</div>
-						{MODEL_SELECTION_ENABLED && (
-							<div>
-								<label className="block text-sm font-medium mb-1">
-									{t("settings:providers.profileType")}
-								</label>
-								<Select
-									value={newProfileType}
-									onValueChange={(value) => setNewProfileType(value as ProfileType)}>
-									<SelectTrigger className="w-full">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="chat">{t("settings:providers.profileTypeChat")}</SelectItem>
-										<SelectItem value="autocomplete">
-											{t("settings:providers.profileTypeAutocomplete")}
-										</SelectItem>
-									</SelectContent>
-								</Select>
-								<p className="text-vscode-descriptionForeground text-xs mt-1">
-									{t("settings:providers.profileTypeDescription")}
-								</p>
-							</div>
-						)}
+						<div>
+							<label className="block text-sm font-medium mb-1">
+								{t("settings:providers.profileType")}
+							</label>
+							<Select
+								value={newProfileType}
+								onValueChange={(value) => setNewProfileType(value as ProfileType)}>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="chat">{t("settings:providers.profileTypeChat")}</SelectItem>
+									<SelectItem value="autocomplete">
+										{t("settings:providers.profileTypeAutocomplete")}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							<p className="text-vscode-descriptionForeground text-xs mt-1">
+								{t("settings:providers.profileTypeDescription")}
+							</p>
+						</div>
 					</div>
 					{/* kilocode_change end */}
 					{error && (
