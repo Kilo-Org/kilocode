@@ -101,6 +101,8 @@
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"editMessageLabel": "Edit message",
+	"deleteMessageLabel": "Delete message",
 	"editMessage": {
 		"placeholder": "Edit your message..."
 	},
@@ -365,7 +367,8 @@
 	},
 	"reasoning": {
 		"thinking": "Thinking",
-		"seconds": "{{count}}s"
+		"seconds": "{{count}}s",
+		"toggle": "Toggle thinking content"
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copy to input (same as shift + click)",

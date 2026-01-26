@@ -1392,8 +1392,17 @@ export const ChatRowContent = ({
 												onClick={(e) => {
 													e.stopPropagation()
 													handleEditClick()
+												}}
+												role="button"
+												tabIndex={0}
+												aria-label={t("chat:editMessageLabel", "Edit message")}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault()
+														handleEditClick()
+													}
 												}}>
-												<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
+												<Edit className="w-4 shrink-0" aria-hidden="true" />
 											</div>
 											<div
 												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1401,8 +1410,17 @@ export const ChatRowContent = ({
 												onClick={(e) => {
 													e.stopPropagation()
 													vscode.postMessage({ type: "deleteMessage", value: message.ts })
+												}}
+												role="button"
+												tabIndex={0}
+												aria-label={t("chat:deleteMessageLabel", "Delete message")}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault()
+														vscode.postMessage({ type: "deleteMessage", value: message.ts })
+													}
 												}}>
-												<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
+												<Trash2 className="w-4 shrink-0" aria-hidden="true" />
 											</div>
 										</div>
 									</div>

@@ -868,6 +868,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 						const isSelected = id === activeTab
 						const onSelect = () => handleTabChange(id)
 
+						// Compute the label for aria-label
+						const label =
+							id === "agentBehaviour"
+								? t(`kilocode:settings.sections.agentBehaviour`)
+								: id === "ghost"
+									? t(`kilocode:ghost.title`)
+									: t(`settings:sections.${id}`)
+
 						// Base TabTrigger component definition
 						// We pass isSelected manually for styling, but onSelect is handled conditionally
 						const triggerComponent = (
@@ -875,6 +883,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								ref={(element) => (tabRefs.current[id] = element)}
 								value={id}
 								isSelected={isSelected} // Pass manually for styling state
+								ariaLabel={label}
 								className={cn(
 									isSelected // Use manual isSelected for styling
 										? `${settingsTabTrigger} ${settingsTabTriggerActive}`
@@ -887,11 +896,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 									<Icon className="w-4 h-4" />
 									<span className="tab-label">
 										{/* kilocode_change start - handle agentBehaviour and ghost labels */}
-										{id === "agentBehaviour"
-											? t(`kilocode:settings.sections.agentBehaviour`)
-											: id === "ghost"
-												? t(`kilocode:ghost.title`)
-												: t(`settings:sections.${id}`)}
+										{label}
 										{/* kilocode_change end */}
 									</span>
 								</div>
@@ -908,15 +913,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 											{React.cloneElement(triggerComponent)}
 										</TooltipTrigger>
 										<TooltipContent side="right" className="text-base">
-											<p className="m-0">
-												{/* kilocode_change start - handle agentBehaviour and ghost labels */}
-												{id === "agentBehaviour"
-													? t(`kilocode:settings.sections.agentBehaviour`)
-													: id === "ghost"
-														? t(`kilocode:ghost.title`)
-														: t(`settings:sections.${id}`)}
-												{/* kilocode_change end */}
-											</p>
+											<p className="m-0">{label}</p>
 										</TooltipContent>
 									</Tooltip>
 								</TooltipProvider>
