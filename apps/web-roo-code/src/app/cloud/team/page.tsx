@@ -23,7 +23,7 @@ import { EXTERNAL_LINKS } from "@/lib/constants"
 
 const TITLE = "Roo Code Cloud Team Plan"
 const DESCRIPTION =
-	"Scale your development with team collaboration features. Centralized billing, shared configuration, team-wide analytics, and unified GitHub and Slack integrations."
+	"Scale your development with team collaboration features. Centralized billing, shared configuration, team-wide analytics, and unified GitHub, Slack, and Linear integrations."
 const OG_DESCRIPTION = "Team collaboration for AI-powered development"
 const PATH = "/cloud/team"
 
@@ -75,13 +75,13 @@ const keyBenefits = [
 	{
 		title: "Centralized Billing",
 		description:
-			"Single billing point for all team members using Cloud Agents and the Roo Code Cloud Provider. No more API key management.",
+			"Single billing point for all team members using Cloud Agents and the Roo Code Router. No more API key management.",
 		icon: DollarSign,
 	},
 	{
 		title: "Unified Integrations",
 		description:
-			"Connect GitHub and Slack once for the entire team. No need for each member to set up individual integrations.",
+			"Connect GitHub, Slack, and Linear once for the entire team. No need for each member to set up individual integrations.",
 		icon: Settings,
 	},
 	{
@@ -126,7 +126,7 @@ const features: Feature[] = [
 		icon: Puzzle,
 		title: "Centralized Integration",
 		description:
-			"Centralized GitHub and Slack connection for the entire team. Agents can review PRs, collaborate on your repositories and respond on your team channels.",
+			"Centralized GitHub, Slack, and Linear connection for the entire team. Agents can review PRs, collaborate on your repositories, respond on your team Slack channels, and work on issues in Linear.",
 	},
 	{
 		icon: RefreshCcw,

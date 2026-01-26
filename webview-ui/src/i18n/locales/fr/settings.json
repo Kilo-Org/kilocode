@@ -1,4 +1,5 @@
 {
+	"back": "Retour à la vue des tâches",
 	"common": {
 		"save": "Enregistrer",
 		"done": "Terminé",
@@ -7,6 +8,10 @@
 		"select": "Sélectionner",
 		"add": "Ajouter un en-tête",
 		"remove": "Supprimer"
+	},
+	"search": {
+		"placeholder": "Rechercher les paramètres...",
+		"noResults": "Aucun paramètre trouvé"
 	},
 	"header": {
 		"title": "Paramètres",
@@ -37,7 +42,9 @@
 		"experimental": "Expérimental",
 		"language": "Langue",
 		"about": "À propos de Kilo Code",
-		"autoPurge": "Auto-nettoyage"
+		"autoPurge": "Auto-nettoyage",
+		"agentBehaviour": "Comportement de l'agent",
+		"ghost": "Autocomplétion"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Vous voulez des conseils ou simplement discuter avec d'autres utilisateurs de Kilo Code ? Rejoignez <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact et Communauté",
-		"manageSettings": "Gérer les Paramètres"
+		"manageSettings": "Gérer les Paramètres",
+		"debugMode": {
+			"label": "Activer le mode debug",
+			"description": "Active le mode debug pour afficher des boutons supplémentaires dans l'en-tête de la tâche permettant de consulter l'historique de conversation de l'API et les messages de l'interface utilisateur au format JSON dans des fichiers temporaires."
+		}
 	},
 	"slashCommands": {
 		"description": "Gérez vos commandes slash pour exécuter rapidement des flux de travail et des actions personnalisées. <DocsLink>En savoir plus</DocsLink>"
@@ -314,7 +325,6 @@
 		"useCustomBaseUrl": "Utiliser une URL de base personnalisée",
 		"useReasoning": "Activer le raisonnement",
 		"useHostHeader": "Utiliser un en-tête Host personnalisé",
-		"useLegacyFormat": "Utiliser le format API OpenAI hérité",
 		"customHeaders": "En-têtes personnalisés",
 		"headerName": "Nom de l'en-tête",
 		"headerValue": "Valeur de l'en-tête",

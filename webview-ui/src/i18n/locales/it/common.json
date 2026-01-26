@@ -125,5 +125,9 @@
 		"delegated_to": "Delegato all'attività {{childId}}",
 		"delegation_completed": "Sottoattività completata, ripresa attività padre",
 		"awaiting_child": "In attesa dell'attività figlia {{childId}}"
+	},
+	"costs": {
+		"own": "Proprio",
+		"subtasks": "Sottoattività"
 	}
 }

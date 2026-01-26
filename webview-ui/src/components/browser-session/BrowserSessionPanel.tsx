@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react"
-import { type ClineMessage } from "@roo-code/types"
-import BrowserSessionRow from "../chat/BrowserSessionRow"
+
+import { type ClineMessage, type ExtensionMessage } from "@roo-code/types"
+
 import { TooltipProvider } from "@src/components/ui/tooltip"
-import ErrorBoundary from "../ErrorBoundary"
 import TranslationProvider from "@src/i18n/TranslationContext"
-import { ExtensionMessage } from "@roo/ExtensionMessage"
-import { BrowserPanelStateProvider, useBrowserPanelState } from "./BrowserPanelStateProvider"
 import { vscode } from "@src/utils/vscode"
+
 import { ExtensionStateContextProvider } from "@/context/ExtensionStateContext"
+
+import BrowserSessionRow from "../chat/BrowserSessionRow"
+import ErrorBoundary from "../ErrorBoundary"
+
+import { BrowserPanelStateProvider, useBrowserPanelState } from "./BrowserPanelStateProvider"
 
 interface BrowserSessionPanelState {
 	messages: ClineMessage[]

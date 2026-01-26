@@ -1,5 +1,5 @@
 ---
-"@kilocode/core-schemas": patch
+"@kilocode/cli": patch
 ---
 
 Add missing openai-codex provider type definition

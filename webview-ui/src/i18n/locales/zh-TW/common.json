@@ -125,5 +125,9 @@
 		"delegated_to": "已委派給工作 {{childId}}",
 		"delegation_completed": "子工作已完成，繼續父工作",
 		"awaiting_child": "等待子工作 {{childId}}"
+	},
+	"costs": {
+		"own": "自身",
+		"subtasks": "子工作"
 	}
 }

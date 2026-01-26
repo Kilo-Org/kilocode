@@ -93,6 +93,11 @@
 		"title": "取消",
 		"tooltip": "取消当前操作"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "停止当前任务"
+	},
+	"enqueueMessage": "将消息加入队列（当前任务完成后发送）",
 	"scrollToBottom": "滚动到聊天底部",
 	"about": "通过 AI 辅助生成、重构和调试代码。查看我们的 <DocsLink>文档</DocsLink> 了解更多。",
 	"docs": "查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
@@ -287,7 +292,8 @@
 		"title": "错误详情",
 		"copyToClipboard": "复制到剪贴板",
 		"copied": "已复制!",
-		"diagnostics": "获取详细错误信息"
+		"diagnostics": "获取详细错误信息",
+		"proxyProvider": "看起来你在使用基于代理的提供商。请检查日志并确保它不会重写 Roo 的请求。"
 	},
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
@@ -308,7 +314,7 @@
 		"triggerLabel_zero": "0 个自动批准",
 		"triggerLabel_one": "1 个自动批准",
 		"triggerLabel_other": "{{count}} 个自动批准",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -345,8 +351,9 @@
 		},
 		"release": {
 			"heading": "新增功能：",
-			"skills": "Roo 现支持 <skillsLink>Agent Skills</skillsLink> - 可复用的提示词、工具和资源包，扩展 Roo 的功能。",
-			"nativeToolCalling": "所有新任务现在需要使用原生工具调用。<blogLink>了解更多</blogLink>相关信息和解决方案。"
+			"openaiCodexProvider": "添加了 OpenAI - ChatGPT Plus/Pro 提供商，提供基于订阅的 Codex 模型访问，无需按 Token 收费。",
+			"gpt52codexModel": "新的 gpt-5.2-codex 模型已添加到 Roo Code Router、标准 OpenAI 提供商等。",
+			"bugFixes": "修复了导致灰屏的内存泄漏、Gemini 思考签名问题以及其他稳定性改进。"
 		},
 		"cloudAgents": {
 			"heading": "云端新功能：",
@@ -357,8 +364,14 @@
 		"careers": "此外，<careersLink>我们正在招聘！</careersLink>",
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/KiloCode</redditLink> 上关注我们 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "总成本（包括子任务）: ${{cost}}",
+		"total": "总成本: ${{cost}}",
+		"includesSubtasks": "包括子任务成本"
+	},
 	"browser": {
 		"session": "浏览器会话",
+		"active": "活动中",
 		"rooWantsToUse": "Kilo Code想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",

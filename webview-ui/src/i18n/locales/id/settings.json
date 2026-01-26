@@ -1,4 +1,5 @@
 {
+	"back": "Kembali ke tampilan tugas",
 	"common": {
 		"save": "Simpan",
 		"done": "Selesai",
@@ -7,6 +8,10 @@
 		"select": "Pilih",
 		"add": "Tambah Header",
 		"remove": "Hapus"
+	},
+	"search": {
+		"placeholder": "Cari pengaturan...",
+		"noResults": "Tidak ada pengaturan yang ditemukan"
 	},
 	"header": {
 		"title": "Pengaturan",
@@ -37,7 +42,9 @@
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code",
-		"autoPurge": "Pembersihan Otomatis"
+		"autoPurge": "Pembersihan Otomatis",
+		"agentBehaviour": "Perilaku Agent",
+		"ghost": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Ingin tips atau hanya nongkrong dengan pengguna Kilo Code lainnya? Bergabunglah dengan <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontak & Komunitas",
-		"manageSettings": "Kelola Pengaturan"
+		"manageSettings": "Kelola Pengaturan",
+		"debugMode": {
+			"label": "Aktifkan mode debug",
+			"description": "Aktifkan mode debug untuk menampilkan tombol tambahan di header tugas yang memungkinkan melihat riwayat percakapan API dan pesan UI sebagai JSON yang diformat dalam file sementara."
+		}
 	},
 	"slashCommands": {
 		"description": "Kelola perintah slash kamu untuk mengeksekusi alur kerja dan tindakan kustom dengan cepat. <DocsLink>Pelajari lebih lanjut</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Gunakan base URL kustom",
 		"useReasoning": "Aktifkan reasoning",
 		"useHostHeader": "Gunakan Host header kustom",
-		"useLegacyFormat": "Gunakan format API OpenAI legacy",
 		"customHeaders": "Header Kustom",
 		"headerName": "Nama header",
 		"headerValue": "Nilai header",

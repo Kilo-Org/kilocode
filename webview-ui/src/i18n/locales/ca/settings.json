@@ -1,4 +1,5 @@
 {
+	"back": "Torna a la vista de tasques",
 	"common": {
 		"save": "Desar",
 		"done": "Fet",
@@ -7,6 +8,10 @@
 		"select": "Seleccionar",
 		"add": "Afegir capçalera",
 		"remove": "Eliminar"
+	},
+	"search": {
+		"placeholder": "Cercar configuració...",
+		"noResults": "No s'ha trobat cap configuració"
 	},
 	"header": {
 		"title": "Configuració",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"autoPurge": "Auto-neteja"
+		"autoPurge": "Auto-neteja",
+		"agentBehaviour": "Comportament de l'agent",
+		"ghost": "Autocompletat"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Vols consells o simplement passar l'estona amb altres usuaris de Kilo Code? Uneix-te a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contacte i Comunitat",
-		"manageSettings": "Gestionar Configuració"
+		"manageSettings": "Gestionar Configuració",
+		"debugMode": {
+			"label": "Activa el mode de depuració",
+			"description": "Activa el mode de depuració per mostrar botons addicionals a la capçalera de la tasca que permetin veure l'historial de conversa de l'API i els missatges de la UI com a JSON formatejat en fitxers temporals."
+		}
 	},
 	"slashCommands": {
 		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Utilitzar URL base personalitzada",
 		"useReasoning": "Activar raonament",
 		"useHostHeader": "Utilitzar capçalera Host personalitzada",
-		"useLegacyFormat": "Utilitzar el format d'API OpenAI antic",
 		"customHeaders": "Capçaleres personalitzades",
 		"headerName": "Nom de la capçalera",
 		"headerValue": "Valor de la capçalera",

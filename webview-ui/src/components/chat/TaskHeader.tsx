@@ -42,6 +42,9 @@ export interface TaskHeaderProps {
 	cacheWrites?: number
 	cacheReads?: number
 	totalCost: number
+	aggregatedCost?: number
+	hasSubtasks?: boolean
+	costBreakdown?: string
 	contextTokens: number
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
@@ -55,6 +58,9 @@ const TaskHeader = ({
 	cacheWrites,
 	cacheReads,
 	totalCost,
+	aggregatedCost,
+	hasSubtasks,
+	costBreakdown,
 	contextTokens,
 	buttonsDisabled,
 	handleCondenseContext,
@@ -248,7 +254,34 @@ const TaskHeader = ({
 									{formatLargeNumber(contextTokens || 0)} / {formatLargeNumber(contextWindow)}
 								</span>
 							</StandardTooltip>
-							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
+							{!!totalCost && (
+								<StandardTooltip
+									content={
+										hasSubtasks ? (
+											<div>
+												<div>
+													{t("chat:costs.totalWithSubtasks", {
+														cost: (aggregatedCost ?? totalCost).toFixed(2),
+													})}
+												</div>
+												{costBreakdown && <div className="text-xs mt-1">{costBreakdown}</div>}
+											</div>
+										) : (
+											<div>{t("chat:costs.total", { cost: totalCost.toFixed(2) })}</div>
+										)
+									}
+									side="top"
+									sideOffset={8}>
+									<span>
+										${(aggregatedCost ?? totalCost).toFixed(2)}
+										{hasSubtasks && (
+											<span className="text-xs ml-1" title={t("chat:costs.includesSubtasks")}>
+												*
+											</span>
+										)}
+									</span>
+								</StandardTooltip>
+							)}
 						</div>
 						{showBrowserGlobe && (
 							<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -278,7 +311,7 @@ const TaskHeader = ({
 									<span
 										className="text-sm font-medium"
 										style={{ color: "var(--vscode-testing-iconPassed)" }}>
-										Active
+										{t("chat:browser.active")}
 									</span>
 								)}
 							</div>
@@ -386,7 +419,38 @@ const TaskHeader = ({
 												{t("chat:task.apiCost")}
 											</th>
 											<td className="font-light align-top">
-												<span>${totalCost?.toFixed(2)}</span>
+												<StandardTooltip
+													content={
+														hasSubtasks ? (
+															<div>
+																<div>
+																	{t("chat:costs.totalWithSubtasks", {
+																		cost: (aggregatedCost ?? totalCost).toFixed(2),
+																	})}
+																</div>
+																{costBreakdown && (
+																	<div className="text-xs mt-1">{costBreakdown}</div>
+																)}
+															</div>
+														) : (
+															<div>
+																{t("chat:costs.total", { cost: totalCost.toFixed(2) })}
+															</div>
+														)
+													}
+													side="top"
+													sideOffset={8}>
+													<span>
+														${(aggregatedCost ?? totalCost).toFixed(2)}
+														{hasSubtasks && (
+															<span
+																className="text-xs ml-1"
+																title={t("chat:costs.includesSubtasks")}>
+																*
+															</span>
+														)}
+													</span>
+												</StandardTooltip>
 											</td>
 										</tr>
 									)}

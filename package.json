@@ -62,7 +62,7 @@
 		"rimraf": "^6.0.1",
 		"tsx": "^4.19.3",
 		"turbo": "^2.6.0",
-		"typescript": "^5.4.5"
+		"typescript": "5.8.3"
 	},
 	"lint-staged": {
 		"*.{js,jsx,ts,tsx,json,css,md}": [
@@ -70,6 +70,9 @@
 		]
 	},
 	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@vscode/ripgrep"
+		],
 		"overrides": {
 			"tar-fs": ">=3.1.1",
 			"esbuild": ">=0.25.0",
@@ -77,7 +80,9 @@
 			"brace-expansion": "^2.0.2",
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2",
-			"glob": ">=11.1.0"
+			"glob": ">=11.1.0",
+			"@types/react": "^18.3.23",
+			"@types/react-dom": "^18.3.5"
 		}
 	}
 }

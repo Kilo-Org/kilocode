@@ -3,10 +3,10 @@
  */
 
 import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
-import type { ModelRecord } from "../constants/providers/models.js"
 import type { ProviderConfig } from "../config/types.js"
 import type { RouterModels } from "../types/messages.js"
 import {
+	type ModelRecord,
 	getModelsByProvider,
 	getCurrentModelId,
 	sortModelsByPreference,

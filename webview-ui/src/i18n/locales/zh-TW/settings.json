@@ -1,4 +1,5 @@
 {
+	"back": "返回工作檢視",
 	"common": {
 		"save": "儲存",
 		"done": "完成",
@@ -7,6 +8,10 @@
 		"select": "選擇",
 		"add": "新增標頭",
 		"remove": "移除"
+	},
+	"search": {
+		"placeholder": "搜尋設定...",
+		"noResults": "找不到設定"
 	},
 	"header": {
 		"title": "設定",
@@ -38,7 +43,8 @@
 		"language": "語言",
 		"about": "關於 Kilo Code",
 		"autoPurge": "自動清理",
-		"ghost": "Ghost"
+		"agentBehaviour": "Agent 行為",
+		"ghost": "自動補全"
 	},
 	"about": {
 		"bugReport": {
@@ -58,7 +64,11 @@
 		},
 		"community": "想要獲取使用技巧或與其他 Kilo Code 使用者交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "聯絡與社群",
-		"manageSettings": "管理設定"
+		"manageSettings": "管理設定",
+		"debugMode": {
+			"label": "啟用偵錯模式",
+			"description": "啟用偵錯模式以在工作標題顯示額外按鈕，用於在暫存檔案中檢視 API 對話歷史記錄和 UI 訊息的格式化 JSON。"
+		}
 	},
 	"slashCommands": {
 		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
@@ -306,7 +316,6 @@
 		"useCustomBaseUrl": "使用自訂基礎 URL",
 		"useReasoning": "啟用推理",
 		"useHostHeader": "使用自訂 Host 標頭",
-		"useLegacyFormat": "使用舊版 OpenAI API 格式",
 		"customHeaders": "自訂標頭",
 		"headerName": "標頭名稱",
 		"headerValue": "標頭值",

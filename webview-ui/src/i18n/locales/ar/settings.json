@@ -1,4 +1,5 @@
 {
+	"back": "العودة لعرض المهام",
 	"common": {
 		"save": "حفظ",
 		"done": "تم",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "حفظ التغييرات",
 		"nothingChangedTooltip": "ما صار أي تغيير",
 		"doneButtonTooltip": "تجاهل التغييرات غير المحفوظة وإغلاق اللوحة"
+	},
+	"search": {
+		"placeholder": "البحث في الإعدادات...",
+		"noResults": "لم يتم العثور على إعدادات"
 	},
 	"unsavedChangesDialog": {
 		"title": "تغييرات غير محفوظة",
@@ -37,7 +42,9 @@
 		"experimental": "تجريبي",
 		"language": "اللغة",
 		"about": "عن Kilo Code",
-		"autoPurge": "التنظيف التلقائي"
+		"autoPurge": "التنظيف التلقائي",
+		"agentBehaviour": "سلوك الوكيل",
+		"ghost": "الإكمال التلقائي"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunity": "انضم للمجتمع",
 		"joinCommunityDesc": "تواصل مع مستخدمين آخرين وشارك الأفكار",
 		"contactAndCommunity": "التواصل والمجتمع",
-		"manageSettings": "إدارة الإعدادات"
+		"manageSettings": "إدارة الإعدادات",
+		"debugMode": {
+			"label": "تفعيل وضع التصحيح",
+			"description": "فعّل وضع التصحيح لإظهار أزرار إضافية في رأس المهمة لعرض سجل محادثات API ورسائل UI كملفات JSON منسقة مؤقتة."
+		}
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"

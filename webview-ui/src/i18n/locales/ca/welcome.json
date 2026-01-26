@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Per fer la seva màgia, Kilo Code necessita una clau API.",
+	"landing": {
+		"greeting": "Benvingut a Kilo Code!",
+		"introduction": "Amb una gamma de Modes integrats i ampliables, Kilo Code et permet planificar, arquitectar, codificar, depurar i augmentar la teva productivitat com mai abans.",
+		"accountMention": "Per començar, crea el teu compte Kilo Code Cloud. Obtén models potents, control web, analítica, suport i molt més.",
+		"getStarted": "Crea compte Kilo",
+		"noAccount": "o utilitza sense compte"
+	},
 	"providerSignup": {
 		"heading": "Tria el teu proveïdor",
 		"chooseProvider": "Roo necessita un proveïdor de LLM per funcionar. Tria-ne un per començar, pots afegir-ne més tard.",

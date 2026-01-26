@@ -19,6 +19,7 @@ import { customToolRegistry } from "@roo-code/core"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
 import { createOutputChannelLogger, createDualLogger } from "./utils/outputChannelLogger"
+import { initializeNetworkProxy } from "./utils/networkProxy"
 
 import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
@@ -101,6 +102,11 @@ export async function activate(context: vscode.ExtensionContext) {
 	outputChannel = vscode.window.createOutputChannel("Kilo-Code")
 	context.subscriptions.push(outputChannel)
 	outputChannel.appendLine(`${Package.name} extension activated - ${JSON.stringify(Package)}`)
+
+	// Initialize network proxy configuration early, before any network requests.
+	// When proxyUrl is configured, all HTTP/HTTPS traffic will be routed through it.
+	// Only applied in debug mode (F5).
+	await initializeNetworkProxy(context, outputChannel)
 
 	// Set extension path for custom tool registry to find bundled esbuild
 	customToolRegistry.setExtensionPath(context.extensionPath)

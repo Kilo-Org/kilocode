@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Réponse interrompue par l'utilisateur",
-		"responseInterruptedByApiError": "Réponse interrompue par une erreur d'API"
+		"responseInterruptedByApiError": "Réponse interrompue par une erreur d'API",
+		"streamTerminatedByProvider": "Le fournisseur a terminé la demande"
 	},
 	"storage": {
 		"prompt_custom_path": "Entrez le chemin de stockage personnalisé pour l'historique des conversations, laissez vide pour utiliser l'emplacement par défaut",

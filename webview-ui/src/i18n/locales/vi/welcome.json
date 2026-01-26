@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Để thực hiện phép màu của mình, Kilo Code cần một khóa API.",
+	"landing": {
+		"greeting": "Chào mừng đến với Roo Code!",
+		"introduction": "Với nhiều Chế độ tích hợp và có thể mở rộng, Roo Code cho phép bạn lập kế hoạch, thiết kế kiến trúc, viết mã, gỡ lỗi và tăng năng suất như chưa từng có trước đây.",
+		"accountMention": "Để bắt đầu, hãy tạo tài khoản Roo Code Cloud của bạn. Nhận các mô hình mạnh mẽ, kiểm soát web, phân tích, hỗ trợ và hơn thế nữa.",
+		"getStarted": "Tạo tài khoản Roo",
+		"noAccount": "hoặc sử dụng mà không có tài khoản"
+	},
 	"providerSignup": {
 		"heading": "Chọn nhà cung cấp của bạn",
 		"chooseProvider": "Roo cần một nhà cung cấp LLM để hoạt động. Chọn một để bắt đầu, bạn có thể thêm nhiều hơn sau.",

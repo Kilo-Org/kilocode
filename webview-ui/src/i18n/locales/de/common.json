@@ -125,5 +125,9 @@
 		"delegated_to": "An Aufgabe {{childId}} delegiert",
 		"delegation_completed": "Unteraufgabe abgeschlossen, übergeordnete Aufgabe wird fortgesetzt",
 		"awaiting_child": "Warte auf Unteraufgabe {{childId}}"
+	},
+	"costs": {
+		"own": "Eigen",
+		"subtasks": "Unteraufgaben"
 	}
 }

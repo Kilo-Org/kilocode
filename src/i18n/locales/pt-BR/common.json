@@ -217,7 +217,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Resposta interrompida pelo usuário",
-		"responseInterruptedByApiError": "Resposta interrompida por erro da API"
+		"responseInterruptedByApiError": "Resposta interrompida por erro da API",
+		"streamTerminatedByProvider": "Provedor encerrou a solicitação"
 	},
 	"storage": {
 		"prompt_custom_path": "Digite o caminho de armazenamento personalizado para o histórico de conversas, deixe em branco para usar o local padrão",

@@ -1,4 +1,5 @@
 {
+	"back": "タスク ビューに戻る",
 	"common": {
 		"save": "保存",
 		"done": "完了",
@@ -7,6 +8,10 @@
 		"select": "選択",
 		"add": "ヘッダーを追加",
 		"remove": "削除"
+	},
+	"search": {
+		"placeholder": "設定を検索...",
+		"noResults": "設定が見つかりません"
 	},
 	"header": {
 		"title": "設定",
@@ -38,6 +43,7 @@
 		"language": "言語",
 		"about": "Kilo Codeについて",
 		"autoPurge": "自動クリーンアップ",
+		"agentBehaviour": "エージェントの動作",
 		"ghost": "Ghost"
 	},
 	"about": {
@@ -58,7 +64,11 @@
 		},
 		"community": "ヒントが欲しいですか、または他のKilo Codeユーザーと交流したいですか？<redditLink>reddit.com/r/kilocode</redditLink>または<discordLink>kilo.ai/discord</discordLink>に参加してください",
 		"contactAndCommunity": "お問い合わせとコミュニティ",
-		"manageSettings": "設定を管理"
+		"manageSettings": "設定を管理",
+		"debugMode": {
+			"label": "デバッグモードを有効にする",
+			"description": "デバッグモードを有効にすると、タスクヘッダーにAPI会話履歴とUIメッセージをフォーマットされたJSONとして一時ファイルで表示するための追加ボタンが表示されます。"
+		}
 	},
 	"slashCommands": {
 		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
@@ -311,7 +321,6 @@
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
-		"useLegacyFormat": "レガシーOpenAI API形式を使用",
 		"customHeaders": "カスタムヘッダー",
 		"headerName": "ヘッダー名",
 		"headerValue": "ヘッダー値",

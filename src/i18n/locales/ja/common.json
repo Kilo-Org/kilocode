@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "ユーザーによって応答が中断されました",
-		"responseInterruptedByApiError": "APIエラーによって応答が中断されました"
+		"responseInterruptedByApiError": "APIエラーによって応答が中断されました",
+		"streamTerminatedByProvider": "プロバイダーがリクエストを終了しました"
 	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",

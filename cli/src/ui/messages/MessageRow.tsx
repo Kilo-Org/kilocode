@@ -2,7 +2,6 @@ import React from "react"
 import { type UnifiedMessage } from "../../state/atoms/ui.js"
 import { CliMessageRow } from "./cli/CliMessageRow.js"
 import { ExtensionMessageRow } from "./extension/ExtensionMessageRow.js"
-//import { logs } from "../../services/logs.js"
 
 interface MessageRowProps {
 	unifiedMessage: UnifiedMessage

@@ -3,24 +3,14 @@ import * as path from "path"
 import { promises as fs } from "fs"
 import { exec } from "child_process"
 import { promisify } from "util"
+
+import type { GitRepositoryInfo, GitCommit } from "@roo-code/types"
+
 import { truncateOutput } from "../integrations/misc/extract-text"
 
 const execAsync = promisify(exec)
+
 const GIT_OUTPUT_LINE_LIMIT = 500
-
-export interface GitRepositoryInfo {
-	repositoryUrl?: string
-	repositoryName?: string
-	defaultBranch?: string
-}
-
-export interface GitCommit {
-	hash: string
-	shortHash: string
-	subject: string
-	author: string
-	date: string
-}
 
 /**
  * Extracts git repository information from the workspace's .git directory

@@ -2,7 +2,7 @@ import { HTMLAttributes } from "react"
 import React from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { Database, FoldVertical } from "lucide-react"
+import { FoldVertical } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Button } from "@/components/ui"
@@ -10,6 +10,7 @@ import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, S
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SearchableSetting } from "./SearchableSetting"
 import { vscode } from "@/utils/vscode"
 
 type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
@@ -110,14 +111,14 @@ export const ContextManagementSettings = ({
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
 			<SectionHeader description={t("settings:contextManagement.description")}>
-				<div className="flex items-center gap-2">
-					<Database className="w-4" />
-					<div>{t("settings:sections.contextManagement")}</div>
-				</div>
+				{t("settings:sections.contextManagement")}
 			</SectionHeader>
 
 			<Section>
-				<div>
+				<SearchableSetting
+					settingId="context-open-tabs"
+					section="contextManagement"
+					label={t("settings:contextManagement.openTabs.label")}>
 					<span className="block font-medium mb-1">{t("settings:contextManagement.openTabs.label")}</span>
 					<div className="flex items-center gap-2">
 						<Slider
@@ -133,9 +134,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.openTabs.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-workspace-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.workspaceFiles.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.workspaceFiles.label")}
 					</span>
@@ -153,9 +156,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.workspaceFiles.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-max-git-status-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxGitStatusFiles.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.maxGitStatusFiles.label")}
 					</span>
@@ -173,9 +178,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.maxGitStatusFiles.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-max-concurrent-file-reads"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxConcurrentFileReads.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.maxConcurrentFileReads.label")}
 					</span>
@@ -193,9 +200,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.maxConcurrentFileReads.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-show-rooignored-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.rooignore.label")}>
 					<VSCodeCheckbox
 						checked={showRooIgnoredFiles}
 						onChange={(e: any) => setCachedStateField("showRooIgnoredFiles", e.target.checked)}
@@ -207,9 +216,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.rooignore.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-enable-subfolder-rules"
+					section="contextManagement"
+					label={t("settings:contextManagement.enableSubfolderRules.label")}>
 					<VSCodeCheckbox
 						checked={enableSubfolderRules}
 						onChange={(e: any) => setCachedStateField("enableSubfolderRules", e.target.checked)}
@@ -221,9 +232,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.enableSubfolderRules.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-max-read-file"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxReadFile.label")}>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxReadFile.label")}</span>
 						<div className="flex items-center gap-4">
@@ -257,7 +270,7 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
 						{t("settings:contextManagement.maxReadFile.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 				{/*kilocode_change start*/}
 				<div>
 					<VSCodeCheckbox
@@ -272,8 +285,10 @@ export const ContextManagementSettings = ({
 					</div>
 				</div>
 				{/*kilocode_change end*/}
-
-				<div>
+				<SearchableSetting
+					settingId="context-max-image-file-size"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxImageFileSize.label")}>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxImageFileSize.label")}</span>
 						<div className="flex items-center gap-4">
@@ -299,9 +314,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
 						{t("settings:contextManagement.maxImageFileSize.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-max-total-image-size"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxTotalImageSize.label")}>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxTotalImageSize.label")}</span>
 						<div className="flex items-center gap-4">
@@ -327,9 +344,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
 						{t("settings:contextManagement.maxTotalImageSize.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-include-diagnostic-messages"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.includeMessages.label")}>
 					<VSCodeCheckbox
 						checked={includeDiagnosticMessages}
 						onChange={(e: any) => setCachedStateField("includeDiagnosticMessages", e.target.checked)}
@@ -341,9 +360,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.diagnostics.includeMessages.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-max-diagnostic-messages"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.maxMessages.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.diagnostics.maxMessages.label")}
 					</span>
@@ -396,9 +417,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.diagnostics.maxMessages.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-write-delay"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.delayAfterWrite.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.diagnostics.delayAfterWrite.label")}
 					</span>
@@ -416,9 +439,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.diagnostics.delayAfterWrite.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-include-current-time"
+					section="contextManagement"
+					label={t("settings:contextManagement.includeCurrentTime.label")}>
 					<VSCodeCheckbox
 						checked={includeCurrentTime}
 						onChange={(e: any) => setCachedStateField("includeCurrentTime", e.target.checked)}
@@ -430,9 +455,11 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.includeCurrentTime.description")}
 					</div>
-				</div>
-
-				<div>
+				</SearchableSetting>
+				<SearchableSetting
+					settingId="context-include-current-cost"
+					section="contextManagement"
+					label={t("settings:contextManagement.includeCurrentCost.label")}>
 					<VSCodeCheckbox
 						checked={includeCurrentCost}
 						onChange={(e: any) => setCachedStateField("includeCurrentCost", e.target.checked)}
@@ -444,15 +471,20 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.includeCurrentCost.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 			</Section>
 			<Section className="pt-2">
-				<VSCodeCheckbox
-					checked={autoCondenseContext}
-					onChange={(e: any) => setCachedStateField("autoCondenseContext", e.target.checked)}
-					data-testid="auto-condense-context-checkbox">
-					<span className="font-medium">{t("settings:contextManagement.autoCondenseContext.name")}</span>
-				</VSCodeCheckbox>
+				<SearchableSetting
+					settingId="context-auto-condense"
+					section="contextManagement"
+					label={t("settings:contextManagement.autoCondenseContext.name")}>
+					<VSCodeCheckbox
+						checked={autoCondenseContext}
+						onChange={(e: any) => setCachedStateField("autoCondenseContext", e.target.checked)}
+						data-testid="auto-condense-context-checkbox">
+						<span className="font-medium">{t("settings:contextManagement.autoCondenseContext.name")}</span>
+					</VSCodeCheckbox>
+				</SearchableSetting>
 				{autoCondenseContext && (
 					<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
 						<div className="flex items-center gap-4 font-bold">

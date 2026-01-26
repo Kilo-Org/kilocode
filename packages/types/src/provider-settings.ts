@@ -297,7 +297,6 @@ const vertexSchema = apiModelIdProviderModelSchema.extend({
 const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiBaseUrl: z.string().optional(),
 	openAiApiKey: z.string().optional(),
-	openAiLegacyFormat: z.boolean().optional(),
 	openAiR1FormatEnabled: z.boolean().optional(),
 	openAiModelId: z.string().optional(),
 	openAiCustomModelInfo: modelInfoSchema.nullish(),
@@ -356,12 +355,10 @@ const geminiSchema = apiModelIdProviderModelSchema.extend({
 	enableGrounding: z.boolean().optional(),
 })
 
-// kilocode_change start
 const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
 })
-// kilocode_change end
 
 const openAiCodexSchema = apiModelIdProviderModelSchema.extend({
 	// No additional settings needed - uses OAuth authentication
@@ -537,7 +534,8 @@ const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
 })
 
 const rooSchema = apiModelIdProviderModelSchema.extend({
-	// No additional fields needed - uses cloud authentication.
+	// Can use cloud authentication or provide an API key (cli).
+	rooApiKey: z.string().optional(),
 })
 
 const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({
@@ -578,6 +576,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	vsCodeLmSchema.merge(z.object({ apiProvider: z.literal("vscode-lm") })),
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
+	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	openAiCodexSchema.merge(z.object({ apiProvider: z.literal("openai-codex") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })), // kilocode_change
@@ -593,7 +592,6 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
-	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
@@ -632,8 +630,8 @@ export const providerSettingsSchema = z.object({
 	...vsCodeLmSchema.shape,
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
-	// kilocode_change start
 	...geminiCliSchema.shape,
+	// kilocode_change start
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	...syntheticSchema.shape,
@@ -894,7 +892,7 @@ export const MODELS_BY_PROVIDER: Record<
 		models: Object.keys(openAiNativeModels),
 	},
 	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: Object.keys(qwenCodeModels) },
-	roo: { id: "roo", label: "Roo Code Cloud", models: [] },
+	roo: { id: "roo", label: "Roo Code Router", models: [] },
 	sambanova: {
 		id: "sambanova",
 		label: "SambaNova",

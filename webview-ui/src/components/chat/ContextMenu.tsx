@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { getIconForFilePath, getIconUrlByName, getIconForDirectoryPath } from "vscode-material-icons"
+import { Trans } from "react-i18next"
+import { t } from "i18next"
 import { Settings } from "lucide-react"
 
-import type { ModeConfig } from "@roo-code/types"
-import type { Command } from "@roo/ExtensionMessage"
+import type { ModeConfig, Command } from "@roo-code/types"
 
 import {
 	ContextMenuOptionType,
@@ -13,9 +14,8 @@ import {
 } from "@src/utils/context-mentions"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
 import { vscode } from "@src/utils/vscode"
+
 import { buildDocLink } from "@/utils/docLinks"
-import { Trans } from "react-i18next"
-import { t } from "i18next"
 
 interface ContextMenuProps {
 	onSelect: (type: ContextMenuOptionType, value?: string) => void

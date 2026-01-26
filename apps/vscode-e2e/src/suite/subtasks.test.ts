@@ -2,73 +2,92 @@ import * as assert from "assert"
 
 import { RooCodeEventName, type ClineMessage } from "@roo-code/types"
 
-import { sleep, waitFor, waitUntilCompleted } from "./utils"
+import { waitFor } from "./utils"
 
-suite.skip("Kilo Code Subtasks", () => {
-	test("Should handle subtask cancellation and resumption correctly", async () => {
+suite("Kilo Code Subtasks", () => {
+	test("Should create and complete a subtask successfully", async function () {
+		this.timeout(180_000) // 3 minutes for complex orchestration
 		const api = globalThis.api
 
-		const messages: Record<string, ClineMessage[]> = {}
+		const messages: ClineMessage[] = []
+		let childTaskCompleted = false
+		let parentCompleted = false
 
-		api.on(RooCodeEventName.Message, ({ taskId, message }) => {
-			if (message.type === "say" && message.partial === false) {
-				messages[taskId] = messages[taskId] || []
-				messages[taskId].push(message)
+		// Listen for messages to detect subtask result
+		const messageHandler = ({ message }: { message: ClineMessage }) => {
+			messages.push(message)
+
+			// Log completion messages
+			if (message.type === "say" && message.say === "completion_result") {
+				console.log("Completion result:", message.text?.substring(0, 100))
 			}
-		})
+		}
+		api.on(RooCodeEventName.Message, messageHandler)
 
-		const childPrompt = "You are a calculator. Respond only with numbers. What is the square root of 9?"
+		// Listen for task completion
+		const completionHandler = (taskId: string) => {
+			if (taskId === parentTaskId) {
+				parentCompleted = true
+				console.log("✓ Parent task completed")
+			} else {
+				childTaskCompleted = true
+				console.log("✓ Child task completed:", taskId)
+			}
+		}
+		api.on(RooCodeEventName.TaskCompleted, completionHandler)
 
-		// Start a parent task that will create a subtask.
+		const childPrompt = "What is 2 + 2? Respond with just the number."
+
+		// Start a parent task that will create a subtask
+		console.log("Starting parent task that will spawn subtask...")
 		const parentTaskId = await api.startNewTask({
 			configuration: {
-				mode: "ask",
+				mode: "code",
 				alwaysAllowModeSwitch: true,
 				alwaysAllowSubtasks: true,
 				autoApprovalEnabled: true,
 				enableCheckpoints: false,
 			},
-			text:
-				"You are the parent task. " +
-				`Create a subtask by using the new_task tool with the message '${childPrompt}'.` +
-				"After creating the subtask, wait for it to complete and then respond 'Parent task resumed'.",
+			text: `Create a subtask using the new_task tool with this message: "${childPrompt}". Wait for the subtask to complete, then tell me the result.`,
 		})
 
-		let spawnedTaskId: string | undefined = undefined
+		try {
+			// Wait for child task to complete
+			console.log("Waiting for child task to complete...")
+			await waitFor(() => childTaskCompleted, { timeout: 90_000 })
+			console.log("✓ Child task completed")
 
-		// Wait for the subtask to be spawned and then cancel it.
-		api.on(RooCodeEventName.TaskSpawned, (_, childTaskId) => (spawnedTaskId = childTaskId))
-		await waitFor(() => !!spawnedTaskId)
-		await sleep(1_000) // Give the task a chance to start and populate the history.
-		await api.cancelCurrentTask()
+			// Wait for parent to complete
+			console.log("Waiting for parent task to complete...")
+			await waitFor(() => parentCompleted, { timeout: 90_000 })
+			console.log("✓ Parent task completed")
 
-		// Wait a bit to ensure any task resumption would have happened.
-		await sleep(2_000)
+			// Verify the parent task mentions the subtask result (should contain "4")
+			const hasSubtaskResult = messages.some(
+				(m) =>
+					m.type === "say" &&
+					m.say === "completion_result" &&
+					m.text?.includes("4") &&
+					m.text?.toLowerCase().includes("subtask"),
+			)
 
-		// The parent task should not have resumed yet, so we shouldn't see
-		// "Parent task resumed".
-		assert.ok(
-			messages[parentTaskId]?.find(({ type, text }) => type === "say" && text === "Parent task resumed") ===
-				undefined,
-			"Parent task should not have resumed after subtask cancellation",
-		)
+			// Verify all events occurred
+			assert.ok(childTaskCompleted, "Child task should have completed")
+			assert.ok(parentCompleted, "Parent task should have completed")
+			assert.ok(hasSubtaskResult, "Parent task should mention the subtask result")
 
-		// Start a new task with the same message as the subtask.
-		const anotherTaskId = await api.startNewTask({ text: childPrompt })
-		await waitUntilCompleted({ api, taskId: anotherTaskId })
+			console.log("Test passed! Subtask orchestration working correctly")
+		} finally {
+			// Clean up
+			api.off(RooCodeEventName.Message, messageHandler)
+			api.off(RooCodeEventName.TaskCompleted, completionHandler)
 
-		// Wait a bit to ensure any task resumption would have happened.
-		await sleep(2_000)
-
-		// The parent task should still not have resumed.
-		assert.ok(
-			messages[parentTaskId]?.find(({ type, text }) => type === "say" && text === "Parent task resumed") ===
-				undefined,
-			"Parent task should not have resumed after subtask cancellation",
-		)
-
-		// Clean up - cancel all tasks.
-		await api.clearCurrentTask()
-		await waitUntilCompleted({ api, taskId: parentTaskId })
+			// Cancel any remaining tasks
+			try {
+				await api.cancelCurrentTask()
+			} catch {
+				// Task might already be complete
+			}
+		}
 	})
 })

@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Risposta interrotta dall'utente",
-		"responseInterruptedByApiError": "Risposta interrotta da errore API"
+		"responseInterruptedByApiError": "Risposta interrotta da errore API",
+		"streamTerminatedByProvider": "Il provider ha terminato la richiesta"
 	},
 	"storage": {
 		"prompt_custom_path": "Inserisci il percorso di archiviazione personalizzato per la cronologia delle conversazioni, lascia vuoto per utilizzare la posizione predefinita",

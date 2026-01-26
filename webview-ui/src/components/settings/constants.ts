@@ -101,9 +101,7 @@ export const PROVIDERS = [
 	{ value: "fireworks", label: "Fireworks AI", proxy: false },
 	{ value: "featherless", label: "Featherless AI", proxy: false },
 	{ value: "io-intelligence", label: "IO Intelligence", proxy: false },
-	// kilocode_change start
-	// { value: "roo", label: "Roo Code Cloud", proxy: false },
-	// kilocode_change end
+	// { value: "roo", label: "Roo Code Router", proxy: false }, // kilocode_change
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway", proxy: false },
 	{ value: "minimax", label: "MiniMax", proxy: false },
 	{ value: "baseten", label: "Baseten", proxy: false },
