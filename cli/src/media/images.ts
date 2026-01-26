@@ -1,6 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { logs } from "../services/logs.js"
+import { formatByteSize } from "../ui/messages/extension/utils.js"
 
 export const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024 // 8MB
 
@@ -50,9 +51,9 @@ export async function readImageAsDataUrl(imagePath: string, basePath?: string): 
 	// Enforce size limit before reading
 	const stats = await fs.stat(resolvedPath)
 	if (stats.size > MAX_IMAGE_SIZE_BYTES) {
-		const maxMb = (MAX_IMAGE_SIZE_BYTES / (1024 * 1024)).toFixed(1)
-		const actualMb = (stats.size / (1024 * 1024)).toFixed(1)
-		throw new Error(`Image file is too large (${actualMb} MB). Max allowed is ${maxMb} MB.`)
+		const maxSize = formatByteSize(MAX_IMAGE_SIZE_BYTES)
+		const actualSize = formatByteSize(stats.size)
+		throw new Error(`Image file is too large (${actualSize}). Max allowed is ${maxSize}.`)
 	}
 
 	// Read file and convert to base64
