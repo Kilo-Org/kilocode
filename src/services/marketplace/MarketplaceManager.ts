@@ -15,7 +15,7 @@ import type { CustomModesManager } from "../../core/config/CustomModesManager"
 import { getGlobalRooDirectory } from "../roo-config" // kilocode_change
 
 import { RemoteConfigLoader } from "./RemoteConfigLoader"
-import { SimpleInstaller } from "./SimpleInstaller"
+import { SimpleInstaller, type McpHubGetter } from "./SimpleInstaller" // kilocode_change - Import McpHubGetter type
 
 export interface MarketplaceItemsResponse {
 	organizationMcps: MarketplaceItem[]
@@ -30,9 +30,10 @@ export class MarketplaceManager {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly customModesManager?: CustomModesManager,
+		getMcpHub?: McpHubGetter, // kilocode_change - Add McpHub getter for programmatic update flag
 	) {
 		this.configLoader = new RemoteConfigLoader()
-		this.installer = new SimpleInstaller(context, customModesManager)
+		this.installer = new SimpleInstaller(context, customModesManager, getMcpHub) // kilocode_change - Pass McpHub getter
 	}
 
 	async getMarketplaceItems(): Promise<MarketplaceItemsResponse> {

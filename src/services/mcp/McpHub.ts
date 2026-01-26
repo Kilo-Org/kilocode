@@ -2557,6 +2557,32 @@ export class McpHub {
 		}
 	}
 
+	// kilocode_change start - Public method to run callback with programmatic update flag set
+	/**
+	 * Runs a callback with the isProgrammaticUpdate flag set to true.
+	 * This prevents the file watcher from triggering server restarts when
+	 * external code (like SimpleInstaller) writes to MCP settings files.
+	 *
+	 * @param callback - The async callback to run with the flag set
+	 */
+	public async withProgrammaticUpdate<T>(callback: () => Promise<T>): Promise<T> {
+		// Set flag to prevent file watcher from triggering server restart
+		if (this.flagResetTimer) {
+			clearTimeout(this.flagResetTimer)
+		}
+		this.isProgrammaticUpdate = true
+		try {
+			return await callback()
+		} finally {
+			// Reset flag after watcher debounce period (non-blocking)
+			this.flagResetTimer = setTimeout(() => {
+				this.isProgrammaticUpdate = false
+				this.flagResetTimer = undefined
+			}, 600)
+		}
+	}
+	// kilocode_change end
+
 	async dispose(): Promise<void> {
 		// Prevent multiple disposals
 		if (this.isDisposed) {

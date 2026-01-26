@@ -228,7 +228,8 @@ export class ClineProvider
 			this.log(`Failed to initialize Skills Manager: ${error}`)
 		})
 
-		this.marketplaceManager = new MarketplaceManager(this.context, this.customModesManager)
+		// kilocode_change - Pass McpHub getter to MarketplaceManager to prevent MCP server restart loop
+		this.marketplaceManager = new MarketplaceManager(this.context, this.customModesManager, () => this.mcpHub)
 
 		// Forward <most> task events to the provider.
 		// We do something fairly similar for the IPC-based API.
