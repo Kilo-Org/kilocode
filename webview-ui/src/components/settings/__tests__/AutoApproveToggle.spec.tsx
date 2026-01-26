@@ -21,6 +21,7 @@ describe("AutoApproveToggle", () => {
 		alwaysAllowWrite: false,
 		alwaysAllowDelete: false, // kilocode_change
 		alwaysAllowBrowser: false,
+		alwaysAllowWeb: false, // kilocode_change
 		alwaysAllowMcp: false,
 		alwaysAllowModeSwitch: true,
 		alwaysAllowSubtasks: false,

@@ -13,12 +13,13 @@ import { isWriteToolAction, isReadOnlyToolAction } from "./tools"
 import { isMcpToolAlwaysAllowed } from "./mcp"
 import { getCommandDecision } from "./commands"
 
-// We have 11 different actions that can be auto-approved. // kilocode_change
+// We have 12 different actions that can be auto-approved. // kilocode_change
 export type AutoApprovalState =
 	| "alwaysAllowReadOnly"
 	| "alwaysAllowWrite"
 	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
+	| "alwaysAllowWeb" // kilocode_change: Auto-approve web tools (webFetch, webSearch)
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
@@ -190,6 +191,11 @@ export async function checkAutoApproval({
 		// kilocode_change start
 		if (tool.tool === "deleteFile") {
 			return state.alwaysAllowDelete === true ? { decision: "approve" } : { decision: "ask" }
+		}
+
+		// kilocode_change: Auto-approve web tools (webFetch, webSearch)
+		if (tool.tool === "webFetch" || tool.tool === "webSearch") {
+			return state.alwaysAllowWeb === true ? { decision: "approve" } : { decision: "ask" }
 		}
 		// kilocode_change end
 	}

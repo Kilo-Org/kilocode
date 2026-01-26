@@ -234,6 +234,10 @@
 			"label": "Browser",
 			"description": "Automatically perform browser actions without requiring approval. Note: Only applies when the model supports computer use"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Automatically perform web operations (fetch URLs, search the web) without requiring approval"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Enable auto-approval of individual MCP tools in the MCP Servers view (requires both this setting and the tool's individual \"Always allow\" checkbox)"

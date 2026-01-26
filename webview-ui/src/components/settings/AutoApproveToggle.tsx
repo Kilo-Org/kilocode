@@ -10,6 +10,7 @@ type AutoApproveToggles = Pick<
 	| "alwaysAllowWrite"
 	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
+	| "alwaysAllowWeb" // kilocode_change: Auto-approve web tools (webFetch, webSearch)
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
@@ -58,6 +59,15 @@ export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveCo
 		icon: "globe",
 		testId: "always-allow-browser-toggle",
 	},
+	// kilocode_change start: Auto-approve web tools
+	alwaysAllowWeb: {
+		key: "alwaysAllowWeb",
+		labelKey: "settings:autoApprove.web.label",
+		descriptionKey: "settings:autoApprove.web.description",
+		icon: "search",
+		testId: "always-allow-web-toggle",
+	},
+	// kilocode_change end
 	alwaysAllowMcp: {
 		key: "alwaysAllowMcp",
 		labelKey: "settings:autoApprove.mcp.label",
