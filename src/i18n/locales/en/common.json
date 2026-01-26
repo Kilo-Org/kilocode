@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Response interrupted by user",
-		"responseInterruptedByApiError": "Response interrupted by API error"
+		"responseInterruptedByApiError": "Response interrupted by API error",
+		"streamTerminatedByProvider": "Provider ended the request"
 	},
 	"storage": {
 		"prompt_custom_path": "Enter custom conversation history storage path, leave empty to use default location",

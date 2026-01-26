@@ -1,13 +1,11 @@
 import { useCallback } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList, RouterModels } from "@roo-code/types"
 import { chutesDefaultModelId } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
-
-import type { RouterModels } from "@roo/api"
 
 import { ModelPicker } from "../ModelPicker"
 import { inputEventTransform } from "../transforms"

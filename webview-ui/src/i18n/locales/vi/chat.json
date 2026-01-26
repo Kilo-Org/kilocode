@@ -89,10 +89,15 @@
 		"title": "Kết thúc",
 		"tooltip": "Kết thúc nhiệm vụ hiện tại"
 	},
+	"stop": {
+		"title": "Dừng",
+		"tooltip": "Dừng nhiệm vụ hiện tại"
+	},
 	"cancel": {
 		"title": "Hủy",
 		"tooltip": "Hủy thao tác hiện tại"
 	},
+	"enqueueMessage": "Thêm tin nhắn vào hàng đợi (sẽ gửi sau khi nhiệm vụ hiện tại hoàn tất)",
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
 	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Xem <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
 	"docs": "Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
@@ -287,7 +292,8 @@
 		"title": "Chi tiết lỗi",
 		"copyToClipboard": "Sao chép vào clipboard",
 		"copied": "Đã sao chép!",
-		"diagnostics": "Nhận thông tin lỗi chi tiết"
+		"diagnostics": "Nhận thông tin lỗi chi tiết",
+		"proxyProvider": "Có vẻ bạn đang sử dụng nhà cung cấp dựa trên proxy. Hãy chắc chắn kiểm tra các nhật ký của nó và đảm bảo nó không viết lại các yêu cầu của Roo."
 	},
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
@@ -308,7 +314,7 @@
 		"triggerLabel_zero": "0 được tự động phê duyệt",
 		"triggerLabel_one": "1 được tự động phê duyệt",
 		"triggerLabel_other": "{{count}} được tự động phê duyệt",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Đang suy nghĩ",
@@ -345,8 +351,9 @@
 		},
 		"release": {
 			"heading": "Tính năng mới:",
-			"skills": "Roo hiện hỗ trợ <skillsLink>Agent Skills</skillsLink> - các gói có thể tái sử dụng gồm các lời nhắc, công cụ và tài nguyên để mở rộng khả năng của Roo.",
-			"nativeToolCalling": "Gọi công cụ gốc hiện được yêu cầu cho tất cả các tác vụ mới. <blogLink>Tìm hiểu thêm</blogLink> về động lực và những gì cần làm nếu bạn gặp sự cố."
+			"openaiCodexProvider": "Đã thêm nhà cung cấp OpenAI - ChatGPT Plus/Pro cung cấp quyền truy cập dựa trên đăng ký vào các mô hình Codex mà không có chi phí trên mỗi token.",
+			"gpt52codexModel": "Mô hình gpt-5.2-codex mới được thêm vào Roo Code Router, nhà cung cấp OpenAI tiêu chuẩn và nhiều hơn nữa.",
+			"bugFixes": "Đã sửa các rò rỉ bộ nhớ gây ra màn hình xám, các vấn đề về chữ ký suy nghĩ Gemini và các cải thiện ổn định khác."
 		},
 		"cloudAgents": {
 			"heading": "Mới trên Cloud:",
@@ -357,8 +364,14 @@
 		"careers": "Ngoài ra, <careersLink>chúng tôi đang tuyển dụng!</careersLink>",
 		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Tổng chi phí (bao gồm các tác vụ phụ): ${{cost}}",
+		"total": "Tổng chi phí: ${{cost}}",
+		"includesSubtasks": "Bao gồm chi phí của các tác vụ phụ"
+	},
 	"browser": {
 		"session": "Phiên trình duyệt",
+		"active": "Đang hoạt động",
 		"rooWantsToUse": "Kilo Code muốn sử dụng trình duyệt",
 		"consoleLogs": "Nhật ký bảng điều khiển",
 		"noNewLogs": "(Không có nhật ký mới)",

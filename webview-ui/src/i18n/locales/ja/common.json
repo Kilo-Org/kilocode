@@ -125,5 +125,9 @@
 		"delegated_to": "タスク{{childId}}に委任",
 		"delegation_completed": "サブタスク完了、親タスクを再開",
 		"awaiting_child": "子タスク{{childId}}を待機中"
+	},
+	"costs": {
+		"own": "自身",
+		"subtasks": "サブタスク"
 	}
 }

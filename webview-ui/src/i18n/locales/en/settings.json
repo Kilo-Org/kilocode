@@ -1,4 +1,5 @@
 {
+	"back": "Back to tasks view",
 	"common": {
 		"save": "Save",
 		"done": "Done",
@@ -12,7 +13,11 @@
 		"title": "Settings",
 		"saveButtonTooltip": "Save changes",
 		"nothingChangedTooltip": "Nothing changed",
-		"doneButtonTooltip": "Discard unsaved changes and close settings panel"
+		"doneButtonTooltip": "Discard unsaved changes and go back to tasks view"
+	},
+	"search": {
+		"placeholder": "Search settings...",
+		"noResults": "No settings found"
 	},
 	"unsavedChangesDialog": {
 		"title": "Unsaved Changes",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code",
-		"autoPurge": "Auto-Cleanup"
+		"autoPurge": "Auto-Cleanup",
+		"agentBehaviour": "Agent Behaviour",
+		"ghost": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Want tips or to just hang out with other Kilo Code users? Join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Community",
-		"manageSettings": "Manage Settings"
+		"manageSettings": "Manage Settings",
+		"debugMode": {
+			"label": "Enable debug mode",
+			"description": "Enable debug mode to show additional buttons in the task header for viewing API conversation history and UI messages as prettified JSON in temporary files."
+		}
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -323,7 +334,6 @@
 		"useCustomBaseUrl": "Use custom base URL",
 		"useReasoning": "Enable reasoning",
 		"useHostHeader": "Use custom Host header",
-		"useLegacyFormat": "Use legacy OpenAI API format",
 		"customHeaders": "Custom Headers",
 		"headerName": "Header name",
 		"headerValue": "Header value",

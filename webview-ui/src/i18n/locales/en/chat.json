@@ -61,13 +61,13 @@
 		"reservedForResponse": "Reserved for model response: {{amount}} tokens"
 	},
 	"reject": {
-		"title": "Reject",
-		"tooltip": "Reject this action"
+		"title": "Deny",
+		"tooltip": "Prevent this action from occurring"
 	},
 	"completeSubtaskAndReturn": "Complete Subtask and Return",
 	"approve": {
 		"title": "Approve",
-		"tooltip": "Approve this action"
+		"tooltip": "Allow this action to happen"
 	},
 	"read-batch": {
 		"approve": {
@@ -82,25 +82,30 @@
 		"tooltip": "Execute this command"
 	},
 	"proceedWhileRunning": {
-		"title": "Proceed While Running",
-		"tooltip": "Continue despite warnings"
+		"title": "Continue While Running",
+		"tooltip": "Keep going despite warnings"
 	},
 	"killCommand": {
 		"title": "Kill Command",
 		"tooltip": "Kill the current command"
 	},
 	"resumeTask": {
-		"title": "Resume Task",
-		"tooltip": "Continue the current task"
+		"title": "Continue",
+		"tooltip": "Resume the current task"
 	},
 	"terminate": {
-		"title": "Terminate",
-		"tooltip": "End the current task"
+		"title": "New task",
+		"tooltip": "Start a new task"
 	},
 	"cancel": {
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Stop the current task"
+	},
+	"enqueueMessage": "Add message to queue (will be sent after current task completes)",
 	"editMessage": {
 		"placeholder": "Edit your message..."
 	},
@@ -313,7 +318,8 @@
 		"title": "Error Details",
 		"copyToClipboard": "Copy basic error info",
 		"copied": "Copied!",
-		"diagnostics": "Get detailed error info"
+		"diagnostics": "Get detailed error info",
+		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting Roo's requests."
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
@@ -337,7 +343,7 @@
 		"triggerLabel_zero": "0 auto-approve",
 		"triggerLabel_one": "1 auto-approved",
 		"triggerLabel_other": "{{count}} auto-approved",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} Released",
@@ -351,8 +357,9 @@
 		},
 		"release": {
 			"heading": "What's New:",
-			"skills": "Roo now supports <skillsLink>Agent Skills</skillsLink> - reusable packages of prompts, tools, and resources to extend Roo's capabilities.",
-			"nativeToolCalling": "Native tool calling is now required for all new tasks. <blogLink>Read more</blogLink> about the motivation and what to do if you're encountering issues."
+			"openaiCodexProvider": "Added OpenAI - ChatGPT Plus/Pro Provider that gives subscription-based access to Codex models without per-token costs.",
+			"gpt52codexModel": "Added the new gpt-5.2-codex model to Roo Code Router, the standard OpenAI provider, and more.",
+			"bugFixes": "Fixed memory leaks causing gray screens, Gemini thought signature issues, and more stability improvements."
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
@@ -371,8 +378,14 @@
 		"copyToInput": "Copy to input (same as shift + click)",
 		"timerPrefix": "Auto-approve enabled. Selecting in {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Cost (including subtasks): ${{cost}}",
+		"total": "Total Cost: ${{cost}}",
+		"includesSubtasks": "Includes subtask costs"
+	},
 	"browser": {
 		"session": "Browser Session",
+		"active": "Active",
 		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",

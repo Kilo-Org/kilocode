@@ -141,24 +141,6 @@
 		"roo": {
 			"authenticationRequired": "ผู้ให้บริการ Roo ต้องการการยืนยันตัวตนบนคลาวด์ กรุณาเข้าสู่ระบบ Roo Code Cloud"
 		},
-		"openAiCodex": {
-			"notAuthenticated": "ยังไม่ได้ยืนยันตัวตนกับ OpenAI Codex กรุณาลงชื่อเข้าใช้โดยใช้กระบวนการ OAuth ของ OpenAI Codex",
-			"invalidRequest": "คำขอไปยัง Codex API ไม่ถูกต้อง กรุณาตรวจสอบพารามิเตอร์ที่ป้อน",
-			"authenticationFailed": "การยืนยันตัวตนล้มเหลว กรุณายืนยันตัวตนใหม่กับ OpenAI Codex",
-			"accessDenied": "การเข้าถึงถูกปฏิเสธ การสมัครสมาชิก ChatGPT ของคุณอาจไม่รวมการเข้าถึง Codex",
-			"endpointNotFound": "ไม่พบ endpoint ของ Codex API",
-			"rateLimitExceeded": "เกินขีดจำกัดอัตรา กรุณาลองอีกครั้งในภายหลัง",
-			"serviceError": "ข้อผิดพลาดบริการ OpenAI Codex กรุณาลองอีกครั้งในภายหลัง",
-			"genericError": "ข้อผิดพลาด Codex API ({{status}})",
-			"noResponseBody": "ข้อผิดพลาด Codex API: ไม่มีเนื้อหาการตอบกลับ",
-			"connectionFailed": "ล้มเหลวในการเชื่อมต่อกับ Codex API: {{message}}",
-			"unexpectedConnectionError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการเชื่อมต่อกับ Codex API",
-			"apiError": "ข้อผิดพลาด Codex API: {{message}}",
-			"responseFailed": "การตอบกลับล้มเหลว: {{message}}",
-			"streamProcessingError": "เกิดข้อผิดพลาดในการประมวลผลสตรีมการตอบกลับ: {{message}}",
-			"unexpectedStreamError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการประมวลผลสตรีมการตอบกลับ",
-			"completionError": "ข้อผิดพลาดการเติมเต็ม OpenAI Codex: {{message}}"
-		},
 		"message": {
 			"no_active_task_to_delete": "ไม่พบงานที่ใช้งานอยู่ ไม่สามารถลบข้อความได้",
 			"invalid_timestamp_for_deletion": "ระบุ timestamp ที่ไม่ถูกต้องสำหรับการลบ",
@@ -176,6 +158,24 @@
 		"api": {
 			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง",
 			"apiRequestFailed": "คำขอ API ล้มเหลว ({{status}})"
+		},
+		"openAiCodex": {
+			"notAuthenticated": "ยังไม่ได้ยืนยันตัวตนกับ OpenAI Codex กรุณาลงชื่อเข้าใช้โดยใช้ OAuth flow ของ OpenAI Codex",
+			"invalidRequest": "คำขอไปยัง Codex API ไม่ถูกต้อง กรุณาตรวจสอบพารามิเตอร์ที่ป้อน",
+			"authenticationFailed": "การยืนยันตัวตนล้มเหลว กรุณายืนยันตัวตนใหม่กับ OpenAI Codex",
+			"accessDenied": "การเข้าถึงถูกปฏิเสธ บัญชี ChatGPT ของคุณอาจไม่รวมการเข้าถึง Codex",
+			"endpointNotFound": "ไม่พบ endpoint ของ Codex API",
+			"rateLimitExceeded": "เกินขีดจำกัดอัตรา กรุณาลองอีกครั้งในภายหลัง",
+			"serviceError": "ข้อผิดพลาดบริการ OpenAI Codex กรุณาลองอีกครั้งในภายหลัง",
+			"genericError": "ข้อผิดพลาด Codex API ({{status}})",
+			"noResponseBody": "ข้อผิดพลาด Codex API: ไม่มีเนื้อหาการตอบกลับ",
+			"connectionFailed": "ล้มเหลวในการเชื่อมต่อกับ Codex API: {{message}}",
+			"unexpectedConnectionError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการเชื่อมต่อกับ Codex API",
+			"apiError": "ข้อผิดพลาด Codex API: {{message}}",
+			"responseFailed": "การตอบสนองล้มเหลว: {{message}}",
+			"streamProcessingError": "เกิดข้อผิดพลาดในการประมวลผลสตรีมการตอบสนอง: {{message}}",
+			"unexpectedStreamError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการประมวลผลสตรีมการตอบสนอง",
+			"completionError": "ข้อผิดพลาดการเติมเต็ม OpenAI Codex: {{message}}"
 		}
 	},
 	"warnings": {
@@ -270,7 +270,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "การตอบสนองถูกหยุดโดยผู้ใช้",
-		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API"
+		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API",
+		"streamTerminatedByProvider": "ผู้ให้บริการยุติคำขอ"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

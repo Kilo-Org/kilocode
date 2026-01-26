@@ -1,4 +1,5 @@
 {
+	"back": "Torna alla vista attività",
 	"common": {
 		"save": "Salva",
 		"done": "Fatto",
@@ -7,6 +8,10 @@
 		"select": "Seleziona",
 		"add": "Aggiungi intestazione",
 		"remove": "Rimuovi"
+	},
+	"search": {
+		"placeholder": "Cerca impostazioni...",
+		"noResults": "Nessuna impostazione trovata"
 	},
 	"header": {
 		"title": "Impostazioni",
@@ -37,8 +42,9 @@
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"ghost": "Ghost",
-		"autoPurge": "Auto-pulizia"
+		"autoPurge": "Auto-pulizia",
+		"agentBehaviour": "Comportamento agente",
+		"ghost": "Ghost"
 	},
 	"about": {
 		"bugReport": {
@@ -58,7 +64,11 @@
 		},
 		"community": "Vuoi consigli o semplicemente uscire con altri utenti di Roo Code? Unisciti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contatti e Comunità",
-		"manageSettings": "Gestisci Impostazioni"
+		"manageSettings": "Gestisci Impostazioni",
+		"debugMode": {
+			"label": "Abilita modalità debug",
+			"description": "Abilita la modalità debug per mostrare pulsanti aggiuntivi nell'intestazione dell'attività che consentano di visualizzare la cronologia delle conversazioni API e i messaggi dell'interfaccia utente come JSON formattato in file temporanei."
+		}
 	},
 	"slashCommands": {
 		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
@@ -320,7 +330,6 @@
 		"useCustomBaseUrl": "Usa URL base personalizzato",
 		"useReasoning": "Abilita ragionamento",
 		"useHostHeader": "Usa intestazione Host personalizzata",
-		"useLegacyFormat": "Usa formato API OpenAI legacy",
 		"customHeaders": "Intestazioni personalizzate",
 		"headerName": "Nome intestazione",
 		"headerValue": "Valore intestazione",

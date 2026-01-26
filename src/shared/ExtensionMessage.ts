@@ -1,27 +1,5 @@
-import { z } from "zod"
-import type {
-	GlobalSettings,
-	ProviderSettingsEntry,
-	ProviderSettings,
-	ModelInfo, // kilocode_change
-	HistoryItem,
-	ModeConfig,
-	TelemetrySetting,
-	Experiments,
-	ClineMessage,
-	MarketplaceItem,
-	TodoItem,
-	CloudUserInfo,
-	CloudOrganizationMembership,
-	OrganizationAllowList,
-	ShareVisibility,
-	QueuedMessage,
-	SerializedCustomToolDefinition,
-	InstallMarketplaceItemOptions,
-	RooCodeSettings,
-	PromptComponent,
-} from "@roo-code/types"
-import { marketplaceItemSchema } from "@roo-code/types"
+// kilocode_change - new file
+// Legacy re-export shim for extension/webview message types.
 
 import { GitCommit } from "../utils/git"
 

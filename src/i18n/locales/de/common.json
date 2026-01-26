@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Antwort vom Benutzer unterbrochen",
-		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen"
+		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen",
+		"streamTerminatedByProvider": "Der Anbieter hat die Anfrage beendet"
 	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",

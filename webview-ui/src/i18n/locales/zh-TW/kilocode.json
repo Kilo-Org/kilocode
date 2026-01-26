@@ -10,7 +10,7 @@
 		"loginText": "在此登入"
 	},
 	"lowCreditWarning": {
-		"addCredit": "添加額度",
+		"addCredit": "增加額度",
 		"lowBalance": "你的 Kilo Code 餘額不足",
 		"newOrganization": "將 Kilo 用於工作？"
 	},
@@ -144,7 +144,7 @@
 		"detailedUsage": "詳細使用情況",
 		"createOrganization": "建立組織以追蹤詳細使用情況"
 	},
-	"docs": "文件",
+	"docs": "說明文件",
 	"rules": {
 		"tooltip": "管理代理行為（{{types}}）",
 		"agentBehaviourTypes": {
@@ -312,7 +312,7 @@
 	},
 	"marketplace": {
 		"mcp": {
-			"description": "这些MCP服务器由社区维护。点击<1>这里</1>编辑您自己的MCP设置。"
+			"description": "这些 MCP 服务器由社区维护。点击<1>这里</1>编辑您自己的 MCP 设置。"
 		},
 		"modes": {
 			"description": "这些模式来自社区提供。点击<1>这里</1>编辑您自己的自定义模式。"

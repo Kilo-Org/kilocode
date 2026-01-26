@@ -173,6 +173,24 @@
 		"manual_url_missing_params": "الرابط يفتقد للمعاملات المطلوبة",
 		"manual_url_auth_failed": "فشل في المصادقة",
 		"manual_url_auth_error": "حدث خطأ في المصادقة",
+		"openAiCodex": {
+			"notAuthenticated": "ما أنت مسجل دخول مع OpenAI Codex. سجل دخولك باستخدام OAuth flow حق OpenAI Codex.",
+			"invalidRequest": "طلب غير صالح لـ Codex API. تحقق من معاملات الإدخال.",
+			"authenticationFailed": "فشل تسجيل الدخول. سجل دخولك مرة ثانية مع OpenAI Codex.",
+			"accessDenied": "الوصول ممنوع. ممكن اشتراكك في ChatGPT ما يشمل الوصول لـ Codex.",
+			"endpointNotFound": "نقطة نهاية Codex API غير موجودة.",
+			"rateLimitExceeded": "تجاوزت الحد المسموح. جرب مرة ثانية لاحقاً.",
+			"serviceError": "خطأ في خدمة OpenAI Codex. جرب مرة ثانية لاحقاً.",
+			"genericError": "خطأ Codex API ({{status}})",
+			"noResponseBody": "خطأ Codex API: ما فيه محتوى في الاستجابة",
+			"connectionFailed": "فشل الاتصال بـ Codex API: {{message}}",
+			"unexpectedConnectionError": "خطأ غير متوقع في الاتصال بـ Codex API",
+			"apiError": "خطأ Codex API: {{message}}",
+			"responseFailed": "فشلت الاستجابة: {{message}}",
+			"streamProcessingError": "خطأ في معالجة تدفق الاستجابة: {{message}}",
+			"unexpectedStreamError": "خطأ غير متوقع في معالجة تدفق الاستجابة",
+			"completionError": "خطأ في إكمال OpenAI Codex: {{message}}"
+		},
 		"api": {
 			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة.",
 			"apiRequestFailed": "فشل طلب API ({{status}})"
@@ -270,7 +288,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "تم مقاطعة الاستجابة من قبل المستخدم",
-		"responseInterruptedByApiError": "تم مقاطعة الاستجابة بسبب خطأ في واجهة برمجة التطبيقات"
+		"responseInterruptedByApiError": "تم مقاطعة الاستجابة بسبب خطأ في واجهة برمجة التطبيقات",
+		"streamTerminatedByProvider": "المزود أنهى الطلب"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

@@ -125,5 +125,9 @@
 		"delegated_to": "Przekazano do zadania {{childId}}",
 		"delegation_completed": "Podzadanie ukończone, wznowienie zadania nadrzędnego",
 		"awaiting_child": "Oczekiwanie na zadanie podrzędne {{childId}}"
+	},
+	"costs": {
+		"own": "Własne",
+		"subtasks": "Podzadania"
 	}
 }

@@ -30,7 +30,7 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "連接 Qdrant 向量資料庫失敗。請確保 Qdrant 正在執行並可在 {{qdrantUrl}} 存取。錯誤：{{errorMessage}}",
-		"vectorDimensionMismatch": "無法更新新模型的向量索引。請嘗試清除索引並重新開始。詳細資訊: {{errorMessage}}",
+		"vectorDimensionMismatch": "無法更新新模型的向量索引。請嘗試清除索引並重新開始。詳細資訊：{{errorMessage}}",
 		"lancedbStoreInitFailed": "初始化 LanceDB 向量儲存失敗：{{errorMessage}}",
 		"lancedbLoadFailed": "載入 LanceDB 模組失敗：{{errorMessage}}"
 	},

@@ -1,6 +1,9 @@
+import * as os from "os"
+import { v7 as uuidv7 } from "uuid"
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
+import { Package } from "../../shared/package"
 import {
 	type ModelInfo,
 	openAiNativeDefaultModelId,
@@ -24,8 +27,8 @@ import { getModelParams } from "../transform/model-params"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
-import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
 import { isMcpTool } from "../../utils/mcp-name"
+import { sanitizeOpenAiCallId } from "../../utils/tool-id"
 
 export type OpenAiNativeModel = ReturnType<OpenAiNativeHandler["getModel"]>
 
@@ -33,6 +36,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	protected options: ApiHandlerOptions
 	private client: OpenAI
 	private readonly providerName = "OpenAI Native"
+	// Session ID for request tracking (persists for the lifetime of the handler)
+	private readonly sessionId: string
+	/**
+	 * Some Responses streams emit tool-call argument deltas without stable call id/name.
+	 * Track the last observed tool identity from output_item events so we can still
+	 * emit `tool_call_partial` chunks (tool-call-only streams).
+	 */
+	private pendingToolCallId: string | undefined
+	private pendingToolCallName: string | undefined
 	// Resolved service tier from Responses API (actual tier used by OpenAI)
 	private lastServiceTier: ServiceTier | undefined
 	// Complete response output array (includes reasoning items with encrypted_content)
@@ -52,6 +64,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		"response.reasoning_summary_text.delta",
 		"response.refusal.delta",
 		"response.output_item.added",
+		"response.output_item.done",
 		"response.done",
 		"response.completed",
 		"response.tool_call_arguments.delta",
@@ -63,13 +76,25 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
+		// Generate a session ID for request tracking
+		this.sessionId = uuidv7()
 		// Default to including reasoning.summary: "auto" for models that support Responses API
 		// reasoning summaries unless explicitly disabled.
 		if (this.options.enableResponsesReasoningSummary === undefined) {
 			this.options.enableResponsesReasoningSummary = true
 		}
 		const apiKey = this.options.openAiNativeApiKey ?? "not-provided"
-		this.client = new OpenAI({ baseURL: this.options.openAiNativeBaseUrl, apiKey })
+		// Include originator, session_id, and User-Agent headers for API tracking and debugging
+		const userAgent = `kilo-code/${Package.version} (${os.platform()} ${os.release()}; ${os.arch()}) node/${process.version.slice(1)}`
+		this.client = new OpenAI({
+			baseURL: this.options.openAiNativeBaseUrl,
+			apiKey,
+			defaultHeaders: {
+				originator: "kilo-code",
+				session_id: this.sessionId,
+				"User-Agent": userAgent,
+			},
+		})
 	}
 
 	private normalizeUsage(usage: any, model: OpenAiNativeModel): ApiStreamUsageChunk | undefined {
@@ -156,6 +181,9 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		this.lastResponseOutput = undefined
 		// Reset last response id for this request
 		this.lastResponseId = undefined
+		// Reset pending tool identity for this request
+		this.pendingToolCallId = undefined
+		this.pendingToolCallName = undefined
 
 		// Use Responses API for ALL models
 		const { verbosity, reasoning } = this.getModel()
@@ -197,6 +225,12 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 			const result = { ...schema }
 
+			// OpenAI Responses API requires additionalProperties: false on all object schemas
+			// Only add if not already set to false (to avoid unnecessary mutations)
+			if (result.additionalProperties !== false) {
+				result.additionalProperties = false
+			}
+
 			if (result.properties) {
 				const allKeys = Object.keys(result.properties)
 				result.required = allKeys
@@ -211,6 +245,42 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 						newProps[key] = {
 							...prop,
 							items: ensureAllRequired(prop.items),
+						}
+					}
+				}
+				result.properties = newProps
+			}
+
+			return result
+		}
+
+		// Adds additionalProperties: false to all object schemas recursively
+		// without modifying required array. Used for MCP tools with strict: false
+		// to comply with OpenAI Responses API requirements.
+		const ensureAdditionalPropertiesFalse = (schema: any): any => {
+			if (!schema || typeof schema !== "object" || schema.type !== "object") {
+				return schema
+			}
+
+			const result = { ...schema }
+
+			// OpenAI Responses API requires additionalProperties: false on all object schemas
+			// Only add if not already set to false (to avoid unnecessary mutations)
+			if (result.additionalProperties !== false) {
+				result.additionalProperties = false
+			}
+
+			if (result.properties) {
+				// Recursively process nested objects
+				const newProps = { ...result.properties }
+				for (const key of Object.keys(result.properties)) {
+					const prop = newProps[key]
+					if (prop && prop.type === "object") {
+						newProps[key] = ensureAdditionalPropertiesFalse(prop)
+					} else if (prop && prop.type === "array" && prop.items?.type === "object") {
+						newProps[key] = {
+							...prop,
+							items: ensureAdditionalPropertiesFalse(prop.items),
 						}
 					}
 				}
@@ -296,14 +366,14 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					.map((tool) => {
 						// MCP tools use the 'mcp--' prefix - disable strict mode for them
 						// to preserve optional parameters from the MCP server schema
+						// But we still need to add additionalProperties: false for OpenAI Responses API
 						const isMcp = isMcpTool(tool.function.name)
 						return {
 							type: "function",
 							name: tool.function.name,
 							description: tool.function.description,
-							// kilocode_change: normalize invalid schemes for strict mode for MCP
 							parameters: isMcp
-								? normalizeObjectAdditionalPropertiesFalse(tool.function.parameters)
+								? ensureAdditionalPropertiesFalse(tool.function.parameters)
 								: ensureAllRequired(tool.function.parameters),
 							strict: !isMcp,
 						}
@@ -338,10 +408,20 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		// Create AbortController for cancellation
 		this.abortController = new AbortController()
 
+		// Build per-request headers using taskId when available, falling back to sessionId
+		const taskId = metadata?.taskId
+		const userAgent = `kilo-code/${Package.version} (${os.platform()} ${os.release()}; ${os.arch()}) node/${process.version.slice(1)}`
+		const requestHeaders: Record<string, string> = {
+			originator: "kilo-code",
+			session_id: taskId || this.sessionId,
+			"User-Agent": userAgent,
+		}
+
 		try {
-			// Use the official SDK
+			// Use the official SDK with per-request headers
 			const stream = (await (this.client as any).responses.create(requestBody, {
 				signal: this.abortController.signal,
+				headers: requestHeaders,
 			})) as AsyncIterable<any>
 
 			if (typeof (stream as any)[Symbol.asyncIterator] !== "function") {
@@ -416,7 +496,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 									: block.content?.map((c) => (c.type === "text" ? c.text : "")).join("") || ""
 							toolResults.push({
 								type: "function_call_output",
-								call_id: block.tool_use_id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.tool_use_id),
 								output: result,
 							})
 						}
@@ -446,7 +527,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 							// Map Anthropic tool_use to Responses API function_call item
 							toolCalls.push({
 								type: "function_call",
-								call_id: block.id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.id),
 								name: block.name,
 								arguments: JSON.stringify(block.input),
 							})
@@ -483,13 +565,19 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		// Create AbortController for cancellation
 		this.abortController = new AbortController()
 
+		// Build per-request headers using taskId when available, falling back to sessionId
+		const taskId = metadata?.taskId
+		const userAgent = `kilo-code/${Package.version} (${os.platform()} ${os.release()}; ${os.arch()}) node/${process.version.slice(1)}`
+
 		try {
 			const response = await fetch(url, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${apiKey}`,
-					Accept: "text/event-stream",
+					originator: "kilo-code",
+					session_id: taskId || this.sessionId,
+					"User-Agent": userAgent,
 				},
 				body: JSON.stringify(requestBody),
 				signal: this.abortController.signal,
@@ -634,7 +722,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 							if (parsed?.type && this.coreHandledEventTypes.has(parsed.type)) {
 								for await (const outChunk of this.processEvent(parsed, model)) {
 									// Track whether we've emitted any content so fallback handling can decide appropriately
-									if (outChunk.type === "text" || outChunk.type === "reasoning") {
+									// Include tool calls so tool-call-only responses aren't treated as empty
+									if (
+										outChunk.type === "text" ||
+										outChunk.type === "reasoning" ||
+										outChunk.type === "tool_call" ||
+										outChunk.type === "tool_call_partial"
+									) {
 										hasContent = true
 									}
 									yield outChunk
@@ -1104,17 +1198,22 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			event?.type === "response.tool_call_arguments.delta" ||
 			event?.type === "response.function_call_arguments.delta"
 		) {
-			// Emit partial chunks directly - NativeToolCallParser handles state management
-			const callId = event.call_id || event.tool_call_id || event.id
-			const name = event.name || event.function_name
+			// Some streams omit stable identity on delta events; fall back to the
+			// most recently observed tool identity from output_item events.
+			const callId = event.call_id || event.tool_call_id || event.id || this.pendingToolCallId || undefined
+			const name = event.name || event.function_name || this.pendingToolCallName || undefined
 			const args = event.delta || event.arguments
 
-			yield {
-				type: "tool_call_partial",
-				index: event.index ?? 0,
-				id: callId,
-				name,
-				arguments: args,
+			// Avoid emitting incomplete tool_call_partial chunks; the downstream
+			// NativeToolCallParser needs a name to start a call.
+			if (typeof name === "string" && name.length > 0 && typeof callId === "string" && callId.length > 0) {
+				yield {
+					type: "tool_call_partial",
+					index: event.index ?? 0,
+					id: callId,
+					name,
+					arguments: args,
+				}
 			}
 			return
 		}
@@ -1132,6 +1231,16 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		if (event?.type === "response.output_item.added" || event?.type === "response.output_item.done") {
 			const item = event?.item
 			if (item) {
+				// Capture tool identity so subsequent argument deltas can be attributed.
+				if (item.type === "function_call" || item.type === "tool_call") {
+					const callId = item.call_id || item.tool_call_id || item.id
+					const name = item.name || item.function?.name || item.function_name
+					if (typeof callId === "string" && callId.length > 0) {
+						this.pendingToolCallId = callId
+						this.pendingToolCallName = typeof name === "string" ? name : undefined
+					}
+				}
+
 				if (item.type === "text" && item.text) {
 					yield { type: "text", text: item.text }
 				} else if (item.type === "reasoning" && item.text) {

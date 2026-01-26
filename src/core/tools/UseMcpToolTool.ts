@@ -1,10 +1,11 @@
+import type { ClineAskUseMcpServer, McpExecutionStatus } from "@roo-code/types"
+
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { ClineAskUseMcpServer } from "../../shared/ExtensionMessage"
-import { McpExecutionStatus } from "@roo-code/types"
 import { t } from "../../i18n"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface UseMcpToolParams {
 	server_name: string
