@@ -308,14 +308,20 @@ export async function executeCommandInTerminal(
 				clearTimeout(timeoutId)
 			}
 
-			task.terminalProcess = undefined
+			// Don't clear if running in background - user may still want to kill it
+			if (!runInBackground) {
+				task.terminalProcess = undefined
+			}
 		}
 	} else {
 		// No timeout - just wait for the process to complete.
 		try {
 			await process
 		} finally {
-			task.terminalProcess = undefined
+			// Don't clear if running in background - user may still want to kill it
+			if (!runInBackground) {
+				task.terminalProcess = undefined
+			}
 		}
 	}
 
