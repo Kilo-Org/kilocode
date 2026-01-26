@@ -280,8 +280,29 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 		const { id: model, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
 
+		// Only forward encrypted reasoning continuations (thoughtSignature) when we are
+		// using reasoning (thinkingConfig is present). Both effort-based (thinkingLevel)
+		// and budget-based (thinkingBudget) models require this for active loops.
+		const includeThoughtSignatures = Boolean(thinkingConfig)
+
+		// Build a map of tool IDs to names from previous messages
+		// This is needed because Anthropic's tool_result blocks only contain the ID,
+		// but Gemini requires the name in functionResponse
+		const toolIdToName = new Map<string, string>()
+		for (const message of messages) {
+			if (Array.isArray(message.content)) {
+				for (const block of message.content) {
+					if (block.type === "tool_use") {
+						toolIdToName.set(block.id, block.name)
+					}
+				}
+			}
+		}
+
 		// Convert messages to Gemini format
-		const contents = messages.map((message) => convertAnthropicMessageToGemini(message))
+		const contents = messages.map((message) =>
+			convertAnthropicMessageToGemini(message, { includeThoughtSignatures, toolIdToName }),
+		)
 
 		// Prepare request body for Code Assist API - matching Cline's structure
 		const requestBody: any = {
