@@ -76,7 +76,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, pla
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: "rgba(0, 0, 0, 0.2)",
+                background: "rgba(0, 0, 0, 0.5)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -92,7 +92,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, pla
                     maxWidth: "90%",
                     maxHeight: "90vh",
                     overflow: "auto",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                     display: "flex",
                     flexDirection: "column",
                     gap: "16px",
@@ -120,8 +120,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, pla
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "0.95em" }}>
                         <p style={{ margin: 0 }}>
-                            <strong style={{ color: "var(--vscode-textLink-foreground)" }}>{planCost} credits</strong> (${planCostDollars}) will be deducted from your GenLabs Account,{" "}
-                            <span style={{ fontFamily: "monospace", opacity: 0.8 }}>{apiConfiguration?.agenticaEmail}</span>.
+                            <strong style={{ color: "var(--vscode-textLink-foreground)" }}>{planCost} credits</strong> (${planCostDollars}) will be deducted from your GenLabs account {apiConfiguration?.agenticaEmail ? `, ${apiConfiguration.agenticaEmail}` : ""}. If you signed in with Github, you need to use Github to sign in to your GenLabs account.
                         </p>
 
                         <div style={{
