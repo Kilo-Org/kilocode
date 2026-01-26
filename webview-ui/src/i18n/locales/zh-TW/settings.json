@@ -17,7 +17,7 @@
 		"title": "設定",
 		"saveButtonTooltip": "儲存變更",
 		"nothingChangedTooltip": "無任何變更",
-		"doneButtonTooltip": "捨棄未儲存的變更並關閉設定面板"
+		"doneButtonTooltip": "捨棄未儲存的變更並回到工作檢視"
 	},
 	"unsavedChangesDialog": {
 		"title": "未儲存的變更",
@@ -30,7 +30,7 @@
 		"modes": "模式",
 		"mcp": "MCP 伺服器",
 		"autoApprove": "自動核准",
-		"browser": "電腦存取",
+		"browser": "瀏覽器",
 		"checkpoints": "檢查點",
 		"display": "顯示",
 		"notifications": "通知",
@@ -62,7 +62,7 @@
 		"contact": {
 			"label": "需要與我們聯絡？請寫信"
 		},
-		"community": "想要獲取使用技巧或與其他 Kilo Code 使用者交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
+		"community": "想要取得使用技巧或與其他 Kilo Code 使用者交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "聯絡與社群",
 		"manageSettings": "管理設定",
 		"debugMode": {
@@ -73,13 +73,28 @@
 	"slashCommands": {
 		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
 	},
+	"ui": {
+		"collapseThinking": {
+			"label": "預設折疊「思考」訊息",
+			"description": "啟用後，「思考」塊將預設折疊，直到您與其互動"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "需要 {{primaryMod}}+Enter 傳送訊息",
+			"description": "啟用後，必須按 {{primaryMod}}+Enter 傳送訊息，而不只是 Enter"
+		}
+	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
 	},
 	"codeIndex": {
 		"title": "程式碼庫索引",
+		"description": "設定程式碼庫索引設定以啟用專案的語意搜尋。<0>了解更多</0>",
+		"statusTitle": "狀態",
 		"enableLabel": "啟用程式碼庫索引",
 		"enableDescription": "啟用程式碼索引以改進搜尋和上下文理解",
+		"settingsTitle": "索引設定",
+		"disabledMessage": "程式碼庫索引目前已停用。請在全域設定中啟用以設定索引選項。",
+		"embedderProviderLabel": "嵌入器供應商",
 		"profileLabel": "嵌入供應商",
 		"selectProfilePlaceholder": "選擇供應商",
 		"openaiProvider": "OpenAI",
@@ -87,23 +102,23 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 金鑰：",
 		"geminiApiKeyPlaceholder": "輸入您的 Gemini API 金鑰",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API 金鑰：",
+		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 金鑰",
 		"vercelAiGatewayApiKeyPlaceholder": "輸入您的 Vercel AI Gateway API 金鑰",
 		"bedrockProvider": "Amazon Bedrock",
 		"bedrockRegionLabel": "AWS 區域",
 		"bedrockRegionPlaceholder": "us-east-1",
-		"bedrockProfileLabel": "AWS 設定檔",
+		"bedrockProfileLabel": "AWS Profile",
 		"bedrockProfilePlaceholder": "default",
-		"bedrockProfileDescription": "來自 ~/.aws/credentials 的 AWS 設定檔名稱（必需）。",
+		"bedrockProfileDescription": "來自 ~/.aws/credentials 的 AWS Profile 名稱（必需）。",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 		"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
 		"openRouterProviderRoutingLabel": "OpenRouter 供應商路由",
 		"openRouterProviderRoutingDescription": "OpenRouter 會將請求路由到適合您嵌入模型的最佳可用供應商。預設情況下，請求會在頂尖供應商之間進行負載平衡以最大化正常運作時間。您也可以為此模型選擇特定的供應商。",
-		"mistralProvider": "Mistral",
-		"mistralApiKeyLabel": "API 金鑰：",
-		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
 		"openaiCompatibleProvider": "OpenAI 相容",
 		"openaiCompatibleResponsesProvider": "OpenAI 相容 (Responses)",
 		"openAiKeyLabel": "OpenAI API 金鑰",
@@ -114,14 +129,24 @@
 		"openAiCompatibleModelDimensionLabel": "嵌入維度：",
 		"modelDimensionLabel": "模型維度",
 		"openAiCompatibleModelDimensionPlaceholder": "例如，1536",
-		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件以取得此值。常見值：384、768、1536、3072。",
+		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱供應商說明文件以取得此值。常見值：384、768、1536、3072。",
 		"modelLabel": "模型",
+		"modelPlaceholder": "輸入模型名稱",
+		"selectModel": "選擇模型",
 		"selectModelPlaceholder": "選擇模型",
 		"ollamaUrlLabel": "Ollama URL:",
+		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
+		"vectorStoreProviderLabel": "向量儲存提供者",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 金鑰：",
-		"startIndexingButton": "開始",
-		"clearIndexDataButton": "清除索引",
+		"qdrantApiKeyLabel": "Qdrant API 金鑰",
+		"qdrantApiKeyPlaceholder": "輸入您的 Qdrant API 金鑰（選用）",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store 路徑",
+		"lancedbVectorStoreDirectoryPlaceholder": "輸入自訂向量儲存路徑（選用）",
+		"lancedbVectorStoreDirectoryDescription": "儲存 LanceDB 向量資料庫的路徑。如果為空，將使用 globalStorageUri/vector 的預設位置。",
+		"setupConfigLabel": "設定",
+		"startIndexingButton": "開始索引",
+		"clearIndexDataButton": "清除索引資料",
 		"unsavedSettingsMessage": "請先儲存設定再開始索引程序。",
 		"clearDataDialog": {
 			"title": "確定要繼續嗎？",
@@ -129,27 +154,12 @@
 			"cancelButton": "取消",
 			"confirmButton": "清除資料"
 		},
-		"description": "設定程式碼庫索引設定以啟用專案的語意搜尋。<0>了解更多</0>",
-		"statusTitle": "狀態",
-		"settingsTitle": "索引設定",
-		"disabledMessage": "程式碼庫索引目前已停用。請在全域設定中啟用以設定索引選項。",
-		"embedderProviderLabel": "嵌入模型供應商",
-		"modelPlaceholder": "輸入模型名稱",
-		"selectModel": "選擇模型",
-		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
-		"vectorStoreProviderLabel": "向量儲存提供者",
-		"qdrantApiKeyLabel": "Qdrant API 金鑰",
-		"qdrantApiKeyPlaceholder": "輸入您的 Qdrant API 金鑰（選用）",
-		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store 路徑",
-		"lancedbVectorStoreDirectoryPlaceholder": "輸入自訂向量儲存路徑（選用）",
-		"lancedbVectorStoreDirectoryDescription": "儲存 LanceDB 向量資料庫的路徑。如果為空，將使用 globalStorageUri/vector 的預設位置。",
-		"setupConfigLabel": "設定",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
 		"modelDimensionPlaceholder": "1536",
 		"qdrantUrlPlaceholder": "http://localhost:6333",
 		"saveError": "無法儲存設定",
-		"modelDimensions": "({{dimension}} 維度)",
+		"modelDimensions": "（{{dimension}} 維度）",
 		"saveSuccess": "設定已成功儲存",
 		"saving": "儲存中...",
 		"saveSettings": "儲存",
@@ -161,10 +171,10 @@
 		},
 		"close": "關閉",
 		"validation": {
+			"qdrantUrlRequired": "需要 Qdrant URL",
 			"invalidQdrantUrl": "無效的 Qdrant URL",
 			"invalidOllamaUrl": "無效的 Ollama URL",
 			"invalidBaseUrl": "無效的基礎 URL",
-			"qdrantUrlRequired": "需要 Qdrant URL",
 			"openaiApiKeyRequired": "需要 OpenAI API 金鑰",
 			"modelSelectionRequired": "需要選擇模型",
 			"apiKeyRequired": "需要 API 金鑰",
@@ -173,14 +183,14 @@
 			"geminiApiKeyRequired": "需要 Gemini API 金鑰",
 			"mistralApiKeyRequired": "需要 Mistral API 金鑰",
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 金鑰",
-			"bedrockRegionRequired": "AWS 區域為必填",
-			"bedrockProfileRequired": "AWS 設定檔為必填",
+			"bedrockRegionRequired": "AWS 區域必填",
+			"bedrockProfileRequired": "AWS Profile 必填",
+			"openRouterApiKeyRequired": "OpenRouter API 金鑰必填",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",
 			"baseUrlRequired": "需要基礎 URL",
-			"modelDimensionMinValue": "模型維度必須大於 0",
-			"openRouterApiKeyRequired": "OpenRouter API 密鑰是必需的"
+			"modelDimensionMinValue": "模型維度必須大於 0"
 		},
-		"optional": "可選",
+		"optional": "選用",
 		"advancedConfigLabel": "進階設定",
 		"searchMinScoreLabel": "搜尋分數閾值",
 		"searchMinScoreDescription": "搜尋結果所需的最低相似度分數（0.0-1.0）。較低的值會傳回更多結果，但可能較不相關。較高的值會傳回較少但更相關的結果。",
@@ -192,11 +202,9 @@
 		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
-		"toggleShortcut": "您可以<SettingsLink>在 IDE 偏好設定中</SettingsLink>為此設定設定全域快捷鍵。",
+		"toggleShortcut": "您可以在 <SettingsLink>IDE 偏好設定</SettingsLink> 中為此設定設定全域快捷鍵。",
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
 		"enabled": "自動核准已啟用",
-		"toggleAriaLabel": "切換自動核准",
-		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
 			"label": "讀取",
 			"description": "啟用後，Kilo Code 將自動檢視目錄內容並讀取檔案，無需點選核准按鈕。",
@@ -207,8 +215,8 @@
 		},
 		"write": {
 			"label": "寫入",
-			"description": "自動建立和編輯檔案而無需核准",
-			"delayLabel": "寫入後延遲以允許診斷偵測潛在問題",
+			"description": "無需核准即可自動建立與編輯檔案",
+			"delayLabel": "寫入後延遲一小段時間，以便診斷工具偵測潛在問題",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
 				"description": "允許 Kilo Code 在目前工作區外建立和編輯檔案，無需核准。"
@@ -220,36 +228,36 @@
 		},
 		"browser": {
 			"label": "瀏覽器",
-			"description": "自動執行瀏覽器操作而無需核准 — 注意：僅適用於模型支援電腦使用時"
+			"description": "無需核准即可自動執行瀏覽器動作。注意：僅適用於支援電腦操作的模型。"
 		},
 		"mcp": {
 			"label": "MCP",
-			"description": "在 MCP 伺服器檢視中啟用個別 MCP 工具的自動核准（需要此設定和工具的「始終允許」核取方塊）"
+			"description": "啟用 MCP 伺服器檢視中個別 MCP 工具的自動核准（需同時啟用此設定與該工具的「始終允許」核取方塊）"
 		},
 		"modeSwitch": {
 			"label": "模式",
-			"description": "自動在不同模式之間切換而無需核准"
+			"description": "無需核准即可自動切換至不同模式"
 		},
 		"subtasks": {
 			"label": "子任務",
-			"description": "允許建立和完成子任務而無需核准"
+			"description": "無需核准即可建立與完成子任務"
 		},
 		"followupQuestions": {
-			"label": "問題",
-			"description": "在設定的逾時時間後自動選擇後續問題的第一個建議答案",
+			"label": "後續提問",
+			"description": "在設定的逾時時間過後，自動選擇後續問題的第一個建議答案",
 			"timeoutLabel": "自動選擇第一個答案前的等待時間"
 		},
 		"execute": {
-			"label": "執行",
-			"description": "自動執行允許的終端機命令而無需核准",
+			"label": "執行命令",
+			"description": "無需核准即可自動執行允許的終端機命令",
 			"allowedCommands": "允許自動執行的命令",
-			"allowedCommandsDescription": "當「始終核准執行操作」啟用時可以自動執行的命令前綴。新增 * 以允許所有命令（請謹慎使用）。",
+			"allowedCommandsDescription": "啟用「始終核准執行」時，可自動執行的命令前綴。新增 * 可允許所有命令（請謹慎使用）。",
 			"deniedCommands": "拒絕的命令",
-			"deniedCommandsDescription": "將自動拒絕的命令前綴，無需使用者核准。與允許命令衝突時，最長前綴匹配優先。新增 * 拒絕所有命令。",
+			"deniedCommandsDescription": "將自動拒絕且不詢問核准的命令前綴。若與允許的命令衝突，將以最長前綴比對優先。新增 * 可拒絕所有命令。",
 			"commandPlaceholder": "輸入命令前綴（例如 'git '）",
 			"deniedCommandPlaceholder": "輸入要拒絕的命令前綴（例如 'rm -rf'）",
 			"addButton": "新增",
-			"autoDenied": "前綴為 `{{prefix}}` 的命令已被使用者禁止。不要透過執行其他命令來繞過此限制。"
+			"autoDenied": "前綴為 `{{prefix}}` 的命令已被使用者禁止。請勿透過執行其他命令來繞過此限制。"
 		},
 		"showMenu": {
 			"label": "在聊天視圖中顯示自動核准選單",
@@ -264,18 +272,20 @@
 			"description": "自動刪除檔案和目錄無需核准"
 		},
 		"apiRequestLimit": {
-			"title": "最大請求數",
+			"title": "請求次數上限",
 			"description": "在請求核准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
 		},
-		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准",
 		"apiCostLimit": {
-			"unlimited": "無限",
-			"title": "最高費用"
+			"title": "費用上限",
+			"unlimited": "無限制"
 		},
 		"maxLimits": {
-			"description": "在請求獲得繼續操作的核准前，自動發送請求直至達到這些限制。"
-		}
+			"description": "在達到這些限制之前自動發送請求，超過後將詢問核准以繼續。"
+		},
+		"toggleAriaLabel": "切換自動核准狀態",
+		"disabledAriaLabel": "自動核准已停用 - 請先選取下方選項",
+		"selectOptionsFirst": "請先選取下方至少一個選項以啟用自動核准"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 說明文件",
@@ -284,16 +294,16 @@
 		"makeActiveProfile": "設為活動設定檔",
 		"makeActiveTooltip": "啟用此設定檔以用於 API 請求",
 		"apiProvider": "API 供應商",
-		"apiProviderDocs": "供應商文檔",
+		"apiProviderDocs": "供應商說明文件",
 		"model": "模型",
 		"nameEmpty": "名稱不能為空",
 		"nameExists": "已存在同名的設定檔",
 		"deleteProfile": "刪除設定檔",
-		"invalidArnFormat": "ARN 格式無效。請檢查上方示例。",
+		"invalidArnFormat": "ARN 格式無效。請檢查上方範例。",
 		"enterNewName": "輸入新名稱",
 		"addProfile": "新增設定檔",
 		"renameProfile": "重新命名設定檔",
-		"newProfile": "新建設定檔",
+		"newProfile": "新增設定檔",
 		"enterProfileName": "輸入設定檔名稱",
 		"createProfile": "建立設定檔",
 		"cannotDeleteOnlyProfile": "無法刪除唯一的設定檔",
@@ -312,14 +322,14 @@
 		"getVercelAiGatewayApiKey": "取得 Vercel AI Gateway API 金鑰",
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
-		"apiKeyStorageNotice": "API 金鑰安全儲存於 VSCode 金鑰儲存中",
+		"apiKeyStorageNotice": "API 金鑰會安全地儲存在 VS Code 的 Secret Storage 中",
 		"useCustomBaseUrl": "使用自訂基礎 URL",
 		"useReasoning": "啟用推理",
 		"useHostHeader": "使用自訂 Host 標頭",
 		"customHeaders": "自訂標頭",
 		"headerName": "標頭名稱",
 		"headerValue": "標頭值",
-		"noCustomHeaders": "尚未定義自訂標頭。點擊 + 按鈕以新增。",
+		"noCustomHeaders": "尚未定義自訂標頭。點選 + 按鈕以新增。",
 		"requestyApiKey": "Requesty API 金鑰",
 		"refreshModels": {
 			"label": "重新整理模型",
@@ -364,13 +374,13 @@
 		"moonshotApiKey": "Moonshot API 金鑰",
 		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
 		"moonshotBaseUrl": "Moonshot 服務端點",
+		"minimaxApiKey": "MiniMax API 金鑰",
+		"getMiniMaxApiKey": "取得 MiniMax API 金鑰",
+		"minimaxBaseUrl": "MiniMax 服務端點",
 		"zaiApiKey": "Z AI API 金鑰",
 		"getZaiApiKey": "取得 Z AI API 金鑰",
 		"zaiEntrypoint": "Z AI 服務端點",
 		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務端點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
-		"minimaxApiKey": "MiniMax API 金鑰",
-		"getMiniMaxApiKey": "取得 MiniMax API 金鑰",
-		"minimaxBaseUrl": "MiniMax 服務端點",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
@@ -418,18 +428,18 @@
 		"awsProfile": "AWS Profile",
 		"awsApiKey": "Amazon Bedrock API 金鑰",
 		"awsProfileName": "AWS Profile 名稱",
-		"awsAccessKey": "AWS Access Key",
-		"awsSecretKey": "AWS Secret Key",
+		"awsAccessKey": "AWS 存取金鑰",
+		"awsSecretKey": "AWS 秘密金鑰",
 		"awsSessionToken": "AWS 工作階段權杖",
 		"awsRegion": "AWS 區域",
 		"awsCrossRegion": "使用跨區域推論",
-		"awsGlobalInference": "使用全域推論 (自動選取最佳 AWS 區域)",
+		"awsGlobalInference": "使用全域推論（自動選取最佳 AWS 區域）",
 		"awsServiceTier": "服務層級",
 		"awsServiceTierStandard": "Standard",
 		"awsServiceTierStandardDesc": "效能和成本均衡",
-		"awsServiceTierFlex": "Flex (50% 折扣)",
+		"awsServiceTierFlex": "Flex（50% 折扣）",
 		"awsServiceTierFlexDesc": "低成本，非關鍵工作的延遲較高",
-		"awsServiceTierPriority": "Priority (75% 溢價)",
+		"awsServiceTierPriority": "Priority（75% 溢價）",
 		"awsServiceTierPriorityDesc": "為關鍵業務應用提供最快效能",
 		"awsServiceTierNote": "服務層級會影響定價和效能。Flex 提供 50% 折扣但延遲較高，Priority 提供 25% 更好的效能但費用溢價 75%。",
 		"awsBedrockVpc": {
@@ -441,15 +451,15 @@
 		"enablePromptCachingTitle": "啟用提示快取以提升支援的模型效能並降低成本。",
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
 		"vscodeLmModel": "語言模型",
-		"vscodeLmWarning": "注意：透過 VS Code Language Model API 存取的模型可能由供應商封裝或微調，因此其行為可能與直接從一般供應商或路由器使用相同模型時不同。要使用「Language Model」下拉式選單中的模型，請先切換到該模型，然後在 Copilot Chat 提示中點擊「接受」；否則可能會出現 400「The requested model is not supported」等錯誤。",
+		"vscodeLmWarning": "注意：透過 VS Code Language Model API 存取的模型可能由供應商封裝或微調，因此其行為可能與直接從一般供應商或路由器使用相同模型時不同。要使用「Language Model」下拉式選單中的模型，請先切換到該模型，然後在 Copilot Chat 提示中點選「接受」；否則可能會出現 400「The requested model is not supported」等錯誤。",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "啟用 URL 上下文",
-				"description": "讓 Gemini 讀取連結的頁面以提取、比較和綜合其內容，從而提供明智的答覆。"
+				"description": "讓 Gemini 讀取連結的頁面，以擷取、比較並統整其內容，提供更有根據的回覆。"
 			},
 			"groundingSearch": {
-				"title": "啟用 Google 搜尋基礎",
-				"description": "將 Gemini 連接到即時網路數據，以獲得包含可驗證引用的準確、最新的答案。"
+				"title": "啟用 Google 搜尋 Grounding",
+				"description": "將 Gemini 連線到即時網路資料，以取得準確、最新且附可驗證引用的答案。"
 			}
 		},
 		"googleCloudSetup": {
@@ -470,18 +480,18 @@
 			"draftModelDesc": "草稿模型必須來自相同模型系列才能正確運作。",
 			"selectDraftModel": "選擇草稿模型",
 			"noModelsFound": "未找到草稿模型。請確保 LM Studio 以伺服器模式執行。",
-			"description": "LM Studio 允許您在本機電腦執行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本機伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"description": "LM Studio 允許您在本機電腦執行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本機伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> Kilo Code 使用複雜提示詞，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"ollama": {
 			"baseUrl": "基礎 URL（選用）",
 			"modelId": "模型 ID",
 			"apiKey": "Ollama API 金鑰",
 			"apiKeyPlaceholder": "輸入您的 API 金鑰",
-			"apiKeyHelp": "用於已認證 Ollama 執行個體或雲端服務的選用 API 金鑰。本機安裝請留空。",
-			"numCtx": "上下文視窗大小 (num_ctx)",
+			"apiKeyHelp": "用於已驗證 Ollama 執行個體或雲端服務的選用 API 金鑰。本機安裝請留空。",
+			"numCtx": "上下文視窗大小（num_ctx）",
 			"numCtxHelp": "覆寫模型的預設上下文視窗大小。留空以使用模型的 Modelfile 設定。最小值為 128。",
 			"description": "Ollama 允許您在本機電腦執行模型。請參閱快速入門指南。",
-			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"warning": "注意：Kilo Code 使用複雜提示詞，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
@@ -493,7 +503,7 @@
 		},
 		"roo": {
 			"authenticatedMessage": "已透過 Roo Code Cloud 帳戶安全認證。",
-			"connectButton": "連接到 Roo Code Cloud"
+			"connectButton": "連線到 Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -522,12 +532,12 @@
 			},
 			"promptCache": {
 				"label": "提示快取",
-				"description": "此模型是否能夠快取提示？"
+				"description": "此模型是否能夠快取提示詞？"
 			},
 			"pricing": {
 				"input": {
 					"label": "輸入價格",
-					"description": "輸入/提示每百萬 Token 的費用。這會影響向模型傳送內容和指令時的費用。"
+					"description": "輸入/提示詞每百萬 Token 的費用。這會影響向模型傳送內容和指令時的費用。"
 				},
 				"output": {
 					"label": "輸出價格",
@@ -561,11 +571,11 @@
 		"reasoningEffort": {
 			"label": "模型推理強度",
 			"none": "無",
-			"minimal": "最小 (最快)",
+			"minimal": "最小（最快）",
+			"low": "低",
+			"medium": "中",
 			"high": "高",
 			"xhigh": "超高",
-			"medium": "中",
-			"low": "低",
 			"xhigh": "超高"
 		},
 		"verbosity": {
@@ -575,10 +585,10 @@
 			"low": "低",
 			"description": "控制模型回應的詳細程度。低詳細度產生簡潔的回答，而高詳細度提供詳盡的解釋。"
 		},
-		"setReasoningLevel": "啟用推理工作量",
+		"setReasoningLevel": "啟用推理強度",
 		"claudeCode": {
 			"pathLabel": "Claude Code 路徑",
-			"description": "可選的 Claude Code CLI 路徑。如果未設定，則預設為 'claude'。",
+			"description": "選用的 Claude Code CLI 路徑。若未設定，預設為 'claude'。",
 			"placeholder": "預設：claude",
 			"maxTokensLabel": "最大輸出 Token",
 			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
@@ -658,7 +668,7 @@
 		},
 		"screenshotQuality": {
 			"label": "截圖品質",
-			"description": "調整瀏覽器截圖的 WebP 品質。數值越高截圖越清晰，但會增加 token 用量。"
+			"description": "調整瀏覽器截圖的 WebP 品質。數值越高截圖越清晰，但會增加 Token 用量。"
 		},
 		"remote": {
 			"label": "使用遠端瀏覽器連線",
@@ -724,7 +734,7 @@
 		}
 	},
 	"contextManagement": {
-		"description": "控制 AI 上下文視窗中要包含哪些資訊，會影響 token 用量和回應品質",
+		"description": "控制 AI 上下文視窗中要包含哪些資訊，會影響 Token 用量和回應品質",
 		"autoCondenseContextPercent": {
 			"label": "觸發智慧上下文壓縮的閾值",
 			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
@@ -732,7 +742,7 @@
 		"condensingApiConfiguration": {
 			"label": "上下文壓縮的 API 設定",
 			"description": "選擇用於上下文壓縮操作的 API 設定。留空則使用目前啟用的設定。",
-			"useCurrentConfig": "使用目前設定"
+			"useCurrentConfig": "預設"
 		},
 		"customCondensingPrompt": {
 			"label": "自訂上下文壓縮提示",
@@ -747,15 +757,19 @@
 		},
 		"openTabs": {
 			"label": "開啟分頁的上下文限制",
-			"description": "上下文中最多包含多少個 VS Code 開啟的分頁。數值越高提供的上下文越多，但 token 用量也會增加。"
+			"description": "上下文中最多包含多少個 VS Code 開啟的分頁。數值越高提供的上下文越多，但 Token 用量也會增加。"
 		},
 		"workspaceFiles": {
 			"label": "工作區檔案的上下文限制",
-			"description": "目前工作目錄中最多包含多少個檔案。數值越高提供的上下文越多，但 token 用量也會增加。"
+			"description": "目前工作目錄中最多包含多少個檔案。數值越高提供的上下文越多，但 Token 用量也會增加。"
 		},
 		"rooignore": {
-			"label": "在列表和搜尋中顯示被 .kilocodeignore 排除的檔案",
-			"description": "啟用後，符合 .kilocodeignore 規則的檔案會在列表中顯示並標示鎖定圖示。停用後，這些檔案將完全從檔案列表和搜尋結果中隱藏。"
+			"label": "在清單和搜尋中顯示被 .kilocodeignore 排除的檔案",
+			"description": "啟用後，符合 .kilocodeignore 規則的檔案會在清單中顯示並標示鎖定圖示。停用後，這些檔案將完全從檔案清單和搜尋結果中隱藏。"
+		},
+		"maxConcurrentFileReads": {
+			"label": "並行檔案讀取限制",
+			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
@@ -763,9 +777,15 @@
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		},
-		"maxConcurrentFileReads": {
-			"label": "並行檔案讀取限制",
-			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
+		"maxImageFileSize": {
+			"label": "最大圖片檔案大小",
+			"mb": "MB",
+			"description": "read_file 工具可以處理的影像檔案最大大小（MB）。"
+		},
+		"maxTotalImageSize": {
+			"label": "圖片總大小上限",
+			"mb": "MB",
+			"description": "單次 read_file 操作中處理的所有圖片的最大累計大小限制（MB）。讀取多張圖片時，每張圖片的大小會累加到總大小中。如果包含另一張圖片會超過此限制，則會跳過該圖片。"
 		},
 		"diagnostics": {
 			"includeMessages": {
@@ -774,8 +794,8 @@
 			},
 			"maxMessages": {
 				"label": "最大診斷訊息數",
-				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加 token 使用量。",
-				"resetTooltip": "重設為預設值 (50)",
+				"description": "限制納入上下文的診斷訊息（錯誤、警告）數量。設定後只會顯示這麼多診斷，並優先顯示錯誤而非警告。設為 0 表示無限制。",
+				"resetTooltip": "重設為預設值（50）",
 				"unlimited": "無限制診斷訊息",
 				"unlimitedLabel": "無限制"
 			},
@@ -786,22 +806,12 @@
 		},
 		"condensingThreshold": {
 			"label": "壓縮觸發閾值",
-			"selectProfile": "設定檔案閾值",
+			"selectProfile": "設定檔的閾值",
 			"defaultProfile": "全域預設（所有設定檔）",
-			"defaultDescription": "當上下文達到此百分比時，將自動壓縮上下文，可被自定義設定檔覆蓋",
-			"profileDescription": "僅此設定檔的自訂閾值（覆蓋全域預設）",
-			"inheritDescription": "此設定檔繼承全域預設閾值（{{threshold}}%）",
+			"defaultDescription": "當上下文達到此百分比時，除非有自訂設定，所有設定檔都會自動壓縮。",
+			"profileDescription": "僅此設定檔的自訂閾值（覆寫全域預設）",
+			"inheritDescription": "此設定檔沿用全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
-		},
-		"maxImageFileSize": {
-			"label": "最大圖片檔案大小",
-			"mb": "MB",
-			"description": "read file 工具可以處理的圖像檔案的最大大小（以 MB 為單位）。"
-		},
-		"maxTotalImageSize": {
-			"label": "圖片總大小上限",
-			"mb": "MB",
-			"description": "單次 read_file 操作中處理的所有圖片的最大累計大小限制（MB）。讀取多張圖片時，每張圖片的大小會累加到總大小中。如果包含另一張圖片會超過此限制，則會跳過該圖片。"
 		},
 		"includeCurrentTime": {
 			"label": "在上下文中包含目前時間",
@@ -813,7 +823,7 @@
 		},
 		"maxGitStatusFiles": {
 			"label": "Git 狀態最大檔案數",
-			"description": "git狀態上下文中包含的最大檔案條目數。設為0禁用。分支資訊和提交在>0時始終顯示。"
+			"description": "git status 上下文中包含的最大檔案條目數。設為 0 會停用。當值 > 0 時，會一律顯示分支資訊。"
 		},
 		"enableSubfolderRules": {
 			"label": "啟用子資料夾規則",
@@ -831,7 +841,7 @@
 		},
 		"outputLineLimit": {
 			"label": "終端機輸出限制",
-			"description": "保留首尾行並丟棄中間行以保持在限制內。降低可節省 token；提高可為 Kilo 提供更多中間細節。Kilo 看到內容被跳過的佔位符。<0>了解更多</0>"
+			"description": "保留首尾行並丟棄中間行以保持在限制內。降低可節省 Token；提高可為 Kilo 提供更多中間細節。Kilo 看到內容被跳過的佔位符。<0>了解更多</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "終端機字元限制",
@@ -851,7 +861,7 @@
 		},
 		"compressProgressBar": {
 			"label": "壓縮進度條輸出",
-			"description": "折疊進度條/旋轉器，僅保留最終狀態（節省 token）。<0>了解更多</0>"
+			"description": "折疊進度條/旋轉器，僅保留最終狀態（節省 Token）。<0>了解更多</0>"
 		},
 		"powershellCounter": {
 			"label": "啟用 PowerShell 計數器解決方案",
@@ -887,7 +897,7 @@
 		"default": "預設",
 		"xml": "XML",
 		"native": "原生",
-		"currentDefault": "預設: {{protocol}}"
+		"currentDefault": "預設：{{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -929,13 +939,13 @@
 			"name": "使用實驗性「動力輔助」模式",
 			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
 		},
+		"CONCURRENT_FILE_READS": {
+			"name": "啟用並行檔案讀取",
+			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
-		},
-		"CONCURRENT_FILE_READS": {
-			"name": "啟用並行檔案讀取",
-			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
 		},
 		"MARKETPLACE": {
 			"name": "啟用 Marketplace",
@@ -965,32 +975,32 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "背景編輯",
-			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Roo 進行變更時繼續不受干擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
+			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Kilo Code 進行變更時繼續不受干擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "使用全新訊息解析器",
 			"description": "啟用實驗性的串流訊息解析器。透過更有效率地處理訊息，能顯著提升長回覆的效能。"
 		},
 		"NEW_TASK_REQUIRE_TODOS": {
-			"name": "要求新工作提供 'todos' 列表",
+			"name": "要求新工作提供 'todos' 清單",
 			"description": "啟用後，new_task 工具將需要提供 todos 參數。這可以確保所有新工作都以明確的目標列表開始。停用時（預設），todos 參數保持可選，以實現向後相容。"
 		},
 		"IMAGE_GENERATION": {
-			"providerLabel": "提供商",
-			"providerDescription": "選擇用於圖像生成的提供商。",
-			"name": "啟用 AI 圖像生成",
-			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
+			"name": "啟用 AI 影像生成",
+			"description": "啟用後，Kilo Code 可以從文字提示生成影像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
 			"apiProvider": "API 供應商",
+			"providerLabel": "供應商",
+			"providerDescription": "選擇用於影像生成的供應商。",
 			"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 			"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
 			"kiloCodeApiKeyLabel": "Kilo Code API 金鑰",
 			"kiloCodeApiKeyPlaceholder": "輸入您的 Kilo Code API 金鑰",
 			"kiloCodeApiKeyPaste": "貼上目前的 Kilo Code API 金鑰",
-			"getApiKeyText": "取得您的 API 金鑰從",
-			"modelSelectionLabel": "圖像生成模型",
-			"modelSelectionDescription": "選擇用於圖像生成的模型",
-			"warningMissingKey": "⚠️ 圖像生成需要 API 金鑰，請在上方設定。",
-			"successConfigured": "✓ 圖像生成已設定完成並準備使用"
+			"getApiKeyText": "取得您的 API 金鑰請前往",
+			"modelSelectionLabel": "影像生成模型",
+			"modelSelectionDescription": "選擇用於影像生成的模型",
+			"warningMissingKey": "⚠️ 影像生成需要 API 金鑰，請在上方設定。",
+			"successConfigured": "✓ 影像生成已設定完成並準備使用"
 		},
 		"INLINE_ASSIST": {
 			"name": "自動補全",
@@ -1034,7 +1044,7 @@
 		"noImages": "不支援影像",
 		"supportsPromptCache": "支援提示快取",
 		"noPromptCache": "不支援提示快取",
-		"contextWindow": "上下文視窗:",
+		"contextWindow": "上下文視窗：",
 		"maxOutput": "最大輸出",
 		"inputPrice": "輸入價格",
 		"outputPrice": "輸出價格",
@@ -1046,7 +1056,7 @@
 		"useAzure": "使用 Azure",
 		"azureApiVersion": "設定 Azure API 版本",
 		"gemini": {
-			"freeRequests": "* 每分鐘可免費使用 {{count}} 次請求，超過後將依提示大小計費。",
+			"freeRequests": "* 每分鐘可免費使用 {{count}} 次請求，超過後將依提示詞大小計費。",
 			"pricingDetails": "詳細資訊請參閱定價說明。",
 			"billingEstimate": "* 費用為估算值 - 實際費用取決於提示大小。"
 		}
@@ -1055,7 +1065,7 @@
 		"automaticFetch": "此擴充功能會自動從 <serviceLink>{{serviceName}}</serviceLink> 取得最新的可用模型清單。如果不確定要選哪個模型，建議使用 <defaultModelLink>{{defaultModelId}}</defaultModelLink>，這是與 Kilo Code 最佳搭配的模型。",
 		"label": "模型",
 		"searchPlaceholder": "搜尋",
-		"noMatchFound": "找不到符合的項目",
+		"noMatchFound": "找不到符合的結果",
 		"useCustomModel": "使用自訂模型：{{modelId}}",
 		"simplifiedExplanation": "你可以稍後調整詳細的模型設定。",
 		"recommendedModels": "推薦模型",
@@ -1066,7 +1076,7 @@
 		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允許匿名錯誤與使用情況回報",
-			"description": "透過傳送匿名的使用資料與錯誤回報，協助改善 Kilo Code。我們絕不會傳送您的程式碼、提示或個人資訊。詳細資訊請參閱我們的隱私權政策。"
+			"description": "透過傳送匿名的使用資料與錯誤回報，協助改善 Kilo Code。我們絕不會傳送您的程式碼、提示詞或個人資訊。詳細資訊請參閱我們的隱私權政策。"
 		},
 		"settings": {
 			"import": "匯入",
@@ -1075,8 +1085,8 @@
 		}
 	},
 	"thinkingBudget": {
-		"maxTokens": "最大 token 數",
-		"maxThinkingTokens": "最大思考 token 數"
+		"maxTokens": "最大 Token 數",
+		"maxThinkingTokens": "最大思考 Token 數"
 	},
 	"validation": {
 		"apiKey": "請提供有效的 API 金鑰。",
@@ -1092,7 +1102,7 @@
 		"modelAvailability": "您指定的模型 ID ({{modelId}}) 目前無法使用，請選擇其他模型。",
 		"modelDeprecated": "此模型已停用，請選擇其他模型。",
 		"providerNotAllowed": "供應商 '{{provider}}' 不允許用於您的組織。",
-		"modelNotAllowed": "模型 '{{model}}' 不允許用於供應商 '{{provider}}'，您的組織不允許",
+		"modelNotAllowed": "模型 '{{model}}' 不允許用於供應商 '{{provider}}'，此設定已被組織禁止",
 		"profileInvalid": "此設定檔包含您的組織不允許的供應商或模型",
 		"qwenCodeOauthPath": "您必須提供有效的 OAuth 憑證路徑",
 		"sapAiCore": "您必須提供有效的 SAP AI Core 服務金鑰。",
@@ -1102,7 +1112,7 @@
 		"apiKey": "請輸入 API 金鑰...",
 		"profileName": "請輸入設定檔名稱",
 		"accessKey": "請輸入存取金鑰...",
-		"secretKey": "請輸入金鑰...",
+		"secretKey": "請輸入秘密金鑰...",
 		"sessionToken": "請輸入工作階段權杖...",
 		"credentialsJson": "請輸入憑證 JSON...",
 		"keyFilePath": "請輸入金鑰檔案路徑...",
@@ -1185,16 +1195,6 @@
 			"input": "輸入",
 			"output": "輸出",
 			"cacheReads": "快取讀取"
-		}
-	},
-	"ui": {
-		"collapseThinking": {
-			"label": "預設折疊「思考」訊息",
-			"description": "啟用後，「思考」塊將預設折疊，直到您與其互動"
-		},
-		"requireCtrlEnterToSend": {
-			"label": "需要 {{primaryMod}}+Enter 傳送訊息",
-			"description": "啟用後，必須按 {{primaryMod}}+Enter 傳送訊息，而不只是 Enter"
 		}
 	}
 }
