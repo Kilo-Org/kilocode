@@ -219,7 +219,7 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 				<VSCodeButton
 					onClick={handleDeviceAuth}
 					disabled={deviceAuthStatus === "pending"}
-					style={{ width: "100%", display: "flex", gap: "8px", alignItems: "center", justifyContent: "center" }}>
+					style={{ width: "100%", display: "flex", gap: "8px", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap" }}>
 					<span className="codicon codicon-github" style={{ fontSize: "16px" }} aria-hidden="true"></span>
 					<span>{deviceAuthStatus === "pending" ? "Authenticating..." : "Continue with GitHub"}</span>
 				</VSCodeButton>
@@ -395,14 +395,14 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					borderRadius: "6px",
 					border: "1px solid var(--vscode-panel-border)"
 				}}>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", gap: "12px" }}>
 						<div style={{ fontSize: "14px", fontWeight: "600" }}>
 							Current Plan: {subscription.data.plan_tier.toUpperCase()}
 						</div>
 						<VSCodeButton
 							appearance="secondary"
 							onClick={() => setPlansModalOpen(true)}
-							style={{ fontSize: "12px", padding: "4px 12px" }}>
+							style={{ fontSize: "12px", padding: "4px 12px", flexShrink: 0 }}>
 							Manage Plan
 						</VSCodeButton>
 					</div>
