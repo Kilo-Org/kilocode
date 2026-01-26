@@ -502,5 +502,11 @@
 		"updated": "Updated the to-do list",
 		"completed": "Completed",
 		"started": "Started"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code wants to fetch content from a URL",
+		"didFetch": "Kilo Code fetched content from a URL",
+		"wantsToSearch": "Kilo Code wants to search the web",
+		"didSearch": "Kilo Code searched the web"
 	}
 }
