@@ -152,7 +152,10 @@ export class CodeIndexServiceFactory {
 			vectorSize = config.modelDimension
 		}
 
-		if (vectorSize === undefined || vectorSize <= 0) {
+		if (vectorSize === undefined || vectorSize <= 0 || !Number.isFinite(vectorSize) || vectorSize > 100000) {
+			// kilocode_change start - Enhanced validation for issue #5325
+			console.error(`[CodeIndexServiceFactory] Invalid vectorSize: ${vectorSize} (type: ${typeof vectorSize}) for provider: ${provider}, modelId: ${modelId}`)
+			// kilocode_change end
 			if (provider === "openai-compatible") {
 				throw new Error(
 					t("embeddings:serviceFactory.vectorDimensionNotDeterminedOpenAiCompatible", { modelId, provider }),

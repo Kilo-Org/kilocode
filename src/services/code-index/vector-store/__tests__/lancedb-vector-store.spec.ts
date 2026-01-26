@@ -103,6 +103,36 @@ describe("LocalVectorStore", () => {
 			expect(store["workspacePath"]).toBe(workspacePath)
 			expect(store["dbPath"]).toContain("mock")
 		})
+
+		// kilocode_change start - Test for issue #5325
+		it("should reject invalid vectorSize values", () => {
+			// Test negative values
+			expect(() => new LanceDBVectorStore(workspacePath, -1, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+
+			// Test zero
+			expect(() => new LanceDBVectorStore(workspacePath, 0, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+
+			// Test NaN
+			expect(() => new LanceDBVectorStore(workspacePath, NaN, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+
+			// Test Infinity
+			expect(() => new LanceDBVectorStore(workspacePath, Infinity, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+
+			// Test extremely large values
+			expect(() => new LanceDBVectorStore(workspacePath, 200000, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+
+			// Test non-number types (should be caught by typeof check)
+			expect(() => new LanceDBVectorStore(workspacePath, "768" as any, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+			expect(() => new LanceDBVectorStore(workspacePath, null as any, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+			expect(() => new LanceDBVectorStore(workspacePath, undefined as any, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).toThrow(RangeError)
+		})
+
+		it("should accept valid vectorSize values", () => {
+			expect(() => new LanceDBVectorStore(workspacePath, 1, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).not.toThrow()
+			expect(() => new LanceDBVectorStore(workspacePath, 768, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).not.toThrow()
+			expect(() => new LanceDBVectorStore(workspacePath, 100000, dbDirectory, mockLanceDBManager as unknown as LanceDBManager)).not.toThrow()
+		})
+		// kilocode_change end
 	})
 
 	describe("initialize", () => {
