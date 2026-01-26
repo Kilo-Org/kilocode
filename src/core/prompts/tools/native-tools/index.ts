@@ -23,6 +23,8 @@ import writeToFile from "./write_to_file"
 
 import deleteFile from "./kilocode/delete_file"
 import fastEditFile from "./kilocode/fast_edit_file"
+import webFetch from "./kilocode/web_fetch"
+import webSearch from "./kilocode/web_search"
 
 export { getMcpServerTools } from "./mcp_server"
 export { convertOpenAIToolToAnthropic, convertOpenAIToolsToAnthropic } from "./converters"
@@ -59,6 +61,8 @@ export function getNativeTools(options: NativeToolsOptions = {}): OpenAI.Chat.Ch
 		// kilocode_change start
 		deleteFile,
 		fastEditFile,
+		webFetch,
+		webSearch,
 		// todo:
 		// condenseTool,
 		// newRuleTool,

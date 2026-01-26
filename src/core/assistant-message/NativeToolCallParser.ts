@@ -560,6 +560,28 @@ export class NativeToolCallParser {
 					}
 				}
 				break
+
+			case "web_fetch":
+				if (partialArgs.url !== undefined) {
+					nativeArgs = {
+						url: partialArgs.url,
+						format: partialArgs.format,
+						timeout: partialArgs.timeout,
+					}
+				}
+				break
+
+			case "web_search":
+				if (partialArgs.query !== undefined) {
+					nativeArgs = {
+						query: partialArgs.query,
+						num_results: partialArgs.num_results,
+						livecrawl: partialArgs.livecrawl,
+						search_type: partialArgs.search_type,
+						context_max_characters: partialArgs.context_max_characters,
+					}
+				}
+				break
 			// kilocode_change end
 
 			default:
@@ -864,6 +886,30 @@ export class NativeToolCallParser {
 							target_file: args.target_file,
 							instructions: args.instructions,
 							code_edit: args.code_edit,
+						} as NativeArgsFor<TName>
+					}
+					break
+				// kilocode_change end
+
+				// kilocode_change start: Web tools
+				case "web_fetch":
+					if (args.url !== undefined) {
+						nativeArgs = {
+							url: args.url,
+							format: args.format,
+							timeout: args.timeout,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				case "web_search":
+					if (args.query !== undefined) {
+						nativeArgs = {
+							query: args.query,
+							num_results: args.num_results,
+							livecrawl: args.livecrawl,
+							search_type: args.search_type,
+							context_max_characters: args.context_max_characters,
 						} as NativeArgsFor<TName>
 					}
 					break

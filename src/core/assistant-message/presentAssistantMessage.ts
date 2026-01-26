@@ -50,6 +50,8 @@ import { deleteFileTool } from "../tools/kilocode/deleteFileTool"
 import { newRuleTool } from "../tools/kilocode/newRuleTool"
 import { reportBugTool } from "../tools/kilocode/reportBugTool"
 import { condenseTool } from "../tools/kilocode/condenseTool"
+import { webFetchTool } from "../tools/kilocode/webFetchTool"
+import { webSearchTool } from "../tools/kilocode/webSearchTool"
 import { captureAskApproval } from "./kilocode/captureAskApprovalEvent"
 
 /**
@@ -492,6 +494,10 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
+					case "web_fetch":
+						return `[${block.name} for '${block.params.url}']`
+					case "web_search":
+						return `[${block.name} for '${block.params.query}']`
 					// kilocode_change end
 					case "run_slash_command":
 						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
@@ -1188,6 +1194,24 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "web_fetch":
+					await webFetchTool.handle(cline, block as ToolUse<"web_fetch">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
+				case "web_search":
+					await webSearchTool.handle(cline, block as ToolUse<"web_search">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
 					break
 				// kilocode_change end
 
