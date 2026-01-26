@@ -95,9 +95,9 @@ const PlansView: React.FC<PlansViewProps> = ({ onDone }) => {
 
     const plans = [
         { id: "free", price: "$0", period: "month", cost: 0, features: ["Basic Models", "300 req/day"] },
-        { id: "plus", price: "$20", period: "month", cost: 20000, features: ["Bonus Models", "$45/month Credits (refills daily)"] },
-        { id: "pro", price: "$50", period: "month", cost: 50000, features: ["Bonus Models", "$150/month Credits (refills daily)"] },
-        { id: "max", price: "$200", period: "month", cost: 200000, features: ["Bonus Models", "$600/month Credits (refills daily)"] },
+        { id: "plus", price: "$20", period: "month", cost: 20000, features: ["Bonus Models", "$30/month Credits (refills daily)"] },
+        { id: "pro", price: "$50", period: "month", cost: 50000, features: ["Bonus Models", "$90/month Credits (refills daily)"] },
+        { id: "max", price: "$200", period: "month", cost: 200000, features: ["Bonus Models", "$360/month Credits (refills daily)"] },
     ]
 
     const selectedPlan = plans.find(p => p.id === selectedPlanId)
