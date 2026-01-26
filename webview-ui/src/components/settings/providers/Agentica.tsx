@@ -395,14 +395,14 @@ export const Agentica: React.FC<AgenticaProps> = ({ apiConfiguration, setApiConf
 					borderRadius: "6px",
 					border: "1px solid var(--vscode-panel-border)"
 				}}>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", gap: "12px" }}>
+					<div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "8px" }}>
 						<div style={{ fontSize: "14px", fontWeight: "600" }}>
 							Current Plan: {subscription.data.plan_tier.toUpperCase()}
 						</div>
 						<VSCodeButton
-							appearance="secondary"
+							appearance="primary"
 							onClick={() => setPlansModalOpen(true)}
-							style={{ fontSize: "12px", padding: "4px 12px", flexShrink: 0 }}>
+							style={{ width: "100%", padding: "8px 12px" }}>
 							Manage Plan
 						</VSCodeButton>
 					</div>
