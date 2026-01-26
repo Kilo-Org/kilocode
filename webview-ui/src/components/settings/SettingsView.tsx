@@ -839,7 +839,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	}, [scrollToActiveTab])
 
 	// Search index registry - settings register themselves on mount
-	const getSectionLabel = useCallback((section: SectionName) => t(`settings:sections.${section}`), [t])
+	// kilocode_change start - handle agentBehaviour and ghost labels that are in different translation namespaces
+	const getSectionLabel = useCallback(
+		(section: SectionName) =>
+			section === "agentBehaviour"
+				? t(`kilocode:settings.sections.agentBehaviour`)
+				: section === "ghost"
+					? t(`kilocode:ghost.title`)
+					: t(`settings:sections.${section}`),
+		[t],
+	)
+	// kilocode_change end
 	const { contextValue: searchContextValue, index: searchIndex } = useSearchIndexRegistry(getSectionLabel)
 
 	// Track which tabs have been indexed (visited at least once)
@@ -855,7 +865,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			// All tabs indexed, now register tab titles as searchable items
 			if (!tabTitlesRegistered.current && searchContextValue) {
 				sections.forEach(({ id }) => {
-					const tabTitle = t(`settings:sections.${id}`)
+					// kilocode_change start - handle agentBehaviour and ghost labels that are in different translation namespaces
+					const tabTitle =
+						id === "agentBehaviour"
+							? t(`kilocode:settings.sections.agentBehaviour`)
+							: id === "ghost"
+								? t(`kilocode:ghost.title`)
+								: t(`settings:sections.${id}`)
+					// kilocode_change end
 					// Register each tab title as a searchable item
 					// Using a special naming convention for tab titles: "tab-{sectionName}"
 					searchContextValue.registerSetting({
