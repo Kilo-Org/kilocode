@@ -879,6 +879,9 @@ export class NativeToolCallParser {
 				params,
 				partial: false, // Native tool calls are always complete when yielded
 				nativeArgs,
+				// Preserve original args for API history to maintain format consistency
+				// This ensures line_ranges stays as [[1, 50]] instead of being converted to lineRanges
+				rawInput: args,
 			}
 
 			// Preserve original name for API history when an alias was used

@@ -3556,8 +3556,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							const toolUse = block as import("../../shared/tools").ToolUse
 							const toolCallId = toolUse.id
 							if (toolCallId) {
-								// nativeArgs is already in the correct API format for all tools
-								const input = toolUse.nativeArgs || toolUse.params
+								// Use rawInput to preserve original API format for history consistency.
+								// This ensures parameters like line_ranges stay as [[1, 50]] instead of
+								// being converted to lineRanges with object format [{ start: 1, end: 50 }].
+								// Fall back to nativeArgs for tools that don't have rawInput, then to params for legacy.
+								const input = toolUse.rawInput || toolUse.nativeArgs || toolUse.params
 
 								// Use originalName (alias) if present for API history consistency.
 								// When tool aliases are used (e.g., "edit_file" -> "search_and_replace"),

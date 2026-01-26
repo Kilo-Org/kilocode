@@ -150,6 +150,12 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 	toolUseId?: string // kilocode_change
 	// nativeArgs is properly typed based on TName if it's in NativeToolArgs, otherwise never
 	nativeArgs?: TName extends keyof NativeToolArgs ? NativeToolArgs[TName] : never
+	/**
+	 * The raw input object from the API, preserving original parameter names and formats.
+	 * Used for saving to conversation history to maintain API format consistency.
+	 * For example, read_file keeps `line_ranges` as `[[1, 50]]` instead of converting to `lineRanges`.
+	 */
+	rawInput?: Record<string, unknown>
 }
 
 /**
