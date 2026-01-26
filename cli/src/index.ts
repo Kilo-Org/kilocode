@@ -67,7 +67,7 @@ program
 		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
 		// This is a defensive check for cases where Commander.js routing might not work as expected
 		// (e.g., when spawned as a child process with stdin disconnected)
-		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		const SUBCOMMANDS = ["auth", "config", "debug", "models", "completion"]
 		if (SUBCOMMANDS.includes(prompt)) {
 			return
 		}
@@ -402,6 +402,33 @@ program
 	.action(async (options: { provider?: string; json?: boolean }) => {
 		const { modelsApiCommand } = await import("./commands/models-api.js")
 		await modelsApiCommand(options)
+	})
+
+// Completion command - generate shell completion scripts
+program
+	.command("completion")
+	.description("Generate shell completion script")
+	.argument("[shell]", "Shell type (bash, zsh, fish, powershell)")
+	.action(async (shell?: string) => {
+		const { generateCompletionScript, isValidShell, SHELLS } = await import("./commands/completion.js")
+
+		if (!shell) {
+			console.log(`Usage: kilocode completion <shell>`)
+			console.log(`\nAvailable shells: ${SHELLS.join(", ")}`)
+			console.log(`\nExamples:`)
+			console.log(`  kilocode completion bash >> ~/.bashrc`)
+			console.log(`  kilocode completion zsh >> ~/.zshrc`)
+			console.log(`  kilocode completion fish > ~/.config/fish/completions/kilocode.fish`)
+			console.log(`  kilocode completion powershell >> $PROFILE`)
+			process.exit(0)
+		}
+
+		if (!isValidShell(shell)) {
+			console.error(`Error: Invalid shell "${shell}". Valid shells: ${SHELLS.join(", ")}`)
+			process.exit(1)
+		}
+
+		console.log(generateCompletionScript(shell))
 	})
 
 // Handle process termination signals
