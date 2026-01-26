@@ -153,7 +153,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, pla
                             </div>
                             {hasInsufficientCredits && (
                                 <div style={{ marginTop: "8px" }}>
-                                    <VSCodeLink href="https://genlabs.dev/credits" target="_blank">
+                                    <VSCodeLink href="https://app.genlabs.dev/profile" target="_blank">
                                         Buy more by signing into your GenLabs account
                                     </VSCodeLink>
                                 </div>
