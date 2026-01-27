@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { getProcessedSnippets } from "../getProcessedSnippets"
 import { AutocompleteInput, GhostContextProvider } from "../../types"
-import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/types"
+import { AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
 import { GhostModel } from "../../GhostModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
 import crypto from "crypto"
-import { ContextRetrievalService } from "../../../continuedev/core/autocomplete/context/ContextRetrievalService"
-import { VsCodeIde } from "../../../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -28,19 +28,19 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-vi.mock("../../../continuedev/core/autocomplete/context/ContextRetrievalService", () => ({
+vi.mock("../../continuedev/core/autocomplete/context/ContextRetrievalService", () => ({
 	ContextRetrievalService: vi.fn().mockImplementation(() => ({
 		initializeForFile: vi.fn().mockResolvedValue(undefined),
 	})),
 }))
 
-vi.mock("../../../continuedev/core/vscode-test-harness/src/VSCodeIde", () => ({
+vi.mock("../../continuedev/core/vscode-test-harness/src/VSCodeIde", () => ({
 	VsCodeIde: vi.fn().mockImplementation(() => ({
 		getWorkspaceDirs: vi.fn().mockResolvedValue(["file:///workspace"]),
 	})),
 }))
 
-vi.mock("../../../continuedev/core/autocomplete/util/HelperVars", () => ({
+vi.mock("../../continuedev/core/autocomplete/util/HelperVars", () => ({
 	HelperVars: {
 		create: vi.fn().mockResolvedValue({
 			filepath: "file:///test.ts",
@@ -49,7 +49,7 @@ vi.mock("../../../continuedev/core/autocomplete/util/HelperVars", () => ({
 	},
 }))
 
-vi.mock("../../../continuedev/core/autocomplete/snippets/getAllSnippets", () => ({
+vi.mock("../../continuedev/core/autocomplete/snippets/getAllSnippets", () => ({
 	getAllSnippetsWithoutRace: vi.fn().mockResolvedValue({
 		recentlyOpenedFileSnippets: [],
 		importDefinitionSnippets: [],
@@ -63,7 +63,7 @@ vi.mock("../../../continuedev/core/autocomplete/snippets/getAllSnippets", () => 
 	}),
 }))
 
-vi.mock("../../../continuedev/core/autocomplete/templating/filtering", () => ({
+vi.mock("../../continuedev/core/autocomplete/templating/filtering", () => ({
 	getSnippets: vi
 		.fn()
 		.mockImplementation((_helper, payload) => [
@@ -126,7 +126,7 @@ describe("GhostContextProvider", () => {
 
 		it("should return processed snippets when snippets are available", async () => {
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
@@ -167,7 +167,7 @@ describe("GhostContextProvider", () => {
 
 		it("should process multiple snippets correctly", async () => {
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
@@ -219,7 +219,7 @@ describe("GhostContextProvider", () => {
 
 		it("should propagate errors from getAllSnippetsWithoutRace", async () => {
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			;(getAllSnippetsWithoutRace as any).mockRejectedValueOnce(new Error("Test error"))
@@ -264,7 +264,7 @@ describe("GhostContextProvider", () => {
 
 		it("should filter out blocked files", async () => {
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			// Mock validateAccess to block /blocked.ts
@@ -317,7 +317,7 @@ describe("GhostContextProvider", () => {
 
 		it("should keep snippets without file paths", async () => {
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			const controller = await mockIgnoreController!
@@ -351,7 +351,7 @@ describe("GhostContextProvider", () => {
 				staticSnippet: [],
 			})
 
-			const { getSnippets } = await import("../../../continuedev/core/autocomplete/templating/filtering")
+			const { getSnippets } = await import("../../continuedev/core/autocomplete/templating/filtering")
 			;(getSnippets as any).mockImplementation((_helper: any, payload: any) => [
 				...payload.recentlyOpenedFileSnippets,
 				...payload.diffSnippets,
@@ -392,7 +392,7 @@ describe("GhostContextProvider", () => {
 			}
 
 			const { getAllSnippetsWithoutRace } = await import(
-				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+				"../../continuedev/core/autocomplete/snippets/getAllSnippets"
 			)
 
 			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
