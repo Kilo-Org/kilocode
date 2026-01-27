@@ -456,7 +456,16 @@ export namespace Session {
       const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as { cost?: number } | undefined
       const providerCost = openrouterUsage?.cost
 
+      // Debug logging for cost calculation - log all metadata keys to see what's available
+      console.log("[getUsage] All metadata keys:", input.metadata ? Object.keys(input.metadata) : "no metadata")
+      console.log("[getUsage] Full metadata:", JSON.stringify(input.metadata, null, 2))
+      if (input.metadata?.["openrouter"]) {
+        console.log("[getUsage] OpenRouter metadata found:", JSON.stringify(input.metadata["openrouter"], null, 2))
+        console.log("[getUsage] Provider cost:", providerCost)
+      }
+
       if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
+        console.log("[getUsage] Using provider-reported cost:", providerCost)
         return {
           cost: safe(providerCost),
           tokens,
@@ -468,18 +477,20 @@ export namespace Session {
         input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
           ? input.model.cost.experimentalOver200K
           : input.model.cost
+      const calculatedCost = safe(
+        new Decimal(0)
+          .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
+          .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
+          .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
+          .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
+          // TODO: update models.dev to have better pricing model, for now:
+          // charge reasoning tokens at the same rate as output tokens
+          .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
+          .toNumber(),
+      )
+      console.log("[getUsage] Falling back to calculated cost:", calculatedCost, "model:", input.model.id, "costInfo:", costInfo)
       return {
-        cost: safe(
-          new Decimal(0)
-            .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
-            .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
-            .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
-            .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
-            // TODO: update models.dev to have better pricing model, for now:
-            // charge reasoning tokens at the same rate as output tokens
-            .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
-            .toNumber(),
-        ),
+        cost: calculatedCost,
         tokens,
       }
     },
