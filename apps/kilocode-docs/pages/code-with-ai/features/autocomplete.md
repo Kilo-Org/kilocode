@@ -70,9 +70,9 @@ Kilo Code automatically selects a provider for autocomplete in the following pri
 - **LM Studio** (using `mistralai/codestral-22b-v0.1`)
 - **Ollama** (using `codestral:latest`)
 
-:::note
+{% callout type="note" %}
 **Model Selection is Currently Fixed**: At this time, you cannot freely choose a different model for autocomplete. The feature is designed to work specifically with Codestral, which is optimized for Fill-in-the-Middle (FIM) completions. Support for additional models may be added in future releases.
-:::
+{% /callout %}
 
 ## Disable Rival Autocomplete
 
@@ -80,19 +80,11 @@ We recommend disabling rival autocompletes to optimize your experience with Kilo
 
 Then, toggle to 'disabled':
 
-<img
-  src="https://github.com/user-attachments/assets/60c69417-1d1c-4a48-9820-5390c30ae25c"
-  alt="Disable GitHub Copilot in VSCode"
-  width="800"
-/>
+{% image src="https://github.com/user-attachments/assets/60c69417-1d1c-4a48-9820-5390c30ae25c" alt="Disable GitHub Copilot in VSCode" width="800" caption="Disable GitHub Copilot in VSCode" /%}
 
 If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle off 'Cursor Tab':
 
-<img
-  src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47"
-  alt="Disable Cursor autocomplete"
-  width="800"
-/>
+{% image src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47" alt="Disable Cursor autocomplete" width="800" caption="Disable Cursor autocomplete" /%}
 
 ## Best Practices
 
