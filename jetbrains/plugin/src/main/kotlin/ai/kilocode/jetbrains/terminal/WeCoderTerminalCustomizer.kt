@@ -214,17 +214,21 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
             return command
         }
 
-        // Convert path for WSL if needed
-        val effectiveScriptPath = if (wslDistribution != null) convertToWslPath(scriptPath, wslDistribution) else scriptPath
-        logger.info("🔧 Injecting Shell Integration script: $effectiveScriptPath (original: $scriptPath, wsl: ${wslDistribution != null})")
+        // Only convert paths for WSL if the shell itself is a Linux shell (not PowerShell on Windows with WSL working dir)
+        val isWslShell = wslDistribution != null && command[0].startsWith("/")
+        val effectiveScriptPath = if (isWslShell) convertToWslPath(scriptPath, wslDistribution) else scriptPath
+        logger.info("🔧 Injecting Shell Integration script: $effectiveScriptPath (original: $scriptPath, wslShell: $isWslShell)")
         logger.info("🐚 Shell type: $shellName")
 
         // Set general injection flag
         envs["VSCODE_INJECTION"] = "1"
 
+        // Only pass WSL distribution to shell injection if it's actually a WSL shell
+        val effectiveWslDistribution = if (isWslShell) wslDistribution else null
+
         return when (shellName) {
-            "bash", "sh" -> injectBashScript(command, envs, effectiveScriptPath, wslDistribution)
-            "zsh" -> injectZshScript(command, envs, effectiveScriptPath, wslDistribution)
+            "bash", "sh" -> injectBashScript(command, envs, effectiveScriptPath, effectiveWslDistribution)
+            "zsh" -> injectZshScript(command, envs, effectiveScriptPath, effectiveWslDistribution)
             "powershell", "pwsh", "powershell.exe" -> injectPowerShellScript(command, envs, effectiveScriptPath)
             else -> {
                 logger.warn("⚠️ Unsupported shell type: $shellName")
