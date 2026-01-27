@@ -1,35 +1,25 @@
-import { createSignal, createEffect } from "solid-js"
-
-interface State {
-  count: number
-}
-
-const vscode = acquireVsCodeApi<State>()
-
-function getInitialState(): State {
-  return vscode.getState() ?? { count: 0 }
-}
+import { ServerProvider } from "./context/server"
+import { SessionProvider } from "./context/session"
+import { StatusIndicator } from "./components/StatusIndicator"
+import { MessageList } from "./components/MessageList"
+import { PromptInput } from "./components/PromptInput"
 
 export default function App() {
-  const initial = getInitialState()
-  const [count, setCount] = createSignal(initial.count)
-
-  createEffect(() => {
-    vscode.setState({ count: count() })
-  })
-
-  function increment() {
-    setCount((c) => c + 1)
-    vscode.postMessage({ type: "increment", count: count() })
-  }
-
   return (
-    <div class="container">
-      <h1>Kilo Sidebar</h1>
-      <p>Welcome to the Kilo VS Code extension sidebar.</p>
-      <div class="counter">
-        <button onClick={increment}>Count: {count()}</button>
-      </div>
-    </div>
+    <ServerProvider>
+      <SessionProvider>
+        <div class="app">
+          <header class="app-header">
+            <StatusIndicator />
+          </header>
+          <main class="app-main">
+            <MessageList />
+          </main>
+          <footer class="app-footer">
+            <PromptInput />
+          </footer>
+        </div>
+      </SessionProvider>
+    </ServerProvider>
   )
 }
