@@ -73,6 +73,9 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		chatMessages: [],
 		// Current task context
 		currentTask: null,
+		// Session export context
+		getMessages: vi.fn().mockReturnValue([]),
+		getExtensionState: vi.fn().mockReturnValue(null),
 		modelListPageIndex: 0,
 		modelListFilters: {
 			sort: "preferred",
