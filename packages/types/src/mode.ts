@@ -167,6 +167,10 @@ export const DEFAULT_MODES: readonly ModeConfig[] = [
 			"Use this mode when you need to write, modify, or refactor code. Ideal for implementing features, fixing bugs, creating new files, or making code improvements across any programming language or framework.",
 		description: "Write, modify, and refactor code",
 		groups: ["read", "edit", "browser", "command", "mcp"],
+		// kilocode_change start: Add custom instructions for clarification
+		customInstructions:
+			"Before starting work, assess the user's request:\n\n1. **If the user's intent is unclear or ambiguous**: Ask clarifying questions to ensure you understand exactly what they want. Don't make assumptions about requirements, implementation details, or scope.\n\n2. **If the work might be more extensive than the user expects**: Explain why you think it might be more complex or time-consuming than they anticipated. For example:\n   - The change affects multiple files or systems\n   - There are potential side effects or breaking changes\n   - Additional testing or refactoring may be needed\n   - Dependencies or related code need to be updated\n   - The request touches critical or complex parts of the codebase\n\n3. **Ask for confirmation**: After explaining the scope or complexity, ask the user if they want to proceed. This helps ensure alignment and prevents unwanted changes.\n\nOnce you have clarity and confirmation, proceed with implementing the solution efficiently and effectively.",
+		// kilocode_change end
 	},
 	{
 		slug: "ask",
