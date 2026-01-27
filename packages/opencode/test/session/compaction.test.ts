@@ -388,7 +388,7 @@ describe("session.getUsage", () => {
         cache: { read: 0.3, write: 3.75 },
       },
     })
-    const provider = { id: "kilo" } as Provider.Provider
+    const provider = { id: "kilo" } as Provider.Info
     const result = Session.getUsage({
       model,
       provider,
@@ -423,7 +423,7 @@ describe("session.getUsage", () => {
         cache: { read: 0.3, write: 3.75 },
       },
     })
-    const provider = { id: "openrouter" } as Provider.Provider
+    const provider = { id: "openrouter" } as Provider.Info
     const result = Session.getUsage({
       model,
       provider,
@@ -491,7 +491,7 @@ describe("session.getUsage", () => {
         cache: { read: 0.3, write: 3.75 },
       },
     })
-    const provider = { id: "kilo" } as Provider.Provider
+    const provider = { id: "kilo" } as Provider.Info
     const result = Session.getUsage({
       model,
       provider,

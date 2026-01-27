@@ -424,7 +424,7 @@ export namespace Session {
       model: z.custom<Provider.Model>(),
       usage: z.custom<LanguageModelUsage>(),
       metadata: z.custom<ProviderMetadata>().optional(),
-      provider: z.custom<Provider.Provider>().optional(), // kilocode_change
+      provider: z.custom<Provider.Info>().optional(), // kilocode_change
     }),
     (input) => {
       const cachedInputTokens = input.usage.cachedInputTokens ?? 0
@@ -455,27 +455,28 @@ export namespace Session {
       // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
       // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage
       // Reference: https://openrouter.ai/docs/use-cases/usage-accounting
-      // Reference: https://github.com/Kilo-Org/kilocode-backend/blob/main/src/lib/processUsage.ts
       // Note: The AI SDK uses camelCase (upstreamInferenceCost), not snake_case
       const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as {
         cost?: number
         costDetails?: { upstreamInferenceCost?: number }
       } | undefined
       
-      // For Kilo provider (BYOK), always prefer upstreamInferenceCost when available
-      // The 'cost' field from OpenRouter is just their 5% fee for BYOK requests
-      // For regular OpenRouter, use the cost field
-      const isKiloProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
-      const upstreamCost = openrouterUsage?.costDetails?.upstreamInferenceCost
-      const openrouterCost = openrouterUsage?.cost
-      
-      // Kilo is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
-      const providerCost = isKiloProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
+      if (openrouterUsage) {
+        // For Kilo provider (BYOK), always prefer upstreamInferenceCost when available
+        // The 'cost' field from OpenRouter is just their 5% fee for BYOK requests
+        // For regular OpenRouter, use the cost field
+        const isKiloProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
+        const upstreamCost = openrouterUsage.costDetails?.upstreamInferenceCost
+        const openrouterCost = openrouterUsage.cost
+        
+        // Kilo is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
+        const providerCost = isKiloProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
 
-      if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
-        return {
-          cost: safe(providerCost),
-          tokens,
+        if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
+          return {
+            cost: safe(providerCost),
+            tokens,
+          }
         }
       }
       // kilocode_change end
