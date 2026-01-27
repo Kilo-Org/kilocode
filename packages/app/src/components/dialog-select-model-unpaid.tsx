@@ -8,7 +8,7 @@ import { Tag } from "@opencode-ai/ui/tag"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { type Component, onCleanup, onMount, Show } from "solid-js"
 import { useLocal } from "@/context/local"
-import { popularProviders, useProviders } from "@/hooks/use-providers"
+import { preferredProviders, useProviders } from "@/hooks/use-providers"
 import { DialogConnectProvider } from "./dialog-connect-provider"
 import { DialogSelectProvider } from "./dialog-select-provider"
 import { ModelTooltip } from "./model-tooltip"
@@ -87,11 +87,11 @@ export const DialogSelectModelUnpaid: Component = () => {
               <List
                 class="w-full px-0"
                 key={(x) => x?.id}
-                items={providers.popular}
+                items={providers.preferred}
                 activeIcon="plus-small"
                 sortBy={(a, b) => {
-                  if (popularProviders.includes(a.id) && popularProviders.includes(b.id))
-                    return popularProviders.indexOf(a.id) - popularProviders.indexOf(b.id)
+                  if (preferredProviders.includes(a.id) && preferredProviders.includes(b.id))
+                    return preferredProviders.indexOf(a.id) - preferredProviders.indexOf(b.id)
                   return a.name.localeCompare(b.name)
                 }}
                 onSelect={(x) => {

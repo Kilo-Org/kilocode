@@ -85,6 +85,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "Buscar provedores",
   "dialog.provider.empty": "Nenhum provedor encontrado",
   "dialog.provider.group.popular": "Popular",
+  "dialog.provider.group.recommended": "Recomendado", // kilocode_change
   "dialog.provider.group.other": "Outro",
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.kilo.note": "Acesse mais de 500 modelos de IA",

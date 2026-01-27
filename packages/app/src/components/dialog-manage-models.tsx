@@ -3,7 +3,7 @@ import { List } from "@opencode-ai/ui/list"
 import { Switch } from "@opencode-ai/ui/switch"
 import type { Component } from "solid-js"
 import { useLocal } from "@/context/local"
-import { popularProviders } from "@/hooks/use-providers"
+import { preferredProviders } from "@/hooks/use-providers"
 import { useLanguage } from "@/context/language"
 
 export const DialogManageModels: Component = () => {
@@ -22,9 +22,9 @@ export const DialogManageModels: Component = () => {
         sortGroupsBy={(a, b) => {
           const aProvider = a.items[0].provider.id
           const bProvider = b.items[0].provider.id
-          if (popularProviders.includes(aProvider) && !popularProviders.includes(bProvider)) return -1
-          if (!popularProviders.includes(aProvider) && popularProviders.includes(bProvider)) return 1
-          return popularProviders.indexOf(aProvider) - popularProviders.indexOf(bProvider)
+          if (preferredProviders.includes(aProvider) && !preferredProviders.includes(bProvider)) return -1
+          if (!preferredProviders.includes(aProvider) && preferredProviders.includes(bProvider)) return 1
+          return preferredProviders.indexOf(aProvider) - preferredProviders.indexOf(bProvider)
         }}
         onSelect={(x) => {
           if (!x) return
