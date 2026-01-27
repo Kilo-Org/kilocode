@@ -365,6 +365,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 									thinking: thinkingDeltaAccumulator,
 									signature: chunk.delta.signature,
 								}
+								// Reset accumulator after emitting the complete thinking block
+								thinkingDeltaAccumulator = ""
 							}
 							break
 						// kilocode_change end
