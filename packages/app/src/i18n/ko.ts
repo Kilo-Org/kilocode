@@ -87,6 +87,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "공급자 검색",
   "dialog.provider.empty": "공급자 없음",
   "dialog.provider.group.popular": "인기",
+  "dialog.provider.group.recommended": "추천", // kilocode_change
   "dialog.provider.group.other": "기타",
   "dialog.provider.tag.recommended": "추천",
   "dialog.provider.kilo.note": "500개 이상의 AI 모델에 액세스",

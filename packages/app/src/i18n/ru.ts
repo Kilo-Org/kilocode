@@ -85,6 +85,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "Поиск провайдеров",
   "dialog.provider.empty": "Провайдеры не найдены",
   "dialog.provider.group.popular": "Популярные",
+  "dialog.provider.group.recommended": "Рекомендуемые", // kilocode_change
   "dialog.provider.group.other": "Другие",
   "dialog.provider.tag.recommended": "Рекомендуемые",
   "dialog.provider.kilo.note": "Доступ к более чем 500 моделям ИИ",

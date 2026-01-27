@@ -83,6 +83,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "Søg udbydere",
   "dialog.provider.empty": "Ingen udbydere fundet",
   "dialog.provider.group.popular": "Populære",
+  "dialog.provider.group.recommended": "Anbefalet", // kilocode_change
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalet",
   "dialog.provider.kilo.note": "Adgang til 500+ AI-modeller",

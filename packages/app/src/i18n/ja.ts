@@ -83,6 +83,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "プロバイダーを検索",
   "dialog.provider.empty": "プロバイダーが見つかりません",
   "dialog.provider.group.popular": "人気",
+  "dialog.provider.group.recommended": "推奨", // kilocode_change
   "dialog.provider.group.other": "その他",
   "dialog.provider.tag.recommended": "推奨",
   "dialog.provider.kilo.note": "500以上のAIモデルにアクセス",

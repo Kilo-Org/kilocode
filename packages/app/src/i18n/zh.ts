@@ -87,6 +87,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "搜索提供商",
   "dialog.provider.empty": "未找到提供商",
   "dialog.provider.group.popular": "热门",
+  "dialog.provider.group.recommended": "推荐", // kilocode_change
   "dialog.provider.group.other": "其他",
   "dialog.provider.tag.recommended": "推荐",
   "dialog.provider.kilo.note": "访问 500+ AI 模型",

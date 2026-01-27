@@ -87,6 +87,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "搜尋提供者",
   "dialog.provider.empty": "找不到提供者",
   "dialog.provider.group.popular": "熱門",
+  "dialog.provider.group.recommended": "推薦", // kilocode_change
   "dialog.provider.group.other": "其他",
   "dialog.provider.tag.recommended": "推薦",
   "dialog.provider.kilo.note": "存取 500+ AI 模型",
