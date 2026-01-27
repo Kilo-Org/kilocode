@@ -451,6 +451,19 @@ export namespace Session {
         },
       }
 
+      // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
+      // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage.cost
+      const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as { cost?: number } | undefined
+      const providerCost = openrouterUsage?.cost
+
+      if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
+        return {
+          cost: safe(providerCost),
+          tokens,
+        }
+      }
+      // kilocode_change end
+
       const costInfo =
         input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
           ? input.model.cost.experimentalOver200K

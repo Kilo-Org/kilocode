@@ -290,4 +290,92 @@ describe("session.getUsage", () => {
 
     expect(result.cost).toBe(3 + 1.5)
   })
+
+  // kilocode_change start - Test for OpenRouter provider cost
+  test("uses openrouter provider cost when available", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.42, // Provider-reported cost should be used instead of calculated
+          },
+        },
+      },
+    })
+
+    // Should use the provider cost (0.42) instead of calculated cost (4.5)
+    expect(result.cost).toBe(0.42)
+  })
+
+  test("falls back to calculated cost when openrouter cost is not available", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            // cost is undefined
+          },
+        },
+      },
+    })
+
+    // Should fall back to calculated cost
+    expect(result.cost).toBe(3 + 1.5)
+  })
+
+  test("falls back to calculated cost when openrouter metadata is empty", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {},
+      },
+    })
+
+    // Should fall back to calculated cost
+    expect(result.cost).toBe(3 + 1.5)
+  })
+  // kilocode_change end
 })
