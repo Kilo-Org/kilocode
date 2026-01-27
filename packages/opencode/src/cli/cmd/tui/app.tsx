@@ -594,6 +594,7 @@ function App() {
   registerKiloCommands(useSDK)
   // kilocode_change end
 
+// kilocode_change - Delete OpenRouter Alert
   sdk.event.on(TuiEvent.CommandExecute.type, (evt) => {
     command.trigger(evt.properties.command)
   })
