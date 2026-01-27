@@ -2,7 +2,7 @@ import { Prompt, type PromptRef } from "@tui/component/prompt"
 import { createMemo, Match, onMount, Show, Switch } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { useKeybind } from "@tui/context/keybind"
-import { Logo } from "../component/logo"
+import { WelcomeMessage } from "../component/welcome-message" // kilocode_change
 import { Tips } from "../component/tips"
 import { Locale } from "@/util/locale"
 import { useSync } from "../context/sync"
@@ -25,6 +25,7 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const command = useCommandDialog()
+  const args = useArgs() // kilocode_change
   const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
   const mcpError = createMemo(() => {
     return Object.values(sync.data.mcp).some((x) => x.status === "failed")
@@ -34,13 +35,8 @@ export function Home() {
     return Object.values(sync.data.mcp).filter((x) => x.status === "connected").length
   })
 
-  const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
   const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
-  const showTips = createMemo(() => {
-    // Don't show tips for first-time users
-    if (isFirstTimeUser()) return false
-    return !tipsHidden()
-  })
+  const showTips = createMemo(() => !tipsHidden())
 
   command.register(() => [
     {
@@ -75,7 +71,6 @@ export function Home() {
   )
 
   let prompt: PromptRef
-  const args = useArgs()
   onMount(() => {
     if (once) return
     if (route.initialPrompt) {
@@ -95,7 +90,10 @@ export function Home() {
     <>
       <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
         <box height={3} />
-        <Logo />
+        {/* kilocode_change - hide logo and instructions when --nosplash */}
+        <Show when={!args.nosplash}>
+          <WelcomeMessage />
+        </Show>
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
           <Prompt
             ref={(r) => {

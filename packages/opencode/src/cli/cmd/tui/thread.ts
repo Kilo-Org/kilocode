@@ -71,7 +71,14 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      // kilocode_change start
+      .option("nosplash", {
+        type: "boolean",
+        default: false,
+        describe: "disable the welcome message",
       }),
+  // kilocode_change end
   handler: async (args) => {
     // Resolve relative paths against PWD to preserve behavior when using --cwd flag
     const baseCwd = process.env.PWD ?? process.cwd()
@@ -150,6 +157,7 @@ export const TuiThreadCommand = cmd({
         agent: args.agent,
         model: args.model,
         prompt,
+        nosplash: args.nosplash, // kilocode_change
       },
       onExit: async () => {
         await client.call("shutdown", undefined)

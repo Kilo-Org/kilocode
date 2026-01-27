@@ -9,6 +9,7 @@ This document explains how Kilocode configurations are automatically migrated to
 - [Rules Migration](#rules-migration)
 - [Workflows Migration](#workflows-migration)
 - [MCP Migration](#mcp-migration)
+- [Splash Screen](#splash-screen)
 
 ---
 
@@ -337,3 +338,72 @@ Kilocode MCP server configurations are migrated to Opencode's `mcp` config. See 
 | Location                                                    | Description               |
 | ----------------------------------------------------------- | ------------------------- |
 | VSCode extension storage `settings/cline_mcp_settings.json` | MCP server configurations |
+
+---
+
+# Splash Screen
+
+The splash screen displays the Kilo logo and instructions when the CLI starts. This behavior matches the original Kilo CLI.
+
+## Default Behavior
+
+When Kilo starts normally, the splash screen shows:
+
+1. **Kilo Logo** - ASCII art logo (responsive based on terminal width)
+2. **Instructions** - Basic usage hints for new and returning users
+
+```
+⣿⡿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⢿⣿
+⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿   █████   ████  ███  ████                █████████               █████
+⣿⡇⠀⠀⢰⣶⠀⠀⣶⡆⢰⣶⣶⣄⠀⠀⠀⠀⢸⣿  ░░███   ███░  ░░░  ░░███               ███░░░░░███             ░░███
+⣿⡇⠀⠀⢸⣿⠿⠿⣦⡀⠀⠀⢸⣿⠀⠀⠀⠀⢸⣿   ░███  ███    ████  ░███   ██████     ███     ░░░   ██████   ███████   ██████
+⣿⡇⠀⠀⠸⠿⠀⠀⠿⠃⠘⠿⠿⠿⠿⠇⠀⠀⢸⣿   ░███████    ░░███  ░███  ███░░███   ░███          ███░░███ ███░░███  ███░░███
+⣿⡇⠀⠀⢰⣶⠀⠀⣶⡄⠀⠀⣴⣶⣦⡀⠀⠀⢸⣿   ░███░░███    ░███  ░███ ░███ ░███   ░███         ░███ ░███░███ ░███ ░███████
+⣿⡇⠀⠀⢸⣿⠀⠀⠀⠀⢰⣿⠁⠀⣿⡇⠀⠀⢸⣿   ░███ ░░███   ░███  ░███ ░███ ░███   ░░███     ███░███ ░███░███ ░███ ░███░░░
+⣿⡇⠀⠀⠘⠿⠿⠿⠿⠇⠈⠻⠿⠿⠀⠀⠀⠀⢸⣿   █████ ░░████ █████ █████░░██████     ░░█████████ ░░██████ ░░████████░░██████
+⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿  ░░░░░   ░░░░ ░░░░░ ░░░░░  ░░░░░░       ░░░░░░░░░   ░░░░░░   ░░░░░░░░  ░░░░░░
+⣿⣷⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣾⣿
+
+Type a message to start chatting, or use /help to see available commands.
+Commands start with / (e.g., /help, /model)
+```
+
+## Responsive Logo
+
+The logo adapts to terminal width:
+
+| Terminal Width | Display                      |
+| -------------- | ---------------------------- |
+| < 80 columns   | Braille icon only            |
+| 80-103 columns | Big text "Kilo Code" only    |
+| >= 104 columns | Icon + Big text side by side |
+
+## `--nosplash` Flag
+
+Use the `--nosplash` flag to completely hide the splash screen (both logo and instructions):
+
+```bash
+kilo --nosplash
+```
+
+This is useful for:
+
+- CI/CD pipelines
+- Scripts that programmatically interact with Kilo
+- Users who prefer a minimal interface
+
+| Flag         | Logo | Instructions |
+| ------------ | ---- | ------------ |
+| Normal mode  | Show | Show         |
+| `--nosplash` | Hide | Hide         |
+
+## Tips
+
+Tips are shown below the prompt for returning users and can be toggled via `ctrl+p` > "Hide tips" / "Show tips".
+
+## Related Files
+
+- [`kilo-logo.tsx`](../../cli/cmd/tui/component/kilo-logo.tsx) - Logo component with responsive layout
+- [`welcome-message.tsx`](../../cli/cmd/tui/component/welcome-message.tsx) - Welcome message with logo and instructions
+- [`home.tsx`](../../cli/cmd/tui/routes/home.tsx) - Home route with `--nosplash` logic
+- [`thread.ts`](../../cli/cmd/tui/thread.ts) - CLI argument parsing for `--nosplash`
