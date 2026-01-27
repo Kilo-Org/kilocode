@@ -1,5 +1,11 @@
 # kilo-code
 
+## 5.1.0
+
+### Minor Changes
+
+- [#5288](https://github.com/Kilo-Org/kilocode/pull/5288) [`016ea49`](https://github.com/Kilo-Org/kilocode/commit/016ea49a3a875a8e60c846b314a7040852701262) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Remove Gemini CLI provider support.
+
 ## 5.0.0
 
 ### Major Changes
