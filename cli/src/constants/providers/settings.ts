@@ -354,6 +354,11 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter base URL (or leave empty for default)...",
 		isOptional: true,
 	},
+	openAiModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID (e.g., gpt-4, llama-3.1-70b)...",
+	},
 
 	// Glama fields
 	glamaApiKey: {
@@ -876,7 +881,11 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 			]
 
 		case "openai":
-			return [createFieldConfig("openAiApiKey", config), createFieldConfig("openAiBaseUrl", config, "Default")]
+			return [
+				createFieldConfig("openAiApiKey", config),
+				createFieldConfig("openAiModelId", config),
+				createFieldConfig("openAiBaseUrl", config, "Default"),
+			]
 
 		case "glama":
 			return [
