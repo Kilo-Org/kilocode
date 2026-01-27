@@ -15,17 +15,20 @@ const defaultsSchema = z.object({
 })
 
 async function fetchKilocodeDefaultModel(
-	kilocodeToken: KilocodeToken,
+	kilocodeToken?: KilocodeToken,
 	organizationId?: OrganizationId,
 	providerSettings?: ProviderSettings,
 ): Promise<string> {
 	try {
 		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
-		const url = getKiloUrlFromToken(`https://api.kilo.ai/api${path}`, kilocodeToken)
+		const url = getKiloUrlFromToken(`https://api.kilo.ai/api${path}`, kilocodeToken ?? "")
 
+		// kilocode_change: Make Authorization header optional for anonymous access
 		const headers: Record<string, string> = {
 			...DEFAULT_HEADERS,
-			Authorization: `Bearer ${kilocodeToken}`,
+		}
+		if (kilocodeToken) {
+			headers.Authorization = `Bearer ${kilocodeToken}`
 		}
 
 		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
@@ -61,11 +64,9 @@ export async function getKilocodeDefaultModel(
 	organizationId?: OrganizationId,
 	providerSettings?: ProviderSettings,
 ): Promise<string> {
-	if (!kilocodeToken) {
-		return openRouterDefaultModelId
-	}
+	// kilocode_change: Remove early return - allow fetching default model without token for anonymous access
 	const key = JSON.stringify({
-		kilocodeToken,
+		kilocodeToken: kilocodeToken ?? "anonymous",
 		organizationId,
 		testerSuppressed: providerSettings?.kilocodeTesterWarningsDisabledUntil,
 	})
