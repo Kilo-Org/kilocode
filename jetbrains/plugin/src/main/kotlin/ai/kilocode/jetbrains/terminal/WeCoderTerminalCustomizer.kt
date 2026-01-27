@@ -175,6 +175,11 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
      * Falls back to manual conversion if distribution is not available.
      */
     private fun convertToWslPath(windowsPath: String, distribution: WSLDistribution?): String {
+        // If already a Linux/WSL path, return as-is
+        if (windowsPath.startsWith("/")) {
+            return windowsPath
+        }
+
         // Try using the JetBrains WSL API first
         if (distribution != null) {
             try {
