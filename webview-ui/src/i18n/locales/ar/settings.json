@@ -655,21 +655,6 @@
 			"maxTokensLabel": "أقصى توكنات المخرجات",
 			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
 		},
-		"geminiCli": {
-			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
-			"oauthPath": "مسار بيانات OAuth (اختياري)",
-			"oauthPathDescription": "إذا تركته فاضي يستخدم المسار الافتراضي (~/.gemini/oauth_creds.json).",
-			"instructions": "إذا ما سجلت دخول، شغّل",
-			"instructionsContinued": "في الطرفية أولاً.",
-			"setupLink": "دليل إعداد Gemini CLI",
-			"requirementsTitle": "متطلبات مهمة",
-			"requirement1": "ثبت أداة Gemini CLI",
-			"requirement2": "سجل دخول بـ Google",
-			"requirement3": "يعمل مع حسابات Google الشخصية فقط",
-			"requirement4": "المصادقة تتم عبر OAuth",
-			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
-			"freeAccess": "طبقة مجانية عبر OAuth"
-		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
 			"description": "ذكاء ميسور للمهام اليومية"

@@ -33,7 +33,6 @@ import {
 	litellmDefaultModelId,
 	qwenCodeModels,
 	qwenCodeDefaultModelId,
-	geminiCliModels,
 	claudeCodeModels,
 	claudeCodeDefaultModelId,
 	doubaoModels,
@@ -222,12 +221,6 @@ export const getModelsByProvider = ({
 			return {
 				models: qwenCodeModels,
 				defaultModel: qwenCodeDefaultModelId,
-			}
-		}
-		case "gemini-cli": {
-			return {
-				models: geminiCliModels,
-				defaultModel: geminiDefaultModelId,
 			}
 		}
 		case "anthropic": {

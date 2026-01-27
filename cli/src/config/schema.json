@@ -263,7 +263,6 @@
 						"deepinfra",
 						"io-intelligence",
 						"qwen-code",
-						"gemini-cli",
 						"zai",
 						"minimax",
 						"unbound",
@@ -1959,27 +1958,6 @@
 				},
 				{
 					"if": {
-						"properties": { "provider": { "const": "gemini-cli" } }
-					},
-					"then": {
-						"properties": {
-							"geminiCliOAuthPath": {
-								"type": "string",
-								"description": "Gemini CLI OAuth path"
-							},
-							"geminiCliProjectId": {
-								"type": "string",
-								"description": "Gemini CLI project ID"
-							},
-							"apiModelId": {
-								"type": "string",
-								"description": "Gemini CLI model ID"
-							}
-						}
-					}
-				},
-				{
-					"if": {
 						"properties": {
 							"provider": { "const": "qwen-code" },
 							"qwenCodeOauthPath": { "type": "string", "minLength": 1 }
@@ -1996,48 +1974,6 @@
 					"if": {
 						"properties": {
 							"provider": { "const": "qwen-code" },
-							"apiModelId": { "type": "string", "minLength": 1 }
-						},
-						"required": ["apiModelId"]
-					},
-					"then": {
-						"properties": {
-							"apiModelId": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
-							"geminiCliOAuthPath": { "type": "string", "minLength": 1 }
-						},
-						"required": ["geminiCliOAuthPath"]
-					},
-					"then": {
-						"properties": {
-							"geminiCliOAuthPath": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
-							"geminiCliProjectId": { "type": "string", "minLength": 1 }
-						},
-						"required": ["geminiCliProjectId"]
-					},
-					"then": {
-						"properties": {
-							"geminiCliProjectId": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
 							"apiModelId": { "type": "string", "minLength": 1 }
 						},
 						"required": ["apiModelId"]

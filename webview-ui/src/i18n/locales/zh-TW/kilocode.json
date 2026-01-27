@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "增加額度",
 		"lowBalance": "你的 Kilo Code 餘額不足",
-		"newOrganization": "將 Kilo 用於工作？"
+		"switchToFreeModel": "切換到免費模型"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
@@ -73,8 +73,7 @@
 					"deny": "拒絕提示詞訓練",
 					"zdr": "零資料保留"
 				}
-			},
-			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "上下文視窗",

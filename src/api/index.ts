@@ -34,7 +34,6 @@ import {
 	LiteLLMHandler,
 	// kilocode_change start
 	VirtualQuotaFallbackHandler,
-	GeminiCliHandler,
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
@@ -168,8 +167,6 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change start
 		case "kilocode":
 			return new KilocodeOpenrouterHandler(options)
-		case "gemini-cli":
-			return new GeminiCliHandler(options)
 		case "virtual-quota-fallback":
 			return new VirtualQuotaFallbackHandler(options)
 		// kilocode_change end
@@ -272,7 +269,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "baseten":
 			return new BasetenHandler(options)
 		default:
-			apiProvider satisfies "gemini-cli" | undefined
+			apiProvider satisfies undefined
 			return new AnthropicHandler(options)
 	}
 }

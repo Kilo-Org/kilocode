@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك.",
 			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Kilo Code تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",
-			"tokenRefreshFailed": "فشل تحديث رمز OAuth: {{error}}",
-			"onboardingTimeout": "انتهى وقت التهيئة بعد ٦٠ ثانية. حاول مرة ثانية.",
-			"projectDiscoveryFailed": "ما قدرنا نكتشف معرف المشروع. تأكد إنك سجلت دخول بـ 'gemini auth'.",
-			"rateLimitExceeded": "تجاوزت الحد المسموح. الحد المجاني تم استهلاكه.",
-			"badRequest": "طلب غير صحيح: {{details}}",
-			"apiError": "خطأ من Gemini CLI: {{error}}",
-			"completionError": "خطأ أثناء الإكمال في Gemini CLI: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي مصادقة أول: {{error}}"
 		},

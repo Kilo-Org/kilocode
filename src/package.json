@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.153.0",
+	"version": "5.0.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
