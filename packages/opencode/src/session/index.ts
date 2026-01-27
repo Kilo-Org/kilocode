@@ -424,6 +424,7 @@ export namespace Session {
       model: z.custom<Provider.Model>(),
       usage: z.custom<LanguageModelUsage>(),
       metadata: z.custom<ProviderMetadata>().optional(),
+      provider: z.custom<Provider.Provider>().optional(), // kilocode_change
     }),
     (input) => {
       const cachedInputTokens = input.usage.cachedInputTokens ?? 0
@@ -452,20 +453,26 @@ export namespace Session {
       }
 
       // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
-      // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage.cost
-      const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as { cost?: number } | undefined
-      const providerCost = openrouterUsage?.cost
-
-      // Debug logging for cost calculation - log all metadata keys to see what's available
-      console.log("[getUsage] All metadata keys:", input.metadata ? Object.keys(input.metadata) : "no metadata")
-      console.log("[getUsage] Full metadata:", JSON.stringify(input.metadata, null, 2))
-      if (input.metadata?.["openrouter"]) {
-        console.log("[getUsage] OpenRouter metadata found:", JSON.stringify(input.metadata["openrouter"], null, 2))
-        console.log("[getUsage] Provider cost:", providerCost)
-      }
+      // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage
+      // Reference: https://openrouter.ai/docs/use-cases/usage-accounting
+      // Reference: https://github.com/Kilo-Org/kilocode-backend/blob/main/src/lib/processUsage.ts
+      // Note: The AI SDK uses camelCase (upstreamInferenceCost), not snake_case
+      const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as {
+        cost?: number
+        costDetails?: { upstreamInferenceCost?: number }
+      } | undefined
+      
+      // For Kilo provider (BYOK), always prefer upstreamInferenceCost when available
+      // The 'cost' field from OpenRouter is just their 5% fee for BYOK requests
+      // For regular OpenRouter, use the cost field
+      const isKiloProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
+      const upstreamCost = openrouterUsage?.costDetails?.upstreamInferenceCost
+      const openrouterCost = openrouterUsage?.cost
+      
+      // Kilo is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
+      const providerCost = isKiloProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
 
       if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
-        console.log("[getUsage] Using provider-reported cost:", providerCost)
         return {
           cost: safe(providerCost),
           tokens,
@@ -477,20 +484,18 @@ export namespace Session {
         input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
           ? input.model.cost.experimentalOver200K
           : input.model.cost
-      const calculatedCost = safe(
-        new Decimal(0)
-          .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
-          .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
-          .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
-          .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
-          // TODO: update models.dev to have better pricing model, for now:
-          // charge reasoning tokens at the same rate as output tokens
-          .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
-          .toNumber(),
-      )
-      console.log("[getUsage] Falling back to calculated cost:", calculatedCost, "model:", input.model.id, "costInfo:", costInfo)
       return {
-        cost: calculatedCost,
+        cost: safe(
+          new Decimal(0)
+            .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
+            // TODO: update models.dev to have better pricing model, for now:
+            // charge reasoning tokens at the same rate as output tokens
+            .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
+            .toNumber(),
+        ),
         tokens,
       }
     },

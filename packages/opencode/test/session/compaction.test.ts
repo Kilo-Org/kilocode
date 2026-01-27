@@ -377,5 +377,141 @@ describe("session.getUsage", () => {
     // Should fall back to calculated cost
     expect(result.cost).toBe(3 + 1.5)
   })
+
+  test("uses upstreamInferenceCost for Kilo provider", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const provider = { id: "kilo" } as Provider.Provider
+    const result = Session.getUsage({
+      model,
+      provider,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.01, // OpenRouter 5% fee
+            costDetails: {
+              upstreamInferenceCost: 0.20, // Actual inference cost
+            },
+          },
+        },
+      },
+    })
+
+    // Should use upstreamInferenceCost for Kilo provider (BYOK)
+    expect(result.cost).toBe(0.20)
+  })
+
+  test("uses regular cost for OpenRouter provider", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const provider = { id: "openrouter" } as Provider.Provider
+    const result = Session.getUsage({
+      model,
+      provider,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.50, // Regular OpenRouter cost
+            costDetails: {
+              upstreamInferenceCost: 0.45,
+            },
+          },
+        },
+      },
+    })
+
+    // Should use regular cost for OpenRouter provider
+    expect(result.cost).toBe(0.50)
+  })
+
+  test("falls back to regular cost when provider is not specified", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.30,
+            costDetails: {
+              upstreamInferenceCost: 0.25,
+            },
+          },
+        },
+      },
+    })
+
+    // Should use regular cost when provider is not specified
+    expect(result.cost).toBe(0.30)
+  })
+
+  test("uses regular cost when upstreamInferenceCost is missing for Kilo", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const provider = { id: "kilo" } as Provider.Provider
+    const result = Session.getUsage({
+      model,
+      provider,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        openrouter: {
+          usage: {
+            cost: 0.01,
+            // costDetails is missing
+          },
+        },
+      },
+    })
+
+    // When upstream cost is missing for Kilo, fall back to regular cost field
+    expect(result.cost).toBe(0.01)
+  })
   // kilocode_change end
 })
