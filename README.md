@@ -13,8 +13,14 @@
 ## Installation
 
 ```bash
-# Coming soon!
+bun install
+bun dev . # starts Kilo CLI in the current directory; use a different path to start in another repository
 ```
+
+This will open Kilo CLI in your terminal
+1. Type `/connect` to setup your Provider
+1. Select your desired Provider from the list - this will trigger authentication with that Provider
+1. After authentication, return to Kilo CLI to select your Model and you're done!
 
 ## Key Features
 
