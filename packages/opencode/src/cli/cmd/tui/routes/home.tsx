@@ -2,7 +2,7 @@ import { Prompt, type PromptRef } from "@tui/component/prompt"
 import { createMemo, Match, onMount, Show, Switch } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { useKeybind } from "@tui/context/keybind"
-import { WelcomeMessage } from "../component/welcome-message" // kilocode_change
+import { Logo } from "../component/logo"
 import { Tips } from "../component/tips"
 import { Locale } from "@/util/locale"
 import { useSync } from "../context/sync"
@@ -90,9 +90,9 @@ export function Home() {
     <>
       <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
         <box height={3} />
-        {/* kilocode_change - hide logo and instructions when --nosplash */}
+        {/* kilocode_change - hide logo when --nosplash */}
         <Show when={!args.nosplash}>
-          <WelcomeMessage />
+          <Logo />
         </Show>
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
           <Prompt
