@@ -35,7 +35,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 FROM node:20.20.0-bookworm-slim AS debian_base
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
@@ -97,7 +97,9 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 # Install App
 COPY dist/kilocode-cli-${VERSION}.tgz /tmp/kilocode-cli.tgz
-RUN npm install -g /tmp/kilocode-cli.tgz && rm /tmp/kilocode-cli.tgz
+RUN npm install -g /tmp/kilocode-cli.tgz \
+    && rm /tmp/kilocode-cli.tgz \
+    && npm cache clean --force
 
 USER kilocode
 WORKDIR /workspace
@@ -126,7 +128,9 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 # Install App
 COPY dist/kilocode-cli-${VERSION}.tgz /tmp/kilocode-cli.tgz
-RUN npm install -g /tmp/kilocode-cli.tgz && rm /tmp/kilocode-cli.tgz
+RUN npm install -g /tmp/kilocode-cli.tgz \
+    && rm /tmp/kilocode-cli.tgz \
+    && npm cache clean --force
 
 USER kilocode
 WORKDIR /workspace
