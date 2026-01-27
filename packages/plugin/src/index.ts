@@ -102,6 +102,14 @@ export type AuthHook = {
   )[]
 }
 
+// kilocode_change start - AuthAccount type for Kilo Gateway organization selection
+export type AuthAccount = {
+  id: string
+  name: string
+  hint?: string
+}
+// kilocode_change end
+
 export type AuthOuathResult = { url: string; instructions: string } & (
   | {
       method: "auto"
@@ -109,6 +117,7 @@ export type AuthOuathResult = { url: string; instructions: string } & (
         | ({
             type: "success"
             provider?: string
+            accounts?: AuthAccount[] // kilocode_change - accounts for selection
           } & (
             | {
                 refresh: string
@@ -129,6 +138,7 @@ export type AuthOuathResult = { url: string; instructions: string } & (
         | ({
             type: "success"
             provider?: string
+            accounts?: AuthAccount[] // kilocode_change - accounts for selection
           } & (
             | {
                 refresh: string

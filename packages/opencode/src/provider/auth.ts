@@ -71,13 +71,36 @@ export namespace ProviderAuth {
     },
   )
 
+  // kilocode_change start - Account and CallbackResult types for Kilo Gateway organization selection
+  export const Account = z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      hint: z.string().optional(),
+    })
+    .meta({
+      ref: "ProviderAuthAccount",
+    })
+  export type Account = z.infer<typeof Account>
+
+  export const CallbackResult = z
+    .object({
+      accounts: z.array(Account).optional(),
+    })
+    .meta({
+      ref: "ProviderAuthCallbackResult",
+    })
+  export type CallbackResult = z.infer<typeof CallbackResult>
+  // kilocode_change end
+
   export const callback = fn(
     z.object({
       providerID: z.string(),
       method: z.number(),
       code: z.string().optional(),
+      accountId: z.string().optional(), // kilocode_change - accountId for Kilo Gateway
     }),
-    async (input) => {
+    async (input): Promise<CallbackResult> => {
       const match = await state().then((s) => s.pending[input.providerID])
       if (!match) throw new OauthMissing({ providerID: input.providerID })
       let result
@@ -105,17 +128,39 @@ export namespace ProviderAuth {
             refresh: result.refresh,
             expires: result.expires,
           }
-          if (result.accountId) {
-            info.accountId = result.accountId
+          // kilocode_change start - Use provided accountId or the one from result
+          const accountId = input.accountId || result.accountId
+          if (accountId) {
+            info.accountId = accountId
           }
+          // kilocode_change end
           await Auth.set(input.providerID, info)
         }
-        return
+        return { accounts: result.accounts } // kilocode_change - return accounts for selection
       }
 
       throw new OauthCallbackFailed({})
     },
   )
+
+  // kilocode_change start - setAccount function for Kilo Gateway organization selection
+  export const setAccount = fn(
+    z.object({
+      providerID: z.string(),
+      accountId: z.string(),
+    }),
+    async (input) => {
+      const existing = await Auth.get(input.providerID)
+      if (!existing || existing.type !== "oauth") {
+        throw new OauthMissing({ providerID: input.providerID })
+      }
+      await Auth.set(input.providerID, {
+        ...existing,
+        accountId: input.accountId || undefined,
+      })
+    },
+  )
+  // kilocode_change end
 
   export const api = fn(
     z.object({

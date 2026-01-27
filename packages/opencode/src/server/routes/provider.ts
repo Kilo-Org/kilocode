@@ -138,7 +138,7 @@ export const ProviderRoutes = lazy(() =>
             description: "OAuth callback processed successfully",
             content: {
               "application/json": {
-                schema: resolver(z.boolean()),
+                schema: resolver(ProviderAuth.CallbackResult), // kilocode_change - return CallbackResult with accounts
               },
             },
           },
@@ -156,17 +156,61 @@ export const ProviderRoutes = lazy(() =>
         z.object({
           method: z.number().meta({ description: "Auth method index" }),
           code: z.string().optional().meta({ description: "OAuth authorization code" }),
+          accountId: z.string().optional().meta({ description: "Selected account ID" }), // kilocode_change
         }),
       ),
       async (c) => {
         const providerID = c.req.valid("param").providerID
-        const { method, code } = c.req.valid("json")
-        await ProviderAuth.callback({
+        const { method, code, accountId } = c.req.valid("json") // kilocode_change - accountId
+        const result = await ProviderAuth.callback({
           providerID,
           method,
           code,
+          accountId, // kilocode_change
+        })
+        return c.json(result) // kilocode_change - return result with accounts
+      },
+    )
+    // kilocode_change start - setAccount endpoint for Kilo Gateway organization selection
+    .post(
+      "/:providerID/account",
+      describeRoute({
+        summary: "Set account",
+        description: "Set the account ID for an authenticated provider.",
+        operationId: "provider.setAccount",
+        responses: {
+          200: {
+            description: "Account set successfully",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          providerID: z.string().meta({ description: "Provider ID" }),
+        }),
+      ),
+      validator(
+        "json",
+        z.object({
+          accountId: z.string().meta({ description: "Account ID to set" }),
+        }),
+      ),
+      async (c) => {
+        const providerID = c.req.valid("param").providerID
+        const { accountId } = c.req.valid("json")
+        await ProviderAuth.setAccount({
+          providerID,
+          accountId,
         })
         return c.json(true)
       },
     ),
+    // kilocode_change end
 )

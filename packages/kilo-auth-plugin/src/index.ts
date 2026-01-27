@@ -1,6 +1,6 @@
-import type { Plugin } from "@opencode-ai/plugin"
-import { authenticateWithDeviceAuth } from "./device-auth.js"
-import { KILO_API_BASE, TOKEN_EXPIRATION_MS } from "./constants.js"
+import type { Plugin, AuthAccount } from "@opencode-ai/plugin"
+import { KILO_API_BASE, TOKEN_EXPIRATION_MS, POLL_INTERVAL_MS } from "./constants.js"
+import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "./types.js"
 
 /**
  * Kilo Gateway Authentication Plugin
@@ -44,27 +44,96 @@ export const KiloAuthPlugin: Plugin = async (ctx) => {
       methods: [
         {
           type: "oauth",
-          label: "Kilo Gateway (Device Authorization)",
+          label: "Kilo Gateway",
           async authorize() {
-            // Execute the device auth flow
-            const result = await authenticateWithDeviceAuth()
+            // Step 1: Initiate device auth - this returns immediately
+            const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
 
-            // Return in the format expected by OpenCode
+            if (!response.ok) {
+              if (response.status === 429) {
+                throw new Error("Too many pending authorization requests. Please try again later.")
+              }
+              throw new Error(`Failed to initiate device authorization: ${response.status}`)
+            }
+
+            const authData = (await response.json()) as DeviceAuthInitiateResponse
+            const { code, verificationUrl, expiresIn } = authData
+
+            // Return authorization info for the TUI to display
+            // The callback will be called to poll for completion
             return {
-              url: KILO_API_BASE,
-              instructions: "Authenticated successfully with Kilo Gateway",
-              method: "auto",
+              url: verificationUrl,
+              instructions: `Enter code: ${code}`,
+              method: "auto" as const,
               async callback() {
-                // Store using OAuth format to include organization ID
-                // accountId field stores the organization ID
-                return {
-                  type: "success",
-                  provider: "kilo",
-                  refresh: result.token, // Store token here too for redundancy
-                  access: result.token, // Primary token storage
-                  expires: Date.now() + TOKEN_EXPIRATION_MS,
-                  ...(result.organizationId && { accountId: result.organizationId }),
+                // Poll for authorization completion
+                const maxAttempts = Math.ceil((expiresIn * 1000) / POLL_INTERVAL_MS)
+
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                  const pollResponse = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`)
+
+                  if (pollResponse.status === 202) {
+                    // Still pending, wait and continue
+                    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+                    continue
+                  }
+
+                  if (pollResponse.status === 403) {
+                    // Denied by user
+                    return { type: "failed" as const }
+                  }
+
+                  if (pollResponse.status === 410) {
+                    // Code expired
+                    return { type: "failed" as const }
+                  }
+
+                  if (!pollResponse.ok) {
+                    return { type: "failed" as const }
+                  }
+
+                  const pollData = (await pollResponse.json()) as DeviceAuthPollResponse
+
+                  if (pollData.status === "approved" && pollData.token) {
+                    // Build accounts from organizations in poll response
+                    let accounts: AuthAccount[] | undefined
+                    if (pollData.organizations && pollData.organizations.length > 0) {
+                      accounts = [
+                        { id: "", name: "Personal Account", hint: "Use your personal account" },
+                        ...pollData.organizations.map((org) => ({
+                          id: org.id,
+                          name: org.name,
+                          hint: "Organization",
+                        })),
+                      ]
+                    }
+
+                    // Success! Return the auth result
+                    return {
+                      type: "success" as const,
+                      provider: "kilo",
+                      refresh: pollData.token,
+                      access: pollData.token,
+                      expires: Date.now() + TOKEN_EXPIRATION_MS,
+                      accounts,
+                    }
+                  }
+
+                  if (pollData.status === "denied" || pollData.status === "expired") {
+                    return { type: "failed" as const }
+                  }
+
+                  // Still pending, wait and continue
+                  await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
                 }
+
+                // Timed out
+                return { type: "failed" as const }
               },
             }
           },

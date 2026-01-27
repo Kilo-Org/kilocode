@@ -2010,6 +2010,16 @@ export type ProviderAuthAuthorization = {
   instructions: string
 }
 
+export type ProviderAuthAccount = {
+  id: string
+  name: string
+  hint?: string
+}
+
+export type ProviderAuthCallbackResult = {
+  accounts?: Array<ProviderAuthAccount>
+}
+
 export type Symbol = {
   name: string
   kind: number
@@ -3984,6 +3994,10 @@ export type ProviderOauthCallbackData = {
      * OAuth authorization code
      */
     code?: string
+    /**
+     * Selected account ID
+     */
+    accountId?: string
   }
   path: {
     /**
@@ -4010,10 +4024,47 @@ export type ProviderOauthCallbackResponses = {
   /**
    * OAuth callback processed successfully
    */
-  200: boolean
+  200: ProviderAuthCallbackResult
 }
 
 export type ProviderOauthCallbackResponse = ProviderOauthCallbackResponses[keyof ProviderOauthCallbackResponses]
+
+export type ProviderSetAccountData = {
+  body?: {
+    /**
+     * Account ID to set
+     */
+    accountId: string
+  }
+  path: {
+    /**
+     * Provider ID
+     */
+    providerID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/provider/{providerID}/account"
+}
+
+export type ProviderSetAccountErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ProviderSetAccountError = ProviderSetAccountErrors[keyof ProviderSetAccountErrors]
+
+export type ProviderSetAccountResponses = {
+  /**
+   * Account set successfully
+   */
+  200: boolean
+}
+
+export type ProviderSetAccountResponse = ProviderSetAccountResponses[keyof ProviderSetAccountResponses]
 
 export type FindTextData = {
   body?: never

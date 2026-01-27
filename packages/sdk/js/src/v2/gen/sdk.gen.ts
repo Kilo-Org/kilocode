@@ -74,6 +74,8 @@ import type {
   ProviderOauthAuthorizeResponses,
   ProviderOauthCallbackErrors,
   ProviderOauthCallbackResponses,
+  ProviderSetAccountErrors,
+  ProviderSetAccountResponses,
   PtyConnectErrors,
   PtyConnectResponses,
   PtyCreateErrors,
@@ -1979,6 +1981,7 @@ export class Oauth extends HeyApiClient {
       directory?: string
       method?: number
       code?: string
+      accountId?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1991,6 +1994,7 @@ export class Oauth extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "body", key: "method" },
             { in: "body", key: "code" },
+            { in: "body", key: "accountId" },
           ],
         },
       ],
@@ -2048,6 +2052,43 @@ export class Provider extends HeyApiClient {
       url: "/provider/auth",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Set account
+   *
+   * Set the account ID for an authenticated provider.
+   */
+  public setAccount<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: string
+      directory?: string
+      accountId?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "query", key: "directory" },
+            { in: "body", key: "accountId" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ProviderSetAccountResponses, ProviderSetAccountErrors, ThrowOnError>({
+      url: "/provider/{providerID}/account",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

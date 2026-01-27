@@ -143,6 +143,22 @@ function AutoMethod(props: AutoMethodProps) {
       dialog.clear()
       return
     }
+
+    // kilocode_change start - account selection for Kilo Gateway organizations
+    // Check if there are accounts to select from
+    const accounts = result.data?.accounts
+    if (accounts && accounts.length > 1) {
+      // Show account selection dialog
+      dialog.replace(() => (
+        <AccountSelect
+          providerID={props.providerID}
+          accounts={accounts}
+        />
+      ))
+      return
+    }
+    // kilocode_change end
+
     await sdk.client.instance.dispose()
     await sync.bootstrap()
     dialog.replace(() => <DialogModel providerID={props.providerID} />)
@@ -167,6 +183,41 @@ function AutoMethod(props: AutoMethodProps) {
     </box>
   )
 }
+
+// kilocode_change start - AccountSelect component for Kilo Gateway organization selection
+interface AccountSelectProps {
+  providerID: string
+  accounts: Array<{ id: string; name: string; hint?: string }>
+}
+function AccountSelect(props: AccountSelectProps) {
+  const sdk = useSDK()
+  const dialog = useDialog()
+  const sync = useSync()
+
+  return (
+    <DialogSelect
+      title="Select account"
+      options={props.accounts.map((account) => ({
+        title: account.name,
+        value: account.id,
+        description: account.hint,
+        async onSelect() {
+          // Update auth with selected account (only if not personal account)
+          if (account.id) {
+            await sdk.client.provider.setAccount({
+              providerID: props.providerID,
+              accountId: account.id,
+            })
+          }
+          await sdk.client.instance.dispose()
+          await sync.bootstrap()
+          dialog.replace(() => <DialogModel providerID={props.providerID} />)
+        },
+      }))}
+    />
+  )
+}
+// kilocode_change end
 
 interface CodeMethodProps {
   index: number

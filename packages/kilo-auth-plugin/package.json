@@ -24,11 +24,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "workspace:*",
-    "@opencode-ai/sdk": "workspace:*",
-    "@opencode-ai/kilo-provider": "workspace:*",
-    "@clack/prompts": "1.0.0-alpha.1",
-    "open": "10.1.2"
+    "@opencode-ai/plugin": "workspace:*"
   },
   "devDependencies": {
     "@tsconfig/node22": "catalog:",

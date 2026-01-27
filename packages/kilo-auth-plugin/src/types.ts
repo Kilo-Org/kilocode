@@ -4,19 +4,16 @@ export interface DeviceAuthInitiateResponse {
   expiresIn: number
 }
 
+export interface Organization {
+  id: string
+  name: string
+  role?: string
+}
+
 export interface DeviceAuthPollResponse {
   status: "pending" | "approved" | "denied" | "expired"
   token?: string
   userEmail?: string
-}
-
-export interface Organization {
-  id: string
-  name: string
-}
-
-export interface KilocodeProfile {
-  email: string
   organizations?: Organization[]
 }
 
