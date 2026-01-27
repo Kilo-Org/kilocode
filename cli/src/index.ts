@@ -67,7 +67,7 @@ program
 		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
 		// This is a defensive check for cases where Commander.js routing might not work as expected
 		// (e.g., when spawned as a child process with stdin disconnected)
-		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		const SUBCOMMANDS = ["auth", "config", "debug", "models", "export", "import"]
 		if (SUBCOMMANDS.includes(prompt)) {
 			return
 		}
@@ -402,6 +402,44 @@ program
 	.action(async (options: { provider?: string; json?: boolean }) => {
 		const { modelsApiCommand } = await import("./commands/models-api.js")
 		await modelsApiCommand(options)
+	})
+
+// Export command - export a session to JSON file
+program
+	.command("export")
+	.description("Export a session to a JSON file")
+	.argument("<sessionId>", "Session ID to export")
+	.option("-o, --output <path>", "Output file path")
+	.action(async (sessionId: string, options?: { output?: string }) => {
+		const { exportSessionToFile } = await import("./commands/session-export.js")
+		try {
+			const outputPath = await exportSessionToFile(sessionId, options?.output)
+			console.log(`✅ Session exported to: ${outputPath}`)
+		} catch (error) {
+			console.error(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			process.exit(1)
+		}
+	})
+
+// Import command - import a session from JSON file
+program
+	.command("import")
+	.description("Import a session from a JSON file")
+	.argument("<file>", "Path to the exported session JSON file")
+	.action(async (file: string) => {
+		const { readExportedSession, previewImport } = await import("./commands/session-export.js")
+		try {
+			const exported = readExportedSession(file)
+			console.log("Session Preview:")
+			console.log("─".repeat(40))
+			console.log(previewImport(exported))
+			console.log("─".repeat(40))
+			console.log("\n⚠️  Note: Full session import requires starting the CLI and using /session fork")
+			console.log(`   The original session ID is: ${exported.session.id}`)
+		} catch (error) {
+			console.error(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			process.exit(1)
+		}
 	})
 
 // Handle process termination signals
