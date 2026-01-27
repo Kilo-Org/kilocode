@@ -949,89 +949,157 @@ export const webviewMessageHandler = async (
 			const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || message?.values?.openRouterBaseUrl
 
 			// Base candidates (only those handled by this aggregate fetcher)
-			const candidates: { key: RouterName; options: GetModelsOptions }[] = [
-				{
-					key: "openrouter",
-					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
-				},
-				{
+			// Providers are added conditionally based on whether they are configured (have API keys)
+			// This prevents unnecessary network requests to providers the user hasn't set up
+			const candidates: { key: RouterName; options: GetModelsOptions }[] = []
+
+			// OpenRouter: works without API key for public models, so always include
+			candidates.push({
+				key: "openrouter",
+				options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
+			})
+
+			// Gemini: conditional on API key
+			if (apiConfiguration.geminiApiKey) {
+				candidates.push({
 					key: "gemini",
 					options: {
 						provider: "gemini",
 						apiKey: apiConfiguration.geminiApiKey,
 						baseUrl: apiConfiguration.googleGeminiBaseUrl,
 					},
-				},
-				{
+				})
+			}
+
+			// Requesty: conditional on API key
+			if (apiConfiguration.requestyApiKey) {
+				candidates.push({
 					key: "requesty",
 					options: {
 						provider: "requesty",
 						apiKey: apiConfiguration.requestyApiKey,
 						baseUrl: apiConfiguration.requestyBaseUrl,
 					},
-				},
-				{ key: "glama", options: { provider: "glama" } }, // kilocode_change
-				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
-				{
+				})
+			}
+
+			// Glama: conditional on API key (kilocode_change)
+			if (apiConfiguration.glamaApiKey) {
+				candidates.push({
+					key: "glama",
+					options: { provider: "glama", apiKey: apiConfiguration.glamaApiKey },
+				})
+			}
+
+			// Unbound: conditional on API key
+			if (apiConfiguration.unboundApiKey) {
+				candidates.push({
+					key: "unbound",
+					options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey },
+				})
+			}
+
+			// Kilocode: conditional on token
+			if (apiConfiguration.kilocodeToken) {
+				candidates.push({
 					key: "kilocode",
 					options: {
 						provider: "kilocode",
 						kilocodeToken: apiConfiguration.kilocodeToken,
 						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
-				},
-				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
-				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
-				{
+				})
+			}
+
+			// Ollama: local provider, conditional on baseUrl
+			if (apiConfiguration.ollamaBaseUrl) {
+				candidates.push({
+					key: "ollama",
+					options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl },
+				})
+			}
+
+			// Vercel AI Gateway: public endpoint, always include for discoverability
+			candidates.push({ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } })
+
+			// DeepInfra: conditional on API key
+			if (apiConfiguration.deepInfraApiKey) {
+				candidates.push({
 					key: "deepinfra",
 					options: {
 						provider: "deepinfra",
 						apiKey: apiConfiguration.deepInfraApiKey,
 						baseUrl: apiConfiguration.deepInfraBaseUrl,
 					},
-				},
-				// kilocode_change start
-				{
+				})
+			}
+
+			// NanoGPT: conditional on API key (kilocode_change)
+			if (apiConfiguration.nanoGptApiKey) {
+				candidates.push({
 					key: "nano-gpt",
 					options: {
 						provider: "nano-gpt",
 						apiKey: apiConfiguration.nanoGptApiKey,
 						nanoGptModelList: apiConfiguration.nanoGptModelList,
 					},
-				},
-				// kilocode_change end
-				{
+				})
+			}
+
+			// OVHCloud: conditional on API key
+			if (apiConfiguration.ovhCloudAiEndpointsApiKey) {
+				candidates.push({
 					key: "ovhcloud",
 					options: {
 						provider: "ovhcloud",
 						apiKey: apiConfiguration.ovhCloudAiEndpointsApiKey,
 						baseUrl: apiConfiguration.ovhCloudAiEndpointsBaseUrl,
 					},
-				},
-				{
+				})
+			}
+
+			// Inception: conditional on API key
+			if (apiConfiguration.inceptionLabsApiKey) {
+				candidates.push({
 					key: "inception",
 					options: {
 						provider: "inception",
 						apiKey: apiConfiguration.inceptionLabsApiKey,
 						baseUrl: apiConfiguration.inceptionLabsBaseUrl,
 					},
-				},
-				{ key: "synthetic", options: { provider: "synthetic", apiKey: apiConfiguration.syntheticApiKey } }, // kilocode_change
-				{
+				})
+			}
+
+			// Synthetic: conditional on API key (kilocode_change)
+			if (apiConfiguration.syntheticApiKey) {
+				candidates.push({
+					key: "synthetic",
+					options: { provider: "synthetic", apiKey: apiConfiguration.syntheticApiKey },
+				})
+			}
+
+			// Roo: conditional on CloudService auth
+			const rooApiKey = CloudService.hasInstance()
+				? CloudService.instance.authService?.getSessionToken()
+				: undefined
+			if (rooApiKey) {
+				candidates.push({
 					key: "roo",
 					options: {
 						provider: "roo",
 						baseUrl: process.env.ROO_CODE_PROVIDER_URL ?? "https://api.roocode.com/proxy",
-						apiKey: CloudService.hasInstance()
-							? CloudService.instance.authService?.getSessionToken()
-							: undefined,
+						apiKey: rooApiKey,
 					},
-				},
-				{
+				})
+			}
+
+			// Chutes: conditional on API key
+			if (apiConfiguration.chutesApiKey) {
+				candidates.push({
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
-				},
-			]
+				})
+			}
 			// kilocode_change end
 
 			// IO Intelligence is conditional on api key
