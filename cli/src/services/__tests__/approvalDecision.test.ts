@@ -397,6 +397,292 @@ describe("approvalDecision", () => {
 					expect(decision.action).toBe("manual")
 				})
 			})
+
+			describe("command chains with shell operators", () => {
+				it("should reject command chain when second command not in allowed list", () => {
+					const message = createMessage("command", JSON.stringify({ command: "cd backend && npm install" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["cd"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should approve command chain when all commands in allowed list", () => {
+					const message = createMessage("command", JSON.stringify({ command: "cd backend && npm install" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["cd", "npm"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle || operator in command chain", () => {
+					const message = createMessage("command", JSON.stringify({ command: "npm test || echo failed" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["npm"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					// echo is not in allowed list
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should handle semicolon operator in command chain", () => {
+					const message = createMessage("command", JSON.stringify({ command: "npm run build; npm run test" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["npm"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle pipe operator in command chain", () => {
+					const message = createMessage("command", JSON.stringify({ command: "ls -la | grep test" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["ls"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					// grep is not in allowed list
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should approve pipe when both commands allowed", () => {
+					const message = createMessage("command", JSON.stringify({ command: "cat file.txt | grep error" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["cat", "grep"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle complex command chain with multiple operators", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "cd src && npm run build && npm test" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["cd", "npm"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should reject if any command in chain is denied", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "npm install && rm -rf node_modules" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["npm", "rm"],
+							denied: ["rm -rf"],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should handle wildcard with command chains", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "cd backend && npm install express socket.io" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["*"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should reject command chain in CI mode when not all allowed", () => {
+					const message = createMessage("command", JSON.stringify({ command: "cd backend && npm install" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["cd"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, true)
+					expect(decision.action).toBe("auto-reject")
+					expect(decision.message).toBe(CI_MODE_MESSAGES.AUTO_REJECTED)
+				})
+
+				it("should ignore operators inside double quotes", () => {
+					const message = createMessage("command", JSON.stringify({ command: 'echo "hello && world"' }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should ignore operators inside single quotes", () => {
+					const message = createMessage("command", JSON.stringify({ command: "echo 'test || fail'" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle mixed quotes and operators", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: 'echo "test && stuff" && echo "more"' }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should ignore escaped operators", () => {
+					const message = createMessage("command", JSON.stringify({ command: "echo hello\\&\\&world" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle command with escaped semicolon", () => {
+					const message = createMessage("command", JSON.stringify({ command: "echo test\\;more" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle nested quotes correctly", () => {
+					const message = createMessage("command", JSON.stringify({ command: 'echo "it\'s a test"' }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should split commands when operators are outside quotes", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: 'echo "test && quoted" && echo "second"' }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle pipe inside quotes", () => {
+					const message = createMessage("command", JSON.stringify({ command: 'echo "test | pipe"' }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should split on real pipe outside quotes", () => {
+					const message = createMessage("command", JSON.stringify({ command: 'echo "test" | grep test' }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["echo", "grep"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+			})
 		})
 
 		describe("followup questions", () => {
