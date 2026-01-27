@@ -4594,6 +4594,16 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		// kilocode_change start: Review mode scope selection
+		case "reviewScopeSelected": {
+			const scope = message.reviewScope
+			if (scope === "uncommitted" || scope === "branch") {
+				await provider.handleReviewScopeSelected(scope)
+			}
+			break
+		}
+		// kilocode_change end
+
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)
 			//

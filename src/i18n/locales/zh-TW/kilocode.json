@@ -94,7 +94,7 @@
 		},
 		"ui": {
 			"generateButton": "生成提交信息",
-			"generateButtonTooltip": "使用AI分析您的代码变更并生成提交信息"
+			"generateButtonTooltip": "使用 AI 分析您的代码变更并生成提交信息"
 		}
 	},
 	"ghost": {
@@ -107,10 +107,10 @@
 				"disabled": "Kilo Code Autocomplete（已停用）",
 				"noCredits": "**帳戶餘額不足**\n\n你的 Kilo Code 帳戶沒有餘額。要使用自動完成功能，請為帳戶儲值。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
 				"noUsableProvider": "**未設定自動完成模型**\n\n要啟用自動完成，請新增一個使用以下支援的供應商的設定檔：{{providers}}。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
-				"sessionTotal": "工作階段總費用:",
-				"provider": "提供者:",
-				"model": "模型:",
-				"profile": "設定檔: ",
+				"sessionTotal": "工作階段總費用：",
+				"provider": "提供者：",
+				"model": "模型：",
+				"profile": "設定檔：",
 				"defaultProfile": "預設",
 				"completionSummary": "在 {{startTime}} 至 {{endTime}} 之間執行了 {{count}} 次自動完成，總費用為 {{cost}}。",
 				"providerInfo": "自動完成由 {{provider}} 的 {{model}} 提供。"
@@ -180,7 +180,7 @@
 			"cliOutdated": "你的 Kilocode CLI 版本已過時且不支援 Agent Manager。請更新至最新版本。",
 			"cliMisconfigured": "Kilocode CLI 未設定。請執行 'kilocode auth' 登入或 'kilocode config' 進行設定。",
 			"sessionFailed": "啟動代理工作階段失敗",
-			"sessionFailedWithMessage": "啟動代理工作階段失敗: {{message}}"
+			"sessionFailedWithMessage": "啟動代理工作階段失敗：{{message}}"
 		},
 		"actions": {
 			"updateInstructions": "更新說明",
@@ -206,7 +206,7 @@
 		}
 	},
 	"configDiscovery": {
-		"removed": "Kilo代码：已删除{{source}}{{configType}}：{{name}}{{modeStr}}",
-		"added": "Kilo代码：已添加{{source}} {{configType}}：{{name}}{{modeStr}}"
+		"removed": "Kilo 代码：已删除{{source}}{{configType}}：{{name}}{{modeStr}}",
+		"added": "Kilo 代码：已新增{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

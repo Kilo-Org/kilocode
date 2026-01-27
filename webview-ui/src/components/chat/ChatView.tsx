@@ -52,6 +52,7 @@ import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { QueuedMessages } from "./QueuedMessages"
+import { ReviewScopeSelector, type ReviewScopeInfo } from "./ReviewScopeSelector" // kilocode_change: Review mode
 import { buildDocLink } from "@/utils/docLinks"
 // import DismissibleUpsell from "../common/DismissibleUpsell" // kilocode_change: unused
 // import { useCloudUpsell } from "@src/hooks/useCloudUpsell" // kilocode_change: unused
@@ -206,6 +207,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 		>
 	>(new Map())
+
+	// kilocode_change start: Review mode state
+	const [showReviewScopeSelector, setShowReviewScopeSelector] = useState(false)
+	const [reviewScopeInfo, setReviewScopeInfo] = useState<ReviewScopeInfo | null>(null)
+	// kilocode_change end: Review mode state
 
 	const clineAskRef = useRef(clineAsk)
 	useEffect(() => {
@@ -963,6 +969,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						)
 					}
 					break
+				// kilocode_change start: Review mode
+				case "askReviewScope":
+					if (message.reviewScopeInfo) {
+						setReviewScopeInfo(message.reviewScopeInfo)
+						setShowReviewScopeSelector(true)
+					}
+					break
+				// kilocode_change end: Review mode
 			}
 			// textAreaRef.current is not explicitly required here since React
 			// guarantees that ref will be stable across re-renders, and we're
@@ -1875,6 +1889,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			<div id="roo-portal" />
 			{/* kilocode_change: disable  */}
 			{/* <CloudUpsellDialog open={isUpsellOpen} onOpenChange={closeUpsell} onConnect={handleConnect} /> */}
+
+			{/* kilocode_change: Review mode scope selector */}
+			<ReviewScopeSelector
+				open={showReviewScopeSelector}
+				onOpenChange={setShowReviewScopeSelector}
+				scopeInfo={reviewScopeInfo}
+			/>
 		</div>
 	)
 }

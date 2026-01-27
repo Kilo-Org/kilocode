@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ",
 			"notFound": "ไม่พบไฟล์ปฏิบัติการ Claude Code '{{claudePath}}'\n\nกรุณาติดตั้ง Claude Code CLI:\n1. เยี่ยมชม {{installationUrl}} เพื่อดาวน์โหลด Claude Code\n2. ทำตามคำแนะนำการติดตั้งสำหรับระบบปฏิบัติการของคุณ\n3. ตรวจสอบให้แน่ใจว่าคำสั่ง 'claude' พร้อมใช้งานใน PATH\n4. หรือกำหนดค่าเส้นทางแบบกำหนดเองในการตั้งค่า Kilo Code ภายใต้ 'เส้นทาง Claude Code'\n\nข้อผิดพลาดเดิม: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}",
-			"tokenRefreshFailed": "ล้มเหลวในการรีเฟรช OAuth token: {{error}}",
-			"onboardingTimeout": "การดำเนินการ onboarding หมดเวลาหลังจาก 60 วินาที กรุณาลองอีกครั้งในภายหลัง",
-			"projectDiscoveryFailed": "ไม่สามารถค้นหา project ID ตรวจสอบให้แน่ใจว่าคุณยืนยันตัวตนด้วย 'gemini auth'",
-			"rateLimitExceeded": "เกินขีดจำกัดอัตรา ถึงขีดจำกัดของระดับฟรีแล้ว",
-			"badRequest": "คำขอไม่ถูกต้อง: {{details}}",
-			"apiError": "ข้อผิดพลาด Gemini CLI API: {{error}}",
-			"completionError": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini CLI: {{error}}"
-		},
 		"gemini": {
 			"generate_stream": "ข้อผิดพลาดในการสร้างสตรีมบริบท Gemini: {{error}}",
 			"generate_complete_prompt": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini: {{error}}",

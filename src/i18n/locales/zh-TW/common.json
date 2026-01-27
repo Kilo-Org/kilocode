@@ -9,11 +9,11 @@
 		"billion_suffix": "b"
 	},
 	"feedback": {
-		"title": "反饋",
-		"description": "我們很樂意聽取您的反饋或幫助您解決遇到的任何問題。",
-		"githubIssues": "在GitHub上報告問題",
-		"githubDiscussions": "加入GitHub討論",
-		"discord": "加入我們的Discord社區",
+		"title": "回饋",
+		"description": "我們很樂意聽取您的回饋或幫助您解決遇到的任何問題。",
+		"githubIssues": "在 GitHub 上報告問題",
+		"githubDiscussions": "加入 GitHub 討論",
+		"discord": "加入我們的 Discord 社區",
 		"customerSupport": "客戶支援"
 	},
 	"welcome": "歡迎，{{name}}！您有 {{count}} 條通知。",
@@ -85,7 +85,7 @@
 		"share_auth_required": "需要身份驗證。請登入以分享任務。",
 		"share_not_enabled": "此組織未啟用任務分享功能。",
 		"share_task_not_found": "未找到任務或存取被拒絕。",
-		"delete_rules_folder_failed": "刪除規則資料夾失敗: {{rulesFolderPath}}。錯誤: {{error}}",
+		"delete_rules_folder_failed": "刪除規則資料夾失敗：{{rulesFolderPath}}。錯誤：{{error}}",
 		"command_not_found": "找不到指令 '{{name}}'",
 		"open_command_file": "開啟指令檔案失敗",
 		"delete_command": "刪除指令失敗",
@@ -99,16 +99,6 @@
 			"processExitedWithError": "Claude Code 程序退出，退出碼：{{exitCode}}。錯誤輸出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
 			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}",
-			"tokenRefreshFailed": "無法重新整理 OAuth 權杖：{{error}}",
-			"onboardingTimeout": "新手導引操作在 60 秒後逾時。請稍後再試。",
-			"projectDiscoveryFailed": "無法發現專案 ID。請確保您已使用 'gemini auth' 進行驗證。",
-			"rateLimitExceeded": "超過速率限制。已達到免費層級限制。",
-			"badRequest": "錯誤的請求：{{details}}",
-			"apiError": "Gemini CLI API 錯誤：{{error}}",
-			"completionError": "Gemini CLI 完成錯誤：{{error}}"
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}"

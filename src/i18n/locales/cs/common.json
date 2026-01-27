@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu.",
 			"notFound": "Spustitelný soubor Claude Code '{{claudePath}}' nebyl nalezen.\n\nNainstalujte prosím Claude Code CLI:\n1. Navštivte {{installationUrl}} pro stažení Claude Code\n2. Postupujte podle pokynů pro instalaci pro váš operační systém\n3. Ujistěte se, že příkaz 'claude' je dostupný v PATH\n4. Alternativně nakonfigurujte vlastní cestu v nastavení Kilo Code pod 'Cesta Claude Code'\n\nPůvodní chyba: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}",
-			"tokenRefreshFailed": "Nepodařilo se obnovit OAuth token: {{error}}",
-			"onboardingTimeout": "Onboarding operace vypršela po 60 sekundách. Zkuste to prosím později.",
-			"projectDiscoveryFailed": "Nepodařilo se objevit ID projektu. Ujistěte se, že jste autentizováni pomocí 'gemini auth'.",
-			"rateLimitExceeded": "Překročen limit rychlosti. Limity bezplatné úrovně byly dosaženy.",
-			"badRequest": "Špatný požadavek: {{details}}",
-			"apiError": "Chyba Gemini CLI API: {{error}}",
-			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}"
 		},
