@@ -1,7 +1,7 @@
 {
   "name": "kilo-vscode",
-  "displayName": "kilo-vscode",
-  "description": "Kilo VS Code v2",
+  "displayName": "Kilo",
+  "description": "Kilo VS Code Extension",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.108.1"
@@ -9,40 +9,66 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:kilo-sidebar"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "kilo-vscode.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kilo",
+          "title": "Kilo",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kilo": [
+        {
+          "type": "webview",
+          "id": "kilo-sidebar",
+          "name": "Kilo"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js && pnpm run build:webview",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "watch:webview": "vite build --watch",
+    "dev": "npm-run-all -p dev:*",
+    "dev:extension": "node esbuild.js --watch",
+    "dev:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "dev:webview": "vite build --watch",
+    "build:webview": "vite build",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production && pnpm run build:webview",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src --ignore-pattern src/webview",
     "test": "vscode-test"
   },
+  "dependencies": {
+    "solid-js": "^1.9.11"
+  },
   "devDependencies": {
-    "@types/vscode": "^1.108.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.52.0",
-    "eslint": "^9.39.2",
+    "@types/vscode": "^1.108.1",
+    "@types/vscode-webview": "^1.57.5",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.52.0",
+    "vite": "^7.3.1",
+    "vite-plugin-solid": "^2.11.10"
   }
 }

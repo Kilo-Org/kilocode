@@ -6,9 +6,10 @@ src/**
 .gitignore
 .yarnrc
 esbuild.js
+vite.config.mts
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
-**/*.ts
 **/.vscode-test.*
+dist/webview/index.html
