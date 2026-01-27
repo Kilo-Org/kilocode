@@ -5,7 +5,7 @@ import { Installation } from "../../installation"
 
 export const UpgradeCommand = {
   command: "upgrade [target]",
-  describe: "upgrade opencode to the latest or a specific version",
+  describe: "upgrade kilo to the latest or a specific version", // kilocode_change
   builder: (yargs: Argv) => {
     return yargs
       .positional("target", {
