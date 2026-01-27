@@ -1,0 +1,8 @@
+# Algolia-Crawler-Verif: 1245222E155E7898
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location (adjust if you have a sitemap)
+Sitemap: https://kilo.ai/docs/sitemap.xml
