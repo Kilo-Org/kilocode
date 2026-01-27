@@ -1,0 +1,35 @@
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="400" fill="#f8f9fa"/>
+  
+  <!-- Main container -->
+  <rect x="20" y="20" width="560" height="360" rx="8" fill="white" stroke="#e1e5e9" stroke-width="1"/>
+  
+  <!-- Header -->
+  <rect x="20" y="20" width="560" height="50" rx="8" fill="#f1f5f9"/>
+  <text x="40" y="50" font-family="Arial, sans-serif" font-size="16" font-weight="600" fill="#1e293b">Tool Approval</text>
+  
+  <!-- Tool description area -->
+  <rect x="40" y="90" width="520" height="80" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="50" y="110" font-family="Arial, sans-serif" font-size="14" fill="#64748b">Tool: write_to_file</text>
+  <text x="50" y="130" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">Create a file named greeting.js that logs a greeting message</text>
+  <text x="50" y="150" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">Path: greeting.js</text>
+  
+  <!-- Code preview -->
+  <rect x="40" y="190" width="520" height="120" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="210" font-family="monospace" font-size="12" fill="#94a3b8">function greet(name) {</text>
+  <text x="50" y="230" font-family="monospace" font-size="12" fill="#94a3b8">  console.log(`Hello, ${name}!`);</text>
+  <text x="50" y="250" font-family="monospace" font-size="12" fill="#94a3b8">}</text>
+  <text x="50" y="270" font-family="monospace" font-size="12" fill="#94a3b8">greet('World');</text>
+  
+  <!-- Auto-approve checkbox -->
+  <rect x="40" y="330" width="20" height="20" rx="3" fill="white" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="70" y="345" font-family="Arial, sans-serif" font-size="14" fill="#64748b">Auto-approve for similar operations</text>
+  
+  <!-- Save button -->
+  <rect x="400" y="320" width="70" height="35" rx="6" fill="#3b82f6"/>
+  <text x="425" y="342" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="white" text-anchor="middle">Save</text>
+  
+  <!-- Reject button -->
+  <rect x="490" y="320" width="70" height="35" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="525" y="342" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#64748b" text-anchor="middle">Reject</text>
+</svg>
