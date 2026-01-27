@@ -2,9 +2,12 @@ import {
 	sanitizeMcpName,
 	buildMcpToolName,
 	parseMcpToolName,
+	decodeMcpName,
+	normalizeMcpToolName,
 	isMcpTool,
 	MCP_TOOL_SEPARATOR,
 	MCP_TOOL_PREFIX,
+	HYPHEN_ENCODING,
 } from "../mcp-name"
 
 describe("mcp-name utilities", () => {
@@ -12,6 +15,10 @@ describe("mcp-name utilities", () => {
 		it("should have correct separator and prefix", () => {
 			expect(MCP_TOOL_SEPARATOR).toBe("--")
 			expect(MCP_TOOL_PREFIX).toBe("mcp")
+		})
+
+		it("should have correct hyphen encoding", () => {
+			expect(HYPHEN_ENCODING).toBe("___")
 		})
 	})
 
@@ -53,9 +60,10 @@ describe("mcp-name utilities", () => {
 			expect(sanitizeMcpName("test#$%^&*()")).toBe("test")
 		})
 
-		it("should keep valid characters (alphanumeric, underscore, dash)", () => {
+		it("should keep alphanumeric and underscores, but encode hyphens", () => {
 			expect(sanitizeMcpName("server_name")).toBe("server_name")
-			expect(sanitizeMcpName("server-name")).toBe("server-name")
+			// Hyphens are now encoded as triple underscores
+			expect(sanitizeMcpName("server-name")).toBe("server___name")
 			expect(sanitizeMcpName("Server123")).toBe("Server123")
 		})
 
@@ -63,12 +71,16 @@ describe("mcp-name utilities", () => {
 			// Dots and colons are NOT allowed due to AWS Bedrock restrictions
 			expect(sanitizeMcpName("server.name")).toBe("servername")
 			expect(sanitizeMcpName("server:name")).toBe("servername")
-			expect(sanitizeMcpName("awslabs.aws-documentation-mcp-server")).toBe("awslabsaws-documentation-mcp-server")
+			// Hyphens are encoded as triple underscores
+			expect(sanitizeMcpName("awslabs.aws-documentation-mcp-server")).toBe(
+				"awslabsaws___documentation___mcp___server",
+			)
 		})
 
 		it("should prepend underscore if name starts with non-letter/underscore", () => {
 			expect(sanitizeMcpName("123server")).toBe("_123server")
-			expect(sanitizeMcpName("-server")).toBe("_-server")
+			// Hyphen at start is encoded to ___, which starts with underscore (valid)
+			expect(sanitizeMcpName("-server")).toBe("___server")
 			// Dots are removed, so ".server" becomes "server" which starts with a letter
 			expect(sanitizeMcpName(".server")).toBe("server")
 		})
@@ -79,21 +91,45 @@ describe("mcp-name utilities", () => {
 			expect(sanitizeMcpName("Server")).toBe("Server")
 		})
 
-		it("should replace double-hyphen sequences with single hyphen to avoid separator conflicts", () => {
-			expect(sanitizeMcpName("server--name")).toBe("server-name")
-			expect(sanitizeMcpName("test---server")).toBe("test-server")
-			expect(sanitizeMcpName("my----tool")).toBe("my-tool")
+		it("should replace double-hyphen sequences with single hyphen then encode", () => {
+			// Double hyphens become single hyphen, then encoded as ___
+			expect(sanitizeMcpName("server--name")).toBe("server___name")
+			expect(sanitizeMcpName("test---server")).toBe("test___server")
+			expect(sanitizeMcpName("my----tool")).toBe("my___tool")
 		})
 
 		it("should handle complex names with multiple issues", () => {
 			expect(sanitizeMcpName("My Server @ Home!")).toBe("My_Server__Home")
-			expect(sanitizeMcpName("123-test server")).toBe("_123-test_server")
+			// Hyphen is encoded as ___
+			expect(sanitizeMcpName("123-test server")).toBe("_123___test_server")
 		})
 
 		it("should return placeholder for names that become empty after sanitization", () => {
 			expect(sanitizeMcpName("@#$%")).toBe("_unnamed")
 			// Spaces become underscores, which is a valid character, so it returns "_"
 			expect(sanitizeMcpName("   ")).toBe("_")
+		})
+
+		it("should encode hyphens as triple underscores for model compatibility", () => {
+			// This is the key feature: hyphens are encoded so they survive model tool calling
+			expect(sanitizeMcpName("atlassian-jira_search")).toBe("atlassian___jira_search")
+			expect(sanitizeMcpName("atlassian-confluence_search")).toBe("atlassian___confluence_search")
+		})
+	})
+
+	describe("decodeMcpName", () => {
+		it("should decode triple underscores back to hyphens", () => {
+			expect(decodeMcpName("server___name")).toBe("server-name")
+			expect(decodeMcpName("atlassian___jira_search")).toBe("atlassian-jira_search")
+		})
+
+		it("should not modify names without triple underscores", () => {
+			expect(decodeMcpName("server_name")).toBe("server_name")
+			expect(decodeMcpName("tool")).toBe("tool")
+		})
+
+		it("should handle multiple encoded hyphens", () => {
+			expect(decodeMcpName("a___b___c")).toBe("a-b-c")
 		})
 	})
 
@@ -125,6 +161,11 @@ describe("mcp-name utilities", () => {
 		it("should preserve underscores in server and tool names", () => {
 			expect(buildMcpToolName("my_server", "my_tool")).toBe("mcp--my_server--my_tool")
 		})
+
+		it("should encode hyphens in tool names", () => {
+			// Hyphens are encoded as triple underscores
+			expect(buildMcpToolName("onellm", "atlassian-jira_search")).toBe("mcp--onellm--atlassian___jira_search")
+		})
 	})
 
 	describe("parseMcpToolName", () => {
@@ -151,8 +192,7 @@ describe("mcp-name utilities", () => {
 			})
 		})
 
-		it("should correctly handle server names with underscores (fixed from old behavior)", () => {
-			// With the new -- separator, server names with underscores work correctly
+		it("should correctly handle server names with underscores", () => {
 			expect(parseMcpToolName("mcp--my_server--tool")).toEqual({
 				serverName: "my_server",
 				toolName: "tool",
@@ -163,6 +203,14 @@ describe("mcp-name utilities", () => {
 			expect(parseMcpToolName("mcp--my_server--get_forecast")).toEqual({
 				serverName: "my_server",
 				toolName: "get_forecast",
+			})
+		})
+
+		it("should decode triple underscores back to hyphens", () => {
+			// This is the key feature: encoded hyphens are decoded back
+			expect(parseMcpToolName("mcp--onellm--atlassian___jira_search")).toEqual({
+				serverName: "onellm",
+				toolName: "atlassian-jira_search",
 			})
 		})
 
@@ -183,7 +231,6 @@ describe("mcp-name utilities", () => {
 		})
 
 		it("should preserve sanitized names through roundtrip with underscores", () => {
-			// Names with underscores now work correctly through roundtrip
 			const toolName = buildMcpToolName("my_server", "my_tool")
 			const parsed = parseMcpToolName(toolName)
 			expect(parsed).toEqual({
@@ -193,7 +240,6 @@ describe("mcp-name utilities", () => {
 		})
 
 		it("should handle spaces that get converted to underscores", () => {
-			// "my server" becomes "my_server" after sanitization
 			const toolName = buildMcpToolName("my server", "get tool")
 			const parsed = parseMcpToolName(toolName)
 			expect(parsed).toEqual({
@@ -208,6 +254,96 @@ describe("mcp-name utilities", () => {
 			expect(parsed).toEqual({
 				serverName: "Weather_API",
 				toolName: "get_current_forecast",
+			})
+		})
+
+		it("should preserve hyphens through roundtrip via encoding/decoding", () => {
+			// This is the key test: hyphens survive the roundtrip
+			const toolName = buildMcpToolName("onellm", "atlassian-jira_search")
+			expect(toolName).toBe("mcp--onellm--atlassian___jira_search")
+
+			const parsed = parseMcpToolName(toolName)
+			expect(parsed).toEqual({
+				serverName: "onellm",
+				toolName: "atlassian-jira_search", // Hyphen is preserved!
+			})
+		})
+
+		it("should handle tool names with multiple hyphens", () => {
+			const toolName = buildMcpToolName("server", "get-user-profile")
+			const parsed = parseMcpToolName(toolName)
+			expect(parsed).toEqual({
+				serverName: "server",
+				toolName: "get-user-profile",
+			})
+		})
+	})
+
+	describe("normalizeMcpToolName", () => {
+		it("should convert underscore separators to hyphen separators", () => {
+			expect(normalizeMcpToolName("mcp__server__tool")).toBe("mcp--server--tool")
+		})
+
+		it("should not modify names that already have hyphen separators", () => {
+			expect(normalizeMcpToolName("mcp--server--tool")).toBe("mcp--server--tool")
+		})
+
+		it("should not modify non-MCP tool names", () => {
+			expect(normalizeMcpToolName("read_file")).toBe("read_file")
+			expect(normalizeMcpToolName("some__tool")).toBe("some__tool")
+		})
+
+		it("should preserve triple underscores (encoded hyphens) while normalizing separators", () => {
+			// Model outputs: mcp__onellm__atlassian___jira_search
+			// Should become: mcp--onellm--atlassian___jira_search
+			expect(normalizeMcpToolName("mcp__onellm__atlassian___jira_search")).toBe(
+				"mcp--onellm--atlassian___jira_search",
+			)
+		})
+
+		it("should handle multiple encoded hyphens", () => {
+			expect(normalizeMcpToolName("mcp__server__get___user___profile")).toBe("mcp--server--get___user___profile")
+		})
+	})
+
+	describe("model compatibility - full flow", () => {
+		it("should handle the complete flow: build -> model mangles -> normalize -> parse", () => {
+			// Step 1: Build the tool name (hyphens encoded as ___)
+			const builtName = buildMcpToolName("onellm", "atlassian-jira_search")
+			expect(builtName).toBe("mcp--onellm--atlassian___jira_search")
+
+			// Step 2: Model mangles the separators (-- becomes __)
+			const mangledName = "mcp__onellm__atlassian___jira_search"
+
+			// Step 3: Normalize the separators back (__ becomes --)
+			const normalizedName = normalizeMcpToolName(mangledName)
+			expect(normalizedName).toBe("mcp--onellm--atlassian___jira_search")
+
+			// Step 4: Parse the normalized name (decodes ___ back to -)
+			const parsed = parseMcpToolName(normalizedName)
+			expect(parsed).toEqual({
+				serverName: "onellm",
+				toolName: "atlassian-jira_search", // Original hyphen is preserved!
+			})
+		})
+
+		it("should handle tool names with multiple hyphens through the full flow", () => {
+			// Build
+			const builtName = buildMcpToolName("server", "get-user-profile")
+			expect(builtName).toBe("mcp--server--get___user___profile")
+
+			// Model mangles
+			const mangledName = "mcp__server__get___user___profile"
+
+			// Normalize
+			const normalizedName = normalizeMcpToolName(mangledName)
+			expect(normalizedName).toBe("mcp--server--get___user___profile")
+
+			// Parse
+			const parsed = parseMcpToolName(normalizedName)
+			expect(parsed).toEqual({
+				serverName: "server",
+				toolName: "get-user-profile",
 			})
 		})
 	})

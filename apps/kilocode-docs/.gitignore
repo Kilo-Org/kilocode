@@ -1,31 +1,9 @@
-.release-notes/
-# Dependencies
-/node_modules
-
-# Production
-/build
-
-# Generated files
-.docusaurus
-.cache-loader
-*.js
-!src/**/*.js
-
-# Misc
+node_modules/
 .DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.npmrc
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-.devcontainer
-TEMP/
-
-.history/
+.next/
 .vercel
+package-lock.json
+yarn.lock
+screenshots/
+.beads/
+.env

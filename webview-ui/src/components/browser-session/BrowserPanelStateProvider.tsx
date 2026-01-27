@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { ExtensionMessage } from "@roo/ExtensionMessage"
+
+import { type ExtensionMessage } from "@roo-code/types"
 
 interface BrowserPanelState {
 	browserViewportSize: string

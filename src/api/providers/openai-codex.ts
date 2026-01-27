@@ -14,6 +14,7 @@ import {
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
+import { Package } from "../../shared/package"
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
@@ -22,6 +23,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { isMcpTool } from "../../utils/mcp-name"
+import { sanitizeOpenAiCallId } from "../../utils/tool-id"
 import { openAiCodexOAuthManager } from "../../integrations/openai-codex/oauth"
 import { t } from "../../i18n"
 
@@ -433,7 +435,8 @@ export class OpenAiCodexHandler extends BaseProvider /* kilocode_change: impleme
 									: block.content?.map((c) => (c.type === "text" ? c.text : "")).join("") || ""
 							toolResults.push({
 								type: "function_call_output",
-								call_id: block.tool_use_id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.tool_use_id),
 								output: result,
 							})
 						}
@@ -460,7 +463,8 @@ export class OpenAiCodexHandler extends BaseProvider /* kilocode_change: impleme
 						} else if (block.type === "tool_use") {
 							toolCalls.push({
 								type: "function_call",
-								call_id: block.id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.id),
 								name: block.name,
 								arguments: JSON.stringify(block.input),
 							})

@@ -1,6 +1,7 @@
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
+import type { ClineApiReqInfo } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Task } from "../task/Task"
@@ -9,7 +10,6 @@ import { getWorkspacePath } from "../../utils/path"
 import { checkGitInstalled } from "../../utils/git"
 import { t } from "../../i18n"
 
-import { ClineApiReqInfo } from "../../shared/ExtensionMessage"
 import { getApiMetrics } from "../../shared/getApiMetrics"
 
 import { DIFF_VIEW_URI_SCHEME } from "../../integrations/editor/DiffViewProvider"

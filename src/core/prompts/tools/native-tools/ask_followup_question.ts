@@ -51,7 +51,7 @@ export default {
 						required: ["text", "mode"],
 						additionalProperties: false,
 					},
-					minItems: 2,
+					minItems: 1,
 					maxItems: 4,
 				},
 			},

@@ -4,14 +4,13 @@ import {
 	type ProviderSettings,
 	type OrganizationAllowList,
 	type ProviderName,
+	type RouterModels,
 	modelIdKeysByProvider,
 	isProviderName,
 	isDynamicProvider,
 	isFauxProvider,
 	isCustomProvider,
 } from "@roo-code/types"
-
-import type { RouterModels } from "@roo/api"
 
 export function validateApiConfiguration(
 	apiConfiguration: ProviderSettings,
@@ -90,11 +89,6 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
-		// kilocode_change start
-		case "gemini-cli":
-			// OAuth-based provider, no API key validation needed
-			break
-		// kilocode_change end
 		case "openai-native":
 			if (!apiConfiguration.openAiNativeApiKey) {
 				return i18next.t("settings:validation.apiKey")

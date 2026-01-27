@@ -1,5 +1,7 @@
 import {
 	type ModelInfo,
+	type ModelRecord, // kilocode_change
+	type RouterModels, // kilocode_change
 	type ProviderSettings,
 	type DynamicProvider,
 	type LocalProvider,
@@ -8,6 +10,12 @@ import {
 	isLocalProvider,
 	ToolProtocol, // kilocode_change
 } from "@roo-code/types"
+
+// Re-export for legacy imports (some providers still import ModelRecord from this module).
+export type { ModelRecord } // kilocode_change
+
+// Re-export for webview-ui legacy imports (via `@roo/api`).
+export type { RouterModels } // kilocode_change
 
 // ApiHandlerOptions
 // Extend ProviderSettings (minus apiProvider) with handler-specific toggles.
@@ -39,12 +47,6 @@ export function toRouterName(value?: string): RouterName {
 
 	throw new Error(`Invalid router name: ${value}`)
 }
-
-// RouterModels
-
-export type ModelRecord = Record<string, ModelInfo>
-
-export type RouterModels = Record<RouterName, ModelRecord>
 
 // Reasoning
 

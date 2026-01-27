@@ -81,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "所有模式的自訂指令",
 		"description": "這些指令適用於所有模式。它們提供了一套可透過下方特定模式指令強化的基本行為。<0>了解更多</0>",
-		"loadFromFile": "指令也可以從工作區中的<span>.kilocode/rules/</span>資料夾或全域<0>.kilocode/rules/</0>載入（.kilocoderules和.clinerules已棄用，即將停止運作）。"
+		"loadFromFile": "指令也可以從工作區中的<span>.kilocode/rules/</span>資料夾或全域<0>.kilocode/rules/</0>載入（.kilocoderules 和.clinerules 已棄用，即將停止運作）。"
 	},
 	"systemPrompt": {
 		"preview": "預覽系統提示詞",

@@ -97,10 +97,15 @@
 		"title": "Hentikan",
 		"tooltip": "Akhiri tugas saat ini"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Hentikan tugas saat ini"
+	},
 	"cancel": {
 		"title": "Batal",
 		"tooltip": "Batalkan operasi saat ini"
 	},
+	"enqueueMessage": "Tambahkan pesan ke antrean (akan dikirim setelah tugas saat ini selesai)",
 	"scrollToBottom": "Gulir ke bawah chat",
 	"about": "Buat, refaktor, dan debug kode dengan bantuan AI. Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
 	"docs": "Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
@@ -316,7 +321,8 @@
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
 		"copied": "Disalin!",
-		"diagnostics": "Dapatkan informasi kesalahan terperinci"
+		"diagnostics": "Dapatkan informasi kesalahan terperinci",
+		"proxyProvider": "Tampaknya kamu menggunakan penyedia berbasis proxy. Pastikan untuk memeriksa log-nya dan memastikan tidak menulis ulang permintaan Roo."
 	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
@@ -337,7 +343,7 @@
 		"triggerLabel_zero": "0 disetujui otomatis",
 		"triggerLabel_one": "1 disetujui otomatis",
 		"triggerLabel_other": "{{count}} disetujui otomatis",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} Dirilis",
@@ -351,8 +357,9 @@
 		},
 		"release": {
 			"heading": "Yang Baru:",
-			"skills": "Roo sekarang mendukung <skillsLink>Agent Skills</skillsLink> - paket yang dapat digunakan kembali dari prompt, alat, dan sumber daya untuk memperluas kemampuan Roo.",
-			"nativeToolCalling": "Pemanggilan alat native sekarang diperlukan untuk semua tugas baru. <blogLink>Pelajari lebih lanjut</blogLink> tentang motivasi dan apa yang harus dilakukan jika mengalami masalah."
+			"openaiCodexProvider": "OpenAI - ChatGPT Plus/Pro Provider ditambahkan yang memberikan akses berbasis langganan ke model Codex tanpa biaya per-token.",
+			"gpt52codexModel": "Model gpt-5.2-codex baru ditambahkan ke Roo Code Router, provider OpenAI standar, dan lebih banyak lagi.",
+			"bugFixes": "Memperbaiki kebocoran memori yang menyebabkan layar abu-abu, masalah tanda tangan pemikiran Gemini, dan peningkatan stabilitas lainnya."
 		},
 		"cloudAgents": {
 			"heading": "Baru di Cloud:",
@@ -371,8 +378,14 @@
 		"copyToInput": "Salin ke input (sama dengan shift + klik)",
 		"timerPrefix": "Persetujuan otomatis diaktifkan. Memilih dalam {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Biaya (termasuk subtugas): ${{cost}}",
+		"total": "Total Biaya: ${{cost}}",
+		"includesSubtasks": "Termasuk biaya subtugas"
+	},
 	"browser": {
 		"session": "Sesi Browser",
+		"active": "Aktif",
 		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
