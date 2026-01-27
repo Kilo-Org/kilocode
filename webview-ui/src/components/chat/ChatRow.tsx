@@ -1107,6 +1107,61 @@ export const ChatRowContent = ({
 						)}
 					</>
 				)
+			// kilocode_change start: web tools UI
+			case "webFetch":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("globe")}
+							<span style={{ fontWeight: "bold" }}>
+								{message.type === "ask" ? t("chat:webTools.wantsToFetch") : t("chat:webTools.didFetch")}
+							</span>
+						</div>
+						<div className="pl-6">
+							<ToolUseBlock>
+								<ToolUseBlockHeader className="group">
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2">
+										{tool.url}
+									</span>
+									{tool.format && (
+										<span className="text-xs text-vscode-descriptionForeground ml-2">
+											({tool.format})
+										</span>
+									)}
+								</ToolUseBlockHeader>
+							</ToolUseBlock>
+						</div>
+					</>
+				)
+			case "webSearch":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("search")}
+							<span style={{ fontWeight: "bold" }}>
+								{message.type === "ask"
+									? t("chat:webTools.wantsToSearch")
+									: t("chat:webTools.didSearch")}
+							</span>
+						</div>
+						<div className="pl-6">
+							<ToolUseBlock>
+								<ToolUseBlockHeader className="group">
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2">
+										{tool.query}
+									</span>
+								</ToolUseBlockHeader>
+								{(tool.include_domains || tool.exclude_domains) && (
+									<div className="p-2 text-xs text-vscode-descriptionForeground border-t border-vscode-editorGroup-border">
+										{tool.include_domains && <div>Include: {tool.include_domains}</div>}
+										{tool.exclude_domains && <div>Exclude: {tool.exclude_domains}</div>}
+									</div>
+								)}
+							</ToolUseBlock>
+						</div>
+					</>
+				)
+			// kilocode_change end
 			default:
 				return null
 		}

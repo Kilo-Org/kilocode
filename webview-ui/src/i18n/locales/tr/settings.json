@@ -226,6 +226,10 @@
 			"label": "Tarayıcı",
 			"description": "Onay gerektirmeden otomatik olarak tarayıcı eylemleri gerçekleştir. Not: Yalnızca model bilgisayar kullanımını desteklediğinde geçerlidir"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Onay gerektirmeden otomatik olarak web işlemleri gerçekleştir (URL'leri getir, web'de ara)"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "MCP Sunucuları görünümünde bireysel MCP araçlarının otomatik onayını etkinleştir (hem bu ayar hem de aracın \"Her zaman izin ver\" onay kutusu gerekir)"

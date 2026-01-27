@@ -226,6 +226,10 @@
 			"label": "Przeglądarka",
 			"description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Automatycznie wykonuj operacje webowe (pobieranie URL, wyszukiwanie w sieci) bez konieczności zatwierdzania"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Włącz automatyczne zatwierdzanie poszczególnych narzędzi MCP w widoku Serwerów MCP (wymaga zarówno tego ustawienia, jak i pola wyboru \"Zawsze zezwalaj\" narzędzia)"

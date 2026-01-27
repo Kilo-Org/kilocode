@@ -504,6 +504,12 @@
 		"terminal": "Terminal",
 		"url": "Enganxa la URL per obtenir-ne el contingut"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code vol obtenir contingut d'una URL",
+		"didFetch": "Kilo Code ha obtingut contingut d'una URL",
+		"wantsToSearch": "Kilo Code vol cercar a la web",
+		"didSearch": "Kilo Code ha cercat a la web"
+	},
 	"todo": {
 		"partial": "{{completed}} de {{total}} tasques pendents fetes",
 		"complete": "{{total}} tasques pendents fetes",

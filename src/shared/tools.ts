@@ -89,6 +89,14 @@ export const toolParamNames = [
 	"old_string", // search_replace and edit_file parameter
 	"new_string", // search_replace and edit_file parameter
 	"expected_replacements", // edit_file parameter for multiple occurrences
+	// kilocode_change start: web tools
+	"format", // web_fetch format parameter
+	"timeout", // web_fetch timeout parameter
+	"num_results", // web_search num_results parameter
+	"livecrawl", // web_search livecrawl parameter
+	"search_type", // web_search type parameter
+	"context_max_characters", // web_search context_max_characters parameter
+	// kilocode_change end
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -126,6 +134,16 @@ export type NativeToolArgs = {
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	// kilocode_change start: web tools
+	web_fetch: { url: string; format?: "text" | "markdown" | "html"; timeout?: number }
+	web_search: {
+		query: string
+		num_results?: number
+		livecrawl?: "fallback" | "preferred"
+		search_type?: "auto" | "fast" | "deep"
+		context_max_characters?: number
+	}
+	// kilocode_change end
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -309,6 +327,10 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
 	custom_tool: "use custom tools",
+	// kilocode_change start: web tools
+	web_fetch: "fetch web content",
+	web_search: "search the web",
+	// kilocode_change end
 } as const
 
 // Define available tool groups.
@@ -343,6 +365,11 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["switch_mode", "new_task"],
 		alwaysAvailable: true,
 	},
+	// kilocode_change start: web tools
+	web: {
+		tools: ["web_fetch", "web_search"],
+	},
+	// kilocode_change end
 }
 
 // Tools that are always available to all modes.

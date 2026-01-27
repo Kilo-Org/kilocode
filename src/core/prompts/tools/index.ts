@@ -27,6 +27,8 @@ import { getUpdateTodoListDescription } from "./update-todo-list"
 import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
 import { getDeleteFileDescription } from "./delete-file" // kilocode_change
+import { getWebFetchDescription } from "./web-fetch" // kilocode_change
+import { getWebSearchDescription } from "./web-search" // kilocode_change
 
 // kilocode_change start: Morph fast apply
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
@@ -60,6 +62,10 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	update_todo_list: (args) => getUpdateTodoListDescription(args),
 	run_slash_command: () => getRunSlashCommandDescription(),
 	generate_image: (args) => getGenerateImageDescription(args),
+	// kilocode_change start: web tools
+	web_fetch: (args) => getWebFetchDescription(args),
+	web_search: (args) => getWebSearchDescription(args),
+	// kilocode_change end
 }
 
 export function getToolDescriptionsForMode(

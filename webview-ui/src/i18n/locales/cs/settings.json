@@ -234,6 +234,10 @@
 				"description": "Povolit Kilo Code vytvářet a upravovat chráněné soubory (jako .kilocodeignore a konfigurační soubory .kilocode/) bez nutnosti schválení."
 			}
 		},
+		"web": {
+			"label": "Web",
+			"description": "Automaticky provádět webové operace (načítat URL, vyhledávat na webu) bez nutnosti schválení"
+		},
 		"browser": {
 			"label": "Prohlížeč",
 			"description": "Automaticky provádět akce prohlížeče bez nutnosti schválení. Poznámka: Platí pouze v případě, že model podporuje používání počítače"

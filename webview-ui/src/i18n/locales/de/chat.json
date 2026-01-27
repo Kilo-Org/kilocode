@@ -496,6 +496,12 @@
 		"terminal": "Terminal",
 		"url": "URL einfügen, um Inhalte abzurufen"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code möchte Inhalte von einer URL abrufen",
+		"didFetch": "Kilo Code hat Inhalte von einer URL abgerufen",
+		"wantsToSearch": "Kilo Code möchte im Web suchen",
+		"didSearch": "Kilo Code hat im Web gesucht"
+	},
 	"queuedMessages": {
 		"title": "Warteschlange Nachrichten",
 		"clickToEdit": "Klicken zum Bearbeiten der Nachricht"

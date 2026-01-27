@@ -504,6 +504,12 @@
 		"wantsToRun": "Kilo Code chce uruchomić komendę slash",
 		"didRun": "Kilo Code uruchomił komendę slash"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code chce pobrać zawartość z adresu URL",
+		"didFetch": "Kilo Code pobrał zawartość z adresu URL",
+		"wantsToSearch": "Kilo Code chce przeszukać internet",
+		"didSearch": "Kilo Code przeszukał internet"
+	},
 	"todo": {
 		"partial": "Ukończono {{completed}} z {{total}} zadań do wykonania",
 		"complete": "Ukończono {{total}} zadań do wykonania",

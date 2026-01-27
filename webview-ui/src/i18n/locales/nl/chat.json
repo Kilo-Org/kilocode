@@ -510,5 +510,11 @@
 		"updated": "De to-do-lijst is bijgewerkt",
 		"completed": "Voltooid",
 		"started": "Gestart"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code wil inhoud ophalen van een URL",
+		"didFetch": "Kilo Code heeft inhoud opgehaald van een URL",
+		"wantsToSearch": "Kilo Code wil het web doorzoeken",
+		"didSearch": "Kilo Code heeft het web doorzocht"
 	}
 }
