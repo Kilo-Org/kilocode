@@ -4,11 +4,15 @@
 
 package ai.kilocode.jetbrains.terminal
 
+import com.intellij.execution.wsl.WSLDistribution
+import com.intellij.execution.wsl.WslDistributionManager
+import com.intellij.execution.wsl.WslPath
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.terminal.LocalTerminalCustomizer
 import java.io.File
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -103,27 +107,120 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         logger.info("🔨 Command: ${command.joinToString(" ")}")
         logger.info("🌍 Environment variables: ${envs.entries.joinToString("\n")}")
 
+        // Detect if terminal is targeting WSL and get the distribution
+        val wslDistribution = getWslDistribution(workingDirectory, command, envs)
+        logger.info("🐧 WSL distribution: ${wslDistribution?.msId ?: "none"}")
+
         // Inject VSCode shell integration script
-        return injectVSCodeScript(command, envs)
+        return injectVSCodeScript(command, envs, wslDistribution)
     }
 
-    private fun injectVSCodeScript(command: Array<String>, envs: MutableMap<String, String>): Array<String> {
+    /**
+     * Get the WSL distribution if the terminal is targeting WSL.
+     * Returns null if not running in WSL context.
+     */
+    private fun getWslDistribution(workingDirectory: String?, command: Array<String>, envs: Map<String, String>): WSLDistribution? {
+        // Check if we're on Windows first
+        val osName = System.getProperty("os.name")?.lowercase() ?: ""
+        if (!osName.contains("windows")) {
+            return null
+        }
+
+        // Try to get distribution from working directory UNC path (e.g., \\wsl$\Ubuntu\...)
+        if (workingDirectory != null) {
+            val wslPath = WslPath.parseWindowsUncPath(workingDirectory)
+            if (wslPath != null) {
+                return try {
+                    WslDistributionManager.getInstance().getOrCreateDistributionByMsId(wslPath.distributionId)
+                } catch (e: Exception) {
+                    logger.warn("Failed to get WSL distribution from path: ${e.message}")
+                    null
+                }
+            }
+        }
+
+        // Try to get distribution from WSL_DISTRO_NAME environment variable
+        val distroName = envs["WSL_DISTRO_NAME"]
+        if (distroName != null) {
+            return try {
+                WslDistributionManager.getInstance().getOrCreateDistributionByMsId(distroName)
+            } catch (e: Exception) {
+                logger.warn("Failed to get WSL distribution from env: ${e.message}")
+                null
+            }
+        }
+
+        // Check if the shell command is a Linux-style path (e.g., /bin/bash)
+        // This indicates JetBrains is running the shell inside WSL, but we don't know which distro
+        // Try to get the first installed distribution as a fallback
+        if (command.isNotEmpty() && command[0].startsWith("/")) {
+            return try {
+                val distributions = WslDistributionManager.getInstance().installedDistributions
+                if (distributions.isNotEmpty()) {
+                    distributions.first()
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to get installed WSL distributions: ${e.message}")
+                null
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Convert a Windows path to a WSL-compatible path using the WSL distribution.
+     * Falls back to manual conversion if distribution is not available.
+     */
+    private fun convertToWslPath(windowsPath: String, distribution: WSLDistribution?): String {
+        // Try using the JetBrains WSL API first
+        if (distribution != null) {
+            try {
+                val wslPath = distribution.getWslPath(Path.of(windowsPath))
+                if (wslPath != null) {
+                    return wslPath
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to convert path using WSL API: ${e.message}")
+            }
+        }
+
+        // Fallback to manual conversion for standard /mnt/ mount root
+        val driveLetterRegex = Regex("^([A-Za-z]):\\\\")
+        val match = driveLetterRegex.find(windowsPath)
+
+        return if (match != null) {
+            val driveLetter = match.groupValues[1].lowercase()
+            val restOfPath = windowsPath.substring(match.range.last + 1)
+                .replace("\\", "/")
+            "/mnt/$driveLetter/$restOfPath"
+        } else {
+            // Not a Windows path, return as-is
+            windowsPath
+        }
+    }
+
+    private fun injectVSCodeScript(command: Array<String>, envs: MutableMap<String, String>, wslDistribution: WSLDistribution?): Array<String> {
         val shellName = File(command[0]).name
         val scriptPath = getVSCodeScript(shellName) ?: run {
             logger.warn("🚫 No integration script found for Shell($shellName)")
             return command
         }
 
-        logger.info("🔧 Injecting Shell Integration script: $scriptPath")
+        // Convert path for WSL if needed
+        val effectiveScriptPath = if (wslDistribution != null) convertToWslPath(scriptPath, wslDistribution) else scriptPath
+        logger.info("🔧 Injecting Shell Integration script: $effectiveScriptPath (original: $scriptPath, wsl: ${wslDistribution != null})")
         logger.info("🐚 Shell type: $shellName")
 
         // Set general injection flag
         envs["VSCODE_INJECTION"] = "1"
 
         return when (shellName) {
-            "bash", "sh" -> injectBashScript(command, envs, scriptPath)
-            "zsh" -> injectZshScript(command, envs, scriptPath)
-            "powershell", "pwsh", "powershell.exe" -> injectPowerShellScript(command, envs, scriptPath)
+            "bash", "sh" -> injectBashScript(command, envs, effectiveScriptPath, wslDistribution)
+            "zsh" -> injectZshScript(command, envs, effectiveScriptPath, wslDistribution)
+            "powershell", "pwsh", "powershell.exe" -> injectPowerShellScript(command, envs, effectiveScriptPath)
             else -> {
                 logger.warn("⚠️ Unsupported shell type: $shellName")
                 command
@@ -134,7 +231,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
     /**
      * Inject VSCode integration script for Bash/Sh
      */
-    private fun injectBashScript(command: Array<String>, envs: MutableMap<String, String>, scriptPath: String): Array<String> {
+    private fun injectBashScript(command: Array<String>, envs: MutableMap<String, String>, scriptPath: String, wslDistribution: WSLDistribution?): Array<String> {
         val rcfileIndex = command.indexOf("--rcfile")
 
         return if (rcfileIndex != -1 && rcfileIndex + 1 < command.size) {
@@ -143,7 +240,10 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
             logger.info("🔧 Detected existing --rcfile parameter: $originalRcfile")
 
             // Save the original rcfile path to environment variable for script use
-            envs["ORIGINAL_BASH_RCFILE"] = originalRcfile
+            // Convert to WSL path if needed so the shell integration script can source it
+            val effectiveOriginalRcfile = if (wslDistribution != null) convertToWslPath(originalRcfile, wslDistribution) else originalRcfile
+            envs["ORIGINAL_BASH_RCFILE"] = effectiveOriginalRcfile
+            logger.info("🔧 Set ORIGINAL_BASH_RCFILE: $effectiveOriginalRcfile")
 
             // Replace the existing --rcfile parameter value
             val newCommand = command.clone()
@@ -164,6 +264,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         command: Array<String>,
         envs: MutableMap<String, String>,
         scriptPath: String,
+        wslDistribution: WSLDistribution?,
     ): Array<String> {
         // 1) If JetBrains' built-in zsh shell integration is already in place, avoid modifying ZDOTDIR to prevent conflicts.
         val jetbrainsZshDir = envs["JETBRAINS_INTELLIJ_ZSH_DIR"] ?: System.getenv("JETBRAINS_INTELLIJ_ZSH_DIR")
@@ -174,24 +275,30 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
             logger.info("🔒 Detected JetBrains Zsh integration (JETBRAINS_INTELLIJ_ZSH_DIR=$jetbrainsZshDir, looksLikeJbZsh=$looksLikeJbZsh). Skip overriding ZDOTDIR.")
             // Still retain the user's original ZDOTDIR in the environment for on-demand use within scripts.
             val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
-            envs["USER_ZDOTDIR"] = userZdotdir
+            // Convert to WSL path if needed
+            val effectiveUserZdotdir = if (wslDistribution != null) convertToWslPath(userZdotdir, wslDistribution) else userZdotdir
+            envs["USER_ZDOTDIR"] = effectiveUserZdotdir
             return command
         }
 
-        // 2) Inject only when `scriptPath` appears to be a valid `ZDOTDIR` (at least containing `.zshrc`).
-        val dir = File(scriptPath)
+        // 2) Inject only when the ZDOTDIR contains `.zshrc`.
+        // Use the Windows path (shellIntegrationBaseDir) for file existence check since File() operates on host filesystem
+        val zshDirToCheck = Paths.get(shellIntegrationBaseDir, "vscode-zsh").toString()
+        val dir = File(zshDirToCheck)
         val hasZshrc = File(dir, ".zshrc").exists()
         if (!dir.isDirectory || !hasZshrc) {
-            logger.warn("🚫 Zsh script dir '$scriptPath' is invalid (dir=$dir, hasZshrc=$hasZshrc). Skip overriding ZDOTDIR.")
+            logger.warn("🚫 Zsh script dir '$zshDirToCheck' is invalid (dir=$dir, hasZshrc=$hasZshrc). Skip overriding ZDOTDIR.")
             return command
         }
 
         // 3) Record and securely overwrite.
         val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
-        envs["USER_ZDOTDIR"] = userZdotdir
+        // Convert to WSL path if needed
+        val effectiveUserZdotdir = if (wslDistribution != null) convertToWslPath(userZdotdir, wslDistribution) else userZdotdir
+        envs["USER_ZDOTDIR"] = effectiveUserZdotdir
         envs["ZDOTDIR"] = scriptPath
 
-        logger.info("🔧 Set ZDOTDIR to '$scriptPath' (saved original as USER_ZDOTDIR='$userZdotdir'), shell=$shellExeName")
+        logger.info("🔧 Set ZDOTDIR to '$scriptPath' (saved original as USER_ZDOTDIR='$effectiveUserZdotdir'), shell=$shellExeName")
         return command
     }
 
