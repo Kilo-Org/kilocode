@@ -32,6 +32,7 @@ import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
+import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
 
 export namespace Config {
   const log = Log.create({ service: "config" })
@@ -113,6 +114,20 @@ export namespace Config {
     const kilocodeMcp = await McpMigrator.loadMcpConfig(Instance.directory)
     if (Object.keys(kilocodeMcp).length > 0) {
       result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
+    }
+
+    // Load Kilocode .kilocodeignore patterns (legacy fallback)
+    try {
+      const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
+      if (Object.keys(ignorePermission).length > 0) {
+        result = mergeConfigConcatArrays(result, { permission: ignorePermission })
+        log.debug("loaded kilocode ignore patterns", {
+          hasRead: !!ignorePermission.read,
+          hasEdit: !!ignorePermission.edit,
+        })
+      }
+    } catch (err) {
+      log.warn("failed to load kilocode ignore patterns", { error: err })
     }
     // kilocode_change end
 
