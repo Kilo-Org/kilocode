@@ -30,7 +30,7 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 
 Here's how a typical tool interaction works:
 
-<img src="/docs/img/how-tools-work/how-tools-work.png" alt="Tool approval interface showing Save and Reject buttons along with Auto-approve checkbox" width="600" />
+<img src="/img/how-tools-work/how-tools-work.svg" alt="Tool approval interface showing Save and Reject buttons along with Auto-approve checkbox" width="600" />
 
 _The tool approval interface shows Save/Reject buttons and Auto-approve options._
 
