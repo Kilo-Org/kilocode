@@ -85,6 +85,9 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 
+# Validate VERSION is provided
+RUN test -n "$VERSION" || (echo "ERROR: VERSION build arg is required" && exit 1)
+
 # Apply Labels
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
@@ -115,6 +118,9 @@ FROM debian_base AS debian
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
+
+# Validate VERSION is provided
+RUN test -n "$VERSION" || (echo "ERROR: VERSION build arg is required" && exit 1)
 
 # Apply Labels
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
