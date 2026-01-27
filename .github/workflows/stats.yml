@@ -12,7 +12,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode stats tracking)
     if: false
     # kilocode_change end - original: if: github.repository == 'anomalyco/opencode'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest # kilocode_change - replaced blacksmith runner
     permissions:
       contents: write
 

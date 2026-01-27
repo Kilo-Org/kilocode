@@ -14,7 +14,7 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
+            host: ubuntu-latest # kilocode_change - replaced blacksmith runner
             playwright: bunx playwright install --with-deps
             workdir: .
             command: |

@@ -23,7 +23,7 @@ on:
 jobs:
   update-node-modules-hashes:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest # kilocode_change - replaced blacksmith runner
     env:
       TITLE: node_modules hashes
 
