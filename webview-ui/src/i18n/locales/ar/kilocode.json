@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "شحن الرصيد",
-		"lowBalance": "رصيدك في Kilo Code منخفض",
-		"newOrganization": "تستخدم Kilo للعمل؟"
+		"lowBalance": "رصيدك في Kilo Code منخفض"
 	},
 	"memoryWarning": {
 		"message": "استخدام الذاكرة عند {{percentage}}%. يرجى إعادة تشغيل بيئة التطوير لمنع التعطل."
@@ -49,7 +48,6 @@
 			"apiKey": "مفتاح Kilo Code API",
 			"login": "سجّل دخولك في Kilo Code",
 			"logout": "تسجيل الخروج من Kilo Code",
-			"automaticFetch": "أحدث النماذج متاحة تلقائيًا في Kilo Code. إذا لم تكن متأكدًا من النموذج الذي تريد اختياره، يعمل Kilo Code بشكل أفضل مع النماذج الموصى بها المدرجة في الأعلى <strong>بخط عريض</strong>.",
 			"providerRouting": {
 				"title": "توجيه المزود",
 				"managedByOrganization": "إدارة توجيه المزود على مستوى المؤسسة",

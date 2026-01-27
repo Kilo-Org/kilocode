@@ -1,4 +1,5 @@
 {
+	"back": "Terug naar takenoverzicht",
 	"common": {
 		"save": "Opslaan",
 		"done": "Gereed",
@@ -7,6 +8,10 @@
 		"select": "Selecteren",
 		"add": "Header toevoegen",
 		"remove": "Verwijderen"
+	},
+	"search": {
+		"placeholder": "Instellingen zoeken...",
+		"noResults": "Geen instellingen gevonden"
 	},
 	"header": {
 		"title": "Instellingen",
@@ -37,7 +42,9 @@
 		"experimental": "Experimenteel",
 		"language": "Taal",
 		"about": "Over Kilo Code",
-		"autoPurge": "Auto-opruimen"
+		"autoPurge": "Auto-opruimen",
+		"agentBehaviour": "Agentgedrag",
+		"ghost": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Wil je tips of gewoon even hangen met andere Kilo Code-gebruikers? Sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Gemeenschap",
-		"manageSettings": "Instellingen Beheren"
+		"manageSettings": "Instellingen Beheren",
+		"debugMode": {
+			"label": "Debugmodus inschakelen",
+			"description": "Schakel de debugmodus in om extra knoppen in de taakkoptekst te tonen voor het bekijken van API-gesprekgeschiedenis en UI-berichten als opgemaakte JSON in tijdelijke bestanden."
+		}
 	},
 	"slashCommands": {
 		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Aangepaste basis-URL gebruiken",
 		"useReasoning": "Redenering inschakelen",
 		"useHostHeader": "Aangepaste Host-header gebruiken",
-		"useLegacyFormat": "Verouderd OpenAI API-formaat gebruiken",
 		"customHeaders": "Aangepaste headers",
 		"headerName": "Headernaam",
 		"headerValue": "Headerwaarde",

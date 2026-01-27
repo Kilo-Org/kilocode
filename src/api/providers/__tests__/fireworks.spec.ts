@@ -115,6 +115,31 @@ describe("FireworksHandler", () => {
 		)
 	})
 
+	it("should return Kimi K2 Thinking model with correct configuration", () => {
+		const testModelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-thinking"
+		const handlerWithModel = new FireworksHandler({
+			apiModelId: testModelId,
+			fireworksApiKey: "test-fireworks-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 16000,
+				contextWindow: 256000,
+				supportsImages: false,
+				supportsPromptCache: true,
+				supportsNativeTools: true,
+				supportsTemperature: true,
+				preserveReasoning: true,
+				defaultTemperature: 1.0,
+				inputPrice: 0.6,
+				outputPrice: 2.5,
+				cacheReadsPrice: 0.15,
+			}),
+		)
+	})
+
 	it("should return MiniMax M2 model with correct configuration", () => {
 		const testModelId: FireworksModelId = "accounts/fireworks/models/minimax-m2"
 		const handlerWithModel = new FireworksHandler({
@@ -424,16 +449,85 @@ describe("FireworksHandler", () => {
 		)
 	})
 
-	it("should use default temperature of 0.5", () => {
-		const testModelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct"
+	it("should use provider default temperature of 0.5 for models without defaultTemperature", async () => {
+		const modelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct"
 		const handlerWithModel = new FireworksHandler({
-			apiModelId: testModelId,
+			apiModelId: modelId,
 			fireworksApiKey: "test-fireworks-api-key",
 		})
-		const model = handlerWithModel.getModel()
-		// The temperature is set in the constructor as defaultTemperature: 0.5
-		// This test verifies the handler is configured with the correct default temperature
-		expect(handlerWithModel).toBeDefined()
+
+		mockCreate.mockImplementationOnce(() => ({
+			[Symbol.asyncIterator]: () => ({
+				async next() {
+					return { done: true }
+				},
+			}),
+		}))
+
+		const messageGenerator = handlerWithModel.createMessage("system", [])
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				temperature: 0.5,
+			}),
+			undefined,
+		)
+	})
+
+	it("should use model defaultTemperature (1.0) over provider default (0.5) for kimi-k2-thinking", async () => {
+		const modelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-thinking"
+		const handlerWithModel = new FireworksHandler({
+			apiModelId: modelId,
+			fireworksApiKey: "test-fireworks-api-key",
+		})
+
+		mockCreate.mockImplementationOnce(() => ({
+			[Symbol.asyncIterator]: () => ({
+				async next() {
+					return { done: true }
+				},
+			}),
+		}))
+
+		const messageGenerator = handlerWithModel.createMessage("system", [])
+		await messageGenerator.next()
+
+		// Model's defaultTemperature (1.0) should take precedence over provider's default (0.5)
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				temperature: 1.0,
+			}),
+			undefined,
+		)
+	})
+
+	it("should use user-specified temperature over model and provider defaults", async () => {
+		const modelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-thinking"
+		const handlerWithModel = new FireworksHandler({
+			apiModelId: modelId,
+			fireworksApiKey: "test-fireworks-api-key",
+			modelTemperature: 0.7,
+		})
+
+		mockCreate.mockImplementationOnce(() => ({
+			[Symbol.asyncIterator]: () => ({
+				async next() {
+					return { done: true }
+				},
+			}),
+		}))
+
+		const messageGenerator = handlerWithModel.createMessage("system", [])
+		await messageGenerator.next()
+
+		// User-specified temperature should take precedence over everything
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				temperature: 0.7,
+			}),
+			undefined,
+		)
 	})
 
 	it("should handle empty response in completePrompt", async () => {

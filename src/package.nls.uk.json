@@ -58,5 +58,8 @@
 	"ghost.commands.applyCurrentSuggestion": "Застосувати Поточну Пропозицію Редагування",
 	"ghost.commands.applyAllSuggestions": "Застосувати Всі Пропозиції Редагування",
 	"ghost.commands.goToNextSuggestion": "Перейти до Наступної Пропозиції",
-	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції"
+	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції",
+	"settings.debugProxy.enabled.description": "**Увімкнути Debug Proxy** — Направляти всі вихідні мережеві запити через proxy для налагодження MITM. Активний лише під час роботи в режимі налагодження (F5).",
+	"settings.debugProxy.serverUrl.description": "URL Proxy (наприклад, `http://127.0.0.1:8888`). Використовується лише коли **Debug Proxy** увімкнено.",
+	"settings.debugProxy.tlsInsecure.description": "Приймати самопідписані сертифікати від proxy. **Необхідно для інспекції MITM.** ⚠️ Небезпечно — використовуй лише для локального налагодження."
 }

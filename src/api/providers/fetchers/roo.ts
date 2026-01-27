@@ -1,6 +1,5 @@
-import { RooModelsResponseSchema, type ModelInfo } from "@roo-code/types"
+import { RooModelsResponseSchema, type ModelInfo, type ModelRecord } from "@roo-code/types"
 
-import type { ModelRecord } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
 
 import { DEFAULT_HEADERS } from "../constants"

@@ -102,6 +102,7 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "anthropic":
 			return provider.apiModelId || ""
 		case "openai-native":
+		case "openai-codex":
 			return provider.apiModelId || ""
 		case "openrouter":
 			return provider.openRouterModelId || ""
@@ -110,6 +111,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "lmstudio":
 			return provider.lmStudioModelId || ""
 		case "openai":
+			return provider.openAiModelId || ""
+		case "openai-responses":
 			return provider.openAiModelId || ""
 		case "glama":
 			return provider.glamaModelId || ""

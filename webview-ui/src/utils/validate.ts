@@ -4,14 +4,13 @@ import {
 	type ProviderSettings,
 	type OrganizationAllowList,
 	type ProviderName,
+	type RouterModels,
 	modelIdKeysByProvider,
 	isProviderName,
 	isDynamicProvider,
 	isFauxProvider,
 	isCustomProvider,
 } from "@roo-code/types"
-
-import type { RouterModels } from "@roo/api"
 
 export function validateApiConfiguration(
 	apiConfiguration: ProviderSettings,

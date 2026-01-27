@@ -27,13 +27,13 @@ export default async function authWizard(): Promise<void> {
 
 		// Prompt user to select a provider
 		const selectedProvider = await withRawMode(() =>
-       select({
-         message: "Select an AI provider:",
-         choices: providerChoices,
-         loop: false,
-         pageSize: process.stdout.rows ? Math.min(20, process.stdout.rows - 2) : 10,
-       })
-     )
+			select({
+				message: "Select an AI provider:",
+				choices: providerChoices,
+				loop: false,
+				pageSize: process.stdout.rows ? Math.min(20, process.stdout.rows - 2) : 10,
+			}),
+		)
 
 		// Find the selected provider
 		const provider = authProviders.find((p) => p.value === selectedProvider)
@@ -86,14 +86,14 @@ export default async function authWizard(): Promise<void> {
 			})
 
 			const selectedModel = await withRawMode(() =>
-         select({
-           message: "Select a model to use:",
-           choices: modelChoices,
-           default: defaultModel,
-           loop: false,
-           pageSize: 10,
-         })
-       )
+				select({
+					message: "Select a model to use:",
+					choices: modelChoices,
+					default: defaultModel,
+					loop: false,
+					pageSize: 10,
+				}),
+			)
 
 			const modelKey = getModelIdKey(providerId)
 			authResult.providerConfig[modelKey] = selectedModel

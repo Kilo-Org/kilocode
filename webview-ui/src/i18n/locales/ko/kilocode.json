@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "크레딧 추가",
-		"lowBalance": "Kilo Code 잔액이 부족합니다",
-		"newOrganization": "업무용으로 Kilo를 사용하시나요?"
+		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	},
 	"pagination": {
 		"previous": "이전",
@@ -47,7 +46,6 @@
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃",
-			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
 			"providerRouting": {
 				"title": "공급자 라우팅",
 				"managedByOrganization": "조직 수준 공급자 라우팅 관리",

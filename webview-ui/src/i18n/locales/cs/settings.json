@@ -1,4 +1,5 @@
 {
+	"back": "Zpět na zobrazení úkolů",
 	"common": {
 		"save": "Uložit",
 		"done": "Hotovo",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "Uložit změny",
 		"nothingChangedTooltip": "Nic se nezměnilo",
 		"doneButtonTooltip": "Zahodit neuložené změny a zavřít panel nastavení"
+	},
+	"search": {
+		"placeholder": "Hledat nastavení...",
+		"noResults": "Nenalezena žádná nastavení"
 	},
 	"unsavedChangesDialog": {
 		"title": "Neuložené změny",
@@ -37,7 +42,9 @@
 		"experimental": "Experimentální",
 		"language": "Jazyk",
 		"about": "O Kilo Code",
-		"autoPurge": "Automatické čištění"
+		"autoPurge": "Automatické čištění",
+		"agentBehaviour": "Chování agenta",
+		"ghost": "Automatické dokončování"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunityDesc": "Připoj se k ostatním uživatelům pro tipy a diskuse",
 		"community": "Chceš tipy nebo si jen popovídat s ostatními uživateli Kilo Code? Připoj se na <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt a komunita",
-		"manageSettings": "Spravovat nastavení"
+		"manageSettings": "Spravovat nastavení",
+		"debugMode": {
+			"label": "Povolit režim ladění",
+			"description": "Povolit režim ladění pro zobrazení dalších tlačítek v záhlaví úkolu pro zobrazení historie konverzace API a zpráv UI jako zpřehledněného JSON v dočasných souborech."
+		}
 	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"

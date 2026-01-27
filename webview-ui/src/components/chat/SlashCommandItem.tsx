@@ -1,7 +1,7 @@
 import React from "react"
 import { Edit, Trash2 } from "lucide-react"
 
-import type { Command } from "@roo/ExtensionMessage"
+import type { Command } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Button, StandardTooltip } from "@/components/ui"

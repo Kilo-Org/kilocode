@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
-		"lowBalance": "你的 Kilo Code 余额不足",
-		"newOrganization": "在工作中使用 Kilo？"
+		"lowBalance": "你的 Kilo Code 余额不足"
 	},
 	"pagination": {
 		"previous": "上一页",
@@ -60,7 +59,6 @@
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
 			"logout": "退出 Kilo Code",
-			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
 			"providerRouting": {
 				"title": "提供商路由",
 				"managedByOrganization": "管理组织级提供商路由",

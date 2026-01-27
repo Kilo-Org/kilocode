@@ -1,4 +1,5 @@
 {
+	"back": "Wróć do widoku zadań",
 	"common": {
 		"save": "Zapisz",
 		"done": "Gotowe",
@@ -7,6 +8,10 @@
 		"select": "Wybierz",
 		"add": "Dodaj nagłówek",
 		"remove": "Usuń"
+	},
+	"search": {
+		"placeholder": "Szukaj ustawień...",
+		"noResults": "Nie znaleziono ustawień"
 	},
 	"header": {
 		"title": "Ustawienia",
@@ -37,7 +42,9 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"autoPurge": "Auto-czyszczenie"
+		"autoPurge": "Auto-czyszczenie",
+		"agentBehaviour": "Zachowanie agenta",
+		"ghost": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Chcesz wskazówek lub po prostu porozmawiać z innymi użytkownikami Kilo Code? Dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt i Społeczność",
-		"manageSettings": "Zarządzaj Ustawieniami"
+		"manageSettings": "Zarządzaj Ustawieniami",
+		"debugMode": {
+			"label": "Włącz tryb debugowania",
+			"description": "Włącz tryb debugowania, aby wyświetlić dodatkowe przyciski w nagłówku zadania umożliwiające przeglądanie historii konwersacji API i komunikatów UI jako sformatowany JSON w plikach tymczasowych."
+		}
 	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
 		"useReasoning": "Włącz rozumowanie",
 		"useHostHeader": "Użyj niestandardowego nagłówka Host",
-		"useLegacyFormat": "Użyj starszego formatu API OpenAI",
 		"customHeaders": "Niestandardowe nagłówki",
 		"headerName": "Nazwa nagłówka",
 		"headerValue": "Wartość nagłówka",

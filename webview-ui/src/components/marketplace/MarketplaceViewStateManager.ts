@@ -14,7 +14,7 @@
 import { MarketplaceItem, isSkillItem, SkillMarketplaceItem } from "@roo-code/types" //kilo_code change
 import { vscode } from "../../utils/vscode"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
-import type { MarketplaceInstalledMetadata } from "../../../../src/shared/ExtensionMessage" //kilo_code change
+import type { MarketplaceInstalledMetadata } from "@roo-code/types" // kilocode_change
 
 export interface ViewState {
 	allItems: MarketplaceItem[]

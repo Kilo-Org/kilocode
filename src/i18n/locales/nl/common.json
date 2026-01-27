@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Reactie onderbroken door gebruiker",
-		"responseInterruptedByApiError": "Reactie onderbroken door API-fout"
+		"responseInterruptedByApiError": "Reactie onderbroken door API-fout",
+		"streamTerminatedByProvider": "Provider heeft het verzoek beëindigd"
 	},
 	"storage": {
 		"prompt_custom_path": "Voer een aangepast opslagpad voor gespreksgeschiedenis in, laat leeg voor standaardlocatie",

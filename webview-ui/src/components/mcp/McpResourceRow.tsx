@@ -1,4 +1,4 @@
-import { McpResource, McpResourceTemplate } from "@roo/mcp"
+import type { McpResource, McpResourceTemplate } from "@roo-code/types"
 
 type McpResourceRowProps = {
 	item: McpResource | McpResourceTemplate

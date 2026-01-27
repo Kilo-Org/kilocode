@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Ответ прерван пользователем",
-		"responseInterruptedByApiError": "Ответ прерван ошибкой API"
+		"responseInterruptedByApiError": "Ответ прерван ошибкой API",
+		"streamTerminatedByProvider": "Провайдер завершил запрос"
 	},
 	"storage": {
 		"prompt_custom_path": "Введите пользовательский путь хранения истории разговоров, оставьте пустым для использования расположения по умолчанию",

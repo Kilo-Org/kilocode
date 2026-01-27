@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
-		"lowBalance": "Twój stan konta Kilo Code jest niski",
-		"newOrganization": "Używasz Kilo do pracy?"
+		"lowBalance": "Twój stan konta Kilo Code jest niski"
 	},
 	"pagination": {
 		"previous": "Poprzednia",
@@ -58,8 +57,7 @@
 					"deny": "Zabroń treningu promptów",
 					"zdr": "Zerowe przechowywanie danych"
 				}
-			},
-			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Okno kontekstu",

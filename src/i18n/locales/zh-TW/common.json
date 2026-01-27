@@ -9,11 +9,11 @@
 		"billion_suffix": "b"
 	},
 	"feedback": {
-		"title": "反饋",
-		"description": "我們很樂意聽取您的反饋或幫助您解決遇到的任何問題。",
-		"githubIssues": "在GitHub上報告問題",
-		"githubDiscussions": "加入GitHub討論",
-		"discord": "加入我們的Discord社區",
+		"title": "回饋",
+		"description": "我們很樂意聽取您的回饋或幫助您解決遇到的任何問題。",
+		"githubIssues": "在 GitHub 上報告問題",
+		"githubDiscussions": "加入 GitHub 討論",
+		"discord": "加入我們的 Discord 社區",
 		"customerSupport": "客戶支援"
 	},
 	"welcome": "歡迎，{{name}}！您有 {{count}} 條通知。",
@@ -85,7 +85,7 @@
 		"share_auth_required": "需要身份驗證。請登入以分享任務。",
 		"share_not_enabled": "此組織未啟用任務分享功能。",
 		"share_task_not_found": "未找到任務或存取被拒絕。",
-		"delete_rules_folder_failed": "刪除規則資料夾失敗: {{rulesFolderPath}}。錯誤: {{error}}",
+		"delete_rules_folder_failed": "刪除規則資料夾失敗：{{rulesFolderPath}}。錯誤：{{error}}",
 		"command_not_found": "找不到指令 '{{name}}'",
 		"open_command_file": "開啟指令檔案失敗",
 		"delete_command": "刪除指令失敗",
@@ -213,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "回應被使用者中斷",
-		"responseInterruptedByApiError": "回應被 API 錯誤中斷"
+		"responseInterruptedByApiError": "回應被 API 錯誤中斷",
+		"streamTerminatedByProvider": "提供方終止了請求"
 	},
 	"storage": {
 		"prompt_custom_path": "輸入自定義對話記錄儲存路徑，留空以使用預設位置",

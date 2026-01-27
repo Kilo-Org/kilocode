@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Добавить кредит",
-		"lowBalance": "Ваш баланс Kilo Code низкий",
-		"newOrganization": "Используете Kilo для работы?"
+		"lowBalance": "Ваш баланс Kilo Code низкий"
 	},
 	"pagination": {
 		"previous": "Предыдущая",
@@ -47,7 +46,6 @@
 			"apiKey": "API-ключ Kilo Code",
 			"login": "Войти в Kilo Code",
 			"logout": "Выйти из Kilo Code",
-			"automaticFetch": "Новейшие модели автоматически доступны в Kilo Code. Если вы не уверены, какую модель выбрать, Kilo Code лучше всего работает с рекомендуемыми моделями, перечисленными вверху <strong>жирным шрифтом</strong>.",
 			"providerRouting": {
 				"title": "Маршрутизация провайдеров",
 				"managedByOrganization": "Управлять маршрутизацией провайдеров на уровне организации",

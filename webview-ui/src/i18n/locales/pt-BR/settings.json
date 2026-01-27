@@ -1,4 +1,5 @@
 {
+	"back": "Voltar para a visão de tarefas",
 	"common": {
 		"save": "Salvar",
 		"done": "Concluído",
@@ -7,6 +8,10 @@
 		"select": "Selecionar",
 		"add": "Adicionar cabeçalho",
 		"remove": "Remover"
+	},
+	"search": {
+		"placeholder": "Pesquisar configurações...",
+		"noResults": "Nenhuma configuração encontrada"
 	},
 	"header": {
 		"title": "Configurações",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre",
-		"autoPurge": "Auto-limpeza"
+		"autoPurge": "Auto-limpeza",
+		"agentBehaviour": "Comportamento do Agente",
+		"ghost": "Autocompletar"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Quer dicas ou apenas conversar com outros usuários do Kilo Code? Junte-se a <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contato e Comunidade",
-		"manageSettings": "Gerenciar Configurações"
+		"manageSettings": "Gerenciar Configurações",
+		"debugMode": {
+			"label": "Ativar modo de debug",
+			"description": "Ative o modo de depuração para mostrar botões adicionais no cabeçalho da tarefa para visualizar o histórico de conversação da API e as mensagens da UI como JSON formatado em arquivos temporários."
+		}
 	},
 	"slashCommands": {
 		"description": "Gerencie seus comandos de barra para executar rapidamente fluxos de trabalho e ações personalizadas. <DocsLink>Saiba mais</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Usar URL base personalizado",
 		"useReasoning": "Habilitar raciocínio",
 		"useHostHeader": "Usar cabeçalho Host personalizado",
-		"useLegacyFormat": "Usar formato de API OpenAI legado",
 		"customHeaders": "Cabeçalhos personalizados",
 		"headerName": "Nome do cabeçalho",
 		"headerValue": "Valor do cabeçalho",

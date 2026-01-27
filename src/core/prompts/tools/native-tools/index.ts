@@ -36,6 +36,8 @@ export interface NativeToolsOptions {
 	partialReadsEnabled?: boolean
 	/** Maximum number of files that can be read in a single read_file request (default: 5) */
 	maxConcurrentFileReads?: number
+	/** Whether the model supports image processing (default: false) */
+	supportsImages?: boolean
 }
 
 /**
@@ -45,11 +47,12 @@ export interface NativeToolsOptions {
  * @returns Array of native tool definitions
  */
 export function getNativeTools(options: NativeToolsOptions = {}): OpenAI.Chat.ChatCompletionTool[] {
-	const { partialReadsEnabled = true, maxConcurrentFileReads = 5 } = options
+	const { partialReadsEnabled = true, maxConcurrentFileReads = 5, supportsImages = false } = options
 
 	const readFileOptions: ReadFileToolOptions = {
 		partialReadsEnabled,
 		maxConcurrentFileReads,
+		supportsImages,
 	}
 
 	return [

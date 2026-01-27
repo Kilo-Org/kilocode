@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "क्रेडिट जोड़ें",
-		"lowBalance": "आपका Kilo Code बैलेंस कम है",
-		"newOrganization": "काम के लिए Kilo उपयोग कर रहे हैं?"
+		"lowBalance": "आपका Kilo Code बैलेंस कम है"
 	},
 	"pagination": {
 		"previous": "पिछला",
@@ -40,7 +39,6 @@
 			"apiKey": "Kilo Code API कुंजी",
 			"login": "Kilo Code में लॉग इन करें",
 			"logout": "Kilo Code से लॉग आउट करें",
-			"automaticFetch": "नवीनतम मॉडल Kilo Code में स्वचालित रूप से उपलब्ध हैं। यदि आप निश्चित नहीं हैं कि कौन सा मॉडल चुनना है, तो Kilo Code शीर्ष पर <strong>बोल्ड फेस</strong> में सूचीबद्ध अनुशंसित मॉडल के साथ सबसे अच्छा काम करता है।",
 			"providerRouting": {
 				"title": "प्रदाता रूटिंग",
 				"managedByOrganization": "संगठन-स्तरीय प्रदाता रूटिंग प्रबंधित करें",

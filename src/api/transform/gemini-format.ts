@@ -70,13 +70,19 @@ export function convertAnthropicContentToGemini(
 
 				return { inlineData: { data: block.source.data, mimeType: block.source.media_type } }
 			case "tool_use":
+				// Gemini 3 validation rules:
+				// - In a parallel function calling response, only the FIRST functionCall part has a signature.
+				// - In sequential steps, each step's first functionCall must include its signature.
+				// When converting from our history, we don't always have enough information to perfectly
+				// recreate the original per-part distribution, but we can and should avoid attaching the
+				// signature to every parallel call in a single assistant message.
 				return {
 					functionCall: {
 						name: block.name,
 						args: block.input as Record<string, unknown>,
 					},
 					// Inject the thoughtSignature into the functionCall part if required.
-					// This is necessary for Gemini 2.5/3+ thinking models to validate the tool call.
+					// This is necessary for Gemini 3+ thinking models to validate the tool call.
 					...(functionCallSignature ? { thoughtSignature: functionCallSignature } : {}),
 				} as Part
 			case "tool_result": {
@@ -136,7 +142,10 @@ export function convertAnthropicContentToGemini(
 		}
 	})
 
-	// Post-processing: Ensure thought signature is attached if required
+	// Post-processing:
+	// 1) Ensure thought signature is attached if required
+	// 2) For multiple function calls in a single message, keep the signature only on the first
+	//    functionCall part to match Gemini 3 parallel-calling behavior.
 	if (includeThoughtSignatures && activeThoughtSignature) {
 		const hasSignature = parts.some((p) => "thoughtSignature" in p)
 
@@ -149,6 +158,21 @@ export function convertAnthropicContentToGemini(
 				// Create a placeholder part if no other content exists
 				const placeholder: PartWithThoughtSignature = { text: "", thoughtSignature: activeThoughtSignature }
 				parts.push(placeholder)
+			}
+		}
+	}
+
+	if (includeThoughtSignatures) {
+		let seenFirstFunctionCall = false
+		for (const part of parts) {
+			if (part && typeof part === "object" && "functionCall" in part && (part as any).functionCall) {
+				const partWithSig = part as PartWithThoughtSignature
+				if (!seenFirstFunctionCall) {
+					seenFirstFunctionCall = true
+				} else {
+					// Remove signature from subsequent function calls in this message.
+					delete partWithSig.thoughtSignature
+				}
 			}
 		}
 	}

@@ -142,11 +142,11 @@
 			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		},
 		"openAiCodex": {
-			"notAuthenticated": "Nejsi přihlášen k OpenAI Codex. Prosím přihlas se pomocí OpenAI Codex OAuth.",
+			"notAuthenticated": "Nejsi autentizován s OpenAI Codex. Prosím přihlas se pomocí OpenAI Codex OAuth.",
 			"invalidRequest": "Neplatný požadavek na Codex API. Zkontroluj prosím své vstupní parametry.",
-			"authenticationFailed": "Autentizace selhala. Prosím znovu se přihlas k OpenAI Codex.",
+			"authenticationFailed": "Autentizace selhala. Prosím autentizuj se znovu s OpenAI Codex.",
 			"accessDenied": "Přístup odepřen. Tvé předplatné ChatGPT možná nezahrnuje přístup k Codex.",
-			"endpointNotFound": "Endpoint Codex API nebyl nalezen.",
+			"endpointNotFound": "Koncový bod Codex API nebyl nalezen.",
 			"rateLimitExceeded": "Překročen limit rychlosti. Zkus to prosím později.",
 			"serviceError": "Chyba služby OpenAI Codex. Zkus to prosím později.",
 			"genericError": "Chyba Codex API ({{status}})",
@@ -155,8 +155,8 @@
 			"unexpectedConnectionError": "Neočekávaná chyba při připojování k Codex API",
 			"apiError": "Chyba Codex API: {{message}}",
 			"responseFailed": "Odpověď selhala: {{message}}",
-			"streamProcessingError": "Chyba při zpracování proudu odpovědi: {{message}}",
-			"unexpectedStreamError": "Neočekávaná chyba při zpracování proudu odpovědi",
+			"streamProcessingError": "Chyba při zpracování odpovědního proudu: {{message}}",
+			"unexpectedStreamError": "Neočekávaná chyba při zpracování odpovědního proudu",
 			"completionError": "Chyba dokončení OpenAI Codex: {{message}}"
 		},
 		"message": {
@@ -270,7 +270,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Odpověď přerušena uživatelem",
-		"responseInterruptedByApiError": "Odpověď přerušena chybou API"
+		"responseInterruptedByApiError": "Odpověď přerušena chybou API",
+		"streamTerminatedByProvider": "Poskytovatel ukončil požadavek"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

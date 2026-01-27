@@ -36,9 +36,9 @@ cd cli && pnpm start:dev
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| [`src/cli.ts`](src/cli.ts) | Main CLI class |
+| File                                                     | Purpose                          |
+| -------------------------------------------------------- | -------------------------------- |
+| [`src/cli.ts`](src/cli.ts)                               | Main CLI class                   |
 | [`src/host/ExtensionHost.ts`](src/host/ExtensionHost.ts) | Loads extension, routes messages |
-| [`src/host/VSCode.ts`](src/host/VSCode.ts) | VSCode API mock |
-| [`src/services/extension.ts`](src/services/extension.ts) | Service layer wrapper |
+| [`src/host/VSCode.ts`](src/host/VSCode.ts)               | VSCode API mock                  |
+| [`src/services/extension.ts`](src/services/extension.ts) | Service layer wrapper            |

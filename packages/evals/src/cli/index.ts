@@ -6,7 +6,7 @@ import { EVALS_REPO_PATH } from "../exercises/index.js"
 
 import { runCi } from "./runCi.js"
 import { runEvals } from "./runEvals.js"
-import { processTask } from "./runTask.js"
+import { processTask } from "./processTask.js"
 
 const main = async () => {
 	await run(

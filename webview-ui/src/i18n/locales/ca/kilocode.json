@@ -11,8 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
-		"lowBalance": "El teu saldo de Kilo Code és baix",
-		"newOrganization": "Utilitzes Kilo per a la feina?"
+		"lowBalance": "El teu saldo de Kilo Code és baix"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -40,7 +39,6 @@
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code",
-			"automaticFetch": "Els models més recents estan disponibles automàticament a Kilo Code. Si no estàs segur de quin model triar, Kilo Code funciona millor amb els models recomanats que apareixen a la part superior en <strong>negreta</strong>.",
 			"providerRouting": {
 				"title": "Encaminament de proveïdors",
 				"managedByOrganization": "Gestionar encaminament de proveïdors a nivell d'organització",

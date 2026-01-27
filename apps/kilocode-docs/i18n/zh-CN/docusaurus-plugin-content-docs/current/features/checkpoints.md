@@ -86,7 +86,7 @@ Kilo Code 使用一个影子 Git 仓库（独立于您的主版本控制系统�
 
 - **恢复文件和任务** - 恢复工作区文件并删除所有后续对话消息。当您希望将代码和对话完全重置回检查点的时间点时使用。此选项需要在对话框中进行确认，因为它无法撤消。
 
-               <img src="/docs/img/checkpoints/checkpoints-9.png" alt="恢复文件和任务检查点的确认对话框" width="300" />
+                 <img src="/docs/img/checkpoints/checkpoints-9.png" alt="恢复文件和任务检查点的确认对话框" width="300" />
 
 ### 限制和注意事项
 

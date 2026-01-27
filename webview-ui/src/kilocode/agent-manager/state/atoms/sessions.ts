@@ -209,22 +209,19 @@ export const updateSessionStatusAtom = atom(
 	},
 )
 
-export const updateSessionModeAtom = atom(
-	null,
-	(get, set, payload: { sessionId: string; mode: string }) => {
-		const current = get(sessionsMapAtom)
-		const session = current[payload.sessionId]
-		if (!session) return
+export const updateSessionModeAtom = atom(null, (get, set, payload: { sessionId: string; mode: string }) => {
+	const current = get(sessionsMapAtom)
+	const session = current[payload.sessionId]
+	if (!session) return
 
-		set(sessionsMapAtom, {
-			...current,
-			[payload.sessionId]: {
-				...session,
-				mode: payload.mode,
-			},
-		})
-	},
-)
+	set(sessionsMapAtom, {
+		...current,
+		[payload.sessionId]: {
+			...session,
+			mode: payload.mode,
+		},
+	})
+})
 
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)

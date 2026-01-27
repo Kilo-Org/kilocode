@@ -1,4 +1,5 @@
 {
+	"back": "작업 보기로 돌아가기",
 	"common": {
 		"save": "저장",
 		"done": "완료",
@@ -7,6 +8,10 @@
 		"select": "선택",
 		"add": "헤더 추가",
 		"remove": "삭제"
+	},
+	"search": {
+		"placeholder": "설정 검색...",
+		"noResults": "설정을 찾을 수 없습니다"
 	},
 	"header": {
 		"title": "설정",
@@ -37,7 +42,9 @@
 		"experimental": "실험적",
 		"language": "언어",
 		"about": "Kilo Code 정보",
-		"autoPurge": "자동 정리"
+		"autoPurge": "자동 정리",
+		"agentBehaviour": "에이전트 동작",
+		"ghost": "자동 완성"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "팁을 얻거나 다른 Kilo Code 사용자들과 교류하고 싶으신가요? <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilo.ai/discord</discordLink>에 참여하세요",
 		"contactAndCommunity": "문의 및 커뮤니티",
-		"manageSettings": "설정 관리"
+		"manageSettings": "설정 관리",
+		"debugMode": {
+			"label": "디버그 모드 활성화",
+			"description": "디버그 모드를 활성화하여 작업 헤더에 API 대화 기록과 UI 메시지를 임시 파일에 포맷된 JSON으로 볼 수 있는 추가 버튼을 표시합니다."
+		}
 	},
 	"slashCommands": {
 		"description": "사용자 지정 워크플로와 작업을 신속하게 실행하기 위해 슬래시 명령을 관리합니다. <DocsLink>더 알아보기</DocsLink>"
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "사용자 정의 기본 URL 사용",
 		"useReasoning": "추론 활성화",
 		"useHostHeader": "사용자 정의 Host 헤더 사용",
-		"useLegacyFormat": "레거시 OpenAI API 형식 사용",
 		"customHeaders": "사용자 정의 헤더",
 		"headerName": "헤더 이름",
 		"headerValue": "헤더 값",
