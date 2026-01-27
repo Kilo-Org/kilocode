@@ -226,6 +226,10 @@
 			"label": "浏览器",
 			"description": "自动执行浏览器操作而无需批准 — 注意：仅当模型支持计算机功能调用时适用"
 		},
+		"web": {
+			"label": "Web",
+			"description": "自动执行 Web 操作（获取 URL、搜索网页）而无需批准"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "允许自动调用MCP服务而无需批准"

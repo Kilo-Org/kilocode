@@ -500,6 +500,12 @@
 		"description": "Твоя команда виконується без інтеграції оболонки терміналу VSCode. Щоб прибрати це попередження, ти можеш вимкнути інтеграцію оболонки в розділі <strong>Terminal</strong> <settingsLink>налаштувань Kilo Code</settingsLink> або усунути проблеми з інтеграцією терміналу VSCode, використовуючи посилання нижче.",
 		"troubleshooting": "Натисни тут для документації з інтеграції оболонки."
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code хоче отримати вміст з URL",
+		"didFetch": "Kilo Code отримав вміст з URL",
+		"wantsToSearch": "Kilo Code хоче шукати в інтернеті",
+		"didSearch": "Kilo Code шукав в інтернеті"
+	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Досягнуто ліміт автосхвалених запитів",

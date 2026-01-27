@@ -510,5 +510,11 @@
 		"updated": "टू-डू सूची अपडेट की गई",
 		"completed": "पूरा हुआ",
 		"started": "शुरू हुआ"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code एक URL से सामग्री लाना चाहता है",
+		"didFetch": "Kilo Code ने एक URL से सामग्री लाई",
+		"wantsToSearch": "Kilo Code वेब पर खोज करना चाहता है",
+		"didSearch": "Kilo Code ने वेब पर खोज की"
 	}
 }

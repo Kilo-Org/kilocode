@@ -511,5 +511,11 @@
 		"updated": "已更新待办事项列表",
 		"completed": "已完成",
 		"started": "已开始"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code 想要从 URL 获取内容",
+		"didFetch": "Kilo Code 已从 URL 获取内容",
+		"wantsToSearch": "Kilo Code 想要搜索网页",
+		"didSearch": "Kilo Code 已搜索网页"
 	}
 }

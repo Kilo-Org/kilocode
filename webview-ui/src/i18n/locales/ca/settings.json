@@ -222,6 +222,10 @@
 			"label": "Navegador",
 			"description": "Realitzar accions del navegador automàticament sense requerir aprovació. Nota: Només s'aplica quan el model admet l'ús de l'ordinador"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Realitzar operacions web automàticament (obtenir URL, cercar a la web) sense requerir aprovació"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Habilitar l'aprovació automàtica d'eines MCP individuals a la vista de Servidors MCP (requereix tant aquesta configuració com la casella \"Permetre sempre\" de l'eina)"

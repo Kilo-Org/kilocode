@@ -213,6 +213,12 @@
 	"instructions": {
 		"wantsToFetch": "Kilo Code veut récupérer des instructions détaillées pour aider à la tâche actuelle"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code veut récupérer du contenu depuis une URL",
+		"didFetch": "Kilo Code a récupéré du contenu depuis une URL",
+		"wantsToSearch": "Kilo Code veut effectuer une recherche sur le web",
+		"didSearch": "Kilo Code a effectué une recherche sur le web"
+	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code veut voir les fichiers de premier niveau dans ce répertoire",
 		"didViewTopLevel": "Kilo Code a vu les fichiers de premier niveau dans ce répertoire",

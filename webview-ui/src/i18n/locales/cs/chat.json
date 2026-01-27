@@ -219,6 +219,12 @@
 	"instructions": {
 		"wantsToFetch": "Kilo Code chce načíst podrobné instrukce pro pomoc s aktuálním úkolem"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code chce načíst obsah z URL",
+		"didFetch": "Kilo Code načetl obsah z URL",
+		"wantsToSearch": "Kilo Code chce prohledat web",
+		"didSearch": "Kilo Code prohledal web"
+	},
 	"fileOperations": {
 		"wantsToRead": "Kilo Code chce přečíst tento soubor:",
 		"wantsToReadMultiple": "Kilo Code chce přečíst více souborů:",

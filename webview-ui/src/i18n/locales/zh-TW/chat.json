@@ -425,6 +425,12 @@
 			"close": "關閉瀏覽器"
 		}
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code 想要從 URL 擷取內容",
+		"didFetch": "Kilo Code 已從 URL 擷取內容",
+		"wantsToSearch": "Kilo Code 想要搜尋網路",
+		"didSearch": "Kilo Code 已搜尋網路"
+	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "展開程式碼區塊",

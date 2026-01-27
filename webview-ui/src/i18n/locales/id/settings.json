@@ -226,6 +226,10 @@
 			"label": "Browser",
 			"description": "Secara otomatis melakukan aksi browser tanpa memerlukan persetujuan. Catatan: Hanya berlaku ketika model mendukung computer use"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Secara otomatis melakukan operasi web (mengambil URL, mencari di web) tanpa memerlukan persetujuan"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Aktifkan auto-approval tool MCP individual di tampilan Server MCP (memerlukan pengaturan ini dan checkbox \"Selalu izinkan\" tool tersebut)"

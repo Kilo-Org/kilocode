@@ -406,6 +406,12 @@
 			"close": "Cerrar navegador"
 		}
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code quiere obtener contenido de una URL",
+		"didFetch": "Kilo Code obtuvo contenido de una URL",
+		"wantsToSearch": "Kilo Code quiere buscar en la web",
+		"didSearch": "Kilo Code buscó en la web"
+	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "Expandir bloque de código",

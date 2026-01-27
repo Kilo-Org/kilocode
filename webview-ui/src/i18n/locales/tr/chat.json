@@ -407,6 +407,12 @@
 			"close": "Tarayıcıyı kapat"
 		}
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code bir URL'den içerik almak istiyor",
+		"didFetch": "Kilo Code bir URL'den içerik aldı",
+		"wantsToSearch": "Kilo Code web'de arama yapmak istiyor",
+		"didSearch": "Kilo Code web'de arama yaptı"
+	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "Kod bloğunu genişlet",

@@ -218,6 +218,10 @@
 				"description": "允許 Kilo Code 建立和編輯受保護的檔案（如 .kilocodeignore 和 .kilocode/ 設定檔），無需核准。"
 			}
 		},
+		"web": {
+			"label": "網路",
+			"description": "自動執行網路操作（擷取 URL、搜尋網路）而無需核准"
+		},
 		"browser": {
 			"label": "瀏覽器",
 			"description": "自動執行瀏覽器操作而無需核准 — 注意：僅適用於模型支援電腦使用時"

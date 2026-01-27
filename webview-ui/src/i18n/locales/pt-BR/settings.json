@@ -226,6 +226,10 @@
 			"label": "Navegador",
 			"description": "Realizar ações do navegador automaticamente sem exigir aprovação. Nota: Aplica-se apenas quando o modelo suporta uso do computador"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Realizar operações web automaticamente (buscar URLs, pesquisar na web) sem exigir aprovação"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Ativar aprovação automática de ferramentas MCP individuais na visualização de Servidores MCP (requer tanto esta configuração quanto a caixa de seleção \"Permitir sempre\" da ferramenta)"

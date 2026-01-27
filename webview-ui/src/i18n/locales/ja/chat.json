@@ -504,6 +504,12 @@
 		"wantsToRun": "Kilo Codeはスラッシュコマンドを実行したい",
 		"didRun": "Kilo Codeはスラッシュコマンドを実行しました"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo CodeはURLからコンテンツを取得したい",
+		"didFetch": "Kilo CodeはURLからコンテンツを取得しました",
+		"wantsToSearch": "Kilo Codeはウェブを検索したい",
+		"didSearch": "Kilo Codeはウェブを検索しました"
+	},
 	"todo": {
 		"partial": "{{total}}件中{{completed}}件のTo-Doが完了",
 		"complete": "{{total}}件のTo-Doが完了",
