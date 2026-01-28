@@ -51,6 +51,12 @@ Before enabling Code Reviews:
 
 Once configured, the Review Agent will run automatically on PR events.
 
+## Local Code Reviews
+
+Code Reviewer is also available locally via the new Review Mode. Simply select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions. This is valuable for developers who want to review their code before pushing a pull request to their team publicly, or for developers who want reviews and don't need to ship a pull request to GitHub.
+
+![VS Code interface showing Review option in mode dropdown](/docs/img/code-reviewer/review-mode.png "Review Mode")
+
 ## How Code Reviews Work
 
 - When a pull request is opened or updated:

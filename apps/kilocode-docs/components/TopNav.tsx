@@ -34,7 +34,11 @@ const mainNavItems: NavItem[] = [
 
 const contributingItems: DropdownItem[] = [
 	{ label: "Contributing Guide", href: "/contributing", description: "How to contribute to Kilo Code" },
-	{ label: "Code of Conduct", href: "/docs/code-of-conduct", description: "Our community guidelines" },
+	{
+		label: "Code of Conduct",
+		href: "https://github.com/Kilo-Org/kilocode?tab=coc-ov-file",
+		description: "Our community guidelines",
+	},
 	{ label: "GitHub Repository", href: "https://github.com/Kilo-Org/", description: "View source and issues" },
 	{ label: "Discord Community", href: "https://kilo.ai/discord", description: "Join our community" },
 ]
@@ -42,8 +46,12 @@ const contributingItems: DropdownItem[] = [
 const helpItems: DropdownItem[] = [
 	{ label: "Documentation", href: "/", description: "Browse all documentation" },
 	{ label: "FAQ", href: "/getting-started/faq", description: "Frequently asked questions" },
-	{ label: "Support", href: "/support", description: "Get help from the team" },
-	{ label: "Changelog", href: "/changelog", description: "Latest updates and releases" },
+	{ label: "Support", href: "https://kilo.ai/support", description: "Get help from the team" },
+	{
+		label: "Changelog",
+		href: "https://github.com/Kilo-Org/kilocode/releases",
+		description: "Latest updates and releases",
+	},
 ]
 
 function ChevronDownIcon({ className }: { className?: string }) {

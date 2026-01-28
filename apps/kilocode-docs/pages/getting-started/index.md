@@ -28,7 +28,7 @@ Your sessions sync across all of these, so you can start a task on your phone an
 ## Quick Start
 
 1. [Install Kilo Code](/docs/getting-started/installing) in your preferred environment
-2. [Connect an AI provider](/docs/getting-started/ai-providers) or use Kilo's built-in provider & credits
+2. [Connect an AI provider](/docs/ai-providers) or use Kilo's built-in provider & credits
 3. [Run your first task](/docs/getting-started/quickstart)
 
 New to AI coding assistants? Before learning what Kilo itself does, you can learn about agentic engineering at [path.kilo.ai](https://path.kilo.ai)

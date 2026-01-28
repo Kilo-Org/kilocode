@@ -3,12 +3,6 @@ module.exports = [
 	// GET STARTED
 	// ============================================
 	{
-		source: "/docs/getting-started/quickstart",
-		destination: "/docs/getting-started/quickstart",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/getting-started/setting-up",
 		destination: "/docs/getting-started/setup-authentication",
 		basePath: false,
@@ -34,13 +28,13 @@ module.exports = [
 	},
 	{
 		source: "/docs/basic-usage/connecting-providers",
-		destination: "/docs/getting-started/ai-providers",
+		destination: "/docs/ai-providers",
 		basePath: false,
 		permanent: true,
 	},
 	{
 		source: "/docs/providers/:path*",
-		destination: "/docs/getting-started/ai-providers",
+		destination: "/docs/ai-providers/:path*",
 		basePath: false,
 		permanent: true,
 	},
@@ -136,7 +130,7 @@ module.exports = [
 	},
 	{
 		source: "/docs/basic-usage/autocomplete/mistral-setup",
-		destination: "/docs/code-with-ai/features/autocomplete",
+		destination: "/docs/code-with-ai/features/autocomplete/mistral-setup",
 		basePath: false,
 		permanent: true,
 	},
@@ -259,6 +253,12 @@ module.exports = [
 	},
 	{
 		source: "/docs/agent-behavior/skills",
+		destination: "/docs/customize/skills",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/skills",
 		destination: "/docs/customize/skills",
 		basePath: false,
 		permanent: true,
@@ -555,20 +555,8 @@ module.exports = [
 	// CONTRIBUTING
 	// ============================================
 	{
-		source: "/docs/contributing",
-		destination: "/docs/contributing",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/contributing/index",
 		destination: "/docs/contributing",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/development-environment",
-		destination: "/docs/contributing/development-environment",
 		basePath: false,
 		permanent: true,
 	},
@@ -577,56 +565,14 @@ module.exports = [
 	// CONTRIBUTING - Architecture
 	// ============================================
 	{
-		source: "/docs/contributing/architecture",
-		destination: "/docs/contributing/architecture",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/contributing/architecture/index",
 		destination: "/docs/contributing/architecture",
 		basePath: false,
 		permanent: true,
 	},
 	{
-		source: "/docs/contributing/architecture/annual-billing",
-		destination: "/docs/contributing/architecture/annual-billing",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/architecture/enterprise-mcp-controls",
-		destination: "/docs/contributing/architecture/enterprise-mcp-controls",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/contributing/architecture/onboarding-engagement-improvements",
 		destination: "/docs/contributing/architecture/onboarding-improvements",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/architecture/organization-modes-library",
-		destination: "/docs/contributing/architecture/organization-modes-library",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/architecture/track-repo-url",
-		destination: "/docs/contributing/architecture/track-repo-url",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/architecture/vercel-ai-gateway",
-		destination: "/docs/contributing/architecture/vercel-ai-gateway",
-		basePath: false,
-		permanent: true,
-	},
-	{
-		source: "/docs/contributing/architecture/voice-transcription",
-		destination: "/docs/contributing/architecture/voice-transcription",
 		basePath: false,
 		permanent: true,
 	},

@@ -56,6 +56,6 @@ Understand how your team is using AI:
 ## Get Started with Teams
 
 1. [Install Kilo Code](/docs/getting-started/installing) in your preferred environment
-2. [Connect an AI provider](/docs/getting-started/ai-providers)
+2. [Connect an AI provider](/docs/ai-providers)
 3. [Choose a plan](/docs/collaborate/teams/about-plans) that fits your needs
 4. Invite your team members and start collaborating

@@ -7,3 +7,4 @@ yarn.lock
 screenshots/
 .beads/
 .env
+next-env.d.ts
