@@ -3021,7 +3021,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "opencode-desktop"
+name = "kilo-desktop"
 version = "0.0.0"
 dependencies = [
  "comrak",

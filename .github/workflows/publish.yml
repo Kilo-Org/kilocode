@@ -193,7 +193,7 @@ jobs:
             updaterJsonPreferNsis: true
             releaseId: ${{ needs.publish.outputs.release }}
             tagName: ${{ needs.publish.outputs.tag }}
-            releaseAssetNamePattern: opencode-desktop-[platform]-[arch][ext]
+            releaseAssetNamePattern: kilo-desktop-[platform]-[arch][ext]
             releaseDraft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
