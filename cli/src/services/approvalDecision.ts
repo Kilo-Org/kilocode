@@ -82,7 +82,7 @@ function splitCommandChain(command: string): string[] {
  * - "git status" matches "git status --short", "git status -v", etc.
  * - Exact match: "git status --short" only matches "git status --short"
  */
-function matchesCommandPattern(command: string, patterns: string[]): boolean {
+export function matchesCommandPattern(command: string, patterns: string[]): boolean {
 	if (patterns.length === 0) return false
 
 	const normalizedCommand = command.trim()

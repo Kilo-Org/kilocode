@@ -2,10 +2,34 @@
  * Tests for approval atoms
  */
 
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { createStore } from "jotai"
 import { approvalOptionsAtom, pendingApprovalAtom } from "../approval.js"
+import { configAtom } from "../config.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
+import type { KiloCodeConfig } from "../../../config/types.js"
+
+// Helper to create a config with specific allowed commands
+const createConfigWithAllowedCommands = (allowedCommands: string[]): KiloCodeConfig => ({
+	version: "1.0.0",
+	mode: "ask",
+	provider: "anthropic",
+	providers: [],
+	telemetry: true,
+	autoApproval: {
+		enabled: true,
+		read: { enabled: false, outside: false },
+		write: { enabled: false, outside: false, protected: false },
+		browser: { enabled: false },
+		retry: { enabled: false, delay: 5 },
+		mcp: { enabled: false },
+		mode: { enabled: false },
+		subtasks: { enabled: false },
+		todo: { enabled: false },
+		execute: { enabled: true, allowed: allowedCommands, denied: [] },
+		question: { enabled: false, timeout: 30 },
+	},
+})
 
 // Helper to create a test message
 const createMessage = (ask: string, text: string = "{}"): ExtensionChatMessage => ({
@@ -154,6 +178,112 @@ describe("approval atoms", () => {
 				expect(options).toHaveLength(4) // Run Command, Always run invalid, Always run invalid json, Reject
 				expect(options[1].commandPattern).toBe("invalid")
 				expect(options[2].commandPattern).toBe("invalid json")
+			})
+
+			describe("filtering already allowed commands", () => {
+				it("should not show 'Always Run' options for commands already in allowed list", () => {
+					const store = createStore()
+					// Set up config with "git" already allowed
+					store.set(configAtom, createConfigWithAllowedCommands(["git"]))
+
+					const message = createMessage("command", "git status")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// parseCommandHierarchy("git status") generates: ["git", "git status"]
+					// matchesCommandPattern("git", ["git"]) returns true (exact match) - filtered
+					// matchesCommandPattern("git status", ["git"]) returns true (hierarchical) - filtered
+					// So all patterns should be filtered
+					expect(options).toHaveLength(2)
+					expect(options[0].label).toBe("Run Command")
+					expect(options[1].label).toBe("Reject")
+				})
+
+				it("should filter all hierarchical patterns that are already allowed", () => {
+					const store = createStore()
+					// Set up config with "git" already allowed
+					store.set(configAtom, createConfigWithAllowedCommands(["git"]))
+
+					const message = createMessage("command", "git status --short --branch")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// parseCommandHierarchy generates: ["git", "git status", "git status --short --branch"]
+					// matchesCommandPattern("git", ["git"]) returns true (exact match) - filtered
+					// matchesCommandPattern("git status", ["git"]) returns true (hierarchical) - filtered
+					// matchesCommandPattern("git status --short --branch", ["git"]) returns true (hierarchical) - filtered
+					// So all patterns should be filtered
+					expect(options).toHaveLength(2)
+					expect(options[0].label).toBe("Run Command")
+					expect(options[1].label).toBe("Reject")
+				})
+
+				it("should show no 'Always Run' options when entire hierarchy is already allowed", () => {
+					const store = createStore()
+					// Set up config with the full command already allowed
+					store.set(configAtom, createConfigWithAllowedCommands(["git", "git status", "git status --short"]))
+
+					const message = createMessage("command", "git status --short")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// Should only have: Run Command, Reject (no Always Run options)
+					expect(options).toHaveLength(2)
+					expect(options[0].label).toBe("Run Command")
+					expect(options[1].label).toBe("Reject")
+				})
+
+				it("should handle wildcard in allowed commands list", () => {
+					const store = createStore()
+					// Set up config with wildcard
+					store.set(configAtom, createConfigWithAllowedCommands(["*"]))
+
+					const message = createMessage("command", "ls -la")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// Wildcard matches everything, so no Always Run options should appear
+					expect(options).toHaveLength(2)
+					expect(options[0].label).toBe("Run Command")
+					expect(options[1].label).toBe("Reject")
+				})
+
+				it("should show 'Always Run' options for commands not covered by allowed list", () => {
+					const store = createStore()
+					// "git" is allowed, "npm run" is allowed, but "npm test" is not
+					store.set(configAtom, createConfigWithAllowedCommands(["git", "npm run"]))
+
+					const message = createMessage("command", "npm test")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// parseCommandHierarchy("npm test") generates: ["npm", "npm test"]
+					// "git", "npm run" does NOT cover "npm" or "npm test"
+					// So both patterns should appear as Always Run options
+					const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
+					expect(alwaysRunOptions.length).toBe(2)
+					// Verify "npm" is in the options
+					const npmOption = alwaysRunOptions.find((opt) => opt.commandPattern === "npm")
+					expect(npmOption).toBeDefined()
+					// Verify "npm test" is in the options
+					const npmTestOption = alwaysRunOptions.find((opt) => opt.commandPattern === "npm test")
+					expect(npmTestOption).toBeDefined()
+				})
+
+				it("should handle empty allowed commands list", () => {
+					const store = createStore()
+					// Empty allowed list - nothing should be filtered
+					store.set(configAtom, createConfigWithAllowedCommands([]))
+
+					const message = createMessage("command", "git status")
+					store.set(pendingApprovalAtom, message)
+
+					const options = store.get(approvalOptionsAtom)
+					// Should show all options: Run Command, Always Run "git", Always Run "git status", Reject
+					expect(options).toHaveLength(4)
+					expect(options[1].label).toBe('Always Run "git"')
+					expect(options[2].label).toBe('Always Run "git status"')
+				})
 			})
 		})
 	})

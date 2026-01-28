@@ -2,6 +2,8 @@ import { atom } from "jotai"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { selectedIndexAtom } from "./ui.js"
+import { autoApproveExecuteAllowedAtom } from "./config.js"
+import { matchesCommandPattern } from "../../services/approvalDecision.js"
 
 /**
  * Approval option interface
@@ -92,6 +94,8 @@ function parseCommandHierarchy(command: string): string[] {
 	return hierarchy
 }
 
+
+
 /**
  * Derived atom to get approval options based on the pending message type
  * Note: This atom recalculates whenever the pending message changes OR when
@@ -99,6 +103,7 @@ function parseCommandHierarchy(command: string): string[] {
  */
 export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 	const pendingMessage = get(pendingApprovalAtom)
+	const allowedCommands = get(autoApproveExecuteAllowedAtom)
 
 	if (!pendingMessage || pendingMessage.type !== "ask") {
 		return []
@@ -185,8 +190,11 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 				},
 			]
 
-			// Add "Always run X" options for each level of the hierarchy
-			hierarchy.forEach((pattern, index) => {
+			// Add "Always run X" options only for patterns not already allowed
+			// Filter out patterns that are already covered by the allowed commands list
+			const newPatterns = hierarchy.filter((pattern) => !matchesCommandPattern(pattern, allowedCommands))
+
+			newPatterns.forEach((pattern, index) => {
 				options.push({
 					label: `Always Run "${pattern}"`,
 					action: "approve-and-remember" as const,
