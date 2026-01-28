@@ -5,6 +5,7 @@ import z from "zod"
 import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
+import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 
 // Try to import bundled snapshot (generated at build time)
@@ -106,20 +107,32 @@ export namespace ModelsDev {
 
     // Inject kilo provider with dynamic model fetching
     if (!providers["kilo"]) {
-      const kiloModels = await ModelCache.fetch("kilo").catch(() => ({}))
+      const config = await Config.get() // kilocode_change
+      const kiloBaseURL = config.provider?.kilo?.options?.baseURL // kilocode_change
+      const kiloOrgId = config.provider?.kilo?.options?.kilocodeOrganizationId // kilocode_change
+
+      const kiloFetchOptions = {
+        ...(kiloBaseURL ? { baseURL: kiloBaseURL } : {}),
+        ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
+      }
+
+      const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`) // kilocode_change
+
+      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+
+      const providerApiSource = kiloBaseURL ?? "https://api.kilo.ai/api/openrouter"
 
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
         env: [],
-        api: "https://api.kilo.ai/api/openrouter/",
+        api: ensureTrailingSlash(providerApiSource),
         npm: "@kilocode/kilo-gateway",
         models: kiloModels,
       }
 
-      // Trigger background refresh if models are empty or stale
       if (Object.keys(kiloModels).length === 0) {
-        ModelCache.refresh("kilo").catch(() => {})
+        ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
     }
 

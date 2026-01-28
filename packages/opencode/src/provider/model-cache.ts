@@ -186,6 +186,10 @@ export namespace ModelCache {
         options.kilocodeToken = providerConfig.options.apiKey
       }
 
+      if (providerConfig?.options?.kilocodeOrganizationId) {
+        options.kilocodeOrganizationId = providerConfig.options.kilocodeOrganizationId
+      }
+
       // Get from Auth
       const auth = await Auth.get(providerID)
       if (auth) {
