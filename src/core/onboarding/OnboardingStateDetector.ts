@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
+import { HistoryItem } from "@roo-code/types"
 
 export class OnboardingStateDetector {
 	constructor(private context: vscode.ExtensionContext) {}
@@ -12,9 +13,12 @@ export class OnboardingStateDetector {
 		const folders = vscode.workspace.workspaceFolders
 		const hasOpenFolder = folders !== undefined && folders.length > 0
 
-		// Check if user has previous sessions
-		const taskHistory = this.context.globalState.get<string[]>("taskHistory") || []
-		const hasSessionHistory = taskHistory.length > 0
+		// Check if user has previous sessions for the current workspace
+		const taskHistory = this.context.globalState.get<HistoryItem[]>("taskHistory") || []
+		const currentWorkspace = folders?.[0]?.uri.fsPath
+		const hasSessionHistory = currentWorkspace
+			? taskHistory.some((item) => item.workspace === currentWorkspace)
+			: false
 
 		return { hasOpenFolder, hasSessionHistory }
 	}
