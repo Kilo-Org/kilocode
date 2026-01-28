@@ -5,7 +5,8 @@
 	"scripts": {
 		"dev": "next dev --webpack --port 3002",
 		"build": "next build --webpack",
-		"start": "next start"
+		"start": "next start",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@docsearch/css": "^4",
@@ -27,6 +28,7 @@
 		"autoprefixer": "^10.4.23",
 		"postcss": "^8.5.6",
 		"tailwindcss": "^4.1.18",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.3"
 	}
 }
