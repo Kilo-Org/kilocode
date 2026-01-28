@@ -3,7 +3,7 @@ name = "kilo-desktop"
 version = "0.0.0"
 description = "The open source AI coding agent"
 authors = ["Kilo"]
-edition = "2026"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
