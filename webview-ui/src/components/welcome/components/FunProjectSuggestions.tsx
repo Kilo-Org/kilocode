@@ -1,0 +1,58 @@
+import { Gamepad2, ListTodo, Cloud } from "lucide-react"
+import { Button } from "@src/components/ui"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { vscode } from "@src/utils/vscode"
+
+const FUN_PROJECTS = [
+	{
+		id: "snake",
+		icon: Gamepad2,
+		prompt: "Create a Snake game in HTML/CSS/JavaScript with arrow key controls and score tracking",
+	},
+	{
+		id: "todo",
+		icon: ListTodo,
+		prompt:
+			"Build a Todo app with React and TypeScript, including add/delete/complete functionality and local storage",
+	},
+	{
+		id: "weather",
+		icon: Cloud,
+		prompt:
+			"Make a Weather Dashboard using a weather API, showing current conditions and 5-day forecast with icons",
+	},
+]
+
+export const FunProjectSuggestions = () => {
+	const { t } = useAppTranslation()
+
+	const handleProjectClick = (project: (typeof FUN_PROJECTS)[0]) => {
+		vscode.postMessage({
+			type: "sendMessage",
+			text: project.prompt,
+		})
+	}
+
+	return (
+		<div className="mt-4">
+			<p className="text-sm text-vscode-descriptionForeground mb-2">
+				{t("welcome:noFolderNoHistory.orTryFunProject")}
+			</p>
+			<div className="flex flex-col gap-2">
+				{FUN_PROJECTS.map((project) => {
+					const Icon = project.icon
+					return (
+						<Button
+							key={project.id}
+							onClick={() => handleProjectClick(project)}
+							variant="secondary"
+							className="w-full justify-start text-sm">
+							<Icon className="size-4 mr-2" />
+							{t(`welcome:noFolderNoHistory.projects.${project.id}`)}
+						</Button>
+					)
+				})}
+			</div>
+		</div>
+	)
+}
