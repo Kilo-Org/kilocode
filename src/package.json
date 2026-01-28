@@ -760,7 +760,7 @@
 		"undici": "^6.21.3",
 		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",
-		"web-tree-sitter": "^0.25.6",
+		"web-tree-sitter": "^0.26.3",
 		"workerpool": "^9.2.0",
 		"ws": "^8.18.0",
 		"xlsx": "^0.18.5",
