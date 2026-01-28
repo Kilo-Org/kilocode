@@ -323,6 +323,10 @@
 	"modes": {
 		"shareModesNewBanner": "New: Share modes by creating an organization"
 	},
+	"freeK25Banner": {
+		"new": "FREE:",
+		"message": "Try K2.5 - our most capable model, now free to use!"
+	},
 	"deviceAuth": {
 		"title": "Sign in to Kilo Code",
 		"step1": "Open the following URL on your browser",

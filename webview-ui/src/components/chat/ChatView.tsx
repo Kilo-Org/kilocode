@@ -51,6 +51,7 @@ import SystemPromptWarning from "./SystemPromptWarning"
 import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
+import { FreeK25Banner } from "../kilocode/FreeK25Banner" // kilocode_change
 import { QueuedMessages } from "./QueuedMessages"
 import { ReviewScopeSelector, type ReviewScopeInfo } from "./ReviewScopeSelector" // kilocode_change: Review mode
 import { buildDocLink } from "@/utils/docLinks"
@@ -1666,6 +1667,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{!showTelemetryBanner && (
 							<div className={taskHistoryFullLength === 0 ? "mt-10" : undefined}>
 								<KilocodeNotifications />
+								<FreeK25Banner />
 							</div>
 						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
