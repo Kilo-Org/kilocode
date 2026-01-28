@@ -34,7 +34,7 @@ export const FunProjectSuggestions = () => {
 
 	return (
 		<div className="mt-4">
-			<p className="text-sm text-vscode-descriptionForeground mb-2">
+			<p className="text-base text-vscode-descriptionForeground mb-2">
 				{t("welcome:noFolderNoHistory.orTryFunProject")}
 			</p>
 			<div className="flex flex-col gap-2">
