@@ -70,6 +70,13 @@ class ShellIntegrationOutputState {
     var output: String = ""
         private set
 
+    // For OSC 133 (FinalTerm) protocol: capture command line between B and C markers
+    @Volatile
+    private var commandLineBuffer: String = ""
+    
+    @Volatile
+    private var isCapturingCommandLine: Boolean = false
+
     // Pending output buffer
     private val pendingOutput = StringBuilder()
     private val pendingOutputLock = Any()
@@ -125,10 +132,8 @@ class ShellIntegrationOutputState {
      * Append output data (with buffering and delayed sending)
      */
     private fun appendOutput(text: String) {
-        logger.debug("📝 appendOutput called: '$text', length=${text.length}")
         synchronized(pendingOutputLock) {
             pendingOutput.append(text)
-            logger.debug("📝 pendingOutput updated length: ${pendingOutput.length}")
         }
 
         val currentTime = System.currentTimeMillis()
@@ -136,13 +141,10 @@ class ShellIntegrationOutputState {
 
         // If no flush task is scheduled, schedule one
         if (isFlushScheduled.compareAndSet(false, true)) {
-            logger.debug("📝 Scheduling flush task, will execute after 50ms")
             scope.launch {
                 delay(50) // 50ms delay
                 flushPendingOutput()
             }
-        } else {
-            logger.debug("📝 Flush task already scheduled, skipping")
         }
     }
 
@@ -150,15 +152,12 @@ class ShellIntegrationOutputState {
      * Flush pending output
      */
     private fun flushPendingOutput() {
-        logger.debug("🚀 flushPendingOutput called")
         val textToFlush = synchronized(pendingOutputLock) {
             if (pendingOutput.isNotEmpty()) {
                 val text = pendingOutput.toString()
                 pendingOutput.clear()
-                logger.debug("🚀 Ready to flush text: '$text', length=${text.length}")
                 text
             } else {
-                logger.debug("🚀 pendingOutput is empty, no need to flush")
                 null
             }
         }
@@ -167,7 +166,6 @@ class ShellIntegrationOutputState {
 
         textToFlush?.let { text ->
             output += text
-            logger.info("🚀 Sending ShellExecutionData event: '$text', length=${text.length}")
             notifyListeners(ShellEvent.ShellExecutionData(text))
         }
     }
@@ -197,48 +195,62 @@ class ShellIntegrationOutputState {
      * Parse Shell Integration markers and extract clean content
      */
     fun appendRawOutput(output: String) {
-        logger.debug("📥 Processing raw output: ${output.length} chars, isCommandRunning=$isCommandRunning")
-        logger.debug("📥 Raw output content: '${output.replace("\u001b", "\\u001b").replace("\u0007", "\\u0007")}'")
-
         var currentIndex = 0
         var hasShellIntegrationMarkers = false
 
         while (currentIndex < output.length) {
-            // Find Shell Integration marker: \u001b]633;
-            val markerIndex = output.indexOf("\u001b]633;", currentIndex)
+            // Find Shell Integration marker: \u001b]633; (VSCode) or \u001b]133; (FinalTerm/JetBrains)
+            val vscodeMarkerIndex = output.indexOf("\u001b]633;", currentIndex)
+            val finaltermMarkerIndex = output.indexOf("\u001b]133;", currentIndex)
+            
+            // Use whichever marker comes first
+            val markerIndex = when {
+                vscodeMarkerIndex == -1 && finaltermMarkerIndex == -1 -> -1
+                vscodeMarkerIndex == -1 -> finaltermMarkerIndex
+                finaltermMarkerIndex == -1 -> vscodeMarkerIndex
+                else -> minOf(vscodeMarkerIndex, finaltermMarkerIndex)
+            }
+            
+            val isVSCodeMarker = markerIndex == vscodeMarkerIndex && vscodeMarkerIndex != -1
 
             if (markerIndex == -1) {
                 // No marker found
                 val remainingContent = output.substring(currentIndex)
-                logger.debug("📤 No Shell Integration marker found, remaining content: '$remainingContent', isCommandRunning=$isCommandRunning")
+
+                // If capturing command line (between B and C markers), add to buffer
+                if (isCapturingCommandLine && remainingContent.isNotEmpty()) {
+                    commandLineBuffer += remainingContent
+                }
 
                 if (!hasShellIntegrationMarkers && remainingContent.isNotEmpty()) {
                     // If there is no Shell Integration marker in the entire output, treat all content as command output
-                    logger.debug("📤 No Shell Integration marker, treat all content as command output")
                     appendOutput(remainingContent)
                 } else if (isCommandRunning && currentIndex < output.length) {
-                    logger.debug("📤 Append remaining content to output: '$remainingContent'")
                     appendOutput(remainingContent)
-                } else if (!isCommandRunning) {
-                    logger.debug("⚠️ Command not running, ignore output: '$remainingContent'")
                 }
                 break
             }
 
             hasShellIntegrationMarkers = true
 
-            // If command is running, append content before marker
-            if (isCommandRunning && currentIndex < markerIndex) {
+            // Handle content before marker
+            if (currentIndex < markerIndex) {
                 val beforeMarker = output.substring(currentIndex, markerIndex)
-                logger.debug("📤 Append content before marker: '$beforeMarker'")
-                appendOutput(beforeMarker)
-            } else if (!isCommandRunning && currentIndex < markerIndex) {
-                val beforeMarker = output.substring(currentIndex, markerIndex)
-                logger.debug("⚠️ Command not running, ignore content before marker: '$beforeMarker'")
+                
+                // If capturing command line (between B and C markers), add to buffer
+                if (isCapturingCommandLine) {
+                    commandLineBuffer += beforeMarker
+                }
+                
+                // If command is running, append content to output
+                if (isCommandRunning) {
+                    appendOutput(beforeMarker)
+                }
             }
 
             // Parse marker
-            val typeStart = markerIndex + 6 // "\u001b]633;".length
+            val markerLength = 6 // Both "\u001b]633;" and "\u001b]133;" are 6 chars
+            val typeStart = markerIndex + markerLength
             if (typeStart >= output.length) {
                 if (isCommandRunning && currentIndex < output.length) {
                     appendOutput(output.substring(currentIndex))
@@ -252,7 +264,6 @@ class ShellIntegrationOutputState {
             // Find marker end: \u0007
             val paramEnd = output.indexOf('\u0007', paramStart)
             if (paramEnd == -1) {
-                logger.debug("⚠️ Marker end not found, skip")
                 currentIndex = typeStart
                 continue
             }
@@ -270,24 +281,48 @@ class ShellIntegrationOutputState {
                 listOf(params)
             }
 
-            logger.debug("🔍 Parse Shell Integration marker: type=$type, params='$params', components=$components")
-
             // Handle different marker types
             when (type) {
                 MarkerType.COMMAND_LINE -> {
-                    logger.info("🎯 Shell Integration - Detected command line marker")
+                    // OSC 633;E - VSCode protocol: explicit command line
                     if (components.isNotEmpty() && components[0].isNotEmpty()) {
                         currentCommand = components[0]
                         currentNonce = if (components.size >= 2) components[1] else ""
-                        logger.info("🎯 Shell Integration - Command line: '$currentCommand'")
                     }
                 }
 
+                MarkerType.PROMPT_START -> {
+                    // OSC 133;A or OSC 633;A - Prompt starts
+                    // Reset command line buffer for OSC 133 protocol
+                    commandLineBuffer = ""
+                    isCapturingCommandLine = false
+                }
+
+                MarkerType.COMMAND_START -> {
+                    // OSC 133;B or OSC 633;B - User starts typing command
+                    // For OSC 133, we'll capture the command line between B and C markers
+                    commandLineBuffer = ""
+                    isCapturingCommandLine = true
+                }
+
                 MarkerType.COMMAND_EXECUTED -> {
-                    logger.info("🚀 Shell Integration - Detected command executed marker")
+                    // OSC 133;C or OSC 633;C - Command execution starts
+                    
+                    // Stop capturing command line
+                    isCapturingCommandLine = false
+                    
+                    // For OSC 133 protocol, use the captured command line buffer
+                    if (currentCommand.isEmpty() && commandLineBuffer.isNotEmpty()) {
+                        // Clean up ANSI escape sequences from command line
+                        val cleanCommand = commandLineBuffer
+                            .replace(Regex("\u001b\\[[0-9;]*[a-zA-Z]"), "") // Remove ANSI CSI sequences
+                            .replace(Regex("\u001b\\][^\\u0007]*\\u0007"), "") // Remove OSC sequences
+                            .trim()
+                        currentCommand = cleanCommand
+                    }
+                    
                     isCommandRunning = true
                     if (currentCommand.isNotEmpty()) {
-                        logger.info("🚀 Shell Integration - Command started: '$currentCommand', isCommandRunning=$isCommandRunning")
                         notifyListeners(ShellEvent.ShellExecutionStart(currentCommand, currentDirectory))
                         // Include marker itself in output
                         appendOutput(output.substring(markerIndex, paramEnd + 1))
@@ -295,45 +330,36 @@ class ShellIntegrationOutputState {
                 }
 
                 MarkerType.COMMAND_FINISHED -> {
-                    logger.info("🏁 Shell Integration - Detected command finished marker")
+                    // OSC 133;D or OSC 633;D - Command finishes
                     if (currentCommand.isNotEmpty()) {
                         // Include marker itself in output
                         appendOutput(output.substring(markerIndex, paramEnd + 1))
                         flushPendingOutput() // Ensure all pending data is sent before command ends
 
                         commandStatus = components.firstOrNull()?.toIntOrNull()
-                        logger.info("🏁 Shell Integration - Command finished: '$currentCommand' (exit code: $commandStatus)")
                         notifyListeners(ShellEvent.ShellExecutionEnd(currentCommand, commandStatus))
                         currentCommand = ""
+                        commandLineBuffer = ""
                     }
                     isCommandRunning = false
                 }
 
                 MarkerType.PROPERTY -> {
-                    logger.debug("📋 Shell Integration - Detected property marker")
+                    // OSC 633;P - VSCode protocol: property set
                     if (components.isNotEmpty()) {
                         val property = components[0]
                         if (property.startsWith("Cwd=")) {
                             val cwdValue = property.substring(4) // "Cwd=".length
                             if (cwdValue != currentDirectory) {
                                 currentDirectory = cwdValue
-                                logger.info("📁 Shell Integration - Directory changed: '$cwdValue'")
                                 notifyListeners(ShellEvent.CwdChange(cwdValue))
                             }
                         }
                     }
                 }
 
-                MarkerType.PROMPT_START -> {
-                    logger.debug("🎯 Shell Integration - Prompt start")
-                }
-
-                MarkerType.COMMAND_START -> {
-                    logger.debug("🎯 Shell Integration - Command input start")
-                }
-
                 else -> {
-                    logger.debug("🔍 Shell Integration - Unhandled marker type: $type")
+                    // Unhandled marker type
                 }
             }
 
@@ -347,9 +373,11 @@ class ShellIntegrationOutputState {
     fun getCleanOutput(rawOutput: String): String {
         var result = rawOutput
 
-        // Remove all Shell Integration markers
-        val markerPattern = Regex("\u001b\\]633;[^\\u0007]*\\u0007")
-        result = markerPattern.replace(result, "")
+        // Remove all Shell Integration markers (both VSCode 633 and FinalTerm 133)
+        val vscodeMarkerPattern = Regex("\u001b\\]633;[^\\u0007]*\\u0007")
+        val finaltermMarkerPattern = Regex("\u001b\\]133;[^\\u0007]*\\u0007")
+        result = vscodeMarkerPattern.replace(result, "")
+        result = finaltermMarkerPattern.replace(result, "")
 
         return result
     }

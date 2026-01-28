@@ -97,25 +97,16 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         command: Array<String>,
         envs: MutableMap<String, String>,
     ): Array<String> {
-        // Print debug logs
-        logger.info("🔧 WeCodeTerminalCustomizer - customize terminal command and environment")
-        logger.info("📂 Working directory: $workingDirectory")
-        logger.info("🔨 Command: ${command.joinToString(" ")}")
-        logger.info("🌍 Environment variables: ${envs.entries.joinToString("\n")}")
-
-        // Inject VSCode shell integration script
         return injectVSCodeScript(command, envs)
     }
 
     private fun injectVSCodeScript(command: Array<String>, envs: MutableMap<String, String>): Array<String> {
         val shellName = File(command[0]).name
+        
         val scriptPath = getVSCodeScript(shellName) ?: run {
-            logger.warn("🚫 No integration script found for Shell($shellName)")
+            logger.warn("No integration script found for Shell($shellName)")
             return command
         }
-
-        logger.info("🔧 Injecting Shell Integration script: $scriptPath")
-        logger.info("🐚 Shell type: $shellName")
 
         // Set general injection flag
         envs["VSCODE_INJECTION"] = "1"
@@ -125,7 +116,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
             "zsh" -> injectZshScript(command, envs, scriptPath)
             "powershell", "pwsh", "powershell.exe" -> injectPowerShellScript(command, envs, scriptPath)
             else -> {
-                logger.warn("⚠️ Unsupported shell type: $shellName")
+                logger.warn("Unsupported shell type: $shellName")
                 command
             }
         }
@@ -165,33 +156,44 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
         envs: MutableMap<String, String>,
         scriptPath: String,
     ): Array<String> {
+        // Check if this is an extension-owned terminal using our marker
+        val isExtensionTerminal = envs["KILOCODE_EXTENSION_TERMINAL"] == "true"
+        
         // 1) If JetBrains' built-in zsh shell integration is already in place, avoid modifying ZDOTDIR to prevent conflicts.
         val jetbrainsZshDir = envs["JETBRAINS_INTELLIJ_ZSH_DIR"] ?: System.getenv("JETBRAINS_INTELLIJ_ZSH_DIR")
-        val shellExeName = File(command[0]).name
         val looksLikeJbZsh = command[0].contains("/plugins/terminal/shell-integrations/zsh")
 
+        // For extension-owned terminals, FORCE VSCode shell integration even if JetBrains integration is detected
         if (jetbrainsZshDir != null || looksLikeJbZsh) {
-            logger.info("🔒 Detected JetBrains Zsh integration (JETBRAINS_INTELLIJ_ZSH_DIR=$jetbrainsZshDir, looksLikeJbZsh=$looksLikeJbZsh). Skip overriding ZDOTDIR.")
-            // Still retain the user's original ZDOTDIR in the environment for on-demand use within scripts.
-            val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
-            envs["USER_ZDOTDIR"] = userZdotdir
-            return command
+            if (isExtensionTerminal) {
+                // Don't return early - continue with VSCode injection
+            } else {
+                // Still retain the user's original ZDOTDIR in the environment for on-demand use within scripts.
+                val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
+                envs["USER_ZDOTDIR"] = userZdotdir
+                return command
+            }
         }
 
         // 2) Inject only when `scriptPath` appears to be a valid `ZDOTDIR` (at least containing `.zshrc`).
         val dir = File(scriptPath)
         val hasZshrc = File(dir, ".zshrc").exists()
+        
         if (!dir.isDirectory || !hasZshrc) {
-            logger.warn("🚫 Zsh script dir '$scriptPath' is invalid (dir=$dir, hasZshrc=$hasZshrc). Skip overriding ZDOTDIR.")
+            logger.warn("Zsh script dir '$scriptPath' is invalid. Skip overriding ZDOTDIR.")
             return command
         }
 
         // 3) Record and securely overwrite.
-        val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
+        // For extension terminals, set USER_ZDOTDIR to user's home directory to avoid loading JetBrains integration
+        val userZdotdir = if (isExtensionTerminal) {
+            System.getProperty("user.home")
+        } else {
+            envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
+        }
         envs["USER_ZDOTDIR"] = userZdotdir
         envs["ZDOTDIR"] = scriptPath
 
-        logger.info("🔧 Set ZDOTDIR to '$scriptPath' (saved original as USER_ZDOTDIR='$userZdotdir'), shell=$shellExeName")
         return command
     }
 
