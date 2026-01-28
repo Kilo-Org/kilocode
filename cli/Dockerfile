@@ -35,7 +35,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 FROM node:20.20.0-bookworm-slim AS debian_base
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
@@ -85,6 +85,9 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 
+# Validate VERSION is provided
+RUN test -n "$VERSION" || (echo "ERROR: VERSION build arg is required" && exit 1)
+
 # Apply Labels
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
@@ -97,7 +100,9 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 # Install App
 COPY dist/kilocode-cli-${VERSION}.tgz /tmp/kilocode-cli.tgz
-RUN npm install -g /tmp/kilocode-cli.tgz && rm /tmp/kilocode-cli.tgz
+RUN npm install -g /tmp/kilocode-cli.tgz \
+    && rm /tmp/kilocode-cli.tgz \
+    && npm cache clean --force
 
 USER kilocode
 WORKDIR /workspace
@@ -114,6 +119,9 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 
+# Validate VERSION is provided
+RUN test -n "$VERSION" || (echo "ERROR: VERSION build arg is required" && exit 1)
+
 # Apply Labels
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
@@ -126,7 +134,9 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 # Install App
 COPY dist/kilocode-cli-${VERSION}.tgz /tmp/kilocode-cli.tgz
-RUN npm install -g /tmp/kilocode-cli.tgz && rm /tmp/kilocode-cli.tgz
+RUN npm install -g /tmp/kilocode-cli.tgz \
+    && rm /tmp/kilocode-cli.tgz \
+    && npm cache clean --force
 
 USER kilocode
 WORKDIR /workspace
