@@ -1,43 +1,46 @@
-import { telemetryClient } from "@/utils/TelemetryClient"
+import { FolderNoHistoryScreen } from "@/components/welcome/screens/FolderNoHistoryScreen"
+import { NoFolderNoHistoryScreen } from "@/components/welcome/screens/NoFolderNoHistoryScreen"
+import { PaidModelScreen } from "@/components/welcome/screens/PaidModelScreen"
 import { vscode } from "@/utils/vscode"
-import { TelemetryEventName } from "@roo-code/types"
-import { useTranslation, Trans } from "react-i18next"
+import { useEffect, useState } from "react"
 
 export const IdeaSuggestionsBox = () => {
-	const { t } = useTranslation("kilocode")
-	const ideas = Object.values(t("ideaSuggestionsBox.ideas", { returnObjects: true }))
+	const [hasOpenFolder, setHasOpenFolder] = useState<boolean>(false)
+	const [hasSessionHistory, setHasSessionHistory] = useState<boolean>(false)
+	const [showPaidModelScreen, _setShowPaidModelScreen] = useState<boolean>(false)
+	const [supportsKiloGateway, _setSupportsKiloGateway] = useState<boolean>(false)
 
-	const handleClick = () => {
-		const randomIndex = Math.floor(Math.random() * ideas.length)
-		const randomIdea = ideas[randomIndex]
+	useEffect(() => {
+		vscode.postMessage({ type: "checkWorkspaceState" })
+	}, [])
 
-		vscode.postMessage({
-			type: "insertTextToChatArea",
-			text: randomIdea,
-		})
+	useEffect(() => {
+		const handler = (event: MessageEvent) => {
+			const message = event.data
 
-		telemetryClient.capture(TelemetryEventName.SUGGESTION_BUTTON_CLICKED, {
-			randomIdea,
-		})
+			switch (message.type) {
+				case "workspaceState":
+					setHasOpenFolder(message.hasFolder)
+					setHasSessionHistory(message.hasHistory)
+					break
+			}
+		}
+
+		window.addEventListener("message", handler)
+		return () => window.removeEventListener("message", handler)
+	}, [])
+
+	if (!hasOpenFolder && !hasSessionHistory) {
+		return <NoFolderNoHistoryScreen />
 	}
 
-	return (
-		<div className="mt-4 p-3 bg-vscode-input-background rounded border border-vscode-panel-border">
-			<p className="text-sm text-vscode-descriptionForeground font-bold">{t("ideaSuggestionsBox.newHere")}</p>
-			<p className="text-sm text-vscode-descriptionForeground">
-				<Trans
-					i18nKey="kilocode:ideaSuggestionsBox.suggestionText"
-					components={{
-						suggestionButton: (
-							<button
-								onClick={handleClick}
-								className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground cursor-pointer bg-transparent border-none p-0 font-sans"
-							/>
-						),
-						sendIcon: <span className="codicon codicon-send inline-block align-middle" />,
-					}}
-				/>
-			</p>
-		</div>
-	)
+	if (hasOpenFolder && !hasSessionHistory) {
+		return <FolderNoHistoryScreen />
+	}
+
+	if (showPaidModelScreen) {
+		return <PaidModelScreen supportsKiloGateway={supportsKiloGateway} />
+	}
+
+	return null
 }
