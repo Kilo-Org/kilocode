@@ -8,6 +8,7 @@ export function MessageList() {
 
   createEffect(() => {
     const msgs = messages()
+    console.log("[MessageList] messages updated:", msgs.length, msgs)
     if (msgs.length > 0 && container) {
       container.scrollTop = container.scrollHeight
     }

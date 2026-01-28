@@ -60,9 +60,23 @@ export function SessionProvider(props: ParentProps) {
   const parts = () => (messageID: string) => state.parts[messageID] ?? []
   const status = () => (state.current ? (state.status[state.current] ?? "idle") : "idle")
 
+  // Track if we've already subscribed to prevent re-subscription
+  const [subscribed, setSubscribed] = createSignal(false)
+
   createEffect(() => {
     const c = client()
-    if (!c || serverStatus() !== "connected") return
+    const connected = serverStatus() === "connected"
+
+    if (!c || !connected) {
+      // Reset subscription state when disconnected
+      setSubscribed(false)
+      eventAbort()?.abort()
+      return
+    }
+
+    // Only subscribe once per connection
+    if (subscribed()) return
+    setSubscribed(true)
 
     loadSessions()
     subscribeToEvents()
@@ -88,24 +102,38 @@ export function SessionProvider(props: ParentProps) {
 
   async function subscribeToEvents() {
     const c = client()
-    if (!c) return
+    if (!c) {
+      console.log("[session] subscribeToEvents: no client")
+      return
+    }
+
+    console.log("[session] subscribing to events...")
 
     eventAbort()?.abort()
     const abort = new AbortController()
     setEventAbort(abort)
 
     try {
+      console.log("[session] calling c.global.event()")
       const result = await c.global.event({ signal: abort.signal })
-      if (!result.stream) return
+      console.log("[session] event stream result:", result, "hasStream:", !!result.stream)
+      if (!result.stream) {
+        console.log("[session] no stream in result!")
+        return
+      }
 
+      console.log("[session] starting to iterate over stream...")
       for await (const event of result.stream) {
-        if (abort.signal.aborted) break
+        console.log("[session] received raw event:", JSON.stringify(event))
+        if (abort.signal.aborted) {
+          console.log("[session] abort signal received, breaking")
+          break
+        }
         handleEvent(event as { directory?: string; payload: Event })
       }
+      console.log("[session] stream iteration ended")
     } catch (err) {
-      if (!abort.signal.aborted) {
-        console.error("Event stream error:", err)
-      }
+      console.error("[session] Event stream error:", err)
     }
   }
 
@@ -113,7 +141,15 @@ export function SessionProvider(props: ParentProps) {
     const payload = event.payload
     const dir = directory()
 
+    console.log("[session] handleEvent", {
+      eventType: payload.type,
+      eventDirectory: event.directory,
+      localDirectory: dir,
+      willFilter: dir && event.directory && event.directory !== dir && event.directory !== "global",
+    })
+
     if (dir && event.directory && event.directory !== dir && event.directory !== "global") {
+      console.log("[session] filtering out event due to directory mismatch")
       return
     }
 
@@ -152,6 +188,7 @@ export function SessionProvider(props: ParentProps) {
         break
 
       case "message.updated":
+        console.log("[session] message.updated", payload.properties.info)
         setState(
           produce((s) => {
             const msg = payload.properties.info
@@ -180,6 +217,7 @@ export function SessionProvider(props: ParentProps) {
         break
 
       case "message.part.updated":
+        console.log("[session] message.part.updated", payload.properties.part)
         setState(
           produce((s) => {
             const part = payload.properties.part
@@ -210,10 +248,9 @@ export function SessionProvider(props: ParentProps) {
       case "session.status":
         setState(
           produce((s) => {
-            for (const [sessionID, sessionStatus] of Object.entries(payload.properties.status)) {
-              const st = sessionStatus as { status: string }
-              s.status[sessionID] = st.status === "running" ? "running" : "idle"
-            }
+            // Event payload is { sessionID: string, status: { type: "idle" | "busy" | "retry", ... } }
+            const { sessionID, status } = payload.properties as { sessionID: string; status: { type: string } }
+            s.status[sessionID] = status.type === "busy" ? "running" : "idle"
           }),
         )
         break
@@ -222,16 +259,21 @@ export function SessionProvider(props: ParentProps) {
 
   async function createSession(): Promise<Session | null> {
     const c = client()
+    console.log("[session] createSession: client exists:", !!c)
     if (!c) return null
 
     try {
+      console.log("[session] createSession: calling c.session.create()...")
       const result = await c.session.create()
+      console.log("[session] createSession: result:", result)
       if (result.data) {
+        console.log("[session] createSession: setting current to", result.data.id)
         setState("current", result.data.id)
         return result.data
       }
+      console.log("[session] createSession: no data in result, error:", result.error)
     } catch (err) {
-      console.error("Failed to create session:", err)
+      console.error("[session] createSession: Failed to create session:", err)
     }
     return null
   }
@@ -248,9 +290,11 @@ export function SessionProvider(props: ParentProps) {
     try {
       const result = await c.session.messages({ sessionID })
       if (result.data) {
-        setState("messages", sessionID, result.data.messages)
-        for (const msg of result.data.messages) {
-          setState("parts", msg.id, result.data.parts[msg.id] ?? [])
+        // result.data is Array<{ info: Message, parts: Part[] }>
+        const messages = result.data.map((m) => m.info)
+        setState("messages", sessionID, messages)
+        for (const msg of result.data) {
+          setState("parts", msg.info.id, msg.parts)
         }
       }
     } catch (err) {
@@ -260,32 +304,48 @@ export function SessionProvider(props: ParentProps) {
 
   async function sendMessage(text: string): Promise<void> {
     const c = client()
-    if (!c) return
+    if (!c) {
+      console.log("[session] sendMessage: no client")
+      return
+    }
 
+    console.log("[session] sendMessage: getting or creating session, current:", state.current)
     const sessionID = state.current ?? (await getOrCreateSession())
-    if (!sessionID) return
+    if (!sessionID) {
+      console.log("[session] sendMessage: no session ID")
+      return
+    }
 
+    console.log("[session] sendMessage: sending prompt to session", sessionID)
+    console.log("[session] sendMessage: current state.messages:", JSON.stringify(state.messages))
     setState("status", sessionID, "running")
 
     try {
-      await c.session.prompt({
+      console.log("[session] sendMessage: calling c.session.prompt...")
+      const result = await c.session.prompt({
         sessionID,
         parts: [{ type: "text", text }],
       })
+      console.log("[session] sendMessage: prompt result:", result)
     } catch (err) {
-      console.error("Failed to send message:", err)
+      console.error("[session] sendMessage: Failed to send message:", err)
       setState("status", sessionID, "error")
     }
   }
 
   async function getOrCreateSession(): Promise<string | null> {
+    console.log("[session] getOrCreateSession: creating:", creating(), "current:", state.current)
     if (creating()) {
+      console.log("[session] getOrCreateSession: already creating, waiting...")
       await new Promise((resolve) => setTimeout(resolve, 100))
+      console.log("[session] getOrCreateSession: done waiting, current:", state.current)
       return state.current
     }
 
     setCreating(true)
+    console.log("[session] getOrCreateSession: calling createSession...")
     const session = await createSession()
+    console.log("[session] getOrCreateSession: createSession returned:", session)
     setCreating(false)
     return session?.id ?? null
   }

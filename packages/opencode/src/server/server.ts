@@ -110,6 +110,9 @@ export namespace Server {
               if (input.startsWith("http://127.0.0.1:")) return input
               if (input === "tauri://localhost" || input === "http://tauri.localhost") return input
 
+              // VS Code webview origins
+              if (input.startsWith("vscode-webview://")) return input
+
               // *.opencode.ai (https only, adjust if needed)
               if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
                 return input
@@ -120,6 +123,10 @@ export namespace Server {
 
               return
             },
+            allowHeaders: ["Content-Type", "x-opencode-directory"],
+            allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            exposeHeaders: ["Content-Type"],
+            maxAge: 86400,
           }),
         )
         .route("/global", GlobalRoutes())

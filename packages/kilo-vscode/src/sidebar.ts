@@ -106,7 +106,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:; connect-src http://localhost:* https://localhost:*;"
+      content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:; connect-src http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;"
     />
     <link rel="stylesheet" href="${styleUri}?v=${bust}" />
     <title>Kilo</title>

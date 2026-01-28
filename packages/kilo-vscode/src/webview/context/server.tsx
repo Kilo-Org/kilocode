@@ -39,12 +39,14 @@ export function ServerProvider(props: ParentProps) {
 
   function handleMessage(event: MessageEvent<ExtensionMessage>) {
     const message = event.data
+    console.log("[server] handleMessage", message)
     switch (message.type) {
       case "server":
         setServer(message.server ?? null)
         vscode.setState({ server: message.server ?? null, directory: directory() })
         break
       case "workspace":
+        console.log("[server] setting directory to:", message.directory)
         setDirectory(message.directory ?? null)
         vscode.setState({ server: server(), directory: message.directory ?? null })
         break
@@ -64,6 +66,8 @@ export function ServerProvider(props: ParentProps) {
     const info = server()
     const dir = directory()
 
+    console.log("[server] createEffect - server:", info, "directory:", dir)
+
     if (!info) {
       setClient(null)
       setStatus("disconnected")
@@ -71,12 +75,14 @@ export function ServerProvider(props: ParentProps) {
     }
 
     setStatus("connecting")
+    console.log("[server] creating client with baseUrl:", info.url, "directory:", dir)
     const newClient = createOpencodeClient({
       baseUrl: info.url,
       directory: dir ?? undefined,
     })
     setClient(newClient)
     setStatus("connected")
+    console.log("[server] client created, status: connected")
   })
 
   return <ServerContext.Provider value={{ server, directory, client, status }}>{props.children}</ServerContext.Provider>
