@@ -276,6 +276,29 @@ function getCommandApprovalDecision(
 		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 	}
 
+	// First check if the full command (unsplit) is explicitly denied
+	// This takes precedence over any allowed patterns
+	const normalizedCommand = command.trim()
+	const fullCommandDenied = deniedCommands.some((pattern) => pattern.trim() === normalizedCommand)
+
+	if (fullCommandDenied) {
+		logs.debug("Full command matches denied pattern exactly", "approvalDecision", {
+			command: normalizedCommand,
+		})
+		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+	}
+
+	// Check if the full command (unsplit) matches any allowed pattern exactly
+	// This allows users to approve and remember entire command chains like "ls . && cat README.md"
+	const fullCommandAllowed = allowedCommands.some((pattern) => pattern.trim() === normalizedCommand)
+
+	if (fullCommandAllowed) {
+		logs.info("Full command matches allowed pattern exactly - auto-approving", "approvalDecision", {
+			command: normalizedCommand,
+		})
+		return { action: "auto-approve" }
+	}
+
 	// Check each command in the chain
 	for (const cmd of commands) {
 		// Check denied list first (takes precedence)

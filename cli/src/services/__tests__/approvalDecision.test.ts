@@ -682,6 +682,95 @@ describe("approvalDecision", () => {
 					const decision = getApprovalDecision(message, config, false)
 					expect(decision.action).toBe("auto-approve")
 				})
+
+				it("should auto-approve when full command chain is in allowed list", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "ls . && cat README.md" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							// Only the full command chain is allowed, not individual commands
+							allowed: ["ls . && cat README.md"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should auto-approve complex chained command when full chain is allowed", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "cd src && npm run build && npm test" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							// Only the full command chain is allowed
+							allowed: ["cd src && npm run build && npm test"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should require manual approval when full command chain is not in allowed list", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "ls . && cat README.md" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							// A different command chain is allowed
+							allowed: ["ls . && cat package.json"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should reject when full command chain is in denied list", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "rm -rf / && echo done" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["*"], // Allow everything
+							denied: ["rm -rf / && echo done"], // But deny this specific chain
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should auto-reject in CI mode when full command chain is in denied list", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: "rm -rf / && echo done" }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["*"], // Allow everything
+							denied: ["rm -rf / && echo done"], // But deny this specific chain
+						},
+					}
+					const decision = getApprovalDecision(message, config, true)
+					expect(decision.action).toBe("auto-reject")
+					expect(decision.message).toBe(CI_MODE_MESSAGES.AUTO_REJECTED)
+				})
 			})
 		})
 
