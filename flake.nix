@@ -1,5 +1,5 @@
 {
-  description = "OpenCode development flake";
+  description = "Kilo development flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -36,34 +36,49 @@
           node_modules = pkgs.callPackage ./nix/node_modules.nix {
             inherit rev;
           };
-          opencode = pkgs.callPackage ./nix/opencode.nix {
+          kilo = pkgs.callPackage ./nix/kilo.nix {
             inherit node_modules;
           };
           desktop = pkgs.callPackage ./nix/desktop.nix {
-            inherit opencode;
+            inherit kilo;
           };
           # nixpkgs cpu naming to bun cpu naming
-          cpuMap = { x86_64 = "x64"; aarch64 = "arm64"; };
+          cpuMap = {
+            x86_64 = "x64";
+            aarch64 = "arm64";
+          };
           # matrix of node_modules builds - these will always fail due to fakeHash usage
           # but allow computation of the correct hash from any build machine for any cpu/os
           # see the update-nix-hashes workflow for usage
           moduleUpdaters = pkgs.lib.listToAttrs (
-            pkgs.lib.concatMap (cpu:
-              map (os: {
-                name = "${cpu}-${os}_node_modules";
-                value = node_modules.override {
-                  bunCpu = cpuMap.${cpu};
-                  bunOs = os;
-                  hash = pkgs.lib.fakeHash;
-                };
-              }) [ "linux" "darwin" ]
-            ) [ "x86_64" "aarch64" ]
+            pkgs.lib.concatMap
+              (
+                cpu:
+                map
+                  (os: {
+                    name = "${cpu}-${os}_node_modules";
+                    value = node_modules.override {
+                      bunCpu = cpuMap.${cpu};
+                      bunOs = os;
+                      hash = pkgs.lib.fakeHash;
+                    };
+                  })
+                  [
+                    "linux"
+                    "darwin"
+                  ]
+              )
+              [
+                "x86_64"
+                "aarch64"
+              ]
           );
         in
         {
-          default = opencode;
-          inherit opencode desktop;
-        } // moduleUpdaters
+          default = kilo;
+          inherit kilo desktop;
+        }
+        // moduleUpdaters
       );
     };
 }
