@@ -62,7 +62,7 @@ if (!Script.preview) {
     }
   }
 
-  const image = "ghcr.io/Kilo-Org/kilo"
+  const image = "ghcr.io/kilo-org/kilo" // kilocode_change
   const platforms = "linux/amd64,linux/arm64"
   const tags = [`${image}:${Script.version}`, `${image}:latest`]
   const tagFlags = tags.flatMap((t) => ["-t", t])
