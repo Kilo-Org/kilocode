@@ -81,9 +81,16 @@ export async function fetchRouterModels(
 			service!.on("message", messageHandler)
 		})
 
+		const shouldRefresh = provider.provider === "github-copilot"
+		const providerKey = provider.provider
+
 		// Send requestRouterModels message
 		await service.sendWebviewMessage({
 			type: "requestRouterModels",
+			values: {
+				provider: providerKey,
+				refresh: shouldRefresh,
+			},
 		})
 		logs.debug("Sent requestRouterModels message", "ModelFetcher")
 

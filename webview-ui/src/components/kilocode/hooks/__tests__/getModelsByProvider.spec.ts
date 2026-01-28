@@ -36,6 +36,7 @@ describe("getModelsByProvider", () => {
 		"vercel-ai-gateway": { "test-model": testModel },
 		huggingface: { "test-model": testModel },
 		gemini: { "test-model": testModel },
+		"github-copilot": { "test-model": testModel },
 		ovhcloud: { "test-model": testModel },
 		chutes: { "test-model": testModel },
 		"sap-ai-core": { "test-model": testModel },
@@ -49,6 +50,7 @@ describe("getModelsByProvider", () => {
 			"fake-ai", // don't know what this is
 			"huggingface", // don't know what this is
 			"human-relay", // no models
+			"github-copilot", // OAuth-only provider (CLI only)
 			"nano-gpt", // dynamic provider - models fetched from API
 			"openai", // not implemented
 			"openai-responses", // not implemented

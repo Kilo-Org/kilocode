@@ -78,6 +78,7 @@ describe("Model Validation Functions", () => {
 		"io-intelligence": {},
 		"vercel-ai-gateway": {},
 		huggingface: {},
+		"github-copilot": {},
 		// kilocode_change start
 		ovhcloud: {},
 		gemini: {},

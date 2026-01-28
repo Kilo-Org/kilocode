@@ -46,6 +46,8 @@ import {
 	minimaxModels,
 	minimaxDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
+	githubCopilotModels, // kilocode_change
+	githubCopilotDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 
 /**
@@ -65,6 +67,7 @@ export type RouterName =
 	| "vercel-ai-gateway"
 	| "ovhcloud"
 	| "nano-gpt"
+	| "github-copilot" // kilocode_change
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -141,6 +144,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	gemini: null,
 	"openai-native": null,
 	"openai-codex": null,
+	"github-copilot": "github-copilot", // kilocode_change
 	mistral: null,
 	moonshot: null,
 	deepseek: null,
@@ -194,6 +198,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	gemini: null,
 	"openai-native": null,
 	"openai-codex": null,
+	"github-copilot": "githubCopilotModelId", // kilocode_change
 	mistral: null,
 	moonshot: null,
 	deepseek: null,
@@ -283,6 +288,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
 	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
+	"github-copilot": githubCopilotDefaultModelId, // kilocode_change
 }
 
 /**
@@ -413,6 +419,11 @@ export function getModelsByProvider(params: {
 				models: claudeCodeModels as ModelRecord,
 				defaultModel: claudeCodeDefaultModelId,
 			}
+		case "github-copilot": // kilocode_change
+			return {
+				models: githubCopilotModels as ModelRecord,
+				defaultModel: githubCopilotDefaultModelId,
+			}
 		default:
 			// For providers without static models (e.g., vscode-lm, fake-ai, virtual-quota-fallback)
 			return {
@@ -460,6 +471,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "ovhCloudAiEndpointsModelId"
 		case "nano-gpt":
 			return "nanoGptModelId"
+		case "github-copilot": // kilocode_change
+			return "githubCopilotModelId" // kilocode_change
 		default:
 			return "apiModelId"
 	}

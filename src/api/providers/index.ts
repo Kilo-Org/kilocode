@@ -9,6 +9,7 @@ export { DoubaoHandler } from "./doubao"
 export { MoonshotHandler } from "./moonshot"
 export { FakeAIHandler } from "./fake-ai"
 export { GeminiHandler } from "./gemini"
+export { GitHubCopilotHandler } from "./github-copilot" // kilocode_change
 export { GlamaHandler } from "./glama" // kilocode_change
 export { GroqHandler } from "./groq"
 export { HuggingFaceHandler } from "./huggingface"

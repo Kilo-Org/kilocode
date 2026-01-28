@@ -254,6 +254,43 @@ describe("validateSelectedProvider", () => {
 		expect(result.valid).toBe(true)
 	})
 
+	it("should require github-copilot token even when GH_TOKEN is set", () => {
+		const originalGhToken = process.env.GH_TOKEN
+		const originalGithubToken = process.env.GITHUB_TOKEN
+
+		process.env.GH_TOKEN = "env-token"
+		delete process.env.GITHUB_TOKEN
+
+		const config: CLIConfig = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "copilot",
+			providers: [
+				{
+					id: "copilot",
+					provider: "github-copilot",
+				},
+			],
+		}
+
+		const result = validateSelectedProvider(config)
+		expect(result.valid).toBe(false)
+		expect(result.errors).toContain("githubCopilotToken is required and cannot be empty for selected provider")
+
+		if (originalGhToken === undefined) {
+			delete process.env.GH_TOKEN
+		} else {
+			process.env.GH_TOKEN = originalGhToken
+		}
+
+		if (originalGithubToken === undefined) {
+			delete process.env.GITHUB_TOKEN
+		} else {
+			process.env.GITHUB_TOKEN = originalGithubToken
+		}
+	})
+
 	it("should return error when no provider is selected", () => {
 		const config: CLIConfig = {
 			version: "1.0.0",

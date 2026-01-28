@@ -10,6 +10,7 @@ export * from "./featherless.js"
 export * from "./fireworks.js"
 export * from "./gemini.js"
 // kilocode_change start
+export * from "./github-copilot.js"
 export * from "./ovhcloud.js"
 export * from "./synthetic.js"
 export * from "./inception.js"
@@ -53,6 +54,7 @@ import { doubaoDefaultModelId } from "./doubao.js"
 import { featherlessDefaultModelId } from "./featherless.js"
 import { fireworksDefaultModelId } from "./fireworks.js"
 import { geminiDefaultModelId } from "./gemini.js"
+import { githubCopilotDefaultModelId } from "./github-copilot.js" // kilocode_change
 import { glamaDefaultModelId } from "./glama.js" // kilocode_change
 import { groqDefaultModelId } from "./groq.js"
 import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
@@ -94,6 +96,10 @@ export function getProviderDefaultModelId(
 		// kilocode_change start
 		case "glama":
 			return glamaDefaultModelId
+		// kilocode_change end
+		// kilocode_change start
+		case "github-copilot":
+			return githubCopilotDefaultModelId
 		// kilocode_change end
 		case "unbound":
 			return unboundDefaultModelId

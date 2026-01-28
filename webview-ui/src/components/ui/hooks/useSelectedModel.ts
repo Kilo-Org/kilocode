@@ -13,6 +13,7 @@ import {
 	geminiModels,
 	geminiDefaultModelId,
 	// kilocode_change start
+	githubCopilotModels,
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -522,6 +523,18 @@ function getSelectedModel({
 			const info = openAiCodexModels[id as keyof typeof openAiCodexModels]
 			return { id, info }
 		}
+		// kilocode_change start
+		case "github-copilot": {
+			const id = getValidatedModelId(
+				apiConfiguration.githubCopilotModelId,
+				routerModels["github-copilot"],
+				defaultModelId,
+			)
+			const info =
+				routerModels["github-copilot"]?.[id] ?? githubCopilotModels[id as keyof typeof githubCopilotModels]
+			return { id, info }
+		}
+		// kilocode_change end
 		case "vercel-ai-gateway": {
 			const id = getValidatedModelId(
 				apiConfiguration.vercelAiGatewayModelId,

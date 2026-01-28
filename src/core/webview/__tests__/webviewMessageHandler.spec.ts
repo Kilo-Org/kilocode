@@ -336,6 +336,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				baseUrl: expect.any(String),
 			}),
 		)
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "github-copilot", apiKey: undefined }) // kilocode_change
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -368,6 +369,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ovhcloud: mockModels, // kilocode_change
 				inception: mockModels, // kilocode_change
 				"sap-ai-core": {}, // kilocode_change
+				"github-copilot": mockModels, // kilocode_change
 			},
 			values: undefined,
 		})
@@ -474,6 +476,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ovhcloud: mockModels, // kilocode_change
 				inception: mockModels, // kilocode_change
 				"sap-ai-core": {}, // kilocode_change
+				"github-copilot": mockModels, // kilocode_change
 			},
 			values: undefined,
 		})
@@ -506,6 +509,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockResolvedValueOnce(mockModels) // github-copilot // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -582,6 +586,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels,
 				ovhcloud: mockModels,
 				"sap-ai-core": {},
+				"github-copilot": mockModels, // kilocode_change
 				// kilocode_change end
 			},
 			values: undefined,
@@ -606,6 +611,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockRejectedValueOnce(new Error("GitHub Copilot API error")) // github-copilot // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -711,6 +717,15 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Chutes API error",
 			values: { provider: "chutes" },
 		})
+
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "GitHub Copilot API error",
+			values: { provider: "github-copilot" },
+		})
+		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",

@@ -2778,6 +2778,7 @@ describe("ClineProvider - Router Models", () => {
 				baseUrl: expect.any(String),
 			}),
 		)
+		expect(getModels).toHaveBeenCalledWith({ provider: "github-copilot", apiKey: undefined }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -2809,6 +2810,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				"github-copilot": mockModels, // kilocode_change
 			},
 			values: undefined,
 		})
@@ -2861,6 +2863,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode_change: synthetic success
 			.mockResolvedValueOnce(mockModels) // roo success
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes fail
+			.mockResolvedValueOnce(mockModels) // github-copilot success // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2889,6 +2892,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				"github-copilot": mockModels, // kilocode_change
 			},
 			values: undefined,
 		})
@@ -3045,6 +3049,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				"github-copilot": mockModels, // kilocode_change
 			},
 			values: undefined,
 		})

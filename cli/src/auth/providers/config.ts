@@ -4,6 +4,7 @@
  */
 export const CUSTOM_AUTH_PROVIDERS: Set<string> = new Set([
 	"kilocode", // Has device auth and token auth variants
+	"github-copilot", // kilocode_change: Has OAuth device flow
 	"other", // Opens config file manually (not a ProviderName, but an auth provider value)
 	"vscode-lm", // Uses VSCode's built-in auth
 	"fake-ai", // No auth needed - testing only

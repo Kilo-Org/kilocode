@@ -20,22 +20,24 @@ export async function poll<T>(options: PollingOptions): Promise<T> {
 			onProgress(attempt, maxAttempts)
 		}
 
+		let result: PollResult
 		try {
-			const result: PollResult = await pollFn()
-
-			// If polling should stop
-			if (!result.continue) {
-				if (result.error) {
-					throw result.error
-				}
-				return result.data as T
-			}
+			result = await pollFn()
 		} catch (error) {
 			// If this is the last attempt, throw the error
 			if (attempt === maxAttempts) {
 				throw error
 			}
 			// Otherwise, continue polling (network errors might be transient)
+			continue
+		}
+
+		// If polling should stop
+		if (!result.continue) {
+			if (result.error) {
+				throw result.error
+			}
+			return result.data as T
 		}
 	}
 
