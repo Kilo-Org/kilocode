@@ -34,24 +34,28 @@ export const FunProjectSuggestions = () => {
 	}
 
 	return (
-		<div className="mt-4">
-			<p className="text-base text-vscode-descriptionForeground mb-2">
-				{t("welcome:noFolderNoHistory.orTryFunProject")}
-			</p>
-			<div className="flex flex-col gap-2">
-				{FUN_PROJECTS.map((project) => {
-					const Icon = project.icon
-					return (
-						<Button
-							key={project.id}
-							onClick={() => handleProjectClick(project)}
-							variant="secondary"
-							className="w-full justify-start text-sm">
-							<Icon className="size-4 mr-2" />
-							{t(`welcome:noFolderNoHistory.projects.${project.id}`)}
-						</Button>
-					)
-				})}
+		<div className="mt-6">
+			<div className="border-t border-vscode-panel-border pt-6">
+				<p className="text-sm text-vscode-descriptionForeground mb-3 font-medium">
+					{t("welcome:noFolderNoHistory.orTryFunProject")}
+				</p>
+				<div className="flex flex-col gap-2">
+					{FUN_PROJECTS.map((project) => {
+						const Icon = project.icon
+						return (
+							<Button
+								key={project.id}
+								onClick={() => handleProjectClick(project)}
+								variant="secondary"
+								className="w-full justify-start text-sm py-5 hover:bg-vscode-list-hoverBackground transition-colors">
+								<Icon className="size-4 mr-3 flex-shrink-0" />
+								<span className="text-left">
+									{t(`welcome:noFolderNoHistory.projects.${project.id}`)}
+								</span>
+							</Button>
+						)
+					})}
+				</div>
 			</div>
 		</div>
 	)

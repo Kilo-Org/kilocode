@@ -64,7 +64,7 @@ export const ContextualPrompts = () => {
 	].filter((p) => p.condition)
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-3">
 			{prompts.map((prompt, index) => {
 				const Icon = prompt.icon
 				return (
@@ -72,9 +72,9 @@ export const ContextualPrompts = () => {
 						key={index}
 						onClick={() => handlePromptClick(prompt.text)}
 						variant="secondary"
-						className="w-full justify-start">
-						<Icon className="size-4 mr-2" />
-						{prompt.text}
+						className="w-full justify-start py-5 hover:bg-vscode-list-hoverBackground transition-colors">
+						<Icon className="size-5 mr-3 flex-shrink-0" />
+						<span className="text-left text-base">{prompt.text}</span>
 					</Button>
 				)
 			})}

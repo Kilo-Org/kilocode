@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Tab, TabContent } from "../../common/Tab"
-import RooHero from "../RooHero"
+import KiloHero from "../KiloHero"
 import { ContextualPrompts } from "../components/ContextualPrompts"
 
 export const FolderNoHistoryScreen = () => {
@@ -9,15 +9,19 @@ export const FolderNoHistoryScreen = () => {
 
 	return (
 		<Tab>
-			<TabContent className="flex flex-col gap-4 p-6">
-				<RooHero />
-				<h2 className="text-xl font-semibold mt-0 mb-0">{t("welcome:folderNoHistory.heading")}</h2>
+			<TabContent className="flex flex-col gap-6 p-8 max-w-2xl mx-auto">
+				<KiloHero />
 
-				<p className="text-base text-vscode-descriptionForeground">
-					{t("welcome:folderNoHistory.description")}
-				</p>
+				<div className="text-center space-y-3">
+					<h1 className="text-2xl font-bold mt-0 mb-0">{t("welcome:folderNoHistory.heading")}</h1>
+					<p className="text-base text-vscode-descriptionForeground leading-relaxed">
+						{t("welcome:folderNoHistory.description")}
+					</p>
+				</div>
 
-				<ContextualPrompts />
+				<div className="mt-2">
+					<ContextualPrompts />
+				</div>
 			</TabContent>
 		</Tab>
 	)

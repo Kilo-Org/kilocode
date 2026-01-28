@@ -4,7 +4,7 @@ import { Button } from "@src/components/ui"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { vscode } from "@src/utils/vscode"
 import { Tab, TabContent } from "../../common/Tab"
-import RooHero from "../RooHero"
+import KiloHero from "../KiloHero"
 import { FunProjectSuggestions } from "../components/FunProjectSuggestions"
 
 export const NoFolderNoHistoryScreen = () => {
@@ -20,28 +20,38 @@ export const NoFolderNoHistoryScreen = () => {
 
 	return (
 		<Tab>
-			<TabContent className="flex flex-col gap-4 p-6">
-				<RooHero />
-				<h2 className="text-xl font-semibold mt-0 mb-0">{t("welcome:noFolderNoHistory.heading")}</h2>
+			<TabContent className="flex flex-col gap-6 p-8 max-w-2xl mx-auto">
+				<KiloHero />
 
-				<p className="text-base text-vscode-descriptionForeground">
-					{t("welcome:noFolderNoHistory.description")}
-				</p>
+				<div className="text-center space-y-3">
+					<h1 className="text-2xl font-bold mt-0 mb-0">{t("welcome:noFolderNoHistory.heading")}</h1>
+					<p className="text-base text-vscode-descriptionForeground leading-relaxed">
+						{t("welcome:noFolderNoHistory.description")}
+					</p>
+				</div>
 
 				{/* Primary Actions - Highlighted */}
-				<div className="flex flex-col gap-2">
-					<Button onClick={handleOpenFolder} variant="primary" className="w-full justify-start">
-						<FolderOpen className="size-4 mr-2" />
+				<div className="flex flex-col gap-3 mt-2">
+					<Button
+						onClick={handleOpenFolder}
+						variant="primary"
+						className="w-full justify-start py-6 text-base">
+						<FolderOpen className="size-5 mr-3" />
 						{t("welcome:noFolderNoHistory.openFolder")}
 					</Button>
-					<Button onClick={handleCloneRepository} variant="primary" className="w-full justify-start">
-						<GitBranch className="size-4 mr-2" />
+					<Button
+						onClick={handleCloneRepository}
+						variant="primary"
+						className="w-full justify-start py-6 text-base">
+						<GitBranch className="size-5 mr-3" />
 						{t("welcome:noFolderNoHistory.cloneRepository")}
 					</Button>
 				</div>
 
 				{/* Secondary Actions - Fun Projects */}
-				<FunProjectSuggestions />
+				<div className="mt-4">
+					<FunProjectSuggestions />
+				</div>
 			</TabContent>
 		</Tab>
 	)
