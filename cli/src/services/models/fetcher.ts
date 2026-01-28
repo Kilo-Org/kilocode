@@ -82,6 +82,19 @@ export async function fetchRouterModels(
 		})
 
 		// Send requestRouterModels message
+		// For litellm provider, pass credentials in message values to ensure they're available
+		// even if the injected configuration hasn't been fully processed yet.
+		// This matches the pattern used by the webview UI when refreshing models.
+		const messageValues: Record<string, unknown> = {}
+		if (provider.provider === "litellm") {
+			if (provider.litellmApiKey) {
+				messageValues.litellmApiKey = provider.litellmApiKey
+			}
+			if (provider.litellmBaseUrl) {
+				messageValues.litellmBaseUrl = provider.litellmBaseUrl
+			}
+		}
+
 		await service.sendWebviewMessage({
 			type: "requestRouterModels",
 		})
