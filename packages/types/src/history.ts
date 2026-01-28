@@ -11,6 +11,7 @@ export const historyItemSchema = z.object({
 	number: z.number(),
 	ts: z.number(),
 	task: z.string(),
+	title: z.string().optional(), // kilocode_change: Generated session title for display
 	tokensIn: z.number(),
 	tokensOut: z.number(),
 	cacheWrites: z.number().optional(),
