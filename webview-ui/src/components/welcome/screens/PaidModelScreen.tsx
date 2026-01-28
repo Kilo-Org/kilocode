@@ -20,7 +20,7 @@ export const PaidModelScreen = ({ supportsKiloGateway }: PaidModelScreenProps) =
 	}
 
 	const handleProviderSettings = () => {
-		vscode.postMessage({ type: "openSettings" })
+		vscode.postMessage({ type: "openMcpSettings" })
 	}
 
 	// Model supports Kilo Gateway subscription

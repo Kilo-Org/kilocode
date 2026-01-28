@@ -12,14 +12,12 @@ const FUN_PROJECTS = [
 	{
 		id: "todo",
 		icon: ListTodo,
-		prompt:
-			"Build a Todo app with React and TypeScript, including add/delete/complete functionality and local storage",
+		prompt: "Build a Todo app with React and TypeScript, including add/delete/complete functionality and local storage",
 	},
 	{
 		id: "weather",
 		icon: Cloud,
-		prompt:
-			"Make a Weather Dashboard using a weather API, showing current conditions and 5-day forecast with icons",
+		prompt: "Make a Weather Dashboard using a weather API, showing current conditions and 5-day forecast with icons",
 	},
 ]
 
@@ -28,7 +26,7 @@ export const FunProjectSuggestions = () => {
 
 	const handleProjectClick = (project: (typeof FUN_PROJECTS)[0]) => {
 		vscode.postMessage({
-			type: "sendMessage",
+			type: "newTask",
 			text: project.prompt,
 		})
 	}
