@@ -1045,6 +1045,7 @@ export interface WebviewMessage {
 	organizationId?: string | null // For organization switching
 	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
 	historyItem?: HistoryItem // kilocode_change For addTaskToHistory
+	funProject?: string // kilocode_change: Fun project identifier (snake, todo, weather)
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean

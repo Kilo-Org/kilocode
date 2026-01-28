@@ -581,7 +581,28 @@ export const webviewMessageHandler = async (
 			// task. This essentially creates a fresh slate for the new task.
 			try {
 				const resolved = await resolveIncomingImages({ text: message.text, images: message.images })
-				await provider.createTask(resolved.text, resolved.images)
+
+				// kilocode_change start: Handle fun projects by creating a folder
+				let taskText = resolved.text
+				if (message.funProject) {
+					const cwd = getCurrentCwd()
+					const projectFolderName = `${message.funProject}-game`
+					const projectPath = path.join(cwd, projectFolderName)
+
+					try {
+						// Create the project folder
+						await fs.mkdir(projectPath, { recursive: true })
+
+						// Modify the prompt to instruct the LLM to work in the created folder
+						taskText = `${resolved.text}\n\nIMPORTANT: Create all files for this project inside the "${projectFolderName}" folder. Use relative paths like "${projectFolderName}/index.html", "${projectFolderName}/style.css", etc.`
+					} catch (folderError) {
+						provider.log(`Failed to create fun project folder: ${folderError}`)
+						// Continue with the original prompt if folder creation fails
+					}
+				}
+				await provider.createTask(taskText, resolved.images)
+				// kilocode_change end
+
 				// Task created successfully - notify the UI to reset
 				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 			} catch (error) {

@@ -29,6 +29,7 @@ export const FunProjectSuggestions = () => {
 		vscode.postMessage({
 			type: "newTask",
 			text: project.prompt,
+			funProject: project.id,
 		})
 	}
 
