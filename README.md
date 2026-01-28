@@ -25,6 +25,16 @@ Kilo CLI includes two built-in agents you can switch between using the `Tab` key
 Also included is a **general** subagent for complex searches and multi-step tasks.
 This is used internally and can be invoked using `@general` in messages.
 
+### Autonomous Mode (CI/CD)
+
+Use the `--auto` flag with `kilo run` to enable fully autonomous operation without user interaction. This is ideal for CI/CD pipelines and automated workflows:
+
+```bash
+kilo run --auto "run tests and fix any failures"
+```
+
+**Important:** The `--auto` flag disables all permission prompts and allows the agent to execute any action without confirmation. Only use this in trusted environments like CI/CD pipelines.
+
 ### Migrating from Kilo Code Extension
 
 If you're coming from the Kilo Code VS Code extension, your configurations are automatically migrated:
