@@ -97,6 +97,11 @@ kilocode --auto "Implement feature X"
 # Run in autonomous mode with piped input
 echo "Fix the bug in app.ts" | kilocode --auto
 
+# Run in autonomous mode with a prompt file
+kilocode --auto --prompt-file ./prompts/fix-bug.md
+
+# Requires --auto or --json-io
+
 # Run in autonomous mode with timeout (in seconds)
 kilocode --auto "Run tests" --timeout 300
 ```
