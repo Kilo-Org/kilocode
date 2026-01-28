@@ -17,6 +17,8 @@ import {
 	TasksByIdRequestPayload,
 	UpdateGlobalStateMessage,
 } from "../../shared/WebviewMessage"
+import { OnboardingStateDetector } from "../onboarding/OnboardingStateDetector"
+import { RateLimitMonitor } from "../rate-limiting/RateLimitMonitor"
 // kilocode_change end
 
 import {
@@ -4603,6 +4605,50 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+
+		// kilocode_change start: Onboarding state handlers
+		case "checkWorkspaceState": {
+			const detector = new OnboardingStateDetector(provider.context)
+			const state = await detector.detectWorkspaceState()
+			await provider.postMessageToWebview({
+				type: "workspaceState",
+				hasFolder: state.hasOpenFolder,
+				hasHistory: state.hasSessionHistory,
+			})
+			break
+		}
+
+		case "checkEditorState": {
+			const detector = new OnboardingStateDetector(provider.context)
+			const state = await detector.detectEditorState()
+			await provider.postMessageToWebview({
+				type: "editorState",
+				hasOpenFile: state.hasOpenFile,
+				hasSelectedCode: state.hasSelectedCode,
+			})
+			break
+		}
+
+		case "checkRateLimit": {
+			const status = RateLimitMonitor.getStatus()
+			await provider.postMessageToWebview({
+				type: "rateLimitStatus",
+				isLimited: status.isLimited,
+				resetTime: status.resetTime,
+			})
+			break
+		}
+
+		case "openFolder": {
+			await vscode.commands.executeCommand("vscode.openFolder")
+			break
+		}
+
+		case "showCloneDialog": {
+			await vscode.commands.executeCommand("git.clone")
+			break
+		}
+		// kilocode_change end: Onboarding state handlers
 
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)
