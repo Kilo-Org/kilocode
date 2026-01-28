@@ -101,16 +101,6 @@
 			"stoppedWithReason": "Claude Code इस कारण से रुका: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}",
-			"tokenRefreshFailed": "OAuth टोकन रीफ्रेश करने में विफल: {{error}}",
-			"onboardingTimeout": "ऑनबोर्डिंग ऑपरेशन 60 सेकंड बाद टाइमआउट हो गया। कृपया बाद में पुनः प्रयास करें।",
-			"projectDiscoveryFailed": "प्रोजेक्ट ID खोजने में असमर्थ। सुनिश्चित करें कि आप 'gemini auth' के साथ प्रमाणित हैं।",
-			"rateLimitExceeded": "दर सीमा पार हो गई। मुफ्त टियर की सीमा पहुंच गई है।",
-			"badRequest": "गलत अनुरोध: {{details}}",
-			"apiError": "Gemini CLI API त्रुटि: {{error}}",
-			"completionError": "Gemini CLI पूर्णता त्रुटि: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}"
 		},

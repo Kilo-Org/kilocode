@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
-		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
+		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, en meer dan 450 andere.",
 		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
 		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
-		"lowBalance": "Uw Kilo Code-saldo is laag"
+		"lowBalance": "Je Kilo Code-saldo is laag",
+		"switchToFreeModel": "Schakel over naar een gratis model"
 	},
 	"pagination": {
 		"previous": "Vorige",
@@ -46,6 +47,7 @@
 			"apiKey": "Kilo Code API-sleutel",
 			"login": "Inloggen bij Kilo Code",
 			"logout": "Uitloggen bij Kilo Code",
+			"loginForPremiumModels": "Log in voor toegang tot premium modellen en functies",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",

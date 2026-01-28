@@ -336,7 +336,6 @@ describe("models-api command", () => {
 			"featherless",
 			"roo",
 			"claude-code",
-			"gemini-cli",
 		]
 
 		it.each(staticProviders)("should recognize %s as static provider", (provider) => {
