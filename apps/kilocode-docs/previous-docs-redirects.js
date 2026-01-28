@@ -258,6 +258,12 @@ module.exports = [
 		permanent: true,
 	},
 	{
+		source: "/docs/features/skills",
+		destination: "/docs/customize/skills",
+		basePath: false,
+		permanent: true,
+	},
+	{
 		source: "/docs/agent-behavior/prompt-engineering",
 		destination: "/docs/customize/prompt-engineering",
 		basePath: false,
