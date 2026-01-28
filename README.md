@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://kilo.ai">
-    <img src="assets/kilo-logo.svg" alt="Kilo CLI logo">
+    <img src="logo.png" alt="Kilo CLI logo">
   </a>
 </p>
 <p align="center">The open source AI coding agent.</p>
