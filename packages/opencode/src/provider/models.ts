@@ -108,13 +108,31 @@ export namespace ModelsDev {
     if (!providers["kilo"]) {
       const kiloModels = await ModelCache.fetch("kilo").catch(() => ({}))
 
+      // Fallback models when API is unavailable (e.g., in CI)
+      const fallbackModels: Record<string, any> =
+        Object.keys(kiloModels).length > 0
+          ? kiloModels
+          : {
+              "minimax/minimax-m2.1:free": {
+                id: "minimax/minimax-m2.1:free",
+                name: "Minimax M2.1 (Free)",
+                family: "minimax",
+                tool_call: true,
+                temperature: true,
+                limit: {
+                  context: 128000,
+                  output: 8192,
+                },
+              },
+            }
+
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
         env: [],
         api: "https://api.kilo.ai/api/openrouter/",
         npm: "@kilocode/kilo-gateway",
-        models: kiloModels,
+        models: fallbackModels,
       }
 
       // Trigger background refresh if models are empty or stale
