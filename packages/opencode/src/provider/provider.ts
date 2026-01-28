@@ -1192,9 +1192,12 @@ export namespace Provider {
     const cfg = await Config.get()
     if (cfg.model) return parseModel(cfg.model)
 
-    const provider = await list()
-      .then((val) => Object.values(val))
-      .then((x) => x.find((p) => !cfg.provider || Object.keys(cfg.provider).includes(p.id)))
+    // kilocode_change start - Skip providers with no models
+    const providers = await list().then((val) => Object.values(val))
+    const provider = providers.find(
+      (p) => (!cfg.provider || Object.keys(cfg.provider).includes(p.id)) && Object.keys(p.models).length > 0,
+    )
+    // kilocode_change end
     if (!provider) throw new Error("no providers found")
     const [model] = sort(Object.values(provider.models))
     if (!model) throw new Error("no models found")
