@@ -49,14 +49,23 @@ const messageBufferAtom = atom<ExtensionMessage[]>([])
  */
 const isProcessingBufferAtom = atom<boolean>(false)
 
+export type PendingOutputUpdate = { output: string; command?: string; completed?: boolean; pid?: number }
+
+function hasNumericPid(value: unknown): value is { pid: number } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"pid" in value &&
+		typeof (value as { pid?: unknown }).pid === "number"
+	)
+}
+
 /**
  * Map to store pending output updates for command_output asks
  * Key: executionId, Value: latest output data
  * Exported so extension.ts can apply pending updates when asks appear
  */
-export const pendingOutputUpdatesAtom = atom<Map<string, { output: string; command?: string; completed?: boolean }>>(
-	new Map<string, { output: string; command?: string; completed?: boolean }>(),
-)
+export const pendingOutputUpdatesAtom = atom<Map<string, PendingOutputUpdate>>(new Map<string, PendingOutputUpdate>())
 
 /**
  * Map to track which commands have shown a command_output ask
@@ -423,11 +432,23 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						// Initialize with command info
 						// IMPORTANT: Store the command immediately so it's available even if no output is produced
 						const command = "command" in statusData ? (statusData.command as string) : undefined
-						const updateData: { output: string; command?: string; completed?: boolean } = {
+						const updateData: { output: string; command?: string; completed?: boolean; pid?: number } = {
 							output: "",
 							command: command || "", // Always set command, even if empty
 						}
+						if (hasNumericPid(statusData)) {
+							updateData.pid = statusData.pid
+						}
 						newPendingUpdates.set(statusData.executionId, updateData)
+
+						const askPayload: { executionId: string; command: string; output: string; pid?: number } = {
+							executionId: statusData.executionId,
+							command: command || "",
+							output: "",
+						}
+						if (hasNumericPid(statusData)) {
+							askPayload.pid = statusData.pid
+						}
 
 						// CLI-ONLY WORKAROUND: Immediately create a synthetic command_output ask
 						// This allows users to abort the command even before any output is produced
@@ -435,11 +456,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 							ts: Date.now(),
 							type: "ask",
 							ask: "command_output",
-							text: JSON.stringify({
-								executionId: statusData.executionId,
-								command: command || "",
-								output: "",
-							}),
+							text: JSON.stringify(askPayload),
 							partial: true, // Mark as partial since command is still running
 							isAnswered: false,
 						}
@@ -470,13 +487,20 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						)
 
 						// Update with new output
-						const existing = newPendingUpdates.get(statusData.executionId) || { output: "" }
+						const existing: PendingOutputUpdate = newPendingUpdates.get(statusData.executionId) || {
+							output: "",
+						}
 						const command = "command" in statusData ? (statusData.command as string) : existing.command
-						const updateData: { output: string; command?: string; completed?: boolean } = {
+						const updateData: { output: string; command?: string; completed?: boolean; pid?: number } = {
 							output: statusData.output || "",
 						}
 						if (command) {
 							updateData.command = command
+						}
+						if (hasNumericPid(statusData)) {
+							updateData.pid = statusData.pid
+						} else if (existing.pid !== undefined) {
+							updateData.pid = existing.pid
 						}
 						if (existing.completed !== undefined) {
 							updateData.completed = existing.completed
@@ -505,6 +529,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 									executionId: statusData.executionId,
 									command: command || "",
 									output: statusData.output || "",
+									...(existing.pid !== undefined && { pid: existing.pid }),
 								}),
 								partial: true, // Still running
 							}
@@ -534,7 +559,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						)
 
 						// Mark as completed and ensure command is preserved
-						const existing = newPendingUpdates.get(statusData.executionId) || { output: "", command: "" }
+						const existing: PendingOutputUpdate = newPendingUpdates.get(statusData.executionId) || {
+							output: "",
+							command: "",
+						}
 						// If command wasn't set yet (shouldn't happen but defensive), try to get it from statusData
 						const command =
 							existing.command || ("command" in statusData ? (statusData.command as string) : "")
@@ -582,6 +610,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									...(pendingUpdate?.pid !== undefined && { pid: pendingUpdate.pid }),
 									...(exitCode !== undefined && { exitCode }),
 								}),
 								partial: false, // Command completed
@@ -693,7 +722,7 @@ export const disposeServiceEffectAtom = atom(null, async (get, set) => {
 		set(messageBufferAtom, [])
 
 		// Clear pending output updates
-		set(pendingOutputUpdatesAtom, new Map<string, { output: string; command?: string; completed?: boolean }>())
+		set(pendingOutputUpdatesAtom, new Map<string, PendingOutputUpdate>())
 
 		// Clear command output ask tracking
 		set(commandOutputAskShownAtom, new Map<string, boolean>())
