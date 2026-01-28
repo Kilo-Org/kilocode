@@ -148,9 +148,7 @@ export async function checkAutoApproval({
 			return { decision: "ask" }
 		}
 
-		if (tool.tool === "updateTodoList") {
-			return { decision: "approve" }
-		}
+		// kilocode_change: removed auto-approval for updateTodoList to require user confirmation for new users
 
 		if (tool?.tool === "fetchInstructions") {
 			if (tool.content === "create_mode") {

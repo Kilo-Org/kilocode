@@ -2704,7 +2704,7 @@ export class ClineProvider
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
-			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
+			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? false, // kilocode_change: default to false for new users
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			isBrowserSessionActive,
@@ -2772,7 +2772,7 @@ export class ClineProvider
 			selectedMicrophoneDevice: stateValues.selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
-			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
+			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? false, // kilocode_change: default to false for new users
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,
