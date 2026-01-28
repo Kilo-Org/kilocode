@@ -5,6 +5,8 @@ import {
 	anthropicModels,
 	basetenModels,
 	basetenDefaultModelId,
+	corethinkModels,
+	corethinkDefaultModelId,
 	bedrockDefaultModelId,
 	bedrockModels,
 	deepSeekDefaultModelId,
@@ -315,6 +317,12 @@ export const getModelsByProvider = ({
 			return {
 				models: basetenModels,
 				defaultModel: basetenDefaultModelId,
+			}
+		}
+		case "corethink": {
+			return {
+				models: corethinkModels,
+				defaultModel: corethinkDefaultModelId,
 			}
 		}
 		case "zai": {
