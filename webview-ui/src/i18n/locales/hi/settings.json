@@ -1,4 +1,5 @@
 {
+	"back": "टास्क व्यू पर वापस जाओ",
 	"common": {
 		"save": "सहेजें",
 		"done": "पूर्ण",
@@ -7,6 +8,10 @@
 		"select": "चुनें",
 		"add": "हेडर जोड़ें",
 		"remove": "हटाएं"
+	},
+	"search": {
+		"placeholder": "सेटिंग्स खोजें...",
+		"noResults": "कोई सेटिंग नहीं मिली"
 	},
 	"header": {
 		"title": "सेटिंग्स",
@@ -37,7 +42,9 @@
 		"experimental": "प्रायोगिक",
 		"language": "भाषा",
 		"about": "परिचय",
-		"autoPurge": "स्वचालित सफाई"
+		"autoPurge": "स्वचालित सफाई",
+		"agentBehaviour": "एजेंट व्यवहार",
+		"ghost": "ऑटोकम्पलीट"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "सुझाव चाहिए या बस अन्य Kilo Code उपयोगकर्ताओं के साथ घूमना चाहते हैं? <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल हों",
 		"contactAndCommunity": "संपर्क और समुदाय",
-		"manageSettings": "सेटिंग्स प्रबंधित करें"
+		"manageSettings": "सेटिंग्स प्रबंधित करें",
+		"debugMode": {
+			"label": "डिबग मोड सक्षम करें",
+			"description": "टास्क हेडर में अतिरिक्त बटन दिखाने के लिए डिबग मोड सक्षम करें जो API वार्तालाप इतिहास और UI संदेशों को अस्थायी फ़ाइलों में सुंदर JSON के रूप में देखने की अनुमति देते हैं।"
+		}
 	},
 	"slashCommands": {
 		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>"
@@ -94,6 +105,7 @@
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
 		"openaiCompatibleProvider": "OpenAI संगत",
+		"openaiCompatibleResponsesProvider": "OpenAI संगत (Responses)",
 		"openAiKeyLabel": "OpenAI API कुंजी",
 		"openAiKeyPlaceholder": "अपना OpenAI API कुंजी दर्ज करें",
 		"openAiCompatibleBaseUrlLabel": "आधार URL",
@@ -312,7 +324,6 @@
 		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"useReasoning": "तर्क सक्षम करें",
 		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
-		"useLegacyFormat": "पुराने OpenAI API प्रारूप का उपयोग करें",
 		"customHeaders": "कस्टम हेडर्स",
 		"headerName": "हेडर नाम",
 		"headerValue": "हेडर मूल्य",
@@ -597,21 +608,6 @@
 			"placeholder": "डिफ़ॉल्ट: claude",
 			"maxTokensLabel": "अधिकतम आउटपुट टोकन",
 			"maxTokensDescription": "Claude Code प्रतिक्रियाओं के लिए आउटपुट टोकन की अधिकतम संख्या। डिफ़ॉल्ट 8000 है।"
-		},
-		"geminiCli": {
-			"description": "यह प्रदाता Gemini CLI टूल से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
-			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
-			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.gemini/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
-			"instructions": "यदि आपने अभी तक प्रमाणीकरण नहीं किया है, तो कृपया पहले",
-			"instructionsContinued": "को अपने टर्मिनल में चलाएं।",
-			"setupLink": "Gemini CLI सेटअप निर्देश",
-			"requirementsTitle": "महत्वपूर्ण आवश्यकताएं",
-			"requirement1": "पहले, आपको Gemini CLI टूल इंस्टॉल करना होगा",
-			"requirement2": "फिर, अपने टर्मिनल में gemini चलाएं और सुनिश्चित करें कि आप Google से लॉग इन करें",
-			"requirement3": "केवल व्यक्तिगत Google खातों के साथ काम करता है (Google Workspace खाते नहीं)",
-			"requirement4": "API कुंजियों का उपयोग नहीं करता - प्रमाणीकरण OAuth के माध्यम से संभाला जाता है",
-			"requirement5": "Gemini CLI टूल को पहले इंस्टॉल और प्रमाणित करने की आवश्यकता है",
-			"freeAccess": "OAuth प्रमाणीकरण के माध्यम से मुफ्त पहुंच"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",

@@ -1,4 +1,5 @@
 {
+	"back": "Zurück zur Aufgabenansicht",
 	"common": {
 		"save": "Speichern",
 		"done": "Fertig",
@@ -7,6 +8,10 @@
 		"select": "Auswählen",
 		"add": "Header hinzufügen",
 		"remove": "Entfernen"
+	},
+	"search": {
+		"placeholder": "Einstellungen durchsuchen...",
+		"noResults": "Keine Einstellungen gefunden"
 	},
 	"header": {
 		"title": "Einstellungen",
@@ -37,7 +42,9 @@
 		"experimental": "Experimentell",
 		"language": "Sprache",
 		"about": "Über Kilo Code",
-		"autoPurge": "Auto-Bereinigung"
+		"autoPurge": "Auto-Bereinigung",
+		"agentBehaviour": "Agentenverhalten",
+		"ghost": "Autovervollständigung"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Möchtest du Tipps oder dich einfach mit anderen Kilo Code-Nutzern austauschen? Tritt <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilo.ai/discord</discordLink> bei",
 		"contactAndCommunity": "Kontakt & Community",
-		"manageSettings": "Einstellungen verwalten"
+		"manageSettings": "Einstellungen verwalten",
+		"debugMode": {
+			"label": "Debug-Modus aktivieren",
+			"description": "Aktiviere den Debug-Modus, um zusätzliche Buttons im Task-Header zum Anzeigen der API-Konversationshistorie und UI-Nachrichten als formatiertes JSON in temporären Dateien zu erhalten."
+		}
 	},
 	"slashCommands": {
 		"description": "Verwalte deine Slash-Befehle, um benutzerdefinierte Workflows und Aktionen schnell auszuführen. <DocsLink>Mehr erfahren</DocsLink>"
@@ -99,6 +110,7 @@
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
 		"openaiCompatibleProvider": "OpenAI-kompatibel",
+		"openaiCompatibleResponsesProvider": "OpenAI-kompatibel (Responses)",
 		"openAiKeyLabel": "OpenAI API-Schlüssel",
 		"openAiKeyPlaceholder": "Gib deinen OpenAI API-Schlüssel ein",
 		"openAiCompatibleBaseUrlLabel": "Basis-URL",
@@ -315,7 +327,6 @@
 		"useCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"useReasoning": "Reasoning aktivieren",
 		"useHostHeader": "Benutzerdefinierten Host-Header verwenden",
-		"useLegacyFormat": "Altes OpenAI API-Format verwenden",
 		"customHeaders": "Benutzerdefinierte Headers",
 		"headerName": "Header-Name",
 		"headerValue": "Header-Wert",
@@ -606,21 +617,6 @@
 			"placeholder": "Standard: claude",
 			"maxTokensLabel": "Maximale Ausgabe-Tokens",
 			"maxTokensDescription": "Maximale Anzahl an Ausgabe-Tokens für Claude Code-Antworten. Standard ist 8000."
-		},
-		"geminiCli": {
-			"description": "Dieser Anbieter verwendet OAuth-Authentifizierung vom Gemini CLI-Tool und benötigt keine API-Schlüssel.",
-			"oauthPath": "OAuth-Anmeldedaten-Pfad (optional)",
-			"oauthPathDescription": "Pfad zur OAuth-Anmeldedaten-Datei. Leer lassen, um den Standardort zu verwenden (~/.gemini/oauth_creds.json).",
-			"instructions": "Falls du dich noch nicht authentifiziert hast, führe bitte",
-			"instructionsContinued": "in deinem Terminal zuerst aus.",
-			"setupLink": "Gemini CLI Setup-Anweisungen",
-			"requirementsTitle": "Wichtige Anforderungen",
-			"requirement1": "Zuerst musst du das Gemini CLI-Tool installieren",
-			"requirement2": "Dann führe gemini in deinem Terminal aus und stelle sicher, dass du dich mit Google anmeldest",
-			"requirement3": "Funktioniert nur mit persönlichen Google-Konten (nicht mit Google Workspace-Konten)",
-			"requirement4": "Verwendet keine API-Schlüssel - Authentifizierung wird über OAuth abgewickelt",
-			"requirement5": "Erfordert, dass das Gemini CLI-Tool zuerst installiert und authentifiziert wird",
-			"freeAccess": "Kostenloser Zugang über OAuth-Authentifizierung"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth-Anmeldedaten-Pfad (optional)",

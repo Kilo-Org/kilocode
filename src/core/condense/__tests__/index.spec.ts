@@ -334,6 +334,254 @@ describe("getKeepMessagesWithToolBlocks", () => {
 		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
 		expect(result.reasoningBlocksToPreserve).toHaveLength(0)
 	})
+
+	it("should preserve tool_use when tool_result is in 2nd kept message and tool_use is 2 messages before boundary", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_second_kept",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_second_kept",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 3,
+			},
+			{ role: "user", content: "Some other message", ts: 4 },
+			{ role: "assistant", content: "First kept message", ts: 5 },
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 6,
+			},
+			{ role: "assistant", content: "Third kept message", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages (ts: 5, 6, 7)
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].ts).toBe(5)
+		expect(result.keepMessages[1].ts).toBe(6)
+		expect(result.keepMessages[2].ts).toBe(7)
+
+		// Should preserve the tool_use block from message at ts:3 (2 messages before boundary)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+	})
+
+	it("should preserve tool_use when tool_result is in 3rd kept message and tool_use is at boundary edge", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_third_kept",
+			name: "search",
+			input: { query: "test" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_third_kept",
+			content: "search results",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Start", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Searching..." }, toolUseBlock],
+				ts: 2,
+			},
+			{ role: "user", content: "First kept message", ts: 3 },
+			{ role: "assistant", content: "Second kept message", ts: 4 },
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Done" }],
+				ts: 5,
+			},
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages (ts: 3, 4, 5)
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].ts).toBe(3)
+		expect(result.keepMessages[1].ts).toBe(4)
+		expect(result.keepMessages[2].ts).toBe(5)
+
+		// Should preserve the tool_use block from message at ts:2 (at the search boundary edge)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+	})
+
+	it("should preserve multiple tool_uses when tool_results are in different kept messages", () => {
+		const toolUseBlock1 = {
+			type: "tool_use" as const,
+			id: "toolu_multi_1",
+			name: "read_file",
+			input: { path: "file1.txt" },
+		}
+		const toolUseBlock2 = {
+			type: "tool_use" as const,
+			id: "toolu_multi_2",
+			name: "read_file",
+			input: { path: "file2.txt" },
+		}
+		const toolResultBlock1 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_multi_1",
+			content: "contents 1",
+		}
+		const toolResultBlock2 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_multi_2",
+			content: "contents 2",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Start", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading file 1..." }, toolUseBlock1],
+				ts: 2,
+			},
+			{ role: "user", content: "Some message", ts: 3 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading file 2..." }, toolUseBlock2],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock1, { type: "text" as const, text: "First result" }],
+				ts: 5,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock2, { type: "text" as const, text: "Second result" }],
+				ts: 6,
+			},
+			{ role: "assistant", content: "Got both files", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages (ts: 5, 6, 7)
+		expect(result.keepMessages).toHaveLength(3)
+
+		// Should preserve both tool_use blocks
+		expect(result.toolUseBlocksToPreserve).toHaveLength(2)
+		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock1)
+		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock2)
+	})
+
+	it("should not crash when tool_result references tool_use beyond search boundary", () => {
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_beyond_boundary",
+			content: "result",
+		}
+
+		// Tool_use is at ts:1, but with N_MESSAGES_TO_KEEP=3, we only search back 3 messages
+		// from startIndex-1. StartIndex is 7 (messages.length=10, keepCount=3, startIndex=7).
+		// So we search from index 6 down to index 4 (7-1 down to 7-3).
+		// The tool_use at index 0 (ts:1) is beyond the search boundary.
+		const messages: ApiMessage[] = [
+			{
+				role: "assistant",
+				content: [
+					{ type: "text" as const, text: "Way back..." },
+					{
+						type: "tool_use" as const,
+						id: "toolu_beyond_boundary",
+						name: "old_tool",
+						input: {},
+					},
+				],
+				ts: 1,
+			},
+			{ role: "user", content: "Message 2", ts: 2 },
+			{ role: "assistant", content: "Message 3", ts: 3 },
+			{ role: "user", content: "Message 4", ts: 4 },
+			{ role: "assistant", content: "Message 5", ts: 5 },
+			{ role: "user", content: "Message 6", ts: 6 },
+			{ role: "assistant", content: "Message 7", ts: 7 },
+			{
+				role: "user",
+				content: [toolResultBlock],
+				ts: 8,
+			},
+			{ role: "assistant", content: "Message 9", ts: 9 },
+			{ role: "user", content: "Message 10", ts: 10 },
+		]
+
+		// Should not crash
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].ts).toBe(8)
+		expect(result.keepMessages[1].ts).toBe(9)
+		expect(result.keepMessages[2].ts).toBe(10)
+
+		// Should not preserve the tool_use since it's beyond the search boundary
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should not duplicate tool_use blocks when same tool_result ID appears multiple times", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_duplicate",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock1 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_duplicate",
+			content: "result 1",
+		}
+		const toolResultBlock2 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_duplicate",
+			content: "result 2",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Start", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Using tool..." }, toolUseBlock],
+				ts: 2,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock1],
+				ts: 3,
+			},
+			{ role: "assistant", content: "Processing", ts: 4 },
+			{
+				role: "user",
+				content: [toolResultBlock2], // Same tool_use_id as first result
+				ts: 5,
+			},
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages (ts: 3, 4, 5)
+		expect(result.keepMessages).toHaveLength(3)
+
+		// Should only preserve the tool_use block once, not twice
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+	})
 })
 
 describe("getMessagesSinceLastSummary", () => {

@@ -66,9 +66,16 @@ export class ProviderSettingsManager {
 		modes.map((mode) => [mode.slug, this.defaultConfigId]),
 	)
 
+	// kilocode_change start: Anonymous kilocode onboarding - set default provider for new users
 	private readonly defaultProviderProfiles: ProviderProfiles = {
 		currentApiConfigName: "default",
-		apiConfigs: { default: { id: this.defaultConfigId } },
+		apiConfigs: {
+			default: {
+				id: this.defaultConfigId,
+				apiProvider: "kilocode",
+				kilocodeModel: "minimax/minimax-m2.1:free",
+			},
+		},
 		modeApiConfigs: this.defaultModeApiConfigs,
 		migrations: {
 			rateLimitSecondsMigrated: true, // Mark as migrated on fresh installs
@@ -79,6 +86,7 @@ export class ProviderSettingsManager {
 			claudeCodeLegacySettingsMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
+	// kilocode_change end
 
 	// kilocode_change start
 	private pendingDuplicateIdRepairReport: Record<string, string[]> | null = null
@@ -140,10 +148,15 @@ export class ProviderSettingsManager {
 	async init_runMigrations() {
 		try {
 			return await this.lock(async () => {
-				const providerProfiles = await this.load()
+				// kilocode_change start: Check if this is a new user (no stored config)
+				const storedContent = await this.context.secrets.get(this.secretsKey)
+				const isNewUser = !storedContent
+				// kilocode_change end
 
-				if (!providerProfiles) {
-					await this.store(this.defaultProviderProfiles)
+				const providerProfiles = await this.loadFromContent(storedContent)
+
+				if (isNewUser) {
+					await this.store(providerProfiles)
 					return
 				}
 
@@ -700,7 +713,8 @@ export class ProviderSettingsManager {
 	public async export() {
 		try {
 			return await this.lock(async () => {
-				const profiles = providerProfilesSchema.parse(await this.load())
+				const providerProfiles = await this.load()
+				const profiles = providerProfilesSchema.parse(providerProfiles)
 				const configs = profiles.apiConfigs
 				for (const name in configs) {
 					// Avoid leaking properties from other providers.
@@ -760,9 +774,13 @@ export class ProviderSettingsManager {
 	}
 
 	private async load(): Promise<ProviderProfiles> {
-		try {
-			const content = await this.context.secrets.get(this.secretsKey)
+		const content = await this.context.secrets.get(this.secretsKey)
+		return this.loadFromContent(content)
+	}
 
+	// kilocode_change start: Extract content parsing to avoid double-fetching in init_runMigrations
+	private loadFromContent(content: string | undefined): ProviderProfiles {
+		try {
 			if (!content) {
 				return this.defaultProviderProfiles
 			}
@@ -801,6 +819,7 @@ export class ProviderSettingsManager {
 			throw new Error(`Failed to read provider profiles from secrets: ${error}`)
 		}
 	}
+	// kilocode_change end
 
 	/**
 	 * Sanitizes a provider config by resetting invalid/removed apiProvider values.

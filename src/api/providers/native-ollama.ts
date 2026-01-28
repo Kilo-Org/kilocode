@@ -302,6 +302,8 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			let totalOutputTokens = 0
 			// Track tool calls across chunks (Ollama may send complete tool_calls in final chunk)
 			let toolCallIndex = 0
+			// Track tool call IDs for emitting end events
+			const toolCallIds: string[] = []
 
 			try {
 				for await (const chunk of stream) {
@@ -317,6 +319,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 						for (const toolCall of chunk.message.tool_calls) {
 							// Generate a unique ID for this tool call
 							const toolCallId = `ollama-tool-${toolCallIndex}`
+							toolCallIds.push(toolCallId)
 							yield {
 								type: "tool_call_partial",
 								index: toolCallIndex,
@@ -342,6 +345,13 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				// Yield any remaining content from the matcher
 				for (const chunk of matcher.final()) {
 					yield chunk
+				}
+
+				for (const toolCallId of toolCallIds) {
+					yield {
+						type: "tool_call_end",
+						id: toolCallId,
+					}
 				}
 
 				// Yield usage information if available

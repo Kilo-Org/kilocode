@@ -1,4 +1,5 @@
 {
+	"back": "작업 보기로 돌아가기",
 	"common": {
 		"save": "저장",
 		"done": "완료",
@@ -7,6 +8,10 @@
 		"select": "선택",
 		"add": "헤더 추가",
 		"remove": "삭제"
+	},
+	"search": {
+		"placeholder": "설정 검색...",
+		"noResults": "설정을 찾을 수 없습니다"
 	},
 	"header": {
 		"title": "설정",
@@ -37,7 +42,9 @@
 		"experimental": "실험적",
 		"language": "언어",
 		"about": "Kilo Code 정보",
-		"autoPurge": "자동 정리"
+		"autoPurge": "자동 정리",
+		"agentBehaviour": "에이전트 동작",
+		"ghost": "자동 완성"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "팁을 얻거나 다른 Kilo Code 사용자들과 교류하고 싶으신가요? <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilo.ai/discord</discordLink>에 참여하세요",
 		"contactAndCommunity": "문의 및 커뮤니티",
-		"manageSettings": "설정 관리"
+		"manageSettings": "설정 관리",
+		"debugMode": {
+			"label": "디버그 모드 활성화",
+			"description": "디버그 모드를 활성화하여 작업 헤더에 API 대화 기록과 UI 메시지를 임시 파일에 포맷된 JSON으로 볼 수 있는 추가 버튼을 표시합니다."
+		}
 	},
 	"slashCommands": {
 		"description": "사용자 지정 워크플로와 작업을 신속하게 실행하기 위해 슬래시 명령을 관리합니다. <DocsLink>더 알아보기</DocsLink>"
@@ -94,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter 공급자 라우팅",
 		"openRouterProviderRoutingDescription": "OpenRouter는 임베딩 모델에 가장 적합한 공급자로 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자 간에 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
 		"openaiCompatibleProvider": "OpenAI 호환",
+		"openaiCompatibleResponsesProvider": "OpenAI 호환 (Responses)",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
 		"openAiCompatibleBaseUrlLabel": "기본 URL",
@@ -304,7 +316,6 @@
 		"useCustomBaseUrl": "사용자 정의 기본 URL 사용",
 		"useReasoning": "추론 활성화",
 		"useHostHeader": "사용자 정의 Host 헤더 사용",
-		"useLegacyFormat": "레거시 OpenAI API 형식 사용",
 		"customHeaders": "사용자 정의 헤더",
 		"headerName": "헤더 이름",
 		"headerValue": "헤더 값",
@@ -597,21 +608,6 @@
 			"placeholder": "기본값: claude",
 			"maxTokensLabel": "최대 출력 토큰",
 			"maxTokensDescription": "Claude Code 응답의 최대 출력 토큰 수. 기본값은 8000입니다."
-		},
-		"geminiCli": {
-			"description": "이 공급자는 Gemini CLI 도구의 OAuth 인증을 사용하며 API 키가 필요하지 않습니다.",
-			"oauthPath": "OAuth 자격 증명 경로 (선택사항)",
-			"oauthPathDescription": "OAuth 자격 증명 파일의 경로입니다. 기본 위치(~/.gemini/oauth_creds.json)를 사용하려면 비워두세요.",
-			"instructions": "아직 인증하지 않았다면",
-			"instructionsContinued": "를 터미널에서 먼저 실행하세요.",
-			"setupLink": "Gemini CLI 설정 지침",
-			"requirementsTitle": "중요한 요구사항",
-			"requirement1": "먼저 Gemini CLI 도구를 설치해야 합니다",
-			"requirement2": "그 다음 터미널에서 gemini를 실행하고 Google로 로그인했는지 확인하세요",
-			"requirement3": "개인 Google 계정에서만 작동합니다 (Google Workspace 계정 불가)",
-			"requirement4": "API 키를 사용하지 않습니다 - 인증은 OAuth를 통해 처리됩니다",
-			"requirement5": "Gemini CLI 도구가 먼저 설치되고 인증되어야 합니다",
-			"freeAccess": "OAuth 인증을 통한 무료 액세스"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth 자격 증명 경로 (선택사항)",

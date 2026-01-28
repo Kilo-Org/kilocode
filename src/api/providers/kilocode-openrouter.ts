@@ -120,8 +120,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
-			throw new Error(KILOCODE_TOKEN_REQUIRED_ERROR)
+		if (!this.options.openRouterBaseUrl) {
+			throw new Error("OpenRouter base URL is required")
 		}
 
 		const [models, endpoints, defaultModel] = await Promise.all([
@@ -135,12 +135,12 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 				modelId: this.options.kilocodeModel,
 				endpoint: this.options.openRouterSpecificProvider,
 			}),
-			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId, this.options),
+			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId),
 		])
 
 		this.models = models
 		this.endpoints = endpoints
-		this.defaultModel = defaultModel
+		this.defaultModel = defaultModel.defaultModel
 		return this.getModel()
 	}
 

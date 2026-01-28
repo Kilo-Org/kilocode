@@ -84,7 +84,10 @@ export class KilocodeEventProcessor {
 		}
 		// Skip echo of initial user prompt (say:text before first api_req_started)
 		if (payload.say === "text" && !this.firstApiReqStarted.get(sessionId)) {
-			this.log(sessionId, `[Event] SKIPPING user echo (firstApiReqStarted=false): "${(payload.content as string)?.slice(0, 50)}"`)
+			this.log(
+				sessionId,
+				`[Event] SKIPPING user echo (firstApiReqStarted=false): "${(payload.content as string)?.slice(0, 50)}"`,
+			)
 			return
 		}
 

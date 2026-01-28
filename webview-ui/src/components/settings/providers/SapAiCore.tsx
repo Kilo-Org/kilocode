@@ -12,7 +12,16 @@ import type { ProviderSettings } from "@roo-code/types"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
 import { inputEventTransform } from "../transforms"
-import { DeploymentRecord } from "../../../../../src/api/providers/fetchers/sap-ai-core"
+// kilocode_change: Local deployment shape used by the webview.
+// The extension's SAP AI Core fetcher includes `model` + `targetStatus`, but the
+// canonical `@roo-code/types` DeploymentRecord is a different shape.
+type SapAiCoreDeployment = {
+	id: string
+	model?: string
+	targetStatus?: string
+}
+
+type DeploymentRecord = Record<string, SapAiCoreDeployment>
 import { ModelInfoView } from "@/components/settings/ModelInfoView"
 import { ModelRecord } from "@roo/api"
 
@@ -159,15 +168,15 @@ const SapAiCore = ({ apiConfiguration, setApiConfigurationField }: SapAiCoreProp
 		if (!apiConfiguration.sapAiCoreModelId) return []
 
 		return getAvailableDeployments(apiConfiguration.sapAiCoreModelId)
-			.sort((a, b) => Number(b.targetStatus === "RUNNING") - Number(a.targetStatus === "RUNNING"))
+			.sort((a, b) => Number((b.targetStatus ?? "") === "RUNNING") - Number((a.targetStatus ?? "") === "RUNNING"))
 			.map(
 				(deployment): SearchableSelectOption => ({
 					value: deployment.id,
 					label:
-						deployment.targetStatus === "RUNNING"
+						(deployment.targetStatus ?? "") === "RUNNING"
 							? deployment.id
-							: `${deployment.id} (${deployment.targetStatus.toLowerCase()})`,
-					disabled: deployment.targetStatus !== "RUNNING",
+							: `${deployment.id} (${(deployment.targetStatus ?? "unknown").toLowerCase()})`,
+					disabled: (deployment.targetStatus ?? "") !== "RUNNING",
 				}),
 			)
 	}, [apiConfiguration.sapAiCoreModelId, getAvailableDeployments])

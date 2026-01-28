@@ -1,4 +1,9 @@
 {
+	"back": "กลับไปยังมุมมองงาน",
+	"search": {
+		"placeholder": "ค้นหาการตั้งค่า...",
+		"noResults": "ไม่พบการตั้งค่า"
+	},
 	"common": {
 		"save": "บันทึก",
 		"done": "เสร็จสิ้น",
@@ -38,9 +43,14 @@
 		"experimental": "ทดลอง",
 		"language": "ภาษา",
 		"about": "เกี่ยวกับ Kilo Code",
-		"autoPurge": "ทำความสะอาดอัตโนมัติ"
+		"autoPurge": "ทำความสะอาดอัตโนมัติ",
+		"agentBehaviour": "พฤติกรรม Agent"
 	},
 	"about": {
+		"debugMode": {
+			"label": "เปิดใช้งานโหมดดีบัก",
+			"description": "เปิดใช้งานโหมดดีบักเพื่อแสดงปุ่มเพิ่มเติมในส่วนหัวของงานสำหรับการดูประวัติการสนทนา API และข้อความ UI ในรูปแบบ JSON ที่อ่านง่ายในไฟล์ชั่วคราว"
+		},
 		"bugReport": {
 			"label": "พบข้อผิดพลาด?",
 			"link": "รายงานบน GitHub"
@@ -128,6 +138,7 @@
 		"openRouterProviderRoutingLabel": "การกำหนดเส้นทางผู้ให้บริการ OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter กำหนดเส้นทางคำขอไปยังผู้ให้บริการที่ดีที่สุดสำหรับโมเดล embedding ของคุณ โดยค่าเริ่มต้น คำขอจะถูกกระจายโหลดไปยังผู้ให้บริการชั้นนำเพื่อเพิ่มเวลาทำงานสูงสุด อย่างไรก็ตาม คุณสามารถเลือกผู้ให้บริการเฉพาะสำหรับโมเดลนี้ได้",
 		"openaiCompatibleProvider": "เข้ากันได้กับ OpenAI",
+		"openaiCompatibleResponsesProvider": "เข้ากันได้กับ OpenAI (Responses)",
 		"openAiKeyLabel": "คีย์ API OpenAI",
 		"openAiKeyPlaceholder": "ป้อนคีย์ API OpenAI ของคุณ",
 		"openAiCompatibleBaseUrlLabel": "URL พื้นฐาน",
@@ -603,21 +614,6 @@
 			"placeholder": "ค่าเริ่มต้น: claude",
 			"maxTokensLabel": "โทเค็นเอาต์พุตสูงสุด",
 			"maxTokensDescription": "จำนวนโทเค็นเอาต์พุตสูงสุดสำหรับการตอบสนองของ Claude Code ค่าเริ่มต้นคือ 8000"
-		},
-		"geminiCli": {
-			"description": "ผู้ให้บริการนี้ใช้การยืนยันตัวตน OAuth จากเครื่องมือ Gemini CLI และไม่ต้องการกุญแจ API",
-			"oauthPath": "เส้นทางข้อมูลประจำตัว OAuth (ไม่บังคับ)",
-			"oauthPathDescription": "เส้นทางไปยังไฟล์ข้อมูลประจำตัว OAuth ปล่อยว่างไว้เพื่อใช้ตำแหน่งเริ่มต้น (~/.gemini/oauth_creds.json)",
-			"instructions": "หากคุณยังไม่ได้ยืนยันตัวตน โปรดรัน",
-			"instructionsContinued": "ใน terminal ของคุณก่อน",
-			"setupLink": "คำแนะนำการตั้งค่า Gemini CLI",
-			"requirementsTitle": "ข้อกำหนดที่สำคัญ",
-			"requirement1": "ก่อนอื่น คุณต้องติดตั้งเครื่องมือ Gemini CLI",
-			"requirement2": "จากนั้น รัน gemini ใน terminal ของคุณและตรวจสอบให้แน่ใจว่าคุณเข้าสู่ระบบด้วย Google",
-			"requirement3": "ใช้งานได้เฉพาะกับบัญชี Google ส่วนตัว (ไม่ใช่บัญชี Google Workspace)",
-			"requirement4": "ไม่ใช้กุญแจ API - การยืนยันตัวตนจัดการผ่าน OAuth",
-			"requirement5": "ต้องการให้เครื่องมือ Gemini CLI ถูกติดตั้งและยืนยันตัวตนก่อน",
-			"freeAccess": "การเข้าถึงระดับฟรีผ่านการยืนยันตัวตน OAuth"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",

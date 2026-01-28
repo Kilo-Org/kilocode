@@ -1,4 +1,5 @@
 {
+	"back": "Wróć do widoku zadań",
 	"common": {
 		"save": "Zapisz",
 		"done": "Gotowe",
@@ -7,6 +8,10 @@
 		"select": "Wybierz",
 		"add": "Dodaj nagłówek",
 		"remove": "Usuń"
+	},
+	"search": {
+		"placeholder": "Szukaj ustawień...",
+		"noResults": "Nie znaleziono ustawień"
 	},
 	"header": {
 		"title": "Ustawienia",
@@ -37,7 +42,9 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"autoPurge": "Auto-czyszczenie"
+		"autoPurge": "Auto-czyszczenie",
+		"agentBehaviour": "Zachowanie agenta",
+		"ghost": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Chcesz wskazówek lub po prostu porozmawiać z innymi użytkownikami Kilo Code? Dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt i Społeczność",
-		"manageSettings": "Zarządzaj Ustawieniami"
+		"manageSettings": "Zarządzaj Ustawieniami",
+		"debugMode": {
+			"label": "Włącz tryb debugowania",
+			"description": "Włącz tryb debugowania, aby wyświetlić dodatkowe przyciski w nagłówku zadania umożliwiające przeglądanie historii konwersacji API i komunikatów UI jako sformatowany JSON w plikach tymczasowych."
+		}
 	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
@@ -94,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "Routing dostawców OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu osadzania. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatybilny z OpenAI (Responses)",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Bazowy URL",
@@ -304,7 +316,6 @@
 		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
 		"useReasoning": "Włącz rozumowanie",
 		"useHostHeader": "Użyj niestandardowego nagłówka Host",
-		"useLegacyFormat": "Użyj starszego formatu API OpenAI",
 		"customHeaders": "Niestandardowe nagłówki",
 		"headerName": "Nazwa nagłówka",
 		"headerValue": "Wartość nagłówka",
@@ -597,21 +608,6 @@
 			"placeholder": "Domyślnie: claude",
 			"maxTokensLabel": "Maksymalna liczba tokenów wyjściowych",
 			"maxTokensDescription": "Maksymalna liczba tokenów wyjściowych dla odpowiedzi Claude Code. Domyślnie 8000."
-		},
-		"geminiCli": {
-			"description": "Ten dostawca używa uwierzytelniania OAuth z narzędzia Gemini CLI i nie wymaga kluczy API.",
-			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
-			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.gemini/oauth_creds.json).",
-			"instructions": "Jeśli jeszcze się nie uwierzytelniłeś, uruchom najpierw",
-			"instructionsContinued": "w swoim terminalu.",
-			"setupLink": "Instrukcje konfiguracji Gemini CLI",
-			"requirementsTitle": "Ważne wymagania",
-			"requirement1": "Najpierw musisz zainstalować narzędzie Gemini CLI",
-			"requirement2": "Następnie uruchom gemini w swoim terminalu i upewnij się, że logujesz się przez Google",
-			"requirement3": "Działa tylko z osobistymi kontami Google (nie z kontami Google Workspace)",
-			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
-			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
-			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",

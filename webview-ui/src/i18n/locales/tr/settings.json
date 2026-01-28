@@ -1,4 +1,5 @@
 {
+	"back": "Görev görünümüne dön",
 	"common": {
 		"save": "Kaydet",
 		"done": "Tamamlandı",
@@ -7,6 +8,10 @@
 		"select": "Seç",
 		"add": "Başlık Ekle",
 		"remove": "Kaldır"
+	},
+	"search": {
+		"placeholder": "Ayarları ara...",
+		"noResults": "Ayar bulunamadı"
 	},
 	"header": {
 		"title": "Ayarlar",
@@ -38,7 +43,8 @@
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
 		"ghost": "Ghost",
-		"autoPurge": "Otomatik Temizlik"
+		"autoPurge": "Otomatik Temizlik",
+		"agentBehaviour": "Ajan Davranışı"
 	},
 	"about": {
 		"bugReport": {
@@ -58,7 +64,11 @@
 		},
 		"community": "İpuçları mı istiyorsunuz yoksa sadece diğer Kilo Code kullanıcılarıyla takılmak mı istiyorsunuz? <redditLink>reddit.com/r/kilocode</redditLink> veya <discordLink>kilo.ai/discord</discordLink>'a katılın",
 		"contactAndCommunity": "İletişim ve Topluluk",
-		"manageSettings": "Ayarları Yönet"
+		"manageSettings": "Ayarları Yönet",
+		"debugMode": {
+			"label": "Debug modunu etkinleştir",
+			"description": "Görev başlığında API konuşma geçmişini ve UI mesajlarını geçici dosyalarda biçimlendirilmiş JSON olarak görüntülemek için ek düğmeler göstermek üzere debug modunu etkinleştirin."
+		}
 	},
 	"slashCommands": {
 		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
@@ -95,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter Sağlayıcı Yönlendirmesi",
 		"openRouterProviderRoutingDescription": "OpenRouter, gömme modeliniz için mevcut en iyi sağlayıcılara istekleri yönlendirir. Varsayılan olarak, istekler çalışma süresini en üst düzeye çıkarmak için en iyi sağlayıcılar arasında dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
+		"openaiCompatibleResponsesProvider": "OpenAI Uyumlu (Responses)",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
 		"openAiCompatibleBaseUrlLabel": "Temel URL",
@@ -305,7 +316,6 @@
 		"useCustomBaseUrl": "Özel temel URL kullan",
 		"useReasoning": "Akıl yürütmeyi etkinleştir",
 		"useHostHeader": "Özel Host başlığı kullan",
-		"useLegacyFormat": "Eski OpenAI API formatını kullan",
 		"customHeaders": "Özel Başlıklar",
 		"headerName": "Başlık adı",
 		"headerValue": "Başlık değeri",
@@ -572,21 +582,6 @@
 			"placeholder": "Varsayılan: claude",
 			"maxTokensLabel": "Maksimum Çıktı Token sayısı",
 			"maxTokensDescription": "Claude Code yanıtları için maksimum çıktı token sayısı. Varsayılan 8000'dir."
-		},
-		"geminiCli": {
-			"description": "Bu sağlayıcı Gemini CLI aracından OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
-			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",
-			"oauthPathDescription": "OAuth kimlik bilgileri dosyasının yolu. Varsayılan konumu kullanmak için boş bırakın (~/.gemini/oauth_creds.json).",
-			"instructions": "Henüz kimlik doğrulaması yapmadıysanız, önce",
-			"instructionsContinued": "komutunu terminalinizde çalıştırın.",
-			"setupLink": "Gemini CLI Kurulum Talimatları",
-			"requirementsTitle": "Önemli Gereksinimler",
-			"requirement1": "Önce Gemini CLI aracını yüklemeniz gerekir",
-			"requirement2": "Sonra terminalinizde gemini çalıştırın ve Google ile giriş yaptığınızdan emin olun",
-			"requirement3": "Sadece kişisel Google hesaplarıyla çalışır (Google Workspace hesapları değil)",
-			"requirement4": "API anahtarları kullanmaz - kimlik doğrulama OAuth ile yapılır",
-			"requirement5": "Gemini CLI aracının önce yüklenmesi ve kimlik doğrulaması yapılması gerekir",
-			"freeAccess": "OAuth kimlik doğrulaması ile ücretsiz erişim"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",

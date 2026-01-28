@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています",
-		"newOrganization": "仕事でKiloを使用していますか？"
+		"switchToFreeModel": "無料モデルに切り替える"
 	},
 	"pagination": {
 		"previous": "前へ",
@@ -47,6 +47,7 @@
 			"apiKey": "Kilo Code APIキー",
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト",
+			"loginForPremiumModels": "ログインしてプレミアムモデルと機能にアクセス",
 			"providerRouting": {
 				"title": "プロバイダールーティング",
 				"managedByOrganization": "組織レベルのプロバイダールーティングを管理",
@@ -65,8 +66,7 @@
 					"deny": "プロンプトトレーニングを拒否",
 					"zdr": "データ保持なし"
 				}
-			},
-			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。"
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "コンテキストウィンドウ",

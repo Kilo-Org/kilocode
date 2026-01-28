@@ -3,10 +3,11 @@ import type { ProviderSettingsManager } from "../../../core/config/ProviderSetti
 
 /**
  * Get OpenAI API key from provider settings
- * Searches for any provider with type "openai" or "openai-native"
+ * Searches for any provider with type "openai", "openai-responses", or "openai-native"
  *
  * Both provider types can access the OpenAI API, but store keys in different fields:
  * - "openai" provider: uses openAiApiKey field
+ * - "openai-responses" provider: uses openAiApiKey field
  * - "openai-native" provider: uses openAiNativeApiKey field
  */
 export async function getOpenAiApiKey(providerSettingsManager: ProviderSettingsManager): Promise<string | null> {
@@ -14,10 +15,17 @@ export async function getOpenAiApiKey(providerSettingsManager: ProviderSettingsM
 		const allProfiles = await providerSettingsManager.listConfig()
 
 		for (const profile of allProfiles) {
-			if (profile.apiProvider === "openai" || profile.apiProvider === "openai-native") {
+			if (
+				profile.apiProvider === "openai" ||
+				profile.apiProvider === "openai-responses" ||
+				profile.apiProvider === "openai-native"
+			) {
 				const fullProfile = await providerSettingsManager.getProfile({ id: profile.id })
 
-				if (profile.apiProvider === "openai" && fullProfile.openAiApiKey) {
+				if (
+					(profile.apiProvider === "openai" || profile.apiProvider === "openai-responses") &&
+					fullProfile.openAiApiKey
+				) {
 					return fullProfile.openAiApiKey
 				}
 
@@ -43,10 +51,17 @@ export async function getOpenAiBaseUrl(providerSettingsManager: ProviderSettings
 		const allProfiles = await providerSettingsManager.listConfig()
 
 		for (const profile of allProfiles) {
-			if (profile.apiProvider === "openai" || profile.apiProvider === "openai-native") {
+			if (
+				profile.apiProvider === "openai" ||
+				profile.apiProvider === "openai-responses" ||
+				profile.apiProvider === "openai-native"
+			) {
 				const fullProfile = await providerSettingsManager.getProfile({ id: profile.id })
 
-				if (profile.apiProvider === "openai" && fullProfile.openAiBaseUrl) {
+				if (
+					(profile.apiProvider === "openai" || profile.apiProvider === "openai-responses") &&
+					fullProfile.openAiBaseUrl
+				) {
 					return fullProfile.openAiBaseUrl
 				}
 

@@ -11,8 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
-		"lowBalance": "Uw Kilo Code-saldo is laag",
-		"newOrganization": "Gebruik je Kilo voor werk?"
+		"lowBalance": "Je Kilo Code-saldo is laag",
+		"switchToFreeModel": "Schakel over naar een gratis model"
 	},
 	"pagination": {
 		"previous": "Vorige",
@@ -47,7 +47,7 @@
 			"apiKey": "Kilo Code API-sleutel",
 			"login": "Inloggen bij Kilo Code",
 			"logout": "Uitloggen bij Kilo Code",
-			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
+			"loginForPremiumModels": "Log in voor toegang tot premium modellen en functies",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",

@@ -89,10 +89,15 @@
 		"title": "Termina",
 		"tooltip": "Termina l'attività corrente"
 	},
+	"stop": {
+		"title": "Ferma",
+		"tooltip": "Ferma l'attività corrente"
+	},
 	"cancel": {
 		"title": "Annulla",
 		"tooltip": "Annulla l'operazione corrente"
 	},
+	"enqueueMessage": "Aggiungi il messaggio alla coda (sarà inviato dopo che l'attività corrente sarà terminata)",
 	"scrollToBottom": "Scorri fino alla fine della chat",
 	"about": "Genera, refactorizza e debugga codice con l'assistenza dell'IA. Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
 	"docs": "Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
@@ -286,7 +291,8 @@
 		"title": "Dettagli errore",
 		"copyToClipboard": "Copia negli appunti",
 		"copied": "Copiato!",
-		"diagnostics": "Ottieni informazioni errore dettagliate"
+		"diagnostics": "Ottieni informazioni errore dettagliate",
+		"proxyProvider": "Sembra che tu stia utilizzando un provider basato su proxy. Assicurati di controllarne i log e di verificare che non stia riscrivendo le richieste di Roo."
 	},
 	"powershell": {
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
@@ -307,7 +313,7 @@
 		"triggerLabel_zero": "0 approvati automaticamente",
 		"triggerLabel_one": "1 approvato automaticamente",
 		"triggerLabel_other": "{{count}} approvati automaticamente",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Sto pensando",
@@ -344,8 +350,9 @@
 		},
 		"release": {
 			"heading": "Novità:",
-			"skills": "Roo ora supporta <skillsLink>Agent Skills</skillsLink> - pacchetti riutilizzabili di prompt, strumenti e risorse per estendere le capacità di Roo.",
-			"nativeToolCalling": "La chiamata nativa degli strumenti è ora obbligatoria per tutte le nuove attività. <blogLink>Scopri di più</blogLink> sulla motivazione e cosa fare se riscontri problemi."
+			"openaiCodexProvider": "Aggiunto il Provider OpenAI - ChatGPT Plus/Pro che offre accesso basato su abbonamento ai modelli Codex senza costi per token.",
+			"gpt52codexModel": "Aggiunto il nuovo modello gpt-5.2-codex a Roo Code Router, al provider OpenAI standard e altro.",
+			"bugFixes": "Corretti memory leak che causavano schermi grigi, problemi di firma del pensiero Gemini e altri miglioramenti di stabilità."
 		},
 		"cloudAgents": {
 			"heading": "Novità nel Cloud:",
@@ -356,8 +363,14 @@
 		"careers": "Inoltre, <careersLink>stiamo assumendo!</careersLink>",
 		"socialLinks": "Unisciti a noi su <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Costo totale (sottoattività incluse): ${{cost}}",
+		"total": "Costo totale: ${{cost}}",
+		"includesSubtasks": "Include i costi delle sottoattività"
+	},
 	"browser": {
 		"session": "Sessione del browser",
+		"active": "Attivo",
 		"rooWantsToUse": "Kilo Code vuole utilizzare il browser",
 		"consoleLogs": "Log della console",
 		"noNewLogs": "(Nessun nuovo log)",

@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Kilo Codeが機能するには、APIキーが必要です。",
+	"landing": {
+		"greeting": "Roo Codeへようこそ！",
+		"introduction": "組み込みおよび拡張可能なモードを備えたRoo Codeは、計画、アーキテクチャ設計、コーディング、デバッグ、そして今までにない生産性向上を可能にします。",
+		"accountMention": "始めるには、Roo Code Cloudアカウントを作成してください。強力なモデル、ウェブコントロール、分析、サポート、その他をご利用いただけます。",
+		"getStarted": "Rooアカウントを作成",
+		"noAccount": "またはアカウントなしで使用"
+	},
 	"providerSignup": {
 		"heading": "プロバイダーを選択",
 		"chooseProvider": "Rooが機能するにはLLMプロバイダーが必要です。始めるために1つを選択してください。後から追加することもできます。",

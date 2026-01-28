@@ -9,10 +9,11 @@ import type {
 	ModeConfig,
 	TodoItem,
 	ClineMessage,
+	McpServer,
 } from "@roo-code/types"
 
 // ============================================
-// SHARED TYPES - Import from src/shared
+// SHARED TYPES - Import from @roo-code/types
 // ============================================
 export type {
 	WebviewMessage,
@@ -20,10 +21,10 @@ export type {
 	UpdateGlobalStateMessage,
 	ClineAskResponse,
 	TaskHistoryRequestPayload,
-} from "@roo/WebviewMessage"
-
-import type { McpServer, McpTool, McpResource } from "@roo/mcp"
-export type { McpServer, McpTool, McpResource }
+	McpServer,
+	McpTool,
+	McpResource,
+} from "@roo-code/types"
 
 // ============================================
 // MODEL TYPES - Import from constants

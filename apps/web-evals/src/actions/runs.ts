@@ -28,10 +28,18 @@ const EVALS_STORAGE_PATH = "/tmp/evals/runs"
 
 const EVALS_REPO_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../../evals")
 
-export async function createRun({ suite, exercises = [], timeout, iterations = 1, ...values }: CreateRun) {
+export async function createRun({
+	suite,
+	exercises = [],
+	timeout,
+	iterations = 1,
+	executionMethod = "vscode",
+	...values
+}: CreateRun) {
 	const run = await _createRun({
 		...values,
 		timeout,
+		executionMethod,
 		socketPath: "", // TODO: Get rid of this.
 	})
 
