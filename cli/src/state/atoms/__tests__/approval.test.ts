@@ -369,15 +369,26 @@ describe("approval atoms", () => {
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
 	
-						// Should have options for: git, git pull, echo, echo Pull, echo Pull failed
-						// Note: shell-quote parses "echo 'Pull failed'" and joins tokens back,
-						// so we get "echo", "echo Pull", and "echo Pull failed"
-						expect(alwaysRunOptions.length).toBe(5)
+						// Should have options for: git, git pull, echo
+						// Note: "echo" is special-cased to not generate hierarchy, only "echo" itself
+						expect(alwaysRunOptions.length).toBe(3)
 						expect(alwaysRunOptions[0].commandPattern).toBe("git")
 						expect(alwaysRunOptions[1].commandPattern).toBe("git pull")
 						expect(alwaysRunOptions[2].commandPattern).toBe("echo")
-						expect(alwaysRunOptions[3].commandPattern).toBe("echo Pull")
-						expect(alwaysRunOptions[4].commandPattern).toBe("echo Pull failed")
+					})
+	
+					it("should special-case echo to not generate hierarchy", () => {
+						const store = createStore()
+						store.set(configAtom, createConfigWithAllowedCommands([]))
+						const message = createMessage("command", "echo 'Hello World'")
+						store.set(pendingApprovalAtom, message)
+	
+						const options = store.get(approvalOptionsAtom)
+						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
+	
+						// Should only have "echo", not "echo 'Hello" or "echo 'Hello World'"
+						expect(alwaysRunOptions.length).toBe(1)
+						expect(alwaysRunOptions[0].commandPattern).toBe("echo")
 					})
 	
 					it("should handle ; chain", () => {

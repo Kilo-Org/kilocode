@@ -63,27 +63,39 @@ export const isApprovalPendingAtom = atom<boolean>((get) => {
 	return pending !== null && !processing.isProcessing
 })
 
+// Commands that should not generate hierarchical options - only the base command
+const NO_HIERARCHY_COMMANDS = new Set(["echo"])
+
 /**
  * Helper function to parse command into hierarchical parts
  * Example: "git status --short --branch" returns:
  * - "git"
  * - "git status"
  * - "git status --short --branch"
+ *
+ * For commands in NO_HIERARCHY_COMMANDS (like "echo"), only returns the base command:
+ * - "echo"
  */
 function parseCommandHierarchy(command: string): string[] {
 	const parts = command.trim().split(/\s+/).filter(Boolean)
 	if (parts.length === 0) return []
 
+	const baseCommand = parts[0]
 	const hierarchy: string[] = []
 
 	// Add base command
-	if (parts[0]) {
-		hierarchy.push(parts[0])
+	if (baseCommand) {
+		hierarchy.push(baseCommand)
+	}
+
+	// For commands like "echo", don't generate further hierarchy
+	if (NO_HIERARCHY_COMMANDS.has(baseCommand)) {
+		return hierarchy
 	}
 
 	// Add command + first subcommand if exists
-	if (parts.length > 1 && parts[0] && parts[1]) {
-		hierarchy.push(`${parts[0]} ${parts[1]}`)
+	if (parts.length > 1 && baseCommand && parts[1]) {
+		hierarchy.push(`${baseCommand} ${parts[1]}`)
 	}
 
 	// Add full command if it's different from the previous entries
