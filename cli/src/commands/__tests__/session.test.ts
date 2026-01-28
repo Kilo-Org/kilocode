@@ -100,7 +100,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should have usage examples", () => {
-			expect(sessionCommand.examples).toHaveLength(8)
+			expect(sessionCommand.examples).toHaveLength(10)
 			expect(sessionCommand.examples).toContain("/session show")
 			expect(sessionCommand.examples).toContain("/session list")
 			expect(sessionCommand.examples).toContain("/session search <query>")
@@ -109,6 +109,8 @@ describe("sessionCommand", () => {
 			expect(sessionCommand.examples).toContain("/session fork <id>")
 			expect(sessionCommand.examples).toContain("/session delete <sessionId>")
 			expect(sessionCommand.examples).toContain("/session rename <new name>")
+			expect(sessionCommand.examples).toContain("/session export markdown")
+			expect(sessionCommand.examples).toContain("/session export html ./output.html")
 		})
 
 		it("should have subcommand argument defined", () => {
@@ -121,7 +123,7 @@ describe("sessionCommand", () => {
 		it("should have all subcommand values defined", () => {
 			const subcommandArg = sessionCommand.arguments![0]
 			expect(subcommandArg.values).toBeDefined()
-			expect(subcommandArg.values).toHaveLength(8)
+			expect(subcommandArg.values).toHaveLength(9)
 			expect(subcommandArg.values!.map((v) => v.value)).toEqual([
 				"show",
 				"list",
@@ -131,6 +133,7 @@ describe("sessionCommand", () => {
 				"fork",
 				"delete",
 				"rename",
+				"export",
 			])
 		})
 

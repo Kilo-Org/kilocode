@@ -290,6 +290,42 @@ This instructs the AI to proceed without user input.
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
 
+### Session Export
+
+Export your conversation sessions to shareable file formats for documentation, PR descriptions, or auditing.
+
+```bash
+# Inside the CLI, use the /session export command:
+
+# Export to Markdown (default) - great for PRs and documentation
+/session export markdown
+
+# Export to HTML - styled, self-contained report
+/session export html
+
+# Export to JSONL - machine-readable, one message per line
+/session export jsonl
+
+# Specify custom output path
+/session export html ./my-session-report.html
+```
+
+**Supported Formats:**
+
+- `markdown` - README-friendly format with metadata and conversation history
+- `html` - Single-file styled report with dark theme
+- `jsonl` - JSON Lines format for programmatic processing
+
+**Exported Metadata:**
+
+- Session ID
+- Mode, provider, and model used
+- Workspace directory
+- Export timestamp
+- Message count
+
+Files are saved to `./kilo-exports/` by default, or to your specified path.
+
 ## Local Development
 
 See [Development Guide](cli/docs/DEVELOPMENT.md) for setup instructions.
