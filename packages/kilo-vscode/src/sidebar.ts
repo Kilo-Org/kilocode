@@ -6,6 +6,11 @@ export interface WebviewMessage {
   [key: string]: unknown
 }
 
+interface ModelSelection {
+  providerID: string
+  modelID: string
+}
+
 export class SidebarProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView
   private serverWatcher: ServerWatcher
@@ -52,9 +57,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       case "ready":
         this.sendServerInfo(this.serverWatcher.server)
         this.sendWorkspaceInfo()
+        this.sendSettings()
         break
       case "log":
         console.log("[webview]", message.message)
+        break
+      case "save-settings":
+        this.saveSettings(message.model as ModelSelection | null)
         break
     }
   }
@@ -73,6 +82,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       type: "workspace",
       directory,
     })
+  }
+
+  private sendSettings() {
+    const config = vscode.workspace.getConfiguration("kilo")
+    const providerID = config.get<string>("model.providerID", "")
+    const modelID = config.get<string>("model.modelID", "")
+
+    const model = providerID && modelID ? { providerID, modelID } : null
+    this.view?.webview.postMessage({
+      type: "settings",
+      model,
+    })
+  }
+
+  private async saveSettings(model: ModelSelection | null) {
+    const config = vscode.workspace.getConfiguration("kilo")
+    await config.update("model.providerID", model?.providerID ?? "", vscode.ConfigurationTarget.Global)
+    await config.update("model.modelID", model?.modelID ?? "", vscode.ConfigurationTarget.Global)
   }
 
   private setupDevReload(webviewView: vscode.WebviewView) {

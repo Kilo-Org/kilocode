@@ -21,6 +21,13 @@ export interface SessionState {
   status: Record<string, SessionStatus>
 }
 
+export interface SendMessageOptions {
+  model?: {
+    providerID: string
+    modelID: string
+  }
+}
+
 export interface SessionContextValue {
   state: SessionState
   current: Accessor<Session | null>
@@ -29,7 +36,7 @@ export interface SessionContextValue {
   status: Accessor<SessionStatus>
   createSession: () => Promise<Session | null>
   selectSession: (id: string) => void
-  sendMessage: (text: string) => Promise<void>
+  sendMessage: (text: string, options?: SendMessageOptions) => Promise<void>
   abort: () => Promise<void>
 }
 
@@ -302,7 +309,7 @@ export function SessionProvider(props: ParentProps) {
     }
   }
 
-  async function sendMessage(text: string): Promise<void> {
+  async function sendMessage(text: string, options?: SendMessageOptions): Promise<void> {
     const c = client()
     if (!c) {
       console.log("[session] sendMessage: no client")
@@ -316,7 +323,7 @@ export function SessionProvider(props: ParentProps) {
       return
     }
 
-    console.log("[session] sendMessage: sending prompt to session", sessionID)
+    console.log("[session] sendMessage: sending prompt to session", sessionID, "with model:", options?.model)
     console.log("[session] sendMessage: current state.messages:", JSON.stringify(state.messages))
     setState("status", sessionID, "running")
 
@@ -325,6 +332,7 @@ export function SessionProvider(props: ParentProps) {
       const result = await c.session.prompt({
         sessionID,
         parts: [{ type: "text", text }],
+        model: options?.model,
       })
       console.log("[session] sendMessage: prompt result:", result)
     } catch (err) {
