@@ -119,6 +119,10 @@ export namespace ModelsDev {
                 family: "minimax",
                 tool_call: true,
                 temperature: true,
+                cost: {
+                  input: 0,
+                  output: 0,
+                },
                 limit: {
                   context: 128000,
                   output: 8192,
