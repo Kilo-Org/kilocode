@@ -125,5 +125,9 @@
 		"delegated_to": "Delegado a la tarea {{childId}}",
 		"delegation_completed": "Subtarea completada, reanudando tarea principal",
 		"awaiting_child": "Esperando tarea secundaria {{childId}}"
+	},
+	"costs": {
+		"own": "Propio",
+		"subtasks": "Subtareas"
 	}
 }

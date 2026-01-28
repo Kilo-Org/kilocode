@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import type OpenAI from "openai"
 import type { ModeConfig, ModelInfo } from "@roo-code/types"
-import { filterNativeToolsForMode, filterMcpToolsForMode, applyModelToolCustomization } from "../filter-tools-for-mode"
+import {
+	filterNativeToolsForMode,
+	filterMcpToolsForMode,
+	applyModelToolCustomization,
+	resolveToolAlias,
+} from "../filter-tools-for-mode"
 import { getToolDescriptionsForMode } from "../index"
 import * as toolsModule from "../../../../shared/tools"
 
@@ -962,3 +967,48 @@ describe("getToolDescriptionsForMode", () => {
 	})
 })
 // kilocode_change end
+describe("resolveToolAlias", () => {
+	it("should resolve known alias to canonical name", () => {
+		// write_file is an alias for write_to_file (defined in TOOL_ALIASES)
+		expect(resolveToolAlias("write_file")).toBe("write_to_file")
+	})
+
+	it("should return canonical name unchanged", () => {
+		expect(resolveToolAlias("write_to_file")).toBe("write_to_file")
+		expect(resolveToolAlias("read_file")).toBe("read_file")
+		expect(resolveToolAlias("apply_diff")).toBe("apply_diff")
+	})
+
+	it("should return unknown tool names unchanged", () => {
+		expect(resolveToolAlias("unknown_tool")).toBe("unknown_tool")
+		expect(resolveToolAlias("custom_tool_xyz")).toBe("custom_tool_xyz")
+	})
+
+	it("should ensure allowedFunctionNames are consistent with functionDeclarations", () => {
+		// This test documents the fix for the Gemini allowedFunctionNames issue.
+		// When tools are renamed via aliasRenames, the alias names must be resolved
+		// back to canonical names for allowedFunctionNames to match functionDeclarations.
+		//
+		// Example scenario:
+		// - Model specifies includedTools: ["write_file"] (an alias)
+		// - filterNativeToolsForMode returns tool with name "write_file"
+		// - But allTools (functionDeclarations) contains "write_to_file" (canonical)
+		// - If allowedFunctionNames contains "write_file", Gemini will error
+		// - Resolving aliases ensures consistency: resolveToolAlias("write_file") -> "write_to_file"
+
+		const aliasToolName = "write_file"
+		const canonicalToolName = "write_to_file"
+
+		// Simulate extracting name from a filtered tool that was renamed to alias
+		const extractedName = aliasToolName
+
+		// Before the fix: allowedFunctionNames would contain alias name
+		// This would cause Gemini to error because "write_file" doesn't exist in functionDeclarations
+
+		// After the fix: we resolve to canonical name
+		const resolvedName = resolveToolAlias(extractedName)
+
+		// The resolved name matches what's in functionDeclarations (canonical names)
+		expect(resolvedName).toBe(canonicalToolName)
+	})
+})

@@ -125,5 +125,9 @@
 		"delegated_to": "{{childId}} görevine devredildi",
 		"delegation_completed": "Alt görev tamamlandı, üst görev devam ediyor",
 		"awaiting_child": "{{childId}} alt görevi bekleniyor"
+	},
+	"costs": {
+		"own": "Kendi",
+		"subtasks": "Alt görevler"
 	}
 }

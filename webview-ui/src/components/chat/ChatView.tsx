@@ -11,15 +11,13 @@ import { Trans } from "react-i18next"
 import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { appendImages } from "@src/utils/imageUtils"
 
-import type { ClineAsk, ClineMessage } from "@roo-code/types"
+import type { ClineAsk, ClineSayTool, ClineMessage, ExtensionMessage, AudioType } from "@roo-code/types"
 
-import { ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
 import { findLast } from "@roo/array"
 import { SuggestionItem } from "@roo-code/types"
 import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { getApiMetrics } from "@roo/getApiMetrics"
-import { AudioType } from "@roo/WebviewMessage"
 import { getAllModes } from "@roo/modes"
 import { ProfileValidator } from "@roo/ProfileValidator"
 import { getLatestTodo } from "@roo/todo"
@@ -54,6 +52,7 @@ import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { QueuedMessages } from "./QueuedMessages"
+import { ReviewScopeSelector, type ReviewScopeInfo } from "./ReviewScopeSelector" // kilocode_change: Review mode
 import { buildDocLink } from "@/utils/docLinks"
 // import DismissibleUpsell from "../common/DismissibleUpsell" // kilocode_change: unused
 // import { useCloudUpsell } from "@src/hooks/useCloudUpsell" // kilocode_change: unused
@@ -197,6 +196,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const autoApproveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const userRespondedRef = useRef<boolean>(false)
 	const [currentFollowUpTs, setCurrentFollowUpTs] = useState<number | null>(null)
+	// kilocode_change: keep map for `taskWithAggregatedCosts` updates (even if not currently displayed)
+	const [_aggregatedCostsMap, setAggregatedCostsMap] = useState<
+		Map<
+			string,
+			{
+				totalCost: number
+				ownCost: number
+				childrenCost: number
+			}
+		>
+	>(new Map())
+
+	// kilocode_change start: Review mode state
+	const [showReviewScopeSelector, setShowReviewScopeSelector] = useState(false)
+	const [reviewScopeInfo, setReviewScopeInfo] = useState<ReviewScopeInfo | null>(null)
+	// kilocode_change end: Review mode state
 
 	const clineAskRef = useRef(clineAsk)
 	useEffect(() => {
@@ -453,12 +468,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSendingDisabled(true)
 							break
 						case "api_req_started":
-							if (secondLastMessage?.ask === "command_output") {
-								setSendingDisabled(true)
-								setSelectedImages([])
-								setClineAsk(undefined)
-								setEnableButtons(false)
-							}
+							// Clear button state when a new API request starts
+							// This fixes buttons persisting when the task continues
+							setSendingDisabled(true)
+							setSelectedImages([])
+							setClineAsk(undefined)
+							setEnableButtons(false)
+							setPrimaryButtonText(undefined)
+							setSecondaryButtonText(undefined)
 							break
 						case "api_req_finished":
 						case "error":
@@ -515,6 +532,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Reset user response flag for new task
 		userRespondedRef.current = false
 	}, [task?.ts])
+
+	const taskTs = task?.ts
+
+	// Request aggregated costs when task changes and has childIds
+	useEffect(() => {
+		if (taskTs && currentTaskItem?.childIds && currentTaskItem.childIds.length > 0) {
+			vscode.postMessage({
+				type: "getTaskWithAggregatedCosts",
+				text: currentTaskItem.id,
+			})
+		}
+	}, [taskTs, currentTaskItem?.id, currentTaskItem?.childIds])
 
 	useEffect(() => {
 		if (isHidden) {
@@ -793,6 +822,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setSendingDisabled(true)
 			setClineAsk(undefined)
 			setEnableButtons(false)
+			setPrimaryButtonText(undefined)
+			setSecondaryButtonText(undefined)
 		},
 		[clineAsk, startNewTask, currentTaskItem?.parentTaskId, lastMessage?.text], // kilocode_change: add lastMessage?.text
 	)
@@ -927,6 +958,25 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "interactionRequired":
 					playSound("notification")
 					break
+				case "taskWithAggregatedCosts":
+					if (message.text && message.aggregatedCosts) {
+						setAggregatedCostsMap(
+							(prev: Map<string, { totalCost: number; ownCost: number; childrenCost: number }>) => {
+								const newMap = new Map(prev)
+								newMap.set(message.text!, message.aggregatedCosts!)
+								return newMap
+							},
+						)
+					}
+					break
+				// kilocode_change start: Review mode
+				case "askReviewScope":
+					if (message.reviewScopeInfo) {
+						setReviewScopeInfo(message.reviewScopeInfo)
+						setShowReviewScopeSelector(true)
+					}
+					break
+				// kilocode_change end: Review mode
 			}
 			// textAreaRef.current is not explicitly required here since React
 			// guarantees that ref will be stable across re-renders, and we're
@@ -1524,6 +1574,26 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						cacheWrites={apiMetrics.totalCacheWrites}
 						cacheReads={apiMetrics.totalCacheReads}
 						totalCost={apiMetrics.totalCost}
+						aggregatedCost={
+							currentTaskItem?.id && aggregatedCostsMap.has(currentTaskItem.id)
+								? aggregatedCostsMap.get(currentTaskItem.id)!.totalCost
+								: undefined
+						}
+						hasSubtasks={
+							!!(
+								currentTaskItem?.id &&
+								aggregatedCostsMap.has(currentTaskItem.id) &&
+								aggregatedCostsMap.get(currentTaskItem.id)!.childrenCost > 0
+							)
+						}
+						costBreakdown={
+							currentTaskItem?.id && aggregatedCostsMap.has(currentTaskItem.id)
+								? getCostBreakdownIfNeeded(aggregatedCostsMap.get(currentTaskItem.id)!, {
+										own: t("common:costs.own"),
+										subtasks: t("common:costs.subtasks"),
+									})
+								: undefined
+						}
 						contextTokens={apiMetrics.contextTokens}
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
@@ -1683,7 +1753,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							className={`flex h-9 items-center mb-1 px-[15px] ${
 								showScrollToBottom
 									? "opacity-100"
-									: enableButtons || (isStreaming && !didClickCancel)
+									: enableButtons || (isStreaming && !didClickCancel) // kilocode_change
 										? "opacity-100"
 										: "opacity-50"
 							}`}>
@@ -1735,6 +1805,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											</Button>
 										</StandardTooltip>
 									)}
+									{/* kilocode_change start */}
 									{(secondaryButtonText || isStreaming) && (
 										<StandardTooltip
 											content={
@@ -1746,7 +1817,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 															? t("chat:reject.tooltip")
 															: secondaryButtonText === t("chat:terminate.title")
 																? t("chat:terminate.tooltip")
-																: undefined
+																: secondaryButtonText === t("chat:killCommand.title")
+																	? t("chat:killCommand.tooltip")
+																	: undefined
 											}>
 											<Button
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
@@ -1756,6 +1829,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											</Button>
 										</StandardTooltip>
 									)}
+									{/* kilocode_change end */}
 								</>
 							)}
 						</div>
@@ -1815,6 +1889,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			<div id="roo-portal" />
 			{/* kilocode_change: disable  */}
 			{/* <CloudUpsellDialog open={isUpsellOpen} onOpenChange={closeUpsell} onConnect={handleConnect} /> */}
+
+			{/* kilocode_change: Review mode scope selector */}
+			<ReviewScopeSelector
+				open={showReviewScopeSelector}
+				onOpenChange={setShowReviewScopeSelector}
+				scopeInfo={reviewScopeInfo}
+			/>
 		</div>
 	)
 }

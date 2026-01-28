@@ -37,7 +37,6 @@ This guide provides detailed information on how to configure each provider in Ki
     - [DeepInfra](#deepinfra)
     - [IO Intelligence](#io-intelligence)
     - [Qwen Code](#qwen-code)
-    - [Gemini CLI](#gemini-cli)
     - [ZAI](#zai)
     - [Minimax](#minimax)
     - [Unbound](#unbound)
@@ -1279,39 +1278,6 @@ Qwen Code AI models.
 
 - Requires OAuth credentials file
 - Optimized for code generation tasks
-
----
-
-### gemini-cli
-
-Gemini CLI integration.
-
-**Description**: Use Google's Gemini models through CLI with OAuth authentication.
-
-**Required Fields**:
-
-- `geminiCliOAuthPath` (text): Path to OAuth credentials file (default: `~/.gemini/oauth_creds.json`)
-- `geminiCliProjectId` (text): Google Cloud project ID
-- `apiModelId` (text): The model to use (default: `gemini-2.5-flash-preview-04-17`)
-
-**Example Configuration**:
-
-```json
-{
-	"id": "default",
-	"provider": "gemini-cli",
-	"geminiCliOAuthPath": "~/.gemini/oauth_creds.json",
-	"geminiCliProjectId": "my-project-123",
-	"apiModelId": "gemini-2.5-flash-preview-04-17"
-}
-```
-
-**Default Model**: `gemini-2.5-flash-preview-04-17`
-
-**Notes**:
-
-- Requires OAuth credentials file
-- Requires Google Cloud project
 
 ---
 

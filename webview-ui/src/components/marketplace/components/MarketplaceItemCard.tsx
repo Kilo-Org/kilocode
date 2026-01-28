@@ -93,7 +93,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 
 	return (
 		<>
-			<div className="border border-vscode-panel-border rounded-sm p-3 bg-vscode-editor-background">
+			<div className="border border-vscode-panel-border rounded-xl cursor-default p-3 transition-colors bg-vscode-editor-background hover:bg-vscode-editor-foreground/5">
 				<div className="flex gap-2 items-start justify-between">
 					<div className="flex gap-2 items-start">
 						<div>

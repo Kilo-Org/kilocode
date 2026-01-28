@@ -58,5 +58,8 @@
 	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
 	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
 	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh",
-	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech."
+	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech.",
+	"settings.debugProxy.enabled.description": "**Povolit Debug Proxy** — Přesměrovat všechny odchozí síťové požadavky přes proxy pro ladění MITM. Aktivní pouze při běhu v režimu ladění (F5).",
+	"settings.debugProxy.serverUrl.description": "URL Proxy (např. `http://127.0.0.1:8888`). Používá se pouze když je **Debug Proxy** povoleno.",
+	"settings.debugProxy.tlsInsecure.description": "Přijímat certifikáty podepsané samým sebou od proxy. **Vyžadováno pro inspekci MITM.** ⚠️ Nebezpečné — používej pouze pro lokální ladění."
 }

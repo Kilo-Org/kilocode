@@ -3,13 +3,20 @@ import { Server, ChevronDown, ChevronRight } from "lucide-react"
 import { useEvent } from "react-use"
 import { useTranslation } from "react-i18next"
 
-import { McpExecutionStatus, mcpExecutionStatusSchema } from "@roo-code/types"
-import { ExtensionMessage, ClineAskUseMcpServer } from "../../../../src/shared/ExtensionMessage"
-import { safeJsonParse } from "../../../../src/shared/safeJsonParse"
+import {
+	type ExtensionMessage,
+	type ClineAskUseMcpServer,
+	type McpExecutionStatus,
+	mcpExecutionStatusSchema,
+} from "@roo-code/types"
+
+import { safeJsonParse } from "@roo/core"
+
 import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import McpToolRow from "../mcp/McpToolRow"
+
 import { Markdown } from "./Markdown"
 
 interface McpExecutionProps {

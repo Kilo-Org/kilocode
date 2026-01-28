@@ -137,6 +137,23 @@ export abstract class BaseTerminalProcess extends EventEmitter<RooTerminalProces
 	 */
 	abstract getUnretrievedOutput(): string
 
+	/**
+	 * Clears the internal output buffer when all content has been retrieved.
+	 *
+	 * This prevents unbounded memory growth when processing large
+	 * command outputs by discarding data that has already been
+	 * consumed by callers of `getUnretrievedOutput`.
+	 *
+	 * Called after command completion when `lastRetrievedIndex` has been
+	 * set to `fullOutput.length` to indicate all output has been processed.
+	 */
+	public trimRetrievedOutput(): void {
+		if (this.lastRetrievedIndex >= this.fullOutput.length && this.fullOutput.length > 0) {
+			this.fullOutput = ""
+			this.lastRetrievedIndex = 0
+		}
+	}
+
 	protected startHotTimer(data: string) {
 		this.isHot = true
 

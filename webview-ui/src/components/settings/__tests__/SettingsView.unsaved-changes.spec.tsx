@@ -14,6 +14,11 @@ const mockVscode = {
 
 // Mock the extension state context
 vi.mock("@src/context/ExtensionStateContext", () => ({
+	// kilocode_change: some components access the raw context via `useContext(ExtensionStateContext)`
+	// (e.g. MarketplaceView). Provide the named export so module consumers don't crash.
+	ExtensionStateContext: React.createContext<any>(undefined),
+	// kilocode_change: keep provider available in case a component tree expects it
+	ExtensionStateContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	useExtensionState: vi.fn(),
 }))
 
@@ -47,6 +52,18 @@ vi.mock("@src/components/ui", () => ({
 	TooltipProvider: ({ children }: any) => <>{children}</>,
 	TooltipTrigger: ({ children }: any) => <>{children}</>,
 	StandardTooltip: ({ children, content }: any) => <div title={content}>{children}</div>,
+	Popover: ({ children }: any) => <>{children}</>,
+	PopoverTrigger: ({ children }: any) => <>{children}</>,
+	PopoverContent: ({ children }: any) => <div>{children}</div>,
+}))
+
+// Mock ModesView and McpView since they're rendered during indexing
+vi.mock("@src/components/modes/ModesView", () => ({
+	default: () => null,
+}))
+
+vi.mock("@src/components/mcp/McpView", () => ({
+	default: () => null,
 }))
 
 // Mock Tab components
@@ -114,6 +131,9 @@ vi.mock("../SectionHeader", () => ({
 }))
 vi.mock("../Section", () => ({
 	Section: ({ children }: any) => <div>{children}</div>,
+}))
+vi.mock("../SettingsSearch", () => ({
+	SettingsSearch: () => null,
 }))
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"

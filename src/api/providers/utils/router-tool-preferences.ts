@@ -5,7 +5,6 @@ import type { ModelInfo } from "@roo-code/types"
  *
  * Different model families perform better with specific tools:
  * - OpenAI models: Better results with apply_patch instead of apply_diff/write_to_file
- * - Gemini models: Higher quality results with write_file and edit_file
  *
  * This function modifies the model info to apply these preferences consistently
  * across all dynamic router providers.
@@ -24,16 +23,6 @@ export function applyRouterToolPreferences(modelId: string, info: ModelInfo): Mo
 			...result,
 			excludedTools: [...new Set([...(result.excludedTools || []), "apply_diff", "write_to_file"])],
 			includedTools: [...new Set([...(result.includedTools || []), "apply_patch"])],
-		}
-	}
-
-	// For Gemini models via routers, include write_file and edit_file
-	// This matches the behavior of the native Gemini provider
-	if (modelId.includes("gemini")) {
-		result = {
-			...result,
-			excludedTools: [...new Set([...(result.excludedTools || []), "apply_diff"])],
-			includedTools: [...new Set([...(result.includedTools || []), "write_file", "edit_file"])],
 		}
 	}
 
