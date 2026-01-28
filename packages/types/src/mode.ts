@@ -71,6 +71,8 @@ export const modeConfigSchema = z.object({
 	groups: groupEntryArraySchema,
 	source: z.enum(["global", "project", "organization"]).optional(), // kilocode_change: Added "organization" source
 	iconName: z.string().optional(), // kilocode_change
+	preferredProviderId: z.string().optional(),
+	preferredModelId: z.string().optional(),
 })
 
 export type ModeConfig = z.infer<typeof modeConfigSchema>
