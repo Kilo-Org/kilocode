@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import * as vscode from "vscode"
 
 export class OnboardingStateDetector {

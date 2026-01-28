@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { useEffect, useState } from "react"
 import { Clock } from "lucide-react"
 import { ClineMessage } from "@roo-code/types"

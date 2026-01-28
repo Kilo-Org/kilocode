@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { CreditCard, Key } from "lucide-react"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Button } from "@src/components/ui"

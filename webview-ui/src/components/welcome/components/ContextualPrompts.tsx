@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { useEffect, useState } from "react"
 import { FolderTree, Bug, TestTube, Sparkles, FileText } from "lucide-react"
 import { Button } from "@src/components/ui"

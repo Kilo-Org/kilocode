@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { FolderOpen, GitBranch } from "lucide-react"
 import { Button } from "@src/components/ui"
 import { useAppTranslation } from "@src/i18n/TranslationContext"

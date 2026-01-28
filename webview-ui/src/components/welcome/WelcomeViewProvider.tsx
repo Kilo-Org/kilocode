@@ -22,9 +22,11 @@ import RooHero from "./RooHero"
 import { Trans } from "react-i18next"
 import { ArrowLeft, ArrowRight, BadgeInfo, Brain, TriangleAlert } from "lucide-react"
 import { buildDocLink } from "@/utils/docLinks"
+// kilocode_change start: Onboarding screens
 import { NoFolderNoHistoryScreen } from "./screens/NoFolderNoHistoryScreen"
 import { FolderNoHistoryScreen } from "./screens/FolderNoHistoryScreen"
 import { PaidModelScreen } from "./screens/PaidModelScreen"
+// kilocode_change end
 
 type ProviderOption = "roo" | "custom"
 type AuthOrigin = "landing" | "providerSelection"
@@ -47,6 +49,7 @@ const WelcomeViewProvider = () => {
 	const [manualUrl, setManualUrl] = useState("")
 	const [manualErrorMessage, setManualErrorMessage] = useState<boolean | undefined>(undefined)
 	const manualUrlInputRef = useRef<HTMLInputElement | null>(null)
+	// kilocode_change start: Onboarding state
 	const [hasOpenFolder, setHasOpenFolder] = useState<boolean>(false)
 	const [hasSessionHistory, setHasSessionHistory] = useState<boolean>(false)
 	const [showPaidModelScreen, _setShowPaidModelScreen] = useState<boolean>(false)
@@ -73,6 +76,7 @@ const WelcomeViewProvider = () => {
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
 	}, [])
+	// kilocode_change end
 
 	// When auth completes during the provider signup flow, either:
 	// 1. If user skipped model selection (cloudAuthSkipModel=true), navigate to provider selection with "custom" selected
@@ -212,6 +216,7 @@ const WelcomeViewProvider = () => {
 		vscode.postMessage({ type: "rooCloudSignIn", useProviderSignup: false })
 	}
 
+	// kilocode_change start: Onboarding flow routing
 	// Initial load - no folder, no history
 	if (!hasOpenFolder && !hasSessionHistory && selectedProvider === null) {
 		return <NoFolderNoHistoryScreen />
@@ -226,6 +231,7 @@ const WelcomeViewProvider = () => {
 	if (showPaidModelScreen) {
 		return <PaidModelScreen supportsKiloGateway={supportsKiloGateway} />
 	}
+	// kilocode_change end
 
 	// Render the waiting for cloud state
 	if (authInProgress) {
