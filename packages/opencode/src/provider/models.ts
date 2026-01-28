@@ -5,12 +5,27 @@ import z from "zod"
 import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
+import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
+
+// kilocode_change start
+const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
+  if (!baseURL) return undefined
+  const trimmed = baseURL.replace(/\/+$/, "")
+  if (orgId) {
+    if (trimmed.includes("/api/organizations/")) return trimmed
+    if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${orgId}`
+    return `${trimmed}/api/organizations/${orgId}`
+  }
+  if (trimmed.includes("/openrouter")) return trimmed
+  if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
+  return `${trimmed}/api/openrouter`
+} // kilocode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -107,20 +122,30 @@ export namespace ModelsDev {
 
     // Inject kilo provider with dynamic model fetching
     if (!providers["kilo"]) {
-      const kiloModels = await ModelCache.fetch("kilo").catch(() => ({}))
-
+      const config = await Config.get()
+      const kiloOptions = config.provider?.kilo?.options
+      const kiloOrgId = kiloOptions?.kilocodeOrganizationId
+      const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
+      const kiloFetchOptions = {
+        ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
+        ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
+      }
+      const defaultBaseURL = kiloOrgId
+        ? `https://api.kilo.ai/api/organizations/${kiloOrgId}`
+        : "https://api.kilo.ai/api/openrouter"
+      const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
+      const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`)
+      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
         env: ["KILO_API_KEY"],
-        api: KILO_OPENROUTER_BASE,
+        api: ensureTrailingSlash(KILO_OPENROUTER_BASE),
         npm: "@kilocode/kilo-gateway",
         models: kiloModels,
       }
-
-      // Trigger background refresh if models are empty or stale
       if (Object.keys(kiloModels).length === 0) {
-        ModelCache.refresh("kilo").catch(() => {})
+        ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
     }
 
