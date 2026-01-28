@@ -1,36 +1,36 @@
 # kilocode_change - new file
 #
-# Beta Release Workflow for Kilo CLI
+# Next Release Workflow for Kilo CLI
 # ===================================
 #
 # HOW TO RELEASE:
-# 1. Go to GitHub Actions → publish-beta
+# 1. Go to GitHub Actions → publish-next
 # 2. Click "Run workflow"
-# 3. Optionally enter a version (e.g., 1.2.0-beta.1)
+# 3. Optionally enter a version (e.g., 1.2.0-next.1)
 # 4. Click "Run workflow"
 #
 # HOW USERS INSTALL:
-#   npm install -g @kilocode/cli@beta
+#   npm install -g @kilocode/cli@next
 #
 # REQUIRED GITHUB SECRETS:
 # - NPM_TOKEN: npm authentication token with publish access to @kilocode/cli
 #   (Get from: npmjs.com → Access Tokens → Generate New Token → Automation)
 #
 # WHAT THIS DOES:
-# - Runs the existing publish-start.ts script with OPENCODE_CHANNEL=beta
+# - Runs the existing publish-start.ts script with OPENCODE_CHANNEL=next
 # - Builds all platform binaries (Linux, macOS, Windows, x64, ARM64)
-# - Publishes to npm with @beta tag (won't affect stable users)
-# - Version format: 0.0.0-beta-{timestamp} (auto) or custom (manual input)
+# - Publishes to npm with @next tag (won't affect stable users)
+# - Version format: 0.0.0-next-{timestamp} (auto) or custom (manual input)
 # - Does NOT create git tags or GitHub releases (preview mode)
 #
-name: publish-beta
-run-name: "beta release ${{ inputs.version || 'auto' }}"
+name: publish-next
+run-name: "next release ${{ inputs.version || 'auto' }}"
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Override version (optional, e.g., 1.2.0-beta.1)"
+        description: "Override version (optional, e.g., 1.2.0-next.1)"
         required: false
         type: string
 
@@ -42,7 +42,7 @@ permissions:
   packages: write
 
 jobs:
-  publish-beta:
+  publish-next:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -58,15 +58,15 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Publish Beta
+      - name: Publish Next
         run: ./script/publish-start.ts
         env:
-          OPENCODE_CHANNEL: beta
+          OPENCODE_CHANNEL: next
           OPENCODE_VERSION: ${{ inputs.version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kilocode-cli-beta
+          name: kilocode-cli-next
           path: packages/opencode/dist
