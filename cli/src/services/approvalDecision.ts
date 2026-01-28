@@ -37,7 +37,17 @@ import { parse as parseShellCommand } from "shell-quote"
  * @param command - The full command string
  * @returns Array of individual commands
  */
-function splitCommandChain(command: string): string[] {
+/**
+ * Splits a shell command into individual commands by operators (&&, ||, ;, |)
+ * Uses the shell-quote library for proper shell syntax parsing:
+ * - Ignores operators inside single or double quotes
+ * - Ignores escaped operators (preceded by backslash)
+ * - Handles complex shell syntax correctly
+ *
+ * @param command - The full command string
+ * @returns Array of individual commands
+ */
+export function splitCommandChain(command: string): string[] {
 	try {
 		const parsed = parseShellCommand(command)
 		const commands: string[] = []

@@ -3,7 +3,7 @@ import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { selectedIndexAtom } from "./ui.js"
 import { autoApproveExecuteAllowedAtom } from "./config.js"
-import { matchesCommandPattern } from "../../services/approvalDecision.js"
+import { matchesCommandPattern, splitCommandChain } from "../../services/approvalDecision.js"
 
 /**
  * Approval option interface
@@ -94,6 +94,27 @@ function parseCommandHierarchy(command: string): string[] {
 	return hierarchy
 }
 
+/**
+ * Helper function to generate hierarchical approval options for all commands in a chain
+ * Splits the command chain and generates hierarchy for each individual command
+ * Example: "ls . && cat README.md | tail -20" generates:
+ * - "ls", "ls ."
+ * - "cat", "cat README.md"
+ * - "tail", "tail -20"
+ */
+function generateCommandHierarchyForChain(fullCommand: string): string[] {
+	const commands = splitCommandChain(fullCommand)
+	const allHierarchies: string[] = []
+
+	for (const command of commands) {
+		const hierarchy = parseCommandHierarchy(command)
+		allHierarchies.push(...hierarchy)
+	}
+
+	// Remove duplicates while preserving order
+	return [...new Set(allHierarchies)]
+}
+
 
 
 /**
@@ -180,7 +201,8 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 		}
 
 		if (command) {
-			const hierarchy = parseCommandHierarchy(command)
+			// Generate hierarchical options for all commands in the chain
+			const hierarchy = generateCommandHierarchyForChain(command)
 			const options: ApprovalOption[] = [
 				{
 					label: approveLabel,
