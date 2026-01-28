@@ -1,0 +1,7 @@
+<svg width="400" height="60" viewBox="0 0 400 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text x="10" y="45" font-family="monospace" font-size="16" font-weight="bold" fill="#656363">
+    <tspan x="10" dy="0">██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██</tspan>
+    <tspan x="10" dy="16">████   ██ ██     ██  ██   ██     ██     ██</tspan>
+    <tspan x="10" dy="16">██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██</tspan>
+  </text>
+</svg>
