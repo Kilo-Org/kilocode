@@ -314,16 +314,19 @@ body {
   font-size: 11px;
   font-family: var(--vscode-font-family);
   color: var(--vscode-foreground);
-  background-color: transparent;
+  opacity: 0.5;
+  background-color: transparent !important;
   border: 1px solid var(--vscode-input-border);
   border-radius: 4px;
   cursor: pointer;
   min-width: 0;
   max-width: 200px;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .model-selector-trigger:hover:not(:disabled) {
-  background-color: var(--vscode-list-hoverBackground);
+  background-color: var(--vscode-list-hoverBackground) !important;
+  opacity: 1;
 }
 
 .model-selector-trigger:disabled {
@@ -465,18 +468,18 @@ body {
   font-size: 12px;
   font-family: var(--vscode-font-family);
   color: var(--vscode-foreground);
-  background-color: transparent;
+  background-color: transparent !important;
   border: none;
   cursor: pointer;
   text-align: left;
 }
 
 .model-option.active {
-  background-color: var(--vscode-list-hoverBackground);
+  background-color: var(--vscode-list-hoverBackground) !important;
 }
 
 .model-option.selected {
-  color: var(--vscode-list-activeSelectionForeground);
+  color: var(--vscode-list-activeSelectionForeground) !important;
 }
 
 .model-option-name {

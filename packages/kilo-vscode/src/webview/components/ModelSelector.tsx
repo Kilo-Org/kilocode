@@ -138,12 +138,9 @@ export function ModelSelector() {
         </Show>
         <Show when={!loading() && connected().length > 0}>
           <span class="model-name">{selectedModel()?.name ?? "Select model"}</span>
-          <Show when={selectedModel()}>
-            <span class="model-provider">{selectedModel()?.providerName}</span>
-          </Show>
         </Show>
         <svg class="model-chevron" width="12" height="12" viewBox="0 0 12 12">
-          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" fill="none" />
+          <path d="M2.5 7.5L6 4L9.5 7.5" stroke="currentColor" stroke-width="1.5" fill="none" />
         </svg>
       </button>
 
@@ -219,9 +216,6 @@ export function ModelSelector() {
                               <Show when={model.free}>
                                 <span class="model-tag free">free</span>
                               </Show>
-                              <Show when={model.latest}>
-                                <span class="model-tag latest">latest</span>
-                              </Show>
                             </div>
                             <Show when={isSelected()}>
                               <svg
@@ -245,45 +239,6 @@ export function ModelSelector() {
               </For>
             </div>
           </div>
-
-          <Show when={tooltipModel()}>
-            {(model) => (
-              <div class="model-tooltip">
-                <div class="model-tooltip-header">
-                  <span class="model-tooltip-name">{model().name}</span>
-                  <span class="model-tooltip-provider">{model().providerName}</span>
-                </div>
-                <div class="model-tooltip-details">
-                  <Show when={model().limit?.context}>
-                    <div class="model-tooltip-row">
-                      <span class="model-tooltip-label">Context</span>
-                      <span class="model-tooltip-value">{formatContext(model().limit.context)} tokens</span>
-                    </div>
-                  </Show>
-                  <Show when={getInputTypes(model()).length > 0}>
-                    <div class="model-tooltip-row">
-                      <span class="model-tooltip-label">Inputs</span>
-                      <span class="model-tooltip-value">{getInputTypes(model()).join(", ")}</span>
-                    </div>
-                  </Show>
-                  <Show when={model().reasoning !== undefined}>
-                    <div class="model-tooltip-row">
-                      <span class="model-tooltip-label">Reasoning</span>
-                      <span class="model-tooltip-value">{model().reasoning ? "Supported" : "Not supported"}</span>
-                    </div>
-                  </Show>
-                  <Show when={model().cost}>
-                    <div class="model-tooltip-row">
-                      <span class="model-tooltip-label">Cost</span>
-                      <span class="model-tooltip-value">
-                        ${model().cost!.input}/M in, ${model().cost!.output}/M out
-                      </span>
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            )}
-          </Show>
         </div>
       </Show>
     </div>
