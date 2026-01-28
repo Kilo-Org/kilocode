@@ -1,14 +1,14 @@
-FROM node:20-slim AS base
+# Build with:
+# docker compose -f packages/evals/docker-compose.yml build runner
 
-# Install pnpm
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-RUN npm install -g npm@latest npm-run-all
+# Test with:
+# docker compose -f packages/evals/docker-compose.yml run --rm runner bash
 
-# Install system packages
-RUN apt update && \
-  apt install -y \
+FROM debian:bookworm-slim AS base
+
+# Install system packages (excluding language runtimes - those come from mise)
+RUN apt-get update && \
+  apt-get install -y \
   curl \
   git \
   vim \
@@ -22,18 +22,13 @@ RUN apt update && \
   gpg \
   xvfb \
   cmake \
-  golang-go \
-  default-jre \
-  python3 \
-  python3-venv \
-  python3-dev \
-  python3-pip \
+  build-essential \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Docker cli
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-  && apt update && apt install -y docker-ce-cli \
+  && apt-get update && apt-get install -y docker-ce-cli \
   && rm -rf /var/lib/apt/lists/*
 
 # Install VS Code
@@ -41,15 +36,43 @@ RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 
   && install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg \
   && echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null \
   && rm -f packages.microsoft.gpg \
-  && apt update && apt install -y code \
+  && apt-get update && apt-get install -y code \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /roo
 
-# Install rust
-ARG RUST_VERSION=1.87.0
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${RUST_VERSION} \
-  && echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+# Install mise (https://mise.jdx.dev) for language runtime management
+RUN curl https://mise.run | sh \
+  && /root/.local/bin/mise --version
+
+# Set up mise environment
+ENV MISE_DATA_DIR="/root/.local/share/mise"
+ENV PATH="/root/.local/share/mise/shims:/root/.local/bin:$PATH"
+
+# Define language runtime versions (matching setup.sh)
+ARG NODE_VERSION=20.19.2
+ARG PYTHON_VERSION=3.13.2
+ARG GO_VERSION=1.24.2
+ARG RUST_VERSION=1.85.1
+ARG JAVA_VERSION=openjdk-17
+ARG UV_VERSION=0.7.11
+
+# Install language runtimes via mise
+RUN mise use --global node@${NODE_VERSION} \
+  && mise use --global python@${PYTHON_VERSION} \
+  && mise use --global go@${GO_VERSION} \
+  && mise use --global rust@${RUST_VERSION} \
+  && mise use --global java@${JAVA_VERSION} \
+  && mise use --global uv@${UV_VERSION} \
+  && mise reshim
+
+# Verify installations
+RUN node --version && python --version && go version && rustc --version && java --version && uv --version
+
+# Install pnpm (after node is available from mise)
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN npm install -g pnpm npm-run-all
 
 # Install VS Code extensions
 ARG GOLANG_EXT_VERSION=0.46.1
@@ -72,17 +95,20 @@ RUN git clone ${EVALS_REPO_URL} evals \
   && cd evals \
   && git checkout ${EVALS_COMMIT}
 
-# Install uv and sync python dependencies
-ARG UV_VERSION=0.7.11
+# Pre-warm Gradle wrapper cache (./gradlew downloads its own Gradle regardless of system install).
+# Find a Java project with gradlew and run it to cache the distribution.
+RUN find /roo/evals -name "gradlew" -type f | head -1 | xargs -I {} sh -c 'cd $(dirname {}) && ./gradlew --version'
+
+# Sync python dependencies for evals
 WORKDIR /roo/evals/python
-RUN curl -LsSf https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-installer.sh | sh \
-  && /root/.local/bin/uv sync
+RUN uv sync
 
 WORKDIR /roo/repo
 
 # Install npm packages
 RUN mkdir -p \
   scripts \
+  apps/cli \
   packages/build \
   packages/config-eslint \
   packages/config-typescript \
@@ -92,6 +118,7 @@ RUN mkdir -p \
   packages/telemetry \
   packages/types \
   packages/cloud \
+  packages/vscode-shim \
   src \
   webview-ui
 
@@ -99,6 +126,7 @@ COPY ./package.json                            ./
 COPY ./pnpm-lock.yaml                          ./
 COPY ./pnpm-workspace.yaml                     ./
 COPY ./scripts/bootstrap.mjs                   ./scripts/
+COPY ./apps/cli/package.json                   ./apps/cli/
 COPY ./packages/build/package.json             ./packages/build/
 COPY ./packages/config-eslint/package.json     ./packages/config-eslint/
 COPY ./packages/config-typescript/package.json ./packages/config-typescript/
@@ -108,6 +136,7 @@ COPY ./packages/ipc/package.json               ./packages/ipc/
 COPY ./packages/telemetry/package.json         ./packages/telemetry/
 COPY ./packages/types/package.json             ./packages/types/
 COPY ./packages/cloud/package.json             ./packages/cloud/
+COPY ./packages/vscode-shim/package.json       ./packages/vscode-shim/
 COPY ./src/package.json                        ./src/
 COPY ./webview-ui/package.json                 ./webview-ui/
 
@@ -128,9 +157,14 @@ COPY packages/evals/.env.local ./packages/evals/
 # Copy the pre-installed VS Code extensions
 RUN cp -r /roo/.vscode-template /roo/.vscode
 
-# Build the Roo Code extension
+# Build the Roo Code extension (for VSCode execution method)
 RUN pnpm vsix -- --out ../bin/roo-code.vsix \
     && yes | code --no-sandbox --user-data-dir /roo/.vscode --install-extension bin/roo-code.vsix
+
+# Build the extension bundle and CLI (for CLI execution method)
+# The CLI requires the extension bundle (src/dist/extension.js) and the CLI build (apps/cli/dist/index.js)
+RUN pnpm --filter roo-cline bundle \
+    && pnpm --filter @roo-code/cli build
 
 # Copy entrypoint script
 COPY packages/evals/.docker/entrypoints/runner.sh /usr/local/bin/entrypoint.sh

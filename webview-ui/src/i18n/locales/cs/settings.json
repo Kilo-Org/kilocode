@@ -1,4 +1,5 @@
 {
+	"back": "Zpět na zobrazení úkolů",
 	"common": {
 		"save": "Uložit",
 		"done": "Hotovo",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "Uložit změny",
 		"nothingChangedTooltip": "Nic se nezměnilo",
 		"doneButtonTooltip": "Zahodit neuložené změny a zavřít panel nastavení"
+	},
+	"search": {
+		"placeholder": "Hledat nastavení...",
+		"noResults": "Nenalezena žádná nastavení"
 	},
 	"unsavedChangesDialog": {
 		"title": "Neuložené změny",
@@ -37,7 +42,9 @@
 		"experimental": "Experimentální",
 		"language": "Jazyk",
 		"about": "O Kilo Code",
-		"autoPurge": "Automatické čištění"
+		"autoPurge": "Automatické čištění",
+		"agentBehaviour": "Chování agenta",
+		"ghost": "Automatické dokončování"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunityDesc": "Připoj se k ostatním uživatelům pro tipy a diskuse",
 		"community": "Chceš tipy nebo si jen popovídat s ostatními uživateli Kilo Code? Připoj se na <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt a komunita",
-		"manageSettings": "Spravovat nastavení"
+		"manageSettings": "Spravovat nastavení",
+		"debugMode": {
+			"label": "Povolit režim ladění",
+			"description": "Povolit režim ladění pro zobrazení dalších tlačítek v záhlaví úkolu pro zobrazení historie konverzace API a zpráv UI jako zpřehledněného JSON v dočasných souborech."
+		}
 	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
@@ -113,6 +124,7 @@
 		"openRouterProviderRoutingLabel": "Směrování poskytovatele OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model vkládání. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatibilní s OpenAI (Responses)",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Základní URL",
@@ -633,21 +645,6 @@
 			"placeholder": "Výchozí: claude",
 			"maxTokensLabel": "Maximální počet výstupních tokenů",
 			"maxTokensDescription": "Maximální počet výstupních tokenů pro odpovědi Claude Code. Výchozí je 8000."
-		},
-		"geminiCli": {
-			"description": "Tento poskytovatel používá OAuth autentizaci z nástroje Gemini CLI a nevyžaduje klíče API.",
-			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
-			"oauthPathDescription": "Cesta k souboru přihlašovacích údajů OAuth. Ponechte prázdné pro použití výchozího umístění (~/.gemini/oauth_creds.json).",
-			"instructions": "Pokud jste se ještě neověřili, spusťte prosím",
-			"instructionsContinued": "ve vašem terminálu nejdříve.",
-			"setupLink": "Pokyny k nastavení Gemini CLI",
-			"requirementsTitle": "Důležité požadavky",
-			"requirement1": "Nejprve musíte nainstalovat nástroj Gemini CLI",
-			"requirement2": "Poté spusťte gemini ve vašem terminálu a ujistěte se, že se přihlásíte pomocí Google",
-			"requirement3": "Funguje pouze s osobními účty Google (ne s účty Google Workspace)",
-			"requirement4": "Nepoužívá klíče API - ověřování je řešeno přes OAuth",
-			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejdříve nainstalován a ověřen",
-			"freeAccess": "Přístup k bezplatné úrovni prostřednictvím OAuth autentizace"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",

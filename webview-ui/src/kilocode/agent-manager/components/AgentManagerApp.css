@@ -495,6 +495,61 @@
 	border-radius: 3px;
 }
 
+/* Reasoning Block */
+.am-reasoning-block {
+	padding: 10px 20px;
+}
+
+.am-reasoning-block:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.am-reasoning-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	user-select: none;
+	padding-right: 8px;
+}
+
+.am-reasoning-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--vscode-foreground);
+}
+
+.am-reasoning-elapsed {
+	font-size: calc(var(--vscode-font-size) * 0.85);
+	color: var(--vscode-descriptionForeground);
+	margin-top: 1px;
+}
+
+.am-reasoning-content {
+	border-left: 1px solid var(--vscode-descriptionForeground);
+	margin-left: 8px;
+	margin-top: 10px;
+	padding-left: 16px;
+	padding-bottom: 4px;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.8;
+}
+
+.am-reasoning-chevron {
+	transition: transform 0.2s;
+	opacity: 0;
+	color: var(--vscode-descriptionForeground);
+}
+
+.am-reasoning-block:hover .am-reasoning-chevron {
+	opacity: 1;
+}
+
+.am-reasoning-chevron.am-collapsed {
+	transform: rotate(180deg);
+}
+
 /* Forms */
 .am-center-form {
 	display: flex;
@@ -504,7 +559,7 @@
 	height: 100%;
 	padding: 20px;
 	width: 100%;
-	max-width: 560px;
+	max-width: 800px;
 	margin: 0 auto;
 	text-align: center;
 }
@@ -935,4 +990,95 @@
 
 .am-model-indicator svg {
 	flex-shrink: 0;
+}
+
+/* Session Mode Selector - Compact design for toolbar */
+.am-session-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100px; /* Limit width to prevent overflow */
+	flex-shrink: 1;
+}
+
+.am-session-mode-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 6px !important;
+	min-height: 28px !important;
+	max-width: 100px !important;
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	border-radius: 4px !important;
+	color: var(--vscode-descriptionForeground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+	opacity: 0.6 !important;
+}
+
+.am-session-mode-trigger:hover:not(:disabled) {
+	opacity: 1 !important;
+	color: var(--vscode-foreground) !important;
+	background-color: rgba(255, 255, 255, 0.03) !important;
+	border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.am-session-mode-trigger:disabled {
+	opacity: 0.4 !important;
+	cursor: not-allowed !important;
+}
+
+/* Truncate the mode name in the trigger */
+.am-session-mode-trigger span {
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+	max-width: 70px !important;
+}
+
+.am-session-mode-content {
+	max-height: 300px !important;
+	min-width: 180px !important;
+	overflow-y: auto !important;
+	overscroll-behavior: contain !important;
+}
+
+/* Mode Selector for New Agent Form */
+.am-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	width: 100%;
+}
+
+.am-mode-selector-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+	width: 100% !important;
+	background: var(--vscode-input-background) !important;
+	border: 1px solid var(--vscode-input-border) !important;
+	border-radius: 4px !important;
+	color: var(--vscode-input-foreground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+}
+
+.am-mode-selector-trigger:hover:not(:disabled) {
+	border-color: var(--vscode-focusBorder) !important;
+}
+
+.am-mode-selector-trigger:disabled {
+	opacity: 0.5 !important;
+	cursor: not-allowed !important;
+}
+
+.am-mode-selector-content {
+	max-height: 300px !important;
+	min-width: 200px !important;
+	overflow-y: auto !important;
+	overscroll-behavior: contain !important;
 }

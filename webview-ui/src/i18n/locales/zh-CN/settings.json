@@ -1,4 +1,5 @@
 {
+	"back": "返回任务视图",
 	"common": {
 		"save": "保存",
 		"done": "完成",
@@ -7,6 +8,10 @@
 		"select": "选择",
 		"add": "添加标头",
 		"remove": "移除"
+	},
+	"search": {
+		"placeholder": "搜索设置...",
+		"noResults": "未找到设置"
 	},
 	"header": {
 		"title": "设置",
@@ -37,7 +42,9 @@
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
-		"autoPurge": "自动清理"
+		"autoPurge": "自动清理",
+		"agentBehaviour": "智能体行为",
+		"ghost": "自动补全"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "想要获取使用技巧或与其他 Kilo Code 用户交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "联系与社区",
-		"manageSettings": "管理设置"
+		"manageSettings": "管理设置",
+		"debugMode": {
+			"label": "启用调试模式",
+			"description": "启用调试模式以在任务标题栏显示额外按钮，用于在临时文件中查看 API 对话历史和 UI 消息的格式化 JSON。"
+		}
 	},
 	"slashCommands": {
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
@@ -99,6 +110,7 @@
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
 		"openaiCompatibleProvider": "OpenAI 兼容",
+		"openaiCompatibleResponsesProvider": "OpenAI 兼容 (Responses)",
 		"openAiKeyLabel": "OpenAI API 密钥",
 		"openAiKeyPlaceholder": "输入你的 OpenAI API 密钥",
 		"openAiCompatibleBaseUrlLabel": "基础 URL",
@@ -304,7 +316,6 @@
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useReasoning": "启用推理",
 		"useHostHeader": "使用自定义 Host 标头",
-		"useLegacyFormat": "使用传统 OpenAI API 格式",
 		"customHeaders": "自定义标头",
 		"headerName": "标头名称",
 		"headerValue": "标头值",
@@ -597,21 +608,6 @@
 			"placeholder": "默认：claude",
 			"maxTokensLabel": "最大输出 Token",
 			"maxTokensDescription": "Claude Code 响应的最大输出 Token 数量。默认为 8000。"
-		},
-		"geminiCli": {
-			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份验证，不需要 API 密钥。",
-			"oauthPath": "OAuth 凭据路径（可选）",
-			"oauthPathDescription": "OAuth 凭据文件的路径。留空以使用默认位置（~/.gemini/oauth_creds.json）。",
-			"instructions": "如果您尚未进行身份验证，请先运行",
-			"instructionsContinued": "在您的终端中。",
-			"setupLink": "Gemini CLI 设置说明",
-			"requirementsTitle": "重要要求",
-			"requirement1": "首先，您需要安装 Gemini CLI 工具",
-			"requirement2": "然后，在终端中运行 gemini 并确保使用 Google 登录",
-			"requirement3": "仅适用于个人 Google 账户（不支持 Google Workspace 账户）",
-			"requirement4": "不使用 API 密钥 - 身份验证通过 OAuth 处理",
-			"requirement5": "需要先安装并验证 Gemini CLI 工具",
-			"freeAccess": "通过 OAuth 身份验证免费访问"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth 凭据路径（可选）",

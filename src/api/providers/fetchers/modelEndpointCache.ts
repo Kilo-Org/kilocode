@@ -2,13 +2,15 @@ import * as path from "path"
 import fs from "fs/promises"
 
 import NodeCache from "node-cache"
-import { safeWriteJson } from "../../../utils/safeWriteJson"
 import sanitize from "sanitize-filename"
 
+import type { ModelRecord } from "@roo-code/types"
+
 import { ContextProxy } from "../../../core/config/ContextProxy"
+import { RouterName } from "../../../shared/api"
 import { getCacheDirectoryPath } from "../../../utils/storage"
-import { RouterName, ModelRecord } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
+import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import { getOpenRouterModelEndpoints } from "./openrouter"
 import { getModels } from "./modelCache"

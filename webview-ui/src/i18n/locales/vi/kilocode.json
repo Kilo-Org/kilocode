@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
-		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
+		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
 		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp",
-		"newOrganization": "Sử dụng Kilo cho công việc?"
+		"switchToFreeModel": "Chuyển sang mô hình miễn phí"
 	},
 	"pagination": {
 		"previous": "Trước",
@@ -39,7 +39,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "Máy chủ MCP",
-			"agentBehaviour": "Hành vi của Agent"
+			"agentBehaviour": "Hành vi của Agent",
+			"skills": "Kỹ năng"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -58,6 +59,7 @@
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
 			"logout": "Đăng xuất khỏi Kilo Code",
+			"loginForPremiumModels": "Đăng nhập để truy cập các mô hình và tính năng premium",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
 				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",
@@ -76,8 +78,7 @@
 					"deny": "Từ chối huấn luyện prompt",
 					"zdr": "Không lưu trữ dữ liệu"
 				}
-			},
-			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Cửa sổ ngữ cảnh",
@@ -148,7 +149,8 @@
 			"rules": "Quy tắc",
 			"workflows": "Quy trình làm việc",
 			"mcps": "MCPs",
-			"modes": "Chế độ"
+			"modes": "Chế độ",
+			"skills": "Kỹ năng"
 		},
 		"ariaLabel": "Quy tắc Kilo Code",
 		"tabs": {
@@ -361,6 +363,18 @@
 			"loading": "Đang tải các thiết bị microphone...",
 			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
 			"refresh": "Làm mới"
+		}
+	},
+	"skills": {
+		"description": "Kỹ năng cung cấp hướng dẫn chuyên biệt cho các tác vụ cụ thể. Chúng được tự động áp dụng khi liên quan đến yêu cầu của bạn.",
+		"noSkills": "Chưa cài đặt kỹ năng nào",
+		"projectSkills": "Kỹ năng Dự án",
+		"globalSkills": "Kỹ năng Toàn cầu",
+		"deleteDialog": {
+			"title": "Xóa Kỹ năng",
+			"description": "Bạn có chắc chắn muốn xóa kỹ năng \"{{skillName}}\"? Hành động này không thể hoàn tác.",
+			"cancel": "Hủy",
+			"delete": "Xóa"
 		}
 	}
 }

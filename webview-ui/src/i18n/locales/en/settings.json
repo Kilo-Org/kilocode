@@ -1,4 +1,5 @@
 {
+	"back": "Back to tasks view",
 	"common": {
 		"save": "Save",
 		"done": "Done",
@@ -12,7 +13,11 @@
 		"title": "Settings",
 		"saveButtonTooltip": "Save changes",
 		"nothingChangedTooltip": "Nothing changed",
-		"doneButtonTooltip": "Discard unsaved changes and close settings panel"
+		"doneButtonTooltip": "Discard unsaved changes and go back to tasks view"
+	},
+	"search": {
+		"placeholder": "Search settings...",
+		"noResults": "No settings found"
 	},
 	"unsavedChangesDialog": {
 		"title": "Unsaved Changes",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code",
-		"autoPurge": "Auto-Cleanup"
+		"autoPurge": "Auto-Cleanup",
+		"agentBehaviour": "Agent Behaviour",
+		"ghost": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Want tips or to just hang out with other Kilo Code users? Join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Community",
-		"manageSettings": "Manage Settings"
+		"manageSettings": "Manage Settings",
+		"debugMode": {
+			"label": "Enable debug mode",
+			"description": "Enable debug mode to show additional buttons in the task header for viewing API conversation history and UI messages as prettified JSON in temporary files."
+		}
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -109,6 +120,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter Provider Routing",
 		"openRouterProviderRoutingDescription": "OpenRouter routes requests to the best available providers for your embedding model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
 		"openaiCompatibleProvider": "OpenAI Compatible",
+		"openaiCompatibleResponsesProvider": "OpenAI Compatible (Responses)",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
 		"openAiCompatibleBaseUrlLabel": "Base URL",
@@ -322,7 +334,6 @@
 		"useCustomBaseUrl": "Use custom base URL",
 		"useReasoning": "Enable reasoning",
 		"useHostHeader": "Use custom Host header",
-		"useLegacyFormat": "Use legacy OpenAI API format",
 		"customHeaders": "Custom Headers",
 		"headerName": "Header name",
 		"headerValue": "Header value",
@@ -617,21 +628,6 @@
 			"placeholder": "Default: claude",
 			"maxTokensLabel": "Max Output Tokens",
 			"maxTokensDescription": "Maximum number of output tokens for Claude Code responses. Default is 8000."
-		},
-		"geminiCli": {
-			"description": "This provider uses OAuth authentication from the Gemini CLI tool and does not require API keys.",
-			"oauthPath": "OAuth Credentials Path (optional)",
-			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.gemini/oauth_creds.json).",
-			"instructions": "If you haven't authenticated yet, please run",
-			"instructionsContinued": "in your terminal first.",
-			"setupLink": "Gemini CLI Setup Instructions",
-			"requirementsTitle": "Important Requirements",
-			"requirement1": "First, you need to install the Gemini CLI tool",
-			"requirement2": "Then, run gemini in your terminal and make sure you Log in with Google",
-			"requirement3": "Only works with personal Google accounts (not Google Workspace accounts)",
-			"requirement4": "Does not use API keys - authentication is handled via OAuth",
-			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
-			"freeAccess": "Free tier access via OAuth authentication"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth Credentials Path (optional)",

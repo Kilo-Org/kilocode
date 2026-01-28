@@ -17,16 +17,23 @@
 		}
 	},
 	"chooseProvider": "Um seine Magie zu entfalten, benötigt Kilo Code einen API-Schlüssel.",
+	"landing": {
+		"greeting": "Willkommen bei Roo Code!",
+		"introduction": "Mit einer Reihe von integrierten und erweiterbaren Modi ermöglicht dir Roo Code, zu planen, zu architektieren, zu coden, zu debuggen und deine Produktivität wie nie zuvor zu steigern.",
+		"accountMention": "Um zu beginnen, erstelle dein Roo Code Cloud Konto. Erhalte leistungsstarke Modelle, Webkontrolle, Analysen, Support und mehr.",
+		"getStarted": "Roo-Konto erstellen",
+		"noAccount": "oder ohne Konto verwenden"
+	},
 	"providerSignup": {
 		"heading": "Wähle deinen Anbieter",
 		"chooseProvider": "Roo braucht einen LLM-Anbieter, um zu funktionieren. Wähle einen aus, um loszulegen. Du kannst später mehr hinzufügen.",
-		"rooCloudProvider": "Roo Code Cloud Provider",
-		"rooCloudDescription": "Der einfachste Weg loszulegen ist mit dem Roo Code Cloud Provider: eine kuratierte Mischung aus kostenlosen und bezahlten Modellen zu niedrigen Kosten.",
+		"rooCloudProvider": "Roo Code Router",
+		"rooCloudDescription": "Der einfachste Weg loszulegen ist mit dem Roo Code Router: eine kuratierte Mischung aus kostenlosen und bezahlten Modellen zu niedrigen Kosten.",
 		"learnMore": "Weitere Informationen",
 		"useAnotherProvider": "3rd-party Provider",
 		"useAnotherProviderDescription": "Gib einen API-Schlüssel ein und leg los.",
 		"noApiKeys": "Du möchtest dich nicht mit API-Schlüsseln und separaten Konten rumschlagen?",
-		"backToRoo": "Geh mit dem Roo Code Cloud Provider.",
+		"backToRoo": "Geh mit dem Roo Code Router.",
 		"goBack": "Zurück",
 		"finish": "Beenden"
 	},

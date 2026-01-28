@@ -234,7 +234,7 @@ describe("StatusBar", () => {
 			process.cwd = originalCwd
 		})
 
-		it("should render project name with git worktree suffix in parallel mode", async () => {
+		it("should render project name with git worktree indicator in parallel mode", async () => {
 			// Mock isGitWorktree to return true immediately
 			isGitWorktreeMock.mockResolvedValue(true)
 
@@ -275,7 +275,7 @@ describe("StatusBar", () => {
 			await vi.waitFor(
 				() => {
 					const frame = lastFrame()
-					expect(frame).toContain("kilocode (git worktree)")
+					expect(frame).toContain("kilocode ⎇")
 				},
 				{ timeout: 1000, interval: 50 },
 			)

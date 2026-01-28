@@ -21,6 +21,8 @@ export type TaskMetadataOptions = {
 	globalStoragePath: string
 	workspace: string
 	mode?: string
+	/** Provider profile name for the task (sticky profile feature) */
+	apiConfigName?: string
 	/** Initial status for the task (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
 	/**
@@ -39,6 +41,7 @@ export async function taskMetadata({
 	globalStoragePath,
 	workspace,
 	mode,
+	apiConfigName,
 	initialStatus,
 	toolProtocol,
 }: TaskMetadataOptions) {
@@ -116,6 +119,7 @@ export async function taskMetadata({
 		workspace,
 		mode,
 		...(toolProtocol && { toolProtocol }),
+		...(typeof apiConfigName === "string" && apiConfigName.length > 0 ? { apiConfigName } : {}),
 		...(initialStatus && { status: initialStatus }),
 	}
 

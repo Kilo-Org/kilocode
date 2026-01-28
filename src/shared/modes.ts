@@ -7,6 +7,7 @@ import {
 	type ToolGroup,
 	type PromptComponent,
 	DEFAULT_MODES,
+	DEFAULT_MODE_SLUG,
 } from "@roo-code/types"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
@@ -45,7 +46,7 @@ export function getToolsForMode(groups: readonly GroupEntry[]): string[] {
 export const modes = DEFAULT_MODES
 
 // Export the default mode slug
-export const defaultModeSlug = "code" // kilocode_change: set default to code
+export const defaultModeSlug = DEFAULT_MODE_SLUG // kilocode_change: use shared constant
 
 // Helper functions
 export function getModeBySlug(slug: string, customModes?: ModeConfig[]): ModeConfig | undefined {

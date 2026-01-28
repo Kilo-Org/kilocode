@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "โหมดขององค์กร",
-		"description": "โหมดนี้จัดทำโดยองค์กรของคุณและไม่สามารถแก้ไขได้ที่นี่ หากต้องการแก้ไขโหมดนี้ โปรดไปที่ Kilo Code Dashboard.",
+		"description": "โหมดนี้จัดทำโดยองค์กรของคุณและไม่สามารถแก้ไขได้ที่นี่ หากต้องการแก้ไขโหมดนี้ โปรดไปที่ <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
 		"cannotEdit": "ไม่สามารถแก้ไขโหมดขององค์กรได้"
 	},
 	"tools": {

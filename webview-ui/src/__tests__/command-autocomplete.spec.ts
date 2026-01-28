@@ -1,4 +1,4 @@
-import type { Command } from "@roo/ExtensionMessage"
+import type { Command } from "@roo-code/types"
 
 import { getContextMenuOptions, ContextMenuOptionType } from "../utils/context-mentions"
 

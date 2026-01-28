@@ -1,4 +1,5 @@
 {
+	"back": "Quay lại chế độ xem tác vụ",
 	"common": {
 		"save": "Lưu",
 		"done": "Hoàn thành",
@@ -7,6 +8,10 @@
 		"select": "Chọn",
 		"add": "Thêm tiêu đề",
 		"remove": "Xóa"
+	},
+	"search": {
+		"placeholder": "Tìm kiếm cài đặt...",
+		"noResults": "Không tìm thấy cài đặt"
 	},
 	"header": {
 		"title": "Cài đặt",
@@ -37,7 +42,9 @@
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
-		"autoPurge": "Tự động dọn dẹp"
+		"autoPurge": "Tự động dọn dẹp",
+		"agentBehaviour": "Hành Vi Agent",
+		"ghost": "Tự Động Hoàn Thành"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Muốn nhận mẹo hoặc chỉ muốn giao lưu với những người dùng Kilo Code khác? Tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Liên Hệ & Cộng Đồng",
-		"manageSettings": "Quản Lý Cài Đặt"
+		"manageSettings": "Quản Lý Cài Đặt",
+		"debugMode": {
+			"label": "Bật chế độ debug",
+			"description": "Bật chế độ debug để hiển thị các nút bổ sung trong tiêu đề nhiệm vụ cho phép xem lịch sử hội thoại API và tin nhắn UI dưới dạng JSON được định dạng trong các tệp tạm thời."
+		}
 	},
 	"slashCommands": {
 		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
@@ -94,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
+		"openaiCompatibleResponsesProvider": "Tương thích OpenAI (Responses)",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
 		"openAiCompatibleBaseUrlLabel": "URL cơ sở",
@@ -312,7 +324,6 @@
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
-		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
 		"customHeaders": "Tiêu đề tùy chỉnh",
 		"headerName": "Tên tiêu đề",
 		"headerValue": "Giá trị tiêu đề",
@@ -597,21 +608,6 @@
 			"placeholder": "Mặc định: claude",
 			"maxTokensLabel": "Số token đầu ra tối đa",
 			"maxTokensDescription": "Số lượng token đầu ra tối đa cho các phản hồi của Claude Code. Mặc định là 8000."
-		},
-		"geminiCli": {
-			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ công cụ Gemini CLI và không yêu cầu khóa API.",
-			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",
-			"oauthPathDescription": "Đường dẫn đến tệp thông tin xác thực OAuth. Để trống để sử dụng vị trí mặc định (~/.gemini/oauth_creds.json).",
-			"instructions": "Nếu bạn chưa xác thực, vui lòng chạy",
-			"instructionsContinued": "trong terminal của bạn trước.",
-			"setupLink": "Hướng dẫn Thiết lập Gemini CLI",
-			"requirementsTitle": "Yêu cầu Quan trọng",
-			"requirement1": "Trước tiên, bạn cần cài đặt công cụ Gemini CLI",
-			"requirement2": "Sau đó, chạy gemini trong terminal của bạn và đảm bảo bạn đăng nhập bằng Google",
-			"requirement3": "Chỉ hoạt động với tài khoản Google cá nhân (không phải tài khoản Google Workspace)",
-			"requirement4": "Không sử dụng khóa API - xác thực được xử lý qua OAuth",
-			"requirement5": "Yêu cầu công cụ Gemini CLI được cài đặt và xác thực trước",
-			"freeAccess": "Truy cập miễn phí qua xác thực OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",

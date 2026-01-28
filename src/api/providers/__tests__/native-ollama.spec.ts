@@ -519,5 +519,109 @@ describe("NativeOllamaHandler", () => {
 				arguments: JSON.stringify({ location: "San Francisco" }),
 			})
 		})
+
+		it("should yield tool_call_end events after tool_call_partial chunks", async () => {
+			// Mock model with native tool support
+			mockGetOllamaModels.mockResolvedValue({
+				"llama3.2": {
+					contextWindow: 128000,
+					maxTokens: 4096,
+					supportsImages: true,
+					supportsPromptCache: false,
+					supportsNativeTools: true,
+				},
+			})
+
+			const options: ApiHandlerOptions = {
+				apiModelId: "llama3.2",
+				ollamaModelId: "llama3.2",
+				ollamaBaseUrl: "http://localhost:11434",
+			}
+
+			handler = new NativeOllamaHandler(options)
+
+			// Mock the chat response with multiple tool calls
+			mockChat.mockImplementation(async function* () {
+				yield {
+					message: {
+						content: "",
+						tool_calls: [
+							{
+								function: {
+									name: "get_weather",
+									arguments: { location: "San Francisco" },
+								},
+							},
+							{
+								function: {
+									name: "get_time",
+									arguments: { timezone: "PST" },
+								},
+							},
+						],
+					},
+				}
+			})
+
+			const tools = [
+				{
+					type: "function" as const,
+					function: {
+						name: "get_weather",
+						description: "Get the weather for a location",
+						parameters: {
+							type: "object",
+							properties: { location: { type: "string" } },
+							required: ["location"],
+						},
+					},
+				},
+				{
+					type: "function" as const,
+					function: {
+						name: "get_time",
+						description: "Get the current time in a timezone",
+						parameters: {
+							type: "object",
+							properties: { timezone: { type: "string" } },
+							required: ["timezone"],
+						},
+					},
+				},
+			]
+
+			const stream = handler.createMessage(
+				"System",
+				[{ role: "user" as const, content: "What's the weather and time in SF?" }],
+				{ taskId: "test", tools },
+			)
+
+			const results = []
+			for await (const chunk of stream) {
+				results.push(chunk)
+			}
+
+			// Should yield tool_call_partial chunks
+			const toolCallPartials = results.filter((r) => r.type === "tool_call_partial")
+			expect(toolCallPartials).toHaveLength(2)
+
+			// Should yield tool_call_end events for each tool call
+			const toolCallEnds = results.filter((r) => r.type === "tool_call_end")
+			expect(toolCallEnds).toHaveLength(2)
+			expect(toolCallEnds[0]).toEqual({ type: "tool_call_end", id: "ollama-tool-0" })
+			expect(toolCallEnds[1]).toEqual({ type: "tool_call_end", id: "ollama-tool-1" })
+
+			// tool_call_end should come after tool_call_partial
+			// Find the last tool_call_partial index
+			let lastPartialIndex = -1
+			for (let i = results.length - 1; i >= 0; i--) {
+				if (results[i].type === "tool_call_partial") {
+					lastPartialIndex = i
+					break
+				}
+			}
+			const firstEndIndex = results.findIndex((r) => r.type === "tool_call_end")
+			expect(firstEndIndex).toBeGreaterThan(lastPartialIndex)
+		})
 	})
 })

@@ -1,4 +1,5 @@
 {
+	"back": "タスク ビューに戻る",
 	"common": {
 		"save": "保存",
 		"done": "完了",
@@ -7,6 +8,10 @@
 		"select": "選択",
 		"add": "ヘッダーを追加",
 		"remove": "削除"
+	},
+	"search": {
+		"placeholder": "設定を検索...",
+		"noResults": "設定が見つかりません"
 	},
 	"header": {
 		"title": "設定",
@@ -38,6 +43,7 @@
 		"language": "言語",
 		"about": "Kilo Codeについて",
 		"autoPurge": "自動クリーンアップ",
+		"agentBehaviour": "エージェントの動作",
 		"ghost": "Ghost"
 	},
 	"about": {
@@ -58,7 +64,11 @@
 		},
 		"community": "ヒントが欲しいですか、または他のKilo Codeユーザーと交流したいですか？<redditLink>reddit.com/r/kilocode</redditLink>または<discordLink>kilo.ai/discord</discordLink>に参加してください",
 		"contactAndCommunity": "お問い合わせとコミュニティ",
-		"manageSettings": "設定を管理"
+		"manageSettings": "設定を管理",
+		"debugMode": {
+			"label": "デバッグモードを有効にする",
+			"description": "デバッグモードを有効にすると、タスクヘッダーにAPI会話履歴とUIメッセージをフォーマットされたJSONとして一時ファイルで表示するための追加ボタンが表示されます。"
+		}
 	},
 	"slashCommands": {
 		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
@@ -95,6 +105,7 @@
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
 		"openaiCompatibleProvider": "OpenAI互換",
+		"openaiCompatibleResponsesProvider": "OpenAI互換 (Responses)",
 		"openAiKeyLabel": "OpenAI APIキー",
 		"openAiKeyPlaceholder": "OpenAI APIキーを入力してください",
 		"openAiCompatibleBaseUrlLabel": "ベースURL",
@@ -310,7 +321,6 @@
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
-		"useLegacyFormat": "レガシーOpenAI API形式を使用",
 		"customHeaders": "カスタムヘッダー",
 		"headerName": "ヘッダー名",
 		"headerValue": "ヘッダー値",
@@ -603,21 +613,6 @@
 			"placeholder": "デフォルト：claude",
 			"maxTokensLabel": "最大出力トークン",
 			"maxTokensDescription": "Claude Codeレスポンスの最大出力トークン数。デフォルトは8000です。"
-		},
-		"geminiCli": {
-			"description": "このプロバイダーはGemini CLIツールからのOAuth認証を使用し、APIキーは必要ありません。",
-			"oauthPath": "OAuth認証情報パス（オプション）",
-			"oauthPathDescription": "OAuth認証情報ファイルへのパス。デフォルトの場所（~/.gemini/oauth_creds.json）を使用する場合は空のままにしてください。",
-			"instructions": "まだ認証していない場合は、まず",
-			"instructionsContinued": "をターミナルで実行してください。",
-			"setupLink": "Gemini CLI セットアップ手順",
-			"requirementsTitle": "重要な要件",
-			"requirement1": "まず、Gemini CLIツールをインストールする必要があります",
-			"requirement2": "次に、ターミナルでgeminiを実行し、Googleでログインすることを確認してください",
-			"requirement3": "個人のGoogleアカウントでのみ動作します（Google Workspaceアカウントは不可）",
-			"requirement4": "APIキーは使用しません - 認証はOAuthで処理されます",
-			"requirement5": "Gemini CLIツールが最初にインストールされ、認証されている必要があります",
-			"freeAccess": "OAuth認証による無料アクセス"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth認証情報パス（オプション）",

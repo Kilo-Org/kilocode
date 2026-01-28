@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Vítej v Kilo Code!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
-		"introText2": "Funguje s nejnovějšími AI modely jako Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 a více než 450 dalšími.",
+		"introText2": "Funguje s nejnovějšími AI modely jako Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 a více než 450 dalšími.",
 		"introText3": "Vytvoř si bezplatný účet a získej $20 bonusových kreditů při prvním dobití.",
 		"ctaButton": "Začít",
 		"manualModeButton": "Použij vlastní API key",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký",
-		"newOrganization": "Používáš Kilo pro práci?"
+		"switchToFreeModel": "Přepnout na bezplatný model"
 	},
 	"pagination": {
 		"previous": "Předchozí",
@@ -39,14 +39,15 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP servery",
-			"agentBehaviour": "Chování agenta"
+			"agentBehaviour": "Chování agenta",
+			"skills": "Dovednosti"
 		},
 		"provider": {
 			"account": "Účet Kilo Code",
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
 			"logout": "Odhlásit se z Kilo Code",
-			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
+			"loginForPremiumModels": "Přihlas se pro přístup k prémiovým modelům a funkcím",
 			"providerRouting": {
 				"title": "Směrování poskytovatelů",
 				"managedByOrganization": "Spravovat směrování poskytovatelů na úrovni organizace",
@@ -148,7 +149,8 @@
 			"rules": "Pravidla",
 			"workflows": "Pracovní postupy",
 			"mcps": "MCP",
-			"modes": "Režimy"
+			"modes": "Režimy",
+			"skills": "Dovednosti"
 		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"loading": "Načítání mikrofonních zařízení...",
 			"refresh": "Obnovit",
 			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
+	},
+	"skills": {
+		"description": "Dovednosti poskytují specializované instrukce pro konkrétní úkoly. Jsou automaticky aplikovány, když jsou relevantní pro tvůj požadavek.",
+		"noSkills": "Žádné dovednosti nainstalovány",
+		"projectSkills": "Dovednosti projektu",
+		"globalSkills": "Globální dovednosti",
+		"deleteDialog": {
+			"title": "Smazat dovednost",
+			"description": "Opravdu chceš smazat dovednost \"{{skillName}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"delete": "Smazat"
 		}
 	}
 }

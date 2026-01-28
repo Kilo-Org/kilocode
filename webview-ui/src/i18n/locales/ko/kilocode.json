@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
 		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
 		"ctaButton": "시작하기",
 		"manualModeButton": "내 API 키 사용하기",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다",
-		"newOrganization": "업무용으로 Kilo를 사용하시나요?"
+		"switchToFreeModel": "무료 모델로 전환"
 	},
 	"pagination": {
 		"previous": "이전",
@@ -39,14 +39,15 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP 서버",
-			"agentBehaviour": "에이전트 동작"
+			"agentBehaviour": "에이전트 동작",
+			"skills": "스킬"
 		},
 		"provider": {
 			"account": "Kilo Code 계정",
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃",
-			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
+			"loginForPremiumModels": "로그인하여 프리미엄 모델 및 기능에 액세스하세요",
 			"providerRouting": {
 				"title": "공급자 라우팅",
 				"managedByOrganization": "조직 수준 공급자 라우팅 관리",
@@ -155,7 +156,8 @@
 			"rules": "규칙",
 			"workflows": "워크플로우",
 			"mcps": "MCPs",
-			"modes": "모드"
+			"modes": "모드",
+			"skills": "스킬"
 		},
 		"ariaLabel": "Kilo Code 규칙",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"defaultOption": "시스템 기본값",
 			"noDevices": "마이크 장치가 발견되지 않음",
 			"refresh": "새로 고침"
+		}
+	},
+	"skills": {
+		"description": "스킬은 특정 작업에 대한 전문 지침을 제공합니다. 요청과 관련이 있을 때 자동으로 적용됩니다.",
+		"noSkills": "설치된 스킬 없음",
+		"projectSkills": "프로젝트 스킬",
+		"globalSkills": "전역 스킬",
+		"deleteDialog": {
+			"title": "스킬 삭제",
+			"description": "\"{{skillName}}\" 스킬을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+			"cancel": "취소",
+			"delete": "삭제"
 		}
 	}
 }

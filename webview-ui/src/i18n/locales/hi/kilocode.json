@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Kilo Code में आपका स्वागत है!",
 		"introText1": "Kilo Code एक मुफ्त, ओपन सोर्स AI कोडिंग एजेंट है।",
-		"introText2": "यह Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, और 450+ अन्य नवीनतम AI मॉडल्स के साथ काम करता है।",
+		"introText2": "यह Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, और 450+ अन्य नवीनतम AI मॉडल्स के साथ काम करता है।",
 		"introText3": "एक मुफ्त खाता बनाएं और पहली बार टॉप-अप करने पर $20 बोनस क्रेडिट प्राप्त करें।",
 		"ctaButton": "शुरू करें",
 		"manualModeButton": "अपनी स्वयं की API कुंजी का उपयोग करें",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "क्रेडिट जोड़ें",
 		"lowBalance": "आपका Kilo Code बैलेंस कम है",
-		"newOrganization": "काम के लिए Kilo उपयोग कर रहे हैं?"
+		"switchToFreeModel": "इसके बजाय मुफ्त मॉडल पर स्विच करें"
 	},
 	"pagination": {
 		"previous": "पिछला",
@@ -32,14 +32,15 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP सर्वर",
-			"agentBehaviour": "एजेंट व्यवहार"
+			"agentBehaviour": "एजेंट व्यवहार",
+			"skills": "कौशल"
 		},
 		"provider": {
 			"account": "Kilo Code खाता",
 			"apiKey": "Kilo Code API कुंजी",
 			"login": "Kilo Code में लॉग इन करें",
 			"logout": "Kilo Code से लॉग आउट करें",
-			"automaticFetch": "नवीनतम मॉडल Kilo Code में स्वचालित रूप से उपलब्ध हैं। यदि आप निश्चित नहीं हैं कि कौन सा मॉडल चुनना है, तो Kilo Code शीर्ष पर <strong>बोल्ड फेस</strong> में सूचीबद्ध अनुशंसित मॉडल के साथ सबसे अच्छा काम करता है।",
+			"loginForPremiumModels": "प्रीमियम मॉडल और सुविधाओं तक पहुंचने के लिए लॉग इन करें",
 			"providerRouting": {
 				"title": "प्रदाता रूटिंग",
 				"managedByOrganization": "संगठन-स्तरीय प्रदाता रूटिंग प्रबंधित करें",
@@ -141,7 +142,8 @@
 			"rules": "नियम",
 			"workflows": "वर्कफ़्लो",
 			"mcps": "MCPs",
-			"modes": "मोड्स"
+			"modes": "मोड्स",
+			"skills": "कौशल"
 		},
 		"ariaLabel": "Kilo Code नियम",
 		"tabs": {
@@ -360,6 +362,18 @@
 			"description": "स्पीच-टू-टेक्स्ट के लिए माइक्रोफ़ोन डिवाइस चुनें",
 			"noDevices": "कोई माइक्रोफ़ोन डिवाइस नहीं मिला",
 			"refresh": "रीफ़्रेश"
+		}
+	},
+	"skills": {
+		"description": "कौशल विशिष्ट कार्यों के लिए विशेष निर्देश प्रदान करते हैं। जब तुम्हारे अनुरोध से संबंधित हों तो ये स्वचालित रूप से लागू होते हैं।",
+		"noSkills": "कोई कौशल इंस्टॉल नहीं है",
+		"projectSkills": "प्रोजेक्ट कौशल",
+		"globalSkills": "वैश्विक कौशल",
+		"deleteDialog": {
+			"title": "कौशल हटाएं",
+			"description": "क्या तुम वाकई \"{{skillName}}\" कौशल को हटाना चाहते हो? यह क्रिया पूर्ववत नहीं की जा सकती।",
+			"cancel": "रद्द करें",
+			"delete": "हटाएं"
 		}
 	}
 }

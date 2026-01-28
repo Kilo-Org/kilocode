@@ -16,7 +16,7 @@ import type {
 	ApiStreamToolCallDeltaChunk,
 	ApiStreamToolCallEndChunk,
 } from "../../api/transform/stream"
-import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName } from "../../utils/mcp-name"
+import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName, normalizeMcpToolName } from "../../utils/mcp-name"
 
 /**
  * Helper type to extract properly typed native arguments for a given tool.
@@ -52,7 +52,7 @@ export type ToolCallStreamEvent = ApiStreamToolCallStartChunk | ApiStreamToolCal
  */
 export class NativeToolCallParser {
 	// Streaming state management for argument accumulation (keyed by tool call id)
-	// Note: name is string to accommodate dynamic MCP tools (mcp_serverName_toolName)
+	// Note: name is string to accommodate dynamic MCP tools (mcp--serverName--toolName)
 	private static streamingToolCalls = new Map<
 		string,
 		{
@@ -199,7 +199,7 @@ export class NativeToolCallParser {
 	/**
 	 * Start streaming a new tool call.
 	 * Initializes tracking for incremental argument parsing.
-	 * Accepts string to support both ToolName and dynamic MCP tools (mcp_serverName_toolName).
+	 * Accepts string to support both ToolName and dynamic MCP tools (mcp--serverName--toolName).
 	 */
 	public static startStreamingToolCall(id: string, name: string): void {
 		this.streamingToolCalls.set(id, {
@@ -594,10 +594,16 @@ export class NativeToolCallParser {
 		arguments: string
 	}): ToolUse<TName> | McpToolUse | null {
 		// Check if this is a dynamic MCP tool (mcp--serverName--toolName)
+		// Also handle models that output underscores instead of hyphens (mcp__serverName__toolName)
 		const mcpPrefix = MCP_TOOL_PREFIX + MCP_TOOL_SEPARATOR
 
-		if (typeof toolCall.name === "string" && toolCall.name.startsWith(mcpPrefix)) {
-			return this.parseDynamicMcpTool(toolCall)
+		if (typeof toolCall.name === "string") {
+			// Normalize the tool name to handle models that output underscores instead of hyphens
+			const normalizedName = normalizeMcpToolName(toolCall.name)
+			if (normalizedName.startsWith(mcpPrefix)) {
+				// Pass the original tool call but with normalized name for parsing
+				return this.parseDynamicMcpTool({ ...toolCall, name: normalizedName })
+			}
 		}
 
 		// Resolve tool alias to canonical name
@@ -866,8 +872,6 @@ export class NativeToolCallParser {
 				default:
 					if (customToolRegistry.has(resolvedName)) {
 						nativeArgs = args as NativeArgsFor<TName>
-					} else {
-						console.error(`Unhandled tool: ${resolvedName}`)
 					}
 
 					break
@@ -911,11 +915,15 @@ export class NativeToolCallParser {
 			// Parse the arguments - these are the actual tool arguments passed directly
 			const args = JSON.parse(toolCall.arguments || "{}")
 
+			// Normalize the tool name to handle models that output underscores instead of hyphens
+			// e.g., mcp__serverName__toolName -> mcp--serverName--toolName
+			const normalizedName = normalizeMcpToolName(toolCall.name)
+
 			// Extract server_name and tool_name from the tool name itself
 			// Format: mcp--serverName--toolName (using -- separator)
-			const parsed = parseMcpToolName(toolCall.name)
+			const parsed = parseMcpToolName(normalizedName)
 			if (!parsed) {
-				console.error(`Invalid dynamic MCP tool name format: ${toolCall.name}`)
+				console.error(`Invalid dynamic MCP tool name format: ${toolCall.name} (normalized: ${normalizedName})`)
 				return null
 			}
 

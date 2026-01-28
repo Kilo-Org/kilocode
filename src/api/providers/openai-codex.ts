@@ -14,6 +14,7 @@ import {
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
+import { Package } from "../../shared/package"
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
@@ -22,6 +23,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { isMcpTool } from "../../utils/mcp-name"
+import { sanitizeOpenAiCallId } from "../../utils/tool-id"
 import { openAiCodexOAuthManager } from "../../integrations/openai-codex/oauth"
 import { t } from "../../i18n"
 
@@ -48,7 +50,7 @@ const CODEX_API_BASE_URL = "https://chatgpt.com/backend-api/codex"
  * - Limited model subset
  * - Custom headers for Codex backend
  */
-export class OpenAiCodexHandler extends BaseProvider implements SingleCompletionHandler {
+export class OpenAiCodexHandler extends BaseProvider /* kilocode_change: implements SingleCompletionHandler */ {
 	protected options: ApiHandlerOptions
 	private readonly providerName = "OpenAI Codex"
 	private client?: OpenAI
@@ -433,7 +435,8 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 									: block.content?.map((c) => (c.type === "text" ? c.text : "")).join("") || ""
 							toolResults.push({
 								type: "function_call_output",
-								call_id: block.tool_use_id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.tool_use_id),
 								output: result,
 							})
 						}
@@ -460,7 +463,8 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 						} else if (block.type === "tool_use") {
 							toolCalls.push({
 								type: "function_call",
-								call_id: block.id,
+								// Sanitize and truncate call_id to fit OpenAI's 64-char limit
+								call_id: sanitizeOpenAiCallId(block.id),
 								name: block.name,
 								arguments: JSON.stringify(block.input),
 							})
@@ -844,12 +848,14 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 		}
 
 		// Handle text deltas
+		/* kilocode_change: don't yield text deltas, the full text is yielded as part of response.output_item.done
 		if (event?.type === "response.text.delta" || event?.type === "response.output_text.delta") {
 			if (event?.delta) {
 				yield { type: "text", text: event.delta }
 			}
 			return
 		}
+		*/
 
 		// Handle reasoning deltas
 		if (
@@ -1013,7 +1019,7 @@ export class OpenAiCodexHandler extends BaseProvider implements SingleCompletion
 		return this.lastResponseId
 	}
 
-	async completePrompt(prompt: string): Promise<string> {
+	async completePrompt_deleted_by_kilocode_because_streaming_is_required(prompt: string): Promise<string> {
 		this.abortController = new AbortController()
 
 		try {

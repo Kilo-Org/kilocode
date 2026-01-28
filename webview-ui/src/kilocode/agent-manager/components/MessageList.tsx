@@ -17,6 +17,9 @@ import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
 import { CommandExecutionBlock } from "./CommandExecutionBlock"
+import { ProgressIndicator } from "./ProgressIndicator"
+import { ReasoningBlock } from "./ReasoningBlock"
+import MessageThumbnails from "./MessageThumbnails"
 import { vscode } from "../utils/vscode"
 import {
 	MessageCircle,
@@ -249,11 +252,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 	if (message.type === "say") {
 		switch (message.say) {
 			case "api_req_started": {
-				icon = <ArrowRightLeft size={16} className="opacity-70" />
 				title = t("messages.apiRequest")
 				const info = safeJsonParse<{ cost?: number }>(messageText)
-				if (info?.cost !== undefined) {
-					extraInfo = <span className="am-message-cost">${info.cost.toFixed(4)}</span>
+				const hasCost = info?.cost !== undefined && info.cost !== null
+				// Show spinner when this is the last message and no cost yet (API request in progress)
+				if (hasCost) {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
+					extraInfo = <span className="am-message-cost">${info.cost!.toFixed(4)}</span>
+				} else if (isLast) {
+					icon = <ProgressIndicator />
+				} else {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
 				}
 				// Don't show content for API req started, just header
 				content = null
@@ -268,7 +277,14 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 			case "user_feedback": {
 				icon = <User size={16} />
 				title = t("messages.youSaid")
-				content = <SimpleMarkdown content={messageText} />
+				content = (
+					<>
+						<SimpleMarkdown content={messageText} />
+						{message.images && message.images.length > 0 && (
+							<MessageThumbnails images={message.images} style={{ marginTop: "8px" }} />
+						)}
+					</>
+				)
 				break
 			}
 			case "completion_result": {
@@ -282,6 +298,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 				title = t("messages.error")
 				content = <SimpleMarkdown content={messageText} />
 				break
+			}
+			case "reasoning": {
+				// Return early - reasoning block has its own wrapper
+				return (
+					<ReasoningBlock
+						content={messageText}
+						ts={message.ts}
+						isStreaming={message.partial ?? false}
+						isLast={isLast}
+					/>
+				)
 			}
 			case "api_req_finished":
 			case "checkpoint_saved":
@@ -425,6 +452,9 @@ function QueuedMessageItem({ queuedMessage, isSending: _isSending, onRetry, onDi
 				</div>
 				<div className="am-message-body">
 					<SimpleMarkdown content={queuedMessage.content} />
+					{queuedMessage.images && queuedMessage.images.length > 0 && (
+						<MessageThumbnails images={queuedMessage.images} style={{ marginTop: "8px" }} />
+					)}
 				</div>
 				{queuedMessage.status === "failed" && (
 					<div className="mt-2 space-y-2">

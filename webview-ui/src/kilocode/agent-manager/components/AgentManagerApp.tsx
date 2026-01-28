@@ -38,6 +38,8 @@ function AgentManagerContent() {
 		<div className="agent-manager-container">
 			<SessionSidebar />
 			<SessionDetail />
+			{/* Portal container for dropdowns and popovers */}
+			<div id="roo-portal" />
 		</div>
 	)
 }

@@ -60,7 +60,9 @@
 		"selectModel": "モデルを選択",
 		"modelTooltip": "このセッションで使用するAIモデルを選択",
 		"defaultModel": "デフォルトモデル",
-		"loadingModels": "読み込み中..."
+		"loadingModels": "読み込み中...",
+		"selectMode": "モードを選択",
+		"modeTooltip": "モード: {{mode}}"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -75,7 +77,9 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}",
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
-		"copyCommand": "コマンドをコピー"
+		"copyCommand": "コマンドをコピー",
+		"thinking": "思考中",
+		"thinkingSeconds": "{{count}}秒"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",

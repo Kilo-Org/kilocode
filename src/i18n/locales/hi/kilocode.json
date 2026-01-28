@@ -15,6 +15,7 @@
 		"noAssistantMessages": "मॉडल का प्रतिक्रिया अप्रत्याशित रूप से समाप्त हो गई (कोई सहायक संदेश नहीं)। यह दर सीमा का संकेत हो सकता है।",
 		"notLoggedInError": "अनुरोध पूरा नहीं किया जा सकता है, सुनिश्चित करें कि आप चयनित प्रदाता के साथ जुड़े और लॉग इन हैं।\n\n{{error}}",
 		"maxCompletionTokens": "अधिकतम पूर्णता टोकन की संख्या पहुंच गई।",
+		"contentFilter": "अनुरोध सामग्री फ़िल्टर द्वारा अवरोधित किया गया था।",
 		"disableApplyDiff": "यदि यह त्रुटि बार-बार हो रही है, तो कृपया उन्नत सेटिंग्स में Editing Through Diffs को अक्षम करें।",
 		"disableEditFile": "यदि यह त्रुटि बार-बार हो रही है, तो कृपया Fast Apply प्रायोगिक सुविधा को अक्षम करें।"
 	},
@@ -105,7 +106,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "आपका Kilocode CLI संस्करण पुराना है और Agent Manager का समर्थन नहीं करता। कृपया नवीनतम संस्करण में अपडेट करें।",
-			"cliNotFound": "Kilocode CLI नहीं मिला। Agent Manager का उपयोग करने के लिए कृपया इसे इंस्टॉल करें।",
 			"cliMisconfigured": "Kilocode CLI कॉन्फ़िगर नहीं है। साइन इन करने के लिए 'kilocode auth' चलाएं या कॉन्फ़िगर करने के लिए 'kilocode config' चलाएं।",
 			"sessionFailed": "एजेंट सत्र प्रारंभ करने में विफल",
 			"sessionFailedWithMessage": "एजेंट सत्र प्रारंभ करने में विफल: {{message}}"

@@ -51,7 +51,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 			} else if (message.type === "balanceDataResponse") {
 				const payload = message.payload as BalanceDataResponsePayload
 				if (payload.success) {
-					setBalance(payload.data?.balance || 0)
+					// `BalanceDataResponsePayload.data` is `unknown` (from backend). Normalize defensively.
+					setBalance(((payload.data as any)?.balance as number) || 0) // kilocode_change
 				} else {
 					console.error("Error fetching balance data:", payload.error)
 					setBalance(null)

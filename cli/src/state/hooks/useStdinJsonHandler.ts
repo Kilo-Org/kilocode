@@ -7,8 +7,10 @@ import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
 import { sendAskResponseAtom, sendTaskAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { setModeAtom } from "../atoms/config.js"
 import { logs } from "../../services/logs.js"
 import { convertImagesToDataUrls } from "../../media/image-utils.js"
+import { outputJsonIoMessage } from "../../ui/utils/jsonOutput.js"
 
 export interface StdinMessage {
 	type: string
@@ -16,6 +18,8 @@ export interface StdinMessage {
 	text?: string
 	images?: string[]
 	approved?: boolean
+	mode?: string
+	previousMode?: string
 }
 
 export interface StdinMessageHandlers {
@@ -27,6 +31,7 @@ export interface StdinMessageHandlers {
 		text?: string
 		images?: string[]
 	}) => Promise<void>
+	setMode: (mode: string) => Promise<void>
 }
 
 /**
@@ -39,14 +44,6 @@ export interface StdinMessageHandlers {
  *
  * File paths are automatically converted to data URLs before being sent.
  */
-/**
- * Output a JSON message to stdout for the Agent Manager to consume.
- * Used for error notifications and other structured output.
- */
-function outputJsonMessage(message: Record<string, unknown>): void {
-	console.log(JSON.stringify(message))
-}
-
 export async function handleStdinMessage(
 	message: StdinMessage,
 	handlers: StdinMessageHandlers,
@@ -61,7 +58,7 @@ export async function handleStdinMessage(
 
 			// Notify if some images failed to load
 			if (result.errors.length > 0) {
-				outputJsonMessage({
+				outputJsonIoMessage({
 					type: "image_load_error",
 					errors: result.errors,
 					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
@@ -82,7 +79,7 @@ export async function handleStdinMessage(
 
 			// Notify if some images failed to load
 			if (result.errors.length > 0) {
-				outputJsonMessage({
+				outputJsonIoMessage({
 					type: "image_load_error",
 					errors: result.errors,
 					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
@@ -126,6 +123,19 @@ export async function handleStdinMessage(
 			}
 			return { handled: true }
 
+		case "setMode": {
+			// Handle mode change from Agent Manager
+			if (!message.mode) {
+				return { handled: false, error: "setMode message requires mode field" }
+			}
+			const previousMode = message.previousMode
+			await handlers.setMode(message.mode)
+			// Output mode change confirmation for Agent Manager (JSON-IO protocol)
+			// This allows the Agent Manager to update its session state
+			outputJsonIoMessage({ type: "modeChanged", mode: message.mode, previousMode })
+			return { handled: true }
+		}
+
 		default:
 			return { handled: false, error: `Unknown message type: ${message.type}` }
 	}
@@ -136,6 +146,7 @@ export function useStdinJsonHandler(enabled: boolean) {
 	const sendTask = useSetAtom(sendTaskAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
+	const setMode = useSetAtom(setModeAtom)
 
 	useEffect(() => {
 		if (!enabled) {
@@ -161,6 +172,9 @@ export function useStdinJsonHandler(enabled: boolean) {
 			},
 			respondToTool: async (params) => {
 				await respondToTool(params)
+			},
+			setMode: async (mode) => {
+				await setMode(mode)
 			},
 		}
 
@@ -199,5 +213,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 		return () => {
 			rl.close()
 		}
-	}, [enabled, sendAskResponse, sendTask, cancelTask, respondToTool])
+	}, [enabled, sendAskResponse, sendTask, cancelTask, respondToTool, setMode])
 }

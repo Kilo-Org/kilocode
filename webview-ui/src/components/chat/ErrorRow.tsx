@@ -1,7 +1,7 @@
 import React, { useState, useCallback, memo, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import { BookOpenText, MessageCircleWarning, Copy, Check, Microscope } from "lucide-react"
+import { BookOpenText, MessageCircleWarning, Copy, Check, Microscope, Info } from "lucide-react"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { vscode } from "@src/utils/vscode"
@@ -10,12 +10,13 @@ import { Button } from "@src/components/ui" // kilocode_change
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@src/components/ui/dialog"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+import { PROVIDERS } from "../settings/constants"
 
 /**
  * Unified error display component for all error types in the chat.
  * Provides consistent styling, icons, and optional documentation links across all errors.
  *
- * @param type - Error type determines icon and default title
+ * @param type - Error type determines default title
  * @param title - Optional custom title (overrides default for error type)
  * @param message - Error message text (required)
  * @param docsURL - Optional documentation link URL (shown as "Learn more" with book icon)
@@ -101,6 +102,8 @@ export const ErrorRow = memo(
 		const { version, apiConfiguration } = useExtensionState()
 		const { provider, id: modelId } = useSelectedModel(apiConfiguration)
 
+		const usesProxy = PROVIDERS.find((p) => p.value === provider)?.proxy ?? false
+
 		// Format error details with metadata prepended
 		const formattedErrorDetails = useMemo(() => {
 			if (!errorDetails) return undefined
@@ -108,14 +111,14 @@ export const ErrorRow = memo(
 			const metadata = [
 				`Date/time: ${new Date().toISOString()}`,
 				`Extension version: ${version}`,
-				`Provider: ${provider}`,
+				`Provider: ${provider}${usesProxy ? " (proxy)" : ""}`,
 				`Model: ${modelId}`,
 				"",
 				"",
 			].join("\n")
 
 			return metadata + errorDetails
-		}, [errorDetails, version, provider, modelId])
+		}, [errorDetails, version, provider, modelId, usesProxy])
 
 		const handleDownloadDiagnostics = useCallback(
 			(e: React.MouseEvent) => {
@@ -303,10 +306,18 @@ export const ErrorRow = memo(
 							<DialogHeader>
 								<DialogTitle>{t("chat:errorDetails.title")}</DialogTitle>
 							</DialogHeader>
-							<div className="max-h-96 overflow-auto px-3 bg-vscode-editor-background rounded-xl border border-vscode-editorGroup-border">
-								<pre className="font-mono text-sm whitespace-pre-wrap break-words bg-transparent">
+							<div className="max-h-96 overflow-auto bg-vscode-editor-background rounded-xl border border-vscode-editorGroup-border">
+								<pre className="font-mono text-sm whitespace-pre-wrap break-words bg-transparent px-3">
 									{formattedErrorDetails}
 								</pre>
+								{usesProxy && (
+									<div className="cursor-default flex gap-2 border-t-1 px-3 py-2 border-vscode-editorGroup-border bg-foreground/5 text-vscode-button-secondaryForeground">
+										<Info className="size-3 shrink-0 mt-1 text-vscode-descriptionForeground" />
+										<span className="text-vscode-descriptionForeground text-sm">
+											{t("chat:errorDetails.proxyProvider")}
+										</span>
+									</div>
+								)}
 							</div>
 							<DialogFooter>
 								<Button variant="secondary" className="w-full" onClick={handleCopyDetails}>

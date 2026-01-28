@@ -30,7 +30,6 @@ import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { Section } from "@src/components/settings/Section"
-import { SectionHeader } from "@src/components/settings/SectionHeader"
 import {
 	Button,
 	Select,
@@ -53,6 +52,7 @@ import {
 import { DeleteModeDialog } from "@src/components/modes/DeleteModeDialog"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import { OrganizationModeWarning } from "../kilocode/OrganizationModeWarning"
+import { SectionHeader } from "../settings/SectionHeader"
 
 // Get all available groups that should show in prompts view
 const availableGroups = (Object.keys(TOOL_GROUPS) as ToolGroup[]).filter((group) => !TOOL_GROUPS[group].alwaysAvailable)
@@ -617,7 +617,9 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 			<Section>
 				<div>
 					<div onClick={(e) => e.stopPropagation()} className="flex justify-between items-center mb-3">
-						<h3 className="text-vscode-foreground m-0">{t("prompts:modes.title")}</h3>
+						<h3 className="text-[1.25em] font-semibold text-vscode-foreground mt-4 mb-2">
+							{t("prompts:modes.title")}
+						</h3>
 						<div className="flex gap-2">
 							<div className="relative inline-block">
 								<StandardTooltip content={t("prompts:modes.editModesConfig")}>
@@ -723,9 +725,6 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 					</div>
 
 					<div className="flex items-center gap-1 mb-3">
-						{isOrganizationMode && <OrganizationModeWarning />} {/* kilocode_change start */}
-						{/* Only show name and delete for custom modes that are not organization modes */}
-						{/* kilocode_change end */}
 						{isRenamingMode ? (
 							<>
 								<VSCodeTextField
@@ -929,6 +928,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 							</>
 						)}
 					</div>
+
+					{/* kilocode_change start */}
+					{isOrganizationMode && <OrganizationModeWarning />}
+					{/* kilocode_change end */}
 
 					{/* API Configuration - Moved Here */}
 					<div className="mb-3">

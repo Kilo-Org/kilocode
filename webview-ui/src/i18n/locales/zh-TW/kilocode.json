@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一個免費的開源 AI 程式設計代理。",
-		"introText2": "它適用於最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多個其他模型。",
+		"introText2": "它適用於最新的 AI 模型，如 Claude Opus 4.5、Gemini 3 Pro、GPT-5.2 以及 450 多個其他模型。",
 		"introText3": "建立免費帳戶，首次儲值即可獲得 20 美元獎勵額度。",
 		"ctaButton": "開始使用",
 		"manualModeButton": "使用你自己的 API 金鑰",
@@ -10,9 +10,9 @@
 		"loginText": "在此登入"
 	},
 	"lowCreditWarning": {
-		"addCredit": "添加額度",
+		"addCredit": "增加額度",
 		"lowBalance": "你的 Kilo Code 餘額不足",
-		"newOrganization": "將 Kilo 用於工作？"
+		"switchToFreeModel": "切換到免費模型"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
@@ -34,7 +34,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP 伺服器",
-			"agentBehaviour": "代理行為"
+			"agentBehaviour": "代理行為",
+			"skills": "技能"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -54,6 +55,7 @@
 			"apiKey": "Kilo Code API 金鑰",
 			"login": "登入 Kilo Code",
 			"logout": "登出 Kilo Code",
+			"loginForPremiumModels": "登入以存取進階模型和功能",
 			"providerRouting": {
 				"title": "供應商路由",
 				"managedByOrganization": "管理組織層級供應商路由",
@@ -72,8 +74,7 @@
 					"deny": "拒絕提示詞訓練",
 					"zdr": "零資料保留"
 				}
-			},
-			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "上下文視窗",
@@ -143,14 +144,15 @@
 		"detailedUsage": "詳細使用情況",
 		"createOrganization": "建立組織以追蹤詳細使用情況"
 	},
-	"docs": "文件",
+	"docs": "說明文件",
 	"rules": {
 		"tooltip": "管理代理行為（{{types}}）",
 		"agentBehaviourTypes": {
 			"rules": "規則",
 			"workflows": "工作流程",
 			"mcps": "MCP",
-			"modes": "模式"
+			"modes": "模式",
+			"skills": "技能"
 		},
 		"ariaLabel": "Kilo Code 規則",
 		"tabs": {
@@ -310,7 +312,7 @@
 	},
 	"marketplace": {
 		"mcp": {
-			"description": "这些MCP服务器由社区维护。点击<1>这里</1>编辑您自己的MCP设置。"
+			"description": "这些 MCP 服务器由社区维护。点击<1>这里</1>编辑您自己的 MCP 设置。"
 		},
 		"modes": {
 			"description": "这些模式来自社区提供。点击<1>这里</1>编辑您自己的自定义模式。"
@@ -360,6 +362,18 @@
 			"refresh": "重新整理",
 			"defaultOption": "系統預設",
 			"noDevices": "找不到麥克風設備"
+		}
+	},
+	"skills": {
+		"description": "技能為特定任務提供專業指導。當與你的請求相關時，它們會自動套用。",
+		"noSkills": "尚未安裝任何技能",
+		"projectSkills": "專案技能",
+		"globalSkills": "全域技能",
+		"deleteDialog": {
+			"title": "刪除技能",
+			"description": "確定要刪除技能「{{skillName}}」嗎？此操作無法復原。",
+			"cancel": "取消",
+			"delete": "刪除"
 		}
 	}
 }

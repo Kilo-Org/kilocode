@@ -26,7 +26,8 @@
 	"tabs": {
 		"tools": "工具",
 		"resources": "資源",
-		"logs": "日誌"
+		"logs": "日誌",
+		"authDebug": "驗證偵錯"
 	},
 	"emptyState": {
 		"noTools": "找不到工具",
@@ -55,11 +56,27 @@
 	},
 	"serverStatus": {
 		"retrying": "重試中...",
-		"retryConnection": "重試連線"
+		"retryConnection": "重試連線",
+		"signIn": "登入",
+		"signingIn": "登入中..."
 	},
 	"execution": {
 		"running": "執行中",
 		"completed": "已完成",
 		"error": "錯誤"
+	},
+	"authDebug": {
+		"title": "OAuth 偵錯資訊",
+		"status": "狀態",
+		"tokenExpires": "Token 到期時間",
+		"scopes": "授權範圍",
+		"refreshInfo": "Refresh Token 資訊",
+		"hasRefreshToken": "具有 Refresh Token",
+		"canRefresh": "可自動更新",
+		"tokenIssuedAt": "Token 核發時間",
+		"nextRefreshAt": "下次更新時間",
+		"lastRefreshAt": "上次更新時間",
+		"tokenEndpoint": "Token 端點",
+		"clientId": "Client ID"
 	}
 }

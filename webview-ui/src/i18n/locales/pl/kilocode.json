@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
-		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 i ponad 450 innymi.",
+		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 i ponad 450 innymi.",
 		"introText3": "Stwórz darmowe konto i otrzymaj $20 bonusowych kredytów przy pierwszym doładowaniu.",
 		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
 		"lowBalance": "Twój stan konta Kilo Code jest niski",
-		"newOrganization": "Używasz Kilo do pracy?"
+		"switchToFreeModel": "Przełącz na darmowy model"
 	},
 	"pagination": {
 		"previous": "Poprzednia",
@@ -32,13 +32,15 @@
 	"settings": {
 		"sections": {
 			"mcp": "Serwery MCP",
-			"agentBehaviour": "Zachowanie agenta"
+			"agentBehaviour": "Zachowanie agenta",
+			"skills": "Umiejętności"
 		},
 		"provider": {
 			"account": "Konto Kilo Code",
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
 			"logout": "Wyloguj się z Kilo Code",
+			"loginForPremiumModels": "Zaloguj się, aby uzyskać dostęp do modeli i funkcji premium",
 			"providerRouting": {
 				"title": "Routing dostawców",
 				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",
@@ -57,8 +59,7 @@
 					"deny": "Zabroń treningu promptów",
 					"zdr": "Zerowe przechowywanie danych"
 				}
-			},
-			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Okno kontekstu",
@@ -148,7 +149,8 @@
 			"rules": "Reguły",
 			"workflows": "Przepływy Pracy",
 			"mcps": "MCPs",
-			"modes": "Tryby"
+			"modes": "Tryby",
+			"skills": "Umiejętności"
 		},
 		"ariaLabel": "Reguły Kilo Code",
 		"tabs": {
@@ -361,6 +363,18 @@
 			"loading": "Ładowanie urządzeń mikrofonowych...",
 			"refresh": "Odśwież",
 			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
+		}
+	},
+	"skills": {
+		"description": "Umiejętności dostarczają specjalistyczne instrukcje dla konkretnych zadań. Są automatycznie stosowane, gdy są istotne dla twojego zapytania.",
+		"noSkills": "Brak zainstalowanych umiejętności",
+		"projectSkills": "Umiejętności Projektu",
+		"globalSkills": "Umiejętności Globalne",
+		"deleteDialog": {
+			"title": "Usuń Umiejętność",
+			"description": "Czy na pewno chcesz usunąć umiejętność \"{{skillName}}\"? Tej akcji nie można cofnąć.",
+			"cancel": "Anuluj",
+			"delete": "Usuń"
 		}
 	}
 }

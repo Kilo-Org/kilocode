@@ -125,5 +125,9 @@
 		"delegated_to": "कार्य {{childId}} को सौंपा गया",
 		"delegation_completed": "उप-कार्य पूर्ण, मुख्य कार्य फिर से शुरू हो रहा है",
 		"awaiting_child": "चाइल्ड कार्य {{childId}} की प्रतीक्षा में"
+	},
+	"costs": {
+		"own": "स्वयं",
+		"subtasks": "उपकार्य"
 	}
 }

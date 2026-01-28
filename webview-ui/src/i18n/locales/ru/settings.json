@@ -1,4 +1,5 @@
 {
+	"back": "Назад к списку задач",
 	"common": {
 		"save": "Сохранить",
 		"done": "Готово",
@@ -7,6 +8,10 @@
 		"select": "Выбрать",
 		"add": "Добавить заголовок",
 		"remove": "Удалить"
+	},
+	"search": {
+		"placeholder": "Поиск параметров...",
+		"noResults": "Параметры не найдены"
 	},
 	"header": {
 		"title": "Настройки",
@@ -37,7 +42,9 @@
 		"experimental": "Экспериментальное",
 		"language": "Язык",
 		"about": "О Kilo Code",
-		"autoPurge": "Авто-очистка"
+		"autoPurge": "Авто-очистка",
+		"agentBehaviour": "Поведение агента",
+		"ghost": "Автодополнение"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Хотите получить советы или просто пообщаться с другими пользователями Kilo Code? Присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Контакты и Сообщество",
-		"manageSettings": "Управление Настройками"
+		"manageSettings": "Управление Настройками",
+		"debugMode": {
+			"label": "Включить режим отладки",
+			"description": "Включите режим отладки для отображения дополнительных кнопок в заголовке задачи для просмотра истории разговоров API и сообщений UI в виде форматированного JSON во временных файлах."
+		}
 	},
 	"slashCommands": {
 		"description": "Управляйте своими слэш-командами для быстрого выполнения пользовательских рабочих процессов и действий. <DocsLink>Узнать больше</DocsLink>"
@@ -94,6 +105,7 @@
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
 		"openaiCompatibleProvider": "OpenAI-совместимый",
+		"openaiCompatibleResponsesProvider": "OpenAI-совместимый (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введите ваш ключ API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Базовый URL",
@@ -304,7 +316,6 @@
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"useReasoning": "Включить рассуждения",
 		"useHostHeader": "Использовать пользовательский Host-заголовок",
-		"useLegacyFormat": "Использовать устаревший формат OpenAI API",
 		"customHeaders": "Пользовательские заголовки",
 		"headerName": "Имя заголовка",
 		"headerValue": "Значение заголовка",
@@ -597,21 +608,6 @@
 			"placeholder": "По умолчанию: claude",
 			"maxTokensLabel": "Макс. выходных токенов",
 			"maxTokensDescription": "Максимальное количество выходных токенов для ответов Claude Code. По умолчанию 8000."
-		},
-		"geminiCli": {
-			"description": "Этот провайдер использует OAuth-аутентификацию из инструмента Gemini CLI и не требует API-ключей.",
-			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
-			"oauthPathDescription": "Путь к файлу учетных данных OAuth. Оставьте пустым для использования местоположения по умолчанию (~/.gemini/oauth_creds.json).",
-			"instructions": "Если вы еще не прошли аутентификацию, выполните",
-			"instructionsContinued": "в вашем терминале сначала.",
-			"setupLink": "Инструкции по настройке Gemini CLI",
-			"requirementsTitle": "Важные требования",
-			"requirement1": "Сначала вам нужно установить инструмент Gemini CLI",
-			"requirement2": "Затем запустите gemini в вашем терминале и убедитесь, что вы вошли в Google",
-			"requirement3": "Работает только с личными аккаунтами Google (не с аккаунтами Google Workspace)",
-			"requirement4": "Не использует API-ключи - аутентификация обрабатывается через OAuth",
-			"requirement5": "Требует, чтобы инструмент Gemini CLI был сначала установлен и аутентифицирован",
-			"freeAccess": "Бесплатный доступ через OAuth-аутентификацию"
 		},
 		"qwenCode": {
 			"oauthPath": "Путь к учетным данным OAuth (необязательно)",

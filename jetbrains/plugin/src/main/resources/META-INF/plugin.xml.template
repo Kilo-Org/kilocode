@@ -72,14 +72,6 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="New Task" />
         </action>
 
-        <action id="kilocode.mcpButtonClicked"
-                icon="AllIcons.Webreferences.Server"
-                class="ai.kilocode.jetbrains.actions.MCPButtonClickAction"
-                text="MCP Server"
-                description="MCP server">
-            <override-text place="GoToAction" text="MCP Server" />
-        </action>
-
         <action id="kilocode.historyButtonClicked"
                 icon="AllIcons.Vcs.History"
                 class="ai.kilocode.jetbrains.actions.HistoryButtonClickAction"
@@ -114,7 +106,6 @@ SPDX-License-Identifier: Apache-2.0
 
         <group id="WecoderToolbarGroup">
             <reference ref="kilocode.plusButtonClicked" />
-            <reference ref="kilocode.mcpButtonClicked" />
             <reference ref="kilocode.historyButtonClicked" />
             <reference ref="kilocode.profileButtonClicked" />
             <reference ref="kilocode.settingsButtonClicked" />

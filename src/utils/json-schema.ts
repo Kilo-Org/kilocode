@@ -231,13 +231,60 @@ const NormalizedToolSchemaInternal: z.ZodType<Record<string, unknown>, z.ZodType
 )
 
 /**
+ * Flattens a schema with top-level anyOf/oneOf/allOf to a simple object schema.
+ * This is needed because some providers (OpenRouter, Claude) don't support
+ * schema composition keywords at the top level of tool input schemas.
+ *
+ * @param schema - The schema to flatten
+ * @returns A flattened schema without top-level composition keywords
+ */
+function flattenTopLevelComposition(schema: Record<string, unknown>): Record<string, unknown> {
+	const { anyOf, oneOf, allOf, ...rest } = schema
+
+	// If no top-level composition keywords, return as-is
+	if (!anyOf && !oneOf && !allOf) {
+		return schema
+	}
+
+	// Get the composition array to process (prefer anyOf, then oneOf, then allOf)
+	const compositionArray = (anyOf || oneOf || allOf) as Record<string, unknown>[] | undefined
+	if (!compositionArray || !Array.isArray(compositionArray) || compositionArray.length === 0) {
+		return schema
+	}
+
+	// Find the first non-null object type variant to use as the base
+	// This preserves the most information while making the schema compatible
+	const objectVariant = compositionArray.find(
+		(variant) =>
+			typeof variant === "object" &&
+			variant !== null &&
+			(variant.type === "object" || variant.properties !== undefined),
+	)
+
+	if (objectVariant) {
+		// Merge remaining properties with the object variant
+		return { ...rest, ...objectVariant }
+	}
+
+	// If no object variant found, create a generic object schema
+	// This is a fallback that allows any object structure
+	return {
+		type: "object",
+		additionalProperties: false,
+		...rest,
+	}
+}
+
+/**
  * Normalizes a tool input JSON Schema to be compliant with JSON Schema draft 2020-12.
  *
- * This function performs three key transformations:
+ * This function performs four key transformations:
  * 1. Sets `additionalProperties: false` by default (required by OpenAI strict mode)
  * 2. Converts deprecated `type: ["T", "null"]` array syntax to `anyOf` format
  *    (required by Claude on Bedrock which enforces JSON Schema draft 2020-12)
  * 3. Strips unsupported `format` values (e.g., "uri") for OpenAI Structured Outputs compatibility
+ * 4. Flattens top-level anyOf/oneOf/allOf (required by OpenRouter/Claude which don't support
+ *    schema composition keywords at the top level)
  *
  * Uses recursive parsing so transformations apply to all nested schemas automatically.
  *
@@ -249,6 +296,9 @@ export function normalizeToolSchema(schema: Record<string, unknown>): Record<str
 		return schema
 	}
 
-	const result = NormalizedToolSchemaInternal.safeParse(schema)
-	return result.success ? result.data : schema
+	// First, flatten any top-level composition keywords before normalizing
+	const flattenedSchema = flattenTopLevelComposition(schema)
+
+	const result = NormalizedToolSchemaInternal.safeParse(flattenedSchema)
+	return result.success ? result.data : flattenedSchema
 }

@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Не удалось отключить {{count}} MCP сервер(ов). Проверьте вывод для получения подробностей.",
 		"toolNotFound": "Инструмент '{{toolName}}' не существует на сервере '{{serverName}}'. Доступные инструменты: {{availableTools}}",
 		"serverNotFound": "MCP сервер '{{serverName}}' не настроен. Доступные серверы: {{availableServers}}",
-		"toolDisabled": "Инструмент '{{toolName}}' на сервере '{{serverName}}' отключен. Доступные включенные инструменты: {{availableTools}}"
+		"toolDisabled": "Инструмент '{{toolName}}' на сервере '{{serverName}}' отключен. Доступные включенные инструменты: {{availableTools}}",
+		"oauth_signin_failed": "Ошибка входа через OAuth. Пожалуйста, попробуйте снова.",
+		"oauth_failed": "Ошибка OAuth-аутентификации для {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP серверы уже обновляются.",
 		"refreshing_all": "Обновление всех MCP серверов...",
 		"all_refreshed": "Все MCP серверы обновлены.",
-		"project_config_deleted": "Файл конфигурации MCP проекта удален. Все MCP серверы проекта отключены."
+		"project_config_deleted": "Файл конфигурации MCP проекта удален. Все MCP серверы проекта отключены.",
+		"oauth_required": "Требуется OAuth-аутентификация для подключения к '{{serverUrl}}'",
+		"oauth_success": "OAuth-аутентификация успешно выполнена для '{{serverUrl}}'"
 	}
 }

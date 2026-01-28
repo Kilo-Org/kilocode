@@ -125,5 +125,9 @@
 		"delegated_to": "Delegat a la tasca {{childId}}",
 		"delegation_completed": "Subtasca completada, reprenent la tasca principal",
 		"awaiting_child": "Esperant la tasca filla {{childId}}"
+	},
+	"costs": {
+		"own": "Propi",
+		"subtasks": "Subtasques"
 	}
 }

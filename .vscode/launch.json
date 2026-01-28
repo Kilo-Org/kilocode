@@ -17,7 +17,7 @@
 			"env": {
 				"NODE_ENV": "development",
 				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js"
+				"KILOCODE_DEV_AGENT_RUNTIME_PATH": "${workspaceFolder}/dist/agent-runtime-process.js"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": {
@@ -42,7 +42,7 @@
 			"env": {
 				"NODE_ENV": "development",
 				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js"
+				"KILOCODE_DEV_AGENT_RUNTIME_PATH": "${workspaceFolder}/dist/agent-runtime-process.js"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
@@ -59,8 +59,8 @@
 			"env": {
 				"NODE_ENV": "development",
 				"VSCODE_DEBUG_MODE": "true",
-				"KILOCODE_DEV_CLI_PATH": "${workspaceFolder}/cli/dist/index.js",
-				"KILOCODE_BACKEND_BASE_URL": "${input:kilocodeBackendBaseUrl}"
+				"KILOCODE_BACKEND_BASE_URL": "${input:kilocodeBackendBaseUrl}",
+				"KILOCODE_DEV_AGENT_RUNTIME_PATH": "${workspaceFolder}/dist/agent-runtime-process.js"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 2 }
