@@ -292,7 +292,7 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
                             data-slot="list-item"
                             data-key={props.key(item)}
                             data-active={props.key(item) === active()}
-                            data-selected={props.current !== undefined && props.key(item) === props.key(props.current)}
+                            data-selected={item === props.current}
                             onClick={() => handleSelect(item, i())}
                             type="button"
                             onMouseMove={(event) => {
@@ -306,7 +306,7 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
                             }}
                           >
                             {props.children(item)}
-                            <Show when={props.current !== undefined && props.key(item) === props.key(props.current)}>
+                            <Show when={item === props.current}>
                               <span data-slot="list-item-selected-icon">
                                 <Icon name="check-small" />
                               </span>

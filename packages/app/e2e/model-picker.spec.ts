@@ -18,14 +18,11 @@ test("smoke model selection updates prompt footer", async ({ page, gotoSession }
 
   const input = dialog.getByRole("textbox").first()
 
-  // Wait for list items to be visible (there may or may not be a selected one depending on provider config)
-  const listItems = dialog.locator('[data-slot="list-item"]')
-  await expect(listItems.first()).toBeVisible()
-
-  // Try to find a selected item, otherwise use the first available item
   const selected = dialog.locator('[data-slot="list-item"][data-selected="true"]').first()
-  const hasSelected = (await selected.count()) > 0
-  const target = hasSelected ? selected : listItems.first()
+  await expect(selected).toBeVisible()
+
+  const other = dialog.locator('[data-slot="list-item"]:not([data-selected="true"])').first()
+  const target = (await other.count()) > 0 ? other : selected
 
   const key = await target.getAttribute("data-key")
   if (!key) throw new Error("Failed to resolve model key from list item")
