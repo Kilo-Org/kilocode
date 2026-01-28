@@ -256,7 +256,8 @@ export interface ExtensionMessage {
 		| "customToolsResult"
 		| "modes"
 		| "taskWithAggregatedCosts"
-		| "skillsData" // kilocode_change: Skills data response
+		| "skillsData"
+		| "askReviewScope" // kilocode_change: Review mode scope selection
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -442,6 +443,23 @@ export interface ExtensionMessage {
 		childrenCost: number
 	}
 	historyItem?: HistoryItem
+	// kilocode_change start: Review mode
+	reviewScopeInfo?: {
+		uncommitted: {
+			available: boolean
+			fileCount: number
+			filePreview?: string[]
+		}
+		branch: {
+			available: boolean
+			currentBranch: string
+			baseBranch: string
+			fileCount: number
+			filePreview?: string[]
+		}
+		error?: string
+	}
+	// kilocode_change end: Review mode
 }
 
 export type ExtensionState = Pick<
@@ -929,7 +947,8 @@ export interface WebviewMessage {
 		| "requestModes"
 		| "switchMode"
 		| "debugSetting"
-		| "refreshSkills" // kilocode_change: Request skills data refresh
+		| "refreshSkills"
+		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -1049,6 +1068,9 @@ export interface WebviewMessage {
 		codebaseIndexOpenRouterApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
+	// kilocode_change start: Review mode
+	reviewScope?: "uncommitted" | "branch"
+	// kilocode_change end: Review mode
 }
 
 // kilocode_change: Create discriminated union for type-safe messages

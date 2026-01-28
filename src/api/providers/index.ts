@@ -31,7 +31,6 @@ export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { AgenticaHandler } from "./agentica"
 export { OVHcloudAIEndpointsHandler } from "./ovhcloud"
-export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
 export { SyntheticHandler } from "./synthetic"
 export { InceptionLabsHandler } from "./inception"

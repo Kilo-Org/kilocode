@@ -107,16 +107,6 @@
 		"command_already_exists": "Команда \"{{commandName}}\" вже існує",
 		"create_command_failed": "Не вдалося створити команду",
 		"command_template_content": "---\ndescription: \"Короткий опис того, що робить ця команда\"\n---\n\nЦе нова slash команда. Відредагуйте цей файл, щоб налаштувати поведінку команди.",
-		"geminiCli": {
-			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}",
-			"tokenRefreshFailed": "Не вдалося оновити OAuth token: {{error}}",
-			"onboardingTimeout": "Операція onboarding перевищила час очікування після 60 секунд. Будь ласка, спробуй пізніше.",
-			"projectDiscoveryFailed": "Не вдалося знайти ID проекту. Переконайся, що ти автентифікований за допомогою 'gemini auth'.",
-			"rateLimitExceeded": "Перевищено ліміт швидкості. Досягнуто обмежень безкоштовного рівня.",
-			"badRequest": "Неправильний запит: {{details}}",
-			"apiError": "Помилка Gemini CLI API: {{error}}",
-			"completionError": "Помилка завершення Gemini CLI: {{error}}"
-		},
 		"gemini": {
 			"generate_stream": "Помилка генерації контекстного потоку Gemini: {{error}}",
 			"generate_complete_prompt": "Помилка завершення Gemini: {{error}}",

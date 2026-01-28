@@ -1,0 +1,1065 @@
+diff --git a/src/core/webview/ClineProvider.ts b/src/core/webview/ClineProvider.ts
+index fc303cffb6..c3fa21c71a 100644
+--- a/src/core/webview/ClineProvider.ts
++++ b/src/core/webview/ClineProvider.ts
+@@ -4,8 +4,8 @@ import fs from "fs/promises"
+ import EventEmitter from "events"
+ 
+ import { Anthropic } from "@anthropic-ai/sdk"
+-import delay from "delay"
+-import axios from "axios"
++import OpenAI from "openai"
++import axios from "axios" // kilocode_change
+ import pWaitFor from "p-wait-for"
+ import * as vscode from "vscode"
+ 
+@@ -34,11 +34,15 @@ import {
+ 	type CreateTaskOptions,
+ 	type TokenUsage,
+ 	type ToolUsage,
++	type ExtensionMessage,
++	type ExtensionState,
++	type MarketplaceInstalledMetadata,
+ 	RooCodeEventName,
+ 	TelemetryEventName, // kilocode_change
+ 	requestyDefaultModelId,
+ 	openRouterDefaultModelId,
+ 	glamaDefaultModelId, // kilocode_change
++	agenticaDefaultModelId, // kilocode_change
+ 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
+ 	DEFAULT_WRITE_DELAY_MS,
+ 	ORGANIZATION_ALLOW_ALL,
+@@ -46,6 +50,7 @@ import {
+ 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+ 	getModelId,
+ } from "@roo-code/types"
++import { aggregateTaskCostsRecursive, type AggregatedCosts } from "./aggregateTaskCosts"
+ import { TelemetryService } from "@roo-code/telemetry"
+ import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
+ 
+@@ -53,13 +58,11 @@ import { Package } from "../../shared/package"
+ import { findLast } from "../../shared/array"
+ import { supportPrompt } from "../../shared/support-prompt"
+ import { GlobalFileNames } from "../../shared/globalFileNames"
+-import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
+ import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
+ import { experimentDefault } from "../../shared/experiments"
+ import { formatLanguage } from "../../shared/language"
+ import { WebviewMessage } from "../../shared/WebviewMessage"
+ import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
+-import { UsageTracker } from "../../utils/usage-tracker" // kilocode_change
+ import { ProfileValidator } from "../../shared/ProfileValidator"
+ 
+ import { Terminal } from "../../integrations/terminal/Terminal"
+@@ -89,6 +92,7 @@ import { t } from "../../i18n"
+ 
+ import { buildApiHandler } from "../../api"
+ import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
++import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
+ 
+ import { ContextProxy } from "../config/ContextProxy"
+ import { getEnabledRules } from "./kilorules"
+@@ -104,22 +108,22 @@ import { readTaskMessages } from "../task-persistence/taskMessages"
+ import { getNonce } from "./getNonce"
+ import { getUri } from "./getUri"
+ import { REQUESTY_BASE_URL } from "../../shared/utils/requesty"
++import { validateAndFixToolResultIds } from "../task/validateToolResultIds"
+ 
+-//kilocode_change start
++// kilocode_change start
+ import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
+ import { McpServer } from "../../shared/mcp"
+ import { OpenRouterHandler } from "../../api/providers"
+ import { stringifyError } from "../../shared/kilocode/errorUtils"
+ import isWsl from "is-wsl"
+ import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
+-import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
++import { getEffectiveTelemetrySetting, getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+ import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
+ import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+ import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
+ import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
+-import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService"
++import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService" // kilocode_change
+ 
+-export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
+ // kilocode_change end
+ 
+ /**
+@@ -141,6 +145,18 @@ interface PendingEditOperation {
+ 	createdAt: number
+ }
+ 
++export type ClineProviderState = Omit<
++	ExtensionState,
++	| "clineMessages"
++	| "renderContext"
++	| "hasOpenedModeSelector"
++	| "version"
++	| "shouldShowAnnouncement"
++	| "hasSystemPromptOverride"
++	| "taskHistoryFullLength"
++	| "taskHistoryVersion"
++> // kilocode_change: exported view state shape
++
+ export class ClineProvider
+ 	extends EventEmitter<TaskProviderEvents>
+ 	implements vscode.WebviewViewProvider, TelemetryPropertiesProvider, TaskProviderLike {
+@@ -166,7 +182,7 @@ export class ClineProvider
+ 	private currentWorkspacePath: string | undefined
+ 	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
+ 	private deviceAuthHandler?: DeviceAuthHandler // kilocode_change - Device auth handler
+-	private agenticaDeviceAuthService?: GithubDeviceAuthService // Agentica GitHub device auth service
++	private agenticaDeviceAuthService?: GithubDeviceAuthService // kilocode_change - Agentica device auth handler
+ 
+ 	private recentTasksCache?: string[]
+ 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
+@@ -178,7 +194,7 @@ export class ClineProvider
+ 
+ 	public isViewLaunched = false
+ 	public settingsImportedAt?: number
+-	public readonly latestAnnouncementId = "dec-2025-v3.36.0-context-rewind-roo-provider" // v3.36.0 Context Rewind & Roo Provider Improvements
++	public readonly latestAnnouncementId = "jan-2026-v3.41.0-openai-codex-provider-gpt52-fixes" // v3.41.0 OpenAI Codex Provider, GPT-5.2-codex, Bug Fixes
+ 	public readonly providerSettingsManager: ProviderSettingsManager
+ 	public readonly customModesManager: CustomModesManager
+ 
+@@ -718,7 +734,7 @@ export class ClineProvider
+ 		if (!visibleProvider) {
+ 			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
+ 			// Wait briefly for the view to become visible
+-			await delay(100)
++			await new Promise((resolve) => setTimeout(resolve, 100)) // kilocode_change
+ 			visibleProvider = ClineProvider.getVisibleInstance()
+ 		}
+ 
+@@ -977,28 +993,75 @@ export class ClineProvider
+ 			await this.updateGlobalState("mode", historyItem.mode)
+ 
+ 			// Load the saved API config for the restored mode if it exists.
+-			const savedConfigId = await this.providerSettingsManager.getModeConfigId(historyItem.mode)
+-			const listApiConfig = await this.providerSettingsManager.listConfig()
++			// Skip mode-based profile activation if historyItem.apiConfigName exists,
++			// since the task's specific provider profile will override it anyway.
++			if (!historyItem.apiConfigName) {
++				const savedConfigId = await this.providerSettingsManager.getModeConfigId(historyItem.mode)
++				const listApiConfig = await this.providerSettingsManager.listConfig()
++
++				// Update listApiConfigMeta first to ensure UI has latest data.
++				await this.updateGlobalState("listApiConfigMeta", listApiConfig)
++
++				// If this mode has a saved config, use it.
++				if (savedConfigId) {
++					const profile = listApiConfig.find(({ id }) => id === savedConfigId)
++
++					if (profile?.name) {
++						try {
++							// Check if the profile has actual API configuration (not just an id).
++							// In CLI mode, the ProviderSettingsManager may return empty default profiles
++							// that only contain 'id' and 'name' fields. Activating such a profile would
++							// overwrite the CLI's working API configuration with empty settings.
++							const fullProfile = await this.providerSettingsManager.getProfile({ name: profile.name })
++							const hasActualSettings = !!fullProfile.apiProvider
++
++							if (hasActualSettings) {
++								await this.activateProviderProfile({ name: profile.name })
++							} else {
++								// The task will continue with the current/default configuration.
++							}
++						} catch (error) {
++							// Log the error but continue with task restoration.
++							this.log(
++								`Failed to restore API configuration for mode '${historyItem.mode}': ${
++									error instanceof Error ? error.message : String(error)
++								}. Continuing with default configuration.`,
++							)
++							// The task will continue with the current/default configuration.
++						}
++					}
++				}
++			}
++		}
+ 
+-			// Update listApiConfigMeta first to ensure UI has latest data.
++		// If the history item has a saved API config name (provider profile), restore it.
++		// This overrides any mode-based config restoration above, because the task's
++		// specific provider profile takes precedence over mode defaults.
++		if (historyItem.apiConfigName) {
++			const listApiConfig = await this.providerSettingsManager.listConfig()
++			// Keep global state/UI in sync with latest profiles for parity with mode restoration above.
+ 			await this.updateGlobalState("listApiConfigMeta", listApiConfig)
++			const profile = listApiConfig.find(({ name }) => name === historyItem.apiConfigName)
+ 
+-			// If this mode has a saved config, use it.
+-			if (savedConfigId) {
+-				const profile = listApiConfig.find(({ id }) => id === savedConfigId)
+-
+-				if (profile?.name) {
+-					try {
+-						await this.activateProviderProfile({ name: profile.name })
+-					} catch (error) {
+-						// Log the error but continue with task restoration.
+-						this.log(
+-							`Failed to restore API configuration for mode '${historyItem.mode}': ${error instanceof Error ? error.message : String(error)
+-							}. Continuing with default configuration.`,
+-						)
+-						// The task will continue with the current/default configuration.
+-					}
++			if (profile?.name) {
++				try {
++					await this.activateProviderProfile(
++						{ name: profile.name },
++						{ persistModeConfig: false, persistTaskHistory: false },
++					)
++				} catch (error) {
++					// Log the error but continue with task restoration.
++					this.log(
++						`Failed to restore API configuration '${historyItem.apiConfigName}' for task: ${
++							error instanceof Error ? error.message : String(error)
++						}. Continuing with current configuration.`,
++					)
+ 				}
++			} else {
++				// Profile no longer exists, log warning but continue
++				this.log(
++					`Provider profile '${historyItem.apiConfigName}' from history no longer exists. Using current configuration.`,
++				)
+ 			}
+ 		}
+ 
+@@ -1304,15 +1367,15 @@ export class ClineProvider
+ 
+ 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
+ 		return /*html*/ `
+-        <!DOCTYPE html>
+-        <html lang="en">
+-          <head>
+-            <meta charset="utf-8">
+-            <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+-            <meta name="theme-color" content="#000000">
++		<!DOCTYPE html>
++		<html lang="en">
++		  <head>
++			<meta charset="utf-8">
++			<meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
++			<meta name="theme-color" content="#000000">
+ 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com to img-src, https://*, http://localhost:3000 to connect-src -->
+-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+-            <link rel="stylesheet" type="text/css" href="${stylesUri}">
++			<meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
++			<link rel="stylesheet" type="text/css" href="${stylesUri}">
+ 			<link href="${codiconsUri}" rel="stylesheet" />
+ 			<script nonce="${nonce}">
+ 				window.IMAGES_BASE_URI = "${imagesUri}"
+@@ -1320,15 +1383,15 @@ export class ClineProvider
+ 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+ 				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
+ 			</script>
+-            <title>Kilo Code</title>
+-          </head>
+-          <body>
+-            <noscript>You need to enable JavaScript to run this app.</noscript>
+-            <div id="root"></div>
+-            <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+-          </body>
+-        </html>
+-      `
++			<title>Kilo Code</title>
++		  </head>
++		  <body>
++			<noscript>You need to enable JavaScript to run this app.</noscript>
++			<div id="root"></div>
++			<script nonce="${nonce}" type="module" src="${scriptUri}"></script>
++		  </body>
++		</html>
++	  `
+ 	}
+ 
+ 	/**
+@@ -1411,14 +1474,29 @@ export class ClineProvider
+ 			const profile = listApiConfig.find(({ id }) => id === savedConfigId)
+ 
+ 			if (profile?.name) {
+-				await this.activateProviderProfile({ name: profile.name })
++				// Check if the profile has actual API configuration (not just an id).
++				// In CLI mode, the ProviderSettingsManager may return empty default profiles
++				// that only contain 'id' and 'name' fields. Activating such a profile would
++				// overwrite the CLI's working API configuration with empty settings.
++				// Skip activation if the profile has no apiProvider set - this indicates
++				// an unconfigured/empty profile.
++				const fullProfile = await this.providerSettingsManager.getProfile({ name: profile.name })
++				const hasActualSettings = !!fullProfile.apiProvider
++
++				if (hasActualSettings) {
++					await this.activateProviderProfile({ name: profile.name })
++				} else {
++					// The task will continue with the current/default configuration.
++				}
++			} else {
++				// The task will continue with the current/default configuration.
+ 			}
+ 		} else {
+ 			// If no saved config for this mode, save current config as default.
+-			const currentApiConfigName = this.getGlobalState("currentApiConfigName")
++			const currentApiConfigNameAfter = this.getGlobalState("currentApiConfigName")
+ 
+-			if (currentApiConfigName) {
+-				const config = listApiConfig.find((c) => c.name === currentApiConfigName)
++			if (currentApiConfigNameAfter) {
++				const config = listApiConfig.find((c) => c.name === currentApiConfigNameAfter)
+ 
+ 				if (config?.id) {
+ 					await this.providerSettingsManager.setModeConfig(newMode, config.id)
+@@ -1473,7 +1551,7 @@ export class ClineProvider
+ 			task.updateApiConfiguration(providerSettings)
+ 		} else {
+ 			// No rebuild needed, just sync apiConfiguration
+-			;(task as any).apiConfiguration = providerSettings
++			; (task as any).apiConfiguration = providerSettings
+ 		}
+ 	}
+ 
+@@ -1533,6 +1611,9 @@ export class ClineProvider
+ 				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+ 
+ 				this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
++
++				// Keep the current task's sticky provider profile in sync with the newly-activated profile.
++				await this.persistStickyProviderProfileToCurrentTask(name)
+ 			} else {
+ 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
+ 			}
+@@ -1572,9 +1653,42 @@ export class ClineProvider
+ 		await this.postStateToWebview()
+ 	}
+ 
+-	async activateProviderProfile(args: { name: string } | { id: string }) {
++	private async persistStickyProviderProfileToCurrentTask(apiConfigName: string): Promise<void> {
++		const task = this.getCurrentTask()
++		if (!task) {
++			return
++		}
++
++		try {
++			// Update in-memory state immediately so sticky behavior works even before the task has
++			// been persisted into taskHistory (it will be captured on the next save).
++			task.setTaskApiConfigName(apiConfigName)
++
++			const history = this.getGlobalState("taskHistory") ?? []
++			const taskHistoryItem = history.find((item) => item.id === task.taskId)
++
++			if (taskHistoryItem) {
++				await this.updateTaskHistory({ ...taskHistoryItem, apiConfigName })
++			}
++		} catch (error) {
++			// If persistence fails, log the error but don't fail the profile switch.
++			this.log(
++				`Failed to persist provider profile switch for task ${task.taskId}: ${
++					error instanceof Error ? error.message : String(error)
++				}`,
++			)
++		}
++	}
++
++	async activateProviderProfile(
++		args: { name: string } | { id: string },
++		options?: { persistModeConfig?: boolean; persistTaskHistory?: boolean },
++	) {
+ 		const { name, id, ...providerSettings } = await this.providerSettingsManager.activateProfile(args)
+ 
++		const persistModeConfig = options?.persistModeConfig ?? true
++		const persistTaskHistory = options?.persistTaskHistory ?? true
++
+ 		// See `upsertProviderProfile` for a description of what this is doing.
+ 		await Promise.all([
+ 			this.contextProxy.setValue("listApiConfigMeta", await this.providerSettingsManager.listConfig()),
+@@ -1584,12 +1698,19 @@ export class ClineProvider
+ 
+ 		const { mode } = await this.getState()
+ 
+-		if (id) {
++		if (id && persistModeConfig) {
+ 			await this.providerSettingsManager.setModeConfig(mode, id)
+ 		}
++
+ 		// Change the provider for the current task.
+ 		this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
+ 
++		// Update the current task's sticky provider profile, unless this activation is
++		// being used purely as a non-persisting restoration (e.g., reopening a task from history).
++		if (persistTaskHistory) {
++			await this.persistStickyProviderProfileToCurrentTask(name)
++		}
++
+ 		await this.postStateToWebview()
+ 		await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+ 
+@@ -1729,273 +1850,197 @@ export class ClineProvider
+ 		await this.upsertProviderProfile(profileName, newConfiguration)
+ 	}
+ 
+-	// Agentica
+-
+-	async handleAgenticaCallback(code: string) {
+-		let apiKey: string
+-		let userEmail: string | undefined
++	// kilocode_change start
++	async handleKiloCodeCallback(token: string) {
++		const kilocode: ProviderName = "kilocode"
++		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+ 
+-		try {
+-			const baseUrl = "https://api.genlabs.dev/agentica/v1"
+-			const response = await axios.post(`${baseUrl}/auth/github`, { code })
++		await this.upsertProviderProfile(currentApiConfigName, {
++			...apiConfiguration,
++			apiProvider: "kilocode",
++			kilocodeToken: token,
++		})
+ 
+-			if (response.data && response.data.api_key) {
+-				apiKey = response.data.api_key
+-				userEmail = response.data.user?.email
+-			} else {
+-				throw new Error("Invalid response from Agentica API")
+-			}
+-		} catch (error: any) {
+-			this.log(
+-				`Error exchanging GitHub code for Agentica API key: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+-			)
++		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+ 
+-			const errorMessage = error.response?.data?.error || error.message || "Failed to authenticate with GitHub"
+-			vscode.window.showErrorMessage(`Agentica GitHub authentication failed: ${errorMessage}`)
+-			throw error
++		if (this.getCurrentTask()) {
++			this.getCurrentTask()!.api = buildApiHandler({
++				apiProvider: kilocode,
++				kilocodeToken: token,
++			})
+ 		}
++	}
++	// kilocode_change end
+ 
+-		const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+-		const { agenticaDefaultModelId } = await import("@roo-code/types")
+-
+-		const newConfiguration: ProviderSettings = {
+-			...apiConfiguration,
+-			apiProvider: "agentica",
+-			agenticaApiKey: apiKey,
+-			agenticaEmail: userEmail, // Store email from OAuth response
+-			agenticaModelId: apiConfiguration?.agenticaModelId || agenticaDefaultModelId,
++	// kilocode_change start - Device Auth Flow
++	async startDeviceAuth() {
++		if (!this.deviceAuthHandler) {
++			this.deviceAuthHandler = new DeviceAuthHandler({
++				postMessageToWebview: (msg) => this.postMessageToWebview(msg),
++				log: (msg) => this.log(msg),
++				showInformationMessage: (msg) => vscode.window.showInformationMessage(msg),
++			})
+ 		}
++		await this.deviceAuthHandler.startDeviceAuth()
++	}
+ 
+-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+-		vscode.window.showInformationMessage("Successfully authenticated with Agentica via GitHub!")
++	cancelDeviceAuth() {
++		this.deviceAuthHandler?.cancelDeviceAuth()
+ 	}
++	// kilocode_change end
+ 
+-	/**
+-	 * Handle Agentica GitHub device flow authentication
+-	 * Uses GitHub's device flow to get access token, then exchanges it for Agentica API key
+-	 */
+-	async handleAgenticaDeviceAuth(githubAccessToken: string) {
+-		let apiKey: string
+-		let userEmail: string | undefined
++	// kilocode_change start - Agentica GitHub Device Auth Flow
++	private agenticaGithubDeviceAuthService?: GithubDeviceAuthService
+ 
+-		this.log(`Exchanging GitHub access token for Agentica API key...`)
++	async startAgenticaDeviceAuth() {
+ 		try {
+-			const baseUrl = "https://api.genlabs.dev/agentica/v1"
+-			// Exchange GitHub access token for Agentica API key
+-			const response = await axios.post(
+-				`${baseUrl}/auth/github`,
+-				{ access_token: githubAccessToken },
+-				{
+-					headers: {
+-						"Content-Type": "application/json",
+-					},
+-				}
+-			)
++			// Clean up any existing flow
++			if (this.agenticaGithubDeviceAuthService) {
++				this.agenticaGithubDeviceAuthService.dispose()
++			}
+ 
+-			this.log(`Agentica API response status: ${response.status}`)
+-			this.log(`Agentica API response data: ${JSON.stringify(response.data)}`)
++			this.agenticaGithubDeviceAuthService = new GithubDeviceAuthService()
+ 
+-			if (response.data && response.data.api_key) {
+-				apiKey = response.data.api_key
+-				userEmail = response.data.user?.email
+-				this.log(`Successfully received API key and user email: ${userEmail}`)
+-			} else {
+-				this.log(`Invalid response structure: ${JSON.stringify(response.data)}`)
+-				throw new Error("Invalid response from Agentica API - missing api_key")
+-			}
+-		} catch (error: any) {
+-			this.log(
+-				`Error exchanging token: ${error.response?.status} ${error.response?.statusText} - ${JSON.stringify(error.response?.data)}`,
+-			)
++			// Wire events to webview
++			this.agenticaGithubDeviceAuthService.on("started", (data: { userCode: string; verificationUrl: string; expiresIn: number }) => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthStarted",
++					deviceAuthCode: data.userCode,
++					deviceAuthVerificationUrl: data.verificationUrl,
++					deviceAuthExpiresIn: data.expiresIn,
++				})
++				// Also open the verification URL in the browser for convenience
++				vscode.env.openExternal(vscode.Uri.parse(data.verificationUrl))
++			})
+ 
+-			const errorMessage = error.response?.data?.error || error.message || "Failed to authenticate with GitHub"
+-			vscode.window.showErrorMessage(`Agentica GitHub authentication failed: ${errorMessage}`)
+-			throw error
+-		}
++			this.agenticaGithubDeviceAuthService.on("polling", (timeRemaining: number) => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthPolling",
++					deviceAuthTimeRemaining: timeRemaining,
++				})
++			})
+ 
+-		const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+-		const { agenticaDefaultModelId } = await import("@roo-code/types")
++			this.agenticaGithubDeviceAuthService.on("tick", (timeRemaining: number) => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthTick",
++					deviceAuthTimeRemaining: timeRemaining,
++				})
++			})
+ 
+-		const newConfiguration: ProviderSettings = {
+-			...apiConfiguration,
+-			apiProvider: "agentica",
+-			agenticaApiKey: apiKey,
+-			agenticaEmail: userEmail,
+-			agenticaModelId: apiConfiguration?.agenticaModelId || agenticaDefaultModelId,
+-		}
++			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken: string) => {
++				try {
++					// Notify user we're now exchanging the token with Agentica
++					this.postMessageToWebview({
++						type: "agenticaDeviceAuthExchanging",
++					})
+ 
+-		// Use upsertProviderProfile which handles state updates properly
+-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+-		
+-		// Post state update to webview to refresh UI
+-		await this.postStateToWebview()
+-		
+-		vscode.window.showInformationMessage("Successfully authenticated with Agentica via GitHub!")
+-	}
++					// Exchange GitHub access token for Agentica API key
++					const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
++					const baseUrl = apiConfiguration?.agenticaBaseUrl || "https://api.genlabs.dev/agentica/v1" // kilocode_change
+ 
+-	/**
+-	 * Start Agentica GitHub device authorization flow
+-	 */
+-	async startAgenticaDeviceAuth(): Promise<void> {
+-		// Prevent multiple simultaneous auth flows
+-		if (this.agenticaDeviceAuthService) {
+-			this.log("Agentica device auth already in progress, cleaning up previous instance")
+-			this.agenticaDeviceAuthService.dispose()
+-			this.agenticaDeviceAuthService = undefined
+-		}
++					const response = await axios.post(
++						`${baseUrl}/auth/github`,
++						{ access_token: githubAccessToken },
++						{ headers: { "Content-Type": "application/json" } },
++					)
+ 
+-		try {
+-			this.agenticaDeviceAuthService = new GithubDeviceAuthService()
++					const data: any = response.data
++					const agenticaApiKey: string | undefined = data?.api_key || data?.access_token
++					const agenticaEmail: string | undefined = data?.email
+ 
+-			// Set up event listeners (only once per service instance)
+-			const setupListeners = () => {
+-				this.agenticaDeviceAuthService!.on("started", (data: { userCode: string; verificationUrl: string; expiresIn: number }) => {
+-					this.postMessageToWebview({
+-						type: "agenticaDeviceAuthStarted",
+-						deviceAuthCode: data.userCode,
+-						deviceAuthVerificationUrl: data.verificationUrl,
+-						deviceAuthExpiresIn: data.expiresIn,
+-					})
+-					// Open browser automatically
+-					vscode.env.openExternal(vscode.Uri.parse(data.verificationUrl))
+-				})
++					if (!agenticaApiKey) {
++						throw new Error("Agentica did not return an API key")
++					}
+ 
+-				this.agenticaDeviceAuthService!.on("polling", (timeRemaining: number) => {
+-					this.postMessageToWebview({
+-						type: "agenticaDeviceAuthPolling",
+-						deviceAuthTimeRemaining: timeRemaining,
++					await this.upsertProviderProfile(currentApiConfigName, {
++						...apiConfiguration,
++						apiProvider: "agentica",
++						agenticaApiKey,
++						agenticaEmail: agenticaEmail || apiConfiguration?.agenticaEmail,
++						agenticaModelId: apiConfiguration?.agenticaModelId || agenticaDefaultModelId,
+ 					})
+-				})
+ 
+-			this.agenticaDeviceAuthService!.on("success", async (accessToken: string) => {
+-				this.log(`Agentica device auth success - received access token`)
+-				try {
+-					await this.handleAgenticaDeviceAuth(accessToken)
+-					this.log("Agentica device auth - successfully exchanged token for API key")
+ 					this.postMessageToWebview({
+ 						type: "agenticaDeviceAuthComplete",
+-						deviceAuthToken: accessToken,
++						agenticaApiKey,
++						agenticaEmail,
+ 					})
+-				} catch (error) {
+-					const errorMessage = error instanceof Error ? error.message : String(error)
+-					this.log(`Error in handleAgenticaDeviceAuth: ${errorMessage}`)
+-					vscode.window.showErrorMessage(`Failed to exchange GitHub token: ${errorMessage}`)
++
++					vscode.window.showInformationMessage("Agentica successfully configured via GitHub.")
++				} catch (error: any) {
++					this.log(
++						`Error completing Agentica GitHub device auth: ${error instanceof Error ? error.message : String(error)}`,
++					)
+ 					this.postMessageToWebview({
+ 						type: "agenticaDeviceAuthFailed",
+-						deviceAuthError: errorMessage,
++						deviceAuthError:
++							error instanceof Error ? error.message : "Failed to complete Agentica authentication via GitHub",
+ 					})
+-				} finally {
+-					// Clean up
+-					this.agenticaDeviceAuthService?.dispose()
+-					this.agenticaDeviceAuthService = undefined
++				}
++				finally {
++					this.agenticaGithubDeviceAuthService?.dispose()
++					this.agenticaGithubDeviceAuthService = undefined
+ 				}
+ 			})
+ 
+-				this.agenticaDeviceAuthService!.on("denied", () => {
+-					this.postMessageToWebview({
+-						type: "agenticaDeviceAuthFailed",
+-						deviceAuthError: "Authorization was denied",
+-					})
+-					this.agenticaDeviceAuthService?.dispose()
+-					this.agenticaDeviceAuthService = undefined
++			this.agenticaGithubDeviceAuthService.on("denied", () => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthFailed",
++					deviceAuthError: "Authorization was denied",
+ 				})
++				this.agenticaGithubDeviceAuthService?.dispose()
++				this.agenticaGithubDeviceAuthService = undefined
++			})
+ 
+-				this.agenticaDeviceAuthService!.on("expired", () => {
+-					this.postMessageToWebview({
+-						type: "agenticaDeviceAuthFailed",
+-						deviceAuthError: "Authorization code expired. Please try again.",
+-					})
+-					this.agenticaDeviceAuthService?.dispose()
+-					this.agenticaDeviceAuthService = undefined
++			this.agenticaGithubDeviceAuthService.on("expired", () => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthFailed",
++					deviceAuthError: "Authorization code expired. Please try again.",
+ 				})
++				this.agenticaGithubDeviceAuthService?.dispose()
++				this.agenticaGithubDeviceAuthService = undefined
++			})
+ 
+-				this.agenticaDeviceAuthService!.on("error", (error: Error) => {
+-					this.log(`Agentica device auth error: ${error.message}`)
+-					this.postMessageToWebview({
+-						type: "agenticaDeviceAuthFailed",
+-						deviceAuthError: error.message || "An error occurred during authentication",
+-					})
+-					vscode.window.showErrorMessage(`Agentica GitHub authentication error: ${error.message}`)
+-					this.agenticaDeviceAuthService?.dispose()
+-					this.agenticaDeviceAuthService = undefined
++			this.agenticaGithubDeviceAuthService.on("error", (error: Error) => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthFailed",
++					deviceAuthError: error.message,
+ 				})
++				this.agenticaGithubDeviceAuthService?.dispose()
++				this.agenticaGithubDeviceAuthService = undefined
++			})
+ 
+-				this.agenticaDeviceAuthService!.on("cancelled", () => {
+-					// Don't send message here - cancelAgenticaDeviceAuth handles UI reset
+-					this.agenticaDeviceAuthService?.dispose()
+-					this.agenticaDeviceAuthService = undefined
++			this.agenticaGithubDeviceAuthService.on("cancelled", () => {
++				this.postMessageToWebview({
++					type: "agenticaDeviceAuthCancelled",
+ 				})
+-			}
+-
+-			setupListeners()
++			})
+ 
+-			// Start the device auth flow
+-			await this.agenticaDeviceAuthService.initiate()
++			await this.agenticaGithubDeviceAuthService.initiate()
+ 		} catch (error) {
+-			const errorMessage = error instanceof Error ? error.message : String(error)
+-			this.log(`Failed to start Agentica device auth: ${errorMessage}`)
+-			vscode.window.showErrorMessage(`Failed to start Agentica GitHub authentication: ${errorMessage}`)
+-
++			this.log(
++				`Error starting Agentica GitHub device auth: ${error instanceof Error ? error.message : String(error)}`,
++			)
+ 			this.postMessageToWebview({
+ 				type: "agenticaDeviceAuthFailed",
+-				deviceAuthError: errorMessage,
+-			})
+-
+-			if (this.agenticaDeviceAuthService) {
+-				this.agenticaDeviceAuthService.dispose()
+-				this.agenticaDeviceAuthService = undefined
+-			}
+-		}
+-	}
+-
+-	/**
+-	 * Cancel Agentica device authorization flow
+-	 */
+-	cancelAgenticaDeviceAuth(): void {
+-		if (this.agenticaDeviceAuthService) {
+-			this.agenticaDeviceAuthService.cancel()
+-			this.agenticaDeviceAuthService.dispose()
+-			this.agenticaDeviceAuthService = undefined
+-			// Frontend handles UI reset directly in handleCancelDeviceAuth
+-		}
+-	}
+-
+-	// kilocode_change start
+-	async handleKiloCodeCallback(token: string) {
+-		const kilocode: ProviderName = "kilocode"
+-		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+-
+-		await this.upsertProviderProfile(currentApiConfigName, {
+-			...apiConfiguration,
+-			apiProvider: "kilocode",
+-			kilocodeToken: token,
+-		})
+-
+-		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+-
+-		if (this.getCurrentTask()) {
+-			this.getCurrentTask()!.api = buildApiHandler({
+-				apiProvider: kilocode,
+-				kilocodeToken: token,
++				deviceAuthError: error instanceof Error ? error.message : "Failed to start Agentica authentication",
+ 			})
++			this.agenticaGithubDeviceAuthService?.dispose()
++			this.agenticaGithubDeviceAuthService = undefined
+ 		}
+ 	}
+-	// kilocode_change end
+ 
+-	// kilocode_change start - Device Auth Flow
+-	async startDeviceAuth() {
+-		if (!this.deviceAuthHandler) {
+-			this.deviceAuthHandler = new DeviceAuthHandler({
+-				postMessageToWebview: (msg) => this.postMessageToWebview(msg),
+-				log: (msg) => this.log(msg),
+-				showInformationMessage: (msg) => vscode.window.showInformationMessage(msg),
+-			})
++	cancelAgenticaDeviceAuth() {
++		if (this.agenticaGithubDeviceAuthService) {
++			this.agenticaGithubDeviceAuthService.cancel()
++			// Dispose shortly after to avoid disposing during event emission
++			setTimeout(() => {
++				if (this.agenticaGithubDeviceAuthService) {
++					this.agenticaGithubDeviceAuthService.dispose()
++					this.agenticaGithubDeviceAuthService = undefined
++				}
++			}, 0)
+ 		}
+-		await this.deviceAuthHandler.startDeviceAuth()
+-	}
+-
+-	cancelDeviceAuth() {
+-		this.deviceAuthHandler?.cancelDeviceAuth()
+ 	}
+ 	// kilocode_change end
+ 
+@@ -2057,6 +2102,20 @@ export class ClineProvider
+ 		throw new Error("Task not found")
+ 	}
+ 
++	async getTaskWithAggregatedCosts(taskId: string): Promise<{
++		historyItem: HistoryItem
++		aggregatedCosts: AggregatedCosts
++	}> {
++		const { historyItem } = await this.getTaskWithId(taskId)
++
++		const aggregatedCosts = await aggregateTaskCostsRecursive(taskId, async (id: string) => {
++			const result = await this.getTaskWithId(id)
++			return result.historyItem
++		})
++
++		return { historyItem, aggregatedCosts }
++	}
++
+ 	async showTaskWithId(id: string) {
+ 		if (id !== this.getCurrentTask()?.taskId) {
+ 			// Non-current task.
+@@ -2186,6 +2245,11 @@ export class ClineProvider
+ 			})
+ 		}
+ 	}
++
++	async postSkillsDataToWebview() {
++		const skills = this.skillsManager?.getAllSkills() ?? []
++		this.postMessageToWebview({ type: "skillsData", skills })
++	}
+ 	// kilocode_change end
+ 
+ 	/**
+@@ -2365,6 +2429,7 @@ export class ClineProvider
+ 			browserToolEnabled,
+ 			telemetrySetting,
+ 			showRooIgnoredFiles,
++			enableSubfolderRules,
+ 			language,
+ 			showAutoApproveMenu, // kilocode_change
+ 			showTaskTimeline, // kilocode_change
+@@ -2381,6 +2446,7 @@ export class ClineProvider
+ 			cloudUserInfo,
+ 			cloudIsAuthenticated,
+ 			sharingEnabled,
++			publicSharingEnabled,
+ 			organizationAllowList,
+ 			organizationSettingsVersion,
+ 			maxConcurrentFileReads,
+@@ -2421,7 +2487,13 @@ export class ClineProvider
+ 		// kilocode_change start: Get active model for virtual quota fallback UI display
+ 		const virtualQuotaActiveModel =
+ 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+-				? this.getCurrentTask()!.api.getModel()
++				? {
++					...this.getCurrentTask()!.api.getModel(),
++					activeProfileNumber:
++						this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
++							? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
++							: undefined,
++				}
+ 				: undefined
+ 		// kilocode_change end
+ 
+@@ -2474,11 +2546,11 @@ export class ClineProvider
+ 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
+ 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
+ 			alwaysAllowDelete: alwaysAllowDelete ?? false, // kilocode_change
+-			alwaysAllowExecute: alwaysAllowExecute ?? true,
+-			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
+-			alwaysAllowMcp: alwaysAllowMcp ?? true,
+-			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
+-			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
++			alwaysAllowExecute: alwaysAllowExecute ?? false,
++			alwaysAllowBrowser: alwaysAllowBrowser ?? false,
++			alwaysAllowMcp: alwaysAllowMcp ?? false,
++			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
++			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
+ 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+ 			isBrowserSessionActive,
+ 			yoloMode: yoloMode ?? false, // kilocode_change
+@@ -2559,8 +2631,9 @@ export class ClineProvider
+ 			showTimestamps: showTimestamps ?? true, // kilocode_change
+ 			hideCostBelowThreshold, // kilocode_change
+ 			language, // kilocode_change
++			enableSubfolderRules: enableSubfolderRules ?? false,
+ 			renderContext: this.renderContext,
+-			maxReadFileLine: maxReadFileLine ?? -1,
++			maxReadFileLine: maxReadFileLine ?? 500 /*kilocode_change*/,
+ 			maxImageFileSize: maxImageFileSize ?? 5,
+ 			maxTotalImageSize: maxTotalImageSize ?? 20,
+ 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
+@@ -2573,8 +2646,10 @@ export class ClineProvider
+ 			enterBehavior: enterBehavior ?? "send",
+ 			cloudUserInfo,
+ 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
++			cloudAuthSkipModel: this.context.globalState.get<boolean>("roo-auth-skip-model") ?? false,
+ 			cloudOrganizations,
+ 			sharingEnabled: sharingEnabled ?? false,
++			publicSharingEnabled: publicSharingEnabled ?? false,
+ 			organizationAllowList,
+ 			// kilocode_change start
+ 			ghostServiceSettings: ghostServiceSettings,
+@@ -2649,6 +2724,22 @@ export class ClineProvider
+ 			openRouterUseMiddleOutTransform,
+ 			featureRoomoteControlEnabled,
+ 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
++			claudeCodeIsAuthenticated: await (async () => {
++				try {
++					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
++					return await claudeCodeOAuthManager.isAuthenticated()
++				} catch {
++					return false
++				}
++			})(),
++			openAiCodexIsAuthenticated: await (async () => {
++				try {
++					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
++					return await openAiCodexOAuthManager.isAuthenticated()
++				} catch {
++					return false
++				}
++			})(),
+ 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
+ 		}
+ 	}
+@@ -2678,7 +2769,7 @@ export class ClineProvider
+ 		const customModes = await this.customModesManager.getCustomModes()
+ 
+ 		// Determine apiProvider with the same logic as before.
+-		const apiProvider: ProviderName = stateValues.apiProvider ? stateValues.apiProvider : "agentica" // Changed default to agentica
++		const apiProvider: ProviderName = stateValues.apiProvider ? stateValues.apiProvider : "kilocode" // kilocode_change: fall back to kilocode
+ 
+ 		// Build the apiConfiguration object combining state values and secrets.
+ 		const providerSettings = this.contextProxy.getProviderSettings()
+@@ -2728,6 +2819,16 @@ export class ClineProvider
+ 			)
+ 		}
+ 
++		let publicSharingEnabled: boolean = false
++
++		try {
++			publicSharingEnabled = await CloudService.instance.canSharePublicly()
++		} catch (error) {
++			console.error(
++				`[getState] failed to get public sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
++			)
++		}
++
+ 		let organizationSettingsVersion: number = -1
+ 
+ 		try {
+@@ -2820,8 +2921,6 @@ export class ClineProvider
+ 			mcpEnabled: true, // kilocode_change: always true
+ 			enableMcpServerCreation: stateValues.enableMcpServerCreation ?? true,
+ 			mcpServers: this.mcpHub?.getAllServers() ?? [],
+-			alwaysApproveResubmit: stateValues.alwaysApproveResubmit ?? false,
+-			requestDelaySeconds: Math.max(5, stateValues.requestDelaySeconds ?? 10),
+ 			currentApiConfigName: stateValues.currentApiConfigName ?? "default",
+ 			listApiConfigMeta: stateValues.listApiConfigMeta ?? [],
+ 			pinnedApiConfigs: stateValues.pinnedApiConfigs ?? {},
+@@ -2850,14 +2949,15 @@ export class ClineProvider
+ 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,
+ 			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform,
+ 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
+-			telemetrySetting: stateValues.telemetrySetting || "unset",
++			telemetrySetting: getEffectiveTelemetrySetting(stateValues.telemetrySetting), // kilocode_change
+ 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
+ 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
+ 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
+ 			sendMessageOnEnter: stateValues.sendMessageOnEnter ?? true, // kilocode_change
+ 			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
+ 			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
+-			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
++			enableSubfolderRules: stateValues.enableSubfolderRules ?? false,
++			maxReadFileLine: stateValues.maxReadFileLine ?? 500 /*kilocode_change*/,
+ 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
+ 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
+ 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
+@@ -2873,6 +2973,7 @@ export class ClineProvider
+ 			cloudUserInfo,
+ 			cloudIsAuthenticated,
+ 			sharingEnabled,
++			publicSharingEnabled,
+ 			organizationAllowList,
+ 			organizationSettingsVersion,
+ 			condensingApiConfigId: stateValues.condensingApiConfigId,
+@@ -3957,8 +4058,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			await parent.flushPendingToolResultsToHistory()
+ 		} catch (error) {
+ 			this.log(
+-				`[delegateParentAndOpenChild] Error flushing pending tool results (non-fatal): ${
+-					error instanceof Error ? error.message : String(error)
++				`[delegateParentAndOpenChild] Error flushing pending tool results (non-fatal): ${error instanceof Error ? error.message : String(error)
+ 				}`,
+ 			)
+ 		}
+@@ -3970,8 +4070,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			await this.removeClineFromStack()
+ 		} catch (error) {
+ 			this.log(
+-				`[delegateParentAndOpenChild] Error during parent disposal (non-fatal): ${
+-					error instanceof Error ? error.message : String(error)
++				`[delegateParentAndOpenChild] Error during parent disposal (non-fatal): ${error instanceof Error ? error.message : String(error)
+ 				}`,
+ 			)
+ 			// Non-fatal: proceed with child creation even if parent cleanup had issues
+@@ -3985,8 +4084,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			await this.handleModeSwitch(mode as any)
+ 		} catch (e) {
+ 			this.log(
+-				`[delegateParentAndOpenChild] handleModeSwitch failed for mode '${mode}': ${
+-					(e as Error)?.message ?? String(e)
++				`[delegateParentAndOpenChild] handleModeSwitch failed for mode '${mode}': ${(e as Error)?.message ?? String(e)
+ 				}`,
+ 			)
+ 		}
+@@ -4014,8 +4112,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			await this.updateTaskHistory(updatedHistory)
+ 		} catch (err) {
+ 			this.log(
+-				`[delegateParentAndOpenChild] Failed to persist parent metadata for ${parentTaskId} -> ${child.taskId}: ${
+-					(err as Error)?.message ?? String(err)
++				`[delegateParentAndOpenChild] Failed to persist parent metadata for ${parentTaskId} -> ${child.taskId}: ${(err as Error)?.message ?? String(err)
+ 				}`,
+ 			)
+ 		}
+@@ -4143,6 +4240,15 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			})
+ 		}
+ 
++		// Validate the newly injected tool_result against the preceding assistant message.
++		// This ensures the tool_result's tool_use_id matches a tool_use in the immediately
++		// preceding assistant message (Anthropic API requirement).
++		const lastMessage = parentApiMessages[parentApiMessages.length - 1]
++		if (lastMessage?.role === "user") {
++			const validatedMessage = validateAndFixToolResultIds(lastMessage, parentApiMessages.slice(0, -1))
++			parentApiMessages[parentApiMessages.length - 1] = validatedMessage
++		}
++
+ 		await saveApiMessages({ messages: parentApiMessages as any, taskId: parentTaskId, globalStoragePath })
+ 
+ 		// 3) Update child metadata to "completed" status
+@@ -4154,8 +4260,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
+ 			})
+ 		} catch (err) {
+ 			this.log(
+-				`[reopenParentFromDelegation] Failed to persist child completed status for ${childTaskId}: ${
+-					(err as Error)?.message ?? String(err)
++				`[reopenParentFromDelegation] Failed to persist child completed status for ${childTaskId}: ${(err as Error)?.message ?? String(err)
+ 				}`,
+ 			)
+ 		}

@@ -38,7 +38,7 @@
 		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
 		"cli:dev": "pnpm --filter @kilocode/cli run dev",
 		"cli:run": "pnpm --filter @kilocode/cli run start",
-		"docs:start": "pnpm --filter kilocode-docs start",
+		"docs:dev": "pnpm --filter kilocode-docs dev",
 		"docs:build": "pnpm --filter kilocode-docs build"
 	},
 	"devDependencies": {
