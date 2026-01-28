@@ -39,7 +39,7 @@ export const generateUpdateAvailableMessage = (status: AutoUpdateStatus): CliMes
 You are using v${status.currentVersion}, the latest version is v${status.latestVersion}.
 Please run the following command to update:
 \`\`\`bash
-npm install -g ${status.name}
+kilocode update
 \`\`\``,
 	}
 }

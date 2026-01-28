@@ -83,10 +83,10 @@ describe("auto-update", () => {
 			expect(message.content).toContain("A new version of Kilo CLI is available!")
 			expect(message.content).toContain("v1.0.0")
 			expect(message.content).toContain("v2.0.0")
-			expect(message.content).toContain("npm install -g @kilocode/cli")
+			expect(message.content).toContain("kilocode update")
 		})
 
-		it("should include package name in install command", () => {
+		it("should include update command", () => {
 			const status = {
 				name: "@kilocode/cli",
 				isOutdated: true,
@@ -96,7 +96,7 @@ describe("auto-update", () => {
 
 			const message = generateUpdateAvailableMessage(status)
 
-			expect(message.content).toContain("@kilocode/cli")
+			expect(message.content).toContain("kilocode update")
 		})
 	})
 

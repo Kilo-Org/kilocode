@@ -67,7 +67,7 @@ program
 		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
 		// This is a defensive check for cases where Commander.js routing might not work as expected
 		// (e.g., when spawned as a child process with stdin disconnected)
-		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		const SUBCOMMANDS = ["auth", "config", "debug", "models", "update"]
 		if (SUBCOMMANDS.includes(prompt)) {
 			return
 		}
@@ -402,6 +402,16 @@ program
 	.action(async (options: { provider?: string; json?: boolean }) => {
 		const { modelsApiCommand } = await import("./commands/models-api.js")
 		await modelsApiCommand(options)
+	})
+
+// Update command - check for and install CLI updates
+program
+	.command("update")
+	.description("Check for and install CLI updates")
+	.option("--check", "Only check for updates, don't install")
+	.action(async (options: { check?: boolean }) => {
+		const { updateCommand } = await import("./commands/update.js")
+		await updateCommand(options)
 	})
 
 // Handle process termination signals
