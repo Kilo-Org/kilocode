@@ -76,7 +76,8 @@ export interface KiloProviderOptions {
 
   /**
    * Base URL for the KiloCode API
-   * @default "https://api.kilo.ai/api/openrouter/"
+   * Can be overridden by KILO_API_URL environment variable
+   * @default "https://api.kilo.ai"
    */
   baseURL?: string
 

@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { z } from "zod"
+import { KILO_API_BASE } from "./constants.js"
 
 /**
  * Kilo notification schema
@@ -38,7 +39,7 @@ export async function fetchKilocodeNotifications(options: {
   const token = options.kilocodeToken
   if (!token) return []
 
-  const url = "https://api.kilo.ai/api/users/notifications"
+  const url = `${KILO_API_BASE}/api/users/notifications`
 
   try {
     const response = await fetch(url, {

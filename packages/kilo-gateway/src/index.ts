@@ -70,6 +70,8 @@ export type {
 // Constants
 // ============================================================================
 export {
+  ENV_KILO_API_URL,
+  DEFAULT_KILO_API_URL,
   KILO_API_BASE,
   KILO_OPENROUTER_BASE,
   POLL_INTERVAL_MS,

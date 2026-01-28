@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -61,9 +61,7 @@ export async function fetchKiloModels(options?: {
   const organizationId = options?.kilocodeOrganizationId
 
   // Construct base URL
-  const defaultBaseURL = organizationId
-    ? `https://api.kilo.ai/api/organizations/${organizationId}`
-    : KILO_OPENROUTER_BASE
+  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
 
   const baseURL = options?.baseURL ?? defaultBaseURL
 

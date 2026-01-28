@@ -67,6 +67,8 @@ jobs:
         working-directory: packages/opencode
         run: bun script/seed-e2e.ts
         env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           OPENCODE_DISABLE_SHARE: "true"
           OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
           OPENCODE_DISABLE_DEFAULT_PLUGINS: "true"
@@ -86,6 +88,8 @@ jobs:
         working-directory: packages/opencode
         run: bun dev -- --print-logs --log-level WARN serve --port 4096 --hostname 127.0.0.1 &
         env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           OPENCODE_DISABLE_SHARE: "true"
           OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
           OPENCODE_DISABLE_DEFAULT_PLUGINS: "true"
@@ -111,6 +115,8 @@ jobs:
         run: ${{ matrix.settings.command }}
         env:
           CI: true
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           OPENCODE_DISABLE_SHARE: "true"
           OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
           OPENCODE_DISABLE_DEFAULT_PLUGINS: "true"

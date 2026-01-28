@@ -3,11 +3,17 @@
  * Centralized configuration for all API endpoints, headers, and settings
  */
 
-/** Base URL for Kilo API */
-export const KILO_API_BASE = "https://api.kilo.ai"
+/** Environment variable for custom Kilo API URL */
+export const ENV_KILO_API_URL = "KILO_API_URL"
+
+/** Default Kilo API URL */
+export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
+
+/** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
+export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
 /** Default base URL for OpenRouter-compatible endpoint */
-export const KILO_OPENROUTER_BASE = "https://api.kilo.ai/api/openrouter"
+export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 
 /** Device auth polling interval in milliseconds */
 export const POLL_INTERVAL_MS = 3000
