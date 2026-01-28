@@ -11,6 +11,10 @@ export function isPaymentRequiredError(error: any) {
 	return !!(error && error.status === 402)
 }
 
+export function isRateLimitError(error: any) {
+	return !!(error && error.status === 429)
+}
+
 export function isAlphaPeriodEndedError(error: any) {
 	return !!(
 		error &&
@@ -32,6 +36,7 @@ export function isModelNotAllowedForTeamError(error: any) {
 export function isAnyRecognizedKiloCodeError(error: any) {
 	return (
 		isPaymentRequiredError(error) ||
+		isRateLimitError(error) ||
 		isOpenRouterInvalidModelError(error) ||
 		isAlphaPeriodEndedError(error) ||
 		isModelNotAllowedForTeamError(error)

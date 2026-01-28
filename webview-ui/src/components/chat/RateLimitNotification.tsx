@@ -1,29 +1,70 @@
 import { useEffect, useState } from "react"
 import { Clock } from "lucide-react"
-import { Button } from "@src/components/ui"
-import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { ClineMessage } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
+import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import { RetryIconButton } from "../kilocode/common/RetryIconButton"
+import styled from "styled-components"
 
 interface RateLimitNotificationProps {
+	message: ClineMessage
+}
+
+type RateLimitData = {
+	title: string
+	message: string
 	resetTime: number
 }
 
-export const RateLimitNotification = ({ resetTime }: RateLimitNotificationProps) => {
-	const { t } = useAppTranslation()
+const HeaderContainer = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+`
+
+const Description = styled.div`
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+`
+
+export const RateLimitNotification = ({ message }: RateLimitNotificationProps) => {
 	const [timeRemaining, setTimeRemaining] = useState("")
+
+	let data: RateLimitData = {
+		title: "Rate Limit Reached",
+		message: "You've reached the rate limit. Please wait or create an account.",
+		resetTime: Date.now() + 60 * 60 * 1000,
+	}
+
+	try {
+		data = JSON.parse(message.text ?? "{}")
+	} catch (e) {
+		console.error("Failed to parse rate_limit_reached data:", e)
+	}
 
 	useEffect(() => {
 		const updateTime = () => {
-			const remaining = Math.max(0, resetTime - Date.now())
+			const remaining = Math.max(0, data.resetTime - Date.now())
 			const minutes = Math.floor(remaining / 60000)
-			setTimeRemaining(t("welcome:rateLimit.waitTime", { minutes }))
+			setTimeRemaining(`Please wait ${minutes} minute${minutes !== 1 ? "s" : ""} before trying again.`)
 		}
 
 		updateTime()
 		const interval = setInterval(updateTime, 60000) // Update every minute
 
 		return () => clearInterval(interval)
-	}, [resetTime, t])
+	}, [data.resetTime])
+
+	const handleRetry = () => {
+		vscode.postMessage({
+			type: "askResponse",
+			askResponse: "retry_clicked",
+			text: message.text,
+		})
+	}
 
 	const handleCreateAccount = () => {
 		vscode.postMessage({
@@ -33,22 +74,30 @@ export const RateLimitNotification = ({ resetTime }: RateLimitNotificationProps)
 	}
 
 	return (
-		<div className="bg-vscode-notifications-background border border-vscode-notifications-border p-4 rounded-md mb-4">
-			<div className="flex items-start gap-3">
-				<Clock className="size-5 text-vscode-notificationsWarningIcon-foreground shrink-0 mt-0.5" />
-				<div className="flex-1">
-					<p className="font-semibold text-vscode-notifications-foreground m-0">
-						{t("welcome:rateLimit.heading")}
-					</p>
-					<p className="text-sm text-vscode-descriptionForeground mt-1 mb-2">
-						{t("welcome:rateLimit.description")}
-					</p>
-					<p className="text-sm text-vscode-descriptionForeground mb-3">{timeRemaining}</p>
-					<Button onClick={handleCreateAccount} variant="primary" size="sm">
-						{t("welcome:rateLimit.createAccount")}
-					</Button>
+		<>
+			<HeaderContainer>
+				<Clock className="size-5 text-vscode-notificationsWarningIcon-foreground shrink-0" />
+				<span style={{ fontWeight: "bold" }}>{data.title}</span>
+			</HeaderContainer>
+			<Description>{data.message}</Description>
+
+			<div
+				className="bg-vscode-panel-border flex flex-col gap-3"
+				style={{
+					borderRadius: "4px",
+					display: "flex",
+					marginTop: "15px",
+					padding: "14px 16px 22px",
+					justifyContent: "center",
+				}}>
+				<div className="flex justify-between items-center">
+					{timeRemaining}
+					<RetryIconButton onClick={handleRetry} />
 				</div>
+				<VSCodeButton className="p-1 w-full rounded" appearance="primary" onClick={handleCreateAccount}>
+					Create Account for Unlimited Access
+				</VSCodeButton>
 			</div>
-		</div>
+		</>
 	)
 }

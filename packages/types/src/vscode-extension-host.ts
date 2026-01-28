@@ -260,8 +260,6 @@ export interface ExtensionMessage {
 		| "askReviewScope" // kilocode_change: Review mode scope selection
 		| "workspaceState"
 		| "editorState"
-		| "rateLimitStatus"
-		| "rateLimitReached"
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -469,8 +467,6 @@ export interface ExtensionMessage {
 	hasHistory?: boolean
 	hasOpenFile?: boolean
 	hasSelectedCode?: boolean
-	isLimited?: boolean
-	resetTime?: number | null
 }
 
 export type ExtensionState = Pick<
@@ -964,7 +960,6 @@ export interface WebviewMessage {
 		| "showCloneDialog"
 		| "checkWorkspaceState"
 		| "checkEditorState"
-		| "checkRateLimit"
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change

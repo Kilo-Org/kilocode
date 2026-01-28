@@ -142,7 +142,11 @@ import { processUserContentMentions } from "../mentions/processUserContentMentio
 import { getMessagesSinceLastSummary, summarizeConversation, getEffectiveApiHistory } from "../condense"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
 
-import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
+import {
+	isAnyRecognizedKiloCodeError,
+	isPaymentRequiredError,
+	isRateLimitError,
+} from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel" // kilocode_change
 import { addOrMergeUserContent } from "./kilocode"
@@ -4620,16 +4624,27 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								defaultFreeModel,
 							}),
 						)
-					: this.ask(
-							"invalid_model",
-							JSON.stringify({
-								modelId: apiConfiguration.kilocodeModel,
-								error: {
-									status: error.status,
-									message: error.message,
-								},
-							}),
-						))
+					: isRateLimitError(error)
+						? this.ask(
+								"rate_limit_reached",
+								JSON.stringify({
+									title: error.error?.title ?? "Rate Limit Reached",
+									message:
+										error.error?.message ??
+										"You've reached the rate limit for free models. Please wait or create an account for unlimited access.",
+									resetTime: error.error?.resetTime ?? Date.now() + 60 * 60 * 1000, // Default to 1 hour
+								}),
+							)
+						: this.ask(
+								"invalid_model",
+								JSON.stringify({
+									modelId: apiConfiguration.kilocodeModel,
+									error: {
+										status: error.status,
+										message: error.message,
+									},
+								}),
+							))
 				this.currentRequestAbortController = undefined
 				const isContextWindowExceededError = checkContextWindowExceededError(error)
 

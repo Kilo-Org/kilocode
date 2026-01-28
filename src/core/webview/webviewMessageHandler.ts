@@ -18,7 +18,6 @@ import {
 	UpdateGlobalStateMessage,
 } from "../../shared/WebviewMessage"
 import { OnboardingStateDetector } from "../onboarding/OnboardingStateDetector"
-import { RateLimitMonitor } from "../rate-limiting/RateLimitMonitor"
 // kilocode_change end
 
 import {
@@ -4625,16 +4624,6 @@ export const webviewMessageHandler = async (
 				type: "editorState",
 				hasOpenFile: state.hasOpenFile,
 				hasSelectedCode: state.hasSelectedCode,
-			})
-			break
-		}
-
-		case "checkRateLimit": {
-			const status = RateLimitMonitor.getStatus()
-			await provider.postMessageToWebview({
-				type: "rateLimitStatus",
-				isLimited: status.isLimited,
-				resetTime: status.resetTime,
 			})
 			break
 		}
