@@ -1,6 +1,6 @@
 import { Component, Show } from "solid-js"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { popularProviders, useProviders } from "@/hooks/use-providers"
+import { preferredProviders, useProviders } from "@/hooks/use-providers"
 import { Dialog } from "@opencode-ai/ui/dialog"
 import { List } from "@opencode-ai/ui/list"
 import { Tag } from "@opencode-ai/ui/tag"
@@ -14,8 +14,10 @@ export const DialogSelectProvider: Component = () => {
   const providers = useProviders()
   const language = useLanguage()
 
-  const popularGroup = () => language.t("dialog.provider.group.popular")
+  // kilocode_change start - Use "Recommended" terminology to match kilocode
+  const recommendedGroup = () => language.t("dialog.provider.group.recommended")
   const otherGroup = () => language.t("dialog.provider.group.other")
+  // kilocode_change end
 
   return (
     <Dialog title={language.t("command.provider.connect")}>
@@ -29,16 +31,16 @@ export const DialogSelectProvider: Component = () => {
           return providers.all()
         }}
         filterKeys={["id", "name"]}
-        groupBy={(x) => (popularProviders.includes(x.id) ? popularGroup() : otherGroup())}
+        groupBy={(x) => (preferredProviders.includes(x.id) ? recommendedGroup() : otherGroup())}
         sortBy={(a, b) => {
-          if (popularProviders.includes(a.id) && popularProviders.includes(b.id))
-            return popularProviders.indexOf(a.id) - popularProviders.indexOf(b.id)
+          if (preferredProviders.includes(a.id) && preferredProviders.includes(b.id))
+            return preferredProviders.indexOf(a.id) - preferredProviders.indexOf(b.id)
           return a.name.localeCompare(b.name)
         }}
         sortGroupsBy={(a, b) => {
-          const popular = popularGroup()
-          if (a.category === popular && b.category !== popular) return -1
-          if (b.category === popular && a.category !== popular) return 1
+          const recommended = recommendedGroup()
+          if (a.category === recommended && b.category !== recommended) return -1
+          if (b.category === recommended && a.category !== recommended) return 1
           return 0
         }}
         onSelect={(x) => {

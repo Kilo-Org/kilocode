@@ -1,12 +1,12 @@
 ---
 title: Server
-description: Interact with opencode server over HTTP.
+description: Interact with Kilo CLI server over HTTP.
 ---
 
 import config from "../../../config.mjs"
 export const typesUrl = `${config.github}/blob/dev/packages/sdk/js/src/gen/types.gen.ts`
 
-The `opencode serve` command runs a headless HTTP server that exposes an OpenAPI endpoint that an opencode client can use.
+The `opencode serve` command runs a headless HTTP server that exposes an OpenAPI endpoint that an Kilo CLI client can use.
 
 ---
 
@@ -50,13 +50,13 @@ client that talks to the server. The server exposes an OpenAPI 3.1 spec
 endpoint. This endpoint is also used to generate an [SDK](/docs/sdk).
 
 :::tip
-Use the opencode server to interact with opencode programmatically.
+Use the Kilo CLI server to interact with Kilo CLI programmatically.
 :::
 
-This architecture lets opencode support multiple clients and allows you to interact with opencode programmatically.
+This architecture lets Kilo CLI support multiple clients and allows you to interact with Kilo CLI programmatically.
 
 You can run `opencode serve` to start a standalone server. If you have the
-opencode TUI running, `opencode serve` will start a new server.
+Kilo CLI TUI running, `opencode serve` will start a new server.
 
 ---
 
@@ -64,7 +64,7 @@ opencode TUI running, `opencode serve` will start a new server.
 
 When you start the TUI it randomly assigns a port and hostname. You can instead pass in the `--hostname` and `--port` [flags](/docs/cli). Then use this to connect to its server.
 
-The [`/tui`](#tui) endpoint can be used to drive the TUI through the server. For example, you can prefill or run a prompt. This setup is used by the OpenCode [IDE](/docs/ide) plugins.
+The [`/tui`](#tui) endpoint can be used to drive the TUI through the server. For example, you can prefill or run a prompt. This setup is used by the Kilo CLI [IDE](/docs/ide) plugins.
 
 ---
 
@@ -82,7 +82,7 @@ For example, `http://localhost:4096/doc`. Use the spec to generate clients or in
 
 ## APIs
 
-The opencode server exposes the following APIs.
+The Kilo CLI server exposes the following APIs.
 
 ---
 

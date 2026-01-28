@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-telemetry",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Telemetry for Kilo CLI - PostHog analytics integration",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "build": "tsc",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "posthog-node": "4.4.0",
+    "@kilocode/kilo-gateway": "workspace:*",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "1.30.1",
+    "@opentelemetry/sdk-trace-base": "1.30.1",
+    "@opentelemetry/sdk-trace-node": "1.30.1",
+    "@opentelemetry/resources": "1.30.1",
+    "@opentelemetry/semantic-conventions": "1.28.0"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}

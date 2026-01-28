@@ -60,13 +60,15 @@ export const ModelsCommand = cmd({
           return
         }
 
+        // kilocode_change start
         const providerIDs = Object.keys(providers).sort((a, b) => {
-          const aIsOpencode = a.startsWith("opencode")
-          const bIsOpencode = b.startsWith("opencode")
-          if (aIsOpencode && !bIsOpencode) return -1
-          if (!aIsOpencode && bIsOpencode) return 1
+          const aIsKilo = a === "kilo" || a.startsWith("opencode")
+          const bIsKilo = b === "kilo" || b.startsWith("opencode")
+          if (aIsKilo && !bIsKilo) return -1
+          if (!aIsKilo && bIsKilo) return 1
           return a.localeCompare(b)
         })
+        // kilocode_change end
 
         for (const providerID of providerIDs) {
           printModels(providerID, args.verbose)

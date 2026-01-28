@@ -11,7 +11,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode Discord integration)
     if: false
     # kilocode_change end
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read

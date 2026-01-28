@@ -132,10 +132,12 @@ export namespace ToolRegistry {
     const result = await Promise.all(
       tools
         .filter((t) => {
-          // Enable websearch/codesearch for zen users OR via enable flag
+          // Enable websearch/codesearch for zen/kilo users OR via enable flag
+          // kilocode_change start
           if (t.id === "codesearch" || t.id === "websearch") {
-            return model.providerID === "opencode" || Flag.OPENCODE_ENABLE_EXA
+            return model.providerID === "opencode" || model.providerID === "kilo" || Flag.OPENCODE_ENABLE_EXA
           }
+          // kilocode_change end
 
           // use apply tool in same format as codex
           const usePatch =

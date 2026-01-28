@@ -7,6 +7,7 @@
  */
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
+import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
 
 // Type definitions for OpenCode dependencies (injected at runtime)
 type Hono = any
@@ -159,6 +160,40 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         })
 
         return c.json(true)
+      },
+    )
+    .get(
+      "/notifications",
+      describeRoute({
+        summary: "Get Kilo notifications",
+        description: "Fetch notifications from Kilo Gateway for CLI display",
+        operationId: "kilo.notifications",
+        responses: {
+          200: {
+            description: "Notifications list",
+            content: {
+              "application/json": {
+                schema: resolver(z.array(KilocodeNotificationSchema)),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      async (c: any) => {
+        const auth = await Auth.get("kilo")
+        if (!auth) return c.json([])
+
+        const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+        if (!token) return c.json([])
+
+        const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+        const notifications = await fetchKilocodeNotifications({
+          kilocodeToken: token,
+          kilocodeOrganizationId: organizationId,
+        })
+
+        return c.json(notifications)
       },
     )
 }

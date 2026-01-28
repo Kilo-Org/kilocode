@@ -17,7 +17,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode GitHub Action publishing)
     if: false
     # kilocode_change end
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:

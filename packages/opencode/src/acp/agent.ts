@@ -37,6 +37,7 @@ import { Config } from "@/config/config"
 import { Todo } from "@/session/todo"
 import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
+import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
 import type { Event, OpencodeClient, SessionMessageResponse } from "@opencode-ai/sdk/v2"
 import { applyPatch } from "diff"
 
@@ -1359,12 +1360,10 @@ export namespace ACP {
 
     if (specified && !providers.length) return specified
 
-    const opencodeProvider = providers.find((p) => p.id === "opencode")
-    if (opencodeProvider) {
-      if (opencodeProvider.models["big-pickle"]) {
-        return { providerID: "opencode", modelID: "big-pickle" }
-      }
-      const [best] = Provider.sort(Object.values(opencodeProvider.models))
+    // kilocode_change start
+    const kiloProvider = providers.find((p) => p.id === "kilo")
+    if (kiloProvider) {
+      const [best] = Provider.sort(Object.values(kiloProvider.models))
       if (best) {
         return {
           providerID: best.providerID,
@@ -1372,6 +1371,7 @@ export namespace ACP {
         }
       }
     }
+    // kilocode_change end
 
     const models = providers.flatMap((p) => Object.values(p.models))
     const [best] = Provider.sort(models)
@@ -1384,7 +1384,11 @@ export namespace ACP {
 
     if (specified) return specified
 
-    return { providerID: "opencode", modelID: "big-pickle" }
+    // kilocode_change start
+    const freeModel = await fetchDefaultModel()
+    const parsed = Provider.parseModel(freeModel)
+    return { providerID: "kilo", modelID: parsed.modelID }
+    // kilocode_change end
   }
 
   function parseUri(

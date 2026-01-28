@@ -12,8 +12,11 @@ export const KILO_OPENROUTER_BASE = "https://api.kilo.ai/api/openrouter"
 /** Device auth polling interval in milliseconds */
 export const POLL_INTERVAL_MS = 3000
 
-/** Default model to use as fallback */
+/** Default model for authenticated users */
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-4"
+
+/** Default model for anonymous/free usage */
+export const DEFAULT_FREE_MODEL = "minimax/minimax-m2.1:free"
 
 /** Token expiration duration in milliseconds (1 year) */
 export const TOKEN_EXPIRATION_MS = 365 * 24 * 60 * 60 * 1000

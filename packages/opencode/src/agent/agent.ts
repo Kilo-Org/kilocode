@@ -18,6 +18,7 @@ import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
 import path from "path"
 import { Plugin } from "@/plugin"
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
 export namespace Agent {
   export const Info = z
@@ -285,12 +286,17 @@ export namespace Agent {
     const existing = await list()
 
     const params = {
+      // kilocode_change start - enable telemetry by default with custom PostHog tracer
       experimental_telemetry: {
-        isEnabled: cfg.experimental?.openTelemetry,
+        isEnabled: cfg.experimental?.openTelemetry !== false,
+        recordInputs: false, // Prevent recording prompts, messages, tool args
+        recordOutputs: false, // Prevent recording completions, tool results
+        tracer: Telemetry.getTracer() ?? undefined,
         metadata: {
           userId: cfg.username ?? "unknown",
         },
       },
+      // kilocode_change end
       temperature: 0.3,
       messages: [
         ...system.map(

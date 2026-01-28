@@ -2,6 +2,7 @@ import path from "path"
 import { Global } from "../global"
 import fs from "fs/promises"
 import z from "zod"
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
@@ -69,5 +70,12 @@ export namespace Auth {
     delete data[key]
     await Bun.write(file, JSON.stringify(data, null, 2))
     await fs.chmod(file.name!, 0o600)
+
+    // kilocode_change start - Track logout and reset telemetry identity for Kilo
+    if (key === "kilo") {
+      await Telemetry.updateIdentity(null)
+    }
+    Telemetry.trackAuthLogout(key)
+    // kilocode_change end
   }
 }

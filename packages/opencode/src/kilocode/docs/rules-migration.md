@@ -9,12 +9,15 @@ Kilocode stores rules in various file locations. When Opencode starts, it reads 
 ## Key Guarantees
 
 ### 1. Read-Only Migration
+
 The migration **never modifies project files**. We only:
+
 - Read existing rule files from disk
 - Inject file paths into the config's `instructions` array
 - Never write to the project or modify any files
 
 ### 2. Combines with Existing Config (Never Overwrites)
+
 If you have existing opencode config with `instructions`, the Kilocode rules are **combined**, not replaced:
 
 ```typescript
@@ -29,6 +32,7 @@ If you have existing opencode config with `instructions`, the Kilocode rules are
 ```
 
 ### 3. Restart to Pick Up Changes
+
 If you change your Kilocode configuration (e.g., edit `.kilocoderules`), simply restart kilo-cli to pick up the new config. No manual migration or conversion needed.
 
 ## Source Locations
@@ -37,32 +41,33 @@ The migrator reads rules from these locations:
 
 ### Project Rules
 
-| Location | Description |
-|----------|-------------|
-| `.kilocoderules` | Legacy single-file rules in project root |
-| `.kilocode/rules/*.md` | Directory-based rules (multiple markdown files) |
-| `.kilocoderules-{mode}` | Mode-specific legacy rules (e.g., `.kilocoderules-code`) |
-| `.kilocode/rules-{mode}/*.md` | Mode-specific rule directories |
+| Location                      | Description                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| `.kilocoderules`              | Legacy single-file rules in project root                 |
+| `.kilocode/rules/*.md`        | Directory-based rules (multiple markdown files)          |
+| `.kilocoderules-{mode}`       | Mode-specific legacy rules (e.g., `.kilocoderules-code`) |
+| `.kilocode/rules-{mode}/*.md` | Mode-specific rule directories                           |
 
 ### Global Rules
 
-| Location | Description |
-|----------|-------------|
+| Location                 | Description            |
+| ------------------------ | ---------------------- |
 | `~/.kilocode/rules/*.md` | Global rules directory |
 
 ## File Mapping
 
-| Kilocode Location | Opencode Equivalent |
-|-------------------|---------------------|
-| `.kilocoderules` | `instructions: [".kilocoderules"]` |
-| `.kilocoderules-{mode}` | `instructions: [".kilocoderules-{mode}"]` |
-| `.kilocode/rules/*.md` | `instructions: [".kilocode/rules/file.md", ...]` |
+| Kilocode Location             | Opencode Equivalent                                     |
+| ----------------------------- | ------------------------------------------------------- |
+| `.kilocoderules`              | `instructions: [".kilocoderules"]`                      |
+| `.kilocoderules-{mode}`       | `instructions: [".kilocoderules-{mode}"]`               |
+| `.kilocode/rules/*.md`        | `instructions: [".kilocode/rules/file.md", ...]`        |
 | `.kilocode/rules-{mode}/*.md` | `instructions: [".kilocode/rules-{mode}/file.md", ...]` |
-| `~/.kilocode/rules/*.md` | `instructions: ["~/.kilocode/rules/file.md", ...]` |
+| `~/.kilocode/rules/*.md`      | `instructions: ["~/.kilocode/rules/file.md", ...]`      |
 
 ## AGENTS.md Compatibility
 
 `AGENTS.md` is loaded **natively** by Opencode - no migration needed. Opencode automatically loads:
+
 - `AGENTS.md` in project root
 - `CLAUDE.md` in project root
 - `~/.opencode/AGENTS.md` (global)
@@ -70,6 +75,7 @@ The migrator reads rules from these locations:
 ## Not Migrated
 
 The following are **not** migrated:
+
 - `.roorules` - Roo-specific rules
 - `.clinerules` - Cline-specific rules
 
@@ -82,6 +88,7 @@ Mode-specific rules (e.g., `.kilocoderules-code`, `.kilocode/rules-architect/`) 
 ## Warnings
 
 The migrator generates warnings for:
+
 - **Legacy files**: When `.kilocoderules` is found, a warning suggests migrating to `.kilocode/rules/` directory structure
 
 ## Example

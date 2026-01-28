@@ -85,6 +85,7 @@ export const dict = {
   "dialog.provider.search.placeholder": "Buscar provedores",
   "dialog.provider.empty": "Nenhum provedor encontrado",
   "dialog.provider.group.popular": "Popular",
+  "dialog.provider.group.recommended": "Recomendado", // kilocode_change
   "dialog.provider.group.other": "Outro",
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.kilo.note": "Acesse mais de 500 modelos de IA",
@@ -115,13 +116,13 @@ export const dict = {
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
   "provider.connect.apiKey.placeholder": "Chave de API",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
-  "provider.connect.opencodeZen.line1":
-    "Kilo CLI Zen oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
-  "provider.connect.opencodeZen.line2":
+  "provider.connect.kiloGateway.line1":
+    "Kilo Gateway oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
+  "provider.connect.kiloGateway.line2":
     "Com uma única chave de API você terá acesso a modelos como Claude, GPT, Gemini, GLM e mais.",
-  "provider.connect.opencodeZen.visit.prefix": "Visite ",
-  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
-  "provider.connect.opencodeZen.visit.suffix": " para obter sua chave de API.",
+  "provider.connect.kiloGateway.visit.prefix": "Visite ",
+  "provider.connect.kiloGateway.visit.link": "kilo.ai",
+  "provider.connect.kiloGateway.visit.suffix": " para obter sua chave de API.",
   "provider.connect.oauth.code.visit.prefix": "Visite ",
   "provider.connect.oauth.code.visit.link": "este link",
   "provider.connect.oauth.code.visit.suffix":

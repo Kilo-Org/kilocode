@@ -284,7 +284,9 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                     ✕
                   </text>
                 </box>
-                <text fg={theme.textMuted}>OpenCode includes free models so you can start immediately.</text>
+                {/* kilocode_change start */}
+                <text fg={theme.textMuted}>Kilo includes free models so you can start immediately.</text>
+                {/* kilocode_change end */}
                 <text fg={theme.textMuted}>
                   Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
                 </text>
@@ -299,13 +301,15 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
             <span style={{ fg: theme.textMuted }}>{directory().split("/").slice(0, -1).join("/")}/</span>
             <span style={{ fg: theme.text }}>{directory().split("/").at(-1)}</span>
           </text>
+          {/* kilocode_change start */}
           <text fg={theme.textMuted}>
-            <span style={{ fg: theme.success }}>•</span> <b>Open</b>
+            <span style={{ fg: theme.success }}>•</span>{" "}
             <span style={{ fg: theme.text }}>
-              <b>Code</b>
+              <b>Kilo</b>
             </span>{" "}
             <span>{Installation.VERSION}</span>
           </text>
+          {/* kilocode_change end */}
         </box>
       </box>
     </Show>

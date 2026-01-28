@@ -9,6 +9,7 @@ This document explains how Kilocode configurations are automatically migrated to
 - [Rules Migration](#rules-migration)
 - [Workflows Migration](#workflows-migration)
 - [MCP Migration](#mcp-migration)
+- [Kilo Notifications](#kilo-notifications)
 
 ---
 
@@ -337,3 +338,52 @@ Kilocode MCP server configurations are migrated to Opencode's `mcp` config. See 
 | Location                                                    | Description               |
 | ----------------------------------------------------------- | ------------------------- |
 | VSCode extension storage `settings/cline_mcp_settings.json` | MCP server configurations |
+
+---
+
+# Kilo Notifications
+
+When connected to Kilo Gateway, the CLI fetches and displays notifications from the Kilo API. This allows Kilo to communicate important announcements, feature updates, and tips to users.
+
+## How It Works
+
+1. **On startup**, if the user is authenticated with Kilo Gateway, the CLI fetches notifications from `https://api.kilo.ai/api/users/notifications`
+2. **Filtering**: Only notifications with `showIn` containing `"cli"` (or no `showIn` restriction) are displayed
+3. **Display**: The first notification is shown as a toast notification after a 2-second delay
+
+## Notification Data Structure
+
+```typescript
+interface KilocodeNotification {
+  id: string // Unique identifier
+  title: string // Notification title (e.g., "Agent skills now supported!")
+  message: string // Description text
+  action?: {
+    actionText: string // Link text (e.g., "Learn More")
+    actionURL: string // URL destination
+  }
+  showIn?: string[] // Target platforms: ["cli", "vscode"]
+}
+```
+
+## Example Notification
+
+```
+Title: Agent skills now supported!
+Message: Define reusable skills and workflows for your AI agent.
+Action: Learn More -> https://docs.kilo.ai/skills
+```
+
+## Display Conditions
+
+| Condition                 | Notifications Shown |
+| ------------------------- | ------------------- |
+| Connected to Kilo Gateway | Yes                 |
+| Not connected to Kilo     | No                  |
+| No notifications from API | No                  |
+
+## Related Files
+
+- [`notifications.ts`](../../../../kilo-gateway/src/api/notifications.ts) - Fetch function and types
+- [`routes.ts`](../../../../kilo-gateway/src/server/routes.ts) - Server endpoint `/kilo/notifications`
+- [`app.tsx`](../../cli/cmd/tui/app.tsx) - TUI notification display logic

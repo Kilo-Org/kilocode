@@ -14,6 +14,7 @@ import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
+import { KiloNews } from "@kilocode/kilo-gateway/tui" // kilocode_change
 
 // TODO: what is the best way to do this?
 let once = false
@@ -105,7 +106,9 @@ export function Home() {
             hint={Hint}
           />
         </box>
-        <box height={3} width="100%" maxWidth={75} alignItems="center" paddingTop={2}>
+        {/* kilocode_change - KiloNews added */}
+        <box width="100%" maxWidth={75} alignItems="center" paddingTop={2} gap={1}>
+          <KiloNews />
           <Show when={showTips()}>
             <Tips />
           </Show>

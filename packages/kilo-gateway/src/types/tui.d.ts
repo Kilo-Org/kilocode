@@ -49,5 +49,6 @@ declare namespace JSX {
     box: any
     text: any
     span: any
+    scrollbox: any
   }
 }

@@ -1,17 +1,17 @@
 ---
 title: CLI
-description: OpenCode CLI options and commands.
+description: Kilo CLI options and commands.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components"
 
-The OpenCode CLI by default starts the [TUI](/docs/tui) when run without any arguments.
+The Kilo CLI by default starts the [TUI](/docs/tui) when run without any arguments.
 
 ```bash
 opencode
 ```
 
-But it also accepts commands as documented on this page. This allows you to interact with OpenCode programmatically.
+But it also accepts commands as documented on this page. This allows you to interact with Kilo CLI programmatically.
 
 ```bash
 opencode run "Explain how closures work in JavaScript"
@@ -21,7 +21,7 @@ opencode run "Explain how closures work in JavaScript"
 
 ### tui
 
-Start the OpenCode terminal user interface.
+Start the Kilo CLI terminal user interface.
 
 ```bash
 opencode [project]
@@ -43,13 +43,13 @@ opencode [project]
 
 ## Commands
 
-The OpenCode CLI also has the following commands.
+The Kilo CLI also has the following commands.
 
 ---
 
 ### agent
 
-Manage agents for OpenCode.
+Manage agents for Kilo.
 
 ```bash
 opencode agent [command]
@@ -59,13 +59,13 @@ opencode agent [command]
 
 ### attach
 
-Attach a terminal to an already running OpenCode backend server started via `serve` or `web` commands.
+Attach a terminal to an already running Kilo CLI backend server started via `serve` or `web` commands.
 
 ```bash
 opencode attach [url]
 ```
 
-This allows using the TUI with a remote OpenCode backend. For example:
+This allows using the TUI with a remote Kilo CLI backend. For example:
 
 ```bash
 # Start the backend server for web/mobile access
@@ -118,13 +118,13 @@ opencode auth [command]
 
 #### login
 
-OpenCode is powered by the provider list at [Models.dev](https://models.dev), so you can use `opencode auth login` to configure API keys for any provider you'd like to use. This is stored in `~/.local/share/opencode/auth.json`.
+Kilo CLI is powered by the provider list at [Models.dev](https://models.dev), so you can use `opencode auth login` to configure API keys for any provider you'd like to use. This is stored in `~/.local/share/opencode/auth.json`.
 
 ```bash
 opencode auth login
 ```
 
-When OpenCode starts up it loads the providers from the credentials file. And if there are any keys defined in your environments or a `.env` file in your project.
+When Kilo CLI starts up it loads the providers from the credentials file. And if there are any keys defined in your environments or a `.env` file in your project.
 
 ---
 
@@ -310,7 +310,7 @@ opencode models --refresh
 
 ### run
 
-Run opencode in non-interactive mode by passing a prompt directly.
+Run Kilo CLI in non-interactive mode by passing a prompt directly.
 
 ```bash
 opencode run [message..]
@@ -345,20 +345,20 @@ opencode run --attach http://localhost:4096 "Explain async/await in JavaScript"
 | `--file`     | `-f`  | File(s) to attach to message                                       |
 | `--format`   |       | Format: default (formatted) or json (raw JSON events)              |
 | `--title`    |       | Title for the session (uses truncated prompt if no value provided) |
-| `--attach`   |       | Attach to a running opencode server (e.g., http://localhost:4096)  |
+| `--attach`   |       | Attach to a running Kilo CLI server (e.g., http://localhost:4096)  |
 | `--port`     |       | Port for the local server (defaults to random port)                |
 
 ---
 
 ### serve
 
-Start a headless OpenCode server for API access. Check out the [server docs](/docs/server) for the full HTTP interface.
+Start a headless Kilo CLI server for API access. Check out the [server docs](/docs/server) for the full HTTP interface.
 
 ```bash
 opencode serve
 ```
 
-This starts an HTTP server that provides API access to opencode functionality without the TUI interface. Set `OPENCODE_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `opencode`).
+This starts an HTTP server that provides API access to Kilo CLI functionality without the TUI interface. Set `OPENCODE_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `opencode`).
 
 #### Flags
 
@@ -373,7 +373,7 @@ This starts an HTTP server that provides API access to opencode functionality wi
 
 ### session
 
-Manage OpenCode sessions.
+Manage Kilo CLI sessions.
 
 ```bash
 opencode session [command]
@@ -383,7 +383,7 @@ opencode session [command]
 
 #### list
 
-List all OpenCode sessions.
+List all Kilo CLI sessions.
 
 ```bash
 opencode session list
@@ -400,7 +400,7 @@ opencode session list
 
 ### stats
 
-Show token usage and cost statistics for your OpenCode sessions.
+Show token usage and cost statistics for your Kilo CLI sessions.
 
 ```bash
 opencode stats
@@ -431,13 +431,13 @@ If you don't provide a session ID, you'll be prompted to select from available s
 
 ### import
 
-Import session data from a JSON file or OpenCode share URL.
+Import session data from a JSON file or Kilo CLI share URL.
 
 ```bash
 opencode import <file>
 ```
 
-You can import from a local file or an OpenCode share URL.
+You can import from a local file or an Kilo CLI share URL.
 
 ```bash
 opencode import session.json
@@ -448,13 +448,13 @@ opencode import https://opncd.ai/s/abc123
 
 ### web
 
-Start a headless OpenCode server with a web interface.
+Start a headless Kilo CLI server with a web interface.
 
 ```bash
 opencode web
 ```
 
-This starts an HTTP server and opens a web browser to access OpenCode through a web interface. Set `OPENCODE_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `opencode`).
+This starts an HTTP server and opens a web browser to access Kilo CLI through a web interface. Set `OPENCODE_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `opencode`).
 
 #### Flags
 
@@ -489,7 +489,7 @@ This command starts an ACP server that communicates via stdin/stdout using nd-JS
 
 ### uninstall
 
-Uninstall OpenCode and remove all related files.
+Uninstall Kilo CLI and remove all related files.
 
 ```bash
 opencode uninstall
@@ -508,7 +508,7 @@ opencode uninstall
 
 ### upgrade
 
-Updates opencode to the latest version or a specific version.
+Updates Kilo CLI to the latest version or a specific version.
 
 ```bash
 opencode upgrade [target]
@@ -536,7 +536,7 @@ opencode upgrade v0.1.48
 
 ## Global Flags
 
-The opencode CLI takes the following global flags.
+The Kilo CLI takes the following global flags.
 
 | Flag           | Short | Description                          |
 | -------------- | ----- | ------------------------------------ |
@@ -549,7 +549,7 @@ The opencode CLI takes the following global flags.
 
 ## Environment variables
 
-OpenCode can be configured using environment variables.
+Kilo CLI can be configured using environment variables.
 
 | Variable                              | Type    | Description                                       |
 | ------------------------------------- | ------- | ------------------------------------------------- |

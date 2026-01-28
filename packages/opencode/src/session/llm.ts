@@ -25,6 +25,7 @@ import { Flag } from "@/flag/flag"
 import { PermissionNext } from "@/permission/next"
 import { Auth } from "@/auth"
 import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
 export namespace LLM {
   const log = Log.create({ service: "llm" })
@@ -263,7 +264,14 @@ export namespace LLM {
           extractReasoningMiddleware({ tagName: "think", startWithReasoning: false }),
         ],
       }),
-      experimental_telemetry: { isEnabled: cfg.experimental?.openTelemetry },
+      // kilocode_change start - enable telemetry by default with custom PostHog tracer
+      experimental_telemetry: {
+        isEnabled: cfg.experimental?.openTelemetry !== false,
+        recordInputs: false, // Prevent recording prompts, messages, tool args
+        recordOutputs: false, // Prevent recording completions, tool results
+        tracer: Telemetry.getTracer() ?? undefined,
+      },
+      // kilocode_change end
     })
   }
 

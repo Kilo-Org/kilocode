@@ -7,6 +7,10 @@ import { mapValues } from "remeda"
 import { errors } from "../error"
 import { Log } from "../../util/log"
 import { lazy } from "../../util/lazy"
+// kilocode_change start
+import { fetchDefaultModel } from "@kilocode/kilo-gateway"
+import { Auth } from "../../auth"
+// kilocode_change end
 
 const log = Log.create({ service: "server" })
 
@@ -82,10 +86,25 @@ export const ConfigRoutes = lazy(() =>
       }),
       async (c) => {
         using _ = log.time("providers")
-        const providers = await Provider.list().then((x) => mapValues(x, (item) => item))
+        const providers = await Provider.list()
+
+        // kilocode_change start - Fetch default model from Kilo API
+        const kiloAuth = await Auth.get("kilo")
+        const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
+        const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
+        const kiloApiDefault = await fetchDefaultModel(token, organizationId)
+        // kilocode_change end
+
+        // kilocode_change start - Use API default for Kilo provider if valid
+        const defaults = mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id)
+        if (kiloApiDefault && providers["kilo"]?.models[kiloApiDefault]) {
+          defaults["kilo"] = kiloApiDefault
+        }
+        // kilocode_change end
+
         return c.json({
           providers: Object.values(providers),
-          default: mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id),
+          default: defaults,
         })
       },
     ),

@@ -65,6 +65,7 @@
   "devDependencies": {
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
+    "baseline-browser-mapping": "2.9.18",
     "husky": "9.1.7",
     "prettier": "3.6.2",
     "semver": "^7.6.0",

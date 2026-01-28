@@ -17,11 +17,11 @@ import { KiloAutoMethod } from "@kilocode/kilo-gateway/tui" // kilocode_change
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   kilo: -1, // kilocode_change - Kilo Gateway at top
-  opencode: 0,
-  anthropic: 1,
-  "github-copilot": 2,
-  openai: 3,
-  google: 4,
+  // kilocode_change - removed opencode from popular providers
+  anthropic: 0,
+  "github-copilot": 1,
+  openai: 2,
+  google: 3,
 }
 
 export function createDialogProviderOptions() {
@@ -40,7 +40,6 @@ export function createDialogProviderOptions() {
           value: provider.id,
           description: {
             kilo: "(Recommended)", // kilocode_change
-            opencode: "(Recommended)",
             anthropic: "(Claude Max or API key)",
             openai: "(ChatGPT Plus/Pro or API key)",
           }[provider.id],

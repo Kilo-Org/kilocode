@@ -1,14 +1,43 @@
 <p align="center">
-  <a href="https://x.com/kilocode"><img src="https://img.shields.io/badge/kilocode-000000?style=flat&logo=x&logoColor=white" alt="X (Twitter)"></a>
-  <a href="https://blog.kilo.ai"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Substack Blog"></a>
-  <a href="https://kilo.ai/discord"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://www.reddit.com/r/kilocode/"><img src="https://img.shields.io/badge/Join%20r%2Fkilocode-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
+  <a href="https://kilo.ai">
+    <img src="logo.png" alt="Kilo CLI logo">
+  </a>
+</p>
+<p align="center">The open source AI coding agent.</p>
+<p align="center">
+  <a href="https://kilo.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
+  <a href="https://x.com/kilocode"><img alt="X" src="https://img.shields.io/badge/X-@kilocode-000000?style=flat-square&logo=x&logoColor=white" /></a>
+  <a href="https://www.reddit.com/r/kilocode/"><img alt="Reddit" src="https://img.shields.io/badge/Reddit-r%2Fkilocode-FF4500?style=flat-square&logo=reddit&logoColor=white" /></a>
 </p>
 
-# 🧑‍💻 Kilo CLI
+---
 
-> Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 1M+ Kilo Coders. 20T+ tokens processed
+### Agents
+
+Kilo CLI includes two built-in agents you can switch between using the `Tab` key:
+
+- **build** - Default, full access agent for development work
+- **plan** - Read-only agent for analysis and code exploration
+  - Denies file edits by default
+  - Asks permission before running bash commands
+  - Ideal for exploring unfamiliar codebases or planning changes
+
+Also included is a **general** subagent for complex searches and multi-step tasks.
+This is used internally and can be invoked using `@general` in messages.
+
+### Autonomous Mode (CI/CD)
+
+Use the `--auto` flag with `kilo run` to enable fully autonomous operation without user interaction. This is ideal for CI/CD pipelines and automated workflows:
+
+```bash
+kilo run --auto "run tests and fix any failures"
+```
+
+**Important:** The `--auto` flag disables all permission prompts and allows the agent to execute any action without confirmation. Only use this in trusted environments like CI/CD pipelines.
+
+### Migrating from Kilo Code Extension
+
+If you're coming from the Kilo Code VS Code extension, your configurations are automatically migrated:
 
 ## Installation
 
@@ -24,18 +53,38 @@ This will open Kilo CLI in your terminal
 
 ## Key Features
 
-- **Code Generation:** Kilo can generate code using natural language.
-- **Task Automation:** Kilo can automate repetitive coding tasks.
-- **Automated Refactoring:** Kilo can refactor and improve existing code.
-- **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
-- **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
+| Kilo Code Feature                            | Kilo CLI Equivalent                          |
+| -------------------------------------------- | -------------------------------------------- |
+| Custom modes                                 | Converted to agents                          |
+| Rules (`.kilocoderules`, `.kilocode/rules/`) | Added to `instructions` array                |
+| Skills (`.kilocode/skills/`)                 | Auto-discovered alongside `.opencode/skill/` |
+| Workflows (`.kilocode/workflows/`)           | Converted to commands                        |
+| MCP servers                                  | Migrated to `mcp` config                     |
 
-## Contributing
+**Default mode mappings:**
 
-Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://discord.gg/kilocode) to chat with the team and community.
+- `code` → `build` agent
+- `architect` → `plan` agent
 
-## FAQ
+For detailed migration information, see:
+
+- [Migration Overview](packages/opencode/src/kilocode/docs/migration.md)
+- [Rules Migration](packages/opencode/src/kilocode/docs/rules-migration.md)
+
+### Documentation
+
+For more info on how to configure Kilo CLI, [**head over to our docs**](https://kilo.ai/docs).
+
+### Contributing
+
+If you're interested in contributing, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+
+### FAQ
 
 #### Where did Kilo CLI come from?
 
-Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode) designeed to work within the Kilo all-in-one agentic engineering platform.
+Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
+
+---
+
+**Join our community** [Discord](https://kilo.ai/discord) | [X.com](https://x.com/kilocode) | [Reddit](https://reddit.com/r/kilocode)

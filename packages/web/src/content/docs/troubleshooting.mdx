@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Common issues and how to resolve them.
 ---
 
-To debug issues with OpenCode, start by checking the logs and local data it stores on disk.
+To debug issues with Kilo CLI, start by checking the logs and local data it stores on disk.
 
 ---
 
@@ -22,7 +22,7 @@ You can set the log level with the `--log-level` command-line option to get more
 
 ## Storage
 
-opencode stores session data and other application data on disk at:
+Kilo CLI stores session data and other application data on disk at:
 
 - **macOS/Linux**: `~/.local/share/opencode/`
 - **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.local\share\opencode`
@@ -165,7 +165,7 @@ To find the directory quickly:
 
 ## Getting help
 
-If you're experiencing issues with OpenCode:
+If you're experiencing issues with Kilo CLI:
 
 1. **Report issues on GitHub**
 
@@ -179,7 +179,7 @@ If you're experiencing issues with OpenCode:
 
    For real-time help and community discussion, join our Discord server:
 
-   [**opencode.ai/discord**](https://opencode.ai/discord)
+   [**kilo.ai/discord**](https://kilo.ai/discord)
 
 ---
 
@@ -189,7 +189,7 @@ Here are some common issues and how to resolve them.
 
 ---
 
-### OpenCode won't start
+### Kilo CLI won't start
 
 1. Check the logs for error messages
 2. Try running with `--print-logs` to see output in the terminal
@@ -246,7 +246,7 @@ To resolve this:
 
 ### AI_APICallError and provider package issues
 
-If you encounter API call errors, this may be due to outdated provider packages. opencode dynamically installs provider packages (OpenAI, Anthropic, Google, etc.) as needed and caches them locally.
+If you encounter API call errors, this may be due to outdated provider packages. Kilo CLI dynamically installs provider packages (OpenAI, Anthropic, Google, etc.) as needed and caches them locally.
 
 To resolve provider package issues:
 
@@ -258,9 +258,9 @@ To resolve provider package issues:
 
    On Windows, press `WIN+R` and delete: `%USERPROFILE%\.cache\opencode`
 
-2. Restart opencode to reinstall the latest provider packages
+2. Restart Kilo CLI to reinstall the latest provider packages
 
-This will force opencode to download the most recent versions of provider packages, which often resolves compatibility issues with model parameters and API changes.
+This will force Kilo CLI to download the most recent versions of provider packages, which often resolves compatibility issues with model parameters and API changes.
 
 ---
 
@@ -291,4 +291,4 @@ Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 export DISPLAY=:99.0
 ```
 
-opencode will detect if you're using Wayland and prefer `wl-clipboard`, otherwise it will try to find clipboard tools in order of: `xclip` and `xsel`.
+Kilo CLI will detect if you're using Wayland and prefer `wl-clipboard`, otherwise it will try to find clipboard tools in order of: `xclip` and `xsel`.

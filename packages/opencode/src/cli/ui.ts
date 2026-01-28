@@ -3,12 +3,13 @@ import { EOL } from "os"
 import { NamedError } from "@opencode-ai/util/error"
 
 export namespace UI {
+  // kilocode_change start
   const LOGO = [
-    [`                    `, `             ▄     `],
-    [`█▀▀█ █▀▀█ █▀▀█ █▀▀▄ `, `█▀▀▀ █▀▀█ █▀▀█ █▀▀█`],
-    [`█░░█ █░░█ █▀▀▀ █░░█ `, `█░░░ █░░█ █░░█ █▀▀▀`],
-    [`▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ `, `▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`],
+    `██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ `,
+    `████   ██ ██     ██  ██   ██     ██     ██ `,
+    `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
   ]
+  // kilocode_change end
 
   export const CancelledError = NamedError.create("UICancelledError", z.void())
 
@@ -46,18 +47,20 @@ export namespace UI {
     blank = true
   }
 
+  // kilocode_change start
   export function logo(pad?: string) {
+    const yellow = "\x1b[93m" // bright yellow
     const result = []
     for (const row of LOGO) {
       if (pad) result.push(pad)
-      result.push(Bun.color("gray", "ansi"))
-      result.push(row[0])
+      result.push(yellow)
+      result.push(row)
       result.push("\x1b[0m")
-      result.push(row[1])
       result.push(EOL)
     }
     return result.join("").trimEnd()
   }
+  // kilocode_change end
 
   export async function input(prompt: string): Promise<string> {
     const readline = require("readline")

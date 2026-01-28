@@ -198,6 +198,92 @@ describe("KilocodeConfigInjector", () => {
       expect(result.warnings.some((w) => w.includes("Legacy"))).toBe(true)
     })
     // kilocode_change end
+
+    // kilocode_change start - Ignore migration tests
+    test("includes ignore patterns in config", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/\n*.env")
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+      const config = JSON.parse(result.configJson)
+
+      expect(config.permission).toBeDefined()
+      expect(config.permission.read).toBeDefined()
+      expect(config.permission.edit).toBeDefined()
+      expect(config.permission.read["secrets/*"]).toBe("deny")
+      expect(config.permission.read["*.env"]).toBe("deny")
+    })
+
+    test("skips ignore when includeIgnore is false", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/")
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        includeIgnore: false,
+      })
+      const config = JSON.parse(result.configJson)
+
+      expect(config.permission).toBeUndefined()
+    })
+
+    test("combines ignore with other migrations", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          // Add custom mode
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: translate
+    name: Translate
+    roleDefinition: You are a translator
+    groups:
+      - read`,
+          )
+          // Add ignore patterns
+          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/")
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+      const config = JSON.parse(result.configJson)
+
+      expect(config.agent).toBeDefined()
+      expect(config.agent.translate).toBeDefined()
+      expect(config.permission).toBeDefined()
+      expect(config.permission.read["secrets/*"]).toBe("deny")
+    })
+
+    test("handles negation patterns in ignore file", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilocodeignore"), "*.env\n!.env.example")
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+      const config = JSON.parse(result.configJson)
+
+      expect(config.permission.read["*.env"]).toBe("deny")
+      expect(config.permission.read[".env.example"]).toBe("allow")
+    })
+    // kilocode_change end
   })
 
   describe("getEnvVars", () => {

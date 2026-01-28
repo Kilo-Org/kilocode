@@ -11,6 +11,7 @@ declare module "solid-js" {
       box: any
       text: any
       span: any
+      scrollbox: any
     }
   }
 }

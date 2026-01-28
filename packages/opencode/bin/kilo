@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+
+const childProcess = require("child_process")
+const fs = require("fs")
+const path = require("path")
+const os = require("os")
+const { createRequire } = require("module")
+
+function run(target) {
+  const result = childProcess.spawnSync(target, process.argv.slice(2), {
+    stdio: "inherit",
+  })
+  if (result.error) {
+    console.error(result.error.message)
+    process.exit(1)
+  }
+  const code = typeof result.status === "number" ? result.status : 0
+  process.exit(code)
+}
+
+const envPath = process.env.KILO_BIN_PATH
+if (envPath) {
+  run(envPath)
+}
+
+const platformMap = {
+  darwin: "darwin",
+  linux: "linux",
+  win32: "windows",
+}
+const archMap = {
+  x64: "x64",
+  arm64: "arm64",
+  arm: "arm",
+}
+
+let platform = platformMap[os.platform()]
+if (!platform) {
+  platform = os.platform()
+}
+let arch = archMap[os.arch()]
+if (!arch) {
+  arch = os.arch()
+}
+const base = "@kilocode/cli-" + platform + "-" + arch
+const binary = platform === "windows" ? "kilo.exe" : "kilo"
+
+function findBinary() {
+  // Use require.resolve to find the platform-specific package
+  // This handles scoped packages correctly (e.g., @kilocode/cli-darwin-arm64)
+  const req = createRequire(__filename)
+  try {
+    const pkgPath = req.resolve(base + "/package.json")
+    const pkgDir = path.dirname(pkgPath)
+    const candidate = path.join(pkgDir, "bin", binary)
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  } catch {}
+}
+
+const resolved = findBinary()
+if (!resolved) {
+  console.error(
+    'It seems that your package manager failed to install the right version of the Kilo CLI for your platform. You can try manually installing the "' +
+      base +
+      '" package',
+  )
+  process.exit(1)
+}
+
+run(resolved)

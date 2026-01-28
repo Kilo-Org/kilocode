@@ -8,6 +8,19 @@ import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { useKeybind } from "../context/keybind"
 import * as fuzzysort from "fuzzysort"
 
+// kilocode_change start - Recommended models for Kilo Gateway (order determines display priority)
+const KILO_RECOMMENDED_MODELS = [
+  "anthropic/claude-sonnet-4.5",
+  "anthropic/claude-opus-4.5",
+  "anthropic/claude-haiku-4.5",
+  "openai/gpt-5.2",
+  "openai/gpt-5.2-codex",
+  "google/gemini-3-pro-preview",
+  "google/gemini-3-flash-preview",
+  "mistralai/devstral-2512",
+]
+// kilocode_change end
+
 export function useConnected() {
   const sync = useSync()
   return createMemo(() =>
@@ -128,6 +141,10 @@ export function DialogModel(props: { providerID?: string }) {
               providerID: provider.id,
               modelID: model,
             }
+            // kilocode_change start - Show "Recommended" category for recommended Kilo models
+            const isKiloRecommended = provider.id === "kilo" && KILO_RECOMMENDED_MODELS.includes(model)
+            const category = connected() ? (isKiloRecommended ? "Recommended" : provider.name) : undefined
+            // kilocode_change end
             return {
               value,
               title: info.name ?? model,
@@ -136,7 +153,7 @@ export function DialogModel(props: { providerID?: string }) {
               )
                 ? "(Favorite)"
                 : undefined,
-              category: connected() ? provider.name : undefined,
+              category,
               disabled: provider.id === "opencode" && model.includes("-nano"),
               footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
               onSelect() {
@@ -165,6 +182,15 @@ export function DialogModel(props: { providerID?: string }) {
             return true
           }),
           sortBy(
+            // kilocode_change start - Sort recommended models first for Kilo Gateway
+            (x) => {
+              if (x.value.providerID === "kilo") {
+                const idx = KILO_RECOMMENDED_MODELS.indexOf(x.value.modelID)
+                return idx >= 0 ? idx : KILO_RECOMMENDED_MODELS.length + 1
+              }
+              return 0
+            },
+            // kilocode_change end
             (x) => x.footer !== "Free",
             (x) => x.title,
           ),

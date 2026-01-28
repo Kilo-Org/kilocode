@@ -10,6 +10,7 @@ export interface TUIDependencies {
   useDialog: () => any
   useToast: () => any
   useTheme: () => any
+  useSDK: () => any
 
   // UI Components
   DialogAlert: any
