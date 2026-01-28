@@ -57,6 +57,7 @@ export abstract class BaseProvider implements ApiHandler {
 	 * Converts tool schemas to be compatible with OpenAI's strict mode by:
 	 * - Ensuring all properties are in the required array (strict mode requirement)
 	 * - Converting nullable types (["type", "null"]) to non-nullable ("type")
+	 * - Adding additionalProperties: false to all object schemas (required by OpenAI Responses API)
 	 * - Recursively processing nested objects and arrays
 	 *
 	 * This matches the behavior of ensureAllRequired in openai-native.ts
@@ -67,6 +68,12 @@ export abstract class BaseProvider implements ApiHandler {
 		}
 
 		const result = { ...schema }
+
+		// OpenAI Responses API requires additionalProperties: false on all object schemas
+		// Only add if not already set to false (to avoid unnecessary mutations)
+		if (result.additionalProperties !== false) {
+			result.additionalProperties = false
+		}
 
 		if (result.properties) {
 			const allKeys = Object.keys(result.properties)

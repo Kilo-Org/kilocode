@@ -125,5 +125,9 @@
 		"delegated_to": "Ủy quyền cho nhiệm vụ {{childId}}",
 		"delegation_completed": "Nhiệm vụ con hoàn thành, tiếp tục nhiệm vụ cha",
 		"awaiting_child": "Đang chờ nhiệm vụ con {{childId}}"
+	},
+	"costs": {
+		"own": "Riêng",
+		"subtasks": "Nhiệm vụ con"
 	}
 }

@@ -125,5 +125,9 @@
 		"delegated_to": "작업 {{childId}}에 위임됨",
 		"delegation_completed": "하위 작업 완료, 상위 작업 재개",
 		"awaiting_child": "하위 작업 {{childId}} 대기 중"
+	},
+	"costs": {
+		"own": "자체",
+		"subtasks": "하위작업"
 	}
 }

@@ -101,16 +101,6 @@
 			"stoppedWithReason": "Claude Code가 다음 이유로 중지되었습니다: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}",
-			"tokenRefreshFailed": "OAuth 토큰을 새로 고치지 못했습니다: {{error}}",
-			"onboardingTimeout": "온보딩 작업이 60초 후 시간 초과되었습니다. 나중에 다시 시도하세요.",
-			"projectDiscoveryFailed": "프로젝트 ID를 찾을 수 없습니다. 'gemini auth'로 인증되었는지 확인하세요.",
-			"rateLimitExceeded": "속도 제한을 초과했습니다. 무료 등급 제한에 도달했습니다.",
-			"badRequest": "잘못된 요청: {{details}}",
-			"apiError": "Gemini CLI API 오류: {{error}}",
-			"completionError": "Gemini CLI 완성 오류: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}"
 		},
@@ -213,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "사용자에 의해 응답이 중단됨",
-		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨"
+		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨",
+		"streamTerminatedByProvider": "제공자가 요청을 종료함"
 	},
 	"storage": {
 		"prompt_custom_path": "대화 내역을 위한 사용자 지정 저장 경로를 입력하세요. 기본 위치를 사용하려면 비워두세요",

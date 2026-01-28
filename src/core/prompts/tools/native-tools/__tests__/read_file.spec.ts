@@ -96,6 +96,48 @@ describe("createReadFileTool", () => {
 		})
 	})
 
+	describe("supportsImages option", () => {
+		it("should include image format documentation when supportsImages is true", () => {
+			const tool = createReadFileTool({ supportsImages: true })
+			const description = getFunctionDef(tool).description
+
+			expect(description).toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+		})
+
+		it("should not include image format documentation when supportsImages is false", () => {
+			const tool = createReadFileTool({ supportsImages: false })
+			const description = getFunctionDef(tool).description
+
+			expect(description).not.toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+			expect(description).toContain("may not handle other binary files properly")
+		})
+
+		it("should default supportsImages to false", () => {
+			const tool = createReadFileTool({})
+			const description = getFunctionDef(tool).description
+
+			expect(description).not.toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+		})
+
+		it("should always include PDF and DOCX support in description", () => {
+			const toolWithImages = createReadFileTool({ supportsImages: true })
+			const toolWithoutImages = createReadFileTool({ supportsImages: false })
+
+			expect(getFunctionDef(toolWithImages).description).toContain(
+				"Supports text extraction from PDF and DOCX files",
+			)
+			expect(getFunctionDef(toolWithoutImages).description).toContain(
+				"Supports text extraction from PDF and DOCX files",
+			)
+		})
+	})
+
 	describe("combined options", () => {
 		it("should correctly combine low maxConcurrentFileReads with partialReadsEnabled", () => {
 			const tool = createReadFileTool({
@@ -119,6 +161,49 @@ describe("createReadFileTool", () => {
 			expect(description).toContain("only read one file at a time")
 			expect(description).not.toContain("line_ranges")
 			expect(description).not.toContain("Example multiple files")
+		})
+
+		it("should correctly combine partialReadsEnabled and supportsImages", () => {
+			const tool = createReadFileTool({
+				partialReadsEnabled: true,
+				supportsImages: true,
+			})
+			const description = getFunctionDef(tool).description
+
+			// Should have both line_ranges and image support
+			expect(description).toContain("line_ranges")
+			expect(description).toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+		})
+
+		it("should work with partialReadsEnabled=false and supportsImages=true", () => {
+			const tool = createReadFileTool({
+				partialReadsEnabled: false,
+				supportsImages: true,
+			})
+			const description = getFunctionDef(tool).description
+
+			// Should have image support but no line_ranges
+			expect(description).not.toContain("line_ranges")
+			expect(description).toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+		})
+
+		it("should correctly combine all three options", () => {
+			const tool = createReadFileTool({
+				maxConcurrentFileReads: 3,
+				partialReadsEnabled: true,
+				supportsImages: true,
+			})
+			const description = getFunctionDef(tool).description
+
+			expect(description).toContain("maximum of 3 files")
+			expect(description).toContain("line_ranges")
+			expect(description).toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
 		})
 	})
 
