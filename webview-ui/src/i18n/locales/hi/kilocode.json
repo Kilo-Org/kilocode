@@ -40,6 +40,7 @@
 			"apiKey": "Kilo Code API कुंजी",
 			"login": "Kilo Code में लॉग इन करें",
 			"logout": "Kilo Code से लॉग आउट करें",
+			"loginForPremiumModels": "प्रीमियम मॉडल और सुविधाओं तक पहुंचने के लिए लॉग इन करें",
 			"providerRouting": {
 				"title": "प्रदाता रूटिंग",
 				"managedByOrganization": "संगठन-स्तरीय प्रदाता रूटिंग प्रबंधित करें",

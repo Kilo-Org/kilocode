@@ -40,6 +40,7 @@
 			"apiKey": "Clave API de Kilo Code",
 			"login": "Iniciar sesión en Kilo Code",
 			"logout": "Cerrar sesión de Kilo Code",
+			"loginForPremiumModels": "Inicia sesión para acceder a modelos y funciones premium",
 			"providerRouting": {
 				"title": "Enrutamiento de proveedores",
 				"managedByOrganization": "Gestionar enrutamiento de proveedores a nivel de organización",
