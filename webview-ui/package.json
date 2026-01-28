@@ -96,7 +96,7 @@
 		"@storybook/addon-interactions": "^8.6.15",
 		"@storybook/react-vite": "^8.6.15",
 		"@storybook/testing-library": "^0.2.2",
-		"@testing-library/jest-dom": "^6.6.3",
+		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.2.0",
 		"@testing-library/user-event": "^14.6.1",
 		"@types/diff": "^5.2.1",
