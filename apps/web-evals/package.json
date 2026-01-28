@@ -43,7 +43,7 @@
 		"react-hook-form": "^7.57.0",
 		"react-use": "^17.6.0",
 		"redis": "^5.5.5",
-		"sonner": "^2.0.5",
+		"sonner": "^2.0.7",
 		"tailwind-merge": "^3.3.0",
 		"tailwindcss-animate": "^1.0.7",
 		"vaul": "^1.1.2",
