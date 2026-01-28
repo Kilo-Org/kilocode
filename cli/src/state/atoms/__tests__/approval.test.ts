@@ -154,9 +154,10 @@ describe("approval atoms", () => {
 				store.set(pendingApprovalAtom, message)
 
 				const options = store.get(approvalOptionsAtom)
-				expect(options).toHaveLength(4) // Run Command, Always run npm, Always run npm install, Reject
+				expect(options).toHaveLength(5) // Run Command, Always run npm, Always run npm install, Always run full command, Reject
 				expect(options[1].commandPattern).toBe("npm")
 				expect(options[2].commandPattern).toBe("npm install")
+				expect(options[3].commandPattern).toBe("  npm   install  ")
 			})
 
 			it("should handle empty command gracefully (plain text)", () => {
@@ -292,16 +293,17 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "ls . && cat README.md")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: ls, ls ., cat, cat README.md
-						expect(alwaysRunOptions.length).toBe(4)
+
+						// Should have options for: ls, ls ., cat, cat README.md, full command
+						expect(alwaysRunOptions.length).toBe(5)
 						expect(alwaysRunOptions[0].commandPattern).toBe("ls")
 						expect(alwaysRunOptions[1].commandPattern).toBe("ls .")
 						expect(alwaysRunOptions[2].commandPattern).toBe("cat")
 						expect(alwaysRunOptions[3].commandPattern).toBe("cat README.md")
+						expect(alwaysRunOptions[4].commandPattern).toBe("ls . && cat README.md")
 					})
 	
 					it("should generate options for all commands in | pipe chain", () => {
@@ -310,16 +312,17 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "cat README.md | tail -20")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: cat, cat README.md, tail, tail -20
-						expect(alwaysRunOptions.length).toBe(4)
+
+						// Should have options for: cat, cat README.md, tail, tail -20, full command
+						expect(alwaysRunOptions.length).toBe(5)
 						expect(alwaysRunOptions[0].commandPattern).toBe("cat")
 						expect(alwaysRunOptions[1].commandPattern).toBe("cat README.md")
 						expect(alwaysRunOptions[2].commandPattern).toBe("tail")
 						expect(alwaysRunOptions[3].commandPattern).toBe("tail -20")
+						expect(alwaysRunOptions[4].commandPattern).toBe("cat README.md | tail -20")
 					})
 	
 					it("should generate options for complex chained command with && and |", () => {
@@ -328,18 +331,19 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "ls . && cat README.md | tail -20")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: ls, ls ., cat, cat README.md, tail, tail -20
-						expect(alwaysRunOptions.length).toBe(6)
+
+						// Should have options for: ls, ls ., cat, cat README.md, tail, tail -20, full command
+						expect(alwaysRunOptions.length).toBe(7)
 						expect(alwaysRunOptions[0].commandPattern).toBe("ls")
 						expect(alwaysRunOptions[1].commandPattern).toBe("ls .")
 						expect(alwaysRunOptions[2].commandPattern).toBe("cat")
 						expect(alwaysRunOptions[3].commandPattern).toBe("cat README.md")
 						expect(alwaysRunOptions[4].commandPattern).toBe("tail")
 						expect(alwaysRunOptions[5].commandPattern).toBe("tail -20")
+						expect(alwaysRunOptions[6].commandPattern).toBe("ls . && cat README.md | tail -20")
 					})
 	
 					it("should filter already allowed commands in chained commands", () => {
@@ -365,16 +369,17 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "git pull || echo 'Pull failed'")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: git, git pull, echo
+
+						// Should have options for: git, git pull, echo, full command
 						// Note: "echo" is special-cased to not generate hierarchy, only "echo" itself
-						expect(alwaysRunOptions.length).toBe(3)
+						expect(alwaysRunOptions.length).toBe(4)
 						expect(alwaysRunOptions[0].commandPattern).toBe("git")
 						expect(alwaysRunOptions[1].commandPattern).toBe("git pull")
 						expect(alwaysRunOptions[2].commandPattern).toBe("echo")
+						expect(alwaysRunOptions[3].commandPattern).toBe("git pull || echo 'Pull failed'")
 					})
 	
 					it("should special-case echo to not generate hierarchy", () => {
@@ -382,13 +387,14 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "echo 'Hello World'")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should only have "echo", not "echo 'Hello" or "echo 'Hello World'"
-						expect(alwaysRunOptions.length).toBe(1)
+
+						// Should have "echo" and full command, not "echo 'Hello" or "echo 'Hello World'"
+						expect(alwaysRunOptions.length).toBe(2)
 						expect(alwaysRunOptions[0].commandPattern).toBe("echo")
+						expect(alwaysRunOptions[1].commandPattern).toBe("echo 'Hello World'")
 					})
 	
 					it("should handle ; chain", () => {
@@ -397,15 +403,16 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "npm install ; npm test")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: npm, npm install, npm, npm test (npm appears twice but deduplicated)
-						expect(alwaysRunOptions.length).toBe(3)
+
+						// Should have options for: npm, npm install, npm, npm test (npm appears twice but deduplicated), full command
+						expect(alwaysRunOptions.length).toBe(4)
 						expect(alwaysRunOptions[0].commandPattern).toBe("npm")
 						expect(alwaysRunOptions[1].commandPattern).toBe("npm install")
 						expect(alwaysRunOptions[2].commandPattern).toBe("npm test")
+						expect(alwaysRunOptions[3].commandPattern).toBe("npm install ; npm test")
 					})
 	
 					it("should handle chained command with JSON format", () => {
@@ -414,16 +421,17 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", JSON.stringify({ command: "ls . && cat README.md" }))
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						const alwaysRunOptions = options.filter((opt) => opt.action === "approve-and-remember")
-	
-						// Should have options for: ls, ls ., cat, cat README.md
-						expect(alwaysRunOptions.length).toBe(4)
+
+						// Should have options for: ls, ls ., cat, cat README.md, full command
+						expect(alwaysRunOptions.length).toBe(5)
 						expect(alwaysRunOptions[0].commandPattern).toBe("ls")
 						expect(alwaysRunOptions[1].commandPattern).toBe("ls .")
 						expect(alwaysRunOptions[2].commandPattern).toBe("cat")
 						expect(alwaysRunOptions[3].commandPattern).toBe("cat README.md")
+						expect(alwaysRunOptions[4].commandPattern).toBe("ls . && cat README.md")
 					})
 	
 					it("should assign sequential hotkeys for chained command options", () => {
@@ -432,13 +440,14 @@ describe("approval atoms", () => {
 						store.set(configAtom, createConfigWithAllowedCommands([]))
 						const message = createMessage("command", "ls && cat | tail")
 						store.set(pendingApprovalAtom, message)
-	
+
 						const options = store.get(approvalOptionsAtom)
 						expect(options[0].hotkey).toBe("y") // Run Command
 						expect(options[1].hotkey).toBe("1") // Always Run "ls"
 						expect(options[2].hotkey).toBe("2") // Always Run "cat"
 						expect(options[3].hotkey).toBe("3") // Always Run "tail"
-						expect(options[4].hotkey).toBe("n") // Reject
+						expect(options[4].hotkey).toBe("4") // Always Run "ls && cat | tail"
+						expect(options[5].hotkey).toBe("n") // Reject
 					})
 				})
 			})

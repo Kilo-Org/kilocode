@@ -113,6 +113,7 @@ function parseCommandHierarchy(command: string): string[] {
  * - "ls", "ls ."
  * - "cat", "cat README.md"
  * - "tail", "tail -20"
+ * - "ls . && cat README.md | tail -20" (full command)
  */
 function generateCommandHierarchyForChain(fullCommand: string): string[] {
 	const commands = splitCommandChain(fullCommand)
@@ -122,6 +123,9 @@ function generateCommandHierarchyForChain(fullCommand: string): string[] {
 		const hierarchy = parseCommandHierarchy(command)
 		allHierarchies.push(...hierarchy)
 	}
+
+	// Add the full command at the end so users can approve the exact command chain
+	allHierarchies.push(fullCommand)
 
 	// Remove duplicates while preserving order
 	return [...new Set(allHierarchies)]
