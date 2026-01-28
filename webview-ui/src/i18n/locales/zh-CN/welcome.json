@@ -53,5 +53,48 @@
 		"helpImprove": "帮助改进 Kilo Code",
 		"helpImproveMessage": "Kilo Code 收集错误和使用数据以帮助我们修复错误并改进扩展。此遥测不会收集代码、提示词或个人信息。你可以在<settingsLink>设置</settingsLink>中关闭此功能。"
 	},
-	"importSettings": "导入设置"
+	"importSettings": "导入设置",
+	"noFolderNoHistory": {
+		"heading": "欢迎使用 Kilo Code！",
+		"description": "要开始使用，请打开一个文件夹或克隆一个仓库。或者用一个有趣的项目来试试 Kilo Code！",
+		"openFolder": "打开文件夹",
+		"cloneRepository": "克隆仓库",
+		"orTryFunProject": "或者尝试一个有趣的项目：",
+		"projects": {
+			"snake": "创建贪吃蛇游戏",
+			"todo": "创建待办事项应用",
+			"weather": "创建天气仪表盘"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "让我们开始你的项目吧！",
+		"description": "以下是我可以帮助你的一些事情：",
+		"prompts": {
+			"explainStructure": "解释这个项目的结构",
+			"findBugs": "查找当前文件中的潜在 bug",
+			"writeTests": "为选中的代码编写测试",
+			"improveCode": "为这段代码提出改进建议",
+			"addDocumentation": "为这个项目添加文档"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "此模型需要订阅",
+			"description": "订阅 Kilo Code Gateway 以灵活的价格获取高级模型的访问权限。",
+			"subscribe": "订阅 Kilo Gateway",
+			"useOwnKey": "或使用你自己的 API 密钥"
+		},
+		"withoutSubscription": {
+			"heading": "此模型需要 API 密钥",
+			"description": "此模型不支持 Kilo Gateway 订阅。你需要配置自己的 API 密钥。",
+			"configureProvider": "配置提供商设置",
+			"orCreateAccount": "或创建 Kilo 账户以使用其他模型"
+		}
+	},
+	"rateLimit": {
+		"heading": "你已达到免费使用限制",
+		"description": "创建 Kilo Code 账户以继续使用免费模型，或等待你的限制重置。",
+		"waitTime": "你的限制将在 {{minutes}} 分钟后重置",
+		"createAccount": "创建 Kilo 账户"
+	}
 }

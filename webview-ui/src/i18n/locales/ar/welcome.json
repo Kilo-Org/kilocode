@@ -54,5 +54,48 @@
 		"helpImprove": "ساهم في تحسين Kilo Code",
 		"helpImproveMessage": "يجمع Kilo Code بيانات الأخطاء والاستخدام لمساعدتنا في إصلاح الأخطاء وتحسين الإضافة. هذه البيانات التشخيصية لا تجمع الكود أو المطالبات أو المعلومات الشخصية. يمكنك إيقاف هذا في <settingsLink>الإعدادات</settingsLink>."
 	},
-	"importSettings": "استيراد الإعدادات"
+	"importSettings": "استيراد الإعدادات",
+	"noFolderNoHistory": {
+		"heading": "مرحبًا بك في Kilo Code!",
+		"description": "للبدء، افتح مجلد أو استنسخ مستودع. أو جرّب Kilo Code مع مشروع ممتع!",
+		"openFolder": "فتح مجلد",
+		"cloneRepository": "استنساخ مستودع",
+		"orTryFunProject": "أو جرّب مشروع ممتع:",
+		"projects": {
+			"snake": "بناء لعبة الثعبان",
+			"todo": "إنشاء تطبيق مهام",
+			"weather": "إنشاء لوحة الطقس"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "لنبدأ مع مشروعك!",
+		"description": "إليك بعض الأشياء التي يمكنني مساعدتك بها:",
+		"prompts": {
+			"explainStructure": "اشرح هيكل هذا المشروع",
+			"findBugs": "ابحث عن الأخطاء المحتملة في الملف الحالي",
+			"writeTests": "اكتب اختبارات للكود المحدد",
+			"improveCode": "اقترح تحسينات لهذا الكود",
+			"addDocumentation": "أضف توثيق لهذا المشروع"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "هذا النموذج يتطلب اشتراك",
+			"description": "اشترك في Kilo Code Gateway للوصول إلى النماذج المميزة بأسعار مرنة.",
+			"subscribe": "اشترك في Kilo Gateway",
+			"useOwnKey": "أو استخدم مفتاح API الخاص بك"
+		},
+		"withoutSubscription": {
+			"heading": "هذا النموذج يتطلب مفتاح API",
+			"description": "هذا النموذج لا يدعم اشتراكات Kilo Gateway. ستحتاج إلى إعداد مفتاح API الخاص بك.",
+			"configureProvider": "إعداد المزوّد",
+			"orCreateAccount": "أو أنشئ حساب Kilo للنماذج الأخرى"
+		}
+	},
+	"rateLimit": {
+		"heading": "وصلت إلى حد الاستخدام المجاني",
+		"description": "أنشئ حساب Kilo Code لمتابعة استخدام النماذج المجانية، أو انتظر حتى يتم إعادة تعيين الحد.",
+		"waitTime": "سيتم إعادة تعيين الحد خلال {{minutes}} دقيقة",
+		"createAccount": "إنشاء حساب Kilo"
+	}
 }

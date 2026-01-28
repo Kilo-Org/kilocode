@@ -53,5 +53,48 @@
 		"helpImprove": "Pomóż ulepszyć Kilo Code",
 		"helpImproveMessage": "Kilo Code zbiera dane o błędach i użyciu, aby pomóc nam w naprawianiu błędów i ulepszaniu rozszerzenia. Ta telemetria nie zbiera kodu, promptów ani informacji osobistych. Możesz to wyłączyć w <settingsLink>ustawieniach</settingsLink>."
 	},
-	"importSettings": "Importuj ustawienia"
+	"importSettings": "Importuj ustawienia",
+	"noFolderNoHistory": {
+		"heading": "Witaj w Kilo Code!",
+		"description": "Aby rozpocząć, otwórz folder lub sklonuj repozytorium. Lub wypróbuj Kilo Code z zabawnym projektem!",
+		"openFolder": "Otwórz folder",
+		"cloneRepository": "Sklonuj repozytorium",
+		"orTryFunProject": "Lub wypróbuj zabawny projekt:",
+		"projects": {
+			"snake": "Zbuduj grę Snake",
+			"todo": "Stwórz aplikację Todo",
+			"weather": "Stwórz panel pogodowy"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Zacznijmy z twoim projektem!",
+		"description": "Oto kilka rzeczy, w których mogę ci pomóc:",
+		"prompts": {
+			"explainStructure": "Wyjaśnij strukturę tego projektu",
+			"findBugs": "Znajdź potencjalne błędy w bieżącym pliku",
+			"writeTests": "Napisz testy dla wybranego kodu",
+			"improveCode": "Zaproponuj ulepszenia dla tego kodu",
+			"addDocumentation": "Dodaj dokumentację do tego projektu"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Ten model wymaga subskrypcji",
+			"description": "Subskrybuj Kilo Code Gateway, aby uzyskać dostęp do modeli premium z elastycznymi cenami.",
+			"subscribe": "Subskrybuj Kilo Gateway",
+			"useOwnKey": "lub użyj własnego klucza API"
+		},
+		"withoutSubscription": {
+			"heading": "Ten model wymaga klucza API",
+			"description": "Ten model nie obsługuje subskrypcji Kilo Gateway. Musisz skonfigurować własny klucz API.",
+			"configureProvider": "Skonfiguruj ustawienia dostawcy",
+			"orCreateAccount": "lub utwórz konto Kilo dla innych modeli"
+		}
+	},
+	"rateLimit": {
+		"heading": "Osiągnąłeś limit bezpłatnego użycia",
+		"description": "Utwórz konto Kilo Code, aby kontynuować korzystanie z bezpłatnych modeli, lub poczekaj na zresetowanie limitu.",
+		"waitTime": "Twój limit zostanie zresetowany za {{minutes}} minut",
+		"createAccount": "Utwórz konto Kilo"
+	}
 }

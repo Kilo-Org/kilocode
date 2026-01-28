@@ -53,5 +53,48 @@
 		"helpImprove": "Bantu Tingkatkan Kilo Code",
 		"helpImproveMessage": "Kilo Code mengumpulkan data error dan penggunaan untuk membantu kami memperbaiki bug dan meningkatkan ekstensi. Telemetri ini tidak mengumpulkan kode, prompts, atau informasi pribadi. Anda dapat mematikan ini di <settingsLink>pengaturan</settingsLink>."
 	},
-	"importSettings": "Impor Pengaturan"
+	"importSettings": "Impor Pengaturan",
+	"noFolderNoHistory": {
+		"heading": "Selamat datang di Kilo Code!",
+		"description": "Untuk memulai, buka folder atau clone repository. Atau coba Kilo Code dengan proyek yang menyenangkan!",
+		"openFolder": "Buka Folder",
+		"cloneRepository": "Clone Repository",
+		"orTryFunProject": "Atau coba proyek yang menyenangkan:",
+		"projects": {
+			"snake": "Buat Game Snake",
+			"todo": "Buat Aplikasi Todo",
+			"weather": "Buat Dashboard Cuaca"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Mari mulai dengan proyekmu!",
+		"description": "Berikut beberapa hal yang bisa saya bantu:",
+		"prompts": {
+			"explainStructure": "Jelaskan struktur proyek ini",
+			"findBugs": "Temukan bug potensial di file saat ini",
+			"writeTests": "Tulis tes untuk kode yang dipilih",
+			"improveCode": "Sarankan perbaikan untuk kode ini",
+			"addDocumentation": "Tambahkan dokumentasi ke proyek ini"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Model ini memerlukan langganan",
+			"description": "Berlangganan Kilo Code Gateway untuk mendapatkan akses ke model premium dengan harga fleksibel.",
+			"subscribe": "Berlangganan Kilo Gateway",
+			"useOwnKey": "atau gunakan API key milikmu sendiri"
+		},
+		"withoutSubscription": {
+			"heading": "Model ini memerlukan API key",
+			"description": "Model ini tidak mendukung langganan Kilo Gateway. Kamu perlu mengkonfigurasi API key milikmu sendiri.",
+			"configureProvider": "Konfigurasi Pengaturan Provider",
+			"orCreateAccount": "atau buat akun Kilo untuk model lainnya"
+		}
+	},
+	"rateLimit": {
+		"heading": "Kamu telah mencapai batas penggunaan gratis",
+		"description": "Buat akun Kilo Code untuk terus menggunakan model gratis, atau tunggu batasmu direset.",
+		"waitTime": "Batasmu akan direset dalam {{minutes}} menit",
+		"createAccount": "Buat Akun Kilo"
+	}
 }

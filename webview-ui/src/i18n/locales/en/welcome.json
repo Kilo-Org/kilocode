@@ -54,7 +54,6 @@
 		"helpImproveMessage": "Kilo Code collects error and usage data to help us fix bugs and improve the extension. This telemetry does not collect code, prompts or personal information. You can turn this off in <settingsLink>settings</settingsLink>."
 	},
 	"importSettings": "Import Settings",
-	// kilocode_change start: Onboarding translations
 	"noFolderNoHistory": {
 		"heading": "Welcome to Kilo Code!",
 		"description": "To get started, open a folder or clone a repository. Or try out Kilo Code with a fun project!",
@@ -92,7 +91,6 @@
 			"orCreateAccount": "or create a Kilo account for other models"
 		}
 	},
-	// kilocode_change end
 	"rateLimit": {
 		"heading": "You've reached your free usage limit",
 		"description": "Create a Kilo Code account to continue using free models, or wait for your limit to reset.",

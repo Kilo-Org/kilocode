@@ -53,5 +53,48 @@
 		"helpImprove": "Ajuda a millorar Kilo Code",
 		"helpImproveMessage": "Kilo Code recull dades d'errors i ús per ajudar-nos a corregir errors i millorar l'extensió. Aquesta telemetria no recull codi, prompts o informació personal. Pots desactivar això a la <settingsLink>configuració</settingsLink>."
 	},
-	"importSettings": "Importa la configuració"
+	"importSettings": "Importa la configuració",
+	"noFolderNoHistory": {
+		"heading": "Benvingut a Kilo Code!",
+		"description": "Per començar, obre una carpeta o clona un repositori. O prova Kilo Code amb un projecte divertit!",
+		"openFolder": "Obre carpeta",
+		"cloneRepository": "Clona repositori",
+		"orTryFunProject": "O prova un projecte divertit:",
+		"projects": {
+			"snake": "Construeix un joc de la serp",
+			"todo": "Crea una aplicació de tasques",
+			"weather": "Fes un tauler meteorològic"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Comencem amb el teu projecte!",
+		"description": "Aquí tens algunes coses amb les quals et puc ajudar:",
+		"prompts": {
+			"explainStructure": "Explica l'estructura d'aquest projecte",
+			"findBugs": "Troba errors potencials al fitxer actual",
+			"writeTests": "Escriu tests per al codi seleccionat",
+			"improveCode": "Suggereix millores per a aquest codi",
+			"addDocumentation": "Afegeix documentació a aquest projecte"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Aquest model requereix una subscripció",
+			"description": "Subscriu-te a Kilo Code Gateway per accedir a models premium amb preus flexibles.",
+			"subscribe": "Subscriu-te a Kilo Gateway",
+			"useOwnKey": "o utilitza la teva pròpia clau API"
+		},
+		"withoutSubscription": {
+			"heading": "Aquest model requereix una clau API",
+			"description": "Aquest model no admet subscripcions de Kilo Gateway. Hauràs de configurar la teva pròpia clau API.",
+			"configureProvider": "Configura els paràmetres del proveïdor",
+			"orCreateAccount": "o crea un compte Kilo per a altres models"
+		}
+	},
+	"rateLimit": {
+		"heading": "Has assolit el límit d'ús gratuït",
+		"description": "Crea un compte Kilo Code per continuar utilitzant models gratuïts, o espera que es reiniciï el teu límit.",
+		"waitTime": "El teu límit es reiniciarà en {{minutes}} minuts",
+		"createAccount": "Crea compte Kilo"
+	}
 }

@@ -53,5 +53,48 @@
 		"helpImprove": "Kilo Code'u Geliştirmeye Yardım Et",
 		"helpImproveMessage": "Kilo Code, hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri toplar. Bu telemetri kod, prompts veya kişisel bilgi toplamaz. Bunu <settingsLink>ayarlar</settingsLink>da kapatabilirsin."
 	},
-	"importSettings": "Ayarları İçe Aktar"
+	"importSettings": "Ayarları İçe Aktar",
+	"noFolderNoHistory": {
+		"heading": "Kilo Code'a Hoş Geldin!",
+		"description": "Başlamak için bir klasör aç veya bir depo klonla. Ya da eğlenceli bir projeyle Kilo Code'u dene!",
+		"openFolder": "Klasör Aç",
+		"cloneRepository": "Depo Klonla",
+		"orTryFunProject": "Ya da eğlenceli bir proje dene:",
+		"projects": {
+			"snake": "Yılan Oyunu Yap",
+			"todo": "Yapılacaklar Uygulaması Oluştur",
+			"weather": "Hava Durumu Paneli Yap"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Projene başlayalım!",
+		"description": "İşte sana yardımcı olabileceğim bazı şeyler:",
+		"prompts": {
+			"explainStructure": "Bu projenin yapısını açıkla",
+			"findBugs": "Mevcut dosyada potansiyel hataları bul",
+			"writeTests": "Seçili kod için testler yaz",
+			"improveCode": "Bu kod için iyileştirmeler öner",
+			"addDocumentation": "Bu projeye dokümantasyon ekle"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Bu model abonelik gerektiriyor",
+			"description": "Esnek fiyatlandırmayla premium modellere erişmek için Kilo Code Gateway'e abone ol.",
+			"subscribe": "Kilo Gateway'e Abone Ol",
+			"useOwnKey": "veya kendi API anahtarını kullan"
+		},
+		"withoutSubscription": {
+			"heading": "Bu model API anahtarı gerektiriyor",
+			"description": "Bu model Kilo Gateway aboneliklerini desteklemiyor. Kendi API anahtarını yapılandırman gerekiyor.",
+			"configureProvider": "Sağlayıcı Ayarlarını Yapılandır",
+			"orCreateAccount": "veya diğer modeller için Kilo hesabı oluştur"
+		}
+	},
+	"rateLimit": {
+		"heading": "Ücretsiz kullanım limitine ulaştın",
+		"description": "Ücretsiz modelleri kullanmaya devam etmek için Kilo Code hesabı oluştur veya limitinin sıfırlanmasını bekle.",
+		"waitTime": "Limitin {{minutes}} dakika içinde sıfırlanacak",
+		"createAccount": "Kilo Hesabı Oluştur"
+	}
 }

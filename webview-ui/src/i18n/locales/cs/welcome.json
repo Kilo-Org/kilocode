@@ -68,5 +68,48 @@
 		"helpImproveMessage": "Kilo Code sbírá data o chybách a používání, aby nám pomohl opravit chyby a vylepšit rozšíření. Tato telemetrie nesbírá kód, prompts ani osobní informace. Můžeš to vypnout v <settingsLink>nastavení</settingsLink>.",
 		"changeSettings": "Toto můžete později změnit v dolní části <settingsLink>nastavení</settingsLink>"
 	},
-	"importSettings": "Importovat Nastavení"
+	"importSettings": "Importovat Nastavení",
+	"noFolderNoHistory": {
+		"heading": "Vítej v Kilo Code!",
+		"description": "Pro začátek otevři složku nebo naklonuj repozitář. Nebo si vyzkoušej Kilo Code na zábavném projektu!",
+		"openFolder": "Otevřít složku",
+		"cloneRepository": "Naklonovat repozitář",
+		"orTryFunProject": "Nebo zkus zábavný projekt:",
+		"projects": {
+			"snake": "Vytvoř hru Snake",
+			"todo": "Vytvoř Todo aplikaci",
+			"weather": "Vytvoř panel počasí"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Pojďme začít s tvým projektem!",
+		"description": "Tady je pár věcí, se kterými ti můžu pomoct:",
+		"prompts": {
+			"explainStructure": "Vysvětli strukturu tohoto projektu",
+			"findBugs": "Najdi potenciální chyby v aktuálním souboru",
+			"writeTests": "Napiš testy pro vybraný kód",
+			"improveCode": "Navrhni vylepšení pro tento kód",
+			"addDocumentation": "Přidej dokumentaci k tomuto projektu"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Tento model vyžaduje předplatné",
+			"description": "Přihlas se k odběru Kilo Code Gateway pro přístup k prémiovým modelům s flexibilními cenami.",
+			"subscribe": "Přihlásit se k Kilo Gateway",
+			"useOwnKey": "nebo použij vlastní API klíč"
+		},
+		"withoutSubscription": {
+			"heading": "Tento model vyžaduje API klíč",
+			"description": "Tento model nepodporuje předplatné Kilo Gateway. Budeš muset nakonfigurovat vlastní API klíč.",
+			"configureProvider": "Konfigurovat nastavení poskytovatele",
+			"orCreateAccount": "nebo si vytvoř účet Kilo pro jiné modely"
+		}
+	},
+	"rateLimit": {
+		"heading": "Dosáhl jsi limitu bezplatného používání",
+		"description": "Vytvoř si účet Kilo Code pro pokračování v používání bezplatných modelů, nebo počkej na reset limitu.",
+		"waitTime": "Tvůj limit se resetuje za {{minutes}} minut",
+		"createAccount": "Vytvořit účet Kilo"
+	}
 }
