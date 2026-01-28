@@ -117,6 +117,9 @@ export namespace ModelsDev {
                 id: "minimax/minimax-m2.1:free",
                 name: "Minimax M2.1 (Free)",
                 family: "minimax",
+                release_date: "2024-01-01",
+                attachment: false,
+                reasoning: false,
                 tool_call: true,
                 temperature: true,
                 cost: {
@@ -125,6 +128,7 @@ export namespace ModelsDev {
                 },
                 limit: {
                   context: 128000,
+                  input: 128000,
                   output: 8192,
                 },
               },
