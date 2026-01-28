@@ -12,6 +12,7 @@ import { ModelCache } from "./model-cache" // kilocode_change
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
 
+// kilocode_change start
 const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
   if (!baseURL) return undefined
   const trimmed = baseURL.replace(/\/+$/, "")
@@ -23,7 +24,7 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (trimmed.includes("/openrouter")) return trimmed
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`
-} // kilocode_change
+} // kilocode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -120,10 +121,10 @@ export namespace ModelsDev {
 
     // Inject kilo provider with dynamic model fetching
     if (!providers["kilo"]) {
-      const config = await Config.get() // kilocode_change
-      const kiloOptions = config.provider?.kilo?.options // kilocode_change
-      const kiloOrgId = kiloOptions?.kilocodeOrganizationId // kilocode_change
-      const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId) // kilocode_change
+      const config = await Config.get()
+      const kiloOptions = config.provider?.kilo?.options
+      const kiloOrgId = kiloOptions?.kilocodeOrganizationId
+      const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
       const kiloFetchOptions = {
         ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
         ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
@@ -132,7 +133,7 @@ export namespace ModelsDev {
         ? `https://api.kilo.ai/api/organizations/${kiloOrgId}`
         : "https://api.kilo.ai/api/openrouter"
       const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
-      const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`) // kilocode_change
+      const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`)
       const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
       providers["kilo"] = {
         id: "kilo",
