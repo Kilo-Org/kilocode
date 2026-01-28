@@ -258,6 +258,10 @@ export interface ExtensionMessage {
 		| "taskWithAggregatedCosts"
 		| "skillsData"
 		| "askReviewScope" // kilocode_change: Review mode scope selection
+		| "workspaceState"
+		| "editorState"
+		| "rateLimitStatus"
+		| "rateLimitReached"
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -460,6 +464,13 @@ export interface ExtensionMessage {
 		error?: string
 	}
 	// kilocode_change end: Review mode
+	// Onboarding flow message properties
+	hasFolder?: boolean
+	hasHistory?: boolean
+	hasOpenFile?: boolean
+	hasSelectedCode?: boolean
+	isLimited?: boolean
+	resetTime?: number | null
 }
 
 export type ExtensionState = Pick<
@@ -949,6 +960,11 @@ export interface WebviewMessage {
 		| "debugSetting"
 		| "refreshSkills"
 		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
+		| "openFolder"
+		| "showCloneDialog"
+		| "checkWorkspaceState"
+		| "checkEditorState"
+		| "checkRateLimit"
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
