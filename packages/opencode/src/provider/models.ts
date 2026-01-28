@@ -108,25 +108,49 @@ export namespace ModelsDev {
     // Inject kilo provider with dynamic model fetching
     if (!providers["kilo"]) {
       const config = await Config.get() // kilocode_change
-      const kiloBaseURL = config.provider?.kilo?.options?.baseURL // kilocode_change
+      const configuredBaseURL = config.provider?.kilo?.options?.baseURL // kilocode_change
       const kiloOrgId = config.provider?.kilo?.options?.kilocodeOrganizationId // kilocode_change
 
-      const kiloFetchOptions = {
-        ...(kiloBaseURL ? { baseURL: kiloBaseURL } : {}),
-        ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
-      }
+      const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "") // kilocode_change
 
       const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`) // kilocode_change
 
-      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+      const normalizeBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
+        if (!baseURL) return undefined
 
-      const providerApiSource = kiloBaseURL ?? "https://api.kilo.ai/api/openrouter"
+        const trimmed = trimTrailingSlash(baseURL)
+
+        if (orgId) {
+          if (trimmed.includes("/api/organizations/")) return trimmed
+          if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${orgId}`
+          return `${trimmed}/api/organizations/${orgId}`
+        }
+
+        if (trimmed.includes("/openrouter")) return trimmed
+        if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
+        return `${trimmed}/api/openrouter`
+      } // kilocode_change
+
+      const normalizedBaseURL = normalizeBaseURL(configuredBaseURL, kiloOrgId) // kilocode_change
+
+      const kiloFetchOptions = {
+        ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
+        ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
+      }
+
+      const defaultBaseURL = kiloOrgId
+        ? `https://api.kilo.ai/api/organizations/${kiloOrgId}`
+        : "https://api.kilo.ai/api/openrouter"
+
+      const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
+
+      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
 
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
         env: [],
-        api: ensureTrailingSlash(providerApiSource),
+        api: ensureTrailingSlash(providerBaseURL),
         npm: "@kilocode/kilo-gateway",
         models: kiloModels,
       }
