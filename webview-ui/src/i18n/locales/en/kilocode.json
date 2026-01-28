@@ -55,6 +55,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code",
+			"loginForPremiumModels": "Log in to access premium models & features",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Manage Organization-level Provider Routing",

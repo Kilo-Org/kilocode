@@ -59,6 +59,7 @@
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
 			"logout": "Đăng xuất khỏi Kilo Code",
+			"loginForPremiumModels": "Đăng nhập để truy cập các mô hình và tính năng premium",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
 				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",

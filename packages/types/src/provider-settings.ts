@@ -388,7 +388,11 @@ const doubaoSchema = apiModelIdProviderModelSchema.extend({
 
 const moonshotSchema = apiModelIdProviderModelSchema.extend({
 	moonshotBaseUrl: z
-		.union([z.literal("https://api.moonshot.ai/v1"), z.literal("https://api.moonshot.cn/v1")])
+		.union([
+			z.literal("https://api.moonshot.ai/v1"),
+			z.literal("https://api.moonshot.cn/v1"),
+			z.literal("https://api.kimi.com/coding/v1"),
+		])
 		.optional(),
 	moonshotApiKey: z.string().optional(),
 })

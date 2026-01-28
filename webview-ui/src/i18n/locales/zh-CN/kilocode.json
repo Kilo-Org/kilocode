@@ -60,6 +60,7 @@
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
 			"logout": "退出 Kilo Code",
+			"loginForPremiumModels": "登录以访问高级模型和功能",
 			"providerRouting": {
 				"title": "提供商路由",
 				"managedByOrganization": "管理组织级提供商路由",

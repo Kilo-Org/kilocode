@@ -47,6 +47,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
 			"logout": "Odhlásit se z Kilo Code",
+			"loginForPremiumModels": "Přihlas se pro přístup k prémiovým modelům a funkcím",
 			"providerRouting": {
 				"title": "Směrování poskytovatelů",
 				"managedByOrganization": "Spravovat směrování poskytovatelů na úrovni organizace",

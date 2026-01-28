@@ -60,6 +60,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "เข้าสู่ระบบที่ Kilo Code",
 			"logout": "ออกจากระบบ Kilo Code",
+			"loginForPremiumModels": "เข้าสู่ระบบเพื่อเข้าถึงโมเดลและฟีเจอร์พรีเมียม",
 			"providerRouting": {
 				"title": "การกำหนดเส้นทางผู้ให้บริการ",
 				"createOrganization": "สร้างองค์กรเพื่อจัดการการกำหนดเส้นทางผู้ให้บริการ",

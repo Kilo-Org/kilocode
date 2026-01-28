@@ -40,6 +40,7 @@
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
 			"logout": "Wyloguj się z Kilo Code",
+			"loginForPremiumModels": "Zaloguj się, aby uzyskać dostęp do modeli i funkcji premium",
 			"providerRouting": {
 				"title": "Routing dostawców",
 				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",

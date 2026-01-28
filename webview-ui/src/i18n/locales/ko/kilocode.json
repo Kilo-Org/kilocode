@@ -47,6 +47,7 @@
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃",
+			"loginForPremiumModels": "로그인하여 프리미엄 모델 및 기능에 액세스하세요",
 			"providerRouting": {
 				"title": "공급자 라우팅",
 				"managedByOrganization": "조직 수준 공급자 라우팅 관리",
