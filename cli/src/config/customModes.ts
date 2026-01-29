@@ -156,15 +156,18 @@ async function loadGlobalCustomModes(): Promise<{ modes: ModeConfig[]; pathInfo:
 		return { modes: [], pathInfo }
 	}
 
+	pathInfo.found = true
+
 	try {
 		const content = await readFile(globalPath, "utf-8")
 		const modes = parseCustomModes(content, "global")
-		pathInfo.found = true
 		pathInfo.modesCount = modes.length
 		logs.debug(`Loaded ${modes.length} global custom mode(s) from: ${globalPath}`, "CustomModes")
 		return { modes, pathInfo }
 	} catch (error) {
-		logs.debug(`Failed to read global custom modes file: ${globalPath}`, "CustomModes", { error })
+		logs.warn(`Custom modes file exists but cannot be read: ${globalPath}. File will be skipped.`, "CustomModes", {
+			error: error instanceof Error ? error.message : String(error),
+		})
 		return { modes: [], pathInfo }
 	}
 }
@@ -188,15 +191,18 @@ async function loadProjectCustomModes(workspace: string): Promise<{ modes: ModeC
 		return { modes: [], pathInfo }
 	}
 
+	pathInfo.found = true
+
 	try {
 		const content = await readFile(projectPath, "utf-8")
 		const modes = parseCustomModes(content, "project")
-		pathInfo.found = true
 		pathInfo.modesCount = modes.length
 		logs.debug(`Loaded ${modes.length} project custom mode(s) from: ${projectPath}`, "CustomModes")
 		return { modes, pathInfo }
 	} catch (error) {
-		logs.debug(`Failed to read project custom modes file: ${projectPath}`, "CustomModes", { error })
+		logs.warn(`Custom modes file exists but cannot be read: ${projectPath}. File will be skipped.`, "CustomModes", {
+			error: error instanceof Error ? error.message : String(error),
+		})
 		return { modes: [], pathInfo }
 	}
 }

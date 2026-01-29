@@ -67,7 +67,7 @@ program
 		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
 		// This is a defensive check for cases where Commander.js routing might not work as expected
 		// (e.g., when spawned as a child process with stdin disconnected)
-		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		const SUBCOMMANDS = ["auth", "config", "debug", "models", "providers", "modes", "profile"]
 		if (SUBCOMMANDS.includes(prompt)) {
 			return
 		}
@@ -402,6 +402,58 @@ program
 	.action(async (options: { provider?: string; json?: boolean }) => {
 		const { modelsApiCommand } = await import("./commands/models-api.js")
 		await modelsApiCommand(options)
+	})
+
+function validateListSubcommand(subcommand: string): void {
+	if (subcommand && subcommand !== "list") {
+		console.log(
+			JSON.stringify(
+				{
+					error: 'Unknown subcommand. Available: "list"',
+					code: "INVALID_SUBCOMMAND",
+				},
+				null,
+				2,
+			),
+		)
+		process.exit(1)
+	}
+}
+
+// Providers command - list configured providers as JSON
+program
+	.command("providers")
+	.description("List configured providers as JSON")
+	.argument("[subcommand]", "Subcommand: list", "list")
+	.action(async (subcommand: string) => {
+		validateListSubcommand(subcommand)
+
+		const { providersApiCommand } = await import("./commands/providers-api.js")
+		await providersApiCommand()
+	})
+
+// Modes command - list available modes as JSON
+program
+	.command("modes")
+	.description("List available modes as JSON")
+	.argument("[subcommand]", "Subcommand: list", "list")
+	.option("--workspace <path>", "Path to the workspace directory", process.cwd())
+	.action(async (subcommand: string, options: { workspace?: string }) => {
+		validateListSubcommand(subcommand)
+
+		const { modesApiCommand } = await import("./commands/modes-api.js")
+		// Normalize workspace to string (Commander.js default already ensures it's defined)
+		const workspace = options.workspace || process.cwd()
+		await modesApiCommand({ workspace })
+	})
+
+// Profile command - show current Kilocode profile as JSON
+program
+	.command("profile")
+	.description("Show profile information for the current Kilocode user as JSON")
+	.action(async () => {
+		const { profileApiCommand } = await import("./commands/profile-api.js")
+		await profileApiCommand()
 	})
 
 // Handle process termination signals
