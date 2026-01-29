@@ -108,6 +108,29 @@ pnpm lint             # Run ESLint
 pnpm check-types      # TypeScript type checking
 ```
 
+## Issue Tracking
+
+This project uses **bd (beads)** for issue tracking.
+Run `bd prime` for workflow context, or install hooks (`bd hooks install`) for auto-injection.
+
+**Quick reference:**
+- `bd ready` - Find unblocked work
+- `bd create "Title" --type task --priority 2` - Create issue
+- `bd close <id>` - Complete work
+- `bd sync` - Sync with git (run at session end)
+
+For full workflow details: `bd prime`
+
+## GitHub Workflow
+
+- Use the GitHub CLI (`gh`) for interacting with GitHub (issues, PRs, reviews, releases) instead of the web UI when practical.
+  - Examples: `gh issue list`, `gh issue view <id>`, `gh pr create`, `gh pr checkout <id>`, `gh pr review`.
+- Sign any GitHub comments you leave (issues/PRs/reviews) with your full name.
+  - Example (end of comment): `— Full Name`
+- Sign your commits with your full name.
+  - Ensure your Git author name is your full name (not a handle): `git config user.name "Full Name"`.
+  - Include a sign-off line in commits: `git commit -s ...` (adds `Signed-off-by: Full Name`).
+
 ## Skills
 
 - **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
@@ -225,3 +248,29 @@ Keep changes to core extension code minimal to reduce merge conflicts during ups
     - Use Tailwind CSS classes instead of inline style objects for new markup
     - VSCode CSS variables must be added to webview-ui/src/index.css before using them in Tailwind classes
     - Example: `<div className="text-md text-vscode-descriptionForeground mb-2" />` instead of style objects
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
