@@ -2197,6 +2197,56 @@ describe("ClineProvider", () => {
 				{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
 			])
 		})
+
+		// kilocode_change start: Test for anonymous user model change fix
+		test("handles upsertApiConfiguration when currentApiConfigName is undefined (anonymous user)", async () => {
+			await provider.resolveWebviewView(mockWebviewView)
+			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
+
+			// Mock globalState.get to return undefined for currentApiConfigName to simulate anonymous user
+			;(mockContext.globalState.get as any).mockImplementation((key: string) => {
+				if (key === "currentApiConfigName") {
+					return undefined // Simulate anonymous user with no currentApiConfigName set
+				}
+				return null
+			})
+			;(provider as any).providerSettingsManager = {
+				setModeConfig: vi.fn(),
+				saveConfig: vi.fn().mockResolvedValue(undefined),
+				listConfig: vi.fn().mockResolvedValue([{ name: "default", id: "default-id", apiProvider: "kilocode" }]),
+				getProfile: vi.fn().mockResolvedValue({
+					name: "default",
+					apiProvider: "kilocode",
+					kilocodeModel: "minimax/minimax-m2.1:free",
+					id: "default-id",
+				}),
+			} as any
+
+			const testApiConfig = {
+				apiProvider: "kilocode" as const,
+				kilocodeModel: "anthropic/claude-sonnet-4:free",
+			}
+
+			// Trigger upsertApiConfiguration with "default" profile name
+			// This simulates what happens when an anonymous user changes the model
+			await messageHandler({
+				type: "upsertApiConfiguration",
+				text: "default",
+				apiConfiguration: testApiConfig,
+			})
+
+			// Verify config was saved
+			expect(provider.providerSettingsManager.saveConfig).toHaveBeenCalledWith("default", testApiConfig)
+
+			// Verify state was updated (listApiConfigMeta update indicates profile was processed)
+			expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
+				{ name: "default", id: "default-id", apiProvider: "kilocode" },
+			])
+
+			// Verify state was posted to webview (the fix ensures this happens with the updated model)
+			expect(mockPostMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "state" }))
+		})
+		// kilocode_change end
 	})
 
 	describe("browser connection features", () => {

@@ -2305,7 +2305,8 @@ export const webviewMessageHandler = async (
 				}
 
 				// kilocode_change start: If we're updating the active profile, we need to activate it to ensure it's persisted
-				const currentApiConfigName = getGlobalState("currentApiConfigName")
+				// Default to "default" to handle anonymous users who may not have currentApiConfigName set in global state yet
+				const currentApiConfigName = getGlobalState("currentApiConfigName") ?? "default"
 				const isActiveProfile = message.text === currentApiConfigName
 				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
