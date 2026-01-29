@@ -28,9 +28,9 @@ This section outlines the detailed requirements that the solution will fulfill.
 
 # System Design
 
-!![Organization Modes Library UI](/docs/img/organization-modes-library-1.png)
+![Organization Modes Library UI](/docs/img/organization-modes-library-1.png)
 
-!![Organization Modes Library Editor](/docs/img/organization-modes-library-2.png)
+![Organization Modes Library Editor](/docs/img/organization-modes-library-2.png)
 
 Currently extension fetches available modes from the "mode marketplace" by downloading a "modes.yaml" file from our backend. We will add an endpoint the extension can call with a user & org id and it can return any organization modes. Those will be merged into the mode list and dropdown shown to the user.
 
