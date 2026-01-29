@@ -5,7 +5,7 @@ description: "Using Orchestrator mode for complex multi-step tasks"
 
 # Orchestrator Mode: Coordinate Complex Workflows
 
-Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down complex projects into smaller, manageable pieces. Think of it like delegating parts of your work to specialized assistants. Each subtask runs in its own context, often using a different Kilo Code mode tailored for that specific job (like [`code`](/basic-usage/using-modes#code-mode-default), [`architect`](/basic-usage/using-modes#architect-mode), or [`debug`](/basic-usage/using-modes#debug-mode)).
+Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down complex projects into smaller, manageable pieces. Think of it like delegating parts of your work to specialized assistants. Each subtask runs in its own context, often using a different Kilo Code mode tailored for that specific job (like [`code`](/docs/basic-usage/using-modes#code-mode-default), [`architect`](/docs/basic-usage/using-modes#architect-mode), or [`debug`](/docs/basic-usage/using-modes#debug-mode)).
 
 {% youtube url="https://www.youtube.com/watch?v=20MmJNeOODo" caption="Orchestrator Mode explained and demonstrated" /%}
 
@@ -25,7 +25,7 @@ Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down c
 
 ## Key Considerations
 
-- **Approval Required:** By default, you must approve the creation and completion of each subtask. This can be automated via the [Auto-Approving Actions](/features/auto-approving-actions#subtasks) settings if desired.
+- **Approval Required:** By default, you must approve the creation and completion of each subtask. This can be automated via the [Auto-Approving Actions](/docs/features/auto-approving-actions#subtasks) settings if desired.
 - **Context Isolation and Transfer:** Each subtask operates in complete isolation with its own conversation history. It does not automatically inherit the parent's context. Information must be explicitly passed:
     - **Down:** Via the initial instructions provided when the subtask is created.
     - **Up:** Via the final summary provided when the subtask finishes. Be mindful that only this summary returns to the parent.
@@ -37,6 +37,6 @@ Orchestrator Mode provides a powerful way to manage complex development workflow
 Use subtasks to maintain clarity. If a request significantly shifts focus or requires a different expertise (mode), consider creating a subtask rather than overloading the current one.
 {% /callout %}
 
-1. This context is passed via the `message` parameter of the [`new_task`](/features/tools/new-task) tool.
-2. The mode for the subtask is specified via the `mode` parameter of the [`new_task`](/features/tools/new-task) tool during initiation.
-3. This summary is passed via the `result` parameter of the [`attempt_completion`](/features/tools/attempt-completion) tool when the subtask finishes.
+1. This context is passed via the `message` parameter of the [`new_task`](/docs/features/tools/new-task) tool.
+2. The mode for the subtask is specified via the `mode` parameter of the [`new_task`](/docs/features/tools/new-task) tool during initiation.
+3. This summary is passed via the `result` parameter of the [`attempt_completion`](/docs/features/tools/attempt-completion) tool when the subtask finishes.

@@ -20,11 +20,11 @@ There are many ways to contribute to Kilo Code:
 
 ## Setting Up the Development Environment
 
-Setting Up the Development Environment is described in details on the [Development Environment](/contributing/development-environment) page.
+Setting Up the Development Environment is described in details on the [Development Environment](/docs/contributing/development-environment) page.
 
 ## Understanding the Architecture
 
-Before diving into the code, we recommend reviewing the [Architecture Overview](architecture) to understand how the different components of Kilo Code fit together.
+Before diving into the code, we recommend reviewing the [Architecture Overview](/docs/contributing/architecture) to understand how the different components of Kilo Code fit together.
 
 ## Development Workflow
 
@@ -88,7 +88,7 @@ The [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) is a commun
 
 To contribute:
 
-1. Follow the documentation for [Custom Modes](/agent-behavior/custom-modes), [Skills](/agent-behavior/skills), or [MCP Servers](/features/mcp/overview) to create your resource
+1. Follow the documentation for [Custom Modes](/docs/agent-behavior/custom-modes), [Skills](/docs/agent-behavior/skills), or [MCP Servers](/docs/features/mcp/overview) to create your resource
 
 2. Test your contribution thoroughly
 
@@ -96,7 +96,7 @@ To contribute:
 
 ## Engineering Specs
 
-For larger features, we write engineering specs to align on requirements before implementation. Check out the [Architecture](/contributing/architecture) section to see planned features and learn how to contribute specs.
+For larger features, we write engineering specs to align on requirements before implementation. Check out the [Architecture](/docs/contributing/architecture) section to see planned features and learn how to contribute specs.
 
 ## Documentation Contributions
 

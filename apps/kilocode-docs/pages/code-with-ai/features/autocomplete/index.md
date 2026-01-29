@@ -102,4 +102,4 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 
 ## Related Features
 
-- [Code Actions](/features/code-actions) - Context menu options for common coding tasks
+- [Code Actions](/docs/features/code-actions) - Context menu options for common coding tasks

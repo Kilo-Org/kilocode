@@ -45,7 +45,7 @@ This happens seamlessly in the background, requiring no manual intervention.
 
 #### Optional Fields
 
-- **`profile`** (string): Name of an existing [API Configuration Profile](/features/api-configuration-profiles) to use for this task. Must exactly match a profile name from your settings.
+- **`profile`** (string): Name of an existing [API Configuration Profile](/docs/features/api-configuration-profiles) to use for this task. Must exactly match a profile name from your settings.
 
 - **`mode`** (string): The Kilo Code mode to use for this task. Available modes:
     - `"code"` - General-purpose coding tasks
@@ -53,7 +53,7 @@ This happens seamlessly in the background, requiring no manual intervention.
     - `"ask"` - Questions and explanations
     - `"debug"` - Problem diagnosis and troubleshooting
     - `"test"` - Testing-focused workflows
-    - Custom mode slugs (if you have [custom modes](/agent-behavior/custom-modes))
+    - Custom mode slugs (if you have [custom modes](/docs/agent-behavior/custom-modes))
 
 ## Example Configurations
 
@@ -147,7 +147,7 @@ This file should be at the root of your workspace (the same level as your main p
 
 1. Verify the profile name exactly matches one from your settings
 2. Profile names are case-sensitive and must match exactly (including emojis)
-3. Check that the profile exists in your [API Configuration Profiles](/features/api-configuration-profiles)
+3. Check that the profile exists in your [API Configuration Profiles](/docs/features/api-configuration-profiles)
 
 ### Mode Not Switching
 

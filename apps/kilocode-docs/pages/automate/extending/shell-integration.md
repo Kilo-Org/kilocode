@@ -11,7 +11,7 @@ Terminal Shell Integration is a key feature that enables Kilo Code to execute co
 
 Shell integration is automatically enabled in Kilo Code and connects directly to your terminal's command execution lifecycle without requiring any setup from you. This built-in feature allows Kilo Code to:
 
-- Execute commands on your behalf through the [`execute_command`](/features/tools/execute-command) tool
+- Execute commands on your behalf through the [`execute_command`](/docs/features/tools/execute-command) tool
 - Read command output in real-time without manual copy-pasting
 - Automatically detect and fix errors in running applications
 - Observe command exit codes to determine success or failure

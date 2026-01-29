@@ -10,7 +10,7 @@ Kilo Code supports a wide range of AI model providers that offer APIs compatible
 - **Cloud providers** like Perplexity, Together AI, Anyscale, and others.
 - **Any other provider** offering an OpenAI-compatible API endpoint.
 
-This document focuses on setting up providers _other than_ the official OpenAI API (which has its own [dedicated configuration page](/providers/openai)).
+This document focuses on setting up providers _other than_ the official OpenAI API (which has its own [dedicated configuration page](/docs/providers/openai)).
 
 ## General Configuration
 

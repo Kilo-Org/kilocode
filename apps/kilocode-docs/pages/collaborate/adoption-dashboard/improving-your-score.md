@@ -73,7 +73,7 @@ Linking coding → review → deploy actions significantly boosts your Depth sco
 
 If acceptance rates are low, the issue is often context. The AI is making suggestions without understanding your codebase.
 
-**Action:** Enable [Managed Indexing](/advanced-usage/managed-indexing) to give the model vector-backed search across your repository.
+**Action:** Enable [Managed Indexing](/docs/advanced-usage/managed-indexing) to give the model vector-backed search across your repository.
 
 Better context leads to:
 
@@ -86,7 +86,7 @@ Better context leads to:
 
 Generated code that never runs is hard to trust. Teams that can verify AI output against live environments tend to retain more of that code long-term.
 
-**Action:** Use [Kilo Deploy](/advanced-usage/deploy) to spin up live URLs for branches, allowing your team to verify changes before merging.
+**Action:** Use [Kilo Deploy](/docs/advanced-usage/deploy) to spin up live URLs for branches, allowing your team to verify changes before merging.
 
 ---
 
@@ -124,7 +124,7 @@ Coverage is partly a numbers game. If you have team members who haven't logged i
 
 Spiky usage—heavy on Mondays, quiet the rest of the week—limits your Coverage score.
 
-**Action:** Make [Code Reviews](/advanced-usage/code-reviews) part of your PR process. Reviews happen throughout the week, so AI usage naturally follows.
+**Action:** Make [Code Reviews](/docs/advanced-usage/code-reviews) part of your PR process. Reviews happen throughout the week, so AI usage naturally follows.
 
 Other ways to spread usage:
 
@@ -190,5 +190,5 @@ Other ways to spread usage:
 
 ## Next Steps
 
-- [Use the dashboard for team leadership](/plans/adoption-dashboard/for-team-leads)
-- [Return to the dashboard overview](/plans/adoption-dashboard/overview)
+- [Use the dashboard for team leadership](/docs/plans/adoption-dashboard/for-team-leads)
+- [Return to the dashboard overview](/docs/plans/adoption-dashboard/overview)

@@ -211,6 +211,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Burada yeni misin?",
+		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
+		"clickToInsert": "Hemen üzerinde çalışmaya başlamak için herhangi bir öneriye tıkla",
 		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
 		"ideas": {
 			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",

@@ -30,8 +30,8 @@ Kilo Code currently supports two main local model providers:
 
 For detailed setup instructions, see:
 
-- [Setting up Ollama](/providers/ollama)
-- [Setting up LM Studio](/providers/lmstudio)
+- [Setting up Ollama](/docs/providers/ollama)
+- [Setting up LM Studio](/docs/providers/lmstudio)
 
 Both providers offer similar capabilities but with different user interfaces and workflows. Ollama provides more control through its command-line interface, while LM Studio offers a more user-friendly graphical interface.
 

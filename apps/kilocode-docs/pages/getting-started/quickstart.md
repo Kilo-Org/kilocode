@@ -9,7 +9,7 @@ description: "Get up and running with Kilo Code in minutes"
 
 {% youtube url="https://www.youtube.com/watch?v=pO7zRLQS-p0" caption="This quick tour shows how Kilo Code handles a simple request from start to finish" /%}
 
-After you [set up Kilo Code](/getting-started/setting-up), follow these steps:
+After you [set up Kilo Code](/docs/getting-started/setting-up), follow these steps:
 
 ## Step by Step Guide
 
@@ -30,7 +30,7 @@ Type a clear, concise description of what you want Kilo Code to do in the chat b
 No special commands or syntax needed—just use plain English.
 
 {% callout type="tip" title="Optional: Try Autocomplete" collapsed=true %}
-While chat is great for complex tasks, Kilo Code also offers **inline autocomplete** for quick code suggestions. Open any code file, start typing, and watch for ghost text suggestions. Press `Tab` to accept. [Learn more about Autocomplete →](/basic-usage/autocomplete)
+While chat is great for complex tasks, Kilo Code also offers **inline autocomplete** for quick code suggestions. Open any code file, start typing, and watch for ghost text suggestions. Press `Tab` to accept. [Learn more about Autocomplete →](/docs/basic-usage/autocomplete)
 {% /callout %}
 
 {% image src="/docs/img/your-first-task/your-first-task-6.png" alt="Typing a task in the Kilo Code chat interface" width="500" caption="Enter your task in natural language - no special syntax required." /%}
@@ -57,7 +57,7 @@ Kilo Code analyzes your request and proposes specific actions. These may include
 {% callout type="tip" %}
 The level of autonomy is configurable, allowing you to make the agent more or less autonomous.
 
-You can learn more about [using modes](/basic-usage/using-modes) and [auto-approving actions](/features/auto-approving-actions).
+You can learn more about [using modes](/docs/basic-usage/using-modes) and [auto-approving actions](/docs/features/auto-approving-actions).
 {% /callout %}
 
 ### Step 5: Iterate

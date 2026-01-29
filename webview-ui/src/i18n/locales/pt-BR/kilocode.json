@@ -211,6 +211,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Novo aqui?",
+		"tryOneOfThese": "Experimente uma dessas ideias para começar:",
+		"clickToInsert": "Clique em qualquer sugestão para começar a trabalhar nela imediatamente",
 		"suggestionText": "<suggestionButton>Clique aqui</suggestionButton> para uma ideia legal, depois toque em <sendIcon /> e me veja fazer mágica!",
 		"ideas": {
 			"idea1": "Crie uma esfera 3D giratória e brilhante que responde aos movimentos do mouse. Faça o app funcionar no navegador.",

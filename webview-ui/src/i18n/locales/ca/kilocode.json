@@ -204,6 +204,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nou aquí?",
+		"tryOneOfThese": "Prova una d'aquestes idees per començar:",
+		"clickToInsert": "Fes clic a qualsevol suggeriment per començar a treballar-hi immediatament",
 		"suggestionText": "<suggestionButton>Fes clic aquí</suggestionButton> per a una idea genial, després toca <sendIcon /> i mira'm fer màgia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D que giri i brilli i respongui als moviments del ratolí. Fes que l'aplicació funcioni al navegador.",

@@ -213,6 +213,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "新用戶？",
+		"tryOneOfThese": "試試這些想法開始使用：",
+		"clickToInsert": "點擊任意建議即可立即開始",
 		"suggestionText": "<suggestionButton>點擊這裡</suggestionButton>獲取有趣的想法，然後點按 <sendIcon /> 看我施展魔法！",
 		"ideas": {
 			"idea1": "建立一個旋轉發光的 3D 球體，能夠回應滑鼠移動。讓應用程式在瀏覽器中運行。",

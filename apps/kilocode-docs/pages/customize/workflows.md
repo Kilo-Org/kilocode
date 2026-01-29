@@ -26,10 +26,10 @@ Workflows are markdown files stored in `.kilocode/workflows/`:
 
 Workflows can leverage:
 
-- [Built-in tools](/features/tools/tool-use-overview): [`read_file()`](/features/tools/read-file), [`search_files()`](/features/tools/search-files), [`execute_command()`](/features/tools/execute-command)
+- [Built-in tools](/docs/features/tools/tool-use-overview): [`read_file()`](/docs/features/tools/read-file), [`search_files()`](/docs/features/tools/search-files), [`execute_command()`](/docs/features/tools/execute-command)
 - CLI tools: `gh`, `docker`, `npm`, custom scripts
-- [MCP integrations](/features/mcp/overview): Slack, databases, APIs
-- [Mode switching](/basic-usage/using-modes): [`new_task()`](/features/tools/new-task) for specialized contexts
+- [MCP integrations](/docs/features/mcp/overview): Slack, databases, APIs
+- [Mode switching](/docs/basic-usage/using-modes): [`new_task()`](/docs/features/tools/new-task) for specialized contexts
 
 ## Common Workflow Patterns
 
