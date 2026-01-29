@@ -194,7 +194,7 @@ export class McpOAuthService {
 			state,
 			codeChallenge,
 			codeChallengeMethod: "S256",
-			// resource: serverUrl, // Disabled: Cloudflare doesn't support RFC 8707 resource parameter
+			resource: serverUrl,
 		})
 
 		// 5. Verify State
