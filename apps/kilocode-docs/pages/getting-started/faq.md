@@ -124,13 +124,13 @@ In general, autocomplete is best for quick, in-flow coding assistance, while cha
 
 ### What are modes in Kilo Code?
 
-[Modes](/docs/basic-usage/using-modes) are different personas that Kilo Code can adopt, each with a specific focus and set of capabilities. The built-in modes are:
+[Modes](/docs/code-with-ai/agents/using-modes) are different personas that Kilo Code can adopt, each with a specific focus and set of capabilities. The built-in modes are:
 
 - **Code:** For general-purpose coding tasks.
 - **Architect:** For planning and technical leadership.
 - **Ask:** For answering questions and providing information.
 - **Debug:** For systematic problem diagnosis.
-  You can also create [Custom Modes](/docs/agent-behavior/custom-modes).
+  You can also create [Custom Modes](/docs/customize/custom-modes).
 
 ### How do I switch between modes?
 

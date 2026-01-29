@@ -59,7 +59,7 @@ These pages document the architecture and design of a current or planned feature
 | [Vercel AI Gateway](/docs/contributing/architecture/vercel-ai-gateway)                   | Vercel AI Gateway integration              |
 | [Voice Transcription](/docs/contributing/architecture/voice-transcription)               | Live voice input for chat                  |
 
-To propose a new feature design, consider using the [feature template](/docs/contributing/architecture/feature-template).
+To propose a new feature design, please create a detailed proposal using the architecture patterns shown in the above feature examples.
 
 ## Key Concepts
 

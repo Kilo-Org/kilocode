@@ -43,7 +43,7 @@ The default prompt template includes the placeholder `${userInput}`, which will 
 
 Speed up prompt enhancement by switching to a more lightweight LLM model provider (e.g. GPT 4.1 Nano). This delivers faster results at lower cost while maintaining quality.
 
-Create a dedicated profile for Enhance Prompt by following the [API configuration profiles guide](/docs/features/api-configuration-profiles).
+Create a dedicated profile for Enhance Prompt by following the [API configuration profiles guide](/docs/ai-providers).
 
 {% image src="/docs/img/enhance-prompt/custom-enhance-profile.png" alt="Custom profile configuration for Enhance Prompt feature" width="600" /%}
 

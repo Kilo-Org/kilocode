@@ -13,7 +13,7 @@ Once you've used any initial free Kilo Credits, you can easily add more:
 
 These options are available to purchase from your [personal profile page](https://app.kilo.ai/profile).
 
-You can also use subscriptions or credits you may have purchased directly with an AI provider by adding your keys on the [Bring your own Key (BYOK)](https://app.kilo.ai/byok) settings screen. For setup details and supported providers, see [Bring Your Own Key (BYOK)](/docs/basic-usage/byok). If your provider is not yet supported, you can also [directly connect your provider](/docs/getting-started/connecting-api-provider.md) in the extension and CLI.
+You can also use subscriptions or credits you may have purchased directly with an AI provider by adding your keys on the [Bring your own Key (BYOK)](https://app.kilo.ai/byok) settings screen. For setup details and supported providers, see [AI Providers documentation](/docs/ai-providers). If your provider is not yet supported, you can also [directly connect your provider](/docs/getting-started/setup-authentication) in the extension and CLI.
 
 ## Transparent Pricing
 
