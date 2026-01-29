@@ -15,7 +15,7 @@ env:
 
 jobs:
     check-version:
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         if: >
             ( github.event_name == 'pull_request' &&
             github.event.pull_request.merged == true &&
@@ -50,7 +50,7 @@ jobs:
     build-and-test:
         needs: check-version
         if: needs.check-version.outputs.publish == 'true'
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -100,7 +100,7 @@ jobs:
 
     publish-npm:
         needs: [check-version, build-and-test]
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         permissions:
             id-token: write
             contents: read
@@ -128,7 +128,7 @@ jobs:
     
     publish-docker-debian:
         needs: [check-version, build-and-test]
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -168,7 +168,7 @@ jobs:
 
     publish-docker-alpine:
         needs: [check-version, build-and-test]
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -206,7 +206,7 @@ jobs:
 
     create-release:
         needs: [check-version, publish-npm, publish-docker-debian, publish-docker-alpine]
-        runs-on: ubuntu-latest
+        runs-on: depot-ubuntu-24.04-4
         permissions:
             contents: write
         steps:
