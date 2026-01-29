@@ -10,7 +10,7 @@ You are an autonomous merge agent responsible for synchronizing the Kilo CLI rep
 
 - **Upstream remote**: `git@github.com:sst/opencode.git` (add as `upstream` if not exists)
 - **Default branch**: `dev`
-- **Upstream branch to merge**: Specified by user (e.g., `dev` or a specific tag/commit)
+- **Upstream branch to merge**: Specified by user (e.g., `v1.1.42`)
 
 ## Package Naming Conventions
 
@@ -41,11 +41,12 @@ These files MUST be kept from the `dev` branch (ours), NOT upstream:
 
 ### P0 - Branding Files (NEVER accept upstream changes)
 
-| File                                | Reason                              |
-| ----------------------------------- | ----------------------------------- |
-| `packages/opencode/src/cli/logo.ts` | Contains Kilo ASCII art logo        |
-| `packages/opencode/src/cli/ui.ts`   | References the Kilo logo            |
-| `package.json` (root)               | Must have `"name": "@kilocode/cli"` |
+| File                                                   | Reason                              |
+| ------------------------------------------------------ | ----------------------------------- |
+| `packages/opencode/src/cli/logo.ts`                    | Contains Kilo ASCII art logo        |
+| `packages/opencode/src/cli/ui.ts`                      | References the Kilo logo            |
+| `packages/opencode/src/cli/cmd/tui/component/logo.tsx` | TUI logo returns KiloLogo           |
+| `package.json` (root)                                  | Must have `"name": "@kilocode/cli"` |
 
 ### P0 - Provider Configuration
 
@@ -66,6 +67,8 @@ export const preferredProviders = [
   "openrouter",
   "vercel",
 ]
+// Alias for upstream compatibility
+export const popularProviders = preferredProviders
 ```
 
 ### P0 - Locale/i18n Files
@@ -107,96 +110,48 @@ git rm -f README.it.md README.th.md 2>/dev/null || true
 
 ---
 
-## Phase 1: Preparation
+## Merge Process
 
-### 1.1 Run Initialization Script
+### Step 1: Prepare the Upstream Branch
 
-```bash
-./scripts/kilocode/opencode_merge_01_init.sh <version> [prefix]
-# Example: ./scripts/kilocode/opencode_merge_01_init.sh v1.1.42
-# Example with prefix: ./scripts/kilocode/opencode_merge_01_init.sh v1.1.42 my_name
-```
-
-This script:
-
-1. Ensures upstream remote is configured
-2. Fetches latest changes and tags
-3. Creates `upstream-at-<version>` branch at the target version
-4. Creates `upstream-prepared-<version>` branch for transformations
-
-### 1.2 Run Preparation Script
+This only needs to be done once per upstream version. Check if branches already exist:
 
 ```bash
-./scripts/kilocode/opencode_merge_02_prepare.sh
+git branch -a | grep upstream-prepared-<version>
 ```
 
-This script runs on the preparation branch and:
-
-1. Executes package.json transformations (renames packages to Kilo conventions)
-2. Renames binary files (`opencode` -> `kilo`)
-3. Commits the preparation changes
-
-### 1.3 Start the Merge
+If not, create them:
 
 ```bash
-./scripts/kilocode/opencode_merge_03_start_merge.sh <version> [prefix]
+# Add upstream remote if needed
+git remote add upstream git@github.com:sst/opencode.git 2>/dev/null || true
+git fetch upstream --tags
+
+# Create branch at upstream version
+git checkout -b upstream-at-<version> <version>
+
+# Create preparation branch
+git checkout -b upstream-prepared-<version>
+
+# Run package transformation script
+bun run ./scripts/kilocode/opencode_merge_transform_packages.ts
+
+# Commit preparation
+git add -A
+git commit -m "chore: prepare upstream for kilo merge"
 ```
 
-This script:
+### Step 2: Start the Merge
 
-1. Creates merge branch `opencode-<version>` from `dev`
-2. Initiates merge with prepared upstream branch
-
----
-
-## Phase 2: Research (Parallel Sub-Agents)
-
-Launch two sub-agents concurrently:
-
-### Sub-Agent A: Upstream Feature Research
-
-Research merged PRs in the upstream opencode repository since our last merge:
+From your working branch (based on `dev`):
 
 ```bash
-# Find the last merge commit
-git log --oneline --grep="merge opencode" -1
-
-# Get PRs merged since then
-gh pr list --repo sst/opencode --state merged --limit 50 --json number,title,mergedAt
+git merge upstream-prepared-<version> --no-edit
 ```
 
-Document each feature/fix with:
+This will create conflicts that need resolution.
 
-- PR number and title
-- Files affected
-- Summary of changes
-- Any breaking changes or API modifications
-
-### Sub-Agent B: Kilo Feature Research
-
-Research Kilo-specific features that must be preserved:
-
-```bash
-# Find all kilocode_change markers
-grep -r "kilocode_change" --include="*.ts" --include="*.tsx" packages/
-
-# List Kilo-specific directories
-ls -la packages/kilo-gateway/
-ls -la packages/kilo-telemetry/
-ls -la packages/opencode/src/kilocode/
-```
-
-Document:
-
-- Files with `kilocode_change` markers
-- Contents of Kilo-specific directories
-- Any Kilo-specific test files
-
----
-
-## Phase 3: Conflict Resolution
-
-### 3.1 Run Cleanup Script
+### Step 3: Run Cleanup Script
 
 ```bash
 ./scripts/kilocode/opencode_merge_04_cleanup.sh
@@ -211,7 +166,7 @@ This script:
 - Verifies Kilo-specific directories exist
 - **Runs branding verification checks** and reports any issues
 
-### 3.2 Resolve Package.json Conflicts
+### Step 4: Resolve Package.json Conflicts
 
 ```bash
 bun run ./scripts/kilocode/opencode_merge_05_package_json.ts
@@ -223,7 +178,7 @@ This script automatically resolves package.json conflicts by:
 - Preserving Kilo-specific dependencies
 - Merging dependency updates from upstream
 
-### 3.3 Verify Locale Branding
+### Step 5: Fix Branding Issues
 
 ```bash
 ./scripts/kilocode/opencode_merge_06_fix_branding.sh
@@ -235,115 +190,50 @@ This script checks locale files for branding issues:
 - Warns about OpenCode references that should be Kilo
 - Warns about opencodeZen references that should be kiloGateway
 
-### 3.4 Resolution Priority Order
+### Step 6: Resolve Remaining Conflicts Manually
 
-1. **package.json files** - Use script, then manual review
-2. **Lock files** - Run `bun install` after package.json resolved
-3. **Source files with `kilocode_change` markers** - ALWAYS preserve marked changes
-4. **Branding files (logo.ts, ui.ts)** - ALWAYS keep Kilo version
-5. **Provider configuration (use-providers.ts)** - ALWAYS keep `kilo` first in preferredProviders
-6. **Locale/i18n files** - Accept upstream structure, but restore Kilo branding strings
-7. **Configuration files** - Generally keep Kilo versions
-8. **Documentation** - Keep Kilo versions
-9. **GitHub workflows** - Keep Kilo versions
+Common conflict patterns:
 
-### 3.5 Resolution Rules
-
-**For files with `kilocode_change` markers:**
+**Source files with `kilocode_change` markers:**
 
 - ALWAYS preserve the marked changes
 - Integrate upstream changes around them
 - If upstream modified the same lines, manually merge preserving Kilo intent
 
-**For Kilo-specific directories (no conflicts expected):**
+**Import conflicts (SDK packages):**
 
-- `packages/opencode/src/kilocode/*` - Keep as-is
-- `packages/opencode/test/kilocode/*` - Keep as-is
-- `packages/kilo-gateway/*` - Keep as-is
-- `packages/kilo-telemetry/*` - Keep as-is
+```typescript
+// Keep Kilo imports:
+import type { X } from "@kilocode/sdk/v2" // kilocode_change
+// NOT:
+import type { X } from "@opencode-ai/sdk/v2"
+```
 
-**For logo.ts and ui.ts:**
+**Locale file conflicts (kiloGateway vs opencodeZen):**
 
-- ALWAYS checkout from `dev` (ours): `git checkout --ours packages/opencode/src/cli/logo.ts packages/opencode/src/cli/ui.ts`
-- These files contain Kilo ASCII art that MUST NOT be replaced with OpenCode logo
-
-**For use-providers.ts:**
-
-- Keep the `kilocode_change` markers around `preferredProviders`
-- Ensure `"kilo"` is FIRST in the array
-- Accept other upstream changes in the file
-
-**For locale files:**
-
-- Accept upstream structural changes (new keys, reorganization)
-- RESTORE Kilo branding in user-facing strings
-- Keep `kiloGateway` keys, do NOT rename to `opencodeZen`
+- Keep `kiloGateway` keys, reject `opencodeZen` renaming
 - Keep `dialog.provider.kilo.note` key
-- Keep `dialog.provider.group.recommended` with kilocode_change marker
 
-**For package.json:**
+**Config files (tauri, zed extension):**
 
-- Keep Kilo version numbers
-- Keep Kilo package names (@kilocode/\*)
-- Keep Kilo bin names (kilo, not opencode)
-- Merge dependency updates from upstream
-- Preserve Kilo-specific dependencies
+- Keep Kilo branding (product name, identifiers)
+- Update version numbers to match upstream
+- Keep Kilo GitHub URLs (`Kilo-Org/kilo`)
 
-### 3.6 Post-Resolution Checks
-
-Search for and address:
+### Step 7: Validation
 
 ```bash
-# Check for remaining conflict markers
-grep -r "<<<<<<" --include="*.ts" --include="*.tsx" --include="*.json" .
-
-# Check for opencode references that should be kilo (user-facing)
-grep -r "opencode" --include="*.json" packages/*/package.json
-
-# Check for upstream repo URLs
-grep -r "sst/opencode\|anomalyco/opencode" --include="*.json" .
-```
-
----
-
-## Phase 4: Validation
-
-### 4.1 Install Dependencies
-
-```bash
+# Install dependencies (regenerates bun.lock)
 bun install
-```
 
-### 4.2 Build Verification
-
-```bash
-bun run build
-```
-
-### 4.3 Type Check
-
-```bash
+# Type check
 bun run typecheck
-```
 
-### 4.4 Test Verification
-
-```bash
+# Run tests
 cd packages/opencode && bun run test
 ```
 
-### 4.5 Marker Audit
-
-```bash
-# Verify kilocode_change markers weren't accidentally removed
-git diff dev --stat | grep -E "kilocode" || echo "Check kilocode changes manually"
-
-# Compare marker count
-git grep -c "kilocode_change" dev -- "*.ts" "*.tsx" | wc -l
-git grep -c "kilocode_change" HEAD -- "*.ts" "*.tsx" | wc -l
-```
-
-### 4.6 CRITICAL: Branding Verification Checklist
+### Step 8: Branding Verification Checklist
 
 **You MUST verify each of these before creating the PR:**
 
@@ -354,7 +244,7 @@ grep '"name":' package.json | head -1
 
 # 2. Logo file has Kilo branding
 head -5 packages/opencode/src/cli/logo.ts
-# MUST contain "KILO" ASCII art, NOT "OPEN CODE"
+# MUST contain Kilo branding, NOT "OPEN CODE"
 
 # 3. Provider priority
 grep -A10 "preferredProviders" packages/app/src/hooks/use-providers.ts
@@ -381,7 +271,7 @@ ls README.*.md 2>/dev/null
 
 ---
 
-## Phase 5: PR Creation
+## PR Creation
 
 Create a pull request with:
 
@@ -401,19 +291,17 @@ Create a pull request with:
 
   - [List files with conflicts and how they were resolved]
 
-  ## Manual Decisions
-
-  - [Any non-obvious choices made during merge]
-
   ## Branding Verification
 
   - [ ] Root package.json has name `@kilocode/cli`
   - [ ] logo.ts contains Kilo ASCII art
+  - [ ] TUI logo.tsx returns KiloLogo component
+  - [ ] ui.ts contains Kilo CLI logo
   - [ ] use-providers.ts has `kilo` first in preferredProviders
-  - [ ] Locale files have Kilo branding (not OpenCode) in user-facing strings
+  - [ ] Locale files have Kilo branding in user-facing strings
   - [ ] kiloGateway keys preserved (not renamed to opencodeZen)
   - [ ] dialog.provider.kilo.note key exists
-  - [ ] No unwanted README translations (it, th)
+  - [ ] No unwanted README translations (it, th removed)
 
   ## Verification
 
@@ -421,10 +309,31 @@ Create a pull request with:
   - [ ] Tests pass
   - [ ] Type check passes
   - [ ] kilocode_change markers preserved
-  - [ ] Kilo-specific packages intact
+  - [ ] Kilo-specific packages intact (kilo-gateway, kilo-telemetry)
   ```
 
-- **Important**: Do NOT squash merge - preserve upstream commit history
+---
+
+## Available Scripts
+
+| Script                                 | Purpose                                    |
+| -------------------------------------- | ------------------------------------------ |
+| `opencode_merge_04_cleanup.sh`         | Reset branding files + cleanup after merge |
+| `opencode_merge_05_package_json.ts`    | Resolve package.json conflicts             |
+| `opencode_merge_06_fix_branding.sh`    | Verify/fix locale branding                 |
+| `opencode_merge_transform_packages.ts` | Transform package names (for prep branch)  |
+
+---
+
+## Common Mistakes to AVOID
+
+1. **Accepting upstream logo.ts** - This replaces Kilo logo with OpenCode logo
+2. **Accepting upstream preferredProviders** - This removes `kilo` from first position or removes it entirely
+3. **Accepting upstream locale branding** - This replaces "Kilo CLI" with "OpenCode" in user-facing text
+4. **Accepting upstream kiloGateway->opencodeZen rename** - This breaks Kilo-specific provider config
+5. **Accepting upstream version bumps** - Keep Kilo's version numbers
+6. **Keeping upstream README translations** - Delete README.it.md, README.th.md etc.
+7. **Forgetting popularProviders alias** - Upstream code may use `popularProviders`, add alias for compatibility
 
 ---
 
@@ -442,43 +351,6 @@ Then:
 2. Leave a `// TODO: MERGE_REVIEW_NEEDED` comment
 3. Continue with other resolutions
 4. Report all unresolved items in the final PR description
-
----
-
-## Available Scripts
-
-| Script                                 | Purpose                        |
-| -------------------------------------- | ------------------------------ |
-| `opencode_merge_01_init.sh`            | Initialize branches for merge  |
-| `opencode_merge_02_prepare.sh`         | Apply naming transformations   |
-| `opencode_merge_03_start_merge.sh`     | Start the actual merge         |
-| `opencode_merge_04_cleanup.sh`         | Reset branding files + cleanup |
-| `opencode_merge_05_package_json.ts`    | Resolve package.json conflicts |
-| `opencode_merge_06_fix_branding.sh`    | Verify/fix locale branding     |
-| `opencode_merge_transform_packages.ts` | Transform package names        |
-
----
-
-## Sub-Agent Coordination
-
-When spawning sub-agents for conflict resolution:
-
-- Each sub-agent handles a specific file or directory
-- Sub-agents report back: resolved/unresolved status + any concerns
-- Main agent aggregates results and runs final validation
-- Use parallel sub-agents for independent files
-- Use sequential processing for dependent changes
-
----
-
-## Common Mistakes to AVOID
-
-1. **Accepting upstream logo.ts** - This replaces Kilo logo with OpenCode logo
-2. **Accepting upstream preferredProviders** - This removes `kilo` from first position or removes it entirely
-3. **Accepting upstream locale branding** - This replaces "Kilo CLI" with "OpenCode" in user-facing text
-4. **Accepting upstream kiloGateway->opencodeZen rename** - This breaks Kilo-specific provider config
-5. **Accepting upstream version bumps** - Keep Kilo's version numbers
-6. **Keeping upstream README translations** - Delete README.it.md, README.th.md etc.
 
 ---
 
