@@ -2259,6 +2259,7 @@ export const webviewMessageHandler = async (
 			if (message.text && message.apiConfiguration) {
 				let configToSave = message.apiConfiguration
 				let organizationChanged = false
+				let tokenChanged = false
 
 				try {
 					const { ...currentConfig } = await provider.providerSettingsManager.getProfile({
@@ -2272,6 +2273,7 @@ export const webviewMessageHandler = async (
 					if (hadPreviousToken && hasNewToken && tokensAreDifferent) {
 						configToSave = { ...message.apiConfiguration, kilocodeOrganizationId: undefined }
 						await updateGlobalState("hasPerformedOrganizationAutoSwitch", undefined)
+						tokenChanged = true
 					}
 
 					organizationChanged =
@@ -2307,7 +2309,9 @@ export const webviewMessageHandler = async (
 				// kilocode_change start: If we're updating the active profile, we need to activate it to ensure it's persisted
 				// Default to "default" to handle anonymous users who may not have currentApiConfigName set in global state yet
 				const currentApiConfigName = getGlobalState("currentApiConfigName") ?? "default"
-				const isActiveProfile = message.text === currentApiConfigName
+				// During auto-switch or token change, we don't activate to avoid side effects
+				const isAutoSwitch = "isAutoSwitch" in message && (message as any).isAutoSwitch === true
+				const isActiveProfile = message.text === currentApiConfigName && !isAutoSwitch && !tokenChanged
 				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
 				// kilocode_change end
@@ -2867,13 +2871,14 @@ export const webviewMessageHandler = async (
 							`[Auto-switch] Performing automatic organization switch to: ${firstOrg.name} (${firstOrg.id})`,
 						)
 
-						const upsertMessage: WebviewMessage = {
+						const upsertMessage: WebviewMessage & { isAutoSwitch?: boolean } = {
 							type: "upsertApiConfiguration",
 							text: currentApiConfigName ?? "default",
 							apiConfiguration: {
 								...apiConfiguration,
 								kilocodeOrganizationId: firstOrg.id,
 							},
+							isAutoSwitch: true, // Mark as auto-switch to prevent activation
 						}
 
 						await webviewMessageHandler(provider, upsertMessage)
