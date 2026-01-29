@@ -1,12 +1,12 @@
 {
-  "name": "opencode",
+  "name": "@kilocode/cli",
   "displayName": "opencode",
   "description": "opencode for VS Code",
   "version": "1.1.42",
   "publisher": "sst-dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anomalyco/opencode"
+    "url": "https://github.com/Kilo-Org/kilo"
   },
   "license": "MIT",
   "icon": "images/icon.png",
