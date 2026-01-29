@@ -16,7 +16,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode VSCode extension publishing)
     if: false
     # kilocode_change end
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - uses: actions/checkout@v3
         with:

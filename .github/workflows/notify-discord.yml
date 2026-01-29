@@ -9,7 +9,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode Discord notifications)
     if: false
     # kilocode_change end
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04
     steps:
       - name: Send nicely-formatted embed to Discord
         uses: SethCohen/github-releases-to-discord@v1

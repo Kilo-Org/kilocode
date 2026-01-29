@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     # kilocode_change start - disabled for kilo-cli fork (OpenCode npm/AUR publishing)
     if: false
     # kilocode_change end - original: if: github.repository == 'Kilo-Org/kilo'
@@ -99,15 +99,15 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
+          - host: depot-macos-15
             target: x86_64-apple-darwin
-          - host: macos-latest
+          - host: depot-macos-15
             target: aarch64-apple-darwin
-          - host: windows-latest
+          - host: depot-windows-2022-8
             target: x86_64-pc-windows-msvc
-          - host: ubuntu-latest
+          - host: depot-ubuntu-22.04-8
             target: x86_64-unknown-linux-gnu
-          - host: ubuntu-24.04-arm
+          - host: depot-ubuntu-24.04-arm-8
             target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -212,7 +212,7 @@ jobs:
       - publish
       - publish-tauri
     if: needs.publish.outputs.tag
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - uses: actions/checkout@v3
         with:

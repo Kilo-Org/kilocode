@@ -11,7 +11,7 @@ env:
 
 jobs:
   stale:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     permissions:
       issues: write
     steps:

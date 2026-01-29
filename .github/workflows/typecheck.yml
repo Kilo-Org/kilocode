@@ -7,7 +7,7 @@ on:
 
 jobs:
   typecheck:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -13,7 +13,7 @@ jobs:
     # kilocode_change start - disabled for kilo-cli fork (OpenCode docs automation)
     if: false
     # kilocode_change end - original: if: github.repository == 'sst/opencode'
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     permissions:
       id-token: write
       contents: write

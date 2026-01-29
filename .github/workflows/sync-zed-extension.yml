@@ -11,7 +11,7 @@ jobs:
     if: false
     # kilocode_change end
     name: Release Zed Extension
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - uses: actions/checkout@v4
         with:
