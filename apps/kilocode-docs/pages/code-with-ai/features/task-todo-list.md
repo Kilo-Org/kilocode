@@ -21,7 +21,7 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 **Manual triggers**:
 
-- Ask Kilo to "use the [update_todo_list tool](/features/tools/update-todo-list)"
+- Ask Kilo to "use the [update_todo_list tool](/docs/features/tools/update-todo-list)"
 - Say "create a todo list"
 
 **The bottom line**: Kilo decides what goes in the list, but you can provide feedback during approval dialogs.
@@ -91,7 +91,7 @@ Design choice. Kilo maintains authority over task management to ensure consisten
 
 **When to use it**: Long workflows where constant interruptions slow you down.
 
-**How to enable it**: Check the [Update Todo List auto-approval settings](/features/auto-approving-actions#update-todo-list).
+**How to enable it**: Check the [Update Todo List auto-approval settings](/docs/features/auto-approving-actions#update-todo-list).
 
 **The catch**: Less control, but faster execution.
 {% /callout %}

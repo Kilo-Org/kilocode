@@ -196,4 +196,4 @@ Some scenarios benefit from a hybrid approach:
 
 ## Configuring Transports in Kilo Code
 
-For detailed information on configuring STDIO and SSE transports in Kilo Code, including example configurations, see the [Understanding Transport Types](/features/mcp/using-mcp-in-kilo-code#understanding-transport-types) section in the Using MCP in Kilo Code guide.
+For detailed information on configuring STDIO and SSE transports in Kilo Code, including example configurations, see the [Understanding Transport Types](/docs/features/mcp/using-mcp-in-kilo-code#understanding-transport-types) section in the Using MCP in Kilo Code guide.

@@ -14,7 +14,7 @@ Kilo Code is your AI pair programmer that works in your IDE, terminal, or browse
 New to Kilo Code? Start here to understand the core concepts:
 
 - [**Install Kilo Code**](/docs/getting-started/installing) — Get started in VS Code, JetBrains, CLI, or mobile
-- [**Connect an AI Provider**](/docs/getting-started/ai-providers) — Set up your preferred model
+- [**Connect an AI Provider**](/docs/ai-providers) — Set up your preferred model
 - [**Quick Start Guide**](/docs/getting-started/quickstart) — Run your first task in minutes
 
 ## Platforms

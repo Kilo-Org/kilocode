@@ -9,6 +9,10 @@ export const ContributingNav: NavSection[] = [
 				href: "/contributing/development-environment",
 				children: "Development Environment",
 			},
+			{
+				href: "/contributing/cline-to-kilo-migration",
+				children: "Cline to Kilo Migration",
+			},
 		],
 	},
 	{

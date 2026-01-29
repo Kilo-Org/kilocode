@@ -7,8 +7,152 @@ import { Task } from "../../task/Task"
 import axios from "axios"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { buildApiHandler } from "../../../api"
+import { ContextProxy } from "../../config/ContextProxy"
 
 const shownNativeNotificationIds = new Set<string>()
+
+/**
+ * Replaces vscode:// protocol in URLs with the appropriate protocol for the current IDE.
+ * For example, in Cursor it becomes cursor://, in VSCodium it becomes vscodium://, etc.
+ * @param url The URL to transform
+ * @returns The URL with the appropriate protocol for the current IDE
+ */
+export function replaceVscodeProtocol(url: string): string {
+	if (!url.startsWith("vscode://")) {
+		return url
+	}
+	const currentScheme = vscode.env.uriScheme
+	return url.replace(/^vscode:\/\//, `${currentScheme}://`)
+}
+
+interface KilocodeNotification {
+	id: string
+	title: string
+	message: string
+	showIn?: string[]
+	action?: {
+		actionText: string
+		actionURL: string
+	}
+}
+
+interface FetchNotificationsResult {
+	notifications: KilocodeNotification[]
+	nativeNotifications: KilocodeNotification[]
+}
+
+/**
+ * Core function to fetch Kilocode notifications from the API
+ * Can be used both from webview handler and standalone startup
+ */
+export async function fetchKilocodeNotificationsCore(
+	kilocodeToken: string,
+	dismissedNotificationIds: string[] = [],
+	kilocodeTesterWarningsDisabledUntil?: number,
+	log?: (message: string) => void,
+): Promise<FetchNotificationsResult> {
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${kilocodeToken}`,
+		"Content-Type": "application/json",
+	}
+
+	// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+	if (kilocodeTesterWarningsDisabledUntil && kilocodeTesterWarningsDisabledUntil > Date.now()) {
+		headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+	}
+
+	const url = getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", kilocodeToken)
+	const response = await axios.get(url, {
+		headers,
+		timeout: 5000,
+	})
+
+	const notifications: KilocodeNotification[] = response.data?.notifications || []
+
+	// Filter notifications for native display (not dismissed and not already shown)
+	const nativeNotifications = notifications.filter(
+		(notification) =>
+			!dismissedNotificationIds.includes(notification.id) &&
+			!shownNativeNotificationIds.has(notification.id) &&
+			(notification.showIn ?? []).includes("extension-native"),
+	)
+
+	// Filter notifications for webview display
+	const webviewNotifications = notifications.filter(({ showIn }) => !showIn || showIn.includes("extension"))
+
+	return {
+		notifications: webviewNotifications,
+		nativeNotifications,
+	}
+}
+
+/**
+ * Display native VSCode notifications for Kilocode notifications
+ */
+export async function displayNativeNotifications(
+	notifications: KilocodeNotification[],
+	log?: (message: string) => void,
+): Promise<void> {
+	for (const notification of notifications) {
+		try {
+			const message = `${notification.title}: ${notification.message}`
+			const actionButton = notification.action?.actionText
+			const selection = await vscode.window.showInformationMessage(
+				message,
+				...(actionButton ? [actionButton] : []),
+			)
+			if (selection === actionButton) {
+				if (notification.action?.actionURL) {
+					// Replace vscode:// protocol with the appropriate protocol for the current IDE
+					const actionUrl = replaceVscodeProtocol(notification.action.actionURL)
+					await vscode.env.openExternal(vscode.Uri.parse(actionUrl))
+				}
+			}
+
+			shownNativeNotificationIds.add(notification.id)
+		} catch (error: any) {
+			log?.(`Error displaying notification ${notification.id}: ${error.message}`)
+		}
+	}
+}
+
+/**
+ * Fetch and display Kilocode notifications on extension startup
+ * This function works without requiring the webview to be open
+ */
+export async function fetchKilocodeNotificationsOnStartup(
+	contextProxy: ContextProxy,
+	log?: (message: string) => void,
+): Promise<void> {
+	try {
+		const apiConfiguration = contextProxy.getProviderSettings()
+		const dismissedNotificationIds = contextProxy.getValue("dismissedNotificationIds") || []
+		const kilocodeToken = apiConfiguration?.kilocodeToken
+
+		if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
+			log?.("[Notifications] Skipping notification fetch: not using kilocode provider")
+			return
+		}
+
+		log?.("[Notifications] Fetching notifications on startup...")
+
+		const { nativeNotifications } = await fetchKilocodeNotificationsCore(
+			kilocodeToken,
+			dismissedNotificationIds,
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil,
+			log,
+		)
+
+		if (nativeNotifications.length > 0) {
+			log?.(`[Notifications] Displaying ${nativeNotifications.length} native notification(s)`)
+			await displayNativeNotifications(nativeNotifications, log)
+		} else {
+			log?.("[Notifications] No new notifications to display")
+		}
+	} catch (error: any) {
+		log?.(`[Notifications] Error fetching notifications on startup: ${error.message}`)
+	}
+}
 
 // Helper function to delete messages for resending
 const deleteMessagesForResend = async (cline: Task, originalMessageIndex: number, originalMessageTs: number) => {
@@ -85,72 +229,19 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			return
 		}
 
-		const headers: Record<string, string> = {
-			Authorization: `Bearer ${kilocodeToken}`,
-			"Content-Type": "application/json",
-		}
-
-		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-		if (
-			apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-			apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-		) {
-			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-		}
-
-		const url = getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", kilocodeToken)
-		const response = await axios.get(url, {
-			headers,
-			timeout: 5000,
-		})
-
-		const notifications = response.data?.notifications || []
-		const dismissedIds = dismissedNotificationIds || []
-
-		// Filter notifications to only show new ones
-		const notificationsToShowAsNative = notifications.filter(
-			(notification: any) =>
-				!dismissedIds.includes(notification.id) &&
-				!shownNativeNotificationIds.has(notification.id) &&
-				(notification.showIn ?? []).includes("extension-native"),
+		const { notifications, nativeNotifications } = await fetchKilocodeNotificationsCore(
+			kilocodeToken,
+			dismissedNotificationIds || [],
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil,
+			provider.log.bind(provider),
 		)
 
 		provider.postMessageToWebview({
 			type: "kilocodeNotificationsResponse",
-			notifications: (response.data?.notifications || []).filter(
-				({ showIn }: { showIn?: string[] }) => !showIn || showIn.includes("extension"),
-			),
+			notifications,
 		})
 
-		for (const notification of notificationsToShowAsNative) {
-			try {
-				const message = `${notification.title}: ${notification.message}`
-				const actionButton = notification.action?.actionText
-				const dismissButton = "Do not show again"
-				const selection = await vscode.window.showInformationMessage(
-					message,
-					...(actionButton ? [actionButton, dismissButton] : [dismissButton]),
-				)
-				if (selection) {
-					const currentDismissedIds = dismissedNotificationIds || []
-					if (!currentDismissedIds.includes(notification.id)) {
-						await provider.contextProxy.setValue("dismissedNotificationIds", [
-							...currentDismissedIds,
-							notification.id,
-						])
-					}
-				}
-				if (selection === actionButton) {
-					if (notification.action?.actionURL) {
-						await vscode.env.openExternal(vscode.Uri.parse(notification.action.actionURL))
-					}
-				}
-
-				shownNativeNotificationIds.add(notification.id)
-			} catch (error: any) {
-				provider.log(`Error displaying notification ${notification.id}: ${error.message}`)
-			}
-		}
+		await displayNativeNotifications(nativeNotifications, provider.log.bind(provider))
 	} catch (error: any) {
 		provider.log(`Error fetching Kilocode notifications: ${error.message}`)
 		provider.postMessageToWebview({

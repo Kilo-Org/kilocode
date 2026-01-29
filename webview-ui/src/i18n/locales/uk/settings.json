@@ -350,6 +350,37 @@
 		"apiKeyStorageNotice": "Ключі API надійно зберігаються в Secret Storage VSCode",
 		"glamaApiKey": "Ключ API Glama",
 		"getGlamaApiKey": "Отримати ключ API Glama",
+		"openAiCodexRateLimits": {
+			"title": "Ліміти використання для Codex{{planLabel}}",
+			"loading": "Завантаження лімітів використання...",
+			"loadError": "Не вдалося завантажити ліміти використання",
+			"retry": "Спробувати знову",
+			"usedPercent": "{{percent}}% використано",
+			"resetsIn": "Скинеться через {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Зараз",
+				"notAvailable": "Недоступно"
+			},
+			"duration": {
+				"daysHours": "{{days}}д {{hours}}г",
+				"hoursMinutes": "{{hours}}г {{minutes}}хв",
+				"minutes": "{{minutes}}хв"
+			},
+			"window": {
+				"usage": "Використання",
+				"fiveHour": "5-годинний ліміт",
+				"oneHour": "1-годинний ліміт",
+				"daily": "Денний ліміт",
+				"weekly": "Тижневий ліміт",
+				"days": "{{days}}д ліміт",
+				"hours": "{{hours}}г ліміт",
+				"minutes": "{{minutes}}хв ліміт"
+			}
+		},
 		"useCustomBaseUrl": "Використовувати власний базовий URL",
 		"useReasoning": "Увімкнути міркування",
 		"useHostHeader": "Використовувати власний заголовок Host",

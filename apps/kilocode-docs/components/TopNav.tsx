@@ -30,6 +30,7 @@ const mainNavItems: NavItem[] = [
 	{ label: "Collaborate", href: "/collaborate" },
 	{ label: "Automate", href: "/automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure" },
+	{ label: "Contributing", href: "/contributing" },
 ]
 
 const contributingItems: DropdownItem[] = [
@@ -253,10 +254,10 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
 				<div className="right-actions">
 					<ThemeToggle />
-					<Link href="/github" className="github-link desktop-nav">
+					<Link href="https://kilo.ai/github" className="github-link desktop-nav">
 						GitHub
 					</Link>
-					<Link href="/sign-in" className="signin-btn desktop-nav">
+					<Link href="https://app.kilo.ai" className="signin-btn desktop-nav">
 						Sign in
 					</Link>
 				</div>

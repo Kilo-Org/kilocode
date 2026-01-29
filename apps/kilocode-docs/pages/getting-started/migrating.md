@@ -436,9 +436,9 @@ mkdir -p .kilocode/rules-docs
 
 ## Next Steps
 
-- [Learn about Custom Rules](/agent-behavior/custom-rules)
-- [Explore Custom Modes](/agent-behavior/custom-modes)
-- [Set up Custom Instructions](/agent-behavior/custom-instructions)
+- [Learn about Custom Rules](/docs/agent-behavior/custom-rules)
+- [Explore Custom Modes](/docs/agent-behavior/custom-modes)
+- [Set up Custom Instructions](/docs/agent-behavior/custom-instructions)
 - [Join our Discord](https://kilo.ai/discord) for migration support
 
 ## Additional Resources

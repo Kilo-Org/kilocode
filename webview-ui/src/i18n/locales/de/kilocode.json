@@ -211,6 +211,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Neu hier?",
+		"tryOneOfThese": "Probier eine dieser Ideen aus, um loszulegen:",
+		"clickToInsert": "Klick auf einen Vorschlag, um sofort damit zu arbeiten",
 		"suggestionText": "<suggestionButton>Klick hier</suggestionButton> für eine coole Idee, dann drück auf <sendIcon /> und schau zu, wie ich Magie wirke!",
 		"ideas": {
 			"idea1": "Erstelle eine rotierende, leuchtende 3D-Kugel, die auf Mausbewegungen reagiert. Lass die App im Browser laufen.",

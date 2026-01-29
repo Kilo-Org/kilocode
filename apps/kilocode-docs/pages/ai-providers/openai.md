@@ -25,4 +25,4 @@ Kilo Code supports accessing models directly through the official OpenAI API.
 ## Tips and Notes
 
 - **Pricing:** Refer to the [OpenAI Pricing](https://openai.com/pricing) page for details on model costs.
-- **Azure OpenAI Service:** If you'd like to use the Azure OpenAI service, please see our section on [OpenAI-compatible](/providers/openai-compatible) providers.
+- **Azure OpenAI Service:** If you'd like to use the Azure OpenAI service, please see our section on [OpenAI-compatible](/docs/providers/openai-compatible) providers.
