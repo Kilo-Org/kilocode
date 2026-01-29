@@ -1,4 +1,9 @@
-import type { CLIConfig, AutoApprovalConfig } from "./types.js"
+import type { CLIConfig, AutoApprovalConfig, HooksConfig } from "./types.js"
+
+/**
+ * Default hooks configuration (empty - no hooks registered by default)
+ */
+export const DEFAULT_HOOKS: HooksConfig = {}
 
 /**
  * Default auto approval configuration
@@ -59,6 +64,7 @@ export const DEFAULT_CONFIG = {
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
+	hooks: DEFAULT_HOOKS,
 	theme: "dark",
 	customThemes: {},
 } satisfies CLIConfig

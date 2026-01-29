@@ -159,6 +159,7 @@ describe("Config Persistence", () => {
 				],
 				autoApproval: DEFAULT_CONFIG.autoApproval,
 				customThemes: {},
+				hooks: {},
 			}
 
 			await saveConfig(testConfig)
