@@ -26,6 +26,11 @@
 		"continueWith": "继续使用 {{model}}",
 		"continue": "继续"
 	},
+	"unauthorizedError": {
+		"title": "你需要登录才能使用 {{modelId}} 模型",
+		"message": "登录或创建账号即可访问 500+ 模型,按成本价使用额度,或使用自己的 API 密钥。",
+		"loginButton": "登录"
+	},
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",

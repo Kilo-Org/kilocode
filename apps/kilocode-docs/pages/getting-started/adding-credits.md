@@ -33,5 +33,5 @@ We're continuously working to improve Kilo Code and expand our offerings:
 - More payment options and other plans are under development
 
 {% callout type="tip" title="Need Help?" %}
-If you have any questions about pricing or tokens, please reach out to our [support team](mailto:hi@kilo.ai) or ask in our <a href={DISCORD_URL} target='_blank'>Discord community</a>.
+If you have any questions about pricing or tokens, please reach out to our [support team](mailto:hi@kilo.ai) or ask in our [Discord community](https://kilo.ai/discord).
 {% /callout %}

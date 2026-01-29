@@ -26,6 +26,11 @@
 		"continueWith": "{{model}}で続行",
 		"continue": "続行"
 	},
+	"unauthorizedError": {
+		"title": "{{modelId}}モデルを使用するにはサインインが必要です",
+		"message": "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを使用できます。",
+		"loginButton": "サインイン"
+	},
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",

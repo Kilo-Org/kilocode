@@ -26,6 +26,11 @@
 		"continueWith": "Continua con {{model}}",
 		"continue": "Continua"
 	},
+	"unauthorizedError": {
+		"title": "Devi accedere per usare il modello {{modelId}}",
+		"message": "Accedi o crea un account per accedere a oltre 500 modelli, utilizzare crediti al costo effettivo o portare la tua chiave.",
+		"loginButton": "Accedi"
+	},
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",

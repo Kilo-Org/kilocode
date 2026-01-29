@@ -53,7 +53,7 @@ Model usage is metered by the providers in terms of different kinds of tokens. W
 
 You can use any models you like as long as you have credits in your account. When you run out of credits, you can add more. It's that simple!
 
-If you're looking to earn some credits, you could join our <a href={DISCORD_URL} target='_blank'>Discord</a> where we sometimes have promotional offers!
+If you're looking to earn some credits, you could join our [Discord](https://kilo.ai/discord) where we sometimes have promotional offers!
 
 ### What are the risks of using Kilo Code?
 

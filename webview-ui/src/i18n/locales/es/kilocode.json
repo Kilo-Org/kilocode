@@ -19,6 +19,11 @@
 		"next": "Siguiente",
 		"page": "Página {{page}} / {{count}}"
 	},
+	"unauthorizedError": {
+		"title": "Necesitas iniciar sesión para usar el modelo {{modelId}}",
+		"message": "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
+		"loginButton": "Iniciar Sesión"
+	},
 	"pricing": {
 		"costUnknown": "costo desconocido",
 		"costUnknownDescription": "El proveedor de API no proporcionó datos de costo o la solicitud fue cancelada.",
