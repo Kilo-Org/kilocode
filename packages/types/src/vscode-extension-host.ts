@@ -948,6 +948,7 @@ export interface WebviewMessage {
 		| "openDebugUiHistory"
 		| "startDeviceAuth" // kilocode_change: Start device auth flow
 		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
+		| "startWithFreeModels" // kilocode_change: Start with free models without auth
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 		| "chatCompletionAccepted" // kilocode_change: User accepted a chat completion suggestion
