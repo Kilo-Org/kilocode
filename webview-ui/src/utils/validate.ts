@@ -195,6 +195,16 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change start - Add Agentica provider validation
+		case "agentica":
+			// Agentica can be authenticated via:
+			// 1. API key (agenticaApiKey) - preferred
+			// 2. Email/Password combination (agenticaEmail + agenticaPassword)
+			if (!apiConfiguration.agenticaApiKey && (!apiConfiguration.agenticaEmail || !apiConfiguration.agenticaPassword)) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		// kilocode_change end
 	}
 
 	return undefined

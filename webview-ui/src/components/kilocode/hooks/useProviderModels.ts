@@ -50,6 +50,8 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	// kilocode_change - added import for Agentica default model ID
+	agenticaDefaultModelId,
 	nanoGptDefaultModelId, //kilocode_change
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -211,6 +213,14 @@ export const getModelsByProvider = ({
 				defaultModel: kilocodeDefaultModel,
 			}
 		}
+		// kilocode_change start
+		case "agentica": {
+			return {
+				models: routerModels.agentica,
+				defaultModel: agenticaDefaultModelId,
+			}
+		}
+		// kilocode_change end
 		case "claude-code": {
 			return {
 				models: claudeCodeModels,

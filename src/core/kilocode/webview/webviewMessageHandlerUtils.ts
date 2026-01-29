@@ -251,7 +251,9 @@ export const editMessageHandler = async (provider: ClineProvider, message: Webvi
 
 /**
  * Handles device authentication webview messages
- * Supports: startDeviceAuth, cancelDeviceAuth, deviceAuthCompleteWithProfile
+ * Supports:
+ * - KiloCode auth: startDeviceAuth, cancelDeviceAuth, deviceAuthCompleteWithProfile
+ * - Agentica GitHub auth: startAgenticaDeviceAuth, cancelAgenticaDeviceAuth
  */
 export const deviceAuthMessageHandler = async (provider: ClineProvider, message: WebviewMessage): Promise<boolean> => {
 	switch (message.type) {
@@ -261,6 +263,14 @@ export const deviceAuthMessageHandler = async (provider: ClineProvider, message:
 		}
 		case "cancelDeviceAuth": {
 			provider.cancelDeviceAuth()
+			return true
+		}
+		case "startAgenticaDeviceAuth": {
+			await provider.startAgenticaDeviceAuth()
+			return true
+		}
+		case "cancelAgenticaDeviceAuth": {
+			provider.cancelAgenticaDeviceAuth()
 			return true
 		}
 		case "deviceAuthCompleteWithProfile": {

@@ -29,6 +29,7 @@ import {
 	Plug,
 	// Server, // kilocode_change - no longer needed, merged into agentBehaviour
 	Users2,
+	CreditCard, // kilocode_change
 	ArrowLeft,
 } from "lucide-react"
 
@@ -88,6 +89,7 @@ import { UISettings } from "./UISettings"
 import AgentBehaviourView from "../kilocode/settings/AgentBehaviourView" // kilocode_change - new combined view
 // import ModesView from "../modes/ModesView" // kilocode_change - now used inside AgentBehaviourView
 // import McpView from "../mcp/McpView" // kilocode_change: own view
+import PlansView from "./PlansView" // kilocode_change
 import { SettingsSearch } from "./SettingsSearch"
 import { useSearchIndexRegistry, SearchIndexProvider } from "./useSettingsSearch"
 
@@ -121,6 +123,7 @@ export const sectionNames = [
 	"ui",
 	"experimental",
 	"language",
+	"plans", // kilocode_change
 	"about",
 ] as const
 
@@ -768,6 +771,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			// { id: "mcp", icon: Server }, // kilocode_change - merged into agentBehaviour
+			{ id: "plans", icon: CreditCard }, // kilocode_change
 			{ id: "about", icon: Info },
 		],
 		[], // kilocode_change
@@ -970,12 +974,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								<div className={cn("flex items-center gap-2", isCompactMode && "justify-center")}>
 									<Icon className="w-4 h-4" />
 									<span className="tab-label">
-										{/* kilocode_change start - handle agentBehaviour and ghost labels */}
+										{/* kilocode_change start - handle agentBehaviour, ghost, and plans labels */}
 										{id === "agentBehaviour"
 											? t(`kilocode:settings.sections.agentBehaviour`)
 											: id === "ghost"
 												? t(`kilocode:ghost.title`)
-												: t(`settings:sections.${id}`)}
+												: id === "plans"
+													? "Plans"
+													: t(`settings:sections.${id}`)}
 										{/* kilocode_change end */}
 									</span>
 								</div>
@@ -993,12 +999,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 										</TooltipTrigger>
 										<TooltipContent side="right" className="text-base">
 											<p className="m-0">
-												{/* kilocode_change start - handle agentBehaviour and ghost labels */}
+												{/* kilocode_change start - handle agentBehaviour, ghost, and plans labels */}
 												{id === "agentBehaviour"
 													? t(`kilocode:settings.sections.agentBehaviour`)
 													: id === "ghost"
 														? t(`kilocode:ghost.title`)
-														: t(`settings:sections.${id}`)}
+														: id === "plans"
+															? "Plans"
+															: t(`settings:sections.${id}`)}
 												{/* kilocode_change end */}
 											</p>
 										</TooltipContent>
@@ -1299,6 +1307,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 						{renderTab === "language" && (
 							<LanguageSettings language={language || "en"} setCachedStateField={setCachedStateField} />
 						)}
+
+						{/* Plans Section */}
+						{activeTab === "plans" && <PlansView onDone={onDone} />}
 
 						{/* About Section */}
 						{activeTab === "about" && (

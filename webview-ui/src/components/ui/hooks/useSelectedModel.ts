@@ -559,6 +559,13 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		// kilocode_change start: agentica provider
+		case "agentica": {
+			const id = apiConfiguration.agenticaModelId ?? defaultModelId
+			const info = routerModels.agentica?.[id]
+			return { id, info }
+		}
+		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

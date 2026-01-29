@@ -4,8 +4,8 @@ import fs from "fs/promises"
 import EventEmitter from "events"
 
 import { Anthropic } from "@anthropic-ai/sdk"
-import delay from "delay"
-import axios from "axios"
+import OpenAI from "openai"
+import axios from "axios" // kilocode_change
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
@@ -42,6 +42,7 @@ import {
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
 	glamaDefaultModelId, // kilocode_change
+	agenticaDefaultModelId, // kilocode_change
 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
@@ -109,7 +110,7 @@ import { getUri } from "./getUri"
 import { REQUESTY_BASE_URL } from "../../shared/utils/requesty"
 import { validateAndFixToolResultIds } from "../task/validateToolResultIds"
 
-//kilocode_change start
+// kilocode_change start
 import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
 import { McpServer } from "../../shared/mcp"
 import { OpenRouterHandler } from "../../api/providers"
@@ -121,8 +122,8 @@ import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
+import { GithubDeviceAuthService } from "../../services/agentica/GithubDeviceAuthService" // kilocode_change
 
-export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
 
 /**
@@ -144,10 +145,21 @@ interface PendingEditOperation {
 	createdAt: number
 }
 
+export type ClineProviderState = Omit<
+	ExtensionState,
+	| "clineMessages"
+	| "renderContext"
+	| "hasOpenedModeSelector"
+	| "version"
+	| "shouldShowAnnouncement"
+	| "hasSystemPromptOverride"
+	| "taskHistoryFullLength"
+	| "taskHistoryVersion"
+> // kilocode_change: exported view state shape
+
 export class ClineProvider
 	extends EventEmitter<TaskProviderEvents>
-	implements vscode.WebviewViewProvider, TelemetryPropertiesProvider, TaskProviderLike
-{
+	implements vscode.WebviewViewProvider, TelemetryPropertiesProvider, TaskProviderLike {
 	// Used in package.json as the view's id. This value cannot be changed due
 	// to how VSCode caches views based on their id, and updating the id would
 	// break existing instances of the extension.
@@ -170,6 +182,7 @@ export class ClineProvider
 	private currentWorkspacePath: string | undefined
 	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
 	private deviceAuthHandler?: DeviceAuthHandler // kilocode_change - Device auth handler
+	private agenticaDeviceAuthService?: GithubDeviceAuthService // kilocode_change - Agentica device auth handler
 
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -270,8 +283,7 @@ export class ClineProvider
 					}
 				} catch (error) {
 					this.log(
-						`[onTaskAborted] Failed to rehydrate after streaming failure: ${
-							error instanceof Error ? error.message : String(error)
+						`[onTaskAborted] Failed to rehydrate after streaming failure: ${error instanceof Error ? error.message : String(error)
 						}`,
 					)
 				}
@@ -722,7 +734,7 @@ export class ClineProvider
 		if (!visibleProvider) {
 			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
 			// Wait briefly for the view to become visible
-			await delay(100)
+			await new Promise((resolve) => setTimeout(resolve, 100)) // kilocode_change
 			visibleProvider = ClineProvider.getVisibleInstance()
 		}
 
@@ -1355,15 +1367,15 @@ export class ClineProvider
 
 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
 		return /*html*/ `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
-            <meta name="theme-color" content="#000000">
+		<!DOCTYPE html>
+		<html lang="en">
+		  <head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+			<meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com to img-src, https://*, http://localhost:3000 to connect-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
-            <link rel="stylesheet" type="text/css" href="${stylesUri}">
+			<meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+			<link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
@@ -1371,15 +1383,15 @@ export class ClineProvider
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
-            <title>Kilo Code</title>
-          </head>
-          <body>
-            <noscript>You need to enable JavaScript to run this app.</noscript>
-            <div id="root"></div>
-            <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
-          </body>
-        </html>
-      `
+			<title>Kilo Code</title>
+		  </head>
+		  <body>
+			<noscript>You need to enable JavaScript to run this app.</noscript>
+			<div id="root"></div>
+			<script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+		  </body>
+		</html>
+	  `
 	}
 
 	/**
@@ -1433,7 +1445,7 @@ export class ClineProvider
 				}
 
 				// Only update the task's mode after successful persistence.
-				;(task as any)._taskMode = newMode
+				; (task as any)._taskMode = newMode
 			} catch (error) {
 				// If persistence fails, log the error but don't update the in-memory state.
 				this.log(
@@ -1545,7 +1557,7 @@ export class ClineProvider
 			task.updateApiConfiguration(providerSettings)
 		} else {
 			// No rebuild needed, just sync apiConfiguration
-			;(task as any).apiConfiguration = providerSettings
+			; (task as any).apiConfiguration = providerSettings
 		}
 	}
 
@@ -1883,6 +1895,161 @@ export class ClineProvider
 	}
 	// kilocode_change end
 
+	// kilocode_change start - Agentica GitHub Device Auth Flow
+	private agenticaGithubDeviceAuthService?: GithubDeviceAuthService
+
+	async startAgenticaDeviceAuth() {
+		try {
+			// Clean up any existing flow
+			if (this.agenticaGithubDeviceAuthService) {
+				this.agenticaGithubDeviceAuthService.dispose()
+			}
+
+			this.agenticaGithubDeviceAuthService = new GithubDeviceAuthService()
+
+			// Wire events to webview
+			this.agenticaGithubDeviceAuthService.on("started", (data: { userCode: string; verificationUrl: string; expiresIn: number }) => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthStarted",
+					deviceAuthCode: data.userCode,
+					deviceAuthVerificationUrl: data.verificationUrl,
+					deviceAuthExpiresIn: data.expiresIn,
+				})
+				// Also open the verification URL in the browser for convenience
+				vscode.env.openExternal(vscode.Uri.parse(data.verificationUrl))
+			})
+
+			this.agenticaGithubDeviceAuthService.on("polling", (timeRemaining: number) => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthPolling",
+					deviceAuthTimeRemaining: timeRemaining,
+				})
+			})
+
+			this.agenticaGithubDeviceAuthService.on("tick", (timeRemaining: number) => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthTick",
+					deviceAuthTimeRemaining: timeRemaining,
+				})
+			})
+
+			this.agenticaGithubDeviceAuthService.on("success", async (githubAccessToken: string) => {
+				try {
+					// Notify user we're now exchanging the token with Agentica
+					this.postMessageToWebview({
+						type: "agenticaDeviceAuthExchanging",
+					})
+
+					// Exchange GitHub access token for Agentica API key
+					const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+					const baseUrl = apiConfiguration?.agenticaBaseUrl || "https://api.genlabs.dev/agentica/v1" // kilocode_change
+
+					const response = await axios.post(
+						`${baseUrl}/auth/github`,
+						{ access_token: githubAccessToken },
+						{ headers: { "Content-Type": "application/json" } },
+					)
+
+					const data: any = response.data
+					const agenticaApiKey: string | undefined = data?.api_key || data?.access_token
+					const agenticaEmail: string | undefined = data?.email
+
+					if (!agenticaApiKey) {
+						throw new Error("Agentica did not return an API key")
+					}
+
+					await this.upsertProviderProfile(currentApiConfigName, {
+						...apiConfiguration,
+						apiProvider: "agentica",
+						agenticaApiKey,
+						agenticaEmail: agenticaEmail || apiConfiguration?.agenticaEmail,
+						agenticaModelId: apiConfiguration?.agenticaModelId || agenticaDefaultModelId,
+					})
+
+					this.postMessageToWebview({
+						type: "agenticaDeviceAuthComplete",
+						agenticaApiKey,
+						agenticaEmail,
+					})
+
+					vscode.window.showInformationMessage("Agentica successfully configured via GitHub.")
+				} catch (error: any) {
+					this.log(
+						`Error completing Agentica GitHub device auth: ${error instanceof Error ? error.message : String(error)}`,
+					)
+					this.postMessageToWebview({
+						type: "agenticaDeviceAuthFailed",
+						deviceAuthError:
+							error instanceof Error ? error.message : "Failed to complete Agentica authentication via GitHub",
+					})
+				}
+				finally {
+					this.agenticaGithubDeviceAuthService?.dispose()
+					this.agenticaGithubDeviceAuthService = undefined
+				}
+			})
+
+			this.agenticaGithubDeviceAuthService.on("denied", () => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthFailed",
+					deviceAuthError: "Authorization was denied",
+				})
+				this.agenticaGithubDeviceAuthService?.dispose()
+				this.agenticaGithubDeviceAuthService = undefined
+			})
+
+			this.agenticaGithubDeviceAuthService.on("expired", () => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthFailed",
+					deviceAuthError: "Authorization code expired. Please try again.",
+				})
+				this.agenticaGithubDeviceAuthService?.dispose()
+				this.agenticaGithubDeviceAuthService = undefined
+			})
+
+			this.agenticaGithubDeviceAuthService.on("error", (error: Error) => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthFailed",
+					deviceAuthError: error.message,
+				})
+				this.agenticaGithubDeviceAuthService?.dispose()
+				this.agenticaGithubDeviceAuthService = undefined
+			})
+
+			this.agenticaGithubDeviceAuthService.on("cancelled", () => {
+				this.postMessageToWebview({
+					type: "agenticaDeviceAuthCancelled",
+				})
+			})
+
+			await this.agenticaGithubDeviceAuthService.initiate()
+		} catch (error) {
+			this.log(
+				`Error starting Agentica GitHub device auth: ${error instanceof Error ? error.message : String(error)}`,
+			)
+			this.postMessageToWebview({
+				type: "agenticaDeviceAuthFailed",
+				deviceAuthError: error instanceof Error ? error.message : "Failed to start Agentica authentication",
+			})
+			this.agenticaGithubDeviceAuthService?.dispose()
+			this.agenticaGithubDeviceAuthService = undefined
+		}
+	}
+
+	cancelAgenticaDeviceAuth() {
+		if (this.agenticaGithubDeviceAuthService) {
+			this.agenticaGithubDeviceAuthService.cancel()
+			// Dispose shortly after to avoid disposing during event emission
+			setTimeout(() => {
+				if (this.agenticaGithubDeviceAuthService) {
+					this.agenticaGithubDeviceAuthService.dispose()
+					this.agenticaGithubDeviceAuthService = undefined
+				}
+			}, 0)
+		}
+	}
+	// kilocode_change end
+
 	// Task history
 
 	async getTaskWithId(
@@ -2217,6 +2384,7 @@ export class ClineProvider
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
+			alwaysAllowUpdateTodoList,
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext,
@@ -2248,6 +2416,7 @@ export class ClineProvider
 			fuzzyMatchThreshold,
 			// mcpEnabled,  // kilocode_change: always true
 			enableMcpServerCreation,
+			alwaysApproveResubmit,
 			requestDelaySeconds,
 			currentApiConfigName,
 			listApiConfigMeta,
@@ -2313,6 +2482,7 @@ export class ClineProvider
 			openRouterImageApiKey,
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
+			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
@@ -2324,12 +2494,12 @@ export class ClineProvider
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
 				? {
-						...this.getCurrentTask()!.api.getModel(),
-						activeProfileNumber:
-							this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
-								? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
-								: undefined,
-					}
+					...this.getCurrentTask()!.api.getModel(),
+					activeProfileNumber:
+						this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
+							? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
+							: undefined,
+				}
 				: undefined
 		// kilocode_change end
 
@@ -2387,6 +2557,7 @@ export class ClineProvider
 			alwaysAllowMcp: alwaysAllowMcp ?? false,
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
+			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
 			isBrowserSessionActive,
 			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
@@ -2436,6 +2607,8 @@ export class ClineProvider
 			fuzzyMatchThreshold: fuzzyMatchThreshold ?? 1.0,
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: enableMcpServerCreation ?? true,
+			alwaysApproveResubmit: alwaysApproveResubmit ?? false,
+			requestDelaySeconds: requestDelaySeconds ?? 10,
 			currentApiConfigName: currentApiConfigName ?? "default",
 			listApiConfigMeta: listApiConfigMeta ?? [],
 			pinnedApiConfigs: pinnedApiConfigs ?? {},
@@ -2553,6 +2726,7 @@ export class ClineProvider
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
+			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			claudeCodeIsAuthenticated: await (async () => {
@@ -2593,7 +2767,7 @@ export class ClineProvider
 			// kilocode_change start
 			| "taskHistoryFullLength"
 			| "taskHistoryVersion"
-			// kilocode_change end
+		// kilocode_change end
 		>
 	> {
 		const stateValues = this.contextProxy.getValues()
@@ -2707,6 +2881,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
+			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
 			isBrowserSessionActive,
 			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
@@ -2776,6 +2951,7 @@ export class ClineProvider
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,
+			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform,
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
 			telemetrySetting: getEffectiveTelemetrySetting(stateValues.telemetrySetting), // kilocode_change
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
@@ -3650,11 +3826,12 @@ export class ClineProvider
 						alwaysAllowReadOnly: !!state.alwaysAllowReadOnly,
 						alwaysAllowReadOnlyOutsideWorkspace: !!state.alwaysAllowReadOnlyOutsideWorkspace,
 						alwaysAllowSubtasks: !!state.alwaysAllowSubtasks,
-
+						alwaysAllowUpdateTodoList: !!state.alwaysAllowUpdateTodoList,
 						alwaysAllowWrite: !!state.alwaysAllowWrite,
 						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
 						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
 						alwaysAllowDelete: !!state.alwaysAllowDelete, // kilocode_change
+						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
 						yoloMode: !!state.yoloMode,
 					},
 				}
@@ -3943,8 +4120,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await parent.flushPendingToolResultsToHistory()
 		} catch (error) {
 			this.log(
-				`[delegateParentAndOpenChild] Error flushing pending tool results (non-fatal): ${
-					error instanceof Error ? error.message : String(error)
+				`[delegateParentAndOpenChild] Error flushing pending tool results (non-fatal): ${error instanceof Error ? error.message : String(error)
 				}`,
 			)
 		}
@@ -3956,8 +4132,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await this.removeClineFromStack()
 		} catch (error) {
 			this.log(
-				`[delegateParentAndOpenChild] Error during parent disposal (non-fatal): ${
-					error instanceof Error ? error.message : String(error)
+				`[delegateParentAndOpenChild] Error during parent disposal (non-fatal): ${error instanceof Error ? error.message : String(error)
 				}`,
 			)
 			// Non-fatal: proceed with child creation even if parent cleanup had issues
@@ -3971,8 +4146,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await this.handleModeSwitch(mode as any)
 		} catch (e) {
 			this.log(
-				`[delegateParentAndOpenChild] handleModeSwitch failed for mode '${mode}': ${
-					(e as Error)?.message ?? String(e)
+				`[delegateParentAndOpenChild] handleModeSwitch failed for mode '${mode}': ${(e as Error)?.message ?? String(e)
 				}`,
 			)
 		}
@@ -4000,8 +4174,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await this.updateTaskHistory(updatedHistory)
 		} catch (err) {
 			this.log(
-				`[delegateParentAndOpenChild] Failed to persist parent metadata for ${parentTaskId} -> ${child.taskId}: ${
-					(err as Error)?.message ?? String(err)
+				`[delegateParentAndOpenChild] Failed to persist parent metadata for ${parentTaskId} -> ${child.taskId}: ${(err as Error)?.message ?? String(err)
 				}`,
 			)
 		}
@@ -4149,8 +4322,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			})
 		} catch (err) {
 			this.log(
-				`[reopenParentFromDelegation] Failed to persist child completed status for ${childTaskId}: ${
-					(err as Error)?.message ?? String(err)
+				`[reopenParentFromDelegation] Failed to persist child completed status for ${childTaskId}: ${(err as Error)?.message ?? String(err)
 				}`,
 			)
 		}

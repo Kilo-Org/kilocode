@@ -10,9 +10,9 @@ mock/
 *.orig
 
 # Builds
-bin/
+# bin/
 bin-unpacked/
-*.vsix
+# *.vsix
 
 # Local prompts and rules
 /local-prompts

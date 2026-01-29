@@ -42,6 +42,7 @@ type ModelIdKey = keyof Pick<
 	| "nanoGptModelId"
 	| "ovhCloudAiEndpointsModelId"
 	| "inceptionLabsModelId"
+	| "agenticaModelId"
 	// kilocode_change end
 	| "deepInfraModelId"
 	| "ioIntelligenceModelId"
@@ -94,7 +95,9 @@ export const ModelPicker = ({
 	const [isPricingExpanded, setIsPricingExpanded] = useState(false)
 	// kilocode_change end
 
-	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
+	const { id: selectedModelId, info: hookModelInfo } = useSelectedModel(apiConfiguration)
+	// kilocode_change: Fall back to models prop if hook doesn't have info (dynamic providers may have stale cache)
+	const selectedModelInfo = hookModelInfo ?? (selectedModelId && models ? models[selectedModelId] : undefined)
 
 	const [searchValue, setSearchValue] = useState("")
 
@@ -278,27 +281,27 @@ export const ModelPicker = ({
 					{
 						// kilocode_change start
 						selectedModelId &&
-							selectedModelInfo &&
-							(apiConfiguration.apiProvider === "kilocode" ||
+						selectedModelInfo &&
+						(apiConfiguration.apiProvider === "kilocode" ||
 							apiConfiguration.apiProvider === "openrouter" ? (
-								<KiloModelInfoView
-									apiConfiguration={apiConfiguration}
-									modelId={selectedModelId}
-									model={selectedModelInfo}
-									isDescriptionExpanded={isDescriptionExpanded}
-									setIsDescriptionExpanded={setIsDescriptionExpanded}
-									isPricingExpanded={isPricingExpanded}
-									setIsPricingExpanded={setIsPricingExpanded}
-								/>
-							) : (
-								<ModelInfoView
-									apiProvider={apiConfiguration.apiProvider}
-									selectedModelId={selectedModelId}
-									modelInfo={selectedModelInfo}
-									isDescriptionExpanded={isDescriptionExpanded}
-									setIsDescriptionExpanded={setIsDescriptionExpanded}
-								/>
-							))
+							<KiloModelInfoView
+								apiConfiguration={apiConfiguration}
+								modelId={selectedModelId}
+								model={selectedModelInfo}
+								isDescriptionExpanded={isDescriptionExpanded}
+								setIsDescriptionExpanded={setIsDescriptionExpanded}
+								isPricingExpanded={isPricingExpanded}
+								setIsPricingExpanded={setIsPricingExpanded}
+							/>
+						) : (
+							<ModelInfoView
+								apiProvider={apiConfiguration.apiProvider}
+								selectedModelId={selectedModelId}
+								modelInfo={selectedModelInfo}
+								isDescriptionExpanded={isDescriptionExpanded}
+								setIsDescriptionExpanded={setIsDescriptionExpanded}
+							/>
+						))
 						// kilocode_change end
 					}
 					{apiConfiguration.apiProvider !== "kilocode" && ( // kilocode_change
