@@ -75,7 +75,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [depot-ubuntu-24.04-8, depot-windows-2025-8]
+                os: [depot-ubuntu-24.04-8, depot-windows-2022-8]
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [depot-ubuntu-24.04-4, depot-windows-2025-4]
+                os: [depot-ubuntu-24.04-4, depot-windows-2022-4]
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
