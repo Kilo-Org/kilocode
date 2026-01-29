@@ -488,6 +488,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowWriteProtected"
 	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
+	| "alwaysAllowWeb" // kilocode_change: Auto-approve web tools
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
@@ -1262,6 +1263,8 @@ export interface ClineSayTool {
 		| "runSlashCommand"
 		| "updateTodoList"
 		| "deleteFile" // kilocode_change: Handles both files and directories
+		| "webFetch" // kilocode_change: Web fetch tool
+		| "webSearch" // kilocode_change: Web search tool
 	path?: string
 	diff?: string
 	content?: string
@@ -1276,6 +1279,12 @@ export interface ClineSayTool {
 	additionalFileCount?: number // Number of additional files in the same read_file request
 	lineNumber?: number
 	query?: string
+	// kilocode_change start: Web tool properties
+	url?: string // URL for webFetch
+	format?: "text" | "markdown" | "html" // Format for webFetch
+	include_domains?: string[] // Domains to include for webSearch
+	exclude_domains?: string[] // Domains to exclude for webSearch
+	// kilocode_change end
 	// kilocode_change start: Directory stats - only present when deleting directories
 	stats?: {
 		files: number

@@ -421,6 +421,12 @@
 			"close": "Tutup browser"
 		}
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code ingin mengambil konten dari URL",
+		"didFetch": "Kilo Code mengambil konten dari URL",
+		"wantsToSearch": "Kilo Code ingin mencari di web",
+		"didSearch": "Kilo Code mencari di web"
+	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "Perluas blok kode",

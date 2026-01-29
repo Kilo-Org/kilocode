@@ -571,5 +571,11 @@
 		"updated": "تم تحديث قائمة المهام",
 		"completed": "مكتملة",
 		"started": "بدأت"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code يريد جلب محتوى من URL",
+		"didFetch": "Kilo Code جلب محتوى من URL",
+		"wantsToSearch": "Kilo Code يريد البحث في الويب",
+		"didSearch": "Kilo Code بحث في الويب"
 	}
 }

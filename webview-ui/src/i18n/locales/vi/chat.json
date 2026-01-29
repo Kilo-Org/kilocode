@@ -407,6 +407,12 @@
 			"close": "Đóng trình duyệt"
 		}
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code muốn lấy nội dung từ một URL",
+		"didFetch": "Kilo Code đã lấy nội dung từ một URL",
+		"wantsToSearch": "Kilo Code muốn tìm kiếm trên web",
+		"didSearch": "Kilo Code đã tìm kiếm trên web"
+	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "Mở rộng khối mã",

@@ -510,5 +510,11 @@
 		"updated": "할 일 목록을 업데이트했습니다",
 		"completed": "완료됨",
 		"started": "시작됨"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code가 URL에서 콘텐츠를 가져오려고 해",
+		"didFetch": "Kilo Code가 URL에서 콘텐츠를 가져왔어",
+		"wantsToSearch": "Kilo Code가 웹을 검색하려고 해",
+		"didSearch": "Kilo Code가 웹을 검색했어"
 	}
 }

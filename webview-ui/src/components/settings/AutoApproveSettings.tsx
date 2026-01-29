@@ -25,6 +25,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowWriteOutsideWorkspace?: boolean
 	alwaysAllowWriteProtected?: boolean
 	alwaysAllowBrowser?: boolean
+	alwaysAllowWeb?: boolean // kilocode_change
 	alwaysAllowMcp?: boolean
 	alwaysAllowModeSwitch?: boolean
 	alwaysAllowSubtasks?: boolean
@@ -46,6 +47,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowWriteProtected"
 		| "alwaysAllowDelete" // kilocode_change
 		| "alwaysAllowBrowser"
+		| "alwaysAllowWeb" // kilocode_change
 		| "alwaysAllowMcp"
 		| "alwaysAllowModeSwitch"
 		| "alwaysAllowSubtasks"
@@ -69,6 +71,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowWriteOutsideWorkspace,
 	alwaysAllowWriteProtected,
 	alwaysAllowBrowser,
+	alwaysAllowWeb, // kilocode_change
 	alwaysAllowMcp,
 	alwaysAllowModeSwitch,
 	alwaysAllowSubtasks,
@@ -192,7 +195,9 @@ export const AutoApproveSettings = ({
 					<AutoApproveToggle
 						alwaysAllowReadOnly={alwaysAllowReadOnly}
 						alwaysAllowWrite={alwaysAllowWrite}
+						alwaysAllowDelete={toggles.alwaysAllowDelete} // kilocode_change
 						alwaysAllowBrowser={alwaysAllowBrowser}
+						alwaysAllowWeb={alwaysAllowWeb} // kilocode_change
 						alwaysAllowMcp={alwaysAllowMcp}
 						alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 						alwaysAllowSubtasks={alwaysAllowSubtasks}

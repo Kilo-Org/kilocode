@@ -505,6 +505,12 @@
 		"wantsToRun": "Kilo Code хочет выполнить слеш-команду",
 		"didRun": "Kilo Code выполнил слеш-команду"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code хочет получить содержимое по URL",
+		"didFetch": "Kilo Code получил содержимое по URL",
+		"wantsToSearch": "Kilo Code хочет выполнить поиск в интернете",
+		"didSearch": "Kilo Code выполнил поиск в интернете"
+	},
 	"todo": {
 		"partial": "{{completed}} из {{total}} задач выполнено",
 		"complete": "{{total}} задач выполнено",
