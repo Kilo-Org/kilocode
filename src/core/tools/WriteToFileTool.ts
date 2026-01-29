@@ -16,6 +16,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { convertNewFileToUnifiedDiff, computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
+import { FileModificationNotificationService } from "../../services/file-modification/FileModificationNotificationService"
 
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 
@@ -216,6 +217,15 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			}
 
 			task.didEditFile = true
+
+			// kilocode_change start: Notify file modification service
+			await FileModificationNotificationService.getInstance().notifyFileModified({
+				filePath: relPath,
+				absolutePath: path.resolve(task.cwd, relPath),
+				operation: fileExists ? "modify" : "create",
+				source: isPreventFocusDisruptionEnabled ? "filesystem" : "vscode_api",
+			})
+			// kilocode_change end
 
 			const message = await task.diffViewProvider.pushToolWriteResult(task, task.cwd, !fileExists)
 
