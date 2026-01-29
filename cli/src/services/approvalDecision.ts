@@ -25,6 +25,66 @@ export interface ApprovalDecision {
 	message?: string
 }
 
+import { parse as parseShellCommand } from "shell-quote"
+
+/**
+ * Splits a shell command into individual commands by operators (&&, ||, ;, |)
+ * Uses the shell-quote library for proper shell syntax parsing:
+ * - Ignores operators inside single or double quotes
+ * - Ignores escaped operators (preceded by backslash)
+ * - Handles complex shell syntax correctly
+ *
+ * @param command - The full command string
+ * @returns Array of individual commands
+ */
+/**
+ * Splits a shell command into individual commands by operators (&&, ||, ;, |)
+ * Uses the shell-quote library for proper shell syntax parsing:
+ * - Ignores operators inside single or double quotes
+ * - Ignores escaped operators (preceded by backslash)
+ * - Handles complex shell syntax correctly
+ *
+ * @param command - The full command string
+ * @returns Array of individual commands
+ */
+export function splitCommandChain(command: string): string[] {
+	try {
+		const parsed = parseShellCommand(command)
+		const commands: string[] = []
+		let currentCommand: string[] = []
+
+		for (const token of parsed) {
+			// Check if this is an operator
+			if (typeof token === "object" && token !== null && "op" in token) {
+				const op = (token as { op: string }).op
+				// Split on &&, ||, ;, and | operators
+				if (op === "&&" || op === "||" || op === ";" || op === "|") {
+					if (currentCommand.length > 0) {
+						commands.push(currentCommand.join(" "))
+						currentCommand = []
+					}
+				}
+			} else if (typeof token === "string") {
+				currentCommand.push(token)
+			}
+		}
+
+		// Add the last command if there is one
+		if (currentCommand.length > 0) {
+			commands.push(currentCommand.join(" "))
+		}
+
+		return commands
+	} catch (error) {
+		// If parsing fails, fall back to treating the entire command as one
+		logs.warn("Failed to parse shell command, treating as single command", "approvalDecision", {
+			command,
+			error: error instanceof Error ? error.message : String(error),
+		})
+		return [command]
+	}
+}
+
 /**
  * Helper function to check if a command matches allowed/denied patterns
  * Supports hierarchical matching:
@@ -32,7 +92,7 @@ export interface ApprovalDecision {
  * - "git status" matches "git status --short", "git status -v", etc.
  * - Exact match: "git status --short" only matches "git status --short"
  */
-function matchesCommandPattern(command: string, patterns: string[]): boolean {
+export function matchesCommandPattern(command: string, patterns: string[]): boolean {
 	if (patterns.length === 0) return false
 
 	const normalizedCommand = command.trim()
@@ -197,20 +257,18 @@ function getCommandApprovalDecision(
 	const allowedCommands = config.execute?.allowed ?? []
 	const deniedCommands = config.execute?.denied ?? []
 
+	// Split command into individual commands if it contains operators
+	const commands = splitCommandChain(command)
+
 	logs.info("Checking command approval", "approvalDecision", {
 		command,
 		rawText: message.text,
+		splitCommands: commands,
 		allowedCommands,
 		deniedCommands,
 		executeEnabled: config.execute?.enabled,
 		configExecute: config.execute,
 	})
-
-	// Check denied list first (takes precedence)
-	if (matchesCommandPattern(command, deniedCommands)) {
-		logs.debug("Command matches denied pattern", "approvalDecision", { command })
-		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
-	}
 
 	// If allowed list is empty, don't allow any commands
 	if (allowedCommands.length === 0) {
@@ -218,21 +276,58 @@ function getCommandApprovalDecision(
 		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 	}
 
-	// Check if command matches allowed patterns
-	if (matchesCommandPattern(command, allowedCommands)) {
-		logs.info("Command matches allowed pattern - auto-approving", "approvalDecision", {
-			command,
-			matchedAgainst: allowedCommands,
+	// First check if the full command (unsplit) is explicitly denied
+	// This takes precedence over any allowed patterns
+	const normalizedCommand = command.trim()
+	const fullCommandDenied = deniedCommands.some((pattern) => pattern.trim() === normalizedCommand)
+
+	if (fullCommandDenied) {
+		logs.debug("Full command matches denied pattern exactly", "approvalDecision", {
+			command: normalizedCommand,
+		})
+		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+	}
+
+	// Check if the full command (unsplit) matches any allowed pattern exactly
+	// This allows users to approve and remember entire command chains like "ls . && cat README.md"
+	const fullCommandAllowed = allowedCommands.some((pattern) => pattern.trim() === normalizedCommand)
+
+	if (fullCommandAllowed) {
+		logs.info("Full command matches allowed pattern exactly - auto-approving", "approvalDecision", {
+			command: normalizedCommand,
 		})
 		return { action: "auto-approve" }
 	}
 
-	logs.info("Command does not match any allowed pattern", "approvalDecision", {
+	// Check each command in the chain
+	for (const cmd of commands) {
+		// Check denied list first (takes precedence)
+		if (matchesCommandPattern(cmd, deniedCommands)) {
+			logs.debug("Command in chain matches denied pattern", "approvalDecision", {
+				command: cmd,
+				fullCommand: command,
+			})
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+		}
+
+		// Check if this command matches allowed patterns
+		if (!matchesCommandPattern(cmd, allowedCommands)) {
+			logs.info("Command in chain does not match any allowed pattern", "approvalDecision", {
+				command: cmd,
+				fullCommand: command,
+				allowedCommands,
+			})
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+		}
+	}
+
+	// All commands in the chain are allowed
+	logs.info("All commands in chain match allowed patterns - auto-approving", "approvalDecision", {
 		command,
-		allowedCommands,
-		deniedCommands,
+		splitCommands: commands,
+		matchedAgainst: allowedCommands,
 	})
-	return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+	return { action: "auto-approve" }
 }
 
 /**

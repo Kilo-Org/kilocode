@@ -2,6 +2,8 @@ import { atom } from "jotai"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { selectedIndexAtom } from "./ui.js"
+import { autoApproveExecuteAllowedAtom } from "./config.js"
+import { matchesCommandPattern, splitCommandChain } from "../../services/approvalDecision.js"
 
 /**
  * Approval option interface
@@ -61,27 +63,39 @@ export const isApprovalPendingAtom = atom<boolean>((get) => {
 	return pending !== null && !processing.isProcessing
 })
 
+// Commands that should not generate hierarchical options - only the base command
+const NO_HIERARCHY_COMMANDS = new Set(["echo"])
+
 /**
  * Helper function to parse command into hierarchical parts
  * Example: "git status --short --branch" returns:
  * - "git"
  * - "git status"
  * - "git status --short --branch"
+ *
+ * For commands in NO_HIERARCHY_COMMANDS (like "echo"), only returns the base command:
+ * - "echo"
  */
 function parseCommandHierarchy(command: string): string[] {
 	const parts = command.trim().split(/\s+/).filter(Boolean)
 	if (parts.length === 0) return []
 
+	const baseCommand = parts[0]
 	const hierarchy: string[] = []
 
 	// Add base command
-	if (parts[0]) {
-		hierarchy.push(parts[0])
+	if (baseCommand) {
+		hierarchy.push(baseCommand)
+	}
+
+	// For commands like "echo", don't generate further hierarchy
+	if (NO_HIERARCHY_COMMANDS.has(baseCommand)) {
+		return hierarchy
 	}
 
 	// Add command + first subcommand if exists
-	if (parts.length > 1 && parts[0] && parts[1]) {
-		hierarchy.push(`${parts[0]} ${parts[1]}`)
+	if (parts.length > 1 && baseCommand && parts[1]) {
+		hierarchy.push(`${baseCommand} ${parts[1]}`)
 	}
 
 	// Add full command if it's different from the previous entries
@@ -93,12 +107,40 @@ function parseCommandHierarchy(command: string): string[] {
 }
 
 /**
+ * Helper function to generate hierarchical approval options for all commands in a chain
+ * Splits the command chain and generates hierarchy for each individual command
+ * Example: "ls . && cat README.md | tail -20" generates:
+ * - "ls", "ls ."
+ * - "cat", "cat README.md"
+ * - "tail", "tail -20"
+ * - "ls . && cat README.md | tail -20" (full command)
+ */
+function generateCommandHierarchyForChain(fullCommand: string): string[] {
+	const commands = splitCommandChain(fullCommand)
+	const allHierarchies: string[] = []
+
+	for (const command of commands) {
+		const hierarchy = parseCommandHierarchy(command)
+		allHierarchies.push(...hierarchy)
+	}
+
+	// Add the full command at the end so users can approve the exact command chain
+	allHierarchies.push(fullCommand)
+
+	// Remove duplicates while preserving order
+	return [...new Set(allHierarchies)]
+}
+
+
+
+/**
  * Derived atom to get approval options based on the pending message type
  * Note: This atom recalculates whenever the pending message changes OR when
  * the message text/partial status changes (for streaming messages)
  */
 export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 	const pendingMessage = get(pendingApprovalAtom)
+	const allowedCommands = get(autoApproveExecuteAllowedAtom)
 
 	if (!pendingMessage || pendingMessage.type !== "ask") {
 		return []
@@ -175,7 +217,8 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 		}
 
 		if (command) {
-			const hierarchy = parseCommandHierarchy(command)
+			// Generate hierarchical options for all commands in the chain
+			const hierarchy = generateCommandHierarchyForChain(command)
 			const options: ApprovalOption[] = [
 				{
 					label: approveLabel,
@@ -185,8 +228,11 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 				},
 			]
 
-			// Add "Always run X" options for each level of the hierarchy
-			hierarchy.forEach((pattern, index) => {
+			// Add "Always run X" options only for patterns not already allowed
+			// Filter out patterns that are already covered by the allowed commands list
+			const newPatterns = hierarchy.filter((pattern) => !matchesCommandPattern(pattern, allowedCommands))
+
+			newPatterns.forEach((pattern, index) => {
 				options.push({
 					label: `Always Run "${pattern}"`,
 					action: "approve-and-remember" as const,
