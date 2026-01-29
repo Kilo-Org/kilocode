@@ -39,7 +39,7 @@ The MVP will use OpenAI's Realtime API with FFmpeg-based audio streaming for low
 
 ## Architecture Overview
 
-![Voice Transcription Architecture](./img/voice-transcription-architecture.png)
+![Voice Transcription Architecture](/docs/img/voice-transcription-architecture.png)
 
 The system follows a straightforward streaming architecture where user voice input is captured by FFmpeg, streamed as PCM16 audio to OpenAI's Realtime API via WebSocket, and transcribed text is displayed live in the chat input box. Typing interrupts recording instantly.
 

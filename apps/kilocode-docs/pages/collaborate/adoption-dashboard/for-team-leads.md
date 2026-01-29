@@ -71,7 +71,7 @@ Low Depth indicates that developers may be trying AI but not trusting or shippin
 
 **Actions:**
 
-1. Enable [Managed Indexing](/advanced-usage/managed-indexing) to improve context quality
+1. Enable [Managed Indexing](/docs/advanced-usage/managed-indexing) to improve context quality
 2. Review whether suggestions are relevant to your codebase
 3. Introduce chained workflows to increase multi-stage usage
 
@@ -235,6 +235,6 @@ Additional views for comparing multiple teams within an organization are planned
 
 ## Next Steps
 
-- [Understand what each dimension measures](/plans/adoption-dashboard/understanding-your-score)
-- [Learn strategies to improve your score](/plans/adoption-dashboard/improving-your-score)
-- [Return to the dashboard overview](/plans/adoption-dashboard/overview)
+- [Understand what each dimension measures](/docs/plans/adoption-dashboard/understanding-your-score)
+- [Learn strategies to improve your score](/docs/plans/adoption-dashboard/improving-your-score)
+- [Return to the dashboard overview](/docs/plans/adoption-dashboard/overview)

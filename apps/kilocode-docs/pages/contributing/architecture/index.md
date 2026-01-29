@@ -48,18 +48,18 @@ Kilo Code is a VS Code extension built with TypeScript that connects to various 
 
 These pages document the architecture and design of a current or planned feature, as well as any unique development patterns.
 
-| Feature                                                            | Description                                |
-| ------------------------------------------------------------------ | ------------------------------------------ |
-| [Annual Billing](./annual-billing.md)                              | Annual subscription billing                |
-| [Enterprise MCP Controls](./enterprise-mcp-controls.md)            | Admin controls for MCP server allowlists   |
-| [Onboarding Improvements](./onboarding-engagement-improvements.md) | User onboarding and engagement features    |
-| [Organization Modes Library](./organization-modes-library.md)      | Shared modes for teams and enterprise      |
-| [Agentic Security Reviews](./security-reviews.md)                  | AI-powered security vulnerability analysis |
-| [Track Repo URL](./track-repo-url.md)                              | Usage tracking by repository/project       |
-| [Vercel AI Gateway](./vercel-ai-gateway.md)                        | Vercel AI Gateway integration              |
-| [Voice Transcription](./voice-transcription.md)                    | Live voice input for chat                  |
+| Feature                                                                                  | Description                                |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [Annual Billing](/docs/contributing/architecture/annual-billing)                         | Annual subscription billing                |
+| [Enterprise MCP Controls](/docs/contributing/architecture/enterprise-mcp-controls)       | Admin controls for MCP server allowlists   |
+| [Onboarding Improvements](/docs/contributing/architecture/onboarding-improvements)       | User onboarding and engagement features    |
+| [Organization Modes Library](/docs/contributing/architecture/organization-modes-library) | Shared modes for teams and enterprise      |
+| [Agentic Security Reviews](/docs/contributing/architecture/security-reviews)             | AI-powered security vulnerability analysis |
+| [Track Repo URL](/docs/contributing/architecture/track-repo-url)                         | Usage tracking by repository/project       |
+| [Vercel AI Gateway](/docs/contributing/architecture/vercel-ai-gateway)                   | Vercel AI Gateway integration              |
+| [Voice Transcription](/docs/contributing/architecture/voice-transcription)               | Live voice input for chat                  |
 
-To propose a new feature design, consider using the [feature template](./feature-template.md).
+To propose a new feature design, please create a detailed proposal using the architecture patterns shown in the above feature examples.
 
 ## Key Concepts
 
@@ -158,5 +158,5 @@ The project uses:
 
 ## Further Reading
 
-- [Development Environment](/contributing/development-environment) - Setup guide
-- [Tools Reference](/features/tools/tool-use-overview) - Available tools
+- [Development Environment](/docs/contributing/development-environment) - Setup guide
+- [Tools Reference](/docs/features/tools/tool-use-overview) - Available tools
