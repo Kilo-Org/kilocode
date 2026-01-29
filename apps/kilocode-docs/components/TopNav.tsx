@@ -30,6 +30,7 @@ const mainNavItems: NavItem[] = [
 	{ label: "Collaborate", href: "/collaborate" },
 	{ label: "Automate", href: "/automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure" },
+	{ label: "Contributing", href: "/contributing" },
 ]
 
 const contributingItems: DropdownItem[] = [

@@ -34,11 +34,11 @@ When the Enterprise MCP Controls feature is enabled, extension users can no long
 
 #### How Kilo/MCP works today
 
-![How MCP works today](./img/enterprise-mcp-controls-today.png)
+!![How MCP works today](/docs/img/enterprise-mcp-controls-today.png)
 
 #### How Kilo/MCP works with enterprise controls
 
-![How MCP works with enterprise controls](./img/enterprise-mcp-controls-with-ent-control.png)
+!![How MCP works with enterprise controls](/docs/img/enterprise-mcp-controls-with-ent-control.png)
 
 ### Schema
 
@@ -79,7 +79,7 @@ There will be a new page in the left-hand navigation for Enterprise users only c
 
 #### Organization user experience
 
-![Organization user experience](./img/enterprise-mcp-controls-org-user-install.png)
+!![Organization user experience](/docs/img/enterprise-mcp-controls-org-user-install.png)
 
 When org users want to configure and use an MCP server and if organizations.settings.mcp_controls_enabled is true, they will be directed to the Kilo Code dashboard application `/organizations/:id/mcp-control`. Users will be able to enable, disable, and configure approved MCP servers.
 

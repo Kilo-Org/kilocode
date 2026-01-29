@@ -217,6 +217,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nieuw hier?",
+		"tryOneOfThese": "Probeer een van deze ideeën om te beginnen:",
+		"clickToInsert": "Klik op een suggestie om er meteen mee aan de slag te gaan",
 		"suggestionText": "<suggestionButton>Klik hier</suggestionButton> voor een cool idee, tik dan op <sendIcon /> en kijk hoe ik magie doe!",
 		"ideas": {
 			"idea1": "Maak een draaiende, gloeiende 3D-bol die reageert op muisbewegingen. Laat de app in de browser werken.",

@@ -13,24 +13,24 @@ Kilo Code implements a sophisticated tool system that allows AI models to intera
 
 Tools are organized into logical groups based on their functionality:
 
-| Category           | Purpose                           | Tools                                                                                                                                                                                                                                                            | Common Use                                         |
-| ------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Read Group**     | File system reading and searching | [read_file](/features/tools/read-file), [search_files](/features/tools/search-files), [list_files](/features/tools/list-files), [list_code_definition_names](/features/tools/list-code-definition-names)                                                         | Code exploration and analysis                      |
-| **Edit Group**     | File system modifications         | [apply_diff](/features/tools/apply-diff), [delete_file](/features/tools/delete-file), [write_to_file](/features/tools/write-to-file)                                                                                                                             | Code changes and file manipulation                 |
-| **Browser Group**  | Web automation                    | [browser_action](/features/tools/browser-action)                                                                                                                                                                                                                 | Web testing and interaction                        |
-| **Command Group**  | System command execution          | [execute_command](/features/tools/execute-command)                                                                                                                                                                                                               | Running scripts, building projects                 |
-| **MCP Group**      | External tool integration         | [use_mcp_tool](/features/tools/use-mcp-tool), [access_mcp_resource](/features/tools/access-mcp-resource)                                                                                                                                                         | Specialized functionality through external servers |
-| **Workflow Group** | Mode and task management          | [switch_mode](/features/tools/switch-mode), [new_task](/features/tools/new-task), [ask_followup_question](/features/tools/ask-followup-question), [attempt_completion](/features/tools/attempt-completion), [update_todo_list](/features/tools/update-todo-list) | Context switching and task organization            |
+| Category           | Purpose                           | Tools                                                                                                                                                                                                                                                                                     | Common Use                                         |
+| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Read Group**     | File system reading and searching | [read_file](/docs/features/tools/read-file), [search_files](/docs/features/tools/search-files), [list_files](/docs/features/tools/list-files), [list_code_definition_names](/docs/features/tools/list-code-definition-names)                                                              | Code exploration and analysis                      |
+| **Edit Group**     | File system modifications         | [apply_diff](/docs/features/tools/apply-diff), [delete_file](/docs/features/tools/delete-file), [write_to_file](/docs/features/tools/write-to-file)                                                                                                                                       | Code changes and file manipulation                 |
+| **Browser Group**  | Web automation                    | [browser_action](/docs/features/tools/browser-action)                                                                                                                                                                                                                                     | Web testing and interaction                        |
+| **Command Group**  | System command execution          | [execute_command](/docs/features/tools/execute-command)                                                                                                                                                                                                                                   | Running scripts, building projects                 |
+| **MCP Group**      | External tool integration         | [use_mcp_tool](/docs/features/tools/use-mcp-tool), [access_mcp_resource](/docs/features/tools/access-mcp-resource)                                                                                                                                                                        | Specialized functionality through external servers |
+| **Workflow Group** | Mode and task management          | [switch_mode](/docs/features/tools/switch-mode), [new_task](/docs/features/tools/new-task), [ask_followup_question](/docs/features/tools/ask-followup-question), [attempt_completion](/docs/features/tools/attempt-completion), [update_todo_list](/docs/features/tools/update-todo-list) | Context switching and task organization            |
 
 ### Always Available Tools
 
 Certain tools are accessible regardless of the current mode:
 
-- [ask_followup_question](/features/tools/ask-followup-question): Gather additional information from users
-- [attempt_completion](/features/tools/attempt-completion): Signal task completion
-- [switch_mode](/features/tools/switch-mode): Change operational modes
-- [new_task](/features/tools/new-task): Create subtasks
-- [update_todo_list](/features/tools/update-todo-list): Manage step-by-step task tracking
+- [ask_followup_question](/docs/features/tools/ask-followup-question): Gather additional information from users
+- [attempt_completion](/docs/features/tools/attempt-completion): Signal task completion
+- [switch_mode](/docs/features/tools/switch-mode): Change operational modes
+- [new_task](/docs/features/tools/new-task): Create subtasks
+- [update_todo_list](/docs/features/tools/update-todo-list): Manage step-by-step task tracking
 
 ## Available Tools
 
@@ -38,47 +38,47 @@ Certain tools are accessible regardless of the current mode:
 
 These tools help Kilo Code understand your code and project:
 
-- [read_file](/features/tools/read-file) - Examines the contents of files
-- [search_files](/features/tools/search-files) - Finds patterns across multiple files
-- [list_files](/features/tools/list-files) - Maps your project's file structure
-- [list_code_definition_names](/features/tools/list-code-definition-names) - Creates a structural map of your code
+- [read_file](/docs/features/tools/read-file) - Examines the contents of files
+- [search_files](/docs/features/tools/search-files) - Finds patterns across multiple files
+- [list_files](/docs/features/tools/list-files) - Maps your project's file structure
+- [list_code_definition_names](/docs/features/tools/list-code-definition-names) - Creates a structural map of your code
 
 ### Edit Tools
 
 These tools help Kilo Code make changes to your code:
 
-- [apply_diff](/features/tools/apply-diff) - Makes precise, surgical changes to your code
-- [delete_file](/features/tools/delete-file) - Removes files from your workspace
-- [write_to_file](/features/tools/write-to-file) - Creates new files or completely rewrites existing ones
+- [apply_diff](/docs/features/tools/apply-diff) - Makes precise, surgical changes to your code
+- [delete_file](/docs/features/tools/delete-file) - Removes files from your workspace
+- [write_to_file](/docs/features/tools/write-to-file) - Creates new files or completely rewrites existing ones
 
 ### Browser Tools
 
 These tools help Kilo Code interact with web applications:
 
-- [browser_action](/features/tools/browser-action) - Automates browser interactions
+- [browser_action](/docs/features/tools/browser-action) - Automates browser interactions
 
 ### Command Tools
 
 These tools help Kilo Code execute commands:
 
-- [execute_command](/features/tools/execute-command) - Runs system commands and programs
+- [execute_command](/docs/features/tools/execute-command) - Runs system commands and programs
 
 ### MCP Tools
 
 These tools help Kilo Code connect with external services:
 
-- [use_mcp_tool](/features/tools/use-mcp-tool) - Uses specialized external tools
-- [access_mcp_resource](/features/tools/access-mcp-resource) - Accesses external data sources
+- [use_mcp_tool](/docs/features/tools/use-mcp-tool) - Uses specialized external tools
+- [access_mcp_resource](/docs/features/tools/access-mcp-resource) - Accesses external data sources
 
 ### Workflow Tools
 
 These tools help manage the conversation and task flow:
 
-- [ask_followup_question](/features/tools/ask-followup-question) - Gets additional information from you
-- [attempt_completion](/features/tools/attempt-completion) - Presents final results
-- [switch_mode](/features/tools/switch-mode) - Changes to a different mode for specialized tasks
-- [new_task](/features/tools/new-task) - Creates a new subtask
-- [update_todo_list](/features/tools/update-todo-list) - Tracks task progress with step-by-step checklists
+- [ask_followup_question](/docs/features/tools/ask-followup-question) - Gets additional information from you
+- [attempt_completion](/docs/features/tools/attempt-completion) - Presents final results
+- [switch_mode](/docs/features/tools/switch-mode) - Changes to a different mode for specialized tasks
+- [new_task](/docs/features/tools/new-task) - Creates a new subtask
+- [update_todo_list](/docs/features/tools/update-todo-list) - Tracks task progress with step-by-step checklists
 
 ## Tool Calling Mechanism
 
@@ -219,24 +219,24 @@ Tools are made available based on the current mode:
 1. **Information Gathering**
 
     ```
-    [ask_followup_question](/features/tools/ask-followup-question) → [read_file](/features/tools/read-file) → [search_files](/features/tools/search-files)
+    [ask_followup_question](/docs/features/tools/ask-followup-question) → [read_file](/docs/features/tools/read-file) → [search_files](/docs/features/tools/search-files)
     ```
 
 2. **Code Modification**
 
     ```
-    [read_file](/features/tools/read-file) → [apply_diff](/features/tools/apply-diff) → [attempt_completion](/features/tools/attempt-completion)
+    [read_file](/docs/features/tools/read-file) → [apply_diff](/docs/features/tools/apply-diff) → [attempt_completion](/docs/features/tools/attempt-completion)
     ```
 
 3. **Task Management**
 
     ```
-    [new_task](/features/tools/new-task) → [switch_mode](/features/tools/switch-mode) → [execute_command](/features/tools/execute-command)
+    [new_task](/docs/features/tools/new-task) → [switch_mode](/docs/features/tools/switch-mode) → [execute_command](/docs/features/tools/execute-command)
     ```
 
 4. **Progress Tracking**
     ```
-    [update_todo_list](/features/tools/update-todo-list) → [execute_command](/features/tools/execute-command) → [update_todo_list](/features/tools/update-todo-list)
+    [update_todo_list](/docs/features/tools/update-todo-list) → [execute_command](/docs/features/tools/execute-command) → [update_todo_list](/docs/features/tools/update-todo-list)
     ```
 
 ## Error Handling and Recovery

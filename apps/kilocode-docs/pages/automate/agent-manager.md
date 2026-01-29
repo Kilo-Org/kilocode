@@ -16,7 +16,7 @@ This page reflects the actual implementation in the extension.
 
 ## Prerequisites
 
-- Install/update the Kilo Code CLI (latest) — see [CLI setup](/cli)
+- Install/update the Kilo Code CLI (latest) — see [CLI setup](/docs/cli)
 - Open a project in VS Code (workspace required)
 - Authentication: You must be logged in via the extension settings OR use CLI with kilocode as provider (see [Authentication Requirements](#authentication-requirements))
 
@@ -103,7 +103,7 @@ The Agent Manager requires proper authentication for full functionality, includi
 2. **CLI with Kilo Code Provider**
     - Use the CLI configured with `kilocode` as the provider
     - Run `kilocode config` to set up authentication
-    - See [CLI setup](/cli) for details
+    - See [CLI setup](/docs/cli) for details
 
 ### BYOK Limitations
 
@@ -132,7 +132,7 @@ Message transcripts are fetched from a signed blob and exclude internal checkpoi
 ## Troubleshooting
 
 - CLI not found or outdated
-    - Install/update the CLI: [CLI setup](/cli)
+    - Install/update the CLI: [CLI setup](/docs/cli)
     - If you see an "unknown option --json-io" error, update to the latest CLI
 - "Please open a folder…" error
     - The Agent Manager requires a VS Code workspace folder
@@ -147,6 +147,6 @@ Message transcripts are fetched from a signed blob and exclude internal checkpoi
 
 ## Related features
 
-- [Sessions](/advanced-usage/sessions)
-- [Auto-approving Actions](/features/auto-approving-actions)
-- [CLI](/cli)
+- [Sessions](/docs/advanced-usage/sessions)
+- [Auto-approving Actions](/docs/features/auto-approving-actions)
+- [CLI](/docs/cli)
