@@ -218,6 +218,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "New here?",
+		"tryOneOfThese": "Try one of these ideas to get started:",
+		"clickToInsert": "Click any suggestion to start working on it immediately",
 		"suggestionText": "<suggestionButton>Click here</suggestionButton> for a cool idea, then tap on <sendIcon /> and watch me do magic!",
 		"ideas": {
 			"idea1": "Make a spinning, glowing 3D sphere that responds to mouse movements. Make the app work in the browser.",
