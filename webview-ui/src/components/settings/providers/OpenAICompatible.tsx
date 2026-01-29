@@ -245,6 +245,7 @@ export const OpenAICompatible = ({
 								apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults
 
 							setApiConfigurationField("openAiCustomModelInfo", openAiCustomModelInfo)
+							setApiConfigurationField("reasoningEffort", undefined)
 						}
 					}}>
 					{t("settings:providers.setReasoningLevel")}
@@ -253,7 +254,9 @@ export const OpenAICompatible = ({
 					<ThinkingBudget
 						apiConfiguration={{
 							...apiConfiguration,
-							reasoningEffort: apiConfiguration.openAiCustomModelInfo?.reasoningEffort,
+							reasoningEffort:
+								apiConfiguration.reasoningEffort ||
+								apiConfiguration.openAiCustomModelInfo?.reasoningEffort,
 						}}
 						setApiConfigurationField={(field, value) => {
 							if (field === "reasoningEffort") {
@@ -264,6 +267,7 @@ export const OpenAICompatible = ({
 									...openAiCustomModelInfo,
 									reasoningEffort: value as ReasoningEffort,
 								})
+								setApiConfigurationField("reasoningEffort", value as ReasoningEffort)
 							}
 						}}
 						modelInfo={{
