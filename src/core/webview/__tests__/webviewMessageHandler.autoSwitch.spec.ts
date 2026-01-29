@@ -145,7 +145,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "test-token",
 					kilocodeOrganizationId: "org-1",
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 
 			// Verify flag was set to true after the recursive call
@@ -407,7 +407,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "new-token",
 					kilocodeOrganizationId: undefined,
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 		})
 
@@ -569,7 +569,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "test-token",
 					kilocodeOrganizationId: "org-1",
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 
 			// Verify log message mentions the correct organization
