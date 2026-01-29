@@ -18,6 +18,7 @@ export { authenticateWithDeviceAuth } from "./auth/device-auth.js"
 export { authenticateWithDeviceAuthTUI } from "./auth/device-auth-tui.js"
 export { getKiloUrlFromToken, isValidKilocodeToken, getApiKey } from "./auth/token.js"
 export { poll, formatTimeRemaining } from "./auth/polling.js"
+export { migrateLegacyKiloAuth, LEGACY_CONFIG_PATH } from "./auth/legacy-migration.js"
 
 // ============================================================================
 // API

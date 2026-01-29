@@ -26,8 +26,9 @@ import { EOL } from "os"
 import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
-// kilocode_change start - Import telemetry
+// kilocode_change start - Import telemetry and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { migrateLegacyKiloAuth } from "@kilocode/kilo-gateway"
 import { Global } from "./global"
 import { Config } from "./config/config"
 import { Auth } from "./auth"
@@ -88,6 +89,12 @@ const cli = yargs(hideBin(process.argv))
       version: Installation.VERSION,
       enabled: globalCfg.experimental?.openTelemetry !== false,
     })
+
+    // Migrate legacy Kilo CLI auth if needed
+    await migrateLegacyKiloAuth(
+      async () => (await Auth.get("kilo")) !== undefined,
+      async (auth) => Auth.set("kilo", auth),
+    )
 
     const kiloAuth = await Auth.get("kilo")
     if (kiloAuth) {
