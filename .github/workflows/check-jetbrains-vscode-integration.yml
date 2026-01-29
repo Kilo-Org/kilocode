@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2025 Weibo, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: IDE Integration Check
+
+on:
+    pull_request:
+
+jobs:
+    check-commands:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Check JetBrains and VSCode command consistency
+              run: |
+                  echo "Running command consistency check..."
+                  bash scripts/check-jetbrains-vscode-commands.sh
