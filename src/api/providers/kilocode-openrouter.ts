@@ -18,7 +18,7 @@ import {
 } from "../../shared/kilocode/headers"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
-import { streamSse } from "../../services/continuedev/core/fetch/stream"
+import { streamSse } from "../../services/ghost/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
 import type { FimHandler } from "./kilocode/FimHandler"
 

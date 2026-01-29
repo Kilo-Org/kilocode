@@ -6,7 +6,7 @@ import {
 	FillInAtCursorSuggestion,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
-import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { getTemplateForModel } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
 
 export type { FimGhostPrompt, FimCompletionResult }

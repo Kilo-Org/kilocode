@@ -23,10 +23,10 @@ import {
 	X_KILOCODE_PROJECTID,
 	X_KILOCODE_EDITORNAME,
 } from "../../../shared/kilocode/headers"
-import { streamSse } from "../../../services/continuedev/core/fetch/stream"
+import { streamSse } from "../../../services/ghost/continuedev/core/fetch/stream"
 
 // Mock the stream module
-vitest.mock("../../../services/continuedev/core/fetch/stream", () => ({
+vitest.mock("../../../services/ghost/continuedev/core/fetch/stream", () => ({
 	streamSse: vitest.fn(),
 }))
 

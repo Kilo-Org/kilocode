@@ -12,8 +12,8 @@ import {
 	AutocompleteSnippetType,
 	type AutocompleteCodeSnippet,
 	type AutocompleteStaticSnippet,
-} from "../services/continuedev/core/autocomplete/types.js"
-import type { RecentlyEditedRange } from "../services/continuedev/core/autocomplete/util/types.js"
+} from "../services/ghost/continuedev/core/autocomplete/types.js"
+import type { RecentlyEditedRange } from "../services/ghost/continuedev/core/autocomplete/util/types.js"
 import type { ContextFile } from "./test-cases.js"
 
 /**

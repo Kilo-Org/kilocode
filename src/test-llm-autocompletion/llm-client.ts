@@ -1,7 +1,7 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
 import { DEFAULT_HEADERS } from "../api/providers/constants.js"
-import { streamSse } from "../services/continuedev/core/fetch/stream.js"
+import { streamSse } from "../services/ghost/continuedev/core/fetch/stream.js"
 
 config()
 

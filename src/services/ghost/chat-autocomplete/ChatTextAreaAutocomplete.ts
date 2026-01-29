@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { AutocompleteContext, VisibleCodeContext } from "../types"
-import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
+import { removePrefixOverlap } from "../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessGhostSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 
