@@ -8,6 +8,7 @@ export const dict = {
   "command.category.theme": "Theme",
   "command.category.language": "Language",
   "command.category.file": "File",
+  "command.category.context": "Context",
   "command.category.terminal": "Terminal",
   "command.category.model": "Model",
   "command.category.mcp": "MCP",
@@ -42,7 +43,10 @@ export const dict = {
   "command.session.new": "New session",
   "command.file.open": "Open file",
   "command.file.open.description": "Search files and commands",
+  "command.context.addSelection": "Add selection to context",
+  "command.context.addSelection.description": "Add selected lines from the current file",
   "command.terminal.toggle": "Toggle terminal",
+  "command.fileTree.toggle": "Toggle file tree",
   "command.review.toggle": "Toggle review",
   "command.terminal.new": "New terminal",
   "command.terminal.new.description": "Create a new terminal tab",
@@ -85,13 +89,15 @@ export const dict = {
   "dialog.provider.search.placeholder": "Search providers",
   "dialog.provider.empty": "No providers found",
   "dialog.provider.group.popular": "Popular",
-  "dialog.provider.group.recommended": "Recommended", // kilocode_change
   "dialog.provider.group.other": "Other",
   "dialog.provider.tag.recommended": "Recommended",
-  "dialog.provider.kilo.note": "Access 500+ AI models",
-  "dialog.provider.anthropic.note": "Connect with Claude Pro/Max or API key",
-  "dialog.provider.openai.note": "Connect with ChatGPT Pro/Plus or API key",
-  "dialog.provider.copilot.note": "Connect with Copilot or API key",
+  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
+  "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
+  "dialog.provider.copilot.note": "Claude models for coding assistance",
+  "dialog.provider.openai.note": "GPT models for fast, capable general AI tasks",
+  "dialog.provider.google.note": "Gemini models for fast, structured responses",
+  "dialog.provider.openrouter.note": "Access all supported models from one provider",
+  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Select model",
   "dialog.model.search.placeholder": "Search models",
@@ -99,10 +105,10 @@ export const dict = {
   "dialog.model.manage": "Manage models",
   "dialog.model.manage.description": "Customize which models appear in the model selector.",
 
-  "dialog.model.unpaid.freeModels.title": "Free models provided by Kilo CLI",
+  "dialog.model.unpaid.freeModels.title": "Free models provided by OpenCode",
   "dialog.model.unpaid.addMore.title": "Add more models from popular providers",
 
-  "dialog.provider.viewAll": "View all providers",
+  "dialog.provider.viewAll": "Show more providers",
 
   "provider.connect.title": "Connect {{provider}}",
   "provider.connect.title.anthropicProMax": "Login with Claude Pro/Max",
@@ -112,21 +118,21 @@ export const dict = {
   "provider.connect.status.waiting": "Waiting for authorization...",
   "provider.connect.status.failed": "Authorization failed: {{error}}",
   "provider.connect.apiKey.description":
-    "Enter your {{provider}} API key to connect your account and use {{provider}} models in Kilo CLI.",
+    "Enter your {{provider}} API key to connect your account and use {{provider}} models in OpenCode.",
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway gives you access to a curated set of reliable optimized models for coding agents.",
-  "provider.connect.kiloGateway.line2":
+  "provider.connect.opencodeZen.line1":
+    "OpenCode Zen gives you access to a curated set of reliable optimized models for coding agents.",
+  "provider.connect.opencodeZen.line2":
     "With a single API key you'll get access to models such as Claude, GPT, Gemini, GLM and more.",
-  "provider.connect.kiloGateway.visit.prefix": "Visit ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " to collect your API key.",
+  "provider.connect.opencodeZen.visit.prefix": "Visit ",
+  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.suffix": " to collect your API key.",
   "provider.connect.oauth.code.visit.prefix": "Visit ",
   "provider.connect.oauth.code.visit.link": "this link",
   "provider.connect.oauth.code.visit.suffix":
-    " to collect your authorization code to connect your account and use {{provider}} models in Kilo CLI.",
+    " to collect your authorization code to connect your account and use {{provider}} models in OpenCode.",
   "provider.connect.oauth.code.label": "{{method}} authorization code",
   "provider.connect.oauth.code.placeholder": "Authorization code",
   "provider.connect.oauth.code.required": "Authorization code is required",
@@ -134,10 +140,13 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Visit ",
   "provider.connect.oauth.auto.visit.link": "this link",
   "provider.connect.oauth.auto.visit.suffix":
-    " and enter the code below to connect your account and use {{provider}} models in Kilo CLI.",
+    " and enter the code below to connect your account and use {{provider}} models in OpenCode.",
   "provider.connect.oauth.auto.confirmationCode": "Confirmation code",
   "provider.connect.toast.connected.title": "{{provider}} connected",
   "provider.connect.toast.connected.description": "{{provider}} models are now available to use.",
+
+  "provider.disconnect.toast.disconnected.title": "{{provider}} disconnected",
+  "provider.disconnect.toast.disconnected.description": "{{provider}} models are no longer available.",
 
   "model.tag.free": "Free",
   "model.tag.latest": "Latest",
@@ -157,10 +166,13 @@ export const dict = {
   "model.tooltip.context": "Context limit {{limit}}",
 
   "common.search.placeholder": "Search",
-  "common.goBack": "Go back",
+  "common.goBack": "Back",
+  "common.goForward": "Forward",
   "common.loading": "Loading",
   "common.loading.ellipsis": "...",
   "common.cancel": "Cancel",
+  "common.connect": "Connect",
+  "common.disconnect": "Disconnect",
   "common.submit": "Submit",
   "common.save": "Save",
   "common.saving": "Saving...",
@@ -169,6 +181,8 @@ export const dict = {
 
   "prompt.placeholder.shell": "Enter shell command...",
   "prompt.placeholder.normal": 'Ask anything... "{{example}}"',
+  "prompt.placeholder.summarizeComments": "Summarize comments…",
+  "prompt.placeholder.summarizeComment": "Summarize comment…",
   "prompt.mode.shell": "Shell",
   "prompt.mode.shell.exit": "esc to exit",
 
@@ -239,7 +253,7 @@ export const dict = {
   "dialog.directory.empty": "No folders found",
 
   "dialog.server.title": "Servers",
-  "dialog.server.description": "Switch which Kilo CLI server this app connects to.",
+  "dialog.server.description": "Switch which OpenCode server this app connects to.",
   "dialog.server.search.placeholder": "Search servers",
   "dialog.server.empty": "No servers yet",
   "dialog.server.add.title": "Add a server",
@@ -323,6 +337,7 @@ export const dict = {
   "language.ar": "العربية",
   "language.no": "Norsk",
   "language.br": "Português (Brasil)",
+  "language.th": "ไทย",
 
   "toast.language.title": "Language",
   "toast.language.description": "Switched to {{language}}",
@@ -339,6 +354,10 @@ export const dict = {
   "toast.model.none.description": "Connect a provider to summarize this session",
 
   "toast.file.loadFailed.title": "Failed to load file",
+  "toast.file.listFailed.title": "Failed to list files",
+
+  "toast.context.noLineSelection.title": "No line selection",
+  "toast.context.noLineSelection.description": "Select a line range in a file tab first.",
 
   "toast.session.share.copyFailed.title": "Failed to copy URL to clipboard",
   "toast.session.share.success.title": "Session shared",
@@ -354,7 +373,7 @@ export const dict = {
   "toast.session.listFailed.title": "Failed to load sessions for {{project}}",
 
   "toast.update.title": "Update available",
-  "toast.update.description": "A new version of Kilo CLI ({{version}}) is now available to install.",
+  "toast.update.description": "A new version of OpenCode ({{version}}) is now available to install.",
   "toast.update.action.installRestart": "Install and restart",
   "toast.update.action.notYet": "Not yet",
 
@@ -365,7 +384,7 @@ export const dict = {
   "error.page.action.checking": "Checking...",
   "error.page.action.checkUpdates": "Check for updates",
   "error.page.action.updateTo": "Update to {{version}}",
-  "error.page.report.prefix": "Please report this error to the Kilo CLI team",
+  "error.page.report.prefix": "Please report this error to the OpenCode team",
   "error.page.report.discord": "on Discord",
   "error.page.version": "Version: {{version}}",
 
@@ -383,7 +402,7 @@ export const dict = {
   "error.chain.didYouMean": "Did you mean: {{suggestions}}",
   "error.chain.modelNotFound": "Model not found: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Check your config (opencode.json) provider/model names",
-  "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, Kilo CLI does not support MCP authentication yet.',
+  "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, OpenCode does not support MCP authentication yet.',
   "error.chain.providerAuthFailed": "Provider authentication failed ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Failed to initialize provider "{{provider}}". Check credentials and configuration.',
@@ -414,8 +433,15 @@ export const dict = {
   "session.tab.context": "Context",
   "session.panel.reviewAndFiles": "Review and files",
   "session.review.filesChanged": "{{count}} Files Changed",
+  "session.review.change.one": "Change",
+  "session.review.change.other": "Changes",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.empty": "No changes in this session yet",
+  "session.review.noChanges": "No changes",
+
+  "session.files.selectToOpen": "Select a file to open",
+  "session.files.all": "All files",
+
   "session.messages.renderEarlier": "Render earlier messages",
   "session.messages.loadingEarlier": "Loading earlier messages...",
   "session.messages.loadEarlier": "Load earlier messages",
@@ -487,27 +513,43 @@ export const dict = {
   "sidebar.workspaces.enable": "Enable workspaces",
   "sidebar.workspaces.disable": "Disable workspaces",
   "sidebar.gettingStarted.title": "Getting started",
-  "sidebar.gettingStarted.line1": "Kilo CLI includes free models so you can start immediately.",
+  "sidebar.gettingStarted.line1": "OpenCode includes free models so you can start immediately.",
   "sidebar.gettingStarted.line2": "Connect any provider to use models, inc. Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Recent sessions",
   "sidebar.project.viewAllSessions": "View all sessions",
 
+  "app.name.desktop": "OpenCode Desktop",
+
   "settings.section.desktop": "Desktop",
+  "settings.section.server": "Server",
   "settings.tab.general": "General",
   "settings.tab.shortcuts": "Shortcuts",
 
   "settings.general.section.appearance": "Appearance",
   "settings.general.section.notifications": "System notifications",
+  "settings.general.section.updates": "Updates",
   "settings.general.section.sounds": "Sound effects",
 
   "settings.general.row.language.title": "Language",
-  "settings.general.row.language.description": "Change the display language for Kilo CLI",
+  "settings.general.row.language.description": "Change the display language for OpenCode",
   "settings.general.row.appearance.title": "Appearance",
-  "settings.general.row.appearance.description": "Customise how Kilo CLI looks on your device",
+  "settings.general.row.appearance.description": "Customise how OpenCode looks on your device",
   "settings.general.row.theme.title": "Theme",
-  "settings.general.row.theme.description": "Customise how Kilo CLI is themed.",
+  "settings.general.row.theme.description": "Customise how OpenCode is themed.",
   "settings.general.row.font.title": "Font",
   "settings.general.row.font.description": "Customise the mono font used in code blocks",
+
+  "settings.general.row.releaseNotes.title": "Release notes",
+  "settings.general.row.releaseNotes.description": "Show What's New popups after updates",
+
+  "settings.updates.row.startup.title": "Check for updates on startup",
+  "settings.updates.row.startup.description": "Automatically check for updates when OpenCode launches",
+  "settings.updates.row.check.title": "Check for updates",
+  "settings.updates.row.check.description": "Manually check for updates and install if available",
+  "settings.updates.action.checkNow": "Check now",
+  "settings.updates.action.checking": "Checking...",
+  "settings.updates.toast.latest.title": "You're up to date",
+  "settings.updates.toast.latest.description": "You're running the latest version of OpenCode.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -601,6 +643,13 @@ export const dict = {
 
   "settings.providers.title": "Providers",
   "settings.providers.description": "Provider settings will be configurable here.",
+  "settings.providers.section.connected": "Connected providers",
+  "settings.providers.connected.empty": "No connected providers",
+  "settings.providers.section.popular": "Popular providers",
+  "settings.providers.tag.environment": "Environment",
+  "settings.providers.tag.config": "Config",
+  "settings.providers.tag.custom": "Custom",
+  "settings.providers.tag.other": "Other",
   "settings.models.title": "Models",
   "settings.models.description": "Model settings will be configurable here.",
   "settings.agents.title": "Agents",
@@ -667,6 +716,7 @@ export const dict = {
   "workspace.reset.failed.title": "Failed to reset workspace",
   "workspace.reset.success.title": "Workspace reset",
   "workspace.reset.success.description": "Workspace now matches the default branch.",
+  "workspace.error.stillPreparing": "Workspace is still preparing",
   "workspace.status.checking": "Checking for unmerged changes...",
   "workspace.status.error": "Unable to verify git status.",
   "workspace.status.clean": "No unmerged changes detected.",

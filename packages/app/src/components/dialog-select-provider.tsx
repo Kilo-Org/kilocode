@@ -1,13 +1,21 @@
 import { Component, Show } from "solid-js"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { preferredProviders, useProviders } from "@/hooks/use-providers"
+import { preferredProviders, useProviders } from "@/hooks/use-providers" // kilocode_change - renamed to preferredProviders
 import { Dialog } from "@opencode-ai/ui/dialog"
 import { List } from "@opencode-ai/ui/list"
 import { Tag } from "@opencode-ai/ui/tag"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
-import { IconName } from "@opencode-ai/ui/icons/provider"
+import { iconNames, type IconName } from "@opencode-ai/ui/icons/provider"
 import { DialogConnectProvider } from "./dialog-connect-provider"
 import { useLanguage } from "@/context/language"
+import { DialogCustomProvider } from "./dialog-custom-provider"
+
+const CUSTOM_ID = "_custom"
+
+function icon(id: string): IconName {
+  if (iconNames.includes(id as IconName)) return id as IconName
+  return "synthetic"
+}
 
 export const DialogSelectProvider: Component = () => {
   const dialog = useDialog()
@@ -20,7 +28,7 @@ export const DialogSelectProvider: Component = () => {
   // kilocode_change end
 
   return (
-    <Dialog title={language.t("command.provider.connect")}>
+    <Dialog title={language.t("command.provider.connect")} transition>
       <List
         search={{ placeholder: language.t("dialog.provider.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("dialog.provider.empty")}
@@ -28,11 +36,13 @@ export const DialogSelectProvider: Component = () => {
         key={(x) => x?.id}
         items={() => {
           language.locale()
-          return providers.all()
+          return [{ id: CUSTOM_ID, name: "Custom provider" }, ...providers.all()]
         }}
         filterKeys={["id", "name"]}
         groupBy={(x) => (preferredProviders.includes(x.id) ? recommendedGroup() : otherGroup())}
         sortBy={(a, b) => {
+          if (a.id === CUSTOM_ID) return -1
+          if (b.id === CUSTOM_ID) return 1
           if (preferredProviders.includes(a.id) && preferredProviders.includes(b.id))
             return preferredProviders.indexOf(a.id) - preferredProviders.indexOf(b.id)
           return a.name.localeCompare(b.name)
@@ -45,13 +55,20 @@ export const DialogSelectProvider: Component = () => {
         }}
         onSelect={(x) => {
           if (!x) return
+          if (x.id === CUSTOM_ID) {
+            dialog.show(() => <DialogCustomProvider back="providers" />)
+            return
+          }
           dialog.show(() => <DialogConnectProvider provider={x.id} />)
         }}
       >
         {(i) => (
           <div class="px-1.25 w-full flex items-center gap-x-3">
-            <ProviderIcon data-slot="list-item-extra-icon" id={i.id as IconName} />
+            <ProviderIcon data-slot="list-item-extra-icon" id={icon(i.id)} />
             <span>{i.name}</span>
+            <Show when={i.id === CUSTOM_ID}>
+              <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+            </Show>
             {/* kilocode_change start - Provider tags and notes */}
             <Show when={i.id === "kilo"}>
               <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>

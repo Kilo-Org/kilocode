@@ -270,6 +270,10 @@ export namespace LLM {
         recordInputs: false, // Prevent recording prompts, messages, tool args
         recordOutputs: false, // Prevent recording completions, tool results
         tracer: Telemetry.getTracer() ?? undefined,
+        metadata: {
+          userId: cfg.username ?? "unknown",
+          sessionId: input.sessionID,
+        },
       },
       // kilocode_change end
     })

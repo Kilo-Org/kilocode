@@ -1,16 +1,9 @@
 import z from "zod"
 import { EOL } from "os"
 import { NamedError } from "@opencode-ai/util/error"
+import { logo as glyphs } from "./logo"
 
 export namespace UI {
-  // kilocode_change start
-  const LOGO = [
-    `██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ `,
-    `████   ██ ██     ██  ██   ██     ██     ██ `,
-    `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
-  ]
-  // kilocode_change end
-
   export const CancelledError = NamedError.create("UICancelledError", z.void())
 
   export const Style = {
@@ -47,15 +40,21 @@ export namespace UI {
     blank = true
   }
 
-  // kilocode_change start
+  // kilocode_change start - Use simple Kilo logo
+  const LOGO = [
+    `██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ `,
+    `████   ██ ██     ██  ██   ██     ██     ██ `,
+    `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
+  ]
+
   export function logo(pad?: string) {
     const yellow = "\x1b[93m" // bright yellow
-    const result = []
+    const result: string[] = []
     for (const row of LOGO) {
       if (pad) result.push(pad)
       result.push(yellow)
       result.push(row)
-      result.push("\x1b[0m")
+      result.push(Style.TEXT_NORMAL)
       result.push(EOL)
     }
     return result.join("").trimEnd()
