@@ -215,7 +215,14 @@ export function DialogModel(props: { providerID?: string }) {
     if (needle) {
       const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
       const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      return [...filteredProviders, ...filteredPopular]
+      // kilocode_change start - Sort Kilo Gateway results first when searching
+      const sorted = [...filteredProviders].sort((a, b) => {
+        const aIsKilo = a.value.providerID === "kilo" ? 0 : 1
+        const bIsKilo = b.value.providerID === "kilo" ? 0 : 1
+        return aIsKilo - bIsKilo
+      })
+      return [...sorted, ...filteredPopular]
+      // kilocode_change end
     }
 
     return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]
