@@ -16,11 +16,25 @@ kilocode config # this opens up your editor
 
 You can find your Kilo Code API token on your profile page at [app.kilo.ai](https://app.kilo.ai), and place it in the `kilocodeToken` field in the CLI config.
 
+## Features
+
+### Automatic Theme Detection
+
+The CLI automatically detects your terminal's color scheme (light or dark) and applies the appropriate theme for optimal readability. Detection works by checking:
+
+- `COLORFGBG` environment variable (used by many terminals)
+- Terminal-specific environment variables (`TERM_PROGRAM`, `WT_SESSION`, etc.)
+- Falls back to dark theme if detection is not possible
+
+You can override automatic detection by explicitly setting a theme in your config:
+
+```bash
+kilocode config # Set theme manually if needed
+```
+
+Available themes include: `dark`, `light`, `alpha`, `dracula`, `atom-one-dark`, `ayu-dark`, `ayu-light`, `github-dark`, `github-light`, and more.
+
 ## Known Issues
-
-### Theme Detection
-
-We don't detect the theme of your terminal, and are aware the the current theme doesn't work well on light mode terminals. Switch to the light theme using using `kilocode config`.
 
 ### Outdated dependency warnings
 
