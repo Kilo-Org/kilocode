@@ -54,9 +54,8 @@ describe("getToolUseGuidelinesSection", () => {
 				expect(guidelines).toContain("1. Assess what information")
 				expect(guidelines).toContain("2. Choose the most appropriate tool")
 				expect(guidelines).toContain("3. If multiple actions are needed")
-				expect(guidelines).toContain("4. After each tool use")
+				expect(guidelines).toContain("5. After each tool use")
 			})
-
 			it("should include single-tool-per-message guidance when experiment disabled", () => {
 				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE, {})
 
