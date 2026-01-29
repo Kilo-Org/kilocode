@@ -26,6 +26,11 @@
 		"continueWith": "Tiếp tục với {{model}}",
 		"continue": "Tiếp tục"
 	},
+	"unauthorizedError": {
+		"title": "Bạn cần đăng nhập để sử dụng mô hình {{modelId}}",
+		"message": "Đăng nhập hoặc tạo tài khoản để truy cập hơn 500 mô hình, sử dụng tín dụng với giá gốc hoặc sử dụng khóa của riêng bạn.",
+		"loginButton": "Đăng Nhập"
+	},
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",

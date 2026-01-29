@@ -26,6 +26,11 @@
 		"continueWith": "Doorgaan met {{model}}",
 		"continue": "Doorgaan"
 	},
+	"unauthorizedError": {
+		"title": "Je moet inloggen om het {{modelId}} model te gebruiken",
+		"message": "Log in of maak een account aan om toegang te krijgen tot meer dan 500 modellen, gebruik credits tegen kostprijs of breng je eigen sleutel mee.",
+		"loginButton": "Inloggen"
+	},
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",

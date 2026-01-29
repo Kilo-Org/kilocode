@@ -26,6 +26,11 @@
 		"continueWith": "Weiter mit {{model}}",
 		"continue": "Weiter"
 	},
+	"unauthorizedError": {
+		"title": "Du musst dich anmelden, um das {{modelId}} Modell zu nutzen",
+		"message": "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zu Selbstkosten zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
+		"loginButton": "Anmelden"
+	},
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",

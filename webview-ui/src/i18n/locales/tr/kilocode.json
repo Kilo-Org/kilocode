@@ -19,6 +19,11 @@
 		"next": "Sonraki",
 		"page": "Sayfa {{page}} / {{count}}"
 	},
+	"unauthorizedError": {
+		"title": "{{modelId}} modelini kullanmak için giriş yapman gerekiyor",
+		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
+		"loginButton": "Giriş Yap"
+	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",

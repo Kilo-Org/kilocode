@@ -29,6 +29,11 @@
 		"continueWith": "Continue with {{model}}",
 		"continue": "Continue"
 	},
+	"unauthorizedError": {
+		"title": "You need to sign in to use the {{modelId}} model",
+		"message": "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
+		"loginButton": "Sign In"
+	},
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",

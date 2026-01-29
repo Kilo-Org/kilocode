@@ -26,6 +26,11 @@
 		"continueWith": "Pokračovat s {{model}}",
 		"continue": "Pokračovat"
 	},
+	"unauthorizedError": {
+		"title": "Musíš se přihlásit, abys mohl použít model {{modelId}}",
+		"message": "Přihlaš se nebo si vytvoř účet pro přístup k více než 500 modelům, použij kredity za pořizovací cenu nebo přines svůj vlastní klíč.",
+		"loginButton": "Přihlásit se"
+	},
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",

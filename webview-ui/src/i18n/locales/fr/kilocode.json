@@ -26,6 +26,11 @@
 		"continueWith": "Continuer avec {{model}}",
 		"continue": "Continuer"
 	},
+	"unauthorizedError": {
+		"title": "Tu dois te connecter pour utiliser le modèle {{modelId}}",
+		"message": "Connecte-toi ou crée un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter ta propre clé.",
+		"loginButton": "Se Connecter"
+	},
 	"pricing": {
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
