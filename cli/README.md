@@ -290,6 +290,26 @@ This instructs the AI to proceed without user input.
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
 
+## Updating
+
+Check for and install updates:
+
+```bash
+# Check and update to latest version
+kilocode update
+
+# Only check for updates (don't install)
+kilocode update --check
+```
+
+The update command automatically detects your installation method (npm, pnpm, yarn, bun) and runs the appropriate update command.
+
+For Docker users, pull the latest image manually:
+
+```bash
+docker pull kiloai/cli:latest
+```
+
 ## Local Development
 
 See [Development Guide](cli/docs/DEVELOPMENT.md) for setup instructions.
