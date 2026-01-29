@@ -29,7 +29,7 @@ If you prefer to use your own API key or existing subscription, Kilo Code suppor
 | --------------------------------------------------------- | ----------------------------------- | ---------------- |
 | [ChatGPT Plus/Pro](/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
 | [OpenRouter](/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
-| [Anthropic](/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
+| [Anthropic](/docs/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
 | [OpenAI](/ai-providers/openai)                            | Access to GPT models                | Yes              |
 
 {% callout type="info" title="Many More Providers Available" %}
