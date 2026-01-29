@@ -5,7 +5,7 @@ description: "Using Kilo Code in the browser"
 
 # {% $markdoc.frontmatter.title %}
 
-Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub repositories, run commands, and auto-commit changes as work progresses.
+Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub and GitLab repositories, run commands, and auto-commit changes as work progresses.
 
 ## What Cloud Agents Enable
 
@@ -18,8 +18,8 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 
 Before using Cloud Agents:
 
-**GitHub Integration must be configured**  
- Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+- **GitHub or GitLab Integration must be configured**
+  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
 
 ## Cost
 
@@ -29,7 +29,7 @@ Before using Cloud Agents:
 
 ## How to Use
 
-1. **Connect your GitHub account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
+1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
 2. **Select a repository** to use as your workspace.
 3. **Add environment variables** (secrets supported) and set optional startup commands.
 4. **Start chatting with Kilo Code.**
@@ -38,7 +38,7 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 
 ## How Cloud Agents Work
 
-- Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, etc.).
+- Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
 - All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
 - When a session begins:
 

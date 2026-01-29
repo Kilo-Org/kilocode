@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "مرحبًا بك في Kilo Code!",
 		"introText1": "Kilo Code وكيل برمجة مدعوم بالذكاء ومفتوح المصدر ومجاني.",
-		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude Sonnet 4.5 وGemini 2.5 Pro وGPT-5 وأكثر من 450 نموذج آخر.",
+		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude Opus 4.5 وGemini 3 Pro وGPT-5.2 وأكثر من 450 نموذج آخر.",
 		"introText3": "أنشئ حسابًا مجانيًا واحصل على 20 دولارًا كرصيد إضافي عند إضافة رصيد لأول مرة.",
 		"ctaButton": "ابدأ الآن",
 		"manualModeButton": "استخدم مفتاح API الخاص بك",
@@ -49,6 +49,7 @@
 			"apiKey": "مفتاح Kilo Code API",
 			"login": "سجّل دخولك في Kilo Code",
 			"logout": "تسجيل الخروج من Kilo Code",
+			"loginForPremiumModels": "سجّل دخولك للوصول إلى النماذج والميزات المميزة",
 			"providerRouting": {
 				"title": "توجيه المزود",
 				"managedByOrganization": "إدارة توجيه المزود على مستوى المؤسسة",
@@ -212,6 +213,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "جديد هنا؟",
+		"tryOneOfThese": "جرب إحدى هذه الأفكار للبدء:",
+		"clickToInsert": "انقر على أي اقتراح لبدء العمل عليه فوراً",
 		"suggestionText": "<suggestionButton>اضغط هنا</suggestionButton> للحصول على فكرة رائعة، ثم انقر على <sendIcon /> وشاهدني أعمل السحر!",
 		"ideas": {
 			"idea1": "اصنع كرة ثلاثية الأبعاد دوارة ومتوهجة تتفاعل مع حركات الماوس. اجعل التطبيق يعمل في المتصفح.",

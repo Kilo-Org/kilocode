@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
-		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
+		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
 		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
@@ -59,6 +59,7 @@
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
 			"logout": "Đăng xuất khỏi Kilo Code",
+			"loginForPremiumModels": "Đăng nhập để truy cập các mô hình và tính năng premium",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
 				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",
@@ -210,6 +211,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Mới ở đây?",
+		"tryOneOfThese": "Thử một trong những ý tưởng này để bắt đầu:",
+		"clickToInsert": "Nhấp vào bất kỳ gợi ý nào để bắt đầu làm việc ngay lập tức",
 		"suggestionText": "<suggestionButton>Nhấp vào đây</suggestionButton> để có một ý tưởng tuyệt vời, sau đó chạm vào <sendIcon /> và xem tôi làm phép thuật!",
 		"ideas": {
 			"idea1": "Tạo một hình cầu 3D quay và phát sáng phản ứng với chuyển động chuột. Làm cho ứng dụng hoạt động trong trình duyệt.",

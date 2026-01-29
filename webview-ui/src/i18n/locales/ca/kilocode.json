@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Benvingut a Kilo Code!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
-		"introText2": "Funciona amb els models d'IA més recents com Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, i més de 450 més.",
+		"introText2": "Funciona amb els models d'IA més recents com Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, i més de 450 més.",
 		"introText3": "Crea un compte gratuït i obtén $20 en crèdits de bonificació quan recarreguis per primera vegada.",
 		"ctaButton": "Comença",
 		"manualModeButton": "Utilitza la teva pròpia clau API",
@@ -40,6 +40,7 @@
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code",
+			"loginForPremiumModels": "Inicia sessió per accedir a models i funcions premium",
 			"providerRouting": {
 				"title": "Encaminament de proveïdors",
 				"managedByOrganization": "Gestionar encaminament de proveïdors a nivell d'organització",
@@ -203,6 +204,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nou aquí?",
+		"tryOneOfThese": "Prova una d'aquestes idees per començar:",
+		"clickToInsert": "Fes clic a qualsevol suggeriment per començar a treballar-hi immediatament",
 		"suggestionText": "<suggestionButton>Fes clic aquí</suggestionButton> per a una idea genial, després toca <sendIcon /> i mira'm fer màgia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D que giri i brilli i respongui als moviments del ratolí. Fes que l'aplicació funcioni al navegador.",

@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Ласкаво просимо до Kilo Code!",
 		"introText1": "Kilo Code — це безкоштовний агент кодування AI з відкритим кодом.",
-		"introText2": "Працює з найновішими моделями AI, такими як Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 та понад 450 іншими.",
+		"introText2": "Працює з найновішими моделями AI, такими як Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 та понад 450 іншими.",
 		"introText3": "Створи безкоштовний акаунт і отримай $20 бонусних кредитів при першому поповненні.",
 		"ctaButton": "Почати",
 		"manualModeButton": "Використовуй власний API key",
@@ -59,6 +59,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Увійти в Kilo Code",
 			"logout": "Вийти з Kilo Code",
+			"loginForPremiumModels": "Увійдіть, щоб отримати доступ до преміум моделей та функцій",
 			"providerRouting": {
 				"title": "Маршрутизація провайдерів",
 				"managedByOrganization": "Керувати маршрутизацією провайдерів на рівні організації",
@@ -217,6 +218,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Новачок тут?",
+		"tryOneOfThese": "Спробуй одну з цих ідей для початку:",
+		"clickToInsert": "Натисни на будь-яку пропозицію, щоб одразу почати роботу",
 		"suggestionText": "<suggestionButton>Натисніть тут</suggestionButton> для крутої ідеї, потім торкніться <sendIcon /> і дивіться, як я творю магію!",
 		"ideas": {
 			"idea1": "Створіть обертову, світлу 3D-сферу, яка реагує на рухи миші. Зробіть так, щоб додаток працював у браузері.",

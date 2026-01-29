@@ -148,7 +148,7 @@ The indexer automatically excludes:
 - Large files (&gt;1MB)
 - Git repositories (`.git` folders)
 - Dependencies (`node_modules`, `vendor`, etc.)
-- Files matching `.gitignore` and `.kilocode` patterns
+- Files matching `.gitignore` and `.kilocodeignore` patterns
 
 ### Incremental Updates
 

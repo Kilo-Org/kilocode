@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
 		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
 		"ctaButton": "시작하기",
 		"manualModeButton": "내 API 키 사용하기",
@@ -47,6 +47,7 @@
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃",
+			"loginForPremiumModels": "로그인하여 프리미엄 모델 및 기능에 액세스하세요",
 			"providerRouting": {
 				"title": "공급자 라우팅",
 				"managedByOrganization": "조직 수준 공급자 라우팅 관리",
@@ -217,6 +218,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "처음이신가요?",
+		"tryOneOfThese": "시작하려면 이 아이디어 중 하나를 시도해보세요:",
+		"clickToInsert": "아무 제안이나 클릭하면 즉시 작업을 시작할 수 있습니다",
 		"suggestionText": "멋진 아이디어를 위해 <suggestionButton>여기를 클릭</suggestionButton>하세요. 그다음 <sendIcon />를 탭하고 제가 마법을 부리는 것을 보세요!",
 		"ideas": {
 			"idea1": "마우스 움직임에 반응하는 회전하고 빛나는 3D 구체를 만드세요. 앱이 브라우저에서 작동하도록 하세요.",

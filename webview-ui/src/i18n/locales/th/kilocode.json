@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "ยินดีต้อนรับสู่ Kilo Code!",
 		"introText1": "Kilo Code เป็นเอเจนต์เขียนโค้ด AI แบบฟรีและโอเพ่นซอร์ส",
-		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 และอีกกว่า 450 โมเดล",
+		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 และอีกกว่า 450 โมเดล",
 		"introText3": "สร้างบัญชีฟรีและรับเครดิตโบนัส $20 เมื่อเติมเงินครั้งแรก",
 		"ctaButton": "เริ่มต้น",
 		"manualModeButton": "ใช้ API key ของคุณเอง",
@@ -60,6 +60,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "เข้าสู่ระบบที่ Kilo Code",
 			"logout": "ออกจากระบบ Kilo Code",
+			"loginForPremiumModels": "เข้าสู่ระบบเพื่อเข้าถึงโมเดลและฟีเจอร์พรีเมียม",
 			"providerRouting": {
 				"title": "การกำหนดเส้นทางผู้ให้บริการ",
 				"createOrganization": "สร้างองค์กรเพื่อจัดการการกำหนดเส้นทางผู้ให้บริการ",
@@ -217,6 +218,8 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "มาใหม่ใช่ไหม?",
+		"tryOneOfThese": "ลองไอเดียเหล่านี้เพื่อเริ่มต้น:",
+		"clickToInsert": "คลิกข้อเสนอแนะใดก็ได้เพื่อเริ่มทำงานทันที",
 		"suggestionText": "<suggestionButton>คลิกที่นี่</suggestionButton> สำหรับไอเดียเจ๋งๆ จากนั้นแตะ <sendIcon /> และดูฉันทำมายากล!",
 		"ideas": {
 			"idea1": "สร้างทรงกลม 3D ที่หมุนและเรืองแสงที่ตอบสนองต่อการเคลื่อนไหวของเมาส์ ทำให้แอปทำงานในเบราว์เซอร์",

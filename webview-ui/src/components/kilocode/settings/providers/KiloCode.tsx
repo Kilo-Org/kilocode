@@ -83,17 +83,23 @@ export const KiloCode = ({
 						</Button>
 					</div>
 				) : (
-					<Button
-						variant="secondary"
-						onClick={() => {
-							vscode.postMessage({
-								type: "switchTab",
-								tab: "auth",
-								values: { returnTo: "settings", profileName: currentApiConfigName },
-							})
-						}}>
-						{t("kilocode:settings.provider.login")}
-					</Button>
+					<>
+						<div className="flex flex-row items-center gap-1 text-vscode-charts-green text-sm">
+							<div className="codicon codicon-info" />
+							<div>{t("kilocode:settings.provider.loginForPremiumModels")}</div>
+						</div>
+						<Button
+							variant="secondary"
+							onClick={() => {
+								vscode.postMessage({
+									type: "switchTab",
+									tab: "auth",
+									values: { returnTo: "settings", profileName: currentApiConfigName },
+								})
+							}}>
+							{t("kilocode:settings.provider.login")}
+						</Button>
+					</>
 				))}
 
 			<VSCodeTextField
