@@ -31,7 +31,25 @@ describe("TaskItem", () => {
 		vi.clearAllMocks()
 	})
 
-	it("renders task information", () => {
+	it("renders zero cost information", () => {
+		const zeroCostTask = { ...mockTask, totalCost: 0.0 }
+		render(
+			<TaskItem
+				item={zeroCostTask}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+		// The component shows $0.00 for zero amount (2 decimal places)
+		expect(screen.getByText("$0.00")).toBeInTheDocument()
+	})
+
+	it("renders low cost information", () => {
+		// Nutzt mockTask.totalCost (0.002)
 		render(
 			<TaskItem
 				item={mockTask}
@@ -41,9 +59,27 @@ describe("TaskItem", () => {
 				isSelectionMode={false}
 			/>,
 		)
+		
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+		// The component shows $0.0020 for small amounts (4 decimal places)
+		expect(screen.getByText("$0.0020")).toBeInTheDocument()
+	})
+
+	it("renders high cost information", () => {
+		const highCostTask = { ...mockTask, totalCost: 0.0523 }
+		render(
+			<TaskItem
+				item={highCostTask}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
 
 		expect(screen.getByText("Test task")).toBeInTheDocument()
-		expect(screen.getByText("$0.00")).toBeInTheDocument() // Component shows $0.00 for small amounts
+		// The component shows $0.05 for high amounts, not the exact value (2 decimal places)
+		expect(screen.getByText("$0.05")).toBeInTheDocument()
 	})
 
 	it("handles selection in selection mode", () => {
