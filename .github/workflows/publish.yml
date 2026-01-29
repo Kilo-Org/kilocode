@@ -2,6 +2,10 @@ name: publish
 run-name: "${{ format('release {0}', inputs.bump) }}"
 
 on:
+  # kilocode_change start - trigger on changeset PR merge
+  pull_request:
+    types: [closed]
+  # kilocode_change end
   push:
     branches:
       - dev
@@ -31,8 +35,13 @@ permissions:
 jobs:
   publish:
     runs-on: depot-ubuntu-24.04-4
-    # kilocode_change start - disabled for kilo-cli fork (OpenCode npm/AUR publishing)
-    if: false
+    # kilocode_change start - trigger on changeset PR merge or workflow_dispatch
+    if: >
+      ( github.event_name == 'pull_request' &&
+        github.event.pull_request.merged == true &&
+        github.event.pull_request.base.ref == 'dev' &&
+        contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+      github.event_name == 'workflow_dispatch'
     # kilocode_change end - original: if: github.repository == 'Kilo-Org/kilo'
     steps:
       - uses: actions/checkout@v3
