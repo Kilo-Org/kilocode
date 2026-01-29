@@ -297,6 +297,12 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		case "oca": {
+			return {
+				models: routerModels.oca,
+				defaultModel: "",
+			}
+		}
 		//kilocode_change start
 		case "nano-gpt": {
 			return {
@@ -377,7 +383,9 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 					kilocodeDefaultModel,
 					options,
 				})
-			: FALLBACK_MODELS
+			: provider === "oca"
+				? { models: {}, defaultModel: "" }
+				: FALLBACK_MODELS
 
 	return {
 		provider,
