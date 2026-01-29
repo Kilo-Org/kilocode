@@ -35,7 +35,13 @@ import {
 	autoApproveQuestionAtom,
 	autoApproveQuestionTimeoutAtom,
 	autoApproveTodoAtom,
+	configAtom,
+	selectProviderAtom,
+	updateProviderAtom,
 } from "../atoms/config.js"
+import { customModesAtom } from "../atoms/extension.js"
+import { getModelIdKey } from "../../constants/providers/models.js"
+import { getAllModes } from "../../constants/modes/defaults.js"
 import { ciModeAtom } from "../atoms/ci.js"
 import { useApprovalHandler } from "./useApprovalHandler.js"
 import { getApprovalDecision } from "../../services/approvalDecision.js"
@@ -260,6 +266,52 @@ export function useApprovalMonitor(): void {
 		approvalTelemetry,
 	])
 
+	// Switch provider/model when a mode-switching tool is approved (covers both auto and manual approval)
+	const modeToolHandledRef = useRef<Set<number>>(new Set())
+
+	useEffect(() => {
+		if (!lastAskMessage || !lastAskMessage.isAnswered) return
+		if (lastAskMessage.ask !== "tool") return
+		if (modeToolHandledRef.current.has(lastAskMessage.ts)) return
+
+		try {
+			const toolData = JSON.parse(lastAskMessage.text || "{}")
+			if (toolData.tool !== "switchMode" && toolData.tool !== "newTask") return
+
+			modeToolHandledRef.current.add(lastAskMessage.ts)
+
+			const targetModeIdentifier = toolData.mode
+			const allCustomModes = store.get(customModesAtom)
+			const allModes = getAllModes(allCustomModes)
+
+			// Find mode by slug first, then by name (newTask uses display name)
+			const targetMode =
+				allModes.find((m) => m.slug === targetModeIdentifier) ||
+				allModes.find((m) => m.name === targetModeIdentifier)
+
+			if (targetMode?.preferredProviderId) {
+				store
+					.set(selectProviderAtom, targetMode.preferredProviderId)
+					.catch((e) => logs.warn("Failed to switch provider", "useApprovalMonitor", { error: e }))
+			}
+			if (targetMode?.preferredModelId) {
+				const currentConfig = store.get(configAtom)
+				const currentProvider = currentConfig.providers.find(
+					(p) => p.id === (targetMode.preferredProviderId || currentConfig.provider),
+				)
+				if (currentProvider) {
+					const modelIdKey = getModelIdKey(currentProvider.provider)
+					store
+						.set(updateProviderAtom, currentProvider.id, { [modelIdKey]: targetMode.preferredModelId })
+						.catch((e) => logs.warn("Failed to switch model", "useApprovalMonitor", { error: e }))
+				}
+			}
+		} catch (e) {
+			// Non-critical - tool execution still proceeds
+			logs.warn("Failed to parse mode tool data for provider switch", "useApprovalMonitor", { error: e })
+		}
+	}, [lastAskMessage, store])
+
 	// Cleanup: remove old timestamps to prevent memory leak
 	useEffect(() => {
 		return () => {
@@ -268,6 +320,11 @@ export function useApprovalMonitor(): void {
 				const timestamps = Array.from(autoApprovalHandledRef.current)
 				const toKeep = timestamps.slice(-100)
 				autoApprovalHandledRef.current = new Set(toKeep)
+			}
+			if (modeToolHandledRef.current.size > 100) {
+				const modeTimestamps = Array.from(modeToolHandledRef.current)
+				const modeToKeep = modeTimestamps.slice(-100)
+				modeToolHandledRef.current = new Set(modeToKeep)
 			}
 		}
 	}, [lastAskMessage?.ts])
