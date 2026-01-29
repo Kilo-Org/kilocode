@@ -53,5 +53,48 @@
 		"helpImprove": "Ajude a melhorar o Kilo Code",
 		"helpImproveMessage": "O Kilo Code coleta dados de erros e uso para nos ajudar a corrigir bugs e melhorar a extensão. Esta telemetria não coleta código, prompts ou informações pessoais. Você pode desativar isso nas <settingsLink>configurações</settingsLink>."
 	},
-	"importSettings": "Importar configurações"
+	"importSettings": "Importar configurações",
+	"noFolderNoHistory": {
+		"heading": "Bem-vindo ao Kilo Code!",
+		"description": "Para começar, abra uma pasta ou clone um repositório. Ou experimente o Kilo Code com um projeto divertido!",
+		"openFolder": "Abrir pasta",
+		"cloneRepository": "Clonar repositório",
+		"orTryFunProject": "Ou experimente um projeto divertido:",
+		"projects": {
+			"snake": "Criar um jogo da cobrinha",
+			"todo": "Criar um app de tarefas",
+			"weather": "Criar um painel do tempo"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Vamos começar com seu projeto!",
+		"description": "Aqui estão algumas coisas com as quais posso ajudar:",
+		"prompts": {
+			"explainStructure": "Explicar a estrutura deste projeto",
+			"findBugs": "Encontrar bugs potenciais no arquivo atual",
+			"writeTests": "Escrever testes para o código selecionado",
+			"improveCode": "Sugerir melhorias para este código",
+			"addDocumentation": "Adicionar documentação a este projeto"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Este modelo requer uma assinatura",
+			"description": "Assine o Kilo Code Gateway para ter acesso a modelos premium com preços flexíveis.",
+			"subscribe": "Assinar Kilo Gateway",
+			"useOwnKey": "ou use sua própria chave API"
+		},
+		"withoutSubscription": {
+			"heading": "Este modelo requer uma chave API",
+			"description": "Este modelo não suporta assinaturas do Kilo Gateway. Você precisará configurar sua própria chave API.",
+			"configureProvider": "Configurar provedor",
+			"orCreateAccount": "ou crie uma conta Kilo para outros modelos"
+		}
+	},
+	"rateLimit": {
+		"heading": "Você atingiu seu limite de uso gratuito",
+		"description": "Crie uma conta Kilo Code para continuar usando modelos gratuitos, ou aguarde seu limite ser redefinido.",
+		"waitTime": "Seu limite será redefinido em {{minutes}} minutos",
+		"createAccount": "Criar conta Kilo"
+	}
 }

@@ -53,5 +53,48 @@
 		"helpImprove": "Hilf, Kilo Code zu verbessern",
 		"helpImproveMessage": "Kilo Code sammelt Fehler- und Nutzungsdaten, um uns bei der Fehlerbehebung und Verbesserung der Erweiterung zu helfen. Diese Telemetrie sammelt keinen Code, keine Prompts oder persönliche Informationen. Du kannst dies in den <settingsLink>Einstellungen</settingsLink> deaktivieren."
 	},
-	"importSettings": "Einstellungen importieren"
+	"importSettings": "Einstellungen importieren",
+	"noFolderNoHistory": {
+		"heading": "Willkommen bei Kilo Code!",
+		"description": "Um loszulegen, öffne einen Ordner oder klone ein Repository. Oder probier Kilo Code mit einem lustigen Projekt aus!",
+		"openFolder": "Ordner öffnen",
+		"cloneRepository": "Repository klonen",
+		"orTryFunProject": "Oder probier ein lustiges Projekt:",
+		"projects": {
+			"snake": "Ein Snake-Spiel bauen",
+			"todo": "Eine Todo-App erstellen",
+			"weather": "Ein Wetter-Dashboard erstellen"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Lass uns mit deinem Projekt loslegen!",
+		"description": "Hier sind einige Dinge, bei denen ich dir helfen kann:",
+		"prompts": {
+			"explainStructure": "Erkläre die Struktur dieses Projekts",
+			"findBugs": "Finde potenzielle Bugs in der aktuellen Datei",
+			"writeTests": "Schreibe Tests für den ausgewählten Code",
+			"improveCode": "Schlage Verbesserungen für diesen Code vor",
+			"addDocumentation": "Füge Dokumentation zu diesem Projekt hinzu"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Dieses Modell erfordert ein Abonnement",
+			"description": "Abonniere Kilo Code Gateway, um Zugang zu Premium-Modellen mit flexibler Preisgestaltung zu erhalten.",
+			"subscribe": "Kilo Gateway abonnieren",
+			"useOwnKey": "oder verwende deinen eigenen API-Schlüssel"
+		},
+		"withoutSubscription": {
+			"heading": "Dieses Modell erfordert einen API-Schlüssel",
+			"description": "Dieses Modell unterstützt keine Kilo Gateway-Abonnements. Du musst deinen eigenen API-Schlüssel konfigurieren.",
+			"configureProvider": "Anbieter-Einstellungen konfigurieren",
+			"orCreateAccount": "oder erstelle ein Kilo-Konto für andere Modelle"
+		}
+	},
+	"rateLimit": {
+		"heading": "Du hast dein kostenloses Nutzungslimit erreicht",
+		"description": "Erstelle ein Kilo Code-Konto, um weiterhin kostenlose Modelle zu nutzen, oder warte, bis dein Limit zurückgesetzt wird.",
+		"waitTime": "Dein Limit wird in {{minutes}} Minuten zurückgesetzt",
+		"createAccount": "Kilo-Konto erstellen"
+	}
 }

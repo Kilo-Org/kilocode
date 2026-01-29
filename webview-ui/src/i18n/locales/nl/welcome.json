@@ -53,5 +53,48 @@
 		"helpImprove": "Help Kilo Code verbeteren",
 		"helpImproveMessage": "Kilo Code verzamelt fout- en gebruiksgegevens om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt geen code, prompts of persoonlijke gegevens. Je kunt dit uitschakelen in de <settingsLink>instellingen</settingsLink>."
 	},
-	"importSettings": "Instellingen importeren"
+	"importSettings": "Instellingen importeren",
+	"noFolderNoHistory": {
+		"heading": "Welkom bij Kilo Code!",
+		"description": "Om te beginnen, open een map of kloon een repository. Of probeer Kilo Code met een leuk project!",
+		"openFolder": "Map openen",
+		"cloneRepository": "Repository klonen",
+		"orTryFunProject": "Of probeer een leuk project:",
+		"projects": {
+			"snake": "Bouw een Snake-spel",
+			"todo": "Maak een Todo-app",
+			"weather": "Maak een weerdashboard"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Laten we beginnen met je project!",
+		"description": "Hier zijn enkele dingen waar ik je mee kan helpen:",
+		"prompts": {
+			"explainStructure": "Leg de structuur van dit project uit",
+			"findBugs": "Vind potentiële bugs in het huidige bestand",
+			"writeTests": "Schrijf tests voor de geselecteerde code",
+			"improveCode": "Stel verbeteringen voor deze code voor",
+			"addDocumentation": "Voeg documentatie toe aan dit project"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Dit model vereist een abonnement",
+			"description": "Abonneer je op Kilo Code Gateway voor toegang tot premium modellen met flexibele prijzen.",
+			"subscribe": "Abonneer op Kilo Gateway",
+			"useOwnKey": "of gebruik je eigen API-sleutel"
+		},
+		"withoutSubscription": {
+			"heading": "Dit model vereist een API-sleutel",
+			"description": "Dit model ondersteunt geen Kilo Gateway-abonnementen. Je moet je eigen API-sleutel configureren.",
+			"configureProvider": "Provider-instellingen configureren",
+			"orCreateAccount": "of maak een Kilo-account voor andere modellen"
+		}
+	},
+	"rateLimit": {
+		"heading": "Je hebt je gratis gebruikslimiet bereikt",
+		"description": "Maak een Kilo Code-account aan om gratis modellen te blijven gebruiken, of wacht tot je limiet wordt gereset.",
+		"waitTime": "Je limiet wordt over {{minutes}} minuten gereset",
+		"createAccount": "Kilo-account aanmaken"
+	}
 }

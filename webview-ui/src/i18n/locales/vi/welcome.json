@@ -53,5 +53,48 @@
 		"helpImprove": "Giúp cải thiện Kilo Code",
 		"helpImproveMessage": "Kilo Code thu thập dữ liệu lỗi và sử dụng để giúp chúng tôi sửa lỗi và cải thiện tiện ích mở rộng. Dữ liệu viễn trắc này không thu thập mã, prompts hoặc thông tin cá nhân. Bạn có thể tắt tính năng này trong <settingsLink>cài đặt</settingsLink>."
 	},
-	"importSettings": "Nhập Cài đặt"
+	"importSettings": "Nhập Cài đặt",
+	"noFolderNoHistory": {
+		"heading": "Chào mừng đến với Kilo Code!",
+		"description": "Để bắt đầu, hãy mở một thư mục hoặc clone một repository. Hoặc thử Kilo Code với một dự án thú vị!",
+		"openFolder": "Mở thư mục",
+		"cloneRepository": "Clone Repository",
+		"orTryFunProject": "Hoặc thử một dự án thú vị:",
+		"projects": {
+			"snake": "Tạo trò chơi Rắn",
+			"todo": "Tạo ứng dụng Todo",
+			"weather": "Tạo bảng điều khiển thời tiết"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Hãy bắt đầu với dự án của bạn!",
+		"description": "Đây là một số điều tôi có thể giúp bạn:",
+		"prompts": {
+			"explainStructure": "Giải thích cấu trúc của dự án này",
+			"findBugs": "Tìm lỗi tiềm ẩn trong tệp hiện tại",
+			"writeTests": "Viết test cho mã được chọn",
+			"improveCode": "Đề xuất cải tiến cho mã này",
+			"addDocumentation": "Thêm tài liệu cho dự án này"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "Mô hình này yêu cầu đăng ký",
+			"description": "Đăng ký Kilo Code Gateway để truy cập các mô hình cao cấp với giá linh hoạt.",
+			"subscribe": "Đăng ký Kilo Gateway",
+			"useOwnKey": "hoặc sử dụng khóa API của riêng bạn"
+		},
+		"withoutSubscription": {
+			"heading": "Mô hình này yêu cầu khóa API",
+			"description": "Mô hình này không hỗ trợ đăng ký Kilo Gateway. Bạn cần cấu hình khóa API của riêng mình.",
+			"configureProvider": "Cấu hình cài đặt nhà cung cấp",
+			"orCreateAccount": "hoặc tạo tài khoản Kilo cho các mô hình khác"
+		}
+	},
+	"rateLimit": {
+		"heading": "Bạn đã đạt giới hạn sử dụng miễn phí",
+		"description": "Tạo tài khoản Kilo Code để tiếp tục sử dụng các mô hình miễn phí, hoặc đợi giới hạn của bạn được đặt lại.",
+		"waitTime": "Giới hạn của bạn sẽ được đặt lại sau {{minutes}} phút",
+		"createAccount": "Tạo tài khoản Kilo"
+	}
 }
