@@ -1,0 +1,39 @@
+# kilocode_change - new file
+name: Changeset Release
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  changeset-pr-version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Changeset Pull Request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          commit: "changeset version bump"
+          title: "Changeset version bump"
+          version: bun run changeset:version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

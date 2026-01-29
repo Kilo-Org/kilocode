@@ -11,7 +11,9 @@
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "changeset": "changeset",
+    "changeset:version": "changeset version"
   },
   "workspaces": {
     "packages": [
@@ -64,6 +66,8 @@
   },
   "devDependencies": {
     "@actions/artifact": "5.0.1",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.27.10",
     "@tsconfig/bun": "catalog:",
     "baseline-browser-mapping": "2.9.18",
     "husky": "9.1.7",
