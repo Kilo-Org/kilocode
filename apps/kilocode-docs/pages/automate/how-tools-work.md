@@ -86,4 +86,4 @@ This safety mechanism ensures you maintain control over which files are modified
 
 ## Learn More About Tools
 
-For more detailed information about each tool, including complete parameter references and advanced usage patterns, see the [Tool Use Overview](/features/tools/tool-use-overview) documentation.
+For more detailed information about each tool, including complete parameter references and advanced usage patterns, see the [Tool Use Overview](/docs/features/tools/tool-use-overview) documentation.

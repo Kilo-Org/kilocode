@@ -92,6 +92,6 @@ Click on any dimension card to view detailed analysis and improvement suggestion
 
 ## Next Steps
 
-- [Understand what each dimension measures](/plans/adoption-dashboard/understanding-your-score)
-- [Learn strategies to improve your score](/plans/adoption-dashboard/improving-your-score)
-- [Use the dashboard for team leadership](/plans/adoption-dashboard/for-team-leads)
+- [Understand what each dimension measures](/docs/plans/adoption-dashboard/understanding-your-score)
+- [Learn strategies to improve your score](/docs/plans/adoption-dashboard/improving-your-score)
+- [Use the dashboard for team leadership](/docs/plans/adoption-dashboard/for-team-leads)

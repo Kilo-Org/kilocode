@@ -142,7 +142,11 @@ import { processUserContentMentions } from "../mentions/processUserContentMentio
 import { getMessagesSinceLastSummary, summarizeConversation, getEffectiveApiHistory } from "../condense"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
 
-import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
+import {
+	isAnyRecognizedKiloCodeError,
+	isPaymentRequiredError,
+	isUnauthorizedError,
+} from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel" // kilocode_change
 import { addOrMergeUserContent } from "./kilocode"
@@ -1986,7 +1990,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			switch (toolName) {
 				case "apply_diff":
 					return t("kilocode:task.disableApplyDiff") + " "
-				case "edit_file":
+				case "fast_edit_file":
 					return t("kilocode:task.disableEditFile") + " "
 				default:
 					return ""
@@ -4620,16 +4624,23 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								defaultFreeModel,
 							}),
 						)
-					: this.ask(
-							"invalid_model",
-							JSON.stringify({
-								modelId: apiConfiguration.kilocodeModel,
-								error: {
-									status: error.status,
-									message: error.message,
-								},
-							}),
-						))
+					: isUnauthorizedError(error)
+						? this.ask(
+								"unauthorized_prompt",
+								JSON.stringify({
+									modelId: apiConfiguration.kilocodeModel,
+								}),
+							)
+						: this.ask(
+								"invalid_model",
+								JSON.stringify({
+									modelId: apiConfiguration.kilocodeModel,
+									error: {
+										status: error.status,
+										message: error.message,
+									},
+								}),
+							))
 				this.currentRequestAbortController = undefined
 				const isContextWindowExceededError = checkContextWindowExceededError(error)
 

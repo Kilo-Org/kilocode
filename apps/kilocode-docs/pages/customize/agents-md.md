@@ -127,13 +127,13 @@ When you start a task in Kilo Code:
 
 AGENTS.md works alongside Kilo Code's other configuration systems:
 
-| Feature                                                        | Scope   | Location                  | Purpose                                    | Priority    |
-| -------------------------------------------------------------- | ------- | ------------------------- | ------------------------------------------ | ----------- |
-| **[Mode-specific Custom Rules](/agent-behavior/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints        | 1 (Highest) |
-| **[Custom Rules](/agent-behavior/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints   | 2           |
-| **AGENTS.md**                                                  | Project | Project root or subfolder | Cross-tool standard for project guidelines | 3           |
-| **[Global Custom Rules](/agent-behavior/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                     | 4           |
-| **[Custom Instructions](/agent-behavior/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects   | 5 (Lowest)  |
+| Feature                                                        | Scope   | Location                  | Purpose                                   | Priority    |
+| -------------------------------------------------------------- | ------- | ------------------------- | ----------------------------------------- | ----------- |
+| **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints       | 1 (Highest) |
+| **[Custom Rules](/docs/customize/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints  | 2           |
+| **[AGENTS.md](/docs/customize/agents-md)**                                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
+| **[Global Custom Rules](/docs/customize/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                    | 4           |
+| **[Custom Instructions](/docs/customize/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects  | 5 (Lowest)  |
 
 ### Enabling/Disabling AGENTS.md
 
@@ -147,10 +147,10 @@ AGENTS.md support is **enabled by default** in Kilo Code. To disable it, edit `s
 
 ## Related Features
 
-- **[Custom Rules](/agent-behavior/custom-rules)** - Kilo Code-specific rules with more control
-- **[Custom Modes](/agent-behavior/custom-modes)** - Specialized workflows with specific permissions
-- **[Custom Instructions](/agent-behavior/custom-instructions)** - Personal preferences across all projects
-- **[Migrating from Cursor or Windsurf](/advanced-usage/migrating-from-cursor-windsurf)** - Migration guide for other tools
+- **[Custom Rules](/docs/customize/custom-rules)** - Kilo Code-specific rules with more control
+- **[Custom Modes](/docs/customize/custom-modes)** - Specialized workflows with specific permissions
+- **[Custom Instructions](/docs/customize/custom-instructions)** - Personal preferences across all projects
+- **[Migrating from Cursor or Windsurf](/docs/getting-started/migrating)** - Migration guide for other tools
 
 ## External Resources
 
