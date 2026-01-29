@@ -256,7 +256,7 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 					<Link href="/github" className="github-link desktop-nav">
 						GitHub
 					</Link>
-					<Link href="/sign-in" className="signin-btn desktop-nav">
+					<Link href="https://app.kilo.ai" className="signin-btn desktop-nav">
 						Sign in
 					</Link>
 				</div>
