@@ -1572,7 +1572,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 									resize="vertical"
 									value={newModeRoleDefinition}
 									onChange={(e) => {
-										setNewModeRoleDefinition((e.target as HTMLTextAreaElement).value)
+										const value =
+											(e as unknown as CustomEvent)?.detail?.target?.value ??
+											((e as any).target as HTMLTextAreaElement).value
+										setNewModeRoleDefinition(value)
 									}}
 									rows={4}
 									className="w-full"
@@ -1610,7 +1613,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 									resize="vertical"
 									value={newModeWhenToUse}
 									onChange={(e) => {
-										setNewModeWhenToUse((e.target as HTMLTextAreaElement).value)
+										const value =
+											(e as unknown as CustomEvent)?.detail?.target?.value ??
+											((e as any).target as HTMLTextAreaElement).value
+										setNewModeWhenToUse(value)
 									}}
 									rows={3}
 									className="w-full"
@@ -1657,7 +1663,10 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 									resize="vertical"
 									value={newModeCustomInstructions}
 									onChange={(e) => {
-										setNewModeCustomInstructions((e.target as HTMLTextAreaElement).value)
+										const value =
+											(e as unknown as CustomEvent)?.detail?.target?.value ??
+											((e as any).target as HTMLTextAreaElement).value
+										setNewModeCustomInstructions(value)
 									}}
 									rows={4}
 									className="w-full"
