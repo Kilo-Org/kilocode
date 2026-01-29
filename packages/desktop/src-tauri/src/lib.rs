@@ -25,7 +25,7 @@ use tokio::sync::oneshot;
 
 use crate::window_customizer::PinchZoomDisablePlugin;
 
-const SETTINGS_STORE: &str = "opencode.settings.dat";
+const SETTINGS_STORE: &str = "kilo.settings.dat"; // kilocode_change
 const DEFAULT_SERVER_URL_KEY: &str = "defaultServerUrl";
 
 #[derive(Clone, serde::Serialize)]
@@ -252,7 +252,7 @@ pub fn run() {
 
     #[cfg(all(target_os = "macos", not(debug_assertions)))]
     let _ = std::process::Command::new("killall")
-        .arg("opencode-cli")
+        .arg("kilo-cli") // kilocode_change
         .output();
 
     let mut builder = tauri::Builder::default()

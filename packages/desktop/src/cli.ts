@@ -4,9 +4,11 @@ import { message } from "@tauri-apps/plugin-dialog"
 export async function installCli(): Promise<void> {
   try {
     const path = await invoke<string>("install_cli")
-    await message(`CLI installed to ${path}\n\nRestart your terminal to use the 'opencode' command.`, {
+    // kilocode_change start
+    await message(`CLI installed to ${path}\n\nRestart your terminal to use the 'kilo' command.`, {
       title: "CLI Installed",
     })
+    // kilocode_change end
   } catch (e) {
     await message(`Failed to install CLI: ${e}`, { title: "Installation Failed" })
   }

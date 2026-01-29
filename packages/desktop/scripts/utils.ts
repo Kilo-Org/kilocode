@@ -3,27 +3,27 @@ import { $ } from "bun"
 export const SIDECAR_BINARIES: Array<{ rustTarget: string; ocBinary: string; assetExt: string }> = [
   {
     rustTarget: "aarch64-apple-darwin",
-    ocBinary: "opencode-darwin-arm64",
+    ocBinary: "@kilocode/cli-darwin-arm64", // kilocode_change
     assetExt: "zip",
   },
   {
     rustTarget: "x86_64-apple-darwin",
-    ocBinary: "opencode-darwin-x64",
+    ocBinary: "@kilocode/cli-darwin-x64", // kilocode_change
     assetExt: "zip",
   },
   {
     rustTarget: "x86_64-pc-windows-msvc",
-    ocBinary: "opencode-windows-x64",
+    ocBinary: "@kilocode/cli-windows-x64", // kilocode_change
     assetExt: "zip",
   },
   {
     rustTarget: "x86_64-unknown-linux-gnu",
-    ocBinary: "opencode-linux-x64",
+    ocBinary: "@kilocode/cli-linux-x64", // kilocode_change
     assetExt: "tar.gz",
   },
   {
     rustTarget: "aarch64-unknown-linux-gnu",
-    ocBinary: "opencode-linux-arm64",
+    ocBinary: "@kilocode/cli-linux-arm64", // kilocode_change
     assetExt: "tar.gz",
   },
 ]
@@ -41,7 +41,7 @@ export function getCurrentSidecar(target = RUST_TARGET) {
 
 export async function copyBinaryToSidecarFolder(source: string, target = RUST_TARGET) {
   await $`mkdir -p src-tauri/sidecars`
-  const dest = windowsify(`src-tauri/sidecars/opencode-cli-${target}`)
+  const dest = windowsify(`src-tauri/sidecars/kilo-cli-${target}`) // kilocode_change
   await $`cp ${source} ${dest}`
 
   console.log(`Copied ${source} to ${dest}`)

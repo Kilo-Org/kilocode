@@ -61,5 +61,5 @@ fn main() {
         }
     }
 
-    opencode_lib::run()
+    kilo_lib::run() // kilocode_change
 }

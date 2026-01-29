@@ -6,7 +6,7 @@ const RUST_TARGET = Bun.env.TAURI_ENV_TARGET_TRIPLE
 
 const sidecarConfig = getCurrentSidecar(RUST_TARGET)
 
-const binaryPath = windowsify(`../opencode/dist/${sidecarConfig.ocBinary}/bin/opencode`)
+const binaryPath = windowsify(`../opencode/dist/${sidecarConfig.ocBinary}/bin/kilo`) // kilocode_change
 
 await $`cd ../opencode && bun run build --single`
 

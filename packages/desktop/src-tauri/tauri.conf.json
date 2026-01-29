@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenCode Dev",
-  "identifier": "ai.opencode.desktop.dev",
-  "mainBinaryName": "OpenCode",
+  "productName": "Kilo Dev",
+  "identifier": "ai.kilo.desktop.dev",
+  "mainBinaryName": "Kilo",
   "version": "../package.json",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -15,7 +15,7 @@
       {
         "label": "main",
         "create": false,
-        "title": "OpenCode",
+        "title": "Kilo",
         "url": "/",
         "decorations": true,
         "dragDropEnabled": false,
@@ -41,7 +41,7 @@
     ],
     "active": true,
     "targets": ["deb", "rpm", "dmg", "nsis", "app"],
-    "externalBin": ["sidecars/opencode-cli"],
+    "externalBin": ["sidecars/kilo-cli"],
     "macOS": {
       "entitlements": "./entitlements.plist"
     },
