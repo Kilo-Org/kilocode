@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Ласкаво просимо до Kilo Code!",
 		"introText1": "Kilo Code — це безкоштовний агент кодування AI з відкритим кодом.",
-		"introText2": "Працює з найновішими моделями AI, такими як Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 та понад 450 іншими.",
+		"introText2": "Працює з найновішими моделями AI, такими як Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 та понад 450 іншими.",
 		"introText3": "Створи безкоштовний акаунт і отримай $20 бонусних кредитів при першому поповненні.",
 		"ctaButton": "Почати",
 		"manualModeButton": "Використовуй власний API key",

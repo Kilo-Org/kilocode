@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "ยินดีต้อนรับสู่ Kilo Code!",
 		"introText1": "Kilo Code เป็นเอเจนต์เขียนโค้ด AI แบบฟรีและโอเพ่นซอร์ส",
-		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 และอีกกว่า 450 โมเดล",
+		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 และอีกกว่า 450 โมเดล",
 		"introText3": "สร้างบัญชีฟรีและรับเครดิตโบนัส $20 เมื่อเติมเงินครั้งแรก",
 		"ctaButton": "เริ่มต้น",
 		"manualModeButton": "ใช้ API key ของคุณเอง",

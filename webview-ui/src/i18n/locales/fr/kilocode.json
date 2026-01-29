@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Bienvenue dans Kilo Code !",
 		"introText1": "Kilo Code est un agent de codage IA gratuit et open source.",
-		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, et plus de 450 autres.",
+		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, et plus de 450 autres.",
 		"introText3": "Créez un compte gratuit et obtenez 20 $ de crédits bonus lors de votre première recharge.",
 		"ctaButton": "Commencer",
 		"manualModeButton": "Utilisez votre propre clé API",

@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一個免費的開源 AI 程式設計代理。",
-		"introText2": "它適用於最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多個其他模型。",
+		"introText2": "它適用於最新的 AI 模型，如 Claude Opus 4.5、Gemini 3 Pro、GPT-5.2 以及 450 多個其他模型。",
 		"introText3": "建立免費帳戶，首次儲值即可獲得 20 美元獎勵額度。",
 		"ctaButton": "開始使用",
 		"manualModeButton": "使用你自己的 API 金鑰",

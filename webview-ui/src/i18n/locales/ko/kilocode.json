@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
 		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
 		"ctaButton": "시작하기",
 		"manualModeButton": "내 API 키 사용하기",
