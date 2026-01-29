@@ -18,6 +18,7 @@ Checkpoints let you:
 
 - **Checkpoints are enabled by default.**
 - **Git must be installed** for checkpoints to function - [see installation instructions](#git-installation)
+- The working directory must be a Git repository for checkpoints to work
 - No GitHub account or repository is required
 - No Git personal information configuration is needed
 - The shadow Git repository operates independently from your project's existing Git configuration
@@ -173,12 +174,12 @@ This separation is intentional, as `.kilocodeignore` limits which files the AI c
 
 #### Nested Git Repositories
 
-The checkpoint system includes special handling for nested Git repositories:
+Checkpoints do not support nested Git repositories. The working directory must be a single Git repository for checkpoints to function properly.
 
-- Temporarily renames nested `.git` directories to `.git_disabled` during operations
-- Restores them after operations complete
-- Allows proper tracking of files in nested repositories
-- Ensures nested repositories remain functional and unaffected
+- Checkpoints require a single Git repository (not nested `.git` directories)
+- Nested `.git` directories are not supported and checkpoints will be disabled
+- Git submodules are not a workaround - each submodule will have its own `.git` directory, which is incompatible with checkpoint tracking
+- If you have nested repositories, consider using Git submodules instead or consolidating to a single repository
 
 ### Concurrency Control
 
