@@ -49,11 +49,31 @@ export const parseLMStudioModel = (rawModel: LLMInstanceInfo | LLMInfo): ModelIn
 	return modelInfo
 }
 
+export class LMStudioConnectionError extends Error {
+	constructor(
+		message: string,
+		public readonly code: string,
+		public readonly baseUrl: string,
+	) {
+		super(message)
+		this.name = "LMStudioConnectionError"
+	}
+}
+
 export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Promise<Record<string, ModelInfo>> {
 	// clear the set of models that have full details loaded
 	modelsWithLoadedDetails.clear()
 	// clearing the input can leave an empty string; use the default in that case
 	baseUrl = baseUrl === "" ? "http://localhost:1234" : baseUrl
+
+	// Validate baseUrl format
+	if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+		throw new LMStudioConnectionError(
+			`Invalid URL format: "${baseUrl}". URL must start with http:// or https://`,
+			"INVALID_URL_FORMAT",
+			baseUrl,
+		)
+	}
 
 	const models: Record<string, ModelInfo> = {}
 	// ws is required to connect using the LMStudio library
@@ -61,12 +81,51 @@ export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Prom
 
 	try {
 		if (!URL.canParse(lmsUrl)) {
-			return models
+			throw new LMStudioConnectionError(
+				`Invalid URL: "${baseUrl}". Please check the URL format.`,
+				"INVALID_URL",
+				baseUrl,
+			)
 		}
 
 		// test the connection to LM Studio first
-		// errors will be caught further down
-		await axios.get(`${baseUrl}/v1/models`)
+		try {
+			await axios.get(`${baseUrl}/v1/models`, {
+				timeout: 10000, // 10 second timeout
+				headers: { Accept: "application/json" },
+			})
+		} catch (axiosError: any) {
+			if (axiosError.code === "ECONNREFUSED") {
+				throw new LMStudioConnectionError(
+					`Cannot connect to LM Studio at ${baseUrl}. Please ensure:\n` +
+						`1. LM Studio server is running\n` +
+						`2. The URL is correct (${baseUrl})\n` +
+						`3. No firewall or network issue is blocking the connection`,
+					"ECONNREFUSED",
+					baseUrl,
+				)
+			}
+			if (axiosError.code === "ETIMEDOUT" || axiosError.code === "TIMEOUT") {
+				throw new LMStudioConnectionError(
+					`Connection to LM Studio at ${baseUrl} timed out. Please ensure the server is responding.`,
+					"TIMEOUT",
+					baseUrl,
+				)
+			}
+			if (axiosError.response) {
+				throw new LMStudioConnectionError(
+					`LM Studio returned HTTP ${axiosError.response.status}: ${axiosError.response.statusText}. ` +
+						`Please check that the LM Studio server is running correctly.`,
+					`HTTP_${axiosError.response.status}`,
+					baseUrl,
+				)
+			}
+			throw new LMStudioConnectionError(
+				`Network error connecting to LM Studio at ${baseUrl}: ${axiosError.message}`,
+				"NETWORK_ERROR",
+				baseUrl,
+			)
+		}
 
 		const client = new LMStudioClient({ baseUrl: lmsUrl })
 
@@ -116,13 +175,17 @@ export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Prom
 			modelsWithLoadedDetails.add(lmstudioModel.modelKey)
 		}
 	} catch (error) {
-		if (error.code === "ECONNREFUSED") {
-			console.warn(`Error connecting to LMStudio at ${baseUrl}`)
-		} else {
-			console.error(
-				`Error fetching LMStudio models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-			)
+		// Re-throw LMStudioConnectionError as-is for proper handling upstream
+		if (error instanceof LMStudioConnectionError) {
+			throw error
 		}
+		// Log and re-throw other errors
+		console.error(`Error fetching LMStudio models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`)
+		throw new LMStudioConnectionError(
+			`Unexpected error fetching models from LM Studio at ${baseUrl}: ${error instanceof Error ? error.message : String(error)}`,
+			"UNKNOWN_ERROR",
+			baseUrl,
+		)
 	}
 
 	return models
