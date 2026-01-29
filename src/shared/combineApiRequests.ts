@@ -61,20 +61,32 @@ export function combineApiRequests(messages: ClineMessage[]): ClineMessage[] {
 
 		if (startIndex !== undefined) {
 			const startMessage = result[startIndex]
-			let startData = {}
-			let finishData = {}
+			let startData: Record<string, unknown> = {}
+			let finishData: Record<string, unknown> = {}
 
 			try {
 				if (startMessage.text) {
 					startData = JSON.parse(startMessage.text)
 				}
-			} catch (e) {}
+			} catch (e) {
+				// Log JSON parse error with context for debugging malformed API request data
+				console.warn(
+					`[combineApiRequests] Failed to parse api_req_started JSON (ts=${startMessage.ts}):`,
+					e instanceof Error ? e.message : String(e),
+				)
+			}
 
 			try {
 				if (message.text) {
 					finishData = JSON.parse(message.text)
 				}
-			} catch (e) {}
+			} catch (e) {
+				// Log JSON parse error with context for debugging malformed API response data
+				console.warn(
+					`[combineApiRequests] Failed to parse api_req_finished JSON (ts=${message.ts}):`,
+					e instanceof Error ? e.message : String(e),
+				)
+			}
 
 			result[startIndex] = { ...startMessage, text: JSON.stringify({ ...startData, ...finishData }) }
 		}
