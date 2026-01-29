@@ -53,5 +53,48 @@
 		"helpImprove": "Kilo Codeの改善にご協力ください",
 		"helpImproveMessage": "Kilo Codeはバグの修正と拡張機能の改善のため、エラーと使用データを収集します。このテレメトリはコード、プロンプト、個人情報を収集しません。<settingsLink>設定</settingsLink>でこれを無効にできます。"
 	},
-	"importSettings": "設定のインポート"
+	"importSettings": "設定のインポート",
+	"noFolderNoHistory": {
+		"heading": "Kilo Codeへようこそ！",
+		"description": "開始するには、フォルダーを開くかリポジトリをクローンしてください。または楽しいプロジェクトでKilo Codeを試してみましょう！",
+		"openFolder": "フォルダーを開く",
+		"cloneRepository": "リポジトリをクローン",
+		"orTryFunProject": "または楽しいプロジェクトを試す:",
+		"projects": {
+			"snake": "スネークゲームを作る",
+			"todo": "Todoアプリを作る",
+			"weather": "天気ダッシュボードを作る"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "プロジェクトを始めましょう！",
+		"description": "お手伝いできることをいくつかご紹介します:",
+		"prompts": {
+			"explainStructure": "このプロジェクトの構造を説明する",
+			"findBugs": "現在のファイルの潜在的なバグを見つける",
+			"writeTests": "選択したコードのテストを書く",
+			"improveCode": "このコードの改善を提案する",
+			"addDocumentation": "このプロジェクトにドキュメントを追加する"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "このモデルにはサブスクリプションが必要です",
+			"description": "Kilo Code Gatewayに登録して、柔軟な価格設定でプレミアムモデルにアクセスしましょう。",
+			"subscribe": "Kilo Gatewayに登録",
+			"useOwnKey": "または独自のAPIキーを使用"
+		},
+		"withoutSubscription": {
+			"heading": "このモデルにはAPIキーが必要です",
+			"description": "このモデルはKilo Gatewayサブスクリプションをサポートしていません。独自のAPIキーを設定する必要があります。",
+			"configureProvider": "プロバイダー設定を構成",
+			"orCreateAccount": "または他のモデル用にKiloアカウントを作成"
+		}
+	},
+	"rateLimit": {
+		"heading": "無料使用制限に達しました",
+		"description": "無料モデルを引き続き使用するにはKilo Codeアカウントを作成するか、制限がリセットされるまでお待ちください。",
+		"waitTime": "制限は{{minutes}}分後にリセットされます",
+		"createAccount": "Kiloアカウントを作成"
+	}
 }

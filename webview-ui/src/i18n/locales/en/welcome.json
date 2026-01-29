@@ -53,5 +53,48 @@
 		"helpImprove": "Help Improve Kilo Code",
 		"helpImproveMessage": "Kilo Code collects error and usage data to help us fix bugs and improve the extension. This telemetry does not collect code, prompts or personal information. You can turn this off in <settingsLink>settings</settingsLink>."
 	},
-	"importSettings": "Import Settings"
+	"importSettings": "Import Settings",
+	"noFolderNoHistory": {
+		"heading": "Welcome to Kilo Code!",
+		"description": "To get started, open a folder or clone a repository. Or try out Kilo Code with a fun project!",
+		"openFolder": "Open Folder",
+		"cloneRepository": "Clone Repository",
+		"orTryFunProject": "Or try a fun project:",
+		"projects": {
+			"snake": "Build a Snake Game",
+			"todo": "Create a Todo App",
+			"weather": "Make a Weather Dashboard"
+		}
+	},
+	"folderNoHistory": {
+		"heading": "Let's get started with your project!",
+		"description": "Here are some things I can help you with:",
+		"prompts": {
+			"explainStructure": "Explain the structure of this project",
+			"findBugs": "Find potential bugs in the current file",
+			"writeTests": "Write tests for the selected code",
+			"improveCode": "Suggest improvements for this code",
+			"addDocumentation": "Add documentation to this project"
+		}
+	},
+	"paidModel": {
+		"withSubscription": {
+			"heading": "This model requires a subscription",
+			"description": "Subscribe to Kilo Code Gateway to get access to premium models with flexible pricing.",
+			"subscribe": "Subscribe to Kilo Gateway",
+			"useOwnKey": "or use your own API key"
+		},
+		"withoutSubscription": {
+			"heading": "This model requires an API key",
+			"description": "This model doesn't support Kilo Gateway subscriptions. You'll need to configure your own API key.",
+			"configureProvider": "Configure Provider Settings",
+			"orCreateAccount": "or create a Kilo account for other models"
+		}
+	},
+	"rateLimit": {
+		"heading": "You've reached your free usage limit",
+		"description": "Create a Kilo Code account to continue using free models, or wait for your limit to reset.",
+		"waitTime": "Your limit will reset in {{minutes}} minutes",
+		"createAccount": "Create Kilo Account"
+	}
 }

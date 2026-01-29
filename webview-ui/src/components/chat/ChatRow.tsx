@@ -77,6 +77,7 @@ import { OpenMarkdownPreviewButton } from "./OpenMarkdownPreviewButton"
 
 // kilocode_change start
 import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning"
+import { RateLimitNotification } from "./RateLimitNotification"
 import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview"
 import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar"
 import { StandardTooltip } from "../ui"
@@ -1871,6 +1872,9 @@ export const ChatRowContent = ({
 
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
+				}
+				case "rate_limit_reached": {
+					return <RateLimitNotification message={message} />
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

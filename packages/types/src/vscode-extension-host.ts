@@ -258,6 +258,10 @@ export interface ExtensionMessage {
 		| "taskWithAggregatedCosts"
 		| "skillsData"
 		| "askReviewScope" // kilocode_change: Review mode scope selection
+		// kilocode_change start: Onboarding state messages
+		| "workspaceState"
+		| "editorState"
+	// kilocode_change end
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -460,6 +464,12 @@ export interface ExtensionMessage {
 		error?: string
 	}
 	// kilocode_change end: Review mode
+	// kilocode_change start: Onboarding flow message properties
+	hasFolder?: boolean
+	hasHistory?: boolean
+	hasOpenFile?: boolean
+	hasSelectedCode?: boolean
+	// kilocode_change end
 }
 
 export type ExtensionState = Pick<
@@ -949,6 +959,12 @@ export interface WebviewMessage {
 		| "debugSetting"
 		| "refreshSkills"
 		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
+		// kilocode_change start: Onboarding message types
+		| "openFolder"
+		| "showCloneDialog"
+		| "checkWorkspaceState"
+		| "checkEditorState"
+	// kilocode_change end
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -1029,6 +1045,7 @@ export interface WebviewMessage {
 	organizationId?: string | null // For organization switching
 	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
 	historyItem?: HistoryItem // kilocode_change For addTaskToHistory
+	funProject?: string // kilocode_change: Fun project identifier (snake, todo, weather)
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean

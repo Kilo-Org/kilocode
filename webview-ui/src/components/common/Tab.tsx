@@ -7,7 +7,7 @@ type TabProps = HTMLAttributes<HTMLDivElement>
 
 export const Tab = ({ className, children, ...props }: TabProps) => (
 	// kilocode_change
-	<div className={cn("fixed inset-0 bottom-9 flex flex-col", className)} {...props}>
+	<div className={cn("fixed inset-0 bottom-9 flex flex-col bg-vscode-sideBar-background", className)} {...props}>
 		{children}
 	</div>
 )
