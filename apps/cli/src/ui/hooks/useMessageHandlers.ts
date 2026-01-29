@@ -42,6 +42,7 @@ export function useMessageHandlers({ nonInteractive }: UseMessageHandlersOptions
 		setTokenUsage,
 		setRouterModels,
 		setTaskHistory,
+		setApiConfiguration,
 		currentTodos,
 		setTodos,
 	} = useCLIStore()
@@ -322,6 +323,10 @@ export function useMessageHandlers({ nonInteractive }: UseMessageHandlersOptions
 					setTaskHistory(newTaskHistory)
 				}
 
+				if (state.apiConfiguration) {
+					setApiConfiguration(state.apiConfiguration)
+				}
+
 				const clineMessages = state.clineMessages
 
 				if (clineMessages) {
@@ -398,6 +403,7 @@ export function useMessageHandlers({ nonInteractive }: UseMessageHandlersOptions
 			setTokenUsage,
 			setRouterModels,
 			setTaskHistory,
+			setApiConfiguration,
 		],
 	)
 
