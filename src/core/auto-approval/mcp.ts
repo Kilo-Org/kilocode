@@ -1,6 +1,4 @@
-import type { McpServerUse } from "@roo-code/types"
-
-import type { McpServer, McpTool } from "../../shared/mcp"
+import type { McpServerUse, McpServer, McpTool } from "@roo-code/types"
 
 export function isMcpToolAlwaysAllowed(mcpServerUse: McpServerUse, mcpServers: McpServer[] | undefined): boolean {
 	if (mcpServerUse.type === "use_mcp_tool" && mcpServerUse.toolName) {

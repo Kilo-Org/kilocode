@@ -7,6 +7,7 @@ import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { findLast } from "../../shared/array"
 
 /**
  * Checks if a message contains tool_result blocks.
@@ -28,6 +29,28 @@ function getToolUseBlocks(message: ApiMessage): Anthropic.Messages.ToolUseBlock[
 		return []
 	}
 	return message.content.filter((block) => block.type === "tool_use") as Anthropic.Messages.ToolUseBlock[]
+}
+
+/**
+ * Gets the tool_result blocks from a message.
+ */
+function getToolResultBlocks(message: ApiMessage): Anthropic.ToolResultBlockParam[] {
+	if (message.role !== "user" || typeof message.content === "string") {
+		return []
+	}
+	return message.content.filter((block): block is Anthropic.ToolResultBlockParam => block.type === "tool_result")
+}
+
+/**
+ * Finds a tool_use block by ID in a message.
+ */
+function findToolUseBlockById(message: ApiMessage, toolUseId: string): Anthropic.Messages.ToolUseBlock | undefined {
+	if (message.role !== "assistant" || typeof message.content === "string") {
+		return undefined
+	}
+	return message.content.find(
+		(block): block is Anthropic.Messages.ToolUseBlock => block.type === "tool_use" && block.id === toolUseId,
+	)
 }
 
 /**
@@ -57,11 +80,11 @@ export type KeepMessagesResult = {
 
 /**
  * Extracts tool_use blocks that need to be preserved to match tool_result blocks in keepMessages.
- * When the first kept message is a user message with tool_result blocks,
- * we need to find the corresponding tool_use blocks from the preceding assistant message.
+ * Checks ALL kept messages for tool_result blocks and searches backwards through the condensed
+ * region (bounded by N_MESSAGES_TO_KEEP) to find the matching tool_use blocks by ID.
  * These tool_use blocks will be appended to the summary message to maintain proper pairing.
  *
- * Also extracts reasoning blocks from the preceding assistant message, which are required
+ * Also extracts reasoning blocks from messages containing preserved tool_uses, which are required
  * by DeepSeek and Z.ai for interleaved thinking mode. Without these, the API returns a 400 error
  * "Missing reasoning_content field in the assistant message".
  * See: https://api-docs.deepseek.com/guides/thinking_mode#tool-calls
@@ -78,28 +101,53 @@ export function getKeepMessagesWithToolBlocks(messages: ApiMessage[], keepCount:
 	const startIndex = messages.length - keepCount
 	const keepMessages = messages.slice(startIndex)
 
-	// Check if the first kept message is a user message with tool_result blocks
-	if (keepMessages.length > 0 && hasToolResultBlocks(keepMessages[0])) {
-		// Look for the preceding assistant message with tool_use blocks
-		const precedingIndex = startIndex - 1
-		if (precedingIndex >= 0) {
-			const precedingMessage = messages[precedingIndex]
-			const toolUseBlocks = getToolUseBlocks(precedingMessage)
-			if (toolUseBlocks.length > 0) {
-				// Also extract reasoning blocks for DeepSeek/Z.ai interleaved thinking
-				// Task stores reasoning as {type: "reasoning", text: "..."} content blocks
-				const reasoningBlocks = getReasoningBlocks(precedingMessage)
-				// Return the tool_use blocks and reasoning blocks to be merged into the summary message
-				return {
-					keepMessages,
-					toolUseBlocksToPreserve: toolUseBlocks,
-					reasoningBlocksToPreserve: reasoningBlocks,
-				}
+	const toolUseBlocksToPreserve: Anthropic.Messages.ToolUseBlock[] = []
+	const reasoningBlocksToPreserve: Anthropic.Messages.ContentBlockParam[] = []
+	const preservedToolUseIds = new Set<string>()
+
+	// Check ALL kept messages for tool_result blocks
+	for (const keepMsg of keepMessages) {
+		if (!hasToolResultBlocks(keepMsg)) {
+			continue
+		}
+
+		const toolResults = getToolResultBlocks(keepMsg)
+
+		for (const toolResult of toolResults) {
+			const toolUseId = toolResult.tool_use_id
+
+			// Skip if we've already found this tool_use
+			if (preservedToolUseIds.has(toolUseId)) {
+				continue
+			}
+
+			// Search backwards through the condensed region (bounded)
+			const searchStart = startIndex - 1
+			const searchEnd = Math.max(0, startIndex - N_MESSAGES_TO_KEEP)
+			const messagesToSearch = messages.slice(searchEnd, searchStart + 1)
+
+			// Find the message containing this tool_use
+			const messageWithToolUse = findLast(messagesToSearch, (msg) => {
+				return findToolUseBlockById(msg, toolUseId) !== undefined
+			})
+
+			if (messageWithToolUse) {
+				const toolUse = findToolUseBlockById(messageWithToolUse, toolUseId)!
+				toolUseBlocksToPreserve.push(toolUse)
+				preservedToolUseIds.add(toolUseId)
+
+				// Also preserve reasoning blocks from that message
+				const reasoning = getReasoningBlocks(messageWithToolUse)
+				reasoningBlocksToPreserve.push(...reasoning)
 			}
 		}
 	}
 
-	return { keepMessages, toolUseBlocksToPreserve: [], reasoningBlocksToPreserve: [] }
+	return {
+		keepMessages,
+		toolUseBlocksToPreserve,
+		reasoningBlocksToPreserve,
+	}
 }
 
 export const N_MESSAGES_TO_KEEP = 3

@@ -1,6 +1,5 @@
 import { useState, useEffect, FormEvent } from "react"
 import { VSCodeTextArea, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { MessageSquare } from "lucide-react"
 
 import { supportPrompt, SupportPromptType } from "@roo/support-prompt"
 
@@ -20,6 +19,7 @@ import {
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import CommitMessagePromptSettings from "./CommitMessagePromptSettings" // kilocode_change
+import { SearchableSetting } from "./SearchableSetting"
 
 interface PromptsSettingsProps {
 	customSupportPrompts: Record<string, string | undefined>
@@ -139,14 +139,14 @@ const PromptsSettings = ({
 	return (
 		<div>
 			<SectionHeader description={t("settings:prompts.description")}>
-				<div className="flex items-center gap-2">
-					<MessageSquare className="w-4" />
-					<div>{t("settings:sections.prompts")}</div>
-				</div>
+				{t("settings:sections.prompts")}
 			</SectionHeader>
 
 			<Section>
-				<div>
+				<SearchableSetting
+					settingId="prompts-support-prompt-select"
+					section="prompts"
+					label={t("settings:sections.prompts")}>
 					<Select
 						value={activeSupportOption}
 						onValueChange={(type) => setActiveSupportOption(type as SupportPromptType)}>
@@ -164,7 +164,7 @@ const PromptsSettings = ({
 					<div className="text-sm text-vscode-descriptionForeground mt-1">
 						{t(`prompts:supportPrompts.types.${activeSupportOption}.description`)}
 					</div>
-				</div>
+				</SearchableSetting>
 
 				<div key={activeSupportOption} className="mt-4">
 					<div className="flex justify-between items-center mb-1">

@@ -58,5 +58,8 @@
 	"ghost.commands.applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
 	"ghost.commands.applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
 	"ghost.commands.goToNextSuggestion": "انتقل إلى الاقتراح التالي",
-	"ghost.commands.goToPreviousSuggestion": "انتقل إلى الاقتراح السابق"
+	"ghost.commands.goToPreviousSuggestion": "انتقل إلى الاقتراح السابق",
+	"settings.debugProxy.enabled.description": "**تفعيل Debug Proxy** — توجيه جميع طلبات الشبكة الصادرة عبر proxy لتصحيح MITM. ينشط فقط عند التشغيل في وضع التصحيح (F5).",
+	"settings.debugProxy.serverUrl.description": "عنوان Proxy (مثال: `http://127.0.0.1:8888`). يُستخدم فقط عند تفعيل **Debug Proxy**.",
+	"settings.debugProxy.tlsInsecure.description": "قبول الشهادات الموقعة ذاتيًا من proxy. **مطلوب لفحص MITM.** ⚠️ غير آمن — استخدمه فقط للتصحيح المحلي."
 }

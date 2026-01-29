@@ -1,9 +1,7 @@
 import React from "react"
-import { Provider as JotaiProvider } from "jotai"
+import { Provider as JotaiProvider, type createStore } from "jotai"
 import { UI } from "./UI.js"
 import { KeyboardProvider } from "./providers/KeyboardProvider.js"
-
-import type { createStore } from "jotai"
 
 type JotaiStore = ReturnType<typeof createStore>
 

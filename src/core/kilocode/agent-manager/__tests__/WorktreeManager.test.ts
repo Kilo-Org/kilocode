@@ -394,9 +394,10 @@ describe("WorktreeManager", () => {
 
 			// mkdir should only be called for git info dir, not for .kilocode
 			const mkdirCalls = vi.mocked(fs.promises.mkdir).mock.calls
-			const kilocodeMkdirCalls = mkdirCalls.filter((call) =>
-				String(call[0]).replace(/\\/g, "/").includes(".kilocode") &&
-				!String(call[0]).replace(/\\/g, "/").includes(".git"),
+			const kilocodeMkdirCalls = mkdirCalls.filter(
+				(call) =>
+					String(call[0]).replace(/\\/g, "/").includes(".kilocode") &&
+					!String(call[0]).replace(/\\/g, "/").includes(".git"),
 			)
 			expect(kilocodeMkdirCalls).toHaveLength(0)
 
@@ -460,9 +461,7 @@ describe("WorktreeManager", () => {
 
 			await manager.removeSessionId("/worktree/path")
 
-			expect(fs.promises.unlink).toHaveBeenCalledWith(
-				path.join("/worktree/path", ".kilocode", "session-id"),
-			)
+			expect(fs.promises.unlink).toHaveBeenCalledWith(path.join("/worktree/path", ".kilocode", "session-id"))
 		})
 
 		it("does not throw when file does not exist", async () => {

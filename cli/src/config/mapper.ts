@@ -135,7 +135,6 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "bedrock":
 		case "vertex":
 		case "gemini":
-		case "gemini-cli":
 		case "mistral":
 		case "moonshot":
 		case "minimax":

@@ -163,7 +163,7 @@ export const CLAUDE_CODE_API_CONFIG = {
 		"interleaved-thinking-2025-05-14",
 		"fine-grained-tool-streaming-2025-05-14",
 	],
-	userAgent: `Roo-Code/${Package.version}`,
+	userAgent: `Kilo-Code/${Package.version}`,
 } as const
 
 /**

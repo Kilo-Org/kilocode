@@ -1,4 +1,4 @@
-import type { ClineSayTool } from "../../shared/ExtensionMessage"
+import type { ClineSayTool } from "@roo-code/types"
 
 export function isWriteToolAction(tool: ClineSayTool): boolean {
 	return ["editedExistingFile", "appliedDiff", "newFileCreated", "generateImage"].includes(tool.tool)

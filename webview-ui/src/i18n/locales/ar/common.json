@@ -129,5 +129,9 @@
 		"delegated_to": "تم التفويض إلى مهمة {{childId}}",
 		"delegation_completed": "اكتملت المهمة الفرعية، استئناف المهمة الرئيسية",
 		"awaiting_child": "في انتظار المهمة الفرعية {{childId}}"
+	},
+	"costs": {
+		"own": "الخاص",
+		"subtasks": "المهام الفرعية"
 	}
 }

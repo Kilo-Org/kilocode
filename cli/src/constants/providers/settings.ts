@@ -491,18 +491,6 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter OAuth credentials path...",
 	},
 
-	// Gemini CLI fields
-	geminiCliOAuthPath: {
-		label: "OAuth Credentials Path",
-		type: "text",
-		placeholder: "Enter OAuth credentials path...",
-	},
-	geminiCliProjectId: {
-		label: "Project ID",
-		type: "text",
-		placeholder: "Enter project ID...",
-	},
-
 	// ZAI fields
 	zaiApiKey: {
 		label: "API Key",
@@ -949,12 +937,6 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 		case "qwen-code":
 			return [createFieldConfig("qwenCodeOauthPath", config, "~/.qwen/oauth_creds.json")]
 
-		case "gemini-cli":
-			return [
-				createFieldConfig("geminiCliOAuthPath", config, "~/.gemini/oauth_creds.json"),
-				createFieldConfig("geminiCliProjectId", config),
-			]
-
 		case "zai":
 			return [
 				createFieldConfig("zaiApiKey", config),
@@ -1087,7 +1069,6 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	deepinfra: "meta-llama/Meta-Llama-3.1-70B-Instruct",
 	"io-intelligence": "gpt-4o",
 	"qwen-code": "qwen-coder-plus-latest",
-	"gemini-cli": "gemini-1.5-pro-latest",
 	zai: "gpt-4o",
 	unbound: "gpt-4o",
 	requesty: "gpt-4o",

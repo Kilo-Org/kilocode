@@ -121,4 +121,48 @@ describe("ExecaTerminalProcess", () => {
 			expect(mockTerminal.setActiveStream).toHaveBeenLastCalledWith(undefined)
 		})
 	})
+
+	describe("trimRetrievedOutput", () => {
+		it("clears buffer when all output has been retrieved", () => {
+			// Set up a scenario where all output has been retrieved
+			terminalProcess["fullOutput"] = "test output data"
+			terminalProcess["lastRetrievedIndex"] = 16 // Same as fullOutput.length
+
+			// Access the protected method through type casting
+			;(terminalProcess as any).trimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
+		})
+
+		it("does not clear buffer when there is unretrieved output", () => {
+			// Set up a scenario where not all output has been retrieved
+			terminalProcess["fullOutput"] = "test output data"
+			terminalProcess["lastRetrievedIndex"] = 5 // Less than fullOutput.length
+			;(terminalProcess as any).trimRetrievedOutput()
+
+			// Buffer should NOT be cleared - there's still unretrieved content
+			expect(terminalProcess["fullOutput"]).toBe("test output data")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(5)
+		})
+
+		it("does nothing when buffer is already empty", () => {
+			terminalProcess["fullOutput"] = ""
+			terminalProcess["lastRetrievedIndex"] = 0
+			;(terminalProcess as any).trimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
+		})
+
+		it("clears buffer when lastRetrievedIndex exceeds fullOutput length", () => {
+			// Edge case: index is greater than current length (could happen if output was modified)
+			terminalProcess["fullOutput"] = "short"
+			terminalProcess["lastRetrievedIndex"] = 100
+			;(terminalProcess as any).trimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
+		})
+	})
 })

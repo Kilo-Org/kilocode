@@ -89,10 +89,15 @@
 		"title": "종료",
 		"tooltip": "현재 작업 종료"
 	},
+	"stop": {
+		"title": "정지",
+		"tooltip": "현재 작업 정지"
+	},
 	"cancel": {
 		"title": "취소",
 		"tooltip": "현재 작업 취소"
 	},
+	"enqueueMessage": "메시지를 대기열에 추가 (현재 작업 완료 후 전송)",
 	"scrollToBottom": "채팅 하단으로 스크롤",
 	"about": "AI 지원으로 코드를 생성, 리팩터링 및 디버깅합니다. 자세한 내용은 <DocsLink>문서</DocsLink>를 참조하세요.",
 	"docs": "더 알아보려면 <DocsLink>문서</DocsLink>를 확인하세요.",
@@ -286,7 +291,8 @@
 		"title": "오류 세부 정보",
 		"copyToClipboard": "클립보드에 복사",
 		"copied": "복사됨!",
-		"diagnostics": "상세한 오류 정보 가져오기"
+		"diagnostics": "상세한 오류 정보 가져오기",
+		"proxyProvider": "프록시 기반 제공자를 사용하는 것 같습니다. 로그를 확인하고 Roo의 요청을 다시 작성하지 않는지 확인하세요."
 	},
 	"powershell": {
 		"issues": "Windows PowerShell에 문제가 있는 것 같습니다. 다음을 참조하세요"
@@ -307,7 +313,7 @@
 		"triggerLabel_zero": "0개 자동 승인됨",
 		"triggerLabel_one": "1개 자동 승인됨",
 		"triggerLabel_other": "{{count}}개 자동 승인됨",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "생각 중",
@@ -344,8 +350,9 @@
 		},
 		"release": {
 			"heading": "새로운 기능:",
-			"skills": "Roo는 이제 <skillsLink>Agent Skills</skillsLink>를 지원합니다 - Roo의 기능을 확장하기 위한 프롬프트, 도구 및 리소스의 재사용 가능한 패키지입니다.",
-			"nativeToolCalling": "모든 새 작업에 이제 네이티브 도구 호출이 필요합니다. <blogLink>자세히 알아보기</blogLink> 동기 및 문제가 발생한 경우 수행할 작업에 대해."
+			"openaiCodexProvider": "OpenAI - ChatGPT Plus/Pro 공급자가 추가되었으며, 토큰당 비용 없이 Codex 모델에 대한 구독 기반 액세스를 제공합니다.",
+			"gpt52codexModel": "새로운 gpt-5.2-codex 모델이 Roo Code Router, 표준 OpenAI 공급자 등에 추가되었습니다.",
+			"bugFixes": "회색 화면을 유발하는 메모리 누수, Gemini 생각 서명 문제 및 추가 안정성 개선 사항을 수정했습니다."
 		},
 		"cloudAgents": {
 			"heading": "클라우드의 새로운 기능:",
@@ -356,8 +363,14 @@
 		"careers": "그리고, <careersLink>채용 중입니다!</careersLink>",
 		"socialLinks": "<xLink>X</xLink>, <discordLink>Discord</discordLink>, 또는 <redditLink>r/KiloCode</redditLink>에서 만나요 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "총 비용 (하위 작업 포함): ${{cost}}",
+		"total": "총 비용: ${{cost}}",
+		"includesSubtasks": "하위 작업 비용 포함"
+	},
 	"browser": {
 		"session": "브라우저 세션",
+		"active": "활성",
 		"rooWantsToUse": "Kilo Code가 브라우저를 사용하고 싶어합니다",
 		"consoleLogs": "콘솔 로그",
 		"noNewLogs": "(새 로그 없음)",

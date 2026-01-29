@@ -125,5 +125,9 @@
 		"delegated_to": "Delegated to task {{childId}}",
 		"delegation_completed": "Subtask completed, resuming parent",
 		"awaiting_child": "Awaiting child task {{childId}}"
+	},
+	"costs": {
+		"own": "Own",
+		"subtasks": "Subtasks"
 	}
 }

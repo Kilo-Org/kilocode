@@ -1,5 +1,5 @@
 import { HTMLAttributes, useState } from "react"
-import { X, CheckCheck } from "lucide-react"
+import { X } from "lucide-react"
 import { Trans } from "react-i18next"
 import { Package } from "@roo/package"
 
@@ -11,6 +11,7 @@ import { Button, Input, Slider, Select, SelectContent, SelectItem, SelectTrigger
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SearchableSetting } from "./SearchableSetting"
 import { AutoApproveToggle } from "./AutoApproveToggle"
 import { MaxLimitInputs } from "./MaxLimitInputs"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -117,12 +118,7 @@ export const AutoApproveSettings = ({
 
 	return (
 		<div {...props}>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<CheckCheck className="w-4 h-4" />
-					<div>{t("settings:sections.autoApprove")}</div>
-				</div>
-			</SectionHeader>
+			<SectionHeader>{t("settings:sections.autoApprove")}</SectionHeader>
 
 			{/* kilocode_change start */}
 			{yoloMode && (
@@ -153,40 +149,45 @@ export const AutoApproveSettings = ({
 
 			<Section>
 				<div className="space-y-4">
-					<VSCodeCheckbox
-						checked={effectiveAutoApprovalEnabled}
-						aria-label={t("settings:autoApprove.toggleAriaLabel")}
-						onChange={() => {
-							const newValue = !(autoApprovalEnabled ?? false)
-							setAutoApprovalEnabled(newValue)
-							vscode.postMessage({ type: "autoApprovalEnabled", bool: newValue })
-						}}>
-						<span className="font-medium">{t("settings:autoApprove.enabled")}</span>
-					</VSCodeCheckbox>
-					<div className="text-vscode-descriptionForeground text-sm mt-1">
-						<p>{t("settings:autoApprove.description")}</p>
-						<p>
-							<Trans
-								i18nKey="settings:autoApprove.toggleShortcut"
-								components={{
-									SettingsLink: (
-										<a
-											href="#"
-											className="text-vscode-textLink-foreground hover:underline cursor-pointer"
-											onClick={(e) => {
-												e.preventDefault()
-												// Send message to open keyboard shortcuts with search for toggle command
-												vscode.postMessage({
-													type: "openKeyboardShortcuts",
-													text: `${Package.name}.toggleAutoApprove`,
-												})
-											}}
-										/>
-									),
-								}}
-							/>
-						</p>
-					</div>
+					<SearchableSetting
+						settingId="auto-approve-enabled"
+						section="autoApprove"
+						label={t("settings:autoApprove.enabled")}>
+						<VSCodeCheckbox
+							checked={effectiveAutoApprovalEnabled}
+							aria-label={t("settings:autoApprove.toggleAriaLabel")}
+							onChange={() => {
+								const newValue = !(autoApprovalEnabled ?? false)
+								setAutoApprovalEnabled(newValue)
+								vscode.postMessage({ type: "autoApprovalEnabled", bool: newValue })
+							}}>
+							<span className="font-medium">{t("settings:autoApprove.enabled")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							<p>{t("settings:autoApprove.description")}</p>
+							<p>
+								<Trans
+									i18nKey="settings:autoApprove.toggleShortcut"
+									components={{
+										SettingsLink: (
+											<a
+												href="#"
+												className="text-vscode-textLink-foreground hover:underline cursor-pointer"
+												onClick={(e) => {
+													e.preventDefault()
+													// Send message to open keyboard shortcuts with search for toggle command
+													vscode.postMessage({
+														type: "openKeyboardShortcuts",
+														text: `${Package.name}.toggleAutoApprove`,
+													})
+												}}
+											/>
+										),
+									}}
+								/>
+							</p>
+						</div>
+					</SearchableSetting>
 
 					<AutoApproveToggle
 						alwaysAllowReadOnly={alwaysAllowReadOnly}
@@ -216,7 +217,10 @@ export const AutoApproveSettings = ({
 							<span className="codicon codicon-eye" />
 							<div>{t("settings:autoApprove.readOnly.label")}</div>
 						</div>
-						<div>
+						<SearchableSetting
+							settingId="auto-approve-readonly-outside-workspace"
+							section="autoApprove"
+							label={t("settings:autoApprove.readOnly.outsideWorkspace.label")}>
 							<VSCodeCheckbox
 								checked={alwaysAllowReadOnlyOutsideWorkspace}
 								onChange={(e: any) =>
@@ -230,7 +234,7 @@ export const AutoApproveSettings = ({
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.readOnly.outsideWorkspace.description")}
 							</div>
-						</div>
+						</SearchableSetting>
 					</div>
 				)}
 
@@ -240,7 +244,10 @@ export const AutoApproveSettings = ({
 							<span className="codicon codicon-edit" />
 							<div>{t("settings:autoApprove.write.label")}</div>
 						</div>
-						<div>
+						<SearchableSetting
+							settingId="auto-approve-write-outside-workspace"
+							section="autoApprove"
+							label={t("settings:autoApprove.write.outsideWorkspace.label")}>
 							<VSCodeCheckbox
 								checked={alwaysAllowWriteOutsideWorkspace}
 								onChange={(e: any) =>
@@ -254,8 +261,11 @@ export const AutoApproveSettings = ({
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.write.outsideWorkspace.description")}
 							</div>
-						</div>
-						<div>
+						</SearchableSetting>
+						<SearchableSetting
+							settingId="auto-approve-write-protected"
+							section="autoApprove"
+							label={t("settings:autoApprove.write.protected.label")}>
 							<VSCodeCheckbox
 								checked={alwaysAllowWriteProtected}
 								onChange={(e: any) =>
@@ -267,7 +277,7 @@ export const AutoApproveSettings = ({
 							<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 								{t("settings:autoApprove.write.protected.description")}
 							</div>
-						</div>
+						</SearchableSetting>
 					</div>
 				)}
 
@@ -277,7 +287,10 @@ export const AutoApproveSettings = ({
 							<span className="codicon codicon-question" />
 							<div>{t("settings:autoApprove.followupQuestions.label")}</div>
 						</div>
-						<div>
+						<SearchableSetting
+							settingId="auto-approve-followup-timeout"
+							section="autoApprove"
+							label={t("settings:autoApprove.followupQuestions.timeoutLabel")}>
 							<div className="flex items-center gap-2">
 								<Slider
 									min={1000}
@@ -294,7 +307,7 @@ export const AutoApproveSettings = ({
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.followupQuestions.timeoutLabel")}
 							</div>
-						</div>
+						</SearchableSetting>
 					</div>
 				)}
 
@@ -305,14 +318,17 @@ export const AutoApproveSettings = ({
 							<div>{t("settings:autoApprove.execute.label")}</div>
 						</div>
 
-						<div>
+						<SearchableSetting
+							settingId="auto-approve-allowed-commands"
+							section="autoApprove"
+							label={t("settings:autoApprove.execute.allowedCommands")}>
 							<label className="block font-medium mb-1" data-testid="allowed-commands-heading">
 								{t("settings:autoApprove.execute.allowedCommands")}
 							</label>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.execute.allowedCommandsDescription")}
 							</div>
-						</div>
+						</SearchableSetting>
 
 						<div className="flex gap-2">
 							<Input
@@ -357,14 +373,18 @@ export const AutoApproveSettings = ({
 						</div>
 
 						{/* Denied Commands Section */}
-						<div className="mt-6">
+						<SearchableSetting
+							settingId="auto-approve-denied-commands"
+							section="autoApprove"
+							label={t("settings:autoApprove.execute.deniedCommands")}
+							className="mt-6">
 							<label className="block font-medium mb-1" data-testid="denied-commands-heading">
 								{t("settings:autoApprove.execute.deniedCommands")}
 							</label>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.execute.deniedCommandsDescription")}
 							</div>
-						</div>
+						</SearchableSetting>
 
 						<div className="flex gap-2">
 							<Input
