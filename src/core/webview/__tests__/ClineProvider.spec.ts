@@ -2198,7 +2198,7 @@ describe("ClineProvider", () => {
 			])
 		})
 
-		// kilocode_change start: Test for anonymous user model change fix
+		// kilocode_change start: Validate anonymous users can change models
 		test("handles upsertApiConfiguration when currentApiConfigName is undefined (anonymous user)", async () => {
 			await provider.resolveWebviewView(mockWebviewView)
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
