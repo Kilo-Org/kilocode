@@ -5,7 +5,7 @@ import OpenAI from "openai"
  * Content block type for reasoning content (used by Kimi K2.5 / DeepSeek).
  * This is a custom content block type that extends the standard Anthropic content blocks.
  */
-type ReasoningContentBlock = {
+export type ReasoningContentBlock = {
 	type: "reasoning"
 	text: string
 }
@@ -14,7 +14,7 @@ type ReasoningContentBlock = {
  * Content block type for thinking content (used by some providers).
  * This is a custom content block type that extends the standard Anthropic content blocks.
  */
-type ThinkingContentBlock = {
+export type ThinkingContentBlock = {
 	type: "thinking"
 	thinking: string
 }
@@ -24,7 +24,7 @@ type ThinkingContentBlock = {
  * This type is used when messages contain reasoning/thinking content blocks
  * that are not part of the standard Anthropic SDK types.
  */
-type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | ReasoningContentBlock | ThinkingContentBlock
+export type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | ReasoningContentBlock | ThinkingContentBlock
 
 /**
  * Extended Anthropic message type that includes custom properties.
@@ -32,7 +32,7 @@ type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | Reasonin
  * like reasoning_content, reasoning, or reasoning_details that are not part
  * of the standard Anthropic SDK types.
  */
-type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
+export type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
 	reasoning_content?: string
 	reasoning?: string
 	reasoning_details?: ReasoningDetail[]
@@ -45,7 +45,7 @@ type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
  * properties like reasoning_content or reasoning_details that are not part
  * of the standard OpenAI SDK types.
  */
-type ExtendedOpenAIAssistantMessageParam = OpenAI.Chat.ChatCompletionAssistantMessageParam & {
+export type ExtendedOpenAIAssistantMessageParam = OpenAI.Chat.ChatCompletionAssistantMessageParam & {
 	reasoning_details?: ReasoningDetail[]
 	reasoning_content?: string
 }
@@ -55,7 +55,7 @@ type ExtendedOpenAIAssistantMessageParam = OpenAI.Chat.ChatCompletionAssistantMe
  * This type is used when OpenAI messages have been enriched with additional
  * properties like reasoning_details that are not part of the standard OpenAI SDK types.
  */
-type ExtendedOpenAIMessageParam = OpenAI.Chat.ChatCompletionMessageParam & {
+export type ExtendedOpenAIMessageParam = OpenAI.Chat.ChatCompletionMessageParam & {
 	reasoning_details?: ReasoningDetail[]
 	reasoning_content?: string
 }

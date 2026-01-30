@@ -11,18 +11,6 @@ import {
 } from "../openai-format"
 import { normalizeMistralToolCallId } from "../mistral-format"
 
-// Type for extended content blocks that include reasoning and thinking blocks
-// Type for extended content blocks that include reasoning and thinking blocks
-type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | { type: "reasoning"; text: string } | { type: "thinking"; thinking: string }
-
-// Type for extended Anthropic messages that include custom properties
-type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
-	reasoning_content?: string
-	reasoning?: string
-	reasoning_details?: unknown[]
-	content?: string | ExtendedContentBlockParam[]
-}
-
 // Helper type for test assertions with reasoning_content
 type AssistantMessageWithReasoning = {
 	role: string
