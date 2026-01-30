@@ -307,10 +307,23 @@ export function convertToOpenAiMessages(
 			// If a message also contains reasoning_details (Gemini 3 / xAI / o-series, etc.),
 			// we must preserve it here as well.
 			const messageWithDetails = anthropicMessage as any
-			const baseMessage: OpenAI.Chat.ChatCompletionMessageParam & { reasoning_details?: any[] } = {
+			const baseMessage: OpenAI.Chat.ChatCompletionMessageParam & {
+				reasoning_details?: any[],
+				reasoning_content?: string
+			} = {
 				role: anthropicMessage.role,
 				content: anthropicMessage.content,
 			}
+
+			// kilocode_change start: Extract reasoning_content from message-level fields
+			// This handles cases where reasoning_content or reasoning is already stored at the message level
+			// (e.g., when messages are converted and then re-converted)
+			if (messageWithDetails.reasoning_content) {
+				baseMessage.reasoning_content = messageWithDetails.reasoning_content
+			} else if (messageWithDetails.reasoning) {
+				baseMessage.reasoning_content = messageWithDetails.reasoning
+			}
+			// kilocode_change end
 
 			if (anthropicMessage.role === "assistant") {
 				const mapped = mapReasoningDetails(messageWithDetails.reasoning_details)
@@ -483,17 +496,38 @@ export function convertToOpenAiMessages(
 				// Check if the message has reasoning_details (used by Gemini 3, xAI, etc.)
 				const messageWithDetails = anthropicMessage as any
 
-				// Build message with reasoning_details BEFORE tool_calls to preserve
+				// kilocode_change start: Extract reasoning blocks from content for Kimi K2.5 / DeepSeek compatibility
+				// Kimi K2.5 requires reasoning_content at the message level, not in content array
+				// During multi-step tool calling, this reasoning_content must be preserved in the context
+				// If reasoning_content is missing from assistant messages with tool_calls, the API returns a 400 error
+				const reasoningBlocks = (messageWithDetails.content || []).filter(
+					(block: any) => block.type === "reasoning" || block.type === "thinking"
+				)
+				const reasoningContent = reasoningBlocks
+					.map((block: any) => block.text || block.thinking || "")
+					.filter(Boolean)
+					.join("\n")
+				// kilocode_change end
+
+				// Build message with reasoning_content BEFORE reasoning_details and tool_calls to preserve
 				// the order expected by providers like Roo. Property order matters
 				// when sending messages back to some APIs.
 				const baseMessage: OpenAI.Chat.ChatCompletionAssistantMessageParam & {
 					reasoning_details?: any[]
+					reasoning_content?: string
 				} = {
 					role: "assistant",
 					// Use empty string instead of undefined for providers like Gemini (via OpenRouter)
 					// that require every message to have content in the "parts" field
 					content: content ?? "",
 				}
+
+				// kilocode_change start: Add reasoning_content for Kimi K2.5 / DeepSeek compatibility
+				// This must be at the message level, not inside content array
+				if (reasoningContent) {
+					baseMessage.reasoning_content = reasoningContent
+				}
+				// kilocode_change end
 
 				// Pass through reasoning_details to preserve the original shape from the API.
 				// The `id` field is stripped from openai-responses-v1 blocks (see mapReasoningDetails).
@@ -502,7 +536,7 @@ export function convertToOpenAiMessages(
 					baseMessage.reasoning_details = mapped
 				}
 
-				// Add tool_calls after reasoning_details
+				// Add tool_calls after reasoning fields
 				// Cannot be an empty array. API expects an array with minimum length 1, and will respond with an error if it's empty
 				if (tool_calls.length > 0) {
 					baseMessage.tool_calls = tool_calls
