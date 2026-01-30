@@ -1,5 +1,13 @@
 # kilo-code
 
+## 5.2.2
+
+### Patch Changes
+
+- [#5497](https://github.com/Kilo-Org/kilocode/pull/5497) [`95f9214`](https://github.com/Kilo-Org/kilocode/commit/95f92143d254741e6e0628f43ad90a3464fa7a09) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Show sign in prompt when trying paid model when not logged in
+
+- [#5529](https://github.com/Kilo-Org/kilocode/pull/5529) [`1fe7b92`](https://github.com/Kilo-Org/kilocode/commit/1fe7b929e1c218614b9ae71270b304ab47dbf894) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Streamline getting started view: move logo to top, reduce suggestions to 2, remove footer hint text
+
 ## 5.2.1
 
 ### Patch Changes
