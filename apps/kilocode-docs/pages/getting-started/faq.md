@@ -177,7 +177,7 @@ Yes, if you use a [local model](/docs/advanced-usage/local-models).
 
 ### What is MCP (Model Context Protocol)?
 
-[MCP](/docs/features/mcp/overview) is a protocol that allows Kilo Code to communicate with external servers, extending its capabilities with custom tools and resources.
+[MCP](/docs/automate/mcp/overview) is a protocol that allows Kilo Code to communicate with external servers, extending its capabilities with custom tools and resources.
 
 ### Can I create my own MCP servers?
 

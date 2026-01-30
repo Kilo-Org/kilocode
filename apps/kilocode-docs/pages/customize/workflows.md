@@ -28,7 +28,7 @@ Workflows can leverage:
 
 - [Built-in tools](/docs/features/tools/tool-use-overview): [`read_file()`](/docs/features/tools/read-file), [`search_files()`](/docs/features/tools/search-files), [`execute_command()`](/docs/features/tools/execute-command)
 - CLI tools: `gh`, `docker`, `npm`, custom scripts
-- [MCP integrations](/docs/features/mcp/overview): Slack, databases, APIs
+- [MCP integrations](/docs/automate/mcp/overview): Slack, databases, APIs
 - [Mode switching](/docs/code-with-ai/agents/using-modes): [`new_task()`](/docs/features/tools/new-task) for specialized contexts
 
 ## Common Workflow Patterns
