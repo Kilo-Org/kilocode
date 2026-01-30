@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
+import { useDebounce } from "react-use"
 
 import {
 	type ProviderSettings,
@@ -220,6 +221,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setIncludeCurrentTime: (value: boolean) => void
 	includeCurrentCost?: boolean
 	setIncludeCurrentCost: (value: boolean) => void
+	openAiModels?: string[]
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -360,6 +362,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		openRouterImageGenerationSelectedModel: "",
 		includeCurrentTime: true,
 		includeCurrentCost: true,
+		openAiModels: [],
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -518,6 +521,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					setExtensionRouterModels(message.routerModels)
 					break
 				}
+				case "openAiModels": {
+					setState((prevState) => ({ ...prevState, openAiModels: message.openAiModels ?? [] }))
+					break
+				}
 				case "marketplaceData": {
 					if (message.marketplaceItems !== undefined) {
 						setMarketplaceItems(message.marketplaceItems)
@@ -553,6 +560,38 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		}
 		setPrevCloudIsAuthenticated(currentAuth)
 	}, [state.cloudIsAuthenticated, prevCloudIsAuthenticated, state.apiConfiguration?.apiProvider])
+
+	// Fetch OpenAI models on startup or when configuration changes
+	useDebounce(
+		() => {
+			if (!didHydrateState) {
+				return
+			}
+
+			const { apiProvider, openAiBaseUrl, openAiApiKey, openAiHeaders } = state.apiConfiguration || {}
+
+			if (apiProvider === "openai" || apiProvider === "openai-responses") {
+				if (openAiBaseUrl) {
+					vscode.postMessage({
+						type: "requestOpenAiModels",
+						values: {
+							baseUrl: openAiBaseUrl,
+							apiKey: openAiApiKey,
+							openAiHeaders,
+						},
+					})
+				}
+			}
+		},
+		500,
+		[
+			didHydrateState,
+			state.apiConfiguration?.apiProvider,
+			state.apiConfiguration?.openAiBaseUrl,
+			state.apiConfiguration?.openAiApiKey,
+			state.apiConfiguration?.openAiHeaders,
+		],
+	)
 
 	const contextValue: ExtensionStateContextType = {
 		...state,

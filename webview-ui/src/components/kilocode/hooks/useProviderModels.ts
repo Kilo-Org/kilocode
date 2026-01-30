@@ -59,6 +59,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiModels,
 	mainlandZAiDefaultModelId,
+	openAiModelInfoSaneDefaults,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -73,11 +74,13 @@ export const getModelsByProvider = ({
 	provider,
 	routerModels,
 	kilocodeDefaultModel,
+	openAiModels,
 	options = { isChina: false },
 }: {
 	provider: ProviderName
 	routerModels: RouterModels
 	kilocodeDefaultModel: string
+	openAiModels?: string[]
 	options: { isChina?: boolean }
 }): { models: ModelRecord; defaultModel: string } => {
 	switch (provider) {
@@ -181,7 +184,12 @@ export const getModelsByProvider = ({
 			}
 		}
 		case "openai": {
-			// TODO(catrielmuller): Support the fetch here
+			if (openAiModels) {
+				return {
+					models: Object.fromEntries(openAiModels.map((model) => [model, openAiModelInfoSaneDefaults])),
+					defaultModel: openAiModels[0] || "",
+				}
+			}
 			return {
 				models: {},
 				defaultModel: "",
@@ -351,7 +359,7 @@ export const getOptionsForProvider = (provider: ProviderName, apiConfiguration?:
 export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 
-	const { kilocodeDefaultModel } = useExtensionState()
+	const { kilocodeDefaultModel, openAiModels } = useExtensionState()
 
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
@@ -375,6 +383,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 					provider,
 					routerModels: routerModels.data,
 					kilocodeDefaultModel,
+					openAiModels,
 					options,
 				})
 			: FALLBACK_MODELS
