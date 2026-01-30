@@ -13,6 +13,7 @@ import {
 
 import { type ApiHandlerOptions, getModelMaxOutputTokens, shouldUseReasoningEffort } from "../../shared/api"
 import { convertToZAiFormat } from "../transform/zai-format"
+import { logger } from "../../utils/logging"
 
 import type { ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
@@ -60,11 +61,22 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 			// We need to explicitly disable it when reasoning is off.
 			const useReasoning = shouldUseReasoningEffort({ model: info, settings: this.options })
 
+			logger.debug("Z.ai GLM-4.7 thinking mode request", {
+				model: modelId,
+				useReasoning,
+				enableReasoningEffort: this.options.enableReasoningEffort,
+				reasoningEffort: this.options.reasoningEffort,
+			})
+
 			// Create the stream with our custom thinking parameter
 			return this.createStreamWithThinking(systemPrompt, messages, metadata, useReasoning)
 		}
 
 		// For non-thinking models, use the default behavior
+		logger.debug("Z.ai standard model request", {
+			model: modelId,
+			supportsReasoningEffort: info.supportsReasoningEffort,
+		})
 		return super.createStream(systemPrompt, messages, metadata, requestOptions)
 	}
 
@@ -108,6 +120,66 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 			}),
 		}
 
-		return this.client.chat.completions.create(params)
+		// Log request details for verification
+		logger.info("Z.ai API request", {
+			provider: "Z.ai",
+			baseUrl: this.baseURL,
+			model,
+			maxTokens: max_tokens,
+			temperature,
+			hasTools: !!metadata?.tools,
+			hasToolChoice: !!metadata?.tool_choice,
+			thinkingMode: params.thinking?.type,
+			messageCount: convertedMessages.length,
+			zaiApiLine: this.options.zaiApiLine || "international_coding",
+		})
+
+		try {
+			return this.client.chat.completions.create(params)
+		} catch (error) {
+			logger.error("Z.ai API request failed", {
+				provider: "Z.ai",
+				model,
+				baseUrl: this.baseURL,
+				error: error instanceof Error ? error.message : String(error),
+			})
+			throw error
+		}
+	}
+
+	/**
+	 * Override createMessage to add response logging for Z.ai
+	 */
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	) {
+		const { id: modelId } = this.getModel()
+		let responseTokenCount = 0
+		let hasReasoningContent = false
+
+		logger.debug("Z.ai createMessage started", {
+			model: modelId,
+			messageCount: messages.length,
+		})
+
+		for await (const chunk of super.createMessage(systemPrompt, messages, metadata)) {
+			// Track response characteristics
+			if (chunk.type === "reasoning") {
+				hasReasoningContent = true
+			}
+			if (chunk.type === "text" && chunk.text) {
+				responseTokenCount += Math.ceil(chunk.text.length / 4) // Rough token estimation
+			}
+
+			yield chunk
+		}
+
+		logger.debug("Z.ai createMessage completed", {
+			model: modelId,
+			hasReasoningContent,
+			estimatedResponseTokens: responseTokenCount,
+		})
 	}
 }
