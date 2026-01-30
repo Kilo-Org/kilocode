@@ -16,16 +16,22 @@ import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
 import { getGlobalRooDirectory } from "../roo-config" // kilocode_change
 import { extractTarball } from "./tarball-utils" // kilocode_change
+import type { McpHub } from "../mcp/McpHub" // kilocode_change - Import McpHub type for programmatic update flag
 
 export interface InstallOptions extends InstallMarketplaceItemOptions {
 	target: "project" | "global"
 	selectedIndex?: number // Which installation method to use (for array content)
 }
 
+// kilocode_change start - Add McpHub getter type for programmatic update flag
+export type McpHubGetter = () => McpHub | undefined
+// kilocode_change end
+
 export class SimpleInstaller {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly customModesManager?: CustomModesManager,
+		private readonly getMcpHub?: McpHubGetter, // kilocode_change - Add McpHub getter for programmatic update flag
 	) {}
 
 	async installItem(item: MarketplaceItem, options: InstallOptions): Promise<{ filePath: string; line?: number }> {
@@ -280,7 +286,16 @@ export class SimpleInstaller {
 		// Write back to file
 		await fs.mkdir(path.dirname(filePath), { recursive: true })
 		const jsonContent = JSON.stringify(existingData, null, 2)
-		await fs.writeFile(filePath, jsonContent, "utf-8")
+		// kilocode_change start - Use withProgrammaticUpdate to prevent MCP server restart loop
+		const mcpHub = this.getMcpHub?.()
+		if (mcpHub) {
+			await mcpHub.withProgrammaticUpdate(async () => {
+				await fs.writeFile(filePath, jsonContent, "utf-8")
+			})
+		} else {
+			await fs.writeFile(filePath, jsonContent, "utf-8")
+		}
+		// kilocode_change end
 
 		// Calculate approximate line number where the new server was added
 		let line: number | undefined
@@ -369,13 +384,22 @@ export class SimpleInstaller {
 			const existingData = JSON.parse(existing)
 
 			if (existingData?.mcpServers) {
-				// kilocode change removed parsing logic which wasn't necessary as evidenced by types
-				const serverName = item.id
-				delete existingData.mcpServers[serverName]
-
-				// Always write back the file, even if empty
-				await fs.writeFile(filePath, JSON.stringify(existingData, null, 2), "utf-8")
-			}
+					// kilocode change removed parsing logic which wasn't necessary as evidenced by types
+					const serverName = item.id
+					delete existingData.mcpServers[serverName]
+	
+					// Always write back the file, even if empty
+					// kilocode_change start - Use withProgrammaticUpdate to prevent MCP server restart loop
+					const mcpHub = this.getMcpHub?.()
+					if (mcpHub) {
+						await mcpHub.withProgrammaticUpdate(async () => {
+							await fs.writeFile(filePath, JSON.stringify(existingData, null, 2), "utf-8")
+						})
+					} else {
+						await fs.writeFile(filePath, JSON.stringify(existingData, null, 2), "utf-8")
+					}
+					// kilocode_change end
+				}
 		} catch (error) {
 			// File doesn't exist or other error, nothing to remove
 		}
