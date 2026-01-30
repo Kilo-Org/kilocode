@@ -68,6 +68,7 @@ const TaskItem = ({
 				)}
 
 				<div className="flex-1 min-w-0">
+					{/* kilocode_change start: Display title when available, fallback to task */}
 					<div
 						className={cn(
 							"overflow-hidden whitespace-pre-wrap font-light text-vscode-foreground text-ellipsis line-clamp-3",
@@ -78,8 +79,9 @@ const TaskItem = ({
 						)}
 						data-testid="task-content"
 						{...(item.highlight ? { dangerouslySetInnerHTML: { __html: item.highlight } } : {})}>
-						{item.highlight ? undefined : item.task}
+						{item.highlight ? undefined : item.title || item.task}
 					</div>
+					{/* kilocode_change end */}
 
 					<TaskItemFooter
 						item={item}
