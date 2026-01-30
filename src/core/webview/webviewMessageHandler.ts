@@ -3592,11 +3592,17 @@ export const webviewMessageHandler = async (
 					provider.log("Cannot start indexing: No workspace folder open")
 					return
 				}
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
-					// Mimic extension startup behavior: initialize first, which will
-					// check if Qdrant container is active and reuse existing collection
-					await manager.initialize(provider.contextProxy)
 
+				// kilocode_change start: Set workspace-level indexing permission
+				await provider.context.workspaceState.update("indexingAllowed", true)
+
+				// after setting workspace state, initialize the manager which will
+				// first reload config to pick up the new indexingAllowed state
+				// then create services if not already initialized and finally start indexing if needed
+				await manager.initialize(provider.contextProxy)
+				// kilocode_change end
+
+				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
 					// Only call startIndexing if we're in a state that requires it
 					// (e.g., Standby or Error). If already Indexed or Indexing, the
 					// initialize() call above will have already started the watcher.
@@ -3677,6 +3683,11 @@ export const webviewMessageHandler = async (
 				// kilocode_change end
 
 				await manager.clearIndexData()
+
+				// kilocode_change start: Clear workspace-level indexing permission
+				await provider.context.workspaceState.update("indexingAllowed", false)
+				// kilocode_change end
+
 				provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
 			} catch (error) {
 				provider.log(`Error clearing index data: ${error instanceof Error ? error.message : String(error)}`)
