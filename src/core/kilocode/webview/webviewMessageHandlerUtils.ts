@@ -354,6 +354,28 @@ export const deviceAuthMessageHandler = async (provider: ClineProvider, message:
 			provider.cancelDeviceAuth()
 			return true
 		}
+		case "startWithFreeModels": {
+			// Set up kilocode provider with free model (no token required)
+			try {
+				const { currentApiConfigName = "default", apiConfiguration } = await provider.getState()
+				await provider.upsertProviderProfile(currentApiConfigName, {
+					...apiConfiguration,
+					apiProvider: "kilocode",
+					kilocodeModel: "minimax/minimax-m2.1:free",
+				})
+
+				// Navigate to chat tab after setup using action message
+				await provider.postMessageToWebview({
+					type: "action",
+					action: "switchTab",
+					tab: "chat",
+				})
+			} catch (error) {
+				provider.log(`Error setting up free models: ${error instanceof Error ? error.message : String(error)}`)
+				vscode.window.showErrorMessage("Failed to set up free models")
+			}
+			return true
+		}
 		case "deviceAuthCompleteWithProfile": {
 			// Save token to specific profile or current profile if no profile name provided
 			if (message.values?.token) {

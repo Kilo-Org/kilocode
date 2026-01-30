@@ -43,12 +43,6 @@ describe("ProviderSettingsManager", () => {
 		// then reinitializing, and spying on internals of said initialization.
 		// I'm not convinced this test coverage means very much, so this fix makes a complicated puzzle happen to fall in place
 		// Also this override resets itself, but fortunately no test required triple initialization...
-
-		// Wait for the first manager's initialization to complete, then clear mock calls
-		// This is needed because new users get the default kilocode config stored
-		await providerSettingsManager.initialize()
-		vi.clearAllMocks()
-
 		providerSettingsManager.initialize = async () => {
 			providerSettingsManager = new ProviderSettingsManager(mockContext)
 			await providerSettingsManager.initialize()
@@ -57,21 +51,15 @@ describe("ProviderSettingsManager", () => {
 	})
 
 	describe("initialize", () => {
-		// kilocode_change start: test updated to expect kilocode default profile for new users
-		it("should initialize kilocode default profile when secrets.get returns null", async () => {
+		it("should not write to storage when secrets.get returns null", async () => {
 			// Mock readConfig to return null
 			mockSecrets.get.mockResolvedValueOnce(null)
 
 			await providerSettingsManager.initialize()
 
-			// Should write to storage with default kilocode profile for new users
-			expect(mockSecrets.store).toHaveBeenCalled()
-			const calls = mockSecrets.store.mock.calls
-			const storedConfig = JSON.parse(calls[calls.length - 1][1])
-			expect(storedConfig.apiConfigs.default.apiProvider).toBe("kilocode")
-			expect(storedConfig.apiConfigs.default.kilocodeModel).toBe("minimax/minimax-m2.1:free")
+			// Should not write to storage because readConfig returns defaultConfig
+			expect(mockSecrets.store).not.toHaveBeenCalled()
 		})
-		// kilocode_change end
 
 		it("should not initialize config if it exists and migrations are complete", async () => {
 			mockSecrets.get.mockResolvedValue(
@@ -449,7 +437,7 @@ describe("ProviderSettingsManager", () => {
 			mockSecrets.get.mockRejectedValue(new Error("Storage failed"))
 
 			await expect(providerSettingsManager.initialize()).rejects.toThrow(
-				"Failed to initialize config: Error: Storage failed",
+				"Failed to initialize config: Error: Failed to read provider profiles from secrets: Error: Storage failed",
 			)
 		})
 	})
@@ -510,7 +498,7 @@ describe("ProviderSettingsManager", () => {
 			mockSecrets.get.mockRejectedValue(new Error("Read failed"))
 
 			await expect(providerSettingsManager.listConfig()).rejects.toThrow(
-				"Failed to list configs: Error: Read failed",
+				"Failed to list configs: Error: Failed to read provider profiles from secrets: Error: Read failed",
 			)
 		})
 	})
@@ -947,7 +935,7 @@ describe("ProviderSettingsManager", () => {
 			mockSecrets.get.mockRejectedValue(new Error("Storage failed"))
 
 			await expect(providerSettingsManager.hasConfig("test")).rejects.toThrow(
-				"Failed to check config existence: Error: Storage failed",
+				"Failed to check config existence: Error: Failed to read provider profiles from secrets: Error: Storage failed",
 			)
 		})
 	})

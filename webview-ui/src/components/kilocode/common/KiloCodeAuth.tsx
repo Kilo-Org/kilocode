@@ -138,6 +138,13 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, onLogi
 			<div className="w-full flex flex-col gap-5">
 				<ButtonPrimary onClick={handleStartDeviceAuth}>{t("kilocode:welcome.ctaButton")}</ButtonPrimary>
 
+				<ButtonSecondary
+					onClick={() => {
+						vscode.postMessage({ type: "startWithFreeModels" })
+					}}>
+					{t("kilocode:welcome.startWithFreeModels")}
+				</ButtonSecondary>
+
 				{!!onManualConfigClick && (
 					<ButtonSecondary onClick={() => onManualConfigClick && onManualConfigClick()}>
 						{t("kilocode:welcome.manualModeButton")}
