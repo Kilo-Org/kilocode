@@ -8,7 +8,7 @@ export { z as parametersSchema } from "zod/v4"
 
 export type CustomToolParametersSchema = ZodType
 
-export type SerializedCustomToolParameters = z.core.JSONSchema.JSONSchema
+export type SerializedCustomToolParameters = z.core.JSONSchema.JSONSchema | undefined
 
 /**
  * Context provided to tool execute functions.
