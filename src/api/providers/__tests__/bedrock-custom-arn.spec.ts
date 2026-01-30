@@ -163,6 +163,45 @@ describe("Bedrock ARN Handling", () => {
 			expect(result.crossRegionInference).toBe(false)
 		})
 
+		it("should correctly parse GovCloud inference-profile ARN", () => {
+			const handler = createHandler()
+			const arn =
+				"arn:aws-us-gov:bedrock:us-gov-west-1:123456789012:inference-profile/us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+			const result = (handler as any).parseArn(arn, "us-gov-west-1")
+
+			expect(result.isValid).toBe(true)
+			expect(result.region).toBe("us-gov-west-1")
+			expect(result.modelType).toBe("inference-profile")
+			expect(result.modelId).toBe("us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0")
+			expect(result.crossRegionInference).toBe(false)
+		})
+
+		it("should correctly parse GovCloud foundation-model ARN", () => {
+			const handler = createHandler()
+			const arn = "arn:aws-us-gov:bedrock:us-gov-west-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+
+			const result = (handler as any).parseArn(arn, "us-gov-west-1")
+
+			expect(result.isValid).toBe(true)
+			expect(result.region).toBe("us-gov-west-1")
+			expect(result.modelType).toBe("foundation-model")
+			expect(result.modelId).toBe("anthropic.claude-3-sonnet-20240229-v1:0")
+			expect(result.crossRegionInference).toBe(false)
+		})
+
+		it("should correctly parse China partition ARN", () => {
+			const handler = createHandler()
+			const arn = "arn:aws-cn:bedrock:cn-north-1::foundation-model/anthropic.claude-v2"
+
+			const result = (handler as any).parseArn(arn, "cn-north-1")
+
+			expect(result.isValid).toBe(true)
+			expect(result.region).toBe("cn-north-1")
+			expect(result.modelType).toBe("foundation-model")
+			expect(result.modelId).toBe("anthropic.claude-v2")
+		})
+
 		it("should return isValid: false for simple ARN format", () => {
 			const handler = createHandler()
 			const arn = "arn:aws:bedrock:us-east-1:123456789012:some-other-resource"
