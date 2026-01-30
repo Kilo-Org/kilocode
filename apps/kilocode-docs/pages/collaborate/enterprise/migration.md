@@ -57,7 +57,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 **Step 2: Kilo Setup**
 
-1. **Create organization** at [app.kilocode.com](https://app.kilocode.com)
+1. **Create organization** at [app.kilo.ai](https://app.kilo.ai)
 2. **Subscribe to Teams ($15/month)** or **Enterprise ($150/month)**
 3. **Configure team settings** and usage policies
 4. **Purchase initial AI credits** based on usage estimates

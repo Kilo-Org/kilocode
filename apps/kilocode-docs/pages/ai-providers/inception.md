@@ -6,11 +6,11 @@ sidebar_label: Inception
 
 Inception provides access to cutting-edge AI models with a focus on performance and reliability. Their infrastructure is designed for enterprise-grade applications requiring consistent, high-quality outputs.
 
-**Website:** [https://inception.ai](https://inception.ai)
+**Website:** [https://inceptionlabs.ai](https://inceptionlabs.ai)
 
 ## Getting an API Key
 
-1. **Sign Up/Sign In:** Go to the [Inception Platform](https://platform.inception.ai). Create an account or sign in.
+1. **Sign Up/Sign In:** Go to the [Inception Platform](https://platform.inceptionlabs.ai). Create an account or sign in.
 2. **Navigate to API Keys:** Access the API Keys section in your account settings.
 3. **Create a Key:** Click "Create new API key". Give your key a descriptive name (e.g., "Kilo Code").
 4. **Copy the Key:** **Important:** Copy the API key _immediately_. You will not be able to see it again. Store it securely.
@@ -19,7 +19,7 @@ Inception provides access to cutting-edge AI models with a focus on performance 
 
 Kilo Code supports Inception's available models. Model selection and capabilities may vary based on your account tier.
 
-Refer to the [Inception documentation](https://docs.inception.ai) for the most up-to-date list of supported models and their specific capabilities.
+Refer to the [Inception documentation](https://docs.inceptionlabs.ai) for the most up-to-date list of supported models and their specific capabilities.
 
 ## Configuration in Kilo Code
 

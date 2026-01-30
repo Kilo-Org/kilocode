@@ -10,8 +10,8 @@ Glama provides access to a variety of language models through a unified API, inc
 
 ## Getting an API Key
 
-1.  **Sign Up/Sign In:** Go to the [Glama sign-up page](https://glama.ai/sign-up). Sign up using your Google account or name/email/password.
-2.  **Get API Key:** After signing up, navigate to the [API Keys](https://glama.ai/settings/gateway/api-keys) page to get an API key.
+1.  **Sign Up/Sign In:** Go to the Glama sign-up page. Sign up using your Google account or name/email/password.
+2.  **Get API Key:** After signing up, navigate to the API Keys page to get an API key.
 3.  **Copy the Key:** Copy the displayed API key.
 
 ## Supported Models

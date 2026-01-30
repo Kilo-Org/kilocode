@@ -148,8 +148,6 @@ E2E tests verify the extension works correctly within VSCode:
     npm run test:integration
     ```
 
-For more details on E2E tests, see [e2e/VSCODE_INTEGRATION_TESTS.md](https://github.com/Kilo-Org/kilocode/blob/main/e2e/VSCODE_INTEGRATION_TESTS.md).
-
 ## Linting and Type Checking
 
 Ensure your code meets our quality standards:
