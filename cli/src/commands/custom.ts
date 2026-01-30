@@ -119,10 +119,14 @@ function createCustomCommandHandler(customCommand: CustomCommand): CommandHandle
 
 		const processedContent = substituteArguments(customCommand.content, args)
 
-		await sendWebviewMessage({
-			type: "newTask",
-			text: processedContent,
-		})
+		if (context.yoloMode) {
+			context.setInput(processedContent)
+		} else {
+			await sendWebviewMessage({
+				type: "newTask",
+				text: processedContent,
+			})
+		}
 	}
 }
 

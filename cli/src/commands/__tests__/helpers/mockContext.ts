@@ -83,6 +83,9 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		resetModelListState: vi.fn(),
 		// Condense context
 		condenseAndWait: vi.fn().mockResolvedValue(undefined),
+		// Input control
+		setInput: vi.fn(),
+		yoloMode: false,
 	}
 
 	return {
