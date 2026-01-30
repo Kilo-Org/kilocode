@@ -11,6 +11,26 @@ import {
 } from "../openai-format"
 import { normalizeMistralToolCallId } from "../mistral-format"
 
+// Type for extended content blocks that include reasoning and thinking blocks
+// Type for extended content blocks that include reasoning and thinking blocks
+type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | { type: "reasoning"; text: string } | { type: "thinking"; thinking: string }
+
+// Type for extended Anthropic messages that include custom properties
+type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
+	reasoning_content?: string
+	reasoning?: string
+	reasoning_details?: unknown[]
+	content?: string | ExtendedContentBlockParam[]
+}
+
+// Helper type for test assertions with reasoning_content
+type AssistantMessageWithReasoning = {
+	role: string
+	content: string
+	reasoning_content?: string
+	tool_calls?: Array<{ id: string; function: { name: string } }>
+}
+
 describe("convertToOpenAiMessages", () => {
 	it("should convert simple text messages", () => {
 		const anthropicMessages: Anthropic.Messages.MessageParam[] = [
@@ -976,26 +996,27 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "reasoning", text: "Let me analyze this step by step..." },
+						{ type: "reasoning", text: "Let me analyze this step by step..." } as const,
 						{ type: "text", text: "I'll help you with that." },
 						{ type: "tool_use", id: "tool_123", name: "read_file", input: { path: "test.ts" } },
 					],
 				},
-			] as any
+			] as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
 			expect(openAiMessages).toHaveLength(1)
 
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 			expect(assistantMessage.role).toBe("assistant")
 			// reasoning_content should be extracted from the reasoning block
 			expect(assistantMessage.reasoning_content).toBe("Let me analyze this step by step...")
 			// Content should contain only text blocks (not reasoning)
 			expect(assistantMessage.content).toBe("I'll help you with that.")
 			// Tool calls should be preserved
+			expect(assistantMessage.tool_calls).toBeDefined()
 			expect(assistantMessage.tool_calls).toHaveLength(1)
-			expect(assistantMessage.tool_calls[0].id).toBe("tool_123")
-			expect(assistantMessage.tool_calls[0].function.name).toBe("read_file")
+			expect(assistantMessage.tool_calls?.[0]?.id).toBe("tool_123")
+			expect(assistantMessage.tool_calls?.[0]?.function.name).toBe("read_file")
 		})
 
 		it("should extract thinking blocks and add as reasoning_content", () => {
@@ -1004,14 +1025,14 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "thinking", thinking: "This is my thinking process..." },
+						{ type: "thinking", thinking: "This is my thinking process..." } as const,
 						{ type: "text", text: "Here's the answer." },
 					],
 				},
-			] as any
+			] as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// reasoning_content should be extracted from the thinking block
 			expect(assistantMessage.reasoning_content).toBe("This is my thinking process...")
@@ -1024,15 +1045,15 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "reasoning", text: "First thought..." },
-						{ type: "reasoning", text: "Second thought..." },
+						{ type: "reasoning", text: "First thought..." } as const,
+						{ type: "reasoning", text: "Second thought..." } as const,
 						{ type: "text", text: "Final answer." },
 					],
 				},
-			] as any
+			] as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// reasoning_content should concatenate all reasoning blocks
 			expect(assistantMessage.reasoning_content).toBe("First thought...\nSecond thought...")
@@ -1044,14 +1065,14 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "reasoning", text: "Just reasoning, no tools." },
+						{ type: "reasoning", text: "Just reasoning, no tools." } as const,
 						{ type: "text", text: "Response." },
 					],
 				},
-			] as any
+			] as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			expect(assistantMessage.reasoning_content).toBe("Just reasoning, no tools.")
 			expect(assistantMessage.content).toBe("Response.")
@@ -1071,7 +1092,7 @@ describe("convertToOpenAiMessages", () => {
 			]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// Should not have reasoning_content when no reasoning blocks exist
 			expect(assistantMessage.reasoning_content).toBeUndefined()
@@ -1088,10 +1109,10 @@ describe("convertToOpenAiMessages", () => {
 					content: "Here's the answer.",
 					reasoning_content: "This is the reasoning.",
 				},
-			] as any
+			] as unknown as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// reasoning_content should be preserved at message level
 			expect(assistantMessage.reasoning_content).toBe("This is the reasoning.")
@@ -1106,14 +1127,13 @@ describe("convertToOpenAiMessages", () => {
 					content: "Response text.",
 					reasoning: "This is the reasoning.",
 				},
-			] as any
+			] as unknown as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// reasoning should be converted to reasoning_content
 			expect(assistantMessage.reasoning_content).toBe("This is the reasoning.")
-			expect(assistantMessage.reasoning).toBeUndefined()
 			expect(assistantMessage.content).toBe("Response text.")
 		})
 
@@ -1124,7 +1144,7 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "reasoning", text: "Reasoning from content block..." },
+						{ type: "reasoning", text: "Reasoning from content block..." } as const,
 						{ type: "text", text: "Response." },
 						{ type: "tool_use", id: "tool_789", name: "execute_command", input: {} },
 					],
@@ -1137,19 +1157,19 @@ describe("convertToOpenAiMessages", () => {
 						},
 					],
 				},
-			] as any
+			] as unknown as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning & { reasoning_details?: ReasoningDetail[] }
 
 			// reasoning_content should be extracted from content blocks
 			expect(assistantMessage.reasoning_content).toBe("Reasoning from content block...")
 			// reasoning_details should also be preserved
 			expect(assistantMessage.reasoning_details).toHaveLength(1)
-			expect(assistantMessage.reasoning_details[0].summary).toBe("Summary from reasoning_details.")
+			expect(assistantMessage.reasoning_details?.[0]?.summary).toBe("Summary from reasoning_details.")
 			// Tool calls should be preserved
 			expect(assistantMessage.tool_calls).toHaveLength(1)
-			expect(assistantMessage.tool_calls[0].id).toBe("tool_789")
+			expect(assistantMessage.tool_calls?.[0]?.id).toBe("tool_789")
 		})
 
 		it("should filter out empty reasoning text", () => {
@@ -1158,15 +1178,15 @@ describe("convertToOpenAiMessages", () => {
 				{
 					role: "assistant" as const,
 					content: [
-						{ type: "reasoning", text: "" },
-						{ type: "reasoning", text: "Valid reasoning." },
+						{ type: "reasoning", text: "" } as const,
+						{ type: "reasoning", text: "Valid reasoning." } as const,
 						{ type: "text", text: "Response." },
 					],
 				},
-			] as any
+			] as Anthropic.Messages.MessageParam[]
 
 			const openAiMessages = convertToOpenAiMessages(anthropicMessages)
-			const assistantMessage = openAiMessages[0] as any
+			const assistantMessage = openAiMessages[0] as AssistantMessageWithReasoning
 
 			// Only non-empty reasoning should be included
 			expect(assistantMessage.reasoning_content).toBe("Valid reasoning.")

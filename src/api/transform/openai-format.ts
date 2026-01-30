@@ -2,6 +2,65 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
 /**
+ * Content block type for reasoning content (used by Kimi K2.5 / DeepSeek).
+ * This is a custom content block type that extends the standard Anthropic content blocks.
+ */
+type ReasoningContentBlock = {
+	type: "reasoning"
+	text: string
+}
+
+/**
+ * Content block type for thinking content (used by some providers).
+ * This is a custom content block type that extends the standard Anthropic content blocks.
+ */
+type ThinkingContentBlock = {
+	type: "thinking"
+	thinking: string
+}
+
+/**
+ * Extended content block type that includes custom reasoning and thinking blocks.
+ * This type is used when messages contain reasoning/thinking content blocks
+ * that are not part of the standard Anthropic SDK types.
+ */
+type ExtendedContentBlockParam = Anthropic.Messages.ContentBlockParam | ReasoningContentBlock | ThinkingContentBlock
+
+/**
+ * Extended Anthropic message type that includes custom properties.
+ * This type is used when messages have been enriched with additional properties
+ * like reasoning_content, reasoning, or reasoning_details that are not part
+ * of the standard Anthropic SDK types.
+ */
+type ExtendedMessageParam = Anthropic.Messages.MessageParam & {
+	reasoning_content?: string
+	reasoning?: string
+	reasoning_details?: ReasoningDetail[]
+	content?: string | ExtendedContentBlockParam[]
+}
+
+/**
+ * Extended OpenAI assistant message type that includes custom properties.
+ * This type is used when OpenAI messages have been enriched with additional
+ * properties like reasoning_content or reasoning_details that are not part
+ * of the standard OpenAI SDK types.
+ */
+type ExtendedOpenAIAssistantMessageParam = OpenAI.Chat.ChatCompletionAssistantMessageParam & {
+	reasoning_details?: ReasoningDetail[]
+	reasoning_content?: string
+}
+
+/**
+ * Extended OpenAI message type that includes custom properties.
+ * This type is used when OpenAI messages have been enriched with additional
+ * properties like reasoning_details that are not part of the standard OpenAI SDK types.
+ */
+type ExtendedOpenAIMessageParam = OpenAI.Chat.ChatCompletionMessageParam & {
+	reasoning_details?: ReasoningDetail[]
+	reasoning_content?: string
+}
+
+/**
  * Type for OpenRouter's reasoning detail elements.
  * @see https://openrouter.ai/docs/use-cases/reasoning-tokens#streaming-response
  */
@@ -175,9 +234,9 @@ export function sanitizeGeminiMessages(
 
 	for (const msg of messages) {
 		if (msg.role === "assistant") {
-			const anyMsg = msg as any
-			const toolCalls = anyMsg.tool_calls as OpenAI.Chat.ChatCompletionMessageToolCall[] | undefined
-			const reasoningDetails = anyMsg.reasoning_details as ReasoningDetail[] | undefined
+			const extendedMsg = msg as ExtendedOpenAIAssistantMessageParam
+			const toolCalls = extendedMsg.tool_calls as OpenAI.Chat.ChatCompletionMessageToolCall[] | undefined
+			const reasoningDetails = extendedMsg.reasoning_details
 
 			if (Array.isArray(toolCalls) && toolCalls.length > 0) {
 				const hasReasoningDetails = Array.isArray(reasoningDetails) && reasoningDetails.length > 0
@@ -190,8 +249,8 @@ export function sanitizeGeminiMessages(
 						}
 					}
 					// Keep any textual content, but drop the tool_calls themselves
-					if (anyMsg.content) {
-						sanitized.push({ role: "assistant", content: anyMsg.content } as any)
+					if (extendedMsg.content) {
+						sanitized.push({ role: "assistant", content: extendedMsg.content })
 					}
 					continue
 				}
@@ -221,9 +280,9 @@ export function sanitizeGeminiMessages(
 				validReasoningDetails.push(...detailsWithoutId)
 
 				// Build the sanitized message
-				const sanitizedMsg: any = {
+				const sanitizedMsg: ExtendedOpenAIAssistantMessageParam = {
 					role: "assistant",
-					content: anyMsg.content ?? "",
+					content: extendedMsg.content ?? "",
 				}
 
 				if (validReasoningDetails.length > 0) {
@@ -240,8 +299,8 @@ export function sanitizeGeminiMessages(
 		}
 
 		if (msg.role === "tool") {
-			const anyMsg = msg as any
-			if (anyMsg.tool_call_id && droppedToolCallIds.has(anyMsg.tool_call_id)) {
+			const toolMsg = msg as OpenAI.Chat.ChatCompletionToolMessageParam
+			if (toolMsg.tool_call_id && droppedToolCallIds.has(toolMsg.tool_call_id)) {
 				// Skip tool result for dropped tool call
 				continue
 			}
@@ -279,21 +338,21 @@ export function convertToOpenAiMessages(
 ): OpenAI.Chat.ChatCompletionMessageParam[] {
 	const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
 
-	const mapReasoningDetails = (details: unknown): any[] | undefined => {
+	const mapReasoningDetails = (details: unknown): ReasoningDetail[] | undefined => {
 		if (!Array.isArray(details)) {
 			return undefined
 		}
 
-		return details.map((detail: any) => {
+		return details.map((detail: unknown): ReasoningDetail => {
 			// Strip `id` from openai-responses-v1 blocks because OpenAI's Responses API
 			// requires `store: true` to persist reasoning blocks. Since we manage
 			// conversation state client-side, we don't use `store: true`, and sending
 			// back the `id` field causes a 404 error.
-			if (detail?.format === "openai-responses-v1" && detail?.id) {
-				const { id, ...rest } = detail
+			if (detail && typeof detail === "object" && "format" in detail && detail.format === "openai-responses-v1" && "id" in detail && detail.id) {
+				const { id: _id, ...rest } = detail as ReasoningDetail & { id: string }
 				return rest
 			}
-			return detail
+			return detail as ReasoningDetail
 		})
 	}
 
@@ -306,11 +365,8 @@ export function convertToOpenAiMessages(
 			// will convert a single text block into a string for compactness.
 			// If a message also contains reasoning_details (Gemini 3 / xAI / o-series, etc.),
 			// we must preserve it here as well.
-			const messageWithDetails = anthropicMessage as any
-			const baseMessage: OpenAI.Chat.ChatCompletionMessageParam & {
-				reasoning_details?: any[],
-				reasoning_content?: string
-			} = {
+			const messageWithDetails = anthropicMessage as ExtendedMessageParam
+			const baseMessage: ExtendedOpenAIMessageParam = {
 				role: anthropicMessage.role,
 				content: anthropicMessage.content,
 			}
@@ -328,7 +384,7 @@ export function convertToOpenAiMessages(
 			if (anthropicMessage.role === "assistant") {
 				const mapped = mapReasoningDetails(messageWithDetails.reasoning_details)
 				if (mapped) {
-					;(baseMessage as any).reasoning_details = mapped
+					baseMessage.reasoning_details = mapped
 				}
 			}
 
@@ -494,17 +550,26 @@ export function convertToOpenAiMessages(
 				}))
 
 				// Check if the message has reasoning_details (used by Gemini 3, xAI, etc.)
-				const messageWithDetails = anthropicMessage as any
+				const messageWithDetails = anthropicMessage as ExtendedMessageParam
 
 				// kilocode_change start: Extract reasoning blocks from content for Kimi K2.5 / DeepSeek compatibility
 				// Kimi K2.5 requires reasoning_content at the message level, not in content array
 				// During multi-step tool calling, this reasoning_content must be preserved in the context
 				// If reasoning_content is missing from assistant messages with tool_calls, the API returns a 400 error
-				const reasoningBlocks = (messageWithDetails.content || []).filter(
-					(block: any) => block.type === "reasoning" || block.type === "thinking"
+				const contentBlocks = Array.isArray(messageWithDetails.content) ? messageWithDetails.content : []
+				const reasoningBlocks = contentBlocks.filter(
+					(block: ExtendedContentBlockParam): block is ReasoningContentBlock | ThinkingContentBlock =>
+						block.type === "reasoning" || block.type === "thinking"
 				)
 				const reasoningContent = reasoningBlocks
-					.map((block: any) => block.text || block.thinking || "")
+					.map((block: ReasoningContentBlock | ThinkingContentBlock) => {
+						if (block.type === "reasoning") {
+							return block.text
+						} else if (block.type === "thinking") {
+							return block.thinking
+						}
+						return ""
+					})
 					.filter(Boolean)
 					.join("\n")
 				// kilocode_change end
@@ -512,10 +577,7 @@ export function convertToOpenAiMessages(
 				// Build message with reasoning_content BEFORE reasoning_details and tool_calls to preserve
 				// the order expected by providers like Roo. Property order matters
 				// when sending messages back to some APIs.
-				const baseMessage: OpenAI.Chat.ChatCompletionAssistantMessageParam & {
-					reasoning_details?: any[]
-					reasoning_content?: string
-				} = {
+				const baseMessage: ExtendedOpenAIAssistantMessageParam = {
 					role: "assistant",
 					// Use empty string instead of undefined for providers like Gemini (via OpenRouter)
 					// that require every message to have content in the "parts" field
