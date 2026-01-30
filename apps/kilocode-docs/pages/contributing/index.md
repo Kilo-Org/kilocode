@@ -106,7 +106,7 @@ Documentation improvements are highly valued contributions:
 
     - Use clear, concise language
     - Include examples where appropriate
-    - Use absolute paths starting from `/docs/` for internal links
+    - Use absolute paths starting from `/docs/` for internal links (except within the same directory)
     - Don't include `.md` extensions in links
 
 2. Test your documentation changes by running the docs site locally:
