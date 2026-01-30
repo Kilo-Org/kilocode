@@ -5,6 +5,7 @@ import type { MessageComponentProps } from "../types.js"
 import { getMessageIcon } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { getBoxWidth } from "../../../utils/width.js"
+import type { PendingOutputUpdate } from "../../../../state/atoms/effects.js"
 import { pendingOutputUpdatesAtom } from "../../../../state/atoms/effects.js"
 
 export const AskCommandOutputMessage: React.FC<MessageComponentProps> = ({ message }) => {
@@ -16,26 +17,30 @@ export const AskCommandOutputMessage: React.FC<MessageComponentProps> = ({ messa
 	// Parse the message text to get initial command and executionId
 	let executionId = ""
 	let initialCommand = ""
+	let initialPid: number | undefined
 	try {
 		const data = JSON.parse(message.text || "{}")
 		executionId = data.executionId || ""
 		initialCommand = data.command || ""
+		initialPid = typeof data.pid === "number" ? data.pid : undefined
 	} catch {
 		// If parsing fails, use text directly
 		initialCommand = message.text || ""
 	}
 
 	// Get real-time output from pending updates (similar to webview's streamingOutput)
-	const pendingUpdate = executionId ? pendingUpdates.get(executionId) : undefined
+	const pendingUpdate: PendingOutputUpdate | undefined = executionId ? pendingUpdates.get(executionId) : undefined
 	const command = pendingUpdate?.command || initialCommand
 	const output = pendingUpdate?.output || ""
+	const pid = pendingUpdate?.pid ?? initialPid
 
 	return (
 		<Box flexDirection="column" marginY={1}>
-			<Box>
+			<Box width={getBoxWidth(3)} justifyContent="space-between">
 				<Text color={theme.semantic.info} bold>
 					{icon} Command Running
 				</Text>
+				{typeof pid === "number" && <Text color={theme.ui.text.secondary}>PID: {pid}</Text>}
 			</Box>
 
 			{command && (
