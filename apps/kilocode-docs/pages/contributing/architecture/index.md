@@ -3,8 +3,6 @@ title: "Architecture Overview"
 description: "Overview of Kilo Code architecture"
 ---
 
-s
-
 # Architecture Overview
 
 This document provides a high-level overview of Kilo Code's architecture to help contributors understand how the different components fit together.
