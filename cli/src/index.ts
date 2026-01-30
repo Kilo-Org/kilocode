@@ -20,6 +20,7 @@ import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
 import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+import { cleanupCommand } from "./commands/cleanup.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -67,7 +68,7 @@ program
 		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
 		// This is a defensive check for cases where Commander.js routing might not work as expected
 		// (e.g., when spawned as a child process with stdin disconnected)
-		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		const SUBCOMMANDS = ["auth", "config", "debug", "models", "cleanup"]
 		if (SUBCOMMANDS.includes(prompt)) {
 			return
 		}
@@ -402,6 +403,21 @@ program
 	.action(async (options: { provider?: string; json?: boolean }) => {
 		const { modelsApiCommand } = await import("./commands/models-api.js")
 		await modelsApiCommand(options)
+	})
+
+program
+	.command("cleanup")
+	.description("Clean up local Kilo Code CLI data")
+	.option("--logs", "Remove CLI logs")
+	.option("--tasks", "Remove task history and checkpoints")
+	.option("--history", "Remove command history")
+	.option("--config", "Remove CLI config.json")
+	.option("--identity", "Remove CLI identity file")
+	.option("--all", "Remove all CLI data, including config and identity")
+	.option("--dry-run", "Show what would be deleted without removing anything")
+	.option("-y, --yes", "Skip confirmation prompt")
+	.action(async (options) => {
+		await cleanupCommand(options)
 	})
 
 // Handle process termination signals
