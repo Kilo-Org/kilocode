@@ -73,25 +73,25 @@ See the [Installation Guide](/docs/getting-started/installing) for detailed inst
 
 Kilo Code supports a wide range of API providers, including:
 
-- [Anthropic (Claude)](/docs/providers/kilocode)
-- [Anthropic (Claude)](/docs/providers/anthropic)
-- [OpenAI](/docs/providers/openai)
-- [OpenRouter](/docs/providers/openrouter)
-- [Google Gemini](/docs/providers/gemini)
-- [Glama](/docs/providers/glama)
-- [AWS Bedrock](/docs/providers/bedrock)
-- [GCP Vertex AI](/docs/providers/vertex)
-- [Ollama](/docs/providers/ollama)
-- [LM Studio](/docs/providers/lmstudio)
-- [DeepSeek](/docs/providers/deepseek)
-- [Mistral](/docs/providers/mistral)
-- [Unbound](/docs/providers/unbound)
-- [Requesty](/docs/providers/requesty)
-- [VS Code Language Model API](/docs/providers/vscode-lm)
+- [Anthropic (Claude)](/docs/ai-providers/kilocode)
+- [Anthropic (Claude)](/docs/ai-providers/anthropic)
+- [OpenAI](/docs/ai-providers/openai)
+- [OpenRouter](/docs/ai-providers/openrouter)
+- [Google Gemini](/docs/ai-providers/gemini)
+- [Glama](/docs/ai-providers/glama)
+- [AWS Bedrock](/docs/ai-providers/bedrock)
+- [GCP Vertex AI](/docs/ai-providers/vertex)
+- [Ollama](/docs/ai-providers/ollama)
+- [LM Studio](/docs/ai-providers/lmstudio)
+- [DeepSeek](/docs/ai-providers/deepseek)
+- [Mistral](/docs/ai-providers/mistral)
+- [Unbound](/docs/ai-providers/unbound)
+- [Requesty](/docs/ai-providers/requesty)
+- [VS Code Language Model API](/docs/ai-providers/vscode-lm)
 
 ### How do I get an API key?
 
-Each API provider has its own process for obtaining an API key. See the [Setting Up Your First AI Provider](/docs/getting-started/connecting-api-provider) for links to the relevant documentation for each provider.
+Each API provider has its own process for obtaining an API key. See the [Setting Up Your First AI Provider](/docs/getting-started/setup-authentication) for links to the relevant documentation for each provider.
 
 ### Can I use Kilo Code with local models?
 
@@ -124,13 +124,13 @@ In general, autocomplete is best for quick, in-flow coding assistance, while cha
 
 ### What are modes in Kilo Code?
 
-[Modes](/docs/basic-usage/using-modes) are different personas that Kilo Code can adopt, each with a specific focus and set of capabilities. The built-in modes are:
+[Modes](/docs/code-with-ai/agents/using-modes) are different personas that Kilo Code can adopt, each with a specific focus and set of capabilities. The built-in modes are:
 
 - **Code:** For general-purpose coding tasks.
 - **Architect:** For planning and technical leadership.
 - **Ask:** For answering questions and providing information.
 - **Debug:** For systematic problem diagnosis.
-  You can also create [Custom Modes](/docs/agent-behavior/custom-modes).
+  You can also create [Custom Modes](/docs/customize/custom-modes).
 
 ### How do I switch between modes?
 
@@ -177,7 +177,7 @@ Yes, if you use a [local model](/docs/advanced-usage/local-models).
 
 ### What is MCP (Model Context Protocol)?
 
-[MCP](/docs/features/mcp/overview) is a protocol that allows Kilo Code to communicate with external servers, extending its capabilities with custom tools and resources.
+[MCP](/docs/automate/mcp/overview) is a protocol that allows Kilo Code to communicate with external servers, extending its capabilities with custom tools and resources.
 
 ### Can I create my own MCP servers?
 

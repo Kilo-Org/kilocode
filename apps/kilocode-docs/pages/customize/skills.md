@@ -327,6 +327,6 @@ For more details on contributing to Kilo Code, see the [Contributing Guide](/doc
 
 ## Related
 
-- [Custom Modes](/docs/agent-behavior/custom-modes) - Create custom modes that can use specific skills
-- [Custom Instructions](/docs/agent-behavior/custom-instructions) - Global instructions vs. skill-based instructions
-- [Custom Rules](/docs/agent-behavior/custom-rules) - Project-level rules complementing skills
+- [Custom Modes](/docs/customize/custom-modes) - Create custom modes that can use specific skills
+- [Custom Instructions](/docs/customize/custom-instructions) - Global instructions vs. skill-based instructions
+- [Custom Rules](/docs/customize/custom-rules) - Project-level rules complementing skills

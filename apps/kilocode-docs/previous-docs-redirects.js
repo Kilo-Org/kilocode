@@ -73,6 +73,12 @@ module.exports = [
 		permanent: true,
 	},
 	{
+		source: "/docs/advanced-usage/slackbot",
+		destination: "/docs/code-with-ai/platforms/slack",
+		basePath: false,
+		permanent: true,
+	},
+	{
 		source: "/docs/slack",
 		destination: "/docs/code-with-ai/platforms/slack",
 		basePath: false,

@@ -13,7 +13,7 @@ Kilo Code is an open-source AI coding assistant that works wherever you do—in 
 
 - **In your IDE** — [VS Code](/docs/code-with-ai/platforms/vscode), [JetBrains](/docs/code-with-ai/platforms/jetbrains), Cursor, Windsurf, and other VS Code forks
 - [**CLI**](/docs/code-with-ai/platforms/cli) — Run Kilo from your terminal for scripting and automation
-- **Web & Mobile** — Access Kilo from your [browser](/docs/code-with-ai/platforms/web-app) or [iOS/Android apps](/docs/code-with-ai/platforms/mobile)
+- **Web & Mobile** — Access Kilo from your browser (coming soon) or [iOS/Android apps](/docs/code-with-ai/platforms/mobile)
 - [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with Kilo directly in your workspace
 
 Your sessions sync across all of these, so you can start a task on your phone and finish it in your IDE.

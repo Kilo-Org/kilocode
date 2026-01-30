@@ -5,7 +5,7 @@ description: "Create organization-wide custom modes"
 
 # Custom Modes (Org)
 
-Custom Modes let you create tailored versions of Kilo’s built-in [modes](/docs/basic-usage/using-modes) for your organization. You can also adjust the settings for Kilo Code's original default modes. You can define a mode’s purpose, behavior, and tool access — helping Kilo adapt to your team’s unique workflows.
+Custom Modes let you create tailored versions of Kilo’s built-in [modes](/docs/code-with-ai/agents/using-modes) for your organization. You can also adjust the settings for Kilo Code's original default modes. You can define a mode’s purpose, behavior, and tool access — helping Kilo adapt to your team’s unique workflows.
 
 For example, Admins and Owners can extend these by creating **Custom Modes** with specialized roles or personalities (e.g. "Documentation Writer" or "Security Reviewer").
 

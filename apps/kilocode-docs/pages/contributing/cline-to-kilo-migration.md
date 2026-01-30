@@ -159,7 +159,7 @@ Beyond the workflow changes, Kilo has expanded significantly as a platform. As a
 - **Platform features:** Sessions, Parallel Agents, Deploy, Code Reviews, Managed Indexing
 - **Kilo Marketplace:** A community-driven repository where you can contribute Skills (modular workflows), MCP Servers (tool integrations), and Modes (custom agent behaviors)
 
-Check the [Architecture Overview](/contributing/architecture) to understand how these pieces fit together.
+Check the [Architecture Overview](architecture) to understand how these pieces fit together.
 
 ## Getting Help
 

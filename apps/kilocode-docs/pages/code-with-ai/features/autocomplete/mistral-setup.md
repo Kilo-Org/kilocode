@@ -76,6 +76,6 @@ Click **Save** to apply your Mistral configuration. You're now ready to use free
 
 ## Next Steps
 
-- Learn more about [Autocomplete features](./index.md)
-- Explore [triggering options](./index.md#triggering-options) for autocomplete
-- Check out [best practices](./index.md#best-practices) for optimal results
+- Learn more about [Autocomplete features](/docs/code-with-ai/features/autocomplete)
+- Explore [triggering options](/docs/code-with-ai/features/autocomplete#triggering-options) for autocomplete
+- Check out [best practices](/docs/code-with-ai/features/autocomplete#best-practices) for optimal results

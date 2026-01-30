@@ -325,7 +325,7 @@ export default function HomePage() {
 						<span className="footer-icon">🐛</span>
 						<div>
 							<strong>Found a bug?</strong>
-							<Link href="https://github.com/kilocode/kilocode/issues" className="footer-link">
+							<Link href="https://github.com/Kilo-Org/kilocode/issues" className="footer-link">
 								Report an issue
 							</Link>
 						</div>

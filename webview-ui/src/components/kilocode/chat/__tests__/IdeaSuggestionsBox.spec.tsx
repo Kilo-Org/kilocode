@@ -33,8 +33,6 @@ vi.mock("react-i18next", () => ({
 		t: (key: string, options?: any) => {
 			if (key === "ideaSuggestionsBox.newHere") return "New here?"
 			if (key === "ideaSuggestionsBox.tryOneOfThese") return "Try one of these ideas to get started:"
-			if (key === "ideaSuggestionsBox.clickToInsert")
-				return "Click any suggestion to start working on it immediately"
 			if (key === "ideaSuggestionsBox.ideas" && options?.returnObjects) {
 				return {
 					idea1: "Create a portfolio website",
@@ -53,7 +51,6 @@ import { IdeaSuggestionsBox } from "../IdeaSuggestionsBox"
 describe("IdeaSuggestionsBox", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		;(window as any).ICONS_BASE_URI = "/icons"
 		vi.mocked(useExtensionState).mockReturnValue({
 			taskHistoryVersion: 1,
 		} as any)
@@ -112,15 +109,14 @@ describe("IdeaSuggestionsBox", () => {
 		})
 	})
 
-	it("should display Kilo logo", () => {
+	it("should display exactly 2 suggestion buttons", () => {
 		vi.mocked(useTaskHistory).mockReturnValue({
 			data: { historyItems: [] },
 		} as any)
 
 		render(<IdeaSuggestionsBox />)
 
-		const logo = screen.getByAltText("Kilo Code")
-		expect(logo).toBeInTheDocument()
-		expect(logo).toHaveAttribute("src", "/icons/kilo-dark.svg")
+		const buttons = screen.getAllByRole("button")
+		expect(buttons).toHaveLength(2)
 	})
 })
