@@ -3,7 +3,7 @@ import { LMStudioClient, LLMInstanceInfo, LLMInfo } from "@lmstudio/sdk"
 
 import { ModelInfo, lMStudioDefaultModelInfo } from "@roo-code/types"
 
-import { getLMStudioModels, parseLMStudioModel } from "../lmstudio"
+import { getLMStudioModels, parseLMStudioModel, LMStudioConnectionError } from "../lmstudio"
 
 // Mock axios
 vi.mock("axios")
@@ -109,11 +109,15 @@ describe("LMStudio Fetcher", () => {
 
 			mockedAxios.get.mockResolvedValueOnce({ data: { status: "ok" } })
 			mockListDownloadedModels.mockResolvedValueOnce([mockLLMInfo])
+			mockListLoaded.mockResolvedValueOnce([])
 
 			const result = await getLMStudioModels(baseUrl)
 
 			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`)
+			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`, {
+				timeout: 10000,
+				headers: { Accept: "application/json" },
+			})
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledTimes(1)
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: lmsUrl })
 			expect(mockListDownloadedModels).toHaveBeenCalledTimes(1)
@@ -133,7 +137,10 @@ describe("LMStudio Fetcher", () => {
 			const result = await getLMStudioModels(baseUrl)
 
 			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`)
+			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`, {
+				timeout: 10000,
+				headers: { Accept: "application/json" },
+			})
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledTimes(1)
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: lmsUrl })
 			expect(mockListDownloadedModels).toHaveBeenCalledTimes(1)
@@ -373,7 +380,10 @@ describe("LMStudio Fetcher", () => {
 
 			await getLMStudioModels("")
 
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${defaultBaseUrl}/v1/models`)
+			expect(mockedAxios.get).toHaveBeenCalledWith(`${defaultBaseUrl}/v1/models`, {
+				timeout: 10000,
+				headers: { Accept: "application/json" },
+			})
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: defaultLmsUrl })
 		})
 
@@ -385,73 +395,84 @@ describe("LMStudio Fetcher", () => {
 
 			await getLMStudioModels(httpsBaseUrl)
 
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${httpsBaseUrl}/v1/models`)
+			expect(mockedAxios.get).toHaveBeenCalledWith(`${httpsBaseUrl}/v1/models`, {
+				timeout: 10000,
+				headers: { Accept: "application/json" },
+			})
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: wssLmsUrl })
 		})
 
-		it("should return an empty object if lmsUrl is unparsable", async () => {
+		it("should throw LMStudioConnectionError if lmsUrl is unparsable", async () => {
 			const unparsableBaseUrl = "http://localhost:invalid:port" // Leads to ws://localhost:invalid:port
 
-			const result = await getLMStudioModels(unparsableBaseUrl)
-
-			expect(result).toEqual({})
+			await expect(getLMStudioModels(unparsableBaseUrl)).rejects.toThrow(LMStudioConnectionError)
+			await expect(getLMStudioModels(unparsableBaseUrl)).rejects.toThrow(/Invalid URL/)
 			expect(mockedAxios.get).not.toHaveBeenCalled()
 			expect(MockedLMStudioClientConstructor).not.toHaveBeenCalled()
 		})
 
-		it("should return an empty object and log error if axios.get fails with a generic error", async () => {
-			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+		it("should throw LMStudioConnectionError if axios.get fails with a generic error", async () => {
 			const networkError = new Error("Network connection failed")
-			mockedAxios.get.mockRejectedValueOnce(networkError)
+			mockedAxios.get.mockRejectedValue(networkError)
 
-			const result = await getLMStudioModels(baseUrl)
+			await expect(getLMStudioModels(baseUrl)).rejects.toThrow(LMStudioConnectionError)
 
 			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`)
 			expect(MockedLMStudioClientConstructor).not.toHaveBeenCalled()
 			expect(mockListLoaded).not.toHaveBeenCalled()
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				`Error fetching LMStudio models: ${JSON.stringify(networkError, Object.getOwnPropertyNames(networkError), 2)}`,
-			)
-			expect(result).toEqual({})
-			consoleErrorSpy.mockRestore()
 		})
 
-		it("should return an empty object and log info if axios.get fails with ECONNREFUSED", async () => {
-			const consoleInfoSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+		it("should throw LMStudioConnectionError if axios.get fails with ECONNREFUSED", async () => {
 			const econnrefusedError = new Error("Connection refused")
 			;(econnrefusedError as any).code = "ECONNREFUSED"
-			mockedAxios.get.mockRejectedValueOnce(econnrefusedError)
+			mockedAxios.get.mockRejectedValue(econnrefusedError)
 
-			const result = await getLMStudioModels(baseUrl)
+			const error = await getLMStudioModels(baseUrl).catch((e) => e)
 
+			expect(error).toBeInstanceOf(LMStudioConnectionError)
+			expect(error.code).toBe("ECONNREFUSED")
+			expect(error.message).toContain("Cannot connect to LM Studio")
 			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
-			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`)
 			expect(MockedLMStudioClientConstructor).not.toHaveBeenCalled()
 			expect(mockListLoaded).not.toHaveBeenCalled()
-			expect(consoleInfoSpy).toHaveBeenCalledWith(`Error connecting to LMStudio at ${baseUrl}`)
-			expect(result).toEqual({})
-			consoleInfoSpy.mockRestore()
 		})
 
-		it("should return an empty object and log error if listDownloadedModels fails", async () => {
-			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+		it("should throw LMStudioConnectionError if listDownloadedModels fails", async () => {
 			const listError = new Error("LMStudio SDK internal error")
 
-			mockedAxios.get.mockResolvedValueOnce({ data: {} })
-			mockListLoaded.mockRejectedValueOnce(listError)
+			mockedAxios.get.mockResolvedValue({ data: {} })
+			mockListLoaded.mockRejectedValue(listError)
 
-			const result = await getLMStudioModels(baseUrl)
+			await expect(getLMStudioModels(baseUrl)).rejects.toThrow(LMStudioConnectionError)
+			await expect(getLMStudioModels(baseUrl)).rejects.toThrow(/Unexpected error/)
 
-			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
-			expect(MockedLMStudioClientConstructor).toHaveBeenCalledTimes(1)
-			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: lmsUrl })
-			expect(mockListLoaded).toHaveBeenCalledTimes(1)
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				`Error fetching LMStudio models: ${JSON.stringify(listError, Object.getOwnPropertyNames(listError), 2)}`,
-			)
-			expect(result).toEqual({})
-			consoleErrorSpy.mockRestore()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(MockedLMStudioClientConstructor).toHaveBeenCalledTimes(2)
+			expect(mockListLoaded).toHaveBeenCalledTimes(2)
+		})
+
+		it("should throw LMStudioConnectionError for invalid URL format", async () => {
+			const invalidUrl = "localhost:1234" // Missing protocol
+
+			await expect(getLMStudioModels(invalidUrl)).rejects.toThrow(LMStudioConnectionError)
+			await expect(getLMStudioModels(invalidUrl)).rejects.toThrow(/Invalid URL format/)
+			await expect(getLMStudioModels(invalidUrl)).rejects.toThrow(/must start with http/)
+
+			expect(mockedAxios.get).not.toHaveBeenCalled()
+			expect(MockedLMStudioClientConstructor).not.toHaveBeenCalled()
+		})
+
+		it("should include error code and baseUrl in LMStudioConnectionError", async () => {
+			const econnrefusedError = new Error("Connection refused")
+			;(econnrefusedError as any).code = "ECONNREFUSED"
+			mockedAxios.get.mockRejectedValue(econnrefusedError)
+
+			const error = await getLMStudioModels(baseUrl).catch((e) => e)
+
+			expect(error).toBeInstanceOf(LMStudioConnectionError)
+			expect(error.code).toBe("ECONNREFUSED")
+			expect(error.baseUrl).toBe(baseUrl)
+			expect(error.message).toContain(baseUrl)
 		})
 	})
 })
