@@ -22,6 +22,7 @@ import { themeCommand } from "./theme.js"
 import { checkpointCommand } from "./checkpoint.js"
 import { sessionCommand } from "./session.js"
 import { condenseCommand } from "./condense.js"
+import { versionCommand } from "./version.js"
 
 /**
  * Initialize all built-in commands
@@ -43,4 +44,5 @@ export function initializeCommands(): void {
 	commandRegistry.register(checkpointCommand)
 	commandRegistry.register(sessionCommand)
 	commandRegistry.register(condenseCommand)
+	commandRegistry.register(versionCommand)
 }
