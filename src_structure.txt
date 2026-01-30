@@ -1,0 +1,2473 @@
+src
+|____package.nls.fr.json
+|______mocks__
+| |____vscode.js
+| |____fs
+| | |____promises.ts
+|____types
+| |____global-agent.d.ts
+|____test-llm-autocompletion
+| |____test-cases.spec.ts
+| |____test-cases
+| | |____function-call
+| | | |____function-call-args.txt
+| | |____new-line
+| | | |____before-closing-brace.txt
+| | | |____after-if-statement.txt
+| | | |____after-for-loop.txt
+| | |____error-handling
+| | | |____rescue-handling.rb.txt
+| | | |____promise-rejection.txt
+| | | |____try-catch-finally.txt
+| | |____class-patterns
+| | | |____class-constructor.rb.txt
+| | | |____class-inheritance.txt
+| | | |____class-method-override.txt
+| | |____complex
+| | | |____chained-methods.txt
+| | | |____nested-object.txt
+| | |____import-statement
+| | | |____import-curly-brace.txt
+| | |____inline-completion
+| | | |____conditional-expression.txt
+| | | |____property-access.txt
+| | | |____return-expression-middle.txt
+| | | |____function-parameter.txt
+| | | |____variable-assignment-value.txt
+| | |____variable-assignment
+| | | |____variable-assignment.txt
+| | | |____object-declaration.rb.txt
+| | | |____array-declaration.rb.txt
+| | |____comment-driven
+| | | |____todo-debounce.txt
+| | | |____todo-validation.txt
+| | | |____todo-retry-logic.txt
+| | | |____todo-caching.txt
+| | | |____todo-rate-limiting.txt
+| | | |____todo-logging.txt
+| | | |____todo-sanitize-input.txt
+| | | |____fixme-bug.txt
+| | | |____todo-error-handling.txt
+| | | |____implement-function-combine-functions.txt
+| | | |____todo-pagination.txt
+| | | |____implement-function-add-numbers.txt
+| | |____control-flow
+| | | |____return-statement.rb.txt
+| | | |____for-loop.rb.txt
+| | | |____for-loop.txt
+| | | |____if-statement.txt
+| | |____larger-examples
+| | | |____gilded-rose.ts.txt
+| | | |____sudoku.html.txt
+| | |____function-declaration
+| | | |____function-body.rb.txt
+| | | |____function-body.txt
+| | | |____arrow-function.txt
+| | |____api-patterns
+| | | |____rest-api-client.txt
+| | | |____retry-logic.txt
+| | |____data-transformation
+| | | |____object-mapping.txt
+| | | |____data-pipeline.txt
+| | | |____array-reduce-complex.txt
+| | |____context-aware
+| | | |____config-object-property.txt
+| | | |____interface-implementation.txt
+| | | |____utility-function-call.txt
+| | | |____method-invocation.txt
+| |____utils.ts
+| |____llm-client.ts
+| |____README.md
+| |____test-cases.ts
+| |____html-report.ts
+| |____.gitignore
+| |____package.json
+| |____tsconfig.json
+| |____approvals.spec.ts
+| |____opus-approval.ts
+| |____mock-context-provider.ts
+| |____approvals.ts
+| |____approvals
+| | |____function-call
+| | | |____function-call-args.rejected.2.txt
+| | | |____function-call-args.rejected.3.txt
+| | | |____function-call-args.rejected.1.txt
+| | | |____function-call-args.rejected.4.txt
+| | | |____function-call-args.rejected.5.txt
+| | | |____function-call-args.rejected.7.txt
+| | | |____function-call-args.rejected.6.txt
+| | | |____function-call-args.rejected.13.txt
+| | | |____function-call-args.rejected.12.txt
+| | | |____function-call-args.rejected.8.txt
+| | | |____function-call-args.rejected.10.txt
+| | | |____function-call-args.rejected.11.txt
+| | | |____function-call-args.rejected.14.txt
+| | | |____function-call-args.approved.9.txt
+| | |____new-line
+| | | |____after-if-statement.approved.1.txt
+| | | |____after-for-loop.approved.1.txt
+| | | |____before-closing-brace.approved.1.txt
+| | |____error-handling
+| | | |____promise-rejection.approved.9.txt
+| | | |____rescue-handling.rb.approved.9.txt
+| | | |____rescue-handling.rb.approved.8.txt
+| | | |____promise-rejection.rejected.8.txt
+| | | |____rescue-handling.rb.approved.15.txt
+| | | |____rescue-handling.rb.approved.14.txt
+| | | |____rescue-handling.rb.approved.16.txt
+| | | |____rescue-handling.rb.approved.17.txt
+| | | |____rescue-handling.rb.approved.13.txt
+| | | |____rescue-handling.rb.approved.12.txt
+| | | |____rescue-handling.rb.approved.10.txt
+| | | |____rescue-handling.rb.approved.11.txt
+| | | |____rescue-handling.rb.approved.20.txt
+| | | |____rescue-handling.rb.approved.21.txt
+| | | |____rescue-handling.rb.approved.23.txt
+| | | |____rescue-handling.rb.approved.22.txt
+| | | |____promise-rejection.rejected.11.txt
+| | | |____promise-rejection.rejected.10.txt
+| | | |____rescue-handling.rb.approved.19.txt
+| | | |____rescue-handling.rb.approved.25.txt
+| | | |____rescue-handling.rb.approved.24.txt
+| | | |____rescue-handling.rb.approved.18.txt
+| | | |____promise-rejection.rejected.4.txt
+| | | |____try-catch-finally.approved.2.txt
+| | | |____rescue-handling.rb.approved.6.txt
+| | | |____rescue-handling.rb.approved.7.txt
+| | | |____try-catch-finally.approved.3.txt
+| | | |____promise-rejection.rejected.5.txt
+| | | |____promise-rejection.rejected.7.txt
+| | | |____try-catch-finally.approved.1.txt
+| | | |____rescue-handling.rb.approved.5.txt
+| | | |____rescue-handling.rb.approved.4.txt
+| | | |____promise-rejection.rejected.6.txt
+| | | |____promise-rejection.rejected.2.txt
+| | | |____try-catch-finally.approved.4.txt
+| | | |____rescue-handling.rb.approved.1.txt
+| | | |____try-catch-finally.approved.5.txt
+| | | |____promise-rejection.rejected.3.txt
+| | | |____promise-rejection.rejected.1.txt
+| | | |____try-catch-finally.approved.7.txt
+| | | |____rescue-handling.rb.approved.3.txt
+| | | |____rescue-handling.rb.approved.2.txt
+| | | |____try-catch-finally.approved.6.txt
+| | |____class-patterns
+| | | |____class-constructor.rb.rejected.4.txt
+| | | |____class-constructor.rb.approved.3.txt
+| | | |____class-constructor.rb.rejected.17.txt
+| | | |____class-constructor.rb.approved.2.txt
+| | | |____class-constructor.rb.rejected.5.txt
+| | | |____class-constructor.rb.rejected.7.txt
+| | | |____class-constructor.rb.rejected.14.txt
+| | | |____class-constructor.rb.rejected.15.txt
+| | | |____class-constructor.rb.approved.1.txt
+| | | |____class-constructor.rb.rejected.6.txt
+| | | |____class-constructor.rb.approved.19.txt
+| | | |____class-constructor.rb.rejected.11.txt
+| | | |____class-constructor.rb.rejected.12.txt
+| | | |____class-constructor.rb.rejected.13.txt
+| | | |____class-inheritance.approved.1.txt
+| | | |____class-inheritance.approved.2.txt
+| | | |____class-inheritance.approved.3.txt
+| | | |____class-inheritance.approved.6.txt
+| | | |____class-inheritance.approved.4.txt
+| | | |____class-inheritance.approved.5.txt
+| | | |____class-constructor.rb.approved.8.txt
+| | | |____class-constructor.rb.approved.10.txt
+| | | |____class-constructor.rb.rejected.18.txt
+| | | |____class-method-override.approved.1.txt
+| | | |____class-constructor.rb.rejected.9.txt
+| | | |____class-constructor.rb.approved.16.txt
+| | |____complex
+| | | |____nested-object.approved.12.txt
+| | | |____nested-object.approved.13.txt
+| | | |____nested-object.approved.11.txt
+| | | |____nested-object.approved.10.txt
+| | | |____nested-object.approved.14.txt
+| | | |____nested-object.approved.15.txt
+| | | |____nested-object.approved.4.txt
+| | | |____nested-object.approved.5.txt
+| | | |____nested-object.approved.7.txt
+| | | |____nested-object.approved.6.txt
+| | | |____nested-object.approved.2.txt
+| | | |____nested-object.approved.3.txt
+| | | |____nested-object.approved.1.txt
+| | | |____chained-methods.rejected.1.txt
+| | | |____chained-methods.rejected.3.txt
+| | | |____chained-methods.rejected.2.txt
+| | | |____nested-object.approved.8.txt
+| | | |____chained-methods.rejected.5.txt
+| | | |____chained-methods.rejected.4.txt
+| | | |____nested-object.approved.9.txt
+| | |____import-statement
+| | | |____import-curly-brace.approved.1.txt
+| | |____inline-completion
+| | | |____conditional-expression.approved.1.txt
+| | | |____return-expression-middle.approved.1.txt
+| | | |____property-access.approved.1.txt
+| | | |____function-parameter.approved.2.txt
+| | | |____function-parameter.approved.1.txt
+| | | |____variable-assignment-value.approved.4.txt
+| | | |____variable-assignment-value.rejected.3.txt
+| | | |____variable-assignment-value.rejected.2.txt
+| | | |____variable-assignment-value.rejected.1.txt
+| | |____variable-assignment
+| | | |____variable-assignment.rejected.8.txt
+| | | |____variable-assignment.rejected.9.txt
+| | | |____array-declaration.rb.rejected.14.txt
+| | | |____object-declaration.rb.approved.3.txt
+| | | |____object-declaration.rb.approved.2.txt
+| | | |____array-declaration.rb.rejected.15.txt
+| | | |____object-declaration.rb.rejected.5.txt
+| | | |____variable-assignment.rejected.18.txt
+| | | |____array-declaration.rb.rejected.17.txt
+| | | |____object-declaration.rb.approved.1.txt
+| | | |____array-declaration.rb.rejected.16.txt
+| | | |____variable-assignment.rejected.19.txt
+| | | |____array-declaration.rb.rejected.12.txt
+| | | |____array-declaration.rb.rejected.9.txt
+| | | |____object-declaration.rb.approved.4.txt
+| | | |____array-declaration.rb.rejected.8.txt
+| | | |____array-declaration.rb.rejected.13.txt
+| | | |____variable-assignment.rejected.20.txt
+| | | |____array-declaration.rb.rejected.11.txt
+| | | |____object-declaration.rb.approved.6.txt
+| | | |____object-declaration.rb.approved.7.txt
+| | | |____array-declaration.rb.rejected.10.txt
+| | | |____variable-assignment.rejected.12.txt
+| | | |____array-declaration.rb.rejected.21.txt
+| | | |____array-declaration.rb.rejected.6.txt
+| | | |____array-declaration.rb.rejected.7.txt
+| | | |____array-declaration.rb.rejected.20.txt
+| | | |____variable-assignment.rejected.13.txt
+| | | |____variable-assignment.rejected.11.txt
+| | | |____array-declaration.rb.rejected.22.txt
+| | | |____object-declaration.rb.approved.9.txt
+| | | |____array-declaration.rb.rejected.5.txt
+| | | |____array-declaration.rb.rejected.4.txt
+| | | |____object-declaration.rb.approved.8.txt
+| | | |____variable-assignment.rejected.10.txt
+| | | |____variable-assignment.rejected.14.txt
+| | | |____array-declaration.rb.rejected.1.txt
+| | | |____variable-assignment.rejected.15.txt
+| | | |____variable-assignment.rejected.17.txt
+| | | |____array-declaration.rb.rejected.18.txt
+| | | |____array-declaration.rb.rejected.3.txt
+| | | |____array-declaration.rb.rejected.2.txt
+| | | |____array-declaration.rb.rejected.19.txt
+| | | |____variable-assignment.rejected.16.txt
+| | | |____variable-assignment.rejected.4.txt
+| | | |____variable-assignment.rejected.5.txt
+| | | |____variable-assignment.rejected.7.txt
+| | | |____variable-assignment.rejected.6.txt
+| | | |____variable-assignment.rejected.2.txt
+| | | |____variable-assignment.rejected.3.txt
+| | | |____variable-assignment.rejected.1.txt
+| | |____comment-driven
+| | | |____todo-error-handling.rejected.11.txt
+| | | |____todo-logging.rejected.5.txt
+| | | |____todo-logging.approved.2.txt
+| | | |____todo-logging.approved.3.txt
+| | | |____todo-error-handling.rejected.10.txt
+| | | |____todo-error-handling.rejected.12.txt
+| | | |____todo-rate-limiting.rejected.9.txt
+| | | |____todo-logging.rejected.6.txt
+| | | |____todo-debounce.approved.8.txt
+| | | |____todo-logging.approved.1.txt
+| | | |____todo-debounce.approved.9.txt
+| | | |____todo-rate-limiting.rejected.8.txt
+| | | |____todo-error-handling.rejected.13.txt
+| | | |____todo-logging.approved.11.txt
+| | | |____todo-logging.approved.4.txt
+| | | |____fixme-bug.approved.1.txt
+| | | |____todo-error-handling.rejected.14.txt
+| | | |____todo-logging.approved.12.txt
+| | | |____todo-logging.approved.7.txt
+| | | |____fixme-bug.approved.2.txt
+| | | |____todo-error-handling.rejected.15.txt
+| | | |____implement-function-add-numbers.rejected.23.txt
+| | | |____implement-function-add-numbers.rejected.7.txt
+| | | |____todo-error-handling.rejected.9.txt
+| | | |____todo-rate-limiting.rejected.11.txt
+| | | |____todo-caching.rejected.7.txt
+| | | |____todo-caching.rejected.6.txt
+| | | |____todo-rate-limiting.rejected.10.txt
+| | | |____implement-function-add-numbers.rejected.6.txt
+| | | |____implement-function-add-numbers.rejected.20.txt
+| | | |____implement-function-add-numbers.rejected.4.txt
+| | | |____todo-rate-limiting.rejected.12.txt
+| | | |____todo-caching.rejected.4.txt
+| | | |____todo-caching.rejected.5.txt
+| | | |____todo-rate-limiting.rejected.13.txt
+| | | |____implement-function-add-numbers.rejected.5.txt
+| | | |____implement-function-add-numbers.rejected.21.txt
+| | | |____todo-error-handling.approved.8.txt
+| | | |____implement-function-add-numbers.rejected.19.txt
+| | | |____implement-function-add-numbers.rejected.25.txt
+| | | |____implement-function-add-numbers.rejected.1.txt
+| | | |____todo-caching.rejected.1.txt
+| | | |____todo-rate-limiting.rejected.17.txt
+| | | |____todo-rate-limiting.rejected.16.txt
+| | | |____implement-function-add-numbers.rejected.24.txt
+| | | |____implement-function-add-numbers.rejected.26.txt
+| | | |____implement-function-add-numbers.rejected.2.txt
+| | | |____todo-caching.rejected.2.txt
+| | | |____todo-rate-limiting.rejected.14.txt
+| | | |____todo-rate-limiting.rejected.15.txt
+| | | |____todo-caching.rejected.3.txt
+| | | |____implement-function-add-numbers.rejected.3.txt
+| | | |____implement-function-add-numbers.rejected.27.txt
+| | | |____todo-caching.rejected.13.txt
+| | | |____implement-function-add-numbers.rejected.16.txt
+| | | |____todo-error-handling.approved.7.txt
+| | | |____todo-retry-logic.rejected.1.txt
+| | | |____todo-rate-limiting.rejected.24.txt
+| | | |____todo-rate-limiting.rejected.18.txt
+| | | |____todo-rate-limiting.rejected.19.txt
+| | | |____todo-rate-limiting.rejected.25.txt
+| | | |____todo-caching.rejected.12.txt
+| | | |____implement-function-add-numbers.rejected.17.txt
+| | | |____implement-function-add-numbers.rejected.15.txt
+| | | |____todo-error-handling.approved.4.txt
+| | | |____todo-caching.rejected.10.txt
+| | | |____implement-function-add-numbers.rejected.29.txt
+| | | |____todo-error-handling.rejected.3.txt
+| | | |____todo-rate-limiting.rejected.27.txt
+| | | |____todo-debounce.approved.10.txt
+| | | |____todo-rate-limiting.rejected.26.txt
+| | | |____implement-function-add-numbers.approved.18.txt
+| | | |____implement-function-add-numbers.rejected.28.txt
+| | | |____todo-error-handling.approved.5.txt
+| | | |____implement-function-add-numbers.rejected.14.txt
+| | | |____todo-caching.rejected.11.txt
+| | | |____todo-caching.rejected.15.txt
+| | | |____implement-function-add-numbers.rejected.10.txt
+| | | |____todo-error-handling.approved.1.txt
+| | | |____implement-function-add-numbers.rejected.8.txt
+| | | |____todo-error-handling.rejected.6.txt
+| | | |____todo-rate-limiting.rejected.22.txt
+| | | |____todo-caching.rejected.8.txt
+| | | |____todo-caching.rejected.9.txt
+| | | |____todo-rate-limiting.rejected.23.txt
+| | | |____implement-function-add-numbers.rejected.9.txt
+| | | |____todo-validation.approved.1.txt
+| | | |____todo-caching.rejected.14.txt
+| | | |____implement-function-add-numbers.rejected.11.txt
+| | | |____implement-function-add-numbers.rejected.13.txt
+| | | |____todo-error-handling.approved.2.txt
+| | | |____todo-caching.rejected.16.txt
+| | | |____todo-validation.approved.3.txt
+| | | |____todo-rate-limiting.rejected.21.txt
+| | | |____todo-rate-limiting.rejected.20.txt
+| | | |____todo-validation.approved.2.txt
+| | | |____implement-function-add-numbers.approved.22.txt
+| | | |____implement-function-add-numbers.rejected.12.txt
+| | | |____todo-caching.rejected.17.txt
+| | | |____implement-function-combine-functions.approved.3.txt
+| | | |____todo-rate-limiting.rejected.3.txt
+| | | |____todo-debounce.approved.2.txt
+| | | |____todo-rate-limiting.rejected.2.txt
+| | | |____implement-function-combine-functions.approved.2.txt
+| | | |____todo-debounce.approved.1.txt
+| | | |____todo-logging.approved.8.txt
+| | | |____todo-logging.approved.9.txt
+| | | |____todo-rate-limiting.rejected.1.txt
+| | | |____todo-error-handling.approved.16.txt
+| | | |____implement-function-combine-functions.approved.1.txt
+| | | |____todo-logging.rejected.10.txt
+| | | |____implement-function-combine-functions.approved.5.txt
+| | | |____todo-rate-limiting.rejected.5.txt
+| | | |____todo-debounce.approved.4.txt
+| | | |____todo-debounce.rejected.3.txt
+| | | |____todo-debounce.approved.5.txt
+| | | |____todo-rate-limiting.rejected.4.txt
+| | | |____implement-function-combine-functions.approved.4.txt
+| | | |____todo-rate-limiting.rejected.6.txt
+| | | |____todo-debounce.approved.7.txt
+| | | |____todo-debounce.approved.6.txt
+| | | |____todo-rate-limiting.rejected.7.txt
+| | |____control-flow
+| | | |____return-statement.rb.approved.7.txt
+| | | |____return-statement.rb.approved.6.txt
+| | | |____return-statement.rb.approved.4.txt
+| | | |____return-statement.rb.approved.5.txt
+| | | |____for-loop.rb.rejected.9.txt
+| | | |____return-statement.rb.approved.1.txt
+| | | |____for-loop.rb.rejected.8.txt
+| | | |____return-statement.rb.approved.2.txt
+| | | |____return-statement.rb.approved.3.txt
+| | | |____if-statement.rejected.8.txt
+| | | |____for-loop.approved.3.txt
+| | | |____if-statement.rejected.2.txt
+| | | |____for-loop.approved.2.txt
+| | | |____if-statement.approved.5.txt
+| | | |____if-statement.approved.7.txt
+| | | |____for-loop.approved.1.txt
+| | | |____if-statement.approved.6.txt
+| | | |____if-statement.rejected.4.txt
+| | | |____if-statement.approved.3.txt
+| | | |____if-statement.approved.1.txt
+| | | |____return-statement.rb.approved.10.txt
+| | | |____for-loop.rb.rejected.6.txt
+| | | |____for-loop.rb.rejected.7.txt
+| | | |____for-loop.rb.rejected.5.txt
+| | | |____for-loop.rb.rejected.4.txt
+| | | |____for-loop.rb.rejected.10.txt
+| | | |____return-statement.rb.approved.8.txt
+| | | |____return-statement.rb.approved.9.txt
+| | | |____for-loop.rb.rejected.1.txt
+| | | |____for-loop.rb.rejected.11.txt
+| | | |____for-loop.rb.rejected.13.txt
+| | | |____for-loop.rb.rejected.3.txt
+| | | |____for-loop.rb.rejected.2.txt
+| | | |____for-loop.rb.rejected.12.txt
+| | |____larger-examples
+| | | |____gilded-rose.ts.approved.1.txt
+| | | |____sudoku.html.approved.1.txt
+| | |____function-declaration
+| | | |____function-body.rb.rejected.12.txt
+| | | |____function-body.rejected.7.txt
+| | | |____arrow-function.rejected.6.txt
+| | | |____arrow-function.rejected.7.txt
+| | | |____function-body.rejected.6.txt
+| | | |____function-body.rb.rejected.13.txt
+| | | |____function-body.approved.1.txt
+| | | |____function-body.rb.rejected.11.txt
+| | | |____function-body.rejected.4.txt
+| | | |____arrow-function.rejected.5.txt
+| | | |____arrow-function.rejected.4.txt
+| | | |____function-body.rejected.5.txt
+| | | |____function-body.rb.rejected.10.txt
+| | | |____function-body.rb.rejected.14.txt
+| | | |____arrow-function.rejected.1.txt
+| | | |____function-body.rb.rejected.15.txt
+| | | |____function-body.rb.rejected.17.txt
+| | | |____function-body.rejected.2.txt
+| | | |____arrow-function.rejected.3.txt
+| | | |____arrow-function.rejected.2.txt
+| | | |____arrow-function.approved.16.txt
+| | | |____function-body.rejected.3.txt
+| | | |____function-body.rb.rejected.16.txt
+| | | |____function-body.rb.rejected.6.txt
+| | | |____function-body.rejected.11.txt
+| | | |____function-body.rejected.10.txt
+| | | |____function-body.rb.rejected.7.txt
+| | | |____function-body.rb.rejected.5.txt
+| | | |____function-body.rb.rejected.4.txt
+| | | |____function-body.rb.rejected.1.txt
+| | | |____function-body.rb.rejected.3.txt
+| | | |____function-body.rb.rejected.2.txt
+| | | |____function-body.rb.rejected.9.txt
+| | | |____function-body.rb.rejected.8.txt
+| | | |____arrow-function.rejected.14.txt
+| | | |____arrow-function.rejected.15.txt
+| | | |____function-body.rejected.8.txt
+| | | |____arrow-function.rejected.9.txt
+| | | |____arrow-function.rejected.11.txt
+| | | |____arrow-function.rejected.10.txt
+| | | |____arrow-function.rejected.8.txt
+| | | |____function-body.rejected.9.txt
+| | | |____arrow-function.rejected.12.txt
+| | | |____arrow-function.rejected.13.txt
+| | |____api-patterns
+| | | |____rest-api-client.approved.1.txt
+| | | |____rest-api-client.approved.2.txt
+| | | |____rest-api-client.approved.3.txt
+| | | |____rest-api-client.approved.7.txt
+| | | |____rest-api-client.approved.6.txt
+| | | |____rest-api-client.approved.4.txt
+| | | |____rest-api-client.approved.5.txt
+| | | |____retry-logic.approved.1.txt
+| | | |____retry-logic.approved.2.txt
+| | |____data-transformation
+| | | |____data-pipeline.rejected.1.txt
+| | | |____object-mapping.approved.6.txt
+| | | |____object-mapping.approved.7.txt
+| | | |____data-pipeline.rejected.2.txt
+| | | |____data-pipeline.approved.5.txt
+| | | |____object-mapping.approved.5.txt
+| | | |____object-mapping.approved.4.txt
+| | | |____data-pipeline.rejected.3.txt
+| | | |____object-mapping.approved.1.txt
+| | | |____data-pipeline.rejected.6.txt
+| | | |____data-pipeline.rejected.4.txt
+| | | |____object-mapping.approved.3.txt
+| | | |____object-mapping.approved.2.txt
+| | | |____object-mapping.rejected.10.txt
+| | | |____object-mapping.approved.9.txt
+| | | |____object-mapping.approved.8.txt
+| | | |____array-reduce-complex.rejected.3.txt
+| | | |____array-reduce-complex.rejected.2.txt
+| | | |____array-reduce-complex.rejected.5.txt
+| | | |____array-reduce-complex.rejected.4.txt
+| | | |____array-reduce-complex.approved.1.txt
+| | |____context-aware
+| | | |____config-object-property.approved.2.txt
+| | | |____config-object-property.approved.1.txt
+| | | |____method-invocation.rejected.4.txt
+| | | |____interface-implementation.approved.1.txt
+| | | |____method-invocation.rejected.5.txt
+| | | |____utility-function-call.approved.1.txt
+| | | |____method-invocation.rejected.1.txt
+| | | |____interface-implementation.rejected.2.txt
+| | | |____method-invocation.rejected.2.txt
+| | | |____method-invocation.rejected.3.txt
+| |____runner.ts
+| |____mock-vscode.ts
+| |____ghost-provider-tester.ts
+|____package.nls.ko.json
+|____core
+| |____task-persistence
+| | |____taskMessages.ts
+| | |____apiMessages.ts
+| | |____taskMetadata.ts
+| | |______tests__
+| | | |____taskMessages.spec.ts
+| | |____index.ts
+| |____tools
+| | |____EditFileTool.ts
+| | |____AttemptCompletionTool.ts
+| | |____SearchReplaceTool.ts
+| | |____ListFilesTool.ts
+| | |____UseMcpToolTool.ts
+| | |____kilocode
+| | | |____editFileTool.ts
+| | | |____newRuleTool.ts
+| | | |____deleteFileTool.ts
+| | | |____condenseTool.ts
+| | | |______tests__
+| | | | |____multiApplyDiffTool.spec.ts
+| | | | |____applyDiffTool.experiment.spec.ts
+| | | |____reportBugTool.ts
+| | |____SearchAndReplaceTool.ts
+| | |____MultiApplyDiffTool.ts
+| | |____SearchFilesTool.ts
+| | |____RunSlashCommandTool.ts
+| | |____NewTaskTool.ts
+| | |____ApplyDiffTool.ts
+| | |____ToolRepetitionDetector.ts
+| | |____ApplyPatchTool.ts
+| | |____BaseTool.ts
+| | |____FetchInstructionsTool.ts
+| | |____UpdateTodoListTool.ts
+| | |____accessMcpResourceTool.ts
+| | |______tests__
+| | | |____multiApplyDiffTool.spec.ts
+| | | |____ToolRepetitionDetector.spec.ts
+| | | |____runSlashCommandTool.spec.ts
+| | | |____codebaseSearchTool.spec.ts
+| | | |____BrowserActionTool.coordinateScaling.spec.ts
+| | | |____validateToolUse.spec.ts
+| | | |____updateTodoListTool.spec.ts
+| | | |____searchReplaceTool.spec.ts
+| | | |____executeCommandTool.spec.ts
+| | | |____attemptCompletionTool.spec.ts
+| | | |____executeCommandTimeout.integration.spec.ts
+| | | |____searchAndReplaceTool.spec.ts
+| | | |____newTaskTool.spec.ts
+| | | |____executeCommand.spec.ts
+| | | |____generateImageTool.test.ts
+| | | |____writeToFileTool.spec.ts
+| | | |____deleteFileTool.spec.ts
+| | | |____applyDiffTool.experiment.spec.ts
+| | | |____askFollowupQuestionTool.spec.ts
+| | | |____BrowserActionTool.screenshot.spec.ts
+| | | |____editFileTool.spec.ts
+| | | |____useMcpToolTool.spec.ts
+| | | |____readFileTool.spec.ts
+| | |____SwitchModeTool.ts
+| | |____apply-patch
+| | | |____apply.ts
+| | | |____parser.ts
+| | | |______tests__
+| | | | |____apply.spec.ts
+| | | | |____parser.spec.ts
+| | | | |____seek-sequence.spec.ts
+| | | |____seek-sequence.ts
+| | | |____index.ts
+| | |____ReadFileTool.ts
+| | |____WriteToFileTool.ts
+| | |____BrowserActionTool.ts
+| | |____CodebaseSearchTool.ts
+| | |____AskFollowupQuestionTool.ts
+| | |____validateToolUse.ts
+| | |____helpers
+| | | |____toolResultFormatting.ts
+| | | |______tests__
+| | | | |____truncateDefinitions.spec.ts
+| | | | |____toolResultFormatting.spec.ts
+| | | |____fileTokenBudget.ts
+| | | |____truncateDefinitions.ts
+| | | |____imageHelpers.ts
+| | |____kilocode.ts
+| | |____ExecuteCommandTool.ts
+| | |____GenerateImageTool.ts
+| |____context
+| | |____instructions
+| | | |____rule-helpers.ts
+| | | |____workflows.ts
+| | | |____kilo-rules.ts
+| | |____context-management
+| | | |____context-error-handling.ts
+| | | |______tests__
+| | | | |____context-error-handling.test.ts
+| |____kilocode
+| | |____agent-manager
+| | | |____AgentTaskRunner.ts
+| | | |____askErrorParser.ts
+| | | |____SessionTerminalManager.ts
+| | | |____KilocodeEventProcessor.ts
+| | | |____ShellOutput.ts
+| | | |____SetupScriptService.ts
+| | | |____RuntimeProcessHandler.ts
+| | | |____CliOutputParser.ts
+| | | |____mapUtils.ts
+| | | |____normalizeGitUrl.ts
+| | | |____types.ts
+| | | |____vscodeGitTypes.ts
+| | | |____telemetry.ts
+| | | |____WorktreeManager.ts
+| | | |______tests__
+| | | | |____AgentRegistry.spec.ts
+| | | | |____SetupScriptRunner.spec.ts
+| | | | |____providerEnvMapper.spec.ts
+| | | | |____AgentManagerProvider.multiversion.test.ts
+| | | | |____mapUtils.spec.ts
+| | | | |____telemetry.test.ts
+| | | | |____AgentManagerProvider.ipc.spec.ts
+| | | | |____message-handling.spec.ts
+| | | | |____CliOutputParser.spec.ts
+| | | | |____ShellOutput.spec.ts
+| | | | |____askErrorParser.spec.ts
+| | | | |____SetupScriptService.spec.ts
+| | | | |____normalizeGitUrl.spec.ts
+| | | | |____startSession-validation.spec.ts
+| | | | |____KilocodeEventProcessor.spec.ts
+| | | | |____AgentManagerProvider.spec.ts
+| | | | |____AgentTaskRunner.test.ts
+| | | | |____SessionTerminalManager.spec.ts
+| | | | |____parallelModeParser.spec.ts
+| | | | |____WorktreeManager.test.ts
+| | | | |____css-prefix.spec.ts
+| | | |____providerEnvMapper.ts
+| | | |____RemoteSessionService.ts
+| | | |____WorkspaceGitService.ts
+| | | |____multiVersionUtils.ts
+| | | |____AgentManagerProvider.ts
+| | | |____SetupScriptRunner.ts
+| | | |____AgentRegistry.ts
+| | | |____parallelModeParser.ts
+| | |____webview
+| | | |____webviewMessageHandlerUtils.ts
+| | | |____deviceAuthHandler.ts
+| | |____wrapper.ts
+| |____config
+| | |____kilocode
+| | | |____migrateMorphApiKey.ts
+| | |____CustomModesManager.ts
+| | |______tests__
+| | | |____CustomModesManager.yamlEdgeCases.spec.ts
+| | | |____CustomModesSettings.spec.ts
+| | | |____CustomModesManager.exportImportSlugChange.spec.ts
+| | | |____ProviderSettingsManager.spec.ts
+| | | |____CustomModesManager.organizationModes.spec.ts
+| | | |____ModeConfig.spec.ts
+| | | |____ContextProxy.spec.ts
+| | | |____importExport.spec.ts
+| | | |____CustomModesManager.spec.ts
+| | |____ContextProxy.ts
+| | |____importExport.ts
+| | |____ProviderSettingsManager.ts
+| |____ignore
+| | |______mocks__
+| | | |____RooIgnoreController.ts
+| | |____RooIgnoreController.ts
+| | |______tests__
+| | | |____RooIgnoreController.security.spec.ts
+| | | |____RooIgnoreController.spec.ts
+| |____protect
+| | |____RooProtectedController.ts
+| | |______tests__
+| | | |____RooProtectedController.spec.ts
+| |____webview
+| | |____kilorules.ts
+| | |____diagnosticsHandler.ts
+| | |____checkpointRestoreHandler.ts
+| | |____BrowserSessionPanelManager.ts
+| | |____messageEnhancer.ts
+| | |____speechToTextCheck.ts
+| | |____webviewMessageHandler.ts
+| | |____kiloWebviewMessgeHandlerHelpers.ts
+| | |____generateSystemPrompt.ts
+| | |____getNonce.ts
+| | |____ClineProvider.ts
+| | |____sttHandlers.ts
+| | |______tests__
+| | | |____generateSystemPrompt.browser-capability.spec.ts
+| | | |____webviewMessageHandler.singleCompletion.spec.ts
+| | | |____webviewMessageHandler.routerModels.spec.ts
+| | | |____ClineProvider.apiHandlerRebuild.spec.ts
+| | | |____aggregateTaskCosts.spec.ts
+| | | |____ClineProvider.flicker-free-cancel.spec.ts
+| | | |____webviewMessageHandler.delete.spec.ts
+| | | |____ClineProvider.sticky-mode.spec.ts
+| | | |____messageEnhancer.test.ts
+| | | |____webviewMessageHandler.rooBalance.spec.ts
+| | | |____webviewMessageHandler.searchFiles.spec.ts
+| | | |____diagnosticsHandler.spec.ts
+| | | |____webviewMessageHandler.checkpoint.spec.ts
+| | | |____webviewMessageHandler.imageMentions.integration.spec.ts
+| | | |____ClineProvider.spec.ts
+| | | |____webviewMessageHandler.edit.spec.ts
+| | | |____checkpointRestoreHandler.spec.ts
+| | | |____webviewMessageHandler.autoSwitch.spec.ts
+| | | |____webviewMessageHandler.spec.ts
+| | | |____telemetrySettingsTracking.spec.ts
+| | | |____ClineProvider.kilocode-organization.spec.ts
+| | | |____ClineProvider.sticky-profile.spec.ts
+| | |____aggregateTaskCosts.ts
+| | |____getViteDevServerConfig.ts
+| | |____getUri.ts
+| |____checkpoints
+| | |____kilocode
+| | | |____seeNewChanges.ts
+| | |______tests__
+| | | |____checkpoint.test.ts
+| | |____index.ts
+| |____assistant-message
+| | |____AssistantMessageParser.ts
+| | |____NativeToolCallParser.ts
+| | |____parseAssistantMessage.ts
+| | |____kilocode
+| | | |____captureAskApprovalEvent.ts
+| | | |____gatekeeper.ts
+| | | |______tests__
+| | | | |____gatekeeper.test.ts
+| | | |____native-tool-call.ts
+| | |______tests__
+| | | |____AssistantMessageParser.spec.ts
+| | | |____presentAssistantMessage-images.spec.ts
+| | | |____parseAssistantMessage.spec.ts
+| | | |____presentAssistantMessage-fast-apply-alias.spec.ts
+| | | |____presentAssistantMessage-custom-tool.spec.ts
+| | | |____parseAssistantMessageBenchmark.ts
+| | | |____presentAssistantMessage-unknown-tool.spec.ts
+| | | |____NativeToolCallParser.spec.ts
+| | |____index.ts
+| | |____parseAssistantMessageV2.ts
+| | |____presentAssistantMessage.ts
+| |____diff
+| | |____strategies
+| | | |____multi-file-search-replace.ts
+| | | |______tests__
+| | | | |____multi-search-replace.spec.ts
+| | | | |____multi-search-replace-trailing-newline.spec.ts
+| | | | |____multi-file-search-replace-8char.spec.ts
+| | | |____multi-search-replace.ts
+| | |____stats.ts
+| |____mentions
+| | |____processUserContentMentions.ts
+| | |____resolveImageMentions.ts
+| | |______tests__
+| | | |____index.spec.ts
+| | | |____processUserContentMentions.spec.ts
+| | | |____resolveImageMentions.spec.ts
+| | |____index.ts
+| | |____processKiloUserContentMentions.ts
+| |____context-management
+| | |______tests__
+| | | |____context-management.spec.ts
+| | | |____truncation.spec.ts
+| | |____index.ts
+| |____slash-commands
+| | |____kilo.ts
+| | |______tests__
+| | | |____kilo.spec.ts
+| |____task
+| | |____build-tools.ts
+| | |____validateToolResultIds.ts
+| | |____AskIgnoredError.ts
+| | |______tests__
+| | | |____grounding-sources.test.ts
+| | | |____Task.yolo-followup.spec.ts
+| | | |____task-tool-history.spec.ts
+| | | |____task-xml-protocol-regression.spec.ts
+| | | |____reasoning-preservation.test.ts
+| | | |____Task.sticky-profile-race.spec.ts
+| | | |____grace-retry-errors.spec.ts
+| | | |____flushPendingToolResultsToHistory.spec.ts
+| | | |____ask-queued-message-drain.spec.ts
+| | | |____native-tools-filtering.spec.ts
+| | | |____Task.spec.ts
+| | | |____Task.dispose.test.ts
+| | | |____Task.throttle.test.ts
+| | | |____duplicate-tool-use-ids.spec.ts
+| | | |____validateToolResultIds.spec.ts
+| | |____Task.ts
+| | |____kilocode.ts
+| |____prompts
+| | |____instructions
+| | | |____create-mode.ts
+| | | |____instructions.ts
+| | | |____create-mcp-server.ts
+| | |____sections
+| | | |____tool-use.ts
+| | | |____capabilities.ts
+| | | |____kilo.ts
+| | | |____modes.ts
+| | | |____tool-use-guidelines.ts
+| | | |____mcp-servers.ts
+| | | |____rules.ts
+| | | |______tests__
+| | | | |____tool-use.spec.ts
+| | | | |____skills.spec.ts
+| | | | |____custom-system-prompt.spec.ts
+| | | | |____objective.spec.ts
+| | | | |____custom-instructions.spec.ts
+| | | | |____system-info.spec.ts
+| | | | |____custom-instructions-global.spec.ts
+| | | | |____custom-instructions-path-detection.spec.ts
+| | | | |____tool-use-guidelines.spec.ts
+| | | |____custom-system-prompt.ts
+| | | |____index.ts
+| | | |____skills.ts
+| | | |____custom-instructions.ts
+| | | |____objective.ts
+| | | |____markdown-formatting.ts
+| | | |____system-info.ts
+| | |____commands.ts
+| | |____tools
+| | | |____update-todo-list.ts
+| | | |____execute-command.ts
+| | | |____search-files.ts
+| | | |____attempt-completion.ts
+| | | |____run-slash-command.ts
+| | | |____use-mcp-tool.ts
+| | | |____switch-mode.ts
+| | | |____codebase-search.ts
+| | | |____read-file.ts
+| | | |____native-tools
+| | | | |____execute_command.ts
+| | | | |____mcp_server.ts
+| | | | |____attempt_completion.ts
+| | | | |____switch_mode.ts
+| | | | |____fetch_instructions.ts
+| | | | |____list_files.ts
+| | | | |____read_file.ts
+| | | | |____kilocode
+| | | | | |____fast_edit_file.ts
+| | | | | |____delete_file.ts
+| | | | |____converters.ts
+| | | | |____apply_diff.ts
+| | | | |____ask_followup_question.ts
+| | | | |____run_slash_command.ts
+| | | | |____codebase_search.ts
+| | | | |____generate_image.ts
+| | | | |____new_task.ts
+| | | | |______tests__
+| | | | | |____read_file.spec.ts
+| | | | | |____converters.spec.ts
+| | | | | |____mcp_server.spec.ts
+| | | | |____search_files.ts
+| | | | |____update_todo_list.ts
+| | | | |____write_to_file.ts
+| | | | |____edit_file.ts
+| | | | |____search_replace.ts
+| | | | |____search_and_replace.ts
+| | | | |____apply_patch.ts
+| | | | |____index.ts
+| | | | |____access_mcp_resource.ts
+| | | | |____browser_action.ts
+| | | |____access-mcp-resource.ts
+| | | |____types.ts
+| | | |____delete-file.ts
+| | | |______tests__
+| | | | |____access-mcp-resource.spec.ts
+| | | | |____new-task.spec.ts
+| | | | |____filter-tools-for-mode.spec.ts
+| | | | |____fetch-instructions.spec.ts
+| | | | |____attempt-completion.spec.ts
+| | | |____fetch-instructions.ts
+| | | |____list-files.ts
+| | | |____edit-file.ts
+| | | |____index.ts
+| | | |____write-to-file.ts
+| | | |____browser-action.ts
+| | | |____ask-followup-question.ts
+| | | |____new-task.ts
+| | | |____filter-tools-for-mode.ts
+| | | |____generate-image.ts
+| | |____utilities
+| | | |____mermaid.ts
+| | |____types.ts
+| | |______tests__
+| | | |____sections.spec.ts
+| | | |____custom-system-prompt.spec.ts
+| | | |____kilocode
+| | | | |____system-prompt-morph.spec.ts
+| | | |____get-prompt-component.spec.ts
+| | | |____utils.ts
+| | | |____add-custom-instructions.spec.ts
+| | | |____system-prompt.spec.ts
+| | | |____responses-rooignore.spec.ts
+| | | |______snapshots__
+| | | | |____add-custom-instructions
+| | | | | |____trimmed-mode-instructions.snap
+| | | | | |____code-reviewer-mode-rules.snap
+| | | | | |____code-mode-rules.snap
+| | | | | |____test-engineer-mode-rules.snap
+| | | | | |____with-custom-instructions.snap
+| | | | | |____ask-mode-prompt.snap
+| | | | | |____architect-mode-rules.snap
+| | | | | |____mcp-server-creation-enabled.snap
+| | | | | |____combined-custom-instructions.snap
+| | | | | |____ask-mode-rules.snap
+| | | | | |____with-preferred-language.snap
+| | | | | |____global-and-mode-instructions.snap
+| | | | | |____architect-mode-prompt.snap
+| | | | | |____empty-mode-instructions.snap
+| | | | | |____partial-reads-enabled.snap
+| | | | | |____generic-rules-fallback.snap
+| | | | | |____undefined-mode-instructions.snap
+| | | | | |____prioritized-instructions-order.snap
+| | | | | |____mcp-server-creation-disabled.snap
+| | | | |____system-prompt
+| | | | | |____consistent-system-prompt.snap
+| | | | | |____with-diff-enabled-false.snap
+| | | | | |____with-computer-use-support.snap
+| | | | | |____with-different-viewport-size.snap
+| | | | | |____with-diff-enabled-true.snap
+| | | | | |____with-mcp-hub-provided.snap
+| | | | | |____with-diff-enabled-undefined.snap
+| | | | | |____with-undefined-mcp-hub.snap
+| | |____system.ts
+| | |____responses.ts
+| |____environment
+| | |____reminder.ts
+| | |____getEnvironmentDetails.ts
+| | |______tests__
+| | | |____getEnvironmentDetails.spec.ts
+| |____message-queue
+| | |____MessageQueueService.ts
+| |____message-manager
+| | |____index.spec.ts
+| | |____index.ts
+| |____condense
+| | |______tests__
+| | | |____index.spec.ts
+| | | |____condense.spec.ts
+| | | |____rewind-after-condense.spec.ts
+| | |____index.ts
+| |____kilocode.ts
+| |____auto-approval
+| | |____commands.ts
+| | |____mcp.ts
+| | |____AutoApprovalHandler.ts
+| | |______tests__
+| | | |____AutoApprovalHandler.spec.ts
+| | |____tools.ts
+| | |____index.ts
+| |____context-tracking
+| | |____FileContextTrackerTypes.ts
+| | |____FileContextTracker.ts
+|____extension
+| |____api.ts
+| |______tests__
+| | |____api-send-message.spec.ts
+|____package.nls.ca.json
+|____package.nls.hi.json
+|____esbuild.mjs
+|____.vscodeignore
+|____package.nls.id.json
+|____package.nls.cs.json
+|____package.nls.pt-BR.json
+|____turbo.json
+|____extension.ts
+|____package.nls.zh-TW.json
+|____package.nls.vi.json
+|____walkthrough
+| |____step5.md
+| |____step1.md
+| |____step4.md
+| |____images
+| | |____context.gif
+| | |____design_patterns.png
+| | |____modes.gif
+| | |____unknown_error_stripe_rb.png
+| | |____hn-nextjs.png
+| | |____hn-clone-django.gif
+| | |____askui.png
+| | |____custom_modes.gif
+| |____step3.md
+| |____step2.md
+|____utils
+| |____safeWriteJson.ts
+| |____mcp-name.ts
+| |____xml-matcher.ts
+| |____outputChannelLogger.ts
+| |____path.ts
+| |____lancedb-manager.ts
+| |____commands.ts
+| |____github-url-utils.ts
+| |____autoLaunchingTask.ts
+| |____vscode-config.ts
+| |____fowardingLogger.ts
+| |____anthropicApiKeyWarning.ts
+| |____errors.ts
+| |____vitest-verbosity.ts
+| |____json-schema.ts
+| |____storage.ts
+| |____networkProxy.ts
+| |____fs.ts
+| |____image-parsing.ts
+| |____usage-tracker.ts
+| |____kilo-config-file.ts
+| |____autoImportSettings.ts
+| |______tests__
+| | |____enhance-prompt.spec.ts
+| | |____vscode-config.spec.ts
+| | |____shell.spec.ts
+| | |____path.spec.ts
+| | |____project-config.spec.ts
+| | |____tiktoken.spec.ts
+| | |____tool-id.spec.ts
+| | |____autoImportSettings.spec.ts
+| | |____storage.spec.ts
+| | |____safeWriteJson.test.ts
+| | |____cost.spec.ts
+| | |____git.spec.ts
+| | |____resolveToolProtocol.spec.ts
+| | |____terminalCommandGenerator.spec.ts
+| | |____config.spec.ts
+| | |____keybindings.spec.ts
+| | |____json-schema.spec.ts
+| | |____xml-matcher.spec.ts
+| | |____xml.spec.ts
+| | |____anthropicApiKeyWarning.spec.ts
+| | |____mcp-name.spec.ts
+| | |____image-parsing.spec.ts
+| | |____object.spec.ts
+| | |____networkProxy.spec.ts
+| | |____text-normalization.spec.ts
+| | |____migrateSettings.spec.ts
+| | |____outputChannelLogger.spec.ts
+| |____tts.ts
+| |____xml.ts
+| |____shell.ts
+| |____resolveToolProtocol.ts
+| |____tiktoken.ts
+| |____focusPanel.ts
+| |____keybindings.ts
+| |____object.ts
+| |____tool-id.ts
+| |____terminalCommandGenerator.ts
+| |____config.ts
+| |____text-normalization.ts
+| |____git.ts
+| |____logging
+| | |____CompactLogger.ts
+| | |____types.ts
+| | |______tests__
+| | | |____CompactTransport.spec.ts
+| | | |____MockTransport.ts
+| | | |____CompactLogger.spec.ts
+| | |____CompactTransport.ts
+| | |____index.ts
+| |____single-completion-handler.ts
+| |____migrateSettings.ts
+| |____pathUtils.ts
+| |____globalContext.ts
+| |____countTokens.ts
+|____package.nls.ar.json
+|____shared
+| |____WebviewMessage.ts
+| |____embeddingModels.ts
+| |____quote-protection.ts
+| |____ExtensionMessage.ts
+| |____todo.ts
+| |____array.ts
+| |____getApiMetrics.ts
+| |____cost.ts
+| |____kilocode
+| | |____errorUtils.ts
+| | |____headers.ts
+| | |____mcp.ts
+| | |____cli-sessions
+| | | |____types
+| | | | |____ITaskDataProvider.ts
+| | | | |____ILogger.ts
+| | | | |____IExtensionMessenger.ts
+| | | | |____IPathProvider.ts
+| | | |____core
+| | | | |____SessionStateManager.ts
+| | | | |____SyncQueue.ts
+| | | | |____GitStateService.ts
+| | | | |____SessionClient.ts
+| | | | |____TokenValidationService.ts
+| | | | |____SessionSyncService.ts
+| | | | |____SessionTitleService.ts
+| | | | |____TrpcClient.ts
+| | | | |____SessionLifecycleService.ts
+| | | | |______tests__
+| | | | | |____TrpcClient.spec.ts
+| | | | | |____SessionManager.spec.ts
+| | | | | |____TokenValidationService.spec.ts
+| | | | | |____GitStateService.spec.ts
+| | | | | |____SyncQueue.spec.ts
+| | | | | |____SessionClient.spec.ts
+| | | | | |____SessionTitleService.spec.ts
+| | | | | |____SessionStateManager.spec.ts
+| | | | | |____SessionLifecycleService.spec.ts
+| | | | | |____SessionSyncService.spec.ts
+| | | | |____SessionManager.ts
+| | | |____extension
+| | | | |____session-manager-utils.ts
+| | | |____utils
+| | | | |____SessionPersistenceManager.ts
+| | | | |______tests__
+| | | | | |____SessionPersistenceManager.spec.ts
+| | | | | |____fetchBlobFromSignedUrl.spec.ts
+| | | | |____fetchBlobFromSignedUrl.ts
+| | | |____config.ts
+| | |____rules.ts
+| | |____getTaskHistory.ts
+| | |____organization.ts
+| | |____wrapper.ts
+| | |____kiloLanguages.ts
+| |____sttContract.ts
+| |____support-prompt.ts
+| |____http.ts
+| |____language.ts
+| |____globalFileNames.ts
+| |____ProfileValidator.ts
+| |____mcp.ts
+| |____utils
+| | |____requesty.ts
+| | |______tests__
+| | | |____requesty.spec.ts
+| | |____exec.ts
+| | |____escapeHtml.ts
+| | |____iterable.ts
+| |____experiments.ts
+| |____api.ts
+| |____checkExistApiConfig.ts
+| |____modes.ts
+| |____GitWatcher.ts
+| |____tool-aliases.ts
+| |____core.ts
+| |______tests__
+| | |____context-mentions.spec.ts
+| | |____support-prompts.spec.ts
+| | |____experiments.spec.ts
+| | |____getApiMetrics-context-indicator.spec.ts
+| | |____parse-command.spec.ts
+| | |____getApiMetrics.spec.ts
+| | |____quote-protection.spec.ts
+| | |____combineCommandSequences.spec.ts
+| | |____modes-empty-prompt-component.spec.ts
+| | |____modes.spec.ts
+| | |____checkExistApiConfig.spec.ts
+| | |____ProfileValidator.spec.ts
+| | |____experiments-preventFocusDisruption.spec.ts
+| | |____language.spec.ts
+| | |____vsCodeSelectorUtils.spec.ts
+| | |____combineApiRequests.spec.ts
+| | |____GitWatcher.spec.ts
+| | |____api.spec.ts
+| |____vsCodeSelectorUtils.ts
+| |____string-extensions.d.ts
+| |____tools.ts
+| |____context-mentions.ts
+| |____parse-command.ts
+| |____skills.ts
+| |____combineApiRequests.ts
+| |____id.ts
+| |____combineCommandSequences.ts
+| |____cline-rules.ts
+| |____browserUtils.ts
+| |____safeJsonParse.ts
+| |____package.ts
+|____package.nls.es.json
+|____.prettierignore
+|____package.nls.th.json
+|____integrations
+| |____misc
+| | |____extract-text.ts
+| | |____process-images.ts
+| | |____open-file.ts
+| | |____read-file-with-budget.ts
+| | |____extract-text-from-xlsx.ts
+| | |____image-handler.ts
+| | |______tests__
+| | | |____read-lines.spec.ts
+| | | |____open-file.spec.ts
+| | | |____extract-text.spec.ts
+| | | |____line-counter.spec.ts
+| | | |____read-file-tool.spec.ts
+| | | |____extract-text-large-files.spec.ts
+| | | |____image-handler.spec.ts
+| | | |____extract-text-from-xlsx.test.ts
+| | | |____performance
+| | | | |____processCarriageReturns.benchmark.ts
+| | | |____read-file-with-budget.spec.ts
+| | |____line-counter.ts
+| | |____read-lines.ts
+| | |____export-markdown.ts
+| |____claude-code
+| | |____oauth.ts
+| | |____streaming-client.ts
+| | |____message-filter.ts
+| | |______tests__
+| | | |____oauth.spec.ts
+| | | |____streaming-client.spec.ts
+| |____openai-codex
+| | |____oauth.ts
+| |____workspace
+| | |______tests__
+| | | |____WorkspaceTracker.spec.ts
+| | |____WorkspaceTracker.ts
+| |____terminal
+| | |____ExecaTerminalProcess.ts
+| | |____BaseTerminal.ts
+| | |____ShellIntegrationManager.ts
+| | |____BaseTerminalProcess.ts
+| | |____README.md
+| | |____TerminalRegistry.ts
+| | |____types.ts
+| | |____TerminalProcess.ts
+| | |____mergePromise.ts
+| | |______tests__
+| | | |____TerminalRegistry.spec.ts
+| | | |____TerminalProcessExec.pwsh.spec.ts
+| | | |____Terminal.env.test.ts
+| | | |____TerminalProcessInterpretExitCode.spec.ts
+| | | |____TerminalProcess.spec.ts
+| | | |____ExecaTerminal.spec.ts
+| | | |____TerminalProcessExec.bash.spec.ts
+| | | |____ExecaTerminalProcess.spec.ts
+| | | |____TerminalProcessExec.cmd.spec.ts
+| | | |____TerminalProcessExec.common.ts
+| | | |____streamUtils
+| | | | |____cmdStream.ts
+| | | | |____bashStream.ts
+| | | | |____mockStream.ts
+| | | | |____index.ts
+| | | | |____pwshStream.ts
+| | | |____setupTerminalTests.ts
+| | |____Terminal.ts
+| | |____ExecaTerminal.ts
+| |____theme
+| | |____default-themes
+| | | |____dark_modern.json
+| | | |____dark_vs.json
+| | | |____light_vs.json
+| | | |____hc_black.json
+| | | |____dark_plus.json
+| | | |____light_modern.json
+| | | |____vscode-theme-dark.css
+| | | |____light_plus.json
+| | | |____theme-variables.css
+| | | |____hc_light.json
+| | | |____vscode-theme-light.css
+| | |____getTheme.ts
+| |____diagnostics
+| | |______tests__
+| | | |____diagnostics.spec.ts
+| | |____index.ts
+| |____notifications
+| | |______tests__
+| | | |____index.spec.ts
+| | |____index.ts
+| |____editor
+| | |____DiffViewProvider.ts
+| | |______tests__
+| | | |____EditorUtils.spec.ts
+| | | |____DiffViewProvider.spec.ts
+| | |____EditorUtils.ts
+| | |____DecorationController.ts
+|____package.nls.tr.json
+|______tests__
+| |____single-open-invariant.spec.ts
+| |____history-resume-delegation.spec.ts
+| |____extension.spec.ts
+| |____commands.spec.ts
+| |____delegation-events.spec.ts
+| |____new-task-delegation.spec.ts
+| |____nested-delegation-resume.spec.ts
+| |____command-integration.spec.ts
+| |____dist_assets.spec.ts
+| |____common-mocks.ts
+| |____provider-delegation.spec.ts
+| |____command-mentions.spec.ts
+| |____migrateSettings.spec.ts
+|____.gitignore
+|____package.json
+|____package.nls.ja.json
+|____package.nls.nl.json
+|____api
+| |____providers
+| | |____anthropic-vertex.ts
+| | |____openai-responses.ts
+| | |____ovhcloud.ts
+| | |____chutes.ts
+| | |____base-provider.ts
+| | |____bedrock.ts
+| | |____native-ollama.ts
+| | |____roo.ts
+| | |____human-relay.ts
+| | |____fetchers
+| | | |____ovhcloud.ts
+| | | |____versionedSettings.ts
+| | | |____chutes.ts
+| | | |____modelCache.ts
+| | | |____ollama.ts
+| | | |____roo.ts
+| | | |____nano-gpt.ts
+| | | |____deepinfra.ts
+| | | |____huggingface.ts
+| | | |____requesty.ts
+| | | |____litellm.ts
+| | | |____vercel-ai-gateway.ts
+| | | |____gemini.ts
+| | | |____inception.ts
+| | | |______tests__
+| | | | |____chutes.spec.ts
+| | | | |____litellm.spec.ts
+| | | | |____roo.spec.ts
+| | | | |____lmstudio.test.ts
+| | | | |____ollama.test.ts
+| | | | |____fixtures
+| | | | | |____openrouter-models.json
+| | | | | |____ollama-model-details.json
+| | | | | |____sap-ai-core-deployments.json
+| | | | | |____lmstudio-model-details.json
+| | | | | |____sap-ai-core-models-orchestration.json
+| | | | | |____sap-ai-core-models.json
+| | | | | |____openrouter-model-endpoints.json
+| | | | |____versionedSettings.spec.ts
+| | | | |____sap-ai-core.spec.ts
+| | | | |____openrouter.spec.ts
+| | | | |____modelEndpointCache.spec.ts
+| | | | |____modelCache.spec.ts
+| | | | |____vercel-ai-gateway.spec.ts
+| | | |____sap-ai-core.ts
+| | | |____io-intelligence.ts
+| | | |____glama.ts
+| | | |____modelEndpointCache.ts
+| | | |____openrouter.ts
+| | | |____lmstudio.ts
+| | | |____unbound.ts
+| | | |____synthetic.ts
+| | |____openai-native.ts
+| | |____nano-gpt.ts
+| | |____kilocode
+| | | |____chunk-schema.ts
+| | | |____model-settings.ts
+| | | |____verifyFinishReason.ts
+| | | |____openai-strict-schema.ts
+| | | |____FimHandler.ts
+| | | |____getKilocodeDefaultModel.ts
+| | | |____IFimProvider.ts
+| | |____deepinfra.ts
+| | |____anthropic.ts
+| | |____xai.ts
+| | |____huggingface.ts
+| | |____deepseek.ts
+| | |____baseten.ts
+| | |____openai-codex.ts
+| | |____fireworks.ts
+| | |____kilocode-openrouter.ts
+| | |____base-openai-compatible-provider.ts
+| | |____openai.ts
+| | |____lite-llm.ts
+| | |____requesty.ts
+| | |____utils
+| | | |____error-handler.ts
+| | | |______tests__
+| | | | |____openai-error-handler.spec.ts
+| | | | |____image-generation.spec.ts
+| | | | |____error-handler.spec.ts
+| | | | |____timeout-config.spec.ts
+| | | |____timeout-config.ts
+| | | |____image-generation.ts
+| | | |____router-tool-preferences.ts
+| | | |____openai-error-handler.ts
+| | |____claude-code.ts
+| | |____groq.ts
+| | |____zai.ts
+| | |____vercel-ai-gateway.ts
+| | |____doubao.ts
+| | |____fake-ai.ts
+| | |____vertex.ts
+| | |____gemini.ts
+| | |____inception.ts
+| | |____router-provider.ts
+| | |______tests__
+| | | |____native-ollama.spec.ts
+| | | |____mistral.spec.ts
+| | | |____anthropic-vertex.spec.ts
+| | | |____unbound.spec.ts
+| | | |____openai-native-tools.spec.ts
+| | | |____base-openai-compatible-provider-timeout.spec.ts
+| | | |____cerebras.spec.ts
+| | | |____bedrock-error-handling.spec.ts
+| | | |____openai-usage-tracking.spec.ts
+| | | |____openai-codex-native-tool-calls.spec.ts
+| | | |____glama.spec.ts
+| | | |____deepinfra.spec.ts
+| | | |____chutes.spec.ts
+| | | |____bedrock-invokedModelId.spec.ts
+| | | |____lm-studio-timeout.spec.ts
+| | | |____openai-native.spec.ts
+| | | |____deepseek.spec.ts
+| | | |____roo.spec.ts
+| | | |____bedrock-reasoning.spec.ts
+| | | |____requesty.spec.ts
+| | | |____vscode-lm.spec.ts
+| | | |____xai.spec.ts
+| | | |____nano-gpt-native-tools.spec.ts
+| | | |____bedrock-native-tools.spec.ts
+| | | |____bedrock.spec.ts
+| | | |____openai-native-usage.spec.ts
+| | | |____minimax.spec.ts
+| | | |____ovhcloud.spec.ts
+| | | |____qwen-code-native-tools.spec.ts
+| | | |____openai-responses.spec.ts
+| | | |____groq.spec.ts
+| | | |____fireworks.spec.ts
+| | | |____openai.spec.ts
+| | | |____base-provider.spec.ts
+| | | |____lmstudio-native-tools.spec.ts
+| | | |____claude-code-caching.spec.ts
+| | | |____lmstudio.spec.ts
+| | | |____bedrock-custom-arn.spec.ts
+| | | |____mistral-fim.spec.ts
+| | | |____io-intelligence.spec.ts
+| | | |____constants.spec.ts
+| | | |____openai-codex.spec.ts
+| | | |____openai-strict-schema.spec.ts
+| | | |____sambanova.spec.ts
+| | | |____kilocode-openrouter.spec.ts
+| | | |____virtual-quota-fallback-provider.spec.ts
+| | | |____openai-timeout.spec.ts
+| | | |____sap-ai-core.spec.ts
+| | | |____claude-code.spec.ts
+| | | |____bedrock-inference-profiles.spec.ts
+| | | |____bedrock-vpc-endpoint.spec.ts
+| | | |____openrouter.spec.ts
+| | | |____vertex.spec.ts
+| | | |____synthetic.spec.ts
+| | | |____zai.spec.ts
+| | | |____featherless.spec.ts
+| | | |____gemini-handler.spec.ts
+| | | |____base-openai-compatible-provider.spec.ts
+| | | |____lite-llm.spec.ts
+| | | |____vercel-ai-gateway.spec.ts
+| | | |____anthropic.spec.ts
+| | | |____moonshot.spec.ts
+| | | |____gemini.spec.ts
+| | |____featherless.ts
+| | |____constants.ts
+| | |____sap-ai-core.ts
+| | |____virtual-quota-fallback.ts
+| | |____io-intelligence.ts
+| | |____glama.ts
+| | |____sambanova.ts
+| | |____qwen-code.ts
+| | |____openrouter.ts
+| | |____index.ts
+| | |____minimax.ts
+| | |____mistral.ts
+| | |____lm-studio.ts
+| | |____cerebras.ts
+| | |____moonshot.ts
+| | |____vscode-lm.ts
+| | |____unbound.ts
+| | |____synthetic.ts
+| |____index.ts
+| |____transform
+| | |____gemini-format.ts
+| | |____vscode-lm-format.ts
+| | |____bedrock-converse-format.ts
+| | |____openai-format.ts
+| | |____reasoning.ts
+| | |____cache-strategy
+| | | |____multi-point-strategy.ts
+| | | |____base-strategy.ts
+| | | |____types.ts
+| | | |______tests__
+| | | | |____cache-strategy.spec.ts
+| | |____stream.ts
+| | |______tests__
+| | | |____vscode-lm-format.spec.ts
+| | | |____image-cleaning.spec.ts
+| | | |____r1-format.spec.ts
+| | | |____openai-format.spec.ts
+| | | |____minimax-format.spec.ts
+| | | |____mistral-format.spec.ts
+| | | |____stream.spec.ts
+| | | |____model-params.spec.ts
+| | | |____bedrock-converse-format.spec.ts
+| | | |____reasoning.spec.ts
+| | | |____gemini-format.spec.ts
+| | | |____anthropic-filter.spec.ts
+| | |____r1-format.ts
+| | |____minimax-format.ts
+| | |____mistral-format.ts
+| | |____image-cleaning.ts
+| | |____anthropic-filter.ts
+| | |____model-params.ts
+| | |____caching
+| | | |____anthropic.ts
+| | | |____vercel-ai-gateway.ts
+| | | |____vertex.ts
+| | | |____gemini.ts
+| | | |______tests__
+| | | | |____kilocode.spec.ts
+| | | | |____vertex.spec.ts
+| | | | |____vercel-ai-gateway.spec.ts
+| | | | |____anthropic.spec.ts
+| | | | |____gemini.spec.ts
+| | | |____kilocode.ts
+| | |____zai-format.ts
+|____tsconfig.json
+|____package.nls.zh-CN.json
+|____workers
+| |____types.ts
+| |____countTokens.ts
+|____activate
+| |____humanRelay.ts
+| |____handleTask.ts
+| |____CodeActionProvider.ts
+| |____registerTerminalActions.ts
+| |______tests__
+| | |____CodeActionProvider.spec.ts
+| | |____registerCommands.spec.ts
+| |____index.ts
+| |____handleUri.ts
+| |____registerCommands.ts
+| |____registerCodeActions.ts
+|____vitest.config.ts
+|____package.nls.uk.json
+|____i18n
+| |____locales
+| | |____pl
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____vi
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____ja
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____it
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____ca
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____cs
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____ru
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____zh-CN
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____uk
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____zh-TW
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____ar
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____pt-BR
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____nl
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____hi
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____de
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____ko
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____id
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____fr
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____es
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____en
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____th
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| | |____tr
+| | | |____embeddings.json
+| | | |____jetbrains.json
+| | | |____tools.json
+| | | |____common.json
+| | | |____marketplace.json
+| | | |____mcp.json
+| | | |____kilocode.json
+| |____setup.ts
+| |____index.ts
+|____package.nls.pl.json
+|____package.nls.ru.json
+|____package.nls.de.json
+|____assets
+| |____images
+| | |____roo.png
+| | |____openrouter.png
+| | |____requesty.png
+| |____codicons
+| | |____codicon.css
+| | |____codicon.ttf
+| |____docs
+| | |____demo.gif
+| |____icons
+| | |____kilo.png
+| | |____kilo-light.svg
+| | |____icon.png
+| | |____kilo-dark.png
+| | |____kilo-dark.svg
+| | |____kilo-white.svg
+| | |____kilo-icon-font.woff2
+| | |____logo-outline-black.png
+|____vitest.setup.ts
+|____package.nls.it.json
+|____eslint.config.mjs
+|____package.nls.json
+|____services
+| |____mocking
+| | |____MockTextEditor.ts
+| | |______tests__
+| | | |____MockTextEditor.test.ts
+| | | |____MockTextDocument.test.ts
+| | |____MockTextDocument.ts
+| |____mdm
+| | |____MdmService.ts
+| | |______tests__
+| | | |____MdmService.spec.ts
+| |____auto-purge
+| | |______tests__
+| | | |____AutoPurgeService.test.ts
+| | | |____AutoPurgeScheduler.test.ts
+| | |____AutoPurgeService.ts
+| | |____AutoPurgeScheduler.ts
+| | |____index.ts
+| |____tree-sitter
+| | |____markdownParser.ts
+| | |____queries
+| | | |____toml.ts
+| | | |____rust.ts
+| | | |____scala.ts
+| | | |____vue.ts
+| | | |____zig.ts
+| | | |____c-sharp.ts
+| | | |____javascript.ts
+| | | |____php.ts
+| | | |____kotlin.ts
+| | | |____python.ts
+| | | |____go.ts
+| | | |____swift.ts
+| | | |____c.ts
+| | | |____elisp.ts
+| | | |____elixir.ts
+| | | |____css.ts
+| | | |____cpp.ts
+| | | |____tlaplus.ts
+| | | |____embedded_template.ts
+| | | |____ruby.ts
+| | | |____html.ts
+| | | |____typescript.ts
+| | | |____tsx.ts
+| | | |____solidity.ts
+| | | |____index.ts
+| | | |____ocaml.ts
+| | | |____systemrdl.ts
+| | | |____java.ts
+| | | |____lua.ts
+| | |____languageParser.ts
+| | |______tests__
+| | | |____parseSourceCodeDefinitions.tsx.spec.ts
+| | | |____parseSourceCodeDefinitions.systemrdl.spec.ts
+| | | |____parseSourceCodeDefinitions.cpp.spec.ts
+| | | |____helpers.ts
+| | | |____parseSourceCodeDefinitions.java.spec.ts
+| | | |____parseSourceCodeDefinitions.elisp.spec.ts
+| | | |____parseSourceCodeDefinitions.embedded_template.spec.ts
+| | | |____parseSourceCodeDefinitions.elixir.spec.ts
+| | | |____inspectTsx.spec.ts
+| | | |____inspectElisp.spec.ts
+| | | |____inspectSystemRDL.spec.ts
+| | | |____inspectJava.spec.ts
+| | | |____inspectTypeScript.spec.ts
+| | | |____inspectCpp.spec.ts
+| | | |____inspectPhp.spec.ts
+| | | |____parseSourceCodeDefinitions.typescript.spec.ts
+| | | |____inspectHtml.spec.ts
+| | | |____parseSourceCodeDefinitions.go.spec.ts
+| | | |____parseSourceCodeDefinitions.ruby.spec.ts
+| | | |____parseSourceCodeDefinitions.html.spec.ts
+| | | |____inspectSolidity.spec.ts
+| | | |____parseSourceCodeDefinitions.kotlin.spec.ts
+| | | |____inspectZig.spec.ts
+| | | |____inspectRuby.spec.ts
+| | | |____parseSourceCodeDefinitions.python.spec.ts
+| | | |____parseSourceCodeDefinitions.scala.spec.ts
+| | | |____inspectGo.spec.ts
+| | | |____parseSourceCodeDefinitions.c.spec.ts
+| | | |____parseSourceCodeDefinitions.rust.spec.ts
+| | | |____inspectScala.spec.ts
+| | | |____parseSourceCodeDefinitions.solidity.spec.ts
+| | | |____parseSourceCodeDefinitions.php.spec.ts
+| | | |____parseSourceCodeDefinitions.zig.spec.ts
+| | | |____markdownParser.spec.ts
+| | | |____inspectRust.spec.ts
+| | | |____languageParser.spec.ts
+| | | |____inspectPython.spec.ts
+| | | |____parseSourceCodeDefinitions.lua.spec.ts
+| | | |____inspectKotlin.spec.ts
+| | | |____inspectJavaScript.spec.ts
+| | | |____inspectTLAPlus.spec.ts
+| | | |____parseSourceCodeDefinitions.json.spec.ts
+| | | |____parseSourceCodeDefinitions.c-sharp.spec.ts
+| | | |____inspectCSharp.spec.ts
+| | | |____inspectJson.spec.ts
+| | | |____inspectLua.spec.ts
+| | | |____inspectC.spec.ts
+| | | |____markdownIntegration.spec.ts
+| | | |____fixtures
+| | | | |____sample-cpp.ts
+| | | | |____sample-rust.ts
+| | | | |____sample-toml.ts
+| | | | |____sample-json.ts
+| | | | |____sample-javascript.ts
+| | | | |____sample-solidity.ts
+| | | | |____sample-tsx.ts
+| | | | |____sample-elixir.ts
+| | | | |____sample-c.ts
+| | | | |____sample-go.ts
+| | | | |____sample-kotlin.ts
+| | | | |____sample-python.ts
+| | | | |____sample-ocaml.ts
+| | | | |____sample-tlaplus.ts
+| | | | |____sample-lua.ts
+| | | | |____sample-vue.ts
+| | | | |____sample-typescript.ts
+| | | | |____sample-systemrdl.ts
+| | | | |____sample-ruby.ts
+| | | | |____sample-zig.ts
+| | | | |____sample-html.ts
+| | | | |____sample-scala.ts
+| | | | |____sample-php.ts
+| | | | |____sample-elisp.ts
+| | | | |____sample-c-sharp.ts
+| | | | |____sample-css.ts
+| | | | |____sample-embedded_template.ts
+| | | | |____sample-java.ts
+| | | | |____sample-swift.ts
+| | | |____inspectOCaml.spec.ts
+| | | |____parseSourceCodeDefinitions.toml.spec.ts
+| | | |____parseSourceCodeDefinitions.vue.spec.ts
+| | | |____parseSourceCodeDefinitions.ocaml.spec.ts
+| | | |____inspectTOML.spec.ts
+| | | |____parseSourceCodeDefinitions.tlaplus.spec.ts
+| | | |____inspectCSS.spec.ts
+| | | |____parseSourceCodeDefinitions.swift.spec.ts
+| | | |____parseSourceCodeDefinitions.javascript.spec.ts
+| | | |____inspectEmbeddedTemplate.spec.ts
+| | | |____inspectElixir.spec.ts
+| | | |____inspectVue.spec.ts
+| | | |____inspectSwift.spec.ts
+| | | |____parseSourceCodeDefinitions.css.spec.ts
+| | |____index.ts
+| |____roo-config
+| | |______tests__
+| | | |____index.spec.ts
+| | |____index.ts
+| |____kilocode
+| | |____OrganizationService.ts
+| | |______tests__
+| | | |____DeviceAuthService.test.ts
+| | |____DeviceAuthService.ts
+| |____config
+| | |____ConfigChangeNotifier.ts
+| | |____ConfigChangeNotifier.spec.ts
+| |____continuedev
+| | |____EXAMPLES.md
+| | |____tree-sitter
+| | | |____static-context-queries
+| | | | |____relevant-headers-queries
+| | | | | |____typescript-get-toplevel-headers.scm
+| | | | |____relevant-types-queries
+| | | | | |____typescript-find-typedecl-given-typeidentifier.scm
+| | | | | |____typescript-extract-identifiers.scm
+| | | | |____hole-queries
+| | | | | |____typescript.scm
+| | | |____code-snippet-queries
+| | | | |____go.scm
+| | | | |____ocaml.scm
+| | | | |____elixir.scm
+| | | | |____c.scm
+| | | | |____php.scm
+| | | | |____typescript.scm
+| | | | |____python.scm
+| | | | |____c_sharp.scm
+| | | | |____cpp.scm
+| | | | |____ruby.scm
+| | | | |____elisp.scm
+| | | | |____javascript.scm
+| | | | |____ql.scm
+| | | | |____rust.scm
+| | | | |____java.scm
+| | | |____root-path-context-queries
+| | | | |____go
+| | | | | |____function_declaration.scm
+| | | | |____python
+| | | | | |____class_definition.scm
+| | | | | |____function_definition.scm
+| | | | |____typescript
+| | | | | |____generator_function_declaration.scm
+| | | | | |____method_definition.scm
+| | | | | |____arrow_function.scm
+| | | | | |____function_declaration.scm
+| | | | | |____class_declaration.scm
+| | | | |____java
+| | | | | |____method_declaration.scm
+| | | | |____php
+| | | | | |____method_declaration.scm
+| | | | | |____function_definition.scm
+| | | | | |____class_declaration.scm
+| | | | |____cpp
+| | | | | |____function_definition.scm
+| | | |____tag-queries
+| | | | |____tree-sitter-python-tags.scm
+| | | | |____tree-sitter-ql-tags.scm
+| | | | |____tree-sitter-rust-tags.scm
+| | | | |____tree-sitter-go-tags.scm
+| | | | |____tree-sitter-elm-tags.scm
+| | | | |____tree-sitter-javascript-tags.scm
+| | | | |____tree-sitter-java-tags.scm
+| | | | |____tree-sitter-ocaml-tags.scm
+| | | | |____tree-sitter-php-tags.scm
+| | | | |____tree-sitter-cpp-tags.scm
+| | | | |____tree-sitter-typescript-tags.scm
+| | | | |____tree-sitter-c_sharp-tags.scm
+| | | | |____tree-sitter-c-tags.scm
+| | | | |____tree-sitter-elisp-tags.scm
+| | | | |____tree-sitter-elixir-tags.scm
+| | | | |____tree-sitter-ruby-tags.scm
+| | | |____import-queries
+| | | | |____typescript.scm
+| | | | |____python.scm
+| | | | |____cpp.scm
+| | | | |____java.scm
+| | |____ARCHITECTURE.md
+| | |____core
+| | | |____llm
+| | | | |____model-info
+| | | | | |____providers
+| | | | | | |____openai.ts
+| | | | | |____types.ts
+| | | | | |____index.ts
+| | | | |____openai-adapters
+| | | | | |____apis
+| | | | | | |____Mock.ts
+| | | | | | |____base.ts
+| | | | | | |____Bedrock.ts
+| | | | | | |____LlamaStack.ts
+| | | | | | |____Cohere.ts
+| | | | | | |____AnthropicUtils.ts
+| | | | | | |____Relace.ts
+| | | | | | |____WatsonX.ts
+| | | | | | |____Anthropic.ts
+| | | | | | |____ContinueProxy.ts
+| | | | | | |____DeepSeek.ts
+| | | | | | |____OpenAI.ts
+| | | | | | |____Gemini.ts
+| | | | | | |____Inception.ts
+| | | | | | |____Jina.ts
+| | | | | | |____Azure.ts
+| | | | | | |____CometAPI.ts
+| | | | | | |____OpenRouter.ts
+| | | | | | |____AnthropicCachingStrategies.ts
+| | | | | | |____Moonshot.ts
+| | | | | | |____VertexAI.ts
+| | | | | | |____OpenRouterCaching.ts
+| | | | | |____util
+| | | | | | |____emptyChatCompletion.ts
+| | | | | | |____gemini-types.ts
+| | | | | |____types.ts
+| | | | | |____util.ts
+| | | | | |____index.ts
+| | | | |____llamaTokenizer.d.ts
+| | | | |____messages.ts
+| | | | |____llamaTokenizer.js
+| | | | |____constants.ts
+| | | | |____templates
+| | | | | |____edit
+| | | | | | |____gpt.ts
+| | | | | |____edit.ts
+| | | | |____index.ts
+| | | | |____llms
+| | | | | |____Mock.ts
+| | | | | |____OpenAI.ts
+| | | | | |____OpenRouter.ts
+| | | | | |____Mistral.ts
+| | | | | |____KiloCode.ts
+| | | | |____openaiTypeConverters.ts
+| | | | |____countTokens.test.ts
+| | | | |____countTokens.ts
+| | | |____autocomplete
+| | | | |____classification
+| | | | | |____shouldCompleteMultiline.ts
+| | | | |____snippets
+| | | | | |____getAllSnippets.ts
+| | | | | |____getAllSnippets.test.ts
+| | | | | |____index.ts
+| | | | |____context
+| | | | | |____ranking
+| | | | | | |____index.test.ts
+| | | | | | |____index.ts
+| | | | | |____static-context
+| | | | | | |____tree-sitter-utils.ts
+| | | | | | |____StaticContextService.ts
+| | | | | | |____types.ts
+| | | | | |____root-path-context
+| | | | | | |____RootPathContextService.test.ts
+| | | | | | |______fixtures__
+| | | | | | | |____files
+| | | | | | | | |____python
+| | | | | | | | | |____functions.py
+| | | | | | | | | |____classes.py
+| | | | | | | | |____typescript
+| | | | | | | | | |____classes.ts
+| | | | | | | | | |____generators.ts
+| | | | | | | | | |____arrowFunctions.ts
+| | | | | | | | | |____classMethods.ts
+| | | | | | | | | |____functions.ts
+| | | | | | | | |____file1.php
+| | | | | | | | |______init__.py
+| | | | | | | | |____file1.go
+| | | | | | | | |____base_module.py
+| | | | | | |____RootPathContextService.ts
+| | | | | | |____testUtils.ts
+| | | | | | |______test-cases__
+| | | | | | | |____python.ts
+| | | | | | | |____typescript.ts
+| | | | | | | |____index.ts
+| | | | | |____ContextRetrievalService.ts
+| | | | | |____ImportDefinitionsService.test.ts
+| | | | | |____ImportDefinitionsService.ts
+| | | | |____util
+| | | | | |____AutocompleteLoggingService.ts
+| | | | | |____openedFilesLruCache.ts
+| | | | | |____AutocompleteLruCacheInMem.ts
+| | | | | |____processSingleLineCompletion.ts
+| | | | | |____AutocompleteLruCacheInMem.test.ts
+| | | | | |____ast.ts
+| | | | | |____types.ts
+| | | | | |____completionTestUtils.test.ts
+| | | | | |____textSimilarity.ts
+| | | | | |____processSingleLineCompletion.test.ts
+| | | | | |____AutocompleteDebouncer.ts
+| | | | | |____completionTestUtils.ts
+| | | | | |____HelperVars.ts
+| | | | |____filtering
+| | | | | |____test
+| | | | | | |____filter.test.ts
+| | | | | | |____testCases.ts
+| | | | | | |____NEGATIVE_TEST_CASES
+| | | | | | | |____QWEN_TYPESCRIPT.txt
+| | | | | | | |____QWEN_JSON.txt
+| | | | | | | |____STARCODER_PYTHON.TXT
+| | | | | | | |____STARCODER_JSON.txt
+| | | | | | | |____STARCODER_RUBY.TXT
+| | | | | | | |____STARCODER_RUST.TXT
+| | | | | | |____util.ts
+| | | | | |____BracketMatchingService.ts
+| | | | | |____BracketMatchingService.test.ts
+| | | | | |____streamTransforms
+| | | | | | |____charStream.test.ts
+| | | | | | |____lineStream.ts
+| | | | | | |____StreamTransformPipeline.ts
+| | | | | | |____lineStream.test.ts
+| | | | | | |____charStream.ts
+| | | | |____constants
+| | | | | |____AutocompleteLanguageInfo.ts
+| | | | | |____AutocompleteLanguageInfo.test.ts
+| | | | |____MinimalConfig.ts
+| | | | |____templating
+| | | | | |____validation.ts
+| | | | | |____getStopTokens.ts
+| | | | | |____formatOpenedFilesContext.ts
+| | | | | |____constructPrefixSuffix.ts
+| | | | | |____formatting.ts
+| | | | | |______tests__
+| | | | | | |____formatOpenedFilesContext.test.ts
+| | | | | | |____renderPrompt.test.ts
+| | | | | |____filtering.ts
+| | | | | |____index.ts
+| | | | | |____AutocompleteTemplate.ts
+| | | | |____types.ts
+| | | | |____postprocessing
+| | | | | |____removePrefixOverlap.ts
+| | | | | |____index.test.ts
+| | | | | |______tests__
+| | | | | | |____removePrefixOverlap.test.ts
+| | | | | |____index.ts
+| | | | |____CompletionProvider.ts
+| | | | |____generation
+| | | | | |____utils.test.ts
+| | | | | |____GeneratorReuseManager.ts
+| | | | | |____GeneratorReuseManager.test.ts
+| | | | | |____utils.ts
+| | | | | |____ListenableGenerator.test.ts
+| | | | | |____ListenableGenerator.ts
+| | | | | |____CompletionStreamer.ts
+| | | | |____prefiltering
+| | | | | |____index.ts
+| | | |____test
+| | | | |____fixtures.ts
+| | | | |____FakeIDE.ts
+| | | | |____testDir.ts
+| | | | |____vitest.global-setup.ts
+| | | | |____vitest.setup.ts
+| | | | |____FakeConfigHandler.ts
+| | | |____util
+| | | | |____TokensBatchingService.ts
+| | | | |____LruCache.test.ts
+| | | | |____parameters.ts
+| | | | |____treeSitter.ts
+| | | | |____uri.ts
+| | | | |____LruCache.ts
+| | | | |____ranges.ts
+| | | | |____treeSitter.test.ts
+| | | | |____logger.ts
+| | | | |____messageContent.ts
+| | | | |____filesystem.ts
+| | | | |____lcs.ts
+| | | | |____CodeRenderer.ts
+| | | | |____index.ts
+| | | | |____pathToUri.ts
+| | | | |____paths.ts
+| | | | |____merge.ts
+| | | |____vscode-test-harness
+| | | | |____src
+| | | | | |____autocomplete
+| | | | | | |____lsp.ts
+| | | | | | |____RecentlyVisitedRangesService.ts
+| | | | | | |____recentlyEdited.ts
+| | | | | |____VSCodeIde.ts
+| | | |____diff
+| | | | |____myers.ts
+| | | | |____streamDiff.test.ts
+| | | | |____util.test.ts
+| | | | |____streamDiff.ts
+| | | | |____myers.test.ts
+| | | | |____util.ts
+| | | | |____test-examples
+| | | | | |____fastapi.py.diff
+| | | | | |____fastapi-tabs-vs-spaces.py.diff
+| | | | | |____mock-llm.ts.diff
+| | | | | |____README.md
+| | | | | |____add-comments.py.diff
+| | | |____fetch
+| | | | |____stream.ts
+| | | |____indexing
+| | | | |____ignore.test.ts
+| | | | |____ignore.ts
+| | | | |____README.md
+| | | |____index.d.ts
+| | |____INTEGRATION.md
+| | |____LICENSE
+| | |____API_REFERENCE.md
+| | |____README.md
+| | |____.gitignore
+| |____marketplace
+| | |____SimpleInstaller.ts
+| | |______tests__
+| | | |____optional-parameters.spec.ts
+| | | |____RemoteConfigLoader.skill.spec.ts
+| | | |____marketplace-setting-check.spec.ts
+| | | |____SimpleInstaller.spec.ts
+| | | |____MarketplaceManager.skills.spec.ts
+| | | |____RemoteConfigLoader.spec.ts
+| | | |____nested-parameters.spec.ts
+| | | |____MarketplaceManager.spec.ts
+| | | |____SimpleInstaller.skill.spec.ts
+| | |____RemoteConfigLoader.ts
+| | |____tarball-utils.ts
+| | |____index.ts
+| | |____MarketplaceManager.ts
+| |____checkpoints
+| | |____RepoPerTaskCheckpointService.ts
+| | |____excludes.ts
+| | |____types.ts
+| | |______tests__
+| | | |____excludes.spec.ts
+| | | |____ShadowCheckpointService.spec.ts
+| | |____ShadowCheckpointService.ts
+| | |____index.ts
+| |____code-index
+| | |____managed
+| | | |____api-client.ts
+| | | |____ManagedIndexer.ts
+| | | |____git-utils.ts
+| | | |____types.ts
+| | | |______tests__
+| | | | |____get-base-branch.spec.ts
+| | | | |____git-tracked-files.spec.ts
+| | | | |____is-base-branch.spec.ts
+| | | | |____ManagedIndexer.spec.ts
+| | | |____ignore-list.ts
+| | |____manager.ts
+| | |____vector-store
+| | | |____qdrant-client.ts
+| | | |______tests__
+| | | | |____lancedb-vector-store.spec.ts
+| | | | |____qdrant-client.spec.ts
+| | | |____lancedb-vector-store.ts
+| | |____service-factory.ts
+| | |____search-service.ts
+| | |____constants
+| | | |____index.ts
+| | |____orchestrator.ts
+| | |____shared
+| | | |____supported-extensions.ts
+| | | |____get-relative-path.ts
+| | | |______tests__
+| | | | |____validation-helpers.spec.ts
+| | | | |____get-relative-path.spec.ts
+| | | |____validation-helpers.ts
+| | |____processors
+| | | |____file-watcher.ts
+| | | |____parser.ts
+| | | |______tests__
+| | | | |____file-watcher.spec.ts
+| | | | |____parser.spec.ts
+| | | | |____parser.vb.spec.ts
+| | | | |____scanner.spec.ts
+| | | |____index.ts
+| | | |____scanner.ts
+| | |____embedders
+| | | |____bedrock.ts
+| | | |____ollama.ts
+| | | |____openai.ts
+| | | |____vercel-ai-gateway.ts
+| | | |____gemini.ts
+| | | |______tests__
+| | | | |____mistral.spec.ts
+| | | | |____openai-compatible.spec.ts
+| | | | |____bedrock.spec.ts
+| | | | |____openai.spec.ts
+| | | | |____ollama.spec.ts
+| | | | |____openrouter.spec.ts
+| | | | |____openai-compatible-rate-limit.spec.ts
+| | | | |____vercel-ai-gateway.spec.ts
+| | | | |____gemini.spec.ts
+| | | |____openai-compatible.ts
+| | | |____openrouter.ts
+| | | |____mistral.ts
+| | |______tests__
+| | | |____config-manager.spec.ts
+| | | |____manager.spec.ts
+| | | |____cache-manager.spec.ts
+| | | |____orchestrator.spec.ts
+| | | |____service-factory.spec.ts
+| | |____cache-manager.ts
+| | |____config-manager.ts
+| | |____state-manager.ts
+| | |____interfaces
+| | | |____manager.ts
+| | | |____embedder.ts
+| | | |____file-processor.ts
+| | | |____vector-store.ts
+| | | |____cache.ts
+| | | |____index.ts
+| | | |____config.ts
+| |____mcp
+| | |____McpHub.ts
+| | |____McpServerManager.ts
+| | |____oauth
+| | | |____McpOAuthService.ts
+| | | |____McpAuthorizationDiscovery.ts
+| | | |____utils.ts
+| | | |____McpOAuthTokenStorage.ts
+| | | |______tests__
+| | | | |____utils.spec.ts
+| | | | |____McpOAuthTokenStorage.spec.ts
+| | | |____McpOAuthBrowserFlow.ts
+| | | |____index.ts
+| | |____kilocode
+| | | |____NotificationService.ts
+| | |______tests__
+| | | |____McpHub.spec.ts
+| |____settings-sync
+| | |____SettingsSyncService.ts
+| | |______tests__
+| | | |____SettingsSyncService.spec.ts
+| |____terminal-welcome
+| | |____TerminalWelcomeService.ts
+| | |____index.ts
+| |____ghost
+| | |____context
+| | | |______tests__
+| | | | |____VisibleCodeTracker.spec.ts
+| | | |____VisibleCodeTracker.ts
+| | |____GhostStatusBar.ts
+| | |____utils
+| | | |____kilocode-utils.ts
+| | | |____kilocode-utils.test.ts
+| | |____GhostServiceManager.ts
+| | |____types.ts
+| | |____GhostModel.ts
+| | |______tests__
+| | | |____GhostJetbrainsBridge.spec.ts
+| | | |____MockWorkspace.ts
+| | | |____GhostServiceManager.spec.ts
+| | | |____MockWorkspaceEdit.ts
+| | | |____GhostModel.spec.ts
+| | | |____MockWorkspace.spec.ts
+| | |____GhostCodeActionProvider.ts
+| | |____index.ts
+| | |____chat-autocomplete
+| | | |____ChatTextAreaAutocomplete.ts
+| | | |____handleChatCompletionAccepted.ts
+| | | |______tests__
+| | | | |____ChatTextAreaAutocomplete.spec.ts
+| | | |____handleChatCompletionRequest.ts
+| | |____GhostJetbrainsBridge.ts
+| | |____classic-auto-complete
+| | | |____getProcessedSnippets.ts
+| | | |____HoleFiller.ts
+| | | |____contextualSkip.ts
+| | | |____FillInTheMiddle.ts
+| | | |____GhostInlineCompletionProvider.ts
+| | | |______tests__
+| | | | |____HoleFiller.test.ts
+| | | | |____AutocompleteTelemetry.test.ts
+| | | | |____uselessSuggestionFilter.test.ts
+| | | | |____GhostContextProvider.test.ts
+| | | | |____contextualSkip.spec.ts
+| | | | |____GhostInlineCompletionProvider.test.ts
+| | | |____AutocompleteTelemetry.ts
+| | | |____language-filters
+| | | | |____markdown.ts
+| | | | |______tests__
+| | | | | |____markdown.spec.ts
+| | | | |____index.ts
+| | | |____uselessSuggestionFilter.ts
+| |____search
+| | |______tests__
+| | | |____file-search.spec.ts
+| | |____file-search.ts
+| |____browser
+| | |____BrowserSession.ts
+| | |____browserDiscovery.ts
+| | |____UrlContentFetcher.ts
+| | |______tests__
+| | | |____BrowserSession.spec.ts
+| | | |____UrlContentFetcher.spec.ts
+| |____contribution-tracking
+| | |____FormatterService.ts
+| | |____contribution-tracking-types.ts
+| | |____ContributionTrackingService.ts
+| | |______tests__
+| | | |____ContributionTrackingService.spec.ts
+| |____review
+| | |____ReviewService.ts
+| | |____prompts.ts
+| | |____types.ts
+| | |______tests__
+| | | |____ReviewService.spec.ts
+| | | |____prompts.spec.ts
+| | |____index.ts
+| |____glob
+| | |______mocks__
+| | | |____list-files.ts
+| | |____ignore-utils.ts
+| | |______tests__
+| | | |____list-files.spec.ts
+| | | |____gitignore-integration.spec.ts
+| | | |____gitignore-test.spec.ts
+| | | |____list-files-limit.spec.ts
+| | |____constants.ts
+| | |____list-files.ts
+| |____skills
+| | |______tests__
+| | | |____SkillsManager.spec.ts
+| | |____SkillsManager.ts
+| |____command
+| | |____built-in-commands.ts
+| | |____commands.ts
+| | |______tests__
+| | | |____frontmatter-commands.spec.ts
+| | | |____built-in-commands.spec.ts
+| | | |____symlink-commands.spec.ts
+| |____ripgrep
+| | |____index.kilocode.ts
+| | |______tests__
+| | | |____index.spec.ts
+| | |____index.ts
+| |____kilo-session
+| | |____ExtensionPathProvider.ts
+| | |____ExtensionMessengerImpl.ts
+| | |____ExtensionLoggerAdapter.ts
+| |____commit-message
+| | |____types
+| | | |____vscode.ts
+| | | |____core.ts
+| | | |____jetbrains.ts
+| | |____CommitMessageGenerator.ts
+| | |____exclusionUtils.ts
+| | |____types.ts
+| | |____adapters
+| | | |____ICommitMessageIntegration.ts
+| | | |____VSCodeCommitMessageAdapter.ts
+| | | |____ICommitMessageAdapter.ts
+| | | |____JetBrainsCommitMessageAdapter.ts
+| | |______tests__
+| | | |____CommitMessageGenerator.spec.ts
+| | | |____GitExtensionService.spec.ts
+| | | |____progress-reporting.spec.ts
+| | |____GitExtensionService.ts
+| | |____CommitMessageOrchestrator.ts
+| | |____index.ts
+| | |____CommitMessageProvider.ts
+| |____stt
+| | |____context
+| | | |____codeGlossaryExtractor.ts
+| | | |______tests__
+| | | | |____codeGlossaryExtractor.spec.ts
+| | |____STTService.ts
+| | |____utils
+| | | |____getOpenAiCredentials.ts
+| | |____types.ts
+| | |______tests__
+| | | |____vadLogic.spec.ts
+| | | |____FFmpegCaptureService.spec.ts
+| | | |____FFmpegDeviceEnumerator.spec.ts
+| | |____FFmpegDeviceEnumerator.ts
+| | |____index.ts
+| | |____OpenAIWhisperClient.ts
+| | |____FFmpegCaptureService.ts
