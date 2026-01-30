@@ -29,6 +29,42 @@ import type { Command } from "../../../commands/core/types.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { ExtensionService } from "../../../services/extension.js"
 
+// Helper to simulate typing text
+const type = (store: ReturnType<typeof createStore>, text: string) => {
+	for (const char of text) {
+		press(store, char)
+	}
+}
+
+// Helper to simulate a key press
+const press = (store: ReturnType<typeof createStore>, name: string, options: Partial<Key> = {}) => {
+	const key: Key = {
+		name,
+		sequence: options.sequence ?? name,
+		ctrl: options.ctrl ?? false,
+		meta: options.meta ?? false,
+		shift: options.shift ?? false,
+		paste: options.paste ?? false,
+	}
+
+	// Add special sequences for certain keys
+	const sequenceMap: Record<string, string> = {
+		backspace: "\x7f",
+		return: "\r",
+		tab: "\t",
+		escape: "\x1b",
+		up: options.meta ? "\x1b[1;3A" : "\x1b[A",
+		down: options.meta ? "\x1b[1;3B" : "\x1b[B",
+		left: options.meta ? "\x1b[1;3D" : "\x1b[D",
+		right: options.meta ? "\x1b[1;3C" : "\x1b[C",
+	}
+	if (sequenceMap[name] && !options.sequence) {
+		key.sequence = sequenceMap[name]
+	}
+
+	return store.set(keyboardHandlerAtom, key)
+}
+
 describe("keypress atoms", () => {
 	let store: ReturnType<typeof createStore>
 
@@ -43,16 +79,7 @@ describe("keypress atoms", () => {
 			expect(initialText).toBe("")
 
 			// Simulate typing 'h'
-			const key: Key = {
-				name: "h",
-				sequence: "h",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
-			store.set(keyboardHandlerAtom, key)
+			press(store, "h")
 
 			// Check that buffer was updated
 			const updatedText = store.get(textBufferStringAtom)
@@ -61,18 +88,7 @@ describe("keypress atoms", () => {
 
 		it("should update textBufferAtom when typing multiple characters", () => {
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			const text = store.get(textBufferStringAtom)
 			expect(text).toBe("hello")
@@ -80,18 +96,7 @@ describe("keypress atoms", () => {
 
 		it("should update cursor position when typing", () => {
 			// Type 'hi'
-			const chars = ["h", "i"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hi")
 
 			const cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(2)
@@ -100,29 +105,10 @@ describe("keypress atoms", () => {
 
 		it("should handle backspace correctly", () => {
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Press backspace
-			const backspaceKey: Key = {
-				name: "backspace",
-				sequence: "\x7f",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, backspaceKey)
+			press(store, "backspace")
 
 			const text = store.get(textBufferStringAtom)
 			expect(text).toBe("hell")
@@ -130,29 +116,10 @@ describe("keypress atoms", () => {
 
 		it("should handle newline insertion with Shift+Enter", () => {
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Press Shift+Enter
-			const shiftEnterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: true,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, shiftEnterKey)
+			press(store, "return", { shift: true })
 
 			const text = store.get(textBufferStringAtom)
 			const state = store.get(textBufferStateAtom)
@@ -167,29 +134,10 @@ describe("keypress atoms", () => {
 			store.set(submissionCallbackAtom, { callback: mockCallback })
 
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Press Enter
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, enterKey)
+			await press(store, "return")
 
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
@@ -202,29 +150,10 @@ describe("keypress atoms", () => {
 			store.set(submissionCallbackAtom, { callback: null })
 
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Press Enter - should not throw error
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			expect(() => store.set(keyboardHandlerAtom, enterKey)).not.toThrow()
+			expect(() => press(store, "return")).not.toThrow()
 		})
 
 		it("should not call submission callback when text is empty", () => {
@@ -232,15 +161,7 @@ describe("keypress atoms", () => {
 			store.set(submissionCallbackAtom, { callback: mockCallback })
 
 			// Press Enter without typing anything
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, enterKey)
+			press(store, "return")
 
 			expect(mockCallback).not.toHaveBeenCalled()
 		})
@@ -250,29 +171,10 @@ describe("keypress atoms", () => {
 			store.set(submissionCallbackAtom, { callback: mockCallback })
 
 			// Type spaces
-			const spaces = [" ", " ", " "]
-			for (const space of spaces) {
-				const key: Key = {
-					name: "space",
-					sequence: space,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "   ")
 
 			// Press Enter
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, enterKey)
+			press(store, "return")
 
 			expect(mockCallback).not.toHaveBeenCalled()
 		})
@@ -282,29 +184,10 @@ describe("keypress atoms", () => {
 			store.set(submissionCallbackAtom, { callback: "not a function" as unknown as (() => void) | null })
 
 			// Type 'hello'
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Press Enter - should not throw error
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			expect(() => store.set(keyboardHandlerAtom, enterKey)).not.toThrow()
+			expect(() => press(store, "return")).not.toThrow()
 		})
 
 		it("should convert Buffer to string when submitting", () => {
@@ -323,18 +206,7 @@ describe("keypress atoms", () => {
 	describe("tab autocomplete", () => {
 		it("should complete command by appending only missing part", () => {
 			// Type '/mo' - this will automatically trigger autocomplete
-			const chars = ["/", "m", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/mo")
 
 			// Autocomplete should now be visible (derived from text starting with "/")
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -358,15 +230,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should complete to '/mode'
 			const text = store.get(textBufferStringAtom)
@@ -375,18 +239,7 @@ describe("keypress atoms", () => {
 
 		it("should complete command even when user types wrong letters", () => {
 			// Type '/modl' - typo, but 'model' should still be suggested
-			const chars = ["/", "m", "o", "d", "l"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/modl")
 
 			// Autocomplete should now be visible
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -410,15 +263,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should replace '/modl' with '/model' (not '/modlmodel')
 			const text = store.get(textBufferStringAtom)
@@ -427,18 +272,7 @@ describe("keypress atoms", () => {
 
 		it("should complete argument by replacing partial text", () => {
 			// Type '/mode tes' - this will automatically trigger autocomplete
-			const input = "/mode tes"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/mode tes")
 
 			// Autocomplete should now be visible (derived from text starting with "/")
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -454,15 +288,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should replace 'tes' with 'test' to complete '/mode test'
 			const text = store.get(textBufferStringAtom)
@@ -472,18 +298,7 @@ describe("keypress atoms", () => {
 		it("should replace partial argument with full suggestion", () => {
 			// Bug fix: Type '/model info gpt' with suggestion 'openai/gpt-5'
 			// This test verifies the fix where Tab was incorrectly appending instead of replacing
-			const input = "/model info gpt"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/model info gpt")
 
 			// Set up argument suggestions
 			const mockArgumentSuggestion: ArgumentSuggestion = {
@@ -497,15 +312,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should replace 'gpt' with 'openai/gpt-5' (not append to get 'gptopenai/gpt-5')
 			const text = store.get(textBufferStringAtom)
@@ -514,18 +321,7 @@ describe("keypress atoms", () => {
 
 		it("should complete argument from empty with trailing space", () => {
 			// Type '/model info ' (with trailing space)
-			const input = "/model info "
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/model info ")
 
 			// Set up argument suggestions
 			const mockArgumentSuggestion: ArgumentSuggestion = {
@@ -539,15 +335,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should add the full suggestion value
 			const text = store.get(textBufferStringAtom)
@@ -556,18 +344,7 @@ describe("keypress atoms", () => {
 
 		it("should handle exact match completion", () => {
 			// Type '/help' - this will automatically trigger autocomplete
-			const input = "/help"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/help")
 
 			// Autocomplete should now be visible (derived from text starting with "/")
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -591,15 +368,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Should not add anything (already complete)
 			const text = store.get(textBufferStringAtom)
@@ -608,18 +377,7 @@ describe("keypress atoms", () => {
 
 		it("should update cursor position after tab completion", () => {
 			// Type '/mo' - this will automatically trigger autocomplete
-			const chars = ["/", "m", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/mo")
 
 			// Autocomplete should now be visible (derived from text starting with "/")
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -643,15 +401,7 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press Tab
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, tabKey)
+			press(store, "tab")
 
 			// Cursor should be at end of completed text
 			const cursor = store.get(cursorPositionAtom)
@@ -673,17 +423,8 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press down arrow
-			const downKey: Key = {
-				name: "down",
-				sequence: "\x1b[B",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
 			// Should not throw and should not produce NaN
-			expect(() => store.set(keyboardHandlerAtom, downKey)).not.toThrow()
+			expect(() => press(store, "down")).not.toThrow()
 			const selectedIndex = store.get(selectedIndexAtom)
 			expect(selectedIndex).not.toBeNaN()
 			expect(selectedIndex).toBe(0) // Should remain unchanged
@@ -701,17 +442,8 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press up arrow
-			const upKey: Key = {
-				name: "up",
-				sequence: "\x1b[A",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
 			// Should not throw and should not produce NaN
-			expect(() => store.set(keyboardHandlerAtom, upKey)).not.toThrow()
+			expect(() => press(store, "up")).not.toThrow()
 			const selectedIndex = store.get(selectedIndexAtom)
 			expect(selectedIndex).not.toBeNaN()
 			expect(selectedIndex).toBe(0) // Should remain unchanged
@@ -719,15 +451,7 @@ describe("keypress atoms", () => {
 
 		it("should handle empty suggestions array without NaN", () => {
 			// Type "/" to trigger autocomplete mode
-			const slashKey: Key = {
-				name: "/",
-				sequence: "/",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, slashKey)
+			press(store, "/")
 
 			// Autocomplete should now be visible
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -738,17 +462,8 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press down arrow
-			const downKey: Key = {
-				name: "down",
-				sequence: "\x1b[B",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
 			// Should not throw and should not produce NaN
-			expect(() => store.set(keyboardHandlerAtom, downKey)).not.toThrow()
+			expect(() => press(store, "down")).not.toThrow()
 			const selectedIndex = store.get(selectedIndexAtom)
 			expect(selectedIndex).not.toBeNaN()
 			expect(selectedIndex).toBe(0) // Should remain unchanged
@@ -756,15 +471,7 @@ describe("keypress atoms", () => {
 
 		it("should handle empty suggestions array on up arrow without NaN", () => {
 			// Type "/" to trigger autocomplete mode
-			const slashKey: Key = {
-				name: "/",
-				sequence: "/",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, slashKey)
+			press(store, "/")
 
 			// Autocomplete should now be visible
 			expect(store.get(showAutocompleteAtom)).toBe(true)
@@ -775,17 +482,8 @@ describe("keypress atoms", () => {
 			store.set(selectedIndexAtom, 0)
 
 			// Press up arrow
-			const upKey: Key = {
-				name: "up",
-				sequence: "\x1b[A",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
 			// Should not throw and should not produce NaN
-			expect(() => store.set(keyboardHandlerAtom, upKey)).not.toThrow()
+			expect(() => press(store, "up")).not.toThrow()
 			const selectedIndex = store.get(selectedIndexAtom)
 			expect(selectedIndex).not.toBeNaN()
 			expect(selectedIndex).toBe(0) // Should remain unchanged
@@ -809,15 +507,7 @@ describe("keypress atoms", () => {
 			expect(store.get(textBufferStringAtom)).toBe("")
 
 			// Press up arrow to enter history mode
-			const upKey: Key = {
-				name: "up",
-				sequence: "\x1b[A",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, upKey)
+			press(store, "up")
 
 			// Should display the most recent entry
 			const text = store.get(textBufferStringAtom)
@@ -840,26 +530,18 @@ describe("keypress atoms", () => {
 			})
 
 			// Press up arrow to enter history mode (shows most recent)
-			const upKey: Key = {
-				name: "up",
-				sequence: "\x1b[A",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
 
 			// First press - enter history mode
-			store.set(keyboardHandlerAtom, upKey)
+			press(store, "up")
 			expect(store.get(textBufferStringAtom)).toBe("what time is now?")
 			expect(store.get(historyModeAtom)).toBe(true)
 
 			// Second press - navigate to older
-			store.set(keyboardHandlerAtom, upKey)
+			press(store, "up")
 			expect(store.get(textBufferStringAtom)).toBe("/mode ask")
 
 			// Third press - navigate to oldest
-			store.set(keyboardHandlerAtom, upKey)
+			press(store, "up")
 			expect(store.get(textBufferStringAtom)).toBe("/help")
 		})
 
@@ -872,29 +554,10 @@ describe("keypress atoms", () => {
 			})
 
 			// Type some text
-			const chars = ["h", "i"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hi")
 
 			// Press up arrow
-			const upKey: Key = {
-				name: "up",
-				sequence: "\x1b[A",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, upKey)
+			press(store, "up")
 
 			// Should not enter history mode
 			expect(store.get(historyModeAtom)).toBe(false)
@@ -906,18 +569,7 @@ describe("keypress atoms", () => {
 	describe("file mention suggestions", () => {
 		it("should clear suggestions and add space on ESC without clearing buffer", () => {
 			// Type some text first
-			const input = "check @confi"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "check @confi")
 
 			// Verify initial buffer
 			expect(store.get(textBufferStringAtom)).toBe("check @confi")
@@ -936,15 +588,7 @@ describe("keypress atoms", () => {
 			expect(store.get(fileMentionSuggestionsAtom).length).toBe(1)
 
 			// Press ESC
-			const escapeKey: Key = {
-				name: "escape",
-				sequence: "\x1b",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, escapeKey)
+			press(store, "escape")
 
 			// File mention suggestions should be cleared
 			expect(store.get(fileMentionSuggestionsAtom).length).toBe(0)
@@ -959,18 +603,7 @@ describe("keypress atoms", () => {
 
 		it("should clear buffer on ESC when no file mention suggestions", () => {
 			// Type some text
-			const input = "some text"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "some text")
 
 			// Verify buffer has content
 			expect(store.get(textBufferStringAtom)).toBe("some text")
@@ -979,15 +612,7 @@ describe("keypress atoms", () => {
 			store.set(fileMentionSuggestionsAtom, [])
 
 			// Press ESC
-			const escapeKey: Key = {
-				name: "escape",
-				sequence: "\x1b",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, escapeKey)
+			press(store, "escape")
 
 			// Buffer should be cleared (normal ESC behavior)
 			expect(store.get(textBufferStringAtom)).toBe("")
@@ -1022,32 +647,13 @@ describe("keypress atoms", () => {
 			store.set(chatMessagesAtom, [streamingMessage])
 
 			// Type some text first
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Verify we have text in the buffer
 			expect(store.get(textBufferStringAtom)).toBe("hello")
 
 			// Press ESC while streaming
-			const escapeKey: Key = {
-				name: "escape",
-				sequence: "\x1b",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, escapeKey)
+			await press(store, "escape")
 
 			// When streaming, ESC should cancel the task and NOT clear the buffer
 			// (because it returns early from handleGlobalHotkeys)
@@ -1066,53 +672,25 @@ describe("keypress atoms", () => {
 			store.set(chatMessagesAtom, [completeMessage])
 
 			// Type some text
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Verify we have text in the buffer
 			expect(store.get(textBufferStringAtom)).toBe("hello")
 
 			// Press ESC while NOT streaming
-			const escapeKey: Key = {
-				name: "escape",
-				sequence: "\x1b",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, escapeKey)
+			await press(store, "escape")
 
 			// When not streaming, ESC should clear the buffer (normal behavior)
 			expect(store.get(textBufferStringAtom)).toBe("")
 		})
 
 		it("should require confirmation before exiting on Ctrl+C", async () => {
-			const ctrlCKey: Key = {
-				name: "c",
-				sequence: "\u0003",
-				ctrl: true,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-
-			await store.set(keyboardHandlerAtom, ctrlCKey)
+			await press(store, "c", { ctrl: true })
 
 			expect(store.get(exitPromptVisibleAtom)).toBe(true)
 			expect(store.get(exitRequestCounterAtom)).toBe(0)
 
-			await store.set(keyboardHandlerAtom, ctrlCKey)
+			await press(store, "c", { ctrl: true })
 
 			expect(store.get(exitPromptVisibleAtom)).toBe(false)
 			expect(store.get(exitRequestCounterAtom)).toBe(1)
@@ -1120,32 +698,13 @@ describe("keypress atoms", () => {
 
 		it("should clear text buffer when Ctrl+C is pressed", async () => {
 			// Type some text first
-			const chars = ["t", "e", "s", "t"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "test")
 
 			// Verify we have text in the buffer
 			expect(store.get(textBufferStringAtom)).toBe("test")
 
 			// Press Ctrl+C
-			const ctrlCKey: Key = {
-				name: "c",
-				sequence: "\u0003",
-				ctrl: true,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, ctrlCKey)
+			await press(store, "c", { ctrl: true })
 
 			// Text buffer should be cleared
 			expect(store.get(textBufferStringAtom)).toBe("")
@@ -1160,15 +719,7 @@ describe("keypress atoms", () => {
 			store.set(customModesAtom, [])
 
 			// Press Shift+Tab
-			const shiftTabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: true,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, shiftTabKey)
+			await press(store, "tab", { shift: true })
 
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
@@ -1187,15 +738,7 @@ describe("keypress atoms", () => {
 			store.set(customModesAtom, [])
 
 			// Press Shift+Tab
-			const shiftTabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: true,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, shiftTabKey)
+			await press(store, "tab", { shift: true })
 
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
@@ -1220,15 +763,7 @@ describe("keypress atoms", () => {
 			])
 
 			// Press Shift+Tab
-			const shiftTabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: true,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, shiftTabKey)
+			await press(store, "tab", { shift: true })
 
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
@@ -1244,29 +779,10 @@ describe("keypress atoms", () => {
 			store.set(customModesAtom, [])
 
 			// Type some text first to avoid history mode
-			const chars = ["h", "i"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hi")
 
 			// Press Tab without Shift
-			const tabKey: Key = {
-				name: "tab",
-				sequence: "\t",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, tabKey)
+			await press(store, "tab")
 
 			// Mode should remain unchanged
 			const mode = store.get(extensionModeAtom)
@@ -1283,32 +799,14 @@ describe("keypress atoms", () => {
 			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
 
 			// Type a slash command.
-			for (const char of ["/", "h", "e", "l", "p"]) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/help")
 
 			// Simulate the "auto-select first item" behavior from autocomplete that can set selectedIndex to 0.
 			// In the buggy behavior, followup mode is still active and this causes Enter to submit the followup suggestion instead.
 			store.set(selectedIndexAtom, 0)
 
 			// Press Enter to submit.
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, enterKey)
+			await press(store, "return")
 
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
@@ -1327,27 +825,9 @@ describe("keypress atoms", () => {
 			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
 
 			// Type /clear
-			for (const char of ["/", "c", "l", "e", "a", "r"]) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "/clear")
 
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, enterKey)
+			await press(store, "return")
 			await new Promise((resolve) => setTimeout(resolve, 10))
 
 			expect(mockCallback).toHaveBeenCalledWith("/clear")
@@ -1355,18 +835,8 @@ describe("keypress atoms", () => {
 
 			// Re-seed followup and type /new
 			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
-			for (const char of ["/", "n", "e", "w"]) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
-			await store.set(keyboardHandlerAtom, enterKey)
+			type(store, "/new")
+			await press(store, "return")
 			await new Promise((resolve) => setTimeout(resolve, 10))
 
 			expect(mockCallback).toHaveBeenCalledWith("/new")
@@ -1378,16 +848,7 @@ describe("keypress atoms", () => {
 		it("should insert small pastes directly into buffer", () => {
 			// Small paste (less than threshold)
 			const smallPaste = "line1\nline2\nline3"
-			const pasteKey: Key = {
-				name: "",
-				sequence: smallPaste,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			}
-
-			store.set(keyboardHandlerAtom, pasteKey)
+			press(store, "", { paste: true, sequence: smallPaste })
 
 			// Should insert text directly
 			const text = store.get(textBufferStringAtom)
@@ -1398,16 +859,7 @@ describe("keypress atoms", () => {
 			// Large paste (10+ lines to trigger abbreviation)
 			const lines = Array.from({ length: 15 }, (_, i) => `line ${i + 1}`)
 			const largePaste = lines.join("\n")
-			const pasteKey: Key = {
-				name: "",
-				sequence: largePaste,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			}
-
-			store.set(keyboardHandlerAtom, pasteKey)
+			press(store, "", { paste: true, sequence: largePaste })
 
 			// Wait for async paste operation to complete
 			await vi.waitFor(() => {
@@ -1423,16 +875,7 @@ describe("keypress atoms", () => {
 		it("should store full text in references map for large pastes", async () => {
 			const lines = Array.from({ length: 12 }, (_, i) => `content line ${i + 1}`)
 			const largePaste = lines.join("\n")
-			const pasteKey: Key = {
-				name: "",
-				sequence: largePaste,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			}
-
-			store.set(keyboardHandlerAtom, pasteKey)
+			press(store, "", { paste: true, sequence: largePaste })
 
 			// Wait for async paste operation to complete
 			await vi.waitFor(() => {
@@ -1448,14 +891,7 @@ describe("keypress atoms", () => {
 			}
 
 			// First large paste
-			store.set(keyboardHandlerAtom, {
-				name: "",
-				sequence: createLargePaste(1),
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			})
+			press(store, "", { paste: true, sequence: createLargePaste(1) })
 
 			// Wait for first paste to complete
 			await vi.waitFor(() => {
@@ -1464,24 +900,10 @@ describe("keypress atoms", () => {
 			})
 
 			// Add a space
-			store.set(keyboardHandlerAtom, {
-				name: "space",
-				sequence: " ",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			})
+			press(store, " ")
 
 			// Second large paste
-			store.set(keyboardHandlerAtom, {
-				name: "",
-				sequence: createLargePaste(2),
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			})
+			press(store, "", { paste: true, sequence: createLargePaste(2) })
 
 			// Wait for second paste to complete
 			await vi.waitFor(() => {
@@ -1494,16 +916,7 @@ describe("keypress atoms", () => {
 			// Exactly 10 lines (threshold)
 			const lines = Array.from({ length: 10 }, (_, i) => `line ${i + 1}`)
 			const boundaryPaste = lines.join("\n")
-			const pasteKey: Key = {
-				name: "",
-				sequence: boundaryPaste,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			}
-
-			store.set(keyboardHandlerAtom, pasteKey)
+			press(store, "", { paste: true, sequence: boundaryPaste })
 
 			// Wait for async paste operation to complete
 			await vi.waitFor(() => {
@@ -1516,16 +929,7 @@ describe("keypress atoms", () => {
 			// 9 lines (below threshold)
 			const lines = Array.from({ length: 9 }, (_, i) => `line ${i + 1}`)
 			const smallPaste = lines.join("\n")
-			const pasteKey: Key = {
-				name: "",
-				sequence: smallPaste,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			}
-
-			store.set(keyboardHandlerAtom, pasteKey)
+			press(store, "", { paste: true, sequence: smallPaste })
 
 			// Should insert directly
 			const text = store.get(textBufferStringAtom)
@@ -1533,68 +937,55 @@ describe("keypress atoms", () => {
 			expect(text).not.toContain("[Pasted text")
 		})
 
-		it("should convert tabs to spaces in both direct and abbreviated pastes", () => {
+		it("should convert tabs to spaces in both direct and abbreviated pastes", async () => {
 			// Small paste with tabs
 			const smallWithTabs = "col1\tcol2\ncol3\tcol4"
-			store.set(keyboardHandlerAtom, {
-				name: "",
-				sequence: smallWithTabs,
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-			})
+			press(store, "", { paste: true, sequence: smallWithTabs })
 
 			const text = store.get(textBufferStringAtom)
 			expect(text).not.toContain("\t")
 			expect(text).toContain("col1  col2") // tabs converted to 2 spaces
+
+			// Large paste with tabs
+			const largeWithTabs = "col1\tcol2\n" + Array.from({ length: 10 }, (_, i) => `line ${i}`).join("\n")
+			press(store, "", { paste: true, sequence: largeWithTabs })
+
+			// Should be stored in references map without tabs
+			await vi.waitFor(() => {
+				const refs = store.get(pastedTextReferencesAtom)
+				const storedText = refs.get(1) // first large paste
+				expect(storedText).toBeDefined()
+				expect(storedText).not.toContain("\t")
+				expect(storedText).toContain("col1  col2")
+			})
 		})
 	})
 
 	describe("word navigation", () => {
 		it("should move cursor to previous word with Meta+B", () => {
 			// Type "hello world test"
-			const input = "hello world test"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello world test")
 
 			// Cursor should be at end
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
 
 			// Press Meta+B (previous word)
-			const metaBKey: Key = {
-				name: "b",
-				sequence: "b",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaBKey)
+			press(store, "b", { meta: true })
 
 			// Should move to start of "test"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
 
 			// Press Meta+B again
-			store.set(keyboardHandlerAtom, metaBKey)
+			press(store, "b", { meta: true })
 
 			// Should move to start of "world"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
 
 			// Press Meta+B again
-			store.set(keyboardHandlerAtom, metaBKey)
+			press(store, "b", { meta: true })
 
 			// Should move to start of "hello"
 			cursor = store.get(cursorPositionAtom)
@@ -1603,57 +994,30 @@ describe("keypress atoms", () => {
 
 		it("should move cursor to next word with Meta+F", () => {
 			// Type "hello world test"
-			const input = "hello world test"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello world test")
 
 			// Move cursor to start
-			const homeKey: Key = {
-				name: "a",
-				sequence: "a",
-				ctrl: true,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, homeKey)
+			press(store, "a", { ctrl: true })
 
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(0)
 
 			// Press Meta+F (next word)
-			const metaFKey: Key = {
-				name: "f",
-				sequence: "f",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaFKey)
+			press(store, "f", { meta: true })
 
 			// Should move to start of "world"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
 
 			// Press Meta+F again
-			store.set(keyboardHandlerAtom, metaFKey)
+			press(store, "f", { meta: true })
 
 			// Should move to start of "test"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
 
 			// Press Meta+F again
-			store.set(keyboardHandlerAtom, metaFKey)
+			press(store, "f", { meta: true })
 
 			// Should move to end of text
 			cursor = store.get(cursorPositionAtom)
@@ -1662,43 +1026,13 @@ describe("keypress atoms", () => {
 
 		it("should handle word navigation across lines", () => {
 			// Type "hello\nworld"
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Add newline
-			const enterKey: Key = {
-				name: "return",
-				sequence: "\r",
-				ctrl: false,
-				meta: false,
-				shift: true, // Shift+Enter for newline
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, enterKey)
+			press(store, "return", { shift: true })
 
 			// Type "world"
-			const worldChars = ["w", "o", "r", "l", "d"]
-			for (const char of worldChars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "world")
 
 			// Should have "hello\nworld"
 			const text = store.get(textBufferStringAtom)
@@ -1710,30 +1044,14 @@ describe("keypress atoms", () => {
 			expect(cursor.col).toBe(5) // End of "world"
 
 			// Press Meta+F (next word) - should stay on same line since no more words
-			const metaFKey: Key = {
-				name: "f",
-				sequence: "f",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaFKey)
+			press(store, "f", { meta: true })
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.row).toBe(1)
 			expect(cursor.col).toBe(5) // End of "world"
 
 			// Press Meta+B (previous word) - should move to previous line
-			const metaBKey: Key = {
-				name: "b",
-				sequence: "b",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaBKey)
+			press(store, "b", { meta: true })
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.row).toBe(0)
@@ -1745,82 +1063,31 @@ describe("keypress atoms", () => {
 			expect(store.get(textBufferStringAtom)).toBe("")
 
 			// Press Meta+B - should not crash
-			const metaBKey: Key = {
-				name: "b",
-				sequence: "b",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			expect(() => store.set(keyboardHandlerAtom, metaBKey)).not.toThrow()
+			expect(() => press(store, "b", { meta: true })).not.toThrow()
 
 			// Press Meta+F - should not crash
-			const metaFKey: Key = {
-				name: "f",
-				sequence: "f",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			expect(() => store.set(keyboardHandlerAtom, metaFKey)).not.toThrow()
+			expect(() => press(store, "f", { meta: true })).not.toThrow()
 		})
 
 		it("should handle single word correctly", () => {
 			// Type "hello"
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Move cursor to middle of word
-			const leftKey: Key = {
-				name: "left",
-				sequence: "\x1b[D",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, leftKey)
-			store.set(keyboardHandlerAtom, leftKey)
+			press(store, "left")
+			press(store, "left")
 
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(3) // Position before 'l' in "hello"
 
 			// Press Meta+B - should move to start of word
-			const metaBKey: Key = {
-				name: "b",
-				sequence: "b",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaBKey)
+			press(store, "b", { meta: true })
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(0) // Start of "hello"
 
 			// Press Meta+F - should move to end of word
-			const metaFKey: Key = {
-				name: "f",
-				sequence: "f",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaFKey)
+			press(store, "f", { meta: true })
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5) // End of "hello"
@@ -1828,47 +1095,28 @@ describe("keypress atoms", () => {
 
 		it("should move cursor to previous word with Meta+Left arrow", () => {
 			// Type "hello world test"
-			const input = "hello world test"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello world test")
 
 			// Cursor should be at end
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
 
 			// Press Meta+Left (previous word)
-			const metaLeftKey: Key = {
-				name: "left",
-				sequence: "\x1b[1;3D",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaLeftKey)
+			press(store, "left", { meta: true })
 
 			// Should move to start of "test"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
 
 			// Press Meta+Left again
-			store.set(keyboardHandlerAtom, metaLeftKey)
+			press(store, "left", { meta: true })
 
 			// Should move to start of "world"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
 
 			// Press Meta+Left again
-			store.set(keyboardHandlerAtom, metaLeftKey)
+			press(store, "left", { meta: true })
 
 			// Should move to start of "hello"
 			cursor = store.get(cursorPositionAtom)
@@ -1877,57 +1125,30 @@ describe("keypress atoms", () => {
 
 		it("should move cursor to next word with Meta+Right arrow", () => {
 			// Type "hello world test"
-			const input = "hello world test"
-			for (const char of input) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello world test")
 
 			// Move cursor to start
-			const homeKey: Key = {
-				name: "a",
-				sequence: "a",
-				ctrl: true,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, homeKey)
+			press(store, "a", { ctrl: true })
 
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(0)
 
 			// Press Meta+Right (next word)
-			const metaRightKey: Key = {
-				name: "right",
-				sequence: "\x1b[1;3C",
-				ctrl: false,
-				meta: true,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, metaRightKey)
+			press(store, "right", { meta: true })
 
 			// Should move to start of "world"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
 
 			// Press Meta+Right again
-			store.set(keyboardHandlerAtom, metaRightKey)
+			press(store, "right", { meta: true })
 
 			// Should move to start of "test"
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
 
 			// Press Meta+Right again
-			store.set(keyboardHandlerAtom, metaRightKey)
+			press(store, "right", { meta: true })
 
 			// Should move to end of text
 			cursor = store.get(cursorPositionAtom)
@@ -1936,47 +1157,20 @@ describe("keypress atoms", () => {
 
 		it("should move one character with plain Left/Right arrows (no meta)", () => {
 			// Type "hello"
-			const chars = ["h", "e", "l", "l", "o"]
-			for (const char of chars) {
-				const key: Key = {
-					name: char,
-					sequence: char,
-					ctrl: false,
-					meta: false,
-					shift: false,
-					paste: false,
-				}
-				store.set(keyboardHandlerAtom, key)
-			}
+			type(store, "hello")
 
 			// Cursor should be at end
 			let cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5)
 
 			// Press plain Left (no meta) - should move one character
-			const leftKey: Key = {
-				name: "left",
-				sequence: "\x1b[D",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, leftKey)
+			press(store, "left")
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(4) // Moved one character left
 
 			// Press plain Right (no meta) - should move one character
-			const rightKey: Key = {
-				name: "right",
-				sequence: "\x1b[C",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			store.set(keyboardHandlerAtom, rightKey)
+			press(store, "right")
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5) // Moved one character right
@@ -2011,15 +1205,7 @@ describe("keypress atoms", () => {
 			expect(options[options.length - 1].hotkey).toBe("n") // Reject
 
 			// Press "1" key - should select the "Always Run mkdir" option
-			const key1: Key = {
-				name: "1",
-				sequence: "1",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, key1)
+			await press(store, "1")
 
 			// The option at index 1 should be selected
 			const selectedIndex = store.get(selectedIndexAtom)
@@ -2039,15 +1225,7 @@ describe("keypress atoms", () => {
 			store.set(pendingApprovalAtom, mockMessage)
 
 			// Press "2" key
-			const key2: Key = {
-				name: "2",
-				sequence: "2",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, key2)
+			await press(store, "2")
 
 			// The option at index 2 should be selected
 			const selectedIndex = store.get(selectedIndexAtom)
@@ -2079,15 +1257,7 @@ describe("keypress atoms", () => {
 			expect(option3).toBeDefined()
 
 			// Press "3" key
-			const key3: Key = {
-				name: "3",
-				sequence: "3",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, key3)
+			await press(store, "3")
 
 			// The option at index 3 should be selected
 			const selectedIndex = store.get(selectedIndexAtom)
@@ -2116,15 +1286,7 @@ describe("keypress atoms", () => {
 			expect(store.get(selectedIndexAtom)).toBe(0)
 
 			// Press "2" key - should not change selection since there's no option with hotkey "2"
-			const key2: Key = {
-				name: "2",
-				sequence: "2",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: false,
-			}
-			await store.set(keyboardHandlerAtom, key2)
+			await press(store, "2")
 
 			// Selection should remain unchanged
 			const selectedIndex = store.get(selectedIndexAtom)
