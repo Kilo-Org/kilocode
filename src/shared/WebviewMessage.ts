@@ -1,19 +1,31 @@
-export type {
-	WebviewMessage,
-	WebViewMessagePayload,
-	MaybeTypedWebviewMessage,
-	GlobalStateValue,
-	ProfileData,
-	UserOrganizationWithApiKey,
-	ProfileDataResponsePayload,
-	BalanceDataResponsePayload,
-	SeeNewChangesPayload,
-	TaskHistoryRequestPayload,
-	TaskHistoryResponsePayload,
-	TasksByIdRequestPayload,
-	TasksByIdResponsePayload,
-	UpdateGlobalStateMessage,
-} from "@roo-code/types" // kilocode_change
+import type {
+	ClineMessage,
+	ProviderSettingsEntry,
+	ProviderSettings,
+	ModeConfig,
+	QueuedMessage,
+	RooCodeSettings,
+	ModelInfo,
+	Experiments,
+	TelemetrySetting,
+	MarketplaceItem,
+	CloudUserInfo,
+	OrganizationAllowList,
+	HistoryItem,
+	TodoItem,
+	MicrophoneDevice,
+	PromptComponent,
+	GlobalState,
+	GlobalSettings,
+	InstallMarketplaceItemOptions,
+	ShareVisibility,
+	CommitRange,
+} from "@roo-code/types";
+
+import { marketplaceItemSchema } from "@roo-code/types";
+import type { Mode } from "./modes";
+
+import { z } from "zod";
 
 export type ClineAskResponse =
 	| "yesButtonClicked"
@@ -128,6 +140,11 @@ export interface WebviewMessage {
 		| "enableMcpServerCreation"
 		| "remoteControlEnabled"
 		| "taskSyncEnabled"
+		| "getTaskWithAggregatedCosts"
+		| "openMarkdownPreview"
+		| "reviewScopeSelected"
+		| "debugSetting"
+		| "requestOpenAiCodexRateLimits"
 		| "searchCommits"
 		| "setApiConfigPassword"
 		| "mode"

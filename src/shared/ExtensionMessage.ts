@@ -7,6 +7,30 @@ import { McpServer } from "./mcp"
 import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
+import type {
+  ClineMessage,
+  ProviderSettingsEntry,
+  ProviderSettings,
+  ModeConfig,
+  MarketplaceItem,
+  CloudUserInfo,
+  CloudOrganizationMembership,
+  OrganizationAllowList,
+  HistoryItem,
+  TodoItem,
+  TelemetrySetting,
+  PromptComponent,
+  InstallMarketplaceItemOptions,
+  ShareVisibility,
+  QueuedMessage,
+  ModelInfo,
+  RooCodeSettings,
+  Experiments,
+  GlobalSettings,
+  SerializedCustomToolDefinition
+} from "@roo-code/types"
+import { marketplaceItemSchema } from "@roo-code/types"
+import { z } from "zod"
 // kilocode_change start
 import {
 	ProfileDataResponsePayload,
