@@ -51,6 +51,7 @@ import { IdeaSuggestionsBox } from "../IdeaSuggestionsBox"
 describe("IdeaSuggestionsBox", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		;(window as any).ICONS_BASE_URI = "/icons"
 		vi.mocked(useExtensionState).mockReturnValue({
 			taskHistoryVersion: 1,
 		} as any)
@@ -118,5 +119,17 @@ describe("IdeaSuggestionsBox", () => {
 
 		const buttons = screen.getAllByRole("button")
 		expect(buttons).toHaveLength(2)
+	})
+
+	it("should display Kilo logo", () => {
+		vi.mocked(useTaskHistory).mockReturnValue({
+			data: { historyItems: [] },
+		} as any)
+
+		render(<IdeaSuggestionsBox />)
+
+		const logo = screen.getByAltText("Kilo Code")
+		expect(logo).toBeInTheDocument()
+		expect(logo).toHaveAttribute("src", "/icons/kilo-dark.svg")
 	})
 })

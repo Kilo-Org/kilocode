@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useState, useMemo } from "react"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { vscode } from "@/utils/vscode"
 import { TelemetryEventName } from "@roo-code/types"
@@ -10,6 +10,11 @@ import { Lightbulb, Sparkles, ArrowRight } from "lucide-react"
 export const IdeaSuggestionsBox = () => {
 	const { t } = useTranslation("kilocode")
 	const { taskHistoryVersion } = useExtensionState()
+
+	const [iconsBaseUri] = useState(() => {
+		const w = window as any
+		return w.ICONS_BASE_URI || ""
+	})
 
 	// Check if current workspace has any tasks
 	const { data } = useTaskHistory(
@@ -51,7 +56,24 @@ export const IdeaSuggestionsBox = () => {
 	}
 
 	return (
-		<div className="flex flex-col items-center">
+		<div className="flex flex-col items-center gap-2">
+			{/* Kilo Logo */}
+			<div
+				className="flex items-center justify-center"
+				style={{
+					width: "56px",
+					height: "56px",
+				}}>
+				<img
+					src={`${iconsBaseUri}/kilo-dark.svg`}
+					alt="Kilo Code"
+					className="w-full h-full object-contain"
+					style={{
+						opacity: 0.85,
+					}}
+				/>
+			</div>
+
 			{/* Content Box */}
 			<div className="w-full p-5 rounded-md border border-vscode-panel-border bg-vscode-input-background">
 				{/* Header section */}

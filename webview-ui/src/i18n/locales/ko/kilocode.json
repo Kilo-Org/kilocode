@@ -224,7 +224,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "처음이신가요?",
 		"tryOneOfThese": "시작하려면 이 아이디어 중 하나를 시도해보세요:",
-		"clickToInsert": "아무 제안이나 클릭하면 즉시 작업을 시작할 수 있습니다",
 		"suggestionText": "멋진 아이디어를 위해 <suggestionButton>여기를 클릭</suggestionButton>하세요. 그다음 <sendIcon />를 탭하고 제가 마법을 부리는 것을 보세요!",
 		"ideas": {
 			"idea1": "마우스 움직임에 반응하는 회전하고 빛나는 3D 구체를 만드세요. 앱이 브라우저에서 작동하도록 하세요.",
