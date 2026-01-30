@@ -4,7 +4,7 @@ sidebar_label: VS Code Language Model API
 
 # Using VS Code Language Model API With Kilo Code
 
-Kilo Code includes _experimental_ support for the [VS Code Language Model API](https://code.visualstudio.com/api/language-extensions/language-model-access). This API allows extensions to provide access to language models directly within VS Code. This means you can potentially use models from:
+Kilo Code includes _experimental_ support for the VS Code Language Model API. This API allows extensions to provide access to language models directly within VS Code. This means you can potentially use models from:
 
 - **GitHub Copilot:** If you have a Copilot subscription and the extension installed.
 - **Other VS Code Extensions:** Any extension that implements the Language Model API.
