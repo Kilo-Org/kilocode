@@ -2,6 +2,21 @@
 
 The Kilo Code CLI stores task history in `~/.kilocode/cli/` (or `%USERPROFILE%\.kilocode\cli\` on Windows). With heavy usage, this directory can grow significantly.
 
+## Cleanup Command
+
+Use the CLI to clean up stored data without manual deletion:
+
+```bash
+# Default cleanup (logs, tasks, command history)
+kilocode cleanup
+
+# Show what would be deleted
+kilocode cleanup --dry-run
+
+# Remove everything including config and identity
+kilocode cleanup --all --yes
+```
+
 ## Manual Cleanup
 
 Delete the CLI data directory to free disk space:

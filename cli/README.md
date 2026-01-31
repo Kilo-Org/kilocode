@@ -101,6 +101,21 @@ echo "Fix the bug in app.ts" | kilocode --auto
 kilocode --auto "Run tests" --timeout 300
 ```
 
+### Cleanup
+
+Clean up local CLI data like logs, task history, and command history:
+
+```bash
+# Default cleanup (logs, tasks, command history)
+kilocode cleanup
+
+# Show what would be deleted
+kilocode cleanup --dry-run
+
+# Remove everything including config and identity
+kilocode cleanup --all --yes
+```
+
 #### Task Completion Hook
 
 Use `--on-task-completed` to send a follow-up prompt to the agent when the main task completes. This is useful for automating post-task actions like creating pull requests.
