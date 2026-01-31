@@ -210,7 +210,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Baru di sini?",
 		"tryOneOfThese": "Coba salah satu ide ini untuk memulai:",
-		"clickToInsert": "Klik saran apa pun untuk langsung mulai mengerjakannya",
 		"suggestionText": "<suggestionButton>Klik di sini</suggestionButton> untuk ide yang keren, lalu ketuk <sendIcon /> dan lihat saya melakukan keajaiban!",
 		"ideas": {
 			"idea1": "Buat bola 3D yang berputar dan bersinar yang merespons gerakan mouse. Buat aplikasi berfungsi di browser.",
