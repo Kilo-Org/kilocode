@@ -93,12 +93,22 @@ export interface ApiStreamToolCallChunk {
 	id: string
 	name: string
 	arguments: string
+	/**
+	 * Extra content from provider-specific extensions (e.g., Gemini 3 thought_signature).
+	 * Must be preserved and sent back in subsequent requests for multi-turn conversations.
+	 */
+	extra_content?: Record<string, unknown>
 }
 
 export interface ApiStreamToolCallStartChunk {
 	type: "tool_call_start"
 	id: string
 	name: string
+	/**
+	 * Extra content from provider-specific extensions (e.g., Gemini 3 thought_signature).
+	 * Must be preserved and sent back in subsequent requests for multi-turn conversations.
+	 */
+	extra_content?: Record<string, unknown>
 }
 
 export interface ApiStreamToolCallDeltaChunk {
@@ -123,6 +133,11 @@ export interface ApiStreamToolCallPartialChunk {
 	id?: string
 	name?: string
 	arguments?: string
+	/**
+	 * Extra content from provider-specific extensions (e.g., Gemini 3 thought_signature).
+	 * Must be preserved and sent back in subsequent requests for multi-turn conversations.
+	 */
+	extra_content?: Record<string, unknown>
 }
 
 export interface GroundingSource {
