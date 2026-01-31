@@ -20,6 +20,7 @@ import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
 import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+import { validatePromptFileConflicts, validatePromptFileRequiresNonInteractive } from "./validation/prompt.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -55,6 +56,7 @@ program
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
 	.option("--append-system-prompt-file <path>", "Read custom instructions from a file to append to the system prompt")
+	.option("--prompt-file <path>", "Read the prompt from a file (requires --auto or --json-io)")
 	.option("--on-task-completed <prompt>", "Send a custom prompt to the agent when the task completes")
 	.option(
 		"--attach <path>",
@@ -102,10 +104,47 @@ program
 			process.exit(1)
 		}
 
+		// Validate prompt-file usage
+		const promptFileConflicts = validatePromptFileConflicts({
+			promptFile: options.promptFile,
+			prompt: prompt,
+			continue: options.continue,
+		})
+		if (!promptFileConflicts.valid) {
+			console.error(promptFileConflicts.error)
+			process.exit(1)
+		}
+
+		const promptFileNonInteractive = validatePromptFileRequiresNonInteractive({
+			promptFile: options.promptFile,
+			auto: options.auto,
+			jsonIo: options.jsonIo,
+		})
+		if (!promptFileNonInteractive.valid) {
+			console.error(promptFileNonInteractive.error)
+			process.exit(1)
+		}
+
+		// Read from file if --prompt-file is provided
+		let finalPrompt = prompt || ""
+		if (options.promptFile) {
+			const filePath = resolve(options.promptFile)
+			if (!existsSync(filePath)) {
+				console.error(`Error: Prompt file not found: ${filePath}`)
+				process.exit(1)
+			}
+			try {
+				const fileContent = readFileSync(filePath, "utf-8")
+				finalPrompt = fileContent.trim()
+			} catch (error) {
+				console.error(`Error reading prompt file: ${error instanceof Error ? error.message : String(error)}`)
+				process.exit(1)
+			}
+		}
+
 		// Read from stdin if no prompt argument is provided and stdin is piped
 		// BUT NOT in json-io mode, where stdin is used for bidirectional communication
 		// and the prompt will come via a "newTask" message
-		let finalPrompt = prompt || ""
 		if (!finalPrompt && !process.stdin.isTTY && !options.jsonIo) {
 			// Read from stdin
 			const chunks: Buffer[] = []

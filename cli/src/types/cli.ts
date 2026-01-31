@@ -23,6 +23,7 @@ export interface CLIOptions {
 	json?: boolean
 	jsonInteractive?: boolean
 	prompt?: string
+	promptFile?: string
 	timeout?: number
 	customModes?: ModeConfig[]
 	parallel?: boolean
