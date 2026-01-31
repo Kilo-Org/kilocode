@@ -8,6 +8,7 @@ export * from "./core/registry.js"
 import { commandRegistry } from "./core/registry.js"
 
 import { helpCommand } from "./help.js"
+import { shortcutsCommand } from "./shortcuts.js"
 import { newCommand } from "./new.js"
 import { clearCommand } from "./clear.js"
 import { exitCommand } from "./exit.js"
@@ -29,6 +30,7 @@ import { condenseCommand } from "./condense.js"
 export function initializeCommands(): void {
 	// Register all commands
 	commandRegistry.register(helpCommand)
+	commandRegistry.register(shortcutsCommand)
 	commandRegistry.register(newCommand)
 	commandRegistry.register(clearCommand)
 	commandRegistry.register(exitCommand)

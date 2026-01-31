@@ -50,6 +50,8 @@ kilocode -c
 kilocode --continue
 ```
 
+Tip: In interactive mode, type `/shortcuts` to view keyboard shortcuts.
+
 ### Parallel mode
 
 Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
