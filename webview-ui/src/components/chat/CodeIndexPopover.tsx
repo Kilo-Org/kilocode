@@ -843,31 +843,6 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 							</div>
 						</div>
 
-						{/* kilocode_change start: Start Indexing Button */}
-						{currentSettings.codebaseIndexEnabled &&
-							(indexingStatus.systemStatus === "Error" || indexingStatus.systemStatus === "Standby") && (
-								<div className="mb-4 flex justify-center">
-									<Button
-										onClick={() => {
-											setIsStartingIndexing(true)
-											vscode.postMessage({ type: "startIndexing" })
-										}}
-										disabled={saveStatus === "saving" || hasUnsavedChanges || isStartingIndexing}>
-										{isStartingIndexing
-											? `${t("settings:codeIndex.startIndexingButton")}${loadingDots}`
-											: t("settings:codeIndex.startIndexingButton")}
-									</Button>
-								</div>
-							)}
-						{/* kilocode_change start: Show error message if indexing failed */}
-						{indexingStatus.systemStatus === "Error" && (
-							<div className="text-xs text-red-500 mt-2 text-center">
-								{t("settings:codeIndex.indexingErrorMessage")}
-							</div>
-						)}
-						{/* kilocode_change end */}
-						{/* kilocode_change end */}
-
 						{/* Status Section */}
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">{t("settings:codeIndex.statusTitle")}</h4>
@@ -1994,9 +1969,25 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														{t("settings:codeIndex.clearDataDialog.confirmButton")}
 													</AlertDialogAction>
 												</AlertDialogFooter>
-											</AlertDialogContent>
-										</AlertDialog>
+									</AlertDialogContent>
+									</AlertDialog>
+								)}
+
+								{/* kilocode_change start: Start Indexing Button */}
+								{currentSettings.codebaseIndexEnabled &&
+									(indexingStatus.systemStatus === "Error" || indexingStatus.systemStatus === "Standby") && (
+										<Button
+											onClick={() => {
+												setIsStartingIndexing(true)
+												vscode.postMessage({ type: "startIndexing" })
+											}}
+											disabled={saveStatus === "saving" || hasUnsavedChanges || isStartingIndexing}>
+											{isStartingIndexing
+												? `${t("settings:codeIndex.startIndexingButton")}${loadingDots}`
+												: t("settings:codeIndex.startIndexingButton")}
+										</Button>
 									)}
+								{/* kilocode_change end */}
 							</div>
 
 							<Button
