@@ -392,6 +392,12 @@ export class CLI {
 	 * Apply provider and model overrides from CLI options
 	 */
 	private async applyProviderModelOverrides(config: CLIConfig): Promise<CLIConfig> {
+		logs.debug("Applying provider/model overrides", "CLI", {
+			optionsProvider: this.options.provider,
+			optionsModel: this.options.model,
+			currentConfigProvider: config.provider,
+		})
+
 		const updatedConfig = { ...config }
 
 		// Apply provider override
@@ -400,6 +406,8 @@ export class CLI {
 			if (provider) {
 				updatedConfig.provider = this.options.provider
 				logs.info(`Provider overridden to: ${this.options.provider}`, "CLI")
+			} else {
+				logs.warn(`Provider override failed: provider '${this.options.provider}' not found`, "CLI")
 			}
 		}
 
