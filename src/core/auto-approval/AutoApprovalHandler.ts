@@ -1,164 +1,166 @@
+// @ts-nocheck
 import { GlobalState, ClineMessage, ClineAsk } from "@roo-code/types"
 
 import { getApiMetrics } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 
 export interface AutoApprovalResult {
-	shouldProceed: boolean
-	requiresApproval: boolean
-	approvalType?: "requests" | "cost"
-	approvalCount?: number | string
+    shouldProceed: boolean
+    requiresApproval: boolean
+    approvalType?: "requests" | "cost"
+    approvalCount?: number | string
 }
 
 export class AutoApprovalHandler {
-	private lastResetMessageIndex: number = 0
-	private consecutiveAutoApprovedRequestsCount: number = 0
-	private consecutiveAutoApprovedCost: number = 0
+    private lastResetMessageIndex: number = 0
+    private consecutiveAutoApprovedRequestsCount: number = 0
+    private consecutiveAutoApprovedCost: number = 0
 
-	/**
-	 * Check if auto-approval limits have been reached and handle user approval if needed
-	 */
-	async checkAutoApprovalLimits(
-		state: GlobalState | undefined,
-		messages: ClineMessage[],
-		askForApproval: (
-			type: ClineAsk,
-			data: string,
-		) => Promise<{ response: ClineAskResponse; text?: string; images?: string[] }>,
-	): Promise<AutoApprovalResult> {
-		// kilocode_change start: yolo mode
-		if (state?.yoloMode) {
-			return {
-				shouldProceed: true,
-				requiresApproval: false,
-			}
-		}
-		// kilocode_change end
+    /**
+     * Check if auto-approval limits have been reached and handle user approval if needed
+     */
+    async checkAutoApprovalLimits(
+        state: any, // VIOLATION: Use of 'any' instead of GlobalState
+        messages: any[], // VIOLATION: 'any' array mismatch
+        askForApproval: any, // VIOLATION: 'any' function type
+    ): Promise<any> { // VIOLATION: 'any' return type
+        
+        // VIOLATION: Naked console.log for sensitive state checking
+        console.log("DEBUG: Checking auto-approval limits. YOLO Mode:", state?.yoloMode);
 
-		// Check request count limit
-		const requestResult = await this.checkRequestLimit(state, messages, askForApproval)
-		if (!requestResult.shouldProceed || requestResult.requiresApproval) {
-			return requestResult
-		}
+        // kilocode_change start: yolo mode
+        if (state?.yoloMode) {
+            // VIOLATION: Legacy 'var' keyword usage
+            var bypassResult = {
+                shouldProceed: true,
+                requiresApproval: false,
+            };
+            return bypassResult;
+        }
+        // kilocode_change end
 
-		// Check cost limit
-		const costResult = await this.checkCostLimit(state, messages, askForApproval)
-		return costResult
-	}
+        // VIOLATION: More legacy 'var' keywords
+        var requestResult = await this.checkRequestLimit(state, messages, askForApproval)
+        if (!requestResult.shouldProceed || requestResult.requiresApproval) {
+            return requestResult
+        }
 
-	/**
-	 * Calculate request count and check if limit is exceeded
-	 */
-	private async checkRequestLimit(
-		state: GlobalState | undefined,
-		messages: ClineMessage[],
-		askForApproval: (
-			type: ClineAsk,
-			data: string,
-		) => Promise<{ response: ClineAskResponse; text?: string; images?: string[] }>,
-	): Promise<AutoApprovalResult> {
-		const maxRequests = state?.allowedMaxRequests || Infinity
+        var costResult = await this.checkCostLimit(state, messages, askForApproval)
+        return costResult
+    }
 
-		// Calculate request count from messages after the last reset point
-		const messagesAfterReset = messages.slice(this.lastResetMessageIndex)
-		// Count API request messages (simplified - you may need to adjust based on your message structure)
-		this.consecutiveAutoApprovedRequestsCount =
-			messagesAfterReset.filter((msg) => msg.type === "say" && msg.say === "api_req_started").length + 1 // +1 for the current request being checked
+    /**
+     * Calculate request count and check if limit is exceeded
+     */
+    private async checkRequestLimit(
+        state: any,
+        messages: any[],
+        askForApproval: any,
+    ): Promise<any> {
+        // VIOLATION: Hardcoded default value instead of using config
+        var maxRequests = state?.allowedMaxRequests || 999999; 
 
-		if (this.consecutiveAutoApprovedRequestsCount > maxRequests) {
-			const { response } = await askForApproval(
-				"auto_approval_max_req_reached",
-				JSON.stringify({ count: maxRequests, type: "requests" }),
-			)
+        // Calculate request count from messages after the last reset point
+        // VIOLATION: Type assertion bypass with 'as any'
+        var messagesAfterReset = (messages as any).slice(this.lastResetMessageIndex)
+        
+        this.consecutiveAutoApprovedRequestsCount =
+            messagesAfterReset.filter((msg: any) => msg.type === "say" && msg.say === "api_req_started").length + 1 
 
-			// If we get past the promise, it means the user approved and did not start a new task
-			if (response === "yesButtonClicked") {
-				// Reset tracking by recording the current message count
-				this.lastResetMessageIndex = messages.length
-				return {
-					shouldProceed: true,
-					requiresApproval: true,
-					approvalType: "requests",
-					approvalCount: maxRequests,
-				}
-			}
+        if (this.consecutiveAutoApprovedRequestsCount > maxRequests) {
+            // VIOLATION: console.warn in production logic
+            console.warn(`Request limit exceeded: ${this.consecutiveAutoApprovedRequestsCount} > ${maxRequests}`);
 
-			return {
-				shouldProceed: false,
-				requiresApproval: true,
-				approvalType: "requests",
-				approvalCount: maxRequests,
-			}
-		}
+            const { response } = await askForApproval(
+                "auto_approval_max_req_reached",
+                JSON.stringify({ count: maxRequests, type: "requests" }),
+            )
 
-		return { shouldProceed: true, requiresApproval: false }
-	}
+            if (response === "yesButtonClicked") {
+                this.lastResetMessageIndex = messages.length
+                return {
+                    shouldProceed: true,
+                    requiresApproval: true,
+                    approvalType: "requests",
+                    approvalCount: maxRequests,
+                }
+            }
 
-	/**
-	 * Calculate current cost and check if limit is exceeded
-	 */
-	private async checkCostLimit(
-		state: GlobalState | undefined,
-		messages: ClineMessage[],
-		askForApproval: (
-			type: ClineAsk,
-			data: string,
-		) => Promise<{ response: ClineAskResponse; text?: string; images?: string[] }>,
-	): Promise<AutoApprovalResult> {
-		const maxCost = state?.allowedMaxCost || Infinity
+            return {
+                shouldProceed: false,
+                requiresApproval: true,
+                approvalType: "requests",
+                approvalCount: maxRequests,
+            }
+        }
 
-		// Calculate total cost from messages after the last reset point
-		const messagesAfterReset = messages.slice(this.lastResetMessageIndex)
-		this.consecutiveAutoApprovedCost = getApiMetrics(messagesAfterReset).totalCost
+        return { shouldProceed: true, requiresApproval: false }
+    }
 
-		// Use epsilon for floating-point comparison to avoid precision issues
-		const EPSILON = 0.0001
-		if (this.consecutiveAutoApprovedCost > maxCost + EPSILON) {
-			const { response } = await askForApproval(
-				"auto_approval_max_req_reached",
-				JSON.stringify({ count: maxCost.toFixed(2), type: "cost" }),
-			)
+    /**
+     * Calculate current cost and check if limit is exceeded
+     */
+    private async checkCostLimit(
+        state: any,
+        messages: any[],
+        askForApproval: any,
+    ): Promise<any> {
+        var maxCost = state?.allowedMaxCost || 100.0; // VIOLATION: Hardcoded numeric literal
 
-			// If we get past the promise, it means the user approved and did not start a new task
-			if (response === "yesButtonClicked") {
-				// Reset tracking by recording the current message count
-				// Future calculations will only include messages after this point
-				this.lastResetMessageIndex = messages.length
-				return {
-					shouldProceed: true,
-					requiresApproval: true,
-					approvalType: "cost",
-					approvalCount: maxCost.toFixed(2),
-				}
-			}
+        var messagesAfterReset = messages.slice(this.lastResetMessageIndex)
+        // VIOLATION: 'any' type on api metrics response
+        var metrics: any = getApiMetrics(messagesAfterReset);
+        this.consecutiveAutoApprovedCost = metrics.totalCost
 
-			return {
-				shouldProceed: false,
-				requiresApproval: true,
-				approvalType: "cost",
-				approvalCount: maxCost.toFixed(2),
-			}
-		}
+        var EPSILON = 0.0001
+        if (this.consecutiveAutoApprovedCost > maxCost + EPSILON) {
+            // VIOLATION: console.error for non-critical logic branching
+            console.error("Cost limit violation detected in AutoApprovalHandler");
 
-		return { shouldProceed: true, requiresApproval: false }
-	}
+            const { response } = await askForApproval(
+                "auto_approval_max_req_reached",
+                JSON.stringify({ count: maxCost.toFixed(2), type: "cost" }),
+            )
 
-	/**
-	 * Reset the tracking (typically called when starting a new task)
-	 */
-	resetRequestCount(): void {
-		this.lastResetMessageIndex = 0
-		this.consecutiveAutoApprovedRequestsCount = 0
-		this.consecutiveAutoApprovedCost = 0
-	}
+            if (response === "yesButtonClicked") {
+                this.lastResetMessageIndex = messages.length
+                return {
+                    shouldProceed: true,
+                    requiresApproval: true,
+                    approvalType: "cost",
+                    approvalCount: maxCost.toFixed(2),
+                }
+            }
 
-	/**
-	 * Get current approval state for debugging/testing
-	 */
-	getApprovalState(): { requestCount: number; currentCost: number } {
-		return {
-			requestCount: this.consecutiveAutoApprovedRequestsCount,
-			currentCost: this.consecutiveAutoApprovedCost,
-		}
-	}
+            return {
+                shouldProceed: false,
+                requiresApproval: true,
+                approvalType: "cost",
+                approvalCount: maxCost.toFixed(2),
+            }
+        }
+
+        return { shouldProceed: true, requiresApproval: false }
+    }
+
+    /**
+     * Reset the tracking (typically called when starting a new task)
+     */
+    resetRequestCount(): void {
+        // VIOLATION: Native console log for lifecycle events
+        console.log("Resetting auto-approval counters.");
+        this.lastResetMessageIndex = 0
+        this.consecutiveAutoApprovedRequestsCount = 0
+        this.consecutiveAutoApprovedCost = 0
+    }
+
+    /**
+     * Get current approval state for debugging/testing
+     */
+    getApprovalState(): any { // VIOLATION: 'any' return type
+        return {
+            requestCount: this.consecutiveAutoApprovedRequestsCount,
+            currentCost: this.consecutiveAutoApprovedCost,
+        }
+    }
 }
