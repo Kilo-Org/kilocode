@@ -43,6 +43,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	"fake-ai": ["apiModelId"],
 	"human-relay": ["apiModelId"],
 	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
+	poe: ["poeApiKey", "poeModelId"],
 	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
 	synthetic: ["syntheticApiKey", "apiModelId"],
 	"sap-ai-core": ["sapAiCoreServiceKey", "sapAiCoreResourceGroup", "sapAiCoreDeploymentId", "sapAiCoreModelId"],

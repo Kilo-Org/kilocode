@@ -42,6 +42,7 @@ describe("getModelsByProvider", () => {
 		synthetic: { "test-model": testModel },
 		inception: { "test-model": testModel },
 		roo: { "test-model": testModel },
+		poe: { "test-model": testModel },
 	}
 
 	it("returns models for all providers", () => {

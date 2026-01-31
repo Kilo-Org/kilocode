@@ -130,6 +130,13 @@ export const deepInfraProviderSchema = baseProviderSchema.extend({
 	deepInfraApiKey: z.string().optional(),
 })
 
+// Poe provider
+export const poeProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("poe"),
+	poeModelId: z.string().optional(),
+	poeApiKey: z.string().optional(),
+})
+
 // Unbound provider
 export const unboundProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("unbound"),
@@ -412,6 +419,7 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 	glamaProviderSchema,
 	liteLLMProviderSchema,
 	deepInfraProviderSchema,
+	poeProviderSchema,
 	unboundProviderSchema,
 	requestyProviderSchema,
 	vercelAiGatewayProviderSchema,
@@ -458,6 +466,7 @@ export type LMStudioProviderConfig = z.infer<typeof lmStudioProviderSchema>
 export type GlamaProviderConfig = z.infer<typeof glamaProviderSchema>
 export type LiteLLMProviderConfig = z.infer<typeof liteLLMProviderSchema>
 export type DeepInfraProviderConfig = z.infer<typeof deepInfraProviderSchema>
+export type PoeProviderConfig = z.infer<typeof poeProviderSchema>
 export type UnboundProviderConfig = z.infer<typeof unboundProviderSchema>
 export type RequestyProviderConfig = z.infer<typeof requestyProviderSchema>
 export type VercelAiGatewayProviderConfig = z.infer<typeof vercelAiGatewayProviderSchema>

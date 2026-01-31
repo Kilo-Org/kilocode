@@ -40,6 +40,7 @@ import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
+import { getPoeModels } from "./poe" // kilocode_change
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -174,6 +175,11 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			})
 			break
 		//kilocode_change end
+		// kilocode_change start
+		case "poe":
+			models = await getPoeModels(options.apiKey)
+			break
+		// kilocode_change end
 		default: {
 			// Ensures router is exhaustively checked if RouterName is a strict union.
 			const exhaustiveCheck: never = provider

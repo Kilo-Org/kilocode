@@ -929,6 +929,7 @@ export const webviewMessageHandler = async (
 						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
 						"nano-gpt": {}, // kilocode_change
+						poe: {}, // kilocode_change
 					}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -1030,6 +1031,10 @@ export const webviewMessageHandler = async (
 				{
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
+				},
+				{
+					key: "poe",
+					options: { provider: "poe", apiKey: apiConfiguration.poeApiKey },
 				},
 			]
 			// kilocode_change end

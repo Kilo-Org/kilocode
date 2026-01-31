@@ -23,6 +23,7 @@ export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
 export { OpenAiCompatibleResponsesHandler } from "./openai-responses" // kilocode_change
 export { OpenRouterHandler } from "./openrouter"
+export { PoeHandler } from "./poe" // kilocode_change
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"

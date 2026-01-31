@@ -65,6 +65,7 @@ export type RouterName =
 	| "vercel-ai-gateway"
 	| "ovhcloud"
 	| "nano-gpt"
+	| "poe"
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -131,6 +132,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	"io-intelligence": "io-intelligence",
 	"vercel-ai-gateway": "vercel-ai-gateway",
 	ovhcloud: "ovhcloud",
+	poe: "poe",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,
@@ -184,6 +186,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	"io-intelligence": "ioIntelligenceModelId",
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	ovhcloud: "ovhCloudAiEndpointsModelId",
+	poe: "poeModelId",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,
@@ -283,6 +286,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
 	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
+	poe: "gpt-4o",
 }
 
 /**
@@ -460,6 +464,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "ovhCloudAiEndpointsModelId"
 		case "nano-gpt":
 			return "nanoGptModelId"
+		case "poe":
+			return "poeModelId"
 		default:
 			return "apiModelId"
 	}
