@@ -97,6 +97,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexVercelAiGatewayApiKey?: string
 	codebaseIndexOpenRouterApiKey?: string
 	codebaseIndexOpenRouterSpecificProvider?: string
+	codebaseIndexVoyageApiKey?: string
 }
 
 // Validation schema for codebase index settings
@@ -192,6 +193,14 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		case "voyage":
+			return baseSchema.extend({
+				codebaseIndexVoyageApiKey: z.string().min(1, t("settings:codeIndex.validation.voyageApiKeyRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
 		default:
 			return baseSchema
 	}
@@ -262,6 +271,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexVercelAiGatewayApiKey: "",
 		codebaseIndexOpenRouterApiKey: "",
 		codebaseIndexOpenRouterSpecificProvider: "",
+		codebaseIndexVoyageApiKey: "",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -320,6 +330,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexOpenRouterApiKey: "",
 				codebaseIndexOpenRouterSpecificProvider:
 					codebaseIndexConfig.codebaseIndexOpenRouterSpecificProvider || "",
+				codebaseIndexVoyageApiKey: "",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -444,6 +455,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 							? SECRET_PLACEHOLDER
 							: ""
 					}
+					if (!prev.codebaseIndexVoyageApiKey || prev.codebaseIndexVoyageApiKey === SECRET_PLACEHOLDER) {
+						updated.codebaseIndexVoyageApiKey = secretStatus.hasVoyageApiKey ? SECRET_PLACEHOLDER : ""
+					}
 
 					return updated
 				}
@@ -527,7 +541,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					key === "codebaseIndexGeminiApiKey" ||
 					key === "codebaseIndexMistralApiKey" ||
 					key === "codebaseIndexVercelAiGatewayApiKey" ||
-					key === "codebaseIndexOpenRouterApiKey"
+					key === "codebaseIndexOpenRouterApiKey" ||
+					key === "codebaseIndexVoyageApiKey"
 				) {
 					dataToValidate[key] = "placeholder-valid"
 				}
@@ -885,6 +900,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												</SelectItem>
 												<SelectItem value="openrouter">
 													{t("settings:codeIndex.openRouterProvider")}
+												</SelectItem>
+												<SelectItem value="voyage">
+													{t("settings:codeIndex.voyageProvider")}
 												</SelectItem>
 											</SelectContent>
 										</Select>
@@ -1574,6 +1592,72 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														</p>
 													</div>
 												)}
+										</>
+									)}
+
+									{/* Voyage AI Settings */}
+									{currentSettings.codebaseIndexEmbedderProvider === "voyage" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.voyageApiKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexVoyageApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexVoyageApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.voyageApiKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVoyageApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexVoyageApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVoyageApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId || ""}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="" className="p-2">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
 										</>
 									)}
 

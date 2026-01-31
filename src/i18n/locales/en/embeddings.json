@@ -23,6 +23,12 @@
 		"accessDenied": "Access denied to Amazon Bedrock service. Please check your IAM permissions.",
 		"modelNotFound": "Model {{model}} not found in Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Invalid response format from Voyage AI",
+		"invalidCredentials": "Invalid Voyage AI API key. Please check your API key configuration.",
+		"accessDenied": "Access denied. Your IP address may be blocked by Voyage AI. Try a different network.",
+		"modelNotFound": "Model {{model}} not found in Voyage AI. Please check your model selection."
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Unknown error processing file {{filePath}}",
 		"unknownErrorDeletingPoints": "Unknown error deleting points for {{filePath}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "OpenRouter configuration missing for embedder creation",
 		"vercelAiGatewayConfigMissing": "Vercel AI Gateway configuration missing for embedder creation",
 		"bedrockConfigMissing": "Amazon Bedrock configuration missing for embedder creation",
+		"voyageConfigMissing": "Voyage AI configuration missing for embedder creation",
 		"invalidEmbedderType": "Invalid embedder type configured: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Could not determine vector dimension for model '{{modelId}}' with provider '{{provider}}'. Please ensure the 'Embedding Dimension' is correctly set in the OpenAI-Compatible provider settings.",
 		"vectorDimensionNotDetermined": "Could not determine vector dimension for model '{{modelId}}' with provider '{{provider}}'. Check model profiles or configuration.",

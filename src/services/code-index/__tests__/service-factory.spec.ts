@@ -4,6 +4,7 @@ import { OpenAiEmbedder } from "../embedders/openai"
 import { CodeIndexOllamaEmbedder } from "../embedders/ollama"
 import { OpenAICompatibleEmbedder } from "../embedders/openai-compatible"
 import { GeminiEmbedder } from "../embedders/gemini"
+import { VoyageEmbedder } from "../embedders/voyage"
 import { QdrantVectorStore } from "../vector-store/qdrant-client"
 
 // Mock the embedders and vector store
@@ -11,6 +12,7 @@ vitest.mock("../embedders/openai")
 vitest.mock("../embedders/ollama")
 vitest.mock("../embedders/openai-compatible")
 vitest.mock("../embedders/gemini")
+vitest.mock("../embedders/voyage")
 vitest.mock("../vector-store/qdrant-client")
 
 // Mock the embedding models module
@@ -32,6 +34,7 @@ const MockedOpenAiEmbedder = OpenAiEmbedder as MockedClass<typeof OpenAiEmbedder
 const MockedCodeIndexOllamaEmbedder = CodeIndexOllamaEmbedder as MockedClass<typeof CodeIndexOllamaEmbedder>
 const MockedOpenAICompatibleEmbedder = OpenAICompatibleEmbedder as MockedClass<typeof OpenAICompatibleEmbedder>
 const MockedGeminiEmbedder = GeminiEmbedder as MockedClass<typeof GeminiEmbedder>
+const MockedVoyageEmbedder = VoyageEmbedder as MockedClass<typeof VoyageEmbedder>
 const MockedQdrantVectorStore = QdrantVectorStore as MockedClass<typeof QdrantVectorStore>
 
 // Import the mocked functions
@@ -336,6 +339,71 @@ describe("CodeIndexServiceFactory", () => {
 
 			// Act & Assert
 			expect(() => factory.createEmbedder()).toThrow("serviceFactory.invalidEmbedderType")
+		})
+
+		it("should pass model ID to Voyage embedder when using Voyage provider", () => {
+			// Arrange
+			const testModelId = "voyage-code-3"
+			const testConfig = {
+				embedderProvider: "voyage",
+				modelId: testModelId,
+				voyageOptions: {
+					apiKey: "test-api-key",
+				},
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+
+			// Act
+			factory.createEmbedder()
+
+			// Assert
+			expect(MockedVoyageEmbedder).toHaveBeenCalledWith("test-api-key", testModelId)
+		})
+
+		it("should handle undefined model ID for Voyage embedder", () => {
+			// Arrange
+			const testConfig = {
+				embedderProvider: "voyage",
+				modelId: undefined,
+				voyageOptions: {
+					apiKey: "test-api-key",
+				},
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+
+			// Act
+			factory.createEmbedder()
+
+			// Assert
+			expect(MockedVoyageEmbedder).toHaveBeenCalledWith("test-api-key", undefined)
+		})
+
+		it("should throw error when Voyage API key is missing", () => {
+			// Arrange
+			const testConfig = {
+				embedderProvider: "voyage",
+				modelId: "voyage-code-3",
+				voyageOptions: {
+					apiKey: undefined,
+				},
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+
+			// Act & Assert
+			expect(() => factory.createEmbedder()).toThrow("serviceFactory.voyageConfigMissing")
+		})
+
+		it("should throw error when Voyage options are missing", () => {
+			// Arrange
+			const testConfig = {
+				embedderProvider: "voyage",
+				modelId: "voyage-code-3",
+				voyageOptions: undefined,
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+
+			// Act & Assert
+			expect(() => factory.createEmbedder()).toThrow("serviceFactory.voyageConfigMissing")
 		})
 	})
 
@@ -774,6 +842,28 @@ describe("CodeIndexServiceFactory", () => {
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
 			MockedGeminiEmbedder.mockImplementation(() => mockEmbedderInstance)
+			mockEmbedderInstance.validateConfiguration.mockResolvedValue({ valid: true })
+
+			// Act
+			const embedder = factory.createEmbedder()
+			const result = await factory.validateEmbedder(embedder)
+
+			// Assert
+			expect(result).toEqual({ valid: true })
+			expect(mockEmbedderInstance.validateConfiguration).toHaveBeenCalled()
+		})
+
+		it("should validate Voyage embedder successfully", async () => {
+			// Arrange
+			const testConfig = {
+				embedderProvider: "voyage",
+				modelId: "voyage-code-3",
+				voyageOptions: {
+					apiKey: "test-voyage-api-key",
+				},
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+			MockedVoyageEmbedder.mockImplementation(() => mockEmbedderInstance)
 			mockEmbedderInstance.validateConfiguration.mockResolvedValue({ valid: true })
 
 			// Act

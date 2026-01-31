@@ -83,6 +83,15 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		"qwen/qwen3-embedding-4b": { dimension: 2560, scoreThreshold: 0.4 },
 		"qwen/qwen3-embedding-8b": { dimension: 4096, scoreThreshold: 0.4 },
 	},
+	voyage: {
+		// Voyage AI embedding models - code-specific and general purpose
+		"voyage-code-3": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4-large": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4-lite": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-finance-2": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-law-2": { dimension: 1024, scoreThreshold: 0.4 },
+	},
 }
 
 /**
@@ -180,6 +189,9 @@ export function getDefaultModelId(provider: EmbedderProvider): string {
 			return "amazon.titan-embed-text-v2:0"
 		case "openrouter":
 			return "openai/text-embedding-3-large"
+
+		case "voyage":
+			return "voyage-code-3"
 
 		default:
 			// Fallback for unknown providers

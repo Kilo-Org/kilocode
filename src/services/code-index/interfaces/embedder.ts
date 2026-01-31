@@ -37,6 +37,7 @@ export type AvailableEmbedders =
 	| "vercel-ai-gateway"
 	| "bedrock"
 	| "openrouter"
+	| "voyage"
 
 export interface EmbedderInfo {
 	name: AvailableEmbedders
