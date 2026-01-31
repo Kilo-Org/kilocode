@@ -659,6 +659,7 @@ export type ExtensionState = Pick<
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
 	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
+	openAiModels?: string[]
 }
 
 export interface Command {
