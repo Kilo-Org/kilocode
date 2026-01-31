@@ -6,6 +6,7 @@ import { generateMessage } from "../ui/utils/messages.js"
 import type { Command, CommandContext, ArgumentProviderContext, ArgumentSuggestion } from "./core/types.js"
 import { formatRelativeTime } from "../utils/time.js"
 import { SessionManager } from "../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { exportSession, type ExportFormat } from "../utils/export.js"
 
 /**
  * Show current session ID
@@ -335,6 +336,73 @@ async function renameSession(context: CommandContext, newName: string): Promise<
 }
 
 /**
+ * Export the current session to a file
+ */
+async function exportCurrentSession(context: CommandContext, formatArg: string, outputPath?: string): Promise<void> {
+	const { addMessage, getMessages, getExtensionState } = context
+	const sessionService = SessionManager.init()
+
+	const validFormats: ExportFormat[] = ["markdown", "html", "jsonl"]
+	const format = (formatArg?.toLowerCase() || "markdown") as ExportFormat
+
+	if (!validFormats.includes(format)) {
+		addMessage({
+			...generateMessage(),
+			type: "error",
+			content: `Invalid format "${formatArg}". Valid formats: ${validFormats.join(", ")}`,
+		})
+		return
+	}
+
+	try {
+		const messages = getMessages()
+		const extensionState = getExtensionState()
+
+		if (messages.length === 0) {
+			addMessage({
+				...generateMessage(),
+				type: "error",
+				content: "No messages to export. Start a conversation first.",
+			})
+			return
+		}
+
+		const result = await exportSession(messages, {
+			format,
+			outputPath,
+			metadata: {
+				sessionId: sessionService?.sessionId,
+				title: extensionState?.currentTaskItem?.task || "Kilo Code Session",
+				mode: extensionState?.mode,
+				provider: extensionState?.currentApiConfigName,
+				model: extensionState?.apiConfiguration?.apiModelId,
+				workspace: extensionState?.cwd,
+			},
+		})
+
+		if (result.success) {
+			addMessage({
+				...generateMessage(),
+				type: "system",
+				content: `✅ Session exported successfully!\n\n**Format:** ${format}\n**Path:** \`${result.outputPath}\`\n**Messages:** ${result.messageCount}`,
+			})
+		} else {
+			addMessage({
+				...generateMessage(),
+				type: "error",
+				content: `Failed to export session: ${result.error}`,
+			})
+		}
+	} catch (error) {
+		addMessage({
+			...generateMessage(),
+			type: "error",
+			content: `Failed to export session: ${error instanceof Error ? error.message : String(error)}`,
+		})
+	}
+}
+
+/**
  * Autocomplete provider for session IDs
  */
 async function sessionIdAutocompleteProvider(context: ArgumentProviderContext): Promise<ArgumentSuggestion[]> {
@@ -389,13 +457,15 @@ export const sessionCommand: Command = {
 		"/session fork <id>",
 		"/session delete <sessionId>",
 		"/session rename <new name>",
+		"/session export markdown",
+		"/session export html ./output.html",
 	],
 	category: "system",
 	priority: 5,
 	arguments: [
 		{
 			name: "subcommand",
-			description: "Subcommand: show, list, search, select, share, fork, delete, rename",
+			description: "Subcommand: show, list, search, select, share, fork, delete, rename, export",
 			required: false,
 			values: [
 				{ value: "show", description: "Display current session ID" },
@@ -406,6 +476,7 @@ export const sessionCommand: Command = {
 				{ value: "fork", description: "Fork a session" },
 				{ value: "delete", description: "Delete a session" },
 				{ value: "rename", description: "Rename the current session" },
+				{ value: "export", description: "Export session to file (markdown, html, jsonl)" },
 			],
 		},
 		{
@@ -431,7 +502,7 @@ export const sessionCommand: Command = {
 			addMessage({
 				...generateMessage(),
 				type: "system",
-				content: "Usage: /session [show|list|search|select|share|fork|delete|rename] [args]",
+				content: "Usage: /session [show|list|search|select|share|fork|delete|rename|export] [args]",
 			})
 			return
 		}
@@ -463,11 +534,14 @@ export const sessionCommand: Command = {
 			case "rename":
 				await renameSession(context, args.slice(1).join(" "))
 				break
+			case "export":
+				await exportCurrentSession(context, args[1] || "markdown", args[2])
+				break
 			default:
 				addMessage({
 					...generateMessage(),
 					type: "error",
-					content: `Unknown subcommand "${subcommand}". Available: show, list, search, select, share, fork, delete, rename`,
+					content: `Unknown subcommand "${subcommand}". Available: show, list, search, select, share, fork, delete, rename, export`,
 				})
 		}
 	},

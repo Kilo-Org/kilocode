@@ -2,13 +2,20 @@
  * Command system type definitions
  */
 
-import type { ExtensionMessage, RouterModels, WebviewMessage, ModeConfig } from "../../types/messages.js"
+import type {
+	ExtensionMessage,
+	ExtensionState,
+	RouterModels,
+	WebviewMessage,
+	ModeConfig,
+} from "../../types/messages.js"
 import type { CliMessage } from "../../types/cli.js"
 import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
 import type { ModelListFilters } from "../../state/atoms/modelList.js"
 import type { HistoryItem } from "@roo-code/types"
+import type { UnifiedMessage } from "../../state/atoms/ui.js"
 
 export interface Command {
 	name: string
@@ -80,6 +87,9 @@ export interface CommandContext {
 	chatMessages: ExtensionMessage[]
 	// Current task context
 	currentTask: HistoryItem | null
+	// Session export context
+	getMessages: () => UnifiedMessage[]
+	getExtensionState: () => ExtensionState | null
 	// Model list context
 	modelListPageIndex: number
 	modelListFilters: ModelListFilters

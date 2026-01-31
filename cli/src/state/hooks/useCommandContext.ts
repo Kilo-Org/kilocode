@@ -16,6 +16,7 @@ import {
 	setMessageCutoffTimestampAtom,
 	isCommittingParallelModeAtom,
 	refreshTerminalAtom,
+	mergedMessagesAtom,
 } from "../atoms/ui.js"
 import {
 	setModeAtom,
@@ -115,6 +116,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const config = useAtomValue(configAtom)
 	const chatMessages = useAtomValue(chatMessagesAtom)
 	const currentTask = useAtomValue(currentTaskAtom)
+	const mergedMessages = useAtomValue(mergedMessagesAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -243,6 +245,9 @@ export function useCommandContext(): UseCommandContextReturn {
 				chatMessages: chatMessages as unknown as ExtensionMessage[],
 				// Current task context
 				currentTask,
+				// Session export context
+				getMessages: () => mergedMessages,
+				getExtensionState: () => extensionState,
 				// Model list context
 				modelListPageIndex,
 				modelListFilters,
@@ -288,6 +293,8 @@ export function useCommandContext(): UseCommandContextReturn {
 			previousTaskHistoryPage,
 			chatMessages,
 			currentTask,
+			mergedMessages,
+			extensionState,
 			modelListPageIndex,
 			modelListFilters,
 			updateModelListFilters,
