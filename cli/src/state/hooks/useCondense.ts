@@ -9,6 +9,7 @@ import {
 	removePendingCondenseRequestAtom,
 	CONDENSE_REQUEST_TIMEOUT_MS,
 } from "../atoms/condense.js"
+import { runPreCompactHooksAtom } from "../atoms/hooks.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { logs } from "../../services/logs.js"
 
@@ -50,10 +51,20 @@ export interface UseCondenseReturn {
 export function useCondense(): UseCondenseReturn {
 	const addPendingRequest = useSetAtom(addPendingCondenseRequestAtom)
 	const removePendingRequest = useSetAtom(removePendingCondenseRequestAtom)
+	const runPreCompactHooks = useSetAtom(runPreCompactHooksAtom)
 	const { sendMessage } = useWebviewMessage()
 
 	const condenseAndWait = useCallback(
 		async (taskId: string): Promise<void> => {
+			// Run PreCompact hooks before starting condense
+			const hookResult = await runPreCompactHooks({ taskId })
+			if (hookResult.blocked) {
+				logs.info("Condense blocked by PreCompact hook", "useCondense", {
+					reason: hookResult.blockReason,
+				})
+				throw new Error(`Condense blocked: ${hookResult.blockReason || "Blocked by hook"}`)
+			}
+
 			return new Promise((resolve, reject) => {
 				// Set up timeout
 				const timeout = setTimeout(() => {
@@ -83,7 +94,7 @@ export function useCondense(): UseCondenseReturn {
 				logs.info(`Condense request sent for task: ${taskId}, waiting for response...`, "useCondense")
 			})
 		},
-		[addPendingRequest, removePendingRequest, sendMessage],
+		[addPendingRequest, removePendingRequest, sendMessage, runPreCompactHooks],
 	)
 
 	return { condenseAndWait }

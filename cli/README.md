@@ -128,6 +128,31 @@ kilocode --auto "Refactor the auth module" --on-task-completed "Commit all chang
 - The agent has 90 seconds to complete the follow-up action
 - Supports markdown, special characters, and multi-line prompts
 
+#### Hooks Configuration
+
+You can register lifecycle hooks in your CLI config (`~/.kilocode/cli/config.json` or `<workspace>/.kilocode/cli/config.json`). Project hooks are appended after global hooks.
+
+```json
+{
+	"hooks": {
+		"UserPromptSubmit": [
+			{
+				"matcher": "*",
+				"hooks": [{ "type": "command", "command": "echo \"$KILO_HOOK\" >> /tmp/kilo.log" }]
+			}
+		],
+		"PreToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [{ "type": "command", "command": "node ./scripts/validate-tool.js", "timeout": 30000 }]
+			}
+		]
+	}
+}
+```
+
+Supported hook events: `PreToolUse`, `PostToolUse`, `PermissionRequest`, `Notification`, `UserPromptSubmit`, `Stop`, `PreCompact`, `SessionStart`, `SessionEnd`.
+
 #### Autonomous mode Behavior
 
 When running in Autonomous mode (`--auto` flag):

@@ -37,6 +37,7 @@ import { validateModelOnRouterModelsUpdateAtom } from "./modelValidation.js"
 import { validateModeOnCustomModesUpdateAtom } from "./modeValidation.js"
 import { logs } from "../../services/logs.js"
 import { SessionManager } from "../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { runStopHooksAtom } from "./hooks.js"
 
 /**
  * Message buffer to handle race conditions during initialization
@@ -628,6 +629,9 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 					logs.debug("Skipping completion_result detection - historical completion_result", "effects")
 				} else {
 					logs.info("Completion result detected in state update", "effects")
+
+					// Run Stop hooks when completion_result is detected
+					void set(runStopHooksAtom, { reason: "completion_result" })
 
 					set(ciCompletionDetectedAtom, true)
 
