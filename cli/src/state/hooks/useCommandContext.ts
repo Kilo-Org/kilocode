@@ -16,6 +16,7 @@ import {
 	setMessageCutoffTimestampAtom,
 	isCommittingParallelModeAtom,
 	refreshTerminalAtom,
+	yoloModeAtom,
 } from "../atoms/ui.js"
 import {
 	setModeAtom,
@@ -51,6 +52,7 @@ import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
 import { useCondense } from "./useCondense.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
+import { setTextAtom } from "../atoms/textBuffer.js"
 
 const TERMINAL_CLEAR_DELAY_MS = 500
 
@@ -104,6 +106,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const setCommittingParallelMode = useSetAtom(isCommittingParallelModeAtom)
 	const refreshTerminal = useSetAtom(refreshTerminalAtom)
 	const { sendMessage, clearTask } = useWebviewMessage()
+	const setTextBuffer = useSetAtom(setTextAtom)
 
 	// Get read-only state
 	const routerModels = useAtomValue(routerModelsAtom)
@@ -115,6 +118,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const config = useAtomValue(configAtom)
 	const chatMessages = useAtomValue(chatMessagesAtom)
 	const currentTask = useAtomValue(currentTaskAtom)
+	const yoloMode = useAtomValue(yoloModeAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -144,6 +148,13 @@ export function useCommandContext(): UseCommandContextReturn {
 
 	// Get condense function
 	const { condenseAndWait } = useCondense()
+
+	const setInput = useCallback(
+		(text: string) => {
+			setTextBuffer(text)
+		},
+		[setTextBuffer],
+	)
 
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
@@ -251,6 +262,9 @@ export function useCommandContext(): UseCommandContextReturn {
 				resetModelListState,
 				// Condense context
 				condenseAndWait,
+				// Input control
+				setInput,
+				yoloMode,
 			}
 		},
 		[
@@ -294,6 +308,8 @@ export function useCommandContext(): UseCommandContextReturn {
 			changeModelListPage,
 			resetModelListState,
 			condenseAndWait,
+			setInput,
+			yoloMode,
 		],
 	)
 

@@ -88,6 +88,9 @@ export interface CommandContext {
 	resetModelListState: () => void
 	// Condense context
 	condenseAndWait: (taskId: string) => Promise<void>
+	// Input control
+	setInput: (value: string) => void
+	yoloMode: boolean
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void
