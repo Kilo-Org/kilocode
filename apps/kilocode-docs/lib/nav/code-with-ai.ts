@@ -63,6 +63,7 @@ export const CodeWithAiNav: NavSection[] = [
 				href: "/code-with-ai/features/task-todo-list",
 				children: "Task Todo List",
 			},
+			{ href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
 		],
 	},
 ]

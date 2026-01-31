@@ -45,6 +45,7 @@ export const AutomateNav: NavSection[] = [
 		title: "Tools",
 		links: [
 			{ href: "/automate/how-tools-work", children: "How Tools Work" },
+			{ href: "/automate/native-function-calling", children: "Native Function Calling" },
 			{ href: "/automate/tools", children: "Tools Details" },
 		],
 	},
