@@ -911,6 +911,7 @@ export const webviewMessageHandler = async (
 						ovhcloud: {},
 						inception: {},
 						kilocode: {},
+						agentica: {},
 						gemini: {},
 						// kilocode_change end
 						openrouter: {},
@@ -929,7 +930,7 @@ export const webviewMessageHandler = async (
 						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
 						"nano-gpt": {}, // kilocode_change
-					}
+				}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 				try {
@@ -1030,6 +1031,11 @@ export const webviewMessageHandler = async (
 				{
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
+				},
+				// kilocode_change: Agentica dynamic provider
+				{
+					key: "agentica",
+					options: { provider: "agentica", apiKey: apiConfiguration.agenticaApiKey },
 				},
 			]
 			// kilocode_change end
@@ -2311,10 +2317,9 @@ export const webviewMessageHandler = async (
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
 				// kilocode_change end
 
-				// Ensure state is posted to webview after profile update to reflect organization mode changes
-				if (organizationChanged) {
-					await provider.postStateToWebview()
-				}
+				// Always post state to webview after profile update, not just when organization changed
+				// This ensures the welcome view receives the state message to complete the activation flow
+				await provider.postStateToWebview()
 
 				// kilocode_change: Reload ghost model when API provider settings change
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
@@ -2513,10 +2518,10 @@ export const webviewMessageHandler = async (
 							const existingMode = existingModes.find((mode) => mode.slug === message.modeConfig?.slug)
 							const changedSettings = existingMode
 								? Object.keys(message.modeConfig).filter(
-										(key) =>
-											JSON.stringify((existingMode as Record<string, unknown>)[key]) !==
-											JSON.stringify((message.modeConfig as Record<string, unknown>)[key]),
-									)
+									(key) =>
+										JSON.stringify((existingMode as Record<string, unknown>)[key]) !==
+										JSON.stringify((message.modeConfig as Record<string, unknown>)[key]),
+								)
 								: []
 
 							if (changedSettings.length > 0) {
@@ -2992,6 +2997,15 @@ export const webviewMessageHandler = async (
 					type: "updateProfileData",
 				})
 			}
+			break
+
+		case "openPlansView": // kilocode_change: Open Agentica plans UI
+			provider.postMessageToWebview({
+				type: "action",
+				action: "switchTab",
+				tab: "settings",
+				values: { section: "plans" },
+			})
 			break
 
 		case "fetchMcpMarketplace": {
@@ -3516,13 +3530,13 @@ export const webviewMessageHandler = async (
 			const status = manager
 				? manager.getCurrentStatus()
 				: {
-						systemStatus: "Standby",
-						message: "No workspace folder open",
-						processedItems: 0,
-						totalItems: 0,
-						currentItemUnit: "items",
-						workspacePath: undefined,
-					}
+					systemStatus: "Standby",
+					message: "No workspace folder open",
+					processedItems: 0,
+					totalItems: 0,
+					currentItemUnit: "items",
+					workspacePath: undefined,
+				}
 
 			provider.postMessageToWebview({
 				type: "indexingStatusUpdate",
@@ -4605,7 +4619,9 @@ export const webviewMessageHandler = async (
 		// kilocode_change start - Device Auth handlers
 		case "startDeviceAuth":
 		case "cancelDeviceAuth":
-		case "deviceAuthCompleteWithProfile": {
+		case "deviceAuthCompleteWithProfile":
+		case "startAgenticaDeviceAuth":
+		case "cancelAgenticaDeviceAuth": {
 			await deviceAuthMessageHandler(provider, message)
 			break
 		}
@@ -4626,6 +4642,54 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		// kilocode_change start - Secure password storage handlers
+		case "storeSecurePassword": {
+			try {
+				const { key, password } = message
+				if (key && password) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					await SecurePasswordStorage.storePasswordForService("agentica", key, password)
+				}
+			} catch (error) {
+				provider.log(`Error storing secure password: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+		case "getSecurePassword": {
+			try {
+				const { key } = message
+				if (key) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					const password = await SecurePasswordStorage.getPasswordForService("agentica", key)
+					await provider.postMessageToWebview({
+						type: "securePasswordRetrieved",
+						key,
+						password
+					})
+				}
+			} catch (error) {
+				provider.log(`Error retrieving secure password: ${error instanceof Error ? error.message : String(error)}`)
+				await provider.postMessageToWebview({
+					type: "securePasswordRetrieved",
+					key: message.key,
+					password: null,
+					error: error instanceof Error ? error.message : String(error)
+				})
+			}
+			break
+		}
+		case "clearSecurePassword": {
+			try {
+				const { key } = message
+				if (key) {
+					const { SecurePasswordStorage } = await import("../../utils/securePasswordStorage")
+					await SecurePasswordStorage.clearPasswordForService("agentica", key)
+				}
+			} catch (error) {
+				provider.log(`Error clearing secure password: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
 		// kilocode_change start: Review mode scope selection
 		case "reviewScopeSelected": {
 			const scope = message.reviewScope

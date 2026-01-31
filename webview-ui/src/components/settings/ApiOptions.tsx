@@ -26,6 +26,7 @@ import {
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
+	agenticaDefaultModelId,
 	MODEL_SELECTION_ENABLED,
 	// kilocode_change end
 	mistralDefaultModelId,
@@ -76,6 +77,7 @@ import {
 
 import {
 	Anthropic,
+	Agentica,
 	Baseten,
 	Bedrock,
 	Cerebras,
@@ -335,16 +337,16 @@ const ApiOptions = ({
 		// But filter out other deprecated models from being newly selectable
 		const availableModels = filteredModels
 			? Object.entries(filteredModels)
-					.filter(([modelId, modelInfo]) => {
-						// Always include the currently selected model
-						if (modelId === selectedModelId) return true
-						// Filter out deprecated models that aren't currently selected
-						return !modelInfo.deprecated
-					})
-					.map(([modelId]) => ({
-						value: modelId,
-						label: modelId,
-					}))
+				.filter(([modelId, modelInfo]) => {
+					// Always include the currently selected model
+					if (modelId === selectedModelId) return true
+					// Filter out deprecated models that aren't currently selected
+					return !modelInfo.deprecated
+				})
+				.map(([modelId]) => ({
+					value: modelId,
+					label: modelId,
+				}))
 			: []
 
 		return availableModels
@@ -456,6 +458,7 @@ const ApiOptions = ({
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
 				inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId },
+				agentica: { field: "agenticaModelId", default: agenticaDefaultModelId },
 				// kilocode_change end
 			}
 
@@ -595,6 +598,14 @@ const ApiOptions = ({
 					simplifySettings={fromWelcomeView}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
+				/>
+			)}
+
+			{selectedProvider === "agentica" && (
+				<Agentica
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					uriScheme={uriScheme}
 				/>
 			)}
 
@@ -1039,17 +1050,17 @@ const ApiOptions = ({
 			{
 				// kilocode_change start
 				(selectedProvider === "kilocode" || selectedProvider === "openrouter") &&
-					(apiConfiguration.kilocodeOrganizationId ? (
-						<KiloProviderRoutingManagedByOrganization
-							organizationId={apiConfiguration.kilocodeOrganizationId}
-						/>
-					) : (
-						<KiloProviderRouting
-							apiConfiguration={apiConfiguration}
-							setApiConfigurationField={setApiConfigurationField}
-							kilocodeDefaultModel={kilocodeDefaultModel}
-						/>
-					))
+				(apiConfiguration.kilocodeOrganizationId ? (
+					<KiloProviderRoutingManagedByOrganization
+						organizationId={apiConfiguration.kilocodeOrganizationId}
+					/>
+				) : (
+					<KiloProviderRouting
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						kilocodeDefaultModel={kilocodeDefaultModel}
+					/>
+				))
 				// kilocode_change end
 			}
 

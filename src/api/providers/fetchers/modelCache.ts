@@ -39,6 +39,7 @@ import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
+import { getAgenticaModels } from "./agentica" // kilocode_change
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
@@ -166,6 +167,11 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case "chutes":
 			models = await getChutesModels(options.apiKey)
 			break
+		case "agentica": {
+			// kilocode_change: Fetch Agentica models from the API
+			models = await getAgenticaModels(options.apiKey)
+			break
+		}
 		//kilocode_change start
 		case "nano-gpt":
 			models = await getNanoGptModels({

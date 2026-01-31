@@ -5,6 +5,7 @@ import { exec } from "child_process"
 import { promisify } from "util"
 
 import type { GitRepositoryInfo, GitCommit } from "@roo-code/types"
+export type { GitCommit }
 
 import { truncateOutput } from "../integrations/misc/extract-text"
 

@@ -29,6 +29,7 @@ export { SambaNovaHandler } from "./sambanova"
 export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
+export { AgenticaHandler } from "./agentica"
 export { OVHcloudAIEndpointsHandler } from "./ovhcloud"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
 export { SyntheticHandler } from "./synthetic"
