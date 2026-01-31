@@ -50,6 +50,96 @@ kilocode -c
 kilocode --continue
 ```
 
+### Scriptable Subcommands
+
+These subcommands run without the TUI and return JSON for scripting.
+
+```bash
+# List configured providers
+kilocode providers [list]
+
+# List available modes (default workspace is the current directory)
+kilocode modes [list] [--workspace <path>]
+
+# Show Kilocode profile information
+kilocode profile
+```
+
+Successful responses are returned as JSON:
+
+Providers example:
+
+```json
+{
+	"current": "kilocode-1",
+	"providers": [
+		{
+			"id": "kilocode-1",
+			"type": "kilocode",
+			"label": "Kilo Code",
+			"model": "claude-sonnet-4",
+			"isCurrent": true
+		},
+		{
+			"id": "anthropic-1",
+			"type": "anthropic",
+			"label": "Anthropic",
+			"model": null,
+			"isCurrent": false
+		}
+	]
+}
+```
+
+Modes example:
+
+```json
+{
+	"current": "code",
+	"workspace": "/path/to/workspace",
+	"modes": [
+		{
+			"slug": "code",
+			"name": "Code",
+			"description": "Write and update code",
+			"source": "built-in",
+			"isCurrent": true
+		}
+	]
+}
+```
+
+Note: `description` can be `null` when a mode does not define one.
+
+Profile example:
+
+```json
+{
+	"authenticated": true,
+	"provider": "kilocode",
+	"user": {
+		"name": "Jane Doe",
+		"email": "jane@example.com"
+	},
+	"organization": {
+		"id": "org_123",
+		"name": "Example Org",
+		"role": "admin"
+	}
+}
+```
+
+Errors are returned as JSON:
+
+```json
+{
+	"error": "Message",
+	"code": "ERROR_CODE"
+}
+```
+
+Exit codes: 0 = success, 1 = failure.
+
 ### Parallel mode
 
 Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.

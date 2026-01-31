@@ -3,6 +3,7 @@ import { openRouterDefaultModelId } from "@roo-code/types"
 import { z } from "zod"
 import { select } from "@inquirer/prompts"
 import { logs } from "../../../services/logs.js"
+import { kilocodeProfileDataSchema } from "../../types.js"
 import type { KilocodeOrganization, KilocodeProfileData } from "../../types.js"
 import { withRawMode } from "../../utils/terminal.js"
 
@@ -17,6 +18,37 @@ const DEFAULT_HEADERS = {
 }
 
 export const INVALID_TOKEN_ERROR = "INVALID_TOKEN"
+
+function normalizeProfileData(data: unknown): unknown {
+	if (!data || typeof data !== "object") {
+		return data
+	}
+
+	const record = data as Record<string, unknown>
+
+	if (record.user === null) {
+		record.user = undefined
+	}
+
+	if (record.organizations === null) {
+		record.organizations = undefined
+	}
+
+	if (record.user && typeof record.user === "object") {
+		const user = record.user as Record<string, unknown>
+		if (user.name === null) {
+			user.name = undefined
+		}
+		if (user.email === null) {
+			user.email = undefined
+		}
+		if (user.image === null) {
+			user.image = undefined
+		}
+	}
+
+	return record
+}
 
 /**
  * Fetch with timeout wrapper
@@ -49,12 +81,16 @@ export async function getKilocodeProfile(kilocodeToken: string): Promise<Kilocod
 	try {
 		const url = getApiUrl("/api/profile")
 
-		const response = await fetch(url, {
-			headers: {
-				Authorization: `Bearer ${kilocodeToken}`,
-				"Content-Type": "application/json",
+		const response = await fetchWithTimeout(
+			url,
+			{
+				headers: {
+					Authorization: `Bearer ${kilocodeToken}`,
+					"Content-Type": "application/json",
+				},
 			},
-		})
+			API_TIMEOUT_MS,
+		)
 
 		if (!response.ok) {
 			// Invalid token - authentication failed
@@ -64,8 +100,8 @@ export async function getKilocodeProfile(kilocodeToken: string): Promise<Kilocod
 			throw new Error(`Failed to fetch profile: ${response.status}`)
 		}
 
-		const data = await response.json()
-		return data as KilocodeProfileData
+		const data = normalizeProfileData(await response.json())
+		return await kilocodeProfileDataSchema.parseAsync(data)
 	} catch (error) {
 		// Re-throw our custom errors
 		if (error instanceof Error && error.message === INVALID_TOKEN_ERROR) {

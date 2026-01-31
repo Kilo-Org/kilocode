@@ -19,12 +19,27 @@ export const getModeBySlug = (slug: string, customModes: ModeConfig[] = []): Mod
 }
 
 /**
- * Get all available modes (default + custom)
+ * Get all available modes, with custom modes overriding built-in modes
  * @param customModes - Array of custom modes
  * @returns Array of all mode configurations
  */
 export const getAllModes = (customModes: ModeConfig[] = []): ModeConfig[] => {
-	return [...DEFAULT_MODES, ...customModes]
+	if (!customModes?.length) {
+		return [...DEFAULT_MODES]
+	}
+
+	const allModes = [...DEFAULT_MODES]
+
+	customModes.forEach((customMode) => {
+		const index = allModes.findIndex((mode) => mode.slug === customMode.slug)
+		if (index !== -1) {
+			allModes[index] = customMode
+		} else {
+			allModes.push(customMode)
+		}
+	})
+
+	return allModes
 }
 
 /**
