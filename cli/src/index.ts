@@ -404,6 +404,19 @@ program
 		await modelsApiCommand(options)
 	})
 
+// Status command - show effective configuration without starting the TUI
+program
+	.command("status")
+	.description("Show the effective CLI configuration")
+	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
+	.option("--json", "Output as JSON", false)
+	.action(async (options: { workspace?: string; json?: boolean }) => {
+		const { runStatusCommand } = await import("./commands/status.js")
+		const globalJson = program.opts().json ?? false
+		const json = Boolean(options.json || globalJson)
+		await runStatusCommand({ ...options, json })
+	})
+
 // Handle process termination signals
 process.on("SIGINT", async () => {
 	if (cli?.requestExitConfirmation()) {

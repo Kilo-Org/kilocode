@@ -32,6 +32,15 @@ We've only tested the CLI on Mac and Linux, and are aware that there are some is
 
 ## Usage
 
+### Status
+
+Show the effective CLI configuration without starting the TUI:
+
+```bash
+kilocode status
+kilocode status --json
+```
+
 ### Interactive Mode
 
 ```bash
