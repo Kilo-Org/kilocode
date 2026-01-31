@@ -81,12 +81,13 @@ function deepMerge(target: any, source: any): any {
 }
 
 export function getKiloToken(config: CLIConfig) {
-	const kiloProvider = config.providers.find((p) => p.provider === "kilocode")
-
-	if (kiloProvider && "kilocodeToken" in kiloProvider) {
-		return kiloProvider.kilocodeToken
+	// Only look for kilocode token if the current provider is kilocode
+	const currentProvider = config.providers.find((p) => p.id === config.provider)
+	if (currentProvider?.provider === "kilocode") {
+		if ("kilocodeToken" in currentProvider) {
+			return currentProvider.kilocodeToken
+		}
 	}
-
 	return null
 }
 
