@@ -8,11 +8,11 @@
 		"mkdirp": "^3.0.1"
 	},
 	"scripts": {
-		"clean": "./gradlew clean",
-		"build": "./gradlew buildPlugin -PdebugMode=idea",
-		"run": "./gradlew runIde -PdebugMode=idea",
-		"run:bundle": "./gradlew runIde -PdebugMode=release",
-		"bundle": "./gradlew buildPlugin -PdebugMode=release",
+		"clean": "node scripts/run-gradle.js clean",
+		"build": "node scripts/run-gradle.js buildPlugin -PdebugMode=idea",
+		"run": "node scripts/run-gradle.js runIde -PdebugMode=idea",
+		"run:bundle": "node scripts/run-gradle.js runIde -PdebugMode=release",
+		"bundle": "node scripts/run-gradle.js buildPlugin -PdebugMode=release",
 		"bundle:name": "node scripts/get_bundle_name.js",
 		"clean:kilocode": "npx del-cli ./plugins/kilocode --force && npx mkdirp ./plugins/kilocode",
 		"copy:kilocode": "npx cpy '../../bin-unpacked/extension/**' './plugins/kilocode/extension' --parents",
