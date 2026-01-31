@@ -50,6 +50,17 @@ kilocode -c
 kilocode --continue
 ```
 
+### Usage Reports
+
+In interactive mode, you can inspect historical spend and token usage:
+
+```bash
+/usage
+/usage --since 7d --workspace all --top 10
+```
+
+The report includes totals, top tasks by cost, provider/model breakdown, and a daily spend trend.
+
 ### Parallel mode
 
 Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
@@ -99,6 +110,21 @@ echo "Fix the bug in app.ts" | kilocode --auto
 
 # Run in autonomous mode with timeout (in seconds)
 kilocode --auto "Run tests" --timeout 300
+```
+
+### Cleanup
+
+Clean up local CLI data like logs, task history, and command history:
+
+```bash
+# Default cleanup (logs, tasks, command history)
+kilocode cleanup
+
+# Show what would be deleted
+kilocode cleanup --dry-run
+
+# Remove everything including config and identity
+kilocode cleanup --all --yes
 ```
 
 #### Task Completion Hook
