@@ -224,7 +224,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "初めてですか？",
 		"tryOneOfThese": "これらのアイデアを試して始めましょう：",
-		"clickToInsert": "任意の提案をクリックしてすぐに作業を開始",
 		"suggestionText": "クールなアイデアのために<suggestionButton>ここをクリック</suggestionButton>してから、<sendIcon />をタップして私がマジックを行うのを見てください！",
 		"ideas": {
 			"idea1": "マウスの動きに反応する回転する光る3D球体を作成してください。アプリをブラウザで動作させてください。",

@@ -217,7 +217,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Nowy tutaj?",
 		"tryOneOfThese": "Wypróbuj jeden z tych pomysłów, aby zacząć:",
-		"clickToInsert": "Kliknij dowolną sugestię, aby natychmiast zacząć nad nią pracować",
 		"suggestionText": "<suggestionButton>Kliknij tutaj</suggestionButton> dla fajnego pomysłu, następnie dotknij <sendIcon /> i zobacz, jak robię magię!",
 		"ideas": {
 			"idea1": "Stwórz obracającą się, świecącą kulę 3D, która reaguje na ruchy myszy. Spraw, aby aplikacja działała w przeglądarce.",
