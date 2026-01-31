@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "어떻게 시작하시겠습니까?",
+		"freeModels": {
+			"title": "무료 모델",
+			"description": "바로 코딩 시작"
+		},
+		"premiumModels": {
+			"title": "프리미엄 모델",
+			"description": "가입하기. 신규 사용자는 5달러 크레딧 제공"
+		},
+		"byok": {
+			"title": "내 키 사용",
+			"description": "고급. 본인 계정 또는 구독 사용"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",

@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "你想如何开始？",
+		"freeModels": {
+			"title": "免费模型",
+			"description": "立即开始编程"
+		},
+		"premiumModels": {
+			"title": "高级模型",
+			"description": "注册。新用户可获得 5 美元额度"
+		},
+		"byok": {
+			"title": "使用自己的密钥",
+			"description": "高级选项。使用你自己的账户或订阅"
+		}
+	},
 	"welcome": {
 		"greeting": "欢迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",

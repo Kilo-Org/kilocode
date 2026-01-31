@@ -2521,6 +2521,7 @@ export class ClineProvider
 			profileThresholds: profileThresholds ?? {},
 			cloudApiUrl: getRooCodeApiUrl(),
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
+			hasCompletedOnboarding: this.getGlobalState("hasCompletedOnboarding"), // kilocode_change: Track onboarding completion - undefined means new user
 			systemNotificationsEnabled: systemNotificationsEnabled ?? false, // kilocode_change
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey, // kilocode_change
@@ -2589,6 +2590,7 @@ export class ClineProvider
 			| "clineMessages"
 			| "renderContext"
 			| "hasOpenedModeSelector"
+			| "hasCompletedOnboarding" // kilocode_change
 			| "version"
 			| "shouldShowAnnouncement"
 			| "hasSystemPromptOverride"
