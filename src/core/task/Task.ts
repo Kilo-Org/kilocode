@@ -153,6 +153,7 @@ import { addOrMergeUserContent } from "./kilocode"
 import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
 import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
+import { deduplicateToolUseBlocks } from "./deduplicateToolUseBlocks"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -3772,9 +3773,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 					}
 
+					// Deduplicate tool_use blocks to prevent "unexpected tool_use_id" API errors
+					// This handles edge cases like long waits during orchestrator sessions
+					// Skip deduplication if 0-1 tool_use blocks (no duplicates possible)
+					const assistantApiMessage: Anthropic.MessageParam = {
+						role: "assistant",
+						content: assistantContent,
+					}
+
+					const deduplicatedAssistantMessage =
+						toolUseBlocks.length > 1
+							? deduplicateToolUseBlocks(assistantApiMessage) // Deduplicate if multiple tools
+							: assistantApiMessage
+
 					await this.addToApiConversationHistory(
-						{ role: "assistant", content: assistantContent },
-						reasoningMessage || undefined,
+						deduplicatedAssistantMessage,
+						reasoningMessage || undefined, // Include reasoning if present
 					)
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
