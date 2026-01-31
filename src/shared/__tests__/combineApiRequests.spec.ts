@@ -628,4 +628,87 @@ describe("combineApiRequests", () => {
 			})
 		})
 	})
+
+	describe("Error logging", () => {
+		it("should log warning when api_req_started has malformed JSON", () => {
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+			const startMessage: ClineMessage = {
+				type: "say",
+				say: "api_req_started",
+				text: "not valid JSON { broken",
+				ts: 1000,
+			}
+			const finishMessage = createFinishMessage('{"cost":0.005}', 1001)
+
+			const messages: ClineMessage[] = [startMessage, finishMessage]
+
+			const result = combineApiRequests(messages)
+
+			// Should still produce output (graceful degradation)
+			expect(result).toHaveLength(1)
+			const parsedText = JSON.parse(result[0].text || "{}")
+			expect(parsedText).toEqual({ cost: 0.005 })
+
+			// Should have logged a warning for the malformed start message
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[combineApiRequests] Failed to parse api_req_started JSON"),
+				expect.any(String),
+			)
+
+			warnSpy.mockRestore()
+		})
+
+		it("should log warning when api_req_finished has malformed JSON", () => {
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+			const startMessage = createStartMessage('{"request":"GET /api"}', 1000)
+			const finishMessage: ClineMessage = {
+				type: "say",
+				say: "api_req_finished",
+				text: "{ invalid json ::::",
+				ts: 1001,
+			}
+
+			const messages: ClineMessage[] = [startMessage, finishMessage]
+
+			const result = combineApiRequests(messages)
+
+			// Should still produce output (graceful degradation)
+			expect(result).toHaveLength(1)
+			const parsedText = JSON.parse(result[0].text || "{}")
+			expect(parsedText).toEqual({ request: "GET /api" })
+
+			// Should have logged a warning for the malformed finish message
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[combineApiRequests] Failed to parse api_req_finished JSON"),
+				expect.any(String),
+			)
+
+			warnSpy.mockRestore()
+		})
+
+		it("should include timestamp in warning when parsing fails", () => {
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+			const startMessage: ClineMessage = {
+				type: "say",
+				say: "api_req_started",
+				text: "broken",
+				ts: 12345,
+			}
+			const finishMessage = createFinishMessage('{"cost":0.005}', 12346)
+
+			combineApiRequests([startMessage, finishMessage])
+
+			// Warning should include the timestamp for debugging
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("ts=12345"),
+				expect.any(String),
+			)
+
+			warnSpy.mockRestore()
+		})
+	})
 })
+
