@@ -122,6 +122,9 @@ function AppInner({
 		return getContextWindow(routerModels, apiConfiguration)
 	}, [routerModels, apiConfiguration])
 
+	const currentProvider = apiConfiguration?.apiProvider ?? provider
+	const currentModel = apiConfiguration?.apiModelId ?? model
+
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const autocompleteRef = useRef<AutocompleteInputHandle<any>>(null)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -457,8 +460,8 @@ function AppInner({
 				<Header
 					cwd={workspacePath}
 					user={user}
-					provider={provider}
-					model={model}
+					provider={currentProvider}
+					model={currentModel}
 					mode={currentMode || mode}
 					reasoningEffort={reasoningEffort}
 					version={version}
