@@ -44,14 +44,16 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 		setIsCollapsed(!isCollapsed)
 	}
 
+	// kilocode_change start: muted styling with hover opacity
 	return (
 		<div className="group">
 			<div
-				className="flex items-center justify-between mb-2.5 pr-2 cursor-pointer select-none"
+				className="flex items-center justify-between pr-2 cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity"
 				onClick={handleToggle}>
 				<div className="flex items-center gap-2">
 					<Lightbulb className="w-4" />
-					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+					<span className="text-sm text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+					{/* kilocode_change end */}
 					{elapsed > 0 && (
 						<span className="text-sm text-vscode-descriptionForeground mt-0.5">{secondsLabel}</span>
 					)}
