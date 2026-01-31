@@ -30,6 +30,11 @@ export type TaskMetadataOptions = {
 	 * continue using this protocol even if user settings change.
 	 */
 	toolProtocol?: ToolProtocol
+	/**
+	 * cumulative total cost including deleted messages.
+	 * if provided, this overrides the calculated totalCost from messages.
+	 */
+	cumulativeTotalCost?: number
 }
 
 export async function taskMetadata({
@@ -44,6 +49,7 @@ export async function taskMetadata({
 	apiConfigName,
 	initialStatus,
 	toolProtocol,
+	cumulativeTotalCost,
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, id)
 
@@ -114,7 +120,7 @@ export async function taskMetadata({
 		tokensOut: tokenUsage.totalTokensOut,
 		cacheWrites: tokenUsage.totalCacheWrites,
 		cacheReads: tokenUsage.totalCacheReads,
-		totalCost: tokenUsage.totalCost,
+		totalCost: cumulativeTotalCost !== undefined ? cumulativeTotalCost : tokenUsage.totalCost,
 		size: taskDirSize,
 		workspace,
 		mode,
