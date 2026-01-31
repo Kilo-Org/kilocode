@@ -290,12 +290,27 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	// Update indexing status from parent
 	useEffect(() => {
 		setIndexingStatus(externalIndexingStatus)
-		// kilocode_change start: Stop loading animation when status changes from Standby
-		if (externalIndexingStatus.systemStatus !== "Standby" && isStartingIndexing) {
+	// kilocode_change start: Stop loading animation when status changes from Standby or Error
+	if (
+		(externalIndexingStatus.systemStatus !== "Standby" && isStartingIndexing) ||
+		(externalIndexingStatus.systemStatus === "Error" && isStartingIndexing)
+	) {
+		setIsStartingIndexing(false)
+	}
+	// kilocode_change end
+}, [externalIndexingStatus, isStartingIndexing])
+
+	// kilocode_change start: Timeout failsafe for loading state
+	useEffect(() => {
+		if (!isStartingIndexing) return
+
+		const timeout = setTimeout(() => {
 			setIsStartingIndexing(false)
-		}
-		// kilocode_change end
-	}, [externalIndexingStatus, isStartingIndexing])
+		}, 30000) // 30 second timeout
+
+		return () => clearTimeout(timeout)
+	}, [isStartingIndexing])
+	// kilocode_change end
 
 	// kilocode_change start: Animate dots while starting indexing
 	useEffect(() => {
@@ -314,6 +329,14 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 		return () => clearInterval(interval)
 	}, [isStartingIndexing])
+	// kilocode_change end
+
+	// kilocode_change start: Cleanup loading state on unmount
+	useEffect(() => {
+		return () => {
+			setIsStartingIndexing(false)
+		}
+	}, [])
 	// kilocode_change end
 
 	// Initialize settings from global state
@@ -836,6 +859,13 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									</Button>
 								</div>
 							)}
+						{/* kilocode_change start: Show error message if indexing failed */}
+						{indexingStatus.systemStatus === "Error" && (
+							<div className="text-xs text-red-500 mt-2 text-center">
+								{t("settings:codeIndex.indexingErrorMessage")}
+							</div>
+						)}
+						{/* kilocode_change end */}
 						{/* kilocode_change end */}
 
 						{/* Status Section */}

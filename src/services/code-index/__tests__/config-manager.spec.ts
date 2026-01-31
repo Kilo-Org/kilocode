@@ -1951,4 +1951,31 @@ describe("CodeIndexConfigManager", () => {
 			})
 		})
 	})
+
+	describe("double-click scenario", () => {
+		it("should handle rapid startIndexing calls gracefully", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: true,
+			})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			// Simulate rapid calls by returning true (as if workspaceState was updated twice)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
+
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(true)
+			expect(configManager.isIndexingAllowed).toBe(true)
+		})
+
+		it("should handle undefined workspace state gracefully", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: true,
+			})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(undefined) // undefined instead of false
+
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(false) // Should default to false
+			expect(configManager.isIndexingAllowed).toBe(false)
+		})
+	})
 })
