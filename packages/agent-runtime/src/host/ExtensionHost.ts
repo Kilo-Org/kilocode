@@ -980,10 +980,17 @@ export class ExtensionHost extends EventEmitter {
 	public async syncConfigurationMessages(configState: Partial<ExtensionState>): Promise<void> {
 		// Send API configuration if present
 		if (configState.apiConfiguration) {
+			const profileName = configState.currentApiConfigName || "default"
 			await this.sendWebviewMessage({
 				type: "upsertApiConfiguration",
-				text: configState.currentApiConfigName || "default",
+				text: profileName,
 				apiConfiguration: configState.apiConfiguration,
+			})
+
+			// Ensure the profile is activated
+			await this.sendWebviewMessage({
+				type: "loadApiConfiguration",
+				text: profileName,
 			})
 		}
 

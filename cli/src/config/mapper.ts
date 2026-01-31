@@ -9,14 +9,15 @@ export function mapConfigToExtensionState(
 ): Partial<ExtensionState> {
 	try {
 		// Find selected provider
-		let provider = config.providers.find((p) => p.id === config.provider)
+		const provider = config.providers.find((p) => p.id === config.provider)
 
 		if (!provider) {
-			logs.warn("Selected provider not found, using first provider", "ConfigMapper")
-			provider = config.providers[0]
-			if (!provider) {
+			if (config.providers.length === 0) {
 				throw new Error("No providers configured")
-			}
+			} // If no provider is selected but providers exist, throw an error to force explicit selection
+			throw new Error(
+				`No provider selected. Available providers: ${config.providers.map((p) => p.id).join(", ")}`,
+			)
 		}
 
 		// Map provider config to API configuration

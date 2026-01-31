@@ -49,15 +49,8 @@ export const DEFAULT_CONFIG = {
 	version: "1.0.0",
 	mode: "code",
 	telemetry: true,
-	provider: "default",
-	providers: [
-		{
-			id: "default",
-			provider: "kilocode",
-			kilocodeToken: "",
-			kilocodeModel: "x-ai/grok-code-fast-1",
-		},
-	],
+	provider: "",
+	providers: [],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
 	theme: "dark",
 	customThemes: {},
