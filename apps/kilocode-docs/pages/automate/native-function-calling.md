@@ -34,7 +34,7 @@ However, it also suffers from numerous downsides. Its effective replacement is J
 There are a few considerations and challenges.
 
 1. Model Compatibility: Not all models are trained for native function calling, especially small models below 4-7B parameters. That being said, the vast majority of models, both open and closed, released since June 2025 _do_ support native function calls.
-2. Provider Compatability: There are many OpenAI "compliant" providers on the market, using a variety of tools to support their products (often vLLM, SGLang, TensorRT-LLM). Beyond that are numerous local model tools (LM Studio, Ollama, Osaurus). Despite claiming compatability with the OpenAI API specification, its common to see partial or outright incorrect implementations.
+2. Provider Compatibility: There are many OpenAI "compliant" providers on the market, using a variety of tools to support their products (often vLLM, SGLang, TensorRT-LLM). Beyond that are numerous local model tools (LM Studio, Ollama, Osaurus). Despite claiming compatibility with the OpenAI API specification, it's common to see partial or outright incorrect implementations.
 
 Because of these risks and considerations, this capability is experiment, and off by default for nearly all models and providers.
 
