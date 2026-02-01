@@ -3684,6 +3684,11 @@ export const webviewMessageHandler = async (
 
 				await manager.clearIndexData()
 
+				// kilocode_change start
+				// Set workspace-level permission to false to keep indexing disabled after clear
+				await provider.context.workspaceState.update("indexingAllowed", false)
+				// kilocode_change end
+
 				// Keep workspace inactive after clear (don't set indexingAllowed = true)
 
 				provider.postMessageToWebview({
