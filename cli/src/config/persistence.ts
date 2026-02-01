@@ -128,7 +128,7 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 
 	// If no provider is selected, default to the first available provider
 	if (!merged.provider && merged.providers.length > 0) {
-		merged.provider = merged.providers[0].id
+		merged.provider = merged.providers[0]?.id || ""
 	}
 
 	return merged

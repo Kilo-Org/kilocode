@@ -1,4 +1,4 @@
-import type { CLIConfig, AutoApprovalConfig } from "./types.js"
+import type { CLIConfig, AutoApprovalConfig, ProviderConfig } from "./types.js"
 
 /**
  * Default auto approval configuration
@@ -50,7 +50,7 @@ export const DEFAULT_CONFIG = {
 	mode: "code",
 	telemetry: true,
 	provider: "",
-	providers: [],
+	providers: [] as ProviderConfig[],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
 	theme: "dark",
 	customThemes: {},
