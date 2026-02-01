@@ -13,6 +13,9 @@ import {
 	chatMessagesAtom,
 	routerModelsAtom,
 	yoloModeAtom,
+	budgetStatusAtom,
+	budgetEnabledAtom,
+	budgetWarningLevelAtom,
 } from "../../state/atoms/index.js"
 import { useGitInfo } from "../../state/hooks/useGitInfo.js"
 import { useContextUsage } from "../../state/hooks/useContextUsage.js"
@@ -29,6 +32,7 @@ import type { ProviderSettings } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
 import path from "path"
 import { isGitWorktree } from "../../utils/git.js"
+import type { WarningLevel } from "../../services/budget/types.js"
 
 const MAX_MODEL_NAME_LENGTH = 40
 
@@ -91,6 +95,42 @@ function getProjectName(cwd: string | null): string {
 }
 
 /**
+ * Get color based on budget warning level
+ */
+function getBudgetWarningColor(level: WarningLevel, theme: ReturnType<typeof useTheme>): string {
+	switch (level) {
+		case "critical":
+			return theme.semantic.error
+		case "high":
+			return "#ff8800"
+		case "medium":
+			return theme.semantic.warning
+		case "low":
+			return theme.semantic.info
+		default:
+			return theme.semantic.success
+	}
+}
+
+/**
+ * Get status emoji based on budget warning level
+ */
+function getBudgetStatusEmoji(level: WarningLevel): string {
+	switch (level) {
+		case "critical":
+			return "🚨"
+		case "high":
+			return "⚠️"
+		case "medium":
+			return "📊"
+		case "low":
+			return "💰"
+		default:
+			return "✅"
+	}
+}
+
+/**
  * StatusBar component that displays current project status
  */
 export const StatusBar: React.FC = () => {
@@ -105,6 +145,11 @@ export const StatusBar: React.FC = () => {
 	const messages = useAtomValue(chatMessagesAtom)
 	const routerModels = useAtomValue(routerModelsAtom)
 	const yoloMode = useAtomValue(yoloModeAtom)
+
+	// Get budget data
+	const budgetEnabled = useAtomValue(budgetEnabledAtom)
+	const budgetStatus = useAtomValue(budgetStatusAtom)
+	const budgetWarningLevel = useAtomValue(budgetWarningLevelAtom)
 
 	// Get git info
 	const gitInfo = useGitInfo(cwd)
@@ -167,6 +212,11 @@ export const StatusBar: React.FC = () => {
 	// Git status color (success if clean, warning if dirty)
 	const gitStatusColor = gitInfo.isClean ? theme.semantic.success : theme.semantic.warning
 
+	// Budget status color and emoji
+	const budgetColor = getBudgetWarningColor(budgetWarningLevel, theme)
+	const budgetEmoji = getBudgetStatusEmoji(budgetWarningLevel)
+	const budgetPercentage = Math.round(budgetStatus.daily.percentage * 100)
+
 	return (
 		<Box borderStyle="round" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
 			{/* Left side: Project and Git Branch */}
@@ -187,7 +237,7 @@ export const StatusBar: React.FC = () => {
 				) : null}
 			</Box>
 
-			{/* Right side: YOLO indicator, Mode, Model, and Context */}
+			{/* Right side: YOLO indicator, Mode, Model, Context, Budget, and Cost */}
 			<Box>
 				{/* YOLO Mode Indicator */}
 				{yoloMode && (
@@ -221,6 +271,18 @@ export const StatusBar: React.FC = () => {
 				<Text color={contextColor} bold>
 					{contextText}
 				</Text>
+
+				{/* Budget Indicator */}
+				{budgetEnabled && (
+					<>
+						<Text color={theme.ui.text.dimmed} dimColor>
+							{" | "}
+						</Text>
+						<Text color={budgetColor} bold>
+							{budgetEmoji} {budgetPercentage}%
+						</Text>
+					</>
+				)}
 
 				{/* Session Cost */}
 				{sessionCost.hasCostData && (

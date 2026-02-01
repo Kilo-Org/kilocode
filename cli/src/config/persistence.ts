@@ -1,8 +1,8 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import { homedir } from "os"
-import type { CLIConfig, AutoApprovalConfig } from "./types.js"
-import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL } from "./defaults.js"
+import type { CLIConfig, AutoApprovalConfig, BudgetConfig } from "./types.js"
+import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL, DEFAULT_BUDGET_CONFIG } from "./defaults.js"
 import { validateConfig, type ValidationResult } from "./validation.js"
 import { logs } from "../services/logs.js"
 import { buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
@@ -80,6 +80,16 @@ function deepMerge(target: any, source: any): any {
 	return result
 }
 
+/**
+ * Merge budget config with defaults
+ */
+function mergeBudgetConfig(loadedConfig: Partial<CLIConfig>): BudgetConfig {
+	if (!loadedConfig.budget) {
+		return DEFAULT_BUDGET_CONFIG
+	}
+	return deepMerge(DEFAULT_BUDGET_CONFIG, loadedConfig.budget) as BudgetConfig
+}
+
 export function getKiloToken(config: CLIConfig) {
 	const kiloProvider = config.providers.find((p) => p.provider === "kilocode")
 
@@ -105,6 +115,10 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 	} else {
 		merged.autoApproval = DEFAULT_AUTO_APPROVAL
 	}
+
+	// Special handling for budget to ensure all nested keys have defaults
+	// while preserving user values
+	merged.budget = mergeBudgetConfig(loadedConfig)
 
 	// Special handling for providers array to merge each provider with defaults
 	if (loadedConfig.providers && Array.isArray(loadedConfig.providers)) {

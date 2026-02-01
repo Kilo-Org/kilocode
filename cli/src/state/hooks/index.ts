@@ -73,3 +73,7 @@ export { useFollowupHandler } from "./useFollowupHandler.js"
 // Session cost hooks
 export { useSessionCost, formatSessionCost } from "./useSessionCost.js"
 export type { SessionCostInfo } from "./useSessionCost.js"
+
+// Budget hooks
+export { useBudgetCostTracking, useBudgetCheck } from "./useBudget.js"
+export type { BudgetCheckResult } from "./useBudget.js"

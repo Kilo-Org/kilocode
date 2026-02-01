@@ -41,6 +41,8 @@ import { useTerminal } from "../state/hooks/useTerminal.js"
 import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
 import { useWebviewMessage } from "../state/hooks/useWebviewMessage.js"
 import { isResumeAskMessage, shouldWaitForResumeAsk } from "./utils/resumePrompt.js"
+import { useBudgetCostTracking } from "../state/hooks/useBudget.js"
+import { getBudgetService } from "../services/budget/index.js"
 
 // Initialize built-in commands on module load
 initializeCommands()
@@ -96,6 +98,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Task history hook for fetching task history
 	const { fetchTaskHistory } = useTaskHistory()
+
+	// Budget cost tracking hook
+	useBudgetCostTracking()
 
 	// This clears the terminal and forces re-render of static components
 	useTerminal()
@@ -158,6 +163,27 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		// Load custom commands from ~/.kilocode/commands/ and .kilocode/commands/
 		void initializeCustomCommands(workspace)
 	}, [options.workspace, setWorkspacePath])
+
+	// Initialize budget service
+	useEffect(() => {
+		const initBudget = async () => {
+			try {
+				const budgetService = getBudgetService()
+				await budgetService.initialize()
+				logs.info("Budget service initialized", "UI")
+			} catch (error) {
+				logs.error("Failed to initialize budget service", "UI", { error })
+			}
+		}
+
+		void initBudget()
+
+		// Shutdown budget service on unmount
+		return () => {
+			const budgetService = getBudgetService()
+			void budgetService.shutdown()
+		}
+	}, [])
 
 	// Handle CI mode exit
 	useEffect(() => {

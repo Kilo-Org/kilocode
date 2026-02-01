@@ -1,4 +1,5 @@
 import type { CLIConfig, AutoApprovalConfig } from "./types.js"
+import type { BudgetConfig } from "../services/budget/types.js"
 
 /**
  * Default auto approval configuration
@@ -45,6 +46,28 @@ export const DEFAULT_AUTO_APPROVAL: AutoApprovalConfig = {
 	},
 }
 
+/**
+ * Default budget configuration
+ * Tracks daily/weekly/monthly spend with configurable limits
+ */
+export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
+	enabled: true,
+	daily: {
+		enabled: true,
+		limit: 10.0,
+	},
+	weekly: {
+		enabled: true,
+		limit: 50.0,
+	},
+	monthly: {
+		enabled: true,
+		limit: 200.0,
+	},
+	warningThresholds: [0.5, 0.75, 0.9],
+	actionAtLimit: "warn",
+}
+
 export const DEFAULT_CONFIG = {
 	version: "1.0.0",
 	mode: "code",
@@ -59,6 +82,7 @@ export const DEFAULT_CONFIG = {
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
+	budget: DEFAULT_BUDGET_CONFIG,
 	theme: "dark",
 	customThemes: {},
 } satisfies CLIConfig
