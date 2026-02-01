@@ -56,7 +56,7 @@ describe("Ollama Fetcher", () => {
 			})
 		})
 
-		it("should return null when capabilities does not include 'tools'", () => {
+		it("should return model with supportsNativeTools=false when capabilities does not include 'tools'", () => {
 			const modelDataWithoutTools = {
 				...ollamaModelsData["qwen3-2to16:latest"],
 				capabilities: ["completion"], // No "tools" capability
@@ -64,8 +64,9 @@ describe("Ollama Fetcher", () => {
 
 			const parsedModel = parseOllamaModel(modelDataWithoutTools as any)
 
-			// Models without tools capability are filtered out (return null)
-			expect(parsedModel).toBeNull()
+			// Models without tools capability are still returned (for autocomplete), but marked as not supporting tools
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsNativeTools).toBe(false)
 		})
 
 		it("should return model info when capabilities includes 'tools'", () => {
@@ -80,7 +81,7 @@ describe("Ollama Fetcher", () => {
 			expect(parsedModel!.supportsNativeTools).toBe(true)
 		})
 
-		it("should return null when capabilities is undefined (no tool support)", () => {
+		it("should return model with supportsNativeTools=false when capabilities is undefined", () => {
 			const modelDataWithoutCapabilities = {
 				...ollamaModelsData["qwen3-2to16:latest"],
 				capabilities: undefined, // No capabilities array
@@ -88,11 +89,12 @@ describe("Ollama Fetcher", () => {
 
 			const parsedModel = parseOllamaModel(modelDataWithoutCapabilities as any)
 
-			// Models without explicit tools capability are filtered out
-			expect(parsedModel).toBeNull()
+			// Models without explicit tools capability are still returned (for autocomplete)
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsNativeTools).toBe(false)
 		})
 
-		it("should return null when model has vision but no tools capability", () => {
+		it("should return model with vision but supportsNativeTools=false when no tools capability", () => {
 			const modelDataWithVision = {
 				...ollamaModelsData["qwen3-2to16:latest"],
 				capabilities: ["completion", "vision"],
@@ -100,8 +102,10 @@ describe("Ollama Fetcher", () => {
 
 			const parsedModel = parseOllamaModel(modelDataWithVision as any)
 
-			// No "tools" capability means filtered out
-			expect(parsedModel).toBeNull()
+			// No "tools" capability but model is still returned (for autocomplete/vision tasks)
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsImages).toBe(true)
+			expect(parsedModel!.supportsNativeTools).toBe(false)
 		})
 
 		it("should return model with both vision and tools when both capabilities present", () => {
@@ -119,7 +123,7 @@ describe("Ollama Fetcher", () => {
 	})
 
 	describe("getOllamaModels", () => {
-		it("should fetch model list from /api/tags and include models with tools capability", async () => {
+		it("should fetch model list from /api/tags and include all models", async () => {
 			const baseUrl = "http://localhost:11434"
 			const modelName = "devstral2to16:latest"
 
@@ -183,7 +187,7 @@ describe("Ollama Fetcher", () => {
 			expect(result[modelName]).toEqual(expectedParsedDetails)
 		})
 
-		it("should filter out models without tools capability", async () => {
+		it("should include models without tools capability but mark supportsNativeTools=false", async () => {
 			const baseUrl = "http://localhost:11434"
 			const modelName = "no-tools-model:latest"
 
@@ -232,9 +236,10 @@ describe("Ollama Fetcher", () => {
 
 			const result = await getOllamaModels(baseUrl)
 
-			// Model without tools capability should be filtered out
-			expect(Object.keys(result).length).toBe(0)
-			expect(result[modelName]).toBeUndefined()
+			// Model without tools capability is now included (for autocomplete), but marked as not supporting tools
+			expect(Object.keys(result).length).toBe(1)
+			expect(result[modelName]).toBeDefined()
+			expect(result[modelName].supportsNativeTools).toBe(false)
 		})
 
 		it("should return an empty list if the initial /api/tags call fails", async () => {
