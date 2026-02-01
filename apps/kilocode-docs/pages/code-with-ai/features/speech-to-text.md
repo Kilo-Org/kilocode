@@ -6,7 +6,7 @@ description: Kilo Code now includes experimental support for voice input in the 
 # Voice Transcription
 
 {% callout type="warning" title="🧪 Experimental Feature" %}
-Voice Transcriptopn / speech-to-text (STT) is currently in experimental status. Expect potential issues and changes as the feature matures.
+Voice Transcription / speech-to-text (STT) is currently in experimental status. Expect potential issues and changes as the feature matures.
 {% /callout %}
 
 Kilo Code now includes experimental support for voice input in the chat interface. This feature allows you to dictate your messages using speech-to-text (STT) technology powered by OpenAI's Whisper API.
