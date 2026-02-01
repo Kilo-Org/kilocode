@@ -844,7 +844,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				{children}
 				{/* kilocode_change - PopoverContent -> MaybePopoverContent */}
 				<MaybePopoverContent
-					className="w-[calc(100vw-32px)] max-w-[450px] max-h-[80vh] overflow-y-auto p-0"
+					className="w-[calc(100vw-32px)] max-w-[450px] max-h-[80vh] p-0 flex flex-col"
 					align="end"
 					alignOffset={0}
 					side="bottom"
@@ -852,7 +852,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					collisionPadding={16}
 					avoidCollisions={true}
 					container={portalContainer}>
-					<div className="p-3 border-b border-vscode-dropdown-border cursor-default">
+					<div className="p-3 border-b border-vscode-dropdown-border cursor-default flex-shrink-0">
 						<div className="flex flex-row items-center gap-1 p-0 mt-0 mb-1 w-full">
 							<h4 className="m-0 pb-2 flex-1">{t("settings:codeIndex.title")}</h4>
 						</div>
@@ -866,7 +866,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 						</p>
 					</div>
 
-					<div className="p-4">
+					<div className="p-4 overflow-y-auto flex-1">
 						{/* Status Section */}
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">{t("settings:codeIndex.statusTitle")}</h4>
@@ -913,12 +913,13 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 						{/* Action Buttons */}
 						<div className="space-y-3 mt-4">
-							{/* Activate/Deactivate Index Button - Full Width */}
-							<div className="w-full">
+							{/* Activate/Deactivate Index and Clear Buttons - 50/50 Row */}
+							<div className="flex gap-2">
+								{/* Activate/Deactivate Index Button - 50% width */}
 								<Button
 									onClick={handleToggleWorkspaceIndexing}
 									disabled={isTogglingWorkspaceIndexing || !cwd}
-									className="w-full"
+									className="flex-1"
 									variant={isWorkspaceIndexingActive ? "secondary" : "primary"}>
 									{isTogglingWorkspaceIndexing
 										? `${isWorkspaceIndexingActive
@@ -928,16 +929,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 											? t("settings:codeIndex.deactivateIndexButton")
 											: t("settings:codeIndex.activateIndexButton")}
 								</Button>
-								{!cwd && (
-									<p className="text-xs text-vscode-descriptionForeground mt-1">
-										{t("settings:codeIndex.openWorkspaceFirst")}
-									</p>
-								)}
-							</div>
 
-							{/* Clear Index and Save Buttons - 50/50 Row */}
-							<div className="flex gap-2">
-								{/* Clear Index Button - Always visible, disabled when no data */}
+								{/* Clear Index Button - 50% width */}
 								<AlertDialog>
 									<AlertDialogTrigger asChild>
 										<Button
@@ -966,17 +959,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										</AlertDialogFooter>
 									</AlertDialogContent>
 								</AlertDialog>
-
-								{/* Save Settings Button - 50% width */}
-								<Button
-									onClick={handleSaveSettings}
-									disabled={!hasUnsavedChanges || saveStatus === "saving"}
-									className="flex-1">
-									{saveStatus === "saving"
-										? t("settings:codeIndex.saving")
-										: t("settings:codeIndex.saveSettings")}
-								</Button>
 							</div>
+							{!cwd && (
+								<p className="text-xs text-vscode-descriptionForeground mt-1">
+									{t("settings:codeIndex.openWorkspaceFirst")}
+								</p>
+							)}
 						</div>
 
 						{/* Setup Settings Disclosure */}
@@ -2040,6 +2028,19 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 								</span>
 							</div>
 						)}
+
+					</div>
+
+					{/* Save Button - Fixed at bottom */}
+					<div className="p-4 border-t border-vscode-dropdown-border flex-shrink-0">
+						<Button
+							onClick={handleSaveSettings}
+							disabled={!hasUnsavedChanges || saveStatus === "saving"}
+							className="w-full">
+							{saveStatus === "saving"
+								? t("settings:codeIndex.saving")
+								: t("settings:codeIndex.saveSettings")}
+						</Button>
 					</div>
 					{/* kilocode_change - PopoverContent -> MaybePopoverContent */}
 				</MaybePopoverContent>
