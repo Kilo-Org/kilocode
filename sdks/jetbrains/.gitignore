@@ -18,6 +18,7 @@ Thumbs.db
 
 # Kotlin
 *.class
+.kotlin/
 
 # Local configuration
 local.properties
