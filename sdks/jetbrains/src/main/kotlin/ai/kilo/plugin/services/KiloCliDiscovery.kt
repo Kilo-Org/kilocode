@@ -6,7 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import java.io.File
 
 private val log = Logger.getInstance(KiloCliDiscovery::class.java)
-private val BINARY_NAMES = listOf("opencode")
+private val BINARY_NAMES = listOf("kilo", "opencode")
 
 interface OsDiscoveryStrategy {
     fun findBinary(binaryName: String): String?
