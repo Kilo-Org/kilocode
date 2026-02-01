@@ -65,7 +65,7 @@ Used for local servers running on your machine:
 - Simpler setup (no HTTP server needed)
 - Runs as a child process on your machine
 
-For more in-depth information about how STDIO transport works, see [STDIO Transport](/docs/features/mcp/server-transports#stdio-transport).
+For more in-depth information about how STDIO transport works, see [STDIO Transport](server-transports#stdio-transport).
 
 STDIO configuration example:
 
@@ -124,7 +124,7 @@ Used for remote servers accessed over HTTP/HTTPS:
 - Requires network access
 - Allows centralized deployment and management
 
-For more in-depth information about how SSE transport works, see [SSE Transport](/docs/features/mcp/server-transports#sse-transport).
+For more in-depth information about how SSE transport works, see [SSE Transport](server-transports#sse-transport).
 
 SSE configuration example:
 

@@ -224,7 +224,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Nouveau ici ?",
 		"tryOneOfThese": "Essaie une de ces idées pour commencer :",
-		"clickToInsert": "Clique sur n'importe quelle suggestion pour commencer à travailler dessus immédiatement",
 		"suggestionText": "<suggestionButton>Cliquez ici</suggestionButton> pour une idée géniale, puis appuyez sur <sendIcon /> et regardez-moi faire de la magie !",
 		"ideas": {
 			"idea1": "Créez une sphère 3D rotative et brillante qui répond aux mouvements de la souris. Faites fonctionner l'application dans le navigateur.",

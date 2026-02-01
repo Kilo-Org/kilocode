@@ -217,7 +217,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Mới ở đây?",
 		"tryOneOfThese": "Thử một trong những ý tưởng này để bắt đầu:",
-		"clickToInsert": "Nhấp vào bất kỳ gợi ý nào để bắt đầu làm việc ngay lập tức",
 		"suggestionText": "<suggestionButton>Nhấp vào đây</suggestionButton> để có một ý tưởng tuyệt vời, sau đó chạm vào <sendIcon /> và xem tôi làm phép thuật!",
 		"ideas": {
 			"idea1": "Tạo một hình cầu 3D quay và phát sáng phản ứng với chuyển động chuột. Làm cho ứng dụng hoạt động trong trình duyệt.",
