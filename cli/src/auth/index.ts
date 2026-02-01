@@ -102,6 +102,7 @@ export default async function authWizard(): Promise<void> {
 		// Save the configuration
 		const newConfig: CLIConfig = {
 			...config.config,
+			provider: authResult.providerConfig.id,
 			providers: [authResult.providerConfig],
 		}
 
