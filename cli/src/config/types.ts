@@ -6,14 +6,19 @@
  */
 
 import type { ProviderConfig as CoreProviderConfig, CLIConfig as CoreCLIConfig } from "@kilocode/core-schemas"
+import type { BudgetConfig } from "../services/budget/types.js"
 
 // ProviderConfig with index signature for dynamic property access (backward compatibility)
 export type ProviderConfig = CoreProviderConfig & { [key: string]: unknown }
 
-// CLIConfig with our enhanced ProviderConfig type
+// CLIConfig with our enhanced ProviderConfig type and budget configuration
 export interface CLIConfig extends Omit<CoreCLIConfig, "providers"> {
 	providers: ProviderConfig[]
+	budget?: BudgetConfig
 }
+
+// Re-export budget types
+export type { BudgetConfig, BudgetPeriod, BudgetAction, BudgetLimit, BudgetStatus, BudgetWarning, WarningLevel } from "../services/budget/types.js"
 
 // Re-export all config types from core-schemas
 export {

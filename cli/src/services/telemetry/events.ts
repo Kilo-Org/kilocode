@@ -79,6 +79,12 @@ export enum TelemetryEvent {
 	// Workflow Events
 	WORKFLOW_PATTERN_DETECTED = "cli_workflow_pattern_detected",
 	FEATURE_USED = "cli_feature_used",
+
+	// Budget Events
+	BUDGET_WARNING = "cli_budget_warning",
+	BUDGET_EXCEEDED = "cli_budget_exceeded",
+	BUDGET_RESET = "cli_budget_reset",
+	COST_UPDATED = "cli_cost_updated",
 }
 
 /**
@@ -328,6 +334,43 @@ export interface FeatureUsageProperties extends BaseProperties {
 	featureName: string
 	usageCount: number
 	firstUsed: boolean
+}
+
+/**
+ * Budget warning event properties
+ */
+export interface BudgetWarningProperties extends BaseProperties {
+	budgetWarningLevel: string
+	budgetPeriod: string
+	budgetSpend: number
+	budgetLimit: number
+	budgetPercentage: number
+}
+
+/**
+ * Budget exceeded event properties
+ */
+export interface BudgetExceededProperties extends BaseProperties {
+	budgetPeriod: string
+	budgetSpend: number
+	budgetLimit: number
+	budgetAction: string
+}
+
+/**
+ * Budget reset event properties
+ */
+export interface BudgetResetProperties extends BaseProperties {
+	budgetPeriod: string
+}
+
+/**
+ * Cost updated event properties
+ */
+export interface CostUpdatedProperties extends BaseProperties {
+	cost: number
+	provider: string
+	model: string
 }
 
 /**

@@ -732,6 +732,59 @@ export class TelemetryService {
 	}
 
 	// ============================================================================
+	// Budget Tracking
+	// ============================================================================
+
+	public trackBudgetWarning(level: string, period: string, spend: number, limit: number): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.BUDGET_WARNING, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			budgetWarningLevel: level,
+			budgetPeriod: period,
+			budgetSpend: spend,
+			budgetLimit: limit,
+			budgetPercentage: limit > 0 ? spend / limit : 0,
+		})
+	}
+
+	public trackBudgetExceeded(period: string, spend: number, limit: number, action: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.BUDGET_EXCEEDED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			budgetPeriod: period,
+			budgetSpend: spend,
+			budgetLimit: limit,
+			budgetAction: action,
+		})
+	}
+
+	public trackBudgetReset(period?: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.BUDGET_RESET, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			budgetPeriod: period || "all",
+		})
+	}
+
+	public trackCostUpdate(cost: number, provider: string, model: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.COST_UPDATED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			cost,
+			provider,
+			model,
+		})
+	}
+
+	// ============================================================================
 	// Helper Methods
 	// ============================================================================
 

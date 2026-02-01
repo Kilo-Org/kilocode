@@ -247,6 +247,42 @@ export {
 } from "./ui.js"
 
 // ============================================================================
+// Budget Atoms - Budget tracking and cost warnings
+// ============================================================================
+export {
+	// Core budget atoms
+	budgetConfigAtom,
+	budgetStatusAtom,
+	budgetEnabledAtom,
+	budgetLoadingAtom,
+	budgetErrorAtom,
+	budgetWarningAtom,
+
+	// Derived budget atoms
+	dailyBudgetAtom,
+	weeklyBudgetAtom,
+	monthlyBudgetAtom,
+	budgetWarningLevelAtom,
+	isBudgetExceededAtom,
+	budgetActionAtLimitAtom,
+	totalSessionSpendAtom,
+
+	// Budget history atoms
+	budgetHistoryAtom,
+
+	// Budget action atoms
+	initializeBudgetAtom,
+	updateBudgetConfigAtom,
+	toggleBudgetAtom,
+	setBudgetLimitAtom,
+	setBudgetActionAtom,
+	setBudgetThresholdsAtom,
+	resetBudgetAtom,
+	clearBudgetWarningAtom,
+	refreshBudgetAtom,
+} from "./budget.js"
+
+// ============================================================================
 // Type Re-exports
 // ============================================================================
 export type { ExtensionService, ExtensionAPI, MessageBridge } from "../../services/extension.js"
@@ -265,3 +301,4 @@ export type { CliMessage } from "../../types/cli.js"
 export type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 export type { FollowupSuggestion } from "./ui.js"
 export type { KilocodeNotification } from "./notifications.js"
+export type { BudgetConfig, BudgetStatus, BudgetWarning, BudgetPeriod, WarningLevel } from "../../services/budget/types.js"

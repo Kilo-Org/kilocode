@@ -1,7 +1,7 @@
 import Ajv from "ajv"
 import * as fs from "fs/promises"
 import * as path from "path"
-import type { CLIConfig, ProviderConfig } from "./types.js"
+import type { CLIConfig, ProviderConfig, BudgetConfig, BudgetAction } from "./types.js"
 import { PROVIDER_REQUIRED_FIELDS } from "../constants/providers/validation.js"
 
 // __dirname is provided by the banner in the bundled output
@@ -48,6 +48,14 @@ export async function validateConfig(config: unknown): Promise<ValidationResult>
 			const selectedProviderResult = validateSelectedProvider(cliConfig)
 			if (!selectedProviderResult.valid) {
 				return selectedProviderResult
+			}
+
+			// Validate budget configuration if present
+			if (cliConfig.budget) {
+				const budgetResult = validateBudgetConfig(cliConfig.budget)
+				if (!budgetResult.valid) {
+					return budgetResult
+				}
 			}
 		}
 
@@ -215,4 +223,51 @@ export function validateSelectedProvider(config: CLIConfig): ValidationResult {
 
 	// Validate the provider configuration (must have non-empty credentials)
 	return validateProviderConfig(selectedProvider, true)
+}
+
+/**
+ * Validates budget configuration
+ */
+export function validateBudgetConfig(budget: BudgetConfig): ValidationResult {
+	const errors: string[] = []
+
+	// Validate warning thresholds
+	if (!Array.isArray(budget.warningThresholds)) {
+		errors.push("budget.warningThresholds must be an array")
+	} else {
+		for (const threshold of budget.warningThresholds) {
+			if (typeof threshold !== "number" || threshold < 0 || threshold > 1) {
+				errors.push("budget.warningThresholds must contain numbers between 0 and 1")
+				break
+			}
+		}
+	}
+
+	// Validate actionAtLimit
+	const validActions: BudgetAction[] = ["warn", "pause", "block"]
+	if (!validActions.includes(budget.actionAtLimit)) {
+		errors.push(`budget.actionAtLimit must be one of: ${validActions.join(", ")}`)
+	}
+
+	// Validate period limits
+	const periods = ["daily", "weekly", "monthly"] as const
+	for (const period of periods) {
+		const periodConfig = budget[period]
+		if (typeof periodConfig !== "object" || periodConfig === null) {
+			errors.push(`budget.${period} must be an object`)
+			continue
+		}
+		if (typeof periodConfig.enabled !== "boolean") {
+			errors.push(`budget.${period}.enabled must be a boolean`)
+		}
+		if (typeof periodConfig.limit !== "number" || periodConfig.limit < 0) {
+			errors.push(`budget.${period}.limit must be a non-negative number`)
+		}
+	}
+
+	if (errors.length > 0) {
+		return { valid: false, errors }
+	}
+
+	return { valid: true }
 }
