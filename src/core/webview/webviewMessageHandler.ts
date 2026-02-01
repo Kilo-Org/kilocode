@@ -3684,11 +3684,19 @@ export const webviewMessageHandler = async (
 
 				await manager.clearIndexData()
 
-				// kilocode_change start: Clear workspace-level indexing permission
-				await provider.context.workspaceState.update("indexingAllowed", false)
-				// kilocode_change end
+				// Keep workspace inactive after clear (don't set indexingAllowed = true)
 
-				provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
+				provider.postMessageToWebview({
+					type: "indexCleared",
+					values: { success: true },
+				})
+
+				// Send updated status showing no data
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: false,
+					hasIndexData: false,
+				})
 			} catch (error) {
 				provider.log(`Error clearing index data: ${error instanceof Error ? error.message : String(error)}`)
 				provider.postMessageToWebview({
@@ -3701,6 +3709,138 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start
+		case "requestWorkspaceIndexingStatus": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				const isActive = provider.context.workspaceState.get<boolean>("indexingAllowed", false)
+
+				let hasIndexData = false
+				if (manager) {
+					const status = manager.getCurrentStatus()
+					hasIndexData =
+						status.systemStatus === "Indexed" ||
+						(status.totalItems > 0 && status.processedItems > 0)
+				}
+
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: isActive,
+					hasIndexData,
+					isFeatureConfigured: manager?.isFeatureConfigured ?? false,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: false,
+					hasIndexData: false,
+					isFeatureConfigured: false,
+				})
+			}
+			break
+		}
+		case "activateWorkspaceIndexing": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+
+				if (!manager) {
+					provider.postMessageToWebview({
+						type: "workspaceIndexingToggled",
+						active: false,
+						hasIndexData: false,
+						error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+					})
+					return
+				}
+
+				// Set workspace-level permission
+				await provider.context.workspaceState.update("indexingAllowed", true)
+
+				// Initialize manager to pick up the new indexingAllowed setting
+				await manager.initialize(provider.contextProxy)
+
+				// AUTO-START indexing if feature is configured
+				if (manager.isFeatureConfigured) {
+					const currentState = manager.state
+					if (currentState === "Standby" || currentState === "Error") {
+						manager.startIndexing()
+					}
+				}
+
+				// Send updated status
+				// active=true means indexing is allowed for this workspace (indexingAllowed=true)
+				// isFeatureConfigured indicates if all required settings are configured
+				const status = manager.getCurrentStatus()
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: true, // Workspace-level permission is now enabled
+					hasIndexData:
+						status.systemStatus === "Indexed" ||
+						status.systemStatus === "Indexing" ||
+						status.totalItems > 0,
+					isFeatureConfigured: manager.isFeatureConfigured,
+				})
+
+				// Also send updated indexing status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: status,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: false,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
+		case "deactivateWorkspaceIndexing": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+
+				if (!manager) {
+					provider.postMessageToWebview({
+						type: "workspaceIndexingToggled",
+						active: false,
+						hasIndexData: false,
+					})
+					return
+				}
+
+				// Set workspace-level permission to false
+				await provider.context.workspaceState.update("indexingAllowed", false)
+
+				// Stop any active indexing
+				if (manager.state === "Indexing") {
+					manager.cancelIndexing()
+				}
+
+				// Get updated status - hasIndexData remains true (data not cleared)
+				const status = manager.getCurrentStatus()
+
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: status.systemStatus === "Indexed" || status.totalItems > 0,
+				})
+
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: status,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: false,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
+		// kilocode_change end
 		// kilocode_change start - add clearUsageData
 		case "clearUsageData": {
 			try {

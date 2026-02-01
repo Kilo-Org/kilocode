@@ -7,7 +7,6 @@ import {
 	VSCodeDropdown,
 	VSCodeOption,
 	VSCodeLink,
-	VSCodeCheckbox,
 } from "@vscode/webview-ui-toolkit/react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 import { AlertTriangle } from "lucide-react"
@@ -287,6 +286,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	const [loadingDots, setLoadingDots] = useState(".")
 	// kilocode_change end
 
+	// Workspace-level indexing state
+	const [isWorkspaceIndexingActive, setIsWorkspaceIndexingActive] = useState<boolean>(false)
+	const [hasIndexData, setHasIndexData] = useState<boolean>(false)
+	const [isTogglingWorkspaceIndexing, setIsTogglingWorkspaceIndexing] = useState<boolean>(false)
+	const [isFeatureConfigured, setIsFeatureConfigured] = useState<boolean>(false)
+
 	// Update indexing status from parent
 	useEffect(() => {
 		setIndexingStatus(externalIndexingStatus)
@@ -399,6 +404,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		if (open) {
 			vscode.postMessage({ type: "requestIndexingStatus" })
 			vscode.postMessage({ type: "requestCodeIndexSecretStatus" })
+			vscode.postMessage({ type: "requestWorkspaceIndexingStatus" })
 		}
 		const handleMessage = (event: MessageEvent) => {
 			if (event.data.type === "workspaceUpdated") {
@@ -406,6 +412,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				if (open) {
 					vscode.postMessage({ type: "requestIndexingStatus" })
 					vscode.postMessage({ type: "requestCodeIndexSecretStatus" })
+					vscode.postMessage({ type: "requestWorkspaceIndexingStatus" })
 				}
 			}
 		}
@@ -452,6 +459,27 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					// Clear error message after 5 seconds
 					setSaveStatus("idle")
 					setSaveError(null)
+				}
+			} else if (event.data.type === "workspaceIndexingStatus") {
+				setIsWorkspaceIndexingActive(event.data.active)
+				setHasIndexData(event.data.hasIndexData)
+				setIsTogglingWorkspaceIndexing(false)
+				if (event.data.isFeatureConfigured !== undefined) {
+					setIsFeatureConfigured(event.data.isFeatureConfigured)
+				}
+			} else if (event.data.type === "workspaceIndexingToggled") {
+				setIsWorkspaceIndexingActive(event.data.active)
+				setHasIndexData(event.data.hasIndexData)
+				setIsTogglingWorkspaceIndexing(false)
+
+				// Update feature configured status from backend
+				if (event.data.isFeatureConfigured !== undefined) {
+					setIsFeatureConfigured(event.data.isFeatureConfigured)
+				}
+
+				// Refresh indexing status to get updated state
+				if (event.data.active) {
+					vscode.postMessage({ type: "requestIndexingStatus" })
 				}
 			}
 		}
@@ -712,6 +740,16 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	}, [t])
 	// kilocode_change end
 
+	const handleToggleWorkspaceIndexing = useCallback(() => {
+		setIsTogglingWorkspaceIndexing(true)
+
+		if (isWorkspaceIndexingActive) {
+			vscode.postMessage({ type: "deactivateWorkspaceIndexing" })
+		} else {
+			vscode.postMessage({ type: "activateWorkspaceIndexing" })
+		}
+	}, [isWorkspaceIndexingActive])
+
 	const handleSaveSettings = () => {
 		// Validate settings before saving
 		if (!validateSettings()) {
@@ -829,20 +867,6 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					</div>
 
 					<div className="p-4">
-						{/* Enable/Disable Toggle */}
-						<div className="mb-4">
-							<div className="flex items-center gap-2">
-								<VSCodeCheckbox
-									checked={currentSettings.codebaseIndexEnabled}
-									onChange={(e: any) => updateSetting("codebaseIndexEnabled", e.target.checked)}>
-									<span className="font-medium">{t("settings:codeIndex.enableLabel")}</span>
-								</VSCodeCheckbox>
-								<StandardTooltip content={t("settings:codeIndex.enableDescription")}>
-									<span className="codicon codicon-info text-xs text-vscode-descriptionForeground cursor-help" />
-								</StandardTooltip>
-							</div>
-						</div>
-
 						{/* Status Section */}
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">{t("settings:codeIndex.statusTitle")}</h4>
@@ -873,6 +897,86 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									</ProgressPrimitive.Root>
 								</div>
 							)}
+						</div>
+
+						{/* Warning when indexing is active but feature not configured */}
+						{isWorkspaceIndexingActive && !isFeatureConfigured && (
+							<div className="mt-4 p-3 bg-vscode-inputValidation-warningBackground border border-vscode-inputValidation-warningBorder rounded">
+								<div className="flex items-start gap-2">
+									<span className="codicon codicon-warning text-vscode-editorWarning-foreground mt-0.5" />
+									<div className="text-sm text-vscode-foreground">
+										<p>{t("settings:codeIndex.featureNotConfiguredWarning")}</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* Action Buttons */}
+						<div className="space-y-3 mt-4">
+							{/* Activate/Deactivate Index Button - Full Width */}
+							<div className="w-full">
+								<Button
+									onClick={handleToggleWorkspaceIndexing}
+									disabled={isTogglingWorkspaceIndexing || !cwd}
+									className="w-full"
+									variant={isWorkspaceIndexingActive ? "secondary" : "primary"}>
+									{isTogglingWorkspaceIndexing
+										? `${isWorkspaceIndexingActive
+											? t("settings:codeIndex.deactivatingIndex")
+											: t("settings:codeIndex.activatingIndex")}${loadingDots}`
+										: isWorkspaceIndexingActive
+											? t("settings:codeIndex.deactivateIndexButton")
+											: t("settings:codeIndex.activateIndexButton")}
+								</Button>
+								{!cwd && (
+									<p className="text-xs text-vscode-descriptionForeground mt-1">
+										{t("settings:codeIndex.openWorkspaceFirst")}
+									</p>
+								)}
+							</div>
+
+							{/* Clear Index and Save Buttons - 50/50 Row */}
+							<div className="flex gap-2">
+								{/* Clear Index Button - Always visible, disabled when no data */}
+								<AlertDialog>
+									<AlertDialogTrigger asChild>
+										<Button
+											variant="secondary"
+											className="flex-1"
+											disabled={!hasIndexData || indexingStatus.systemStatus === "Indexing"}>
+											{t("settings:codeIndex.clearIndexDataButton")}
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>
+												{t("settings:codeIndex.clearDataDialog.title")}
+											</AlertDialogTitle>
+											<AlertDialogDescription>
+												{t("settings:codeIndex.clearDataDialog.description")}
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel>
+												{t("settings:codeIndex.clearDataDialog.cancelButton")}
+											</AlertDialogCancel>
+											<AlertDialogAction onClick={() => vscode.postMessage({ type: "clearIndexData" })}>
+												{t("settings:codeIndex.clearDataDialog.confirmButton")}
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+
+								{/* Save Settings Button - 50% width */}
+								<Button
+									onClick={handleSaveSettings}
+									disabled={!hasUnsavedChanges || saveStatus === "saving"}
+									className="flex-1">
+									{saveStatus === "saving"
+										? t("settings:codeIndex.saving")
+										: t("settings:codeIndex.saveSettings")}
+								</Button>
+							</div>
 						</div>
 
 						{/* Setup Settings Disclosure */}
@@ -1926,77 +2030,6 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									{/* kilocode_change end */}
 								</div>
 							)}
-						</div>
-
-						{/* Action Buttons */}
-						<div className="flex items-center justify-between gap-2 pt-6">
-							<div className="flex gap-2">
-								{/* kilocode_change start */}
-								{currentSettings.codebaseIndexEnabled && indexingStatus.systemStatus === "Indexing" && (
-									<VSCodeButton
-										appearance="secondary"
-										onClick={handleCancelIndexing}
-										disabled={saveStatus === "saving"}>
-										{t("settings:codeIndex.cancelIndexingButton")}
-									</VSCodeButton>
-								)}
-								{/* kilocode_change end */}
-
-								{currentSettings.codebaseIndexEnabled &&
-									(indexingStatus.systemStatus === "Indexed" ||
-										indexingStatus.systemStatus === "Error") && (
-										<AlertDialog>
-											<AlertDialogTrigger asChild>
-												<Button variant="secondary">
-													{t("settings:codeIndex.clearIndexDataButton")}
-												</Button>
-											</AlertDialogTrigger>
-											<AlertDialogContent>
-												<AlertDialogHeader>
-													<AlertDialogTitle>
-														{t("settings:codeIndex.clearDataDialog.title")}
-													</AlertDialogTitle>
-													<AlertDialogDescription>
-														{t("settings:codeIndex.clearDataDialog.description")}
-													</AlertDialogDescription>
-												</AlertDialogHeader>
-												<AlertDialogFooter>
-													<AlertDialogCancel>
-														{t("settings:codeIndex.clearDataDialog.cancelButton")}
-													</AlertDialogCancel>
-													<AlertDialogAction
-														onClick={() => vscode.postMessage({ type: "clearIndexData" })}>
-														{t("settings:codeIndex.clearDataDialog.confirmButton")}
-													</AlertDialogAction>
-												</AlertDialogFooter>
-									</AlertDialogContent>
-									</AlertDialog>
-								)}
-
-								{/* kilocode_change start: Start Indexing Button */}
-								{currentSettings.codebaseIndexEnabled &&
-									(indexingStatus.systemStatus === "Error" || indexingStatus.systemStatus === "Standby") && (
-										<Button
-											onClick={() => {
-												setIsStartingIndexing(true)
-												vscode.postMessage({ type: "startIndexing" })
-											}}
-											disabled={saveStatus === "saving" || hasUnsavedChanges || isStartingIndexing}>
-											{isStartingIndexing
-												? `${t("settings:codeIndex.startIndexingButton")}${loadingDots}`
-												: t("settings:codeIndex.startIndexingButton")}
-										</Button>
-									)}
-								{/* kilocode_change end */}
-							</div>
-
-							<Button
-								onClick={handleSaveSettings}
-								disabled={!hasUnsavedChanges || saveStatus === "saving"}>
-								{saveStatus === "saving"
-									? t("settings:codeIndex.saving")
-									: t("settings:codeIndex.saveSettings")}
-							</Button>
 						</div>
 
 						{/* Save Status Messages */}

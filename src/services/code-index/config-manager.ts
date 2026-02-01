@@ -597,10 +597,10 @@ export class CodeIndexConfigManager {
 
 	/**
 	 * Gets whether the code indexing feature is enabled
-	 * kilocode_change: Requires both global enable AND workspace-specific indexingAllowed
+	 * kilocode_change: Only requires workspace-specific indexingAllowed
 	 */
 	public get isFeatureEnabled(): boolean {
-		return this.codebaseIndexEnabled && this.indexingAllowed
+		return this.indexingAllowed
 	}
 
 	/**

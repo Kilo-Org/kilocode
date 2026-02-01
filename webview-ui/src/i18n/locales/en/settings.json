@@ -173,6 +173,11 @@
 		"saveSuccess": "Settings saved successfully",
 		"saving": "Saving...",
 		"saveSettings": "Save",
+		"activateIndexButton": "Activate Index",
+		"deactivateIndexButton": "Deactivate Index",
+		"activatingIndex": "Activating",
+		"deactivatingIndex": "Deactivating",
+		"openWorkspaceFirst": "Open a workspace folder to activate indexing",
 		"indexingStatuses": {
 			"standby": "Standby",
 			"indexing": "Indexing",

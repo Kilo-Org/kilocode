@@ -221,6 +221,8 @@ export interface ExtensionMessage {
 		| "shareTaskSuccess"
 		| "codeIndexSettingsSaved"
 		| "codeIndexSecretStatus"
+		| "workspaceIndexingStatus" // kilocode_change
+		| "workspaceIndexingToggled" // kilocode_change
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
 		| "kilocodeNotificationsResponse" // kilocode_change
@@ -344,6 +346,9 @@ export interface ExtensionMessage {
 	/** Generic payload for extension messages that use `values` */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	values?: Record<string, any>
+	active?: boolean // kilocode_change: For workspaceIndexingStatus and workspaceIndexingToggled
+	hasIndexData?: boolean // kilocode_change: For workspaceIndexingStatus and workspaceIndexingToggled
+	isFeatureConfigured?: boolean // kilocode_change: For workspaceIndexingStatus and workspaceIndexingToggled
 	requestId?: string
 	promptText?: string
 	results?:
@@ -865,6 +870,9 @@ export interface WebviewMessage {
 		| "clearIndexData"
 		| "indexingStatusUpdate"
 		| "indexCleared"
+		| "requestWorkspaceIndexingStatus" // kilocode_change
+		| "activateWorkspaceIndexing" // kilocode_change
+		| "deactivateWorkspaceIndexing" // kilocode_change
 		| "focusPanelRequest"
 		| "clearUsageData" // kilocode_change
 		| "getUsageData" // kilocode_change
@@ -964,6 +972,11 @@ export interface WebviewMessage {
 		| "debugSetting"
 		| "refreshSkills"
 		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
+		| "requestWorkspaceIndexingStatus" // kilocode_change: Request workspace-level indexing status
+		| "activateWorkspaceIndexing" // kilocode_change: Activate indexing for current workspace
+		| "deactivateWorkspaceIndexing" // kilocode_change: Deactivate indexing for current workspace
+		| "workspaceIndexingStatus" // kilocode_change: Response with workspace indexing status
+		| "workspaceIndexingToggled" // kilocode_change: Response after toggling workspace indexing
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change

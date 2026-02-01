@@ -64,18 +64,6 @@ describe("CodeIndexConfigManager", () => {
 	})
 
 	describe("isFeatureEnabled", () => {
-		it("should return false when codebaseIndexEnabled is false", async () => {
-			mockContextProxy.getGlobalState.mockReturnValue({
-				codebaseIndexEnabled: false,
-			})
-			mockContextProxy.getSecret.mockReturnValue(undefined)
-			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true) // even if workspace allows
-
-			// Re-create instance to load the configuration
-			configManager = new CodeIndexConfigManager(mockContextProxy)
-			expect(configManager.isFeatureEnabled).toBe(false)
-		})
-
 		it("should return false when indexingAllowed is false", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
@@ -88,7 +76,7 @@ describe("CodeIndexConfigManager", () => {
 			expect(configManager.isFeatureEnabled).toBe(false)
 		})
 
-		it("should return true when both codebaseIndexEnabled and indexingAllowed are true", async () => {
+		it("should return true when indexingAllowed is true", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 			})
@@ -100,10 +88,22 @@ describe("CodeIndexConfigManager", () => {
 			expect(configManager.isFeatureEnabled).toBe(true)
 		})
 
-		it("should default to false when codebaseIndexEnabled is not set", async () => {
-			mockContextProxy.getGlobalState.mockReturnValue({})
+		it("should return true when indexingAllowed is true even if codebaseIndexEnabled is false", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: false,
+			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
+
+			// Re-create instance to load the configuration
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(true)
+		})
+
+		it("should default to false when indexingAllowed is not set", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(undefined)
 
 			// Re-create instance to load the configuration
 			configManager = new CodeIndexConfigManager(mockContextProxy)
