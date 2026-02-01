@@ -82,6 +82,7 @@ import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar"
 import { StandardTooltip } from "../ui"
 import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay"
 import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
+import { UnauthorizedWarning } from "../kilocode/chat/UnauthorizedWarning"
 import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
@@ -1871,6 +1872,9 @@ export const ChatRowContent = ({
 
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
+				}
+				case "unauthorized_prompt": {
+					return <UnauthorizedWarning message={message} />
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

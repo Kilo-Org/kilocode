@@ -26,6 +26,11 @@
 		"continueWith": "Continuar com {{model}}",
 		"continue": "Continuar"
 	},
+	"unauthorizedError": {
+		"title": "Você precisa fazer login para usar o modelo {{modelId}}",
+		"message": "Faça login ou crie uma conta para acessar mais de 500 modelos, usar créditos a preço de custo ou trazer sua própria chave.",
+		"loginButton": "Fazer Login"
+	},
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
@@ -212,7 +217,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Novo aqui?",
 		"tryOneOfThese": "Experimente uma dessas ideias para começar:",
-		"clickToInsert": "Clique em qualquer sugestão para começar a trabalhar nela imediatamente",
 		"suggestionText": "<suggestionButton>Clique aqui</suggestionButton> para uma ideia legal, depois toque em <sendIcon /> e me veja fazer mágica!",
 		"ideas": {
 			"idea1": "Crie uma esfera 3D giratória e brilhante que responde aos movimentos do mouse. Faça o app funcionar no navegador.",

@@ -98,7 +98,7 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use Memory Bank effectively:**
 
-- Store project context once in [Memory Bank](/docs/advanced-usage/memory-bank)
+- Store project context once in [Memory Bank](/docs/customize/context/memory-bank)
 - Reduces need to re-explain project details
 - Saves 200-500 tokens per conversation
 
@@ -117,7 +117,7 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use API Configuration Profiles:**
 
-- Set up [multiple profiles](/docs/features/api-configuration-profiles) for different cost tiers
+- Set up [multiple profiles](/docs/ai-providers) for different cost tiers
 - Quick switching between free, budget, and premium models
 - Match model capability to task complexity
 
@@ -125,9 +125,9 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use appropriate modes to limit expensive operations:**
 
-- **[Ask Mode](/docs/basic-usage/using-modes#ask-mode):** Information gathering without code changes
-- **[Architect Mode](/docs/basic-usage/using-modes#architect-mode):** Planning without expensive file operations
-- **[Debug Mode](/docs/basic-usage/using-modes#debug-mode):** Focused troubleshooting
+- **[Ask Mode](/docs/code-with-ai/agents/using-modes#ask-mode):** Information gathering without code changes
+- **[Architect Mode](/docs/code-with-ai/agents/using-modes#architect-mode):** Planning without expensive file operations
+- **[Debug Mode](/docs/code-with-ai/agents/using-modes#debug-mode):** Focused troubleshooting
 
 **Custom modes for budget control:**
 
@@ -214,14 +214,14 @@ When you need more capability than free models provide, these options deliver ex
 **Set spending limits:**
 
 - Use provider billing alerts
-- Configure [rate limits](/docs/advanced-usage/rate-limits-costs) to control usage
+- Configure [provider rate limits](/docs/ai-providers) to control usage
 - Set daily/monthly budgets
 
 ### Cost-Saving Tips
 
 **Reduce system prompt size:**
 
-- [Disable MCP](/docs/features/mcp/using-mcp-in-kilo-code) if not using external tools
+- [Disable MCP](/docs/automate/mcp/using-in-kilo-code) if not using external tools
 - Use focused custom modes
 - Minimize unnecessary context
 

@@ -19,6 +19,11 @@
 		"next": "Selanjutnya",
 		"page": "Halaman {{page}} / {{count}}"
 	},
+	"unauthorizedError": {
+		"title": "Kamu perlu masuk untuk menggunakan model {{modelId}}",
+		"message": "Masuk atau buat akun untuk mengakses lebih dari 500 model, gunakan kredit dengan harga biaya, atau bawa kunci milikmu sendiri.",
+		"loginButton": "Masuk"
+	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
@@ -205,7 +210,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Baru di sini?",
 		"tryOneOfThese": "Coba salah satu ide ini untuk memulai:",
-		"clickToInsert": "Klik saran apa pun untuk langsung mulai mengerjakannya",
 		"suggestionText": "<suggestionButton>Klik di sini</suggestionButton> untuk ide yang keren, lalu ketuk <sendIcon /> dan lihat saya melakukan keajaiban!",
 		"ideas": {
 			"idea1": "Buat bola 3D yang berputar dan bersinar yang merespons gerakan mouse. Buat aplikasi berfungsi di browser.",

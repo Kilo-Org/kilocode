@@ -26,6 +26,11 @@
 		"continueWith": "Continuer avec {{model}}",
 		"continue": "Continuer"
 	},
+	"unauthorizedError": {
+		"title": "Tu dois te connecter pour utiliser le modèle {{modelId}}",
+		"message": "Connecte-toi ou crée un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter ta propre clé.",
+		"loginButton": "Se Connecter"
+	},
 	"pricing": {
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
@@ -219,7 +224,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Nouveau ici ?",
 		"tryOneOfThese": "Essaie une de ces idées pour commencer :",
-		"clickToInsert": "Clique sur n'importe quelle suggestion pour commencer à travailler dessus immédiatement",
 		"suggestionText": "<suggestionButton>Cliquez ici</suggestionButton> pour une idée géniale, puis appuyez sur <sendIcon /> et regardez-moi faire de la magie !",
 		"ideas": {
 			"idea1": "Créez une sphère 3D rotative et brillante qui répond aux mouvements de la souris. Faites fonctionner l'application dans le navigateur.",

@@ -41,6 +41,7 @@ export const clineAsks = [
 	"auto_approval_max_req_reached",
 	// kilocode_change start
 	"payment_required_prompt", // Added for the low credits dialog
+	"unauthorized_prompt", // Added for unauthorized error when using paid models
 	"invalid_model",
 	"report_bug",
 	"condense",
@@ -60,6 +61,7 @@ export type ClineAsk = z.infer<typeof clineAskSchema>
 export const idleAsks = [
 	// kilocode_change start
 	"payment_required_prompt",
+	"unauthorized_prompt",
 	"invalid_model",
 	// kilocode_change end
 	"completion_result",

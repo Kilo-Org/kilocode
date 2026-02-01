@@ -26,6 +26,11 @@
 		"continueWith": "Pokračovat s {{model}}",
 		"continue": "Pokračovat"
 	},
+	"unauthorizedError": {
+		"title": "Musíš se přihlásit, abys mohl použít model {{modelId}}",
+		"message": "Přihlaš se nebo si vytvoř účet pro přístup k více než 500 modelům, použij kredity za pořizovací cenu nebo přines svůj vlastní klíč.",
+		"loginButton": "Přihlásit se"
+	},
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
@@ -212,7 +217,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Nový tady?",
 		"tryOneOfThese": "Zkus jeden z těchto nápadů pro začátek:",
-		"clickToInsert": "Klikni na jakýkoliv návrh a začni na něm hned pracovat",
 		"suggestionText": "<suggestionButton>Klikni sem</suggestionButton> pro skvělý nápad, pak klikni na <sendIcon /> a sleduj mě, jak dělám zázraky!",
 		"ideas": {
 			"idea1": "Vytvoř rotující, zářící 3D kouli, která reaguje na pohyby myši. Udělej aplikaci funkční v prohlížeči.",

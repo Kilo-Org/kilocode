@@ -1,6 +1,6 @@
 # Welcome to the Kilocode Project
 
-See [the Documentation for details on contributing](https://kilo.ai/docs/extending/contributing-to-kilo)
+See [the Documentation for details on contributing](https://kilo.ai/docs/contributing)
 
 ## TL;DR
 

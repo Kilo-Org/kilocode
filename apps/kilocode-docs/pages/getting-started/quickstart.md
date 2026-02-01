@@ -57,7 +57,7 @@ Kilo Code analyzes your request and proposes specific actions. These may include
 {% callout type="tip" %}
 The level of autonomy is configurable, allowing you to make the agent more or less autonomous.
 
-You can learn more about [using modes](/docs/basic-usage/using-modes) and [auto-approving actions](/docs/features/auto-approving-actions).
+You can learn more about [using modes](/docs/code-with-ai/agents/using-modes) and [auto-approving actions](/docs/features/auto-approving-actions).
 {% /callout %}
 
 ### Step 5: Iterate

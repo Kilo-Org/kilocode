@@ -26,6 +26,11 @@
 		"continueWith": "{{model}}로 계속",
 		"continue": "계속"
 	},
+	"unauthorizedError": {
+		"title": "{{modelId}} 모델을 사용하려면 로그인이 필요합니다",
+		"message": "로그인하거나 계정을 만들어 500개 이상의 모델에 액세스하고, 원가로 크레딧을 사용하거나, 자신의 키를 사용하세요.",
+		"loginButton": "로그인"
+	},
 	"pricing": {
 		"costUnknown": "비용 알 수 없음",
 		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
@@ -219,7 +224,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "처음이신가요?",
 		"tryOneOfThese": "시작하려면 이 아이디어 중 하나를 시도해보세요:",
-		"clickToInsert": "아무 제안이나 클릭하면 즉시 작업을 시작할 수 있습니다",
 		"suggestionText": "멋진 아이디어를 위해 <suggestionButton>여기를 클릭</suggestionButton>하세요. 그다음 <sendIcon />를 탭하고 제가 마법을 부리는 것을 보세요!",
 		"ideas": {
 			"idea1": "마우스 움직임에 반응하는 회전하고 빛나는 3D 구체를 만드세요. 앱이 브라우저에서 작동하도록 하세요.",
