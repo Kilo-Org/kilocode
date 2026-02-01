@@ -306,7 +306,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 		const timeout = setTimeout(() => {
 			setIsStartingIndexing(false)
-		}, 30000) // 30 second timeout
+		}, 10000) // 10 second timeout - prevents indefinite loading while providing quick error feedback
 
 		return () => clearTimeout(timeout)
 	}, [isStartingIndexing])
