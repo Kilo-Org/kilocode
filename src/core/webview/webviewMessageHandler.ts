@@ -2393,6 +2393,9 @@ export const webviewMessageHandler = async (
 			}
 			break
 		// kilocode_change end
+		case "applyProfileToAllModes":
+			await provider.applyProfileToAllModes(message.text)
+			break
 		case "deleteApiConfiguration":
 			if (message.text) {
 				const answer = await vscode.window.showInformationMessage(

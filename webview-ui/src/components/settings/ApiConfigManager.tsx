@@ -31,6 +31,7 @@ interface ApiConfigManagerProps {
 	organizationAllowList?: OrganizationAllowList
 	onSelectConfig: (configName: string) => void
 	onActivateConfig?: (configName: string) => void // kilocode_change: Explicit activation handler
+	onActivateConfigAllModes?: (configName: string) => void // kilocode_change: Activate on all modes
 	onDeleteConfig: (configName: string) => void
 	onRenameConfig: (oldName: string, newName: string) => void
 	onUpsertConfig: (configName: string, profileType?: ProfileType) => void // kilocode_change - autocomplete profile type system
@@ -43,6 +44,7 @@ const ApiConfigManager = ({
 	organizationAllowList,
 	onSelectConfig,
 	onActivateConfig, // kilocode_change: Explicit activation handler
+	onActivateConfigAllModes, // kilocode_change: Activate on all modes
 	onDeleteConfig,
 	onRenameConfig,
 	onUpsertConfig,
@@ -321,16 +323,31 @@ const ApiConfigManager = ({
 						{t("settings:providers.description")}
 					</div>
 					{/* kilocode_change start Show "Make Active Profile" button when editing != active */}
-					{isEditingDifferentProfile && onActivateConfig && (
-						<StandardTooltip content={t("settings:providers.makeActiveTooltip")}>
-							<Button
-								className="mt-2"
-								onClick={() => onActivateConfig(currentApiConfigName)}
-								data-testid="activate-profile-button">
-								{t("settings:providers.makeActiveProfile")}
-							</Button>
-						</StandardTooltip>
-					)}
+					{(isEditingDifferentProfile && onActivateConfig) ||
+					(currentApiConfigName && onActivateConfigAllModes) ? (
+						<div className="flex flex-col gap-2 mt-2">
+							{isEditingDifferentProfile && onActivateConfig && (
+								<StandardTooltip content={t("settings:providers.makeActiveTooltip")}>
+									<Button
+										className="w-full"
+										onClick={() => onActivateConfig(currentApiConfigName)}
+										data-testid="activate-profile-button">
+										{t("settings:providers.makeActiveProfile")}
+									</Button>
+								</StandardTooltip>
+							)}
+							{currentApiConfigName && onActivateConfigAllModes && (
+								<StandardTooltip content={t("settings:providers.makeActiveAllModesTooltip")}>
+									<Button
+										className="w-full"
+										onClick={() => onActivateConfigAllModes(currentApiConfigName)}
+										data-testid="activate-profile-all-modes-button">
+										{t("settings:providers.makeActiveProfileAllModes")}
+									</Button>
+								</StandardTooltip>
+							)}
+						</div>
+					) : null}
 					{/* kilocode_change end Show "Make Active Profile" button when editing != active */}
 				</>
 			)}

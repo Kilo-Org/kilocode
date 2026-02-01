@@ -1715,6 +1715,29 @@ export class ClineProvider
 		}
 	}
 
+	async applyProfileToAllModes(profileName?: string) {
+		const { currentApiConfigName, listApiConfigMeta } = await this.getState()
+		const nameToApply = profileName || currentApiConfigName
+		if (!nameToApply) {
+			return
+		}
+
+		const profile = listApiConfigMeta?.find((p) => p.name === nameToApply)
+		if (!profile || !profile.id) {
+			return
+		}
+
+		const modes = await this.getModes()
+		for (const mode of modes) {
+			await this.providerSettingsManager.setModeConfig(mode.slug, profile.id)
+		}
+
+		// Ensure the current session's API configuration is updated immediately
+		await this.activateProviderProfile({ name: nameToApply })
+
+		vscode.window.showInformationMessage(t("kilocode:info.profile_applied_to_all_modes", { name: nameToApply }))
+	}
+
 	async updateCustomInstructions(instructions?: string) {
 		// User may be clearing the field.
 		await this.updateGlobalState("customInstructions", instructions || undefined)

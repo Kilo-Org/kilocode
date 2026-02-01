@@ -710,6 +710,7 @@ export interface WebviewMessage {
 		| "loadApiConfiguration"
 		| "loadApiConfigurationById"
 		| "getProfileConfigurationForEditing" // kilocode_change: Request to get profile config without activating
+		| "applyProfileToAllModes" // kilocode_change: Apply current profile to all modes
 		| "renameApiConfiguration"
 		| "getListApiConfiguration"
 		| "customInstructions"

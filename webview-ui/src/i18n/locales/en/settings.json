@@ -292,6 +292,8 @@
 		"description": "Save different API configurations to quickly switch between providers and settings.",
 		"makeActiveProfile": "Make Active Profile",
 		"makeActiveTooltip": "Activate this profile to use it for API requests",
+		"makeActiveProfileAllModes": "Make Active Profile on All Modes",
+		"makeActiveAllModesTooltip": "Activate this profile for all modes",
 		"apiProvider": "API Provider",
 		"apiProviderDocs": "Provider Docs",
 		"model": "Model",

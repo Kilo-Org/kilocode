@@ -1045,6 +1045,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 										onActivateConfig={(configName: string) => {
 											vscode.postMessage({ type: "loadApiConfiguration", text: configName })
 										}}
+										onActivateConfigAllModes={(configName: string) => {
+											vscode.postMessage({ type: "applyProfileToAllModes", text: configName })
+										}}
 										onDeleteConfig={(configName: string) => {
 											const isEditingProfile = configName === editingApiConfigName
 
