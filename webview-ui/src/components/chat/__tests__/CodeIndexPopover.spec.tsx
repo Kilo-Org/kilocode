@@ -19,10 +19,13 @@ const t = (key: string) => {
 		"settings:codeIndex.indexingStatuses.indexing": "Indexing",
 		"settings:codeIndex.indexingStatuses.standby": "Standby",
 		"settings:codeIndex.description": "settings:codeIndex.description",
-		"settings:codeIndex.enableLabel": "Enable",
 		"settings:codeIndex.statusTitle": "Status",
 		"settings:codeIndex.setupConfigLabel": "Setup",
 		"settings:codeIndex.advancedConfigLabel": "Advanced",
+		"settings:codeIndex.activateIndexButton": "Activate Index",
+		"settings:codeIndex.deactivateIndexButton": "Deactivate Index",
+		"settings:codeIndex.activatingIndex": "Activating",
+		"settings:codeIndex.deactivatingIndex": "Deactivating",
 	}
 	return translations[key] || key
 }
@@ -199,18 +202,19 @@ describe("CodeIndexPopover", () => {
 		// With the simplified mock, the content is always rendered.
 		expect(screen.getByText("Codebase Indexing")).toBeInTheDocument()
 		expect(screen.getByText("settings:codeIndex.description")).toBeInTheDocument()
-		expect(screen.getByText("Enable")).toBeInTheDocument()
 		expect(screen.getByText("Status")).toBeInTheDocument()
 		expect(screen.getByText("Setup")).toBeInTheDocument()
 		expect(screen.getByText("Advanced")).toBeInTheDocument()
+		// New activate/deactivate button should be present
+		expect(screen.getByText("Activate Index")).toBeInTheDocument()
 	})
 
-	it("should send cancelIndexing message when cancel button is clicked", async () => {
+	it("should send activateWorkspaceIndexing message when activate button is clicked", () => {
 		const indexingStatus: IndexingStatus = {
-			systemStatus: "Indexing",
-			message: "Processing...",
-			processedItems: 50,
-			totalItems: 100,
+			systemStatus: "Standby",
+			message: "",
+			processedItems: 0,
+			totalItems: 0,
 			currentItemUnit: "items",
 		}
 
@@ -220,13 +224,9 @@ describe("CodeIndexPopover", () => {
 			</CodeIndexPopover>,
 		)
 
-		const cancelButton = screen.getByText("Cancel Indexing")
-		fireEvent.click(cancelButton)
+		const activateButton = screen.getByText("Activate Index")
+		fireEvent.click(activateButton)
 
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "cancelIndexing" })
-
-		// Check for optimistic UI update for the message
-		const statusMessage = await screen.findByText(/Cancelling.../i)
-		expect(statusMessage).toBeInTheDocument()
+		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "activateWorkspaceIndexing" })
 	})
 })

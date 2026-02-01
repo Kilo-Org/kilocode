@@ -3576,11 +3576,17 @@ export const webviewMessageHandler = async (
 					provider.log("Cannot start indexing: No workspace folder open")
 					return
 				}
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
-					// Mimic extension startup behavior: initialize first, which will
-					// check if Qdrant container is active and reuse existing collection
-					await manager.initialize(provider.contextProxy)
 
+				// kilocode_change start: Set workspace-level indexing permission
+				await provider.context.workspaceState.update("indexingAllowed", true)
+
+				// after setting workspace state, initialize the manager which will
+				// first reload config to pick up the new indexingAllowed state
+				// then create services if not already initialized and finally start indexing if needed
+				await manager.initialize(provider.contextProxy)
+				// kilocode_change end
+
+				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
 					// Only call startIndexing if we're in a state that requires it
 					// (e.g., Standby or Error). If already Indexed or Indexing, the
 					// initialize() call above will have already started the watcher.
@@ -3661,7 +3667,20 @@ export const webviewMessageHandler = async (
 				// kilocode_change end
 
 				await manager.clearIndexData()
-				provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
+
+				// Keep workspace inactive after clear (don't set indexingAllowed = true)
+
+				provider.postMessageToWebview({
+					type: "indexCleared",
+					values: { success: true },
+				})
+
+				// Send updated status showing no data
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: false,
+					hasIndexData: false,
+				})
 			} catch (error) {
 				provider.log(`Error clearing index data: ${error instanceof Error ? error.message : String(error)}`)
 				provider.postMessageToWebview({
@@ -3674,6 +3693,138 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start
+		case "requestWorkspaceIndexingStatus": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				const isActive = provider.context.workspaceState.get<boolean>("indexingAllowed", false)
+
+				let hasIndexData = false
+				if (manager) {
+					const status = manager.getCurrentStatus()
+					hasIndexData =
+						status.systemStatus === "Indexed" ||
+						(status.totalItems > 0 && status.processedItems > 0)
+				}
+
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: isActive,
+					hasIndexData,
+					isFeatureConfigured: manager?.isFeatureConfigured ?? false,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingStatus",
+					active: false,
+					hasIndexData: false,
+					isFeatureConfigured: false,
+				})
+			}
+			break
+		}
+		case "activateWorkspaceIndexing": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+
+				if (!manager) {
+					provider.postMessageToWebview({
+						type: "workspaceIndexingToggled",
+						active: false,
+						hasIndexData: false,
+						error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+					})
+					return
+				}
+
+				// Set workspace-level permission
+				await provider.context.workspaceState.update("indexingAllowed", true)
+
+				// Initialize manager to pick up the new indexingAllowed setting
+				await manager.initialize(provider.contextProxy)
+
+				// AUTO-START indexing if feature is configured
+				if (manager.isFeatureConfigured) {
+					const currentState = manager.state
+					if (currentState === "Standby" || currentState === "Error") {
+						manager.startIndexing()
+					}
+				}
+
+				// Send updated status
+				// active=true means indexing is allowed for this workspace (indexingAllowed=true)
+				// isFeatureConfigured indicates if all required settings are configured
+				const status = manager.getCurrentStatus()
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: true, // Workspace-level permission is now enabled
+					hasIndexData:
+						status.systemStatus === "Indexed" ||
+						status.systemStatus === "Indexing" ||
+						status.totalItems > 0,
+					isFeatureConfigured: manager.isFeatureConfigured,
+				})
+
+				// Also send updated indexing status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: status,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: false,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
+		case "deactivateWorkspaceIndexing": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+
+				if (!manager) {
+					provider.postMessageToWebview({
+						type: "workspaceIndexingToggled",
+						active: false,
+						hasIndexData: false,
+					})
+					return
+				}
+
+				// Set workspace-level permission to false
+				await provider.context.workspaceState.update("indexingAllowed", false)
+
+				// Stop any active indexing
+				if (manager.state === "Indexing") {
+					manager.cancelIndexing()
+				}
+
+				// Get updated status - hasIndexData remains true (data not cleared)
+				const status = manager.getCurrentStatus()
+
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: status.systemStatus === "Indexed" || status.totalItems > 0,
+				})
+
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: status,
+				})
+			} catch (error) {
+				provider.postMessageToWebview({
+					type: "workspaceIndexingToggled",
+					active: false,
+					hasIndexData: false,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
+		// kilocode_change end
 		// kilocode_change start - add clearUsageData
 		case "clearUsageData": {
 			try {
