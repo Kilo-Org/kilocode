@@ -19,7 +19,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	groq: ["groqApiKey", "apiModelId"],
 	deepseek: ["deepSeekApiKey", "apiModelId"],
 	xai: ["xaiApiKey", "apiModelId"],
-	openai: ["openAiApiKey"],
+	openai: ["openAiApiKey", "openAiModelId"],
 	"openai-responses": ["openAiApiKey"],
 	cerebras: ["cerebrasApiKey", "apiModelId"],
 	glama: ["glamaApiKey", "glamaModelId"],
