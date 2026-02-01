@@ -55,48 +55,50 @@ export default async function authWizard(): Promise<void> {
 			process.exit(1)
 		}
 
-		// Model Selection
+		// Model Selection (skip for GitHub Copilot)
 		const providerId = authResult.providerConfig.provider as ProviderName
 
-		let routerModels = null
-		if (providerSupportsModelList(providerId)) {
-			console.log("\nFetching available models...")
-			try {
-				routerModels = await fetchRouterModels(authResult.providerConfig)
-			} catch (_) {
-				console.warn("Failed to fetch models, using defaults if available.")
-			}
-		}
-
-		const { models, defaultModel } = getModelsByProvider({
-			provider: providerId,
-			routerModels,
-			kilocodeDefaultModel: "",
-		})
-
-		const modelIds = sortModelsByPreference(models)
-
-		if (modelIds.length > 0) {
-			const modelChoices = modelIds.map((id) => {
-				const model = models[id]
-				return {
-					name: model?.displayName || id,
-					value: id,
+		if (providerId !== "github-copilot") {
+			let routerModels = null
+			if (providerSupportsModelList(providerId)) {
+				console.log("Fetching available models...")
+				try {
+					routerModels = await fetchRouterModels(authResult.providerConfig)
+				} catch (_) {
+					console.warn("Failed to fetch models, using defaults if available.")
 				}
+			}
+
+			const { models, defaultModel } = getModelsByProvider({
+				provider: providerId,
+				routerModels,
+				kilocodeDefaultModel: "",
 			})
 
-			const selectedModel = await withRawMode(() =>
-				select({
-					message: "Select a model to use:",
-					choices: modelChoices,
-					default: defaultModel,
-					loop: false,
-					pageSize: 10,
-				}),
-			)
+			const modelIds = sortModelsByPreference(models)
 
-			const modelKey = getModelIdKey(providerId)
-			authResult.providerConfig[modelKey] = selectedModel
+			if (modelIds.length > 0) {
+				const modelChoices = modelIds.map((id) => {
+					const model = models[id]
+					return {
+						name: model?.displayName || id,
+						value: id,
+					}
+				})
+
+				const selectedModel = await withRawMode(() =>
+					select({
+						message: "Select a model to use:",
+						choices: modelChoices,
+						default: defaultModel,
+						loop: false,
+						pageSize: 10,
+					}),
+				)
+
+				const modelKey = getModelIdKey(providerId)
+				authResult.providerConfig[modelKey] = selectedModel
+			}
 		}
 
 		// Save the configuration
@@ -106,7 +108,7 @@ export default async function authWizard(): Promise<void> {
 		}
 
 		await saveConfig(newConfig)
-		console.log("\n✓ Configuration saved successfully!\n")
+		console.log("✓ Configuration saved successfully!")
 	} catch (error) {
 		// Check if this is a user cancellation (Ctrl+C) at the provider selection stage
 		if (error instanceof Error && error.name === "ExitPromptError") {

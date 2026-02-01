@@ -40,6 +40,7 @@ import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
+import { getGitHubCopilotModels } from "./github-copilot" // kilocode_change
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -172,6 +173,9 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 				nanoGptModelList: options.nanoGptModelList,
 				apiKey: options.apiKey,
 			})
+			break
+		case "github-copilot":
+			models = await getGitHubCopilotModels(options.apiKey)
 			break
 		//kilocode_change end
 		default: {

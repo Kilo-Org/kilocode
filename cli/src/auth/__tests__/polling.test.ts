@@ -69,6 +69,8 @@ describe("Polling Utility", () => {
 					pollFn,
 				}),
 			).rejects.toThrow("Test error")
+
+			expect(pollFn).toHaveBeenCalledTimes(1)
 		})
 
 		it("should call onProgress callback", async () => {

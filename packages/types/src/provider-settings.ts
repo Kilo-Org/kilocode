@@ -14,6 +14,7 @@ import {
 	featherlessModels,
 	fireworksModels,
 	// kilocode_change start
+	githubCopilotModels,
 	syntheticModels,
 	// geminiModels,
 	// kilocode_change end
@@ -56,6 +57,7 @@ export const dynamicProviders = [
 	"inception",
 	"synthetic",
 	"sap-ai-core",
+	"github-copilot",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -153,6 +155,7 @@ export const providerNames = [
 	"openai-codex",
 	"openai-native",
 	"openai-responses", // kilocode_change
+	"github-copilot", // kilocode_change
 	"qwen-code",
 	"roo",
 	// kilocode_change start
@@ -356,6 +359,13 @@ const geminiSchema = apiModelIdProviderModelSchema.extend({
 const openAiCodexSchema = apiModelIdProviderModelSchema.extend({
 	// No additional settings needed - uses OAuth authentication
 })
+
+// kilocode_change start
+const githubCopilotSchema = baseProviderSettingsSchema.extend({
+	githubCopilotToken: z.string().optional(),
+	githubCopilotModelId: z.string().optional(),
+})
+// kilocode_change end
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
 	openAiNativeApiKey: z.string().optional(),
@@ -574,6 +584,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	openAiCodexSchema.merge(z.object({ apiProvider: z.literal("openai-codex") })),
+	githubCopilotSchema.merge(z.object({ apiProvider: z.literal("github-copilot") })), // kilocode_change
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })), // kilocode_change
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
@@ -634,6 +645,7 @@ export const providerSettingsSchema = z.object({
 	...inceptionSchema.shape,
 	// kilocode_change end
 	...openAiCodexSchema.shape,
+	...githubCopilotSchema.shape, // kilocode_change
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,
@@ -701,6 +713,7 @@ export const modelIdKeys = [
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
 	"sapAiCoreModelId", // kilocode_change
+	"githubCopilotModelId", // kilocode_change
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -729,6 +742,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	bedrock: "apiModelId",
 	vertex: "apiModelId",
 	"openai-codex": "apiModelId",
+	"github-copilot": "githubCopilotModelId", // kilocode_change
 	"openai-native": "openAiModelId",
 	ollama: "ollamaModelId",
 	lmstudio: "lmStudioModelId",
@@ -879,6 +893,13 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "OpenAI - ChatGPT Plus/Pro",
 		models: Object.keys(openAiCodexModels),
 	},
+	// kilocode_change start
+	"github-copilot": {
+		id: "github-copilot",
+		label: "GitHub Copilot",
+		models: Object.keys(githubCopilotModels),
+	},
+	// kilocode_change end
 	"openai-native": {
 		id: "openai-native",
 		label: "OpenAI",

@@ -229,6 +229,12 @@ describe("Static Provider Models", () => {
 					outputPrice: 10,
 				},
 			},
+			"github-copilot": {
+				"gpt-4o": {
+					contextWindow: 128000,
+					supportsPromptCache: false,
+				},
+			},
 		}
 
 		it("should return router models for openrouter provider", () => {
@@ -309,6 +315,17 @@ describe("Static Provider Models", () => {
 				expect(result.defaultModel).toBeDefined()
 			})
 		})
+
+		it("should return router models for github-copilot provider", () => {
+			const result = getModelsByProvider({
+				provider: "github-copilot",
+				routerModels: mockRouterModels,
+				kilocodeDefaultModel: "",
+			})
+
+			expect(result.models).toBe(mockRouterModels["github-copilot"])
+			expect(Object.keys(result.models)).toContain("gpt-4o")
+		})
 	})
 
 	describe("getModelsByProvider - Edge Cases", () => {
@@ -385,6 +402,7 @@ describe("Static Provider Models", () => {
 			expect(PROVIDER_TO_ROUTER_NAME.openrouter).toBe("openrouter")
 			expect(PROVIDER_TO_ROUTER_NAME.ollama).toBe("ollama")
 			expect(PROVIDER_TO_ROUTER_NAME.litellm).toBe("litellm")
+			expect(PROVIDER_TO_ROUTER_NAME["github-copilot"]).toBe("github-copilot")
 		})
 
 		it("should map nano-gpt to nano-gpt router name", () => {
@@ -405,6 +423,7 @@ describe("Static Provider Models", () => {
 			expect(providerSupportsModelList("openrouter")).toBe(true)
 			expect(providerSupportsModelList("ollama")).toBe(true)
 			expect(providerSupportsModelList("litellm")).toBe(true)
+			expect(providerSupportsModelList("github-copilot")).toBe(true)
 		})
 
 		it("should return true for nano-gpt provider", () => {
@@ -423,6 +442,7 @@ describe("Static Provider Models", () => {
 		it("should return router name for router-based providers", () => {
 			expect(getRouterNameForProvider("openrouter")).toBe("openrouter")
 			expect(getRouterNameForProvider("ollama")).toBe("ollama")
+			expect(getRouterNameForProvider("github-copilot")).toBe("github-copilot")
 		})
 
 		it("should return nano-gpt for nano-gpt provider", () => {
@@ -439,6 +459,7 @@ describe("Static Provider Models", () => {
 		it("should return correct field names for router providers", () => {
 			expect(getModelFieldForProvider("openrouter")).toBe("openRouterModelId")
 			expect(getModelFieldForProvider("ollama")).toBe("ollamaModelId")
+			expect(getModelFieldForProvider("github-copilot")).toBe("githubCopilotModelId")
 		})
 
 		it("should return nanoGptModelId for nano-gpt provider", () => {

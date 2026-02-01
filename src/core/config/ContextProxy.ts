@@ -119,7 +119,8 @@ export class ContextProxy {
 	private async migrateInvalidApiProvider() {
 		try {
 			const apiProvider = this.stateCache.apiProvider
-			if (apiProvider !== undefined && !isProviderName(apiProvider)) {
+			// kilocode_change: github-copilot is CLI-only, treat as invalid in VS Code
+			if (apiProvider !== undefined && (!isProviderName(apiProvider) || apiProvider === "github-copilot")) {
 				logger.info(`[ContextProxy] Found invalid provider "${apiProvider}" in storage - clearing it`)
 				// Clear the invalid provider from both cache and storage
 				this.stateCache.apiProvider = undefined

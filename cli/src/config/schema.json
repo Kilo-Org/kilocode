@@ -236,6 +236,7 @@
 						"anthropic",
 						"openai-native",
 						"openai-codex",
+						"github-copilot",
 						"openai-responses",
 						"openrouter",
 						"bedrock",
@@ -453,6 +454,23 @@
 							"apiModelId": {
 								"type": "string",
 								"description": "OpenAI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "github-copilot" } }
+					},
+					"then": {
+						"properties": {
+							"githubCopilotToken": {
+								"type": "string",
+								"description": "GitHub Copilot OAuth token"
+							},
+							"githubCopilotModelId": {
+								"type": "string",
+								"description": "GitHub Copilot model ID"
 							}
 						}
 					}

@@ -912,6 +912,7 @@ export const webviewMessageHandler = async (
 						inception: {},
 						kilocode: {},
 						gemini: {},
+						"github-copilot": {},
 						// kilocode_change end
 						openrouter: {},
 						"vercel-ai-gateway": {},
@@ -1030,6 +1031,10 @@ export const webviewMessageHandler = async (
 				{
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
+				},
+				{
+					key: "github-copilot",
+					options: { provider: "github-copilot", apiKey: apiConfiguration.githubCopilotToken },
 				},
 			]
 			// kilocode_change end

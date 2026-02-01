@@ -104,6 +104,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "openai-native":
 		case "openai-codex":
 			return provider.apiModelId || ""
+		case "github-copilot": // kilocode_change
+			return provider.githubCopilotModelId || "" // kilocode_change
 		case "openrouter":
 			return provider.openRouterModelId || ""
 		case "ollama":

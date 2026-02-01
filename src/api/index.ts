@@ -15,6 +15,7 @@ import {
 	AnthropicVertexHandler,
 	OpenAiHandler,
 	OpenAiCodexHandler,
+	GitHubCopilotHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
@@ -196,6 +197,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new GeminiHandler(options)
 		case "openai-codex":
 			return new OpenAiCodexHandler(options)
+		case "github-copilot": // kilocode_change
+			return new GitHubCopilotHandler(options) // kilocode_change
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "openai-responses": // kilocode_change

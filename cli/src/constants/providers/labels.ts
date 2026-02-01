@@ -9,6 +9,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	anthropic: "Anthropic",
 	"openai-native": "OpenAI",
 	"openai-codex": "OpenAI - ChatGPT Plus/Pro",
+	"github-copilot": "GitHub Copilot", // kilocode_change
 	"openai-responses": "OpenAI Compatible (Responses)",
 	openrouter: "OpenRouter",
 	bedrock: "Amazon Bedrock",

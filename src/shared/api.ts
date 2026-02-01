@@ -193,6 +193,9 @@ const dynamicProviderExtras = {
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	// kilocode_change end
 	"nano-gpt": {} as { nanoGptModelList?: "all" | "personalized" | "subscription" }, // kilocode_change
+	// kilocode_change start
+	"github-copilot": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	// kilocode_change end
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ovhcloud: {} as { apiKey?: string }, // kilocode_change

@@ -43,6 +43,13 @@ export const openAICodexProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("openai-codex"),
 	apiModelId: z.string().optional(),
 })
+
+// GitHub Copilot provider
+export const githubCopilotProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("github-copilot"),
+	githubCopilotToken: z.string().optional(),
+	githubCopilotModelId: z.string().optional(),
+})
 // kilocode_change end
 
 // OpenAI provider
@@ -404,6 +411,7 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 	anthropicProviderSchema,
 	openAINativeProviderSchema,
 	openAICodexProviderSchema, // kilocode_change
+	githubCopilotProviderSchema, // kilocode_change
 	openAIProviderSchema,
 	openAIResponsesProviderSchema, // kilocode_change
 	openRouterProviderSchema,
@@ -450,6 +458,7 @@ export type KilocodeProviderConfig = z.infer<typeof kilocodeProviderSchema>
 export type AnthropicProviderConfig = z.infer<typeof anthropicProviderSchema>
 export type OpenAINativeProviderConfig = z.infer<typeof openAINativeProviderSchema>
 export type OpenAICodexProviderConfig = z.infer<typeof openAICodexProviderSchema> // kilocode_change
+export type GitHubCopilotProviderConfig = z.infer<typeof githubCopilotProviderSchema> // kilocode_change
 export type OpenAIProviderConfig = z.infer<typeof openAIProviderSchema>
 export type OpenAIResponsesProviderConfig = z.infer<typeof openAIResponsesProviderSchema> // kilocode_change
 export type OpenRouterProviderConfig = z.infer<typeof openRouterProviderSchema>

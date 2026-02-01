@@ -1,3 +1,5 @@
+import { githubCopilotDefaultModelId } from "@roo-code/types"
+
 import type { ProviderName, ProviderSettings } from "../../types/messages.js"
 
 /**
@@ -157,6 +159,22 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter base URL (or leave empty for default)...",
 		isOptional: true,
 	},
+
+	// kilocode_change start
+	// GitHub Copilot fields
+	githubCopilotToken: {
+		label: "Access Token",
+		type: "password",
+		placeholder: "Run 'kilocode auth copilot' to authenticate...",
+	},
+	githubCopilotModelId: {
+		label: "Model",
+		type: "text",
+		placeholder: "Enter model name (e.g., gpt-4o)...",
+		isOptional: true,
+	},
+	// kilocode_change end
+
 	openAiNativeServiceTier: {
 		label: "Service Tier",
 		type: "select",
@@ -801,6 +819,14 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 		case "openai-codex":
 			return [createFieldConfig("apiModelId", config, "gpt-4o")]
 
+		// kilocode_change start
+		case "github-copilot":
+			return [
+				createFieldConfig("githubCopilotToken", config),
+				createFieldConfig("githubCopilotModelId", config, githubCopilotDefaultModelId),
+			]
+		// kilocode_change end
+
 		case "bedrock":
 			return [
 				createFieldConfig("awsAccessKey", config),
@@ -1041,6 +1067,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	anthropic: "claude-3-5-sonnet-20241022",
 	"openai-native": "gpt-4o",
 	"openai-codex": "gpt-4o",
+	"github-copilot": "gpt-4o", // kilocode_change
 	"openai-responses": "gpt-4o",
 	openrouter: "anthropic/claude-3-5-sonnet",
 	bedrock: "anthropic.claude-3-5-sonnet-20241022-v2:0",
