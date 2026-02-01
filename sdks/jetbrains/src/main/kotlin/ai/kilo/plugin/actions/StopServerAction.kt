@@ -23,6 +23,6 @@ class StopServerAction : AnAction(), DumbAware {
         }
 
         val kiloService = KiloProjectService.getInstance(project)
-        e.presentation.isEnabled = kiloService.isReady
+        e.presentation.isEnabled = kiloService.initialized
     }
 }

@@ -30,19 +30,15 @@ class AddFileToContextAction : AnAction(), DumbAware {
         toolWindow?.show()
 
         scope.launch {
-            if (!kiloService.isReady) {
-                kiloService.initialize()
+            kiloService.initialize().onSuccess { state ->
+                // Create a new session if none exists
+                if (state.currentSessionId.value == null) {
+                    state.createSession()
+                }
+
+                val attachedFile = buildAttachedFile(project, file, editor)
+                state.addFileToContext(attachedFile)
             }
-
-            val state = kiloService.state ?: return@launch
-
-            // Create a new session if none exists
-            if (state.currentSessionId.value == null) {
-                state.createSession()
-            }
-
-            val attachedFile = buildAttachedFile(project, file, editor)
-            state.addFileToContext(attachedFile)
         }
     }
 

@@ -5,6 +5,8 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Project-level service that manages the Kilo integration for a specific project.
@@ -20,11 +22,11 @@ class KiloProjectService(private val project: Project) : Disposable {
     private var eventService: KiloEventService? = null
     private var stateService: KiloStateService? = null
 
-    @Volatile
-    private var isInitialized = false
+    private val initMutex = Mutex()
+    private var initDeferred: Deferred<Result<KiloStateService>>? = null
 
-    val isReady: Boolean
-        get() = isInitialized && serverService?.isServerRunning == true
+    var initialized = false
+        private set
 
     val state: KiloStateService?
         get() = stateService
@@ -35,22 +37,25 @@ class KiloProjectService(private val project: Project) : Disposable {
     /**
      * Initialize the Kilo services for this project.
      * Starts the server and sets up all necessary connections.
+     *
+     * Thread-safe: multiple callers will share the same initialization,
+     * all waiting for the single init to complete.
+     *
+     * @return Result containing the KiloStateService on success
      */
-    suspend fun initialize(): Boolean {
-        if (isInitialized) {
-            log.info("Kilo already initialized for project ${project.name}")
-            return true
+    suspend fun initialize(): Result<KiloStateService> {
+        val deferred = initMutex.withLock {
+            initDeferred ?: scope.async { doInitialize() }.also { initDeferred = it }
         }
+        return deferred.await()
+    }
 
+    private suspend fun doInitialize(): Result<KiloStateService> = runCatching {
         log.info("Initializing Kilo for project ${project.name}")
 
         // Start server
         serverService = KiloServerService.getInstance(project)
-        val result = serverService!!.start()
-        result.onFailure { e ->
-            log.error("Failed to start Kilo server", e)
-            return false
-        }
+        serverService!!.start().getOrThrow()
 
         val baseUrl = serverService!!.baseUrl
         val directory = project.basePath ?: System.getProperty("user.home")
@@ -68,9 +73,12 @@ class KiloProjectService(private val project: Project) : Disposable {
         // Initialize state
         stateService!!.initialize()
 
-        isInitialized = true
+        initialized = true
         log.info("Kilo initialized successfully for project ${project.name}")
-        return true
+
+        stateService!!
+    }.onFailure {
+        log.error("Failed to initialize Kilo", it)
     }
 
     /**
@@ -91,13 +99,14 @@ class KiloProjectService(private val project: Project) : Disposable {
         serverService?.stop()
         serverService = null
 
-        isInitialized = false
+        initialized = false
+        initDeferred = null
     }
 
     /**
      * Restart all services.
      */
-    suspend fun restart(): Boolean {
+    suspend fun restart(): Result<KiloStateService> {
         shutdown()
         delay(500)
         return initialize()

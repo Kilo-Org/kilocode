@@ -5,39 +5,44 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.ContentFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 /**
  * Factory for creating the Kilo tool window.
+ * Handles service initialization and shows loading/error states.
  */
 class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val kiloService = KiloProjectService.getInstance(project)
+        val contentFactory = ContentFactory.getInstance()
 
-        // Initialize services when tool window is opened
+        val loadingContent = contentFactory.createContent(LoadingPanel(), "", false)
+        loadingContent.isCloseable = false
+        toolWindow.contentManager.addContent(loadingContent)
+
+        // Initialize service in background, then create UI on main thread
         scope.launch {
             kiloService.initialize()
+                .onSuccess {
+                    withContext(Dispatchers.Main) {
+                        toolWindow.contentManager.removeAllContents(true)
+                        val mainPanel = KiloMainPanel(project, kiloService).also { mainPanels[project] = it }
+                        val content = contentFactory.createContent(mainPanel, "", false)
+                        content.isCloseable = false
+                        toolWindow.contentManager.addContent(content)
+                    }
+                }
+                .onFailure {
+                    withContext(Dispatchers.Main) {
+                        toolWindow.contentManager.removeAllContents(true)
+                        val content = contentFactory.createContent(ErrorPanel("Failed to start Kilo"), "", false)
+                        toolWindow.contentManager.addContent(content)
+                    }
+                }
         }
-
-        // Create the main panel
-        val mainPanel = KiloMainPanel(project, kiloService)
-
-        // Register the main panel for static access
-        mainPanels[project] = mainPanel
-
-        // Add content to tool window
-        val contentFactory = ContentFactory.getInstance()
-        val content = contentFactory.createContent(mainPanel, "", false)
-        content.isCloseable = false
-
-        toolWindow.contentManager.addContent(content)
     }
 
     override fun shouldBeAvailable(project: Project): Boolean {

@@ -25,10 +25,9 @@ class NewSessionAction : AnAction(), DumbAware {
 
         // Create new session
         scope.launch {
-            if (!kiloService.isReady) {
-                kiloService.initialize()
+            kiloService.initialize().onSuccess { state ->
+                state.createSession()
             }
-            kiloService.state?.createSession()
         }
     }
 

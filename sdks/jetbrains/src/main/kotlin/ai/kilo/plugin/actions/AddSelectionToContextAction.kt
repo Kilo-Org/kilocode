@@ -42,23 +42,20 @@ class AddSelectionToContextAction : AnAction(), DumbAware {
         toolWindow?.show()
 
         scope.launch {
-            if (!kiloService.isReady) {
-                kiloService.initialize()
-            }
+            kiloService.initialize().onSuccess { state ->
+                if (state.currentSessionId.value == null) {
+                    state.createSession()
+                }
 
-            val state = kiloService.state ?: return@launch
-            if (state.currentSessionId.value == null) {
-                state.createSession()
+                val attachedFile = KiloStateService.AttachedFile(
+                    absolutePath = absolutePath,
+                    relativePath = relativePath,
+                    startLine = startLine,
+                    endLine = if (endLine != startLine) endLine else null,
+                    mime = "text/plain"
+                )
+                state.addFileToContext(attachedFile)
             }
-
-            val attachedFile = KiloStateService.AttachedFile(
-                absolutePath = absolutePath,
-                relativePath = relativePath,
-                startLine = startLine,
-                endLine = if (endLine != startLine) endLine else null,
-                mime = "text/plain"
-            )
-            state.addFileToContext(attachedFile)
         }
     }
 

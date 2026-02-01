@@ -8,16 +8,12 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.ui.JBSplitter
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.*
 import java.awt.BorderLayout
-import java.awt.GridBagLayout
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JPanel
-import javax.swing.SwingConstants
 
 /**
  * Main panel for the Kilo tool window.
@@ -34,78 +30,20 @@ class KiloMainPanel(
     private val project: Project,
     private val kiloService: KiloProjectService
 ) : SimpleToolWindowPanel(true, true), Disposable {
+    private val wideBreakpoint = 600
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    companion object {
-        // Breakpoint for wide screen (matching web client ~120 chars)
-        const val WIDE_BREAKPOINT = 600
-    }
-
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    
     private var sessionListPanel: SessionListPanel? = null
     private var chatPanel: ChatPanel? = null
     private var sidebarPanel: SidebarPanel? = null
-    private var initialized = false
-    
+
     private var sidebarMode: String = "auto" // "auto", "show", "hide"
     private var sidebarVisible = false
     private var chatWithSidebarPanel: JPanel? = null
-    
+
+    private val state = kiloService.state!!
+
     init {
-        // Show loading message initially
-        showLoadingState()
-        
-        // Initialize when service is ready
-        scope.launch {
-            waitForServiceAndInitialize()
-        }
-    }
-
-    private fun showLoadingState() {
-        val loadingLabel = JBLabel("Starting Kilo...", SwingConstants.CENTER)
-        val panel = JBPanel<JBPanel<*>>(GridBagLayout())
-        panel.add(loadingLabel)
-        setContent(panel)
-    }
-
-    private fun showErrorState(message: String) {
-        val errorLabel = JBLabel("<html><center>Error: $message</center></html>", SwingConstants.CENTER)
-        val panel = JBPanel<JBPanel<*>>(GridBagLayout())
-        panel.add(errorLabel)
-        setContent(panel)
-    }
-
-    private suspend fun waitForServiceAndInitialize() {
-        // Wait for service to be ready
-        var attempts = 0
-        while (!kiloService.isReady && attempts < 100) {
-            delay(100)
-            attempts++
-            if (!isDisplayable) return
-        }
-
-        if (!kiloService.isReady) {
-            withContext(Dispatchers.Main) {
-                showErrorState("Kilo service failed to start")
-            }
-            return
-        }
-
-        // Initialize UI on main thread
-        withContext(Dispatchers.Main) {
-            createMainUI()
-        }
-    }
-
-    private fun createMainUI() {
-        if (initialized) return
-        initialized = true
-        
-        val state = kiloService.state
-        if (state == null) {
-            showErrorState("Kilo state not available")
-            return
-        }
 
         // Create the main splitter (sessions | chat+sidebar)
         val splitter = JBSplitter(false, 0.20f).apply {
@@ -157,7 +95,7 @@ class KiloMainPanel(
     }
 
     private fun updateSidebarVisibility() {
-        val isWide = width > WIDE_BREAKPOINT
+        val isWide = width > wideBreakpoint
         
         sidebarVisible = when (sidebarMode) {
             "show" -> true
