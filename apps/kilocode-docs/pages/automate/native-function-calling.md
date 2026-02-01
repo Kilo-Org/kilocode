@@ -37,36 +37,3 @@ There are a few considerations and challenges.
 2. Provider Compatibility: There are many OpenAI "compliant" providers on the market, using a variety of tools to support their products (often vLLM, SGLang, TensorRT-LLM). Beyond that are numerous local model tools (LM Studio, Ollama, Osaurus). Despite claiming compatibility with the OpenAI API specification, it's common to see partial or outright incorrect implementations.
 
 Because of these risks and considerations, this capability is experiment, and off by default for nearly all models and providers.
-
-## Use
-
-To enable and use native function calling, consider and perform the following:
-
-1. Ensure you are using a provider that has been enabled in Kilo Code for this experiment. As of Oct 21, 2025, they include:
-
-- OpenRouter
-- Kilo Code
-- LM Studio
-- OpenAI Compatible
-- Z.ai
-- Synthetic
-- X.ai
-- Chutes
-
-By default, native function calling is _disabled_ for most models. Should you wish to try it, open the Advanced settings for a given provider profile that is included in the testing group.
-
-Change the Tool Calling Style to `JSON`, and save the profile.
-
-## Caveats
-
-This feature is currently experimental and mostly intended for users interested in contributing to its development.
-
-There are possible issues including, but not limited to:
-
-- ~~Missing tools~~: As of Oct 21, all tools are supported
-- Tools calls not updating the UI until they are complete
-- ~~MCP servers not working~~: As of Oct 21, MCPs are supported
-- Errors specific to certain inference providers
-    - Not all inference providers use servers that are fully compatible with the OpenAI specification. As a result, behavior will vary, even with the same model across providers.
-
-While nearly any provider can be configured via the OpenAI Compatible profile, testers should be aware that this is enabled purely for ease of testing and should be prepared to experience unexpected responses from providers that are not prepared to handle native function calls.
