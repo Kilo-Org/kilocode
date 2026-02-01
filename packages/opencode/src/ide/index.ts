@@ -45,7 +45,9 @@ export namespace Ide {
   }
 
   export function alreadyInstalled() {
-    return process.env["OPENCODE_CALLER"] === "vscode" || process.env["OPENCODE_CALLER"] === "vscode-insiders"
+    return process.env["OPENCODE_CALLER"] === "vscode" ||
+      process.env["OPENCODE_CALLER"] === "vscode-insiders" ||
+      process.env["OPENCODE_CALLER"] === "jetbrains"
   }
 
   export async function install(ide: (typeof SUPPORTED_IDES)[number]["name"]) {
