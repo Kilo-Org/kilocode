@@ -46,9 +46,9 @@ class KiloProjectService(private val project: Project) : Disposable {
 
         // Start server
         serverService = KiloServerService.getInstance(project)
-        val port = serverService!!.start()
-        if (port < 0) {
-            log.error("Failed to start Kilo server")
+        val result = serverService!!.start()
+        result.onFailure { e ->
+            log.error("Failed to start Kilo server", e)
             return false
         }
 

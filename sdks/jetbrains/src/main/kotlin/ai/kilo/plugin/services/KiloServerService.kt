@@ -40,12 +40,12 @@ class KiloServerService(private val project: Project) : Disposable {
 
     /**
      * Start the Kilo server process.
-     * @return The port the server is running on, or -1 if failed to start
+     * @return Result containing the port on success, or an exception on failure
      */
-    suspend fun start(): Int {
+    suspend fun start(): Result<Int> {
         if (isServerRunning) {
             log.info("Kilo server already running on port $port")
-            return port
+            return Result.success(port)
         }
 
         // Use configured port or random
@@ -53,16 +53,30 @@ class KiloServerService(private val project: Project) : Disposable {
         port = settings.state.serverPort ?: Random.nextInt(16384, 65535)
         log.info("Starting Kilo server on port $port")
 
-        val kiloBinary = findKiloBinary()
+        val kiloBinary = findKiloBinary(project.basePath)
         if (kiloBinary == null) {
-            notifyError("Kilo CLI not found. Please install it or configure the path in Settings > Tools > Kilo.")
-            return -1
+            val error = "Kilo CLI not found. Please install it or configure the path in Settings > Tools > Kilo."
+            notifyError(error)
+            return Result.failure(IllegalStateException(error))
         }
 
         return try {
             val workingDir = project.basePath?.let { File(it) } ?: File(System.getProperty("user.home"))
 
-            val processBuilder = ProcessBuilder(kiloBinary, "serve", "--port", port.toString())
+            val command = when {
+                kiloBinary.startsWith("wsl::") -> {
+                    val wslPath = kiloBinary.removePrefix("wsl::")
+                    listOf("wsl", wslPath, "serve", "--port", port.toString())
+                }
+                kiloBinary.endsWith(".cmd", ignoreCase = true) ->
+                    listOf("cmd.exe", "/c", kiloBinary, "serve", "--port", port.toString())
+                kiloBinary.endsWith(".sh", ignoreCase = true) ->
+                    listOf("sh", kiloBinary, "serve", "--port", port.toString())
+                else ->
+                    listOf(kiloBinary, "serve", "--port", port.toString())
+            }
+
+            val processBuilder = ProcessBuilder(command)
                 .directory(workingDir)
                 .redirectErrorStream(true)
 
@@ -86,17 +100,18 @@ class KiloServerService(private val project: Project) : Disposable {
                 isRunning = true
                 notifyInfo("Kilo server started on port $port")
                 log.info("Kilo server ready on port $port")
-                port
+                Result.success(port)
             } else {
                 stop()
-                notifyError("Kilo server failed to start (health check timeout)")
-                -1
+                val error = "Kilo server failed to start (health check timeout)"
+                notifyError(error)
+                Result.failure(IllegalStateException(error))
             }
         } catch (e: Exception) {
             log.error("Failed to start Kilo server", e)
             notifyError("Failed to start Kilo server: ${e.message}")
             stop()
-            -1
+            Result.failure(e)
         }
     }
 
@@ -126,7 +141,7 @@ class KiloServerService(private val project: Project) : Disposable {
     /**
      * Restart the server.
      */
-    suspend fun restart(): Int {
+    suspend fun restart(): Result<Int> {
         stop()
         delay(500)
         return start()
@@ -179,66 +194,8 @@ class KiloServerService(private val project: Project) : Disposable {
     /**
      * Find the Kilo CLI binary on the system.
      */
-    private fun findKiloBinary(): String? {
-        // First check if user configured a custom path
-        val settings = KiloSettings.getInstance()
-        val customPath = settings.state.kiloExecutablePath
-        if (customPath.isNotBlank()) {
-            if (isBinaryAvailable(customPath)) {
-                log.info("Using configured Kilo binary at: $customPath")
-                return customPath
-            }
-            log.warn("Configured Kilo binary not found or not executable: $customPath")
-        }
-
-        // Check common locations
-        val candidates = listOf(
-            "kilo",
-            "/usr/local/bin/kilo",
-            "/opt/homebrew/bin/kilo",
-            "${System.getProperty("user.home")}/.local/bin/kilo",
-            "${System.getProperty("user.home")}/.bun/bin/kilo",
-            // Also check for opencode (the upstream name)
-            "opencode",
-            "/usr/local/bin/opencode",
-            "/opt/homebrew/bin/opencode",
-            "${System.getProperty("user.home")}/.local/bin/opencode",
-            "${System.getProperty("user.home")}/.bun/bin/opencode"
-        )
-
-        for (candidate in candidates) {
-            if (isBinaryAvailable(candidate)) {
-                log.info("Found Kilo binary at: $candidate")
-                return candidate
-            }
-        }
-
-        // Try to find via PATH using `which`
-        return try {
-            val process = ProcessBuilder("which", "kilo")
-                .redirectErrorStream(true)
-                .start()
-            val result = process.inputStream.bufferedReader().readText().trim()
-            if (process.waitFor() == 0 && result.isNotEmpty()) {
-                log.info("Found Kilo binary via which: $result")
-                result
-            } else {
-                // Try opencode
-                val process2 = ProcessBuilder("which", "opencode")
-                    .redirectErrorStream(true)
-                    .start()
-                val result2 = process2.inputStream.bufferedReader().readText().trim()
-                if (process2.waitFor() == 0 && result2.isNotEmpty()) {
-                    log.info("Found opencode binary via which: $result2")
-                    result2
-                } else {
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            log.warn("Failed to find Kilo binary via which", e)
-            null
-        }
+    private fun findKiloBinary(projectPath: String?): String? {
+        return KiloCliDiscovery.findBinary(projectPath)
     }
 
     /**
