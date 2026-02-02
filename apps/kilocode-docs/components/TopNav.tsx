@@ -205,26 +205,51 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
 	// Initialize search-insights and DocSearch
 	useEffect(() => {
+		let mounted = true
+
 		// Dynamically import search-insights to avoid SSR issues
-		import("search-insights").then((searchInsights) => {
-			const aa = searchInsights.default
+		import("search-insights")
+			.then((searchInsights) => {
+				if (!mounted) return
 
-			// Initialize search-insights for click analytics
-			aa("init", {
-				appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
-				apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
+				const aa = searchInsights.default
+
+				// Make aa globally available for DocSearch to use
+				if (typeof window !== "undefined") {
+					;(window as any).aa = aa
+				}
+
+				// Initialize search-insights for click analytics
+				aa("init", {
+					appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
+					apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
+				})
+
+				// Initialize DocSearch with insights enabled
+				docsearch({
+					container: "#docsearch",
+					appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
+					indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "docsearch",
+					apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
+					askAi: process.env.NEXT_PUBLIC_ALGOLIA_ASSISTANT_ID || "askAIDemo",
+					insights: true, // Enable click analytics
+				})
+			})
+			.catch((error) => {
+				console.error("Failed to load search-insights:", error)
+				// Initialize DocSearch without insights as fallback
+				docsearch({
+					container: "#docsearch",
+					appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
+					indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "docsearch",
+					apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
+					askAi: process.env.NEXT_PUBLIC_ALGOLIA_ASSISTANT_ID || "askAIDemo",
+				})
 			})
 
-			// Initialize DocSearch with insights enabled
-			docsearch({
-				container: "#docsearch",
-				appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
-				indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "docsearch",
-				apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
-				askAi: process.env.NEXT_PUBLIC_ALGOLIA_ASSISTANT_ID || "askAIDemo",
-				insights: true, // Enable click analytics
-			})
-		})
+		return () => {
+			mounted = false
+		}
 	}, [])
 
 	return (
