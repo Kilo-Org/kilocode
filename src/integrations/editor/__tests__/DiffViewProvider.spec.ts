@@ -234,11 +234,11 @@ describe("DiffViewProvider", () => {
 			// Execute open
 			await diffViewProvider.open("test.md")
 
-			// Verify that showTextDocument was called before executeCommand
-			expect(callOrder).toEqual(["showTextDocument", "executeCommand"])
+			// kilocode_change: Updated to reflect flicker-free behavior (no pre-opening)
+			expect(callOrder).toEqual(["executeCommand"])
 
-			// Verify that showTextDocument was called with preview: false and preserveFocus: true
-			expect(vscode.window.showTextDocument).toHaveBeenCalledWith(
+			// Verify that showTextDocument was NOT called during open (prevents flicker)
+			expect(vscode.window.showTextDocument).not.toHaveBeenCalledWith(
 				expect.objectContaining({ fsPath: `${mockCwd}/test.md` }),
 				{ preview: false, viewColumn: vscode.ViewColumn.Active, preserveFocus: true },
 			)
@@ -253,22 +253,23 @@ describe("DiffViewProvider", () => {
 			)
 		})
 
-		it("should handle showTextDocument failure", async () => {
-			// Mock showTextDocument to fail
-			vi.mocked(vscode.window.showTextDocument).mockRejectedValue(new Error("Cannot open file"))
-
+		// kilocode_change: Updated test for new flicker-free behavior
+		it("should handle diff editor timeout", async () => {
 			// Mock workspace.onDidOpenTextDocument
 			vi.mocked(vscode.workspace.onDidOpenTextDocument).mockReturnValue({ dispose: vi.fn() })
 
 			// Mock window.onDidChangeVisibleTextEditors
 			vi.mocked(vscode.window.onDidChangeVisibleTextEditors).mockReturnValue({ dispose: vi.fn() })
 
+			// Mock executeCommand to succeed but editor never appears
+			vi.mocked(vscode.commands.executeCommand).mockResolvedValue(undefined)
+
 			// Set up for file
 			;(diffViewProvider as any).editType = "modify"
 
-			// Try to open and expect rejection
+			// Try to open and expect timeout error
 			await expect(diffViewProvider.open("test.md")).rejects.toThrow(
-				"Failed to execute diff command for /mock/cwd/test.md: Cannot open file",
+				"Failed to open diff editor for /mock/cwd/test.md within 10 seconds",
 			)
 		})
 	})

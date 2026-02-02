@@ -269,6 +269,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						text: message.reasoning,
 					}
 				}
+				if ("reasoning_content" in message && typeof message.reasoning_content === "string") {
+					yield {
+						type: "reasoning",
+						text: message.reasoning_content,
+					}
+				}
 				if (message.content) {
 					yield {
 						type: "text",

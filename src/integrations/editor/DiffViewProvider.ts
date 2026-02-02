@@ -39,6 +39,13 @@ export class DiffViewProvider {
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
 	private taskRef: WeakRef<Task>
 
+	// kilocode_change start: Flicker prevention
+	private openingPromise?: Promise<void>
+	private lastOpenTime = 0
+	private readonly OPEN_DEBOUNCE_MS = 100
+	private currentOpenPath?: string
+	// kilocode_change end
+
 	constructor(
 		private cwd: string,
 		task: Task,
@@ -47,6 +54,39 @@ export class DiffViewProvider {
 	}
 
 	async open(relPath: string): Promise<void> {
+		// kilocode_change start: Flicker prevention - debounce rapid open calls
+		const now = Date.now()
+		const timeSinceLastOpen = now - this.lastOpenTime
+
+		// If we're already opening this same path, return the existing promise
+		if (this.openingPromise && this.currentOpenPath === relPath) {
+			return this.openingPromise
+		}
+
+		// If we're already editing this file, just return
+		if (this.isEditing && this.currentOpenPath === relPath) {
+			return
+		}
+
+		// Debounce: if we just opened a file recently, wait a bit
+		if (timeSinceLastOpen < this.OPEN_DEBOUNCE_MS) {
+			await delay(this.OPEN_DEBOUNCE_MS - timeSinceLastOpen)
+		}
+
+		// Create the opening promise
+		this.openingPromise = this._doOpen(relPath)
+		this.currentOpenPath = relPath
+
+		try {
+			await this.openingPromise
+		} finally {
+			this.openingPromise = undefined
+			this.lastOpenTime = Date.now()
+		}
+		// kilocode_change end
+	}
+
+	private async _doOpen(relPath: string): Promise<void> {
 		this.relPath = relPath
 		const fileExists = this.editType === "modify"
 		const absolutePath = path.resolve(this.cwd, relPath)
@@ -56,10 +96,11 @@ export class DiffViewProvider {
 		// contents.
 		if (fileExists) {
 			const existingDocument = vscode.workspace.textDocuments.find(
-				(doc) => doc.uri.scheme === "file" && arePathsEqual(doc.uri.fsPath, absolutePath),
+				(doc: { uri: { scheme: string; fsPath: string | undefined } }) =>
+					doc.uri.scheme === "file" && arePathsEqual(doc.uri.fsPath, absolutePath),
 			)
 
-			if (existingDocument && existingDocument.isDirty) {
+			if (existingDocument?.isDirty) {
 				await existingDocument.save()
 			}
 		}
@@ -89,10 +130,9 @@ export class DiffViewProvider {
 
 		// Close the tab if it's open (it's already saved above).
 		const tabs = vscode.window.tabGroups.all
-			.map((tg) => tg.tabs)
-			.flat()
+			.flatMap((tg: { tabs: any }) => tg.tabs)
 			.filter(
-				(tab) =>
+				(tab: { input: { uri: { scheme: string; fsPath: string | undefined } } }) =>
 					tab.input instanceof vscode.TabInputText &&
 					tab.input.uri.scheme === "file" &&
 					arePathsEqual(tab.input.uri.fsPath, absolutePath),
@@ -238,8 +278,11 @@ export class DiffViewProvider {
 			await updatedDocument.save()
 		}
 
-		await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), { preview: false, preserveFocus: true })
+		// kilocode_change start: Prevent flicker by closing diff view before showing file
+		// Close diff views first, then show the file to avoid visual flicker
 		await this.closeAllDiffViews()
+		await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), { preview: false, preserveFocus: true })
+		// kilocode_change end
 
 		// Getting diagnostics before and after the file edit is a better approach than
 		// automatically tracking problems in real-time. This method ensures we only
@@ -299,12 +342,19 @@ export class DiffViewProvider {
 		const newContentEOL = this.newContent.includes("\r\n") ? "\r\n" : "\n"
 
 		// Normalize EOL characters without trimming content
-		const normalizedEditedContent = editedContent.replace(/\r\n|\n/g, newContentEOL)
+		const normalizedEditedContent = editedContent.replaceAll(/\r\n|\n/g, newContentEOL)
 
 		// Just in case the new content has a mix of varying EOL characters.
-		const normalizedNewContent = this.newContent.replace(/\r\n|\n/g, newContentEOL)
+		const normalizedNewContent = this.newContent.replaceAll(/\r\n|\n/g, newContentEOL)
 
-		if (normalizedEditedContent !== normalizedNewContent) {
+		if (normalizedEditedContent === normalizedNewContent) {
+			// No changes to Roo's edits.
+			// Store the results as class properties for formatFileWriteResponse to use
+			this.newProblemsMessage = newProblemsMessage
+			this.userEdits = undefined
+
+			return { newProblemsMessage, userEdits: undefined, finalContent: normalizedEditedContent }
+		} else {
 			// User made changes before approving edit.
 			const userEdits = formatResponse.createPrettyPatch(
 				this.relPath.toPosix(),
@@ -317,13 +367,6 @@ export class DiffViewProvider {
 			this.userEdits = userEdits
 
 			return { newProblemsMessage, userEdits, finalContent: normalizedEditedContent }
-		} else {
-			// No changes to Roo's edits.
-			// Store the results as class properties for formatFileWriteResponse to use
-			this.newProblemsMessage = newProblemsMessage
-			this.userEdits = undefined
-
-			return { newProblemsMessage, userEdits: undefined, finalContent: normalizedEditedContent }
 		}
 	}
 
@@ -519,6 +562,7 @@ export class DiffViewProvider {
 
 		const uri = vscode.Uri.file(path.resolve(this.cwd, this.relPath))
 
+		// kilocode_change start: Improved diff editor reuse to prevent flickering
 		// If this diff editor is already open (ie if a previous write file was
 		// interrupted) then we should activate that instead of opening a new
 		// diff.
@@ -532,9 +576,16 @@ export class DiffViewProvider {
 			)
 
 		if (diffTab && diffTab.input instanceof vscode.TabInputTextDiff) {
+			// Check if we already have an active editor for this diff
+			const existingEditor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === uri.fsPath)
+			if (existingEditor) {
+				// Reuse existing editor without switching focus
+				return existingEditor
+			}
 			const editor = await vscode.window.showTextDocument(diffTab.input.modified, { preserveFocus: true })
 			return editor
 		}
+		// kilocode_change end
 
 		// Open new diff editor.
 		return new Promise<vscode.TextEditor>((resolve, reject) => {
@@ -600,22 +651,19 @@ export class DiffViewProvider {
 				}),
 			)
 
-			// Pre-open the file as a text document to ensure it doesn't open in preview mode
-			// This fixes issues with files that have custom editor associations (like markdown preview)
-			vscode.window
-				.showTextDocument(uri, { preview: false, viewColumn: vscode.ViewColumn.Active, preserveFocus: true })
-				.then(() => {
-					// Execute the diff command after ensuring the file is open as text
-					return vscode.commands.executeCommand(
-						"vscode.diff",
-						vscode.Uri.parse(`${DIFF_VIEW_URI_SCHEME}:${fileName}`).with({
-							query: Buffer.from(this.originalContent ?? "").toString("base64"),
-						}),
-						uri,
-						`${fileName}: ${fileExists ? `${DIFF_VIEW_LABEL_CHANGES}` : "New File"} (Editable)`,
-						{ preserveFocus: true },
-					)
-				})
+			// kilocode_change start: Skip pre-opening file to prevent flicker
+			// Execute the diff command directly without pre-opening the file
+			// This prevents the flash of the file content before the diff view appears
+			vscode.commands
+				.executeCommand(
+					"vscode.diff",
+					vscode.Uri.parse(`${DIFF_VIEW_URI_SCHEME}:${fileName}`).with({
+						query: Buffer.from(this.originalContent ?? "").toString("base64"),
+					}),
+					uri,
+					`${fileName}: ${fileExists ? `${DIFF_VIEW_LABEL_CHANGES}` : "New File"} (Editable)`,
+					{ preserveFocus: true },
+				)
 				.then(
 					() => {
 						// Command executed successfully, now wait for the editor to appear
@@ -625,6 +673,7 @@ export class DiffViewProvider {
 						reject(new Error(`Failed to execute diff command for ${uri.fsPath}: ${err.message}`))
 					},
 				)
+			// kilocode_change end
 		})
 	}
 
