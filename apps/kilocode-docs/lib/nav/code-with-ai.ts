@@ -46,7 +46,11 @@ export const CodeWithAiNav: NavSection[] = [
 	{
 		title: "Features",
 		links: [
-			{ href: "/code-with-ai/features/autocomplete", children: "Autocomplete" },
+			{
+				href: "/code-with-ai/features/autocomplete",
+				children: "Autocomplete",
+				subLinks: [{ href: "/code-with-ai/features/autocomplete/mistral-setup", children: "Mistral Setup" }],
+			},
 			{ href: "/code-with-ai/features/code-actions", children: "Code Actions" },
 			{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },
 			{
@@ -63,6 +67,7 @@ export const CodeWithAiNav: NavSection[] = [
 				href: "/code-with-ai/features/task-todo-list",
 				children: "Task Todo List",
 			},
+			{ href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
 		],
 	},
 ]
