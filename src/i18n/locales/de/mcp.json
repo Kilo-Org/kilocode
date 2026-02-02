@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Fehler beim Trennen von {{count}} MCP-Server(n). Überprüfe die Ausgabe für Details.",
 		"toolNotFound": "Tool '{{toolName}}' existiert nicht auf Server '{{serverName}}'. Verfügbare Tools: {{availableTools}}",
 		"serverNotFound": "MCP-Server '{{serverName}}' ist nicht konfiguriert. Verfügbare Server: {{availableServers}}",
-		"toolDisabled": "Tool '{{toolName}}' auf Server '{{serverName}}' ist deaktiviert. Verfügbare aktivierte Tools: {{availableTools}}"
+		"toolDisabled": "Tool '{{toolName}}' auf Server '{{serverName}}' ist deaktiviert. Verfügbare aktivierte Tools: {{availableTools}}",
+		"oauth_signin_failed": "OAuth-Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
+		"oauth_failed": "OAuth-Authentifizierung für {{serverUrl}} fehlgeschlagen: {{error}}"
 	},
 	"info": {
 		"server_restarting": "MCP-Server {{serverName}} wird neu gestartet...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP-Server werden bereits aktualisiert.",
 		"refreshing_all": "Alle MCP-Server werden aktualisiert...",
 		"all_refreshed": "Alle MCP-Server wurden aktualisiert.",
-		"project_config_deleted": "Projekt-MCP-Konfigurationsdatei gelöscht. Alle Projekt-MCP-Server wurden getrennt."
+		"project_config_deleted": "Projekt-MCP-Konfigurationsdatei gelöscht. Alle Projekt-MCP-Server wurden getrennt.",
+		"oauth_required": "OAuth-Authentifizierung erforderlich, um mit '{{serverUrl}}' zu verbinden",
+		"oauth_success": "OAuth-Authentifizierung für '{{serverUrl}}' erfolgreich"
 	}
 }

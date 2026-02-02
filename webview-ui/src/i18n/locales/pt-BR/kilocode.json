@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Bem-vindo ao Kilo Code!",
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
-		"introText2": "Funciona com os mais recentes modelos de IA como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e mais de 450 outros.",
+		"introText2": "Funciona com os mais recentes modelos de IA como Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, e mais de 450 outros.",
 		"introText3": "Crie uma conta gratuita e receba $20 em créditos bônus ao recarregar pela primeira vez.",
 		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
 		"lowBalance": "Seu saldo do Kilo Code está baixo",
-		"newOrganization": "Usando o Kilo para trabalho?"
+		"switchToFreeModel": "Mudar para um modelo gratuito"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -25,6 +25,11 @@
 		"modelUnavailable": "⚠️ O modelo {{model}} não está disponível. Mude para um modelo diferente para continuar.",
 		"continueWith": "Continuar com {{model}}",
 		"continue": "Continuar"
+	},
+	"unauthorizedError": {
+		"title": "Você precisa fazer login para usar o modelo {{modelId}}",
+		"message": "Faça login ou crie uma conta para acessar mais de 500 modelos, usar créditos a preço de custo ou trazer sua própria chave.",
+		"loginButton": "Fazer Login"
 	},
 	"pricing": {
 		"costUnknown": "custo desconhecido",
@@ -39,14 +44,15 @@
 	"settings": {
 		"sections": {
 			"mcp": "Servidores MCP",
-			"agentBehaviour": "Comportamento do Agente"
+			"agentBehaviour": "Comportamento do Agente",
+			"skills": "Habilidades"
 		},
 		"provider": {
 			"account": "Conta Kilo Code",
 			"apiKey": "Chave de API do Kilo Code",
 			"login": "Entrar no Kilo Code",
 			"logout": "Sair do Kilo Code",
-			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
+			"loginForPremiumModels": "Faça login para acessar modelos e recursos premium",
 			"providerRouting": {
 				"title": "Roteamento de Provedor",
 				"managedByOrganization": "Gerenciar roteamento de provedor em nível de organização",
@@ -148,7 +154,8 @@
 			"rules": "Regras",
 			"workflows": "Fluxos de Trabalho",
 			"mcps": "MCPs",
-			"modes": "Modos"
+			"modes": "Modos",
+			"skills": "Habilidades"
 		},
 		"ariaLabel": "Regras do Kilo Code",
 		"tabs": {
@@ -209,6 +216,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Novo aqui?",
+		"tryOneOfThese": "Experimente uma dessas ideias para começar:",
 		"suggestionText": "<suggestionButton>Clique aqui</suggestionButton> para uma ideia legal, depois toque em <sendIcon /> e me veja fazer mágica!",
 		"ideas": {
 			"idea1": "Crie uma esfera 3D giratória e brilhante que responde aos movimentos do mouse. Faça o app funcionar no navegador.",
@@ -360,6 +368,18 @@
 			"description": "Selecione o dispositivo de microfone para conversão de fala em texto",
 			"noDevices": "Nenhum dispositivo de microfone encontrado",
 			"refresh": "Atualizar"
+		}
+	},
+	"skills": {
+		"description": "As habilidades fornecem instruções especializadas para tarefas específicas. Elas são aplicadas automaticamente quando relevantes para sua solicitação.",
+		"noSkills": "Nenhuma habilidade instalada",
+		"projectSkills": "Habilidades do Projeto",
+		"globalSkills": "Habilidades Globais",
+		"deleteDialog": {
+			"title": "Excluir Habilidade",
+			"description": "Tem certeza de que deseja excluir a habilidade \"{{skillName}}\"? Esta ação não pode ser desfeita.",
+			"cancel": "Cancelar",
+			"delete": "Excluir"
 		}
 	}
 }

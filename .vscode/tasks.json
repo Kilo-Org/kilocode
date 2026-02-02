@@ -5,7 +5,7 @@
 	"tasks": [
 		{
 			"label": "watch",
-			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc", "watch:cli"],
+			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc"],
 			"presentation": {
 				"reveal": "never"
 			},
@@ -103,61 +103,6 @@
 			"isBackground": true,
 			"presentation": {
 				"group": "watch:core",
-				"reveal": "always"
-			}
-		},
-		{
-			"label": "watch:cli:setup",
-			"dependsOn": ["watch:pnpm"],
-			"type": "shell",
-			"command": "node -e \"require('fs').existsSync('cli/dist/node_modules') || process.exit(1)\" || pnpm --filter @kilocode/cli dev:setup",
-			"group": "build",
-			"presentation": {
-				"group": "watch:cli",
-				"reveal": "silent"
-			},
-			"problemMatcher": []
-		},
-		{
-			"label": "watch:cli:deps",
-			"dependsOn": ["watch:cli:setup"],
-			"type": "shell",
-			"command": "npx nodemon --watch cli/package.dist.json --exec \"pnpm --filter @kilocode/cli deps:install\"",
-			"group": "build",
-			"isBackground": true,
-			"presentation": {
-				"group": "watch:cli",
-				"reveal": "silent"
-			},
-			"problemMatcher": {
-				"pattern": { "regexp": "^$" },
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": "\\[nodemon\\] starting",
-					"endsPattern": "\\[nodemon\\] clean exit - waiting for changes before restart"
-				}
-			}
-		},
-		{
-			"label": "watch:cli",
-			"dependsOn": ["watch:cli:setup", "watch:cli:deps"],
-			"type": "shell",
-			"command": "pnpm --filter @kilocode/cli dev",
-			"group": "build",
-			"problemMatcher": {
-				"owner": "esbuild",
-				"pattern": {
-					"regexp": "^$"
-				},
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": "esbuild-problem-matcher#onStart",
-					"endsPattern": "esbuild-problem-matcher#onEnd"
-				}
-			},
-			"isBackground": true,
-			"presentation": {
-				"group": "watch:cli",
 				"reveal": "always"
 			}
 		},

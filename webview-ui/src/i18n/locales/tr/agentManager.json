@@ -60,7 +60,9 @@
 		"selectModel": "Model seç",
 		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
 		"defaultModel": "Varsayılan model",
-		"loadingModels": "Yükleniyor..."
+		"loadingModels": "Yükleniyor...",
+		"selectMode": "Mod seç",
+		"modeTooltip": "Mod: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",
@@ -75,7 +77,9 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"thinking": "Düşünüyor",
+		"thinkingSeconds": "{{count}}sn"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

@@ -104,16 +104,6 @@
 			"stoppedWithReason": "Claude Code s'ha aturat per la raó: {{reason}}",
 			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}",
-			"tokenRefreshFailed": "No s'ha pogut actualitzar el token OAuth: {{error}}",
-			"onboardingTimeout": "L'operació d'onboarding ha esgotat el temps després de 60 segons. Si us plau, torna-ho a provar més tard.",
-			"projectDiscoveryFailed": "No s'ha pogut descobrir l'ID del projecte. Assegura't d'estar autenticat amb 'gemini auth'.",
-			"rateLimitExceeded": "S'ha superat el límit de velocitat. S'han assolit els límits del nivell gratuït.",
-			"badRequest": "Sol·licitud incorrecta: {{details}}",
-			"apiError": "Error de l'API Gemini CLI: {{error}}",
-			"completionError": "Error de compleció de Gemini CLI: {{error}}"
-		},
 		"message": {
 			"no_active_task_to_delete": "No hi ha cap tasca activa de la qual eliminar missatges",
 			"invalid_timestamp_for_deletion": "Marca de temps del missatge no vàlida per a l'eliminació",
@@ -217,7 +207,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Resposta interrompuda per l'usuari",
-		"responseInterruptedByApiError": "Resposta interrompuda per error d'API"
+		"responseInterruptedByApiError": "Resposta interrompuda per error d'API",
+		"streamTerminatedByProvider": "El proveïdor ha finalitzat la sol·licitud"
 	},
 	"storage": {
 		"prompt_custom_path": "Introdueix una ruta d'emmagatzematge personalitzada per a l'historial de converses o deixa-ho buit per utilitzar la ubicació predeterminada",

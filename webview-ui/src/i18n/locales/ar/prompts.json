@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "نمط المنظمة",
-		"description": "هذا النمط مقدم من منظمتك ولا يمكن تعديله هنا. لتعديل هذا النمط، تفضل بزيارة لوحة تحكم Kilo Code.",
+		"description": "هذا النمط مقدم من منظمتك ولا يمكن تعديله هنا. لتعديل هذا النمط، تفضل بزيارة <dashboardLink>لوحة تحكم Kilo Code</dashboardLink>.",
 		"cannotEdit": "لا يمكن تعديل أنماط المنظمة"
 	},
 	"tools": {

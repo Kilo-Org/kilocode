@@ -9,7 +9,9 @@ import { McpMarketplaceCatalog } from "../../../../src/shared/kilocode/mcp"
  */
 export function getMcpServerDisplayName(serverName: string, mcpMarketplaceCatalog: McpMarketplaceCatalog): string {
 	// Find matching item in marketplace catalog
-	const catalogItem = mcpMarketplaceCatalog.items.find((item) => item.mcpId === serverName)
+	const catalogItem = mcpMarketplaceCatalog.items.find(
+		(item) => ((item as any).mcpId ?? (item as any).id) === serverName, // kilocode_change
+	)
 
 	// Return display name if found, otherwise return original server name
 	return catalogItem?.name || serverName

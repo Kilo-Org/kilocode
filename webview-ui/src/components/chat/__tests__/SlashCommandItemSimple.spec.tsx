@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@/utils/test-utils"
+import type { Command } from "@roo-code/types"
 
-import type { Command } from "@roo/ExtensionMessage"
+import { render, screen, fireEvent } from "@/utils/test-utils"
 
 import { SlashCommandItemSimple } from "../SlashCommandItemSimple"
 

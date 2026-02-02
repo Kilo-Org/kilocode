@@ -62,25 +62,6 @@ class PromptsButtonClickAction : AnAction() {
 }
 
 /**
- * Action that handles clicks on the MCP button in the UI.
- * Executes the corresponding VSCode command when triggered.
- */
-class MCPButtonClickAction : AnAction() {
-    private val logger: Logger = Logger.getInstance(MCPButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.mcpButtonClicked"
-
-    /**
-     * Performs the action when the MCP button is clicked.
-     *
-     * @param e The action event containing context information
-     */
-    override fun actionPerformed(e: AnActionEvent) {
-        logger.info("MCP button clicked")
-        executeCommand(commandId, e.project)
-    }
-}
-
-/**
  * Action that handles clicks on the History button in the UI.
  * Executes the corresponding VSCode command when triggered.
  */

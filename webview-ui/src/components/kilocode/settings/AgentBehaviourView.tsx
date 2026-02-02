@@ -8,6 +8,7 @@ import { Section } from "@src/components/settings/Section"
 import ModesView from "@src/components/modes/ModesView"
 import McpView from "@src/components/mcp/McpView"
 import KiloRulesWorkflowsView from "@src/components/kilocode/rules/KiloRulesWorkflowsView"
+import InstalledSkillsView from "@src/components/kilocode/settings/InstalledSkillsView"
 
 const StyledTabButton = styled.button<{ isActive: boolean }>`
 	background: none;
@@ -40,7 +41,7 @@ const TabButton = ({
 )
 
 const AgentBehaviourView = () => {
-	const [activeTab, setActiveTab] = useState<"modes" | "mcp" | "rules" | "workflows">("modes")
+	const [activeTab, setActiveTab] = useState<"modes" | "mcp" | "rules" | "workflows" | "skills">("modes")
 	const { t } = useAppTranslation()
 
 	return (
@@ -54,13 +55,7 @@ const AgentBehaviourView = () => {
 
 			<Section>
 				{/* Tab buttons */}
-				<div
-					style={{
-						display: "flex",
-						gap: "1px",
-						padding: "0 20px 0 20px",
-						borderBottom: "1px solid var(--vscode-panel-border)",
-					}}>
+				<div className="flex flex-wrap gap-[1px] px-5 border-b border-vscode-panel-border">
 					<TabButton isActive={activeTab === "modes"} onClick={() => setActiveTab("modes")}>
 						{t("settings:sections.modes")}
 					</TabButton>
@@ -73,14 +68,18 @@ const AgentBehaviourView = () => {
 					<TabButton isActive={activeTab === "workflows"} onClick={() => setActiveTab("workflows")}>
 						{t("kilocode:rules.tabs.workflows")}
 					</TabButton>
+					<TabButton isActive={activeTab === "skills"} onClick={() => setActiveTab("skills")}>
+						{t("kilocode:settings.sections.skills")}
+					</TabButton>
 				</div>
 
 				{/* Content */}
-				<div style={{ width: "100%" }}>
+				<div className="w-full">
 					{activeTab === "modes" && <ModesView hideHeader />}
 					{activeTab === "mcp" && <McpView hideHeader onDone={() => {}} />}
 					{activeTab === "rules" && <KiloRulesWorkflowsView type="rule" />}
 					{activeTab === "workflows" && <KiloRulesWorkflowsView type="workflow" />}
+					{activeTab === "skills" && <InstalledSkillsView />}
 				</div>
 			</Section>
 		</div>

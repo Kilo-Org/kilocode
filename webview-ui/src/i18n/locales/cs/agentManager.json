@@ -61,7 +61,9 @@
 		"selectModel": "Vyber model",
 		"modelTooltip": "Vyber, který AI model použít pro tuto relaci",
 		"defaultModel": "Výchozí model",
-		"loadingModels": "Načítání..."
+		"loadingModels": "Načítání...",
+		"selectMode": "Vybrat režim",
+		"modeTooltip": "Režim: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
@@ -76,7 +78,9 @@
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}",
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
-		"copyCommand": "Kopírovat příkaz"
+		"copyCommand": "Kopírovat příkaz",
+		"thinking": "Přemýšlení",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",

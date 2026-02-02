@@ -1,11 +1,11 @@
 import type { ModeConfig } from "../../types/messages.js"
-import { DEFAULT_MODES as DEFAULT_MODES_KILO } from "@roo-code/types"
+import { DEFAULT_MODES as DEFAULT_MODES_KILO, DEFAULT_MODE_SLUG as DEFAULT_MODE_SLUG_KILO } from "@roo-code/types"
 
 /**
  * Default mode
  */
 export const DEFAULT_MODES = DEFAULT_MODES_KILO
-export const DEFAULT_MODE_SLUG = "code"
+export const DEFAULT_MODE_SLUG = DEFAULT_MODE_SLUG_KILO
 
 /**
  * Get mode configuration by slug

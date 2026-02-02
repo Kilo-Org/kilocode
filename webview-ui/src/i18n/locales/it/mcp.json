@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Strumenti",
 		"resources": "Risorse",
-		"logs": "Registri"
+		"logs": "Registri",
+		"authDebug": "Debug Auth"
 	},
 	"emptyState": {
 		"noTools": "Nessuno strumento trovato",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "Riprovo...",
-		"retryConnection": "Riprova connessione"
+		"retryConnection": "Riprova connessione",
+		"signIn": "Accedi",
+		"signingIn": "Accesso in corso..."
 	},
 	"refreshMCP": "Aggiorna server MCP",
 	"execution": {
 		"running": "In esecuzione",
 		"completed": "Completato",
 		"error": "Errore"
+	},
+	"authDebug": {
+		"title": "Informazioni di debug OAuth",
+		"status": "Stato",
+		"tokenExpires": "Scadenza token",
+		"scopes": "Ambiti",
+		"refreshInfo": "Info refresh token",
+		"hasRefreshToken": "Ha refresh token",
+		"canRefresh": "Auto-refresh disponibile",
+		"tokenIssuedAt": "Token emesso il",
+		"nextRefreshAt": "Prossimo refresh",
+		"lastRefreshAt": "Ultimo refresh",
+		"tokenEndpoint": "Token endpoint",
+		"clientId": "Client ID"
 	}
 }

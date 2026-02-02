@@ -1,3 +1,7 @@
+import * as fs from "fs/promises"
+import * as path from "path"
+
+import * as vscode from "vscode"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
@@ -13,29 +17,33 @@ import {
 import chokidar, { FSWatcher } from "chokidar"
 import delay from "delay"
 import deepEqual from "fast-deep-equal"
-import * as fs from "fs/promises"
-import * as path from "path"
-import * as vscode from "vscode"
 import { z } from "zod"
-import { t } from "../../i18n"
 
-import { ClineProvider } from "../../core/webview/ClineProvider"
-import { GlobalFileNames } from "../../shared/globalFileNames"
-import {
+import type {
 	McpResource,
 	McpResourceResponse,
 	McpResourceTemplate,
 	McpServer,
 	McpTool,
 	McpToolCallResponse,
-} from "../../shared/mcp"
+} from "@roo-code/types"
+
+import { McpAuthStatus, McpAuthDebugInfo } from "../../shared/mcp" // kilocode_change
+import { t } from "../../i18n"
+
+import { ClineProvider } from "../../core/webview/ClineProvider"
+
+import { GlobalFileNames } from "../../shared/globalFileNames"
+
 import { fileExistsAtPath } from "../../utils/fs"
 import { arePathsEqual, getWorkspacePath } from "../../utils/path"
 import { injectVariables } from "../../utils/config"
 import { NotificationService } from "./kilocode/NotificationService"
 import { safeWriteJson } from "../../utils/safeWriteJson"
 import { sanitizeMcpName } from "../../utils/mcp-name"
-
+// kilocode_change start - MCP OAuth Authorization
+import { McpOAuthService, OAuthTokens } from "./oauth"
+// kilocode_change end
 // Discriminated union for connection states
 export type ConnectedMcpConnection = {
 	type: "connected"
@@ -58,6 +66,23 @@ export enum DisableReason {
 	MCP_DISABLED = "mcpDisabled",
 	SERVER_DISABLED = "serverDisabled",
 }
+
+// OAuth configuration schema for HTTP-based transports
+// kilocode_change start - MCP OAuth Authorization
+const OAuthConfigSchema = z
+	.object({
+		// Override client_id if pre-registered
+		clientId: z.string().optional(),
+		clientSecret: z.string().optional(),
+
+		// Override scopes to request
+		scopes: z.array(z.string()).optional(),
+
+		// Disable OAuth for this server (use static headers instead)
+		disabled: z.boolean().optional(),
+	})
+	.optional()
+// kilocode_change end
 
 // Base configuration schema for common settings
 const BaseConfigSchema = z.object({
@@ -105,6 +130,7 @@ const createServerTypeSchema = () => {
 			type: z.enum(["sse"]).optional(),
 			url: z.string().url("URL must be a valid URL format"),
 			headers: z.record(z.string()).optional(),
+			oauth: OAuthConfigSchema, // kilocode_change - MCP OAuth Authorization
 			// Ensure no stdio fields are present
 			command: z.undefined().optional(),
 			args: z.undefined().optional(),
@@ -120,6 +146,7 @@ const createServerTypeSchema = () => {
 			type: z.enum(["streamable-http"]).optional(),
 			url: z.string().url("URL must be a valid URL format"),
 			headers: z.record(z.string()).optional(),
+			oauth: OAuthConfigSchema, // kilocode_change - MCP OAuth Authorization
 			// Ensure no stdio fields are present
 			command: z.undefined().optional(),
 			args: z.undefined().optional(),
@@ -158,15 +185,434 @@ export class McpHub {
 	private isProgrammaticUpdate: boolean = false
 	private flagResetTimer?: NodeJS.Timeout
 	private sanitizedNameRegistry: Map<string, string> = new Map()
+	// kilocode_change start - MCP OAuth Authorization
+	private oauthService?: McpOAuthService
+	// kilocode_change end
+	// kilocode_change start - Auto-reconnect on disconnect
+	private reconnectAttempts: Map<string, number> = new Map()
+	private reconnectTimers: Map<string, NodeJS.Timeout> = new Map()
+	private static readonly MAX_RECONNECT_ATTEMPTS = 5
+	private static readonly INITIAL_RECONNECT_DELAY_MS = 1000
+	private static readonly MAX_RECONNECT_DELAY_MS = 30000
+	// kilocode_change end
 
 	constructor(provider: ClineProvider) {
 		this.providerRef = new WeakRef(provider)
+		// kilocode_change start - MCP OAuth Authorization
+		this.initializeOAuthService()
+		// kilocode_change end
 		this.watchMcpSettingsFile()
 		this.watchProjectMcpFile().catch(console.error)
 		this.setupWorkspaceFoldersWatcher()
 		this.initializeGlobalMcpServers()
 		this.initializeProjectMcpServers()
 	}
+
+	// kilocode_change start - MCP OAuth Authorization
+	/**
+	 * Initializes the OAuth service if a context is available
+	 */
+	private initializeOAuthService(): void {
+		const provider = this.providerRef.deref()
+		if (provider?.context) {
+			this.oauthService = new McpOAuthService(provider.context)
+		}
+	}
+
+	/**
+	 * Gets OAuth tokens for an HTTP-based server, refreshing if needed
+	 * @param serverUrl The MCP server URL
+	 * @param oauthConfig Optional OAuth configuration overrides
+	 * @returns OAuth tokens if available, null otherwise
+	 */
+	private async getOAuthTokensForServer(
+		serverUrl: string,
+		oauthConfig?: {
+			clientId?: string
+			clientSecret?: string
+			scopes?: string[]
+			disabled?: boolean
+		},
+	): Promise<OAuthTokens | null> {
+		// If OAuth is explicitly disabled for this server, skip
+		if (oauthConfig?.disabled) {
+			return null
+		}
+
+		if (!this.oauthService) {
+			return null
+		}
+
+		try {
+			// Check if tokens need refresh
+			const { needsRefresh, canRefresh, tokens } = await this.oauthService.checkTokenRefreshNeeded(serverUrl)
+
+			if (!tokens) {
+				// No stored tokens - will need OAuth flow when server returns 401
+				return null
+			}
+
+			if (needsRefresh) {
+				if (canRefresh) {
+					console.log(`Token for ${serverUrl} is expired or expiring soon, attempting refresh`)
+					const refreshedTokens = await this.oauthService.refreshAccessToken(serverUrl)
+					if (refreshedTokens) {
+						console.log(`Successfully refreshed token for ${serverUrl}`)
+						return refreshedTokens
+					}
+					// Refresh failed - the tokens might still work if not fully expired yet
+					console.log(`Token refresh failed for ${serverUrl}, using existing tokens`)
+				} else {
+					console.log(
+						`Token for ${serverUrl} needs refresh but cannot refresh (no refresh token or metadata)`,
+					)
+				}
+			}
+
+			return tokens
+		} catch (error) {
+			console.error(`Failed to get OAuth tokens for ${serverUrl}:`, error)
+			return null
+		}
+	}
+
+	/**
+	 * Initiates OAuth flow for a server that requires authentication
+	 * @param serverUrl The MCP server URL
+	 * @param wwwAuthenticateHeader The WWW-Authenticate header from 401 response
+	 * @param oauthConfig Optional OAuth configuration overrides
+	 * @returns OAuth tokens if successful
+	 */
+	async initiateOAuthForServer(
+		serverUrl: string,
+		wwwAuthenticateHeader?: string,
+		oauthConfig?: {
+			clientId?: string
+			clientSecret?: string
+			scopes?: string[]
+		},
+	): Promise<OAuthTokens | null> {
+		if (!this.oauthService) {
+			console.error("OAuth service not initialized")
+			return null
+		}
+
+		try {
+			// Show notification to user
+			vscode.window.showInformationMessage(
+				t("mcp:info.oauth_required", { serverUrl }) || `MCP server requires authentication: ${serverUrl}`,
+			)
+
+			const tokens = await this.oauthService.initiateOAuthFlow(serverUrl, wwwAuthenticateHeader, {
+				clientId: oauthConfig?.clientId,
+				clientSecret: oauthConfig?.clientSecret,
+				scopes: oauthConfig?.scopes,
+			})
+
+			vscode.window.showInformationMessage(
+				t("mcp:info.oauth_success", { serverUrl }) || `Successfully authenticated with: ${serverUrl}`,
+			)
+
+			return tokens
+		} catch (error) {
+			console.error(`OAuth flow failed for ${serverUrl}:`, error)
+			vscode.window.showErrorMessage(
+				t("mcp:errors.oauth_failed", { serverUrl, error: String(error) }) ||
+					`OAuth authentication failed for ${serverUrl}: ${error}`,
+			)
+			return null
+		}
+	}
+
+	/**
+	 * Clears OAuth tokens for a server (for logout/re-auth)
+	 * @param serverUrl The MCP server URL
+	 */
+	async clearOAuthTokens(serverUrl: string): Promise<void> {
+		if (this.oauthService) {
+			await this.oauthService.clearTokens(serverUrl)
+		}
+	}
+
+	/**
+	 * Initiates OAuth sign-in for a server by name (called from webview)
+	 * @param serverName The MCP server name
+	 * @param source The server source (global or project)
+	 * @returns Promise<void>
+	 */
+	async initiateOAuthSignIn(serverName: string, source?: "global" | "project"): Promise<void> {
+		const connection = this.findConnection(serverName, source)
+		if (!connection) {
+			throw new Error(`Server ${serverName} not found`)
+		}
+
+		// Parse the config to get the URL
+		const config = JSON.parse(connection.server.config)
+		if (config.type !== "sse" && config.type !== "streamable-http") {
+			throw new Error(`Server ${serverName} is not an HTTP-based server`)
+		}
+
+		const serverUrl = config.url
+		if (!serverUrl) {
+			throw new Error(`Server ${serverName} does not have a URL configured`)
+		}
+
+		// Get OAuth config overrides if any
+		const oauthConfig = config.oauth
+
+		// Only clear tokens to force re-authentication, but keep client credentials
+		// from Dynamic Client Registration to reuse the registered client_id
+		if (this.oauthService) {
+			console.log(`Clearing stored tokens for re-authentication (keeping client credentials)...`)
+			await this.oauthService.clearTokens(serverUrl)
+		}
+
+		// Initiate the OAuth flow
+		const tokens = await this.initiateOAuthForServer(serverUrl, undefined, {
+			clientId: oauthConfig?.clientId,
+			clientSecret: oauthConfig?.clientSecret,
+			scopes: oauthConfig?.scopes,
+		})
+
+		if (tokens) {
+			// OAuth successful - restart the connection to use the new tokens
+			await this.restartConnection(serverName, connection.server.source)
+		}
+	}
+
+	/**
+	 * Builds the auth status for an HTTP-based server
+	 * @param serverUrl The MCP server URL
+	 * @param oauthTokens The OAuth tokens if available
+	 * @param oauthConfig OAuth configuration for the server
+	 * @param hasStaticAuth Whether static auth headers are configured
+	 * @param debugInfo Optional debug information about the OAuth tokens
+	 * @returns The McpAuthStatus object
+	 */
+	private buildAuthStatus(
+		serverUrl: string,
+		oauthTokens: OAuthTokens | null,
+		oauthConfig?: { disabled?: boolean },
+		hasStaticAuth?: boolean,
+		debugInfo?: McpAuthDebugInfo | null,
+	): McpAuthStatus {
+		// OAuth is explicitly disabled - check for static auth
+		if (oauthConfig?.disabled) {
+			return {
+				method: hasStaticAuth ? "static" : "none",
+				status: hasStaticAuth ? "authenticated" : "none",
+			}
+		}
+
+		// Have OAuth tokens
+		if (oauthTokens) {
+			const isExpired = oauthTokens.expiresAt ? oauthTokens.expiresAt < Date.now() : false
+			const hasRefreshToken = !!oauthTokens.refreshToken
+			return {
+				method: "oauth",
+				// If expired but has refresh token, still consider it authenticated (will auto-refresh)
+				status: isExpired && !hasRefreshToken ? "expired" : "authenticated",
+				expiresAt: oauthTokens.expiresAt,
+				scopes: oauthTokens.scope?.split(" "),
+				debug: debugInfo || undefined,
+			}
+		}
+
+		// No OAuth tokens - check if static auth is configured
+		if (hasStaticAuth) {
+			return {
+				method: "static",
+				status: "authenticated",
+			}
+		}
+
+		// No auth configured - may require OAuth
+		return {
+			method: "none",
+			status: "none",
+		}
+	}
+
+	/**
+	 * Checks if an error indicates OAuth authentication is required (401 response)
+	 * @param error The error to check
+	 * @returns True if the error is a 401 requiring OAuth
+	 */
+	private isOAuthRequiredError(error: unknown): boolean {
+		if (error instanceof Error) {
+			const message = error.message.toLowerCase()
+			// Check for 401 status code in error message or error object properties
+			if (
+				message.includes("401") ||
+				message.includes("unauthorized") ||
+				message.includes("invalid_token") ||
+				message.includes("missing or invalid access token")
+			) {
+				return true
+			}
+			// Check for code property on the error
+			if ((error as any).code === 401) {
+				return true
+			}
+		}
+		return false
+	}
+
+	/**
+	 * Extracts WWW-Authenticate header value from error if available
+	 * @param error The error to check
+	 * @returns The WWW-Authenticate header value or undefined
+	 */
+	private extractWwwAuthenticateHeader(error: unknown): string | undefined {
+		if (error instanceof Error) {
+			// Check if the error has headers
+			const headers = (error as any).headers
+			if (headers) {
+				return headers["www-authenticate"] || headers["WWW-Authenticate"]
+			}
+		}
+		return undefined
+	}
+	/**
+	 * Normalizes OAuth token type to proper HTTP Authorization header casing.
+	 * OAuth servers may return "bearer" (lowercase) but HTTP headers typically use "Bearer" (title case).
+	 * Most authorization validation libraries expect title case.
+	 * @param tokenType The token type from OAuth response (e.g., "bearer", "Bearer", "BEARER")
+	 * @returns The normalized token type with proper casing (e.g., "Bearer")
+	 */
+	private normalizeTokenType(tokenType: string): string {
+		// Handle common token types with proper casing
+		const lowerType = tokenType.toLowerCase()
+		switch (lowerType) {
+			case "bearer":
+				return "Bearer"
+			case "basic":
+				return "Basic"
+			case "digest":
+				return "Digest"
+			case "hoba":
+				return "HOBA"
+			case "mutual":
+				return "Mutual"
+			case "negotiate":
+				return "Negotiate"
+			case "oauth":
+				return "OAuth"
+			case "scram-sha-1":
+				return "SCRAM-SHA-1"
+			case "scram-sha-256":
+				return "SCRAM-SHA-256"
+			case "vapid":
+				return "vapid"
+			default:
+				// For unknown types, capitalize first letter
+				return tokenType.charAt(0).toUpperCase() + tokenType.slice(1).toLowerCase()
+		}
+	}
+	/**
+	 * Schedules an automatic reconnection attempt for a disconnected server.
+	 * Uses exponential backoff with a maximum number of attempts.
+	 * @param serverName The name of the server to reconnect
+	 * @param source The server source (global or project)
+	 */
+	private scheduleReconnect(serverName: string, source: "global" | "project"): void {
+		const key = `${source}-${serverName}`
+
+		// Don't schedule if already scheduled or if hub is disposed
+		if (this.reconnectTimers.has(key) || this.isDisposed) {
+			return
+		}
+
+		const attempts = this.reconnectAttempts.get(key) || 0
+
+		// Check if we've exceeded max attempts
+		if (attempts >= McpHub.MAX_RECONNECT_ATTEMPTS) {
+			console.log(
+				`Max reconnect attempts (${McpHub.MAX_RECONNECT_ATTEMPTS}) reached for "${serverName}", giving up`,
+			)
+			this.reconnectAttempts.delete(key)
+			return
+		}
+
+		// Calculate delay with exponential backoff
+		const delayMs = Math.min(
+			McpHub.INITIAL_RECONNECT_DELAY_MS * Math.pow(2, attempts),
+			McpHub.MAX_RECONNECT_DELAY_MS,
+		)
+
+		console.log(`Scheduling reconnect for "${serverName}" in ${delayMs}ms (attempt ${attempts + 1})`)
+
+		const timer = setTimeout(async () => {
+			this.reconnectTimers.delete(key)
+
+			// Check if server is still disconnected and not disabled
+			const connection = this.findConnection(serverName, source)
+			if (!connection || connection.server.status !== "disconnected" || connection.server.disabled) {
+				// Server is no longer disconnected or was disabled, clear attempts
+				this.reconnectAttempts.delete(key)
+				return
+			}
+
+			// Check if the server requires OAuth authentication
+			if (connection.server.authStatus?.status === "required") {
+				// Don't auto-reconnect if OAuth is required - user must sign in
+				console.log(`Skipping auto-reconnect for "${serverName}" - OAuth authentication required`)
+				this.reconnectAttempts.delete(key)
+				return
+			}
+
+			// Increment attempt counter
+			this.reconnectAttempts.set(key, attempts + 1)
+
+			try {
+				console.log(`Auto-reconnecting to "${serverName}" (attempt ${attempts + 1})`)
+				await this.restartConnection(serverName, source)
+
+				// Check if reconnection was successful
+				const updatedConnection = this.findConnection(serverName, source)
+				if (updatedConnection?.server.status === "connected") {
+					console.log(`Successfully reconnected to "${serverName}"`)
+					this.reconnectAttempts.delete(key)
+				} else {
+					// Still disconnected, schedule another attempt
+					this.scheduleReconnect(serverName, source)
+				}
+			} catch (error) {
+				console.error(`Failed to reconnect to "${serverName}":`, error)
+				// Schedule another attempt
+				this.scheduleReconnect(serverName, source)
+			}
+		}, delayMs)
+
+		this.reconnectTimers.set(key, timer)
+	}
+
+	/**
+	 * Cancels any scheduled reconnect for a server.
+	 * @param serverName The name of the server
+	 * @param source The server source (global or project)
+	 */
+	private cancelReconnect(serverName: string, source: "global" | "project"): void {
+		const key = `${source}-${serverName}`
+		const timer = this.reconnectTimers.get(key)
+		if (timer) {
+			clearTimeout(timer)
+			this.reconnectTimers.delete(key)
+		}
+		this.reconnectAttempts.delete(key)
+	}
+
+	/**
+	 * Resets the reconnect attempt counter for a server.
+	 * Call this when a server successfully connects.
+	 * @param serverName The name of the server
+	 * @param source The server source (global or project)
+	 */
+	private resetReconnectAttempts(serverName: string, source: "global" | "project"): void {
+		const key = `${source}-${serverName}`
+		this.reconnectAttempts.delete(key)
+	}
+	// kilocode_change end
 	/**
 	 * Registers a client (e.g., ClineProvider) using this hub.
 	 * Increments the reference count.
@@ -757,6 +1203,8 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on error
+					this.scheduleReconnect(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -765,6 +1213,8 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on close
+					this.scheduleReconnect(name, source)
 				}
 
 				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
@@ -797,9 +1247,21 @@ export class McpHub {
 				}
 			} else if (configInjected.type === "streamable-http") {
 				// Streamable HTTP connection
+				// kilocode_change start - MCP OAuth Authorization: Inject OAuth tokens if available
+				let httpHeaders: Record<string, string> = { ...(configInjected.headers || {}) }
+				const oauthConfig = (configInjected as any).oauth
+				if (!oauthConfig?.disabled) {
+					const oauthTokens = await this.getOAuthTokensForServer(configInjected.url, oauthConfig)
+					if (oauthTokens) {
+						httpHeaders["Authorization"] =
+							`${this.normalizeTokenType(oauthTokens.tokenType)} ${oauthTokens.accessToken}`
+					}
+				}
+				// kilocode_change end
+
 				transport = new StreamableHTTPClientTransport(new URL(configInjected.url), {
 					requestInit: {
-						headers: configInjected.headers,
+						headers: httpHeaders,
 					},
 				})
 
@@ -812,6 +1274,8 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on error
+					this.scheduleReconnect(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -820,20 +1284,37 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on close
+					this.scheduleReconnect(name, source)
 				}
 			} else if (configInjected.type === "sse") {
 				// SSE connection
+				// kilocode_change start - MCP OAuth Authorization: Inject OAuth tokens if available
+				let sseHeaders: Record<string, string> = { ...(configInjected.headers || {}) }
+				const sseOauthConfig = (configInjected as any).oauth
+				if (!sseOauthConfig?.disabled) {
+					const sseOauthTokens = await this.getOAuthTokensForServer(configInjected.url, sseOauthConfig)
+					if (sseOauthTokens) {
+						sseHeaders["Authorization"] =
+							`${this.normalizeTokenType(sseOauthTokens.tokenType)} ${sseOauthTokens.accessToken}`
+					}
+				}
+				// kilocode_change end
+
 				const sseOptions = {
 					requestInit: {
-						headers: configInjected.headers,
+						headers: sseHeaders,
 					},
 				}
 				// Configure ReconnectingEventSource options
 				const reconnectingEventSourceOptions = {
 					max_retry_time: 5000, // Maximum retry time in milliseconds
-					withCredentials: configInjected.headers?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
+					withCredentials: sseHeaders?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
 					fetch: (url: string | URL, init: RequestInit) => {
-						const headers = new Headers({ ...(init?.headers || {}), ...(configInjected.headers || {}) })
+						const headers = new Headers(init?.headers)
+						for (const [key, value] of Object.entries(sseHeaders)) {
+							headers.set(key, value)
+						}
 						return fetch(url, {
 							...init,
 							headers,
@@ -855,6 +1336,8 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on error
+					this.scheduleReconnect(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -863,6 +1346,8 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
+					// kilocode_change - Schedule auto-reconnect on close
+					this.scheduleReconnect(name, source)
 				}
 			} else {
 				// Should not happen if validateServerConfig is correct
@@ -873,6 +1358,40 @@ export class McpHub {
 			if (configInjected.type === "stdio") {
 				transport.start = async () => {}
 			}
+
+			// kilocode_change start - MCP OAuth Authorization: Build auth status for HTTP-based transports
+			let authStatus: McpAuthStatus | undefined
+			if (configInjected.type === "streamable-http" || configInjected.type === "sse") {
+				const httpOauthConfig = (configInjected as any).oauth
+				const hasStaticAuth = !!configInjected.headers?.["Authorization"]
+				// Get stored tokens for auth status (we already fetched them above during token injection)
+				const storedTokens = !httpOauthConfig?.disabled
+					? await this.getOAuthTokensForServer(configInjected.url, httpOauthConfig)
+					: null
+				// Get debug info for the auth status
+				let debugInfo: McpAuthDebugInfo | null = null
+				if (this.oauthService && storedTokens) {
+					const tokenDebugInfo = await this.oauthService.getTokenDebugInfo(configInjected.url)
+					if (tokenDebugInfo) {
+						debugInfo = {
+							issuedAt: tokenDebugInfo.issuedAt,
+							hasRefreshToken: tokenDebugInfo.hasRefreshToken,
+							tokenEndpoint: tokenDebugInfo.tokenEndpoint,
+							clientId: tokenDebugInfo.clientId,
+							canRefresh: tokenDebugInfo.canRefresh,
+							nextRefreshAt: tokenDebugInfo.nextRefreshAt,
+						}
+					}
+				}
+				authStatus = this.buildAuthStatus(
+					configInjected.url,
+					storedTokens,
+					httpOauthConfig,
+					hasStaticAuth,
+					debugInfo,
+				)
+			}
+			// kilocode_change end
 
 			// Create a connected connection
 			const connection: ConnectedMcpConnection = {
@@ -885,6 +1404,9 @@ export class McpHub {
 					source,
 					projectPath: source === "project" ? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath : undefined,
 					errorHistory: [],
+					// kilocode_change start - MCP OAuth Authorization
+					authStatus,
+					// kilocode_change end
 				},
 				client,
 				transport,
@@ -896,12 +1418,44 @@ export class McpHub {
 			connection.server.status = "connected"
 			connection.server.error = ""
 			connection.server.instructions = client.getInstructions()
+			// kilocode_change - Reset reconnect attempts on successful connection
+			this.resetReconnectAttempts(name, source)
 
 			this.kiloNotificationService.connect(name, connection.client)
 
 			// Initial fetch of tools and resources
 			await this.fetchAvailableServerCapabilities(name, source) // kilocode_change: logic moved into method
 		} catch (error) {
+			// kilocode_change start - MCP OAuth Authorization: Handle 401 errors
+			// Check if this is an HTTP-based transport and if the error indicates OAuth is required
+			// Instead of automatically opening the auth flow, we just set the status to "required"
+			// and let the user click "Sign in" to trigger the OAuth flow
+			if (
+				(config.type === "streamable-http" || config.type === "sse") &&
+				this.isOAuthRequiredError(error) &&
+				!(config as any).oauth?.disabled
+			) {
+				console.log(`OAuth required for "${name}", showing sign-in button (not auto-opening auth flow)`)
+
+				// Remove the failed connection before creating placeholder
+				await this.deleteConnection(name, source)
+
+				// Create disconnected connection with auth status showing sign-in is required
+				// The user must click "Sign in" to initiate the OAuth flow
+				const connection = this.createPlaceholderConnection(name, config, source, DisableReason.SERVER_DISABLED)
+				connection.server.disabled = false // Not actually disabled, just requires auth
+				connection.server.status = "disconnected"
+				connection.server.error = "Authentication required. Click 'Sign in' to authenticate."
+				connection.server.authStatus = {
+					method: "oauth",
+					status: "required",
+				}
+				this.connections.push(connection)
+				await this.notifyWebviewOfServerChanges()
+				return
+			}
+			// kilocode_change end
+
 			// Update status with error
 			const connection = this.findConnection(name, source)
 			if (connection) {
@@ -1120,6 +1674,15 @@ export class McpHub {
 	async deleteConnection(name: string, source?: "global" | "project"): Promise<void> {
 		// Clean up file watchers for this server
 		this.removeFileWatchersForServer(name)
+
+		// kilocode_change - Cancel any pending reconnect attempts
+		if (source) {
+			this.cancelReconnect(name, source)
+		} else {
+			// Cancel for both sources if not specified
+			this.cancelReconnect(name, "global")
+			this.cancelReconnect(name, "project")
+		}
 
 		// If source is provided, only delete connections from that source
 		const connections = source
@@ -2001,16 +2564,16 @@ export class McpHub {
 	async dispose(): Promise<void> {
 		// Prevent multiple disposals
 		if (this.isDisposed) {
-			console.log("McpHub: Already disposed.")
 			return
 		}
-		console.log("McpHub: Disposing...")
+
 		this.isDisposed = true
 
 		// Clear all debounce timers
 		for (const timer of this.configChangeDebounceTimers.values()) {
 			clearTimeout(timer)
 		}
+
 		this.configChangeDebounceTimers.clear()
 
 		// Clear flag reset timer and reset programmatic update flag
@@ -2018,9 +2581,18 @@ export class McpHub {
 			clearTimeout(this.flagResetTimer)
 			this.flagResetTimer = undefined
 		}
+
 		this.isProgrammaticUpdate = false
+		// kilocode_change start: - Clear all reconnect timers
+		for (const timer of this.reconnectTimers.values()) {
+			clearTimeout(timer)
+		}
+		this.reconnectTimers.clear()
+		this.reconnectAttempts.clear()
+		// kilocode_change end
 
 		this.removeAllFileWatchers()
+
 		for (const connection of this.connections) {
 			try {
 				await this.deleteConnection(connection.server.name, connection.server.source)
@@ -2028,15 +2600,19 @@ export class McpHub {
 				console.error(`Failed to close connection for ${connection.server.name}:`, error)
 			}
 		}
+
 		this.connections = []
+
 		if (this.settingsWatcher) {
 			this.settingsWatcher.dispose()
 			this.settingsWatcher = undefined
 		}
+
 		if (this.projectMcpWatcher) {
 			this.projectMcpWatcher.dispose()
 			this.projectMcpWatcher = undefined
 		}
+
 		this.disposables.forEach((d) => d.dispose())
 	}
 }

@@ -14,11 +14,12 @@ try {
 
 import type { CloudUserInfo, AuthState } from "@roo-code/types"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
-import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
+import { TelemetryService, PostHogTelemetryClient, DebugTelemetryClient } from "@roo-code/telemetry" // kilocode_change: added DebugTelemetryClient
 import { customToolRegistry } from "@roo-code/core"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
 import { createOutputChannelLogger, createDualLogger } from "./utils/outputChannelLogger"
+import { initializeNetworkProxy } from "./utils/networkProxy"
 
 import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
@@ -53,6 +54,7 @@ import { SettingsSyncService } from "./services/settings-sync/SettingsSyncServic
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh, refreshModels } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
+import { fetchKilocodeNotificationsOnStartup } from "./core/kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 // kilocode_change start
 async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
@@ -102,6 +104,11 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(outputChannel)
 	outputChannel.appendLine(`${Package.name} extension activated - ${JSON.stringify(Package)}`)
 
+	// Initialize network proxy configuration early, before any network requests.
+	// When proxyUrl is configured, all HTTP/HTTPS traffic will be routed through it.
+	// Only applied in debug mode (F5).
+	await initializeNetworkProxy(context, outputChannel)
+
 	// Set extension path for custom tool registry to find bundled esbuild
 	customToolRegistry.setExtensionPath(context.extensionPath)
 
@@ -111,11 +118,24 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Initialize telemetry service.
 	const telemetryService = TelemetryService.createInstance()
 
+	// kilocode_change start: use DebugTelemetryClient in development mode, optionally also PostHog if API key is present
 	try {
-		telemetryService.register(new PostHogTelemetryClient())
+		if (process.env.NODE_ENV === "development") {
+			telemetryService.register(new DebugTelemetryClient())
+			console.info("[DebugTelemetry] Using DebugTelemetryClient for development")
+
+			// Also register PostHog if API key is present for local testing
+			if (process.env.KILOCODE_POSTHOG_API_KEY) {
+				telemetryService.register(new PostHogTelemetryClient())
+				console.info("[Telemetry] Also using PostHogTelemetryClient (API key present)")
+			}
+		} else {
+			telemetryService.register(new PostHogTelemetryClient())
+		}
 	} catch (error) {
-		console.warn("Failed to register PostHogTelemetryClient:", error.message)
+		console.warn("Failed to register TelemetryClient:", error.message)
 	}
+	// kilocode_change end
 
 	// Create logger for cloud services.
 	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
@@ -406,6 +426,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			`[AutoImport] Error during auto-import: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
+
+	// kilocode_change start: Fetch Kilo Code notifications on startup
+	try {
+		void fetchKilocodeNotificationsOnStartup(contextProxy, outputChannel.appendLine.bind(outputChannel))
+	} catch (error) {
+		outputChannel.appendLine(
+			`[Notifications] Error fetching notifications on startup: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+	// kilocode_change end
 
 	// kilocode_change start
 	// Check for env var conflicts that might confuse users

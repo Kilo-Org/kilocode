@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "مرحبًا بك في Kilo Code!",
 		"introText1": "Kilo Code وكيل برمجة مدعوم بالذكاء ومفتوح المصدر ومجاني.",
-		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude Sonnet 4.5 وGemini 2.5 Pro وGPT-5 وأكثر من 450 نموذج آخر.",
+		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude Opus 4.5 وGemini 3 Pro وGPT-5.2 وأكثر من 450 نموذج آخر.",
 		"introText3": "أنشئ حسابًا مجانيًا واحصل على 20 دولارًا كرصيد إضافي عند إضافة رصيد لأول مرة.",
 		"ctaButton": "ابدأ الآن",
 		"manualModeButton": "استخدم مفتاح API الخاص بك",
@@ -12,7 +12,7 @@
 	"lowCreditWarning": {
 		"addCredit": "شحن الرصيد",
 		"lowBalance": "رصيدك في Kilo Code منخفض",
-		"newOrganization": "تستخدم Kilo للعمل؟"
+		"switchToFreeModel": "التبديل إلى نموذج مجاني بدلاً من ذلك"
 	},
 	"memoryWarning": {
 		"message": "استخدام الذاكرة عند {{percentage}}%. يرجى إعادة تشغيل بيئة التطوير لمنع التعطل."
@@ -21,6 +21,11 @@
 		"previous": "السابق",
 		"next": "التالي",
 		"page": "صفحة {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "يجب عليك تسجيل الدخول لاستخدام نموذج {{modelId}}",
+		"message": "قم بتسجيل الدخول أو إنشاء حساب للوصول إلى أكثر من 500 نموذج، واستخدم الأرصدة بسعر التكلفة، أو أحضر مفتاحك الخاص.",
+		"loginButton": "تسجيل الدخول"
 	},
 	"pricing": {
 		"costUnknown": "التكلفة غير معروفة",
@@ -35,7 +40,8 @@
 	"settings": {
 		"sections": {
 			"mcp": "خوادم MCP",
-			"agentBehaviour": "سلوك الوكيل"
+			"agentBehaviour": "سلوك الوكيل",
+			"skills": "المهارات"
 		},
 		"codeIndex": {
 			"embeddingBatchSizeLabel": "حجم دفعة التضمين",
@@ -48,7 +54,7 @@
 			"apiKey": "مفتاح Kilo Code API",
 			"login": "سجّل دخولك في Kilo Code",
 			"logout": "تسجيل الخروج من Kilo Code",
-			"automaticFetch": "أحدث النماذج متاحة تلقائيًا في Kilo Code. إذا لم تكن متأكدًا من النموذج الذي تريد اختياره، يعمل Kilo Code بشكل أفضل مع النماذج الموصى بها المدرجة في الأعلى <strong>بخط عريض</strong>.",
+			"loginForPremiumModels": "سجّل دخولك للوصول إلى النماذج والميزات المميزة",
 			"providerRouting": {
 				"title": "توجيه المزود",
 				"managedByOrganization": "إدارة توجيه المزود على مستوى المؤسسة",
@@ -150,7 +156,8 @@
 			"rules": "القواعد",
 			"workflows": "سير العمل",
 			"mcps": "MCPs",
-			"modes": "الأوضاع"
+			"modes": "الأوضاع",
+			"skills": "المهارات"
 		},
 		"ariaLabel": "قواعد Kilo Code",
 		"tabs": {
@@ -211,6 +218,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "جديد هنا؟",
+		"tryOneOfThese": "جرب إحدى هذه الأفكار للبدء:",
 		"suggestionText": "<suggestionButton>اضغط هنا</suggestionButton> للحصول على فكرة رائعة، ثم انقر على <sendIcon /> وشاهدني أعمل السحر!",
 		"ideas": {
 			"idea1": "اصنع كرة ثلاثية الأبعاد دوارة ومتوهجة تتفاعل مع حركات الماوس. اجعل التطبيق يعمل في المتصفح.",
@@ -361,6 +369,18 @@
 			"loading": "جارٍ تحميل أجهزة الميكروفون...",
 			"description": "حدد جهاز الميكروفون لتحويل الكلام إلى نص",
 			"refresh": "تحديث"
+		}
+	},
+	"skills": {
+		"description": "توفر المهارات تعليمات متخصصة لمهام محددة. يتم تطبيقها تلقائيًا عندما تكون ذات صلة بطلبك.",
+		"noSkills": "لا توجد مهارات مثبتة",
+		"projectSkills": "مهارات المشروع",
+		"globalSkills": "المهارات العامة",
+		"deleteDialog": {
+			"title": "حذف المهارة",
+			"description": "هل أنت متأكد أنك تريد حذف المهارة \"{{skillName}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+			"cancel": "إلغاء",
+			"delete": "حذف"
 		}
 	}
 }

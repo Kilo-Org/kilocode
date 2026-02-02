@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Loskoppelen van {{count}} MCP-server(s) mislukt. Controleer de uitvoer voor details.",
 		"toolNotFound": "Tool '{{toolName}}' bestaat niet op server '{{serverName}}'. Beschikbare tools: {{availableTools}}",
 		"serverNotFound": "MCP-server '{{serverName}}' is niet geconfigureerd. Beschikbare servers: {{availableServers}}",
-		"toolDisabled": "Tool '{{toolName}}' op server '{{serverName}}' is uitgeschakeld. Beschikbare ingeschakelde tools: {{availableTools}}"
+		"toolDisabled": "Tool '{{toolName}}' op server '{{serverName}}' is uitgeschakeld. Beschikbare ingeschakelde tools: {{availableTools}}",
+		"oauth_signin_failed": "OAuth-aanmelding mislukt. Probeer het opnieuw.",
+		"oauth_failed": "OAuth-authenticatie mislukt voor {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "{{serverName}} MCP-server wordt opnieuw gestart...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP-servers worden al vernieuwd.",
 		"refreshing_all": "Alle MCP-servers worden vernieuwd...",
 		"all_refreshed": "Alle MCP-servers zijn vernieuwd.",
-		"project_config_deleted": "Project MCP-configuratiebestand verwijderd. Alle project MCP-servers zijn losgekoppeld."
+		"project_config_deleted": "Project MCP-configuratiebestand verwijderd. Alle project MCP-servers zijn losgekoppeld.",
+		"oauth_required": "OAuth-authenticatie vereist om verbinding te maken met '{{serverUrl}}'",
+		"oauth_success": "OAuth-authenticatie geslaagd voor '{{serverUrl}}'"
 	}
 }

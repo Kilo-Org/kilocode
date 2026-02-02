@@ -2,98 +2,103 @@
 	"info": {
 		"settings_imported": "設定已成功匯入。"
 	},
+	"configDiscovery": {
+		"added": "Kilo Code：已新增 {{source}} {{configType}}：{{name}}{{modeStr}}",
+		"removed": "Kilo Code：已移除 {{source}} {{configType}}：{{name}}{{modeStr}}"
+	},
 	"userFeedback": {
-		"message_update_failed": "更新訊息失敗",
+		"message_update_failed": "訊息更新失敗",
 		"no_checkpoint_found": "在此訊息之前找不到檢查點",
 		"message_updated": "訊息已成功更新"
 	},
 	"lowCreditWarning": {
-		"title": "警告：信用額度低！",
-		"message": "檢查您是否可以透過免費信用額度儲值或購買更多額度！"
+		"title": "餘額不足警告！",
+		"message": "請查看是否有免費額度可儲值，或購買更多額度！"
 	},
 	"task": {
-		"noAssistantMessages": "模型回應意外結束（沒有助理訊息）。這可能是頻率限制的跡象。",
-		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
-		"maxCompletionTokens": "已達到完成 Token 數量上限。",
-		"disableApplyDiff": "如果此錯誤持續發生，請在進階設定中停用「透過差異編輯」功能。",
+		"noAssistantMessages": "模型的回應意外結束（沒有助理訊息）。這可能是速率限制的跡象。",
+		"notLoggedInError": "無法完成請求，請確認已連線並登入所選的供應商。\n\n{{error}}",
+		"maxCompletionTokens": "已達到完成 Token 數量的上限。",
+		"contentFilter": "請求已被內容篩選器封鎖。",
+		"disableApplyDiff": "如果此錯誤持續發生，請在進階設定中停用「透過差異編輯」。",
 		"disableEditFile": "如果此錯誤持續發生，請停用「快速套用」實驗性功能。"
 	},
 	"checkpoints": {
-		"nestedGitRepos": "無法使用存檔點功能，因為在 {{path}} 偵測到巢狀 Git 儲存庫。請移除或重新配置巢狀 Git 儲存庫以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
-		"protectedPaths": "無法在 {{workspaceDir}} 中使用存檔點功能。請開啟子資料夾作為工作區以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
+		"nestedGitRepos": "檢查點無法使用，因為在 {{path}} 偵測到巢狀 Git 儲存庫。請移除或重新放置巢狀 Git 儲存庫以使用檢查點功能，或在設定中停用檢查點以隱藏此警告。",
+		"protectedPaths": "檢查點無法在 {{workspaceDir}} 中使用。請開啟子資料夾作為工作區以使用檢查點功能，或在設定中停用檢查點以隱藏此警告。",
 		"dismissWarning": "關閉"
 	},
 	"rules": {
 		"actions": {
 			"delete": "刪除",
-			"confirmDelete": "您確定要刪除 {{filename}} 嗎？",
-			"deleted": "{{filename}} 已刪除"
+			"confirmDelete": "確定要刪除 {{filename}} 嗎？",
+			"deleted": "已刪除 {{filename}}"
 		},
 		"errors": {
 			"noWorkspaceFound": "找不到工作區資料夾",
 			"fileAlreadyExists": "檔案 {{filename}} 已存在",
-			"failedToCreateRuleFile": "建立規則檔案失敗。",
-			"failedToDeleteRuleFile": "刪除規則檔案失敗。"
+			"failedToCreateRuleFile": "無法建立規則檔案。",
+			"failedToDeleteRuleFile": "無法刪除規則檔案。"
 		},
 		"templates": {
 			"workflow": {
-				"description": "工作流程說明在此...",
+				"description": "在此輸入工作流程說明...",
 				"stepsHeader": "## 步驟",
 				"step1": "步驟 1",
 				"step2": "步驟 2"
 			},
 			"rule": {
-				"description": "規則說明在此...",
-				"guidelinesHeader": "## 指導原則",
-				"guideline1": "指導原則 1",
-				"guideline2": "指導原則 2"
+				"description": "在此輸入規則說明...",
+				"guidelinesHeader": "## 指引",
+				"guideline1": "指引 1",
+				"guideline2": "指引 2"
 			}
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code Commit 訊息產生器已啟用",
-		"gitNotFound": "⚠️找不到 Git 儲存庫或 Git 不可用",
+		"activated": "Kilo Code Commit Message 產生器已啟用",
+		"gitNotFound": "⚠️ 找不到 Git 儲存庫或 Git 無法使用",
 		"gitInitError": "⚠️ Git 初始化錯誤：{{error}}",
-		"generating": "Kilo：正在產生 Commit 訊息...",
+		"generating": "Kilo：正在產生 Commit Message...",
 		"noChanges": "Kilo：找不到可供分析的變更",
-		"generated": "Kilo：Commit 訊息已產生！",
-		"generationFailed": "Kilo：產生 Commit 訊息失敗：{{errorMessage}}",
-		"generatingFromUnstaged": "Kilo：使用未暫存的變更產生訊息",
-		"activationFailed": "Kilo：啟用訊息產生器失敗：{{error}}",
-		"providerRegistered": "Kilo：Commit 訊息提供者已註冊",
+		"generated": "Kilo：Commit Message 已產生！",
+		"generationFailed": "Kilo：Commit Message 產生失敗：{{errorMessage}}",
+		"generatingFromUnstaged": "Kilo：正在使用未暫存的變更產生訊息",
+		"activationFailed": "Kilo：訊息產生器啟用失敗：{{error}}",
+		"providerRegistered": "Kilo：Commit Message 供應商已註冊",
 		"errors": {
-			"noProject": "无可用项目",
-			"connectionFailed": "无法连接到 Kilo Code 扩展",
-			"timeout": "请求在 30 秒后超时",
-			"noChanges": "没有发现可提交的更改",
-			"invalidResponse": "收到来自扩展程序的无效响应格式",
-			"missingMessage": "未从扩展程序收到提交信息",
-			"noWorkspacePath": "无法确定 Git 仓库的工作区路径",
-			"processingError": "处理提交消息生成时出错：{{error}}",
-			"workspaceNotFound": "无法确定 Git 存储库的工作区路径"
+			"connectionFailed": "無法連線至 Kilo Code 擴充功能",
+			"timeout": "請求在 30 秒後逾時",
+			"invalidResponse": "從擴充功能收到無效的回應格式",
+			"missingMessage": "未從擴充功能收到 Commit Message",
+			"noChanges": "找不到可提交的變更",
+			"noProject": "沒有可用的專案",
+			"noWorkspacePath": "無法判斷 Git 儲存庫的工作區路徑",
+			"workspaceNotFound": "無法判斷 Git 儲存庫的工作區路徑",
+			"processingError": "處理 Commit Message 產生時發生錯誤：{{error}}"
 		},
 		"error": {
-			"title": "错误",
-			"workspacePathNotFound": "无法确定 Git 存储库的工作区路径",
-			"generationFailed": "无法生成提交消息：{{error}}",
-			"processingFailed": "提交消息生成处理错误：{{error}}",
-			"unknown": "未知错误"
+			"title": "錯誤",
+			"workspacePathNotFound": "無法判斷 Git 儲存庫的工作區路徑",
+			"generationFailed": "Commit Message 產生失敗：{{error}}",
+			"processingFailed": "處理 Commit Message 產生時發生錯誤：{{error}}",
+			"unknown": "未知錯誤"
 		},
 		"dialogs": {
-			"error": "错误",
-			"info": "AI 提交信息",
+			"info": "AI Commit Message",
+			"error": "錯誤",
 			"success": "成功",
-			"title": "AI 提交信息"
+			"title": "AI Commit Message"
 		},
 		"progress": {
-			"title": "生成提交消息",
-			"analyzing": "正在分析更改...",
-			"connecting": "连接至 Kilo Code...",
-			"generating": "正在生成提交消息..."
+			"title": "正在產生 Commit Message",
+			"analyzing": "正在分析變更...",
+			"connecting": "正在連線至 Kilo Code...",
+			"generating": "正在產生 Commit Message..."
 		},
 		"ui": {
-			"generateButton": "生成提交信息",
-			"generateButtonTooltip": "使用AI分析您的代码变更并生成提交信息"
+			"generateButton": "產生 Commit Message",
+			"generateButtonTooltip": "使用 AI 分析程式碼變更並產生 Commit Message"
 		}
 	},
 	"ghost": {
@@ -104,15 +109,15 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已停用）",
-				"noCredits": "**帳戶餘額不足**\n\n你的 Kilo Code 帳戶沒有餘額。要使用自動完成功能，請為帳戶儲值。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
-				"noUsableProvider": "**未設定自動完成模型**\n\n要啟用自動完成，請新增一個使用以下支援的供應商的設定檔：{{providers}}。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
-				"sessionTotal": "工作階段總費用:",
-				"provider": "提供者:",
-				"model": "模型:",
-				"profile": "設定檔: ",
+				"noCredits": "**帳戶中沒有額度**\n\nKilo Code 帳戶沒有額度。若要使用 Autocomplete，請為帳戶儲值。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**未設定 Autocomplete 模型**\n\n若要啟用 Autocomplete，請新增一個使用以下支援供應商的設定檔：{{providers}}。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
+				"sessionTotal": "工作階段總費用：",
+				"provider": "供應商：",
+				"model": "模型：",
+				"profile": "設定檔：",
 				"defaultProfile": "預設",
-				"completionSummary": "在 {{startTime}} 至 {{endTime}} 之間執行了 {{count}} 次自動完成，總費用為 {{cost}}。",
-				"providerInfo": "自動完成由 {{provider}} 的 {{model}} 提供。"
+				"completionSummary": "在 {{startTime}} 至 {{endTime}} 之間完成了 {{count}} 次補齊，總費用為 {{cost}}。",
+				"providerInfo": "Autocomplete 由 {{provider}} 的 {{model}} 提供。"
 			},
 			"cost": {
 				"zero": "$0.00",
@@ -122,91 +127,86 @@
 		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "正在分析你的程式碼...",
+			"analyzing": "正在分析程式碼...",
 			"generating": "正在產生建議編輯...",
 			"processing": "正在處理建議編輯...",
 			"showing": "正在顯示建議編輯..."
 		},
 		"input": {
-			"title": "Kilo Code: 快速工作",
-			"placeholder": "例如：「重構這個函數使其更有效率」"
+			"title": "Kilo Code：快速任務",
+			"placeholder": "例如「重構此函式以提升效率」"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: 產生建議編輯",
+			"generateSuggestions": "Kilo Code：產生建議編輯",
 			"displaySuggestions": "顯示建議編輯",
 			"cancelSuggestions": "取消建議編輯",
-			"applyCurrentSuggestion": "套用目前建議編輯",
+			"applyCurrentSuggestion": "套用目前的建議編輯",
 			"applyAllSuggestions": "套用所有建議編輯",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: 建議編輯"
+			"title": "Kilo Code：建議編輯"
 		},
 		"chatParticipant": {
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "我可以協助你處理快速工作和建議編輯。"
+			"description": "可以協助處理快速任務和建議編輯。"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete 被與 GitHub Copilot 的衝突阻擋。要修正此問題，你必須停用 Copilot 的內嵌建議。",
+			"message": "Kilo Code Autocomplete 因與 GitHub Copilot 衝突而被封鎖。若要修正此問題，必須停用 Copilot 的行內建議。",
 			"disableCopilot": "停用 Copilot",
 			"disableInlineAssist": "停用 Autocomplete"
 		}
 	},
-	"terminalCommandGenerator": {
-		"tipMessage": "Kilo：按下 {{shortcut}} 產生終端機指令",
-		"noActiveTerminal": "Kilo: 找不到活動的終端機。請先開啟一個終端機",
-		"inputPrompt": "Kilo：描述您想要產生的指令",
-		"inputPlaceholder": "例如，結束在連接埠 3001 上執行的行程，尋找大檔案等",
-		"generatingProgress": "Kilo：正在產生終端機指令...",
-		"commandGenerated": "Kilo：產生的指令：{{command}}",
-		"generationFailed": "Kilo：指令產生失敗：{{error}}",
-		"warningDialog": {
-			"title": "終端機安全警告",
-			"okButton": "我明白",
-			"message": "執行前請仔細檢查所有產生的指令。終端機操作並非都可撤銷－執行未經驗證的指令可能導致不可逆的資料遺失或系統損壞。在繼續操作前，請完整審核並瞭解指令內容！",
-			"cancelButton": "取消"
-		}
-	},
 	"seeNewChanges": {
 		"title": "正在顯示新變更",
-		"checkpointsUnavailable": "無法顯示新變更，檢查點不可用。",
+		"checkpointsUnavailable": "無法顯示新變更，檢查點無法使用。",
 		"noChanges": "無法顯示新變更，找不到任何變更。",
 		"error": "無法顯示新變更，發生錯誤。"
 	},
 	"agentManager": {
 		"errors": {
-			"cliOutdated": "你的 Kilocode CLI 版本已過時且不支援 Agent Manager。請更新至最新版本。",
-			"cliNotFound": "找不到 Kilocode CLI。請安裝以使用 Agent Manager。",
-			"cliMisconfigured": "Kilocode CLI 未設定。請執行 'kilocode auth' 登入或 'kilocode config' 進行設定。",
-			"sessionFailed": "啟動代理工作階段失敗",
-			"sessionFailedWithMessage": "啟動代理工作階段失敗: {{message}}"
+			"cliOutdated": "Kilocode CLI 版本已過時，且不支援 Agent Manager。請更新至最新版本。",
+			"cliMisconfigured": "Kilocode CLI 尚未設定。請執行 'kilocode auth' 登入或 'kilocode config' 進行設定。",
+			"sessionFailed": "Agent Session 啟動失敗",
+			"sessionFailedWithMessage": "Agent Session 啟動失敗：{{message}}"
 		},
 		"actions": {
 			"updateInstructions": "更新說明",
 			"installInstructions": "安裝說明",
-			"getHelp": "取得協助",
-			"runInTerminal": "在終端機執行",
-			"loginCli": "Run kilocode auth",
-			"configureCli": "Run kilocode config",
-			"updateGlobal": "更新全域",
-			"updateLocal": "更新本地",
-			"installGlobal": "安裝全域",
-			"installLocal": "安裝本地"
+			"getHelp": "取得說明",
+			"runInTerminal": "在終端機中執行",
+			"updateGlobal": "全域更新",
+			"updateLocal": "本機更新",
+			"installGlobal": "全域安裝",
+			"installLocal": "本機安裝",
+			"loginCli": "執行 kilocode auth",
+			"configureCli": "執行 kilocode config"
 		},
 		"terminal": {
-			"installMessage": "執行 npm install 以安裝 Kilocode CLI。完成後，您可以關閉此終端機並嘗試再次啟動 Agent Manager。",
-			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+			"installMessage": "正在執行 npm install 以安裝 Kilocode CLI。完成後，請關閉此終端機並嘗試重新啟動 Agent Manager。",
+			"authReminder": "如果這是首次安裝，請在啟動 Agent Manager 之前執行 `kilocode auth` 進行登入。"
+		}
+	},
+	"terminalCommandGenerator": {
+		"tipMessage": "Kilo：按下 {{shortcut}} 產生終端機指令",
+		"inputPrompt": "Kilo：描述想要產生的指令",
+		"inputPlaceholder": "例如，終止在連接埠 3001 執行的程序、尋找大型檔案等",
+		"noActiveTerminal": "Kilo：找不到作用中的終端機。請先開啟終端機。",
+		"generatingProgress": "Kilo：正在產生終端機指令...",
+		"commandGenerated": "Kilo：已產生指令：{{command}}",
+		"generationFailed": "Kilo：指令產生失敗：{{error}}",
+		"warningDialog": {
+			"title": "終端機安全警告",
+			"message": "執行前請仔細檢查所有產生的指令。終端機操作並非總是可復原的——執行未經驗證的指令可能導致不可逆的資料遺失或系統損壞。繼續之前，請完整檢閱並瞭解指令內容！",
+			"okButton": "我瞭解",
+			"cancelButton": "取消"
 		}
 	},
 	"speechToText": {
 		"errors": {
-			"invalidApiKey": "您的 OpenAI API 密钥无效或没有访问 Realtime API 的权限。请检查您的 API 密钥并重试。",
-			"unknown": "连接失败。请检查您的配置并重试。"
+			"invalidApiKey": "OpenAI API 金鑰無效，或沒有 Realtime API 的存取權限。請檢查 API 金鑰並重試。",
+			"unknown": "連線失敗。請檢查設定並重試。"
 		}
-	},
-	"configDiscovery": {
-		"removed": "Kilo代码：已删除{{source}}{{configType}}：{{name}}{{modeStr}}",
-		"added": "Kilo代码：已添加{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

@@ -1,8 +1,9 @@
-import { render, screen, fireEvent, act } from "@testing-library/react"
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { GhostServiceSettingsView } from "../GhostServiceSettings"
 import { GhostServiceSettings } from "@roo-code/types"
 import React from "react"
+import { SearchIndexProvider } from "@/components/settings/useSettingsSearch"
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -120,6 +121,28 @@ const renderComponent = (props = {}) => {
 	return render(<GhostServiceSettingsView {...defaultProps} />)
 }
 
+const renderComponentWithSearch = (
+	props: Partial<React.ComponentProps<typeof GhostServiceSettingsView>> & { registerSetting?: any } = {},
+) => {
+	const registerSetting = props.registerSetting ?? vi.fn()
+	const { registerSetting: _omit, ...rest } = props
+
+	const defaultProps = {
+		ghostServiceSettings: defaultGhostServiceSettings,
+		onGhostServiceSettingsChange: vi.fn(),
+		...rest,
+	}
+
+	return {
+		registerSetting,
+		...render(
+			<SearchIndexProvider value={{ registerSetting }}>
+				<GhostServiceSettingsView {...(defaultProps as any)} />
+			</SearchIndexProvider>,
+		),
+	}
+}
+
 describe("GhostServiceSettingsView", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -132,6 +155,50 @@ describe("GhostServiceSettingsView", () => {
 
 	it("renders the component without errors", () => {
 		expect(() => renderComponent()).not.toThrow()
+	})
+
+	it("registers settings for Settings Search when a SearchIndexProvider is present", async () => {
+		// RTL's waitFor uses timers internally; these tests need real timers.
+		vi.useRealTimers()
+
+		const { registerSetting } = renderComponentWithSearch({
+			ghostServiceSettings: {
+				...defaultGhostServiceSettings,
+				enableAutoTrigger: false,
+				enableChatAutocomplete: false,
+				enableSmartInlineTaskKeybinding: false,
+			},
+		})
+
+		await waitFor(() => {
+			const ids = registerSetting.mock.calls.map(([arg]: any[]) => arg.settingId)
+			expect(ids).toContain("ghost-enable-auto-trigger")
+			expect(ids).toContain("ghost-smart-inline-task-keybinding")
+			expect(ids).toContain("ghost-chat-autocomplete")
+			expect(ids).toContain("ghost-autocomplete-model")
+		})
+
+		// Snooze setting should not be registered unless enableAutoTrigger is enabled
+		const snoozeCalls = registerSetting.mock.calls.filter(([arg]: any[]) => arg.settingId === "ghost-snooze")
+		expect(snoozeCalls).toHaveLength(0)
+	})
+
+	it("registers snooze setting when auto-trigger is enabled", async () => {
+		// RTL's waitFor uses timers internally; these tests need real timers.
+		vi.useRealTimers()
+
+		const { registerSetting } = renderComponentWithSearch({
+			ghostServiceSettings: {
+				...defaultGhostServiceSettings,
+				enableAutoTrigger: true,
+				snoozeUntil: undefined,
+			},
+		})
+
+		await waitFor(() => {
+			const ids = registerSetting.mock.calls.map(([arg]: any[]) => arg.settingId)
+			expect(ids).toContain("ghost-snooze")
+		})
 	})
 
 	it("renders basic component structure", () => {

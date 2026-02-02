@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "ツール",
 		"resources": "リソース",
-		"logs": "ログ"
+		"logs": "ログ",
+		"authDebug": "認証デバッグ"
 	},
 	"emptyState": {
 		"noTools": "ツールが見つかりません",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "再試行中...",
-		"retryConnection": "再接続"
+		"retryConnection": "再接続",
+		"signIn": "サインイン",
+		"signingIn": "サインイン中..."
 	},
 	"refreshMCP": "MCPサーバーを更新",
 	"execution": {
 		"running": "実行中",
 		"completed": "完了",
 		"error": "エラー"
+	},
+	"authDebug": {
+		"title": "OAuthデバッグ情報",
+		"status": "ステータス",
+		"tokenExpires": "tokenの有効期限",
+		"scopes": "スコープ",
+		"refreshInfo": "refresh tokenの情報",
+		"hasRefreshToken": "refresh tokenあり",
+		"canRefresh": "自動更新可能",
+		"tokenIssuedAt": "token発行日時",
+		"nextRefreshAt": "次回更新予定",
+		"lastRefreshAt": "最終更新日時",
+		"tokenEndpoint": "tokenエンドポイント",
+		"clientId": "クライアントID"
 	}
 }

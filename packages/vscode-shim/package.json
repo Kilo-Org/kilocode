@@ -1,0 +1,20 @@
+{
+	"name": "@roo-code/vscode-shim",
+	"private": true,
+	"type": "module",
+	"exports": "./src/index.ts",
+	"scripts": {
+		"format": "prettier --write 'src/**/*.ts'",
+		"lint": "eslint src --ext .ts --max-warnings=0",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run",
+		"clean": "rimraf .turbo"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@roo-code/config-typescript": "workspace:^",
+		"@types/node": "^24.1.0",
+		"vitest": "^3.2.3"
+	},
+	"dependencies": {}
+}

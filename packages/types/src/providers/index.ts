@@ -10,7 +10,6 @@ export * from "./featherless.js"
 export * from "./fireworks.js"
 export * from "./gemini.js"
 // kilocode_change start
-export * from "./gemini-cli.js"
 export * from "./ovhcloud.js"
 export * from "./synthetic.js"
 export * from "./inception.js"
@@ -28,6 +27,7 @@ export * from "./nano-gpt.js" // kilocode_change
 export * from "./ollama.js"
 export * from "./openai.js"
 export * from "./openai-codex.js"
+export * from "./openai-codex-rate-limits.js"
 export * from "./openrouter.js"
 export * from "./qwen-code.js"
 export * from "./requesty.js"
@@ -127,6 +127,8 @@ export function getProviderDefaultModelId(
 			return options?.isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
 		case "openai-native":
 			return "gpt-4o" // Based on openai-native patterns
+		case "openai-responses": // kilocode_change
+			return "gpt-4o" // OpenAI-compatible Responses API // kilocode_change
 		case "openai-codex":
 			return openAiCodexDefaultModelId
 		case "mistral":
@@ -160,7 +162,6 @@ export function getProviderDefaultModelId(
 		case "vercel-ai-gateway":
 			return vercelAiGatewayDefaultModelId
 		case "anthropic":
-		case "gemini-cli":
 		case "human-relay":
 		case "fake-ai":
 		default:
