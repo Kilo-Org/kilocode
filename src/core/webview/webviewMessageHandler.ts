@@ -2305,7 +2305,7 @@ export const webviewMessageHandler = async (
 				}
 
 				// kilocode_change start: If we're updating the active profile, we need to activate it to ensure it's persisted
-				const currentApiConfigName = getGlobalState("currentApiConfigName")
+				const currentApiConfigName = getGlobalState("currentApiConfigName") || "default"
 				const isActiveProfile = message.text === currentApiConfigName
 				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
 				vscode.commands.executeCommand("kilo-code.ghost.reload")
@@ -4514,6 +4514,38 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		case "requestOpenAiCodexRateLimits": {
+			try {
+				const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+				const accessToken = await openAiCodexOAuthManager.getAccessToken()
+
+				if (!accessToken) {
+					provider.postMessageToWebview({
+						type: "openAiCodexRateLimits",
+						error: "Not authenticated with OpenAI Codex",
+					})
+					break
+				}
+
+				const accountId = await openAiCodexOAuthManager.getAccountId()
+				const { fetchOpenAiCodexRateLimitInfo } = await import("../../integrations/openai-codex/rate-limits")
+				const rateLimits = await fetchOpenAiCodexRateLimitInfo(accessToken, { accountId })
+
+				provider.postMessageToWebview({
+					type: "openAiCodexRateLimits",
+					values: rateLimits,
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error fetching OpenAI Codex rate limits: ${errorMessage}`)
+				provider.postMessageToWebview({
+					type: "openAiCodexRateLimits",
+					error: errorMessage,
+				})
+			}
+			break
+		}
+
 		case "openDebugApiHistory":
 		case "openDebugUiHistory": {
 			const currentTask = provider.getCurrentTask()
@@ -4593,6 +4625,16 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
+
+		// kilocode_change start: Review mode scope selection
+		case "reviewScopeSelected": {
+			const scope = message.reviewScope
+			if (scope === "uncommitted" || scope === "branch") {
+				await provider.handleReviewScopeSelected(scope)
+			}
+			break
+		}
+		// kilocode_change end
 
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)

@@ -321,6 +321,37 @@
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
 		"glamaApiKey": "Glama API कुंजी",
 		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"useReasoning": "तर्क सक्षम करें",
 		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
@@ -608,21 +639,6 @@
 			"placeholder": "डिफ़ॉल्ट: claude",
 			"maxTokensLabel": "अधिकतम आउटपुट टोकन",
 			"maxTokensDescription": "Claude Code प्रतिक्रियाओं के लिए आउटपुट टोकन की अधिकतम संख्या। डिफ़ॉल्ट 8000 है।"
-		},
-		"geminiCli": {
-			"description": "यह प्रदाता Gemini CLI टूल से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
-			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
-			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.gemini/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
-			"instructions": "यदि आपने अभी तक प्रमाणीकरण नहीं किया है, तो कृपया पहले",
-			"instructionsContinued": "को अपने टर्मिनल में चलाएं।",
-			"setupLink": "Gemini CLI सेटअप निर्देश",
-			"requirementsTitle": "महत्वपूर्ण आवश्यकताएं",
-			"requirement1": "पहले, आपको Gemini CLI टूल इंस्टॉल करना होगा",
-			"requirement2": "फिर, अपने टर्मिनल में gemini चलाएं और सुनिश्चित करें कि आप Google से लॉग इन करें",
-			"requirement3": "केवल व्यक्तिगत Google खातों के साथ काम करता है (Google Workspace खाते नहीं)",
-			"requirement4": "API कुंजियों का उपयोग नहीं करता - प्रमाणीकरण OAuth के माध्यम से संभाला जाता है",
-			"requirement5": "Gemini CLI टूल को पहले इंस्टॉल और प्रमाणित करने की आवश्यकता है",
-			"freeAccess": "OAuth प्रमाणीकरण के माध्यम से मुफ्त पहुंच"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",

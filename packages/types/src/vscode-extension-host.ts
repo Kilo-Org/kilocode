@@ -21,6 +21,7 @@ import type { GitCommit } from "./git.js"
 import type { McpServer } from "./mcp.js"
 import type { ModelRecord, RouterModels, ModelInfo } from "./model.js"
 import type { CommitRange } from "./kilocode/kilocode.js"
+import type { OpenAiCodexRateLimitInfo } from "./providers/openai-codex-rate-limits.js"
 
 // kilocode_change start: Type definitions for Kilo Code-specific features
 // SAP AI Core deployment types
@@ -256,7 +257,9 @@ export interface ExtensionMessage {
 		| "customToolsResult"
 		| "modes"
 		| "taskWithAggregatedCosts"
-		| "skillsData" // kilocode_change: Skills data response
+		| "skillsData"
+		| "askReviewScope" // kilocode_change: Review mode scope selection
+		| "openAiCodexRateLimits"
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -337,7 +340,9 @@ export interface ExtensionMessage {
 	customMode?: ModeConfig
 	slug?: string
 	success?: boolean
-	values?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+	/** Generic payload for extension messages that use `values` */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	values?: Record<string, any>
 	requestId?: string
 	promptText?: string
 	results?:
@@ -442,6 +447,29 @@ export interface ExtensionMessage {
 		childrenCost: number
 	}
 	historyItem?: HistoryItem
+	// kilocode_change start: Review mode
+	reviewScopeInfo?: {
+		uncommitted: {
+			available: boolean
+			fileCount: number
+			filePreview?: string[]
+		}
+		branch: {
+			available: boolean
+			currentBranch: string
+			baseBranch: string
+			fileCount: number
+			filePreview?: string[]
+		}
+		error?: string
+	}
+	// kilocode_change end: Review mode
+}
+
+export interface OpenAiCodexRateLimitsMessage {
+	type: "openAiCodexRateLimits"
+	values?: OpenAiCodexRateLimitInfo
+	error?: string
 }
 
 export type ExtensionState = Pick<
@@ -925,11 +953,13 @@ export interface WebviewMessage {
 		| "chatCompletionAccepted" // kilocode_change: User accepted a chat completion suggestion
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
+		| "requestOpenAiCodexRateLimits"
 		| "refreshCustomTools"
 		| "requestModes"
 		| "switchMode"
 		| "debugSetting"
-		| "refreshSkills" // kilocode_change: Request skills data refresh
+		| "refreshSkills"
+		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
@@ -976,6 +1006,7 @@ export interface WebviewMessage {
 	promptMode?: string | "enhance"
 	customPrompt?: PromptComponent
 	dataUrls?: string[]
+	/** Generic payload for webview messages that use `values` */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	values?: Record<string, any>
 	query?: string
@@ -1049,6 +1080,9 @@ export interface WebviewMessage {
 		codebaseIndexOpenRouterApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
+	// kilocode_change start: Review mode
+	reviewScope?: "uncommitted" | "branch"
+	// kilocode_change end: Review mode
 }
 
 // kilocode_change: Create discriminated union for type-safe messages
@@ -1119,6 +1153,10 @@ export interface TaskHistoryResponsePayload {
 	pageCount: number
 }
 // kilocode_change end
+
+export interface RequestOpenAiCodexRateLimitsMessage {
+	type: "requestOpenAiCodexRateLimits"
+}
 
 export const checkoutDiffPayloadSchema = z.object({
 	ts: z.number().optional(),

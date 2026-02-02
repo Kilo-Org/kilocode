@@ -349,6 +349,37 @@
 		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
 		"glamaApiKey": "مفتاح Glama",
 		"getGlamaApiKey": "احصل على مفتاح Glama",
+		"openAiCodexRateLimits": {
+			"title": "حدود الاستخدام لـ Codex{{planLabel}}",
+			"loading": "جاري تحميل حدود الاستخدام...",
+			"loadError": "فشل تحميل حدود الاستخدام",
+			"retry": "إعادة المحاولة",
+			"usedPercent": "{{percent}}% مستخدم",
+			"resetsIn": "يُعاد التعيين خلال {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "الآن",
+				"notAvailable": "غير متوفر"
+			},
+			"duration": {
+				"daysHours": "{{days}} يوم {{hours}} ساعة",
+				"hoursMinutes": "{{hours}} ساعة {{minutes}} دقيقة",
+				"minutes": "{{minutes}} دقيقة"
+			},
+			"window": {
+				"usage": "الاستخدام",
+				"fiveHour": "حد 5 ساعات",
+				"oneHour": "حد ساعة واحدة",
+				"daily": "الحد اليومي",
+				"weekly": "الحد الأسبوعي",
+				"days": "حد {{days}} يوم",
+				"hours": "حد {{hours}} ساعة",
+				"minutes": "حد {{minutes}} دقيقة"
+			}
+		},
 		"useCustomBaseUrl": "استخدم رابط أساسي مخصص",
 		"useReasoning": "تفعيل الـ Reasoning",
 		"useHostHeader": "استخدم ترويسة Host مخصصة",
@@ -654,21 +685,6 @@
 			"placeholder": "الافتراضي: claude",
 			"maxTokensLabel": "أقصى توكنات المخرجات",
 			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
-		},
-		"geminiCli": {
-			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
-			"oauthPath": "مسار بيانات OAuth (اختياري)",
-			"oauthPathDescription": "إذا تركته فاضي يستخدم المسار الافتراضي (~/.gemini/oauth_creds.json).",
-			"instructions": "إذا ما سجلت دخول، شغّل",
-			"instructionsContinued": "في الطرفية أولاً.",
-			"setupLink": "دليل إعداد Gemini CLI",
-			"requirementsTitle": "متطلبات مهمة",
-			"requirement1": "ثبت أداة Gemini CLI",
-			"requirement2": "سجل دخول بـ Google",
-			"requirement3": "يعمل مع حسابات Google الشخصية فقط",
-			"requirement4": "المصادقة تتم عبر OAuth",
-			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
-			"freeAccess": "طبقة مجانية عبر OAuth"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",

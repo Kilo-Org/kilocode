@@ -1,1 +1,0 @@
-This is the technical and user documentation for Kilo Code, an open source AI agent VS Code extension. It helps you write code more efficiently by generating code, automating tasks, and providing suggestions. It is written with the documentation library Docusaurus and hosted at https://kilo.ai/docs

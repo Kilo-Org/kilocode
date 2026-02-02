@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 0.26.1
+
+### Patch Changes
+
+- [#5359](https://github.com/Kilo-Org/kilocode/pull/5359) [`e4076d9`](https://github.com/Kilo-Org/kilocode/commit/e4076d9d21c5a6a6c3ef34480f962c24c19cac54) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Add missing openai-codex provider type definition
+
+- [#5400](https://github.com/Kilo-Org/kilocode/pull/5400) [`5a49128`](https://github.com/Kilo-Org/kilocode/commit/5a49128a570f1725b705b2da7b19486649e526ed) Thanks [@Sureshkumars](https://github.com/Sureshkumars)! - Add Local review mode
+
+- [#5374](https://github.com/Kilo-Org/kilocode/pull/5374) [`1f06759`](https://github.com/Kilo-Org/kilocode/commit/1f06759572de5d20e897d2392660b13d6e51ec39) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Add openai-responses provider support in CLI config validation.
+
 ## 0.26.0
 
 ### Minor Changes

@@ -313,6 +313,37 @@
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
 		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Gunakan base URL kustom",
 		"useReasoning": "Aktifkan reasoning",
 		"useHostHeader": "Gunakan Host header kustom",
@@ -608,21 +639,6 @@
 			"placeholder": "Default: claude",
 			"maxTokensLabel": "Token Output Maks",
 			"maxTokensDescription": "Jumlah maksimum token output untuk respons Claude Code. Default adalah 8000."
-		},
-		"geminiCli": {
-			"description": "Penyedia ini menggunakan autentikasi OAuth dari alat Gemini CLI dan tidak memerlukan kunci API.",
-			"oauthPath": "Jalur Kredensial OAuth (opsional)",
-			"oauthPathDescription": "Jalur ke file kredensial OAuth. Biarkan kosong untuk menggunakan lokasi default (~/.gemini/oauth_creds.json).",
-			"instructions": "Jika Anda belum melakukan autentikasi, jalankan",
-			"instructionsContinued": "di terminal Anda terlebih dahulu.",
-			"setupLink": "Petunjuk Pengaturan Gemini CLI",
-			"requirementsTitle": "Persyaratan Penting",
-			"requirement1": "Pertama, Anda perlu menginstal alat Gemini CLI",
-			"requirement2": "Kemudian, jalankan gemini di terminal Anda dan pastikan Anda masuk dengan Google",
-			"requirement3": "Hanya berfungsi dengan akun Google pribadi (bukan akun Google Workspace)",
-			"requirement4": "Tidak menggunakan kunci API - autentikasi ditangani melalui OAuth",
-			"requirement5": "Memerlukan alat Gemini CLI diinstal dan diautentikasi terlebih dahulu",
-			"freeAccess": "Akses gratis melalui autentikasi OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Jalur Kredensial OAuth (opsional)",

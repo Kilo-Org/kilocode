@@ -1285,6 +1285,7 @@ export class ClineProvider
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
+						window.ICONS_BASE_URI = "${iconsUri}"
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
@@ -1367,6 +1368,7 @@ export class ClineProvider
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
+				window.ICONS_BASE_URI = "${iconsUri}"
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
@@ -1493,6 +1495,12 @@ export class ClineProvider
 		}
 
 		await this.postStateToWebview()
+
+		// kilocode_change start: Review mode scope selection
+		if (newMode === "review") {
+			await this.triggerReviewScopeSelection()
+		}
+		// kilocode_change end
 	}
 
 	// Provider Profile Management
@@ -2390,10 +2398,9 @@ export class ClineProvider
 			uriScheme: vscode.env.uriScheme,
 			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
 			kiloCodeWrapperProperties, // kilocode_change wrapper information
-			kilocodeDefaultModel: await getKilocodeDefaultModel(
-				apiConfiguration.kilocodeToken,
-				apiConfiguration.kilocodeOrganizationId,
-			),
+			kilocodeDefaultModel: (
+				await getKilocodeDefaultModel(apiConfiguration.kilocodeToken, apiConfiguration.kilocodeOrganizationId)
+			).defaultModel,
 			currentTaskItem: this.getCurrentTask()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
 				: undefined,
@@ -2684,10 +2691,9 @@ export class ClineProvider
 		// Return the same structure as before.
 		return {
 			apiConfiguration: providerSettings,
-			kilocodeDefaultModel: await getKilocodeDefaultModel(
-				providerSettings.kilocodeToken,
-				providerSettings.kilocodeOrganizationId,
-			), // kilocode_change
+			kilocodeDefaultModel: (
+				await getKilocodeDefaultModel(providerSettings.kilocodeToken, providerSettings.kilocodeOrganizationId)
+			).defaultModel, // kilocode_change
 			lastShownAnnouncementId: stateValues.lastShownAnnouncementId,
 			customInstructions: stateValues.customInstructions,
 			apiModelId: stateValues.apiModelId,
@@ -3378,6 +3384,64 @@ export class ClineProvider
 	public async setMode(mode: string): Promise<void> {
 		await this.setValues({ mode })
 	}
+
+	// kilocode_change start: Review mode
+	/**
+	 * Triggers the review scope selection UI
+	 * Called when user enters review mode
+	 */
+	public async triggerReviewScopeSelection(): Promise<void> {
+		try {
+			const cwd = getWorkspacePath()
+			if (!cwd) {
+				this.log("Cannot start review: no workspace folder open")
+				return
+			}
+
+			const { ReviewService } = await import("../../services/review")
+			const reviewService = new ReviewService({ cwd })
+			const scopeInfo = await reviewService.getScopeInfo()
+
+			await this.postMessageToWebview({
+				type: "askReviewScope",
+				reviewScopeInfo: scopeInfo,
+			})
+		} catch (error) {
+			this.log(
+				`Error triggering review scope selection: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
+	/**
+	 * Handles the user's review scope selection
+	 * Gets lightweight summary and starts the review task
+	 * The agent will dynamically explore changes using tools
+	 */
+	public async handleReviewScopeSelected(scope: "uncommitted" | "branch"): Promise<void> {
+		try {
+			const cwd = getWorkspacePath()
+			if (!cwd) {
+				this.log("Cannot start review: no workspace folder open")
+				vscode.window.showErrorMessage("Cannot start review: no workspace folder open")
+				return
+			}
+
+			const { ReviewService, buildReviewPrompt } = await import("../../services/review")
+			const reviewService = new ReviewService({ cwd })
+
+			// Get lightweight summary - agent will explore details with tools
+			const summary = await reviewService.getReviewSummary(scope)
+
+			// Build the review prompt and start the task
+			// Let the agent handle cases with no changes - it can explain and offer alternatives
+			const reviewPrompt = buildReviewPrompt(summary)
+			await this.createTask(reviewPrompt)
+		} catch (error) {
+			this.log(`Error handling review scope selection: ${error instanceof Error ? error.message : String(error)}`)
+		}
+	}
+	// kilocode_change end: Review mode
 
 	// Provider Profiles
 

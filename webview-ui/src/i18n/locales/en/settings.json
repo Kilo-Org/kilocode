@@ -331,6 +331,37 @@
 		"apiKeyStorageNotice": "API keys are stored securely in VSCode's Secret Storage",
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Get Glama API Key",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Use custom base URL",
 		"useReasoning": "Enable reasoning",
 		"useHostHeader": "Use custom Host header",
@@ -628,21 +659,6 @@
 			"placeholder": "Default: claude",
 			"maxTokensLabel": "Max Output Tokens",
 			"maxTokensDescription": "Maximum number of output tokens for Claude Code responses. Default is 8000."
-		},
-		"geminiCli": {
-			"description": "This provider uses OAuth authentication from the Gemini CLI tool and does not require API keys.",
-			"oauthPath": "OAuth Credentials Path (optional)",
-			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.gemini/oauth_creds.json).",
-			"instructions": "If you haven't authenticated yet, please run",
-			"instructionsContinued": "in your terminal first.",
-			"setupLink": "Gemini CLI Setup Instructions",
-			"requirementsTitle": "Important Requirements",
-			"requirement1": "First, you need to install the Gemini CLI tool",
-			"requirement2": "Then, run gemini in your terminal and make sure you Log in with Google",
-			"requirement3": "Only works with personal Google accounts (not Google Workspace accounts)",
-			"requirement4": "Does not use API keys - authentication is handled via OAuth",
-			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
-			"freeAccess": "Free tier access via OAuth authentication"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth Credentials Path (optional)",
