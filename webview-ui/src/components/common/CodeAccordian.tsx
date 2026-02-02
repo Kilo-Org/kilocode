@@ -40,6 +40,7 @@ const CodeAccordian = ({
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
 	const source = useMemo(() => String(code).trim() /*kilocode_change: coerce to string*/, [code])
 	const hasHeader = Boolean(path || isFeedback || header)
+	const uniqueId = useMemo(() => `code-content-${Math.random().toString(36).substr(2, 9)}`, [])
 
 	// Use provided diff stats only (render-only)
 	const derivedStats = useMemo(() => {
@@ -52,7 +53,20 @@ const CodeAccordian = ({
 	return (
 		<ToolUseBlock>
 			{hasHeader && (
-				<ToolUseBlockHeader onClick={onToggleExpand} className="group">
+				<ToolUseBlockHeader
+					onClick={onToggleExpand}
+					className="group"
+					role="button"
+					tabIndex={0}
+					aria-expanded={isExpanded}
+					aria-controls={uniqueId}
+					aria-label={isExpanded ? "Collapse code" : "Expand code"}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault()
+							onToggleExpand()
+						}
+					}}>
 					{isLoading && <VSCodeProgressRing className="size-3 mr-2" />}
 					{header ? (
 						<div className="flex items-center">
@@ -116,7 +130,7 @@ const CodeAccordian = ({
 				</ToolUseBlockHeader>
 			)}
 			{(!hasHeader || isExpanded) && (
-				<div className="overflow-x-auto overflow-y-auto max-h-[300px] max-w-full">
+				<div id={uniqueId} className="overflow-x-auto overflow-y-auto max-h-[300px] max-w-full">
 					{inferredLanguage === "diff" ? (
 						<DiffView source={source} filePath={path} />
 					) : (

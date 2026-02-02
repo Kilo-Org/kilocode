@@ -19,6 +19,7 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 	const { reasoningBlockCollapsed } = useExtensionState()
 
 	const [isCollapsed, setIsCollapsed] = useState(reasoningBlockCollapsed)
+	const contentId = `reasoning-content-${Date.now()}` // Unique ID for ARIA
 
 	const startTimeRef = useRef<number>(Date.now())
 	const [elapsed, setElapsed] = useState<number>(0)
@@ -48,7 +49,18 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 		<div className="group">
 			<div
 				className="flex items-center justify-between mb-2.5 pr-2 cursor-pointer select-none"
-				onClick={handleToggle}>
+				onClick={handleToggle}
+				role="button"
+				tabIndex={0}
+				aria-expanded={!isCollapsed}
+				aria-controls={contentId}
+				aria-label={t("chat:reasoning.toggle", "Toggle thinking content")}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault()
+						handleToggle()
+					}
+				}}>
 				<div className="flex items-center gap-2">
 					<Lightbulb className="w-4" />
 					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
@@ -67,6 +79,7 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 			</div>
 			{(content?.trim()?.length ?? 0) > 0 && !isCollapsed && (
 				<div
+					id={contentId}
 					ref={contentRef}
 					className="border-l border-vscode-descriptionForeground/20 ml-2 pl-4 pb-1 text-vscode-descriptionForeground">
 					<MarkdownBlock markdown={content} />
