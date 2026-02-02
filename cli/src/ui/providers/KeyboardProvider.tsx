@@ -80,6 +80,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const pasteBufferRef = useRef<string>("")
 	const backslashTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const waitingForEnterRef = useRef(false)
+	const kittyBufferRef = useRef<string>("") // Local ref for synchronous buffer tracking
 
 	// Update debug logging atom
 	useEffect(() => {
@@ -262,6 +263,36 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				broadcastKey(createSpecialKey("", BACKSLASH))
 			}
 
+			// Handle split Kitty sequences using local ref for synchronous tracking
+			// (Jotai atom updates are async and cause stale closure issues)
+			if (isKittyEnabled && !parsedKey.sequence.startsWith(ESC)) {
+				if (kittyBufferRef.current) {
+					// We have buffered data, try combining with new sequence
+					kittyBufferRef.current += parsedKey.sequence
+					const result = parseKittySequence(kittyBufferRef.current)
+
+					if (result.key) {
+						if (isDebugEnabled) {
+							logs.debug("Split Kitty sequence parsed", "KeyboardProvider", {
+								key: result.key,
+								buffer: kittyBufferRef.current,
+							})
+						}
+						kittyBufferRef.current = ""
+						broadcastKey(result.key)
+						return
+					}
+
+					// Check for buffer overflow
+					if (kittyBufferRef.current.length > MAX_KITTY_SEQUENCE_LENGTH) {
+						kittyBufferRef.current = ""
+					}
+					// Still incomplete, keep buffering and wait for more
+					return
+				}
+				// No buffer and doesn't start with ESC - fall through to normal handling
+			}
+
 			// Handle Kitty protocol sequences
 			if (isKittyEnabled && parsedKey.sequence.startsWith(ESC)) {
 				// Try to parse the sequence directly first
@@ -272,15 +303,16 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					if (isDebugEnabled) {
 						logs.debug("Kitty sequence parsed", "KeyboardProvider", { key: result.key })
 					}
+					kittyBufferRef.current = "" // Clear ref buffer on success
 					broadcastKey(result.key)
 					return
 				}
 
-				// If not parsed, accumulate in buffer
-				appendToKittyBuffer(parsedKey.sequence)
+				// If not parsed, accumulate in ref buffer (synchronous)
+				kittyBufferRef.current += parsedKey.sequence
 
 				// Try to parse accumulated buffer
-				let buffer = kittyBuffer + parsedKey.sequence
+				let buffer = kittyBufferRef.current
 				let parsedAny = false
 
 				while (buffer) {
@@ -308,19 +340,18 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				}
 
 				if (parsedAny) {
-					clearKittyBuffer()
-					if (buffer) {
-						appendToKittyBuffer(buffer)
-					}
+					kittyBufferRef.current = buffer // Store remainder in ref
 					return
 				}
 
 				// Check for buffer overflow
-				if (kittyBuffer.length > MAX_KITTY_SEQUENCE_LENGTH) {
+				if (kittyBufferRef.current.length > MAX_KITTY_SEQUENCE_LENGTH) {
 					if (isDebugEnabled) {
-						logs.warn("Kitty buffer overflow, clearing", "KeyboardProvider", { kittyBuffer })
+						logs.warn("Kitty buffer overflow, clearing", "KeyboardProvider", {
+							buffer: kittyBufferRef.current,
+						})
 					}
-					clearKittyBuffer()
+					kittyBufferRef.current = ""
 				} else {
 					return // Wait for more data
 				}
@@ -329,6 +360,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Handle Ctrl+C specially
 			if (parsedKey.ctrl && parsedKey.name === "c") {
 				clearBuffers() // Clear all buffers on Ctrl+C
+				kittyBufferRef.current = "" // Also clear ref buffer
 			}
 
 			// Broadcast the key
