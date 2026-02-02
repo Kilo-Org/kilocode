@@ -201,6 +201,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	private client: BedrockRuntimeClient
 	private arnInfo: any
 	private readonly providerName = "Bedrock"
+	// kilocode_change start: Track resolved model from inference profile
+	private resolvedModelIdFromProfile: string | null = null
+	// kilocode_change end
 
 	constructor(options: ProviderSettings) {
 		super()
@@ -243,6 +246,18 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 
 			this.options.apiModelId = this.arnInfo.modelId
 			if (this.arnInfo.awsUseCrossRegionInference) this.options.awsUseCrossRegionInference = true
+
+			// kilocode_change start: Attempt to resolve inference profile ARN asynchronously
+			// For application-inference-profile and inference-profile ARNs, we should resolve to get the underlying model
+			// This is done asynchronously and won't block the constructor, but will be available for subsequent requests
+			if (
+				this.options.awsCustomArn &&
+				(this.options.awsCustomArn.includes(":application-inference-profile/") ||
+					this.options.awsCustomArn.includes(":inference-profile/"))
+			) {
+				this.resolveInferenceProfileAsync(this.options.awsCustomArn)
+			}
+			// kilocode_change end
 		}
 
 		if (!this.options.modelTemperature) {
@@ -1025,10 +1040,67 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		return modelId
 	}
 
+	// kilocode_change start: Method to resolve inference profile asynchronously
+	private async resolveInferenceProfileAsync(arn: string): Promise<void> {
+		try {
+			const { BedrockInferenceProfileResolver } = await import("./bedrock-inference-profile-resolver")
+			const resolver = new BedrockInferenceProfileResolver(this.options)
+			const result = await resolver.resolveInferenceProfile(arn)
+
+			if (result) {
+				this.resolvedModelIdFromProfile = result.modelId
+				logger.info("Successfully resolved inference profile in background", {
+					ctx: "bedrock",
+					arn,
+					resolvedModelId: result.modelId,
+				})
+
+				// Update the model configuration with the resolved model
+				// Get the resolved model info directly (skip resolved override to avoid recursion)
+				const resolvedModelConfig = this.getModelById(result.modelId, undefined, true)
+				// Keep the ARN as the ID for API calls, but use resolved model's capabilities
+				if (this.options.awsCustomArn) {
+					resolvedModelConfig.id = this.options.awsCustomArn
+				}
+				this.costModelConfig = resolvedModelConfig
+
+				logger.info("Updated cost model config with resolved inference profile", {
+					ctx: "bedrock",
+					arn,
+					resolvedModelId: result.modelId,
+					supportsPromptCache: resolvedModelConfig.info.supportsPromptCache,
+				})
+			}
+		} catch (error) {
+			logger.warn("Failed to resolve inference profile in background", {
+				ctx: "bedrock",
+				arn,
+				error: error instanceof Error ? error.message : String(error),
+			})
+		}
+	}
+	// kilocode_change end
+
 	//Prompt Router responses come back in a different sequence and the model used is in the response and must be fetched by name
-	getModelById(modelId: string, modelType?: string): { id: BedrockModelId | string; info: ModelInfo } {
+	getModelById(
+		modelId: string,
+		modelType?: string,
+		skipResolvedOverride: boolean = false,
+	): { id: BedrockModelId | string; info: ModelInfo } {
+		// kilocode_change start: Use resolved model ID if available (unless explicitly skipped)
+		let effectiveModelId = modelId
+		if (this.resolvedModelIdFromProfile && !skipResolvedOverride) {
+			effectiveModelId = this.resolvedModelIdFromProfile
+			logger.info("Using resolved model ID from inference profile", {
+				ctx: "bedrock",
+				originalModelId: modelId,
+				resolvedModelId: effectiveModelId,
+			})
+		}
+		// kilocode_change end
+
 		// Try to find the model in bedrockModels
-		const baseModelId = this.parseBaseModelId(modelId) as BedrockModelId
+		const baseModelId = this.parseBaseModelId(effectiveModelId) as BedrockModelId
 
 		let model
 		if (baseModelId in bedrockModels) {
@@ -1043,7 +1115,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			}
 		} else {
 			// Use heuristics for model info, then allow overrides from ProviderSettings
-			const guessed = this.guessModelInfoFromId(modelId)
+			const guessed = this.guessModelInfoFromId(effectiveModelId)
 			model = {
 				id: bedrockDefaultModelId,
 				info: {
@@ -1072,6 +1144,16 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		reasoning?: any
 		reasoningBudget?: number
 	} {
+		// kilocode_change start: If we have a resolved model from inference profile, update costModelConfig
+		if (this.resolvedModelIdFromProfile && (!this.costModelConfig || !this.costModelConfig.id)) {
+			this.costModelConfig = this.getModelById(this.resolvedModelIdFromProfile)
+			logger.info("Updated cost model config with resolved inference profile model", {
+				ctx: "bedrock",
+				resolvedModelId: this.resolvedModelIdFromProfile,
+			})
+		}
+		// kilocode_change end
+
 		if (this.costModelConfig?.id?.trim().length > 0) {
 			// Get model params for cost model config
 			const params = getModelParams({
@@ -1088,7 +1170,10 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 
 		// If custom ARN is provided, use it
 		if (this.options.awsCustomArn) {
-			modelConfig = this.getModelById(this.arnInfo.modelId, this.arnInfo.modelType)
+			// kilocode_change start: Use resolved model if available
+			const effectiveModelId = this.resolvedModelIdFromProfile || this.arnInfo.modelId
+			modelConfig = this.getModelById(effectiveModelId, this.arnInfo.modelType)
+			// kilocode_change end
 
 			//If the user entered an ARN for a foundation-model they've done the same thing as picking from our list of options.
 			//We leave the model data matching the same as if a drop-down input method was used by not overwriting the model ID with the user input ARN

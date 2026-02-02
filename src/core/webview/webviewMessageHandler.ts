@@ -1313,6 +1313,49 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		// kilocode_change start: Handle Bedrock inference profile resolution
+		case "resolveBedrockInferenceProfile": {
+			if (message.text) {
+				try {
+					const { BedrockInferenceProfileResolver } = await import(
+						"../../api/providers/bedrock-inference-profile-resolver"
+					)
+					const state = await provider.getState()
+					const apiConfiguration = state?.apiConfiguration
+					if (!apiConfiguration) {
+						provider.postMessageToWebview({
+							type: "bedrockInferenceProfileResolved",
+							error: "API configuration not available",
+						})
+						break
+					}
+
+					const resolver = new BedrockInferenceProfileResolver(apiConfiguration)
+					const result = await resolver.resolveInferenceProfile(message.text)
+
+					if (result) {
+						provider.postMessageToWebview({
+							type: "bedrockInferenceProfileResolved",
+							modelId: result.modelId,
+							modelArn: result.modelArn,
+						})
+					} else {
+						provider.postMessageToWebview({
+							type: "bedrockInferenceProfileResolved",
+							error: "Failed to resolve inference profile. Please check your AWS credentials and permissions.",
+						})
+					}
+				} catch (error) {
+					console.error("Bedrock inference profile resolution failed:", error)
+					provider.postMessageToWebview({
+						type: "bedrockInferenceProfileResolved",
+						error: error instanceof Error ? error.message : "Unknown error occurred",
+					})
+				}
+			}
+			break
+		}
+		// kilocode_change end
 		case "openImage":
 			openImage(message.text!, { values: message.values })
 			break

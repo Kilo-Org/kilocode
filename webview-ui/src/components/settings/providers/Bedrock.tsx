@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useState, useEffect, useMemo } from "react"
 import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
@@ -6,6 +6,7 @@ import {
 	type ProviderSettings,
 	type ModelInfo,
 	type BedrockServiceTier,
+	bedrockModels,
 	BEDROCK_REGIONS,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	BEDROCK_GLOBAL_INFERENCE_MODEL_IDS,
@@ -22,11 +23,28 @@ type BedrockProps = {
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	selectedModelInfo?: ModelInfo
 	simplifySettings?: boolean
+	resolvedModelId?: string | null // kilocode_change: Resolved model ID from inference profile
 }
 
-export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedModelInfo }: BedrockProps) => {
+export const Bedrock = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	selectedModelInfo,
+	resolvedModelId,
+}: BedrockProps) => {
 	const { t } = useAppTranslation()
 	const [awsEndpointSelected, setAwsEndpointSelected] = useState(!!apiConfiguration?.awsBedrockEndpointEnabled)
+
+	// kilocode_change start: Merge resolved model info with selected model info
+	const effectiveModelInfo = useMemo(() => {
+		// If we have a resolved model ID from inference profile, use that model's info
+		if (resolvedModelId && resolvedModelId in bedrockModels) {
+			return bedrockModels[resolvedModelId as keyof typeof bedrockModels]
+		}
+		// Otherwise use the selected model info
+		return selectedModelInfo
+	}, [resolvedModelId, selectedModelInfo])
+	// kilocode_change end
 
 	// Check if the selected model supports 1M context (Claude Sonnet 4 / 4.5)
 	const supports1MContextBeta =
@@ -195,7 +213,8 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 				}}>
 				{t("settings:providers.awsCrossRegion")}
 			</Checkbox>
-			{selectedModelInfo?.supportsPromptCache && (
+			{/* kilocode_change: Use effectiveModelInfo instead of selectedModelInfo */}
+			{effectiveModelInfo?.supportsPromptCache && (
 				<>
 					<Checkbox
 						checked={apiConfiguration?.awsUsePromptCache || false}

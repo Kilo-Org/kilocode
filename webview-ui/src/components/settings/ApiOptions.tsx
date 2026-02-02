@@ -29,6 +29,7 @@ import {
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
 	MODEL_SELECTION_ENABLED,
+	bedrockModels, // kilocode_change: Import for resolving inference profile models
 	// kilocode_change end
 	mistralDefaultModelId,
 	xaiDefaultModelId,
@@ -189,6 +190,10 @@ const ApiOptions = ({
 		return Object.entries(headers)
 	})
 
+	// kilocode_change start: Track resolved model ID from Bedrock inference profile
+	const [resolvedBedrockModelId, setResolvedBedrockModelId] = useState<string | null>(null)
+	// kilocode_change end
+
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
 
@@ -234,6 +239,19 @@ const ApiOptions = ({
 		id: selectedModelId,
 		info: selectedModelInfo,
 	} = useSelectedModel(apiConfiguration)
+
+	// kilocode_change start: Merge resolved Bedrock model info with selected model info
+	const effectiveModelInfo = useMemo(() => {
+		// For Bedrock with resolved model ID, use the resolved model's capabilities
+		if (selectedProvider === "bedrock" && resolvedBedrockModelId) {
+			if (resolvedBedrockModelId in bedrockModels) {
+				return bedrockModels[resolvedBedrockModelId as keyof typeof bedrockModels]
+			}
+		}
+		// Otherwise use the selected model info
+		return selectedModelInfo
+	}, [selectedProvider, resolvedBedrockModelId, selectedModelInfo])
+	// kilocode_change end
 
 	// kilocode_change start: queryKey, chutesApiKey, gemini
 	const { data: routerModels, refetch: refetchRouterModels } = useRouterModels({
@@ -816,8 +834,9 @@ const ApiOptions = ({
 				<Bedrock
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
-					selectedModelInfo={selectedModelInfo}
+					selectedModelInfo={effectiveModelInfo} // kilocode_change: Use effective model info
 					simplifySettings={fromWelcomeView}
+					resolvedModelId={resolvedBedrockModelId} // kilocode_change: Pass resolved model ID
 				/>
 			)}
 
@@ -1088,15 +1107,17 @@ const ApiOptions = ({
 							<BedrockCustomArn
 								apiConfiguration={apiConfiguration}
 								setApiConfigurationField={setApiConfigurationField}
+								onResolvedModelInfo={setResolvedBedrockModelId} // kilocode_change: Callback to track resolved model
 							/>
 						)}
 
 						{/* Only show model info if not deprecated */}
+						{/* kilocode_change: Check selectedModelInfo for deprecated, use effectiveModelInfo for capabilities */}
 						{!selectedModelInfo?.deprecated && (
 							<ModelInfoView
 								apiProvider={selectedProvider}
 								selectedModelId={selectedModelId}
-								modelInfo={selectedModelInfo}
+								modelInfo={effectiveModelInfo}
 								isDescriptionExpanded={isDescriptionExpanded}
 								setIsDescriptionExpanded={setIsDescriptionExpanded}
 							/>
