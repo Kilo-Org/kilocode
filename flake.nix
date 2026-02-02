@@ -19,15 +19,52 @@
     in
     {
       devShells = forEachSystem (pkgs: {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            bun
-            nodejs_20
-            pkg-config
-            openssl
-            git
-          ];
-        };
+        default =
+          let
+            kilo = pkgs.writeShellScriptBin "kilo" ''
+              cd "$KILO_ROOT"
+              exec ${pkgs.bun}/bin/bun dev "$@"
+            '';
+          in
+          pkgs.mkShell {
+            packages =
+              with pkgs;
+              [
+                bun
+                nodejs_20
+                pkg-config
+                openssl
+                git
+                jetbrains.jdk
+                jdk21
+                kilo
+              ]
+              ++ lib.optionals stdenv.isLinux [
+                xorg.libX11
+                xorg.libXext
+                xorg.libXrender
+                xorg.libXtst
+                xorg.libXi
+                fontconfig
+                freetype
+              ];
+            shellHook = ''
+              export KILO_ROOT="$PWD"
+            ''
+            + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+              export LD_LIBRARY_PATH="${
+                pkgs.lib.makeLibraryPath [
+                  pkgs.xorg.libX11
+                  pkgs.xorg.libXext
+                  pkgs.xorg.libXrender
+                  pkgs.xorg.libXtst
+                  pkgs.xorg.libXi
+                  pkgs.fontconfig
+                  pkgs.freetype
+                ]
+              }:$LD_LIBRARY_PATH"
+            '';
+          };
       });
 
       packages = forEachSystem (
