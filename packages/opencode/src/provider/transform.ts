@@ -345,6 +345,7 @@ export namespace ProviderTransform {
 
     switch (model.api.npm) {
       case "@openrouter/ai-sdk-provider":
+      case "@kilocode/kilo-gateway": // kilocode_change
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
