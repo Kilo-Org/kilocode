@@ -40,9 +40,9 @@ my-project/
 1. `AGENTS.md` (uppercase, plural - recommended)
 2. `AGENT.md` (uppercase, singular - fallback)
 
-:::warning Case Sensitivity
+{% callout type="warning" title="Case Sensitivity" %}
 The filename must be uppercase (`AGENTS.md`), not lowercase (`agents.md`). This ensures consistency across different operating systems and tools.
-:::
+{% /callout %}
 
 ### Subdirectory AGENTS.md Files
 
@@ -131,7 +131,7 @@ AGENTS.md works alongside Kilo Code's other configuration systems:
 | -------------------------------------------------------------- | ------- | ------------------------- | ----------------------------------------- | ----------- |
 | **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints       | 1 (Highest) |
 | **[Custom Rules](/docs/customize/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints  | 2           |
-| **[AGENTS.md](/docs/customize/agents-md)**                                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
+| **[AGENTS.md](/docs/customize/agents-md)**                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
 | **[Global Custom Rules](/docs/customize/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                    | 4           |
 | **[Custom Instructions](/docs/customize/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects  | 5 (Lowest)  |
 
