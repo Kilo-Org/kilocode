@@ -93,7 +93,7 @@ export const dict = {
   "dialog.provider.group.other": "อื่น ๆ",
   "dialog.provider.tag.recommended": "แนะนำ",
   "dialog.provider.kilo.note": "เข้าถึงโมเดล AI มากกว่า 500 รายการ", // kilocode_change
-  "dialog.provider.opencode.note": "เชื่อมต่อกับ OpenCode Zen หรือคีย์ API", // kilocode_change
+  "dialog.provider.opencode.note": "เชื่อมต่อกับ Kilo Gateway หรือคีย์ API", // kilocode_change
   "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
   "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
   "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
