@@ -9,84 +9,71 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.ui.JBSplitter
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.*
-import java.awt.BorderLayout
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import javax.swing.JPanel
+
+private const val WIDE_BREAKPOINT = 600
+private const val SESSION_LIST_PROPORTION = 0.20f
 
 /**
  * Main panel for the Kilo tool window.
  * Contains a split view with sessions list on the left, chat in the center, and sidebar on the right.
- * 
+ *
  * Responsive behavior (matching web client):
  * - Wide screens (>600px): Sidebar auto-shows as inline panel
  * - Narrow screens: Sidebar hidden, can be toggled
- * 
+ *
  * Note: Permission and question prompts are now handled inline within ChatPanel
  * rather than as separate dialogs/panels (matching web client UX).
  */
 class KiloMainPanel(
     private val project: Project,
-    private val kiloService: KiloProjectService
+    kiloService: KiloProjectService
 ) : SimpleToolWindowPanel(true, true), Disposable {
-    private val wideBreakpoint = 600
+
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    private var sessionListPanel: SessionListPanel? = null
-    private var chatPanel: ChatPanel? = null
-    private var sidebarPanel: SidebarPanel? = null
-
-    private var sidebarMode: String = "auto" // "auto", "show", "hide"
-    private var sidebarVisible = false
-    private var chatWithSidebarPanel: JPanel? = null
-
     private val state = kiloService.state!!
 
-    init {
+    private val sessionListPanel = SessionListPanel(project, state)
+    private val chatPanel = ChatPanel(project, state)
+    private val sidebarPanel = SidebarPanel(state)
+    private val chatWithSidebarPanel: BorderLayoutPanel
 
-        // Create the main splitter (sessions | chat+sidebar)
-        val splitter = JBSplitter(false, 0.20f).apply {
+    private var sidebarMode = SidebarMode.AUTO
+    private var sidebarVisible = false
+
+    private enum class SidebarMode { AUTO, SHOW, HIDE }
+
+    init {
+        chatWithSidebarPanel = BorderLayoutPanel().apply {
+            addToCenter(chatPanel)
+            addToRight(sidebarPanel)
+        }
+
+        val splitter = JBSplitter(false, SESSION_LIST_PROPORTION).apply {
             dividerWidth = 1
             border = JBUI.Borders.empty()
+            firstComponent = sessionListPanel
+            secondComponent = chatWithSidebarPanel
         }
 
-        // Create session list panel
-        sessionListPanel = SessionListPanel(project, state)
-        splitter.firstComponent = sessionListPanel
-
-        // Create chat panel (handles permissions and questions inline)
-        chatPanel = ChatPanel(project, state)
-
-        // Create sidebar panel
-        sidebarPanel = SidebarPanel(state)
-
-        // Create panel containing chat and sidebar
-        chatWithSidebarPanel = JPanel(BorderLayout()).apply {
-            add(chatPanel, BorderLayout.CENTER)
-            add(sidebarPanel, BorderLayout.EAST)
-        }
-
-        splitter.secondComponent = chatWithSidebarPanel
-
-        // Set as content
         setContent(splitter)
+        setupResponsiveSidebar()
+        loadInitialTodos()
+    }
 
-        // Add resize listener for responsive sidebar
+    private fun setupResponsiveSidebar() {
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
                 updateSidebarVisibility()
             }
         })
-
-        // Initial sidebar visibility
         updateSidebarVisibility()
-        
-        // Force repaint
-        revalidate()
-        repaint()
+    }
 
-        // Load todos for initial session if any
+    private fun loadInitialTodos() {
         scope.launch {
             state.currentSessionId.value?.let { sessionId ->
                 state.loadTodos(sessionId)
@@ -95,18 +82,17 @@ class KiloMainPanel(
     }
 
     private fun updateSidebarVisibility() {
-        val isWide = width > wideBreakpoint
-        
+        val isWide = width > WIDE_BREAKPOINT
+
         sidebarVisible = when (sidebarMode) {
-            "show" -> true
-            "hide" -> false
-            "auto" -> isWide
-            else -> isWide
+            SidebarMode.SHOW -> true
+            SidebarMode.HIDE -> false
+            SidebarMode.AUTO -> isWide
         }
 
-        sidebarPanel?.isVisible = sidebarVisible
-        chatWithSidebarPanel?.revalidate()
-        chatWithSidebarPanel?.repaint()
+        sidebarPanel.isVisible = sidebarVisible
+        chatWithSidebarPanel.revalidate()
+        chatWithSidebarPanel.repaint()
     }
 
     /**
@@ -115,33 +101,22 @@ class KiloMainPanel(
      */
     fun toggleSidebar() {
         sidebarMode = when (sidebarMode) {
-            "auto" -> if (sidebarVisible) "hide" else "show"
-            "show" -> "hide"
-            "hide" -> "auto"
-            else -> "auto"
+            SidebarMode.AUTO -> if (sidebarVisible) SidebarMode.HIDE else SidebarMode.SHOW
+            SidebarMode.SHOW -> SidebarMode.HIDE
+            SidebarMode.HIDE -> SidebarMode.AUTO
         }
         updateSidebarVisibility()
     }
-    
-    /**
-     * Focus the chat input field.
-     */
-    fun focusInput() {
-        chatPanel?.focusInput()
-    }
 
-    /**
-     * Abort the current AI generation.
-     */
-    fun abortGeneration() {
-        chatPanel?.abortGeneration()
-    }
+    fun focusInput() = chatPanel.focusInput()
+
+    fun abortGeneration() = chatPanel.abortGeneration()
 
     override fun dispose() {
         scope.cancel()
-        sessionListPanel?.dispose()
-        chatPanel?.dispose()
-        sidebarPanel?.dispose()
+        sessionListPanel.dispose()
+        chatPanel.dispose()
+        sidebarPanel.dispose()
         KiloToolWindowFactory.removePanel(project)
     }
 }
