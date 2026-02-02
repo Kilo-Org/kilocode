@@ -5,14 +5,14 @@
 	"scripts": {
 		"deps:check": "node ../../jetbrains/scripts/check-dependencies.js",
 		"deps:patch": "npm run deps:check && cd ../../deps/vscode && git reset --hard HEAD && git clean -fd && git apply ../patches/vscode/jetbrains.patch",
-		"deps:clean": "rm -rf ./deps/vscode/* || true",
+		"deps:clean": "npx del-cli ./deps/vscode --force",
 		"deps:copy": "npm run deps:check && npx cpy '../../deps/vscode/src/**' './deps/vscode' --parents",
 		"clean": "del-cli ./dist",
 		"build": "tsc",
 		"build:clean": "npm run clean && npm run build",
 		"start": "node ./dist/src/main.js",
 		"dev": "tsc && node ./dist/src/main.js",
-		"bundle:package": "cp ./package.json ./dist/package.json",
+		"bundle:package": "cpy ./package.json ./dist",
 		"bundle:build": "tsc --noEmit && tsup",
 		"lint": "eslint . --ext=ts --max-warnings=0"
 	},
