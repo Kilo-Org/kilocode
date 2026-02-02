@@ -1,13 +1,11 @@
+import { Anthropic } from "@anthropic-ai/sdk"
+
+import { BrowserAction, BrowserActionResult, browserActions, ClineSayBrowserAction } from "@roo-code/types"
+
 import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
-import {
-	BrowserAction,
-	BrowserActionResult,
-	browserActions,
-	ClineSayBrowserAction,
-} from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
-import { Anthropic } from "@anthropic-ai/sdk"
+
 import { scaleCoordinate } from "../../shared/browserUtils"
 
 export async function browserActionTool(

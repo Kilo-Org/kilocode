@@ -60,7 +60,9 @@
 		"selectModel": "Selecciona model",
 		"modelTooltip": "Tria quin model d'IA utilitzar per a aquesta sessió",
 		"defaultModel": "Model per defecte",
-		"loadingModels": "Carregant..."
+		"loadingModels": "Carregant...",
+		"selectMode": "Selecciona el mode",
+		"modeTooltip": "Mode: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",

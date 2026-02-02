@@ -60,7 +60,9 @@
 		"selectModel": "Model seç",
 		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
 		"defaultModel": "Varsayılan model",
-		"loadingModels": "Yükleniyor..."
+		"loadingModels": "Yükleniyor...",
+		"selectMode": "Mod seç",
+		"modeTooltip": "Mod: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

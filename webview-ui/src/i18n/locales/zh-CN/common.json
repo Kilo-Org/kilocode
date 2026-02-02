@@ -125,5 +125,9 @@
 		"delegated_to": "已委托给任务 {{childId}}",
 		"delegation_completed": "子任务已完成，恢复父任务",
 		"awaiting_child": "等待子任务 {{childId}}"
+	},
+	"costs": {
+		"own": "自身",
+		"subtasks": "子任务"
 	}
 }

@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "{{count}} MCP sunucusu bağlantısı kesilemedi. Ayrıntılar için çıktıyı kontrol edin.",
 		"toolNotFound": "Araç '{{toolName}}' sunucu '{{serverName}}' üzerinde mevcut değil. Mevcut araçlar: {{availableTools}}",
 		"serverNotFound": "MCP sunucusu '{{serverName}}' yapılandırılmamış. Mevcut sunucular: {{availableServers}}",
-		"toolDisabled": "Sunucu '{{serverName}}' üzerindeki araç '{{toolName}}' devre dışı. Mevcut etkin araçlar: {{availableTools}}"
+		"toolDisabled": "Sunucu '{{serverName}}' üzerindeki araç '{{toolName}}' devre dışı. Mevcut etkin araçlar: {{availableTools}}",
+		"oauth_signin_failed": "OAuth oturum açma başarısız. Lütfen tekrar deneyin.",
+		"oauth_failed": "{{serverUrl}} için OAuth kimlik doğrulaması başarısız: {{error}}"
 	},
 	"info": {
 		"server_restarting": "{{serverName}} MCP sunucusu yeniden başlatılıyor...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP sunucuları zaten yenileniyor.",
 		"refreshing_all": "Tüm MCP sunucuları yenileniyor...",
 		"all_refreshed": "Tüm MCP sunucuları yenilendi.",
-		"project_config_deleted": "Proje MCP yapılandırma dosyası silindi. Tüm proje MCP sunucuları bağlantısı kesildi."
+		"project_config_deleted": "Proje MCP yapılandırma dosyası silindi. Tüm proje MCP sunucuları bağlantısı kesildi.",
+		"oauth_required": "'{{serverUrl}}' sunucusuna bağlanmak için OAuth kimlik doğrulaması gerekli",
+		"oauth_success": "'{{serverUrl}}' için OAuth kimlik doğrulaması başarılı"
 	}
 }

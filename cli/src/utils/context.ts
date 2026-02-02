@@ -3,9 +3,8 @@
  */
 
 import type { ExtensionChatMessage, ProviderSettings } from "../types/messages.js"
-import type { RouterModels } from "../constants/providers/models.js"
 import type { ProviderConfig } from "../config/types.js"
-import { getCurrentModelId, getModelsByProvider } from "../constants/providers/models.js"
+import { type RouterModels, getCurrentModelId, getModelsByProvider } from "../constants/providers/models.js"
 import { logs } from "../services/logs.js"
 
 // Default max tokens reserved for model output (matches Anthropic's default)

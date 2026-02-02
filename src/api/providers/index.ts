@@ -21,6 +21,7 @@ export { NanoGptHandler } from "./nano-gpt" // kilocode_change
 export { OpenAiCodexHandler } from "./openai-codex"
 export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
+export { OpenAiCompatibleResponsesHandler } from "./openai-responses" // kilocode_change
 export { OpenRouterHandler } from "./openrouter"
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
@@ -29,7 +30,6 @@ export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { OVHcloudAIEndpointsHandler } from "./ovhcloud"
-export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
 export { SyntheticHandler } from "./synthetic"
 export { InceptionLabsHandler } from "./inception"

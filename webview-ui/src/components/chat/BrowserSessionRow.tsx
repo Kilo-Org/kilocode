@@ -2,9 +2,8 @@ import React, { memo, useEffect, useMemo, useRef, useState } from "react"
 import deepEqual from "fast-deep-equal"
 import { useTranslation } from "react-i18next"
 import type { TFunction } from "i18next"
-import type { ClineMessage } from "@roo-code/types"
 
-import { BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo/ExtensionMessage"
+import type { ClineMessage, BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"

@@ -101,16 +101,6 @@
 			"stoppedWithReason": "Claude Code şu nedenle durdu: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}",
-			"tokenRefreshFailed": "OAuth token yenilenemedi: {{error}}",
-			"onboardingTimeout": "Onboarding işlemi 60 saniye sonra zaman aşımına uğradı. Lütfen daha sonra tekrar deneyin.",
-			"projectDiscoveryFailed": "Proje ID'si keşfedilemedi. 'gemini auth' ile kimlik doğrulaması yaptığınızdan emin olun.",
-			"rateLimitExceeded": "Hız sınırı aşıldı. Ücretsiz seviye sınırlarına ulaşıldı.",
-			"badRequest": "Geçersiz istek: {{details}}",
-			"apiError": "Gemini CLI API hatası: {{error}}",
-			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}"
 		},
@@ -213,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Yanıt kullanıcı tarafından kesildi",
-		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi"
+		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi",
+		"streamTerminatedByProvider": "Sağlayıcı isteği sonlandırdı"
 	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",

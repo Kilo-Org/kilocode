@@ -1,4 +1,4 @@
-import { openRouterDefaultModelId, type ProviderSettings } from "@roo-code/types"
+import { openRouterDefaultModelId } from "@roo-code/types"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
@@ -8,32 +8,29 @@ type KilocodeToken = string
 
 type OrganizationId = string
 
-const cache = new Map<string, Promise<string>>()
-
 const defaultsSchema = z.object({
-	defaultModel: z.string().nullish(),
+	defaultModel: z.string(),
+	defaultFreeModel: z.string().optional(),
 })
 
+type Defaults = z.infer<typeof defaultsSchema>
+
+const cache = new Map<string, Promise<Defaults>>()
+
 async function fetchKilocodeDefaultModel(
-	kilocodeToken: KilocodeToken,
+	kilocodeToken?: KilocodeToken,
 	organizationId?: OrganizationId,
-	providerSettings?: ProviderSettings,
-): Promise<string> {
+): Promise<Defaults> {
 	try {
 		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
-		const url = getKiloUrlFromToken(`https://api.kilo.ai/api${path}`, kilocodeToken)
+		const url = getKiloUrlFromToken(`https://api.kilo.ai/api${path}`, kilocodeToken ?? "")
 
 		const headers: Record<string, string> = {
 			...DEFAULT_HEADERS,
-			Authorization: `Bearer ${kilocodeToken}`,
 		}
 
-		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-		if (
-			providerSettings?.kilocodeTesterWarningsDisabledUntil &&
-			providerSettings.kilocodeTesterWarningsDisabledUntil > Date.now()
-		) {
-			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+		if (kilocodeToken) {
+			headers["Authorization"] = `Bearer ${kilocodeToken}`
 		}
 
 		const controller = new AbortController()
@@ -43,35 +40,32 @@ async function fetchKilocodeDefaultModel(
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
 		}
-		const defaultModel = (await defaultsSchema.parseAsync(await response.json())).defaultModel
-		if (!defaultModel) {
-			throw new Error(`Default model from ${url} was empty`)
+		const defaultModel = await defaultsSchema.safeParseAsync(await response.json())
+		if (!defaultModel.data) {
+			throw new Error(
+				`Default model from ${url} was invalid: ${JSON.stringify(defaultModel.error.format(), undefined, 2)}`,
+			)
 		}
-		console.info(`Fetched default model from ${url}: ${defaultModel}`)
-		return defaultModel
+		console.info(`Fetched default model from ${url}: ${defaultModel.data.defaultModel}`)
+		return defaultModel.data
 	} catch (err) {
 		console.error("Failed to get default model", err)
 		TelemetryService.instance.captureException(err, { context: "getKilocodeDefaultModel" })
-		return openRouterDefaultModelId
+		return { defaultModel: openRouterDefaultModelId, defaultFreeModel: undefined }
 	}
 }
 
 export async function getKilocodeDefaultModel(
 	kilocodeToken?: KilocodeToken,
 	organizationId?: OrganizationId,
-	providerSettings?: ProviderSettings,
-): Promise<string> {
-	if (!kilocodeToken) {
-		return openRouterDefaultModelId
-	}
+): Promise<Defaults> {
 	const key = JSON.stringify({
-		kilocodeToken,
+		kilocodeToken: kilocodeToken ?? "anonymous",
 		organizationId,
-		testerSuppressed: providerSettings?.kilocodeTesterWarningsDisabledUntil,
 	})
 	let defaultModelPromise = cache.get(key)
 	if (!defaultModelPromise) {
-		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId, providerSettings)
+		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId)
 		cache.set(key, defaultModelPromise)
 	}
 	return await defaultModelPromise

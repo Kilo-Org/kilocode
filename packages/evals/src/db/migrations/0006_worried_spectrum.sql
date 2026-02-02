@@ -1,0 +1,1 @@
+ALTER TABLE "runs" ADD COLUMN "execution_method" text DEFAULT 'vscode' NOT NULL;

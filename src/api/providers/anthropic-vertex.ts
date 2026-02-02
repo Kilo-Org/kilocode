@@ -11,9 +11,9 @@ import {
 	TOOL_PROTOCOL,
 	VERTEX_1M_CONTEXT_MODEL_IDS,
 } from "@roo-code/types"
+import { safeJsonParse } from "@roo-code/core"
 
 import { ApiHandlerOptions } from "../../shared/api"
-import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { ApiStream } from "../transform/stream"
 import { addCacheBreakpoints } from "../transform/caching/vertex"

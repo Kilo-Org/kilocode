@@ -4,7 +4,7 @@
 
 import type { Command } from "./types.js"
 
-class CommandRegistry {
+export class CommandRegistry {
 	private commands: Map<string, Command> = new Map()
 	private aliases: Map<string, string> = new Map()
 
@@ -85,6 +85,3 @@ class CommandRegistry {
 
 // Export singleton instance
 export const commandRegistry = new CommandRegistry()
-
-// Export class for testing
-export { CommandRegistry }

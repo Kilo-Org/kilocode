@@ -20,11 +20,11 @@
 		"billion_suffix": "b"
 	},
 	"feedback": {
-		"title": "反饋",
-		"description": "我們很樂意聽取您的反饋或幫助您解決遇到的任何問題。",
-		"githubIssues": "在GitHub上報告問題",
-		"githubDiscussions": "加入GitHub討論",
-		"discord": "加入我們的Discord社區",
+		"title": "回饋",
+		"description": "我們很樂意聽取您的回饋或幫助您解決遇到的任何問題。",
+		"githubIssues": "在 GitHub 上回報問題",
+		"githubDiscussions": "加入 GitHub 討論",
+		"discord": "加入我們的 Discord 社群",
 		"customerSupport": "客戶支援"
 	},
 	"ui": {
@@ -69,7 +69,7 @@
 	},
 	"image": {
 		"tabs": {
-			"view": "圖像"
+			"view": "影像"
 		},
 		"noData": "無圖片資料"
 	},
@@ -91,11 +91,11 @@
 		"deleteWarning": "刪除此訊息將會刪除對話中所有後續的訊息。您要繼續嗎？",
 		"editMessage": "編輯訊息",
 		"editWarning": "編輯此訊息將刪除對話中的所有後續訊息。是否繼續？",
-		"editQuestionWithCheckpoint": "編輯此訊息將刪除對話中的所有後續訊息。是否同時將所有變更撤銷到此存檔點？",
-		"deleteQuestionWithCheckpoint": "刪除此訊息將刪除對話中的所有後續訊息。是否同時將所有變更撤銷到此存檔點？",
+		"editQuestionWithCheckpoint": "編輯此訊息將刪除對話中的所有後續訊息。是否同時將所有變更復原到此檢查點？",
+		"deleteQuestionWithCheckpoint": "刪除此訊息將刪除對話中的所有後續訊息。是否同時將所有變更復原到此檢查點？",
 		"editOnly": "否，僅編輯訊息",
 		"deleteOnly": "否，僅刪除訊息",
-		"restoreToCheckpoint": "是，恢復存檔點",
+		"restoreToCheckpoint": "是，還原檢查點",
 		"proceed": "繼續",
 		"dontShowAgain": "不再顯示"
 	},
@@ -116,14 +116,18 @@
 		"years_ago": "{{count}} 年前"
 	},
 	"errors": {
-		"wait_checkpoint_long_time": "初始化存檔點已等待 {{timeout}} 秒。如果你不需要存檔點功能，請在<settingsLink>存檔點設定</settingsLink>中關閉。",
-		"init_checkpoint_fail_long_time": "存檔點初始化已超過 {{timeout}} 秒，因此此工作已停用存檔點。你可以關閉存檔點或在<settingsLink>存檔點設定</settingsLink>中延長等待時間。",
+		"wait_checkpoint_long_time": "初始化檢查點已等待 {{timeout}} 秒。若不需要檢查點功能，請在 <settingsLink>[檢查點設定]</settingsLink> 中關閉。",
+		"init_checkpoint_fail_long_time": "檢查點初始化已超過 {{timeout}} 秒，因此此工作已停用檢查點。可關閉檢查點或在 <settingsLink>[檢查點設定]</settingsLink> 中延長等待時間。",
 		"attempt_completion_tool_failed": "無法執行 attempt_completion，因為本輪中先前的工具呼叫失敗了。請在嘗試完成前解決工具失敗問題。"
 	},
 	"tasks": {
-		"delegated": "已委派給子工作",
+		"delegated": "已委派給子任務",
 		"delegated_to": "已委派給工作 {{childId}}",
-		"delegation_completed": "子工作已完成，繼續父工作",
-		"awaiting_child": "等待子工作 {{childId}}"
+		"delegation_completed": "子任務已完成，繼續主任務",
+		"awaiting_child": "等待子任務 {{childId}}"
+	},
+	"costs": {
+		"own": "自身",
+		"subtasks": "子任務"
 	}
 }

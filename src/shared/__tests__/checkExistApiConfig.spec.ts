@@ -62,4 +62,39 @@ describe("checkExistKey", () => {
 		}
 		expect(checkExistKey(config)).toBe(false)
 	})
+
+	it("should return true for fake-ai provider without API key", () => {
+		const config: ProviderSettings = {
+			apiProvider: "fake-ai",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
+
+	it("should return true for claude-code provider without API key", () => {
+		const config: ProviderSettings = {
+			apiProvider: "claude-code",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
+
+	it("should return true for openai-codex provider without API key", () => {
+		const config: ProviderSettings = {
+			apiProvider: "openai-codex",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
+
+	it("should return true for qwen-code provider without API key", () => {
+		const config: ProviderSettings = {
+			apiProvider: "qwen-code",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
+
+	it("should return true for roo provider without API key", () => {
+		const config: ProviderSettings = {
+			apiProvider: "roo",
+		}
+		expect(checkExistKey(config)).toBe(true)
+	})
 })

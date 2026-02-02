@@ -60,7 +60,9 @@
 		"selectModel": "Seleccionar modelo",
 		"modelTooltip": "Elige qué modelo de IA usar para esta sesión",
 		"defaultModel": "Modelo predeterminado",
-		"loadingModels": "Cargando..."
+		"loadingModels": "Cargando...",
+		"selectMode": "Seleccionar modo",
+		"modeTooltip": "Modo: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",

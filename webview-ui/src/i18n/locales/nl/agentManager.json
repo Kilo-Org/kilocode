@@ -60,7 +60,9 @@
 		"selectModel": "Model selecteren",
 		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
 		"defaultModel": "Standaardmodel",
-		"loadingModels": "Laden..."
+		"loadingModels": "Laden...",
+		"selectMode": "Selecteer modus",
+		"modeTooltip": "Modus: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

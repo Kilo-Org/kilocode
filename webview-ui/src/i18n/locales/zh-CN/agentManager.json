@@ -60,7 +60,9 @@
 		"selectModel": "选择模型",
 		"modelTooltip": "选择此会话使用的 AI 模型",
 		"defaultModel": "默认模型",
-		"loadingModels": "加载中..."
+		"loadingModels": "加载中...",
+		"selectMode": "选择模式",
+		"modeTooltip": "模式：{{mode}}"
 	},
 	"messages": {
 		"waiting": "等待代理响应...",

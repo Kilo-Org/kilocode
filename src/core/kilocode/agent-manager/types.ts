@@ -19,6 +19,7 @@ export {
 	agentManagerMessageSchema,
 	agentManagerExtensionMessageSchema,
 	availableModelSchema,
+	availableModeSchema,
 	startSessionMessageSchema,
 	// Types
 	type AgentStatus,
@@ -30,6 +31,7 @@ export {
 	type AgentManagerMessage,
 	type AgentManagerExtensionMessage,
 	type AvailableModel,
+	type AvailableMode,
 	type StartSessionMessage,
 } from "@kilocode/core-schemas"
 

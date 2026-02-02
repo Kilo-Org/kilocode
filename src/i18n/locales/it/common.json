@@ -101,16 +101,6 @@
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
-			"tokenRefreshFailed": "Impossibile aggiornare il token OAuth: {{error}}",
-			"onboardingTimeout": "L'operazione di onboarding è scaduta dopo 60 secondi. Riprova più tardi.",
-			"projectDiscoveryFailed": "Impossibile scoprire l'ID del progetto. Assicurati di essere autenticato con 'gemini auth'.",
-			"rateLimitExceeded": "Limite di velocità superato. I limiti del livello gratuito sono stati raggiunti.",
-			"badRequest": "Richiesta non valida: {{details}}",
-			"apiError": "Errore API Gemini CLI: {{error}}",
-			"completionError": "Errore di completamento Gemini CLI: {{error}}"
-		},
 		"message": {
 			"no_active_task_to_delete": "Nessuna attività attiva da cui eliminare messaggi",
 			"invalid_timestamp_for_deletion": "Timestamp del messaggio non valido per l'eliminazione",
@@ -213,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Risposta interrotta dall'utente",
-		"responseInterruptedByApiError": "Risposta interrotta da errore API"
+		"responseInterruptedByApiError": "Risposta interrotta da errore API",
+		"streamTerminatedByProvider": "Il provider ha terminato la richiesta"
 	},
 	"storage": {
 		"prompt_custom_path": "Inserisci il percorso di archiviazione personalizzato per la cronologia delle conversazioni, lascia vuoto per utilizzare la posizione predefinita",

@@ -122,7 +122,7 @@ describe("AwsBedrockHandler with invokedModelId", () => {
 						trace: {
 							promptRouter: {
 								invokedModelId:
-									"arn:aws:bedrock:us-west-2:699475926481:inference-profile/us.anthropic.claude-2-1-v1:0",
+									"arn:aws:bedrock:us-west-2:699475926481:inference-profile/us.anthropic.claude-3-opus-20240229-v1:0",
 								usage: {
 									inputTokens: 150,
 									outputTokens: 250,
@@ -162,12 +162,12 @@ describe("AwsBedrockHandler with invokedModelId", () => {
 		}
 
 		// Verify that getModelById was called with the id, not the full arn
-		expect(getModelByIdSpy).toHaveBeenCalledWith("anthropic.claude-2-1-v1:0", "inference-profile")
+		expect(getModelByIdSpy).toHaveBeenCalledWith("anthropic.claude-3-opus-20240229-v1:0", "inference-profile")
 
 		// Verify that getModel returns the updated model info
 		const costModel = handler.getModel()
 		//expect(costModel.id).toBe("anthropic.claude-3-5-sonnet-20240620-v1:0")
-		expect(costModel.info.inputPrice).toBe(8)
+		expect(costModel.info.inputPrice).toBe(15)
 
 		// Verify that a usage event was emitted after updating the costModelConfig
 		const usageEvents = events.filter((event) => event.type === "usage")

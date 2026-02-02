@@ -14,16 +14,16 @@ const faqs = [
 		answer: "AI model providers offer various language models with different capabilities and pricing.",
 	},
 	{
-		question: "What is the Roo Code Cloud Provider?",
+		question: "What is the Roo Code Router?",
 		answer: (
 			<>
-				<p>This is our very own model provider, optimized to work seamlessly with Roo Code Cloud.</p>
+				<p>This is our very own model router, optimized to work seamlessly with Roo Code Cloud.</p>
 				<p>You don&apos;t have to use it to use Roo Code, but it&apos;s the easiest way to do it.</p>
 			</>
 		),
 	},
 	{
-		question: "Do I have to use the Roo Code Cloud Provider to use the Roo Code products?",
+		question: "Do I have to use the Roo Code Router to use the Roo Code products?",
 		answer: "Not at all! You can bring your own provider key, no problem. This is just meant to make it easier.",
 	},
 	{
@@ -32,7 +32,7 @@ const faqs = [
 	},
 	{
 		question: "How is my data treated?",
-		answer: "The Roo Code Cloud provider doesn't keep any of your data, the service only aims to make it easier to use Roo Code. Each model vendor has their own privacy policy though, and usually free models use your data for training, so keep that in mind.",
+		answer: "The Roo Code Router doesn't keep any of your data, the service only aims to make it easier to use Roo Code. Each model vendor has their own privacy policy though, and usually free models use your data for training, so keep that in mind.",
 	},
 	{
 		question: "How much does the Roo Code Cloud service cost?",
@@ -134,7 +134,7 @@ export default function ProviderPage() {
 			<section className="relative overflow-hidden py-16">
 				<div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center">
-						<h1 className="text-4xl md:text-5xl font-bold tracking-tight">The Roo Code Cloud Provider</h1>
+						<h1 className="text-4xl md:text-5xl font-bold tracking-tight">The Roo Code Router</h1>
 						<p className="mx-auto mt-4 max-w-3xl md:text-lg text-muted-foreground">
 							The easiest way to use Roo Code (in the{" "}
 							<Link href="/cloud" className="underline hover:no-underline">

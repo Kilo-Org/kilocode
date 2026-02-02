@@ -7,6 +7,7 @@ import { Button } from "@src/components/ui"
 import { vscode } from "@src/utils/vscode"
 
 import { ModelPicker } from "../ModelPicker"
+import { OpenAICodexRateLimitDashboard } from "./OpenAICodexRateLimitDashboard"
 
 interface OpenAICodexProps {
 	apiConfiguration: ProviderSettings
@@ -49,6 +50,9 @@ export const OpenAICodex: React.FC<OpenAICodexProps> = ({
 					</Button>
 				)}
 			</div>
+
+			{/* Rate Limit Dashboard - only shown when authenticated */}
+			<OpenAICodexRateLimitDashboard isAuthenticated={openAiCodexIsAuthenticated} />
 
 			{/* Model Picker */}
 			<ModelPicker
