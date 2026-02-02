@@ -114,6 +114,17 @@ PR body should list:
 3. Accepting `kiloGateway→opencodeZen` rename → breaks provider config
 4. Forgetting `popularProviders` alias → add if upstream uses it
 5. Keeping `README.it.md`, `README.th.md` → delete these
+6. **Missing source import fixes** → files accepted from upstream may have `@opencode-ai/sdk` imports that need to be `@kilocode/sdk`
+
+## Post-Merge Import Check
+
+The transform script only fixes `package.json`, not source imports. After merge, check for stray imports:
+
+```bash
+grep -rn "@opencode-ai/sdk" packages/app/src/ packages/desktop/src/
+```
+
+Fix any found by changing `@opencode-ai/sdk` → `@kilocode/sdk`
 
 ## If Uncertain
 
