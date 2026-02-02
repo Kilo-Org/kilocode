@@ -283,6 +283,8 @@
 		"description": "다양한 API 구성을 저장하여 제공자와 설정 간에 빠르게 전환할 수 있습니다.",
 		"makeActiveProfile": "활성 프로필로 설정",
 		"makeActiveTooltip": "API 요청에 사용할 이 프로필을 활성화합니다",
+		"makeActiveProfileAllModes": "모든 모드에서 활성 프로필로 설정해",
+		"makeActiveAllModesTooltip": "모든 모드에서 이 프로필을 활성화해",
 		"apiProvider": "API 제공자",
 		"apiProviderDocs": "공급자 문서",
 		"model": "모델",

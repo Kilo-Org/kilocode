@@ -283,6 +283,8 @@
 		"description": "Simpan konfigurasi API yang berbeda untuk beralih dengan cepat antara provider dan pengaturan.",
 		"makeActiveProfile": "Jadikan Profil Aktif",
 		"makeActiveTooltip": "Aktifkan profil ini untuk digunakan dalam permintaan API",
+		"makeActiveProfileAllModes": "Jadikan Profil Aktif di Semua Mode",
+		"makeActiveAllModesTooltip": "Aktifkan profil ini untuk semua mode",
 		"apiProvider": "Provider API",
 		"apiProviderDocs": "Dokumentasi Penyedia",
 		"model": "Model",

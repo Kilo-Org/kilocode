@@ -381,5 +381,8 @@
 			"cancel": "İptal",
 			"delete": "Sil"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "\"{{name}}\" profili tüm modlara uygulandı"
 	}
 }

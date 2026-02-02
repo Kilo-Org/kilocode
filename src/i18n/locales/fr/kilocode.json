@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "Paramètres importés avec succès."
+		"settings_imported": "Paramètres importés avec succès.",
+		"profile_applied_to_all_modes": "Profil \"{{name}}\" appliqué à tous les modes"
 	},
 	"userFeedback": {
 		"message_update_failed": "Échec de la mise à jour du message",

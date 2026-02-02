@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "การตั้งค่าถูกนำเข้าสำเร็จแล้ว"
+		"settings_imported": "การตั้งค่าถูกนำเข้าสำเร็จแล้ว",
+		"profile_applied_to_all_modes": "ใช้โปรไฟล์ \"{{name}}\" กับทุกโหมดแล้ว"
 	},
 	"userFeedback": {
 		"message_update_failed": "อัปเดตข้อความล้มเหลว",

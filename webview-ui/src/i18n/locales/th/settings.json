@@ -315,6 +315,8 @@
 		"description": "บันทึกการกำหนดค่า API ต่างๆ เพื่อสลับระหว่างผู้ให้บริการและการตั้งค่าต่างๆ ได้อย่างรวดเร็ว",
 		"makeActiveProfile": "ทำให้เป็นโปรไฟล์ที่ใช้งาน",
 		"makeActiveTooltip": "เปิดใช้งานโปรไฟล์นี้เพื่อใช้สำหรับคำขอ API",
+		"makeActiveProfileAllModes": "ตั้งเป็นโปรไฟล์ที่ใช้ในทุกโหมด",
+		"makeActiveAllModesTooltip": "เปิดใช้งานโปรไฟล์นี้สำหรับทุกโหมด",
 		"apiProvider": "ผู้ให้บริการ API",
 		"apiProviderDocs": "เอกสารผู้ให้บริการ",
 		"model": "โมเดล",

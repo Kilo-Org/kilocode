@@ -319,6 +319,8 @@
 		"description": "احفظ إعدادات متعددة للتبديل السريع بين مزوّدين ونماذج.",
 		"makeActiveProfile": "جعل الملف النشط",
 		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
+		"makeActiveProfileAllModes": "خلّ الملف نشط لكل الأنماط",
+		"makeActiveAllModesTooltip": "فعّل هذا الملف لكل الأنماط",
 		"apiProvider": "مزود API",
 		"apiProviderDocs": "توثيق المزود",
 		"model": "النموذج",

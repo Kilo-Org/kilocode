@@ -381,5 +381,8 @@
 			"cancel": "취소",
 			"delete": "삭제"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "\"{{name}}\" 프로필이 모든 모드에 적용되었어"
 	}
 }

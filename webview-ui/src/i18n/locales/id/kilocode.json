@@ -381,5 +381,8 @@
 			"cancel": "Batal",
 			"delete": "Hapus"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "Profil \"{{name}}\" diterapkan ke semua mode"
 	}
 }

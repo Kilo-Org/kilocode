@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "设置导入成功。"
+		"settings_imported": "设置导入成功。",
+		"profile_applied_to_all_modes": "配置 \"{{name}}\" 已应用到所有模式"
 	},
 	"userFeedback": {
 		"message_update_failed": "更新消息失败",

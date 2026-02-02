@@ -283,6 +283,8 @@
 		"description": "Sla verschillende API-configuraties op om snel te wisselen tussen providers en instellingen.",
 		"makeActiveProfile": "Maak actief profiel",
 		"makeActiveTooltip": "Activeer dit profiel om het te gebruiken voor API-verzoeken",
+		"makeActiveProfileAllModes": "Maak actief profiel voor alle modi",
+		"makeActiveAllModesTooltip": "Activeer dit profiel voor alle modi",
 		"apiProvider": "API-provider",
 		"apiProviderDocs": "Providerdocumentatie",
 		"model": "Model",

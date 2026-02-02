@@ -381,5 +381,8 @@
 			"cancel": "रद्द करें",
 			"delete": "हटाएं"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "प्रोफ़ाइल \"{{name}}\" सभी मोड्स पर लागू कर दी गई है"
 	}
 }

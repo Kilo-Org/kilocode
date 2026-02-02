@@ -283,6 +283,8 @@
 		"description": "Salve diferentes configurações de API para alternar rapidamente entre provedores e configurações.",
 		"makeActiveProfile": "Tornar perfil ativo",
 		"makeActiveTooltip": "Ative este perfil para usá-lo em solicitações de API",
+		"makeActiveProfileAllModes": "Tornar perfil ativo em todos os modos",
+		"makeActiveAllModesTooltip": "Ative este perfil para todos os modos",
 		"apiProvider": "Provedor de API",
 		"apiProviderDocs": "Documentação do Provedor",
 		"model": "Modelo",

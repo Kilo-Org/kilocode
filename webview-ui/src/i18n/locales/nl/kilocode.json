@@ -380,5 +380,8 @@
 			"cancel": "Annuleren",
 			"delete": "Verwijderen"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "Profiel \"{{name}}\" toegepast op alle modi"
 	}
 }

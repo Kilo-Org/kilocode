@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "設定已成功匯入。"
+		"settings_imported": "設定已成功匯入。",
+		"profile_applied_to_all_modes": "設定檔「{{name}}」已套用至所有模式"
 	},
 	"configDiscovery": {
 		"added": "Kilo Code：已新增 {{source}} {{configType}}：{{name}}{{modeStr}}",

@@ -380,5 +380,8 @@
 			"cancel": "取消",
 			"delete": "刪除"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "設定檔「{{name}}」已套用至所有模式"
 	}
 }

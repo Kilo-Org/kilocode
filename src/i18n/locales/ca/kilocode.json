@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "Configuració importada correctament."
+		"settings_imported": "Configuració importada correctament.",
+		"profile_applied_to_all_modes": "S'ha aplicat el perfil \"{{name}}\" a tots els modes"
 	},
 	"userFeedback": {
 		"message_update_failed": "Ha fallat l'actualització del missatge",

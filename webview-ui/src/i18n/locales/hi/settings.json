@@ -283,6 +283,8 @@
 		"description": "विभिन्न API कॉन्फ़िगरेशन सहेजें ताकि प्रदाताओं और सेटिंग्स के बीच त्वरित रूप से स्विच कर सकें।",
 		"makeActiveProfile": "सक्रिय प्रोफ़ाइल बनाएं",
 		"makeActiveTooltip": "API अनुरोधों के लिए इस प्रोफ़ाइल को सक्रिय करें",
+		"makeActiveProfileAllModes": "सभी मोड्स पर सक्रिय प्रोफ़ाइल बनाओ",
+		"makeActiveAllModesTooltip": "इस प्रोफ़ाइल को सभी मोड्स के लिए सक्रिय करो",
 		"apiProvider": "API प्रदाता",
 		"apiProviderDocs": "प्रदाता डॉक्स",
 		"model": "मॉडल",

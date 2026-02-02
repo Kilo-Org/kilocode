@@ -381,5 +381,8 @@
 			"cancel": "ยกเลิก",
 			"delete": "ลบ"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "ใช้โปรไฟล์ \"{{name}}\" กับทุกโหมดแล้ว"
 	}
 }

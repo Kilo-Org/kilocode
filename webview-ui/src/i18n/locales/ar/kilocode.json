@@ -382,5 +382,8 @@
 			"cancel": "إلغاء",
 			"delete": "حذف"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "تم تطبيق الملف الشخصي \"{{name}}\" على جميع الأنماط"
 	}
 }

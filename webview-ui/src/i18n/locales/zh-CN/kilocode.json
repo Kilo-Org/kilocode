@@ -382,5 +382,8 @@
 			"cancel": "取消",
 			"delete": "删除"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "个人资料 \"{{name}}\" 已应用到所有模式"
 	}
 }

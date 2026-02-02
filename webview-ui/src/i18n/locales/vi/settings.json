@@ -283,6 +283,8 @@
 		"description": "Lưu các cấu hình API khác nhau để nhanh chóng chuyển đổi giữa các nhà cung cấp và cài đặt.",
 		"makeActiveProfile": "Đặt làm hồ sơ hoạt động",
 		"makeActiveTooltip": "Kích hoạt hồ sơ này để sử dụng cho các yêu cầu API",
+		"makeActiveProfileAllModes": "Đặt làm hồ sơ hoạt động cho tất cả các chế độ",
+		"makeActiveAllModesTooltip": "Kích hoạt hồ sơ này cho tất cả các chế độ",
 		"apiProvider": "Nhà cung cấp API",
 		"apiProviderDocs": "Tài liệu Nhà cung cấp",
 		"model": "Mẫu",

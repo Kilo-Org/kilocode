@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "सेटिंग्स सफलतापूर्वक आयात की गईं।"
+		"settings_imported": "सेटिंग्स सफलतापूर्वक आयात की गईं।",
+		"profile_applied_to_all_modes": "प्रोफ़ाइल \"{{name}}\" सभी मोड्स पर लागू कर दी गई है"
 	},
 	"userFeedback": {
 		"message_update_failed": "संदेश अपडेट करने में विफल",

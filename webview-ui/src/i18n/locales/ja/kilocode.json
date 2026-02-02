@@ -382,5 +382,8 @@
 			"cancel": "キャンセル",
 			"delete": "削除"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "プロフィール「{{name}}」をすべてのモードに適用したよ"
 	}
 }

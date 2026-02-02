@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "설정이 성공적으로 가져와졌습니다."
+		"settings_imported": "설정이 성공적으로 가져와졌습니다.",
+		"profile_applied_to_all_modes": "프로필 \"{{name}}\"이(가) 모든 모드에 적용되었습니다"
 	},
 	"userFeedback": {
 		"message_update_failed": "메시지 업데이트 실패",

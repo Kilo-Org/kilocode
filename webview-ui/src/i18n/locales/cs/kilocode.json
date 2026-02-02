@@ -381,5 +381,8 @@
 			"cancel": "Zrušit",
 			"delete": "Smazat"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "Profil \"{{name}}\" byl aplikován na všechny režimy"
 	}
 }
