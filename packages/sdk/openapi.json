@@ -8879,6 +8879,11 @@
             "description": "Toggle tips on home screen",
             "default": "<leader>h",
             "type": "string"
+          },
+          "news_toggle": {
+            "description": "Toggle news on home screen",
+            "default": "none",
+            "type": "string"
           }
         },
         "additionalProperties": false

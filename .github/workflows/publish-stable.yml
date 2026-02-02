@@ -43,7 +43,7 @@ permissions:
 
 jobs:
   publish-stable:
-    runs-on: depot-ubuntu-24.04-4
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:

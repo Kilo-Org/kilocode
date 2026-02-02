@@ -1308,6 +1308,10 @@ export type KeybindsConfig = {
    * Toggle tips on home screen
    */
   tips_toggle?: string
+  /**
+   * Toggle news on home screen
+   */
+  news_toggle?: string
 }
 
 /**
