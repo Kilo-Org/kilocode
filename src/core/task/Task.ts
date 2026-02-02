@@ -4858,7 +4858,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 
 					// Create message with reasoning_details property
-					const msgWithReasoningContent: Anthropic.Messages.MessageParam & { reasoning_content?: string } = {
+					const msgWithReasoningContent: Anthropic.Messages.MessageParam & {
+						reasoning_content?: string
+						reasoning_details?: any
+					} = {
 						role: "assistant",
 						content: assistantContent,
 						reasoning_details: msgWithDetails.reasoning_details,
