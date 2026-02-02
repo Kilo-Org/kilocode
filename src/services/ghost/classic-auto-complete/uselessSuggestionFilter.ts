@@ -1,4 +1,4 @@
-import { postprocessCompletion } from "../../continuedev/core/autocomplete/postprocessing/index.js"
+import { postprocessCompletion } from "../continuedev/core/autocomplete/postprocessing/index.js"
 import { applyLanguageFilter } from "./language-filters"
 
 export type AutocompleteSuggestion = {

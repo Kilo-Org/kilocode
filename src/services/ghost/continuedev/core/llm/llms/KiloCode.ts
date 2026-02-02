@@ -1,8 +1,8 @@
 import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js"
-import { X_KILOCODE_VERSION } from "../../../../../shared/kilocode/headers"
-import { Package } from "../../../../../shared/package"
+import { X_KILOCODE_VERSION } from "../../../../../../shared/kilocode/headers"
+import { Package } from "../../../../../../shared/package"
 import OpenRouter from "./OpenRouter"
-import { IFimProvider } from "../../../../../api/providers/kilocode/IFimProvider"
+import { IFimProvider } from "../../../../../../api/providers/kilocode/IFimProvider"
 import { getKiloUrlFromToken } from "@roo-code/types"
 
 /**

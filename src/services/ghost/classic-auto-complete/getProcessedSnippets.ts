@@ -1,15 +1,15 @@
 import * as vscode from "vscode"
-import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
-import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { AutocompleteInput } from "../types"
-import { HelperVars } from "../../continuedev/core/autocomplete/util/HelperVars"
-import { getAllSnippetsWithoutRace } from "../../continuedev/core/autocomplete/snippets/getAllSnippets"
-import { getDefinitionsFromLsp } from "../../continuedev/core/vscode-test-harness/src/autocomplete/lsp"
-import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameters"
-import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
+import { HelperVars } from "../continuedev/core/autocomplete/util/HelperVars"
+import { getAllSnippetsWithoutRace } from "../continuedev/core/autocomplete/snippets/getAllSnippets"
+import { getDefinitionsFromLsp } from "../continuedev/core/vscode-test-harness/src/autocomplete/lsp"
+import { DEFAULT_AUTOCOMPLETE_OPTS } from "../continuedev/core/util/parameters"
+import { getSnippets } from "../continuedev/core/autocomplete/templating/filtering"
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
-import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
+import { AutocompleteSnippet, AutocompleteSnippetType } from "../continuedev/core/autocomplete/types"
 
 function uriToFsPath(filepath: string): string {
 	if (filepath.startsWith("file://")) {
