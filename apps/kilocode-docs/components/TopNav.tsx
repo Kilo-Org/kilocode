@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import docsearch from "@docsearch/js"
+import aa from "search-insights"
 import { ThemeToggle } from "./ThemeToggle"
 
 interface NavItem {
@@ -203,14 +204,22 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 		return router.pathname.startsWith(href)
 	}
 
-	// Initialize DocSearch
+	// Initialize search-insights and DocSearch
 	useEffect(() => {
+		// Initialize search-insights for click analytics
+		aa("init", {
+			appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
+			apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
+		})
+
+		// Initialize DocSearch with insights enabled
 		docsearch({
 			container: "#docsearch",
 			appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "PMZUYBQDAK",
 			indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "docsearch",
 			apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
 			askAi: process.env.NEXT_PUBLIC_ALGOLIA_ASSISTANT_ID || "askAIDemo",
+			insights: true, // Enable click analytics
 		})
 	}, [])
 
