@@ -55,7 +55,7 @@ Image attributes
 
 ### Callouts
 
-When callouts are used, they should be in markdoc formart like this:
+When callouts are used, they should be in markdoc format like this:
 
 ```markdown
 {% callout type="info" %}
