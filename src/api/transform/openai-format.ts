@@ -317,6 +317,10 @@ export function convertToOpenAiMessages(
 				if (mapped) {
 					;(baseMessage as any).reasoning_details = mapped
 				}
+				// Preserve reasoning_content for Kimi/DeepSeek interleaved thinking
+				if (messageWithDetails.reasoning_content) {
+					;(baseMessage as any).reasoning_content = messageWithDetails.reasoning_content
+				}
 			}
 
 			openAiMessages.push(baseMessage)
@@ -500,6 +504,11 @@ export function convertToOpenAiMessages(
 				const mapped = mapReasoningDetails(messageWithDetails.reasoning_details)
 				if (mapped) {
 					baseMessage.reasoning_details = mapped
+				}
+
+				// Preserve reasoning_content for Kimi/DeepSeek interleaved thinking
+				if (messageWithDetails.reasoning_content) {
+					;(baseMessage as any).reasoning_content = messageWithDetails.reasoning_content
 				}
 
 				// Add tool_calls after reasoning_details
