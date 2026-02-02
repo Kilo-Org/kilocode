@@ -59,3 +59,37 @@ Clicking the **Reset** button completely clears all Kilo Code configuration data
 - **Result:** Kilo Code returns to its initial state, as if freshly installed, with default settings and no user configurations.
 
 Use this option only if you are certain you want to remove all Kilo Code data or if instructed during troubleshooting. Consider exporting your settings first if you might want to restore them later.
+
+## Experimental Features
+
+{% callout type="info" %}
+These features are experimental and may change in future releases. They provide advanced control over Kilo Code's behavior for specific use cases.
+{% /callout %}
+
+### Concurrent File Edits
+
+When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit one file at a time.
+
+**When to disable:**
+
+- Working with less capable models that struggle with complex multi-file operations
+- You want more granular control over file modifications
+- Debugging issues with file editing behavior
+
+**Default:** Enabled
+
+### Power Steering
+
+When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This leads to stronger adherence to role definitions and custom instructions, but will use more tokens per message.
+
+**When to enable:**
+
+- Working with custom modes that have specific role definitions
+- You need stricter adherence to custom instructions
+- The model is deviating from the intended mode behavior
+
+**Trade-off:** Increased token usage per message in exchange for better mode adherence.
+
+**Default:** Disabled
+
+Learn more about [Custom Modes](/docs/customize/custom-modes) and how Power Steering can improve mode behavior.

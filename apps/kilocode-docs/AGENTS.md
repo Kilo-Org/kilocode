@@ -55,17 +55,7 @@ Image attributes
 
 ### Callouts
 
-Callouts in Docusaurus look like this:
-
-```markdown
-:::info
-
-You can report any bugs or feedbacks by chatting with us in our [Discord server](https://discord.gg/ovhcloud), in the AI Endpoints channel.
-
-:::
-```
-
-We want to convert them to Markdoc callout tags like this:
+When callouts are used, they should be in markdoc format like this:
 
 ```markdown
 {% callout type="info" %}
