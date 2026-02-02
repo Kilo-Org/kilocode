@@ -36,6 +36,12 @@ Custom modes are defined by several key properties. Understanding these concepts
 | **When to Use** (`whenToUse`)                  | _(Optional)_ Provides guidance for Kilo's automated decision-making, particularly for mode selection and task orchestration. Used by the Orchestrator mode for task coordination.    |
 | **Custom Instructions** (`customInstructions`) | _(Optional)_ Specific behavioral guidelines or rules for the mode. Added near the end of the system prompt to further refine Kilo's behavior.                                        |
 
+{% callout type="tip" %}
+**Power Steering for Better Mode Adherence**
+
+If you find that models aren't following your custom mode's role definition or instructions closely enough, enable the [Power Steering](/docs/getting-started/settings#power-steering) experimental feature. This reminds the model about mode details more frequently, leading to stronger adherence to your custom configurations at the cost of increased token usage.
+{% /callout %}
+
 ## Import/Export Modes
 
 Easily share, back up, and template your custom modes. This feature lets you export any mode—and its associated rules—into a single, portable YAML file that you can import into any project.

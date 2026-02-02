@@ -308,7 +308,7 @@ Revert to a specific checkpoint using the full git hash:
 /checkpoint restore 00d185d5020969752bc9ae40823b9d6a723696e2
 ```
 
-:::danger Warning
+{% callout type="danger" title="Warning" %}
 Checkpoint restoration is a **destructive action**:
 
 - Performs a git hard reset (all uncommitted changes will be lost)
@@ -316,7 +316,7 @@ Checkpoint restoration is a **destructive action**:
 - Cannot be undone
 
 Make sure you've committed or backed up any work you want to keep before restoring.
-:::
+{% /callout %}
 
 **Aliases:** `/cp` can be used as a shorthand for `/checkpoint`
 
@@ -408,9 +408,9 @@ You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org
 
 to complete configuration with an interactive workflow on the command line.
 
-:::tip
+{% callout type="tip" %}
 You can also use the `/config` slash command during an interactive session, which is equivalent to running `kilocode config`.
-:::
+{% /callout %}
 
 ## Parallel mode
 
