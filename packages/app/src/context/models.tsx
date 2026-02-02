@@ -93,10 +93,7 @@ export const { use: useModels, provider: ModelsProvider } = createSimpleContext(
       const state = visibility().get(key)
       if (state === "hide") return false
       if (state === "show") return true
-      if (latestSet().has(key)) return true
-      const m = find(model)
-      if (!m?.release_date || !DateTime.fromISO(m.release_date).isValid) return true
-      return false
+      return true
     }
 
     const setVisibility = (model: ModelKey, state: boolean) => {

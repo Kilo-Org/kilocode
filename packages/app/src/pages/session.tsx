@@ -730,8 +730,8 @@ export default function Page() {
       onSelect: () => view().terminal.toggle(),
     },
     {
-      id: "review.toggle",
-      title: language.t("command.review.toggle"),
+      id: "fileTree.toggle",
+      title: language.t("command.fileTree.toggle"),
       description: "",
       category: language.t("command.category.view"),
       keybind: "mod+shift+r",

@@ -44,7 +44,7 @@ export function DialogSelectFile(props: { mode?: DialogSelectFileMode; onOpenFil
     "session.previous",
     "session.next",
     "terminal.toggle",
-    "review.toggle",
+    "fileTree.toggle",
   ]
   const limit = 5
 

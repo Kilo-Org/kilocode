@@ -1970,7 +1970,7 @@ export default function Layout(props: ParentProps) {
     const slug = createMemo(() => base64Encode(props.directory))
     const sessions = createMemo(() =>
       workspaceStore.session
-        .filter((session) => session.directory === workspaceStore.path.directory)
+        .filter((session) => session.directory === props.directory)
         .filter((session) => !session.parentID && !session.time?.archived)
         .toSorted(sortSessions(Date.now())),
     )
