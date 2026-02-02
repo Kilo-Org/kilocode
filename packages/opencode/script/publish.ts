@@ -45,12 +45,12 @@ const tasks = Object.entries(binaries).map(async ([name]) => {
   }
   await $`bun pm pack`.cwd(`./dist/${name}`)
   for (const tag of tags) {
-    await $`npm publish *.tgz --access public --tag ${tag}`.cwd(`./dist/${name}`)
+    await $`npm publish *.tgz --access public --tag ${tag} --provenance`.cwd(`./dist/${name}`)
   }
 })
 await Promise.all(tasks)
 for (const tag of tags) {
-  await $`cd ./dist/${pkg.name} && bun pm pack && npm publish *.tgz --access public --tag ${tag}`
+  await $`cd ./dist/${pkg.name} && bun pm pack && npm publish *.tgz --access public --tag ${tag} --provenance`
 }
 
 if (!Script.preview) {
