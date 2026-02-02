@@ -341,9 +341,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci])
 
-	// Show update or notification messages
+	// Show update or notification messages (skip if noSplash is enabled)
 	useEffect(() => {
-		if (!versionStatus) return
+		if (!versionStatus || options.noSplash) return
 
 		if (versionStatus.isOutdated) {
 			addMessage(generateUpdateAvailableMessage(versionStatus))
@@ -351,7 +351,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Only show notification if there's no pending update
 			addMessage(generateNotificationMessage(notifications[0]))
 		}
-	}, [notifications, versionStatus, addMessage])
+	}, [notifications, versionStatus, addMessage, options.noSplash])
 
 	// Fetch task history on mount if not in CI mode
 	const taskHistoryFetchedRef = useRef(false)

@@ -316,7 +316,7 @@ export class CLI {
 			// Request router models after configuration is injected
 			void this.requestRouterModels()
 
-			if (!this.options.ci && !this.options.prompt) {
+			if (!this.options.ci && !this.options.prompt && !this.options.noSplash) {
 				// Fetch Kilocode notifications if provider is kilocode
 				void this.fetchNotifications()
 			}
