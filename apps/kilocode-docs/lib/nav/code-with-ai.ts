@@ -49,10 +49,7 @@ export const CodeWithAiNav: NavSection[] = [
 			{
 				href: "/code-with-ai/features/autocomplete",
 				children: "Autocomplete",
-				subLinks: [
-					{ href: "/code-with-ai/features/autocomplete", children: "Overview" },
-					{ href: "/code-with-ai/features/autocomplete/mistral-setup", children: "Mistral Setup" },
-				],
+				subLinks: [{ href: "/code-with-ai/features/autocomplete/mistral-setup", children: "Mistral Setup" }],
 			},
 			{ href: "/code-with-ai/features/code-actions", children: "Code Actions" },
 			{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },

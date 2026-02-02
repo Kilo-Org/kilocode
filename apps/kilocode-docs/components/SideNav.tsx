@@ -98,7 +98,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 		}
 	}, [router.pathname])
 
-	// Auto-expand parent items when their child is active
+	// Auto-expand parent items when their child is active or when the parent itself is active
 	useEffect(() => {
 		const sectionItems = viewedSection ? sectionNavItems[viewedSection] || [] : []
 		const newExpandedItems = new Set<string>()
@@ -107,7 +107,8 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 			group.links.forEach((link) => {
 				if (link.subLinks) {
 					const hasActiveChild = link.subLinks.some((subLink) => router.pathname === subLink.href)
-					if (hasActiveChild) {
+					const isParentActive = router.pathname === link.href
+					if (hasActiveChild || isParentActive) {
 						newExpandedItems.add(link.href)
 					}
 				}
@@ -159,6 +160,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 				if (hasSubItems) {
 					return (
 						<button
+							type="button"
 							key={item.href}
 							onClick={() => handleSectionClick(item.sectionKey)}
 							className={`nav-item nav-item-button ${isActive ? "active" : ""}`}>
@@ -240,7 +242,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 	// Section navigation panel
 	const sectionNavPanel = (
 		<div className="nav-panel section-panel">
-			<button className="back-button mobile-only" onClick={handleBackClick}>
+			<button type="button" className="back-button mobile-only" onClick={handleBackClick}>
 				<span className="back-arrow">
 					<ChevronLeft />
 				</span>
@@ -272,6 +274,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 														{link.children}
 													</Link>
 													<button
+														type="button"
 														className="toggle-button"
 														onClick={(e) => {
 															e.preventDefault()
@@ -284,6 +287,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 												{isExpanded && (
 													<ul className="sub-links">
 														{link.subLinks.map((subLink) => {
+															// Only mark sublink as active if it's an exact match
 															const subActive = router.pathname === subLink.href
 															return (
 																<li
@@ -399,7 +403,8 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
 					color: var(--text-color);
 				}
 
-				.nav-links li.active :global(a) {
+				.nav-links li.active > :global(a),
+				.nav-links li.active > :global(.nav-item-with-toggle) > :global(a) {
 					background-color: var(--bg-secondary);
 					color: var(--accent-color);
 					font-weight: 500;
