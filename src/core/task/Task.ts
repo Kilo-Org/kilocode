@@ -1088,6 +1088,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				} else if (!messageWithTs.content) {
 					messageWithTs.content = [reasoningBlock]
 				}
+
+				// For Kimi (Moonshot), add reasoning_content as top-level property when there are tool_use blocks
+				// This is required because Kimi's API expects: "reasoning_content" + "tool_calls" in the same message
+				if (
+					this.apiConfiguration.apiProvider === "moonshot" &&
+					reasoning &&
+					Array.isArray(messageWithTs.content) &&
+					messageWithTs.content.some((block: any) => block.type === "tool_use")
+				) {
+					messageWithTs.reasoning_content = reasoning
+				}
 			} else if (reasoningData?.encrypted_content) {
 				// OpenAI Native encrypted reasoning
 				const reasoningBlock = {
@@ -4847,11 +4858,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 
 					// Create message with reasoning_details property
-					cleanConversationHistory.push({
+					const msgWithReasoningContent: Anthropic.Messages.MessageParam & { reasoning_content?: string } = {
 						role: "assistant",
 						content: assistantContent,
 						reasoning_details: msgWithDetails.reasoning_details,
-					} as any)
+					}
+					// Preserve reasoning_content for Kimi (Moonshot)
+					if (msg.reasoning_content) {
+						msgWithReasoningContent.reasoning_content = msg.reasoning_content
+					}
+					cleanConversationHistory.push(msgWithReasoningContent)
 
 					continue
 				}
@@ -4884,10 +4900,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						assistantContent = rest
 					}
 
-					cleanConversationHistory.push({
-						role: "assistant",
-						content: assistantContent,
-					} satisfies Anthropic.Messages.MessageParam)
+					const msgWithEncryptedReasoning: Anthropic.Messages.MessageParam & { reasoning_content?: string } =
+						{
+							role: "assistant",
+							content: assistantContent,
+						}
+					if (msg.reasoning_content) {
+						msgWithEncryptedReasoning.reasoning_content = msg.reasoning_content
+					}
+					cleanConversationHistory.push(msgWithEncryptedReasoning)
 
 					continue
 				} else if (hasPlainTextReasoning) {
@@ -4911,10 +4932,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 					}
 
-					cleanConversationHistory.push({
-						role: "assistant",
-						content: assistantContent,
-					} satisfies Anthropic.Messages.MessageParam)
+					const msgWithPlainTextReasoning: Anthropic.Messages.MessageParam & { reasoning_content?: string } =
+						{
+							role: "assistant",
+							content: assistantContent,
+						}
+					if (msg.reasoning_content) {
+						msgWithPlainTextReasoning.reasoning_content = msg.reasoning_content
+					}
+					cleanConversationHistory.push(msgWithPlainTextReasoning)
 
 					continue
 				}
@@ -4922,10 +4948,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			// Default path for regular messages (no embedded reasoning)
 			if (msg.role) {
-				cleanConversationHistory.push({
+				const baseMessage: Anthropic.Messages.MessageParam & { reasoning_content?: string } = {
 					role: msg.role,
 					content: msg.content as Anthropic.Messages.ContentBlockParam[] | string,
-				})
+				}
+				// Preserve reasoning_content for Kimi (Moonshot) when present
+				if (msg.reasoning_content) {
+					baseMessage.reasoning_content = msg.reasoning_content
+				}
+				cleanConversationHistory.push(baseMessage)
 			}
 		}
 

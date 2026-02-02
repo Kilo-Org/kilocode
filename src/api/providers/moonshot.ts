@@ -51,6 +51,8 @@ export class MoonshotHandler extends OpenAiHandler {
 		// For Kimi models with reasoning budget, use { type: "enabled" } instead of { max_tokens: ... }
 		const { info: model } = this.getModel()
 		if (this.options.enableReasoningEffort && (model as any).supportsReasoningBudget) {
+			// Remove the OpenAI-style reasoning parameter and use Kimi's thinking parameter
+			delete (requestOptions as any).reasoning
 			;(requestOptions as any).thinking = { type: "enabled" }
 		}
 	}
