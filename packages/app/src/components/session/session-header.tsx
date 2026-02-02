@@ -280,14 +280,17 @@ export function SessionHeader() {
                 </TooltipKeybind>
               </div>
               <div class="hidden md:block shrink-0">
-                <TooltipKeybind title={language.t("command.review.toggle")} keybind={command.keybind("review.toggle")}>
+                <TooltipKeybind
+                  title={language.t("command.fileTree.toggle")}
+                  keybind={command.keybind("fileTree.toggle")}
+                >
                   <Button
                     variant="ghost"
                     class="group/file-tree-toggle size-6 p-0"
                     onClick={() => layout.fileTree.toggle()}
-                    aria-label={language.t("command.review.toggle")}
+                    aria-label={language.t("command.fileTree.toggle")}
                     aria-expanded={layout.fileTree.opened()}
-                    aria-controls="review-panel"
+                    aria-controls="filetree-panel"
                   >
                     <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                       <Icon

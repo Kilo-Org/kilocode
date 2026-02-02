@@ -6,43 +6,64 @@ import { Storage } from "@/storage/storage"
 import { Log } from "@/util/log"
 import { Auth } from "@/auth"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
+import z from "zod"
 
 export namespace KiloSessions {
-  const log = Log.create({ service: "share-next" })
+  const log = Log.create({ service: "kilo-sessions" })
 
-  const authCache = new Map<string, { valid: boolean }>()
+  const Uuid = z.uuid()
+  type Uuid = z.infer<typeof Uuid>
 
-  const orgCache = {
-    at: 0,
-    value: undefined as string | undefined,
-    inflight: undefined as Promise<string | undefined> | undefined,
+  const tokenValidKeyTemplate = "kilo-sessions:token-valid:"
+  let tokenValidKey = tokenValidKeyTemplate + "unknown"
+
+  const tokenKey = "kilo-sessions:token"
+  const orgKey = "kilo-sessions:org"
+  const clientKey = "kilo-sessions:client"
+
+  const ttlMs = 10_000
+
+  function clearCache() {
+    clearInFlightCache(tokenKey)
+    clearInFlightCache(tokenValidKey)
+    clearInFlightCache(clientKey)
+    clearInFlightCache(orgKey)
   }
 
   async function authValid(token: string) {
-    const cached = authCache.get(token)
-    if (cached) return cached.valid
+    const newTokenValidKey = tokenValidKeyTemplate + token
 
-    const response = await fetch("https://app.kilo.ai/api/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }).catch(() => undefined)
+    if (newTokenValidKey !== tokenValidKey) {
+      clearInFlightCache(tokenValidKey)
 
-    // Don't cache transient network failures; allow future calls to retry.
-    if (!response) return false
+      tokenValidKey = newTokenValidKey
+    }
 
-    const valid = response.ok
-    authCache.set(token, { valid })
-    return valid
+    return withInFlightCache(tokenValidKey, 15 * 60_000, async () => {
+      const response = await fetch("https://app.kilo.ai/api/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(() => undefined)
+
+      // Don't cache transient network failures; allow future calls to retry.
+      if (!response) return undefined
+
+      const valid = response.ok
+      return valid
+    })
   }
 
-  export async function kilocodeToken() {
-    const auth = await Auth.get("kilo")
-    if (auth?.type === "api" && auth.key.length > 0) return auth.key
-    if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
-    if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
-    return undefined
+  async function kilocodeToken() {
+    return withInFlightCache(tokenKey, ttlMs, async () => {
+      const auth = await Auth.get("kilo")
+      if (auth?.type === "api" && auth.key.length > 0) return auth.key
+      if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
+      if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
+      return undefined
+    })
   }
 
   type Client = {
@@ -50,19 +71,8 @@ export namespace KiloSessions {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
 
-  const cache = {
-    at: 0,
-    value: undefined as Client | undefined,
-    inflight: undefined as Promise<Client | undefined> | undefined,
-  }
-
   async function getClient(): Promise<Client | undefined> {
-    const now = Date.now()
-    if (cache.value && now - cache.at < 5_000) return cache.value
-    if (cache.inflight && now - cache.at < 5_000) return cache.inflight
-
-    cache.at = now
-    cache.inflight = (async () => {
+    return withInFlightCache(clientKey, ttlMs, async () => {
       const token = await kilocodeToken()
       if (!token) return undefined
 
@@ -88,14 +98,7 @@ export namespace KiloSessions {
         url: base,
         fetch: (input, init) => fetch(input, withHeaders(init)),
       }
-    })()
-
-    try {
-      cache.value = await cache.inflight
-      return cache.value
-    } finally {
-      cache.inflight = undefined
-    }
+    })
   }
 
   const ingest = IngestQueue.create({
@@ -105,10 +108,7 @@ export namespace KiloSessions {
     onAuthError: () => {
       // Non-retryable until credentials are fixed.
       // Clearing caches prevents repeated use of a now-invalid token/client.
-      authCache.clear()
-      cache.value = undefined
-      cache.inflight = undefined
-      cache.at = 0
+      clearCache()
     },
   })
 
@@ -371,27 +371,19 @@ export namespace KiloSessions {
     }
   }
 
-  async function getOrgId(): Promise<string | undefined> {
+  async function getOrgId(): Promise<Uuid | undefined> {
     const env = process.env["KILO_ORG_ID"]
-    if (env) return env
+    if (isUuid(env)) return env
 
-    const now = Date.now()
-    if (orgCache.value && now - orgCache.at < 5_000) return orgCache.value
-    if (orgCache.inflight && now - orgCache.at < 5_000) return orgCache.inflight
-
-    orgCache.at = now
-    orgCache.inflight = (async () => {
+    return withInFlightCache(orgKey, ttlMs, async () => {
       const auth = await Auth.get("kilo")
-      if (auth?.type === "oauth" && auth.accountId) return auth.accountId
-
+      if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
-    })()
+    })
+  }
 
-    try {
-      orgCache.value = await orgCache.inflight
-      return orgCache.value
-    } finally {
-      orgCache.inflight = undefined
-    }
+  function isUuid(value: string | undefined): value is Uuid {
+    if (!value) return false
+    return Uuid.safeParse(value).success
   }
 }

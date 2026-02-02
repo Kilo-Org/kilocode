@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { describe, expect, test, beforeEach } from "bun:test"
 import { IngestQueue } from "../../src/kilo-sessions/ingest-queue"
 
