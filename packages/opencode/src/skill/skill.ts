@@ -1,5 +1,6 @@
 import z from "zod"
 import path from "path"
+import os from "os"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { NamedError } from "@opencode-ai/util/error"
@@ -18,6 +19,7 @@ export namespace Skill {
     name: z.string(),
     description: z.string(),
     location: z.string(),
+    content: z.string(),
   })
   export type Info = z.infer<typeof Info>
 
@@ -75,6 +77,7 @@ export namespace Skill {
         name: parsed.data.name,
         description: parsed.data.description,
         location: match,
+        content: md.content,
       }
     }
 
