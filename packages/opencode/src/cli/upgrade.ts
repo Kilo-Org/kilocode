@@ -4,9 +4,11 @@ import { Flag } from "@/flag/flag"
 import { Installation } from "@/installation"
 
 export async function upgrade() {
-  return // kilocode_change - disable auto-upgrade
   const config = await Config.global()
   const method = await Installation.method()
+  // kilocode_change start - only auto-upgrade for npm (we only publish @kilocode/cli via npm)
+  if (method !== "npm") return
+  // kilocode_change end
   const latest = await Installation.latest(method).catch(() => {})
   if (!latest) return
   if (Installation.VERSION === latest) return
@@ -19,7 +21,6 @@ export async function upgrade() {
     return
   }
 
-  if (method === "unknown") return
   await Installation.upgrade(method, latest)
     .then(() => Bus.publish(Installation.Event.Updated, { version: latest }))
     .catch(() => {})
