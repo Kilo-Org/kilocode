@@ -19,6 +19,7 @@ import {
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import CommitMessagePromptSettings from "./CommitMessagePromptSettings" // kilocode_change
+import AutoSelectRulesPromptSettings from "./AutoSelectRulesPromptSettings" // kilocode_change
 import { SearchableSetting } from "./SearchableSetting"
 
 interface PromptsSettingsProps {
@@ -313,6 +314,7 @@ const PromptsSettings = ({
 
 					{/* kilocode_change start */}
 					{activeSupportOption === "COMMIT_MESSAGE" && <CommitMessagePromptSettings />}
+					{activeSupportOption === "AUTO_SELECT_RULES" && <AutoSelectRulesPromptSettings />}
 					{/* kilocode_change end */}
 				</div>
 			</Section>

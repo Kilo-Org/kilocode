@@ -75,6 +75,7 @@ async function generatePrompt(
 	modelId?: string,
 	skillsManager?: SkillsManager,
 	clineProviderState?: ClineProviderState, // kilocode_change
+	autoSelectedRulePaths?: string[], // kilocode_change: Auto-selected rule paths
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -168,6 +169,7 @@ ${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", 
 	localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
 	globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
 	settings,
+	autoSelectedRulePaths: autoSelectedRulePaths, // kilocode_change: Pass auto-selected rule paths
 })}`
 
 	// kilocode_change start: Append custom system prompt from CLI if provided
@@ -202,6 +204,7 @@ export const SYSTEM_PROMPT = async (
 	modelId?: string,
 	skillsManager?: SkillsManager,
 	clineProviderState?: ClineProviderState, // kilocode_change
+	autoSelectedRulePaths?: string[], // kilocode_change: Auto-selected rule paths
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -279,5 +282,6 @@ ${customInstructions}`
 		modelId,
 		skillsManager,
 		clineProviderState, // kilocode_change
+		autoSelectedRulePaths, // kilocode_change: Pass auto-selected rule paths
 	)
 }

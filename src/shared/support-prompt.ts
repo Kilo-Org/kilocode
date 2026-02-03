@@ -46,6 +46,7 @@ type SupportPromptType =
 	| "TERMINAL_GENERATE" // kilocode_change
 	| "NEW_TASK"
 	| "COMMIT_MESSAGE" // kilocode_change
+	| "AUTO_SELECT_RULES" // kilocode_change
 
 const supportPromptConfigs: Record<SupportPromptType, SupportPromptConfig> = {
 	ENHANCE: {
@@ -265,6 +266,30 @@ When analyzing staged changes:
 For significant changes, include a detailed body explaining the changes.
 
 Return ONLY the commit message in the conventional format, nothing else.`,
+	},
+	AUTO_SELECT_RULES: {
+		template: `You are a rule selector for an AI coding assistant. Your job is to select which custom rules are relevant to the user's task.
+
+AVAILABLE RULES:
+\${ruleList}
+
+INSTRUCTIONS:
+1. Analyze the user's task/prompt below
+2. Determine which rules are relevant to this specific task
+3. Respond with ONLY a comma-separated list of rule indices (e.g., "0,2,5")
+4. If no rules are relevant, respond with "none"
+5. When in doubt, include the rule - it's better to include a potentially relevant rule than to miss one
+
+SELECTION GUIDELINES:
+- Select rules that directly relate to the task (e.g., TypeScript rules for TS tasks)
+- Select rules about coding style, conventions, or best practices that apply
+- Select workflow rules if the task matches the workflow's purpose
+- Skip rules that are clearly for different languages, frameworks, or unrelated domains
+
+USER'S TASK:
+\${userPrompt}
+
+Respond with ONLY the comma-separated indices or "none". No explanation needed.`,
 	},
 	// kilocode_change end
 } as const

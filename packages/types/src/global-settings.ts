@@ -142,6 +142,8 @@ export const globalSettingsSchema = z.object({
 	globalWorkflowToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	localRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	globalRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
+	autoSelectRules: z.boolean().optional(), // kilocode_change: Auto-select relevant rules based on user prompt
+	autoSelectRulesApiConfigId: z.string().optional(), // kilocode_change: API config for auto-selecting rules
 	screenshotQuality: z.number().optional(),
 	remoteBrowserEnabled: z.boolean().optional(),
 	remoteBrowserHost: z.string().optional(),

@@ -152,7 +152,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Commit Mesajı Oluşturma",
 				"description": "Sahnelenmiş git değişikliklerinize göre açıklayıcı commit mesajları oluşturun. Deponuzun en iyi uygulamalarına uygun mesajlar oluşturmak için komut istemini özelleştirin."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Otomatik Kural Seçimi",
+				"description": "Görevinize göre ilgili özel kuralları otomatik olarak seçer. Yapay zeka isteminizi analiz eder ve mevcut çalışmaya hangi kuralların uygulanacağını belirler."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Otomatik kural seçimi için bir API yapılandırması seçebilir veya mevcut seçili olanı kullanabilirsiniz."
 		}
 	},
 	"advancedSystemPrompt": {

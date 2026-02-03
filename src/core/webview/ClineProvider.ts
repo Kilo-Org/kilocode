@@ -2070,12 +2070,19 @@ export class ClineProvider
 	// kilocode_change start
 	async postRulesDataToWebview() {
 		const workspacePath = this.cwd
-		if (workspacePath) {
-			this.postMessageToWebview({
-				type: "rulesData",
-				...(await getEnabledRules(workspacePath, this.contextProxy, this.context)),
-			})
-		}
+		const autoSelectEnabled = this.contextProxy.getValue("autoSelectRules") ?? false
+
+		// Always send autoSelectEnabled (it's a global setting)
+		// Only include workspace-specific rules when a workspace is available
+		const rulesData = workspacePath
+			? await getEnabledRules(workspacePath, this.contextProxy, this.context)
+			: { globalRules: {}, localRules: {}, globalWorkflows: {}, localWorkflows: {} }
+
+		this.postMessageToWebview({
+			type: "rulesData",
+			autoSelectEnabled,
+			...rulesData,
+		})
 	}
 
 	async postSkillsDataToWebview() {
@@ -2309,6 +2316,8 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			autoSelectRulesApiConfigId, // kilocode_change: API config for auto-selecting rules
+			autoSelectRules, // kilocode_change: Enable auto-selecting rules based on prompt
 			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			isBrowserSessionActive,
 		} = await this.getState()
@@ -2484,6 +2493,8 @@ export class ClineProvider
 			condensingApiConfigId,
 			customCondensingPrompt,
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			autoSelectRulesApiConfigId, // kilocode_change: API config for auto-selecting rules
+			autoSelectRules: autoSelectRules ?? false, // kilocode_change: Enable auto-selecting rules based on prompt
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: codebaseIndexConfig?.codebaseIndexEnabled ?? false,
@@ -2803,6 +2814,8 @@ export class ClineProvider
 			condensingApiConfigId: stateValues.condensingApiConfigId,
 			customCondensingPrompt: stateValues.customCondensingPrompt,
 			yoloGatekeeperApiConfigId: stateValues.yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			autoSelectRulesApiConfigId: stateValues.autoSelectRulesApiConfigId, // kilocode_change: API config for auto-selecting rules
+			autoSelectRules: stateValues.autoSelectRules ?? false, // kilocode_change: Enable auto-selecting rules based on prompt
 			codebaseIndexModels: stateValues.codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: stateValues.codebaseIndexConfig?.codebaseIndexEnabled ?? false,

@@ -198,6 +198,10 @@
 		"newFile": {
 			"newWorkflowFile": "Yeni iş akışı dosyası...",
 			"newRuleFile": "Yeni kural dosyası..."
+		},
+		"autoSelect": {
+			"label": "Kuralları otomatik seç",
+			"description": "Promptunuza bağlı olarak ilgili kuralları otomatik olarak seç. Prompts ayarlarında yapılandırılan modeli kullanır."
 		}
 	},
 	"taskTimeline": {

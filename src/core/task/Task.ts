@@ -138,6 +138,8 @@ import { parseMentions } from "../mentions" // kilocode_change
 import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_change
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
+import { autoSelectRules } from "../auto-select/auto-select-rules" // kilocode_change
+import { getRulesWithMetadata } from "../webview/kilorules" // kilocode_change
 import { processUserContentMentions } from "../mentions/processUserContentMentions"
 import {
 	getMessagesSinceLastSummary,
@@ -378,12 +380,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	apiConversationHistory: ApiMessage[] = []
 	clineMessages: ClineMessage[] = []
 
+	// Auto-selected rules (when autoSelectRules is enabled)
+	autoSelectedRulePaths?: string[]
+
 	/**
 	 * cumulative cost of API calls from messages that were deleted during this session.
 	 * this ensures the total cost displayed to the user reflects all API usage,
 	 * even if messages are removed from the conversation history.
 	 */
 	private _deletedApiCost: number = 0 // kilocode_change
+	
 
 	// Ask
 	private askResponse?: ClineAskResponse
@@ -2053,8 +2059,60 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		await this.providerRef.deref()?.postStateToWebview()
 
+		// Add the user's task message first so it appears as the first message
 		await this.say("text", task, images)
 		this.isInitialized = true
+
+		// kilocode_change start: Auto-select rules if enabled
+		const state = await this.providerRef.deref()?.getState()
+		if (state?.autoSelectRules && task) {
+			try {
+				const availableRules = await getRulesWithMetadata(this.cwd)
+				if (availableRules.length > 0) {
+					// Show loading indicator
+					await this.say(
+						"text",
+						"🔄 Auto-selecting rules...",
+						undefined,
+						true, // partial=true - loading state
+						undefined,
+						undefined,
+						{ isNonInteractive: true },
+					)
+
+					const result = await autoSelectRules(task, availableRules, this)
+					this.autoSelectedRulePaths = result.selectedRulePaths
+
+					// Build the result message
+					let resultMessage: string
+					if (result.selectedRuleNames.length === 0) {
+						resultMessage = "📋 Auto-select: No rules selected for this task."
+					} else {
+						const ruleNames = result.selectedRuleNames.join(", ")
+						let costInfo = ""
+						if (result.totalCost !== undefined && result.totalCost >= 0.01) {
+							costInfo = ` ($${result.totalCost.toFixed(2)})`
+						}
+						resultMessage = `📋 Auto-selected ${result.selectedRuleNames.length} rule${result.selectedRuleNames.length === 1 ? "" : "s"}: **${ruleNames}**${costInfo}`
+					}
+
+					// Complete the partial message with the result
+					await this.say(
+						"text",
+						resultMessage,
+						undefined,
+						false, // partial=false - completes the previous partial message
+						undefined,
+						undefined,
+						{ isNonInteractive: true },
+					)
+				}
+			} catch (error) {
+				console.error("[Task#startTask] Auto-select rules failed:", error)
+				// Continue without auto-selection on error
+			}
+		}
+		// kilocode_change end
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
 
@@ -4192,6 +4250,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this.api.getModel().id,
 				provider.getSkillsManager(),
 				state, // kilocode_change
+				this.autoSelectedRulePaths, // kilocode_change: Pass auto-selected rule paths
 			)
 		})()
 	}

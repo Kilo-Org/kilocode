@@ -152,7 +152,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "提交信息生成",
 				"description": "根据您的已暂存git更改生成描述性提交信息。定制提示以生成符合您仓库最佳实践的提交信息。"
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "自动选择规则",
+				"description": "根据您的任务自动选择相关的自定义规则。AI会分析您的提示并确定哪些规则适用于当前工作。"
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "您可以选择用于自动选择规则的API配置，或使用当前选择的配置。"
 		}
 	},
 	"advancedSystemPrompt": {

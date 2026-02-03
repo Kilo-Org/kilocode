@@ -189,6 +189,10 @@
 			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Kilo Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
 			"workflowsInChat": "in the chat."
 		},
+		"autoSelect": {
+			"label": "Auto-select rules",
+			"description": "Automatically select relevant rules based on your prompt. Uses the model configured in the Prompts settings."
+		},
 		"sections": {
 			"globalRules": "Global Rules",
 			"workspaceRules": "Workspace Rules",

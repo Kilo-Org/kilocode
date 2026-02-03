@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Generowanie Komunikatów Zatwierdzania",
 				"description": "Generuj opisowe komunikaty commita na podstawie zaplanowanych zmian w git. Dostosuj zapytanie, aby generować komunikaty zgodne z najlepszymi praktykami Twojego repozytorium."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Automatyczny wybór reguł",
+				"description": "Automatycznie wybiera odpowiednie niestandardowe reguły na podstawie Twojego zadania. AI analizuje Twoje polecenie i określa, które reguły mają zastosowanie do bieżącej pracy."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Możesz wybrać konfigurację API dla automatycznego wyboru reguł lub użyć aktualnie wybranej."
 		}
 	},
 	"advancedSystemPrompt": {

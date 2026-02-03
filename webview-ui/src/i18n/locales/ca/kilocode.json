@@ -157,6 +157,10 @@
 	},
 	"docs": "Documentació",
 	"rules": {
+		"autoSelect": {
+			"label": "Selecciona automàticament les regles",
+			"description": "Selecciona automàticament les regles rellevants basant-se en el teu prompt. Utilitza el model configurat a la configuració de Prompts."
+		},
 		"tooltip": "Gestionar el comportament de l'agent ({{types}})",
 		"agentBehaviourTypes": {
 			"rules": "Regles",

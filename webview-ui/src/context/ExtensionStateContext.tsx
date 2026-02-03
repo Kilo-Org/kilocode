@@ -107,6 +107,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setCustomCondensingPrompt: (value: string) => void
 	yoloGatekeeperApiConfigId?: string // kilocode_change: AI gatekeeper for YOLO mode
 	setYoloGatekeeperApiConfigId: (value: string) => void // kilocode_change: AI gatekeeper for YOLO mode
+	autoSelectRulesApiConfigId?: string // kilocode_change: API config for auto-selecting rules
+	setAutoSelectRulesApiConfigId: (value: string) => void // kilocode_change: API config for auto-selecting rules
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
 	marketplaceItems?: any[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
@@ -294,6 +296,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		yoloGatekeeperApiConfigId: "", // kilocode_change: Default empty string for gatekeeper API config ID
+		autoSelectRulesApiConfigId: "", // kilocode_change: Default empty string for auto-select rules API config ID
 		hasOpenedModeSelector: false, // Default to false (not opened yet)
 		hasCompletedOnboarding: undefined, // kilocode_change: Leave unset until extension sends value
 		autoApprovalEnabled: true,
@@ -723,6 +726,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 		setYoloGatekeeperApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, yoloGatekeeperApiConfigId: value })), // kilocode_change: AI gatekeeper for YOLO mode
+		setAutoSelectRulesApiConfigId: (value) =>
+			setState((prevState) => ({ ...prevState, autoSelectRulesApiConfigId: value })), // kilocode_change: API config for auto-selecting rules
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),
 		// kilocode_change start
 		setSystemNotificationsEnabled: (value) =>

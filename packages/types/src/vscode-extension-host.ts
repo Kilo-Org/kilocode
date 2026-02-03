@@ -371,6 +371,7 @@ export interface ExtensionMessage {
 	localRules?: ClineRulesToggles
 	globalWorkflows?: ClineRulesToggles
 	localWorkflows?: ClineRulesToggles
+	autoSelectEnabled?: boolean
 	marketplaceItems?: MarketplaceItem[]
 	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
@@ -540,6 +541,7 @@ export type ExtensionState = Pick<
 	| "globalRulesToggles" // kilocode_change
 	| "localRulesToggles" // kilocode_change
 	| "globalWorkflowToggles" // kilocode_change
+	| "autoSelectRules" // kilocode_change
 	| "commitMessageApiConfigId" // kilocode_change
 	| "terminalCommandApiConfigId" // kilocode_change
 	| "dismissedNotificationIds" // kilocode_change
@@ -553,6 +555,7 @@ export type ExtensionState = Pick<
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"
 	| "yoloGatekeeperApiConfigId" // kilocode_change: AI gatekeeper for YOLO mode
+	| "autoSelectRulesApiConfigId" // kilocode_change: API config for auto-selecting rules
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
@@ -753,6 +756,7 @@ export interface WebviewMessage {
 		| "vsCodeSetting"
 		| "updateCondensingPrompt"
 		| "yoloGatekeeperApiConfigId" // kilocode_change: AI gatekeeper for YOLO mode
+		| "autoSelectRulesApiConfigId" // kilocode_change: API config for auto-selecting rules
 		| "playSound"
 		| "playTts"
 		| "stopTts"
@@ -841,6 +845,7 @@ export interface WebviewMessage {
 		| "toggleWorkflow" // kilocode_change
 		| "refreshRules" // kilocode_change
 		| "toggleRule" // kilocode_change
+		| "toggleAutoSelectRules" // kilocode_change
 		| "createRuleFile" // kilocode_change
 		| "deleteRuleFile" // kilocode_change
 		| "searchFiles"

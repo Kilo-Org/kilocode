@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "สร้าง Commit Message",
 				"description": "สร้าง commit message ที่อธิบายได้ดีตาม staged git changes ของคุณ ปรับแต่ง prompt เพื่อสร้างข้อความที่ตาม best practices ของ repository ของคุณ"
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "เลือกกฎอัตโนมัติ",
+				"description": "เลือกกฎที่กำหนดเองที่เกี่ยวข้องโดยอัตโนมัติตามงานของคุณ AI วิเคราะห์ prompt ของคุณและกำหนดว่ากฎใดใช้กับงานปัจจุบัน"
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "คุณสามารถเลือกการกำหนดค่า API สำหรับการเลือกกฎอัตโนมัติ หรือใช้ที่เลือกอยู่ในปัจจุบัน"
 		}
 	},
 	"advancedSystemPrompt": {

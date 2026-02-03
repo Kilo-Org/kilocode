@@ -175,6 +175,10 @@
 			"workflows": "Alur kerja adalah template yang disiapkan untuk percakapan. Alur kerja memungkinkan kamu menentukan prompt yang sering kamu gunakan, dan dapat mencakup serangkaian langkah untuk memandu Kilo Code melalui tugas-tugas berulang, seperti menerapkan layanan atau mengirim PR. Untuk memanggil alur kerja, ketik",
 			"workflowsInChat": "di chat."
 		},
+		"autoSelect": {
+			"label": "Pilih aturan secara otomatis",
+			"description": "Secara otomatis memilih aturan yang relevan berdasarkan prompt kamu. Menggunakan model yang dikonfigurasi di pengaturan Prompts."
+		},
 		"sections": {
 			"globalRules": "Aturan Global",
 			"workspaceRules": "Aturan Workspace",

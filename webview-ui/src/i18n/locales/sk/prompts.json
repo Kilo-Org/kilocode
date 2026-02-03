@@ -107,6 +107,9 @@
 			"apiConfigDescription": "Vyber, ktorú konfiguráciu API použiť pre operácie kondenzácie kontextu. Ponechaj nevybrané pre použitie aktuálne aktívnej konfigurácie.",
 			"useCurrentConfig": "Použiť aktuálne vybranú konfiguráciu API"
 		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Môe vybra konfiguráciu API, ktorá sa bude pouíva pre automatický výber pravidiel, alebo poui to, o je aktuálne vybrané."
+		},
 		"types": {
 			"ENHANCE": {
 				"label": "Vylepšiť Prompt",
@@ -155,6 +158,10 @@
 			"COMMIT_MESSAGE": {
 				"label": "Generovanie správy commitu",
 				"description": "Generuj popisné správy commitu na základe tvojich staged git zmien. Prispôsob prompt pre generovanie správ, ktoré dodržiavajú najlepšie postupy tvojho repozitára."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Automatický výber pravidiel",
+				"description": "Automaticky vyberie relevantné vlastné pravidlá na základe tvojej úlohy. AI analyzuje tvoj prompt a urdí, ktoré pravidlá sa vzahujú na aktuálnu prácu."
 			}
 		}
 	},

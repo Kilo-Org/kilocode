@@ -152,7 +152,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Tạo Thông Điệp Commit",
 				"description": "Tạo thông điệp commit mô tả dựa trên các thay đổi đã được đưa vào staging trong git. Tùy chỉnh prompt để tạo ra các thông điệp tuân theo các phương pháp tốt nhất của kho lưu trữ của bạn."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Tự động chọn quy tắc",
+				"description": "Tự động chọn các quy tắc tùy chỉnh phù hợp dựa trên nhiệm vụ của bạn. AI phân tích prompt của bạn và xác định quy tắc nào áp dụng cho công việc hiện tại."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Bạn có thể chọn cấu hình API cho việc tự động chọn quy tắc, hoặc sử dụng cấu hình đang được chọn."
 		}
 	},
 	"advancedSystemPrompt": {

@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Commit Bericht Generatie",
 				"description": "Genereer beschrijvende commit-berichten gebaseerd op je staged git-wijzigingen. Pas de prompt aan om berichten te genereren die de best practices van je repository volgen."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Automatische regelselectie",
+				"description": "Selecteert automatisch relevante aangepaste regels op basis van je taak. De AI analyseert je prompt en bepaalt welke regels van toepassing zijn op het huidige werk."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Je kunt een API-configuratie selecteren voor automatische regelselectie, of de huidig geselecteerde gebruiken."
 		}
 	},
 	"advancedSystemPrompt": {

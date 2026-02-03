@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Generació de Missatges de Commit",
 				"description": "Genera missatges de commit descriptius basats en els teus canvis preparats a git. Personalitza el prompt per generar missatges que segueixin les millors pràctiques del teu repositori."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Selecció automàtica de regles",
+				"description": "Selecciona automàticament les regles personalitzades rellevants segons la teva tasca. La IA analitza el teu prompt i determina quines regles s'apliquen al treball actual."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Pots seleccionar una configuració d'API per a la selecció automàtica de regles, o utilitzar la seleccionada actualment."
 		}
 	},
 	"advancedSystemPrompt": {

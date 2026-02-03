@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Génération de Message de Commit",
 				"description": "Générer des messages de commit descriptifs basés sur vos modifications git en attente. Personnalisez le prompt pour générer des messages qui suivent les meilleures pratiques de votre dépôt."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Sélection automatique des règles",
+				"description": "Sélectionne automatiquement les règles personnalisées pertinentes en fonction de votre tâche. L'IA analyse votre prompt et détermine quelles règles s'appliquent au travail en cours."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Vous pouvez sélectionner une configuration API pour la sélection automatique des règles, ou utiliser celle actuellement sélectionnée."
 		}
 	},
 	"advancedSystemPrompt": {

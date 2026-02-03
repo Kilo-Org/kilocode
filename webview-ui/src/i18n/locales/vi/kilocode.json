@@ -198,6 +198,10 @@
 		"newFile": {
 			"newWorkflowFile": "Tệp quy trình làm việc mới...",
 			"newRuleFile": "Tệp quy tắc mới..."
+		},
+		"autoSelect": {
+			"label": "Tự động chọn quy tắc",
+			"description": "Tự động chọn các quy tắc liên quan dựa trên prompt của bạn. Sử dụng mô hình được cấu hình trong cài đặt Prompt."
 		}
 	},
 	"taskTimeline": {
