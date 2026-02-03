@@ -69,19 +69,19 @@ Background "REMINDERS" table that keeps Kilo informed about current progress
 
 ## Task status decoded
 
-**Pending** â†’ Empty checkbox (not started)
+**Pending** -> Empty checkbox (not started)
 
 {% image src="/docs/img/task-todo-list/not-started.png" alt="Pending todo item with empty checkbox" width="300" /%}
 
 ---
 
-**In Progress** â†’ Yellow dot (currently working)
+**In Progress** -> Yellow dot (currently working)
 
 {% image src="/docs/img/task-todo-list/in-progress.png" alt="In progress todo item with yellow dot indicator" width="300" /%}
 
 ---
 
-**Completed** â†’ Green checkmark (finished)
+**Completed** -> Green checkmark (finished)
 
 {% image src="/docs/img/task-todo-list/complete.png" alt="Completed todo item with green checkmark" width="300" /%}
 
