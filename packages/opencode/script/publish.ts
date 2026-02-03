@@ -31,6 +31,10 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
       },
       version: Script.version,
       optionalDependencies: binaries,
+      repository: {
+        type: "git",
+        url: "https://github.com/Kilo-Org/kilo",
+      },
     },
     null,
     2,
