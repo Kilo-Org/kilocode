@@ -1989,6 +1989,12 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		// kilocode_change end
+		// kilocode_change start: API config for auto-selecting rules
+		case "autoSelectRulesApiConfigId":
+			await updateGlobalState("autoSelectRulesApiConfigId", message.text)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "updateCondensingPrompt":
 			// Store the condensing prompt in customSupportPrompts["CONDENSE"]
 			// instead of customCondensingPrompt.
@@ -3005,6 +3011,14 @@ export const webviewMessageHandler = async (
 
 		case "refreshRules": {
 			await provider.postRulesDataToWebview()
+			break
+		}
+
+		case "toggleAutoSelectRules": {
+			if (typeof message.enabled === "boolean") {
+				await updateGlobalState("autoSelectRules", message.enabled)
+				await provider.postRulesDataToWebview()
+			}
 			break
 		}
 

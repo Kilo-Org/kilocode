@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Generasi Pesan Commit",
 				"description": "Buat pesan commit yang deskriptif berdasarkan perubahan git yang sudah di-stage. Sesuaikan prompt untuk menghasilkan pesan yang mengikuti praktik terbaik repositori kamu."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Pemilihan Aturan Otomatis",
+				"description": "Secara otomatis memilih aturan kustom yang relevan berdasarkan tugas kamu. AI menganalisis prompt kamu dan menentukan aturan mana yang berlaku untuk pekerjaan saat ini."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Kamu dapat memilih konfigurasi API untuk pemilihan aturan otomatis, atau gunakan yang sedang dipilih."
 		}
 	},
 	"advancedSystemPrompt": {

@@ -179,6 +179,10 @@
 			"skills": "Skills"
 		},
 		"ariaLabel": "Kilo Code Regels",
+		"autoSelect": {
+			"label": "Auto-selecteer regels",
+			"description": "Selecteer automatisch relevante regels op basis van je prompt. Gebruikt het model dat is geconfigureerd in de Prompts-instellingen."
+		},
 		"tabs": {
 			"rules": "Regels",
 			"workflows": "Workflows"

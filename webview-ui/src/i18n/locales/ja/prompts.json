@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "コミットメッセージ生成",
 				"description": "ステージングされた git の変更に基づいて説明的なコミットメッセージを生成します。リポジトリのベストプラクティスに沿ったメッセージを生成するようにプロンプトをカスタマイズできます。"
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "ルール自動選択",
+				"description": "タスクに基づいて関連するカスタムルールを自動的に選択します。AIがプロンプトを分析し、現在の作業に適用するルールを決定します。"
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "ルールの自動選択に使用するAPI設定を選択するか、現在選択されているものを使用できます。"
 		}
 	},
 	"advancedSystemPrompt": {

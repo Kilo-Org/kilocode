@@ -205,6 +205,10 @@
 		"newFile": {
 			"newWorkflowFile": "새 워크플로우 파일...",
 			"newRuleFile": "새 규칙 파일..."
+		},
+		"autoSelect": {
+			"label": "규칙 자동 선택",
+			"description": "prompt에 따라 관련 규칙을 자동으로 선택합니다. Prompts 설정에서 구성된 모델을 사용합니다."
 		}
 	},
 	"taskTimeline": {

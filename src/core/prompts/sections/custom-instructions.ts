@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
+import os from "os"
 
 import { hasAnyToggles, loadEnabledRules } from "./kilo"
 
@@ -392,6 +393,7 @@ export async function addCustomInstructions(
 		localRulesToggleState?: ClineRulesToggles
 		globalRulesToggleState?: ClineRulesToggles
 		settings?: SystemPromptSettings
+		autoSelectedRulePaths?: string[] // kilocode_change: Auto-selected rule paths override toggle states
 	} = {},
 	// kilocode_change end
 ): Promise<string> {
@@ -481,13 +483,37 @@ export async function addCustomInstructions(
 	}
 
 	// kilocode_change start: rule toggles
-	if (hasAnyToggles(options.localRulesToggleState) || hasAnyToggles(options.globalRulesToggleState)) {
+	// When auto-selected paths are provided, create toggle states that enable only those rules
+	let localToggleState = options.localRulesToggleState || {}
+	let globalToggleState = options.globalRulesToggleState || {}
+
+	if (options.autoSelectedRulePaths && options.autoSelectedRulePaths.length > 0) {
+		// Create toggle states from auto-selected paths
+		// All paths in autoSelectedRulePaths are enabled, all others are disabled
+		localToggleState = {}
+		globalToggleState = {}
+		for (const rulePath of options.autoSelectedRulePaths) {
+			// Determine if global based on path (global rules are in home directory)
+			const isGlobal = rulePath.includes(path.join(os.homedir(), ".kilocode"))
+			if (isGlobal) {
+				globalToggleState[rulePath] = true
+			} else {
+				localToggleState[rulePath] = true
+			}
+		}
+	}
+
+	if (
+		hasAnyToggles(localToggleState) ||
+		hasAnyToggles(globalToggleState) ||
+		(options.autoSelectedRulePaths && options.autoSelectedRulePaths.length > 0)
+	) {
 		const genericRuleContent =
 			(
 				await loadEnabledRules(
 					cwd,
-					options.localRulesToggleState || {},
-					options.globalRulesToggleState || {},
+					localToggleState,
+					globalToggleState,
 					directoryExists,
 					readTextFilesFromDirectory,
 				)

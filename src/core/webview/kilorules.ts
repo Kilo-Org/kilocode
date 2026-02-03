@@ -6,7 +6,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { openFile } from "../../integrations/misc/open-file"
 import { getWorkspacePath } from "../../utils/path"
 import type { ContextProxy } from "../config/ContextProxy"
-import type { ClineRulesToggles } from "../../shared/cline-rules"
+import type { ClineRulesToggles, RuleMetadata } from "../../shared/cline-rules"
 import { t } from "../../i18n"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { allowedExtensions } from "../../shared/kilocode/rules"
@@ -178,4 +178,88 @@ export async function deleteRuleFile(rulePath: string): Promise<void> {
 		await fs.unlink(rulePath)
 		vscode.window.showInformationMessage(t("kilocode:rules.actions.deleted", { filename }))
 	}
+}
+
+/**
+ * Extracts a description from file content.
+ * Reads first 200 characters, extends to the first whitespace character after position 200,
+ * with a hard limit of 250 characters (truncates at whitespace if possible).
+ */
+function extractDescription(content: string): string {
+	if (!content || content.length === 0) {
+		return ""
+	}
+
+	// If content is shorter than 200 chars, return it all
+	if (content.length <= 200) {
+		return content.trim()
+	}
+
+	// Start with 200 characters
+	let endPos = 200
+
+	// Extend to the first whitespace after position 200
+	while (endPos < content.length && endPos < 250 && !/\s/.test(content[endPos]!)) {
+		endPos++
+	}
+
+	// If we reached 250 without finding whitespace, try to truncate at a word boundary
+	if (endPos >= 250) {
+		// Look backwards for a whitespace character
+		let truncatePos = 250
+		while (truncatePos > 200 && !/\s/.test(content[truncatePos - 1]!)) {
+			truncatePos--
+		}
+		// If we found whitespace, truncate there; otherwise use hard limit
+		endPos = truncatePos > 200 ? truncatePos : 250
+	}
+
+	return content.slice(0, endPos).trim()
+}
+
+/**
+ * Gets metadata for all rules from a directory.
+ */
+async function getRulesMetadataFromDirectory(dirPath: string, isGlobal: boolean): Promise<RuleMetadata[]> {
+	const exists = await fileExistsAtPath(dirPath)
+	if (!exists) {
+		return []
+	}
+
+	const files = await fs.readdir(dirPath, { withFileTypes: true })
+	const rules: RuleMetadata[] = []
+
+	for (const file of files) {
+		if (file.isFile() && allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
+			const filePath = path.join(dirPath, file.name)
+			try {
+				const content = await fs.readFile(filePath, "utf8")
+				rules.push({
+					path: filePath,
+					name: file.name,
+					description: extractDescription(content),
+					isGlobal,
+				})
+			} catch {
+				// Skip files that can't be read
+			}
+		}
+	}
+
+	return rules
+}
+
+/**
+ * Gets all rules with their metadata for auto-selection.
+ * Returns both global and local rules with names and descriptions.
+ */
+export async function getRulesWithMetadata(workspacePath: string): Promise<RuleMetadata[]> {
+	const homedir = os.homedir()
+
+	const [globalRules, localRules] = await Promise.all([
+		getRulesMetadataFromDirectory(path.join(homedir, GlobalFileNames.kiloRules), true),
+		getRulesMetadataFromDirectory(path.join(workspacePath, GlobalFileNames.kiloRules), false),
+	])
+
+	return [...globalRules, ...localRules]
 }

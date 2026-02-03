@@ -205,6 +205,10 @@
 		"newFile": {
 			"newWorkflowFile": "新建工作流文件...",
 			"newRuleFile": "新建规则文件..."
+		},
+		"autoSelect": {
+			"label": "自动选择规则",
+			"description": "根据你的 prompt 自动选择相关规则。使用 Prompts 设置中配置的模型。"
 		}
 	},
 	"taskTimeline": {

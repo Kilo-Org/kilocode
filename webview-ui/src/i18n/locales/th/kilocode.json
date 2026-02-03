@@ -172,6 +172,10 @@
 	"docs": "เอกสาร",
 	"rules": {
 		"tooltip": "จัดการพฤติกรรมของเอเจนต์ ({{types}})",
+		"autoSelect": {
+			"label": "เลือก rules อัตโนมัติ",
+			"description": "เลือก rules ที่เกี่ยวข้องอัตโนมัติตามคำขอของคุณ ใช้โมเดลที่กำหนดค่าในการตั้งค่า Prompts"
+		},
 		"agentBehaviourTypes": {
 			"rules": "กฎ",
 			"workflows": "เวิร์กโฟลว์",

@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "커밋 메시지 생성",
 				"description": "스테이지된 git 변경 사항을 기반으로 설명이 포함된 커밋 메시지를 생성합니다. 프롬프트를 사용자 정의하여 저장소의 모범 사례를 따르는 메시지를 생성하세요."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "규칙 자동 선택",
+				"description": "작업에 따라 관련 사용자 정의 규칙을 자동으로 선택합니다. AI가 프롬프트를 분석하고 현재 작업에 적용할 규칙을 결정합니다."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "규칙 자동 선택에 사용할 API 구성을 선택하거나 현재 선택된 것을 사용할 수 있습니다."
 		}
 	},
 	"advancedSystemPrompt": {

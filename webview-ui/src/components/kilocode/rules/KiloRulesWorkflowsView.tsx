@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 
 import RulesWorkflowsSection from "./RulesWorkflowsSection"
+import AutoSelectToggle from "./AutoSelectToggle"
 
 const sortedRules = (data: Record<string, unknown> | undefined) =>
 	Object.entries(data || {})
@@ -37,6 +38,7 @@ const KiloRulesWorkflowsView = ({ type }: KiloRulesWorkflowsViewProps) => {
 	const [globalRules, setGlobalRules] = useState<[string, boolean][]>([])
 	const [localWorkflows, setLocalWorkflows] = useState<[string, boolean][]>([])
 	const [globalWorkflows, setGlobalWorkflows] = useState<[string, boolean][]>([])
+	const [autoSelectEnabled, setAutoSelectEnabled] = useState(false)
 
 	useEffect(() => {
 		vscode.postMessage({ type: "refreshRules" })
@@ -50,6 +52,7 @@ const KiloRulesWorkflowsView = ({ type }: KiloRulesWorkflowsViewProps) => {
 				setGlobalRules(sortedRules(message.globalRules))
 				setLocalWorkflows(sortedRules(message.localWorkflows))
 				setGlobalWorkflows(sortedRules(message.globalWorkflows))
+				setAutoSelectEnabled(message.autoSelectEnabled ?? false)
 			}
 		}
 
@@ -97,6 +100,8 @@ const KiloRulesWorkflowsView = ({ type }: KiloRulesWorkflowsViewProps) => {
 				)}
 			</div>
 
+			{isRules && <AutoSelectToggle enabled={autoSelectEnabled} />}
+
 			<RulesWorkflowsSection
 				type={type}
 				globalItems={isRules ? globalRules : globalWorkflows}
@@ -107,6 +112,7 @@ const KiloRulesWorkflowsView = ({ type }: KiloRulesWorkflowsViewProps) => {
 				toggleLocal={(path: string, enabled: boolean) =>
 					isRules ? toggleRule(false, path, enabled) : toggleWorkflow(false, path, enabled)
 				}
+				disabled={isRules && autoSelectEnabled}
 			/>
 		</div>
 	)

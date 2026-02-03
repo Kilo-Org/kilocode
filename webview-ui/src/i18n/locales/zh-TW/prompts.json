@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Commit 訊息產生",
 				"description": "根據您暫存的 Git 變更產生描述性的 commit 訊息。自訂提示詞以產生符合儲存庫最佳實務的訊息。"
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "自動選擇規則",
+				"description": "根據您的任務自動選擇相關的自訂規則。AI 會分析您的提示並判斷哪些規則適用於目前的工作。"
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "您可以選擇用於自動選擇規則的 API 設定，或使用目前選擇的設定。"
 		}
 	},
 	"advancedSystemPrompt": {
