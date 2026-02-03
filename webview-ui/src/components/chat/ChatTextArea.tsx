@@ -451,7 +451,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [selectedType, searchQuery])
 
 		const handleEnhancePrompt = useCallback(() => {
-			const trimmedInput = inputValue.trim()
+			const trimmedInput = inputValue?.trim() ?? ""
 
 			if (trimmedInput) {
 				setIsEnhancingPrompt(true)

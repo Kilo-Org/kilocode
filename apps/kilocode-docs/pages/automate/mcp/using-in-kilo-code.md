@@ -207,6 +207,10 @@ Common issues and solutions:
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
 - **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
 
+{% callout type="tip" %}
+**Reduce system prompt size:** If you're not using MCP, turn it off in Settings > Agent Behaviour > MCP Servers to significantly cut down the size of the system prompt and improve performance.
+{% /callout %}
+
 ## Platform-Specific MCP Configuration Examples
 
 ### Windows Configuration Example

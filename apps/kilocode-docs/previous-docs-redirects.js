@@ -1,7 +1,31 @@
 module.exports = [
+	{
+		source: "/docs/features/system-notifications",
+		destination: "/docs/getting-started/settings/system-notifications",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/auto-approving-actions",
+		destination: "/docs/getting-started/settings/auto-approving-actions",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/suggested-responses",
+		destination: "/docs/code-with-ai/agents/chat-interface#suggested-responses",
+		basePath: false,
+		permanent: true,
+	},
 	// ============================================
 	// GET STARTED
 	// ============================================
+	{
+		source: "/docs/basic-usage/byok",
+		destination: "/docs/getting-started/byok",
+		basePath: false,
+		permanent: true,
+	},
 	{
 		source: "/docs/getting-started/setting-up",
 		destination: "/docs/getting-started/setup-authentication",
