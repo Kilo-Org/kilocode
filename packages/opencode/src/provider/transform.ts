@@ -34,6 +34,7 @@ export namespace ProviderTransform {
       case "@ai-sdk/gateway":
         return "gateway"
       case "@openrouter/ai-sdk-provider":
+      case "@kilocode/kilo-gateway": // kilocode_change
         return "openrouter"
     }
     return undefined
@@ -66,7 +67,14 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
-    if (model.api.id.includes("claude")) {
+    // kilocode_change - skip toolCallId normalization for OpenRouter/Kilo Gateway
+    // OpenRouter handles tool call IDs differently and modifying messages can break
+    // thinking/redacted_thinking blocks which must remain unchanged per Anthropic API
+    if (
+      model.api.id.includes("claude") &&
+      model.api.npm !== "@openrouter/ai-sdk-provider" &&
+      model.api.npm !== "@kilocode/kilo-gateway"
+    ) {
       return msgs.map((msg) => {
         if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
           msg.content = msg.content.map((part) => {
@@ -239,13 +247,85 @@ export namespace ProviderTransform {
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
+
+    // kilocode_change - skip caching for OpenRouter/Kilo Gateway to avoid modifying thinking blocks
+    // Anthropic API requires thinking/redacted_thinking blocks to remain exactly unchanged
+    const isOpenRouterOrKilo =
+      model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway"
+
+    // kilocode_change - strip thinking/reasoning blocks for OpenRouter/Kilo Gateway
+    // Anthropic's API requires thinking blocks to be EXACTLY unchanged, but our storage
+    // reconstructs them which counts as modification. Stripping them is safe because
+    // the reasoning was already shown to the user and doesn't need to be sent back.
+    if (isOpenRouterOrKilo) {
+      // Helper to strip reasoning-related data from provider options/metadata
+      const stripReasoningData = (opts: Record<string, any> | undefined) => {
+        if (!opts) return undefined // Return undefined instead of empty object to clean up
+        const result = { ...opts }
+        // Strip from openrouter namespace
+        if (result.openrouter) {
+          result.openrouter = { ...result.openrouter }
+          delete result.openrouter.reasoning_details
+          delete result.openrouter.reasoning
+          delete result.openrouter.thinking
+        }
+        // Strip from kilo namespace
+        if (result.kilo) {
+          result.kilo = { ...result.kilo }
+          delete result.kilo.reasoning_details
+          delete result.kilo.reasoning
+          delete result.kilo.thinking
+        }
+        // Strip from anthropic namespace
+        if (result.anthropic) {
+          result.anthropic = { ...result.anthropic }
+          delete result.anthropic.thinking
+          delete result.anthropic.reasoning
+        }
+        return result
+      }
+
+      msgs = msgs.map((msg): ModelMessage => {
+        // Handle string content (just strip metadata)
+        if (!Array.isArray(msg.content)) {
+          const result = { ...msg, providerOptions: stripReasoningData(msg.providerOptions) }
+          if ("experimental_providerMetadata" in msg) {
+            ;(result as any).experimental_providerMetadata = stripReasoningData(
+              (msg as any).experimental_providerMetadata,
+            )
+          }
+          return result
+        }
+        // Filter out reasoning parts from content and strip metadata from remaining parts
+        const filtered = msg.content
+          .filter(
+            (part: any) => part.type !== "thinking" && part.type !== "redacted_thinking" && part.type !== "reasoning",
+          )
+          .map((part: any) => ({
+            ...part,
+            providerOptions: stripReasoningData(part.providerOptions),
+            providerMetadata: stripReasoningData(part.providerMetadata),
+            experimental_providerMetadata: stripReasoningData(part.experimental_providerMetadata),
+          }))
+        // Also strip from message-level options/metadata
+        const result = { ...msg, content: filtered, providerOptions: stripReasoningData(msg.providerOptions) }
+        if ("experimental_providerMetadata" in msg) {
+          ;(result as any).experimental_providerMetadata = stripReasoningData(
+            (msg as any).experimental_providerMetadata,
+          )
+        }
+        return result as ModelMessage
+      })
+    }
+
     if (
-      model.providerID === "anthropic" ||
-      model.api.id.includes("anthropic") ||
-      model.api.id.includes("claude") ||
-      model.id.includes("anthropic") ||
-      model.id.includes("claude") ||
-      model.api.npm === "@ai-sdk/anthropic"
+      !isOpenRouterOrKilo &&
+      (model.providerID === "anthropic" ||
+        model.api.id.includes("anthropic") ||
+        model.api.id.includes("claude") ||
+        model.id.includes("anthropic") ||
+        model.id.includes("claude") ||
+        model.api.npm === "@ai-sdk/anthropic")
     ) {
       msgs = applyCaching(msgs, model.providerID)
     }
@@ -330,7 +410,8 @@ export namespace ProviderTransform {
 
     // see: https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks
     if (id.includes("grok") && id.includes("grok-3-mini")) {
-      if (model.api.npm === "@openrouter/ai-sdk-provider") {
+      if (model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway") {
+        // kilocode_change - add Kilo Gateway support
         return {
           low: { reasoning: { effort: "low" } },
           high: { reasoning: { effort: "high" } },
@@ -348,8 +429,19 @@ export namespace ProviderTransform {
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
-      // kilocode_change start - GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
+      // kilocode_change start - Claude and GPT models via Kilo Gateway
       case "@kilocode/kilo-gateway":
+        // Claude/Anthropic models support reasoning via effort levels through OpenRouter API
+        // OpenRouter maps effort to budget_tokens percentages (xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%)
+        if (
+          model.id.includes("claude") ||
+          model.id.includes("anthropic") ||
+          model.api.id.includes("claude") ||
+          model.api.id.includes("anthropic")
+        ) {
+          return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+        }
+        // GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(
           OPENAI_EFFORTS.map((effort) => [
@@ -576,6 +668,16 @@ export namespace ProviderTransform {
       if (input.model.api.id.includes("gemini-3")) {
         result["reasoning"] = { effort: "high" }
       }
+      // kilocode_change - enable reasoning for Claude models via Kilo Gateway
+      if (
+        input.model.api.npm === "@kilocode/kilo-gateway" &&
+        (input.model.id.includes("claude") ||
+          input.model.id.includes("anthropic") ||
+          input.model.api.id.includes("claude") ||
+          input.model.api.id.includes("anthropic"))
+      ) {
+        result["reasoning"] = { effort: "medium" }
+      }
     }
 
     if (
@@ -647,10 +749,21 @@ export namespace ProviderTransform {
       }
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
-    if (model.providerID === "openrouter") {
+    if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
+      // kilocode_change - add Kilo Gateway support with model-specific handling
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
       }
+      // Claude models need reasoning.effort format (OpenRouter API)
+      if (
+        model.id.includes("claude") ||
+        model.id.includes("anthropic") ||
+        model.api.id.includes("claude") ||
+        model.api.id.includes("anthropic")
+      ) {
+        return { reasoning: { effort: "minimal" } }
+      }
+      // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }
     }
     return {}

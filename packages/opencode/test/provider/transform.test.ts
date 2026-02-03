@@ -1031,41 +1031,42 @@ describe("ProviderTransform.message - claude w/bedrock custom inference profile"
   })
 })
 
-describe("ProviderTransform.variants", () => {
-  const createMockModel = (overrides: Partial<any> = {}): any => ({
-    id: "test/test-model",
-    providerID: "test",
-    api: {
-      id: "test-model",
-      url: "https://api.test.com",
-      npm: "@ai-sdk/openai",
-    },
-    name: "Test Model",
-    capabilities: {
-      temperature: true,
-      reasoning: true,
-      attachment: true,
-      toolcall: true,
-      input: { text: true, audio: false, image: true, video: false, pdf: false },
-      output: { text: true, audio: false, image: false, video: false, pdf: false },
-      interleaved: false,
-    },
-    cost: {
-      input: 0.001,
-      output: 0.002,
-      cache: { read: 0.0001, write: 0.0002 },
-    },
-    limit: {
-      context: 200_000,
-      output: 64_000,
-    },
-    status: "active",
-    options: {},
-    headers: {},
-    release_date: "2024-01-01",
-    ...overrides,
-  })
+// Helper function moved to top level for reuse across test suites
+const createMockModel = (overrides: Partial<any> = {}): any => ({
+  id: "test/test-model",
+  providerID: "test",
+  api: {
+    id: "test-model",
+    url: "https://api.test.com",
+    npm: "@ai-sdk/openai",
+  },
+  name: "Test Model",
+  capabilities: {
+    temperature: true,
+    reasoning: true,
+    attachment: true,
+    toolcall: true,
+    input: { text: true, audio: false, image: true, video: false, pdf: false },
+    output: { text: true, audio: false, image: false, video: false, pdf: false },
+    interleaved: false,
+  },
+  cost: {
+    input: 0.001,
+    output: 0.002,
+    cache: { read: 0.0001, write: 0.0002 },
+  },
+  limit: {
+    context: 200_000,
+    output: 64_000,
+  },
+  status: "active",
+  options: {},
+  headers: {},
+  release_date: "2024-01-01",
+  ...overrides,
+})
 
+describe("ProviderTransform.variants", () => {
   test("returns empty object when model has no reasoning capabilities", () => {
     const model = createMockModel({
       capabilities: { reasoning: false },
@@ -1205,6 +1206,107 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
   })
+
+  // kilocode_change start
+  describe("@kilocode/kilo-gateway", () => {
+    test("claude models return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-sonnet-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-sonnet-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.none).toEqual({ reasoning: { effort: "none" } })
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.medium).toEqual({ reasoning: { effort: "medium" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+      expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
+    })
+
+    test("anthropic models in api.id return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-opus-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-opus-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+    })
+
+    test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
+      const model = createMockModel({
+        id: "kilo/openai/gpt-5",
+        providerID: "kilo",
+        api: {
+          id: "openai/gpt-5",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({
+        reasoningEffort: "low",
+        reasoningSummary: "auto",
+        include: ["reasoning.encrypted_content"],
+      })
+    })
+
+    test("gemini-3 models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
+      const model = createMockModel({
+        id: "kilo/google/gemini-3-pro",
+        providerID: "kilo",
+        api: {
+          id: "google/gemini-3-pro",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+    })
+
+    test("non-qualifying models return empty object", () => {
+      const model = createMockModel({
+        id: "kilo/meta/llama-4",
+        providerID: "kilo",
+        api: {
+          id: "meta/llama-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual({})
+    })
+
+    test("grok-3-mini returns low and high with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/x-ai/grok-3-mini",
+        providerID: "kilo",
+        api: {
+          id: "x-ai/grok-3-mini",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "high"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    })
+  })
+  // kilocode_change end
 
   describe("@ai-sdk/gateway", () => {
     test("returns OPENAI_EFFORTS with reasoningEffort", () => {
@@ -1725,3 +1827,65 @@ describe("ProviderTransform.variants", () => {
     })
   })
 })
+
+// kilocode_change start
+describe("ProviderTransform.smallOptions", () => {
+  describe("@kilocode/kilo-gateway", () => {
+    test("claude models use reasoning.effort format", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-sonnet-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-sonnet-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.smallOptions(model)
+      expect(result).toEqual({ reasoning: { effort: "minimal" } })
+    })
+
+    test("anthropic models in api.id use reasoning.effort format", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-opus-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-opus-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.smallOptions(model)
+      expect(result).toEqual({ reasoning: { effort: "minimal" } })
+    })
+
+    test("non-claude models use reasoningEffort format", () => {
+      const model = createMockModel({
+        id: "kilo/openai/gpt-4",
+        providerID: "kilo",
+        api: {
+          id: "openai/gpt-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.smallOptions(model)
+      expect(result).toEqual({ reasoningEffort: "minimal" })
+    })
+
+    test("google models disable reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/google/gemini-2.0-flash",
+        providerID: "kilo",
+        api: {
+          id: "google/gemini-2.0-flash",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.smallOptions(model)
+      expect(result).toEqual({ reasoning: { enabled: false } })
+    })
+  })
+})
+// kilocode_change end
