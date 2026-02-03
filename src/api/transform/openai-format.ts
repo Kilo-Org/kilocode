@@ -442,13 +442,20 @@ export function convertToOpenAiMessages(
 				}
 			} else if (anthropicMessage.role === "assistant") {
 				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
-					nonToolMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
+					nonToolMessages: (
+						| Anthropic.TextBlockParam
+						| Anthropic.ImageBlockParam
+						| Anthropic.ThinkingBlockParam
+						| any
+					)[]
 					toolMessages: Anthropic.ToolUseBlockParam[]
 				}>(
 					(acc, part) => {
 						if (part.type === "tool_use") {
 							acc.toolMessages.push(part)
 						} else if (part.type === "text" || part.type === "image") {
+							acc.nonToolMessages.push(part)
+						} else if (part.type === "thinking" || (part as any).type === "reasoning") {
 							acc.nonToolMessages.push(part)
 						} // assistant cannot send tool_result messages
 						return acc
@@ -463,6 +470,11 @@ export function convertToOpenAiMessages(
 						.map((part) => {
 							if (part.type === "image") {
 								return "" // impossible as the assistant cannot send images
+							} else if (part.type === "thinking") {
+								return "<think>" + part.thinking + "</think>"
+							} else if (part.type === "reasoning") {
+								// kilocode_change - support custom "reasoning" type used by some providers
+								return "<think>" + (part.text || part.thinking || "") + "</think>"
 							}
 							return part.text
 						})
