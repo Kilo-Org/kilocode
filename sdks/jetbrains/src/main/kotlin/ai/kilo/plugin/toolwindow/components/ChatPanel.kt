@@ -32,9 +32,6 @@ import java.util.*
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 
-/**
- * Data class holding pending permission and question requests.
- */
 data class PendingRequests(
     val permissions: List<PermissionRequest> = emptyList(),
     val questions: List<QuestionRequest> = emptyList()
@@ -50,12 +47,6 @@ data class PendingRequests(
     }
 }
 
-/**
- * Panel displaying the chat conversation and input.
- * Permission and question prompts are displayed inline with tool parts.
- * 
- * Redesigned to match web client UI/UX patterns.
- */
 class ChatPanel(
     private val project: Project,
     private val stateService: KiloStateService
@@ -103,7 +94,6 @@ class ChatPanel(
         headerArea.add(errorBanner)
         add(headerArea, BorderLayout.NORTH)
 
-        // Messages area
         messagesPanel.layout = BoxLayout(messagesPanel, BoxLayout.Y_AXIS)
         messagesPanel.border = JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
         messagesPanel.isOpaque = true
@@ -118,12 +108,10 @@ class ChatPanel(
             viewport.background = KiloTheme.backgroundStronger
         }
 
-        // Empty state
         emptyStateLabel.horizontalAlignment = SwingConstants.CENTER
         emptyStateLabel.foreground = KiloTheme.textWeak
         emptyStateLabel.font = emptyStateLabel.font.deriveFont(KiloTypography.fontSizeMedium)
 
-        // Card layout for empty/content
         val contentPanel = JPanel(CardLayout()).apply {
             isOpaque = true
             background = KiloTheme.backgroundStronger
@@ -132,7 +120,6 @@ class ChatPanel(
         }
         add(contentPanel, BorderLayout.CENTER)
 
-        // Prompt input with attached files above it and feedback below
         val promptArea = JPanel(BorderLayout()).apply {
             isOpaque = true
             background = KiloTheme.backgroundStronger
@@ -141,7 +128,6 @@ class ChatPanel(
                 JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
             )
 
-            // Attached files panel above input
             add(attachedFilesPanel, BorderLayout.NORTH)
         }
 
@@ -153,7 +139,6 @@ class ChatPanel(
         )
         promptArea.add(promptInput, BorderLayout.CENTER)
 
-        // Feedback link below input
         val feedbackLabel = JBLabel("Share feedback ↗").apply {
             foreground = KiloTheme.textWeak
             font = font.deriveFont(Font.PLAIN, 12f)
@@ -165,10 +150,8 @@ class ChatPanel(
 
         add(promptArea, BorderLayout.SOUTH)
         
-        // Subscribe to state
         subscribeToState(contentPanel)
 
-        // Auto-scroll handling
         setupAutoScroll()
 
         setupDragAndDrop()
@@ -185,7 +168,6 @@ class ChatPanel(
     private fun subscribeToState(contentPanel: JPanel) {
         val cardLayout = contentPanel.layout as CardLayout
 
-        // Subscribe to current session
         scope.launch {
             combine(
                 stateService.currentSessionId,
@@ -201,18 +183,15 @@ class ChatPanel(
                 } else {
                     cardLayout.show(contentPanel, "content")
                 }
-                // Input is always enabled - will auto-create session on send
                 promptInput.isEnabled = true
             }
         }
 
-        // Subscribe to messages for current session
         scope.launch {
             stateService.currentSessionId.collectLatest { sessionId ->
                 if (sessionId != null) {
                     stateService.getMessagesForSession(sessionId).collectLatest { messages ->
                         currentMessages = messages
-                        // Extract agent from last user message
                         val lastUser = messages.lastOrNull { it.info.role == "user" }
                         currentAgent = lastUser?.info?.agent
                         updateMessages()
@@ -221,7 +200,6 @@ class ChatPanel(
             }
         }
 
-        // Subscribe to session status for current session
         scope.launch {
             combine(
                 stateService.currentSessionId,
@@ -242,7 +220,6 @@ class ChatPanel(
                 PendingRequests(permissions, questions)
             }.collectLatest { pending ->
                 pendingRequests = pending
-                // Re-render messages when pending requests change
                 updateMessages()
             }
         }
@@ -257,15 +234,12 @@ class ChatPanel(
     private fun updateMessages() {
         val messages = currentMessages
         
-        // Check if this is a streaming update (same message count, likely content change)
         val isIncrementalUpdate = messages.size == lastMessageCount && messages.isNotEmpty()
         lastMessageCount = messages.size
 
-        // Dispose old tool part wrappers
         toolPartWrappers.forEach { it.dispose() }
         toolPartWrappers.clear()
 
-        // Full rebuild
         messagesPanel.removeAll()
 
         for (messageWithParts in messages) {
@@ -297,10 +271,9 @@ class ChatPanel(
             )
             messageView.alignmentX = Component.LEFT_ALIGNMENT
             messagesPanel.add(messageView)
-            messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl)) // 18px gap like web client
+            messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl))
         }
 
-        // Show typing indicator if streaming and last message is from assistant
         if (isStreaming && messages.isNotEmpty()) {
             val last = messages.last()
             if (last.info.role == "assistant" && last.info.finish == null) {
@@ -310,13 +283,11 @@ class ChatPanel(
             }
         }
 
-        // Add spacer at bottom
         messagesPanel.add(Box.createVerticalGlue())
 
         messagesPanel.revalidate()
         messagesPanel.repaint()
 
-        // Auto-scroll to bottom
         if (autoScroll) {
             SwingUtilities.invokeLater {
                 val vertical = scrollPane.verticalScrollBar
@@ -329,7 +300,6 @@ class ChatPanel(
         val wasStreaming = isStreaming
         isStreaming = status?.type == "busy" || status?.type == "retry"
 
-        // If streaming state changed, trigger a repaint
         if (wasStreaming != isStreaming) {
             messagesPanel.revalidate()
             messagesPanel.repaint()
@@ -344,17 +314,11 @@ class ChatPanel(
                 val max = scrollBar.model.maximum
                 val value = scrollBar.model.value
 
-                // If user scrolled up (not at bottom), disable auto-scroll
                 autoScroll = value + extent >= max - 50
             }
         }
     }
 
-    /**
-     * Setup drag and drop support for file attachment.
-     * Users can drag files from the project explorer or file system
-     * into the chat area to attach them as context.
-     */
     private fun setupDragAndDrop() {
         val dropTargetListener = object : DropTargetAdapter() {
             private var originalBorder: javax.swing.border.Border? = null
@@ -362,7 +326,6 @@ class ChatPanel(
             override fun dragEnter(event: DropTargetDragEvent) {
                 if (isFileDropSupported(event)) {
                     event.acceptDrag(DnDConstants.ACTION_COPY)
-                    // Show visual feedback - highlight border
                     originalBorder = scrollPane.border
                     scrollPane.border = BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(KiloTheme.borderWarning, 2),
@@ -382,12 +345,10 @@ class ChatPanel(
             }
 
             override fun dragExit(event: DropTargetEvent) {
-                // Restore original border
                 scrollPane.border = originalBorder ?: JBUI.Borders.empty()
             }
 
             override fun drop(event: DropTargetDropEvent) {
-                // Restore original border
                 scrollPane.border = originalBorder ?: JBUI.Borders.empty()
 
                 try {
@@ -417,13 +378,9 @@ class ChatPanel(
             }
         }
 
-        // Apply drop target to the scroll pane
         scrollPane.dropTarget = DropTarget(scrollPane, DnDConstants.ACTION_COPY, dropTargetListener, true)
     }
 
-    /**
-     * Add a dropped file to the attached files context.
-     */
     private fun addDroppedFile(file: File) {
         val basePath = project.basePath
         val relativePath = if (basePath != null && file.absolutePath.startsWith(basePath)) {
@@ -459,18 +416,12 @@ class ChatPanel(
         }
     }
 
-    /**
-     * Focus the prompt input field.
-     */
     fun focusInput() {
         promptInput.requestFocusInWindow()
     }
 
 
 
-    /**
-     * Abort the current AI generation.
-     */
     fun abortGeneration() {
         if (isStreaming) {
             stopGeneration()
@@ -485,9 +436,6 @@ class ChatPanel(
         promptInput.dispose()
     }
 
-    /**
-     * Header panel showing session info and connection status.
-     */
     private inner class HeaderPanel : JPanel(BorderLayout()) {
         private val titleLabel = JBLabel()
         private val statusLabel = JBLabel()
@@ -501,12 +449,11 @@ class ChatPanel(
             background = KiloTheme.backgroundStronger
             isOpaque = true
 
-            // Left: connection indicator + title
             val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, 0)).apply {
                 isOpaque = false
             }
 
-            connectionIndicator.text = "\u25CF" // Filled circle
+            connectionIndicator.text = "\u25CF"
             connectionIndicator.font = connectionIndicator.font.deriveFont(KiloTypography.fontSizeXSmall)
             connectionIndicator.toolTipText = "Connection status"
             leftPanel.add(connectionIndicator)
@@ -521,7 +468,6 @@ class ChatPanel(
             statusLabel.font = statusLabel.font.deriveFont(KiloTypography.fontSizeBase)
             add(statusLabel, BorderLayout.EAST)
 
-            // Subscribe to connection status
             subscribeToConnectionStatus()
         }
 
@@ -569,10 +515,6 @@ class ChatPanel(
     }
 }
 
-/**
- * Typing indicator shown while assistant is generating response.
- * Redesigned with theme colors and pulsing animation.
- */
 private class TypingIndicator : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, KiloSpacing.xs)) {
     init {
         isOpaque = false
@@ -584,7 +526,6 @@ private class TypingIndicator : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, 
         }
         add(label)
 
-        // Add animated dots
         val dots = JBLabel("...").apply {
             foreground = KiloTheme.textWeak
             font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
@@ -593,10 +534,6 @@ private class TypingIndicator : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, 
     }
 }
 
-/**
- * Individual message view component.
- * Now supports inline permission and question prompts for tool parts.
- */
 private class MessageView(
     private val messageWithParts: MessageWithParts,
     private val pendingRequests: PendingRequests,
@@ -622,7 +559,6 @@ private class MessageView(
         val message = messageWithParts.info
         val isUser = message.role == "user"
 
-        // Background and border styling (matching web client)
         if (isUser) {
             background = KiloTheme.surfaceRaisedBase
             border = BorderFactory.createCompoundBorder(
@@ -644,7 +580,6 @@ private class MessageView(
             isOpaque = false
         }
 
-        // Left side: role icon and label
         val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.sm, 0)).apply {
             isOpaque = false
             val icon = if (isUser) AllIcons.General.User else AllIcons.Nodes.Favorite
@@ -653,7 +588,6 @@ private class MessageView(
             roleLabel.foreground = KiloTheme.textStrong
             add(roleLabel)
 
-            // Timestamp
             val timestamp = formatTimestamp(message.time.created)
             val timeLabel = JBLabel(timestamp).apply {
                 foreground = KiloTheme.textWeaker
@@ -663,13 +597,11 @@ private class MessageView(
         }
         header.add(leftHeader, BorderLayout.WEST)
 
-        // Right side: action buttons (visible on hover)
         val actionsPanel = createActionsPanel(message)
         header.add(actionsPanel, BorderLayout.EAST)
 
         add(header, BorderLayout.NORTH)
         
-        // Content
         val contentPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
@@ -707,7 +639,6 @@ private class MessageView(
         return JPanel(FlowLayout(FlowLayout.RIGHT, KiloSpacing.xxs, 0)).apply {
             isOpaque = false
 
-            // Copy button
             val copyButton = createActionButton(AllIcons.Actions.Copy, "Copy message") {
                 val text = messageWithParts.parts
                     .filter { it.type == "text" }
@@ -719,7 +650,6 @@ private class MessageView(
             }
             add(copyButton)
 
-            // Fork button (assistant messages only)
             if (!message.isUser && onFork != null) {
                 val forkButton = createActionButton(AllIcons.Vcs.Branch, "Fork from here") {
                     onFork.invoke(message.id)
@@ -727,7 +657,6 @@ private class MessageView(
                 add(forkButton)
             }
 
-            // Revert button (assistant messages only)
             if (!message.isUser && onRevert != null) {
                 val revertButton = createActionButton(AllIcons.Actions.Rollback, "Revert to here") {
                     onRevert.invoke(message.id)
@@ -766,7 +695,6 @@ private class MessageView(
             alignmentX = Component.LEFT_ALIGNMENT
         }
 
-        // Token usage
         message.tokens?.let { tokens ->
             val totalTokens = tokens.input + tokens.output + tokens.reasoning
             val tokenText = buildString {
@@ -782,7 +710,6 @@ private class MessageView(
             })
         }
 
-        // Cost
         message.cost?.let { cost ->
             if (cost > 0) {
                 val costText = String.format("$%.4f", cost)
@@ -793,7 +720,6 @@ private class MessageView(
             }
         }
 
-        // Model info
         message.modelID?.let { modelId ->
             footer.add(JBLabel(modelId).apply {
                 foreground = KiloTheme.textWeaker
@@ -818,7 +744,6 @@ private class MessageView(
     private fun createTextPartView(part: Part): JComponent {
         val text = part.text ?: ""
 
-        // Use MarkdownPanel for proper markdown rendering
         val markdownPanel = MarkdownPanel().apply {
             isOpaque = false
             border = JBUI.Borders.empty(KiloSpacing.xs)
@@ -832,7 +757,6 @@ private class MessageView(
         val permission = pendingRequests.getPermissionForTool(part.callID)
         val question = pendingRequests.getQuestionForTool(part.callID)
 
-        // If there's a pending permission or question, use ToolPartWrapper
         if (permission != null || question != null) {
             val wrapper = ToolPartWrapper(
                 part = part,
@@ -846,7 +770,6 @@ private class MessageView(
             return wrapper
         }
 
-        // Otherwise use simple tool display
         return createSimpleToolPartView(part)
     }
 
@@ -870,7 +793,6 @@ private class MessageView(
         }
         panel.add(header, BorderLayout.NORTH)
 
-        // Reasoning parts use "text" for the content
         val reasoningText = part.text
         if (reasoningText != null && reasoningText.isNotBlank()) {
             val content = JBLabel("<html>${reasoningText.take(200)}${if (reasoningText.length > 200) "..." else ""}</html>").apply {
@@ -898,15 +820,13 @@ private class MessageView(
     }
 }
 
-// ========== Mode Data ==========
 
 private val modeNames = listOf("Code", "Architect", "Ask", "Debug")
 
-// ========== Mode Selector Component ==========
 
 private class ModeSelector : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
 
-    private var selectedMode = modeNames[0] // Default to Code
+    private var selectedMode = modeNames[0]
     private val modeLabel = JBLabel("$selectedMode \u25BE").apply {
         foreground = KiloTheme.textWeak
         font = font.deriveFont(13f)
@@ -956,9 +876,6 @@ private class ModeSelector : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
     fun getSelectedMode(): String = selectedMode
 }
 
-/**
- * Simple input component with mode selector, attachment popup, and send functionality.
- */
 private class PromptInputPanel(
     private val project: Project,
     private val stateService: KiloStateService,
@@ -995,7 +912,6 @@ private class PromptInputPanel(
 
     private var fileAutocomplete: FileAutocomplete? = null
 
-    // Expand button (will be positioned absolutely)
     private val expandButton = JButton(AllIcons.General.ExpandComponent).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = "Expand"
@@ -1012,7 +928,6 @@ private class PromptInputPanel(
         addActionListener { toggleExpand() }
     }
 
-    // TOP PANEL: text editor area with placeholder overlay
     private val topPanel = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = JBUI.Borders.empty(8, 10, 4, 10)
@@ -1030,7 +945,6 @@ private class PromptInputPanel(
             }
         })
 
-        // Listen for text changes to show/hide placeholder
         textArea.document.addDocumentListener(object : javax.swing.event.DocumentListener {
             override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = updatePlaceholder()
             override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = updatePlaceholder()
@@ -1048,7 +962,6 @@ private class PromptInputPanel(
             viewport.isOpaque = false
         }
 
-        // Use layered pane to overlay placeholder on text area
         val layeredPane = JLayeredPane().apply {
             layout = object : java.awt.LayoutManager {
                 override fun addLayoutComponent(name: String?, comp: Component?) {}
@@ -1065,7 +978,6 @@ private class PromptInputPanel(
             add(placeholderLabel, JLayeredPane.PALETTE_LAYER)
         }
 
-        // Make placeholder click-through
         placeholderLabel.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 textArea.requestFocusInWindow()
@@ -1075,7 +987,6 @@ private class PromptInputPanel(
         add(layeredPane, BorderLayout.CENTER)
     }
 
-    // Mode selector
     private val modeSelector = ModeSelector()
 
     private var selectedModel = "Claude 4.5 Opus"
@@ -1085,7 +996,6 @@ private class PromptInputPanel(
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
-    // Send button (icon only)
     private val sendButton = JBLabel(AllIcons.Actions.Execute).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = "Send (Enter)"
@@ -1096,7 +1006,6 @@ private class PromptInputPanel(
         })
     }
 
-    // Stop button
     private val stopButton = JBLabel(AllIcons.Actions.Suspend).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = "Stop"
@@ -1108,7 +1017,6 @@ private class PromptInputPanel(
         })
     }
 
-    // BOTTOM PANEL: toolbar
     private val bottomPanel = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = JBUI.Borders.empty(4, 10, 8, 10)
@@ -1130,19 +1038,17 @@ private class PromptInputPanel(
     }
 
     init {
-        layout = null // Use absolute positioning
+        layout = null
         isOpaque = false
         isDoubleBuffered = true
         background = KiloTheme.surfaceRaisedStrong
         border = JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg)
         preferredSize = Dimension(0, collapsedHeight)
 
-        // Add components - expand button first for z-order
         add(expandButton)
         add(topPanel)
         add(bottomPanel)
 
-        // Handle Enter to send (Shift+Enter for newline)
         textArea.inputMap.put(KeyStroke.getKeyStroke("ENTER"), "send")
         textArea.actionMap.put("send", object : AbstractAction() {
             override fun actionPerformed(e: java.awt.event.ActionEvent?) {
@@ -1151,7 +1057,6 @@ private class PromptInputPanel(
         })
         textArea.inputMap.put(KeyStroke.getKeyStroke("shift ENTER"), "insert-break")
 
-        // Handle ESC to unfocus
         textArea.inputMap.put(KeyStroke.getKeyStroke("ESCAPE"), "unfocus")
         textArea.actionMap.put("unfocus", object : AbstractAction() {
             override fun actionPerformed(e: java.awt.event.ActionEvent?) {
@@ -1159,7 +1064,6 @@ private class PromptInputPanel(
             }
         })
 
-        // Model selector click handler
         modelLabel.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 val popup = createModelPopup()
@@ -1203,14 +1107,11 @@ private class PromptInputPanel(
         val w = width - insets.left - insets.right
         val h = height - insets.top - insets.bottom
 
-        // Bottom panel at bottom
         val bottomPref = bottomPanel.preferredSize
         bottomPanel.setBounds(insets.left, height - insets.bottom - bottomPref.height, w, bottomPref.height)
 
-        // Top panel fills remaining space
         topPanel.setBounds(insets.left, insets.top, w, h - bottomPref.height)
 
-        // Expand button in top-right corner
         val btnSize = expandButton.preferredSize
         expandButton.setBounds(width - btnSize.width - 14, 12, btnSize.width, btnSize.height)
     }
@@ -1313,7 +1214,6 @@ private class PromptInputPanel(
         val strokeWidth = if (isFocused) 2f else 1.5f
         val offset = strokeWidth / 2f
 
-        // Fill background
         g2.color = background
         g2.fill(java.awt.geom.RoundRectangle2D.Float(
             strokeWidth, strokeWidth,
@@ -1321,7 +1221,6 @@ private class PromptInputPanel(
             radius, radius
         ))
 
-        // Draw border
         g2.color = borderColor
         g2.stroke = BasicStroke(strokeWidth)
         g2.draw(java.awt.geom.RoundRectangle2D.Float(
