@@ -72,9 +72,11 @@ export namespace Agent {
     const user = PermissionNext.fromConfig(cfg.permission ?? {})
 
     const result: Record<string, Info> = {
-      build: {
-        name: "build",
+      // kilocode_change start
+      code: {
+        name: "code",
         description: "The default agent. Executes tools based on configured permissions.",
+        // kilocode_change end
         options: {},
         permission: PermissionNext.merge(
           defaults,
@@ -256,7 +258,7 @@ export namespace Agent {
     return pipe(
       await state(),
       values(),
-      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
+      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "code"), "desc"]), // kilocode_change - renamed from "build" to "code"
     )
   }
 

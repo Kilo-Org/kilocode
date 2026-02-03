@@ -1214,7 +1214,9 @@ export namespace SessionPrompt {
         })
       }
       const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-      if (wasPlan && input.agent.name === "build") {
+      // kilocode_change start - renamed from "build" to "code"
+      if (wasPlan && input.agent.name === "code") {
+        // kilocode_change end
         userMessage.parts.push({
           id: Identifier.ascending("part"),
           messageID: userMessage.info.id,
