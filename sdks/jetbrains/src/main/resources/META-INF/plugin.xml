@@ -111,24 +111,24 @@
                 description="Stop the current AI generation">
         </action>
 
+        <action id="Kilo.ToggleSessions"
+                class="ai.kilo.plugin.actions.ToggleSessionsAction"
+                text="History"
+                description="Show chat history"
+                icon="AllIcons.Vcs.History">
+        </action>
+
         <!-- Tool Window Toolbar Actions -->
         <group id="Kilo.ToolWindowToolbar">
-            <action id="Kilo.Toolbar.NewSession"
-                    class="ai.kilo.plugin.actions.NewSessionAction"
-                    text="New Session"
-                    description="Create a new chat session"
-                    icon="AllIcons.General.Add"/>
+            <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.ToggleSessions"/>
+            <reference ref="Kilo.ToggleSidebar"/>
+            <separator/>
             <action id="Kilo.Toolbar.Settings"
                     class="ai.kilo.plugin.actions.OpenSettingsAction"
                     text="Settings"
                     description="Open Kilo settings"
                     icon="AllIcons.General.Settings"/>
-            <separator/>
-            <action id="Kilo.Toolbar.StopServer"
-                    class="ai.kilo.plugin.actions.StopServerAction"
-                    text="Stop Server"
-                    description="Stop the Kilo server"
-                    icon="AllIcons.Actions.Suspend"/>
         </group>
     </actions>
 </idea-plugin>
