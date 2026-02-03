@@ -62,14 +62,11 @@ export namespace Installation {
     if (process.execPath.includes(path.join(".local", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
+    // kilocode_change start - removed yarn check since upgrade() doesn't support it
     const checks = [
       {
         name: "npm" as const,
         command: () => $`npm list -g --depth=0`.throws(false).quiet().text(),
-      },
-      {
-        name: "yarn" as const,
-        command: () => $`yarn global list`.throws(false).quiet().text(),
       },
       {
         name: "pnpm" as const,
@@ -92,6 +89,7 @@ export namespace Installation {
         command: () => $`choco list --limit-output opencode`.throws(false).quiet().text(),
       },
     ]
+    // kilocode_change end
 
     checks.sort((a, b) => {
       const aMatches = exec.includes(a.name)
@@ -200,8 +198,8 @@ export namespace Installation {
       }
     }
 
-    // kilocode_change start - only support npm for kilocode, fetch from @kilocode/cli
-    if (detectedMethod === "npm") {
+    // kilocode_change start - support npm/pnpm/bun for kilocode, fetch from @kilocode/cli on npm registry
+    if (detectedMethod === "npm" || detectedMethod === "pnpm" || detectedMethod === "bun") {
       const registry = await iife(async () => {
         const r = (await $`npm config get registry`.quiet().nothrow().text()).trim()
         const reg = r || "https://registry.npmjs.org"
