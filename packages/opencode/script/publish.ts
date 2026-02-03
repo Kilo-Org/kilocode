@@ -59,6 +59,7 @@ for (const tag of tags) {
 
 if (!Script.preview) {
   // Create archives for GitHub release
+  await $`mkdir -p dist/@kilocode` // kilocode_change
   for (const key of Object.keys(binaries)) {
     if (key.includes("linux")) {
       await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}/bin`)
