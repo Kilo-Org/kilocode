@@ -44,7 +44,7 @@ export namespace Identity {
   }
 
   export function isOrganizationalUser(): boolean {
-    return organizationId !== null
+    return organizationId !== null && organizationId.length > 0
   }
 
   export async function updateFromKiloAuth(token: string | null, accountId?: string): Promise<void> {

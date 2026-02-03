@@ -167,8 +167,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         if (Telemetry && getGlobalConfig) {
           const globalCfg = await getGlobalConfig()
           const userExplicitlyEnabledTelemetry = globalCfg.experimental?.openTelemetry === true
+          // Only apply disableForOrg when switching INTO an org context
+          const isOrgContext = organizationId !== null && organizationId.length > 0
           await Telemetry.updateIdentity(auth.access, organizationId ?? undefined, {
-            disableForOrg: !userExplicitlyEnabledTelemetry,
+            disableForOrg: isOrgContext && !userExplicitlyEnabledTelemetry,
           })
         }
 

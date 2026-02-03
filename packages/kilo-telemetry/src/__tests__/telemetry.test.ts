@@ -1,10 +1,12 @@
-import { describe, test, expect, beforeEach } from "bun:test"
+import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
 import { PostHogSpanExporter } from "../otel-exporter.js"
 import { ExportResultCode } from "@opentelemetry/core"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
 import type { PostHog } from "posthog-node"
+import { Telemetry } from "../telemetry.js"
+import { Client } from "../client.js"
 
 function createMockPostHogClient(): PostHog {
   return {
@@ -51,6 +53,76 @@ describe("Identity", () => {
 
     Identity.setOrganizationId(null)
     expect(Identity.isOrganizationalUser()).toBe(false)
+  })
+
+  test("isOrganizationalUser returns false for empty string", () => {
+    Identity.setOrganizationId("")
+    expect(Identity.isOrganizationalUser()).toBe(false)
+  })
+})
+
+describe("Telemetry.updateIdentity with disableForOrg", () => {
+  let clientSetEnabledSpy: ReturnType<typeof spyOn>
+
+  beforeEach(() => {
+    Identity.reset()
+    // Spy on Client.setEnabled since Telemetry.setEnabled calls it internally
+    clientSetEnabledSpy = spyOn(Client, "setEnabled")
+    clientSetEnabledSpy.mockClear()
+  })
+
+  test("disables telemetry when user is in an organization (disableForOrg defaults to true)", async () => {
+    // updateIdentity with an accountId should disable telemetry
+    await Telemetry.updateIdentity("token", "org-123")
+
+    expect(Identity.isOrganizationalUser()).toBe(true)
+    expect(clientSetEnabledSpy).toHaveBeenCalledWith(false)
+  })
+
+  test("re-enables telemetry when user switches to personal account (no org)", async () => {
+    // First set an org
+    Identity.setOrganizationId("org-123")
+
+    // Then switch to personal account (no accountId)
+    await Telemetry.updateIdentity("token", undefined)
+
+    expect(Identity.isOrganizationalUser()).toBe(false)
+    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+  })
+
+  test("re-enables telemetry when user switches to personal account (null org)", async () => {
+    // First set an org
+    Identity.setOrganizationId("org-123")
+
+    // Then switch to personal account with empty string (treated as no org)
+    await Telemetry.updateIdentity("token", "")
+
+    expect(Identity.isOrganizationalUser()).toBe(false)
+    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+  })
+
+  test("does not disable telemetry for personal account users", async () => {
+    await Telemetry.updateIdentity("token", undefined)
+
+    expect(Identity.isOrganizationalUser()).toBe(false)
+    // Should re-enable (not disable) for personal account
+    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+  })
+
+  test("respects disableForOrg: false option (does not change telemetry state)", async () => {
+    await Telemetry.updateIdentity("token", "org-123", { disableForOrg: false })
+
+    expect(Identity.isOrganizationalUser()).toBe(true)
+    // Should not have called setEnabled at all
+    expect(clientSetEnabledSpy).not.toHaveBeenCalled()
+  })
+
+  test("empty string accountId does not trigger org user detection", async () => {
+    await Telemetry.updateIdentity("token", "")
+
+    expect(Identity.isOrganizationalUser()).toBe(false)
+    // Should re-enable for personal account
+    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
   })
 })
 
