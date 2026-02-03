@@ -688,3 +688,76 @@ test("defaultAgent throws when all primary agents are disabled", async () => {
     },
   })
 })
+
+// kilocode_change start - Backward compatibility tests for "build" -> "code" rename
+test("Agent.get('build') returns code agent for backward compatibility", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const build = await Agent.get("build")
+      const code = await Agent.get("code")
+      expect(build).toBeDefined()
+      expect(build).toBe(code)
+      expect(build?.name).toBe("code")
+    },
+  })
+})
+
+test("agent.build config applies to code agent for backward compatibility", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        build: {
+          temperature: 0.8,
+          color: "#00FF00",
+        },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await Agent.get("code")
+      expect(code).toBeDefined()
+      expect(code?.temperature).toBe(0.8)
+      expect(code?.color).toBe("#00FF00")
+    },
+  })
+})
+
+test("default_agent: 'build' returns code agent for backward compatibility", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      default_agent: "build",
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.defaultAgent()
+      expect(agent).toBe("code")
+    },
+  })
+})
+
+test("agent.build disable removes code agent for backward compatibility", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        build: { disable: true },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await Agent.get("code")
+      expect(code).toBeUndefined()
+      const agents = await Agent.list()
+      const names = agents.map((a) => a.name)
+      expect(names).not.toContain("code")
+    },
+  })
+})
+// kilocode_change end

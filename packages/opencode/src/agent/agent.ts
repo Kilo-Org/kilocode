@@ -203,19 +203,23 @@ export namespace Agent {
     }
 
     for (const [key, value] of Object.entries(cfg.agent ?? {})) {
+      // kilocode_change start
+      // Treat "build" config as "code" for backward compatibility
+      const effectiveKey = key === "build" ? "code" : key
       if (value.disable) {
-        delete result[key]
+        delete result[effectiveKey]
         continue
       }
-      let item = result[key]
+      let item = result[effectiveKey]
       if (!item)
-        item = result[key] = {
-          name: key,
+        item = result[effectiveKey] = {
+          name: effectiveKey,
           mode: "all",
           permission: PermissionNext.merge(defaults, user),
           options: {},
           native: false,
         }
+      // kilocode_change end
       if (value.model) item.model = Provider.parseModel(value.model)
       item.prompt = value.prompt ?? item.prompt
       item.description = value.description ?? item.description
@@ -250,7 +254,10 @@ export namespace Agent {
   })
 
   export async function get(agent: string) {
-    return state().then((x) => x[agent])
+    // kilocode_change start -  Treat "build" as "code" for backward compatibility
+    const effectiveAgent = agent === "build" ? "code" : agent
+    return state().then((x) => x[effectiveAgent])
+    // kilocode_change end
   }
 
   export async function list() {
@@ -267,8 +274,11 @@ export namespace Agent {
     const agents = await state()
 
     if (cfg.default_agent) {
-      const agent = agents[cfg.default_agent]
+      // kilocode_change start -  Treat "build" as "code" for backward compatibility
+      const effectiveDefault = cfg.default_agent === "build" ? "code" : cfg.default_agent
+      const agent = agents[effectiveDefault]
       if (!agent) throw new Error(`default agent "${cfg.default_agent}" not found`)
+      // kilocode_change end
       if (agent.mode === "subagent") throw new Error(`default agent "${cfg.default_agent}" is a subagent`)
       if (agent.hidden === true) throw new Error(`default agent "${cfg.default_agent}" is hidden`)
       return agent.name
