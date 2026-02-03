@@ -243,6 +243,18 @@
 			"description": "Selecionar automaticamente a primeira resposta sugerida para perguntas de acompanhamento após o tempo limite configurado",
 			"timeoutLabel": "Tempo de espera antes de selecionar automaticamente a primeira resposta"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Mostrar o botão Ralph no modo chat que habilita a capacidade de loop do agente autônomo",
+			"loopLimit": {
+				"label": "Limite de Loop",
+				"description": "Número máximo de vezes que o Ralph reiniciará automaticamente a tarefa. Defina como 0 para loops ilimitados."
+			},
+			"completionDelimiter": {
+				"label": "Delimitador de Conclusão",
+				"description": "Se este texto for encontrado no resultado da conclusão, o Ralph parará de repetir o loop."
+			}
+		},
 		"execute": {
 			"label": "Executar",
 			"description": "Executar automaticamente comandos de terminal permitidos sem exigir aprovação",

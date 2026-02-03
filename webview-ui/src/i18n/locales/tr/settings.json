@@ -243,6 +243,18 @@
 			"description": "Yapılandırılan zaman aşımından sonra takip sorularına ilişkin ilk önerilen yanıtı otomatik olarak seç",
 			"timeoutLabel": "İlk yanıtı otomatik olarak seçmeden önce beklenecek süre"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Sohbet modunda otonom ajan döngü yeteneğini etkinleştiren Ralph düğmesini göster",
+			"loopLimit": {
+				"label": "Döngü Sınırı",
+				"description": "Ralph'ın görevi otomatik olarak yeniden başlatma maksimum sayısı. Sınırsız döngü için 0 olarak ayarlayın."
+			},
+			"completionDelimiter": {
+				"label": "Tamamlama Sınırlayıcı",
+				"description": "Tamamlama sonucunda bu metin bulunursa, Ralph döngüyü durduracaktır."
+			}
+		},
 		"execute": {
 			"label": "Yürüt",
 			"description": "Onay gerektirmeden otomatik olarak izin verilen terminal komutlarını yürüt",

@@ -2212,6 +2212,7 @@ export class ClineProvider
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowWriteProtected,
 			alwaysAllowDelete, // kilocode_change
+			alwaysAllowRalph, // kilocode_change
 			alwaysAllowExecute,
 			allowedCommands,
 			deniedCommands,
@@ -2320,6 +2321,9 @@ export class ClineProvider
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			isBrowserSessionActive,
+			ralphEnabled, // kilocode_change
+			ralphLoopLimit, // kilocode_change
+			ralphCompletionDelimiter, // kilocode_change
 		} = await this.getState()
 
 		// kilocode_change start: Get active model for virtual quota fallback UI display
@@ -2384,6 +2388,7 @@ export class ClineProvider
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
 			alwaysAllowDelete: alwaysAllowDelete ?? false, // kilocode_change
+			alwaysAllowRalph: alwaysAllowRalph ?? false, // kilocode_change
 			alwaysAllowExecute: alwaysAllowExecute ?? false,
 			alwaysAllowBrowser: alwaysAllowBrowser ?? false,
 			alwaysAllowMcp: alwaysAllowMcp ?? false,
@@ -2574,6 +2579,9 @@ export class ClineProvider
 				}
 			})(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
+			ralphEnabled: ralphEnabled ?? false, // kilocode_change
+			ralphLoopLimit: ralphLoopLimit ?? 5, // kilocode_change
+			ralphCompletionDelimiter: ralphCompletionDelimiter !== undefined ? ralphCompletionDelimiter : "<ralph>COMPLETED</ralph>", // kilocode_change
 		}
 	}
 
@@ -2703,6 +2711,7 @@ export class ClineProvider
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,
 			alwaysAllowDelete: stateValues.alwaysAllowDelete ?? false, // kilocode_change
+			alwaysAllowRalph: stateValues.alwaysAllowRalph ?? false, // kilocode_change
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
@@ -2876,6 +2885,9 @@ export class ClineProvider
 				}
 			})(),
 			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
+			ralphEnabled: stateValues.ralphEnabled ?? false, // kilocode_change
+			ralphLoopLimit: stateValues.ralphLoopLimit ?? 5, // kilocode_change
+			ralphCompletionDelimiter: stateValues.ralphCompletionDelimiter !== undefined ? stateValues.ralphCompletionDelimiter : "<ralph>COMPLETED</ralph>", // kilocode_change
 		}
 	}
 

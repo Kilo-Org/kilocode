@@ -243,6 +243,18 @@
 			"description": "Automatycznie wybierz pierwszą sugerowaną odpowiedź na pytania uzupełniające po skonfigurowanym limicie czasu",
 			"timeoutLabel": "Czas oczekiwania przed automatycznym wybraniem pierwszej odpowiedzi"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Pokaż przycisk Ralph w trybie czatu, który umożliwia autonomiczną pętlę agenta",
+			"loopLimit": {
+				"label": "Limit pętli",
+				"description": "Maksymalna liczba automatycznych restartów zadania przez Ralpha. Ustaw na 0 dla nieograniczonej liczby pętli."
+			},
+			"completionDelimiter": {
+				"label": "Separator zakończenia",
+				"description": "Jeśli ten tekst zostanie znaleziony w wyniku zakończenia, Ralph przestanie zapętlać."
+			}
+		},
 		"execute": {
 			"label": "Wykonaj",
 			"description": "Automatycznie wykonuj dozwolone polecenia terminala bez konieczności zatwierdzania",

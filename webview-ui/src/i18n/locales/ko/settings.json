@@ -243,6 +243,18 @@
 			"description": "설정된 시간이 지나면 후속 질문에 대한 첫 번째 제안 답변을 자동으로 선택합니다",
 			"timeoutLabel": "첫 번째 답변을 자동 선택하기 전 대기 시간"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "자율 에이전트 루프 기능을 활성화하는 Ralph 버튼을 채팅 모드에서 표시합니다",
+			"loopLimit": {
+				"label": "루프 제한",
+				"description": "Ralph가 작업을 자동으로 재시작하는 최대 횟수입니다. 무제한 루프를 위해 0으로 설정하십시오."
+			},
+			"completionDelimiter": {
+				"label": "완료 구분 기호",
+				"description": "완료 결과에서 이 텍스트가 발견되면 Ralph는 루프를 중지합니다."
+			}
+		},
 		"execute": {
 			"label": "실행",
 			"description": "승인 없이 자동으로 허용된 터미널 명령 실행",

@@ -243,6 +243,18 @@
 			"description": "Tự động chọn câu trả lời đầu tiên được đề xuất cho các câu hỏi tiếp theo sau thời gian chờ đã cấu hình",
 			"timeoutLabel": "Thời gian chờ trước khi tự động chọn câu trả lời đầu tiên"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Hiển thị nút Ralph trong chế độ chat để kích hoạt khả năng vòng lặp tác nhân tự trị",
+			"loopLimit": {
+				"label": "Giới hạn vòng lặp",
+				"description": "Số lần tối đa Ralph sẽ tự động khởi động lại tác vụ. Đặt thành 0 cho các vòng lặp không giới hạn."
+			},
+			"completionDelimiter": {
+				"label": "Dấu phân cách hoàn thành",
+				"description": "Nếu văn bản này được tìm thấy trong kết quả hoàn thành, Ralph sẽ ngừng lặp lại."
+			}
+		},
 		"execute": {
 			"label": "Thực thi",
 			"description": "Tự động thực thi các lệnh terminal được phép mà không cần phê duyệt",
