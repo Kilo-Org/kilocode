@@ -54,8 +54,12 @@ import { useExtensionState } from "@/context/ExtensionStateContext" // kilocode_
 // kilocode_change start
 export const useModelProviders = (kilocodeDefaultModel: string, apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider
-	const kiloModelId = apiConfiguration?.kilocodeModel ?? kilocodeDefaultModel
-	const resolvedKiloModelId = kiloModelId.toLowerCase() === "kilo/auto" ? kilocodeDefaultModel : kiloModelId
+	// Be defensive: during initial boot and in some tests, `kilocodeDefaultModel` can be unset.
+	const kiloModelId = apiConfiguration?.kilocodeModel ?? kilocodeDefaultModel ?? openRouterDefaultModelId
+	// `kilo/auto` is a virtual model id (not known by OpenRouter), so for provider endpoint metadata
+	// we resolve it to the default model id.
+	const resolvedKiloModelId =
+		kiloModelId.toLowerCase() === "kilo/auto" ? (kilocodeDefaultModel ?? openRouterDefaultModelId) : kiloModelId
 	return useOpenRouterModelProviders(
 		provider === "kilocode"
 			? resolvedKiloModelId
