@@ -323,10 +323,10 @@ Have you created a skill that others might find useful? Share it with the commun
 - If your skill includes bundled resources (scripts, templates), ensure they are well-documented
 - Follow the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
 
-For more details on contributing to Kilo Code, see the [Contributing Guide](/contributing).
+For more details on contributing to Kilo Code, see the [Contributing Guide](/docs/contributing).
 
 ## Related
 
-- [Custom Modes](/agent-behavior/custom-modes) - Create custom modes that can use specific skills
-- [Custom Instructions](/agent-behavior/custom-instructions) - Global instructions vs. skill-based instructions
-- [Custom Rules](/agent-behavior/custom-rules) - Project-level rules complementing skills
+- [Custom Modes](/docs/customize/custom-modes) - Create custom modes that can use specific skills
+- [Custom Instructions](/docs/customize/custom-instructions) - Global instructions vs. skill-based instructions
+- [Custom Rules](/docs/customize/custom-rules) - Project-level rules complementing skills

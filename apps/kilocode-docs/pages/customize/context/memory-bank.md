@@ -31,7 +31,7 @@ When Memory Bank is active, Kilo Code begins each task with `[Memory Bank: Activ
 
 ## How Memory Bank Works
 
-Memory Bank is built on Kilo Code's [Custom Rules](/advanced-usage/custom-rules) feature, providing a specialized framework for project documentation. Memory Bank files are standard markdown files stored in `.kilocode/rules/memory-bank` folder within your project repository. They're not hidden or proprietary - they're regular documentation files that both you and Kilo Code can access.
+Memory Bank is built on Kilo Code's [Custom Rules](/docs/customize/custom-rules) feature, providing a specialized framework for project documentation. Memory Bank files are standard markdown files stored in `.kilocode/rules/memory-bank` folder within your project repository. They're not hidden or proprietary - they're regular documentation files that both you and Kilo Code can access.
 
 At the start of every task, Kilo Code reads all Memory Bank files to build a comprehensive understanding of your project. This happens automatically without requiring any action from you. Kilo Code then indicates successful Memory Bank activation with `[Memory Bank: Active]` at the beginning of its response, followed by a brief summary of its understanding of your project.
 
@@ -118,7 +118,7 @@ Example: Adding support for new AI models, implementing API endpoints, or any ta
 
 1. Create a `.kilocode/rules/memory-bank/` folder in your project
 2. Write a basic project brief in `.kilocode/rules/memory-bank/brief.md`
-3. Create a file `.kilocode/rules/memory-bank-instructions.md` and paste there [this document](pathname:///downloads/memory-bank.md)
+3. Create a file `.kilocode/rules/memory-bank-instructions.md` with instructions for how to structure memory bank files (the initialization step below will help set this up)
 4. Switch to `Architect` mode
 5. Check if a best available AI model is selected, don't use "lightweight" models
 6. Ask Kilo Code to "initialize memory bank"
@@ -157,9 +157,9 @@ The initialization step is critically important as it establishes the foundation
 3. Provide a detailed summary of what it has understood about your project
 4. Ask you to verify the accuracy of the generated files
 
-:::warning Important
+{% callout type="warning" title="Important" %}
 Take time to carefully review and correct the generated files after initialization. Any misunderstandings or missing information at this stage will affect all future interactions. A thorough initialization dramatically improves Kilo Code's effectiveness, while a rushed or incomplete initialization will permanently limit its ability to assist you effectively.
-:::
+{% /callout %}
 
 #### Memory Bank Updates
 

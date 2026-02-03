@@ -73,6 +73,22 @@ export const MAX_IMAGES_PER_MESSAGE = 20 // This is the Anthropic limit.
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
+// kilocode_change start: KiloLogo component
+const KiloLogo = () => {
+	const iconsBaseUri = (window as any).ICONS_BASE_URI || ""
+	return (
+		<div className="flex items-center justify-center" style={{ width: "56px", height: "56px", margin: "0 auto" }}>
+			<img
+				src={`${iconsBaseUri}/kilo-dark.svg`}
+				alt="Kilo Code"
+				className="w-full h-full object-contain"
+				style={{ opacity: 0.85 }}
+			/>
+		</div>
+	)
+}
+// kilocode_change end
+
 const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewProps> = (
 	{ isHidden, showAnnouncement, hideAnnouncement },
 	ref,
@@ -1668,7 +1684,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								<KilocodeNotifications />
 							</div>
 						)}
-						<div className="flex flex-grow flex-col justify-center gap-4">
+						<div className="flex flex-grow flex-col justify-center gap-2">
+							<KiloLogo />
 							{/* kilocode_change end */}
 							<p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
@@ -1685,7 +1702,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									}}
 								/>
 							</p>
-							{taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							<IdeaSuggestionsBox /> {/* kilocode_change */}
 							{/*<div className="mb-2.5">
 								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
 							</div> kilocode_change: do not show */}

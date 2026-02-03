@@ -27,4 +27,4 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 - **Performance:** MiniMax M2.1 emphasizes fast inference, strong coding ability, and exceptional tool-calling performance.
 - **Context Window:** MiniMax models support ultra-long context windows suitable for large codebases and agent workflows.
 - **Pricing:** Pricing varies by model, with input costs ranging from $0.20 to $0.30 per million tokens and output costs from $1.10 to $2.20 per million tokens. Refer to the MiniMax documentation for the most current pricing information.
-    - **MiniMax M2.1** is currently available for free exclusively for [Kilo for Slack](/slack).
+    - **MiniMax M2.1** is currently available for free exclusively for [Kilo for Slack](/docs/slack).

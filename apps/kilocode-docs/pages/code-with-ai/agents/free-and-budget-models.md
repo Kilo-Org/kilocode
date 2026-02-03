@@ -98,14 +98,14 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use Memory Bank effectively:**
 
-- Store project context once in [Memory Bank](/advanced-usage/memory-bank)
+- Store project context once in [Memory Bank](/docs/customize/context/memory-bank)
 - Reduces need to re-explain project details
 - Saves 200-500 tokens per conversation
 
 **Strategic file mentions:**
 
 - Only include files directly relevant to the task
-- Use [`@folder/`](/basic-usage/context-mentions) for broad context, specific files for targeted work
+- Use [`@folder/`](/docs/basic-usage/context-mentions) for broad context, specific files for targeted work
 
 ### Model Switching Strategies
 
@@ -117,7 +117,7 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use API Configuration Profiles:**
 
-- Set up [multiple profiles](/features/api-configuration-profiles) for different cost tiers
+- Set up [multiple profiles](/docs/ai-providers) for different cost tiers
 - Quick switching between free, budget, and premium models
 - Match model capability to task complexity
 
@@ -125,9 +125,9 @@ When you need more capability than free models provide, these options deliver ex
 
 **Use appropriate modes to limit expensive operations:**
 
-- **[Ask Mode](/basic-usage/using-modes#ask-mode):** Information gathering without code changes
-- **[Architect Mode](/basic-usage/using-modes#architect-mode):** Planning without expensive file operations
-- **[Debug Mode](/basic-usage/using-modes#debug-mode):** Focused troubleshooting
+- **[Ask Mode](/docs/code-with-ai/agents/using-modes#ask-mode):** Information gathering without code changes
+- **[Architect Mode](/docs/code-with-ai/agents/using-modes#architect-mode):** Planning without expensive file operations
+- **[Debug Mode](/docs/code-with-ai/agents/using-modes#debug-mode):** Focused troubleshooting
 
 **Custom modes for budget control:**
 
@@ -214,20 +214,20 @@ When you need more capability than free models provide, these options deliver ex
 **Set spending limits:**
 
 - Use provider billing alerts
-- Configure [rate limits](/advanced-usage/rate-limits-costs) to control usage
+- Configure [provider rate limits](/docs/ai-providers) to control usage
 - Set daily/monthly budgets
 
 ### Cost-Saving Tips
 
 **Reduce system prompt size:**
 
-- [Disable MCP](/features/mcp/using-mcp-in-kilo-code) if not using external tools
+- [Disable MCP](/docs/automate/mcp/using-in-kilo-code) if not using external tools
 - Use focused custom modes
 - Minimize unnecessary context
 
 **Optimize conversation length:**
 
-- Use [Checkpoints](/features/checkpoints) to reset context
+- Use [Checkpoints](/docs/features/checkpoints) to reset context
 - Start fresh conversations for unrelated tasks
 - Archive completed work
 
@@ -251,19 +251,19 @@ When you need more capability than free models provide, these options deliver ex
 
 **Free tier foundation:**
 
-- [OpenRouter](/providers/openrouter) - Free models
-- [Groq](/providers/groq) - Fast inference for supported models
+- [OpenRouter](/docs/providers/openrouter) - Free models
+- [Groq](/docs/providers/groq) - Fast inference for supported models
 - [Z.ai](https://z.ai/model-api) - Provides a free model GLM-4.5-Flash
 
 **Budget tier options:**
 
-- [DeepSeek](/providers/deepseek) - Excellent value models
-- [Mistral](/providers/mistral) - Specialized coding models
+- [DeepSeek](/docs/providers/deepseek) - Excellent value models
+- [Mistral](/docs/providers/mistral) - Specialized coding models
 
 **Premium tier backup:**
 
-- [Anthropic](/providers/anthropic) - Claude for complex reasoning
-- [OpenAI](/providers/openai) - GPT-4 for critical tasks
+- [Anthropic](/docs/providers/anthropic) - Claude for complex reasoning
+- [OpenAI](/docs/providers/openai) - GPT-4 for critical tasks
 
 ## Measuring Success
 

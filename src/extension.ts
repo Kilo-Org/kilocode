@@ -54,6 +54,7 @@ import { SettingsSyncService } from "./services/settings-sync/SettingsSyncServic
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh, refreshModels } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
+import { fetchKilocodeNotificationsOnStartup } from "./core/kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 // kilocode_change start
 async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
@@ -425,6 +426,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			`[AutoImport] Error during auto-import: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
+
+	// kilocode_change start: Fetch Kilo Code notifications on startup
+	try {
+		void fetchKilocodeNotificationsOnStartup(contextProxy, outputChannel.appendLine.bind(outputChannel))
+	} catch (error) {
+		outputChannel.appendLine(
+			`[Notifications] Error fetching notifications on startup: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+	// kilocode_change end
 
 	// kilocode_change start
 	// Check for env var conflicts that might confuse users

@@ -1,5 +1,35 @@
 # kilo-code
 
+## 5.2.2
+
+### Patch Changes
+
+- [#5497](https://github.com/Kilo-Org/kilocode/pull/5497) [`95f9214`](https://github.com/Kilo-Org/kilocode/commit/95f92143d254741e6e0628f43ad90a3464fa7a09) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Show sign in prompt when trying paid model when not logged in
+
+- [#5529](https://github.com/Kilo-Org/kilocode/pull/5529) [`1fe7b92`](https://github.com/Kilo-Org/kilocode/commit/1fe7b929e1c218614b9ae71270b304ab47dbf894) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Streamline getting started view: move logo to top, reduce suggestions to 2, remove footer hint text
+
+## 5.2.1
+
+### Patch Changes
+
+- [#5501](https://github.com/Kilo-Org/kilocode/pull/5501) [`cecefc1`](https://github.com/Kilo-Org/kilocode/commit/cecefc1dd660100631eecf8517f2c0c918f6cdb3) Thanks [@Neonsy](https://github.com/Neonsy)! - Adding Kimi K2.5
+
+## 5.2.0
+
+### Minor Changes
+
+- [#5477](https://github.com/Kilo-Org/kilocode/pull/5477) [`59a792e`](https://github.com/Kilo-Org/kilocode/commit/59a792eeb461497fe2968ca17e2858389c55894a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improve idea box during onboarding experience
+
+### Patch Changes
+
+- [#5503](https://github.com/Kilo-Org/kilocode/pull/5503) [`e53f086`](https://github.com/Kilo-Org/kilocode/commit/e53f0865d32296cb5e4db5f853466f5fa7671371) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Fix mode selection after anonymous usage
+
+- [#5426](https://github.com/Kilo-Org/kilocode/pull/5426) [`56d086b`](https://github.com/Kilo-Org/kilocode/commit/56d086b4853abfeebff6b1afb6c8d0431c232542) Thanks [@lambertjosh](https://github.com/lambertjosh)! - OpenAI Codex: Add ChatGPT subscription usage limits dashboard
+
+- [#4947](https://github.com/Kilo-Org/kilocode/pull/4947) [`53080fd`](https://github.com/Kilo-Org/kilocode/commit/53080fddfc62a171ebae09fe38629aec8b0e6098) Thanks [@CaiDingxian](https://github.com/CaiDingxian)! - feat(moonshot): add new Kimi models and coding API endpoint
+
+- [#5451](https://github.com/Kilo-Org/kilocode/pull/5451) [`af25644`](https://github.com/Kilo-Org/kilocode/commit/af25644f8482bd1a10e6645ed3061421ac23045e) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Updated welcome screen model names in all translations
+
 ## 5.1.0
 
 ### Minor Changes

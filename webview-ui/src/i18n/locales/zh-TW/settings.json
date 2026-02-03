@@ -323,6 +323,37 @@
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰會安全地儲存在 VS Code 的 Secret Storage 中",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "使用自訂基礎 URL",
 		"useReasoning": "啟用推理",
 		"useHostHeader": "使用自訂 Host 標頭",

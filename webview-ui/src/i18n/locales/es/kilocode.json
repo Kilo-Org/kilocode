@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "¡Bienvenido a Kilo Code!",
 		"introText1": "Kilo Code es un agente de codificación de IA gratuito y de código abierto.",
-		"introText2": "Funciona con los modelos de IA más recientes como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, y más de 450 modelos adicionales.",
+		"introText2": "Funciona con los modelos de IA más recientes como Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, y más de 450 modelos adicionales.",
 		"introText3": "Crea una cuenta gratuita y obtén $20 en créditos de bonificación cuando recargues por primera vez.",
 		"ctaButton": "Empezar",
 		"manualModeButton": "Usa tu propia clave API",
@@ -18,6 +18,11 @@
 		"previous": "Anterior",
 		"next": "Siguiente",
 		"page": "Página {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Necesitas iniciar sesión para usar el modelo {{modelId}}",
+		"message": "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
+		"loginButton": "Iniciar Sesión"
 	},
 	"pricing": {
 		"costUnknown": "costo desconocido",
@@ -211,6 +216,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "¿Nuevo aquí?",
+		"tryOneOfThese": "Prueba una de estas ideas para empezar:",
 		"suggestionText": "<suggestionButton>Haz clic aquí</suggestionButton> para una idea genial, luego toca <sendIcon /> y ¡mira cómo hago magia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D giratoria y brillante que responda a los movimientos del ratón. Haz que la aplicación funcione en el navegador.",

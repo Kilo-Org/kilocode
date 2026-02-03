@@ -30,11 +30,16 @@ const mainNavItems: NavItem[] = [
 	{ label: "Collaborate", href: "/collaborate" },
 	{ label: "Automate", href: "/automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure" },
+	{ label: "Contributing", href: "/contributing" },
 ]
 
 const contributingItems: DropdownItem[] = [
 	{ label: "Contributing Guide", href: "/contributing", description: "How to contribute to Kilo Code" },
-	{ label: "Code of Conduct", href: "/docs/code-of-conduct", description: "Our community guidelines" },
+	{
+		label: "Code of Conduct",
+		href: "https://github.com/Kilo-Org/kilocode?tab=coc-ov-file",
+		description: "Our community guidelines",
+	},
 	{ label: "GitHub Repository", href: "https://github.com/Kilo-Org/", description: "View source and issues" },
 	{ label: "Discord Community", href: "https://kilo.ai/discord", description: "Join our community" },
 ]
@@ -42,8 +47,12 @@ const contributingItems: DropdownItem[] = [
 const helpItems: DropdownItem[] = [
 	{ label: "Documentation", href: "/", description: "Browse all documentation" },
 	{ label: "FAQ", href: "/getting-started/faq", description: "Frequently asked questions" },
-	{ label: "Support", href: "/support", description: "Get help from the team" },
-	{ label: "Changelog", href: "/changelog", description: "Latest updates and releases" },
+	{ label: "Support", href: "https://kilo.ai/support", description: "Get help from the team" },
+	{
+		label: "Changelog",
+		href: "https://github.com/Kilo-Org/kilocode/releases",
+		description: "Latest updates and releases",
+	},
 ]
 
 function ChevronDownIcon({ className }: { className?: string }) {
@@ -245,10 +254,10 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
 				<div className="right-actions">
 					<ThemeToggle />
-					<Link href="/github" className="github-link desktop-nav">
+					<Link href="https://kilo.ai/github" className="github-link desktop-nav">
 						GitHub
 					</Link>
-					<Link href="/sign-in" className="signin-btn desktop-nav">
+					<Link href="https://app.kilo.ai" className="signin-btn desktop-nav">
 						Sign in
 					</Link>
 				</div>

@@ -16,7 +16,7 @@ When enabled, the indexing system:
 1. **Parses your code** using Tree-sitter to identify semantic blocks (functions, classes, methods)
 2. **Creates embeddings** of each code block using AI models
 3. **Stores vectors** in a Qdrant database for fast similarity search
-4. **Provides the [`codebase_search`](/advanced-usage/available-tools/codebase-search) tool** to Kilo Code for intelligent code discovery
+4. **Provides the [`codebase_search`](/docs/automate/tools/codebase-search) tool** to Kilo Code for intelligent code discovery
 
 This enables natural language queries like "user authentication logic" or "database connection handling" to find relevant code across your entire project.
 
@@ -97,16 +97,22 @@ For team or production use:
 
 ## Configuration
 
-1. Open Kilo Code settings (<Codicon name="gear" /> icon)
-2. Navigate to **Codebase Indexing** section
-3. Enable **"Enable Codebase Indexing"** using the toggle switch
-4. Configure your embedding provider:
+### Open Codebase Indexing Settings
+
+1. In the chat header, click the database icon (indexing status)
+2. The Codebase Indexing settings panel opens
+3. If you don't see the icon, open Kilo Code settings (<Codicon name="gear" />) and search for **Codebase Indexing**
+
+### Configure Settings
+
+1. Enable **"Enable Codebase Indexing"** using the toggle switch
+2. Configure your embedding provider:
     - **OpenAI**: Enter API key and select model
     - **Gemini**: Enter Google AI API key and select embedding model
     - **Ollama**: Enter base URL and select model
-5. Set Qdrant URL and optional API key
-6. Configure **Max Search Results** (default: 20, range: 1-100)
-7. Click **Save** to start initial indexing
+3. Set Qdrant URL and optional API key
+4. Configure **Max Search Results** (default: 20, range: 1-100)
+5. Click **Save** to start initial indexing
 
 ### Enable/Disable Toggle
 
@@ -148,7 +154,7 @@ The indexer automatically excludes:
 - Large files (&gt;1MB)
 - Git repositories (`.git` folders)
 - Dependencies (`node_modules`, `vendor`, etc.)
-- Files matching `.gitignore` and `.kilocode` patterns
+- Files matching `.gitignore` and [`.kilocodeignore`](/docs/customize/context/kilocodeignore) patterns
 
 ### Incremental Updates
 
@@ -189,7 +195,7 @@ The indexer automatically excludes:
 
 ## Using the Search Feature
 
-Once indexed, Kilo Code can use the [`codebase_search`](/advanced-usage/available-tools/codebase-search) tool to find relevant code:
+Once indexed, Kilo Code can use the [`codebase_search`](/docs/automate/tools/codebase-search) tool to find relevant code:
 
 **Example Queries:**
 

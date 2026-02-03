@@ -65,7 +65,7 @@ Used for local servers running on your machine:
 - Simpler setup (no HTTP server needed)
 - Runs as a child process on your machine
 
-For more in-depth information about how STDIO transport works, see [STDIO Transport](/features/mcp/server-transports#stdio-transport).
+For more in-depth information about how STDIO transport works, see [STDIO Transport](server-transports#stdio-transport).
 
 STDIO configuration example:
 
@@ -124,7 +124,7 @@ Used for remote servers accessed over HTTP/HTTPS:
 - Requires network access
 - Allows centralized deployment and management
 
-For more in-depth information about how SSE transport works, see [SSE Transport](/features/mcp/server-transports#sse-transport).
+For more in-depth information about how SSE transport works, see [SSE Transport](server-transports#sse-transport).
 
 SSE configuration example:
 
@@ -170,7 +170,7 @@ To set the maximum time to wait for a response after a tool call to the MCP serv
 
 MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
 
-1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/features/auto-approving-actions)
+1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/docs/features/auto-approving-actions)
 2. Navigate to Settings > Agent Behaviour > MCP Servers, then locate the specific tool you want to auto-approve
 3. Check the `Always allow` checkbox next to the tool name
 
@@ -206,6 +206,10 @@ Common issues and solutions:
 - **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
 - **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
+
+{% callout type="tip" %}
+**Reduce system prompt size:** If you're not using MCP, turn it off in Settings > Agent Behaviour > MCP Servers to significantly cut down the size of the system prompt and improve performance.
+{% /callout %}
 
 ## Platform-Specific MCP Configuration Examples
 

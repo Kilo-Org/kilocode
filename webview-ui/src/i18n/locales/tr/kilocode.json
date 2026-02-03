@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 ve 450+ diğer en yeni AI modelleri ile çalışır.",
 		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
@@ -18,6 +18,11 @@
 		"previous": "Önceki",
 		"next": "Sonraki",
 		"page": "Sayfa {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}} modelini kullanmak için giriş yapman gerekiyor",
+		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
+		"loginButton": "Giriş Yap"
 	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
@@ -211,6 +216,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Burada yeni misin?",
+		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
 		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
 		"ideas": {
 			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",

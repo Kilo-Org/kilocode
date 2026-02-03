@@ -78,6 +78,10 @@ Four ways to switch modes:
 | **Ideal For**        | Tracking down bugs, diagnosing errors, and resolving complex issues                 |
 | **Special Features** | Uses a methodical approach of analyzing, narrowing possibilities, and fixing issues |
 
+{% callout type="tip" %}
+**Keep debugging separate from main tasks:** When using Debug mode, ask Kilo to "start a new task in Debug mode with all of the necessary context needed to figure out X" so that the debugging process uses its own context window and doesn't pollute the main task.
+{% /callout %}
+
 ### Orchestrator Mode
 
 | Aspect               | Details                                                                                                             |
@@ -89,16 +93,16 @@ Four ways to switch modes:
 
 ### Review Mode
 
-| Aspect               | Details                                                                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Aspect               | Details                                                                                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | **Description**      | An expert code reviewer specializing in analyzing changes to provide structured feedback on quality, security, and best practices |
-| **Tool Access**      | Access to `read`, `browser`, `mcp`, and when permitted, `edit`                                                           |
-| **Ideal For**        | Catching issues early, enforcing code standards, accelerating PR turnaround                                              |
-| **Special Features** | Code review before committing, surfacing feedback across performance, security, style, and test coverage                 |
+| **Tool Access**      | Access to `read`, `browser`, `mcp`, and when permitted, `edit`                                                                    |
+| **Ideal For**        | Catching issues early, enforcing code standards, accelerating PR turnaround                                                       |
+| **Special Features** | Code review before committing, surfacing feedback across performance, security, style, and test coverage                          |
 
 ## Custom Modes
 
-Create your own specialized assistants by defining tool access, file permissions, and behavior instructions. Custom modes help enforce team standards or create purpose-specific assistants. See [Custom Modes documentation](/features/custom-modes) for setup instructions.
+Create your own specialized assistants by defining tool access, file permissions, and behavior instructions. Custom modes help enforce team standards or create purpose-specific assistants. See [Custom Modes documentation](/docs/customize/custom-modes) for setup instructions.
 
 <!--
 EXISTING PAGES TO MIGRATE:

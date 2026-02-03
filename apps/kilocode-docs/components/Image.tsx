@@ -17,18 +17,29 @@ export function Image({ src, alt, width, height, caption }: ImageProps) {
 	if (width) imgStyle.width = width
 	if (height) imgStyle.height = height
 
+	const figureStyle: React.CSSProperties = {
+		margin: "1.5rem 0",
+		maxWidth: "100%",
+		overflow: "hidden",
+	}
+
+	// If width is specified, apply it to the figure to constrain caption width
+	if (width) {
+		figureStyle.width = width
+		figureStyle.maxWidth = "100%"
+	}
+
 	return (
-		<figure style={{ margin: "1.5rem 0", maxWidth: "100%", overflow: "hidden" }}>
+		<figure style={figureStyle}>
 			<img src={src} alt={alt} style={imgStyle} />
 			{caption && (
 				<figcaption
 					style={{
-						display: "table-caption",
-						captionSide: "bottom",
 						fontStyle: "italic",
 						textAlign: "center",
 						marginTop: "0.5rem",
 						color: "var(--gray-600, #6b7280)",
+						width: "100%",
 					}}>
 					{caption}
 				</figcaption>

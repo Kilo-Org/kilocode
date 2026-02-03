@@ -14,7 +14,7 @@ Prompt engineering is the art of crafting effective instructions for AI models l
     - **Bad:** Fix the code.
     - **Good:** Fix the bug in the `calculateTotal` function that causes it to return incorrect results.
 
-- **Provide Context:** Use [Context Mentions](/basic-usage/context-mentions) to refer to specific files, folders, or problems.
+- **Provide Context:** Use [Context Mentions](/docs/basic-usage/context-mentions) to refer to specific files, folders, or problems.
 
     - **Good:** `@/src/utils.ts` Refactor the `calculateTotal` function to use async/await.
 
@@ -49,7 +49,7 @@ Custom instructions are added to the system prompt, providing persistent guidanc
 - Define project-specific conventions.
 - Adjust Kilo Code's tone or personality.
 
-See the [Custom Instructions](/agent-behavior/custom-instructions) section for more details.
+See the [Custom Instructions](/docs/customize/custom-instructions) section for more details.
 
 ## Handling Ambiguity
 

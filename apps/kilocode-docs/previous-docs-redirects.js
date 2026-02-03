@@ -1,7 +1,31 @@
 module.exports = [
+	{
+		source: "/docs/features/system-notifications",
+		destination: "/docs/getting-started/settings/system-notifications",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/auto-approving-actions",
+		destination: "/docs/getting-started/settings/auto-approving-actions",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/suggested-responses",
+		destination: "/docs/code-with-ai/agents/chat-interface#suggested-responses",
+		basePath: false,
+		permanent: true,
+	},
 	// ============================================
 	// GET STARTED
 	// ============================================
+	{
+		source: "/docs/basic-usage/byok",
+		destination: "/docs/getting-started/byok",
+		basePath: false,
+		permanent: true,
+	},
 	{
 		source: "/docs/getting-started/setting-up",
 		destination: "/docs/getting-started/setup-authentication",
@@ -28,13 +52,13 @@ module.exports = [
 	},
 	{
 		source: "/docs/basic-usage/connecting-providers",
-		destination: "/docs/getting-started/ai-providers",
+		destination: "/docs/ai-providers",
 		basePath: false,
 		permanent: true,
 	},
 	{
 		source: "/docs/providers/:path*",
-		destination: "/docs/getting-started/ai-providers",
+		destination: "/docs/ai-providers/:path*",
 		basePath: false,
 		permanent: true,
 	},
@@ -69,6 +93,12 @@ module.exports = [
 	{
 		source: "/docs/advanced-usage/cloud-agent",
 		destination: "/docs/code-with-ai/platforms/cloud-agent",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/advanced-usage/slackbot",
+		destination: "/docs/code-with-ai/platforms/slack",
 		basePath: false,
 		permanent: true,
 	},
@@ -130,7 +160,7 @@ module.exports = [
 	},
 	{
 		source: "/docs/basic-usage/autocomplete/mistral-setup",
-		destination: "/docs/code-with-ai/features/autocomplete",
+		destination: "/docs/code-with-ai/features/autocomplete/mistral-setup",
 		basePath: false,
 		permanent: true,
 	},

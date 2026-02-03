@@ -87,4 +87,4 @@ With the Kilo Code provider, if you sign up with Google you can also connect oth
 - **Latest Models:** Automatic access to the most current frontier coding models
 - **Support Available:** Contact [hi@kilo.ai](mailto:hi@kilo.ai) for questions about pricing or tokens
 
-For detailed setup instructions, see [Setting up Kilo Code](/getting-started/setting-up).
+For detailed setup instructions, see [Setting up Kilo Code](/docs/getting-started/setting-up).

@@ -15,7 +15,7 @@ When you install Kilo Code, you'll be prompted to sign in or create a free accou
 
 {% image src="/docs/img/signupflow.gif" alt="Sign up and registration flow with Kilo Code" /%}
 
-That's it! You're ready to [start your first task](/getting-started/quickstart).
+That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
 
 {% callout type="tip" title="Bonus Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
@@ -25,20 +25,20 @@ That's it! You're ready to [start your first task](/getting-started/quickstart).
 
 If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:
 
-| Provider                                                  | Best For                            | API Key Required |
-| --------------------------------------------------------- | ----------------------------------- | ---------------- |
-| [ChatGPT Plus/Pro](/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
-| [OpenRouter](/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
-| [Anthropic](/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
-| [OpenAI](/ai-providers/openai)                            | Access to GPT models                | Yes              |
+| Provider                                                       | Best For                            | API Key Required |
+| -------------------------------------------------------------- | ----------------------------------- | ---------------- |
+| [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
+| [OpenRouter](/docs/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
+| [Anthropic](/docs/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
+| [OpenAI](/docs/ai-providers/openai)                            | Access to GPT models                | Yes              |
 
 {% callout type="info" title="Many More Providers Available" %}
-These are just a few examples! Kilo Code supports many more providers including Google Gemini, DeepSeek, Mistral, Ollama (for local models), AWS Bedrock, Google Vertex, and more. See the complete list at [AI Providers](/ai-providers/).
+These are just a few examples! Kilo Code supports many more providers including Google Gemini, DeepSeek, Mistral, Ollama (for local models), AWS Bedrock, Google Vertex, and more. See the complete list at [AI Providers](/docs/ai-providers/).
 {% /callout %}
 
 ### ChatGPT Plus/Pro Subscription
 
-Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/providers/openai-chatgpt-plus-pro)—no API key needed.
+Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/docs/providers/openai-chatgpt-plus-pro)—no API key needed.
 
 ### OpenRouter
 

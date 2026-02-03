@@ -2,7 +2,7 @@
 	"welcome": {
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
-		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 i ponad 450 innymi.",
+		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 i ponad 450 innymi.",
 		"introText3": "Stwórz darmowe konto i otrzymaj $20 bonusowych kredytów przy pierwszym doładowaniu.",
 		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
@@ -18,6 +18,11 @@
 		"previous": "Poprzednia",
 		"next": "Następna",
 		"page": "Strona {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Musisz się zalogować, aby użyć modelu {{modelId}}",
+		"message": "Zaloguj się lub utwórz konto, aby uzyskać dostęp do ponad 500 modeli, korzystać z kredytów po cenie kosztowej lub przynieść własny klucz.",
+		"loginButton": "Zaloguj się"
 	},
 	"pricing": {
 		"costUnknown": "koszt nieznany",
@@ -211,6 +216,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nowy tutaj?",
+		"tryOneOfThese": "Wypróbuj jeden z tych pomysłów, aby zacząć:",
 		"suggestionText": "<suggestionButton>Kliknij tutaj</suggestionButton> dla fajnego pomysłu, następnie dotknij <sendIcon /> i zobacz, jak robię magię!",
 		"ideas": {
 			"idea1": "Stwórz obracającą się, świecącą kulę 3D, która reaguje na ruchy myszy. Spraw, aby aplikacja działała w przeglądarce.",
