@@ -34,7 +34,6 @@ export namespace ProviderTransform {
       case "@ai-sdk/gateway":
         return "gateway"
       case "@openrouter/ai-sdk-provider":
-      case "@kilocode/kilo-gateway": // kilocode_change
         return "openrouter"
     }
     return undefined
@@ -331,8 +330,7 @@ export namespace ProviderTransform {
 
     // see: https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks
     if (id.includes("grok") && id.includes("grok-3-mini")) {
-      if (model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway") {
-        // kilocode_change
+      if (model.api.npm === "@openrouter/ai-sdk-provider") {
         return {
           low: { reasoning: { effort: "low" } },
           high: { reasoning: { effort: "high" } },
@@ -346,15 +344,13 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
-      // kilocode_change start
-      case "@kilocode/kilo-gateway":
-        // Claude/Anthropic models support reasoning via effort levels
-        // OpenRouter maps these to budget_tokens percentages (xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%, none=0%)
-        if (model.id.includes("claude") || model.id.includes("anthropic")) {
-          return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-        }
+      case "@openrouter/ai-sdk-provider":
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        // GPT models via Kilo need include for encrypted reasoning content to avoid org_id mismatch
+        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+
+      // kilocode_change start - GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
+      case "@kilocode/kilo-gateway":
+        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(
           OPENAI_EFFORTS.map((effort) => [
             effort,
@@ -366,10 +362,6 @@ export namespace ProviderTransform {
           ]),
         )
       // kilocode_change end
-
-      case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
       case "@ai-sdk/gateway":
@@ -655,12 +647,11 @@ export namespace ProviderTransform {
       }
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
-    if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change
+    if (model.providerID === "openrouter") {
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
       }
-      return { reasoning: { effort: "minimal" } } // kilocode_change - use reasoning.effort for OpenRouter API
+      return { reasoningEffort: "minimal" }
     }
     return {}
   }
