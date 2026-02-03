@@ -26,6 +26,10 @@ interface KiloRoutesDeps {
   errors: Errors
   Auth: Auth
   z: Z
+  Telemetry?: {
+    updateIdentity: (token: string | null, accountId?: string, options?: { disableForOrg?: boolean }) => Promise<void>
+  }
+  getGlobalConfig?: () => Promise<{ experimental?: { openTelemetry?: boolean } }>
 }
 
 /**
@@ -52,7 +56,7 @@ interface KiloRoutesDeps {
  * ```
  */
 export function createKiloRoutes(deps: KiloRoutesDeps) {
-  const { Hono, describeRoute, validator, resolver, errors, Auth, z } = deps
+  const { Hono, describeRoute, validator, resolver, errors, Auth, z, Telemetry, getGlobalConfig } = deps
 
   const Organization = z.object({
     id: z.string(),
@@ -158,6 +162,15 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           expires: auth.expires,
           ...(organizationId && { accountId: organizationId }),
         })
+
+        // Update telemetry identity to disable for org users
+        if (Telemetry && getGlobalConfig) {
+          const globalCfg = await getGlobalConfig()
+          const userExplicitlyEnabledTelemetry = globalCfg.experimental?.openTelemetry === true
+          await Telemetry.updateIdentity(auth.access, organizationId ?? undefined, {
+            disableForOrg: !userExplicitlyEnabledTelemetry,
+          })
+        }
 
         return c.json(true)
       },

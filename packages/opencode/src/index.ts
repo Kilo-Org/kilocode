@@ -100,7 +100,11 @@ const cli = yargs(hideBin(process.argv))
     if (kiloAuth) {
       const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
       const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
-      await Telemetry.updateIdentity(token, accountId)
+      // Only disable telemetry for org users if the user hasn't explicitly enabled it
+      const userExplicitlyEnabledTelemetry = globalCfg.experimental?.openTelemetry === true
+      await Telemetry.updateIdentity(token, accountId, {
+        disableForOrg: !userExplicitlyEnabledTelemetry,
+      })
     }
 
     Telemetry.trackCliStart()

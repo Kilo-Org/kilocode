@@ -30,6 +30,8 @@ import { ConfigRoutes } from "./routes/config"
 import { ExperimentalRoutes } from "./routes/experimental"
 import { ProviderRoutes } from "./routes/provider"
 import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { Config } from "@/config/config" // kilocode_change
 import { lazy } from "../util/lazy"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { Storage } from "../storage/storage"
@@ -233,6 +235,8 @@ export namespace Server {
             errors,
             Auth,
             z,
+            Telemetry,
+            getGlobalConfig: Config.getGlobal,
           }),
         )
         // kilocode_change end

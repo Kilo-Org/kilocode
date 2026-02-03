@@ -42,6 +42,16 @@ describe("Identity", () => {
     Identity.setOrganizationId(null)
     expect(Identity.getOrganizationId()).toBeNull()
   })
+
+  test("isOrganizationalUser returns true when organization ID is set", () => {
+    expect(Identity.isOrganizationalUser()).toBe(false)
+
+    Identity.setOrganizationId("org-789")
+    expect(Identity.isOrganizationalUser()).toBe(true)
+
+    Identity.setOrganizationId(null)
+    expect(Identity.isOrganizationalUser()).toBe(false)
+  })
 })
 
 describe("TelemetryEvent", () => {

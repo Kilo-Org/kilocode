@@ -54,9 +54,19 @@ export namespace Telemetry {
     return Client.isEnabled()
   }
 
-  export async function updateIdentity(token: string | null, accountId?: string): Promise<void> {
+  export async function updateIdentity(
+    token: string | null,
+    accountId?: string,
+    options?: { disableForOrg?: boolean },
+  ): Promise<void> {
     const previousId = Identity.getDistinctId()
     await Identity.updateFromKiloAuth(token, accountId)
+
+    // Disable telemetry by default for organizational users
+    const disableForOrg = options?.disableForOrg ?? true
+    if (disableForOrg && Identity.isOrganizationalUser()) {
+      setEnabled(false)
+    }
 
     const email = Identity.getUserId()
     if (email && previousId && email !== previousId) {

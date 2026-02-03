@@ -7,6 +7,7 @@ import type { AuthOuathResult, Hooks } from "@kilocode/plugin" // kilocode_chang
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "@/auth"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { Config } from "@/config/config" // kilocode_change
 
 export namespace ProviderAuth {
   const state = Instance.state(async () => {
@@ -116,7 +117,12 @@ export namespace ProviderAuth {
         if (input.providerID === "kilo") {
           const token = "refresh" in result ? result.access : result.key
           const accountId = "refresh" in result ? result.accountId : undefined
-          await Telemetry.updateIdentity(token, accountId)
+          // Only disable telemetry for org users if the user hasn't explicitly enabled it
+          const globalCfg = await Config.getGlobal()
+          const userExplicitlyEnabledTelemetry = globalCfg.experimental?.openTelemetry === true
+          await Telemetry.updateIdentity(token, accountId, {
+            disableForOrg: !userExplicitlyEnabledTelemetry,
+          })
         }
         Telemetry.trackAuthSuccess(input.providerID)
         // kilocode_change end
