@@ -7,8 +7,6 @@ import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloSizes
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.SimpleTextAttributes
@@ -28,10 +26,13 @@ import javax.swing.*
 
 /**
  * Panel displaying the list of chat sessions.
+ *
+ * @param onSessionSelected Callback invoked when a session is selected (to switch back to chat view)
  */
 class SessionListPanel(
     private val project: Project,
-    private val stateService: KiloStateService
+    private val stateService: KiloStateService,
+    private val onSessionSelected: (() -> Unit)? = null
 ) : JPanel(BorderLayout()) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -46,11 +47,7 @@ class SessionListPanel(
         isOpaque = true
         background = KiloTheme.backgroundStronger
 
-        // Setup toolbar
-        val toolbar = createToolbar()
-        add(toolbar.component, BorderLayout.NORTH)
-
-        // Setup list
+        // Setup list (no toolbar - actions are in main header now)
         setupList()
         val scrollPane = JBScrollPane(sessionList).apply {
             isOpaque = true
@@ -62,21 +59,6 @@ class SessionListPanel(
 
         // Subscribe to state changes
         subscribeToState()
-    }
-
-    private fun createToolbar(): ActionToolbar {
-        val actionGroup = DefaultActionGroup().apply {
-            add(NewSessionAction())
-            addSeparator()
-            add(RefreshAction())
-        }
-
-        return ActionManager.getInstance()
-            .createActionToolbar("KiloSessionList", actionGroup, true)
-            .apply {
-                targetComponent = this@SessionListPanel
-                setMinimumButtonSize(ActionToolbar.NAVBAR_MINIMUM_BUTTON_SIZE)
-            }
     }
 
     private fun setupList() {
@@ -94,6 +76,8 @@ class SessionListPanel(
                     scope.launch {
                         stateService.selectSession(selected.id)
                     }
+                    // Switch back to chat view
+                    onSessionSelected?.invoke()
                 }
             }
         }
@@ -300,30 +284,6 @@ class SessionListPanel(
             // Status indicator
             if (status?.type == "busy") {
                 append(" ●", busyAttrs)
-            }
-        }
-    }
-
-    private inner class NewSessionAction : DumbAwareAction(
-        "New Session",
-        "Create a new chat session",
-        AllIcons.General.Add
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            scope.launch {
-                stateService.createSession()
-            }
-        }
-    }
-
-    private inner class RefreshAction : DumbAwareAction(
-        "Refresh",
-        "Refresh session list",
-        AllIcons.Actions.Refresh
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            scope.launch {
-                stateService.initialize()
             }
         }
     }

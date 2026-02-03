@@ -1,6 +1,7 @@
 package ai.kilo.plugin.toolwindow
 
 import ai.kilo.plugin.services.KiloProjectService
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
@@ -18,6 +19,9 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val kiloService = KiloProjectService.getInstance(project)
         val contentFactory = ContentFactory.getInstance()
+
+        // Set title bar actions
+        setupTitleActions(toolWindow)
 
         val loadingContent = contentFactory.createContent(LoadingPanel(), "", false)
         loadingContent.isCloseable = false
@@ -45,6 +49,17 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         }
     }
 
+    private fun setupTitleActions(toolWindow: ToolWindow) {
+        val actionManager = ActionManager.getInstance()
+        val actions = listOfNotNull(
+            actionManager.getAction("Kilo.NewSession"),
+            actionManager.getAction("Kilo.ToggleSessions"),
+            actionManager.getAction("Kilo.ToggleSidebar"),
+            actionManager.getAction("Kilo.Toolbar.Settings")
+        )
+        toolWindow.setTitleActions(actions)
+    }
+
     override fun shouldBeAvailable(project: Project): Boolean {
         // Always available
         return true
@@ -65,6 +80,13 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
          */
         fun toggleSidebar(project: Project) {
             mainPanels[project]?.toggleSidebar()
+        }
+
+        /**
+         * Toggle the sessions list visibility for the given project.
+         */
+        fun toggleSessions(project: Project) {
+            mainPanels[project]?.toggleSessions()
         }
 
         /**

@@ -8,25 +8,22 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.ui.JBSplitter
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.*
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
+import java.awt.CardLayout
+import javax.swing.JPanel
 
-private const val WIDE_BREAKPOINT = 600
-private const val SESSION_LIST_PROPORTION = 0.20f
+private const val VIEW_CHAT = "chat"
+private const val VIEW_SESSIONS = "sessions"
 
 /**
  * Main panel for the Kilo tool window.
- * Contains a split view with sessions list on the left, chat in the center, and sidebar on the right.
  *
- * Responsive behavior (matching web client):
- * - Wide screens (>600px): Sidebar auto-shows as inline panel
- * - Narrow screens: Sidebar hidden, can be toggled
+ * Layout:
+ * - Actions in tool window title bar (set by KiloToolWindowFactory)
+ * - Content area: CardLayout switching between Chat and Sessions views
  *
- * Note: Permission and question prompts are now handled inline within ChatPanel
- * rather than as separate dialogs/panels (matching web client UX).
+ * Clicking the history icon shows the sessions list.
+ * Selecting a session switches back to chat view.
  */
 class KiloMainPanel(
     private val project: Project,
@@ -36,41 +33,35 @@ class KiloMainPanel(
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val state = kiloService.state!!
 
-    private val sessionListPanel = SessionListPanel(project, state)
+    private val cardLayout = CardLayout()
+    private val contentPanel = JPanel(cardLayout)
+
+    private val sessionListPanel: SessionListPanel
     private val chatPanel = ChatPanel(project, state)
     private val sidebarPanel = SidebarPanel(state)
-    private val chatWithSidebarPanel: BorderLayoutPanel
+    private val splitter: JBSplitter
 
-    private var sidebarMode = SidebarMode.AUTO
-    private var sidebarVisible = false
-
-    private enum class SidebarMode { AUTO, SHOW, HIDE }
+    private var currentView = VIEW_CHAT
+    private var sidebarVisible = true
 
     init {
-        chatWithSidebarPanel = BorderLayoutPanel().apply {
-            addToCenter(chatPanel)
-            addToRight(sidebarPanel)
+        // Create session list panel with callback to switch to chat when session selected
+        sessionListPanel = SessionListPanel(project, state) {
+            showChat()
         }
 
-        val splitter = JBSplitter(false, SESSION_LIST_PROPORTION).apply {
-            dividerWidth = 1
-            border = JBUI.Borders.empty()
-            firstComponent = sessionListPanel
-            secondComponent = chatWithSidebarPanel
+        // Setup content panel with card layout
+        splitter = JBSplitter(false, 0.5f).apply {
+            firstComponent = chatPanel
+            secondComponent = sidebarPanel
+            dividerWidth = 3
         }
 
-        setContent(splitter)
-        setupResponsiveSidebar()
+        contentPanel.add(splitter, VIEW_CHAT)
+        contentPanel.add(sessionListPanel, VIEW_SESSIONS)
+
+        setContent(contentPanel)
         loadInitialTodos()
-    }
-
-    private fun setupResponsiveSidebar() {
-        addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) {
-                updateSidebarVisibility()
-            }
-        })
-        updateSidebarVisibility()
     }
 
     private fun loadInitialTodos() {
@@ -81,31 +72,27 @@ class KiloMainPanel(
         }
     }
 
-    private fun updateSidebarVisibility() {
-        val isWide = width > WIDE_BREAKPOINT
-
-        sidebarVisible = when (sidebarMode) {
-            SidebarMode.SHOW -> true
-            SidebarMode.HIDE -> false
-            SidebarMode.AUTO -> isWide
-        }
-
-        sidebarPanel.isVisible = sidebarVisible
-        chatWithSidebarPanel.revalidate()
-        chatWithSidebarPanel.repaint()
+    fun showChat() {
+        currentView = VIEW_CHAT
+        cardLayout.show(contentPanel, VIEW_CHAT)
     }
 
-    /**
-     * Toggle the sidebar visibility.
-     * Cycles through: auto -> show -> hide -> auto
-     */
-    fun toggleSidebar() {
-        sidebarMode = when (sidebarMode) {
-            SidebarMode.AUTO -> if (sidebarVisible) SidebarMode.HIDE else SidebarMode.SHOW
-            SidebarMode.SHOW -> SidebarMode.HIDE
-            SidebarMode.HIDE -> SidebarMode.AUTO
+    fun showSessions() {
+        currentView = VIEW_SESSIONS
+        cardLayout.show(contentPanel, VIEW_SESSIONS)
+    }
+
+    fun toggleSessions() {
+        if (currentView == VIEW_SESSIONS) {
+            showChat()
+        } else {
+            showSessions()
         }
-        updateSidebarVisibility()
+    }
+
+    fun toggleSidebar() {
+        sidebarVisible = !sidebarVisible
+        splitter.secondComponent = if (sidebarVisible) sidebarPanel else null
     }
 
     fun focusInput() = chatPanel.focusInput()
