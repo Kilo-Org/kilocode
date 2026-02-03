@@ -125,6 +125,38 @@ Example: Adding support for new AI models, implementing API endpoints, or any ta
 7. Wait for Kilo Code to analyze your project and initialize the Memory Bank files
 8. Verify the content of the files to see if the project is described correctly. Update the files if necessary.
 
+### Memory Bank Instructions Template
+
+Paste the following into `.kilocode/rules/memory-bank-instructions.md`. Kilo Code will read these instructions when creating or updating memory bank files.
+
+```md
+# Memory Bank Instructions
+
+Goal: keep memory bank files concise, accurate, and useful for future sessions.
+
+General rules:
+- Use short sections and bullet lists.
+- Prefer facts and decisions; avoid speculation.
+- Do not include secrets, tokens, or personal data.
+- Keep each file focused on its purpose.
+
+Required files:
+- brief.md: what the project is, why it exists, and success criteria.
+- product.md: user problems, key workflows, and UX goals.
+- context.md: current focus, recent changes, next steps, and open questions.
+- architecture.md: high-level components, data flow, and key decisions.
+- tech.md: stack, tooling, versions, setup steps, and constraints.
+
+Optional files:
+- tasks.md: repeatable workflows and step-by-step procedures.
+- Add additional files for complex features or integrations.
+
+Update behavior:
+- Update context.md first for any meaningful change.
+- Update other files only when new decisions or facts emerge.
+- Keep language clear, neutral, and action-oriented.
+```
+
 ### Project Brief Tips
 
 - Start simple - it can be as detailed or high-level as you like
