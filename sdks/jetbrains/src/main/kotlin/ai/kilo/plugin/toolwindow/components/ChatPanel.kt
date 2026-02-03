@@ -55,7 +55,7 @@ class ChatPanel(
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private val messagesPanel = JBPanel<JBPanel<*>>()
+    private val messagesPanel = MessagesPanel()
     private val scrollPane: JBScrollPane
     private val promptInput: PromptInputPanel
     private val emptyStateLabel = JBLabel("Start typing to begin a new conversation")
@@ -85,40 +85,19 @@ class ChatPanel(
         isOpaque = true
         background = KiloTheme.backgroundStronger
 
-        val headerArea = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            isOpaque = false
-        }
-        headerPanel.alignmentX = LEFT_ALIGNMENT
-        headerArea.add(headerPanel)
-        errorBanner.alignmentX = LEFT_ALIGNMENT
-        headerArea.add(errorBanner)
+        val headerArea = HeaderArea(headerPanel, errorBanner)
         addToTop(headerArea)
 
-        messagesPanel.layout = BoxLayout(messagesPanel, BoxLayout.Y_AXIS)
-        messagesPanel.border = JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
-        messagesPanel.isOpaque = true
-        messagesPanel.background = KiloTheme.backgroundStronger
-
-        scrollPane = JBScrollPane(messagesPanel).apply {
-            border = JBUI.Borders.empty()
-            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-            isOpaque = true
-            viewport.isOpaque = true
-            viewport.background = KiloTheme.backgroundStronger
-        }
+        scrollPane = MessagesScrollPane(messagesPanel)
 
         emptyStateLabel.horizontalAlignment = SwingConstants.CENTER
         emptyStateLabel.foreground = KiloTheme.textWeak
         emptyStateLabel.font = emptyStateLabel.font.deriveFont(KiloTypography.fontSizeMedium)
 
-        val contentPanel = JPanel(CardLayout()).apply {
-            isOpaque = true
-            background = KiloTheme.backgroundStronger
-            add(createCenteredPanel(emptyStateLabel), "empty")
-            add(scrollPane, "content")
-        }
+        val contentPanel = ContentPanel(
+            emptyStatePanel = EmptyStatePanel(emptyStateLabel),
+            messagesScrollPane = scrollPane
+        )
         addToCenter(contentPanel)
 
         promptInput = PromptInputPanel(
@@ -128,26 +107,10 @@ class ChatPanel(
             onStop = { stopGeneration() }
         )
 
-        val feedbackLabel = JBLabel("Share feedback ↗").apply {
-            foreground = KiloTheme.textWeak
-            font = font.deriveFont(Font.PLAIN, 12f)
-            horizontalAlignment = SwingConstants.CENTER
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            border = JBUI.Borders.empty(KiloSpacing.xs, 0, KiloSpacing.md, 0)
-        }
-
-        val promptArea = BorderLayoutPanel().apply {
-            isOpaque = true
-            background = KiloTheme.backgroundStronger
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
-                JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
-            )
-            addToTop(attachedFilesPanel)
-            addToCenter(promptInput)
-            addToBottom(feedbackLabel)
-        }
-
+        val promptArea = PromptArea(
+            attachedFilesPanel = attachedFilesPanel,
+            promptInput = promptInput
+        )
         addToBottom(promptArea)
         
         subscribeToState(contentPanel)
@@ -157,17 +120,8 @@ class ChatPanel(
         setupDragAndDrop()
     }
 
-    private fun createCenteredPanel(component: JComponent): JPanel {
-        return JPanel(GridBagLayout()).apply {
-            isOpaque = true
-            background = KiloTheme.backgroundStronger
-            add(component)
-        }
-    }
 
-    private fun subscribeToState(contentPanel: JPanel) {
-        val cardLayout = contentPanel.layout as CardLayout
-
+    private fun subscribeToState(contentPanel: ContentPanel) {
         scope.launch {
             combine(
                 stateService.currentSessionId,
@@ -179,9 +133,9 @@ class ChatPanel(
                 headerPanel.updateSession(session)
 
                 if (session == null) {
-                    cardLayout.show(contentPanel, "empty")
+                    contentPanel.showEmpty()
                 } else {
-                    cardLayout.show(contentPanel, "content")
+                    contentPanel.showContent()
                 }
                 promptInput.isEnabled = true
             }
@@ -512,6 +466,99 @@ class ChatPanel(
                 else -> ""
             }
         }
+    }
+}
+
+private class HeaderArea(
+    headerPanel: JComponent,
+    errorBanner: JComponent
+) : JPanel() {
+    init {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        isOpaque = false
+        headerPanel.alignmentX = LEFT_ALIGNMENT
+        add(headerPanel)
+        errorBanner.alignmentX = LEFT_ALIGNMENT
+        add(errorBanner)
+    }
+}
+
+private class MessagesPanel : JBPanel<JBPanel<*>>() {
+    init {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        border = JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
+        isOpaque = true
+        background = KiloTheme.backgroundStronger
+    }
+}
+
+private class MessagesScrollPane(
+    messagesPanel: JComponent
+) : JBScrollPane(messagesPanel) {
+    init {
+        border = JBUI.Borders.empty()
+        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        isOpaque = true
+        viewport.isOpaque = true
+        viewport.background = KiloTheme.backgroundStronger
+    }
+}
+
+private class EmptyStatePanel(
+    label: JComponent
+) : JPanel(GridBagLayout()) {
+    init {
+        isOpaque = true
+        background = KiloTheme.backgroundStronger
+        add(label)
+    }
+}
+
+private class ContentPanel(
+    emptyStatePanel: JComponent,
+    messagesScrollPane: JComponent
+) : JPanel(CardLayout()) {
+    init {
+        isOpaque = true
+        background = KiloTheme.backgroundStronger
+        add(emptyStatePanel, "empty")
+        add(messagesScrollPane, "content")
+    }
+
+    fun showEmpty() {
+        (layout as CardLayout).show(this, "empty")
+    }
+
+    fun showContent() {
+        (layout as CardLayout).show(this, "content")
+    }
+}
+
+private class FeedbackLabel : JBLabel("Share feedback ↗") {
+    init {
+        foreground = KiloTheme.textWeak
+        font = font.deriveFont(Font.PLAIN, 12f)
+        horizontalAlignment = SwingConstants.CENTER
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        border = JBUI.Borders.empty(KiloSpacing.xs, 0, KiloSpacing.md, 0)
+    }
+}
+
+private class PromptArea(
+    attachedFilesPanel: JComponent,
+    promptInput: JComponent
+) : BorderLayoutPanel() {
+    init {
+        isOpaque = true
+        background = KiloTheme.backgroundStronger
+        border = BorderFactory.createCompoundBorder(
+            JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+            JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
+        )
+        addToTop(attachedFilesPanel)
+        addToCenter(promptInput)
+        addToBottom(FeedbackLabel())
     }
 }
 
