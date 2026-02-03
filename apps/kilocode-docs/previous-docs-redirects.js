@@ -3,6 +3,12 @@ module.exports = [
 	// GET STARTED
 	// ============================================
 	{
+		source: "/docs/basic-usage/byok",
+		destination: "/docs/getting-started/byok",
+		basePath: false,
+		permanent: true,
+	},
+	{
 		source: "/docs/getting-started/setting-up",
 		destination: "/docs/getting-started/setup-authentication",
 		basePath: false,

@@ -16,6 +16,10 @@ export const GettingStartedNav: NavSection[] = [
 				href: "/getting-started/setup-authentication",
 				children: "Setup & Authentication",
 			},
+			{
+				href: "/getting-started/byok",
+				children: "Bring Your Own Key (BYOK)",
+			},
 			{ href: "/ai-providers", children: "AI Providers" },
 			{ href: "/getting-started/settings", children: "Settings" },
 			{ href: "/getting-started/adding-credits", children: "Adding Credits" },
