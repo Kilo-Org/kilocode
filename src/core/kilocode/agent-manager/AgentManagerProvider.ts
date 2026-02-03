@@ -342,12 +342,25 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		try {
 			switch (message.type) {
-				case "agentManager.webviewReady":
+				case "agentManager.webviewReady": {
 					this.postStateToWebview()
+					// Send cached messages for selected session (fixes stale state when panel is reopened)
+					const selectedId = this.registry.selectedId
+					if (selectedId) {
+						const cachedMessages = this.sessionMessages.get(selectedId)
+						if (cachedMessages && cachedMessages.length > 0) {
+							this.postMessage({
+								type: "agentManager.chatMessages",
+								sessionId: selectedId,
+								messages: cachedMessages,
+							})
+						}
+					}
 					void this.fetchAndPostRemoteSessions()
 					void this.fetchAndPostAvailableModels()
 					void this.fetchAndPostAvailableModes()
 					break
+				}
 				case "agentManager.refreshModels":
 					void this.fetchAndPostAvailableModels(true)
 					break
