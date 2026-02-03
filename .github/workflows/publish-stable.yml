@@ -68,6 +68,7 @@ jobs:
         env:
           OPENCODE_CHANNEL: latest
           OPENCODE_VERSION: ${{ inputs.version }}
+          OPENCODE_SKIP_NOTES: "1"
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

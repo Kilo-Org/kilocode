@@ -37,7 +37,10 @@ let notes: string[] = []
 
 console.log("=== publishing ===\n")
 
-if (!Script.preview) {
+const skipNotes = process.env["OPENCODE_SKIP_NOTES"] === "1" // kilocode_change
+if (skipNotes) console.log("changelog skipped: OPENCODE_SKIP_NOTES=1") // kilocode_change
+
+if (!Script.preview && !skipNotes) {
   const previous = await getLatestRelease()
   notes = await buildNotes(previous, "HEAD")
   // notes.unshift(highlightsTemplate)
