@@ -16,7 +16,8 @@
 		"shareConfirmYes": "是",
 		"shareConfirmNo": "否",
 		"options": "选项",
-		"configureSetupScript": "Worktree 设置脚本"
+		"configureSetupScript": "Worktree 设置脚本",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -62,7 +63,10 @@
 		"defaultModel": "默认模型",
 		"loadingModels": "加载中...",
 		"selectMode": "选择模式",
-		"modeTooltip": "模式：{{mode}}"
+		"modeTooltip": "模式：{{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "等待代理响应...",

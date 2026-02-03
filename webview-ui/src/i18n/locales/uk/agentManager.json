@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Так",
 		"shareConfirmNo": "Ні",
 		"options": "Параметри",
-		"configureSetupScript": "Скрипт налаштування worktree"
+		"configureSetupScript": "Скрипт налаштування worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
@@ -64,7 +65,10 @@
 		"defaultModel": "Модель за замовчуванням",
 		"loadingModels": "Завантаження...",
 		"selectMode": "Вибрати режим",
-		"modeTooltip": "Режим: {{mode}}"
+		"modeTooltip": "Режим: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",

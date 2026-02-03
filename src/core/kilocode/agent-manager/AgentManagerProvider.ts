@@ -442,6 +442,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.setMode":
 					void this.setSessionMode(message.sessionId as string, message.mode as string)
 					break
+				case "agentManager.renameSession":
+					this.registry.updateSessionLabel(message.sessionId as string, message.label as string)
+					this.postStateToWebview()
+					break
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Error handling message: ${error}`)
@@ -466,7 +470,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		const validatedMessage: StartSessionMessage = parseResult.data
-		const { prompt, parallelMode = false, existingBranch, model, mode, images } = validatedMessage
+		const { prompt, parallelMode = false, existingBranch, model, mode, images, yoloMode = true } = validatedMessage
 
 		// For agent-runtime, pass base64 images directly (not file paths)
 		// The extension expects base64 data URLs in the format "data:image/png;base64,..."
@@ -489,6 +493,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			const config = configs[0]
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
+				yoloMode,
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
@@ -508,6 +513,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
+				yoloMode,
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
@@ -655,6 +661,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options?: {
 			parallelMode?: boolean
+			yoloMode?: boolean
 			labelOverride?: string
 			existingBranch?: string
 			model?: string
@@ -719,6 +726,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
+				yoloMode: options?.yoloMode,
 				label: options?.labelOverride,
 				gitUrl,
 				existingBranch: options?.existingBranch,
@@ -780,6 +788,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options: {
 			parallelMode?: boolean
+			yoloMode?: boolean
 			label?: string
 			gitUrl?: string
 			existingBranch?: string
@@ -1440,6 +1449,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				await this.spawnAgentWithCommonSetup(content, {
 					sessionId,
 					parallelMode: true,
+					yoloMode: session.yoloMode,
 					gitUrl: session.gitUrl,
 					worktreeInfo,
 					effectiveWorkspace: worktreeInfo.path,
@@ -1459,6 +1469,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			sessionId,
 			label: sessionLabel || session?.label,
 			parallelMode: session?.parallelMode?.enabled,
+			yoloMode: session?.yoloMode,
 			gitUrl: session?.gitUrl,
 			images,
 			sessionData,

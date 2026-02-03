@@ -16,7 +16,8 @@
 		"shareConfirmYes": "はい",
 		"shareConfirmNo": "いいえ",
 		"options": "オプション",
-		"configureSetupScript": "Worktree セットアップスクリプト"
+		"configureSetupScript": "Worktree セットアップスクリプト",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -62,7 +63,10 @@
 		"defaultModel": "デフォルトモデル",
 		"loadingModels": "読み込み中...",
 		"selectMode": "モードを選択",
-		"modeTooltip": "モード: {{mode}}"
+		"modeTooltip": "モード: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

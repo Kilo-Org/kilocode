@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Có",
 		"shareConfirmNo": "Không",
 		"options": "Tùy chọn",
-		"configureSetupScript": "Script thiết lập worktree"
+		"configureSetupScript": "Script thiết lập worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -62,7 +63,10 @@
 		"defaultModel": "Mô hình mặc định",
 		"loadingModels": "Đang tải...",
 		"selectMode": "Chọn chế độ",
-		"modeTooltip": "Chế độ: {{mode}}"
+		"modeTooltip": "Chế độ: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

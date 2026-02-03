@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Sì",
 		"shareConfirmNo": "No",
 		"options": "Opzioni",
-		"configureSetupScript": "Script di setup worktree"
+		"configureSetupScript": "Script di setup worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Avvia un nuovo agente",
@@ -62,7 +63,10 @@
 		"defaultModel": "Modello predefinito",
 		"loadingModels": "Caricamento...",
 		"selectMode": "Seleziona modalità",
-		"modeTooltip": "Modalità: {{mode}}"
+		"modeTooltip": "Modalità: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",

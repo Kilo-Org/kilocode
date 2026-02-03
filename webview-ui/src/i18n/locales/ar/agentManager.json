@@ -16,7 +16,8 @@
 		"shareConfirmYes": "نعم",
 		"shareConfirmNo": "لا",
 		"options": "خيارات",
-		"configureSetupScript": "سكريبت إعداد Worktree"
+		"configureSetupScript": "سكريبت إعداد Worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -66,7 +67,10 @@
 		"defaultModel": "النموذج الافتراضي",
 		"loadingModels": "جاري التحميل...",
 		"selectMode": "اختر الوضع",
-		"modeTooltip": "الوضع: {{mode}}"
+		"modeTooltip": "الوضع: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",

@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Ano",
 		"shareConfirmNo": "Ne",
 		"options": "Možnosti",
-		"configureSetupScript": "Setup skript worktree"
+		"configureSetupScript": "Setup skript worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -63,7 +64,10 @@
 		"defaultModel": "Výchozí model",
 		"loadingModels": "Načítání...",
 		"selectMode": "Vybrat režim",
-		"modeTooltip": "Režim: {{mode}}"
+		"modeTooltip": "Režim: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
