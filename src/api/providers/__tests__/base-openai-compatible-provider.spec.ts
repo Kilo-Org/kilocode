@@ -358,6 +358,52 @@ describe("BaseOpenAiCompatibleProvider", () => {
 			)
 		})
 
+		// kilocode_change start
+		it("should omit temperature when model does not support it", async () => {
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			class NoTempProvider extends BaseOpenAiCompatibleProvider<"test-model"> {
+				constructor(apiKey: string) {
+					const testModels: Record<"test-model", ModelInfo> = {
+						"test-model": {
+							maxTokens: 4096,
+							contextWindow: 128000,
+							supportsImages: false,
+							supportsPromptCache: false,
+							inputPrice: 0.5,
+							outputPrice: 1.5,
+							supportsTemperature: false,
+						},
+					}
+
+					super({
+						providerName: "NoTempProvider",
+						baseURL: "https://test.example.com/v1",
+						defaultProviderModelId: "test-model",
+						providerModels: testModels,
+						apiKey,
+					})
+				}
+			}
+
+			const noTempHandler = new NoTempProvider("test-api-key")
+			const messageGenerator = noTempHandler.createMessage("system prompt", [])
+			await messageGenerator.next()
+
+			expect(mockCreate).toHaveBeenCalled()
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).not.toHaveProperty("temperature")
+		})
+		// kilocode_change end
+
 		it("should yield usage data from stream", async () => {
 			mockCreate.mockImplementationOnce(() => {
 				return {

@@ -220,6 +220,40 @@ describe("getModelParams", () => {
 		})
 	})
 
+	// kilocode_change start
+	describe("Temperature support", () => {
+		it("should omit temperature when supportsTemperature is false", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				supportsTemperature: false,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { modelTemperature: 0.7 },
+				model,
+			})
+
+			expect(result.temperature).toBeUndefined()
+		})
+
+		it("should omit temperature when supportedParameters excludes temperature", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				supportedParameters: ["max_tokens"] as any,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { modelTemperature: 0.7 },
+				model,
+			})
+
+			expect(result.temperature).toBeUndefined()
+		})
+	})
+	// kilocode_change end
+
 	describe("Reasoning Budget (Hybrid reasoning models)", () => {
 		it("should handle requiredReasoningBudget models correctly", () => {
 			const model: ModelInfo = {

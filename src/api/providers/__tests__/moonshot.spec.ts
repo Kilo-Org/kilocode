@@ -240,6 +240,22 @@ describe("MoonshotHandler", () => {
 			expect(usageChunks[0].cacheWriteTokens).toBe(0)
 			expect(usageChunks[0].cacheReadTokens).toBe(2)
 		})
+
+		// kilocode_change start
+		it("should omit temperature for models that do not support it", async () => {
+			const handlerWithFixedTempModel = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-k2.5",
+			})
+
+			const stream = handlerWithFixedTempModel.createMessage(systemPrompt, messages)
+			await stream.next()
+
+			expect(mockCreate).toHaveBeenCalled()
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).not.toHaveProperty("temperature")
+		})
+		// kilocode_change end
 	})
 
 	describe("processUsageMetrics", () => {

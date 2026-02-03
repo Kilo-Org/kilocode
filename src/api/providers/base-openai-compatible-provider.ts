@@ -7,6 +7,7 @@ import { type ApiHandlerOptions, getModelMaxOutputTokens } from "../../shared/ap
 import { XmlMatcher } from "../../utils/xml-matcher"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { isModelParameterSupported } from "../transform/model-params" // kilocode_change
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
@@ -85,12 +86,17 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				format: "openai",
 			}) ?? undefined
 
-		const temperature = this.options.modelTemperature ?? info.defaultTemperature ?? this.defaultTemperature
+		// kilocode_change start
+		const baseTemperature = this.options.modelTemperature ?? info.defaultTemperature ?? this.defaultTemperature
+		const temperature = isModelParameterSupported(info, "temperature") ? baseTemperature : undefined
+		// kilocode_change end
 
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
 			max_tokens,
-			temperature,
+			// kilocode_change start
+			...(temperature !== undefined ? { temperature } : {}),
+			// kilocode_change end
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },

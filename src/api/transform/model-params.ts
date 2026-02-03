@@ -1,5 +1,6 @@
 import {
 	type ModelInfo,
+	type ModelParameter,
 	type ProviderSettings,
 	type VerbosityLevel,
 	type ReasoningEffortExtended,
@@ -66,6 +67,20 @@ type OpenRouterModelParams = {
 } & BaseModelParams
 
 export type ModelParams = AnthropicModelParams | OpenAiModelParams | GeminiModelParams | OpenRouterModelParams
+
+// kilocode_change start
+export function isModelParameterSupported(model: ModelInfo, parameter: ModelParameter): boolean {
+	if (parameter === "temperature" && model.supportsTemperature === false) {
+		return false
+	}
+
+	if (model.supportedParameters) {
+		return model.supportedParameters.includes(parameter)
+	}
+
+	return true
+}
+// kilocode_change end
 
 // Function overloads for specific return types
 export function getModelParams(options: GetModelParamsOptions<"anthropic">): AnthropicModelParams
@@ -143,6 +158,12 @@ export function getModelParams({
 			reasoningEffort = effort as ReasoningEffortExtended
 		}
 	}
+
+	// kilocode_change start
+	if (!isModelParameterSupported(model, "temperature")) {
+		temperature = undefined
+	}
+	// kilocode_change end
 
 	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget, verbosity }
 
