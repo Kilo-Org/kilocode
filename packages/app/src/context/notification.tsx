@@ -10,7 +10,7 @@ import { useSettings } from "@/context/settings"
 import { Binary } from "@opencode-ai/util/binary"
 import { base64Encode } from "@opencode-ai/util/encode"
 import { decode64 } from "@/utils/base64"
-import { EventSessionError } from "@kilocode/sdk/v2" // kilocode_change
+import { EventSessionError } from "@kilocode/sdk/v2"
 import { Persist, persisted } from "@/utils/persist"
 import { playSound, soundSrc } from "@/utils/sound"
 

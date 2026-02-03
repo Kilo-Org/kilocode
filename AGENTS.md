@@ -84,85 +84,58 @@ const bazFoo = 3
 You MUST avoid using `mocks` as much as possible.
 Tests MUST test actual implementation, do not duplicate logic into a test.
 
-## Fork Architecture
+## Fork Merge Process
 
-Kilo CLI is a rebranded fork of [opencode](https://github.com/sst/opencode). We regularly merge upstream changes.
-
-### Branding
-
-- "Kilo CLI" replaces "OpenCode" in ALL user-facing strings
-- Upstream uses `opencodeZen` as their gateway provider; we use `kiloGateway`
-- The `kilo` provider must be FIRST in `preferredProviders` array
-
-### Package Names
-
-| Upstream              | Kilo                  | Notes                 |
-| --------------------- | --------------------- | --------------------- |
-| `opencode`            | `@kilocode/cli`       | Root package          |
-| `@opencode-ai/plugin` | `@kilocode/plugin`    |                       |
-| `@opencode-ai/sdk`    | `@kilocode/sdk`       |                       |
-| `@opencode-ai/script` | `@opencode-ai/script` | Keep as-is (internal) |
-| `@opencode-ai/util`   | `@opencode-ai/util`   | Keep as-is (internal) |
-| Binary: `opencode`    | Binary: `kilo`        |                       |
-
-### Kilo-Specific Packages (not in upstream)
-
-- `@kilocode/kilo-gateway` - Kilo Gateway provider
-- `@kilocode/kilo-telemetry` - Telemetry package
-
-### Kilo-Specific Directories (no markers needed)
-
-- `packages/opencode/src/kilocode/` - Kilo-specific source code
-- `packages/opencode/test/kilocode/` - Kilo-specific tests
-- `packages/kilo-gateway/` - Kilo Gateway package
-- `packages/kilo-telemetry/` - Telemetry package
+Kilo CLI is a fork of [opencode](https://github.com/Kilo-Org/kilo).
 
 ### Minimizing Merge Conflicts
 
-1. **Prefer `kilocode` directories** - Place Kilo-specific code in dedicated directories
-2. **Minimize changes to shared files** - Keep changes small and isolated
-3. **Use `kilocode_change` markers** - Mark changes in shared code (see below)
-4. **Avoid restructuring upstream code** - Don't refactor unless necessary
+We regularly merge upstream changes from opencode. To minimize merge conflicts and keep the sync process smooth:
+
+1. **Prefer `kilocode` directories** - Place Kilo-specific code in dedicated directories whenever possible:
+   - `packages/opencode/src/kilocode/` - Kilo-specific source code
+   - `packages/opencode/test/kilocode/` - Kilo-specific tests
+   - `packages/kilo-gateway/` - The Kilo Gateway package
+
+2. **Minimize changes to shared files** - When you must modify files that exist in upstream opencode, keep changes as small and isolated as possible.
+
+3. **Use `kilocode_change` markers** - When modifying shared code, mark your changes with `kilocode_change` comments so they can be easily identified during merges.
+
+4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from opencode unless absolutely necessary.
+
+The goal is to keep our diff from upstream as small as possible, making regular merges straightforward and reducing the risk of conflicts.
 
 ### Kilocode Change Markers
 
-Mark Kilo-specific changes in shared code with `kilocode_change` comments:
+To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
+
+**Single line:**
 
 ```typescript
-// Single line
 const value = 42 // kilocode_change
+```
 
-// Multi-line block
+**Multi-line:**
+
+```typescript
 // kilocode_change start
 const foo = 1
 const bar = 2
 // kilocode_change end
+```
 
-// New file (at top of file)
+**New files:**
+
+```typescript
 // kilocode_change - new file
 ```
 
-**When markers are NOT needed:** Any path containing `kilocode` in filename or directory name.
+#### When markers are NOT needed
 
-### Critical Files (never accept upstream)
+Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` markers:
 
-| File                                                   | Reason                             |
-| ------------------------------------------------------ | ---------------------------------- |
-| `packages/opencode/src/cli/logo.ts`                    | Kilo ASCII art logo                |
-| `packages/opencode/src/cli/ui.ts`                      | Kilo logo reference                |
-| `packages/opencode/src/cli/cmd/tui/component/logo.tsx` | KiloLogo component                 |
-| `packages/app/src/hooks/use-providers.ts`              | `kilo` first in preferredProviders |
-| `packages/app/src/i18n/*.ts`                           | kiloGateway keys, Kilo branding    |
-| `package.json` (root)                                  | `"name": "@kilocode/cli"`          |
+- `packages/opencode/src/kilocode/` - All files in this directory
+- `packages/opencode/test/kilocode/` - All test files for kilocode
+- Any other path containing `kilocode` in filename or directory name
 
-### Files to Accept from Upstream (no Kilo changes)
-
-```
-packages/desktop/*                    # Entire Tauri desktop app
-nix/desktop.nix                       # Nix desktop build
-.github/workflows/nix-desktop.yml     # Desktop CI
-```
-
-### Upstream Merge
-
-To merge upstream changes, load the `upstream-merge` skill which has the full process and scripts.
+These paths are entirely Kilo Code additions and won't conflict with upstream.

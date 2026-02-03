@@ -8,7 +8,7 @@ import type { IconName } from "@opencode-ai/ui/icons/provider"
 import { type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useModels } from "@/context/models"
-import { preferredProviders } from "@/hooks/use-providers"
+import { popularProviders } from "@/hooks/use-providers"
 
 type ModelItem = ReturnType<ReturnType<typeof useModels>["list"]>[number]
 
@@ -23,8 +23,8 @@ export const SettingsModels: Component = () => {
     sortBy: (a, b) => a.name.localeCompare(b.name),
     groupBy: (x) => x.provider.id,
     sortGroupsBy: (a, b) => {
-      const aIndex = preferredProviders.indexOf(a.category)
-      const bIndex = preferredProviders.indexOf(b.category)
+      const aIndex = popularProviders.indexOf(a.category)
+      const bIndex = popularProviders.indexOf(b.category)
       const aPopular = aIndex >= 0
       const bPopular = bIndex >= 0
 

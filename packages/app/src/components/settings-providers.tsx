@@ -4,7 +4,7 @@ import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Tag } from "@opencode-ai/ui/tag"
 import { showToast } from "@opencode-ai/ui/toast"
 import { iconNames, type IconName } from "@opencode-ai/ui/icons/provider"
-import { preferredProviders, useProviders } from "@/hooks/use-providers"
+import { popularProviders, useProviders } from "@/hooks/use-providers"
 import { createMemo, type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useGlobalSDK } from "@/context/global-sdk"
@@ -37,10 +37,10 @@ export const SettingsProviders: Component = () => {
   const popular = createMemo(() => {
     const connectedIDs = new Set(connected().map((p) => p.id))
     const items = providers
-      .preferred()
+      .popular()
       .filter((p) => !connectedIDs.has(p.id))
       .slice()
-    items.sort((a, b) => preferredProviders.indexOf(a.id) - preferredProviders.indexOf(b.id))
+    items.sort((a, b) => popularProviders.indexOf(a.id) - popularProviders.indexOf(b.id))
     return items
   })
 
@@ -123,7 +123,7 @@ export const SettingsProviders: Component = () => {
       </div>
 
       <div class="flex flex-col gap-8 max-w-[720px]">
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col gap-1" data-component="connected-providers-section">
           <h3 class="text-14-medium text-text-strong pb-2">{language.t("settings.providers.section.connected")}</h3>
           <div class="bg-surface-raised-base px-4 rounded-lg">
             <Show
@@ -225,7 +225,10 @@ export const SettingsProviders: Component = () => {
               )}
             </For>
 
-            <div class="flex items-center justify-between gap-4 h-16 border-b border-border-weak-base last:border-none">
+            <div
+              class="flex items-center justify-between gap-4 h-16 border-b border-border-weak-base last:border-none"
+              data-component="custom-provider-section"
+            >
               <div class="flex flex-col min-w-0">
                 <div class="flex items-center gap-x-3">
                   <ProviderIcon id={icon("synthetic")} class="size-5 shrink-0 icon-strong-base" />

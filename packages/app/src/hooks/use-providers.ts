@@ -5,6 +5,7 @@ import { createMemo } from "solid-js"
 
 // kilocode_change start - Preferred providers list (order determines display priority)
 export const preferredProviders = ["kilo", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"]
+export const popularProviders = preferredProviders // kilocode_change - alias for upstream compatibility
 // kilocode_change end
 
 export function useProviders() {
@@ -27,6 +28,7 @@ export function useProviders() {
     all: createMemo(() => providers().all),
     default: createMemo(() => providers().default),
     preferred, // kilocode_change - renamed from popular
+    popular: preferred, // kilocode_change - alias for upstream compatibility
     connected,
     paid,
   }

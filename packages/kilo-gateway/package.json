@@ -41,8 +41,8 @@
     "typescript": "catalog:",
     "@typescript/native-preview": "catalog:",
     "solid-js": "1.9.10",
-    "@opentui/core": "0.1.75",
-    "@opentui/solid": "0.1.75"
+    "@opentui/core": "0.1.77",
+    "@opentui/solid": "0.1.77"
   },
   "peerDependencies": {
     "solid-js": "*",

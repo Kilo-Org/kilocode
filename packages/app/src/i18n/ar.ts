@@ -28,6 +28,8 @@ export const dict = {
   "command.settings.open": "فتح الإعدادات",
   "command.session.previous": "الجلسة السابقة",
   "command.session.next": "الجلسة التالية",
+  "command.session.previous.unseen": "Previous unread session",
+  "command.session.next.unseen": "Next unread session",
   "command.session.archive": "أرشفة الجلسة",
 
   "command.palette": "لوحة الأوامر",
@@ -68,6 +70,7 @@ export const dict = {
   "command.model.variant.cycle.description": "التبديل إلى مستوى الجهد التالي",
   "command.permissions.autoaccept.enable": "قبول التعديلات تلقائيًا",
   "command.permissions.autoaccept.disable": "إيقاف قبول التعديلات تلقائيًا",
+  "command.workspace.toggle": "تبديل مساحات العمل",
   "command.session.undo": "تراجع",
   "command.session.undo.description": "تراجع عن الرسالة الأخيرة",
   "command.session.redo": "إعادة",
@@ -89,10 +92,8 @@ export const dict = {
   "dialog.provider.search.placeholder": "البحث عن موفرين",
   "dialog.provider.empty": "لم يتم العثور على موفرين",
   "dialog.provider.group.popular": "شائع",
-  "dialog.provider.group.recommended": "موصى به", // kilocode_change
   "dialog.provider.group.other": "آخر",
   "dialog.provider.tag.recommended": "موصى به",
-  "dialog.provider.kilo.note": "الوصول إلى أكثر من 500 نموذج ذكاء اصطناعي",
   "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
   "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
   "dialog.provider.copilot.note": "اتصل باستخدام Copilot أو مفتاح API",
@@ -103,7 +104,7 @@ export const dict = {
   "dialog.model.manage": "إدارة النماذج",
   "dialog.model.manage.description": "تخصيص النماذج التي تظهر في محدد النماذج.",
 
-  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من Kilo CLI",
+  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من OpenCode",
   "dialog.model.unpaid.addMore.title": "إضافة المزيد من النماذج من موفرين مشهورين",
 
   "dialog.provider.viewAll": "عرض المزيد من الموفرين",
@@ -116,7 +117,7 @@ export const dict = {
   "provider.connect.status.waiting": "في انتظار التفويض...",
   "provider.connect.status.failed": "فشل التفويض: {{error}}",
   "provider.connect.apiKey.description":
-    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo CLI.",
+    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في OpenCode.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
@@ -130,7 +131,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.code.visit.link": "هذا الرابط",
   "provider.connect.oauth.code.visit.suffix":
-    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo CLI.",
+    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في OpenCode.",
   "provider.connect.oauth.code.label": "رمز تفويض {{method}}",
   "provider.connect.oauth.code.placeholder": "رمز التفويض",
   "provider.connect.oauth.code.required": "رمز التفويض مطلوب",
@@ -138,7 +139,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.auto.visit.link": "هذا الرابط",
   "provider.connect.oauth.auto.visit.suffix":
-    " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo CLI.",
+    " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في OpenCode.",
   "provider.connect.oauth.auto.confirmationCode": "رمز التأكيد",
   "provider.connect.toast.connected.title": "تم توصيل {{provider}}",
   "provider.connect.toast.connected.description": "نماذج {{provider}} متاحة الآن للاستخدام.",
@@ -212,6 +213,8 @@ export const dict = {
   "prompt.popover.emptyCommands": "لا توجد أوامر مطابقة",
   "prompt.dropzone.label": "أفلت الصور أو ملفات PDF هنا",
   "prompt.slash.badge.custom": "مخصص",
+  "prompt.slash.badge.skill": "مهارة",
+  "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "نشط",
   "prompt.context.includeActiveFile": "تضمين الملف النشط",
   "prompt.context.removeActiveFile": "إزالة الملف النشط من السياق",
@@ -249,7 +252,7 @@ export const dict = {
   "dialog.directory.empty": "لم يتم العثور على مجلدات",
 
   "dialog.server.title": "الخوادم",
-  "dialog.server.description": "تبديل خادم Kilo CLI الذي يتصل به هذا التطبيق.",
+  "dialog.server.description": "تبديل خادم OpenCode الذي يتصل به هذا التطبيق.",
   "dialog.server.search.placeholder": "البحث في الخوادم",
   "dialog.server.empty": "لا توجد خوادم بعد",
   "dialog.server.add.title": "إضافة خادم",
@@ -346,6 +349,11 @@ export const dict = {
   "toast.permissions.autoaccept.off.title": "توقف قبول التعديلات تلقائيًا",
   "toast.permissions.autoaccept.off.description": "ستتطلب أذونات التحرير والكتابة موافقة",
 
+  "toast.workspace.enabled.title": "تم تمكين مساحات العمل",
+  "toast.workspace.enabled.description": "الآن يتم عرض عدة worktrees في الشريط الجانبي",
+  "toast.workspace.disabled.title": "تم تعطيل مساحات العمل",
+  "toast.workspace.disabled.description": "يتم عرض worktree الرئيسي فقط في الشريط الجانبي",
+
   "toast.model.none.title": "لم يتم تحديد نموذج",
   "toast.model.none.description": "قم بتوصيل موفر لتلخيص هذه الجلسة",
 
@@ -368,7 +376,7 @@ export const dict = {
   "toast.session.listFailed.title": "فشل تحميل الجلسات لـ {{project}}",
 
   "toast.update.title": "تحديث متاح",
-  "toast.update.description": "نسخة جديدة من Kilo CLI ({{version}}) متاحة الآن للتثبيت.",
+  "toast.update.description": "نسخة جديدة من OpenCode ({{version}}) متاحة الآن للتثبيت.",
   "toast.update.action.installRestart": "تثبيت وإعادة تشغيل",
   "toast.update.action.notYet": "ليس الآن",
 
@@ -379,7 +387,7 @@ export const dict = {
   "error.page.action.checking": "جارٍ التحقق...",
   "error.page.action.checkUpdates": "التحقق من وجود تحديثات",
   "error.page.action.updateTo": "تحديث إلى {{version}}",
-  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق Kilo CLI",
+  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق OpenCode",
   "error.page.report.discord": "على Discord",
   "error.page.version": "الإصدار: {{version}}",
 
@@ -397,7 +405,7 @@ export const dict = {
   "error.chain.didYouMean": "هل كنت تعني: {{suggestions}}",
   "error.chain.modelNotFound": "النموذج غير موجود: {{provider}}/{{model}}",
   "error.chain.checkConfig": "تحقق من أسماء الموفر/النموذج في التكوين (opencode.json)",
-  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن Kilo CLI لا يدعم مصادقة MCP بعد.',
+  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن OpenCode لا يدعم مصادقة MCP بعد.',
   "error.chain.providerAuthFailed": "فشلت مصادقة الموفر ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": 'فشل تهيئة الموفر "{{provider}}". تحقق من بيانات الاعتماد والتكوين.',
   "error.chain.configJsonInvalid": "ملف التكوين في {{path}} ليس JSON(C) صالحًا",
@@ -434,6 +442,7 @@ export const dict = {
   "session.review.noChanges": "لا توجد تغييرات",
   "session.files.selectToOpen": "اختر ملفًا لفتحه",
   "session.files.all": "كل الملفات",
+  "session.files.binaryContent": "ملف ثنائي (لا يمكن عرض المحتوى)",
   "session.messages.renderEarlier": "عرض الرسائل السابقة",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
   "session.messages.loadEarlier": "تحميل الرسائل السابقة",
@@ -502,7 +511,7 @@ export const dict = {
   "sidebar.workspaces.enable": "تمكين مساحات العمل",
   "sidebar.workspaces.disable": "تعطيل مساحات العمل",
   "sidebar.gettingStarted.title": "البدء",
-  "sidebar.gettingStarted.line1": "يتضمن Kilo CLI نماذج مجانية حتى تتمكن من البدء فورًا.",
+  "sidebar.gettingStarted.line1": "يتضمن OpenCode نماذج مجانية حتى تتمكن من البدء فورًا.",
   "sidebar.gettingStarted.line2": "قم بتوصيل أي موفر لاستخدام النماذج، بما في ذلك Claude و GPT و Gemini وما إلى ذلك.",
   "sidebar.project.recentSessions": "الجلسات الحديثة",
   "sidebar.project.viewAllSessions": "عرض جميع الجلسات",
@@ -519,11 +528,11 @@ export const dict = {
   "settings.general.section.sounds": "المؤثرات الصوتية",
 
   "settings.general.row.language.title": "اللغة",
-  "settings.general.row.language.description": "تغيير لغة العرض لـ Kilo CLI",
+  "settings.general.row.language.description": "تغيير لغة العرض لـ OpenCode",
   "settings.general.row.appearance.title": "المظهر",
-  "settings.general.row.appearance.description": "تخصيص كيفية ظهور Kilo CLI على جهازك",
+  "settings.general.row.appearance.description": "تخصيص كيفية ظهور OpenCode على جهازك",
   "settings.general.row.theme.title": "السمة",
-  "settings.general.row.theme.description": "تخصيص سمة Kilo CLI.",
+  "settings.general.row.theme.description": "تخصيص سمة OpenCode.",
   "settings.general.row.font.title": "الخط",
   "settings.general.row.font.description": "تخصيص الخط الأحادي المستخدم في كتل التعليمات البرمجية",
 

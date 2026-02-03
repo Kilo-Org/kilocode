@@ -32,6 +32,8 @@ export const dict = {
   "command.settings.open": "開啟設定",
   "command.session.previous": "上一個工作階段",
   "command.session.next": "下一個工作階段",
+  "command.session.previous.unseen": "Previous unread session",
+  "command.session.next.unseen": "Next unread session",
   "command.session.archive": "封存工作階段",
 
   "command.palette": "命令面板",
@@ -72,6 +74,7 @@ export const dict = {
   "command.model.variant.cycle.description": "切換到下一個強度等級",
   "command.permissions.autoaccept.enable": "自動接受編輯",
   "command.permissions.autoaccept.disable": "停止自動接受編輯",
+  "command.workspace.toggle": "切換工作區",
   "command.session.undo": "復原",
   "command.session.undo.description": "復原上一則訊息",
   "command.session.redo": "重做",
@@ -93,10 +96,8 @@ export const dict = {
   "dialog.provider.search.placeholder": "搜尋提供者",
   "dialog.provider.empty": "找不到提供者",
   "dialog.provider.group.popular": "熱門",
-  "dialog.provider.group.recommended": "推薦", // kilocode_change
   "dialog.provider.group.other": "其他",
   "dialog.provider.tag.recommended": "推薦",
-  "dialog.provider.kilo.note": "存取 500+ AI 模型",
   "dialog.provider.anthropic.note": "使用 Claude Pro/Max 或 API 金鑰連線",
   "dialog.provider.openai.note": "使用 ChatGPT Pro/Plus 或 API 金鑰連線",
   "dialog.provider.copilot.note": "使用 Copilot 或 API 金鑰連線",
@@ -107,7 +108,7 @@ export const dict = {
   "dialog.model.manage": "管理模型",
   "dialog.model.manage.description": "自訂模型選擇器中顯示的模型。",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo CLI 提供的免費模型",
+  "dialog.model.unpaid.freeModels.title": "OpenCode 提供的免費模型",
   "dialog.model.unpaid.addMore.title": "從熱門提供者新增更多模型",
 
   "dialog.provider.viewAll": "查看更多提供者",
@@ -120,7 +121,7 @@ export const dict = {
   "provider.connect.status.waiting": "等待授權...",
   "provider.connect.status.failed": "授權失敗: {{error}}",
   "provider.connect.apiKey.description":
-    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Kilo CLI 中使用 {{provider}} 模型。",
+    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 OpenCode 中使用 {{provider}} 模型。",
   "provider.connect.apiKey.label": "{{provider}} API 金鑰",
   "provider.connect.apiKey.placeholder": "API 金鑰",
   "provider.connect.apiKey.required": "API 金鑰為必填",
@@ -131,7 +132,7 @@ export const dict = {
   "provider.connect.kiloGateway.visit.suffix": " 取得你的 API 金鑰。",
   "provider.connect.oauth.code.visit.prefix": "造訪 ",
   "provider.connect.oauth.code.visit.link": "此連結",
-  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 Kilo CLI 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 OpenCode 中使用 {{provider}} 模型。",
   "provider.connect.oauth.code.label": "{{method}} 授權碼",
   "provider.connect.oauth.code.placeholder": "授權碼",
   "provider.connect.oauth.code.required": "授權碼為必填",
@@ -139,7 +140,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
   "provider.connect.oauth.auto.visit.suffix":
-    " 並輸入以下程式碼，以連線你的帳戶並在 Kilo CLI 中使用 {{provider}} 模型。",
+    " 並輸入以下程式碼，以連線你的帳戶並在 OpenCode 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -213,6 +214,8 @@ export const dict = {
   "prompt.popover.emptyCommands": "沒有符合的命令",
   "prompt.dropzone.label": "將圖片或 PDF 拖到這裡",
   "prompt.slash.badge.custom": "自訂",
+  "prompt.slash.badge.skill": "技能",
+  "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "作用中",
   "prompt.context.includeActiveFile": "包含作用中檔案",
   "prompt.context.removeActiveFile": "從上下文移除目前檔案",
@@ -250,7 +253,7 @@ export const dict = {
   "dialog.directory.empty": "找不到資料夾",
 
   "dialog.server.title": "伺服器",
-  "dialog.server.description": "切換此應用程式連線的 Kilo CLI 伺服器。",
+  "dialog.server.description": "切換此應用程式連線的 OpenCode 伺服器。",
   "dialog.server.search.placeholder": "搜尋伺服器",
   "dialog.server.empty": "暫無伺服器",
   "dialog.server.add.title": "新增伺服器",
@@ -339,7 +342,12 @@ export const dict = {
   "toast.language.description": "已切換到 {{language}}",
 
   "toast.theme.title": "主題已切換",
-  "toast.scheme.title": "配色方案",
+  "toast.scheme.title": "顏色方案",
+
+  "toast.workspace.enabled.title": "工作區已啟用",
+  "toast.workspace.enabled.description": "側邊欄現在顯示多個工作樹",
+  "toast.workspace.disabled.title": "工作區已停用",
+  "toast.workspace.disabled.description": "側邊欄只顯示主工作樹",
 
   "toast.permissions.autoaccept.on.title": "自動接受編輯",
   "toast.permissions.autoaccept.on.description": "編輯和寫入權限將自動獲准",
@@ -368,7 +376,7 @@ export const dict = {
   "toast.session.listFailed.title": "無法載入 {{project}} 的工作階段",
 
   "toast.update.title": "有可用更新",
-  "toast.update.description": "Kilo CLI 有新版本 ({{version}}) 可安裝。",
+  "toast.update.description": "OpenCode 有新版本 ({{version}}) 可安裝。",
   "toast.update.action.installRestart": "安裝並重新啟動",
   "toast.update.action.notYet": "稍後",
 
@@ -379,7 +387,7 @@ export const dict = {
   "error.page.action.checking": "檢查中...",
   "error.page.action.checkUpdates": "檢查更新",
   "error.page.action.updateTo": "更新到 {{version}}",
-  "error.page.report.prefix": "請將此錯誤回報給 Kilo CLI 團隊",
+  "error.page.report.prefix": "請將此錯誤回報給 OpenCode 團隊",
   "error.page.report.discord": "在 Discord 上",
   "error.page.version": "版本: {{version}}",
 
@@ -396,7 +404,7 @@ export const dict = {
   "error.chain.didYouMean": "你是不是想輸入: {{suggestions}}",
   "error.chain.modelNotFound": "找不到模型: {{provider}}/{{model}}",
   "error.chain.checkConfig": "請檢查你的設定 (opencode.json) 中的 provider/model 名稱",
-  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意: Kilo CLI 暫不支援 MCP 認證。',
+  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意: OpenCode 暫不支援 MCP 認證。',
   "error.chain.providerAuthFailed": "提供者認證失敗 ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": '無法初始化提供者 "{{provider}}"。請檢查憑證和設定。',
   "error.chain.configJsonInvalid": "設定檔 {{path}} 不是有效的 JSON(C)",
@@ -433,6 +441,7 @@ export const dict = {
   "session.review.noChanges": "沒有變更",
   "session.files.selectToOpen": "選取要開啟的檔案",
   "session.files.all": "所有檔案",
+  "session.files.binaryContent": "二進位檔案（無法顯示內容）",
   "session.messages.renderEarlier": "顯示更早的訊息",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
   "session.messages.loadEarlier": "載入更早的訊息",
@@ -501,7 +510,7 @@ export const dict = {
   "sidebar.workspaces.enable": "啟用工作區",
   "sidebar.workspaces.disable": "停用工作區",
   "sidebar.gettingStarted.title": "開始使用",
-  "sidebar.gettingStarted.line1": "Kilo CLI 提供免費模型，你可以立即開始使用。",
+  "sidebar.gettingStarted.line1": "OpenCode 提供免費模型，你可以立即開始使用。",
   "sidebar.gettingStarted.line2": "連線任意提供者即可使用更多模型，如 Claude、GPT、Gemini 等。",
   "sidebar.project.recentSessions": "最近工作階段",
   "sidebar.project.viewAllSessions": "查看全部工作階段",
@@ -518,11 +527,11 @@ export const dict = {
   "settings.general.section.sounds": "音效",
 
   "settings.general.row.language.title": "語言",
-  "settings.general.row.language.description": "變更 Kilo CLI 的顯示語言",
+  "settings.general.row.language.description": "變更 OpenCode 的顯示語言",
   "settings.general.row.appearance.title": "外觀",
-  "settings.general.row.appearance.description": "自訂 Kilo CLI 在你的裝置上的外觀",
+  "settings.general.row.appearance.description": "自訂 OpenCode 在你的裝置上的外觀",
   "settings.general.row.theme.title": "主題",
-  "settings.general.row.theme.description": "自訂 Kilo CLI 的主題。",
+  "settings.general.row.theme.description": "自訂 OpenCode 的主題。",
   "settings.general.row.font.title": "字型",
   "settings.general.row.font.description": "自訂程式碼區塊使用的等寬字型",
 

@@ -16,7 +16,7 @@ import { Tool } from "./tool"
 import { Instance } from "../project/instance"
 import { Config } from "../config/config"
 import path from "path"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin" // kilocode_change
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { WebSearchTool } from "./websearch"
@@ -137,12 +137,10 @@ export namespace ToolRegistry {
     const result = await Promise.all(
       tools
         .filter((t) => {
-          // Enable websearch/codesearch for zen/kilo users OR via enable flag
-          // kilocode_change start
+          // Enable websearch/codesearch for zen users OR via enable flag
           if (t.id === "codesearch" || t.id === "websearch") {
-            return model.providerID === "opencode" || model.providerID === "kilo" || Flag.OPENCODE_ENABLE_EXA
+            return model.providerID === "opencode" || Flag.OPENCODE_ENABLE_EXA
           }
-          // kilocode_change end
 
           // use apply tool in same format as codex
           const usePatch =

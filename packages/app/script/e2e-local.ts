@@ -58,8 +58,7 @@ const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-e2e-"))
 
 const serverEnv = {
   ...process.env,
-  KILO_DISABLE_SHARE: "true", // kilocode_change
-  KILO_DISABLE_SESSION_INGEST: "true", // kilocode_change
+  OPENCODE_DISABLE_SHARE: process.env.OPENCODE_DISABLE_SHARE ?? "true",
   OPENCODE_DISABLE_LSP_DOWNLOAD: "true",
   OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
   OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
@@ -71,7 +70,7 @@ const serverEnv = {
   OPENCODE_E2E_PROJECT_DIR: repoDir,
   OPENCODE_E2E_SESSION_TITLE: "E2E Session",
   OPENCODE_E2E_MESSAGE: "Seeded for UI e2e",
-  OPENCODE_E2E_MODEL: "kilo/openai/gpt-5-nano",
+  OPENCODE_E2E_MODEL: "opencode/gpt-5-nano",
   OPENCODE_CLIENT: "app",
 } satisfies Record<string, string>
 

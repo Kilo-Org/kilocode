@@ -28,22 +28,20 @@ test("returns default native agents when no config", async () => {
   })
 })
 
-// kilocode_change start - renamed from "build" to "code"
-test("code agent has correct default properties", async () => {
+test("build agent has correct default properties", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const code = await Agent.get("code")
-      expect(code).toBeDefined()
-      expect(code?.mode).toBe("primary")
-      expect(code?.native).toBe(true)
-      expect(evalPerm(code, "edit")).toBe("allow")
-      expect(evalPerm(code, "bash")).toBe("allow")
+      const build = await Agent.get("build")
+      expect(build).toBeDefined()
+      expect(build?.mode).toBe("primary")
+      expect(build?.native).toBe(true)
+      expect(evalPerm(build, "edit")).toBe("allow")
+      expect(evalPerm(build, "bash")).toBe("allow")
     },
   })
 })
-// kilocode_change end
 
 test("plan agent denies edits except .opencode/plans/*", async () => {
   await using tmp = await tmpdir()
@@ -139,30 +137,26 @@ test("custom agent config overrides native agent properties", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start
-        code: {
+        build: {
           model: "anthropic/claude-3",
-          description: "Custom code agent",
+          description: "Custom build agent",
           temperature: 0.7,
           color: "#FF0000",
         },
-        // kilocode_change end
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code).toBeDefined()
-      expect(code?.model?.providerID).toBe("anthropic")
-      expect(code?.model?.modelID).toBe("claude-3")
-      expect(code?.description).toBe("Custom code agent")
-      expect(code?.temperature).toBe(0.7)
-      expect(code?.color).toBe("#FF0000")
-      expect(code?.native).toBe(true)
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build).toBeDefined()
+      expect(build?.model?.providerID).toBe("anthropic")
+      expect(build?.model?.modelID).toBe("claude-3")
+      expect(build?.description).toBe("Custom build agent")
+      expect(build?.temperature).toBe(0.7)
+      expect(build?.color).toBe("#FF0000")
+      expect(build?.native).toBe(true)
     },
   })
 })
@@ -191,9 +185,7 @@ test("agent permission config merges with defaults", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start
-        code: {
-          // kilocode_change end
+        build: {
           permission: {
             bash: {
               "rm -rf *": "deny",
@@ -206,14 +198,12 @@ test("agent permission config merges with defaults", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code).toBeDefined()
+      const build = await Agent.get("build")
+      expect(build).toBeDefined()
       // Specific pattern is denied
-      expect(PermissionNext.evaluate("bash", "rm -rf *", code!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("bash", "rm -rf *", build!.permission).action).toBe("deny")
       // Edit still allowed
-      expect(evalPerm(code, "edit")).toBe("allow")
-      // kilocode_change end
+      expect(evalPerm(build, "edit")).toBe("allow")
     },
   })
 })
@@ -229,11 +219,9 @@ test("global permission config applies to all agents", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code).toBeDefined()
-      expect(evalPerm(code, "bash")).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build).toBeDefined()
+      expect(evalPerm(build, "bash")).toBe("deny")
     },
   })
 })
@@ -242,9 +230,7 @@ test("agent steps/maxSteps config sets steps property", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: { steps: 50 },
-        // kilocode_change end
+        build: { steps: 50 },
         plan: { maxSteps: 100 },
       },
     },
@@ -252,9 +238,9 @@ test("agent steps/maxSteps config sets steps property", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const code = await Agent.get("code") // kilocode_change
+      const build = await Agent.get("build")
       const plan = await Agent.get("plan")
-      expect(code?.steps).toBe(50) // kilocode_change
+      expect(build?.steps).toBe(50)
       expect(plan?.steps).toBe(100)
     },
   })
@@ -281,17 +267,15 @@ test("agent name can be overridden", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        code: { name: "Coder" }, // kilocode_change
+        build: { name: "Builder" },
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code?.name).toBe("Coder")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build?.name).toBe("Builder")
     },
   })
 })
@@ -300,17 +284,15 @@ test("agent prompt can be set from config", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        code: { prompt: "Custom system prompt" }, // kilocode_change
+        build: { prompt: "Custom system prompt" },
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code?.prompt).toBe("Custom system prompt")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build?.prompt).toBe("Custom system prompt")
     },
   })
 })
@@ -319,7 +301,7 @@ test("unknown agent properties are placed into options", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        code: {
+        build: {
           random_property: "hello",
           another_random: 123,
         },
@@ -329,11 +311,9 @@ test("unknown agent properties are placed into options", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code?.options.random_property).toBe("hello")
-      expect(code?.options.another_random).toBe(123)
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build?.options.random_property).toBe("hello")
+      expect(build?.options.another_random).toBe(123)
     },
   })
 })
@@ -342,9 +322,7 @@ test("agent options merge correctly", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: {
-          // kilocode_change end
+        build: {
           options: {
             custom_option: true,
             another_option: "value",
@@ -356,11 +334,9 @@ test("agent options merge correctly", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(code?.options.custom_option).toBe(true)
-      expect(code?.options.another_option).toBe("value")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(build?.options.custom_option).toBe(true)
+      expect(build?.options.another_option).toBe("value")
     },
   })
 })
@@ -409,11 +385,9 @@ test("default permission includes doom_loop and external_directory as ask", asyn
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(evalPerm(code, "doom_loop")).toBe("ask")
-      expect(evalPerm(code, "external_directory")).toBe("ask")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(evalPerm(build, "doom_loop")).toBe("ask")
+      expect(evalPerm(build, "external_directory")).toBe("ask")
     },
   })
 })
@@ -423,10 +397,8 @@ test("webfetch is allowed by default", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(evalPerm(code, "webfetch")).toBe("allow")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(evalPerm(build, "webfetch")).toBe("allow")
     },
   })
 })
@@ -435,9 +407,7 @@ test("legacy tools config converts to permissions", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: {
-          // kilocode_change end
+        build: {
           tools: {
             bash: false,
             read: false,
@@ -449,11 +419,9 @@ test("legacy tools config converts to permissions", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(evalPerm(code, "bash")).toBe("deny")
-      expect(evalPerm(code, "read")).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(evalPerm(build, "bash")).toBe("deny")
+      expect(evalPerm(build, "read")).toBe("deny")
     },
   })
 })
@@ -462,9 +430,7 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: {
-          // kilocode_change end
+        build: {
           tools: {
             write: false,
           },
@@ -475,15 +441,13 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(evalPerm(code, "edit")).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(evalPerm(build, "edit")).toBe("deny")
     },
   })
 })
 
-test("Truncate.DIR is allowed even when user denies external_directory globally", async () => {
+test("Truncate.GLOB is allowed even when user denies external_directory globally", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
@@ -495,24 +459,20 @@ test("Truncate.DIR is allowed even when user denies external_directory globally"
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", code!.permission).action).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
-test("Truncate.DIR is allowed even when user denies external_directory per-agent", async () => {
+test("Truncate.GLOB is allowed even when user denies external_directory per-agent", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: {
-          // kilocode_change end
+        build: {
           permission: {
             external_directory: "deny",
           },
@@ -523,24 +483,22 @@ test("Truncate.DIR is allowed even when user denies external_directory per-agent
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", code!.permission).action).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
-test("explicit Truncate.DIR deny is respected", async () => {
+test("explicit Truncate.GLOB deny is respected", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
       permission: {
         external_directory: {
           "*": "deny",
-          [Truncate.DIR]: "deny",
+          [Truncate.GLOB]: "deny",
         },
       },
     },
@@ -548,27 +506,25 @@ test("explicit Truncate.DIR deny is respected", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("deny")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("deny")
-      // kilocode_change end
+      const build = await Agent.get("build")
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
     },
   })
 })
 
-// kilocode_change start - renamed from "build" to "code"
+// kilocode_change start - default agent is "code" not "build"
 test("defaultAgent returns code when no default_agent config", async () => {
-  // kilocode_change end
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
       const agent = await Agent.defaultAgent()
-      expect(agent).toBe("code") // kilocode_change
+      expect(agent).toBe("code")
     },
   })
 })
+// kilocode_change end
 
 test("defaultAgent respects default_agent config set to plan", async () => {
   await using tmp = await tmpdir({
@@ -647,101 +603,7 @@ test("defaultAgent throws when default_agent points to non-existent agent", asyn
   })
 })
 
-// kilocode_change start - renamed from "build" to "code"
-test("defaultAgent returns plan when code is disabled and default_agent not set", async () => {
-  // kilocode_change end
-  await using tmp = await tmpdir({
-    config: {
-      agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: { disable: true },
-        // kilocode_change end
-      },
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const agent = await Agent.defaultAgent()
-      // kilocode_change - code is disabled, so it should return plan (next primary agent)
-      expect(agent).toBe("plan")
-    },
-  })
-})
-
-test("defaultAgent throws when all primary agents are disabled", async () => {
-  await using tmp = await tmpdir({
-    config: {
-      agent: {
-        // kilocode_change start - renamed from "build" to "code"
-        code: { disable: true },
-        // kilocode_change end
-        plan: { disable: true },
-      },
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      // kilocode_change - code and plan are disabled, no primary-capable agents remain
-      await expect(Agent.defaultAgent()).rejects.toThrow("no primary visible agent found")
-    },
-  })
-})
-
-// kilocode_change start - Backward compatibility tests for "build" -> "code" rename
-test("Agent.get('build') returns code agent for backward compatibility", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const build = await Agent.get("build")
-      const code = await Agent.get("code")
-      expect(build).toBeDefined()
-      expect(build).toBe(code)
-      expect(build?.name).toBe("code")
-    },
-  })
-})
-
-test("agent.build config applies to code agent for backward compatibility", async () => {
-  await using tmp = await tmpdir({
-    config: {
-      agent: {
-        build: {
-          temperature: 0.8,
-          color: "#00FF00",
-        },
-      },
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const code = await Agent.get("code")
-      expect(code).toBeDefined()
-      expect(code?.temperature).toBe(0.8)
-      expect(code?.color).toBe("#00FF00")
-    },
-  })
-})
-
-test("default_agent: 'build' returns code agent for backward compatibility", async () => {
-  await using tmp = await tmpdir({
-    config: {
-      default_agent: "build",
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const agent = await Agent.defaultAgent()
-      expect(agent).toBe("code")
-    },
-  })
-})
-
-test("agent.build disable removes code agent for backward compatibility", async () => {
+test("defaultAgent returns plan when build is disabled and default_agent not set", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
@@ -752,12 +614,27 @@ test("agent.build disable removes code agent for backward compatibility", async 
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const code = await Agent.get("code")
-      expect(code).toBeUndefined()
-      const agents = await Agent.list()
-      const names = agents.map((a) => a.name)
-      expect(names).not.toContain("code")
+      const agent = await Agent.defaultAgent()
+      // build is disabled, so it should return plan (next primary agent)
+      expect(agent).toBe("plan")
     },
   })
 })
-// kilocode_change end
+
+test("defaultAgent throws when all primary agents are disabled", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        build: { disable: true },
+        plan: { disable: true },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      // build and plan are disabled, no primary-capable agents remain
+      await expect(Agent.defaultAgent()).rejects.toThrow("no primary visible agent found")
+    },
+  })
+})

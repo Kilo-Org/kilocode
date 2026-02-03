@@ -1,9 +1,9 @@
 ---
 title: Custom Tools
-description: Create tools the LLM can call in Kilo CLI.
+description: Create tools the LLM can call in opencode.
 ---
 
-Custom tools are functions you create that the LLM can call during conversations. They work alongside Kilo CLI's [built-in tools](/docs/tools) like `read`, `write`, and `bash`.
+Custom tools are functions you create that the LLM can call during conversations. They work alongside opencode's [built-in tools](/docs/tools) like `read`, `write`, and `bash`.
 
 ---
 
@@ -27,7 +27,7 @@ They can be defined:
 The easiest way to create tools is using the `tool()` helper which provides type-safety and validation.
 
 ```ts title=".opencode/tools/database.ts" {1}
-import { tool } from "@kilocode/plugin"
+import { tool } from "@opencode-ai/plugin"
 
 export default tool({
   description: "Query the project database",
@@ -50,7 +50,7 @@ The **filename** becomes the **tool name**. The above creates a `database` tool.
 You can also export multiple tools from a single file. Each export becomes **a separate tool** with the name **`<filename>_<exportname>`**:
 
 ```ts title=".opencode/tools/math.ts"
-import { tool } from "@kilocode/plugin"
+import { tool } from "@opencode-ai/plugin"
 
 export const add = tool({
   description: "Add two numbers",
@@ -113,7 +113,7 @@ export default {
 Tools receive context about the current session:
 
 ```ts title=".opencode/tools/project.ts" {8}
-import { tool } from "@kilocode/plugin"
+import { tool } from "@opencode-ai/plugin"
 
 export default tool({
   description: "Get project information",
@@ -150,7 +150,7 @@ print(a + b)
 Then create the tool definition that invokes it:
 
 ```ts title=".opencode/tools/python-add.ts" {10}
-import { tool } from "@kilocode/plugin"
+import { tool } from "@opencode-ai/plugin"
 import path from "path"
 
 export default tool({
