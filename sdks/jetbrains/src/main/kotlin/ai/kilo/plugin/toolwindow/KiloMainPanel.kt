@@ -3,14 +3,13 @@ package ai.kilo.plugin.toolwindow
 import ai.kilo.plugin.services.KiloProjectService
 import ai.kilo.plugin.toolwindow.components.ChatPanel
 import ai.kilo.plugin.toolwindow.components.SessionListPanel
-import ai.kilo.plugin.toolwindow.components.SidebarPanel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
-import com.intellij.ui.JBSplitter
 import kotlinx.coroutines.*
 import java.awt.CardLayout
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 private const val VIEW_CHAT = "chat"
 private const val VIEW_SESSIONS = "sessions"
@@ -38,11 +37,8 @@ class KiloMainPanel(
 
     private val sessionListPanel: SessionListPanel
     private val chatPanel = ChatPanel(project, state)
-    private val sidebarPanel = SidebarPanel(state)
-    private val splitter: JBSplitter
 
     private var currentView = VIEW_CHAT
-    private var sidebarVisible = true
 
     init {
         // Create session list panel with callback to switch to chat when session selected
@@ -51,17 +47,16 @@ class KiloMainPanel(
         }
 
         // Setup content panel with card layout
-        splitter = JBSplitter(false, 0.5f).apply {
-            firstComponent = chatPanel
-            secondComponent = sidebarPanel
-            dividerWidth = 3
-        }
-
-        contentPanel.add(splitter, VIEW_CHAT)
+        contentPanel.add(chatPanel, VIEW_CHAT)
         contentPanel.add(sessionListPanel, VIEW_SESSIONS)
 
         setContent(contentPanel)
         loadInitialTodos()
+
+        // Autofocus input when panel opens
+        SwingUtilities.invokeLater {
+            focusInput()
+        }
     }
 
     private fun loadInitialTodos() {
@@ -90,11 +85,6 @@ class KiloMainPanel(
         }
     }
 
-    fun toggleSidebar() {
-        sidebarVisible = !sidebarVisible
-        splitter.secondComponent = if (sidebarVisible) sidebarPanel else null
-    }
-
     fun focusInput() = chatPanel.focusInput()
 
     fun abortGeneration() = chatPanel.abortGeneration()
@@ -103,7 +93,6 @@ class KiloMainPanel(
         scope.cancel()
         sessionListPanel.dispose()
         chatPanel.dispose()
-        sidebarPanel.dispose()
         KiloToolWindowFactory.removePanel(project)
     }
 }

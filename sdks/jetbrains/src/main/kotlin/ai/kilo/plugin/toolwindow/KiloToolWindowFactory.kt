@@ -76,13 +76,6 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         }
 
         /**
-         * Toggle the sidebar visibility for the given project.
-         */
-        fun toggleSidebar(project: Project) {
-            mainPanels[project]?.toggleSidebar()
-        }
-
-        /**
          * Toggle the sessions list visibility for the given project.
          */
         fun toggleSessions(project: Project) {

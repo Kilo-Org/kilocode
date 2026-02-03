@@ -462,9 +462,14 @@ class KiloStateService(
      * Send a message to the current session.
      * Uses the currently selected model and agent if not explicitly provided.
      * Includes any attached files in the message.
+     * Auto-creates a new session if none exists.
      */
     suspend fun sendMessage(text: String, model: ModelRef? = null, agent: String? = null) {
-        val sessionId = _currentSessionId.value ?: return
+        // Auto-create session if none exists
+        val sessionId = _currentSessionId.value ?: run {
+            val newSession = createSession()
+            newSession?.id ?: return
+        }
 
         try {
             val effectiveModel = model ?: _selectedModel.value

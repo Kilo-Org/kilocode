@@ -66,13 +66,8 @@ class ChatPanel(
     private val messagesPanel = JBPanel<JBPanel<*>>()
     private val scrollPane: JBScrollPane
     private val promptInput: PromptInputPanel
-    private val emptyStateLabel = JBLabel("Select or create a session to start chatting")
+    private val emptyStateLabel = JBLabel("Start typing to begin a new conversation")
     private val headerPanel = HeaderPanel()
-    private val modelAgentSelector: ModelAgentSelector = ModelAgentSelector(stateService) { selector ->
-        // Update state service when selection changes
-        stateService.setSelectedModel(selector.getSelectedModelRef())
-        stateService.setSelectedAgent(selector.getSelectedAgentName())
-    }
     
     private var currentSessionId: String? = null
     private var currentAgent: String? = null
@@ -137,20 +132,17 @@ class ChatPanel(
         }
         add(contentPanel, BorderLayout.CENTER)
 
-        // Prompt input with model/agent selector and attached files above it
+        // Prompt input with attached files above it and feedback below
         val promptArea = JPanel(BorderLayout()).apply {
             isOpaque = true
             background = KiloTheme.backgroundStronger
-            border = JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0)
-            
-            // Top section: model selector and attached files
-            val topSection = JPanel().apply {
-                layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                isOpaque = false
-                add(modelAgentSelector)
-                add(attachedFilesPanel)
-            }
-            add(topSection, BorderLayout.NORTH)
+            border = BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+                JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
+            )
+
+            // Attached files panel above input
+            add(attachedFilesPanel, BorderLayout.NORTH)
         }
 
         promptInput = PromptInputPanel(
@@ -160,6 +152,17 @@ class ChatPanel(
             onStop = { stopGeneration() }
         )
         promptArea.add(promptInput, BorderLayout.CENTER)
+
+        // Feedback link below input
+        val feedbackLabel = JBLabel("Share feedback ↗").apply {
+            foreground = KiloTheme.textWeak
+            font = font.deriveFont(Font.PLAIN, 12f)
+            horizontalAlignment = SwingConstants.CENTER
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            border = JBUI.Borders.empty(KiloSpacing.xs, 0, KiloSpacing.md, 0)
+        }
+        promptArea.add(feedbackLabel, BorderLayout.SOUTH)
+
         add(promptArea, BorderLayout.SOUTH)
         
         // Subscribe to state
@@ -195,11 +198,11 @@ class ChatPanel(
 
                 if (session == null) {
                     cardLayout.show(contentPanel, "empty")
-                    promptInput.isEnabled = false
                 } else {
                     cardLayout.show(contentPanel, "content")
-                    promptInput.isEnabled = true
                 }
+                // Input is always enabled - will auto-create session on send
+                promptInput.isEnabled = true
             }
         }
 
@@ -478,7 +481,6 @@ class ChatPanel(
         scope.cancel()
         toolPartWrappers.forEach { it.dispose() }
         toolPartWrappers.clear()
-        modelAgentSelector.dispose()
         attachedFilesPanel.dispose()
         promptInput.dispose()
     }
@@ -896,88 +898,280 @@ private class MessageView(
     }
 }
 
+// ========== Mode Data ==========
+
+private val modeNames = listOf("Code", "Architect", "Ask", "Debug")
+
+// ========== Mode Selector Component ==========
+
+private class ModeSelector : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
+
+    private var selectedMode = modeNames[0] // Default to Code
+    private val modeLabel = JBLabel("$selectedMode \u25BE").apply {
+        foreground = KiloTheme.textWeak
+        font = font.deriveFont(13f)
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    }
+
+    init {
+        isOpaque = false
+        add(modeLabel)
+
+        modeLabel.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                showModePopup()
+            }
+            override fun mouseEntered(e: MouseEvent) {
+                modeLabel.foreground = KiloTheme.textInteractive
+            }
+            override fun mouseExited(e: MouseEvent) {
+                modeLabel.foreground = KiloTheme.textWeak
+            }
+        })
+    }
+
+    private fun showModePopup() {
+        val popup = JPopupMenu().apply {
+            add(JLabel("  Mode").apply {
+                font = font.deriveFont(Font.BOLD)
+                border = JBUI.Borders.empty(8, 8, 4, 8)
+            })
+            addSeparator()
+
+            for (mode in modeNames) {
+                add(JMenuItem(mode).apply {
+                    if (mode == selectedMode) {
+                        icon = AllIcons.Actions.Checked
+                    }
+                    addActionListener {
+                        selectedMode = mode
+                        modeLabel.text = "$mode \u25BE"
+                    }
+                })
+            }
+        }
+        popup.show(modeLabel, 0, -popup.preferredSize.height)
+    }
+
+    fun getSelectedMode(): String = selectedMode
+}
+
 /**
- * Prompt input panel with text area and send button.
+ * Simple input component with mode selector, attachment popup, and send functionality.
  */
 private class PromptInputPanel(
     private val project: Project,
     private val stateService: KiloStateService,
     private val onSend: (String) -> Unit,
     private val onStop: () -> Unit
-) : JPanel(BorderLayout()) {
+) : JPanel() {
 
-    private val textArea: JTextArea
-    private val sendButton: JButton
-    private val stopButton: JButton
+    private val focusedColor = JBColor(0x3574F0, 0x3574F0)
+    private val unfocusedColor = KiloTheme.borderWeak
+    private var borderColor = unfocusedColor
+    private var isFocused = false
+    private var isExpanded = false
     private var isBusy = false
+    private val collapsedHeight = 120
+    private val expandedHeight = 300
+
+    private val textArea = com.intellij.ui.components.JBTextArea().apply {
+        lineWrap = true
+        wrapStyleWord = true
+        rows = 2
+        border = JBUI.Borders.empty()
+        isOpaque = false
+        background = KiloTheme.surfaceRaisedStrong
+        foreground = KiloTheme.textBase
+        caretColor = KiloTheme.textBase
+        font = JBUI.Fonts.label(14f)
+    }
+
+    private val placeholderLabel = JBLabel("Ask Kilo anything...").apply {
+        foreground = KiloTheme.textWeaker
+        font = JBUI.Fonts.label(14f)
+        isOpaque = false
+    }
+
     private var fileAutocomplete: FileAutocomplete? = null
 
-    init {
-        border = JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg)
-        isOpaque = true
-        background = KiloTheme.backgroundStronger
+    // Expand button (will be positioned absolutely)
+    private val expandButton = JButton(AllIcons.General.ExpandComponent).apply {
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Expand"
+        isContentAreaFilled = false
+        isBorderPainted = false
+        isFocusPainted = false
+        isOpaque = false
+        margin = Insets(0, 0, 0, 0)
+        border = null
+        val iconSize = AllIcons.General.ExpandComponent.iconWidth
+        preferredSize = Dimension(iconSize, iconSize)
+        minimumSize = Dimension(iconSize, iconSize)
+        maximumSize = Dimension(iconSize, iconSize)
+        addActionListener { toggleExpand() }
+    }
 
-        // Text input with themed styling
-        textArea = JTextArea(3, 40).apply {
-            lineWrap = true
-            wrapStyleWord = true
-            background = KiloTheme.surfaceInsetBase
-            foreground = KiloTheme.textBase
-            caretColor = KiloTheme.textBase
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(KiloTheme.borderWeak, 1),
-                JBUI.Borders.empty(KiloSpacing.md)
-            )
-            font = Font(Font.SANS_SERIF, Font.PLAIN, KiloTypography.fontSizeMedium.toInt())
-        }
+    // TOP PANEL: text editor area with placeholder overlay
+    private val topPanel = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(8, 10, 4, 10)
 
-        // Handle Enter to send (Shift+Enter for newline)
-        textArea.inputMap.put(
-            KeyStroke.getKeyStroke("ENTER"),
-            "send"
-        )
-        textArea.actionMap.put("send", object : AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                if (!isBusy) {
-                    send()
-                }
+        textArea.addFocusListener(object : java.awt.event.FocusAdapter() {
+            override fun focusGained(e: java.awt.event.FocusEvent?) {
+                borderColor = focusedColor
+                isFocused = true
+                this@PromptInputPanel.repaint()
+            }
+            override fun focusLost(e: java.awt.event.FocusEvent?) {
+                borderColor = unfocusedColor
+                isFocused = false
+                this@PromptInputPanel.repaint()
             }
         })
-        textArea.inputMap.put(
-            KeyStroke.getKeyStroke("shift ENTER"),
-            "insert-break"
-        )
 
-        add(JBScrollPane(textArea).apply {
+        // Listen for text changes to show/hide placeholder
+        textArea.document.addDocumentListener(object : javax.swing.event.DocumentListener {
+            override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = updatePlaceholder()
+            override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = updatePlaceholder()
+            override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = updatePlaceholder()
+            private fun updatePlaceholder() {
+                placeholderLabel.isVisible = textArea.text.isEmpty()
+            }
+        })
+
+        val scrollPane = JBScrollPane(textArea).apply {
             border = JBUI.Borders.empty()
-            preferredSize = Dimension(0, JBUI.scale(80))
-        }, BorderLayout.CENTER)
-
-        // Buttons panel
-        val buttonsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, KiloSpacing.xs, 0)).apply {
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
             isOpaque = false
+            viewport.isOpaque = false
         }
 
-        stopButton = JButton("Stop").apply {
-            icon = AllIcons.Actions.Suspend
-            isVisible = false
-            background = KiloTheme.surfaceCritical
-            foreground = KiloTheme.textOnCritical
-            addActionListener {
+        // Use layered pane to overlay placeholder on text area
+        val layeredPane = JLayeredPane().apply {
+            layout = object : java.awt.LayoutManager {
+                override fun addLayoutComponent(name: String?, comp: Component?) {}
+                override fun removeLayoutComponent(comp: Component?) {}
+                override fun preferredLayoutSize(parent: Container?) = scrollPane.preferredSize
+                override fun minimumLayoutSize(parent: Container?) = scrollPane.minimumSize
+                override fun layoutContainer(parent: Container?) {
+                    val bounds = parent?.bounds ?: return
+                    scrollPane.setBounds(0, 0, bounds.width, bounds.height)
+                    placeholderLabel.setBounds(4, 2, bounds.width - 8, 20)
+                }
+            }
+            add(scrollPane, JLayeredPane.DEFAULT_LAYER)
+            add(placeholderLabel, JLayeredPane.PALETTE_LAYER)
+        }
+
+        // Make placeholder click-through
+        placeholderLabel.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                textArea.requestFocusInWindow()
+            }
+        })
+
+        add(layeredPane, BorderLayout.CENTER)
+    }
+
+    // Mode selector
+    private val modeSelector = ModeSelector()
+
+    private var selectedModel = "Claude 4.5 Opus"
+    private val modelLabel = JBLabel("$selectedModel \u25BE").apply {
+        foreground = KiloTheme.textWeak
+        font = font.deriveFont(13f)
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    }
+
+    // Send button (icon only)
+    private val sendButton = JBLabel(AllIcons.Actions.Execute).apply {
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Send (Enter)"
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (!isBusy) send()
+            }
+        })
+    }
+
+    // Stop button
+    private val stopButton = JBLabel(AllIcons.Actions.Suspend).apply {
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Stop"
+        isVisible = false
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
                 onStop()
             }
-        }
-        buttonsPanel.add(stopButton)
+        })
+    }
 
-        sendButton = JButton("Send").apply {
-            icon = AllIcons.Actions.Execute
-            background = KiloTheme.buttonPrimaryBg
-            foreground = KiloTheme.buttonPrimaryFg
-            addActionListener { send() }
-        }
-        buttonsPanel.add(sendButton)
+    // BOTTOM PANEL: toolbar
+    private val bottomPanel = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(4, 10, 8, 10)
 
-        add(buttonsPanel, BorderLayout.SOUTH)
+        val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+            isOpaque = false
+            add(modeSelector)
+        }
+
+        val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
+            isOpaque = false
+            add(modelLabel)
+            add(stopButton)
+            add(sendButton)
+        }
+
+        add(leftPanel, BorderLayout.WEST)
+        add(rightPanel, BorderLayout.EAST)
+    }
+
+    init {
+        layout = null // Use absolute positioning
+        isOpaque = false
+        isDoubleBuffered = true
+        background = KiloTheme.surfaceRaisedStrong
+        border = JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg)
+        preferredSize = Dimension(0, collapsedHeight)
+
+        // Add components - expand button first for z-order
+        add(expandButton)
+        add(topPanel)
+        add(bottomPanel)
+
+        // Handle Enter to send (Shift+Enter for newline)
+        textArea.inputMap.put(KeyStroke.getKeyStroke("ENTER"), "send")
+        textArea.actionMap.put("send", object : AbstractAction() {
+            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                if (!isBusy) send()
+            }
+        })
+        textArea.inputMap.put(KeyStroke.getKeyStroke("shift ENTER"), "insert-break")
+
+        // Handle ESC to unfocus
+        textArea.inputMap.put(KeyStroke.getKeyStroke("ESCAPE"), "unfocus")
+        textArea.actionMap.put("unfocus", object : AbstractAction() {
+            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                textArea.transferFocus()
+            }
+        })
+
+        // Model selector click handler
+        modelLabel.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                val popup = createModelPopup()
+                popup.show(modelLabel, 0, -popup.preferredSize.height)
+            }
+            override fun mouseEntered(e: MouseEvent) {
+                modelLabel.foreground = KiloTheme.textInteractive
+            }
+            override fun mouseExited(e: MouseEvent) {
+                modelLabel.foreground = KiloTheme.textWeak
+            }
+        })
 
         setupFileAutocomplete()
     }
@@ -987,17 +1181,12 @@ private class PromptInputPanel(
             project = project,
             textComponent = textArea,
             stateService = stateService,
-            onFileSelected = { attachedFile, displayText ->
-                // Add file to state
+            onFileSelected = { attachedFile, _ ->
                 stateService.addFileToContext(attachedFile)
-                
-                // Update text to show the file reference was added
-                // Replace the @query with nothing (file is shown in attached panel)
                 val text = textArea.text
                 val atIndex = text.lastIndexOf('@')
                 if (atIndex >= 0) {
                     val caret = textArea.caretPosition
-                    // Remove @query from text
                     val newText = text.substring(0, atIndex) + text.substring(caret.coerceAtMost(text.length))
                     textArea.text = newText.trimEnd()
                     if (newText.isNotEmpty() && !newText.endsWith(" ")) {
@@ -1008,7 +1197,86 @@ private class PromptInputPanel(
             }
         )
     }
-    
+
+    override fun doLayout() {
+        val insets = insets
+        val w = width - insets.left - insets.right
+        val h = height - insets.top - insets.bottom
+
+        // Bottom panel at bottom
+        val bottomPref = bottomPanel.preferredSize
+        bottomPanel.setBounds(insets.left, height - insets.bottom - bottomPref.height, w, bottomPref.height)
+
+        // Top panel fills remaining space
+        topPanel.setBounds(insets.left, insets.top, w, h - bottomPref.height)
+
+        // Expand button in top-right corner
+        val btnSize = expandButton.preferredSize
+        expandButton.setBounds(width - btnSize.width - 14, 12, btnSize.width, btnSize.height)
+    }
+
+    private fun toggleExpand() {
+        isExpanded = !isExpanded
+        val newHeight = if (isExpanded) expandedHeight else collapsedHeight
+        preferredSize = Dimension(preferredSize.width, newHeight)
+        textArea.rows = if (isExpanded) 10 else 2
+        expandButton.icon = if (isExpanded) AllIcons.General.CollapseComponent else AllIcons.General.ExpandComponent
+        expandButton.toolTipText = if (isExpanded) "Collapse" else "Expand"
+        revalidate()
+        repaint()
+        parent?.revalidate()
+        parent?.repaint()
+    }
+
+    private fun createModelPopup(): JPopupMenu {
+        return JPopupMenu().apply {
+            add(JLabel("  Model").apply {
+                font = font.deriveFont(Font.BOLD)
+                border = JBUI.Borders.empty(8, 8, 4, 8)
+            })
+            addSeparator()
+
+            add(createModelMenuItem("Auto", "GPT-5.2", selectedModel == "Auto"))
+            addSeparator()
+
+            add(createModelMenuItem("Claude 4.5 Haiku", null, selectedModel == "Claude 4.5 Haiku"))
+            add(createModelMenuItem("Claude 4.5 Opus", null, selectedModel == "Claude 4.5 Opus"))
+            add(createModelMenuItem("Claude 4.5 Sonnet", null, selectedModel == "Claude 4.5 Sonnet"))
+            add(createModelMenuItem("Claude 4 Sonnet", null, selectedModel == "Claude 4 Sonnet"))
+            addSeparator()
+
+            add(createModelMenuItem("Gemini 3 Flash", null, selectedModel == "Gemini 3 Flash"))
+            add(createModelMenuItem("Gemini 3 Pro", null, selectedModel == "Gemini 3 Pro"))
+            add(createModelMenuItem("GPT-4o", null, selectedModel == "GPT-4o"))
+            add(createModelMenuItem("GPT-5.1", null, selectedModel == "GPT-5.1"))
+            add(createModelMenuItem("GPT-5.2", null, selectedModel == "GPT-5.2"))
+            addSeparator()
+
+            add(JMenuItem("More Models..."))
+            addSeparator()
+
+            add(JLabel("  Third-Party Providers").apply {
+                font = font.deriveFont(Font.BOLD, 11f)
+                foreground = KiloTheme.textWeaker
+                border = JBUI.Borders.empty(4, 8)
+            })
+            add(JMenuItem("Manage Models..."))
+        }
+    }
+
+    private fun createModelMenuItem(name: String, subtitle: String?, isSelected: Boolean): JMenuItem {
+        val text = if (subtitle != null) "$name  $subtitle" else name
+        return JMenuItem(text).apply {
+            if (isSelected) {
+                icon = AllIcons.Actions.Checked
+            }
+            addActionListener {
+                selectedModel = name
+                modelLabel.text = "$name \u25BE"
+            }
+        }
+    }
+
     private fun send() {
         val text = textArea.text.trim()
         if (text.isNotEmpty()) {
@@ -1019,14 +1287,14 @@ private class PromptInputPanel(
 
     fun updateStatus(status: SessionStatus?) {
         isBusy = status?.type == "busy" || status?.type == "retry"
-        sendButton.isEnabled = !isBusy
+        sendButton.isVisible = !isBusy
         stopButton.isVisible = isBusy
     }
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         textArea.isEnabled = enabled
-        sendButton.isEnabled = enabled && !isBusy
+        sendButton.isVisible = enabled && !isBusy
     }
 
     override fun requestFocusInWindow(): Boolean {
@@ -1035,5 +1303,33 @@ private class PromptInputPanel(
 
     fun dispose() {
         fileAutocomplete?.dispose()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+        val radius = 12f
+        val strokeWidth = if (isFocused) 2f else 1.5f
+        val offset = strokeWidth / 2f
+
+        // Fill background
+        g2.color = background
+        g2.fill(java.awt.geom.RoundRectangle2D.Float(
+            strokeWidth, strokeWidth,
+            width - strokeWidth * 2, height - strokeWidth * 2,
+            radius, radius
+        ))
+
+        // Draw border
+        g2.color = borderColor
+        g2.stroke = BasicStroke(strokeWidth)
+        g2.draw(java.awt.geom.RoundRectangle2D.Float(
+            offset, offset,
+            width - strokeWidth, height - strokeWidth,
+            radius, radius
+        ))
+
+        g2.dispose()
     }
 }

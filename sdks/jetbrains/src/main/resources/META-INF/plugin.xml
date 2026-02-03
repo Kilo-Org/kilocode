@@ -95,16 +95,6 @@
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta L"/>
         </action>
 
-        <action id="Kilo.ToggleSidebar"
-                class="ai.kilo.plugin.actions.ToggleSidebarAction"
-                text="Toggle Kilo Sidebar"
-                description="Toggle the Kilo sidebar visibility"
-                icon="AllIcons.Actions.PreviewDetails">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl B"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta B"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta B"/>
-        </action>
-
         <action id="Kilo.AbortGeneration"
                 class="ai.kilo.plugin.actions.AbortGenerationAction"
                 text="Abort Kilo Generation"
@@ -122,7 +112,6 @@
         <group id="Kilo.ToolWindowToolbar">
             <reference ref="Kilo.NewSession"/>
             <reference ref="Kilo.ToggleSessions"/>
-            <reference ref="Kilo.ToggleSidebar"/>
             <separator/>
             <action id="Kilo.Toolbar.Settings"
                     class="ai.kilo.plugin.actions.OpenSettingsAction"
