@@ -17,6 +17,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -50,7 +51,7 @@ data class PendingRequests(
 class ChatPanel(
     private val project: Project,
     private val stateService: KiloStateService
-) : JPanel(BorderLayout()) {
+) : BorderLayoutPanel() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -92,7 +93,7 @@ class ChatPanel(
         headerArea.add(headerPanel)
         errorBanner.alignmentX = LEFT_ALIGNMENT
         headerArea.add(errorBanner)
-        add(headerArea, BorderLayout.NORTH)
+        addToTop(headerArea)
 
         messagesPanel.layout = BoxLayout(messagesPanel, BoxLayout.Y_AXIS)
         messagesPanel.border = JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
@@ -118,18 +119,7 @@ class ChatPanel(
             add(createCenteredPanel(emptyStateLabel), "empty")
             add(scrollPane, "content")
         }
-        add(contentPanel, BorderLayout.CENTER)
-
-        val promptArea = JPanel(BorderLayout()).apply {
-            isOpaque = true
-            background = KiloTheme.backgroundStronger
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
-                JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
-            )
-
-            add(attachedFilesPanel, BorderLayout.NORTH)
-        }
+        addToCenter(contentPanel)
 
         promptInput = PromptInputPanel(
             project = project,
@@ -137,7 +127,6 @@ class ChatPanel(
             onSend = { text -> sendMessage(text) },
             onStop = { stopGeneration() }
         )
-        promptArea.add(promptInput, BorderLayout.CENTER)
 
         val feedbackLabel = JBLabel("Share feedback ↗").apply {
             foreground = KiloTheme.textWeak
@@ -146,9 +135,20 @@ class ChatPanel(
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             border = JBUI.Borders.empty(KiloSpacing.xs, 0, KiloSpacing.md, 0)
         }
-        promptArea.add(feedbackLabel, BorderLayout.SOUTH)
 
-        add(promptArea, BorderLayout.SOUTH)
+        val promptArea = BorderLayoutPanel().apply {
+            isOpaque = true
+            background = KiloTheme.backgroundStronger
+            border = BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+                JBUI.Borders.empty(KiloSpacing.md, KiloSpacing.lg, KiloSpacing.sm, KiloSpacing.lg)
+            )
+            addToTop(attachedFilesPanel)
+            addToCenter(promptInput)
+            addToBottom(feedbackLabel)
+        }
+
+        addToBottom(promptArea)
         
         subscribeToState(contentPanel)
 
@@ -436,7 +436,7 @@ class ChatPanel(
         promptInput.dispose()
     }
 
-    private inner class HeaderPanel : JPanel(BorderLayout()) {
+    private inner class HeaderPanel : BorderLayoutPanel() {
         private val titleLabel = JBLabel()
         private val statusLabel = JBLabel()
         private val connectionIndicator = JBLabel()
@@ -462,11 +462,11 @@ class ChatPanel(
             titleLabel.foreground = KiloTheme.textStrong
             leftPanel.add(titleLabel)
 
-            add(leftPanel, BorderLayout.CENTER)
+            addToCenter(leftPanel)
 
             statusLabel.foreground = KiloTheme.textWeak
             statusLabel.font = statusLabel.font.deriveFont(KiloTypography.fontSizeBase)
-            add(statusLabel, BorderLayout.EAST)
+            addToRight(statusLabel)
 
             subscribeToConnectionStatus()
         }
@@ -545,7 +545,7 @@ private class MessageView(
     private val toolPartWrappers: MutableList<ToolPartWrapper>,
     private val onFork: ((String) -> Unit)? = null,
     private val onRevert: ((String) -> Unit)? = null
-) : JBPanel<JBPanel<*>>() {
+) : BorderLayoutPanel() {
 
     companion object {
         private val timeFormat = SimpleDateFormat("HH:mm")
@@ -553,7 +553,6 @@ private class MessageView(
     }
 
     init {
-        layout = BorderLayout()
         isOpaque = true
 
         val message = messageWithParts.info
@@ -576,10 +575,6 @@ private class MessageView(
             )
         }
 
-        val header = JPanel(BorderLayout()).apply {
-            isOpaque = false
-        }
-
         val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.sm, 0)).apply {
             isOpaque = false
             val icon = if (isUser) AllIcons.General.User else AllIcons.Nodes.Favorite
@@ -595,13 +590,16 @@ private class MessageView(
             }
             add(timeLabel)
         }
-        header.add(leftHeader, BorderLayout.WEST)
 
         val actionsPanel = createActionsPanel(message)
-        header.add(actionsPanel, BorderLayout.EAST)
 
-        add(header, BorderLayout.NORTH)
-        
+        val header = BorderLayoutPanel().apply {
+            isOpaque = false
+            addToLeft(leftHeader)
+            addToRight(actionsPanel)
+        }
+        addToTop(header)
+
         val contentPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
@@ -619,8 +617,8 @@ private class MessageView(
             contentPanel.add(Box.createVerticalStrut(KiloSpacing.md))
             contentPanel.add(createFooter(message))
         }
-        
-        add(contentPanel, BorderLayout.CENTER)
+
+        addToCenter(contentPanel)
     }
 
     private fun formatTimestamp(timestamp: Long): String {
@@ -778,27 +776,27 @@ private class MessageView(
     }
 
     private fun createReasoningPartView(part: Part): JComponent {
-        val panel = JPanel(BorderLayout()).apply {
+        val header = JBLabel("Thinking...", AllIcons.General.InspectionsEye, SwingConstants.LEFT).apply {
+            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
+            foreground = KiloTheme.textWeak
+        }
+
+        val panel = BorderLayoutPanel().apply {
             isOpaque = true
             background = KiloTheme.surfaceInfo
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 3, 0, 0, KiloTheme.borderInfo),
                 JBUI.Borders.empty(KiloSpacing.md)
             )
+            addToTop(header)
         }
-
-        val header = JBLabel("Thinking...", AllIcons.General.InspectionsEye, SwingConstants.LEFT).apply {
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
-            foreground = KiloTheme.textWeak
-        }
-        panel.add(header, BorderLayout.NORTH)
 
         val reasoningText = part.text
         if (reasoningText != null && reasoningText.isNotBlank()) {
             val content = JBLabel("<html>${reasoningText.take(200)}${if (reasoningText.length > 200) "..." else ""}</html>").apply {
                 foreground = KiloTheme.textWeak
             }
-            panel.add(content, BorderLayout.CENTER)
+            panel.addToCenter(content)
         }
 
         return panel
@@ -928,7 +926,7 @@ private class PromptInputPanel(
         addActionListener { toggleExpand() }
     }
 
-    private val topPanel = JPanel(BorderLayout()).apply {
+    private val topPanel = BorderLayoutPanel().apply {
         isOpaque = false
         border = JBUI.Borders.empty(8, 10, 4, 10)
 
@@ -984,7 +982,7 @@ private class PromptInputPanel(
             }
         })
 
-        add(layeredPane, BorderLayout.CENTER)
+        addToCenter(layeredPane)
     }
 
     private val modeSelector = ModeSelector()
@@ -1017,7 +1015,7 @@ private class PromptInputPanel(
         })
     }
 
-    private val bottomPanel = JPanel(BorderLayout()).apply {
+    private val bottomPanel = BorderLayoutPanel().apply {
         isOpaque = false
         border = JBUI.Borders.empty(4, 10, 8, 10)
 
@@ -1033,8 +1031,8 @@ private class PromptInputPanel(
             add(sendButton)
         }
 
-        add(leftPanel, BorderLayout.WEST)
-        add(rightPanel, BorderLayout.EAST)
+        addToLeft(leftPanel)
+        addToRight(rightPanel)
     }
 
     init {
