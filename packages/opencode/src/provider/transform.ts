@@ -354,7 +354,17 @@ export namespace ProviderTransform {
           return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
         }
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+        // GPT models via Kilo need include for encrypted reasoning content to avoid org_id mismatch
+        return Object.fromEntries(
+          OPENAI_EFFORTS.map((effort) => [
+            effort,
+            {
+              reasoning: { effort },
+              reasoningSummary: "auto",
+              include: ["reasoning.encrypted_content"],
+            },
+          ]),
+        )
       // kilocode_change end
 
       case "@openrouter/ai-sdk-provider":
@@ -616,7 +626,8 @@ export namespace ProviderTransform {
         result["textVerbosity"] = "low"
       }
 
-      if (input.model.providerID.startsWith("opencode")) {
+      // kilocode_change - include kilo provider for encrypted reasoning content
+      if (input.model.providerID.startsWith("opencode") || input.model.api.npm === "@kilocode/kilo-gateway") {
         result["promptCacheKey"] = input.sessionID
         result["include"] = ["reasoning.encrypted_content"]
         result["reasoningSummary"] = "auto"
