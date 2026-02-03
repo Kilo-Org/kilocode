@@ -1206,6 +1206,103 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
+  // kilocode_change start
+  describe("@kilocode/kilo-gateway", () => {
+    test("claude models return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-sonnet-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-sonnet-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.none).toEqual({ reasoning: { effort: "none" } })
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.medium).toEqual({ reasoning: { effort: "medium" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+      expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
+    })
+
+    test("anthropic models return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/anthropic/claude-opus-4",
+        providerID: "kilo",
+        api: {
+          id: "anthropic/claude-opus-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+    })
+
+    test("gpt models return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/openai/gpt-5",
+        providerID: "kilo",
+        api: {
+          id: "openai/gpt-5",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+    })
+
+    test("gemini-3 models return OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/google/gemini-3-pro",
+        providerID: "kilo",
+        api: {
+          id: "google/gemini-3-pro",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+    })
+
+    test("non-qualifying models return empty object", () => {
+      const model = createMockModel({
+        id: "kilo/meta/llama-4",
+        providerID: "kilo",
+        api: {
+          id: "meta/llama-4",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual({})
+    })
+
+    test("grok-3-mini returns low and high with reasoning", () => {
+      const model = createMockModel({
+        id: "kilo/x-ai/grok-3-mini",
+        providerID: "kilo",
+        api: {
+          id: "x-ai/grok-3-mini",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "high"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    })
+  })
+  // kilocode_change end
+
   describe("@ai-sdk/gateway", () => {
     test("returns OPENAI_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
