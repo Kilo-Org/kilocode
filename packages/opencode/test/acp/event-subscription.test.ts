@@ -159,8 +159,10 @@ function createFakeAgent() {
         return {
           data: [
             {
-              name: "build",
-              description: "build",
+              // kilocode_change start - renamed from "build" to "code"
+              name: "code",
+              description: "code",
+              // kilocode_change end
               mode: "agent",
             },
           ],

@@ -26,7 +26,7 @@ const seed = async () => {
         sessionID: session.id,
         role: "user" as const,
         time: { created: now },
-        agent: "build",
+        agent: "code", // kilocode_change - renamed from "build" to "code"
         model: {
           providerID,
           modelID,

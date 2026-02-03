@@ -9821,7 +9821,7 @@
             "type": "string"
           },
           "default_agent": {
-            "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'build' if not set or if the specified agent is invalid.",
+            "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
             "type": "string"
           },
           "username": {

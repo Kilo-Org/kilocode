@@ -10,7 +10,7 @@ const ctx = {
   sessionID: "test",
   messageID: "",
   callID: "",
-  agent: "build",
+  agent: "code", // kilocode_change
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

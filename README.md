@@ -12,6 +12,18 @@
 
 ---
 
+### Installation
+
+```bash
+# npm
+npm install -g @kilocode/cli
+
+# Or run directly with npx
+npx @kilocode/cli
+```
+
+Then run `kilo` in any project directory to start.
+
 ### Agents
 
 Kilo CLI includes two built-in agents you can switch between using the `Tab` key:
@@ -69,7 +81,7 @@ If you're interested in contributing, please read our [contributing docs](./CONT
 
 #### Where did Kilo CLI come from?
 
-Kilo CLI is a fork of [OpenCode](https://github.com/Kilo-Org/kilo), enhanced to work within the Kilo agentic engineering platform.
+Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
 
 ---
 
