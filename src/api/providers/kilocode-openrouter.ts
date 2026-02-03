@@ -31,6 +31,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	defaultModel: string = openRouterDefaultModelId
 	private apiFIMBase: string
 
+	private static readonly KILO_AUTO_MODEL_ID = "kilo/auto" // kilocode_change
+
 	protected override get providerName() {
 		return "KiloCode" as const
 	}
@@ -98,7 +100,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override getModel() {
-		let id = this.options.kilocodeModel ?? this.defaultModel
+		const id = this.options.kilocodeModel ?? this.defaultModel
 		let info = this.models[id] ?? openRouterDefaultModelInfo
 
 		// If a specific provider is requested, use the endpoint for that provider.
@@ -124,23 +126,29 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			throw new Error("OpenRouter base URL is required")
 		}
 
-		const [models, endpoints, defaultModel] = await Promise.all([
+		const [models, defaultModel] = await Promise.all([
 			getModels({
 				provider: "kilocode",
 				kilocodeToken: this.options.kilocodeToken,
 				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
-			getModelEndpoints({
-				router: "openrouter",
-				modelId: this.options.kilocodeModel,
-				endpoint: this.options.openRouterSpecificProvider,
-			}),
 			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId),
 		])
 
 		this.models = models
-		this.endpoints = endpoints
 		this.defaultModel = defaultModel.defaultModel
+
+		// Avoid attempting to fetch OpenRouter endpoints for the virtual `kilo/auto` model id.
+		const endpointModelId =
+			this.options.kilocodeModel?.toLowerCase() === KilocodeOpenrouterHandler.KILO_AUTO_MODEL_ID
+				? this.defaultModel
+				: this.options.kilocodeModel
+
+		this.endpoints = await getModelEndpoints({
+			router: "openrouter",
+			modelId: endpointModelId,
+			endpoint: this.options.openRouterSpecificProvider,
+		})
 		return this.getModel()
 	}
 

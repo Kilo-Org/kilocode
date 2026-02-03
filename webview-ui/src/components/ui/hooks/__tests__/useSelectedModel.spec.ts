@@ -10,6 +10,7 @@ import {
 	ModelInfo,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	litellmDefaultModelInfo,
+	openRouterDefaultModelId,
 	openAiModelInfoSaneDefaults,
 } from "@roo-code/types"
 
@@ -43,6 +44,61 @@ const createWrapper = () => {
 }
 
 describe("useSelectedModel", () => {
+	describe("kilocode provider", () => {
+		it("returns kilo/auto as the selected model", () => {
+			const defaultModelInfo: ModelInfo = {
+				maxTokens: 8192,
+				contextWindow: 200000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				description: "Default model",
+			}
+
+			const kiloAutoModelInfo: ModelInfo = {
+				maxTokens: 64000,
+				contextWindow: 200000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				description: "Virtual auto model",
+			}
+
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {}, // kilocode_change
+					unbound: {},
+					litellm: {},
+					kilocode: {
+						[openRouterDefaultModelId]: defaultModelInfo,
+						"kilo/auto": kiloAutoModelInfo,
+					},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "kilocode",
+				kilocodeModel: "kilo/auto",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.provider).toBe("kilocode")
+			expect(result.current.id).toBe("kilo/auto")
+			expect(result.current.info).toEqual(kiloAutoModelInfo)
+		})
+	})
+
 	describe("OpenRouter provider merging", () => {
 		it("should merge base model info with specific provider info when both exist", () => {
 			const baseModelInfo: ModelInfo = {

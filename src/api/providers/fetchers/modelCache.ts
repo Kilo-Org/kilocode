@@ -112,6 +112,22 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 				openRouterBaseUrl,
 				headers: options.kilocodeToken ? { Authorization: `Bearer ${options.kilocodeToken}` } : undefined,
 			})
+
+			// Virtual model that resolves to Kilo's default model at runtime.
+			// Appears as `kilo/auto` in model selectors.
+			models["kilo/auto"] = {
+				maxTokens: 64000,
+				contextWindow: 200000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				supportsNativeTools: true,
+				supportsReasoningEffort: true,
+				supportsTemperature: true,
+				displayName: "Auto",
+				description: "Automatically selects an optimal model",
+				// Use -1 to ensure it stays at the top.
+				preferredIndex: -1,
+			}
 			break
 		}
 		case "synthetic":

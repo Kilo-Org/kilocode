@@ -54,9 +54,11 @@ import { useExtensionState } from "@/context/ExtensionStateContext" // kilocode_
 // kilocode_change start
 export const useModelProviders = (kilocodeDefaultModel: string, apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider
+	const kiloModelId = apiConfiguration?.kilocodeModel ?? kilocodeDefaultModel
+	const resolvedKiloModelId = kiloModelId.toLowerCase() === "kilo/auto" ? kilocodeDefaultModel : kiloModelId
 	return useOpenRouterModelProviders(
 		provider === "kilocode"
-			? (apiConfiguration?.kilocodeModel ?? kilocodeDefaultModel)
+			? resolvedKiloModelId
 			: provider === "openrouter"
 				? (apiConfiguration?.openRouterModelId ?? openRouterDefaultModelId)
 				: undefined,
