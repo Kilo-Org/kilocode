@@ -154,13 +154,13 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
         }
 
-        // Update auth with new organization ID
+        // Update auth with new organization ID (explicitly set accountId to clear it when null)
         await Auth.set("kilo", {
           type: "oauth",
           refresh: auth.refresh,
           access: auth.access,
           expires: auth.expires,
-          ...(organizationId && { accountId: organizationId }),
+          accountId: organizationId ?? undefined,
         })
 
         // Update telemetry identity to disable for org users

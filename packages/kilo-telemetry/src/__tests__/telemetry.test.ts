@@ -79,34 +79,24 @@ describe("Telemetry.updateIdentity with disableForOrg", () => {
     expect(clientSetEnabledSpy).toHaveBeenCalledWith(false)
   })
 
-  test("re-enables telemetry when user switches to personal account (no org)", async () => {
+  test("does not change telemetry when switching to personal account (respects explicit opt-out)", async () => {
     // First set an org
     Identity.setOrganizationId("org-123")
 
     // Then switch to personal account (no accountId)
+    // Should NOT auto-enable to respect user's explicit opt-out setting
     await Telemetry.updateIdentity("token", undefined)
 
     expect(Identity.isOrganizationalUser()).toBe(false)
-    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+    expect(clientSetEnabledSpy).not.toHaveBeenCalled()
   })
 
-  test("re-enables telemetry when user switches to personal account (null org)", async () => {
-    // First set an org
-    Identity.setOrganizationId("org-123")
-
-    // Then switch to personal account with empty string (treated as no org)
-    await Telemetry.updateIdentity("token", "")
-
-    expect(Identity.isOrganizationalUser()).toBe(false)
-    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
-  })
-
-  test("does not disable telemetry for personal account users", async () => {
+  test("does not change telemetry for personal account users", async () => {
     await Telemetry.updateIdentity("token", undefined)
 
     expect(Identity.isOrganizationalUser()).toBe(false)
-    // Should re-enable (not disable) for personal account
-    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+    // Should not change telemetry state for personal account
+    expect(clientSetEnabledSpy).not.toHaveBeenCalled()
   })
 
   test("respects disableForOrg: false option (does not change telemetry state)", async () => {
@@ -117,12 +107,12 @@ describe("Telemetry.updateIdentity with disableForOrg", () => {
     expect(clientSetEnabledSpy).not.toHaveBeenCalled()
   })
 
-  test("empty string accountId does not trigger org user detection", async () => {
+  test("empty string accountId does not trigger org user detection or telemetry change", async () => {
     await Telemetry.updateIdentity("token", "")
 
     expect(Identity.isOrganizationalUser()).toBe(false)
-    // Should re-enable for personal account
-    expect(clientSetEnabledSpy).toHaveBeenCalledWith(true)
+    // Should not change telemetry state
+    expect(clientSetEnabledSpy).not.toHaveBeenCalled()
   })
 })
 
