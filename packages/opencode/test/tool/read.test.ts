@@ -12,7 +12,7 @@ const ctx = {
   sessionID: "test",
   messageID: "",
   callID: "",
-  agent: "build",
+  agent: "code", // kilocode_change
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
@@ -136,7 +136,9 @@ describe("tool.read env file permissions", () => {
     ["environment.ts", false],
   ]
 
-  describe.each(["build", "plan"])("agent=%s", (agentName) => {
+  // kilocode_change start - renamed from "build" to "code"
+  describe.each(["code", "plan"])("agent=%s", (agentName) => {
+    // kilocode_change end
     test.each(cases)("%s asks=%s", async (filename, shouldAsk) => {
       await using tmp = await tmpdir({
         init: (dir) => Bun.write(path.join(dir, filename), "content"),

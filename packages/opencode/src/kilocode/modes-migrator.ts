@@ -23,7 +23,8 @@ export namespace ModesMigrator {
   }
 
   // Default modes to skip - these have native Opencode equivalents
-  const DEFAULT_MODE_SLUGS = new Set(["code", "architect", "ask", "debug", "orchestrator"])
+  // kilocode_change - added "build" for backward compatibility after renaming "build" to "code"
+  const DEFAULT_MODE_SLUGS = new Set(["code", "build", "architect", "ask", "debug", "orchestrator"])
 
   // Group to permission mapping
   const GROUP_TO_PERMISSION: Record<string, string> = {

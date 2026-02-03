@@ -27,13 +27,15 @@ export const PlanExitTool = Tool.define("plan_exit", {
       sessionID: ctx.sessionID,
       questions: [
         {
-          question: `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
-          header: "Build Agent",
+          // kilocode_change start
+          question: `Plan at ${plan} is complete. Would you like to switch to the code agent and start implementing?`,
+          header: "Code Agent",
           custom: false,
           options: [
-            { label: "Yes", description: "Switch to build agent and start implementing the plan" },
+            { label: "Yes", description: "Switch to code agent and start implementing the plan" },
             { label: "No", description: "Stay with plan agent to continue refining the plan" },
           ],
+          // kilocode_change end
         },
       ],
       tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
@@ -51,7 +53,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
       time: {
         created: Date.now(),
       },
-      agent: "build",
+      agent: "code", // kilocode_change - renamed from "build" to "code"
       model,
     }
     await Session.updateMessage(userMsg)
@@ -64,11 +66,13 @@ export const PlanExitTool = Tool.define("plan_exit", {
       synthetic: true,
     } satisfies MessageV2.TextPart)
 
+    // kilocode_change start
     return {
-      title: "Switching to build agent",
-      output: "User approved switching to build agent. Wait for further instructions.",
+      title: "Switching to code agent",
+      output: "User approved switching to code agent. Wait for further instructions.",
       metadata: {},
     }
+    // kilocode_change end
   },
 })
 
@@ -88,7 +92,7 @@ export const PlanEnterTool = Tool.define("plan_enter", {
           custom: false,
           options: [
             { label: "Yes", description: "Switch to plan agent for research and planning" },
-            { label: "No", description: "Stay with build agent to continue making changes" },
+            { label: "No", description: "Stay with code agent to continue making changes" }, // kilocode_change - renamed from "build" to "code"
           ],
         },
       ],

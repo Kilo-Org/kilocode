@@ -13,7 +13,7 @@ describe("transcript", () => {
       id: "msg_123",
       sessionID: "ses_123",
       role: "assistant",
-      agent: "build",
+      agent: "code", // kilocode_change
       modelID: "claude-sonnet-4-20250514",
       providerID: "anthropic",
       mode: "",
@@ -26,7 +26,7 @@ describe("transcript", () => {
 
     test("includes metadata when enabled", () => {
       const result = formatAssistantHeader(baseMsg, true)
-      expect(result).toBe("## Assistant (Build · claude-sonnet-4-20250514 · 5.4s)\n\n")
+      expect(result).toBe("## Assistant (Code · claude-sonnet-4-20250514 · 5.4s)\n\n") // kilocode_change
     })
 
     test("excludes metadata when disabled", () => {
@@ -37,7 +37,7 @@ describe("transcript", () => {
     test("handles missing completed time", () => {
       const msg = { ...baseMsg, time: { created: 1000000 } }
       const result = formatAssistantHeader(msg as AssistantMessage, true)
-      expect(result).toBe("## Assistant (Build · claude-sonnet-4-20250514)\n\n")
+      expect(result).toBe("## Assistant (Code · claude-sonnet-4-20250514)\n\n") // kilocode_change
     })
 
     test("titlecases agent name", () => {
@@ -178,7 +178,7 @@ describe("transcript", () => {
         id: "msg_123",
         sessionID: "ses_123",
         role: "user",
-        agent: "build",
+        agent: "code", // kilocode_change
         model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
         time: { created: 1000000 },
       }
@@ -193,7 +193,7 @@ describe("transcript", () => {
         id: "msg_123",
         sessionID: "ses_123",
         role: "assistant",
-        agent: "build",
+        agent: "code", // kilocode_change
         modelID: "claude-sonnet-4-20250514",
         providerID: "anthropic",
         mode: "",
@@ -205,7 +205,7 @@ describe("transcript", () => {
       }
       const parts: Part[] = [{ id: "p1", sessionID: "ses_123", messageID: "msg_123", type: "text", text: "Hi there" }]
       const result = formatMessage(msg, parts, options)
-      expect(result).toContain("## Assistant (Build · claude-sonnet-4-20250514 · 5.4s)")
+      expect(result).toContain("## Assistant (Code · claude-sonnet-4-20250514 · 5.4s)") // kilocode_change
       expect(result).toContain("Hi there")
     })
   })
@@ -223,7 +223,7 @@ describe("transcript", () => {
             id: "msg_1",
             sessionID: "ses_abc123",
             role: "user" as const,
-            agent: "build",
+            agent: "code", // kilocode_change
             model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
             time: { created: 1000000000000 },
           },
@@ -234,7 +234,7 @@ describe("transcript", () => {
             id: "msg_2",
             sessionID: "ses_abc123",
             role: "assistant" as const,
-            agent: "build",
+            agent: "code", // kilocode_change
             modelID: "claude-sonnet-4-20250514",
             providerID: "anthropic",
             mode: "",
@@ -255,7 +255,7 @@ describe("transcript", () => {
       expect(result).toContain("**Session ID:** ses_abc123")
       expect(result).toContain("## User")
       expect(result).toContain("Hello")
-      expect(result).toContain("## Assistant (Build · claude-sonnet-4-20250514 · 0.5s)")
+      expect(result).toContain("## Assistant (Code · claude-sonnet-4-20250514 · 0.5s)") // kilocode_change
       expect(result).toContain("Hi!")
       expect(result).toContain("---")
     })
@@ -272,7 +272,7 @@ describe("transcript", () => {
             id: "msg_1",
             sessionID: "ses_abc123",
             role: "assistant" as const,
-            agent: "build",
+            agent: "code", // kilocode_change
             modelID: "claude-sonnet-4-20250514",
             providerID: "anthropic",
             mode: "",
@@ -290,7 +290,7 @@ describe("transcript", () => {
       const result = formatTranscript(session, messages, options)
 
       expect(result).toContain("## Assistant\n\n")
-      expect(result).not.toContain("Build")
+      expect(result).not.toContain("Code") // kilocode_change
       expect(result).not.toContain("claude-sonnet-4-20250514")
     })
   })

@@ -10,7 +10,7 @@
  *     Message text with word wrap...
  */
 
-import { Show } from "solid-js"
+import { createSignal, Show } from "solid-js"
 import { getTUIDependencies } from "../context.js"
 import type { KilocodeNotification } from "../../api/notifications.js"
 
@@ -23,19 +23,31 @@ interface NotificationBannerProps {
 export function NotificationBanner(props: NotificationBannerProps) {
   const deps = getTUIDependencies()
   const { theme } = deps.useTheme()
+  const [hover, setHover] = createSignal(false)
 
   return (
-    <box flexDirection="column" maxWidth="100%" onMouseUp={props.onClick}>
+    <box
+      flexDirection="column"
+      maxWidth="100%"
+      backgroundColor={hover() ? theme.backgroundElement : undefined}
+      paddingTop={1}
+      paddingBottom={1}
+      paddingLeft={2}
+      paddingRight={2}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onMouseUp={props.onClick}
+    >
       {/* Line 1: Icon + Title + Count */}
       <box flexDirection="row" gap={1}>
-        <text flexShrink={0} style={{ fg: theme.info }}>
+        <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.info }}>
           *
         </text>
-        <text flexShrink={0} style={{ fg: theme.text }}>
+        <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.text }}>
           {props.notification.title}
         </text>
         <Show when={props.totalCount > 0}>
-          <text flexShrink={0} style={{ fg: theme.textMuted }}>
+          <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.textMuted }}>
             ({props.totalCount} new)
           </text>
         </Show>
@@ -43,7 +55,7 @@ export function NotificationBanner(props: NotificationBannerProps) {
 
       {/* Line 2: Message (indented to align under title) */}
       <box paddingLeft={2}>
-        <text style={{ fg: theme.textMuted }} wrapMode="word">
+        <text style={{ fg: hover() ? theme.text : theme.textMuted }} wrapMode="word">
           {props.notification.message}
         </text>
       </box>

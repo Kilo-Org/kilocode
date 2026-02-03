@@ -19,15 +19,26 @@
     in
     {
       devShells = forEachSystem (pkgs: {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            bun
-            nodejs_20
-            pkg-config
-            openssl
-            git
-          ];
-        };
+        default =
+          let
+            kilo = pkgs.writeShellScriptBin "kilo" ''
+              cd "$KILO_ROOT"
+              exec ${pkgs.bun}/bin/bun dev "$@"
+            '';
+          in
+          pkgs.mkShell {
+            packages = with pkgs; [
+              bun
+              nodejs_20
+              pkg-config
+              openssl
+              git
+              kilo
+            ];
+            shellHook = ''
+              export KILO_ROOT="$PWD"
+            '';
+          };
       });
 
       packages = forEachSystem (
