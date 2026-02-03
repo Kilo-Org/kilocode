@@ -171,6 +171,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	const {
 		alwaysAllowReadOnly,
 		alwaysAllowReadOnlyOutsideWorkspace,
+		alwaysAllowDelete, // kilocode_change
 		allowedCommands,
 		deniedCommands,
 		allowedMaxRequests,
@@ -181,6 +182,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		alwaysAllowMcp,
 		alwaysAllowModeSwitch,
 		alwaysAllowSubtasks,
+		alwaysApproveResubmit, // kilocode_change
+		requestDelaySeconds, // kilocode_change
+		requestRetryMax, // kilocode_change
 		alwaysAllowWrite,
 		alwaysAllowWriteOutsideWorkspace,
 		alwaysAllowWriteProtected,
@@ -536,6 +540,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 					alwaysAllowBrowser: alwaysAllowBrowser ?? undefined,
 					alwaysAllowMcp,
 					alwaysAllowModeSwitch,
+					alwaysAllowDelete, // kilocode_change
+					alwaysApproveResubmit, // kilocode_change
+					requestDelaySeconds, // kilocode_change
+					requestRetryMax, // kilocode_change
 					allowedCommands: allowedCommands ?? [],
 					deniedCommands: deniedCommands ?? [],
 					// Note that we use `null` instead of `undefined` since `JSON.stringify`
@@ -1116,6 +1124,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								alwaysAllowMcp={alwaysAllowMcp}
 								alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 								alwaysAllowSubtasks={alwaysAllowSubtasks}
+							  alwaysApproveResubmit={alwaysApproveResubmit} // kilocode_change
 								alwaysAllowExecute={alwaysAllowExecute}
 								alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
 								followupAutoApproveTimeoutMs={followupAutoApproveTimeoutMs}
