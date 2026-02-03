@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
+import path from "path" // kilocode_change
 import pkg from "../package.json"
 import { Script } from "@opencode-ai/script"
 import { fileURLToPath } from "url"
@@ -60,11 +61,15 @@ for (const tag of tags) {
 if (!Script.preview) {
   // Create archives for GitHub release
   for (const key of Object.keys(binaries)) {
+    // kilocode_change start - use absolute path for archive to handle scoped package names with /
+    const archiveName = key.replace("/", "-")
+    const archivePath = path.resolve(`dist/${archiveName}`)
     if (key.includes("linux")) {
-      await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}/bin`)
+      await $`tar -czf ${archivePath}.tar.gz *`.cwd(`dist/${key}/bin`)
     } else {
-      await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
+      await $`zip -r ${archivePath}.zip *`.cwd(`dist/${key}/bin`)
     }
+    // kilocode_change end
   }
 
   const image = "ghcr.io/kilo-org/kilo" // kilocode_change
