@@ -66,7 +66,11 @@
 		"modeTooltip": "Modus: {{mode}}",
 		"yoloModeToggle": "Toggle YOLO mode",
 		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
-		"yoloModeDisabled": "YOLO mode disabled - tools require approval"
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",
