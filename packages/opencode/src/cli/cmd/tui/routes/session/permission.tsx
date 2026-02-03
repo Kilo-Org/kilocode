@@ -336,7 +336,8 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
           <text fg={theme.text}>Reject permission</text>
         </box>
         <box paddingLeft={1}>
-          <text fg={theme.textMuted}>Tell OpenCode what to do differently</text>
+          {/* kilocode_change */}
+          <text fg={theme.textMuted}>Tell Kilo what to do differently</text>
         </box>
       </box>
       <box
