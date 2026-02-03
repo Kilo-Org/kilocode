@@ -13,10 +13,10 @@ import {
 	X_KILOCODE_ORGANIZATIONID,
 	X_KILOCODE_TASKID,
 	X_KILOCODE_PROJECTID,
+	X_KILOCODE_MODE,
 	X_KILOCODE_TESTER,
 	X_KILOCODE_EDITORNAME,
 } from "../../shared/kilocode/headers"
-import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
@@ -59,6 +59,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
 		const headers: Record<string, string> = {
 			[X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
+		}
+
+		if (metadata?.mode) {
+			headers[X_KILOCODE_MODE] = metadata.mode
 		}
 
 		if (metadata?.taskId) {
