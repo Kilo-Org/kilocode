@@ -2,41 +2,75 @@
 
 import os from "os"
 import * as path from "path"
+import * as vscode from "vscode"
 
 import { arePathsEqual, getReadablePath, getWorkspacePath } from "../path"
 
 // Mock modules
+// We use vi.hoisted to ensure the mock state is available to the mock factory
+const { mockState } = vi.hoisted(() => {
+	return {
+		mockState: {
+			activeTextEditor: {
+				document: {
+					uri: { fsPath: "/test/workspaceFolder/file.ts" },
+				},
+			} as any,
+			workspaceFolders: [
+				{
+					uri: { fsPath: "/test/workspace" },
+					name: "test",
+					index: 0,
+				},
+			] as any,
+			getWorkspaceFolder: vi.fn().mockReturnValue({
+				uri: {
+					fsPath: "/test/workspaceFolder",
+				},
+			}),
+		},
+	}
+})
 
 vi.mock("vscode", () => ({
 	window: {
-		activeTextEditor: {
-			document: {
-				uri: { fsPath: "/test/workspaceFolder/file.ts" },
-			},
+		get activeTextEditor() {
+			return mockState.activeTextEditor
 		},
 	},
 	workspace: {
-		workspaceFolders: [
+		get workspaceFolders() {
+			return mockState.workspaceFolders
+		},
+		getWorkspaceFolder: (...args: any[]) => mockState.getWorkspaceFolder(...args),
+	},
+}))
+
+describe("Path Utilities", () => {
+	const originalPlatform = process.platform
+
+	afterEach(() => {
+		Object.defineProperty(process, "platform", {
+			value: originalPlatform,
+		})
+		// Reset mock state
+		mockState.activeTextEditor = {
+			document: {
+				uri: { fsPath: "/test/workspaceFolder/file.ts" },
+			},
+		}
+		mockState.workspaceFolders = [
 			{
 				uri: { fsPath: "/test/workspace" },
 				name: "test",
 				index: 0,
 			},
-		],
-		getWorkspaceFolder: vi.fn().mockReturnValue({
+		]
+		mockState.getWorkspaceFolder.mockReset()
+		mockState.getWorkspaceFolder.mockReturnValue({
 			uri: {
 				fsPath: "/test/workspaceFolder",
 			},
-		}),
-	},
-}))
-describe("Path Utilities", () => {
-	const originalPlatform = process.platform
-	// Helper to mock VS Code configuration
-
-	afterEach(() => {
-		Object.defineProperty(process, "platform", {
-			value: originalPlatform,
 		})
 	})
 
@@ -56,14 +90,26 @@ describe("Path Utilities", () => {
 			expect(extendedPath.toPosix()).toBe("\\\\?\\C:\\Very\\Long\\Path")
 		})
 	})
+
 	describe("getWorkspacePath", () => {
 		it("should return the current workspace path", () => {
-			const workspacePath = "/Users/test/project"
-			expect(getWorkspacePath(workspacePath)).toBe("/Users/test/project")
+			expect(getWorkspacePath("/default")).toBe("/test/workspaceFolder")
 		})
 
-		it("should return undefined when outside a workspace", () => {})
+		it("should return default path when outside a workspace", () => {
+			mockState.activeTextEditor = undefined
+			mockState.workspaceFolders = undefined
+			const defaultPath = "/default/path"
+			expect(getWorkspacePath(defaultPath)).toBe(defaultPath)
+		})
+
+		it("should return first workspace folder if no active editor", () => {
+			mockState.activeTextEditor = undefined
+			// workspaceFolders is set by default in mockState
+			expect(getWorkspacePath("/default")).toBe("/test/workspace")
+		})
 	})
+
 	describe("arePathsEqual", () => {
 		describe("on Windows", () => {
 			beforeEach(() => {
