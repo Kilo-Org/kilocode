@@ -62,10 +62,15 @@ export namespace Telemetry {
     const previousId = Identity.getDistinctId()
     await Identity.updateFromKiloAuth(token, accountId)
 
-    // Disable telemetry by default for organizational users
+    // Disable telemetry by default for organizational users, re-enable for personal accounts
     const disableForOrg = options?.disableForOrg ?? true
-    if (disableForOrg && Identity.isOrganizationalUser()) {
-      setEnabled(false)
+    if (disableForOrg) {
+      if (Identity.isOrganizationalUser()) {
+        setEnabled(false)
+      } else {
+        // Re-enable telemetry when switching back to personal account
+        setEnabled(true)
+      }
     }
 
     const email = Identity.getUserId()
