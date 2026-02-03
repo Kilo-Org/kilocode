@@ -355,7 +355,7 @@ export namespace ProviderTransform {
           OPENAI_EFFORTS.map((effort) => [
             effort,
             {
-              reasoning: { effort },
+              reasoningEffort: effort,
               reasoningSummary: "auto",
               include: ["reasoning.encrypted_content"],
             },
