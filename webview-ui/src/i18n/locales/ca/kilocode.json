@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Com vols començar?",
+		"freeModels": {
+			"title": "Models gratuïts",
+			"description": "Comença a programar immediatament"
+		},
+		"premiumModels": {
+			"title": "Models premium",
+			"description": "Registra't. Els nous usuaris reben 5 $ en crèdits"
+		},
+		"byok": {
+			"title": "Porta la teva pròpia clau",
+			"description": "Avançat. Utilitza el teu propi compte o subscripció"
+		}
+	},
 	"welcome": {
 		"greeting": "Benvingut a Kilo Code!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",

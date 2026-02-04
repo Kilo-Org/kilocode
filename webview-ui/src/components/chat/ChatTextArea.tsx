@@ -783,6 +783,28 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 				}
 
+				// kilocode_change start: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// If the cursor is within the first token of a leading /command, Tab should not fall through to other handlers.
+				// - If the slash command menu is open, Tab is handled above (completion)
+				// - If the slash command menu is closed, Tab should do nothing (must not mutate text, e.g. inserting '@')
+				if (event.key === "Tab") {
+					const textAreaValue = textAreaRef.current?.value ?? inputValue
+					const selectionStart = textAreaRef.current?.selectionStart ?? cursorPosition
+
+					if (/^\s*\//.test(textAreaValue)) {
+						const slashIndex = textAreaValue.search(/\//)
+						const spaceIndex = textAreaValue.indexOf(" ", slashIndex)
+						const tokenEndIndex = spaceIndex === -1 ? textAreaValue.length : spaceIndex
+
+						const cursorInFirstToken = selectionStart >= slashIndex && selectionStart <= tokenEndIndex
+						if (cursorInFirstToken) {
+							event.preventDefault()
+							return
+						}
+					}
+				}
+				// kilocode_change end: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+
 				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
 				if (handleGhostTextKeyDown(event)) {
 					return // Event was handled by ghost text hook, stop here
@@ -920,7 +942,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setCursorPosition(newCursorPosition)
 
 				let showMenu = shouldShowContextMenu(newValue, newCursorPosition) // kilocode_change start: Slash command menu logic
-				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(newValue, newCursorPosition)
+				// kilocode_change start: Pass workflow toggles to slash command menu
+				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(
+					newValue,
+					newCursorPosition,
+					customModes,
+					localWorkflows,
+					globalWorkflows,
+				)
+				// kilocode_change end
 
 				// we do not allow both menus to be shown at the same time
 				// the slash commands menu has precedence bc its a narrower component
@@ -994,6 +1024,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
+				// kilocode_change start: workflow toggles dependencies
+				customModes,
+				localWorkflows,
+				globalWorkflows,
+				// kilocode_change end
 				setInputValue,
 				setSearchRequestId,
 				setFileSearchResults,

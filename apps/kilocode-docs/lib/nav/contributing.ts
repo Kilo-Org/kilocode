@@ -20,12 +20,20 @@ export const ContributingNav: NavSection[] = [
 		links: [
 			{ href: "/contributing/architecture", children: "Architecture Overview" },
 			{
+				href: "/contributing/architecture/agent-observability",
+				children: "Agent Observability",
+			},
+			{
 				href: "/contributing/architecture/annual-billing",
 				children: "Annual Billing",
 			},
 			{
 				href: "/contributing/architecture/enterprise-mcp-controls",
 				children: "Enterprise MCP Controls",
+			},
+			{
+				href: "/contributing/architecture/mcp-oauth-authorization",
+				children: "MCP OAuth Authorization",
 			},
 			{
 				href: "/contributing/architecture/onboarding-improvements",

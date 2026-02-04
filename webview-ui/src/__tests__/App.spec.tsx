@@ -175,6 +175,10 @@ describe("App", () => {
 			didHydrateState: true,
 			showWelcome: false,
 			shouldShowAnnouncement: false,
+			// kilocode_change start: avoid rendering onboarding screen in App tests
+			hasCompletedOnboarding: true,
+			taskHistoryFullLength: 1,
+			// kilocode_change end
 			experiments: {},
 			language: "en",
 			telemetrySetting: "enabled",

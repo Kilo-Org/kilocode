@@ -45,7 +45,6 @@
 | Task Todo List                      | `basic-usage/task-todo-list`                                               |
 | **Context & Indexing** (subheader)  |                                                                            |
 | Codebase Indexing                   | `features/codebase-indexing`                                               |
-| Memory Bank                         | `advanced-usage/memory-bank`                                               |
 | Large Projects                      | `advanced-usage/large-projects`                                            |
 | **Customization** (subheader)       |                                                                            |
 | Custom Modes                        | `agent-behavior/custom-modes`                                              |
