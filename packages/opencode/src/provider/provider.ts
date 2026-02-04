@@ -1190,6 +1190,8 @@ export namespace Provider {
   export function sort(models: Model[]) {
     return sortBy(
       models,
+      // kilocode_change - keep `kilo/auto` at the top for Kilo Gateway
+      [(model) => (model.providerID === "kilo" && model.id === "kilo/auto" ? 1 : 0), "desc"],
       [(model) => priority.findIndex((filter) => model.id.includes(filter)), "desc"],
       [(model) => (model.id.includes("latest") ? 0 : 1), "asc"],
       [(model) => model.id, "desc"],

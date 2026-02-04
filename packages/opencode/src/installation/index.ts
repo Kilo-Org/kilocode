@@ -62,14 +62,11 @@ export namespace Installation {
     if (process.execPath.includes(path.join(".local", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
+    // kilocode_change start - removed yarn check since upgrade() doesn't support it
     const checks = [
       {
         name: "npm" as const,
         command: () => $`npm list -g --depth=0`.throws(false).quiet().text(),
-      },
-      {
-        name: "yarn" as const,
-        command: () => $`yarn global list`.throws(false).quiet().text(),
       },
       {
         name: "pnpm" as const,
@@ -92,6 +89,7 @@ export namespace Installation {
         command: () => $`choco list --limit-output opencode`.throws(false).quiet().text(),
       },
     ]
+    // kilocode_change end
 
     checks.sort((a, b) => {
       const aMatches = exec.includes(a.name)
@@ -103,8 +101,10 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
+      // kilocode_change start - check for @kilocode/cli instead of opencode-ai for JS package managers
       const installedName =
-        check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "opencode" : "opencode-ai"
+        check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "opencode" : "@kilocode/cli"
+      // kilocode_change end
       if (output.includes(installedName)) {
         return check.name
       }
@@ -138,13 +138,13 @@ export namespace Installation {
         })
         break
       case "npm":
-        cmd = $`npm install -g opencode-ai@${target}`
+        cmd = $`npm install -g @kilocode/cli@${target}` // kilocode_change
         break
       case "pnpm":
-        cmd = $`pnpm install -g opencode-ai@${target}`
+        cmd = $`pnpm install -g @kilocode/cli@${target}` // kilocode_change
         break
       case "bun":
-        cmd = $`bun install -g opencode-ai@${target}`
+        cmd = $`bun install -g @kilocode/cli@${target}` // kilocode_change
         break
       case "brew": {
         const formula = await getBrewFormula()
@@ -198,20 +198,22 @@ export namespace Installation {
       }
     }
 
-    if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
+    // kilocode_change start - support npm/pnpm/bun for kilocode, fetch from @kilocode/cli on npm registry
+    if (detectedMethod === "npm" || detectedMethod === "pnpm" || detectedMethod === "bun") {
       const registry = await iife(async () => {
         const r = (await $`npm config get registry`.quiet().nothrow().text()).trim()
         const reg = r || "https://registry.npmjs.org"
         return reg.endsWith("/") ? reg.slice(0, -1) : reg
       })
       const channel = CHANNEL
-      return fetch(`${registry}/opencode-ai/${channel}`)
+      return fetch(`${registry}/@kilocode/cli/${channel}`)
         .then((res) => {
           if (!res.ok) throw new Error(res.statusText)
           return res.json()
         })
         .then((data: any) => data.version)
     }
+    // kilocode_change end
 
     if (detectedMethod === "choco") {
       return fetch(

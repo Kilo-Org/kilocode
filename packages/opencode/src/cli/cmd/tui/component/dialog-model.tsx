@@ -10,6 +10,7 @@ import * as fuzzysort from "fuzzysort"
 
 // kilocode_change start - Recommended models for Kilo Gateway (order determines display priority)
 const KILO_RECOMMENDED_MODELS = [
+  "kilo/auto",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
   "anthropic/claude-haiku-4.5",

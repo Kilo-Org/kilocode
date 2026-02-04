@@ -229,6 +229,9 @@ export namespace LLM {
           : input.model.providerID !== "anthropic"
             ? DEFAULT_HEADERS // kilocode_change
             : undefined),
+        ...(input.model.api.npm === "@kilocode/kilo-gateway" && input.agent.name
+          ? { "x-kilocode-mode": input.agent.name.toLowerCase() }
+          : {}),
         ...input.model.headers,
         ...headers,
       },

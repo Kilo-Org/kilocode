@@ -9,6 +9,7 @@ import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
+import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 
 export namespace KiloSessions {
   const log = Log.create({ service: "kilo-sessions" })
@@ -42,7 +43,7 @@ export namespace KiloSessions {
     }
 
     return withInFlightCache(tokenValidKey, 15 * 60_000, async () => {
-      const response = await fetch("https://app.kilo.ai/api/user", {
+      const response = await fetch(`${KILO_API_BASE}/api/user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -135,7 +135,27 @@ export namespace ModelsDev {
         : "https://api.kilo.ai/api/openrouter"
       const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
       const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`)
-      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+      const kiloModels: Record<string, any> = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+
+      // Virtual model that resolves to Kilo's default model at runtime.
+      // Appears as `kilo/auto` in model selectors.
+      kiloModels["kilo/auto"] = {
+        id: "kilo/auto",
+        name: "Auto",
+        family: "kilo",
+        release_date: "2020-01-01",
+        attachment: false,
+        reasoning: true,
+        temperature: true,
+        tool_call: true,
+        limit: {
+          context: 200000,
+          output: 64000,
+        },
+        options: {
+          description: "Automatically selects an optimal model",
+        },
+      }
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
