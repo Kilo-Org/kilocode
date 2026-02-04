@@ -153,11 +153,44 @@
 		"organization": "Organizacja",
 		"personal": "Osobiste",
 		"shop": {
-			"title": "Kup Kredyty",
+			"title": "Doładowanie",
+			"description": "Jednorazowe zakupy kredytów, aby zwiększyć saldo",
 			"popular": "Popularne",
 			"credits": "kredyty",
 			"action": "Kup Teraz",
 			"viewAll": "Zobacz wszystkie opcje cenowe"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Subskrybuj przewidywalne wydatki AI z rosnącymi kredytami bonusowymi",
+			"recommended": "Polecane",
+			"perMonth": "/mies.",
+			"action": "Kup Kilo Pass",
+			"learnMore": "Dowiedz się więcej o Kilo Pass",
+			"yourSubscription": "Twój Kilo Pass",
+			"status": {
+				"active": "Aktywna",
+				"canceled": "Anulowana",
+				"past_due": "Zaległa",
+				"trialing": "Okres próbny",
+				"paused": "Wstrzymana",
+				"cancelling": "Anulowanie w toku"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Miesięczna",
+				"yearly": "Roczna"
+			},
+			"nextBilling": "Następne rozliczenie: {{date}}",
+			"activeUntil": "Aktywna do: {{date}}",
+			"streak": "{{count}} miesiąc z rzędu",
+			"streakPlural": "{{count}} miesiące z rzędu",
+			"bonusCredits": "+${{amount}} bonusu dnia {{date}}",
+			"manage": "Zarządzaj subskrypcją"
 		},
 		"detailedUsage": "Szczegółowe użycie",
 		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"

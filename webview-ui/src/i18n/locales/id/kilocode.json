@@ -146,11 +146,44 @@
 		"organization": "Organisasi",
 		"personal": "Pribadi",
 		"shop": {
-			"title": "Beli Kredit",
+			"title": "Top Up",
+			"description": "Pembelian kredit sekali bayar untuk menambah saldo",
 			"popular": "Populer",
 			"credits": "kredit",
 			"action": "Beli Sekarang",
 			"viewAll": "Lihat semua opsi harga"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Berlangganan untuk pengeluaran AI yang dapat diprediksi dengan kredit bonus yang terus bertambah",
+			"recommended": "Direkomendasikan",
+			"perMonth": "/bulan",
+			"action": "Dapatkan Kilo Pass",
+			"learnMore": "Pelajari lebih lanjut tentang Kilo Pass",
+			"yourSubscription": "Kilo Pass Anda",
+			"status": {
+				"active": "Aktif",
+				"canceled": "Dibatalkan",
+				"past_due": "Terlambat",
+				"trialing": "Percobaan",
+				"paused": "Dijeda",
+				"cancelling": "Sedang Dibatalkan"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Bulanan",
+				"yearly": "Tahunan"
+			},
+			"nextBilling": "Tagihan berikutnya: {{date}}",
+			"activeUntil": "Aktif hingga: {{date}}",
+			"streak": "{{count}} bulan berturut-turut",
+			"streakPlural": "{{count}} bulan berturut-turut",
+			"bonusCredits": "+${{amount}} bonus pada {{date}}",
+			"manage": "Kelola langganan"
 		},
 		"detailedUsage": "Penggunaan Terperinci",
 		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"

@@ -160,11 +160,44 @@
 		"organization": "องค์กร",
 		"personal": "ส่วนตัว",
 		"shop": {
-			"title": "ซื้อเครดิต",
+			"title": "เติมเงิน",
+			"description": "ซื้อเครดิตครั้งเดียวเพื่อเพิ่มยอดเงินของคุณ",
 			"popular": "ยอดนิยม",
 			"credits": "เครดิต",
 			"action": "ซื้อตอนนี้",
 			"viewAll": "ดูตัวเลือกราคาทั้งหมด"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "สมัครสมาชิกเพื่อการใช้จ่าย AI ที่คาดการณ์ได้พร้อมเครดิตโบนัสที่เพิ่มขึ้น",
+			"recommended": "แนะนำ",
+			"perMonth": "/เดือน",
+			"action": "รับ Kilo Pass",
+			"learnMore": "เรียนรู้เพิ่มเติมเกี่ยวกับ Kilo Pass",
+			"yourSubscription": "Kilo Pass ของคุณ",
+			"status": {
+				"active": "ใช้งานอยู่",
+				"canceled": "ยกเลิกแล้ว",
+				"past_due": "เลยกำหนดชำระ",
+				"trialing": "ทดลองใช้",
+				"paused": "หยุดชั่วคราว",
+				"cancelling": "กำลังยกเลิก"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "รายเดือน",
+				"yearly": "รายปี"
+			},
+			"nextBilling": "เรียกเก็บเงินครั้งถัดไป: {{date}}",
+			"activeUntil": "ใช้งานได้ถึง: {{date}}",
+			"streak": "ติดต่อกัน {{count}} เดือน",
+			"streakPlural": "ติดต่อกัน {{count}} เดือน",
+			"bonusCredits": "+${{amount}} โบนัส {{date}}",
+			"manage": "จัดการการสมัครสมาชิก"
 		},
 		"detailedUsage": "การใช้งานโดยละเอียด",
 		"createOrganization": "สร้างองค์กรเพื่อติดตามการใช้งานโดยละเอียด"

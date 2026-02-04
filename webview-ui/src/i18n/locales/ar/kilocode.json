@@ -155,11 +155,44 @@
 		"organization": "المؤسسة",
 		"personal": "شخصي",
 		"shop": {
-			"title": "شراء الرصيد",
+			"title": "شحن الرصيد",
+			"description": "شراء رصيد لمرة واحدة لزيادة رصيدك",
 			"popular": "الأكثر شعبية",
 			"credits": "رصيد",
 			"action": "اشتري الآن",
 			"viewAll": "عرض جميع خيارات الأسعار"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "اشترك للحصول على إنفاق AI متوقع مع رصيد إضافي متزايد",
+			"recommended": "موصى به",
+			"perMonth": "/شهر",
+			"action": "احصل على Kilo Pass",
+			"learnMore": "تعرف على المزيد عن Kilo Pass",
+			"yourSubscription": "اشتراكك في Kilo Pass",
+			"status": {
+				"active": "نشط",
+				"canceled": "ملغى",
+				"past_due": "متأخر",
+				"trialing": "تجريبي",
+				"paused": "موقف مؤقتاً",
+				"cancelling": "جارٍ الإلغاء"
+			},
+			"tiers": {
+				"tier_19": "المبتدئ",
+				"tier_49": "المحترف",
+				"tier_199": "الخبير"
+			},
+			"cadence": {
+				"monthly": "شهري",
+				"yearly": "سنوي"
+			},
+			"nextBilling": "الفوترة التالية: {{date}}",
+			"activeUntil": "نشط حتى: {{date}}",
+			"streak": "{{count}} شهر متتالي",
+			"streakPlural": "{{count}} أشهر متتالية",
+			"bonusCredits": "+${{amount}} رصيد إضافي في {{date}}",
+			"manage": "إدارة الاشتراك"
 		},
 		"detailedUsage": "الاستخدام التفصيلي",
 		"createOrganization": "إنشاء مؤسسة لتتبع الاستخدام التفصيلي"

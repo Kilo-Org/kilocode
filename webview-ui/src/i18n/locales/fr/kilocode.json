@@ -160,11 +160,44 @@
 		"organization": "Organisation",
 		"personal": "Personnel",
 		"shop": {
-			"title": "Acheter des Crédits",
+			"title": "Recharger",
+			"description": "Achats de crédits uniques pour augmenter ton solde",
 			"popular": "Populaire",
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
 			"viewAll": "Voir toutes les options de prix"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Abonne-toi pour des dépenses IA prévisibles avec des crédits bonus croissants",
+			"recommended": "Recommandé",
+			"perMonth": "/mois",
+			"action": "Obtenir Kilo Pass",
+			"learnMore": "En savoir plus sur Kilo Pass",
+			"yourSubscription": "Ton Kilo Pass",
+			"status": {
+				"active": "Actif",
+				"canceled": "Annulé",
+				"past_due": "En retard",
+				"trialing": "Essai",
+				"paused": "En pause",
+				"cancelling": "En cours d'annulation"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Mensuel",
+				"yearly": "Annuel"
+			},
+			"nextBilling": "Prochaine facturation : {{date}}",
+			"activeUntil": "Actif jusqu'au : {{date}}",
+			"streak": "{{count}} mois consécutif",
+			"streakPlural": "{{count}} mois consécutifs",
+			"bonusCredits": "+{{amount}} $ bonus le {{date}}",
+			"manage": "Gérer l'abonnement"
 		},
 		"detailedUsage": "Utilisation détaillée",
 		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"

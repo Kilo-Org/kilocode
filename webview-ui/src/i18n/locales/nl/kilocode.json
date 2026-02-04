@@ -159,11 +159,44 @@
 		"organization": "Organisatie",
 		"personal": "Persoonlijk",
 		"shop": {
-			"title": "Credits Kopen",
+			"title": "Opwaarderen",
+			"description": "Eenmalige creditaankopen om je saldo te verhogen",
 			"popular": "Populair",
 			"credits": "credits",
 			"action": "Nu Kopen",
 			"viewAll": "Alle prijs opties bekijken"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Abonneer voor voorspelbare AI-uitgaven met groeiende bonuscredits",
+			"recommended": "Aanbevolen",
+			"perMonth": "/maand",
+			"action": "Kilo Pass krijgen",
+			"learnMore": "Meer informatie over Kilo Pass",
+			"yourSubscription": "Jouw Kilo Pass",
+			"status": {
+				"active": "Actief",
+				"canceled": "Geannuleerd",
+				"past_due": "Achterstallig",
+				"trialing": "Proefperiode",
+				"paused": "Gepauzeerd",
+				"cancelling": "Wordt geannuleerd"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Maandelijks",
+				"yearly": "Jaarlijks"
+			},
+			"nextBilling": "Volgende facturatie: {{date}}",
+			"activeUntil": "Actief tot: {{date}}",
+			"streak": "{{count}} maand achtereen",
+			"streakPlural": "{{count}} maanden achtereen",
+			"bonusCredits": "+${{amount}} bonus op {{date}}",
+			"manage": "Abonnement beheren"
 		},
 		"detailedUsage": "Gedetailleerd gebruik",
 		"createOrganization": "Maak organisatie aan om gedetailleerd gebruik bij te houden"

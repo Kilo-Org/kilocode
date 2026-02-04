@@ -153,11 +153,44 @@
 		"organization": "Organización",
 		"personal": "Personal",
 		"shop": {
-			"title": "Comprar Créditos",
+			"title": "Recargar",
+			"description": "Compras de créditos únicas para aumentar tu saldo",
 			"popular": "Popular",
 			"credits": "créditos",
 			"action": "Comprar Ahora",
 			"viewAll": "Ver todas las opciones de precio"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Suscríbete para gastos de IA predecibles con créditos bonus crecientes",
+			"recommended": "Recomendado",
+			"perMonth": "/mes",
+			"action": "Obtener Kilo Pass",
+			"learnMore": "Más información sobre Kilo Pass",
+			"yourSubscription": "Tu Kilo Pass",
+			"status": {
+				"active": "Activo",
+				"canceled": "Cancelado",
+				"past_due": "Vencido",
+				"trialing": "Prueba",
+				"paused": "Pausado",
+				"cancelling": "Cancelando"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Mensual",
+				"yearly": "Anual"
+			},
+			"nextBilling": "Próxima facturación: {{date}}",
+			"activeUntil": "Activo hasta: {{date}}",
+			"streak": "{{count}} mes consecutivo",
+			"streakPlural": "{{count}} meses consecutivos",
+			"bonusCredits": "+${{amount}} bonus el {{date}}",
+			"manage": "Gestionar Suscripción"
 		},
 		"detailedUsage": "Uso detallado",
 		"createOrganization": "Crear organización para rastrear uso detallado"

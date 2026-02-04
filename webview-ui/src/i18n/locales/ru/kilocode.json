@@ -153,11 +153,44 @@
 		"organization": "Организация",
 		"personal": "Личный",
 		"shop": {
-			"title": "Купить кредиты",
+			"title": "Пополнение",
+			"description": "Единоразовая покупка кредитов для увеличения баланса",
 			"popular": "Популярно",
 			"credits": "кредиты",
 			"action": "Купить сейчас",
 			"viewAll": "Показать все варианты цен"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Подпишитесь для предсказуемых расходов на ИИ с растущими бонусными кредитами",
+			"recommended": "Рекомендуемый",
+			"perMonth": "/мес.",
+			"action": "Получить Kilo Pass",
+			"learnMore": "Узнать больше о Kilo Pass",
+			"yourSubscription": "Ваш Kilo Pass",
+			"status": {
+				"active": "Активна",
+				"canceled": "Отменена",
+				"past_due": "Просрочена",
+				"trialing": "Пробная",
+				"paused": "Приостановлена",
+				"cancelling": "Отменяется"
+			},
+			"tiers": {
+				"tier_19": "Стартовый",
+				"tier_49": "Про",
+				"tier_199": "Эксперт"
+			},
+			"cadence": {
+				"monthly": "Ежемесячно",
+				"yearly": "Ежегодно"
+			},
+			"nextBilling": "Следующий платеж: {{date}}",
+			"activeUntil": "Активна до: {{date}}",
+			"streak": "{{count}} месяц подряд",
+			"streakPlural": "{{count}} месяцев подряд",
+			"bonusCredits": "+${{amount}} бонус {{date}}",
+			"manage": "Управление подпиской"
 		},
 		"detailedUsage": "Подробное использование",
 		"createOrganization": "Создать организацию для отслеживания подробного использования"

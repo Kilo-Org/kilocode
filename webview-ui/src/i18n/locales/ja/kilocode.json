@@ -160,11 +160,44 @@
 		"organization": "組織",
 		"personal": "個人",
 		"shop": {
-			"title": "クレジット購入",
+			"title": "チャージ",
+			"description": "残高を増やすための単発クレジット購入",
 			"popular": "人気",
 			"credits": "クレジット",
 			"action": "今すぐ購入",
 			"viewAll": "すべての価格オプションを表示"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "予測可能なAI支出と増加するボーナスクレジットのためにサブスクライブ",
+			"recommended": "おすすめ",
+			"perMonth": "/月",
+			"action": "Kilo Passを取得",
+			"learnMore": "Kilo Passについて詳しく",
+			"yourSubscription": "あなたのKilo Pass",
+			"status": {
+				"active": "有効",
+				"canceled": "キャンセル済み",
+				"past_due": "支払い遅延",
+				"trialing": "試用中",
+				"paused": "一時停止",
+				"cancelling": "キャンセル中"
+			},
+			"tiers": {
+				"tier_19": "スターター",
+				"tier_49": "プロ",
+				"tier_199": "エキスパート"
+			},
+			"cadence": {
+				"monthly": "月額",
+				"yearly": "年額"
+			},
+			"nextBilling": "次回請求日: {{date}}",
+			"activeUntil": "有効期限: {{date}}",
+			"streak": "{{count}}ヶ月連続",
+			"streakPlural": "{{count}}ヶ月連続",
+			"bonusCredits": "+${{amount}}ボーナス（{{date}}）",
+			"manage": "サブスクリプション管理"
 		},
 		"detailedUsage": "詳細な使用状況",
 		"createOrganization": "詳細な使用状況を追跡する組織を作成"

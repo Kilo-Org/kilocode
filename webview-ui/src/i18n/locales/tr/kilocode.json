@@ -153,11 +153,44 @@
 		"organization": "Organizasyon",
 		"personal": "Kişisel",
 		"shop": {
-			"title": "Kredi Satın Al",
+			"title": "Bakiye Yükle",
+			"description": "Bakiyenizi artırmak için tek seferlik kredi satın alın",
 			"popular": "Popüler",
 			"credits": "kredi",
 			"action": "Şimdi Satın Al",
 			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Artan bonus kredilerle öngörülebilir AI harcaması için abone olun",
+			"recommended": "Önerilen",
+			"perMonth": "/ay",
+			"action": "Kilo Pass Al",
+			"learnMore": "Kilo Pass hakkında daha fazla bilgi edinin",
+			"yourSubscription": "Kilo Pass'ınız",
+			"status": {
+				"active": "Aktif",
+				"canceled": "İptal Edildi",
+				"past_due": "Vadesi Geçmiş",
+				"trialing": "Deneme",
+				"paused": "Duraklatıldı",
+				"cancelling": "İptal Ediliyor"
+			},
+			"tiers": {
+				"tier_19": "Başlangıç",
+				"tier_49": "Pro",
+				"tier_199": "Uzman"
+			},
+			"cadence": {
+				"monthly": "Aylık",
+				"yearly": "Yıllık"
+			},
+			"nextBilling": "Sonraki fatura: {{date}}",
+			"activeUntil": "Aktif bitiş: {{date}}",
+			"streak": "{{count}} ay üst üste",
+			"streakPlural": "{{count}} ay üst üste",
+			"bonusCredits": "+${{amount}} bonus {{date}}",
+			"manage": "Aboneliği Yönet"
 		},
 		"detailedUsage": "Detaylı Kullanım",
 		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"

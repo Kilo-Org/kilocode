@@ -153,11 +153,44 @@
 		"organization": "Tổ chức",
 		"personal": "Cá nhân",
 		"shop": {
-			"title": "Mua Tín dụng",
+			"title": "Nạp Tiền",
+			"description": "Mua tín dụng một lần để tăng số dư của bạn",
 			"popular": "Phổ biến",
 			"credits": "tín dụng",
 			"action": "Mua Ngay",
 			"viewAll": "Xem tất cả tùy chọn giá"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Đăng ký để chi tiêu AI dự đoán được với tín dụng thưởng tăng dần",
+			"recommended": "Đề xuất",
+			"perMonth": "/tháng",
+			"action": "Nhận Kilo Pass",
+			"learnMore": "Tìm hiểu thêm về Kilo Pass",
+			"yourSubscription": "Kilo Pass của bạn",
+			"status": {
+				"active": "Đang hoạt động",
+				"canceled": "Đã hủy",
+				"past_due": "Quá hạn",
+				"trialing": "Dùng thử",
+				"paused": "Tạm dừng",
+				"cancelling": "Đang hủy"
+			},
+			"tiers": {
+				"tier_19": "Khởi đầu",
+				"tier_49": "Pro",
+				"tier_199": "Chuyên gia"
+			},
+			"cadence": {
+				"monthly": "Hàng tháng",
+				"yearly": "Hàng năm"
+			},
+			"nextBilling": "Thanh toán tiếp theo: {{date}}",
+			"activeUntil": "Hoạt động đến: {{date}}",
+			"streak": "{{count}} tháng liên tiếp",
+			"streakPlural": "{{count}} tháng liên tiếp",
+			"bonusCredits": "+${{amount}} thưởng {{date}}",
+			"manage": "Quản lý đăng ký"
 		},
 		"detailedUsage": "Sử dụng chi tiết",
 		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"

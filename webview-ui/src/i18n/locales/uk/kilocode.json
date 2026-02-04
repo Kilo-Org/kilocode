@@ -160,11 +160,44 @@
 		"organization": "Організація",
 		"personal": "Особистий",
 		"shop": {
-			"title": "Купити кредити",
+			"title": "Поповнення",
+			"description": "Одноразова покупка кредитів для збільшення балансу",
 			"popular": "Популярно",
 			"credits": "кредити",
 			"action": "Купити зараз",
 			"viewAll": "Переглянути всі варіанти цін"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Підпишіться для передбачуваних витрат на AI зі зростаючими бонусними кредитами",
+			"recommended": "Рекомендовано",
+			"perMonth": "/міс.",
+			"action": "Отримати Kilo Pass",
+			"learnMore": "Дізнатися більше про Kilo Pass",
+			"yourSubscription": "Ваш Kilo Pass",
+			"status": {
+				"active": "Активна",
+				"canceled": "Скасована",
+				"past_due": "Прострочена",
+				"trialing": "Пробна",
+				"paused": "Призупинена",
+				"cancelling": "Скасовується"
+			},
+			"tiers": {
+				"tier_19": "Стартовий",
+				"tier_49": "Про",
+				"tier_199": "Експерт"
+			},
+			"cadence": {
+				"monthly": "Щомісячно",
+				"yearly": "Щорічно"
+			},
+			"nextBilling": "Наступний платіж: {{date}}",
+			"activeUntil": "Активна до: {{date}}",
+			"streak": "{{count}} місяць поспіль",
+			"streakPlural": "{{count}} місяців поспіль",
+			"bonusCredits": "+${{amount}} бонус {{date}}",
+			"manage": "Керувати підпискою"
 		},
 		"detailedUsage": "Детальне використання",
 		"createOrganization": "Створити організацію для відстеження детального використання"

@@ -153,11 +153,44 @@
 		"organization": "Organizzazione",
 		"personal": "Personale",
 		"shop": {
-			"title": "Acquista Crediti",
+			"title": "Ricarica",
+			"description": "Acquisti di crediti una tantum per aumentare il tuo saldo",
 			"popular": "Popolare",
 			"credits": "crediti",
 			"action": "Acquista Ora",
 			"viewAll": "Visualizza tutte le opzioni di prezzo"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Abbonati per spese AI prevedibili con crediti bonus crescenti",
+			"recommended": "Consigliato",
+			"perMonth": "/mese",
+			"action": "Ottieni Kilo Pass",
+			"learnMore": "Scopri di più su Kilo Pass",
+			"yourSubscription": "Il tuo Kilo Pass",
+			"status": {
+				"active": "Attivo",
+				"canceled": "Cancellato",
+				"past_due": "Scaduto",
+				"trialing": "Prova",
+				"paused": "In pausa",
+				"cancelling": "In cancellazione"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Mensile",
+				"yearly": "Annuale"
+			},
+			"nextBilling": "Prossima fatturazione: {{date}}",
+			"activeUntil": "Attivo fino al: {{date}}",
+			"streak": "{{count}} mese consecutivo",
+			"streakPlural": "{{count}} mesi consecutivi",
+			"bonusCredits": "+${{amount}} bonus il {{date}}",
+			"manage": "Gestisci abbonamento"
 		},
 		"detailedUsage": "Utilizzo dettagliato",
 		"createOrganization": "Crea organizzazione per tracciare utilizzo dettagliato"

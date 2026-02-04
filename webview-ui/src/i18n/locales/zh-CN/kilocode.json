@@ -160,11 +160,44 @@
 		"organization": "组织",
 		"personal": "个人",
 		"shop": {
-			"title": "购买 Credits",
+			"title": "充值",
+			"description": "一次性购买额度以增加余额",
 			"popular": "热门",
 			"credits": "Credits",
 			"action": "立即购买",
 			"viewAll": "查看所有价格选项"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "订阅以获得可预测的 AI 支出和不断增长的奖励额度",
+			"recommended": "推荐",
+			"perMonth": "/月",
+			"action": "获取 Kilo Pass",
+			"learnMore": "了解更多关于 Kilo Pass",
+			"yourSubscription": "你的 Kilo Pass",
+			"status": {
+				"active": "活跃",
+				"canceled": "已取消",
+				"past_due": "逾期",
+				"trialing": "试用中",
+				"paused": "已暂停",
+				"cancelling": "取消中"
+			},
+			"tiers": {
+				"tier_19": "入门版",
+				"tier_49": "专业版",
+				"tier_199": "专家版"
+			},
+			"cadence": {
+				"monthly": "月付",
+				"yearly": "年付"
+			},
+			"nextBilling": "下次结算：{{date}}",
+			"activeUntil": "有效期至：{{date}}",
+			"streak": "连续 {{count}} 个月",
+			"streakPlural": "连续 {{count}} 个月",
+			"bonusCredits": "+${{amount}} 奖励（{{date}}）",
+			"manage": "管理订阅"
 		},
 		"detailedUsage": "详细使用情况",
 		"createOrganization": "创建组织以跟踪详细使用情况"

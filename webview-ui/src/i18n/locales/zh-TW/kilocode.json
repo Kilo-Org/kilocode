@@ -161,10 +161,43 @@
 		"personal": "個人",
 		"shop": {
 			"title": "購買額度",
+			"description": "單次購買額度以增加餘額",
 			"popular": "熱門",
 			"credits": "額度",
 			"action": "立即購買",
 			"viewAll": "檢視所有價格選項"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "訂閱以獲得可預測的 AI 支出和持續增長的獎勵額度",
+			"recommended": "推薦",
+			"perMonth": "/月",
+			"action": "取得 Kilo Pass",
+			"learnMore": "了解更多關於 Kilo Pass",
+			"yourSubscription": "你的 Kilo Pass",
+			"status": {
+				"active": "活躍",
+				"canceled": "已取消",
+				"past_due": "逾期",
+				"trialing": "試用中",
+				"paused": "已暫停",
+				"cancelling": "取消中"
+			},
+			"tiers": {
+				"tier_19": "入門版",
+				"tier_49": "專業版",
+				"tier_199": "專家版"
+			},
+			"cadence": {
+				"monthly": "月付",
+				"yearly": "年付"
+			},
+			"nextBilling": "下次結算：{{date}}",
+			"activeUntil": "有效期至：{{date}}",
+			"streak": "連續 {{count}} 個月",
+			"streakPlural": "連續 {{count}} 個月",
+			"bonusCredits": "+${{amount}} 獎勵（{{date}}）",
+			"manage": "管理訂閱"
 		},
 		"detailedUsage": "詳細使用量",
 		"createOrganization": "建立組織以追蹤詳細使用量"

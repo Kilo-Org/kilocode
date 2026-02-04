@@ -146,11 +146,44 @@
 		"organization": "संगठन",
 		"personal": "व्यक्तिगत",
 		"shop": {
-			"title": "क्रेडिट खरीदें",
+			"title": "टॉप-अप",
+			"description": "अपनी बैलेंस बढ़ाने के लिए एक बार की क्रेडिट खरीदारी",
 			"popular": "पॉपुलर",
 			"credits": "क्रेडिट",
 			"action": "अभी खरीदें",
 			"viewAll": "सभी प्राइसिंग विकल्प देखें"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "बढ़ते बोनस क्रेडिट के साथ अनुमानित AI खर्च के लिए सब्सक्राइब करें",
+			"recommended": "अनुशंसित",
+			"perMonth": "/महीना",
+			"action": "Kilo Pass प्राप्त करें",
+			"learnMore": "Kilo Pass के बारे में और जानें",
+			"yourSubscription": "आपका Kilo Pass",
+			"status": {
+				"active": "सक्रिय",
+				"canceled": "रद्द",
+				"past_due": "बकाया",
+				"trialing": "परीक्षण",
+				"paused": "रुका हुआ",
+				"cancelling": "रद्द हो रहा है"
+			},
+			"tiers": {
+				"tier_19": "स्टार्टर",
+				"tier_49": "प्रो",
+				"tier_199": "एक्सपर्ट"
+			},
+			"cadence": {
+				"monthly": "मासिक",
+				"yearly": "वार्षिक"
+			},
+			"nextBilling": "अगला बिलिंग: {{date}}",
+			"activeUntil": "सक्रिय रहेगा: {{date}}",
+			"streak": "{{count}} महीना लगातार",
+			"streakPlural": "{{count}} महीने लगातार",
+			"bonusCredits": "+${{amount}} बोनस {{date}} को",
+			"manage": "सब्सक्रिप्शन प्रबंधित करें"
 		},
 		"detailedUsage": "विस्तृत उपयोग",
 		"createOrganization": "विस्तृत उपयोग ट्रैक करने के लिए संगठन बनाएं"

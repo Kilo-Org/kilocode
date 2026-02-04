@@ -133,11 +133,44 @@
 		"organization": "Organització",
 		"personal": "Personal",
 		"shop": {
-			"title": "Comprar Crèdits",
+			"title": "Recarregar",
+			"description": "Compres puntuals de crèdits per augmentar el teu saldo",
 			"popular": "Popular",
 			"credits": "crèdits",
 			"action": "Comprar Ara",
 			"viewAll": "Veure totes les opcions de preus"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Subscriu-te per a una despesa d'IA previsible amb crèdits bonus creixents",
+			"recommended": "Recomanat",
+			"perMonth": "/mes",
+			"action": "Obtenir Kilo Pass",
+			"learnMore": "Més informació sobre Kilo Pass",
+			"yourSubscription": "El teu Kilo Pass",
+			"status": {
+				"active": "Actiu",
+				"canceled": "Cancel·lat",
+				"past_due": "Vençut",
+				"trialing": "En prova",
+				"paused": "Pausat",
+				"cancelling": "Cancel·lant"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Mensual",
+				"yearly": "Anual"
+			},
+			"nextBilling": "Pròxima facturació: {{date}}",
+			"activeUntil": "Actiu fins: {{date}}",
+			"streak": "{{count}} mes consecutiu",
+			"streakPlural": "{{count}} mesos consecutius",
+			"bonusCredits": "+${{amount}} bonus el {{date}}",
+			"manage": "Gestionar subscripció"
 		},
 		"detailedUsage": "Ús detallat",
 		"createOrganization": "Crear organització per fer seguiment de l'ús detallat"

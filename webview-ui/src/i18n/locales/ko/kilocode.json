@@ -160,11 +160,44 @@
 		"organization": "조직",
 		"personal": "개인",
 		"shop": {
-			"title": "크레딧 구매",
+			"title": "충전",
+			"description": "잔액을 늘리기 위한 일회성 크레딧 구매",
 			"popular": "인기",
 			"credits": "크레딧",
 			"action": "지금 구매",
 			"viewAll": "모든 가격 옵션 보기"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "예측 가능한 AI 지출과 증가하는 보너스 크레딧을 위해 구독하세요",
+			"recommended": "추천",
+			"perMonth": "/월",
+			"action": "Kilo Pass 받기",
+			"learnMore": "Kilo Pass에 대해 자세히 알아보기",
+			"yourSubscription": "내 Kilo Pass",
+			"status": {
+				"active": "활성",
+				"canceled": "취소됨",
+				"past_due": "연체",
+				"trialing": "체험 중",
+				"paused": "일시 중지",
+				"cancelling": "취소 중"
+			},
+			"tiers": {
+				"tier_19": "스타터",
+				"tier_49": "프로",
+				"tier_199": "엑스퍼트"
+			},
+			"cadence": {
+				"monthly": "월간",
+				"yearly": "연간"
+			},
+			"nextBilling": "다음 결제일: {{date}}",
+			"activeUntil": "만료일: {{date}}",
+			"streak": "{{count}}개월 연속",
+			"streakPlural": "{{count}}개월 연속",
+			"bonusCredits": "+${{amount}} 보너스 ({{date}})",
+			"manage": "구독 관리"
 		},
 		"detailedUsage": "상세 사용량",
 		"createOrganization": "상세 사용량 추적을 위한 조직 생성"

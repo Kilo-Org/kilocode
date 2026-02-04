@@ -153,11 +153,44 @@
 		"organization": "Organizace",
 		"personal": "Osobní",
 		"shop": {
-			"title": "Koupit kredity",
+			"title": "Dobít",
+			"description": "Jednorázový nákup kreditů pro navýšení zůstatku",
 			"popular": "Populární",
 			"credits": "kredity",
 			"action": "Koupit nyní",
 			"viewAll": "Zobrazit všechny cenové možnosti"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Předplaťte si předvídatelné náklady na AI s rostoucími bonusovými kredity",
+			"recommended": "Doporučeno",
+			"perMonth": "/měsíc",
+			"action": "Získat Kilo Pass",
+			"learnMore": "Více o Kilo Pass",
+			"yourSubscription": "Tvůj Kilo Pass",
+			"status": {
+				"active": "Aktivní",
+				"canceled": "Zrušeno",
+				"past_due": "Po splatnosti",
+				"trialing": "Zkušební",
+				"paused": "Pozastaveno",
+				"cancelling": "Ruší se"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Měsíční",
+				"yearly": "Roční"
+			},
+			"nextBilling": "Další platba: {{date}}",
+			"activeUntil": "Aktivní do: {{date}}",
+			"streak": "{{count}} měsíc v řadě",
+			"streakPlural": "{{count}} měsíců v řadě",
+			"bonusCredits": "+${{amount}} bonus dne {{date}}",
+			"manage": "Spravovat předplatné"
 		},
 		"detailedUsage": "Podrobné využití",
 		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"
