@@ -127,15 +127,15 @@ sealed class SessionEntityType(val icon: Icon?) {
 }
 
 /**
- * Simple two-block stacked layout for session entities with collapsible content.
+ * Generic collapsible UI container for chat entities (messages, parts, tools, etc.).
  *
  * ┌─────────────────────────────────────────────┐
- * │  Header: [EntityType] [time]          [▼]   │
+ * │  Header: [EntityType] · metadata · +time [▼] │
  * ├─────────────────────────────────────────────┤
- * │  Content: [entity content]                  │
+ * │  Content: (any JComponent)                  │
  * └─────────────────────────────────────────────┘
  */
-class SessionEntityUIBlock(
+class ChatContentBlock(
     private val entityType: SessionEntityType,
     private val content: JComponent,
     private val timestamp: Long? = null,

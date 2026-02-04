@@ -9,6 +9,54 @@ import kotlinx.coroutines.flow.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
+ * Unified stream of message changes for UI rendering.
+ * ChatUiRenderer subscribes to this single stream for all message-related updates.
+ */
+sealed class MessageChange {
+    abstract val sessionId: String
+
+    /** Initial bulk load of messages for a session */
+    data class InitialLoad(
+        override val sessionId: String,
+        val messages: List<MessageWithParts>
+    ) : MessageChange()
+
+    /** A new message was added */
+    data class MessageAdded(
+        override val sessionId: String,
+        val message: MessageWithParts
+    ) : MessageChange()
+
+    /** A message was removed */
+    data class MessageRemoved(
+        override val sessionId: String,
+        val messageId: String
+    ) : MessageChange()
+
+    /** A part was added to a message */
+    data class PartAdded(
+        override val sessionId: String,
+        val messageId: String,
+        val part: Part
+    ) : MessageChange()
+
+    /** A part was updated (with optional delta for streaming text) */
+    data class PartUpdated(
+        override val sessionId: String,
+        val messageId: String,
+        val part: Part,
+        val delta: String?
+    ) : MessageChange()
+
+    /** A part was removed from a message */
+    data class PartRemoved(
+        override val sessionId: String,
+        val messageId: String,
+        val partId: String
+    ) : MessageChange()
+}
+
+/**
  * Session data store for the Kilo plugin.
  *
  * Manages:
@@ -51,6 +99,15 @@ class ChatUiStateManager(
         extraBufferCapacity = 100
     )
     val storeEvents: SharedFlow<StoreEvent> = _storeEvents.asSharedFlow()
+
+    // ==================== Message Change Stream ====================
+
+    private val _messageChanges = MutableSharedFlow<MessageChange>(
+        replay = 0,
+        extraBufferCapacity = 100
+    )
+    /** Unified stream of message changes for UI rendering */
+    val messageChanges: SharedFlow<MessageChange> = _messageChanges.asSharedFlow()
 
     // ==================== StateFlows for UI Binding ====================
 
@@ -272,11 +329,15 @@ class ChatUiStateManager(
             list[i] = message
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.MessageUpdated(sessionId, message, i))
+            // No MessageChange emit for update - parts carry the content
         } else {
             val index = -(i + 1)
             list.add(index, message)
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.MessageInserted(sessionId, message, index))
+            // Emit MessageAdded with assembled MessageWithParts
+            val parts = partsMap[message.id]?.toList() ?: emptyList()
+            _messageChanges.emit(MessageChange.MessageAdded(sessionId, MessageWithParts(message, parts)))
         }
     }
 
@@ -288,6 +349,7 @@ class ChatUiStateManager(
             partsMap.remove(messageId)
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.MessageRemoved(sessionId, messageId, i))
+            _messageChanges.emit(MessageChange.MessageRemoved(sessionId, messageId))
         }
     }
 
@@ -298,11 +360,13 @@ class ChatUiStateManager(
             list[i] = part
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.PartUpdated(sessionId, messageId, part, i, delta))
+            _messageChanges.emit(MessageChange.PartUpdated(sessionId, messageId, part, delta))
         } else {
             val index = -(i + 1)
             list.add(index, part)
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.PartInserted(sessionId, messageId, part, index))
+            _messageChanges.emit(MessageChange.PartAdded(sessionId, messageId, part))
         }
     }
 
@@ -313,6 +377,7 @@ class ChatUiStateManager(
             list.removeAt(i)
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.PartRemoved(sessionId, messageId, partId, i))
+            _messageChanges.emit(MessageChange.PartRemoved(sessionId, messageId, partId))
         }
     }
 
@@ -458,6 +523,7 @@ class ChatUiStateManager(
             }
             syncMessagesFlow()
             _storeEvents.emit(StoreEvent.MessagesLoaded(sessionId, messageList.map { it.info }))
+            _messageChanges.emit(MessageChange.InitialLoad(sessionId, messageList))
         } catch (e: Exception) {
             log.error("Failed to load messages for session $sessionId", e)
         }

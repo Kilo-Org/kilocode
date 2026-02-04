@@ -7,12 +7,10 @@ import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
 import ai.kilo.plugin.toolwindow.components.chat.ChatDragDropHandler
-import ai.kilo.plugin.toolwindow.components.chat.ChatMessageRenderer
-import ai.kilo.plugin.toolwindow.components.chat.ChatStateManager
+import ai.kilo.plugin.toolwindow.components.chat.ChatUiRenderer
 import ai.kilo.plugin.toolwindow.components.header.ChatHeaderPanel
 import ai.kilo.plugin.toolwindow.components.input.PromptInputPanel
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
@@ -29,7 +27,6 @@ class ChatPanel(
     private val appState: KiloAppState
 ) : BorderLayoutPanel() {
 
-    private val log = Logger.getInstance(ChatPanel::class.java)
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // UI Components
@@ -45,12 +42,11 @@ class ChatPanel(
         onDismiss = { store.clearError() }
     )
 
-    // State & Rendering
-    private val stateManager = ChatStateManager(scope, store)
-    private val messageRenderer: ChatMessageRenderer
+    // Renderer (service #3)
+    private val renderer: ChatUiRenderer
     private val dragDropHandler: ChatDragDropHandler
 
-    // Auto-scroll state (UI-specific, stays in ChatPanel)
+    // Auto-scroll state
     private var autoScroll = true
 
     init {
@@ -100,22 +96,20 @@ class ChatPanel(
         )
         addToBottom(promptArea)
 
-        // Initialize renderer with messages panel
-        messageRenderer = ChatMessageRenderer(project, scope, store, stateManager, messagesPanel)
+        // Initialize renderer
+        renderer = ChatUiRenderer(project, scope, store, messagesPanel)
+        renderer.setListener(createRendererListener(contentPanel))
+        renderer.start()
 
         // Initialize drag-drop handler
         dragDropHandler = ChatDragDropHandler(project, appState, scrollPane)
         dragDropHandler.setup()
 
-        // Setup state manager listener and subscriptions
-        stateManager.setListener(createStateManagerListener(contentPanel))
-        stateManager.subscribeToState()
-
         setupAutoScroll()
     }
 
-    private fun createStateManagerListener(contentPanel: ContentPanel): ChatStateManager.Listener {
-        return object : ChatStateManager.Listener {
+    private fun createRendererListener(contentPanel: ContentPanel): ChatUiRenderer.Listener {
+        return object : ChatUiRenderer.Listener {
             override fun onSessionChanged(session: Session?) {
                 headerPanel.updateSession(session)
                 if (session == null) {
@@ -124,17 +118,6 @@ class ChatPanel(
                     contentPanel.showContent()
                 }
                 promptInput.isEnabled = true
-            }
-
-            override fun onMessagesUpdated(messages: List<MessageWithParts>, previousCount: Int) {
-                updateMessages(messages, previousCount)
-            }
-
-            override fun onStreamingStateChanged(isStreaming: Boolean) {
-                updateTypingIndicator()
-                messagesPanel.revalidate()
-                messagesPanel.repaint()
-                scrollToBottomIfNeeded()
             }
 
             override fun onStatusChanged(status: SessionStatus?) {
@@ -146,54 +129,22 @@ class ChatPanel(
                 errorBanner.setError(error)
             }
 
-            override fun onMessageRefreshNeeded(messageId: String) {
-                messageRenderer.refreshMessageView(messageId)
+            override fun onStreamingStateChanged(isStreaming: Boolean) {
+                updateTypingIndicator()
+                messagesPanel.revalidate()
+                messagesPanel.repaint()
                 scrollToBottomIfNeeded()
             }
 
-            override fun onFullRebuildNeeded() {
-                messageRenderer.fullRebuild(stateManager.currentMessages)
+            override fun onScrollToBottomNeeded() {
                 scrollToBottomIfNeeded()
             }
         }
-    }
-
-    private fun updateMessages(messages: List<MessageWithParts>, previousCount: Int) {
-        println("DEBUG ChatPanel.updateMessages: ${messages.size} messages, previousCount=$previousCount, cacheSize=${stateManager.messageViewCache.size}")
-
-        when {
-            // First load or session change - full rebuild
-            stateManager.messageViewCache.isEmpty() -> {
-                println("DEBUG updateMessages: cache empty -> FULL REBUILD")
-                messageRenderer.fullRebuild(messages)
-            }
-            // New message added - append it
-            messages.size > previousCount && previousCount > 0 -> {
-                println("DEBUG updateMessages: message count increased ${previousCount} -> ${messages.size} -> APPEND")
-                messageRenderer.appendNewMessages(messages, previousCount)
-            }
-            // Message removed - full rebuild
-            messages.size < previousCount -> {
-                println("DEBUG updateMessages: message count decreased -> FULL REBUILD")
-                messageRenderer.fullRebuild(messages)
-            }
-            // Same count - during streaming, refresh the last message
-            else -> {
-                if (stateManager.isStreaming && messages.isNotEmpty()) {
-                    val lastMessage = messages.last()
-                    println("DEBUG updateMessages: same count, streaming -> REFRESH last message")
-                    messageRenderer.refreshMessageView(lastMessage.info.id)
-                }
-            }
-        }
-
-        updateTypingIndicator()
-        scrollToBottomIfNeeded()
     }
 
     private fun updateTypingIndicator() {
-        val messages = stateManager.currentMessages
-        typingIndicator.isVisible = stateManager.isStreaming && messages.isNotEmpty() &&
+        val messages = renderer.messages
+        typingIndicator.isVisible = renderer.streaming && messages.isNotEmpty() &&
             messages.last().let { it.info.role == "assistant" && it.info.finish == null }
     }
 
@@ -241,7 +192,7 @@ class ChatPanel(
     }
 
     fun abortGeneration() {
-        if (stateManager.isStreaming) {
+        if (renderer.streaming) {
             stopGeneration()
         }
     }
@@ -253,7 +204,7 @@ class ChatPanel(
 
     fun dispose() {
         scope.cancel()
-        stateManager.dispose()
+        renderer.dispose()
         attachedFilesPanel.dispose()
         promptInput.dispose()
     }

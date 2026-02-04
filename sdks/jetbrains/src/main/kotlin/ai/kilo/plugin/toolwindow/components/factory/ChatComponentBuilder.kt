@@ -31,9 +31,9 @@ data class PendingRequests(
 }
 
 /**
- * Factory for creating SessionEntityUIBlock instances for different entity types.
+ * Builds Swing components from chat domain models (MessageWithParts, Part).
  */
-object SessionEntityFactory {
+object ChatComponentBuilder {
 
     fun createMessageBlock(
         project: Project,
@@ -48,7 +48,7 @@ object SessionEntityFactory {
         textPartCache: MutableMap<String, MarkdownPanel>,
         onFork: ((String) -> Unit)? = null,
         onRevert: ((String) -> Unit)? = null
-    ): SessionEntityUIBlock {
+    ): ChatContentBlock {
         val message = messageWithParts.info
         val entityType = if (message.isUser) {
             SessionEntityType.UserMessage(
@@ -66,7 +66,7 @@ object SessionEntityFactory {
             toolPartWrappers, textPartCache
         )
 
-        return SessionEntityUIBlock(
+        return ChatContentBlock(
             entityType = entityType,
             content = content,
             timestamp = message.time.created,
@@ -157,7 +157,7 @@ object SessionEntityFactory {
             }
         }
 
-        return SessionEntityUIBlock(
+        return ChatContentBlock(
             entityType = entityType,
             content = content,
             timestamp = messageTimestamp,

@@ -8,12 +8,15 @@ import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloTypography
 import com.intellij.icons.AllIcons
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.IconUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.awt.Color
 import java.awt.FlowLayout
 import java.awt.Font
 import javax.swing.JPanel
@@ -91,11 +94,35 @@ class ChatHeaderPanel(
         titleLabel.icon = if (session != null) AllIcons.General.Balloon else null
     }
 
+    private val lightBlue = Color(100, 181, 246)
+    private val spinnerIcon = AnimatedIcon(
+        125,
+        IconUtil.colorize(AllIcons.Process.Step_1, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_2, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_3, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_4, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_5, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_6, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_7, lightBlue),
+        IconUtil.colorize(AllIcons.Process.Step_8, lightBlue)
+    )
+
     fun updateStatus(status: SessionStatus?) {
-        statusLabel.text = when (status?.type) {
-            "busy" -> "Thinking..."
-            "retry" -> "Retrying (${status.attempt ?: 0})..."
-            else -> ""
+        when (status?.type) {
+            "busy" -> {
+                statusLabel.icon = spinnerIcon
+                statusLabel.text = ""
+            }
+            "retry" -> {
+                statusLabel.icon = spinnerIcon
+                statusLabel.foreground = lightBlue
+                statusLabel.text = "Retrying (${status.attempt ?: 0})..."
+            }
+            else -> {
+                statusLabel.icon = null
+                statusLabel.foreground = KiloTheme.textWeak
+                statusLabel.text = ""
+            }
         }
     }
 }
