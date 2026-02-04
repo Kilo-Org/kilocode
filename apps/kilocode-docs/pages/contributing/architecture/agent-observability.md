@@ -58,6 +58,7 @@ Capture these metrics per LLM API call:
 - Success / Failure
 - Error type and message (if failed)
 - Token counts
+- Source (CLI/JetBrains/VSCode/etc)
 
 #### Dashboards
 
