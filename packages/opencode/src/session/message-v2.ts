@@ -15,6 +15,18 @@ import type { Provider } from "@/provider/provider"
 
 export namespace MessageV2 {
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
+
+  // kilocode_change start
+  export const ReasoningStuckError = NamedError.create(
+    "MessageReasoningStuckError",
+    z.object({
+      message: z.string(),
+      threshold: z.number(),
+      chars: z.number(),
+      finish: z.string().optional(),
+    }),
+  )
+  // kilocode_change end
   export const AbortedError = NamedError.create("MessageAbortedError", z.object({ message: z.string() }))
   export const AuthError = NamedError.create(
     "ProviderAuthError",
@@ -360,6 +372,7 @@ export namespace MessageV2 {
         AuthError.Schema,
         NamedError.Unknown.Schema,
         OutputLengthError.Schema,
+        ReasoningStuckError.Schema,
         AbortedError.Schema,
         APIError.Schema,
       ])
@@ -675,6 +688,8 @@ export namespace MessageV2 {
           },
         ).toObject()
       case MessageV2.OutputLengthError.isInstance(e):
+        return e
+      case MessageV2.ReasoningStuckError.isInstance(e):
         return e
       case LoadAPIKeyError.isInstance(e):
         return new MessageV2.AuthError(

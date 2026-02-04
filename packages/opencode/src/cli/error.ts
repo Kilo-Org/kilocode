@@ -2,6 +2,7 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { Config } from "../config/config"
 import { MCP } from "../mcp"
 import { Provider } from "../provider/provider"
+import { MessageV2 } from "../session/message-v2" // kilocode_change
 import { UI } from "./ui"
 
 export function FormatError(input: unknown) {
@@ -38,6 +39,12 @@ export function FormatError(input: unknown) {
     ].join("\n")
 
   if (UI.CancelledError.isInstance(input)) return ""
+
+  // kilocode_change start
+  if (MessageV2.ReasoningStuckError.isInstance(input)) {
+    return `Model got stuck producing reasoning only (chars: ${input.data.chars}, threshold: ${input.data.threshold}). Try retrying, switching models, or reducing task complexity.`
+  }
+  // kilocode_change end
 }
 
 export function FormatUnknownError(input: unknown): string {

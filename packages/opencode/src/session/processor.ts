@@ -50,6 +50,11 @@ export namespace SessionProcessor {
           try {
             let currentText: MessageV2.TextPart | undefined
             let reasoningMap: Record<string, MessageV2.ReasoningPart> = {}
+            let reasoningChars = 0
+            let produced = false
+
+            const limit = input.model.limit.output || 0
+            const threshold = Math.max(8_000, Math.min(64_000, limit > 0 ? Math.floor(limit * 0.5) : 16_000))
             const stream = await LLM.stream(streamInput)
 
             for await (const value of stream.fullStream) {
@@ -80,8 +85,25 @@ export namespace SessionProcessor {
                   if (value.id in reasoningMap) {
                     const part = reasoningMap[value.id]
                     part.text += value.text
+                    reasoningChars += value.text.length
                     if (value.providerMetadata) part.metadata = value.providerMetadata
                     if (part.text) await Session.updatePart({ part, delta: value.text })
+
+                    // kilocode_change start - prevent infinite reasoning-only streams
+                    // Some providers/models can get stuck streaming <think> / reasoning without ever producing text or tool calls.
+                    // If this happens, stop early so the session loop can exit.
+                    if (!produced && reasoningChars >= threshold) {
+                      input.assistantMessage.error = new MessageV2.ReasoningStuckError({
+                        message: "Model got stuck producing reasoning only",
+                        threshold,
+                        chars: reasoningChars,
+                        finish: input.assistantMessage.finish,
+                      }).toObject()
+                      input.assistantMessage.time.completed = Date.now()
+                      await Session.updateMessage(input.assistantMessage)
+                      blocked = true
+                    }
+                    // kilocode_change end
                   }
                   break
 
@@ -101,6 +123,7 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-input-start":
+                  produced = true
                   const part = await Session.updatePart({
                     id: toolcalls[value.id]?.id ?? Identifier.ascending("part"),
                     messageID: input.assistantMessage.id,
@@ -124,6 +147,7 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-call": {
+                  produced = true
                   const match = toolcalls[value.toolCallId]
                   if (match) {
                     const part = await Session.updatePart({
@@ -170,6 +194,7 @@ export namespace SessionProcessor {
                   break
                 }
                 case "tool-result": {
+                  produced = true
                   const match = toolcalls[value.toolCallId]
                   if (match && match.state.status === "running") {
                     await Session.updatePart({
@@ -194,6 +219,7 @@ export namespace SessionProcessor {
                 }
 
                 case "tool-error": {
+                  produced = true
                   const match = toolcalls[value.toolCallId]
                   if (match && match.state.status === "running") {
                     await Session.updatePart({
@@ -253,6 +279,22 @@ export namespace SessionProcessor {
                     cost: usage.cost,
                   })
                   await Session.updateMessage(input.assistantMessage)
+
+                  // kilocode_change start - prevent infinite reasoning-only streams
+                  // If a step finishes with only reasoning (no text, no tools), treat it as terminal to avoid endless looping.
+                  if (!produced && input.assistantMessage.finish === "unknown" && reasoningChars > 0) {
+                    input.assistantMessage.error = new MessageV2.ReasoningStuckError({
+                      message: "Model got stuck producing reasoning only",
+                      threshold,
+                      chars: reasoningChars,
+                      finish: input.assistantMessage.finish,
+                    }).toObject()
+                    input.assistantMessage.time.completed = Date.now()
+                    await Session.updateMessage(input.assistantMessage)
+                    blocked = true
+                  }
+                  // kilocode_change end
+
                   if (snapshot) {
                     const patch = await Snapshot.patch(snapshot)
                     if (patch.files.length) {
@@ -292,6 +334,7 @@ export namespace SessionProcessor {
 
                 case "text-delta":
                   if (currentText) {
+                    if (value.text) produced = true
                     currentText.text += value.text
                     if (value.providerMetadata) currentText.metadata = value.providerMetadata
                     if (currentText.text)
@@ -335,6 +378,7 @@ export namespace SessionProcessor {
                   continue
               }
               if (needsCompaction) break
+              if (blocked) break
             }
           } catch (e: any) {
             log.error("process", {

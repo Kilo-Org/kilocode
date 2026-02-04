@@ -144,6 +144,16 @@ export type MessageOutputLengthError = {
   }
 }
 
+export type MessageReasoningStuckError = {
+  name: "MessageReasoningStuckError"
+  data: {
+    message: string
+    threshold: number
+    chars: number
+    finish?: string
+  }
+}
+
 export type MessageAbortedError = {
   name: "MessageAbortedError"
   data: {
@@ -175,7 +185,13 @@ export type AssistantMessage = {
     created: number
     completed?: number
   }
-  error?: ProviderAuthError | UnknownError | MessageOutputLengthError | MessageAbortedError | ApiError
+  error?:
+    | ProviderAuthError
+    | UnknownError
+    | MessageOutputLengthError
+    | MessageReasoningStuckError
+    | MessageAbortedError
+    | ApiError
   parentID: string
   modelID: string
   providerID: string
@@ -818,7 +834,13 @@ export type EventSessionError = {
   type: "session.error"
   properties: {
     sessionID?: string
-    error?: ProviderAuthError | UnknownError | MessageOutputLengthError | MessageAbortedError | ApiError
+    error?:
+      | ProviderAuthError
+      | UnknownError
+      | MessageOutputLengthError
+      | MessageReasoningStuckError
+      | MessageAbortedError
+      | ApiError
   }
 }
 
