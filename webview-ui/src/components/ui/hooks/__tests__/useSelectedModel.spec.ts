@@ -447,17 +447,18 @@ describe("useSelectedModel", () => {
 
 			const apiConfiguration: ProviderSettings = {
 				apiProvider: "claude-code",
-				apiModelId: "claude-sonnet-4-5", // Use valid claude-code model ID
+				apiModelId: "sonnet", // Use valid claude-code model ID (short alias)
 			}
 
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
 			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-5")
+			expect(result.current.id).toBe("sonnet")
 			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
-			expect(result.current.info?.supportsPromptCache).toBe(true) // Claude Code now supports prompt cache
+			// Claude Code CLI doesn't support images or prompt cache
+			expect(result.current.info?.supportsImages).toBe(false)
+			expect(result.current.info?.supportsPromptCache).toBe(false)
 			// Verify it inherits other properties from claude-code models
 			expect(result.current.info?.maxTokens).toBe(32768)
 			expect(result.current.info?.contextWindow).toBe(200_000)
@@ -491,9 +492,9 @@ describe("useSelectedModel", () => {
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
 			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-5") // Default model
+			expect(result.current.id).toBe("sonnet") // Default model is "sonnet" (short alias)
 			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
+			expect(result.current.info?.supportsImages).toBe(false) // Claude Code CLI doesn't support images
 		})
 	})
 
