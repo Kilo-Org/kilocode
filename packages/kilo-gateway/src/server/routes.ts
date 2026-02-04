@@ -160,7 +160,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           refresh: auth.refresh,
           access: auth.access,
           expires: auth.expires,
-          accountId: organizationId ?? undefined,
+          accountId: organizationId && organizationId.length > 0 ? organizationId : undefined,
         })
 
         // Update telemetry identity to disable for org users
