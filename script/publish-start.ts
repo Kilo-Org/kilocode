@@ -89,7 +89,10 @@ if (!Script.preview) {
   await $`git cherry-pick HEAD..origin/dev`.nothrow()
   await $`git push origin HEAD --tags --no-verify --force-with-lease`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
-  await $`gh release create v${Script.version} -d --title "v${Script.version}" --notes ${notes.join("\n") || "No notable changes"} ./packages/opencode/dist/archives/*.zip ./packages/opencode/dist/archives/*.tar.gz` // kilocode_change - archives now in subdirectory
+  // kilocode_change start - skip draft flag when OPENCODE_SKIP_NOTES=1 (used by publish-stable.yml which doesn't have a publish-complete step)
+  const draftFlag = skipNotes ? [] : ["-d"]
+  await $`gh release create v${Script.version} ${draftFlag} --title "v${Script.version}" --notes ${notes.join("\n") || "No notable changes"} ./packages/opencode/dist/archives/*.zip ./packages/opencode/dist/archives/*.tar.gz`
+  // kilocode_change end
   const release = await $`gh release view v${Script.version} --json id,tagName`.json()
   output += `release=${release.id}\n`
   output += `tag=${release.tagName}\n`
