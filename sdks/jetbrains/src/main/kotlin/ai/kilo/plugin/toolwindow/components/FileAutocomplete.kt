@@ -1,6 +1,7 @@
 package ai.kilo.plugin.toolwindow.components
 
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.AttachedFile
+import ai.kilo.plugin.services.KiloAppState
 import ai.kilo.plugin.settings.KiloSettings
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
@@ -32,8 +33,8 @@ import javax.swing.text.JTextComponent
 class FileAutocomplete(
     private val project: Project,
     private val textComponent: JTextComponent,
-    private val stateService: KiloStateService,
-    private val onFileSelected: (KiloStateService.AttachedFile, String) -> Unit
+    private val appState: KiloAppState,
+    private val onFileSelected: (AttachedFile, String) -> Unit
 ) : Disposable {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -213,7 +214,7 @@ class FileAutocomplete(
             val query = getFilterText()
             
             try {
-                val results = stateService.searchFiles(query, 20)
+                val results = appState.searchFiles(query, 20)
                 
                 withContext(Dispatchers.Main) {
                     listModel.clear()
@@ -267,7 +268,7 @@ class FileAutocomplete(
         val relativePath = selected.path
 
         // Create attached file
-        val attachedFile = KiloStateService.AttachedFile(
+        val attachedFile = AttachedFile(
             absolutePath = absolutePath,
             relativePath = relativePath,
             mime = if (selected.isDirectory) "application/x-directory" else "text/plain"

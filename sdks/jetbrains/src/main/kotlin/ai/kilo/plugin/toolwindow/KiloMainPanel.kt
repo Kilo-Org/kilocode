@@ -30,19 +30,20 @@ class KiloMainPanel(
 ) : SimpleToolWindowPanel(true, true), Disposable {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val state = kiloService.state!!
+    private val sessionStore = kiloService.sessionStore!!
+    private val appState = kiloService.appState!!
 
     private val cardLayout = CardLayout()
     private val contentPanel = JPanel(cardLayout)
 
     private val sessionListPanel: SessionListPanel
-    private val chatPanel = ChatPanel(project, state)
+    private val chatPanel = ChatPanel(project, sessionStore, appState)
 
     private var currentView = VIEW_CHAT
 
     init {
         // Create session list panel with callback to switch to chat when session selected
-        sessionListPanel = SessionListPanel(project, state) {
+        sessionListPanel = SessionListPanel(project, sessionStore) {
             showChat()
         }
 
@@ -61,8 +62,8 @@ class KiloMainPanel(
 
     private fun loadInitialTodos() {
         scope.launch {
-            state.currentSessionId.value?.let { sessionId ->
-                state.loadTodos(sessionId)
+            sessionStore.currentSessionId.value?.let { sessionId ->
+                sessionStore.loadTodos(sessionId)
             }
         }
     }
@@ -88,6 +89,17 @@ class KiloMainPanel(
     fun focusInput() = chatPanel.focusInput()
 
     fun abortGeneration() = chatPanel.abortGeneration()
+
+    fun startNewSession() {
+        scope.launch {
+            sessionStore.selectSession(null)
+        }
+        showChat()
+        chatPanel.clearForNewSession()
+        SwingUtilities.invokeLater {
+            focusInput()
+        }
+    }
 
     override fun dispose() {
         scope.cancel()

@@ -4,10 +4,21 @@ import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.EditorSettings
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorFontType
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.testFramework.LightVirtualFile
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
@@ -29,13 +40,80 @@ import javax.swing.text.html.StyleSheet
 
 /**
  * Panel that renders markdown content with proper formatting and syntax highlighting.
- * Uses flexmark for markdown parsing and custom rendering for code blocks.
+ * Uses flexmark for markdown parsing and IntelliJ's Editor for code blocks with syntax highlighting.
  */
 class MarkdownPanel(
-    private val project: Project? = null
-) : JPanel() {
+    private val project: Project? = null,
+    private val parentDisposable: Disposable? = null
+) : JPanel(), Disposable {
+
+    private val editors = mutableListOf<Editor>()
 
     companion object {
+        /**
+         * Map language identifiers to file extensions for syntax highlighting.
+         */
+        private val languageToExtension = mapOf(
+            "kotlin" to "kt",
+            "kt" to "kt",
+            "java" to "java",
+            "javascript" to "js",
+            "js" to "js",
+            "typescript" to "ts",
+            "ts" to "ts",
+            "python" to "py",
+            "py" to "py",
+            "rust" to "rs",
+            "rs" to "rs",
+            "go" to "go",
+            "c" to "c",
+            "cpp" to "cpp",
+            "c++" to "cpp",
+            "csharp" to "cs",
+            "cs" to "cs",
+            "ruby" to "rb",
+            "rb" to "rb",
+            "php" to "php",
+            "swift" to "swift",
+            "scala" to "scala",
+            "html" to "html",
+            "css" to "css",
+            "scss" to "scss",
+            "sass" to "sass",
+            "less" to "less",
+            "json" to "json",
+            "xml" to "xml",
+            "yaml" to "yaml",
+            "yml" to "yml",
+            "toml" to "toml",
+            "markdown" to "md",
+            "md" to "md",
+            "sql" to "sql",
+            "shell" to "sh",
+            "bash" to "sh",
+            "sh" to "sh",
+            "zsh" to "sh",
+            "powershell" to "ps1",
+            "ps1" to "ps1",
+            "dockerfile" to "dockerfile",
+            "docker" to "dockerfile",
+            "groovy" to "groovy",
+            "gradle" to "gradle",
+            "lua" to "lua",
+            "perl" to "pl",
+            "r" to "r",
+            "dart" to "dart",
+            "vue" to "vue",
+            "svelte" to "svelte",
+            "jsx" to "jsx",
+            "tsx" to "tsx"
+        )
+
+        fun getFileTypeForLanguage(language: String): FileType {
+            val extension = languageToExtension[language.lowercase()] ?: language.lowercase()
+            val fileType = FileTypeManager.getInstance().getFileTypeByExtension(extension)
+            return if (fileType.name == "UNKNOWN") PlainTextFileType.INSTANCE else fileType
+        }
         private val options = MutableDataSet().apply {
             set(Parser.EXTENSIONS, listOf(
                 TablesExtension.create(),
@@ -63,16 +141,42 @@ class MarkdownPanel(
         isOpaque = false
     }
 
+    // Track current markdown content for incremental updates
+    private var currentMarkdown: String = ""
+
     init {
         layout = BorderLayout()
         isOpaque = false
         add(contentPanel, BorderLayout.CENTER)
+
+        // Register for disposal
+        parentDisposable?.let { Disposer.register(it, this) }
+    }
+
+    override fun dispose() {
+        releaseAllEditors()
+    }
+
+    private fun releaseAllEditors() {
+        val editorFactory = EditorFactory.getInstance()
+        editors.forEach { editor ->
+            try {
+                editorFactory.releaseEditor(editor)
+            } catch (e: Exception) {
+                // Editor may already be disposed
+            }
+        }
+        editors.clear()
     }
 
     /**
      * Set the markdown content to render.
      */
     fun setMarkdown(markdown: String) {
+        currentMarkdown = markdown
+
+        // Release any existing editors before clearing content
+        releaseAllEditors()
         contentPanel.removeAll()
 
         // Split content into code blocks and regular text
@@ -91,6 +195,48 @@ class MarkdownPanel(
         contentPanel.revalidate()
         contentPanel.repaint()
     }
+
+    /**
+     * Append text delta to the current markdown content.
+     * Optimized for streaming - only updates the last text component if no new code blocks.
+     */
+    fun appendText(delta: String) {
+        val oldMarkdown = currentMarkdown
+        currentMarkdown += delta
+
+        // Check if delta introduces new code blocks
+        val oldCodeBlockCount = "```".toRegex().findAll(oldMarkdown).count()
+        val newCodeBlockCount = "```".toRegex().findAll(currentMarkdown).count()
+
+        if (oldCodeBlockCount == newCodeBlockCount && contentPanel.componentCount > 0) {
+            // No new code blocks - try to update last text component in place
+            val lastIndex = contentPanel.componentCount - 1
+            // Skip the spacer (Box.Filler) if present
+            val componentIndex = if (lastIndex > 0 && contentPanel.getComponent(lastIndex) is Box.Filler) lastIndex - 1 else lastIndex
+            val lastComponent = contentPanel.getComponent(componentIndex)
+
+            if (lastComponent is JEditorPane) {
+                // Update the last text panel in place
+                val parts = splitIntoCodeBlocksAndText(currentMarkdown)
+                val lastPart = parts.lastOrNull()
+                if (lastPart is ContentPart.Text) {
+                    val html = parseMarkdown(lastPart.text)
+                    val styledHtml = wrapWithStyles(html)
+                    lastComponent.text = styledHtml
+                    lastComponent.caretPosition = 0
+                    return
+                }
+            }
+        }
+
+        // Fall back to full re-render if code blocks changed or can't update in place
+        setMarkdown(currentMarkdown)
+    }
+
+    /**
+     * Get the current markdown content.
+     */
+    fun getMarkdown(): String = currentMarkdown
 
     /**
      * Split markdown into code blocks and regular text parts.
@@ -164,7 +310,7 @@ class MarkdownPanel(
     }
 
     /**
-     * Create a panel for code blocks with syntax highlighting.
+     * Create a panel for code blocks with syntax highlighting using IntelliJ's Editor.
      */
     private fun createCodeBlockPanel(language: String, code: String): JComponent {
         val panel = JPanel(BorderLayout()).apply {
@@ -218,51 +364,82 @@ class MarkdownPanel(
         }
         panel.add(header, BorderLayout.NORTH)
 
-        // Code content with syntax highlighting
-        val codeArea = createHighlightedCodeArea(language, code)
-        val scrollPane = JScrollPane(codeArea).apply {
-            border = JBUI.Borders.empty()
-            isOpaque = false
-            viewport.isOpaque = false
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
-        }
-        panel.add(scrollPane, BorderLayout.CENTER)
+        // Code content with syntax highlighting using IntelliJ's Editor
+        val editorComponent = createEditorComponent(language, code)
+        panel.add(editorComponent, BorderLayout.CENTER)
 
         return panel
     }
 
     /**
-     * Create a code area with syntax highlighting.
+     * Create an IntelliJ Editor component with proper syntax highlighting.
      */
-    private fun createHighlightedCodeArea(language: String, code: String): JTextArea {
-        val scheme = EditorColorsManager.getInstance().globalScheme
-        val editorFont = scheme.getFont(EditorFontType.PLAIN)
+    private fun createEditorComponent(language: String, code: String): JComponent {
+        val editorFactory = EditorFactory.getInstance()
 
-        return JTextArea(code).apply {
-            isEditable = false
-            isOpaque = true
-            background = KiloTheme.surfaceInsetBase
-            foreground = KiloTheme.textBase
-            font = Font(editorFont.family, Font.PLAIN, KiloTypography.fontSizeSmall.toInt())
-            border = JBUI.Borders.empty(KiloSpacing.md)
-            tabSize = 2
+        // Create a LightVirtualFile with the correct file type for syntax highlighting
+        val fileType = getFileTypeForLanguage(language)
+        val extension = languageToExtension[language.lowercase()] ?: language.lowercase().ifEmpty { "txt" }
+        val virtualFile = LightVirtualFile("snippet.$extension", fileType, code)
 
-            // Apply basic syntax highlighting via foreground colors
-            // For full highlighting, we'd need to integrate with IntelliJ's lexer system
-            // This is a simplified version that handles common patterns
-            highlightSyntax(this, language)
+        val document = editorFactory.createDocument(code)
+
+        // Create a read-only viewer
+        val editor = editorFactory.createViewer(document, project)
+        editors.add(editor)
+
+        // Configure the editor
+        val editorEx = editor as? EditorEx
+        if (editorEx != null) {
+            // Set up syntax highlighting using the virtual file
+            val scheme = EditorColorsManager.getInstance().globalScheme
+            val highlighter = EditorHighlighterFactory.getInstance()
+                .createEditorHighlighter(project, virtualFile)
+            editorEx.highlighter = highlighter
+
+            // Configure editor appearance
+            editorEx.setCaretVisible(false)
+            editorEx.setCaretEnabled(false)
+            editorEx.backgroundColor = KiloTheme.surfaceInsetBase
+
+            // Configure gutter (line numbers area)
+            editorEx.gutterComponentEx.apply {
+                setPaintBackground(false)
+            }
         }
-    }
 
-    /**
-     * Apply basic syntax highlighting to the text area.
-     * Note: For full IDE-level highlighting, we'd need to use EditorTextField with a language.
-     */
-    private fun highlightSyntax(textArea: JTextArea, language: String) {
-        // For now, we use a monochrome approach with the editor font
-        // Full syntax highlighting would require using IntelliJ's syntax highlighter
-        // which is complex to integrate with a plain JTextArea
+        // Configure editor settings
+        editor.settings.apply {
+            isLineNumbersShown = false
+            isLineMarkerAreaShown = false
+            isFoldingOutlineShown = false
+            isRightMarginShown = false
+            additionalLinesCount = 0
+            additionalColumnsCount = 0
+            isAdditionalPageAtBottom = false
+            isVirtualSpace = false
+            isUseSoftWraps = false
+            isCaretRowShown = false
+            isShowIntentionBulb = false
+            isIndentGuidesShown = false
+            isAnimatedScrolling = false
+            isAutoCodeFoldingEnabled = false
+        }
+
+        // Wrap in a panel with padding
+        val editorPanel = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = JBUI.Borders.empty(KiloSpacing.sm, KiloSpacing.md)
+            add(editor.component, BorderLayout.CENTER)
+        }
+
+        // Calculate and set preferred height based on line count
+        val lineCount = code.lines().size
+        val lineHeight = editor.lineHeight
+        val preferredHeight = (lineCount * lineHeight) + (KiloSpacing.sm * 2)
+        editorPanel.preferredSize = Dimension(editorPanel.preferredSize.width, preferredHeight)
+
+        return editorPanel
     }
 
     /**

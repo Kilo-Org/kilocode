@@ -59,8 +59,8 @@
 
         <action id="Kilo.NewSession"
                 class="ai.kilo.plugin.actions.NewSessionAction"
-                text="New Kilo Session"
-                description="Create a new Kilo chat session"
+                text="New Session"
+                description="Start a new chat session"
                 icon="AllIcons.General.Add">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift K"/>
@@ -119,5 +119,12 @@
                     description="Open Kilo settings"
                     icon="AllIcons.General.Settings"/>
         </group>
+
+        <!-- Tool Window Gear Menu Actions -->
+        <action id="Kilo.ClearSessions"
+                class="ai.kilo.plugin.actions.ClearSessionsAction"
+                text="Clear Sessions"
+                description="Clear all chat sessions"
+                icon="AllIcons.Actions.GC"/>
     </actions>
 </idea-plugin>

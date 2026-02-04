@@ -1,37 +1,33 @@
 package ai.kilo.plugin.actions
 
-import ai.kilo.plugin.services.KiloProjectService
+import ai.kilo.plugin.toolwindow.KiloToolWindowFactory
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.wm.ToolWindowManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /**
- * Action to create a new Kilo chat session.
+ * Action to start a new Kilo chat session.
+ * Clears the current session and switches to chat view.
+ * A new session is created lazily when the user sends their first message.
  */
 class NewSessionAction : AnAction(), DumbAware {
-    private val scope = CoroutineScope(Dispatchers.Default)
+
+    override fun displayTextInToolbar(): Boolean = true
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val kiloService = KiloProjectService.getInstance(project)
 
         // Ensure tool window is open
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Kilo")
         toolWindow?.show()
 
-        // Create new session
-        scope.launch {
-            kiloService.initialize().onSuccess { state ->
-                state.createSession()
-            }
-        }
+        // Start new session (clears current, switches to chat view)
+        KiloToolWindowFactory.startNewSession(project)
     }
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.project != null
+        e.presentation.text = "New Session"
     }
 }

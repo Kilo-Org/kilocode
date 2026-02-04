@@ -1,8 +1,12 @@
 package ai.kilo.plugin.toolwindow.components
 
 import ai.kilo.plugin.model.*
+import ai.kilo.plugin.services.AttachedFile
+import ai.kilo.plugin.services.KiloAppState
 import ai.kilo.plugin.services.KiloEventService
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.KiloSessionStore
+import ai.kilo.plugin.store.StoreEvent
+import com.intellij.openapi.diagnostic.Logger
 import ai.kilo.plugin.settings.KiloSettings
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
@@ -21,6 +25,7 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
@@ -50,9 +55,11 @@ data class PendingRequests(
 
 class ChatPanel(
     private val project: Project,
-    private val stateService: KiloStateService
+    private val store: KiloSessionStore,
+    private val appState: KiloAppState
 ) : BorderLayoutPanel() {
 
+    private val log = Logger.getInstance(ChatPanel::class.java)
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val messagesPanel = MessagesPanel()
@@ -60,24 +67,35 @@ class ChatPanel(
     private val promptInput: PromptInputPanel
     private val emptyStateLabel = JBLabel("Start typing to begin a new conversation")
     private val headerPanel = HeaderPanel()
-    
+
     private var currentSessionId: String? = null
+    private var currentSessionStartTime: Long? = null
     private var currentAgent: String? = null
     private var autoScroll = true
     private var lastMessageCount = 0
     private var isStreaming = false
     private val typingIndicator = TypingIndicator()
-    
+
     private var pendingRequests = PendingRequests()
     private var currentMessages: List<MessageWithParts> = emptyList()
     private val toolPartWrappers = mutableListOf<ToolPartWrapper>()
-    
-    private val attachedFilesPanel = AttachedFilesPanel(project, stateService)
+
+    // Incremental update support
+    private val messageViewCache = mutableMapOf<String, SessionEntityUIBlock>()
+
+    // Track requestId -> messageId for targeted refresh on permission/question removal
+    private val permissionMessageMap = mutableMapOf<String, String>()
+    private val questionMessageMap = mutableMapOf<String, String>()
+
+    // Cache for text part MarkdownPanels to enable streaming delta appends
+    private val textPartCache = mutableMapOf<String, MarkdownPanel>()
+
+    private val attachedFilesPanel = AttachedFilesPanel(project, appState)
     private var fileAutocomplete: FileAutocomplete? = null
     
     private val errorBanner = ErrorBanner(
-        onRetry = { scope.launch { stateService.clearError() } },
-        onDismiss = { stateService.clearError() }
+        onRetry = { scope.launch { store.clearError() } },
+        onDismiss = { store.clearError() }
     )
     
     init {
@@ -98,11 +116,21 @@ class ChatPanel(
             emptyStatePanel = EmptyStatePanel(emptyStateLabel),
             messagesScrollPane = scrollPane
         )
-        addToCenter(contentPanel)
+
+        // Wrapper to hold content + typing indicator (outside scroll)
+        val contentWrapper = BorderLayoutPanel().apply {
+            isOpaque = false
+            addToCenter(contentPanel)
+            addToBottom(typingIndicator)
+        }
+        typingIndicator.isVisible = false
+
+        addToCenter(contentWrapper)
 
         promptInput = PromptInputPanel(
             project = project,
-            stateService = stateService,
+            store = store,
+            appState = appState,
             onSend = { text -> sendMessage(text) },
             onStop = { stopGeneration() }
         )
@@ -122,14 +150,14 @@ class ChatPanel(
 
 
     private fun subscribeToState(contentPanel: ContentPanel) {
+        // Track session changes and update header/content panel
         scope.launch {
             combine(
-                stateService.currentSessionId,
-                stateService.sessions
+                store.currentSessionId,
+                store.sessions
             ) { sessionId, sessions ->
                 sessionId?.let { id -> sessions.find { it.id == id } }
             }.collectLatest { session ->
-                currentSessionId = session?.id
                 headerPanel.updateSession(session)
 
                 if (session == null) {
@@ -141,23 +169,69 @@ class ChatPanel(
             }
         }
 
+        // Handle session changes and messages - single flow to avoid races
         scope.launch {
-            stateService.currentSessionId.collectLatest { sessionId ->
+            var previousSessionId: String? = null
+            store.currentSessionId.collectLatest { sessionId ->
+                // Detect session change and reset state BEFORE loading new messages
+                if (previousSessionId != sessionId) {
+                    currentSessionId = sessionId
+                    currentSessionStartTime = null
+                    lastMessageCount = 0
+                    autoScroll = true
+                    isStreaming = false
+                    currentMessages = emptyList()
+                    currentAgent = null
+                    pendingRequests = PendingRequests()
+                    permissionMessageMap.clear()
+                    questionMessageMap.clear()
+                    textPartCache.clear()
+                    toolPartWrappers.forEach { it.dispose() }
+                    toolPartWrappers.clear()
+                    messageViewCache.clear()
+                    messagesPanel.removeAll()
+                    messagesPanel.revalidate()
+                    messagesPanel.repaint()
+                    previousSessionId = sessionId
+                }
+
                 if (sessionId != null) {
-                    stateService.getMessagesForSession(sessionId).collectLatest { messages ->
-                        currentMessages = messages
-                        val lastUser = messages.lastOrNull { it.info.role == "user" }
-                        currentAgent = lastUser?.info?.agent
-                        updateMessages()
-                    }
+                    store.getMessagesForSession(sessionId)
+                        .distinctUntilChanged { old, new ->
+                            // Skip if same message count, same last message completion status, and same parts count
+                            old.size == new.size &&
+                            old.lastOrNull()?.info?.time?.completed == new.lastOrNull()?.info?.time?.completed &&
+                            old.lastOrNull()?.parts?.size == new.lastOrNull()?.parts?.size
+                        }
+                        .collectLatest { messages ->
+                            println("DEBUG ChatPanel: ${messages.size} messages for session $sessionId")
+                            currentMessages = messages
+                            // Use earliest message timestamp as session start time
+                            if (currentSessionStartTime == null && messages.isNotEmpty()) {
+                                currentSessionStartTime = messages.minOf { it.info.time.created }
+                                println("DEBUG ChatPanel: sessionStartTime=$currentSessionStartTime (min of ${messages.size} messages)")
+                            }
+                            // Log all message timestamps for debugging
+                            messages.forEachIndexed { idx, msg ->
+                                val offset = msg.info.time.created - (currentSessionStartTime ?: 0L)
+                                println("DEBUG ChatPanel: msg[$idx] created=${msg.info.time.created} offset=${offset}ms")
+                            }
+                            val lastUser = messages.lastOrNull { it.info.role == "user" }
+                            currentAgent = lastUser?.info?.agent
+                            updateMessages()
+                        }
+                } else {
+                    log.info("ChatPanel: No session selected, clearing messages")
+                    currentSessionStartTime = null
+                    updateMessages()
                 }
             }
         }
 
         scope.launch {
             combine(
-                stateService.currentSessionId,
-                stateService.sessionStatuses
+                store.currentSessionId,
+                store.sessionStatuses
             ) { sessionId, statuses ->
                 sessionId?.let { statuses[it] }
             }.collectLatest { status ->
@@ -168,80 +242,343 @@ class ChatPanel(
 
         scope.launch {
             combine(
-                stateService.pendingPermissions,
-                stateService.pendingQuestions
+                store.pendingPermissions,
+                store.pendingQuestions
             ) { permissions, questions ->
                 PendingRequests(permissions, questions)
             }.collectLatest { pending ->
+                // Populate maps for requests that existed before we started listening to events
+                for (perm in pending.permissions) {
+                    if (perm.id !in permissionMessageMap) {
+                        perm.tool?.messageID?.let { permissionMessageMap[perm.id] = it }
+                    }
+                }
+                for (q in pending.questions) {
+                    if (q.id !in questionMessageMap) {
+                        q.tool?.messageID?.let { questionMessageMap[q.id] = it }
+                    }
+                }
                 pendingRequests = pending
-                updateMessages()
+                // UI updates handled by StoreEvent handlers for targeted refresh
             }
         }
         
         scope.launch {
-            stateService.error.collectLatest { error ->
+            store.error.collectLatest { error ->
                 errorBanner.setError(error)
+            }
+        }
+
+        // Subscribe to store events for incremental updates
+        scope.launch {
+            store.storeEvents.collect { event ->
+                handleStoreEvent(event)
             }
         }
     }
 
-    private fun updateMessages() {
-        val messages = currentMessages
-        
-        val isIncrementalUpdate = messages.size == lastMessageCount && messages.isNotEmpty()
-        lastMessageCount = messages.size
+    /**
+     * Handle fine-grained store events for incremental UI updates.
+     * This enables efficient updates without full rebuilds.
+     */
+    private fun handleStoreEvent(event: StoreEvent) {
+        log.info("ChatPanel: StoreEvent received: ${event::class.simpleName}")
+        val activeSessionId = currentSessionId ?: return
 
-        toolPartWrappers.forEach { it.dispose() }
-        toolPartWrappers.clear()
-
-        messagesPanel.removeAll()
-
-        for (messageWithParts in messages) {
-            val messageView = MessageView(
-                messageWithParts = messageWithParts,
-                pendingRequests = pendingRequests,
-                agentColor = KiloTheme.getAgentColor(currentAgent),
-                onPermissionReply = { requestId, reply ->
-                    scope.launch { stateService.replyPermission(requestId, reply) }
-                },
-                onQuestionReply = { requestId, answers ->
-                    scope.launch { stateService.replyQuestion(requestId, answers) }
-                },
-                onQuestionReject = { requestId ->
-                    scope.launch { stateService.rejectQuestion(requestId) }
-                },
-                isStreaming = isStreaming,
-                toolPartWrappers = toolPartWrappers,
-                onFork = { messageId ->
-                    currentSessionId?.let { sessionId ->
-                        scope.launch { stateService.forkSession(sessionId, messageId) }
-                    }
-                },
-                onRevert = { messageId ->
-                    currentSessionId?.let { sessionId ->
-                        scope.launch { stateService.revertToMessage(sessionId, messageId, restoreFiles = true) }
-                    }
+        when (event) {
+            is StoreEvent.MessageInserted -> {
+                if (event.sessionId == activeSessionId) {
+                    handleMessageInserted(event)
                 }
-            )
-            messageView.alignmentX = Component.LEFT_ALIGNMENT
-            messagesPanel.add(messageView)
+            }
+            is StoreEvent.MessageUpdated -> {
+                if (event.sessionId == activeSessionId) {
+                    handleMessageUpdated(event)
+                }
+            }
+            is StoreEvent.MessageRemoved -> {
+                if (event.sessionId == activeSessionId) {
+                    handleMessageRemoved(event)
+                }
+            }
+            is StoreEvent.PartInserted -> {
+                if (event.sessionId == activeSessionId) {
+                    handlePartInserted(event)
+                }
+            }
+            is StoreEvent.PartUpdated -> {
+                if (event.sessionId == activeSessionId) {
+                    handlePartUpdated(event)
+                }
+            }
+            is StoreEvent.PartRemoved -> {
+                if (event.sessionId == activeSessionId) {
+                    handlePartRemoved(event)
+                }
+            }
+            is StoreEvent.PermissionInserted -> {
+                if (event.sessionId == activeSessionId) {
+                    handlePermissionInserted(event)
+                }
+            }
+            is StoreEvent.PermissionRemoved -> {
+                if (event.sessionId == activeSessionId) {
+                    handlePermissionRemoved(event)
+                }
+            }
+            is StoreEvent.QuestionInserted -> {
+                if (event.sessionId == activeSessionId) {
+                    handleQuestionInserted(event)
+                }
+            }
+            is StoreEvent.QuestionRemoved -> {
+                if (event.sessionId == activeSessionId) {
+                    handleQuestionRemoved(event)
+                }
+            }
+            is StoreEvent.SessionStatusChanged -> {
+                if (event.sessionId == activeSessionId) {
+                    updateStreamingState(event.status)
+                    promptInput.updateStatus(event.status)
+                }
+            }
+            is StoreEvent.MessagesLoaded -> {
+                if (event.sessionId == activeSessionId) {
+                    // Full rebuild for bulk load
+                    rebuildMessages()
+                }
+            }
+            is StoreEvent.PartsLoaded -> {
+                if (event.sessionId == activeSessionId) {
+                    // Refresh the message that received new parts
+                    refreshMessageView(event.messageId)
+                }
+            }
+            // Other events that don't affect current UI
+            else -> {}
+        }
+    }
+
+    private fun handleMessageInserted(event: StoreEvent.MessageInserted) {
+        // Skip - let StateFlow path (updateMessages) handle message inserts
+        // This avoids race conditions between StoreEvent and StateFlow paths
+        println("DEBUG handleMessageInserted: SKIPPING (StateFlow handles message inserts)")
+    }
+
+    private fun handleMessageUpdated(event: StoreEvent.MessageUpdated) {
+        // Skip - let StateFlow path handle message updates
+        println("DEBUG handleMessageUpdated: SKIPPING (StateFlow handles message updates)")
+    }
+
+    private fun handleMessageRemoved(event: StoreEvent.MessageRemoved) {
+        // Skip - let StateFlow path handle message removals
+        println("DEBUG handleMessageRemoved: SKIPPING (StateFlow handles message removals)")
+    }
+
+    private fun handlePartInserted(event: StoreEvent.PartInserted) {
+        println("DEBUG handlePartInserted: messageId=${event.messageId}, partId=${event.part.id}, type=${event.part.type}")
+        // Skip rebuild during streaming - the StateFlow will handle full updates
+        // Only refresh for non-streaming scenarios (e.g., loading old messages)
+        if (!isStreaming) {
+            refreshMessageView(event.messageId)
+        } else {
+            println("DEBUG handlePartInserted: SKIPPING rebuild (streaming, StateFlow handles it)")
+        }
+    }
+
+    private fun handlePartUpdated(event: StoreEvent.PartUpdated) {
+        println("DEBUG handlePartUpdated: messageId=${event.messageId}, partId=${event.part.id}, type=${event.part.type}, hasDelta=${event.delta != null}, toolStatus=${event.part.toolStatus}")
+
+        // For tool parts, always refresh to update status
+        if (event.part.type == "tool") {
+            println("DEBUG handlePartUpdated: tool part status=${event.part.toolStatus} -> REFRESH")
+            refreshMessageView(event.messageId)
+            return
+        }
+
+        // For text parts with delta, try to append directly to cached MarkdownPanel
+        if (event.delta != null && event.part.type == "text") {
+            val cachedPanel = textPartCache[event.part.id]
+            if (cachedPanel != null) {
+                println("DEBUG handlePartUpdated: appending delta to cached panel")
+                cachedPanel.appendText(event.delta)
+                scrollToBottomIfNeeded()
+                return
+            }
+            // No cached panel yet - let StateFlow handle the next refresh which will create it
+            println("DEBUG handlePartUpdated: NO cached panel for text part, waiting for StateFlow")
+            return
+        }
+
+        // For reasoning/other parts with delta, we need to refresh to show updates
+        // (these don't have cached panels that support incremental updates)
+        if (event.delta != null) {
+            println("DEBUG handlePartUpdated: delta for ${event.part.type} -> REFRESH")
+            refreshMessageView(event.messageId)
+            return
+        }
+
+        // For non-delta updates (part finished), always refresh
+        println("DEBUG handlePartUpdated: non-delta -> REFRESH")
+        refreshMessageView(event.messageId)
+    }
+
+    private fun handlePartRemoved(event: StoreEvent.PartRemoved) {
+        // Refresh the message view that contains this part
+        refreshMessageView(event.messageId)
+    }
+
+    private fun handlePermissionInserted(event: StoreEvent.PermissionInserted) {
+        println("DEBUG handlePermissionInserted: requestId=${event.request.id}, toolCallID=${event.request.tool?.callID}, toolMessageID=${event.request.tool?.messageID}")
+        val messageId = event.request.tool?.messageID ?: run {
+            println("DEBUG handlePermissionInserted: NO messageID in tool reference, skipping")
+            return
+        }
+        permissionMessageMap[event.request.id] = messageId
+        // Update pendingRequests immediately so the rebuild uses it
+        pendingRequests = pendingRequests.copy(permissions = pendingRequests.permissions + event.request)
+        println("DEBUG handlePermissionInserted: pendingRequests now has ${pendingRequests.permissions.size} permissions")
+        refreshMessageView(messageId)
+    }
+
+    private fun handlePermissionRemoved(event: StoreEvent.PermissionRemoved) {
+        println("DEBUG handlePermissionRemoved: requestId=${event.requestId}")
+        val messageId = permissionMessageMap.remove(event.requestId) ?: return
+        pendingRequests = pendingRequests.copy(permissions = pendingRequests.permissions.filter { it.id != event.requestId })
+        refreshMessageView(messageId)
+    }
+
+    private fun handleQuestionInserted(event: StoreEvent.QuestionInserted) {
+        println("DEBUG handleQuestionInserted: requestId=${event.request.id}, toolCallID=${event.request.tool?.callID}, toolMessageID=${event.request.tool?.messageID}")
+        val messageId = event.request.tool?.messageID ?: run {
+            println("DEBUG handleQuestionInserted: NO messageID in tool reference, skipping")
+            return
+        }
+        questionMessageMap[event.request.id] = messageId
+        // Update pendingRequests immediately so the rebuild uses it
+        pendingRequests = pendingRequests.copy(questions = pendingRequests.questions + event.request)
+        println("DEBUG handleQuestionInserted: pendingRequests now has ${pendingRequests.questions.size} questions")
+        refreshMessageView(messageId)
+    }
+
+    private fun handleQuestionRemoved(event: StoreEvent.QuestionRemoved) {
+        println("DEBUG handleQuestionRemoved: requestId=${event.requestId}")
+        val messageId = questionMessageMap.remove(event.requestId) ?: return
+        pendingRequests = pendingRequests.copy(questions = pendingRequests.questions.filter { it.id != event.requestId })
+        refreshMessageView(messageId)
+    }
+
+    private fun refreshMessageView(messageId: String) {
+        println("DEBUG refreshMessageView: messageId=$messageId")
+        val sessionId = currentSessionId ?: return
+
+        val message = store.getMessage(sessionId, messageId) ?: return
+        val parts = store.getPartsForMessage(messageId)
+        val messageWithParts = MessageWithParts(info = message, parts = parts)
+
+        val oldView = messageViewCache.remove(messageId)
+        if (oldView != null) {
+            println("DEBUG refreshMessageView: REBUILDING message block with ${parts.size} parts")
+            val newView = createMessageBlock(messageWithParts)
+            messageViewCache[messageId] = newView
+            replaceMessageView(oldView, newView)
+        } else {
+            println("DEBUG refreshMessageView: NO cached view for message, skipping")
+        }
+    }
+
+    private fun createMessageBlock(messageWithParts: MessageWithParts): SessionEntityUIBlock {
+        return SessionEntityFactory.createMessageBlock(
+            project = project,
+            messageWithParts = messageWithParts,
+            pendingRequests = pendingRequests,
+            sessionStartTime = currentSessionStartTime,
+            agentColor = KiloTheme.getAgentColor(currentAgent),
+            onPermissionReply = { requestId, reply ->
+                scope.launch { store.replyPermission(requestId, reply) }
+            },
+            onQuestionReply = { requestId, answers ->
+                scope.launch { store.replyQuestion(requestId, answers) }
+            },
+            onQuestionReject = { requestId ->
+                scope.launch { store.rejectQuestion(requestId) }
+            },
+            toolPartWrappers = toolPartWrappers,
+            textPartCache = textPartCache,
+            onFork = { messageId ->
+                currentSessionId?.let { sessionId ->
+                    scope.launch { store.forkSession(sessionId, messageId) }
+                }
+            },
+            onRevert = { messageId ->
+                currentSessionId?.let { sessionId ->
+                    scope.launch { store.revertToMessage(sessionId, messageId, restoreFiles = true) }
+                }
+            }
+        )
+    }
+
+    private fun insertMessageViewAt(view: SessionEntityUIBlock, index: Int) {
+        view.alignmentX = Component.LEFT_ALIGNMENT
+
+        // Calculate the UI index (each message has a spacer after it)
+        val uiIndex = index * 2
+
+        // Remove the vertical glue at the end if present
+        val componentCount = messagesPanel.componentCount
+        if (componentCount > 0 && messagesPanel.getComponent(componentCount - 1) is Box.Filler) {
+            messagesPanel.remove(componentCount - 1)
+        }
+
+        // Insert the message and spacer
+        if (uiIndex <= messagesPanel.componentCount) {
+            messagesPanel.add(view, uiIndex)
+            messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl), uiIndex + 1)
+        } else {
+            messagesPanel.add(view)
             messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl))
         }
 
-        if (isStreaming && messages.isNotEmpty()) {
-            val last = messages.last()
-            if (last.info.role == "assistant" && last.info.finish == null) {
-                typingIndicator.alignmentX = Component.LEFT_ALIGNMENT
-                messagesPanel.add(typingIndicator)
-                messagesPanel.add(Box.createVerticalStrut(KiloSpacing.lg))
-            }
-        }
-
+        // Add back the vertical glue
         messagesPanel.add(Box.createVerticalGlue())
 
         messagesPanel.revalidate()
         messagesPanel.repaint()
+    }
 
+    private fun replaceMessageView(oldView: SessionEntityUIBlock, newView: SessionEntityUIBlock) {
+        val index = messagesPanel.components.indexOf(oldView)
+        if (index >= 0) {
+            newView.alignmentX = Component.LEFT_ALIGNMENT
+            messagesPanel.remove(index)
+            messagesPanel.add(newView, index)
+            messagesPanel.revalidate()
+            messagesPanel.repaint()
+        }
+    }
+
+    private fun removeMessageView(view: SessionEntityUIBlock) {
+        val index = messagesPanel.components.indexOf(view)
+        if (index >= 0) {
+            messagesPanel.remove(index)
+            // Also remove the spacer after it
+            if (index < messagesPanel.componentCount && messagesPanel.getComponent(index) is Component) {
+                val comp = messagesPanel.getComponent(index)
+                if (comp is Box.Filler || comp.preferredSize?.height == KiloSpacing.xxl) {
+                    messagesPanel.remove(index)
+                }
+            }
+            messagesPanel.revalidate()
+            messagesPanel.repaint()
+        }
+    }
+
+    private fun rebuildMessages() {
+        // Fall back to full rebuild via the existing mechanism
+        updateMessages()
+    }
+
+    private fun scrollToBottomIfNeeded() {
         if (autoScroll) {
             SwingUtilities.invokeLater {
                 val vertical = scrollPane.verticalScrollBar
@@ -250,11 +587,101 @@ class ChatPanel(
         }
     }
 
+    private fun updateMessages() {
+        println("DEBUG updateMessages: called with ${currentMessages.size} messages, lastCount=$lastMessageCount, cacheSize=${messageViewCache.size}")
+        val messages = currentMessages
+        val messageCountChanged = messages.size != lastMessageCount
+        val previousCount = lastMessageCount
+        lastMessageCount = messages.size
+
+        when {
+            // First load or session change - full rebuild
+            messageViewCache.isEmpty() -> {
+                println("DEBUG updateMessages: cache empty -> FULL REBUILD")
+                fullRebuild(messages)
+            }
+            // New message added - append it
+            messages.size > previousCount && previousCount > 0 -> {
+                println("DEBUG updateMessages: message count increased ${previousCount} -> ${messages.size} -> APPEND")
+                appendNewMessages(messages, previousCount)
+            }
+            // Message removed - full rebuild
+            messages.size < previousCount -> {
+                println("DEBUG updateMessages: message count decreased -> FULL REBUILD")
+                fullRebuild(messages)
+            }
+            // Same count - during streaming, refresh the last message to show new parts
+            else -> {
+                if (isStreaming && messages.isNotEmpty()) {
+                    val lastMessage = messages.last()
+                    println("DEBUG updateMessages: same count, streaming -> REFRESH last message (${lastMessage.parts.size} parts)")
+                    refreshMessageView(lastMessage.info.id)
+                } else {
+                    println("DEBUG updateMessages: same count -> SKIP")
+                }
+            }
+        }
+
+        // Update typing indicator visibility
+        typingIndicator.isVisible = isStreaming && messages.isNotEmpty() &&
+            messages.last().let { it.info.role == "assistant" && it.info.finish == null }
+
+        messagesPanel.revalidate()
+        messagesPanel.repaint()
+
+        scrollToBottomIfNeeded()
+    }
+
+    private fun fullRebuild(messages: List<MessageWithParts>) {
+        println("DEBUG fullRebuild: rebuilding ${messages.size} messages")
+        toolPartWrappers.forEach { it.dispose() }
+        toolPartWrappers.clear()
+        textPartCache.clear()
+        messageViewCache.clear()
+
+        messagesPanel.removeAll()
+
+        for (messageWithParts in messages) {
+            val messageBlock = createMessageBlock(messageWithParts)
+            messageBlock.alignmentX = Component.LEFT_ALIGNMENT
+            messageViewCache[messageWithParts.info.id] = messageBlock
+            messagesPanel.add(messageBlock)
+            messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl))
+        }
+
+        messagesPanel.add(Box.createVerticalGlue())
+    }
+
+    private fun appendNewMessages(messages: List<MessageWithParts>, fromIndex: Int) {
+        // Remove the glue at the end
+        val componentCount = messagesPanel.componentCount
+        if (componentCount > 0 && messagesPanel.getComponent(componentCount - 1) is Box.Filler) {
+            messagesPanel.remove(componentCount - 1)
+        }
+
+        // Add new messages
+        for (i in fromIndex until messages.size) {
+            val messageWithParts = messages[i]
+            val messageBlock = createMessageBlock(messageWithParts)
+            messageBlock.alignmentX = Component.LEFT_ALIGNMENT
+            messageViewCache[messageWithParts.info.id] = messageBlock
+            messagesPanel.add(messageBlock)
+            messagesPanel.add(Box.createVerticalStrut(KiloSpacing.xxl))
+        }
+
+        // Add glue back
+        messagesPanel.add(Box.createVerticalGlue())
+    }
+
     private fun updateStreamingState(status: SessionStatus?) {
         val wasStreaming = isStreaming
         isStreaming = status?.type == "busy" || status?.type == "retry"
 
         if (wasStreaming != isStreaming) {
+            // Update typing indicator visibility
+            typingIndicator.isVisible = isStreaming && currentMessages.isNotEmpty() &&
+                currentMessages.last().let { it.info.role == "assistant" && it.info.finish == null }
+
             messagesPanel.revalidate()
             messagesPanel.repaint()
         }
@@ -345,7 +772,7 @@ class ChatPanel(
 
         val mime = if (file.isDirectory) "application/x-directory" else "text/plain"
 
-        val attachedFile = KiloStateService.AttachedFile(
+        val attachedFile = AttachedFile(
             absolutePath = file.absolutePath,
             relativePath = relativePath,
             startLine = null,
@@ -353,20 +780,24 @@ class ChatPanel(
             mime = mime
         )
 
-        stateService.addFileToContext(attachedFile)
+        appState.addFileToContext(attachedFile)
     }
-    
+
     private fun sendMessage(text: String) {
         if (text.isBlank()) return
 
         scope.launch {
-            stateService.sendMessage(text)
+            val model = appState.selectedModel.value
+            val agent = appState.selectedAgent.value
+            val files = appState.attachedFiles.value
+            store.sendMessage(text, model, agent, files)
+            appState.clearAttachedFiles()
         }
     }
 
     private fun stopGeneration() {
         scope.launch {
-            stateService.abortCurrentSession()
+            store.abortCurrentSession()
         }
     }
 
@@ -382,10 +813,19 @@ class ChatPanel(
         }
     }
 
+    fun clearForNewSession() {
+        promptInput.clearText()
+        appState.clearAttachedFiles()
+    }
+
     fun dispose() {
         scope.cancel()
         toolPartWrappers.forEach { it.dispose() }
         toolPartWrappers.clear()
+        messageViewCache.clear()
+        textPartCache.clear()
+        permissionMessageMap.clear()
+        questionMessageMap.clear()
         attachedFilesPanel.dispose()
         promptInput.dispose()
     }
@@ -427,7 +867,7 @@ class ChatPanel(
 
         private fun subscribeToConnectionStatus() {
             scope.launch {
-                stateService.connectionStatus.collectLatest { status ->
+                appState.connectionStatus.collectLatest { status ->
                     updateConnectionIndicator(status)
                 }
             }
@@ -562,306 +1002,203 @@ private class PromptArea(
     }
 }
 
-private class TypingIndicator : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, KiloSpacing.xs)) {
+private class TypingIndicator : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, 0)) {
     init {
-        isOpaque = false
-        border = JBUI.Borders.emptyLeft(KiloSpacing.xxxl)
+        isOpaque = true
+        background = KiloTheme.backgroundStronger
+        border = JBUI.Borders.empty(KiloSpacing.sm, KiloSpacing.xl)
 
-        val label = JBLabel("Generating response", AllIcons.Process.Step_2, SwingConstants.LEFT).apply {
+        val label = JBLabel("Generating response...", AllIcons.Process.Step_2, SwingConstants.LEFT).apply {
             foreground = KiloTheme.textWeak
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
         }
         add(label)
-
-        val dots = JBLabel("...").apply {
-            foreground = KiloTheme.textWeak
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
-        }
-        add(dots)
     }
 }
 
-private class MessageView(
-    private val messageWithParts: MessageWithParts,
-    private val pendingRequests: PendingRequests,
-    private val agentColor: Color,
-    private val onPermissionReply: (requestId: String, reply: String) -> Unit,
-    private val onQuestionReply: (requestId: String, answers: List<List<String>>) -> Unit,
-    private val onQuestionReject: (requestId: String) -> Unit,
-    private val isStreaming: Boolean = false,
-    private val toolPartWrappers: MutableList<ToolPartWrapper>,
-    private val onFork: ((String) -> Unit)? = null,
-    private val onRevert: ((String) -> Unit)? = null
-) : BorderLayoutPanel() {
+/**
+ * Factory for creating SessionEntityUIBlock instances for different entity types.
+ */
+private object SessionEntityFactory {
 
-    companion object {
-        private val timeFormat = SimpleDateFormat("HH:mm")
-        private val dateFormat = SimpleDateFormat("MMM d, HH:mm")
-    }
-
-    init {
-        isOpaque = true
-
+    fun createMessageBlock(
+        project: Project,
+        messageWithParts: MessageWithParts,
+        pendingRequests: PendingRequests,
+        sessionStartTime: Long?,
+        agentColor: Color,
+        onPermissionReply: (requestId: String, reply: String) -> Unit,
+        onQuestionReply: (requestId: String, answers: List<List<String>>) -> Unit,
+        onQuestionReject: (requestId: String) -> Unit,
+        toolPartWrappers: MutableList<ToolPartWrapper>,
+        textPartCache: MutableMap<String, MarkdownPanel>,
+        onFork: ((String) -> Unit)? = null,
+        onRevert: ((String) -> Unit)? = null
+    ): SessionEntityUIBlock {
         val message = messageWithParts.info
-        val isUser = message.role == "user"
-
-        if (isUser) {
-            background = KiloTheme.surfaceRaisedBase
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 3, 0, 0, agentColor),
-                BorderFactory.createCompoundBorder(
-                    JBUI.Borders.customLine(KiloTheme.borderWeaker, 1),
-                    JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
-                )
+        val entityType = if (message.isUser) {
+            SessionEntityType.UserMessage(
+                agent = message.agent,
+                modelId = message.model?.modelID,
+                providerId = message.model?.providerID
             )
         } else {
-            background = KiloTheme.backgroundStronger
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 1, 0, 0, KiloTheme.borderBase),
-                JBUI.Borders.empty(KiloSpacing.lg, KiloSpacing.xl)
-            )
+            SessionEntityType.AssistantMessage(message.modelID)
         }
 
-        val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.sm, 0)).apply {
-            isOpaque = false
-            val icon = if (isUser) AllIcons.General.User else AllIcons.Nodes.Favorite
-            val roleLabel = JBLabel(if (isUser) "You" else "Assistant", icon, SwingConstants.LEFT)
-            roleLabel.font = roleLabel.font.deriveFont(Font.BOLD, KiloTypography.fontSizeBase)
-            roleLabel.foreground = KiloTheme.textStrong
-            add(roleLabel)
+        val content = createMessageContent(
+            project, messageWithParts, pendingRequests, sessionStartTime,
+            onPermissionReply, onQuestionReply, onQuestionReject,
+            toolPartWrappers, textPartCache
+        )
 
-            val timestamp = formatTimestamp(message.time.created)
-            val timeLabel = JBLabel(timestamp).apply {
-                foreground = KiloTheme.textWeaker
-                font = font.deriveFont(KiloTypography.fontSizeSmall)
-            }
-            add(timeLabel)
-        }
+        return SessionEntityUIBlock(
+            entityType = entityType,
+            content = content,
+            timestamp = message.time.created,
+            sessionStartTime = sessionStartTime
+        )
+    }
 
-        val actionsPanel = createActionsPanel(message)
-
-        val header = BorderLayoutPanel().apply {
-            isOpaque = false
-            addToLeft(leftHeader)
-            addToRight(actionsPanel)
-        }
-        addToTop(header)
-
+    private fun createMessageContent(
+        project: Project,
+        messageWithParts: MessageWithParts,
+        pendingRequests: PendingRequests,
+        sessionStartTime: Long?,
+        onPermissionReply: (requestId: String, reply: String) -> Unit,
+        onQuestionReply: (requestId: String, answers: List<List<String>>) -> Unit,
+        onQuestionReject: (requestId: String) -> Unit,
+        toolPartWrappers: MutableList<ToolPartWrapper>,
+        textPartCache: MutableMap<String, MarkdownPanel>
+    ): JComponent {
         val contentPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
-            border = JBUI.Borders.emptyTop(KiloSpacing.md)
         }
 
+        val messageTimestamp = messageWithParts.info.time.created
+
         for (part in messageWithParts.parts) {
-            val partView = createPartView(part)
+            // Skip step markers - they're internal API boundaries
+            if (part.type == "step-start" || part.type == "step-finish") continue
+
+            val partView = createPartContent(
+                project, part, pendingRequests, messageTimestamp, sessionStartTime,
+                onPermissionReply, onQuestionReply, onQuestionReject,
+                toolPartWrappers, textPartCache
+            )
             partView.alignmentX = Component.LEFT_ALIGNMENT
             contentPanel.add(partView)
             contentPanel.add(Box.createVerticalStrut(KiloSpacing.md))
         }
 
-        if (!isUser && (message.tokens != null || message.cost != null)) {
-            contentPanel.add(Box.createVerticalStrut(KiloSpacing.md))
-            contentPanel.add(createFooter(message))
-        }
-
-        addToCenter(contentPanel)
+        return contentPanel
     }
 
-    private fun formatTimestamp(timestamp: Long): String {
-        val now = System.currentTimeMillis()
-        val diff = now - timestamp
-
-        return when {
-            diff < 60_000 -> "just now"
-            diff < 3600_000 -> "${diff / 60_000}m ago"
-            diff < 86400_000 -> timeFormat.format(Date(timestamp))
-            else -> dateFormat.format(Date(timestamp))
-        }
-    }
-
-    private fun createActionsPanel(message: Message): JPanel {
-        return JPanel(FlowLayout(FlowLayout.RIGHT, KiloSpacing.xxs, 0)).apply {
-            isOpaque = false
-
-            val copyButton = createActionButton(AllIcons.Actions.Copy, "Copy message") {
-                val text = messageWithParts.parts
-                    .filter { it.type == "text" }
-                    .mapNotNull { it.text }
-                    .joinToString("\n\n")
-                if (text.isNotBlank()) {
-                    CopyPasteManagerEx.getInstance().setContents(StringSelection(text))
+    private fun createPartContent(
+        project: Project,
+        part: Part,
+        pendingRequests: PendingRequests,
+        messageTimestamp: Long,
+        sessionStartTime: Long?,
+        onPermissionReply: (requestId: String, reply: String) -> Unit,
+        onQuestionReply: (requestId: String, answers: List<List<String>>) -> Unit,
+        onQuestionReject: (requestId: String) -> Unit,
+        toolPartWrappers: MutableList<ToolPartWrapper>,
+        textPartCache: MutableMap<String, MarkdownPanel>
+    ): JComponent {
+        val (entityType, content) = when (part.type) {
+            "text" -> {
+                val markdownPanel = MarkdownPanel(project).apply {
+                    isOpaque = false
+                    setMarkdown(part.text ?: "")
                 }
+                textPartCache[part.id] = markdownPanel
+                SessionEntityType.Text(part.callID) to markdownPanel
             }
-            add(copyButton)
+            "tool" -> {
+                val permission = pendingRequests.getPermissionForTool(part.callID)
+                val question = pendingRequests.getQuestionForTool(part.callID)
+                val toolContent = createToolContent(part, permission, question, onPermissionReply, onQuestionReply, onQuestionReject, toolPartWrappers)
 
-            if (!message.isUser && onFork != null) {
-                val forkButton = createActionButton(AllIcons.Vcs.Branch, "Fork from here") {
-                    onFork.invoke(message.id)
+                val entityType = when {
+                    permission != null -> SessionEntityType.Permission(permission.id, part.tool)
+                    question != null -> SessionEntityType.Question(question.id, part.tool, question.questions?.firstOrNull()?.question)
+                    else -> getToolEntityType(part)
                 }
-                add(forkButton)
+                entityType to toolContent
             }
-
-            if (!message.isUser && onRevert != null) {
-                val revertButton = createActionButton(AllIcons.Actions.Rollback, "Revert to here") {
-                    onRevert.invoke(message.id)
+            "reasoning" -> {
+                val reasoningText = part.text ?: ""
+                val content = JBLabel("<html>${reasoningText.take(500)}${if (reasoningText.length > 500) "..." else ""}</html>").apply {
+                    foreground = KiloTheme.textWeak
                 }
-                add(revertButton)
+                SessionEntityType.Reasoning(part.callID) to content
             }
-        }
-    }
-
-    private fun createActionButton(icon: Icon, tooltip: String, action: () -> Unit): JButton {
-        return JButton(icon).apply {
-            this.toolTipText = tooltip
-            isFocusable = false
-            isContentAreaFilled = false
-            isBorderPainted = false
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            preferredSize = Dimension(KiloSizes.iconLg, KiloSizes.iconLg)
-            foreground = KiloTheme.iconWeak
-            addActionListener { action() }
-
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseEntered(e: MouseEvent) {
-                    background = KiloTheme.buttonGhostHover
-                    isContentAreaFilled = true
+            else -> {
+                val content = JBLabel("Unknown part data").apply {
+                    foreground = KiloTheme.textWeak
                 }
-                override fun mouseExited(e: MouseEvent) {
-                    isContentAreaFilled = false
-                }
-            })
-        }
-    }
-
-    private fun createFooter(message: Message): JComponent {
-        val footer = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.md, 0)).apply {
-            isOpaque = false
-            alignmentX = Component.LEFT_ALIGNMENT
-        }
-
-        message.tokens?.let { tokens ->
-            val totalTokens = tokens.input + tokens.output + tokens.reasoning
-            val tokenText = buildString {
-                append("${totalTokens} tokens")
-                if (tokens.reasoning > 0) {
-                    append(" (${tokens.reasoning} reasoning)")
-                }
-            }
-            footer.add(JBLabel(tokenText).apply {
-                foreground = KiloTheme.textWeaker
-                font = font.deriveFont(KiloTypography.fontSizeSmall)
-                icon = AllIcons.Actions.InlayGlobe
-            })
-        }
-
-        message.cost?.let { cost ->
-            if (cost > 0) {
-                val costText = String.format("$%.4f", cost)
-                footer.add(JBLabel(costText).apply {
-                    foreground = KiloTheme.textWeaker
-                    font = font.deriveFont(KiloTypography.fontSizeSmall)
-                })
+                SessionEntityType.Unknown(part.type, part.callID) to content
             }
         }
 
-        message.modelID?.let { modelId ->
-            footer.add(JBLabel(modelId).apply {
-                foreground = KiloTheme.textWeaker
-                font = font.deriveFont(KiloTypography.fontSizeSmall)
-            })
-        }
-
-        return footer
-    }
-    
-    private fun createPartView(part: Part): JComponent {
-        return when (part.type) {
-            "text" -> createTextPartView(part)
-            "tool" -> createToolPartView(part)
-            "reasoning" -> createReasoningPartView(part)
-            "step-start" -> createStepStartView(part)
-            "step-finish" -> createStepFinishView(part)
-            else -> JBLabel("${part.type}").apply { foreground = KiloTheme.textWeak }
-        }
+        return SessionEntityUIBlock(
+            entityType = entityType,
+            content = content,
+            timestamp = messageTimestamp,
+            sessionStartTime = sessionStartTime
+        )
     }
 
-    private fun createTextPartView(part: Part): JComponent {
-        val text = part.text ?: ""
+    private fun getToolEntityType(part: Part): SessionEntityType {
+        val toolName = part.tool ?: "Unknown"
+        val callId = part.callID
 
-        val markdownPanel = MarkdownPanel().apply {
-            isOpaque = false
-            border = JBUI.Borders.empty(KiloSpacing.xs)
-            setMarkdown(text)
+        return when (toolName.lowercase()) {
+            "read" -> SessionEntityType.ToolRead(callId, part.metadata?.get("file_path")?.toString()?.trim('"'))
+            "write" -> SessionEntityType.ToolWrite(callId, part.metadata?.get("file_path")?.toString()?.trim('"'))
+            "edit" -> SessionEntityType.ToolEdit(callId, part.metadata?.get("file_path")?.toString()?.trim('"'))
+            "bash" -> SessionEntityType.ToolBash(callId, part.metadata?.get("command")?.toString()?.trim('"'))
+            "glob" -> SessionEntityType.ToolGlob(callId, part.metadata?.get("pattern")?.toString()?.trim('"'))
+            "grep" -> SessionEntityType.ToolGrep(callId, part.metadata?.get("pattern")?.toString()?.trim('"'))
+            "ls", "list" -> SessionEntityType.ToolList(callId, part.metadata?.get("path")?.toString()?.trim('"'))
+            "webfetch" -> SessionEntityType.ToolWebFetch(callId, part.metadata?.get("url")?.toString()?.trim('"'))
+            "websearch" -> SessionEntityType.ToolWebSearch(callId, part.metadata?.get("query")?.toString()?.trim('"'))
+            "task" -> SessionEntityType.ToolTask(callId, part.metadata?.get("description")?.toString()?.trim('"'))
+            "todoread" -> SessionEntityType.ToolTodoRead(callId)
+            "todowrite" -> SessionEntityType.ToolTodoWrite(callId)
+            "applypatch" -> SessionEntityType.ToolApplyPatch(callId)
+            else -> SessionEntityType.ToolGeneric(callId, toolName)
         }
-
-        return markdownPanel
     }
-    
-    private fun createToolPartView(part: Part): JComponent {
-        val permission = pendingRequests.getPermissionForTool(part.callID)
-        val question = pendingRequests.getQuestionForTool(part.callID)
 
-        if (permission != null || question != null) {
-            val wrapper = ToolPartWrapper(
-                part = part,
-                permission = permission,
-                question = question,
-                onPermissionReply = onPermissionReply,
-                onQuestionReply = onQuestionReply,
-                onQuestionReject = onQuestionReject
+    private fun createToolContent(
+        part: Part,
+        permission: PermissionRequest?,
+        question: QuestionRequest?,
+        onPermissionReply: (requestId: String, reply: String) -> Unit,
+        onQuestionReply: (requestId: String, answers: List<List<String>>) -> Unit,
+        onQuestionReject: (requestId: String) -> Unit,
+        toolPartWrappers: MutableList<ToolPartWrapper>
+    ): JComponent {
+        // Question: use simple InlineQuestionPrompt directly
+        if (question != null) {
+            return InlineQuestionPrompt(
+                request = question,
+                onReply = { answers -> onQuestionReply(question.id, answers) },
+                onReject = { onQuestionReject(question.id) }
             )
-            toolPartWrappers.add(wrapper)
-            return wrapper
         }
 
-        return createSimpleToolPartView(part)
-    }
+        // Permission: use simple InlinePermissionPrompt directly
+        if (permission != null) {
+            return InlinePermissionPrompt(
+                request = permission,
+                onReply = { reply -> onPermissionReply(permission.id, reply) }
+            )
+        }
 
-    private fun createSimpleToolPartView(part: Part): JComponent {
         return CollapsibleToolPanel(part)
-    }
-
-    private fun createReasoningPartView(part: Part): JComponent {
-        val header = JBLabel("Thinking...", AllIcons.General.InspectionsEye, SwingConstants.LEFT).apply {
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
-            foreground = KiloTheme.textWeak
-        }
-
-        val panel = BorderLayoutPanel().apply {
-            isOpaque = true
-            background = KiloTheme.surfaceInfo
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 3, 0, 0, KiloTheme.borderInfo),
-                JBUI.Borders.empty(KiloSpacing.md)
-            )
-            addToTop(header)
-        }
-
-        val reasoningText = part.text
-        if (reasoningText != null && reasoningText.isNotBlank()) {
-            val content = JBLabel("<html>${reasoningText.take(200)}${if (reasoningText.length > 200) "..." else ""}</html>").apply {
-                foreground = KiloTheme.textWeak
-            }
-            panel.addToCenter(content)
-        }
-
-        return panel
-    }
-
-    private fun createStepStartView(part: Part): JComponent {
-        return JBLabel("Step started", AllIcons.Actions.Execute, SwingConstants.LEFT).apply {
-            foreground = KiloTheme.textWeak
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
-        }
-    }
-
-    private fun createStepFinishView(part: Part): JComponent {
-        val reason = part.reason ?: "completed"
-        return JBLabel("Step finished: $reason", AllIcons.Actions.Checked, SwingConstants.LEFT).apply {
-            foreground = KiloTheme.textWeak
-            font = font.deriveFont(Font.ITALIC, KiloTypography.fontSizeBase)
-        }
     }
 }
 
@@ -923,7 +1260,8 @@ private class ModeSelector : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
 
 private class PromptInputPanel(
     private val project: Project,
-    private val stateService: KiloStateService,
+    private val store: KiloSessionStore,
+    private val appState: KiloAppState,
     private val onSend: (String) -> Unit,
     private val onStop: () -> Unit
 ) : JPanel() {
@@ -1034,12 +1372,18 @@ private class PromptInputPanel(
 
     private val modeSelector = ModeSelector()
 
-    private var selectedModel = "Claude 4.5 Opus"
-    private val modelLabel = JBLabel("$selectedModel \u25BE").apply {
+    // Model selection from server
+    private var selectedModel: Model? = null
+    private var selectedProvider: Provider? = null
+    private var providers: ProviderListResponse? = null
+
+    private val modelLabel = JBLabel("Model \u25BE").apply {
         foreground = KiloTheme.textWeak
         font = font.deriveFont(13f)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
+
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val sendButton = JBLabel(AllIcons.Actions.Execute).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
@@ -1123,15 +1467,67 @@ private class PromptInputPanel(
         })
 
         setupFileAutocomplete()
+        subscribeToProviders()
+    }
+
+    private fun subscribeToProviders() {
+        scope.launch {
+            appState.providers.collectLatest { providerResponse ->
+                providers = providerResponse
+                if (selectedModel == null && providerResponse != null) {
+                    selectDefaultModel(providerResponse)
+                }
+            }
+        }
+    }
+
+    private fun selectDefaultModel(providerResponse: ProviderListResponse) {
+        // Try to use default model from provider response
+        val defaultProviderId = providerResponse.default["provider"]
+        val defaultModelId = providerResponse.default["model"]
+
+        if (defaultProviderId != null && defaultModelId != null) {
+            val provider = providerResponse.all.find { it.id == defaultProviderId }
+            val model = provider?.models?.get(defaultModelId)
+            if (provider != null && model != null) {
+                selectedProvider = provider
+                selectedModel = model
+                updateModelLabel()
+                return
+            }
+        }
+
+        // Fallback: use first connected provider's first model
+        val connectedProvider = providerResponse.all
+            .filter { it.id in providerResponse.connected }
+            .firstOrNull { it.models.isNotEmpty() }
+
+        if (connectedProvider != null) {
+            selectedProvider = connectedProvider
+            selectedModel = connectedProvider.models.values.firstOrNull()
+            updateModelLabel()
+        }
+    }
+
+    private fun updateModelLabel() {
+        val modelName = selectedModel?.name ?: selectedModel?.id ?: "Model"
+        modelLabel.text = "$modelName \u25BE"
+
+        // Update appState with selection
+        selectedProvider?.let { provider ->
+            selectedModel?.let { model ->
+                appState.setSelectedModel(ModelRef(providerID = provider.id, modelID = model.id))
+            }
+        }
     }
 
     private fun setupFileAutocomplete() {
         fileAutocomplete = FileAutocomplete(
             project = project,
             textComponent = textArea,
-            stateService = stateService,
+            appState = appState,
             onFileSelected = { attachedFile, _ ->
-                stateService.addFileToContext(attachedFile)
+                appState.addFileToContext(attachedFile)
                 val text = textArea.text
                 val atIndex = text.lastIndexOf('@')
                 if (atIndex >= 0) {
@@ -1175,6 +1571,9 @@ private class PromptInputPanel(
     }
 
     private fun createModelPopup(): JPopupMenu {
+        val providerResponse = providers
+        val connectedProviders = providerResponse?.all?.filter { it.id in (providerResponse.connected) } ?: emptyList()
+
         return JPopupMenu().apply {
             add(JLabel("  Model").apply {
                 font = font.deriveFont(Font.BOLD)
@@ -1182,43 +1581,44 @@ private class PromptInputPanel(
             })
             addSeparator()
 
-            add(createModelMenuItem("Auto", "GPT-5.2", selectedModel == "Auto"))
-            addSeparator()
+            if (connectedProviders.isEmpty()) {
+                add(JLabel("  No providers connected").apply {
+                    foreground = KiloTheme.textWeaker
+                    border = JBUI.Borders.empty(4, 8)
+                })
+            } else {
+                // Group models by provider
+                for (provider in connectedProviders) {
+                    if (provider.models.isEmpty()) continue
 
-            add(createModelMenuItem("Claude 4.5 Haiku", null, selectedModel == "Claude 4.5 Haiku"))
-            add(createModelMenuItem("Claude 4.5 Opus", null, selectedModel == "Claude 4.5 Opus"))
-            add(createModelMenuItem("Claude 4.5 Sonnet", null, selectedModel == "Claude 4.5 Sonnet"))
-            add(createModelMenuItem("Claude 4 Sonnet", null, selectedModel == "Claude 4 Sonnet"))
-            addSeparator()
+                    // Add provider header
+                    add(JLabel("  ${provider.name}").apply {
+                        font = font.deriveFont(Font.BOLD, 11f)
+                        foreground = KiloTheme.textInteractive
+                        border = JBUI.Borders.empty(4, 8, 2, 8)
+                    })
 
-            add(createModelMenuItem("Gemini 3 Flash", null, selectedModel == "Gemini 3 Flash"))
-            add(createModelMenuItem("Gemini 3 Pro", null, selectedModel == "Gemini 3 Pro"))
-            add(createModelMenuItem("GPT-4o", null, selectedModel == "GPT-4o"))
-            add(createModelMenuItem("GPT-5.1", null, selectedModel == "GPT-5.1"))
-            add(createModelMenuItem("GPT-5.2", null, selectedModel == "GPT-5.2"))
-            addSeparator()
-
-            add(JMenuItem("More Models..."))
-            addSeparator()
-
-            add(JLabel("  Third-Party Providers").apply {
-                font = font.deriveFont(Font.BOLD, 11f)
-                foreground = KiloTheme.textWeaker
-                border = JBUI.Borders.empty(4, 8)
-            })
-            add(JMenuItem("Manage Models..."))
+                    // Add models for this provider
+                    for ((_, model) in provider.models) {
+                        val isSelected = selectedModel?.id == model.id && selectedProvider?.id == provider.id
+                        add(createModelMenuItem(model, provider, isSelected))
+                    }
+                    addSeparator()
+                }
+            }
         }
     }
 
-    private fun createModelMenuItem(name: String, subtitle: String?, isSelected: Boolean): JMenuItem {
-        val text = if (subtitle != null) "$name  $subtitle" else name
-        return JMenuItem(text).apply {
+    private fun createModelMenuItem(model: Model, provider: Provider, isSelected: Boolean): JMenuItem {
+        val displayName = model.name ?: model.id
+        return JMenuItem(displayName).apply {
             if (isSelected) {
                 icon = AllIcons.Actions.Checked
             }
             addActionListener {
-                selectedModel = name
-                modelLabel.text = "$name \u25BE"
+                selectedModel = model
+                selectedProvider = provider
+                updateModelLabel()
             }
         }
     }
@@ -1248,7 +1648,12 @@ private class PromptInputPanel(
     }
 
     fun dispose() {
+        scope.cancel()
         fileAutocomplete?.dispose()
+    }
+
+    fun clearText() {
+        textArea.text = ""
     }
 
     override fun paintComponent(g: Graphics) {

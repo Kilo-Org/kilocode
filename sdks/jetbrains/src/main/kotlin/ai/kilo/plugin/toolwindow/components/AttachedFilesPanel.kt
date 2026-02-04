@@ -1,6 +1,7 @@
 package ai.kilo.plugin.toolwindow.components
 
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.AttachedFile
+import ai.kilo.plugin.services.KiloAppState
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
@@ -30,7 +31,7 @@ import javax.swing.JPanel
  */
 class AttachedFilesPanel(
     private val project: Project,
-    private val stateService: KiloStateService
+    private val appState: KiloAppState
 ) : JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, KiloSpacing.xxs)), Disposable {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -42,13 +43,13 @@ class AttachedFilesPanel(
 
         // Subscribe to attached files
         scope.launch {
-            stateService.attachedFiles.collectLatest { files ->
+            appState.attachedFiles.collectLatest { files ->
                 updateBadges(files)
             }
         }
     }
 
-    private fun updateBadges(files: List<KiloStateService.AttachedFile>) {
+    private fun updateBadges(files: List<AttachedFile>) {
         removeAll()
 
         if (files.isEmpty()) {
@@ -80,7 +81,7 @@ class AttachedFilesPanel(
         repaint()
     }
 
-    private fun createFileBadge(file: KiloStateService.AttachedFile): JPanel {
+    private fun createFileBadge(file: AttachedFile): JPanel {
         val badge = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.xxs, 0)).apply {
             isOpaque = true
             background = KiloTheme.surfaceWarningWeak
@@ -140,7 +141,7 @@ class AttachedFilesPanel(
             toolTipText = "Remove"
 
             addActionListener {
-                stateService.removeFileFromContext(file.absolutePath, file.startLine, file.endLine)
+                appState.removeFileFromContext(file.absolutePath, file.startLine, file.endLine)
             }
 
             addMouseListener(object : MouseAdapter() {
@@ -164,7 +165,7 @@ class AttachedFilesPanel(
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             foreground = KiloTheme.textWeak
             addActionListener {
-                stateService.clearAttachedFiles()
+                appState.clearAttachedFiles()
             }
         }
     }
@@ -173,7 +174,7 @@ class AttachedFilesPanel(
      * Open the attached file in the editor.
      * If a line range is specified, navigates to that line.
      */
-    private fun openFileInEditor(file: KiloStateService.AttachedFile) {
+    private fun openFileInEditor(file: AttachedFile) {
         val virtualFile = LocalFileSystem.getInstance().findFileByPath(file.absolutePath)
         if (virtualFile == null || !virtualFile.isValid) {
             return

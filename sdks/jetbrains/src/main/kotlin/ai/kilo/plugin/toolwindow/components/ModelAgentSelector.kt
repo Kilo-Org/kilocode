@@ -1,7 +1,7 @@
 package ai.kilo.plugin.toolwindow.components
 
 import ai.kilo.plugin.model.*
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.KiloAppState
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
@@ -31,7 +31,7 @@ import javax.swing.*
  * Shows current selection as clickable labels: [Agent] [Model] [Provider]
  */
 class ModelAgentSelector(
-    private val stateService: KiloStateService,
+    private val appState: KiloAppState,
     private val onSelectionChanged: (ModelAgentSelector) -> Unit = {}
 ) : JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)) {
 
@@ -98,8 +98,8 @@ class ModelAgentSelector(
     private fun subscribeToState() {
         scope.launch {
             combine(
-                stateService.agents,
-                stateService.providers
+                appState.agents,
+                appState.providers
             ) { agentList, providerResponse ->
                 Pair(agentList, providerResponse)
             }.collectLatest { (agentList, providerResponse) ->

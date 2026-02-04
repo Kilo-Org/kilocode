@@ -1,6 +1,6 @@
 package ai.kilo.plugin.toolwindow.components
 
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.KiloAppState
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
@@ -22,7 +22,7 @@ import javax.swing.JPanel
  * in the format: branch-name
  */
 class VcsInfoPanel(
-    private val stateService: KiloStateService
+    private val appState: KiloAppState
 ) : JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.xs, 0)), Disposable {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -52,7 +52,7 @@ class VcsInfoPanel(
 
     private fun subscribeToVcsInfo() {
         scope.launch {
-            stateService.vcsInfo.collectLatest { vcsInfo ->
+            appState.vcsInfo.collectLatest { vcsInfo ->
                 updateBranch(vcsInfo?.branch)
             }
         }

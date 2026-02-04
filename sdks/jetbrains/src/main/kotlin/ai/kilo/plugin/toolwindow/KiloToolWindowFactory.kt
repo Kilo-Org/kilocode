@@ -2,10 +2,12 @@ package ai.kilo.plugin.toolwindow
 
 import ai.kilo.plugin.services.KiloProjectService
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.*
 
@@ -54,10 +56,19 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         val actions = listOfNotNull(
             actionManager.getAction("Kilo.NewSession"),
             actionManager.getAction("Kilo.ToggleSessions"),
-            actionManager.getAction("Kilo.ToggleSidebar"),
-            actionManager.getAction("Kilo.Toolbar.Settings")
+            actionManager.getAction("Kilo.ToggleSidebar")
         )
         toolWindow.setTitleActions(actions)
+
+        // Add gear menu actions
+        if (toolWindow is ToolWindowEx) {
+            val gearActions = DefaultActionGroup().apply {
+                actionManager.getAction("Kilo.ClearSessions")?.let { add(it) }
+                addSeparator()
+                actionManager.getAction("Kilo.Toolbar.Settings")?.let { add(it) }
+            }
+            toolWindow.setAdditionalGearActions(gearActions)
+        }
     }
 
     override fun shouldBeAvailable(project: Project): Boolean {
@@ -87,6 +98,14 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
          */
         fun abortGeneration(project: Project) {
             mainPanels[project]?.abortGeneration()
+        }
+
+        /**
+         * Start a new session for the given project.
+         * Clears current session and switches to chat view.
+         */
+        fun startNewSession(project: Project) {
+            mainPanels[project]?.startNewSession()
         }
 
         /**

@@ -6,7 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import java.io.File
 
 private val log = Logger.getInstance(KiloCliDiscovery::class.java)
-private val BINARY_NAMES = listOf("kilo", "opencode")
+private val BINARY_NAMES = listOf("kilo")
 
 interface OsDiscoveryStrategy {
     fun findBinary(binaryName: String): String?
@@ -348,17 +348,23 @@ object KiloCliDiscovery {
 
     fun findBinary(projectPath: String? = null): String? {
         val strategy = getStrategyForOs(projectPath)
-        log.info("Using discovery strategy: ${strategy::class.simpleName}, projectPath: $projectPath")
+        val strategyMsg = "Using discovery strategy: ${strategy::class.simpleName}, projectPath: $projectPath"
+        log.info(strategyMsg)
+        println("[KiloCliDiscovery] $strategyMsg")
 
         for (binaryName in BINARY_NAMES) {
             val result = strategy.findBinary(binaryName)
             if (result != null) {
-                log.info("Found binary '$binaryName': $result")
+                val foundMsg = "Found binary '$binaryName': $result"
+                log.info(foundMsg)
+                println("[KiloCliDiscovery] $foundMsg")
                 return result
             }
         }
 
-        log.warn("Kilo/OpenCode binary not found on system")
+        val notFoundMsg = "Kilo binary not found on system"
+        log.warn(notFoundMsg)
+        println("[KiloCliDiscovery] WARNING: $notFoundMsg")
         return null
     }
 

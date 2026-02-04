@@ -1,7 +1,7 @@
 package ai.kilo.plugin.actions
 
+import ai.kilo.plugin.services.AttachedFile
 import ai.kilo.plugin.services.KiloProjectService
-import ai.kilo.plugin.services.KiloStateService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -42,19 +42,19 @@ class AddSelectionToContextAction : AnAction(), DumbAware {
         toolWindow?.show()
 
         scope.launch {
-            kiloService.initialize().onSuccess { state ->
-                if (state.currentSessionId.value == null) {
-                    state.createSession()
+            kiloService.initialize().onSuccess { services ->
+                if (services.sessionStore.currentSessionId.value == null) {
+                    services.sessionStore.createSession()
                 }
 
-                val attachedFile = KiloStateService.AttachedFile(
+                val attachedFile = AttachedFile(
                     absolutePath = absolutePath,
                     relativePath = relativePath,
                     startLine = startLine,
                     endLine = if (endLine != startLine) endLine else null,
                     mime = "text/plain"
                 )
-                state.addFileToContext(attachedFile)
+                services.appState.addFileToContext(attachedFile)
             }
         }
     }

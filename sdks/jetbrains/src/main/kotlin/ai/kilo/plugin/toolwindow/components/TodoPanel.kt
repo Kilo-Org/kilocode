@@ -1,7 +1,7 @@
 package ai.kilo.plugin.toolwindow.components
 
 import ai.kilo.plugin.model.Todo
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.KiloSessionStore
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloTypography
@@ -29,7 +29,7 @@ import javax.swing.JPanel
  * - Shows status icons: [✓] completed, [•] in_progress, [ ] pending
  */
 class TodoPanel(
-    private val stateService: KiloStateService
+    private val store: KiloSessionStore
 ) : JPanel(BorderLayout()), Disposable {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -83,8 +83,8 @@ class TodoPanel(
     private fun subscribeToTodos() {
         scope.launch {
             combine(
-                stateService.currentSessionId,
-                stateService.todos
+                store.currentSessionId,
+                store.todos
             ) { sessionId, todosMap ->
                 sessionId?.let { todosMap[it] } ?: emptyList()
             }.collectLatest { todos ->

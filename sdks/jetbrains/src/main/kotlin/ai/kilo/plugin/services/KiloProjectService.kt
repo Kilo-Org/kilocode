@@ -9,6 +9,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
+ * Result of initializing Kilo services.
+ */
+data class KiloServices(
+    val sessionStore: KiloSessionStore,
+    val appState: KiloAppState
+)
+
+/**
  * Project-level service that manages the Kilo integration for a specific project.
  * Coordinates the server, API client, event service, and state management.
  */
@@ -20,16 +28,22 @@ class KiloProjectService(private val project: Project) : Disposable {
     private var serverService: KiloServerService? = null
     private var apiClient: KiloApiClient? = null
     private var eventService: KiloEventService? = null
-    private var stateService: KiloStateService? = null
+    private var _sessionStore: KiloSessionStore? = null
+    private var _appState: KiloAppState? = null
 
     private val initMutex = Mutex()
-    private var initDeferred: Deferred<Result<KiloStateService>>? = null
+    private var initDeferred: Deferred<Result<KiloServices>>? = null
 
     var initialized = false
         private set
 
-    val state: KiloStateService?
-        get() = stateService
+    /** Session data store (sessions, messages, parts, permissions, questions, todos) */
+    val sessionStore: KiloSessionStore?
+        get() = _sessionStore
+
+    /** App-level state (agents, providers, selections, attached files, vcs) */
+    val appState: KiloAppState?
+        get() = _appState
 
     val api: KiloApiClient?
         get() = apiClient
@@ -41,16 +55,16 @@ class KiloProjectService(private val project: Project) : Disposable {
      * Thread-safe: multiple callers will share the same initialization,
      * all waiting for the single init to complete.
      *
-     * @return Result containing the KiloStateService on success
+     * @return Result containing KiloServices on success
      */
-    suspend fun initialize(): Result<KiloStateService> {
+    suspend fun initialize(): Result<KiloServices> {
         val deferred = initMutex.withLock {
             initDeferred ?: scope.async { doInitialize() }.also { initDeferred = it }
         }
         return deferred.await()
     }
 
-    private suspend fun doInitialize(): Result<KiloStateService> = runCatching {
+    private suspend fun doInitialize(): Result<KiloServices> = runCatching {
         log.info("Initializing Kilo for project ${project.name}")
 
         // Start server
@@ -67,16 +81,18 @@ class KiloProjectService(private val project: Project) : Disposable {
         eventService = KiloEventService(apiClient!!.getEventStreamUrl())
         eventService!!.connect()
 
-        // Create state service
-        stateService = KiloStateService(apiClient!!, eventService!!)
+        // Create and initialize session store
+        _sessionStore = KiloSessionStore(apiClient!!, eventService!!)
+        _sessionStore!!.initialize()
 
-        // Initialize state
-        stateService!!.initialize()
+        // Create and initialize app state
+        _appState = KiloAppState(apiClient!!, eventService!!)
+        _appState!!.initialize()
 
         initialized = true
         log.info("Kilo initialized successfully for project ${project.name}")
 
-        stateService!!
+        KiloServices(_sessionStore!!, _appState!!)
     }.onFailure {
         log.error("Failed to initialize Kilo", it)
     }
@@ -87,8 +103,11 @@ class KiloProjectService(private val project: Project) : Disposable {
     fun shutdown() {
         log.info("Shutting down Kilo for project ${project.name}")
 
-        stateService?.dispose()
-        stateService = null
+        _sessionStore?.dispose()
+        _sessionStore = null
+
+        _appState?.dispose()
+        _appState = null
 
         eventService?.dispose()
         eventService = null
@@ -106,7 +125,7 @@ class KiloProjectService(private val project: Project) : Disposable {
     /**
      * Restart all services.
      */
-    suspend fun restart(): Result<KiloStateService> {
+    suspend fun restart(): Result<KiloServices> {
         shutdown()
         delay(500)
         return initialize()

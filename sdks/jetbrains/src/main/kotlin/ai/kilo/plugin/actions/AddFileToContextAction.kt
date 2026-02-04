@@ -1,7 +1,7 @@
 package ai.kilo.plugin.actions
 
+import ai.kilo.plugin.services.AttachedFile
 import ai.kilo.plugin.services.KiloProjectService
-import ai.kilo.plugin.services.KiloStateService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -30,14 +30,14 @@ class AddFileToContextAction : AnAction(), DumbAware {
         toolWindow?.show()
 
         scope.launch {
-            kiloService.initialize().onSuccess { state ->
+            kiloService.initialize().onSuccess { services ->
                 // Create a new session if none exists
-                if (state.currentSessionId.value == null) {
-                    state.createSession()
+                if (services.sessionStore.currentSessionId.value == null) {
+                    services.sessionStore.createSession()
                 }
 
                 val attachedFile = buildAttachedFile(project, file, editor)
-                state.addFileToContext(attachedFile)
+                services.appState.addFileToContext(attachedFile)
             }
         }
     }
@@ -46,7 +46,7 @@ class AddFileToContextAction : AnAction(), DumbAware {
         project: com.intellij.openapi.project.Project,
         file: VirtualFile,
         editor: com.intellij.openapi.editor.Editor?
-    ): KiloStateService.AttachedFile {
+    ): AttachedFile {
         // Get absolute and relative paths
         val absolutePath = file.path
         val basePath = project.basePath ?: ""
@@ -73,7 +73,7 @@ class AddFileToContextAction : AnAction(), DumbAware {
             "text/plain"
         }
 
-        return KiloStateService.AttachedFile(
+        return AttachedFile(
             absolutePath = absolutePath,
             relativePath = relativePath,
             startLine = startLine,

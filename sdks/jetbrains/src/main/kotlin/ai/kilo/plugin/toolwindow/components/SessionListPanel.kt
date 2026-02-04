@@ -2,14 +2,12 @@ package ai.kilo.plugin.toolwindow.components
 
 import ai.kilo.plugin.model.Session
 import ai.kilo.plugin.model.SessionStatus
-import ai.kilo.plugin.services.KiloStateService
+import ai.kilo.plugin.services.KiloSessionStore
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloSizes
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
-import com.intellij.ui.ColoredListCellRenderer
-import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -20,9 +18,11 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.KeyEvent
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.swing.*
+import javax.swing.KeyStroke
 
 /**
  * Panel displaying the list of chat sessions.
@@ -31,7 +31,7 @@ import javax.swing.*
  */
 class SessionListPanel(
     private val project: Project,
-    private val stateService: KiloStateService,
+    private val store: KiloSessionStore,
     private val onSessionSelected: (() -> Unit)? = null
 ) : JPanel(BorderLayout()) {
 
@@ -74,7 +74,7 @@ class SessionListPanel(
                 if (selected != null && selected.id != selectedSessionId) {
                     selectedSessionId = selected.id
                     scope.launch {
-                        stateService.selectSession(selected.id)
+                        store.selectSession(selected.id)
                     }
                     // Switch back to chat view
                     onSessionSelected?.invoke()
@@ -96,24 +96,33 @@ class SessionListPanel(
 
         // Context menu
         sessionList.componentPopupMenu = createContextMenu()
+
+        // Keyboard bindings
+        sessionList.inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "deleteSession")
+        sessionList.inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F6, KeyEvent.SHIFT_DOWN_MASK), "renameSession")
+        sessionList.actionMap.put("deleteSession", object : AbstractAction() {
+            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                sessionList.selectedValue?.let { deleteSession(it) }
+            }
+        })
+        sessionList.actionMap.put("renameSession", object : AbstractAction() {
+            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                sessionList.selectedValue?.let { renameSession(it) }
+            }
+        })
     }
 
     private fun createContextMenu(): JPopupMenu {
         return JPopupMenu().apply {
-            add(JMenuItem("Rename").apply {
+            add(JMenuItem("Rename", AllIcons.Actions.Edit).apply {
+                accelerator = KeyStroke.getKeyStroke("shift F6")
                 addActionListener {
                     val selected = sessionList.selectedValue ?: return@addActionListener
                     renameSession(selected)
                 }
             })
-            add(JMenuItem("Archive").apply {
-                addActionListener {
-                    val selected = sessionList.selectedValue ?: return@addActionListener
-                    archiveSession(selected)
-                }
-            })
-            addSeparator()
-            add(JMenuItem("Delete").apply {
+            add(JMenuItem("Delete Chat", AllIcons.Actions.GC).apply {
+                accelerator = KeyStroke.getKeyStroke("DELETE")
                 addActionListener {
                     val selected = sessionList.selectedValue ?: return@addActionListener
                     deleteSession(selected)
@@ -135,26 +144,11 @@ class SessionListPanel(
 
         if (!newTitle.isNullOrBlank() && newTitle != session.title) {
             scope.launch {
-                stateService.renameSession(session.id, newTitle)
+                store.renameSession(session.id, newTitle)
             }
         }
     }
 
-    private fun archiveSession(session: Session) {
-        val confirm = JOptionPane.showConfirmDialog(
-            this,
-            "Archive session '${session.title}'?",
-            "Archive Session",
-            JOptionPane.YES_NO_OPTION
-        )
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            scope.launch {
-                stateService.archiveSession(session.id)
-            }
-        }
-    }
-    
     private fun deleteSession(session: Session) {
         val confirm = JOptionPane.showConfirmDialog(
             this,
@@ -166,7 +160,7 @@ class SessionListPanel(
 
         if (confirm == JOptionPane.YES_OPTION) {
             scope.launch {
-                stateService.deleteSession(session.id)
+                store.deleteSession(session.id)
             }
         }
     }
@@ -175,8 +169,8 @@ class SessionListPanel(
         // Subscribe to sessions and statuses
         scope.launch {
             combine(
-                stateService.sessions,
-                stateService.sessionStatuses
+                store.sessions,
+                store.sessionStatuses
             ) { sessions, statuses ->
                 Pair(sessions, statuses)
             }.collectLatest { (sessions, statuses) ->
@@ -187,7 +181,7 @@ class SessionListPanel(
 
         // Subscribe to current session selection
         scope.launch {
-            stateService.currentSessionId.collectLatest { sessionId ->
+            store.currentSessionId.collectLatest { sessionId ->
                 selectedSessionId = sessionId
                 if (sessionId != null) {
                     val index = (0 until sessionListModel.size()).firstOrNull {
@@ -242,49 +236,71 @@ class SessionListPanel(
         }
     }
 
-    private inner class SessionCellRenderer : ColoredListCellRenderer<Session>() {
-        private val dateFormat = SimpleDateFormat("MMM d, HH:mm")
-        
-        private val titleAttrs = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, KiloTheme.textStrong)
-        private val dateAttrs = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, KiloTheme.textWeak)
-        private val busyAttrs = SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, KiloTheme.iconInteractive)
+    private inner class SessionCellRenderer : ListCellRenderer<Session> {
+        private val dateFormat = SimpleDateFormat("MMM d, h:mm a")
 
-        init {
-            // Set fixed insets to prevent size changes on hover
-            ipad = JBUI.insets(KiloSpacing.xs, KiloSpacing.md)
+        private val panel = JPanel(BorderLayout()).apply {
+            border = JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.md)
+        }
+        private val titleLabel = JLabel()
+        private val dateLabel = JLabel().apply {
+            foreground = KiloTheme.textWeak
         }
 
-        override fun customizeCellRenderer(
+        init {
+            panel.add(titleLabel, BorderLayout.CENTER)
+            panel.add(dateLabel, BorderLayout.EAST)
+        }
+
+        override fun getListCellRendererComponent(
             list: JList<out Session>,
             value: Session,
             index: Int,
-            selected: Boolean,
-            hasFocus: Boolean
-        ) {
+            isSelected: Boolean,
+            cellHasFocus: Boolean
+        ): Component {
             // Background styling
-            background = if (selected) KiloTheme.surfaceInteractive else KiloTheme.backgroundStronger
-            
-            // Status icon
-            val status = sessionStatuses[value.id]
-            icon = when (status?.type) {
-                "busy" -> AllIcons.Process.Step_1
-                "retry" -> AllIcons.General.Warning
-                else -> AllIcons.General.Balloon
-            }
+            panel.background = if (isSelected) KiloTheme.surfaceInteractive else KiloTheme.backgroundStronger
+            panel.isOpaque = true
 
-            // Title - use theme colors
-            append(value.title.ifBlank { "Untitled" }, if (selected) SimpleTextAttributes.REGULAR_ATTRIBUTES else titleAttrs)
+            // Title
+            titleLabel.text = value.title.ifBlank { "Untitled" }
+            titleLabel.foreground = if (isSelected) KiloTheme.textStrong else KiloTheme.textStrong
 
-            // Date
-            append(
-                " · ${dateFormat.format(Date(value.time.updated))}",
-                dateAttrs
-            )
+            // Date - format like "Yesterday 8:59 PM" or "Jan 5, 3:30 PM"
+            val dateText = formatRelativeDate(value.time.updated)
 
             // Status indicator
-            if (status?.type == "busy") {
-                append(" ●", busyAttrs)
+            val status = sessionStatuses[value.id]
+            dateLabel.text = if (status?.type == "busy") "$dateText ●" else dateText
+            dateLabel.foreground = if (status?.type == "busy") KiloTheme.iconInteractive else KiloTheme.textWeak
+
+            return panel
+        }
+
+        private fun formatRelativeDate(timestamp: Long): String {
+            val now = Calendar.getInstance()
+            val date = Calendar.getInstance().apply { timeInMillis = timestamp }
+            val timeFormat = SimpleDateFormat("h:mm a")
+
+            return when {
+                isSameDay(now, date) -> "Today ${timeFormat.format(Date(timestamp))}"
+                isYesterday(now, date) -> "Yesterday ${timeFormat.format(Date(timestamp))}"
+                else -> dateFormat.format(Date(timestamp))
             }
+        }
+
+        private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+            return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                   cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+        }
+
+        private fun isYesterday(now: Calendar, date: Calendar): Boolean {
+            val yesterday = Calendar.getInstance().apply {
+                timeInMillis = now.timeInMillis
+                add(Calendar.DAY_OF_YEAR, -1)
+            }
+            return isSameDay(yesterday, date)
         }
     }
 
