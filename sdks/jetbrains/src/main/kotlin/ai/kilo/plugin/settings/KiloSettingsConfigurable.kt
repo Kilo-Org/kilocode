@@ -23,6 +23,7 @@ class KiloSettingsConfigurable : Configurable {
     private var autoStartCheckbox: JBCheckBox? = null
     private var serverPortField: JBTextField? = null
     private var defaultAgentField: JBTextField? = null
+    private var mockModeCheckbox: JBCheckBox? = null
 
     override fun getDisplayName(): String = "Kilo"
 
@@ -46,6 +47,8 @@ class KiloSettingsConfigurable : Configurable {
         defaultAgentField = JBTextField(20).apply {
             toolTipText = "Default agent is 'code'"
         }
+
+        mockModeCheckbox = JBCheckBox("Enable mock mode (UI development)")
 
         panel = FormBuilder.createFormBuilder()
             .addLabeledComponent(
@@ -91,6 +94,17 @@ class KiloSettingsConfigurable : Configurable {
                 },
                 0
             )
+            .addVerticalGap(20)
+            .addSeparator()
+            .addVerticalGap(10)
+            .addComponent(mockModeCheckbox!!, 1)
+            .addComponent(
+                JBLabel("Shows a control bar to inject mock data for UI testing").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
             .addComponentFillVertically(JPanel(), 0)
             .panel
 
@@ -104,7 +118,8 @@ class KiloSettingsConfigurable : Configurable {
         return executablePathField?.text != state.kiloExecutablePath ||
                 autoStartCheckbox?.isSelected != state.autoStartServer ||
                 parsePort(serverPortField?.text) != state.serverPort ||
-                parseAgent(defaultAgentField?.text) != state.defaultAgent
+                parseAgent(defaultAgentField?.text) != state.defaultAgent ||
+                mockModeCheckbox?.isSelected != state.mockModeEnabled
     }
 
     override fun apply() {
@@ -115,6 +130,7 @@ class KiloSettingsConfigurable : Configurable {
         state.autoStartServer = autoStartCheckbox?.isSelected ?: true
         state.serverPort = parsePort(serverPortField?.text)
         state.defaultAgent = parseAgent(defaultAgentField?.text)
+        state.mockModeEnabled = mockModeCheckbox?.isSelected ?: false
     }
 
     override fun reset() {
@@ -125,6 +141,7 @@ class KiloSettingsConfigurable : Configurable {
         autoStartCheckbox?.isSelected = state.autoStartServer
         serverPortField?.text = state.serverPort?.toString() ?: ""
         defaultAgentField?.text = state.defaultAgent ?: ""
+        mockModeCheckbox?.isSelected = state.mockModeEnabled
     }
 
     override fun disposeUIResources() {
@@ -133,6 +150,7 @@ class KiloSettingsConfigurable : Configurable {
         autoStartCheckbox = null
         serverPortField = null
         defaultAgentField = null
+        mockModeCheckbox = null
     }
 
     override fun getPreferredFocusedComponent(): JComponent? = executablePathField

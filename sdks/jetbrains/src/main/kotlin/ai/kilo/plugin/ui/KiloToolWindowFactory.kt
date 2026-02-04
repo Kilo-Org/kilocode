@@ -64,6 +64,8 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         if (toolWindow is ToolWindowEx) {
             val gearActions = DefaultActionGroup().apply {
                 actionManager.getAction("Kilo.ClearSessions")?.let { add(it) }
+                actionManager.getAction("Kilo.ServerInfo")?.let { add(it) }
+                actionManager.getAction("Kilo.MockControl")?.let { add(it) }
                 addSeparator()
                 actionManager.getAction("Kilo.Toolbar.Settings")?.let { add(it) }
             }

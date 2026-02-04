@@ -28,6 +28,7 @@ class KiloSettings : PersistentStateComponent<KiloSettings.State> {
         var autoStartServer: Boolean = true,
         var defaultAgent: String? = null,
         var serverPort: Int? = null,
+        var mockModeEnabled: Boolean = false,
         // Frecency data: Map<filePath, serialized FrecencyData>
         var fileFrecencyCount: MutableMap<String, Int> = mutableMapOf(),
         var fileFrecencyLastAccess: MutableMap<String, Long> = mutableMapOf()

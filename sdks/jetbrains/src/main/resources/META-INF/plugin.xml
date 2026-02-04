@@ -126,5 +126,16 @@
                 text="Clear Sessions"
                 description="Clear all chat sessions"
                 icon="AllIcons.Actions.GC"/>
+
+        <action id="Kilo.ServerInfo"
+                class="ai.kilo.plugin.actions.ServerInfoAction"
+                text="Server Info"
+                description="Show Kilo server information"
+                icon="AllIcons.General.Information"/>
+
+        <action id="Kilo.MockControl"
+                class="ai.kilo.plugin.mock.OpenMockControlAction"
+                text="Mock Control"
+                description="Inject mock data for UI testing"/>
     </actions>
 </idea-plugin>
