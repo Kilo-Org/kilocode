@@ -47,7 +47,7 @@ export function resolveToolProtocol(
 	// 2. Claude Code provider MUST use XML protocol
 	// Claude Code CLI uses --disallowedTools which prevents native tool_use blocks.
 	// The model must use XML-formatted tool calls in the text response instead.
-	if (providerSettings.apiProvider === "claude-code") {
+	if (providerSettings?.apiProvider === "claude-code") {
 		return TOOL_PROTOCOL.XML
 	}
 
