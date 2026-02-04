@@ -2616,76 +2616,90 @@ export class ClineProvider
 
 		let organizationAllowList = ORGANIZATION_ALLOW_ALL
 
-		try {
-			organizationAllowList = await CloudService.instance.getAllowList()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get organization allow list: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	organizationAllowList = await CloudService.instance.getAllowList()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get organization allow list: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let cloudUserInfo: CloudUserInfo | null = null
 
-		try {
-			cloudUserInfo = CloudService.instance.getUserInfo()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get cloud user info: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	cloudUserInfo = CloudService.instance.getUserInfo()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get cloud user info: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let cloudIsAuthenticated: boolean = false
 
-		try {
-			cloudIsAuthenticated = CloudService.instance.isAuthenticated()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get cloud authentication state: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	cloudIsAuthenticated = CloudService.instance.isAuthenticated()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get cloud authentication state: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let sharingEnabled: boolean = false
 
-		try {
-			sharingEnabled = await CloudService.instance.canShareTask()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	sharingEnabled = await CloudService.instance.canShareTask()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let publicSharingEnabled: boolean = false
 
-		try {
-			publicSharingEnabled = await CloudService.instance.canSharePublicly()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get public sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	publicSharingEnabled = await CloudService.instance.canSharePublicly()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get public sharing enabled state: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let organizationSettingsVersion: number = -1
 
-		try {
-			if (CloudService.hasInstance()) {
-				const settings = CloudService.instance.getOrganizationSettings()
-				organizationSettingsVersion = settings?.version ?? -1
-			}
-		} catch (error) {
-			console.error(
-				`[getState] failed to get organization settings version: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	if (CloudService.hasInstance()) {
+		// 		const settings = CloudService.instance.getOrganizationSettings()
+		// 		organizationSettingsVersion = settings?.version ?? -1
+		// 	}
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get organization settings version: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		let taskSyncEnabled: boolean = false
 
-		try {
-			taskSyncEnabled = CloudService.instance.isTaskSyncEnabled()
-		} catch (error) {
-			console.error(
-				`[getState] failed to get task sync enabled state: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
+		// kilocode_change start: CloudService never initialized, silencing errors
+		// try {
+		// 	taskSyncEnabled = CloudService.instance.isTaskSyncEnabled()
+		// } catch (error) {
+		// 	console.error(
+		// 		`[getState] failed to get task sync enabled state: ${error instanceof Error ? error.message : String(error)}`,
+		// 	)
+		// }
+		// kilocode_change end
 
 		// Get actual browser session state
 		const isBrowserSessionActive = this.getCurrentTask()?.browserSession?.isSessionActive() ?? false
@@ -2850,33 +2864,37 @@ export class ClineProvider
 			includeCurrentCost: stateValues.includeCurrentCost ?? true,
 			maxGitStatusFiles: stateValues.maxGitStatusFiles ?? 0,
 			taskSyncEnabled,
+			// kilocode_change start: CloudService never initialized, silencing errors
 			remoteControlEnabled: (() => {
-				try {
-					const cloudSettings = CloudService.instance.getUserSettings()
-					return cloudSettings?.settings?.extensionBridgeEnabled ?? false
-				} catch (error) {
-					console.error(
-						`[getState] failed to get remote control setting from cloud: ${error instanceof Error ? error.message : String(error)}`,
-					)
-					return false
-				}
+				// try {
+				// 	const cloudSettings = CloudService.instance.getUserSettings()
+				// 	return cloudSettings?.settings?.extensionBridgeEnabled ?? false
+				// } catch (error) {
+				// 	console.error(
+				// 		`[getState] failed to get remote control setting from cloud: ${error instanceof Error ? error.message : String(error)}`,
+				// 	)
+				return false
+				// }
 			})(),
+			// kilocode_change end
 			imageGenerationProvider: stateValues.imageGenerationProvider,
 			openRouterImageApiKey: stateValues.openRouterImageApiKey,
 			kiloCodeImageApiKey: stateValues.kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel: stateValues.openRouterImageGenerationSelectedModel,
+			// kilocode_change start: CloudService never initialized, silencing errors
 			featureRoomoteControlEnabled: (() => {
-				try {
-					const userSettings = CloudService.instance.getUserSettings()
-					const hasOrganization = cloudUserInfo?.organizationId != null
-					return hasOrganization || (userSettings?.features?.roomoteControlEnabled ?? false)
-				} catch (error) {
-					console.error(
-						`[getState] failed to get featureRoomoteControlEnabled: ${error instanceof Error ? error.message : String(error)}`,
-					)
-					return false
-				}
+				// try {
+				// 	const userSettings = CloudService.instance.getUserSettings()
+				// 	const hasOrganization = cloudUserInfo?.organizationId != null
+				// 	return hasOrganization || (userSettings?.features?.roomoteControlEnabled ?? false)
+				// } catch (error) {
+				// 	console.error(
+				// 		`[getState] failed to get featureRoomoteControlEnabled: ${error instanceof Error ? error.message : String(error)}`,
+				// 	)
+				return false
+				// }
 			})(),
+			// kilocode_change end
 			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
 		}
 	}
