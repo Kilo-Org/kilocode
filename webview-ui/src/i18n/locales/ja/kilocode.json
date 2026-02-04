@@ -172,7 +172,7 @@
 			"description": "予測可能なAI支出と増加するボーナスクレジットのためにサブスクライブ",
 			"recommended": "おすすめ",
 			"perMonth": "/月",
-			"action": "Kilo Passを取得",
+			"action": "登録する",
 			"learnMore": "Kilo Passについて詳しく",
 			"yourSubscription": "あなたのKilo Pass",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "{{count}}ヶ月連続",
 			"streakPlural": "{{count}}ヶ月連続",
 			"bonusCredits": "+${{amount}}ボーナス（{{date}}）",
-			"manage": "サブスクリプション管理"
+			"manage": "サブスクリプション管理",
+			"boost": {
+				"mode": "ブーストモード",
+				"unlocked": "ブースト解除！",
+				"unlockProgress": "ブースト解除まで${{amount}}",
+				"monthlyUsage": "月間使用量",
+				"nextBoost": "次のブースト",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "{{days}}日後に補充",
+			"passActiveUntil": "パス有効期限",
+			"creditsNote": "パスクレジットは期限切れになりません。未使用のブーストクレジットは補充時に期限切れになります。"
 		},
 		"detailedUsage": "詳細な使用状況",
 		"createOrganization": "詳細な使用状況を追跡する組織を作成"

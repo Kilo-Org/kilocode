@@ -158,7 +158,7 @@
 			"description": "बढ़ते बोनस क्रेडिट के साथ अनुमानित AI खर्च के लिए सब्सक्राइब करें",
 			"recommended": "अनुशंसित",
 			"perMonth": "/महीना",
-			"action": "Kilo Pass प्राप्त करें",
+			"action": "सदस्यता लें",
 			"learnMore": "Kilo Pass के बारे में और जानें",
 			"yourSubscription": "आपका Kilo Pass",
 			"status": {
@@ -183,7 +183,18 @@
 			"streak": "{{count}} महीना लगातार",
 			"streakPlural": "{{count}} महीने लगातार",
 			"bonusCredits": "+${{amount}} बोनस {{date}} को",
-			"manage": "सब्सक्रिप्शन प्रबंधित करें"
+			"manage": "सब्सक्रिप्शन प्रबंधित करें",
+			"boost": {
+				"mode": "बूस्ट मोड",
+				"unlocked": "बूस्ट अनलॉक!",
+				"unlockProgress": "बूस्ट अनलॉक करने के लिए ${{amount}}",
+				"monthlyUsage": "मासिक उपयोग",
+				"nextBoost": "अगला बूस्ट",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "{{days}} दिनों में रिफिल होगा",
+			"passActiveUntil": "पास सक्रिय है तक",
+			"creditsNote": "पास क्रेडिट कभी समाप्त नहीं होते। अप्रयुक्त बूस्ट क्रेडिट रिफिल पर समाप्त हो जाते हैं।"
 		},
 		"detailedUsage": "विस्तृत उपयोग",
 		"createOrganization": "विस्तृत उपयोग ट्रैक करने के लिए संगठन बनाएं"

@@ -172,7 +172,7 @@
 			"description": "Abonne-toi pour des dépenses IA prévisibles avec des crédits bonus croissants",
 			"recommended": "Recommandé",
 			"perMonth": "/mois",
-			"action": "Obtenir Kilo Pass",
+			"action": "S'abonner",
 			"learnMore": "En savoir plus sur Kilo Pass",
 			"yourSubscription": "Ton Kilo Pass",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "{{count}} mois consécutif",
 			"streakPlural": "{{count}} mois consécutifs",
 			"bonusCredits": "+{{amount}} $ bonus le {{date}}",
-			"manage": "Gérer l'abonnement"
+			"manage": "Gérer l'abonnement",
+			"boost": {
+				"mode": "Mode Boost",
+				"unlocked": "Boost débloqué !",
+				"unlockProgress": "{{amount}} $ pour débloquer le Boost",
+				"monthlyUsage": "Utilisation mensuelle",
+				"nextBoost": "Prochain Boost",
+				"boostAmount": "+{{amount}} $"
+			},
+			"refills": "Rechargement dans {{days}} jours",
+			"passActiveUntil": "Pass actif jusqu'au",
+			"creditsNote": "Les crédits du Pass n'expirent jamais. Les crédits boost non utilisés expirent lors du rechargement."
 		},
 		"detailedUsage": "Utilisation détaillée",
 		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"

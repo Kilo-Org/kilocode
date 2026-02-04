@@ -167,7 +167,7 @@
 			"description": "اشترك للحصول على إنفاق AI متوقع مع رصيد إضافي متزايد",
 			"recommended": "موصى به",
 			"perMonth": "/شهر",
-			"action": "احصل على Kilo Pass",
+			"action": "اشترك",
 			"learnMore": "تعرف على المزيد عن Kilo Pass",
 			"yourSubscription": "اشتراكك في Kilo Pass",
 			"status": {
@@ -192,7 +192,18 @@
 			"streak": "{{count}} شهر متتالي",
 			"streakPlural": "{{count}} أشهر متتالية",
 			"bonusCredits": "+${{amount}} رصيد إضافي في {{date}}",
-			"manage": "إدارة الاشتراك"
+			"manage": "إدارة الاشتراك",
+			"boost": {
+				"mode": "وضع التعزيز",
+				"unlocked": "تم فتح التعزيز!",
+				"unlockProgress": "${{amount}} لفتح التعزيز",
+				"monthlyUsage": "الاستخدام الشهري",
+				"nextBoost": "التعزيز التالي",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "يتجدد خلال {{days}} يوم",
+			"passActiveUntil": "الباقة نشطة حتى",
+			"creditsNote": "رصيد الباقة لا ينتهي. الرصيد الإضافي غير المستخدم ينتهي عند التجديد."
 		},
 		"detailedUsage": "الاستخدام التفصيلي",
 		"createOrganization": "إنشاء مؤسسة لتتبع الاستخدام التفصيلي"

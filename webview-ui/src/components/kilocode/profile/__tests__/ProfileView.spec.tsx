@@ -93,9 +93,14 @@ describe("ProfileView", () => {
 			cancelAtPeriodEnd: boolean
 			currentStreakMonths: number
 			nextYearlyIssueAt: string | null
-			nextBonusCreditsAt: string | null
 			nextBonusCreditsUsd: number | null
 			nextBillingAt: string | null
+			// Boost mode fields (matching backend's kilo-pass-router.ts KiloPassSubscriptionStateSchema)
+			currentPeriodBaseCreditsUsd: number
+			currentPeriodUsageUsd: number
+			currentPeriodBonusCreditsUsd: number | null
+			isBonusUnlocked: boolean
+			refillAt: string | null
 		} | null,
 	) {
 		const message = {
@@ -140,9 +145,14 @@ describe("ProfileView", () => {
 				cancelAtPeriodEnd: false,
 				currentStreakMonths: 3,
 				nextYearlyIssueAt: null,
-				nextBonusCreditsAt: "2026-02-01T00:00:00Z",
 				nextBonusCreditsUsd: 5,
 				nextBillingAt: "2026-02-01T00:00:00Z",
+				// Boost mode fields
+				currentPeriodBaseCreditsUsd: 49,
+				currentPeriodUsageUsd: 25.5,
+				currentPeriodBonusCreditsUsd: 5,
+				isBonusUnlocked: false,
+				refillAt: "2026-02-01T00:00:00Z",
 			}
 
 			renderProfileView()
@@ -154,10 +164,13 @@ describe("ProfileView", () => {
 			simulateBalanceDataResponse(10.0)
 			simulateKiloPassStateResponse(mockSubscription)
 
-			// Should show subscription info section
+			// Should show subscription info section - now shows Kilo Pass title and tier/cadence info
 			await waitFor(() => {
-				expect(screen.getByText("kilocode:profile.kiloPass.yourSubscription")).toBeInTheDocument()
+				expect(screen.getByText("kilocode:profile.kiloPass.title")).toBeInTheDocument()
 			})
+
+			// Should show the tier and status
+			expect(screen.getByText("kilocode:profile.kiloPass.status.active")).toBeInTheDocument()
 
 			// Should NOT show subscription options when already subscribed
 			expect(screen.queryByText("kilocode:profile.kiloPass.action")).not.toBeInTheDocument()

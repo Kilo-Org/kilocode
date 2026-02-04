@@ -165,7 +165,7 @@
 			"description": "Subskrybuj przewidywalne wydatki AI z rosnącymi kredytami bonusowymi",
 			"recommended": "Polecane",
 			"perMonth": "/mies.",
-			"action": "Kup Kilo Pass",
+			"action": "Subskrybuj",
 			"learnMore": "Dowiedz się więcej o Kilo Pass",
 			"yourSubscription": "Twój Kilo Pass",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} miesiąc z rzędu",
 			"streakPlural": "{{count}} miesiące z rzędu",
 			"bonusCredits": "+${{amount}} bonusu dnia {{date}}",
-			"manage": "Zarządzaj subskrypcją"
+			"manage": "Zarządzaj subskrypcją",
+			"boost": {
+				"mode": "Tryb Boost",
+				"unlocked": "Boost odblokowany!",
+				"unlockProgress": "${{amount}} do odblokowania Boost",
+				"monthlyUsage": "Miesięczne użycie",
+				"nextBoost": "Następny Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Odnowienie za {{days}} dni",
+			"passActiveUntil": "Pass aktywny do",
+			"creditsNote": "Kredyty Pass nigdy nie wygasają. Niewykorzystane kredyty boost wygasają przy odnowieniu."
 		},
 		"detailedUsage": "Szczegółowe użycie",
 		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"

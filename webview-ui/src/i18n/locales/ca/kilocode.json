@@ -145,7 +145,7 @@
 			"description": "Subscriu-te per a una despesa d'IA previsible amb crèdits bonus creixents",
 			"recommended": "Recomanat",
 			"perMonth": "/mes",
-			"action": "Obtenir Kilo Pass",
+			"action": "Subscriu-te",
 			"learnMore": "Més informació sobre Kilo Pass",
 			"yourSubscription": "El teu Kilo Pass",
 			"status": {
@@ -170,7 +170,18 @@
 			"streak": "{{count}} mes consecutiu",
 			"streakPlural": "{{count}} mesos consecutius",
 			"bonusCredits": "+${{amount}} bonus el {{date}}",
-			"manage": "Gestionar subscripció"
+			"manage": "Gestionar subscripció",
+			"boost": {
+				"mode": "Mode Boost",
+				"unlocked": "Boost desbloquejat!",
+				"unlockProgress": "${{amount}} per desbloquejar Boost",
+				"monthlyUsage": "Ús mensual",
+				"nextBoost": "Pròxim Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Es recarrega en {{days}} dies",
+			"passActiveUntil": "Pass actiu fins",
+			"creditsNote": "Els crèdits del Pass no caduquen mai. Els crèdits de boost no utilitzats caduquen en la recàrrega."
 		},
 		"detailedUsage": "Ús detallat",
 		"createOrganization": "Crear organització per fer seguiment de l'ús detallat"

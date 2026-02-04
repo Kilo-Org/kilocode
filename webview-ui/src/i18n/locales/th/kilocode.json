@@ -172,7 +172,7 @@
 			"description": "สมัครสมาชิกเพื่อการใช้จ่าย AI ที่คาดการณ์ได้พร้อมเครดิตโบนัสที่เพิ่มขึ้น",
 			"recommended": "แนะนำ",
 			"perMonth": "/เดือน",
-			"action": "รับ Kilo Pass",
+			"action": "สมัครสมาชิก",
 			"learnMore": "เรียนรู้เพิ่มเติมเกี่ยวกับ Kilo Pass",
 			"yourSubscription": "Kilo Pass ของคุณ",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "ติดต่อกัน {{count}} เดือน",
 			"streakPlural": "ติดต่อกัน {{count}} เดือน",
 			"bonusCredits": "+${{amount}} โบนัส {{date}}",
-			"manage": "จัดการการสมัครสมาชิก"
+			"manage": "จัดการการสมัครสมาชิก",
+			"boost": {
+				"mode": "โหมด Boost",
+				"unlocked": "ปลดล็อก Boost แล้ว!",
+				"unlockProgress": "${{amount}} เพื่อปลดล็อก Boost",
+				"monthlyUsage": "การใช้งานรายเดือน",
+				"nextBoost": "Boost ถัดไป",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "เติมใน {{days}} วัน",
+			"passActiveUntil": "Pass ใช้งานได้ถึง",
+			"creditsNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต boost ที่ไม่ได้ใช้จะหมดอายุเมื่อเติม"
 		},
 		"detailedUsage": "การใช้งานโดยละเอียด",
 		"createOrganization": "สร้างองค์กรเพื่อติดตามการใช้งานโดยละเอียด"

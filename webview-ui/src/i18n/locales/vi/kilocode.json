@@ -165,7 +165,7 @@
 			"description": "Đăng ký để chi tiêu AI dự đoán được với tín dụng thưởng tăng dần",
 			"recommended": "Đề xuất",
 			"perMonth": "/tháng",
-			"action": "Nhận Kilo Pass",
+			"action": "Đăng ký",
 			"learnMore": "Tìm hiểu thêm về Kilo Pass",
 			"yourSubscription": "Kilo Pass của bạn",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} tháng liên tiếp",
 			"streakPlural": "{{count}} tháng liên tiếp",
 			"bonusCredits": "+${{amount}} thưởng {{date}}",
-			"manage": "Quản lý đăng ký"
+			"manage": "Quản lý đăng ký",
+			"boost": {
+				"mode": "Chế độ Boost",
+				"unlocked": "Đã mở khóa Boost!",
+				"unlockProgress": "${{amount}} để mở khóa Boost",
+				"monthlyUsage": "Sử dụng hàng tháng",
+				"nextBoost": "Boost tiếp theo",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Nạp lại trong {{days}} ngày",
+			"passActiveUntil": "Pass hoạt động đến",
+			"creditsNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng boost chưa sử dụng hết hạn khi nạp lại."
 		},
 		"detailedUsage": "Sử dụng chi tiết",
 		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"

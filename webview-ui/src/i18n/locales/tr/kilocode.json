@@ -165,7 +165,7 @@
 			"description": "Artan bonus kredilerle öngörülebilir AI harcaması için abone olun",
 			"recommended": "Önerilen",
 			"perMonth": "/ay",
-			"action": "Kilo Pass Al",
+			"action": "Abone ol",
 			"learnMore": "Kilo Pass hakkında daha fazla bilgi edinin",
 			"yourSubscription": "Kilo Pass'ınız",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} ay üst üste",
 			"streakPlural": "{{count}} ay üst üste",
 			"bonusCredits": "+${{amount}} bonus {{date}}",
-			"manage": "Aboneliği Yönet"
+			"manage": "Aboneliği Yönet",
+			"boost": {
+				"mode": "Boost Modu",
+				"unlocked": "Boost Kilidi Açıldı!",
+				"unlockProgress": "Boost kilidini açmak için ${{amount}}",
+				"monthlyUsage": "Aylık Kullanım",
+				"nextBoost": "Sonraki Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "{{days}} gün içinde yenilenir",
+			"passActiveUntil": "Pass aktif bitiş",
+			"creditsNote": "Pass kredileri hiçbir zaman sona ermez. Kullanılmayan boost kredileri yenilemede sona erer."
 		},
 		"detailedUsage": "Detaylı Kullanım",
 		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"

@@ -172,7 +172,7 @@
 			"description": "Підпишіться для передбачуваних витрат на AI зі зростаючими бонусними кредитами",
 			"recommended": "Рекомендовано",
 			"perMonth": "/міс.",
-			"action": "Отримати Kilo Pass",
+			"action": "Підписатися",
 			"learnMore": "Дізнатися більше про Kilo Pass",
 			"yourSubscription": "Ваш Kilo Pass",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "{{count}} місяць поспіль",
 			"streakPlural": "{{count}} місяців поспіль",
 			"bonusCredits": "+${{amount}} бонус {{date}}",
-			"manage": "Керувати підпискою"
+			"manage": "Керувати підпискою",
+			"boost": {
+				"mode": "Режим Boost",
+				"unlocked": "Boost розблоковано!",
+				"unlockProgress": "${{amount}} до розблокування Boost",
+				"monthlyUsage": "Щомісячне використання",
+				"nextBoost": "Наступний Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Поповнення через {{days}} днів",
+			"passActiveUntil": "Pass активний до",
+			"creditsNote": "Кредити Pass ніколи не закінчуються. Невикористані кредити boost закінчуються при поповненні."
 		},
 		"detailedUsage": "Детальне використання",
 		"createOrganization": "Створити організацію для відстеження детального використання"

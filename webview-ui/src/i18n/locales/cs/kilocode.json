@@ -165,7 +165,7 @@
 			"description": "Předplaťte si předvídatelné náklady na AI s rostoucími bonusovými kredity",
 			"recommended": "Doporučeno",
 			"perMonth": "/měsíc",
-			"action": "Získat Kilo Pass",
+			"action": "Předplatit",
 			"learnMore": "Více o Kilo Pass",
 			"yourSubscription": "Tvůj Kilo Pass",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} měsíc v řadě",
 			"streakPlural": "{{count}} měsíců v řadě",
 			"bonusCredits": "+${{amount}} bonus dne {{date}}",
-			"manage": "Spravovat předplatné"
+			"manage": "Spravovat předplatné",
+			"boost": {
+				"mode": "Boost režim",
+				"unlocked": "Boost odemčen!",
+				"unlockProgress": "${{amount}} pro odemčení Boost",
+				"monthlyUsage": "Měsíční využití",
+				"nextBoost": "Další Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Doplní se za {{days}} dní",
+			"passActiveUntil": "Pass aktivní do",
+			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší při doplnění."
 		},
 		"detailedUsage": "Podrobné využití",
 		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"

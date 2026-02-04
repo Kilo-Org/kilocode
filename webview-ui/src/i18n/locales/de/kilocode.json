@@ -165,7 +165,7 @@
 			"description": "Abonniere für planbare KI-Ausgaben mit wachsenden Bonuscredits",
 			"recommended": "Empfohlen",
 			"perMonth": "/Monat",
-			"action": "Kilo Pass holen",
+			"action": "Abonnieren",
 			"learnMore": "Mehr über Kilo Pass erfahren",
 			"yourSubscription": "Dein Kilo Pass",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} Monat in Folge",
 			"streakPlural": "{{count}} Monate in Folge",
 			"bonusCredits": "+${{amount}} Bonus am {{date}}",
-			"manage": "Abonnement verwalten"
+			"manage": "Abonnement verwalten",
+			"boost": {
+				"mode": "Boost-Modus",
+				"unlocked": "Boost freigeschaltet!",
+				"unlockProgress": "${{amount}} zum Freischalten von Boost",
+				"monthlyUsage": "Monatliche Nutzung",
+				"nextBoost": "Nächster Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Wird in {{days}} Tagen aufgefüllt",
+			"passActiveUntil": "Pass aktiv bis",
+			"creditsNote": "Pass-Credits laufen nie ab. Ungenutzte Boost-Credits verfallen bei der Auffüllung."
 		},
 		"detailedUsage": "Detaillierte Nutzung",
 		"createOrganization": "Organisation erstellen, um detaillierte Nutzung zu verfolgen"

@@ -165,7 +165,7 @@
 			"description": "Assine para gastos previsíveis com AI e créditos bônus crescentes",
 			"recommended": "Recomendado",
 			"perMonth": "/mês",
-			"action": "Obter Kilo Pass",
+			"action": "Assinar",
 			"learnMore": "Saiba mais sobre o Kilo Pass",
 			"yourSubscription": "Seu Kilo Pass",
 			"status": {
@@ -190,7 +190,18 @@
 			"streak": "{{count}} mês consecutivo",
 			"streakPlural": "{{count}} meses consecutivos",
 			"bonusCredits": "+${{amount}} de bônus em {{date}}",
-			"manage": "Gerenciar assinatura"
+			"manage": "Gerenciar assinatura",
+			"boost": {
+				"mode": "Modo Boost",
+				"unlocked": "Boost Desbloqueado!",
+				"unlockProgress": "${{amount}} para desbloquear Boost",
+				"monthlyUsage": "Uso Mensal",
+				"nextBoost": "Próximo Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Recarrega em {{days}} dias",
+			"passActiveUntil": "Pass ativo até",
+			"creditsNote": "Créditos do Pass nunca expiram. Créditos boost não utilizados expiram na recarga."
 		},
 		"detailedUsage": "Uso detalhado",
 		"createOrganization": "Criar organização para rastrear uso detalhado"

@@ -172,7 +172,7 @@
 			"description": "Subscribe for predictable AI spending with growing bonus credits",
 			"recommended": "Recommended",
 			"perMonth": "/mo",
-			"action": "Get Kilo Pass",
+			"action": "Subscribe",
 			"learnMore": "Learn more about Kilo Pass",
 			"yourSubscription": "Your Kilo Pass",
 			"status": {
@@ -181,7 +181,7 @@
 				"past_due": "Past Due",
 				"trialing": "Trial",
 				"paused": "Paused",
-				"cancelling": "Cancelling"
+				"cancelling": "Cancellation scheduled"
 			},
 			"tiers": {
 				"tier_19": "Starter",
@@ -197,7 +197,18 @@
 			"streak": "{{count}} month streak",
 			"streakPlural": "{{count}} months streak",
 			"bonusCredits": "+${{amount}} bonus on {{date}}",
-			"manage": "Manage Subscription"
+			"manage": "Manage Subscription",
+			"boost": {
+				"mode": "Boost Mode",
+				"unlocked": "Boost Unlocked!",
+				"unlockProgress": "${{amount}} to unlock Boost",
+				"monthlyUsage": "Monthly Usage",
+				"nextBoost": "Next Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Refills in {{days}} days",
+			"passActiveUntil": "Pass active until",
+			"creditsNote": "Pass credits never expire. Unused boost credits expire on refill."
 		},
 		"detailedUsage": "Detailed Usage",
 		"createOrganization": "Create an Organization to Track Detailed Usage"

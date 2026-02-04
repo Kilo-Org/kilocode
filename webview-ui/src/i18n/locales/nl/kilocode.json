@@ -171,7 +171,7 @@
 			"description": "Abonneer voor voorspelbare AI-uitgaven met groeiende bonuscredits",
 			"recommended": "Aanbevolen",
 			"perMonth": "/maand",
-			"action": "Kilo Pass krijgen",
+			"action": "Abonneren",
 			"learnMore": "Meer informatie over Kilo Pass",
 			"yourSubscription": "Jouw Kilo Pass",
 			"status": {
@@ -196,7 +196,18 @@
 			"streak": "{{count}} maand achtereen",
 			"streakPlural": "{{count}} maanden achtereen",
 			"bonusCredits": "+${{amount}} bonus op {{date}}",
-			"manage": "Abonnement beheren"
+			"manage": "Abonnement beheren",
+			"boost": {
+				"mode": "Boost Modus",
+				"unlocked": "Boost Ontgrendeld!",
+				"unlockProgress": "${{amount}} om Boost te ontgrendelen",
+				"monthlyUsage": "Maandelijks Gebruik",
+				"nextBoost": "Volgende Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Wordt aangevuld over {{days}} dagen",
+			"passActiveUntil": "Pass actief tot",
+			"creditsNote": "Pass-tegoed verloopt nooit. Ongebruikt boost-tegoed verloopt bij aanvulling."
 		},
 		"detailedUsage": "Gedetailleerd gebruik",
 		"createOrganization": "Maak organisatie aan om gedetailleerd gebruik bij te houden"

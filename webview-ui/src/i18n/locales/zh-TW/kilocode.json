@@ -172,7 +172,7 @@
 			"description": "訂閱以獲得可預測的 AI 支出和持續增長的獎勵額度",
 			"recommended": "推薦",
 			"perMonth": "/月",
-			"action": "取得 Kilo Pass",
+			"action": "訂閱",
 			"learnMore": "了解更多關於 Kilo Pass",
 			"yourSubscription": "你的 Kilo Pass",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "連續 {{count}} 個月",
 			"streakPlural": "連續 {{count}} 個月",
 			"bonusCredits": "+${{amount}} 獎勵（{{date}}）",
-			"manage": "管理訂閱"
+			"manage": "管理訂閱",
+			"boost": {
+				"mode": "Boost 模式",
+				"unlocked": "Boost 已解鎖！",
+				"unlockProgress": "還需 ${{amount}} 解鎖 Boost",
+				"monthlyUsage": "每月使用量",
+				"nextBoost": "下次 Boost",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "{{days}} 天後補充",
+			"passActiveUntil": "Pass 有效期至",
+			"creditsNote": "Pass 額度永不過期。未使用的 Boost 額度在補充時過期。"
 		},
 		"detailedUsage": "詳細使用量",
 		"createOrganization": "建立組織以追蹤詳細使用量"

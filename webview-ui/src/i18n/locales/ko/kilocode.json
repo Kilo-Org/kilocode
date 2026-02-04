@@ -172,7 +172,7 @@
 			"description": "예측 가능한 AI 지출과 증가하는 보너스 크레딧을 위해 구독하세요",
 			"recommended": "추천",
 			"perMonth": "/월",
-			"action": "Kilo Pass 받기",
+			"action": "구독하기",
 			"learnMore": "Kilo Pass에 대해 자세히 알아보기",
 			"yourSubscription": "내 Kilo Pass",
 			"status": {
@@ -197,7 +197,18 @@
 			"streak": "{{count}}개월 연속",
 			"streakPlural": "{{count}}개월 연속",
 			"bonusCredits": "+${{amount}} 보너스 ({{date}})",
-			"manage": "구독 관리"
+			"manage": "구독 관리",
+			"boost": {
+				"mode": "부스트 모드",
+				"unlocked": "부스트 해제됨!",
+				"unlockProgress": "부스트 해제까지 ${{amount}}",
+				"monthlyUsage": "월간 사용량",
+				"nextBoost": "다음 부스트",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "{{days}}일 후 충전됨",
+			"passActiveUntil": "패스 유효기간",
+			"creditsNote": "패스 크레딧은 만료되지 않습니다. 사용하지 않은 부스트 크레딧은 충전 시 만료됩니다."
 		},
 		"detailedUsage": "상세 사용량",
 		"createOrganization": "상세 사용량 추적을 위한 조직 생성"

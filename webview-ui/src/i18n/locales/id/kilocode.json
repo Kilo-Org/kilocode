@@ -158,7 +158,7 @@
 			"description": "Berlangganan untuk pengeluaran AI yang dapat diprediksi dengan kredit bonus yang terus bertambah",
 			"recommended": "Direkomendasikan",
 			"perMonth": "/bulan",
-			"action": "Dapatkan Kilo Pass",
+			"action": "Berlangganan",
 			"learnMore": "Pelajari lebih lanjut tentang Kilo Pass",
 			"yourSubscription": "Kilo Pass Anda",
 			"status": {
@@ -183,7 +183,18 @@
 			"streak": "{{count}} bulan berturut-turut",
 			"streakPlural": "{{count}} bulan berturut-turut",
 			"bonusCredits": "+${{amount}} bonus pada {{date}}",
-			"manage": "Kelola langganan"
+			"manage": "Kelola langganan",
+			"boost": {
+				"mode": "Mode Boost",
+				"unlocked": "Boost Terbuka!",
+				"unlockProgress": "${{amount}} untuk membuka Boost",
+				"monthlyUsage": "Penggunaan Bulanan",
+				"nextBoost": "Boost Berikutnya",
+				"boostAmount": "+${{amount}}"
+			},
+			"refills": "Diisi ulang dalam {{days}} hari",
+			"passActiveUntil": "Pass aktif sampai",
+			"creditsNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit boost yang tidak digunakan kedaluwarsa saat pengisian ulang."
 		},
 		"detailedUsage": "Penggunaan Terperinci",
 		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"
