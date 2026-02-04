@@ -7,34 +7,19 @@ import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
 import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
-import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
+import { KILO_OPENROUTER_BASE, normalizeKiloOpenRouterURL } from "@kilocode/kilo-gateway" // kilocode_change
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
 
-// kilocode_change start - normalize kilo baseURL org handling
+// kilocode_change start - normalize kilo baseURL to stable OpenRouter surface
 const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
   if (!baseURL) return undefined
-  const trimmed = baseURL.replace(/\/+$/, "")
-  if (orgId) {
-    if (/\/api\/organizations\/[^/]+/.test(trimmed)) {
-      return trimmed.replace(/\/api\/organizations\/[^/]+/, `/api/organizations/${orgId}`)
-    }
-    if (trimmed.includes("/api/openrouter")) {
-      return trimmed.replace("/api/openrouter", `/api/organizations/${orgId}`)
-    }
-    if (trimmed.endsWith("/openrouter")) {
-      return trimmed.replace(/\/openrouter$/, `/organizations/${orgId}`)
-    }
-    if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${orgId}`
-    return `${trimmed}/api/organizations/${orgId}`
-  }
-
-  if (trimmed.includes("/api/organizations/")) return trimmed
-  if (trimmed.includes("/openrouter")) return trimmed
-  if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
-  return `${trimmed}/api/openrouter`
+  return normalizeKiloOpenRouterURL({
+    baseURL,
+    ...(orgId ? { kilocodeOrganizationId: orgId } : {}),
+  }).baseURL
 } // kilocode_change end
 
 export namespace ModelsDev {

@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
-import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { buildKiloHeaders, DEFAULT_HEADERS } from "../headers.js"
+import { normalizeKiloOpenRouterURL } from "../url.js"
+import { KILO_API_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -58,24 +59,26 @@ export async function fetchKiloModels(options?: {
   baseURL?: string
 }): Promise<Record<string, any>> {
   const token = options?.kilocodeToken
-  const organizationId = options?.kilocodeOrganizationId
+  const baseApiUrl = getKiloUrlFromToken(options?.baseURL ?? KILO_API_BASE, token ?? "")
 
-  // Construct base URL
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
-
-  const baseURL = options?.baseURL ?? defaultBaseURL
-
-  // Transform URL with token if available
-  const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
+  // Normalize to stable OpenRouter surface; org selection stays in headers
+  const normalized = normalizeKiloOpenRouterURL({
+    baseURL: baseApiUrl,
+    ...(options?.kilocodeOrganizationId ? { kilocodeOrganizationId: options.kilocodeOrganizationId } : {}),
+  })
 
   // Construct models endpoint
-  const modelsURL = `${finalBaseURL}/models`
+  const modelsURL = `${normalized.baseURL}models`
 
   try {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
       headers: {
         ...DEFAULT_HEADERS,
+        ...buildKiloHeaders(undefined, {
+          kilocodeOrganizationId: normalized.kilocodeOrganizationId,
+          kilocodeTesterWarningsDisabledUntil: undefined,
+        }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
