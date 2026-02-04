@@ -53,9 +53,25 @@ export namespace SessionProcessor {
             let reasoningChars = 0
             let produced = false
 
-            const limit = input.model.limit.output || 0
-            const threshold = Math.max(8_000, Math.min(64_000, limit > 0 ? Math.floor(limit * 0.5) : 16_000))
-            const stream = await LLM.stream(streamInput)
+            const limit = streamInput.model.limit.output || 0
+            // kilocode_change start
+            // Heuristic guardrail: output limits are token-based, but we only have streaming deltas here.
+            // Use a conservative character threshold derived from configured output token limit (clamped).
+            const reasoningCharThreshold = Math.max(
+              8_000,
+              Math.min(64_000, limit > 0 ? Math.floor(limit * 0.5) : 16_000),
+            )
+            // kilocode_change end
+
+            const controller = new AbortController()
+            streamInput.abort.addEventListener(
+              "abort",
+              () => {
+                controller.abort()
+              },
+              { once: true },
+            )
+            const stream = await LLM.stream({ ...streamInput, abort: controller.signal })
 
             for await (const value of stream.fullStream) {
               input.abort.throwIfAborted()
@@ -92,16 +108,26 @@ export namespace SessionProcessor {
                     // kilocode_change start - prevent infinite reasoning-only streams
                     // Some providers/models can get stuck streaming <think> / reasoning without ever producing text or tool calls.
                     // If this happens, stop early so the session loop can exit.
-                    if (!produced && reasoningChars >= threshold) {
+                    if (!produced && reasoningChars >= reasoningCharThreshold) {
+                      const now = Date.now()
                       input.assistantMessage.error = new MessageV2.ReasoningStuckError({
                         message: "Model got stuck producing reasoning only",
-                        threshold,
+                        threshold: reasoningCharThreshold,
                         chars: reasoningChars,
                         finish: input.assistantMessage.finish,
                       }).toObject()
-                      input.assistantMessage.time.completed = Date.now()
+                      input.assistantMessage.time.completed = now
                       await Session.updateMessage(input.assistantMessage)
                       blocked = true
+                      controller.abort()
+                      for (const k of Object.keys(reasoningMap)) {
+                        const p = reasoningMap[k]
+                        p.text = p.text.trimEnd()
+                        p.time.end = now
+                        await Session.updatePart(p)
+                        delete reasoningMap[k]
+                      }
+                      break
                     }
                     // kilocode_change end
                   }
@@ -282,16 +308,32 @@ export namespace SessionProcessor {
 
                   // kilocode_change start - prevent infinite reasoning-only streams
                   // If a step finishes with only reasoning (no text, no tools), treat it as terminal to avoid endless looping.
-                  if (!produced && input.assistantMessage.finish === "unknown" && reasoningChars > 0) {
+                  if (!produced && reasoningChars > 0 && !input.assistantMessage.error) {
+                    const now = Date.now()
                     input.assistantMessage.error = new MessageV2.ReasoningStuckError({
                       message: "Model got stuck producing reasoning only",
-                      threshold,
+                      threshold: reasoningCharThreshold,
                       chars: reasoningChars,
                       finish: input.assistantMessage.finish,
                     }).toObject()
-                    input.assistantMessage.time.completed = Date.now()
+                    input.assistantMessage.time.completed = now
                     await Session.updateMessage(input.assistantMessage)
                     blocked = true
+                    controller.abort()
+                    for (const k of Object.keys(reasoningMap)) {
+                      const p = reasoningMap[k]
+                      p.text = p.text.trimEnd()
+                      p.time.end = now
+                      await Session.updatePart(p)
+                      delete reasoningMap[k]
+                    }
+
+                    if (currentText && currentText.time) {
+                      currentText.text = currentText.text.trimEnd()
+                      currentText.time.end = now
+                      await Session.updatePart(currentText)
+                      currentText = undefined
+                    }
                   }
                   // kilocode_change end
 
