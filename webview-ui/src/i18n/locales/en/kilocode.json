@@ -160,8 +160,7 @@
 		"organization": "Organization",
 		"personal": "Personal",
 		"shop": {
-			"title": "Top Up",
-			"description": "One-time credit purchases to boost your balance",
+			"title": "Buy Credits",
 			"popular": "Popular",
 			"credits": "credits",
 			"action": "Buy Now",
@@ -202,10 +201,20 @@
 				"mode": "Boost Mode",
 				"unlocked": "Boost Unlocked!",
 				"unlockProgress": "${{amount}} to unlock Boost",
+				"useToUnlock": "Use <amount>${{amount}}</amount> to unlock Boost",
 				"monthlyUsage": "Monthly Usage",
 				"nextBoost": "Next Boost",
 				"boostAmount": "+${{amount}}"
 			},
+			"promo": "Unlock <boost>Boost Mode</boost> for up to 50% free credits.",
+			"plans": {
+				"monthly": "Monthly",
+				"perMonth": "/month",
+				"includesCredits": "Includes <highlight>${{price}}/month</highlight> pass credits",
+				"upToBoost": "Up to <highlight>{{percent}}%</highlight> boost credits",
+				"firstMonthBoost": "First month: <highlight>+{{percent}}%</highlight> boost credits"
+			},
+			"subscriptionNote": "Pass credits never expire. Boost credits unlock after consuming a month of pass credits and expire at the end of each monthly cycle.",
 			"refills": "Refills in {{days}} days",
 			"passActiveUntil": "Pass active until",
 			"creditsNote": "Pass credits never expire. Unused boost credits expire on refill."

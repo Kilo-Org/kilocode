@@ -153,8 +153,7 @@
 		"organization": "Organizacja",
 		"personal": "Osobiste",
 		"shop": {
-			"title": "Doładowanie",
-			"description": "Jednorazowe zakupy kredytów, aby zwiększyć saldo",
+			"title": "Kup Kredyty",
 			"popular": "Popularne",
 			"credits": "kredyty",
 			"action": "Kup Teraz",
@@ -197,11 +196,21 @@
 				"unlockProgress": "${{amount}} do odblokowania Boost",
 				"monthlyUsage": "Miesięczne użycie",
 				"nextBoost": "Następny Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Użyj <amount>${{amount}}</amount>, aby odblokować Boost"
 			},
 			"refills": "Odnowienie za {{days}} dni",
 			"passActiveUntil": "Pass aktywny do",
-			"creditsNote": "Kredyty Pass nigdy nie wygasają. Niewykorzystane kredyty boost wygasają przy odnowieniu."
+			"creditsNote": "Kredyty Pass nigdy nie wygasają. Niewykorzystane kredyty boost wygasają przy odnowieniu.",
+			"promo": "Odblokuj <boost>Tryb Boost</boost> i uzyskaj do 50% darmowych kredytów.",
+			"plans": {
+				"monthly": "Miesięcznie",
+				"perMonth": "/miesiąc",
+				"includesCredits": "Zawiera <highlight>${{price}}/miesiąc</highlight> kredytów Pass",
+				"upToBoost": "Do <highlight>{{percent}}%</highlight> kredytów Boost",
+				"firstMonthBoost": "Pierwszy miesiąc: <highlight>+{{percent}}%</highlight> kredytów Boost"
+			},
+			"subscriptionNote": "Kredyty Pass nigdy nie wygasają. Kredyty Boost odblokowują się po zużyciu miesiąca kredytów Pass i wygasają na koniec każdego cyklu miesięcznego."
 		},
 		"detailedUsage": "Szczegółowe użycie",
 		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"

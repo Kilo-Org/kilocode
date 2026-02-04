@@ -160,8 +160,7 @@
 		"organization": "องค์กร",
 		"personal": "ส่วนตัว",
 		"shop": {
-			"title": "เติมเงิน",
-			"description": "ซื้อเครดิตครั้งเดียวเพื่อเพิ่มยอดเงินของคุณ",
+			"title": "ซื้อเครดิต",
 			"popular": "ยอดนิยม",
 			"credits": "เครดิต",
 			"action": "ซื้อตอนนี้",
@@ -204,11 +203,21 @@
 				"unlockProgress": "${{amount}} เพื่อปลดล็อก Boost",
 				"monthlyUsage": "การใช้งานรายเดือน",
 				"nextBoost": "Boost ถัดไป",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "ใช้ <amount>${{amount}}</amount> เพื่อปลดล็อก Boost"
 			},
 			"refills": "เติมใน {{days}} วัน",
 			"passActiveUntil": "Pass ใช้งานได้ถึง",
-			"creditsNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต boost ที่ไม่ได้ใช้จะหมดอายุเมื่อเติม"
+			"creditsNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต boost ที่ไม่ได้ใช้จะหมดอายุเมื่อเติม",
+			"promo": "ปลดล็อก <boost>โหมด Boost</boost> รับเครดิตฟรีสูงสุด 50%",
+			"plans": {
+				"monthly": "รายเดือน",
+				"perMonth": "/เดือน",
+				"includesCredits": "รวม <highlight>${{price}}/เดือน</highlight> เครดิต Pass",
+				"upToBoost": "สูงสุด <highlight>{{percent}}%</highlight> เครดิต Boost",
+				"firstMonthBoost": "เดือนแรก: <highlight>+{{percent}}%</highlight> เครดิต Boost"
+			},
+			"subscriptionNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต Boost จะปลดล็อกหลังจากใช้เครดิต Pass หนึ่งเดือนและหมดอายุเมื่อสิ้นรอบเดือน"
 		},
 		"detailedUsage": "การใช้งานโดยละเอียด",
 		"createOrganization": "สร้างองค์กรเพื่อติดตามการใช้งานโดยละเอียด"

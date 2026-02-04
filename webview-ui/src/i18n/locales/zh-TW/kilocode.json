@@ -204,11 +204,21 @@
 				"unlockProgress": "還需 ${{amount}} 解鎖 Boost",
 				"monthlyUsage": "每月使用量",
 				"nextBoost": "下次 Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "使用 <amount>${{amount}}</amount> 解鎖 Boost"
 			},
 			"refills": "{{days}} 天後補充",
 			"passActiveUntil": "Pass 有效期至",
-			"creditsNote": "Pass 額度永不過期。未使用的 Boost 額度在補充時過期。"
+			"creditsNote": "Pass 額度永不過期。未使用的 Boost 額度在補充時過期。",
+			"promo": "解鎖 <boost>Boost 模式</boost>，獲得最高 50% 免費額度。",
+			"plans": {
+				"monthly": "月付",
+				"perMonth": "/月",
+				"includesCredits": "包含 <highlight>${{price}}/月</highlight> Pass 額度",
+				"upToBoost": "最高 <highlight>{{percent}}%</highlight> Boost 額度",
+				"firstMonthBoost": "首月：<highlight>+{{percent}}%</highlight> Boost 額度"
+			},
+			"subscriptionNote": "Pass 額度永不過期。Boost 額度在消耗一個月 Pass 額度後解鎖，並在每個月度週期結束時過期。"
 		},
 		"detailedUsage": "詳細使用量",
 		"createOrganization": "建立組織以追蹤詳細使用量"

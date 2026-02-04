@@ -160,8 +160,7 @@
 		"organization": "Організація",
 		"personal": "Особистий",
 		"shop": {
-			"title": "Поповнення",
-			"description": "Одноразова покупка кредитів для збільшення балансу",
+			"title": "Купити кредити",
 			"popular": "Популярно",
 			"credits": "кредити",
 			"action": "Купити зараз",
@@ -204,11 +203,21 @@
 				"unlockProgress": "${{amount}} до розблокування Boost",
 				"monthlyUsage": "Щомісячне використання",
 				"nextBoost": "Наступний Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Використай <amount>${{amount}}</amount> для розблокування Boost"
 			},
 			"refills": "Поповнення через {{days}} днів",
 			"passActiveUntil": "Pass активний до",
-			"creditsNote": "Кредити Pass ніколи не закінчуються. Невикористані кредити boost закінчуються при поповненні."
+			"creditsNote": "Кредити Pass ніколи не закінчуються. Невикористані кредити boost закінчуються при поповненні.",
+			"promo": "Розблокуй <boost>Режим Boost</boost> для отримання до 50% безкоштовних кредитів.",
+			"plans": {
+				"monthly": "Щомісяця",
+				"perMonth": "/місяць",
+				"includesCredits": "Включає <highlight>${{price}}/місяць</highlight> кредитів Pass",
+				"upToBoost": "До <highlight>{{percent}}%</highlight> кредитів Boost",
+				"firstMonthBoost": "Перший місяць: <highlight>+{{percent}}%</highlight> кредитів Boost"
+			},
+			"subscriptionNote": "Кредити Pass ніколи не закінчуються. Кредити Boost розблоковуються після використання місячних кредитів Pass і закінчуються в кінці кожного місячного циклу."
 		},
 		"detailedUsage": "Детальне використання",
 		"createOrganization": "Створити організацію для відстеження детального використання"

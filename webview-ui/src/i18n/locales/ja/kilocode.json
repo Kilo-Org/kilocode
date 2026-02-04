@@ -160,8 +160,7 @@
 		"organization": "組織",
 		"personal": "個人",
 		"shop": {
-			"title": "チャージ",
-			"description": "残高を増やすための単発クレジット購入",
+			"title": "クレジット購入",
 			"popular": "人気",
 			"credits": "クレジット",
 			"action": "今すぐ購入",
@@ -204,11 +203,21 @@
 				"unlockProgress": "ブースト解除まで${{amount}}",
 				"monthlyUsage": "月間使用量",
 				"nextBoost": "次のブースト",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "<amount>${{amount}}</amount> を使用して Boost を解除"
 			},
 			"refills": "{{days}}日後に補充",
 			"passActiveUntil": "パス有効期限",
-			"creditsNote": "パスクレジットは期限切れになりません。未使用のブーストクレジットは補充時に期限切れになります。"
+			"creditsNote": "パスクレジットは期限切れになりません。未使用のブーストクレジットは補充時に期限切れになります。",
+			"promo": "<boost>Boost モード</boost>を解除して最大50%の無料クレジットを獲得。",
+			"plans": {
+				"monthly": "月額",
+				"perMonth": "/月",
+				"includesCredits": "<highlight>${{price}}/月</highlight>の Pass クレジットを含む",
+				"upToBoost": "最大<highlight>{{percent}}%</highlight>の Boost クレジット",
+				"firstMonthBoost": "初月: <highlight>+{{percent}}%</highlight> Boost クレジット"
+			},
+			"subscriptionNote": "Pass クレジットは期限切れになりません。Boost クレジットは1ヶ月分の Pass クレジットを消費した後に解除され、各月間サイクルの終わりに期限切れになります。"
 		},
 		"detailedUsage": "詳細な使用状況",
 		"createOrganization": "詳細な使用状況を追跡する組織を作成"

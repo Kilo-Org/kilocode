@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react"
+import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import {
 	BalanceDataResponsePayload,
@@ -459,21 +460,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																							"kilocode:profile.kiloPass.boost.unlocked",
 																						)
 																					) : (
-																						<>
-																							Use{" "}
-																							<span
-																								className={
-																									isLightTheme
-																										? "text-teal-600 font-medium"
-																										: "text-emerald-400 font-medium"
-																								}>
-																								$
-																								{remainingToUnlock.toFixed(
+																						<Trans
+																							i18nKey="kilocode:profile.kiloPass.boost.useToUnlock"
+																							values={{
+																								amount: remainingToUnlock.toFixed(
 																									2,
-																								)}
-																							</span>{" "}
-																							to unlock Boost
-																						</>
+																								),
+																							}}
+																							components={{
+																								amount: (
+																									<span
+																										className={
+																											isLightTheme
+																												? "text-teal-600 font-medium"
+																												: "text-emerald-400 font-medium"
+																										}
+																									/>
+																								),
+																							}}
+																						/>
 																					)}
 																				</span>
 																			</div>
@@ -618,16 +623,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 														{t("kilocode:profile.kiloPass.title")}
 													</div>
 													<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-4 text-center">
-														Unlock{" "}
-														<span
-															className={
-																isLightTheme
-																	? "text-teal-600 font-medium"
-																	: "text-emerald-400 font-medium"
-															}>
-															Boost Mode
-														</span>{" "}
-														for up to 50% free credits.
+														<Trans
+															i18nKey="kilocode:profile.kiloPass.promo"
+															components={{
+																boost: (
+																	<span
+																		className={
+																			isLightTheme
+																				? "text-teal-600 font-medium"
+																				: "text-emerald-400 font-medium"
+																		}
+																	/>
+																),
+															}}
+														/>
 													</div>
 
 													<div className="grid grid-cols-1 min-[300px]:grid-cols-3 gap-3 mb-4">
@@ -653,7 +662,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																		{plan.name}
 																	</span>
 																	<span className="text-xs text-[var(--vscode-descriptionForeground)]">
-																		Monthly
+																		{t("kilocode:profile.kiloPass.plans.monthly")}
 																	</span>
 																</div>
 
@@ -661,47 +670,62 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																<div className="text-2xl font-bold text-[var(--vscode-foreground)] mb-3">
 																	${plan.price}
 																	<span className="text-sm font-normal text-[var(--vscode-descriptionForeground)]">
-																		/month
+																		{t("kilocode:profile.kiloPass.plans.perMonth")}
 																	</span>
 																</div>
 
 																{/* Details */}
 																<div className="space-y-1 text-xs mb-3">
 																	<div className="text-[var(--vscode-descriptionForeground)]">
-																		Includes{" "}
-																		<span
-																			className={
-																				isLightTheme
-																					? "text-orange-600 font-medium"
-																					: "text-yellow-500 font-medium"
-																			}>
-																			${plan.price}/month
-																		</span>{" "}
-																		pass credits
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.includesCredits"
+																			values={{ price: plan.price }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-orange-600 font-medium"
+																								: "text-yellow-500 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
 																	</div>
 																	<div className="text-[var(--vscode-descriptionForeground)]">
-																		Up to{" "}
-																		<span
-																			className={
-																				isLightTheme
-																					? "text-teal-600 font-medium"
-																					: "text-emerald-400 font-medium"
-																			}>
-																			40%
-																		</span>{" "}
-																		boost credits
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.upToBoost"
+																			values={{ percent: 40 }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-teal-600 font-medium"
+																								: "text-emerald-400 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
 																	</div>
 																	<div className="text-[var(--vscode-descriptionForeground)]">
-																		First month:{" "}
-																		<span
-																			className={
-																				isLightTheme
-																					? "text-teal-600 font-medium"
-																					: "text-emerald-400 font-medium"
-																			}>
-																			+50%
-																		</span>{" "}
-																		boost credits
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.firstMonthBoost"
+																			values={{ percent: 50 }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-teal-600 font-medium"
+																								: "text-emerald-400 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
 																	</div>
 																</div>
 
@@ -720,9 +744,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 													{/* Footer info */}
 													<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
-														Pass credits never expire. Boost credits unlock after consuming
-														a month of pass credits and expire at the end of each monthly
-														cycle.
+														{t("kilocode:profile.kiloPass.subscriptionNote")}
 													</div>
 												</>
 											)}

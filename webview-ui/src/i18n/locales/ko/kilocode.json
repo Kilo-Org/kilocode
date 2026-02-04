@@ -160,8 +160,7 @@
 		"organization": "조직",
 		"personal": "개인",
 		"shop": {
-			"title": "충전",
-			"description": "잔액을 늘리기 위한 일회성 크레딧 구매",
+			"title": "크레딧 구매",
 			"popular": "인기",
 			"credits": "크레딧",
 			"action": "지금 구매",
@@ -204,11 +203,21 @@
 				"unlockProgress": "부스트 해제까지 ${{amount}}",
 				"monthlyUsage": "월간 사용량",
 				"nextBoost": "다음 부스트",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "<amount>${{amount}}</amount>를 사용하여 Boost 잠금 해제"
 			},
 			"refills": "{{days}}일 후 충전됨",
 			"passActiveUntil": "패스 유효기간",
-			"creditsNote": "패스 크레딧은 만료되지 않습니다. 사용하지 않은 부스트 크레딧은 충전 시 만료됩니다."
+			"creditsNote": "패스 크레딧은 만료되지 않습니다. 사용하지 않은 부스트 크레딧은 충전 시 만료됩니다.",
+			"promo": "<boost>Boost 모드</boost>를 잠금 해제하여 최대 50% 무료 크레딧을 받으세요.",
+			"plans": {
+				"monthly": "월간",
+				"perMonth": "/월",
+				"includesCredits": "<highlight>${{price}}/월</highlight> Pass 크레딧 포함",
+				"upToBoost": "최대 <highlight>{{percent}}%</highlight> Boost 크레딧",
+				"firstMonthBoost": "첫 달: <highlight>+{{percent}}%</highlight> Boost 크레딧"
+			},
+			"subscriptionNote": "Pass 크레딧은 만료되지 않습니다. Boost 크레딧은 한 달간의 Pass 크레딧을 소비한 후 잠금 해제되며 각 월간 주기 종료 시 만료됩니다."
 		},
 		"detailedUsage": "상세 사용량",
 		"createOrganization": "상세 사용량 추적을 위한 조직 생성"

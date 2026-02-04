@@ -146,8 +146,7 @@
 		"organization": "Organisasi",
 		"personal": "Pribadi",
 		"shop": {
-			"title": "Top Up",
-			"description": "Pembelian kredit sekali bayar untuk menambah saldo",
+			"title": "Beli Kredit",
 			"popular": "Populer",
 			"credits": "kredit",
 			"action": "Beli Sekarang",
@@ -190,11 +189,21 @@
 				"unlockProgress": "${{amount}} untuk membuka Boost",
 				"monthlyUsage": "Penggunaan Bulanan",
 				"nextBoost": "Boost Berikutnya",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Gunakan <amount>${{amount}}</amount> untuk membuka Boost"
 			},
 			"refills": "Diisi ulang dalam {{days}} hari",
 			"passActiveUntil": "Pass aktif sampai",
-			"creditsNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit boost yang tidak digunakan kedaluwarsa saat pengisian ulang."
+			"creditsNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit boost yang tidak digunakan kedaluwarsa saat pengisian ulang.",
+			"promo": "Buka <boost>Mode Boost</boost> untuk hingga 50% kredit gratis.",
+			"plans": {
+				"monthly": "Bulanan",
+				"perMonth": "/bulan",
+				"includesCredits": "Termasuk <highlight>${{price}}/bulan</highlight> kredit Pass",
+				"upToBoost": "Hingga <highlight>{{percent}}%</highlight> kredit Boost",
+				"firstMonthBoost": "Bulan pertama: <highlight>+{{percent}}%</highlight> kredit Boost"
+			},
+			"subscriptionNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit Boost terbuka setelah menggunakan satu bulan kredit Pass dan kedaluwarsa di akhir setiap siklus bulanan."
 		},
 		"detailedUsage": "Penggunaan Terperinci",
 		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"

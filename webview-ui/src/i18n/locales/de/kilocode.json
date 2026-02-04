@@ -153,8 +153,7 @@
 		"organization": "Organisation",
 		"personal": "Persönlich",
 		"shop": {
-			"title": "Aufladen",
-			"description": "Einmaliger Kreditkauf, um dein Guthaben aufzustocken",
+			"title": "Credits kaufen",
 			"popular": "Beliebt",
 			"credits": "Credits",
 			"action": "Jetzt kaufen",
@@ -195,10 +194,20 @@
 				"mode": "Boost-Modus",
 				"unlocked": "Boost freigeschaltet!",
 				"unlockProgress": "${{amount}} zum Freischalten von Boost",
+				"useToUnlock": "Nutze <amount>${{amount}}</amount> um Boost freizuschalten",
 				"monthlyUsage": "Monatliche Nutzung",
 				"nextBoost": "Nächster Boost",
 				"boostAmount": "+${{amount}}"
 			},
+			"promo": "Schalte <boost>Boost-Modus</boost> für bis zu 50% kostenlose Credits frei.",
+			"plans": {
+				"monthly": "Monatlich",
+				"perMonth": "/Monat",
+				"includesCredits": "Enthält <highlight>${{price}}/Monat</highlight> Pass-Credits",
+				"upToBoost": "Bis zu <highlight>{{percent}}%</highlight> Boost-Credits",
+				"firstMonthBoost": "Erster Monat: <highlight>+{{percent}}%</highlight> Boost-Credits"
+			},
+			"subscriptionNote": "Pass-Credits verfallen nie. Boost-Credits werden nach Verbrauch eines Monats Pass-Credits freigeschaltet und verfallen am Ende jedes Monatszyklus.",
 			"refills": "Wird in {{days}} Tagen aufgefüllt",
 			"passActiveUntil": "Pass aktiv bis",
 			"creditsNote": "Pass-Credits laufen nie ab. Ungenutzte Boost-Credits verfallen bei der Auffüllung."

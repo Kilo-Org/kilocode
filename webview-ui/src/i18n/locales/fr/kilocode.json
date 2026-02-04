@@ -160,8 +160,7 @@
 		"organization": "Organisation",
 		"personal": "Personnel",
 		"shop": {
-			"title": "Recharger",
-			"description": "Achats de crédits uniques pour augmenter ton solde",
+			"title": "Acheter des Crédits",
 			"popular": "Populaire",
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
@@ -202,10 +201,20 @@
 				"mode": "Mode Boost",
 				"unlocked": "Boost débloqué !",
 				"unlockProgress": "{{amount}} $ pour débloquer le Boost",
+				"useToUnlock": "Utilise <amount>{{amount}} $</amount> pour débloquer le Boost",
 				"monthlyUsage": "Utilisation mensuelle",
 				"nextBoost": "Prochain Boost",
 				"boostAmount": "+{{amount}} $"
 			},
+			"promo": "Débloque <boost>Mode Boost</boost> pour jusqu'à 50% de crédits gratuits.",
+			"plans": {
+				"monthly": "Mensuel",
+				"perMonth": "/mois",
+				"includesCredits": "Comprend <highlight>{{price}} $/mois</highlight> de crédits Pass",
+				"upToBoost": "Jusqu'à <highlight>{{percent}}%</highlight> de crédits Boost",
+				"firstMonthBoost": "Premier mois : <highlight>+{{percent}}%</highlight> de crédits Boost"
+			},
+			"subscriptionNote": "Les crédits Pass n'expirent jamais. Les crédits Boost se débloquent après avoir consommé un mois de crédits Pass et expirent à la fin de chaque cycle mensuel.",
 			"refills": "Rechargement dans {{days}} jours",
 			"passActiveUntil": "Pass actif jusqu'au",
 			"creditsNote": "Les crédits du Pass n'expirent jamais. Les crédits boost non utilisés expirent lors du rechargement."

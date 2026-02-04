@@ -153,8 +153,7 @@
 		"organization": "Organizasyon",
 		"personal": "Kişisel",
 		"shop": {
-			"title": "Bakiye Yükle",
-			"description": "Bakiyenizi artırmak için tek seferlik kredi satın alın",
+			"title": "Kredi Satın Al",
 			"popular": "Popüler",
 			"credits": "kredi",
 			"action": "Şimdi Satın Al",
@@ -197,11 +196,21 @@
 				"unlockProgress": "Boost kilidini açmak için ${{amount}}",
 				"monthlyUsage": "Aylık Kullanım",
 				"nextBoost": "Sonraki Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Boost'u açmak için <amount>${{amount}}</amount> kullan"
 			},
 			"refills": "{{days}} gün içinde yenilenir",
 			"passActiveUntil": "Pass aktif bitiş",
-			"creditsNote": "Pass kredileri hiçbir zaman sona ermez. Kullanılmayan boost kredileri yenilemede sona erer."
+			"creditsNote": "Pass kredileri hiçbir zaman sona ermez. Kullanılmayan boost kredileri yenilemede sona erer.",
+			"promo": "%50'ye kadar ücretsiz kredi için <boost>Boost Modu</boost>'nu aç.",
+			"plans": {
+				"monthly": "Aylık",
+				"perMonth": "/ay",
+				"includesCredits": "<highlight>${{price}}/ay</highlight> Pass kredisi içerir",
+				"upToBoost": "<highlight>{{percent}}%</highlight>'e kadar Boost kredisi",
+				"firstMonthBoost": "İlk ay: <highlight>+{{percent}}%</highlight> Boost kredisi"
+			},
+			"subscriptionNote": "Pass kredileri asla sona ermez. Boost kredileri bir aylık Pass kredisi tüketildikten sonra açılır ve her aylık döngünün sonunda sona erer."
 		},
 		"detailedUsage": "Detaylı Kullanım",
 		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"

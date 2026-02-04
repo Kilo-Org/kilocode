@@ -155,8 +155,7 @@
 		"organization": "المؤسسة",
 		"personal": "شخصي",
 		"shop": {
-			"title": "شحن الرصيد",
-			"description": "شراء رصيد لمرة واحدة لزيادة رصيدك",
+			"title": "شراء الرصيد",
 			"popular": "الأكثر شعبية",
 			"credits": "رصيد",
 			"action": "اشتري الآن",
@@ -199,11 +198,21 @@
 				"unlockProgress": "${{amount}} لفتح التعزيز",
 				"monthlyUsage": "الاستخدام الشهري",
 				"nextBoost": "التعزيز التالي",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "استخدم <amount>${{amount}}</amount> لفتح Boost"
 			},
 			"refills": "يتجدد خلال {{days}} يوم",
 			"passActiveUntil": "الباقة نشطة حتى",
-			"creditsNote": "رصيد الباقة لا ينتهي. الرصيد الإضافي غير المستخدم ينتهي عند التجديد."
+			"creditsNote": "رصيد الباقة لا ينتهي. الرصيد الإضافي غير المستخدم ينتهي عند التجديد.",
+			"promo": "افتح <boost>وضع Boost</boost> للحصول على ما يصل إلى 50٪ رصيد مجاني.",
+			"plans": {
+				"monthly": "شهري",
+				"perMonth": "/شهر",
+				"includesCredits": "يشمل <highlight>${{price}}/شهر</highlight> رصيد Pass",
+				"upToBoost": "حتى <highlight>{{percent}}٪</highlight> رصيد Boost",
+				"firstMonthBoost": "الشهر الأول: <highlight>+{{percent}}٪</highlight> رصيد Boost"
+			},
+			"subscriptionNote": "رصيد Pass لا ينتهي أبداً. رصيد Boost يُفتح بعد استهلاك شهر من رصيد Pass وينتهي في نهاية كل دورة شهرية."
 		},
 		"detailedUsage": "الاستخدام التفصيلي",
 		"createOrganization": "إنشاء مؤسسة لتتبع الاستخدام التفصيلي"

@@ -153,8 +153,7 @@
 		"organization": "Organizzazione",
 		"personal": "Personale",
 		"shop": {
-			"title": "Ricarica",
-			"description": "Acquisti di crediti una tantum per aumentare il tuo saldo",
+			"title": "Acquista Crediti",
 			"popular": "Popolare",
 			"credits": "crediti",
 			"action": "Acquista Ora",
@@ -197,11 +196,21 @@
 				"unlockProgress": "${{amount}} per sbloccare Boost",
 				"monthlyUsage": "Utilizzo mensile",
 				"nextBoost": "Prossimo Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Usa <amount>${{amount}}</amount> per sbloccare Boost"
 			},
 			"refills": "Si ricarica tra {{days}} giorni",
 			"passActiveUntil": "Pass attivo fino a",
-			"creditsNote": "I crediti del Pass non scadono mai. I crediti boost non utilizzati scadono alla ricarica."
+			"creditsNote": "I crediti del Pass non scadono mai. I crediti boost non utilizzati scadono alla ricarica.",
+			"promo": "Sblocca <boost>Modalità Boost</boost> per fino al 50% di crediti gratuiti.",
+			"plans": {
+				"monthly": "Mensile",
+				"perMonth": "/mese",
+				"includesCredits": "Include <highlight>${{price}}/mese</highlight> di crediti Pass",
+				"upToBoost": "Fino a <highlight>{{percent}}%</highlight> di crediti Boost",
+				"firstMonthBoost": "Primo mese: <highlight>+{{percent}}%</highlight> di crediti Boost"
+			},
+			"subscriptionNote": "I crediti Pass non scadono mai. I crediti Boost si sbloccano dopo aver consumato un mese di crediti Pass e scadono alla fine di ogni ciclo mensile."
 		},
 		"detailedUsage": "Utilizzo dettagliato",
 		"createOrganization": "Crea organizzazione per tracciare utilizzo dettagliato"

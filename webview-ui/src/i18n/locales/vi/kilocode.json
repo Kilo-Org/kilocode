@@ -153,8 +153,7 @@
 		"organization": "Tổ chức",
 		"personal": "Cá nhân",
 		"shop": {
-			"title": "Nạp Tiền",
-			"description": "Mua tín dụng một lần để tăng số dư của bạn",
+			"title": "Mua Tín dụng",
 			"popular": "Phổ biến",
 			"credits": "tín dụng",
 			"action": "Mua Ngay",
@@ -197,11 +196,21 @@
 				"unlockProgress": "${{amount}} để mở khóa Boost",
 				"monthlyUsage": "Sử dụng hàng tháng",
 				"nextBoost": "Boost tiếp theo",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Sử dụng <amount>${{amount}}</amount> để mở khóa Boost"
 			},
 			"refills": "Nạp lại trong {{days}} ngày",
 			"passActiveUntil": "Pass hoạt động đến",
-			"creditsNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng boost chưa sử dụng hết hạn khi nạp lại."
+			"creditsNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng boost chưa sử dụng hết hạn khi nạp lại.",
+			"promo": "Mở khóa <boost>Chế độ Boost</boost> để nhận tới 50% tín dụng miễn phí.",
+			"plans": {
+				"monthly": "Hàng tháng",
+				"perMonth": "/tháng",
+				"includesCredits": "Bao gồm <highlight>${{price}}/tháng</highlight> tín dụng Pass",
+				"upToBoost": "Tới <highlight>{{percent}}%</highlight> tín dụng Boost",
+				"firstMonthBoost": "Tháng đầu: <highlight>+{{percent}}%</highlight> tín dụng Boost"
+			},
+			"subscriptionNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng Boost được mở khóa sau khi tiêu thụ một tháng tín dụng Pass và hết hạn vào cuối mỗi chu kỳ hàng tháng."
 		},
 		"detailedUsage": "Sử dụng chi tiết",
 		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"

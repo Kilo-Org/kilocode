@@ -159,8 +159,7 @@
 		"organization": "Organisatie",
 		"personal": "Persoonlijk",
 		"shop": {
-			"title": "Opwaarderen",
-			"description": "Eenmalige creditaankopen om je saldo te verhogen",
+			"title": "Credits Kopen",
 			"popular": "Populair",
 			"credits": "credits",
 			"action": "Nu Kopen",
@@ -203,11 +202,21 @@
 				"unlockProgress": "${{amount}} om Boost te ontgrendelen",
 				"monthlyUsage": "Maandelijks Gebruik",
 				"nextBoost": "Volgende Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Gebruik <amount>${{amount}}</amount> om Boost te ontgrendelen"
 			},
 			"refills": "Wordt aangevuld over {{days}} dagen",
 			"passActiveUntil": "Pass actief tot",
-			"creditsNote": "Pass-tegoed verloopt nooit. Ongebruikt boost-tegoed verloopt bij aanvulling."
+			"creditsNote": "Pass-tegoed verloopt nooit. Ongebruikt boost-tegoed verloopt bij aanvulling.",
+			"promo": "Ontgrendel <boost>Boost Mode</boost> voor tot 50% gratis credits.",
+			"plans": {
+				"monthly": "Maandelijks",
+				"perMonth": "/maand",
+				"includesCredits": "Bevat <highlight>${{price}}/maand</highlight> Pass-credits",
+				"upToBoost": "Tot <highlight>{{percent}}%</highlight> Boost-credits",
+				"firstMonthBoost": "Eerste maand: <highlight>+{{percent}}%</highlight> Boost-credits"
+			},
+			"subscriptionNote": "Pass-credits verlopen nooit. Boost-credits worden ontgrendeld na het verbruiken van een maand Pass-credits en verlopen aan het einde van elke maandcyclus."
 		},
 		"detailedUsage": "Gedetailleerd gebruik",
 		"createOrganization": "Maak organisatie aan om gedetailleerd gebruik bij te houden"

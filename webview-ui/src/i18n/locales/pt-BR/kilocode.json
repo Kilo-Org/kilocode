@@ -153,8 +153,7 @@
 		"organization": "Organização",
 		"personal": "Pessoal",
 		"shop": {
-			"title": "Recarga",
-			"description": "Compras únicas de créditos para aumentar seu saldo",
+			"title": "Comprar Créditos",
 			"popular": "Popular",
 			"credits": "créditos",
 			"action": "Comprar Agora",
@@ -197,11 +196,21 @@
 				"unlockProgress": "${{amount}} para desbloquear Boost",
 				"monthlyUsage": "Uso Mensal",
 				"nextBoost": "Próximo Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Use <amount>${{amount}}</amount> para desbloquear Boost"
 			},
 			"refills": "Recarrega em {{days}} dias",
 			"passActiveUntil": "Pass ativo até",
-			"creditsNote": "Créditos do Pass nunca expiram. Créditos boost não utilizados expiram na recarga."
+			"creditsNote": "Créditos do Pass nunca expiram. Créditos boost não utilizados expiram na recarga.",
+			"promo": "Desbloqueie <boost>Modo Boost</boost> para até 50% de créditos grátis.",
+			"plans": {
+				"monthly": "Mensal",
+				"perMonth": "/mês",
+				"includesCredits": "Inclui <highlight>${{price}}/mês</highlight> de créditos Pass",
+				"upToBoost": "Até <highlight>{{percent}}%</highlight> de créditos Boost",
+				"firstMonthBoost": "Primeiro mês: <highlight>+{{percent}}%</highlight> de créditos Boost"
+			},
+			"subscriptionNote": "Créditos Pass nunca expiram. Créditos Boost são desbloqueados após consumir um mês de créditos Pass e expiram no final de cada ciclo mensal."
 		},
 		"detailedUsage": "Uso detalhado",
 		"createOrganization": "Criar organização para rastrear uso detalhado"

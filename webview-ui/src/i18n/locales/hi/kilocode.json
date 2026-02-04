@@ -146,8 +146,7 @@
 		"organization": "संगठन",
 		"personal": "व्यक्तिगत",
 		"shop": {
-			"title": "टॉप-अप",
-			"description": "अपनी बैलेंस बढ़ाने के लिए एक बार की क्रेडिट खरीदारी",
+			"title": "क्रेडिट खरीदें",
 			"popular": "पॉपुलर",
 			"credits": "क्रेडिट",
 			"action": "अभी खरीदें",
@@ -190,11 +189,21 @@
 				"unlockProgress": "बूस्ट अनलॉक करने के लिए ${{amount}}",
 				"monthlyUsage": "मासिक उपयोग",
 				"nextBoost": "अगला बूस्ट",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Boost अनलॉक करने के लिए <amount>${{amount}}</amount> का उपयोग करें"
 			},
 			"refills": "{{days}} दिनों में रिफिल होगा",
 			"passActiveUntil": "पास सक्रिय है तक",
-			"creditsNote": "पास क्रेडिट कभी समाप्त नहीं होते। अप्रयुक्त बूस्ट क्रेडिट रिफिल पर समाप्त हो जाते हैं।"
+			"creditsNote": "पास क्रेडिट कभी समाप्त नहीं होते। अप्रयुक्त बूस्ट क्रेडिट रिफिल पर समाप्त हो जाते हैं।",
+			"promo": "50% तक मुफ्त क्रेडिट के लिए <boost>Boost Mode</boost> अनलॉक करें।",
+			"plans": {
+				"monthly": "मासिक",
+				"perMonth": "/माह",
+				"includesCredits": "<highlight>${{price}}/माह</highlight> Pass क्रेडिट शामिल है",
+				"upToBoost": "<highlight>{{percent}}%</highlight> तक Boost क्रेडिट",
+				"firstMonthBoost": "पहला महीना: <highlight>+{{percent}}%</highlight> Boost क्रेडिट"
+			},
+			"subscriptionNote": "Pass क्रेडिट कभी समाप्त नहीं होते। Boost क्रेडिट एक महीने के Pass क्रेडिट उपभोग के बाद अनलॉक होते हैं और प्रत्येक मासिक चक्र के अंत में समाप्त हो जाते हैं।"
 		},
 		"detailedUsage": "विस्तृत उपयोग",
 		"createOrganization": "विस्तृत उपयोग ट्रैक करने के लिए संगठन बनाएं"

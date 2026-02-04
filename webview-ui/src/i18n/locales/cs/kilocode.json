@@ -153,8 +153,7 @@
 		"organization": "Organizace",
 		"personal": "Osobní",
 		"shop": {
-			"title": "Dobít",
-			"description": "Jednorázový nákup kreditů pro navýšení zůstatku",
+			"title": "Koupit kredity",
 			"popular": "Populární",
 			"credits": "kredity",
 			"action": "Koupit nyní",
@@ -197,11 +196,21 @@
 				"unlockProgress": "${{amount}} pro odemčení Boost",
 				"monthlyUsage": "Měsíční využití",
 				"nextBoost": "Další Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Použij <amount>${{amount}}</amount> pro odemknutí Boost"
 			},
 			"refills": "Doplní se za {{days}} dní",
 			"passActiveUntil": "Pass aktivní do",
-			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší při doplnění."
+			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší při doplnění.",
+			"promo": "Odemkni <boost>Boost Mode</boost> pro až 50% kreditů zdarma.",
+			"plans": {
+				"monthly": "Měsíčně",
+				"perMonth": "/měsíc",
+				"includesCredits": "Zahrnuje <highlight>${{price}}/měsíc</highlight> Pass kreditů",
+				"upToBoost": "Až <highlight>{{percent}}%</highlight> Boost kreditů",
+				"firstMonthBoost": "První měsíc: <highlight>+{{percent}}%</highlight> Boost kreditů"
+			},
+			"subscriptionNote": "Pass kredity nikdy nevyprší. Boost kredity se odemknou po spotřebování měsíce Pass kreditů a vyprší na konci každého měsíčního cyklu."
 		},
 		"detailedUsage": "Podrobné využití",
 		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"

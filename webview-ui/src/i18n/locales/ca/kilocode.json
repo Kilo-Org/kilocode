@@ -133,8 +133,7 @@
 		"organization": "Organització",
 		"personal": "Personal",
 		"shop": {
-			"title": "Recarregar",
-			"description": "Compres puntuals de crèdits per augmentar el teu saldo",
+			"title": "Comprar Crèdits",
 			"popular": "Popular",
 			"credits": "crèdits",
 			"action": "Comprar Ara",
@@ -177,11 +176,21 @@
 				"unlockProgress": "${{amount}} per desbloquejar Boost",
 				"monthlyUsage": "Ús mensual",
 				"nextBoost": "Pròxim Boost",
-				"boostAmount": "+${{amount}}"
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Utilitza <amount>${{amount}}</amount> per desbloquejar Boost"
 			},
 			"refills": "Es recarrega en {{days}} dies",
 			"passActiveUntil": "Pass actiu fins",
-			"creditsNote": "Els crèdits del Pass no caduquen mai. Els crèdits de boost no utilitzats caduquen en la recàrrega."
+			"creditsNote": "Els crèdits del Pass no caduquen mai. Els crèdits de boost no utilitzats caduquen en la recàrrega.",
+			"promo": "Desbloqueja <boost>Mode Boost</boost> per fins a un 50% de crèdits gratuïts.",
+			"plans": {
+				"monthly": "Mensual",
+				"perMonth": "/mes",
+				"includesCredits": "Inclou <highlight>${{price}}/mes</highlight> de crèdits Pass",
+				"upToBoost": "Fins a <highlight>{{percent}}%</highlight> de crèdits Boost",
+				"firstMonthBoost": "Primer mes: <highlight>+{{percent}}%</highlight> de crèdits Boost"
+			},
+			"subscriptionNote": "Els crèdits Pass no caduquen mai. Els crèdits Boost es desbloquegen després de consumir un mes de crèdits Pass i caduquen al final de cada cicle mensual."
 		},
 		"detailedUsage": "Ús detallat",
 		"createOrganization": "Crear organització per fer seguiment de l'ús detallat"
