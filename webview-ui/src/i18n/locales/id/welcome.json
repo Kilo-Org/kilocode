@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Untuk melakukan keajaibannya, Kilo Code membutuhkan API key.",
+	"landing": {
+		"greeting": "Selamat datang di Roo Code!",
+		"introduction": "Dengan berbagai Mode bawaan dan dapat diperluas, Roo Code memungkinkan Anda merencanakan, merancang, coding, debug, dan meningkatkan produktivitas seperti yang belum pernah terjadi sebelumnya.",
+		"accountMention": "Untuk memulai, buat akun Roo Code Cloud Anda. Dapatkan model yang kuat, kontrol web, analitik, dukungan, dan banyak lagi.",
+		"getStarted": "Buat Akun Roo",
+		"noAccount": "atau gunakan tanpa akun"
+	},
 	"providerSignup": {
 		"heading": "Pilih penyedia Anda",
 		"chooseProvider": "Roo memerlukan penyedia LLM untuk bekerja. Pilih satu untuk memulai, Anda dapat menambahkan lebih banyak nanti.",

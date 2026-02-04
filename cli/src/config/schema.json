@@ -235,6 +235,8 @@
 						"kilocode",
 						"anthropic",
 						"openai-native",
+						"openai-codex",
+						"openai-responses",
 						"openrouter",
 						"bedrock",
 						"gemini",
@@ -261,7 +263,6 @@
 						"deepinfra",
 						"io-intelligence",
 						"qwen-code",
-						"gemini-cli",
 						"zai",
 						"minimax",
 						"unbound",
@@ -440,6 +441,95 @@
 					"then": {
 						"properties": {
 							"openAiNativeApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai-codex" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai-responses" } }
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": {
+								"type": "string",
+								"description": "OpenAI API key"
+							},
+							"openAiBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for OpenAI API requests"
+							},
+							"openAiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							},
+							"openAiLegacyFormat": {
+								"type": "boolean",
+								"description": "Use legacy API format for compatibility with older OpenAI API versions"
+							},
+							"openAiR1FormatEnabled": {
+								"type": "boolean",
+								"description": "Enable R1 format for reasoning models that support extended thinking capabilities"
+							},
+							"openAiUseAzure": {
+								"type": "boolean",
+								"description": "Use Azure OpenAI Service instead of standard OpenAI API"
+							},
+							"azureApiVersion": {
+								"type": "string",
+								"description": "Azure OpenAI API version (e.g., '2024-02-15-preview'). Required when openAiUseAzure is true"
+							},
+							"openAiStreamingEnabled": {
+								"type": "boolean",
+								"description": "Enable streaming responses for real-time token generation"
+							},
+							"openAiHeaders": {
+								"type": "object",
+								"description": "Custom HTTP headers to include in OpenAI API requests",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai-responses" },
+							"openAiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai-responses" },
+							"openAiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiModelId"]
+					},
+					"then": {
+						"properties": {
+							"openAiModelId": { "minLength": 1 }
 						}
 					}
 				},
@@ -1868,27 +1958,6 @@
 				},
 				{
 					"if": {
-						"properties": { "provider": { "const": "gemini-cli" } }
-					},
-					"then": {
-						"properties": {
-							"geminiCliOAuthPath": {
-								"type": "string",
-								"description": "Gemini CLI OAuth path"
-							},
-							"geminiCliProjectId": {
-								"type": "string",
-								"description": "Gemini CLI project ID"
-							},
-							"apiModelId": {
-								"type": "string",
-								"description": "Gemini CLI model ID"
-							}
-						}
-					}
-				},
-				{
-					"if": {
 						"properties": {
 							"provider": { "const": "qwen-code" },
 							"qwenCodeOauthPath": { "type": "string", "minLength": 1 }
@@ -1905,48 +1974,6 @@
 					"if": {
 						"properties": {
 							"provider": { "const": "qwen-code" },
-							"apiModelId": { "type": "string", "minLength": 1 }
-						},
-						"required": ["apiModelId"]
-					},
-					"then": {
-						"properties": {
-							"apiModelId": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
-							"geminiCliOAuthPath": { "type": "string", "minLength": 1 }
-						},
-						"required": ["geminiCliOAuthPath"]
-					},
-					"then": {
-						"properties": {
-							"geminiCliOAuthPath": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
-							"geminiCliProjectId": { "type": "string", "minLength": 1 }
-						},
-						"required": ["geminiCliProjectId"]
-					},
-					"then": {
-						"properties": {
-							"geminiCliProjectId": { "minLength": 1 }
-						}
-					}
-				},
-				{
-					"if": {
-						"properties": {
-							"provider": { "const": "gemini-cli" },
 							"apiModelId": { "type": "string", "minLength": 1 }
 						},
 						"required": ["apiModelId"]

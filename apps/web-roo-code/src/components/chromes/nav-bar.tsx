@@ -58,7 +58,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								href="/provider"
 								className="block px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground">
 								<Brain className="size-3 inline mr-2 -mt-0.5" />
-								Roo Code Cloud Provider
+								Roo Code Router
 							</Link>
 						</div>
 					</div>
@@ -194,7 +194,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								href="/provider"
 								className="block w-full p-5 py-3 text-left text-foreground active:opacity-50"
 								onClick={() => setIsMenuOpen(false)}>
-								Roo Code Cloud Provider
+								Roo Code Router
 							</Link>
 						</div>
 

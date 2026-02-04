@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "How would you like to get started?",
+		"freeModels": {
+			"title": "Free models",
+			"description": "Start coding immediately"
+		},
+		"premiumModels": {
+			"title": "Premium models",
+			"description": "Sign up. New users get $5 in credits"
+		},
+		"byok": {
+			"title": "Bring my own Key",
+			"description": "Advanced. Use your own account or subscription"
+		}
+	},
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"introText2": "It works with the latest AI models like Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, and 450+ more.",
 		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low",
-		"newOrganization": "Using Kilo for work?"
+		"switchToFreeModel": "Switch to Free Model instead"
 	},
 	"memoryWarning": {
 		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
@@ -28,6 +43,11 @@
 		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
 		"continueWith": "Continue with {{model}}",
 		"continue": "Continue"
+	},
+	"unauthorizedError": {
+		"title": "You need to sign in to use the {{modelId}} model",
+		"message": "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
+		"loginButton": "Sign In"
 	},
 	"pricing": {
 		"costUnknown": "cost unknown",
@@ -55,6 +75,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code",
+			"loginForPremiumModels": "Log in to access premium models & features",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Manage Organization-level Provider Routing",
@@ -72,8 +93,7 @@
 					"deny": "Deny prompt training",
 					"zdr": "Zero data retention"
 				}
-			},
-			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Context window",
@@ -218,6 +238,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "New here?",
+		"tryOneOfThese": "Try one of these ideas to get started:",
 		"suggestionText": "<suggestionButton>Click here</suggestionButton> for a cool idea, then tap on <sendIcon /> and watch me do magic!",
 		"ideas": {
 			"idea1": "Make a spinning, glowing 3D sphere that responds to mouse movements. Make the app work in the browser.",

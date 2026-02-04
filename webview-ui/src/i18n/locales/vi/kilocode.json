@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Bạn muốn bắt đầu như thế nào?",
+		"freeModels": {
+			"title": "Mô hình miễn phí",
+			"description": "Bắt đầu lập trình ngay"
+		},
+		"premiumModels": {
+			"title": "Mô hình cao cấp",
+			"description": "Đăng ký. Người dùng mới nhận $5 tín dụng"
+		},
+		"byok": {
+			"title": "Sử dụng khóa của bạn",
+			"description": "Nâng cao. Sử dụng tài khoản hoặc đăng ký của bạn"
+		}
+	},
 	"welcome": {
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
-		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
+		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
 		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp",
-		"newOrganization": "Sử dụng Kilo cho công việc?"
+		"switchToFreeModel": "Chuyển sang mô hình miễn phí"
 	},
 	"pagination": {
 		"previous": "Trước",
@@ -25,6 +40,11 @@
 		"modelUnavailable": "⚠️ Mô hình {{model}} không khả dụng. Chuyển sang mô hình khác để tiếp tục.",
 		"continueWith": "Tiếp tục với {{model}}",
 		"continue": "Tiếp tục"
+	},
+	"unauthorizedError": {
+		"title": "Bạn cần đăng nhập để sử dụng mô hình {{modelId}}",
+		"message": "Đăng nhập hoặc tạo tài khoản để truy cập hơn 500 mô hình, sử dụng tín dụng với giá gốc hoặc sử dụng khóa của riêng bạn.",
+		"loginButton": "Đăng Nhập"
 	},
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
@@ -59,6 +79,7 @@
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
 			"logout": "Đăng xuất khỏi Kilo Code",
+			"loginForPremiumModels": "Đăng nhập để truy cập các mô hình và tính năng premium",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
 				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",
@@ -77,8 +98,7 @@
 					"deny": "Từ chối huấn luyện prompt",
 					"zdr": "Không lưu trữ dữ liệu"
 				}
-			},
-			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Cửa sổ ngữ cảnh",
@@ -211,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Mới ở đây?",
+		"tryOneOfThese": "Thử một trong những ý tưởng này để bắt đầu:",
 		"suggestionText": "<suggestionButton>Nhấp vào đây</suggestionButton> để có một ý tưởng tuyệt vời, sau đó chạm vào <sendIcon /> và xem tôi làm phép thuật!",
 		"ideas": {
 			"idea1": "Tạo một hình cầu 3D quay và phát sáng phản ứng với chuyển động chuột. Làm cho ứng dụng hoạt động trong trình duyệt.",

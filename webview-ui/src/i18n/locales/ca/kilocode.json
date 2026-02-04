@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Com vols començar?",
+		"freeModels": {
+			"title": "Models gratuïts",
+			"description": "Comença a programar immediatament"
+		},
+		"premiumModels": {
+			"title": "Models premium",
+			"description": "Registra't. Els nous usuaris reben 5 $ en crèdits"
+		},
+		"byok": {
+			"title": "Porta la teva pròpia clau",
+			"description": "Avançat. Utilitza el teu propi compte o subscripció"
+		}
+	},
 	"welcome": {
 		"greeting": "Benvingut a Kilo Code!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
-		"introText2": "Funciona amb els models d'IA més recents com Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, i més de 450 més.",
+		"introText2": "Funciona amb els models d'IA més recents com Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, i més de 450 més.",
 		"introText3": "Crea un compte gratuït i obtén $20 en crèdits de bonificació quan recarreguis per primera vegada.",
 		"ctaButton": "Comença",
 		"manualModeButton": "Utilitza la teva pròpia clau API",
@@ -12,12 +27,17 @@
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
 		"lowBalance": "El teu saldo de Kilo Code és baix",
-		"newOrganization": "Utilitzes Kilo per a la feina?"
+		"switchToFreeModel": "Canvia a un model gratuït"
 	},
 	"pagination": {
 		"previous": "Anterior",
 		"next": "Següent",
 		"page": "Pàgina {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Has d'iniciar sessió per utilitzar el model {{modelId}}",
+		"message": "Inicia sessió o crea un compte per accedir a més de 500 models, utilitzar crèdits a preu de cost o portar la teva pròpia clau.",
+		"loginButton": "Iniciar Sessió"
 	},
 	"pricing": {
 		"costUnknown": "cost desconegut",
@@ -40,7 +60,7 @@
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code",
-			"automaticFetch": "Els models més recents estan disponibles automàticament a Kilo Code. Si no estàs segur de quin model triar, Kilo Code funciona millor amb els models recomanats que apareixen a la part superior en <strong>negreta</strong>.",
+			"loginForPremiumModels": "Inicia sessió per accedir a models i funcions premium",
 			"providerRouting": {
 				"title": "Encaminament de proveïdors",
 				"managedByOrganization": "Gestionar encaminament de proveïdors a nivell d'organització",
@@ -204,6 +224,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nou aquí?",
+		"tryOneOfThese": "Prova una d'aquestes idees per començar:",
 		"suggestionText": "<suggestionButton>Fes clic aquí</suggestionButton> per a una idea genial, després toca <sendIcon /> i mira'm fer màgia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D que giri i brilli i respongui als moviments del ratolí. Fes que l'aplicació funcioni al navegador.",

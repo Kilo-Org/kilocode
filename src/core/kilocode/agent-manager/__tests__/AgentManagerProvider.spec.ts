@@ -1211,16 +1211,14 @@ describe("AgentManagerProvider telemetry", () => {
 				// BUG: The completion popup should NOT be shown when commit fails
 				// Currently this test FAILS because showInformationMessage IS called
 				// even when the commit fails
-				const completionCalls = mockShowInformationMessage.mock.calls.filter(
-					(call: any[]) => call[0]?.includes("Parallel mode complete"),
+				const completionCalls = mockShowInformationMessage.mock.calls.filter((call: any[]) =>
+					call[0]?.includes("Parallel mode complete"),
 				)
 				expect(completionCalls.length).toBe(0)
 
 				// Instead, an error message should be shown
 				// (This assertion will fail until the bug is fixed)
-				expect(mockShowErrorMessage).toHaveBeenCalledWith(
-					expect.stringContaining("Failed to commit changes"),
-				)
+				expect(mockShowErrorMessage).toHaveBeenCalledWith(expect.stringContaining("Failed to commit changes"))
 			} finally {
 				testProvider.dispose()
 			}
@@ -1348,8 +1346,8 @@ describe("AgentManagerProvider telemetry", () => {
 				await (testProvider as any).finishWorktreeSession(sessionId)
 
 				// The completion popup SHOULD be shown when commit succeeds
-				const completionCalls = mockShowInformationMessage.mock.calls.filter(
-					(call: any[]) => call[0]?.includes("Parallel mode complete"),
+				const completionCalls = mockShowInformationMessage.mock.calls.filter((call: any[]) =>
+					call[0]?.includes("Parallel mode complete"),
 				)
 				expect(completionCalls.length).toBe(1)
 
@@ -1477,8 +1475,8 @@ describe("AgentManagerProvider telemetry", () => {
 
 				await (testProvider as any).finishWorktreeSession(sessionId)
 
-				const completionCalls = mockShowInformationMessage.mock.calls.filter(
-					(call: any[]) => call[0]?.includes("Parallel mode complete (no changes)"),
+				const completionCalls = mockShowInformationMessage.mock.calls.filter((call: any[]) =>
+					call[0]?.includes("Parallel mode complete (no changes)"),
 				)
 				expect(completionCalls.length).toBe(1)
 				expect(mockShowErrorMessage).not.toHaveBeenCalled()

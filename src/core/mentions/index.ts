@@ -285,7 +285,13 @@ async function getFileOrFolderContent(
 		const stats = await fs.stat(absPath)
 
 		if (stats.isFile()) {
-			if (rooIgnoreController && !rooIgnoreController.validateAccess(absPath)) {
+			// Avoid trying to include image binary content as text context.
+			// Image mentions are handled separately via image attachment flow.
+			const isBinary = await isBinaryFile(absPath).catch(() => false)
+			if (isBinary) {
+				return `(Binary file ${mentionPath} omitted)`
+			}
+			if (rooIgnoreController && !rooIgnoreController.validateAccess(unescapedPath)) {
 				return `(File ${mentionPath} is ignored by .kilocodeignore)`
 			}
 			// kilocode_change start

@@ -18,7 +18,7 @@ describe("Claude Code Streaming Client", () => {
 		})
 
 		test("should have correct user agent", () => {
-			expect(CLAUDE_CODE_API_CONFIG.userAgent).toMatch(/^Roo-Code\/\d+\.\d+\.\d+$/)
+			expect(CLAUDE_CODE_API_CONFIG.userAgent).toMatch(/^Kilo-Code\/\d+\.\d+\.\d+$/)
 		})
 	})
 

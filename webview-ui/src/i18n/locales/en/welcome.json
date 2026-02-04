@@ -17,16 +17,23 @@
 		}
 	},
 	"chooseProvider": "To do its magic, Kilo Code needs an API key.",
+	"landing": {
+		"greeting": "Welcome to Roo Code!",
+		"introduction": "With a range of built-in and extensible Modes, Roo Code lets you plan, architect, code, debug and boost your productivity like never before.",
+		"accountMention": "To get started, create your Roo Code Cloud account. Get powerful models, web control, analytics, support and more.",
+		"getStarted": "Create Roo Account",
+		"noAccount": "or use without an account"
+	},
 	"providerSignup": {
 		"heading": "Choose your provider",
 		"chooseProvider": "Roo needs an LLM provider to work. Choose one to get started, you can add more later.",
-		"rooCloudProvider": "Roo Code Cloud Provider",
-		"rooCloudDescription": "The easiest way to start is with the Roo Code Cloud Provider: a curated mix of free and paid models at a low cost.",
+		"rooCloudProvider": "Roo Code Router",
+		"rooCloudDescription": "The easiest way to start is with the Roo Code Router: a curated mix of free and paid models at a low cost.",
 		"learnMore": "Learn more",
 		"useAnotherProvider": "3rd-party Provider",
 		"useAnotherProviderDescription": "Enter an API key and get going.",
 		"noApiKeys": "Don't want to deal with API keys and separate accounts?",
-		"backToRoo": "Go with the Roo Code Cloud Provider.",
+		"backToRoo": "Go with the Roo Code Router.",
 		"goBack": "Back",
 		"finish": "Finish"
 	},

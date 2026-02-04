@@ -34,15 +34,15 @@
 		"tags": {
 			"label": "依標籤篩選：",
 			"clear": "清除標籤",
-			"placeholder": "輸入以搜尋和選擇標籤...",
+			"placeholder": "輸入以搜尋並選擇標籤...",
 			"noResults": "找不到符合的標籤",
-			"selected": "顯示包含任何選定標籤的項目",
+			"selected": "顯示包含任何已選標籤的項目",
 			"clickToFilter": "點選標籤以篩選項目"
 		},
 		"none": "無"
 	},
 	"sections": {
-		"organizationMcps": "{{organization}} MCPs",
+		"organizationMcps": "{{organization}} 的 MCP 伺服器",
 		"marketplace": "市集"
 	},
 	"type-group": {
@@ -52,14 +52,14 @@
 	"items": {
 		"empty": {
 			"noItems": "找不到市集項目",
-			"withFilters": "嘗試調整您的篩選條件",
+			"withFilters": "嘗試調整篩選條件",
 			"noSources": "嘗試在「來源」分頁中新增來源",
-			"adjustFilters": "嘗試調整您的篩選條件或搜尋詞",
+			"adjustFilters": "嘗試調整篩選條件或搜尋字詞",
 			"clearAllFilters": "清除所有篩選條件"
 		},
 		"count": "找到 {{count}} 個項目",
 		"components": "{{count}} 個元件",
-		"matched": "{{count}} 個符合",
+		"matched": "符合 {{count}} 筆",
 		"refresh": {
 			"button": "重新整理",
 			"refreshing": "重新整理中...",
@@ -98,15 +98,15 @@
 		"configurationDescription": "設定此 MCP 伺服器所需的參數",
 		"button": "安裝",
 		"successTitle": "{{name}} 已安裝",
-		"successDescription": "安裝成功完成",
+		"successDescription": "安裝完成",
 		"installed": "安裝成功！",
-		"whatNextMcp": "您現在可以設定和使用此 MCP 伺服器。點選側邊欄的 MCP 圖示來切換分頁。",
-		"whatNextMode": "您現在可以使用此模式。點選側邊欄的模式圖示來切換分頁。",
+		"whatNextMcp": "現在可設定並使用此 MCP 伺服器。點選側邊欄的 [MCP] 圖示以切換分頁。",
+		"whatNextMode": "現在可使用此模式。點選側邊欄的 [模式] 圖示以切換分頁。",
 		"done": "完成",
 		"goToMcp": "前往 MCP 分頁",
 		"goToModes": "前往模式設定",
-		"moreInfoMcp": "檢視 {{name}} MCP 文件",
-		"validationRequired": "請為 {{paramName}} 提供一個值"
+		"moreInfoMcp": "檢視 {{name}} MCP 說明文件",
+		"validationRequired": "請輸入 {{paramName}} 的值"
 	},
 	"sources": {
 		"title": "設定市集來源",
@@ -140,12 +140,12 @@
 	"removeConfirm": {
 		"mode": {
 			"title": "移除模式",
-			"message": "您確定要移除「{{modeName}}」模式嗎？",
+			"message": "確定要移除「{{modeName}}」模式嗎？",
 			"rulesWarning": "這也會移除此模式的任何相關規則檔案。"
 		},
 		"mcp": {
 			"title": "移除 MCP 伺服器",
-			"message": "您確定要移除 MCP 伺服器「{{mcpName}}」嗎？"
+			"message": "確定要移除 MCP 伺服器「{{mcpName}}」嗎？"
 		},
 		"skill": {
 			"title": "移除技能",
@@ -155,7 +155,7 @@
 		"confirm": "移除"
 	},
 	"footer": {
-		"issueText": "發現市集項目有問題或有新建議嗎？<0>到 GitHub 開個 issue</0> 告訴我們！"
+		"issueText": "發現市集項目有問題或有新建議嗎？<0>到 GitHub 建立 Issue</0> 告訴我們！"
 	},
 	"skills": {
 		"loading": "正在載入技能...",

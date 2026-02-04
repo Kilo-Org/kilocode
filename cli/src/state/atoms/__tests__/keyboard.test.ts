@@ -1182,8 +1182,8 @@ describe("keypress atoms", () => {
 
 		it("should wrap around to first mode when at the last mode", async () => {
 			// Set initial mode to the last default mode
-			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator
-			store.set(extensionModeAtom, "orchestrator")
+			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator, review
+			store.set(extensionModeAtom, "review")
 			store.set(customModesAtom, [])
 
 			// Press Shift+Tab
@@ -1206,8 +1206,8 @@ describe("keypress atoms", () => {
 		})
 
 		it("should include custom modes in the cycle", async () => {
-			// Set initial mode to "orchestrator" (last default mode)
-			store.set(extensionModeAtom, "orchestrator")
+			// Set initial mode to "review" (last default mode)
+			store.set(extensionModeAtom, "review")
 			// Add a custom mode
 			store.set(customModesAtom, [
 				{
@@ -1233,7 +1233,7 @@ describe("keypress atoms", () => {
 			// Wait for async operations to complete
 			await new Promise((resolve) => setTimeout(resolve, 10))
 
-			// Should have cycled to the custom mode (after orchestrator)
+			// Should have cycled to the custom mode (after review)
 			const newMode = store.get(extensionModeAtom)
 			expect(newMode).toBe("custom-mode")
 		})

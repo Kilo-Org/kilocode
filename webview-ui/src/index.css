@@ -213,6 +213,29 @@
 	.history-item-highlight {
 		@apply underline;
 	}
+
+	/* Custom smooth bounce animation for Roo hero */
+	@keyframes smooth-bounce {
+		0% {
+			transform: translateY(0);
+		}
+		25% {
+			transform: translateY(-25%);
+		}
+		50% {
+			transform: translateY(0);
+		}
+		75% {
+			transform: translateY(-12.5%);
+		}
+		100% {
+			transform: translateY(0);
+		}
+	}
+
+	.animate-smooth-bounce {
+		animation: smooth-bounce 1s ease-in-out infinite;
+	}
 }
 
 /* kilocode_change start: Cursor blink animation for voice recording */
@@ -574,4 +597,21 @@ input[cmdk-input]:focus {
 
 .animate-sun {
 	animation: sun 30s linear infinite;
+}
+
+/* Settings search highlight animation */
+@keyframes settings-highlight-fade {
+	0% {
+		background-color: color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+.settings-highlight {
+	animation: settings-highlight-fade 1.5s ease-out forwards;
+	border-radius: 4px;
+	padding: 8px;
+	margin: -8px;
 }

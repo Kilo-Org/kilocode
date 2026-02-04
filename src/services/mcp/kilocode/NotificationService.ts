@@ -10,7 +10,9 @@ export class NotificationService {
 		client.setNotificationHandler(LoggingMessageNotificationSchema, async (notification) => {
 			const params = notification.params || {}
 			const level = params.level || "info"
-			const data = params.data || params.message || ""
+			// `LoggingMessageNotificationSchema` defines `data`, not `message`.
+			// Keep backwards/compat handling by accepting either.
+			const data = (params as any).data || (params as any).message || "" // kilocode_change
 			const logger = params.logger || ""
 			const dataPrefix = logger ? `[${logger}]` : ``
 			const message = `MCP ${name}: ${dataPrefix}${data}`

@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Come vorresti iniziare?",
+		"freeModels": {
+			"title": "Modelli gratuiti",
+			"description": "Inizia a programmare subito"
+		},
+		"premiumModels": {
+			"title": "Modelli premium",
+			"description": "Registrati. I nuovi utenti ricevono 5 $ di crediti"
+		},
+		"byok": {
+			"title": "Porta la tua chiave",
+			"description": "Avanzato. Usa il tuo account o abbonamento"
+		}
+	},
 	"welcome": {
 		"greeting": "Benvenuto in Kilo Code!",
 		"introText1": "Kilo Code è un agente di coding AI gratuito e open source.",
-		"introText2": "Funziona con i più recenti modelli AI come Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e oltre 450 altri.",
+		"introText2": "Funziona con i più recenti modelli AI come Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, e oltre 450 altri.",
 		"introText3": "Crea un account gratuito e ottieni $20 di crediti bonus quando ricarichi per la prima volta.",
 		"ctaButton": "Inizia",
 		"manualModeButton": "Usa la tua chiave API",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Aggiungi credito",
 		"lowBalance": "Il tuo saldo Kilo Code è basso",
-		"newOrganization": "Usi Kilo per lavoro?"
+		"switchToFreeModel": "Passa a un modello gratuito"
 	},
 	"pagination": {
 		"previous": "Precedente",
@@ -25,6 +40,11 @@
 		"modelUnavailable": "⚠️ Il modello {{model}} non è disponibile. Cambia a un modello diverso per continuare.",
 		"continueWith": "Continua con {{model}}",
 		"continue": "Continua"
+	},
+	"unauthorizedError": {
+		"title": "Devi accedere per usare il modello {{modelId}}",
+		"message": "Accedi o crea un account per accedere a oltre 500 modelli, utilizzare crediti al costo effettivo o portare la tua chiave.",
+		"loginButton": "Accedi"
 	},
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
@@ -47,7 +67,7 @@
 			"apiKey": "Chiave API Kilo Code",
 			"login": "Accedi a Kilo Code",
 			"logout": "Disconnetti da Kilo Code",
-			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Kilo Code. Se non sei sicuro di quale modello scegliere, Kilo Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
+			"loginForPremiumModels": "Accedi per sbloccare modelli e funzionalità premium",
 			"providerRouting": {
 				"title": "Routing dei provider",
 				"managedByOrganization": "Gestisci routing dei provider a livello di organizzazione",
@@ -211,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nuovo qui?",
+		"tryOneOfThese": "Prova una di queste idee per iniziare:",
 		"suggestionText": "<suggestionButton>Clicca qui</suggestionButton> per un'idea fantastica, poi tocca <sendIcon /> e guardami fare magie!",
 		"ideas": {
 			"idea1": "Crea una sfera 3D rotante e luminosa che risponde ai movimenti del mouse. Fai funzionare l'app nel browser.",
