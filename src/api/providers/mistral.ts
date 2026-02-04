@@ -15,12 +15,9 @@ import { ApiHandlerOptions } from "../../shared/api"
 
 import { convertToMistralMessages } from "../transform/mistral-format"
 import { ApiStream } from "../transform/stream"
-import { handleProviderError } from "./utils/error-handler"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
-import { DEFAULT_HEADERS } from "./constants" // kilocode_change
-import { streamSse } from "../../services/continuedev/core/fetch/stream" // kilocode_change
 import type { CompletionUsage } from "./openrouter" // kilocode_change
 import type { FimHandler } from "./kilocode/FimHandler" // kilocode_change
 
@@ -258,56 +255,50 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 	): AsyncGenerator<string> {
 		const { id: model, maxTokens } = this.getModel()
 
-		// Get the base URL for the model
-		// copy pasted from constructor, be sure to keep in sync
-		const baseUrl = model.startsWith("codestral-")
-			? this.options.mistralCodestralUrl || "https://codestral.mistral.ai"
-			: "https://api.mistral.ai"
-
-		const endpoint = new URL("v1/fim/completions", baseUrl)
-
-		const headers: Record<string, string> = {
-			...DEFAULT_HEADERS,
-			"Content-Type": "application/json",
-			Accept: "application/json",
-			Authorization: `Bearer ${this.options.mistralApiKey}`,
-		}
-
 		// temperature: 0.2 is mentioned as a sane example in mistral's docs
 		const temperature = 0.2
 		const requestMaxTokens = 256
 
-		const response = await fetch(endpoint, {
-			method: "POST",
-			body: JSON.stringify({
-				model,
-				prompt: prefix,
-				suffix,
-				max_tokens: Math.min(requestMaxTokens, maxTokens ?? requestMaxTokens),
-				temperature,
-				stream: true,
-			}),
-			headers,
-		})
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			throw new Error(`FIM streaming failed: ${response.status} ${response.statusText} - ${errorText}`)
+		const request = {
+			model,
+			temperature,
+			maxTokens: Math.min(requestMaxTokens, maxTokens ?? requestMaxTokens),
+			stream: true,
+			prompt: prefix,
+			suffix,
 		}
 
-		for await (const data of streamSse(response)) {
-			const content = data.choices?.[0]?.delta?.content
-			if (content) {
+		let response
+		try {
+			response = await this.client.fim.stream(request)
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "streamFim")
+			TelemetryService.instance.captureException(apiError)
+			throw new Error(`Mistral FIM completion error: ${errorMessage}`)
+		}
+
+		for await (const ev of response) {
+			const data = ev.data
+
+			const content = data.choices[0]?.delta.content
+			if (typeof content === "string") {
 				yield content
+			} else if (content !== null && content !== undefined) {
+				for (const chunk of content) {
+					if (chunk.type === "text") {
+						yield chunk.text
+					}
+				}
 			}
 
 			// Call usage callback when available
 			// Note: Mistral FIM API returns usage in the final chunk with prompt_tokens and completion_tokens
 			if (data.usage && onUsage) {
 				onUsage({
-					prompt_tokens: data.usage.prompt_tokens,
-					completion_tokens: data.usage.completion_tokens,
-					total_tokens: data.usage.total_tokens,
+					prompt_tokens: data.usage.promptTokens,
+					completion_tokens: data.usage.completionTokens,
+					total_tokens: data.usage.totalTokens,
 				})
 			}
 		}
