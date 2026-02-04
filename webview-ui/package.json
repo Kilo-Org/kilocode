@@ -56,7 +56,7 @@
 		"lru-cache": "^11.1.0",
 		"lucide-react": "^0.518.0",
 		"mermaid": "^11.4.1",
-		"posthog-js": "^1.227.2",
+		"posthog-js": "^1.337.0",
 		"pretty-bytes": "^7.0.0",
 		"qrcode": "^1.5.4",
 		"react": "^18.3.1",
