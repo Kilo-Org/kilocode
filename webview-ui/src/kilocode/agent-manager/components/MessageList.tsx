@@ -32,6 +32,7 @@ import {
 	User,
 	Clock,
 	Loader,
+	ChevronDown,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -227,7 +228,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 									behavior: "smooth",
 								})
 							}}>
-							<span className="codicon codicon-chevron-down"></span>
+							<ChevronDown size={16} />
 						</button>
 					</StandardTooltip>
 				</div>
