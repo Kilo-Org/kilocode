@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.withLock
  * Result of initializing Kilo services.
  */
 data class KiloServices(
-    val sessionStore: KiloSessionStore,
+    val sessionStore: ChatUiStateManager,
     val appState: KiloAppState
 )
 
@@ -28,7 +28,7 @@ class KiloProjectService(private val project: Project) : Disposable {
     private var serverService: KiloServerService? = null
     private var apiClient: KiloApiClient? = null
     private var eventService: KiloEventService? = null
-    private var _sessionStore: KiloSessionStore? = null
+    private var _sessionStore: ChatUiStateManager? = null
     private var _appState: KiloAppState? = null
 
     private val initMutex = Mutex()
@@ -38,7 +38,7 @@ class KiloProjectService(private val project: Project) : Disposable {
         private set
 
     /** Session data store (sessions, messages, parts, permissions, questions, todos) */
-    val sessionStore: KiloSessionStore?
+    val sessionStore: ChatUiStateManager?
         get() = _sessionStore
 
     /** App-level state (agents, providers, selections, attached files, vcs) */
@@ -82,7 +82,7 @@ class KiloProjectService(private val project: Project) : Disposable {
         eventService!!.connect()
 
         // Create and initialize session store
-        _sessionStore = KiloSessionStore(apiClient!!, eventService!!)
+        _sessionStore = ChatUiStateManager(apiClient!!, eventService!!)
         _sessionStore!!.initialize()
 
         // Create and initialize app state

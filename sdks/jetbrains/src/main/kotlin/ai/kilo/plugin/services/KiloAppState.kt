@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.*
  * - Attached files context
  * - Connection status
  *
- * This is separate from KiloSessionStore which manages session/message data.
+ * This is separate from ChatUiStateManager which manages session/message data.
  */
 class KiloAppState(
     private val apiClient: KiloApiClient,
@@ -92,11 +92,12 @@ class KiloAppState(
 
     private fun subscribeToVcsEvents() {
         scope.launch {
-            eventService.vcsEvents.collect { event ->
+            eventService.events.collect { event ->
                 when (event) {
-                    is KiloEventService.VcsEvent.BranchUpdated -> {
+                    is ServerEvent.VcsBranchUpdated -> {
                         _vcsInfo.value = VcsInfo(branch = event.branch)
                     }
+                    else -> { }
                 }
             }
         }

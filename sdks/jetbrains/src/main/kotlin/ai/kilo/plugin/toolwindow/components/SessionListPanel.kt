@@ -2,7 +2,7 @@ package ai.kilo.plugin.toolwindow.components
 
 import ai.kilo.plugin.model.Session
 import ai.kilo.plugin.model.SessionStatus
-import ai.kilo.plugin.services.KiloSessionStore
+import ai.kilo.plugin.services.ChatUiStateManager
 import ai.kilo.plugin.toolwindow.KiloTheme
 import ai.kilo.plugin.toolwindow.KiloSpacing
 import ai.kilo.plugin.toolwindow.KiloSizes
@@ -31,7 +31,7 @@ import javax.swing.KeyStroke
  */
 class SessionListPanel(
     private val project: Project,
-    private val store: KiloSessionStore,
+    private val store: ChatUiStateManager,
     private val onSessionSelected: (() -> Unit)? = null
 ) : JPanel(BorderLayout()) {
 

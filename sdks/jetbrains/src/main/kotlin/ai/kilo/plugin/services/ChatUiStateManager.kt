@@ -24,12 +24,12 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * This is separate from KiloAppState which manages app-level config (agents, providers, etc.)
  */
-class KiloSessionStore(
+class ChatUiStateManager(
     private val apiClient: KiloApiClient,
     private val eventService: KiloEventService
 ) : Disposable {
 
-    private val log = Logger.getInstance(KiloSessionStore::class.java)
+    private val log = Logger.getInstance(ChatUiStateManager::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     // ==================== Internal Sorted State ====================
@@ -127,7 +127,7 @@ class KiloSessionStore(
             _pendingQuestions.value = questions
 
             _storeEvents.emit(StoreEvent.SessionsLoaded(sessionList))
-            log.info("KiloSessionStore initialized: ${sessionList.size} sessions")
+            log.info("ChatUiStateManager initialized: ${sessionList.size} sessions")
         } catch (e: Exception) {
             log.error("Failed to initialize", e)
             _error.value = e.message
@@ -139,191 +139,219 @@ class KiloSessionStore(
     // ==================== Event Subscription ====================
 
     private fun subscribeToEventService() {
-        scope.launch { eventService.sessionEvents.collect { handleSessionEvent(it) } }
-        scope.launch { eventService.messageEvents.collect { handleMessageEvent(it) } }
-        scope.launch { eventService.permissionEvents.collect { handlePermissionEvent(it) } }
-        scope.launch { eventService.questionEvents.collect { handleQuestionEvent(it) } }
-        scope.launch { eventService.todoEvents.collect { handleTodoEvent(it) } }
+        scope.launch {
+            eventService.events.collect { event ->
+                handleEvent(event)
+            }
+        }
     }
 
-    // ==================== Session Event Handlers ====================
+    // ==================== Event Handler ====================
 
-    private suspend fun handleSessionEvent(event: KiloEventService.SessionEvent) {
+    private suspend fun handleEvent(event: ServerEvent) {
         when (event) {
-            is KiloEventService.SessionEvent.Created -> {
-                val index: Int
-                synchronized(sessionsLock) {
-                    val i = sessionsList.binarySearch { it.id.compareTo(event.session.id) }
-                    if (i >= 0) {
-                        sessionsList[i] = event.session
-                        syncSessionsFlow()
-                        _storeEvents.tryEmit(StoreEvent.SessionUpdated(event.session, i))
-                        return
-                    }
-                    index = -(i + 1)
-                    sessionsList.add(index, event.session)
-                }
-                syncSessionsFlow()
-                _storeEvents.emit(StoreEvent.SessionCreated(event.session, index))
-            }
-            is KiloEventService.SessionEvent.Updated -> {
-                val index: Int
-                val wasInserted: Boolean
-                synchronized(sessionsLock) {
-                    val i = sessionsList.binarySearch { it.id.compareTo(event.session.id) }
-                    if (i >= 0) {
-                        sessionsList[i] = event.session
-                        index = i
-                        wasInserted = false
-                    } else {
-                        index = -(i + 1)
-                        sessionsList.add(index, event.session)
-                        wasInserted = true
-                    }
-                }
-                syncSessionsFlow()
-                if (wasInserted) {
-                    _storeEvents.emit(StoreEvent.SessionCreated(event.session, index))
-                } else {
-                    _storeEvents.emit(StoreEvent.SessionUpdated(event.session, index))
-                }
-            }
-            is KiloEventService.SessionEvent.Deleted -> {
-                val index: Int
-                synchronized(sessionsLock) {
-                    val i = sessionsList.binarySearch { it.id.compareTo(event.sessionId) }
-                    if (i < 0) return
-                    sessionsList.removeAt(i)
-                    index = i
-                }
-                messagesMap.remove(event.sessionId)
-                permissionsMap.remove(event.sessionId)
-                questionsMap.remove(event.sessionId)
-                sessionStatusesMap.remove(event.sessionId)
-                todosMap.remove(event.sessionId)
+            // Session events
+            is ServerEvent.SessionCreated -> handleSessionCreated(event.session)
+            is ServerEvent.SessionUpdated -> handleSessionUpdated(event.session)
+            is ServerEvent.SessionDeleted -> handleSessionDeleted(event.sessionId)
+            is ServerEvent.SessionStatus -> handleSessionStatus(event.sessionId, event.status)
+            is ServerEvent.SessionDiff -> handleSessionDiff(event.sessionId, event.diffs)
 
+            // Message events
+            is ServerEvent.MessageUpdated -> handleMessageUpdated(event.message)
+            is ServerEvent.MessageRemoved -> handleMessageRemoved(event.sessionId, event.messageId)
+            is ServerEvent.MessagePartUpdated -> handlePartUpdated(event.sessionId, event.messageId, event.part, event.delta)
+            is ServerEvent.MessagePartRemoved -> handlePartRemoved(event.sessionId, event.messageId, event.partId)
+
+            // Permission events
+            is ServerEvent.PermissionAsked -> handlePermissionAsked(event.request)
+            is ServerEvent.PermissionReplied -> handlePermissionReplied(event.requestId)
+
+            // Question events
+            is ServerEvent.QuestionAsked -> handleQuestionAsked(event.request)
+            is ServerEvent.QuestionReplied -> handleQuestionReplied(event.requestId)
+            is ServerEvent.QuestionRejected -> handleQuestionRejected(event.requestId)
+
+            // Todo events
+            is ServerEvent.TodoUpdated -> handleTodoUpdated(event.sessionId, event.todos)
+
+            // VCS events
+            is ServerEvent.VcsBranchUpdated -> { }
+
+            // Unknown
+            is ServerEvent.Unknown -> { }
+        }
+    }
+
+    // ==================== Session Handlers ====================
+
+    private suspend fun handleSessionCreated(session: Session) {
+        val index: Int
+        synchronized(sessionsLock) {
+            val i = sessionsList.binarySearch { it.id.compareTo(session.id) }
+            if (i >= 0) {
+                sessionsList[i] = session
                 syncSessionsFlow()
-                syncMessagesFlow()
+                _storeEvents.tryEmit(StoreEvent.SessionUpdated(session, i))
+                return
+            }
+            index = -(i + 1)
+            sessionsList.add(index, session)
+        }
+        syncSessionsFlow()
+        _storeEvents.emit(StoreEvent.SessionCreated(session, index))
+    }
+
+    private suspend fun handleSessionUpdated(session: Session) {
+        val index: Int
+        val wasInserted: Boolean
+        synchronized(sessionsLock) {
+            val i = sessionsList.binarySearch { it.id.compareTo(session.id) }
+            if (i >= 0) {
+                sessionsList[i] = session
+                index = i
+                wasInserted = false
+            } else {
+                index = -(i + 1)
+                sessionsList.add(index, session)
+                wasInserted = true
+            }
+        }
+        syncSessionsFlow()
+        if (wasInserted) {
+            _storeEvents.emit(StoreEvent.SessionCreated(session, index))
+        } else {
+            _storeEvents.emit(StoreEvent.SessionUpdated(session, index))
+        }
+    }
+
+    private suspend fun handleSessionDeleted(sessionId: String) {
+        val index: Int
+        synchronized(sessionsLock) {
+            val i = sessionsList.binarySearch { it.id.compareTo(sessionId) }
+            if (i < 0) return
+            sessionsList.removeAt(i)
+            index = i
+        }
+        messagesMap.remove(sessionId)
+        permissionsMap.remove(sessionId)
+        questionsMap.remove(sessionId)
+        sessionStatusesMap.remove(sessionId)
+        todosMap.remove(sessionId)
+
+        syncSessionsFlow()
+        syncMessagesFlow()
+        syncPermissionsFlow()
+        syncQuestionsFlow()
+        _sessionStatuses.value = sessionStatusesMap.toMap()
+        _todos.value = todosMap.toMap()
+
+        if (_currentSessionId.value == sessionId) {
+            _currentSessionId.value = null
+        }
+        _storeEvents.emit(StoreEvent.SessionDeleted(sessionId, index))
+    }
+
+    private suspend fun handleSessionStatus(sessionId: String, status: SessionStatus) {
+        sessionStatusesMap[sessionId] = status
+        _sessionStatuses.value = sessionStatusesMap.toMap()
+        _storeEvents.emit(StoreEvent.SessionStatusChanged(sessionId, status))
+    }
+
+    private suspend fun handleSessionDiff(sessionId: String, diffs: List<FileDiff>) {
+        _storeEvents.emit(StoreEvent.SessionDiffUpdated(sessionId, diffs))
+    }
+
+    // ==================== Message Handlers ====================
+
+    private suspend fun handleMessageUpdated(message: Message) {
+        val sessionId = message.sessionID
+        val list = messagesMap.getOrPut(sessionId) { mutableListOf() }
+        val i = list.binarySearch { it.id.compareTo(message.id) }
+        if (i >= 0) {
+            list[i] = message
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.MessageUpdated(sessionId, message, i))
+        } else {
+            val index = -(i + 1)
+            list.add(index, message)
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.MessageInserted(sessionId, message, index))
+        }
+    }
+
+    private suspend fun handleMessageRemoved(sessionId: String, messageId: String) {
+        val list = messagesMap[sessionId] ?: return
+        val i = list.binarySearch { it.id.compareTo(messageId) }
+        if (i >= 0) {
+            list.removeAt(i)
+            partsMap.remove(messageId)
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.MessageRemoved(sessionId, messageId, i))
+        }
+    }
+
+    private suspend fun handlePartUpdated(sessionId: String, messageId: String, part: Part, delta: String?) {
+        val list = partsMap.getOrPut(messageId) { mutableListOf() }
+        val i = list.binarySearch { it.id.compareTo(part.id) }
+        if (i >= 0) {
+            list[i] = part
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.PartUpdated(sessionId, messageId, part, i, delta))
+        } else {
+            val index = -(i + 1)
+            list.add(index, part)
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.PartInserted(sessionId, messageId, part, index))
+        }
+    }
+
+    private suspend fun handlePartRemoved(sessionId: String, messageId: String, partId: String) {
+        val list = partsMap[messageId] ?: return
+        val i = list.binarySearch { it.id.compareTo(partId) }
+        if (i >= 0) {
+            list.removeAt(i)
+            syncMessagesFlow()
+            _storeEvents.emit(StoreEvent.PartRemoved(sessionId, messageId, partId, i))
+        }
+    }
+
+    // ==================== Permission Handlers ====================
+
+    private suspend fun handlePermissionAsked(request: PermissionRequest) {
+        val list = permissionsMap.getOrPut(request.sessionID) { mutableListOf() }
+        val index = list.addSorted(request) { it.id }
+        syncPermissionsFlow()
+        _storeEvents.emit(StoreEvent.PermissionInserted(request.sessionID, request, index))
+    }
+
+    private suspend fun handlePermissionReplied(requestId: String) {
+        for ((sessionId, list) in permissionsMap) {
+            val i = list.binarySearch { it.id.compareTo(requestId) }
+            if (i >= 0) {
+                list.removeAt(i)
                 syncPermissionsFlow()
-                syncQuestionsFlow()
-                _sessionStatuses.value = sessionStatusesMap.toMap()
-                _todos.value = todosMap.toMap()
-
-                if (_currentSessionId.value == event.sessionId) {
-                    _currentSessionId.value = null
-                }
-                _storeEvents.emit(StoreEvent.SessionDeleted(event.sessionId, index))
-            }
-            is KiloEventService.SessionEvent.Status -> {
-                sessionStatusesMap[event.sessionId] = event.status
-                _sessionStatuses.value = sessionStatusesMap.toMap()
-                _storeEvents.emit(StoreEvent.SessionStatusChanged(event.sessionId, event.status))
-            }
-            is KiloEventService.SessionEvent.Diff -> {
-                _storeEvents.emit(StoreEvent.SessionDiffUpdated(event.sessionId, event.diffs))
+                _storeEvents.emit(StoreEvent.PermissionRemoved(sessionId, requestId, i))
+                break
             }
         }
     }
 
-    // ==================== Message Event Handlers ====================
+    // ==================== Question Handlers ====================
 
-    private suspend fun handleMessageEvent(event: KiloEventService.MessageEvent) {
-        log.info("KiloSessionStore: MessageEvent received: ${event::class.simpleName}")
-        when (event) {
-            is KiloEventService.MessageEvent.Updated -> {
-                val sessionId = event.message.sessionID
-                log.info("KiloSessionStore: Message.Updated - id=${event.message.id}, role=${event.message.role}, sessionId=$sessionId")
-                val list = messagesMap.getOrPut(sessionId) { mutableListOf() }
-                val i = list.binarySearch { it.id.compareTo(event.message.id) }
-                if (i >= 0) {
-                    list[i] = event.message
-                    syncMessagesFlow()
-                    _storeEvents.emit(StoreEvent.MessageUpdated(sessionId, event.message, i))
-                } else {
-                    val index = -(i + 1)
-                    list.add(index, event.message)
-                    syncMessagesFlow()
-                    log.info("KiloSessionStore: Emitting MessageInserted at index $index")
-                    _storeEvents.emit(StoreEvent.MessageInserted(sessionId, event.message, index))
-                }
-            }
-            is KiloEventService.MessageEvent.Removed -> {
-                val list = messagesMap[event.sessionId] ?: return
-                val i = list.binarySearch { it.id.compareTo(event.messageId) }
-                if (i >= 0) {
-                    list.removeAt(i)
-                    partsMap.remove(event.messageId)
-                    syncMessagesFlow()
-                    _storeEvents.emit(StoreEvent.MessageRemoved(event.sessionId, event.messageId, i))
-                }
-            }
-            is KiloEventService.MessageEvent.PartUpdated -> {
-                log.info("KiloSessionStore: Part.Updated - messageId=${event.messageId}, partId=${event.part.id}, type=${event.part.type}")
-                val list = partsMap.getOrPut(event.messageId) { mutableListOf() }
-                val i = list.binarySearch { it.id.compareTo(event.part.id) }
-                if (i >= 0) {
-                    list[i] = event.part
-                    syncMessagesFlow()
-                    _storeEvents.emit(StoreEvent.PartUpdated(event.sessionId, event.messageId, event.part, i, event.delta))
-                } else {
-                    val index = -(i + 1)
-                    list.add(index, event.part)
-                    syncMessagesFlow()
-                    log.info("KiloSessionStore: Emitting PartInserted at index $index")
-                    _storeEvents.emit(StoreEvent.PartInserted(event.sessionId, event.messageId, event.part, index))
-                }
-            }
-            is KiloEventService.MessageEvent.PartRemoved -> {
-                val list = partsMap[event.messageId] ?: return
-                val i = list.binarySearch { it.id.compareTo(event.partId) }
-                if (i >= 0) {
-                    list.removeAt(i)
-                    syncMessagesFlow()
-                    _storeEvents.emit(StoreEvent.PartRemoved(event.sessionId, event.messageId, event.partId, i))
-                }
-            }
-        }
+    private suspend fun handleQuestionAsked(request: QuestionRequest) {
+        val list = questionsMap.getOrPut(request.sessionID) { mutableListOf() }
+        val index = list.addSorted(request) { it.id }
+        syncQuestionsFlow()
+        _storeEvents.emit(StoreEvent.QuestionInserted(request.sessionID, request, index))
     }
 
-    // ==================== Permission/Question Event Handlers ====================
-
-    private suspend fun handlePermissionEvent(event: KiloEventService.PermissionEvent) {
-        when (event) {
-            is KiloEventService.PermissionEvent.Asked -> {
-                val list = permissionsMap.getOrPut(event.request.sessionID) { mutableListOf() }
-                val index = list.addSorted(event.request) { it.id }
-                syncPermissionsFlow()
-                _storeEvents.emit(StoreEvent.PermissionInserted(event.request.sessionID, event.request, index))
-            }
-            is KiloEventService.PermissionEvent.Replied -> {
-                for ((sessionId, list) in permissionsMap) {
-                    val i = list.binarySearch { it.id.compareTo(event.requestId) }
-                    if (i >= 0) {
-                        list.removeAt(i)
-                        syncPermissionsFlow()
-                        _storeEvents.emit(StoreEvent.PermissionRemoved(sessionId, event.requestId, i))
-                        break
-                    }
-                }
-            }
-        }
+    private suspend fun handleQuestionReplied(requestId: String) {
+        removeQuestion(requestId)
     }
 
-    private suspend fun handleQuestionEvent(event: KiloEventService.QuestionEvent) {
-        when (event) {
-            is KiloEventService.QuestionEvent.Asked -> {
-                val list = questionsMap.getOrPut(event.request.sessionID) { mutableListOf() }
-                val index = list.addSorted(event.request) { it.id }
-                syncQuestionsFlow()
-                _storeEvents.emit(StoreEvent.QuestionInserted(event.request.sessionID, event.request, index))
-            }
-            is KiloEventService.QuestionEvent.Replied -> {
-                removeQuestion(event.requestId)
-            }
-            is KiloEventService.QuestionEvent.Rejected -> {
-                removeQuestion(event.requestId)
-            }
-        }
+    private suspend fun handleQuestionRejected(requestId: String) {
+        removeQuestion(requestId)
     }
 
     private suspend fun removeQuestion(requestId: String) {
@@ -338,14 +366,12 @@ class KiloSessionStore(
         }
     }
 
-    private suspend fun handleTodoEvent(event: KiloEventService.TodoEvent) {
-        when (event) {
-            is KiloEventService.TodoEvent.Updated -> {
-                todosMap[event.sessionId] = event.todos
-                _todos.value = todosMap.toMap()
-                _storeEvents.emit(StoreEvent.TodosUpdated(event.sessionId, event.todos))
-            }
-        }
+    // ==================== Todo Handlers ====================
+
+    private suspend fun handleTodoUpdated(sessionId: String, todos: List<Todo>) {
+        todosMap[sessionId] = todos
+        _todos.value = todosMap.toMap()
+        _storeEvents.emit(StoreEvent.TodosUpdated(sessionId, todos))
     }
 
     // ==================== StateFlow Sync ====================
