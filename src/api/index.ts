@@ -51,6 +51,7 @@ import {
 	DeepInfraHandler,
 	MiniMaxHandler,
 	BasetenHandler,
+	CorethinkHandler,
 	OpenAiCompatibleResponsesHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
@@ -268,6 +269,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new MiniMaxHandler(options)
 		case "baseten":
 			return new BasetenHandler(options)
+		case "corethink":
+			return new CorethinkHandler(options)
 		default:
 			apiProvider satisfies undefined
 			return new AnthropicHandler(options)

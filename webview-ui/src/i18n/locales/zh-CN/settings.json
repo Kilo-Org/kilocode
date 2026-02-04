@@ -383,6 +383,8 @@
 		"vertex1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
 		"basetenApiKey": "Baseten API 密钥",
 		"getBasetenApiKey": "获取 Baseten API 密钥",
+		"corethinkApiKey": "Corethink API 密钥",
+		"getCorethinkApiKey": "获取 Corethink API 密钥",
 		"cerebrasApiKey": "Cerebras API 密钥",
 		"getCerebrasApiKey": "获取 Cerebras API 密钥",
 		"chutesApiKey": "Chutes API 密钥",

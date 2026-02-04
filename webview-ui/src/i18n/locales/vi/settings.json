@@ -383,6 +383,8 @@
 		"vertex1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"basetenApiKey": "Khóa API Baseten",
 		"getBasetenApiKey": "Lấy khóa API Baseten",
+		"corethinkApiKey": "Khóa API Corethink",
+		"getCorethinkApiKey": "Lấy khóa API Corethink",
 		"cerebrasApiKey": "Khóa API Cerebras",
 		"getCerebrasApiKey": "Lấy khóa API Cerebras",
 		"chutesApiKey": "Khóa API Chutes",

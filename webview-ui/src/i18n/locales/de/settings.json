@@ -386,6 +386,8 @@
 		"vertex1MContextBetaDescription": "Erweitert das Kontextfenster für Claude Sonnet 4 auf 1 Million Token",
 		"basetenApiKey": "Baseten API-Schlüssel",
 		"getBasetenApiKey": "Baseten API-Schlüssel erhalten",
+		"corethinkApiKey": "Corethink API-Schlüssel",
+		"getCorethinkApiKey": "Corethink API-Schlüssel erhalten",
 		"cerebrasApiKey": "Cerebras API-Schlüssel",
 		"getCerebrasApiKey": "Cerebras API-Schlüssel erhalten",
 		"chutesApiKey": "Chutes API-Schlüssel",
