@@ -298,21 +298,27 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 													{t("kilocode:profile.loading")}
 												</div>
 											) : kiloPassState ? (
-												/* Show current subscription info - new design */
+												/* Show current subscription info - matching backend design */
 												<div className="mb-6">
 													{/* Main subscription card */}
-													<div className="border rounded-lg p-3 bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]">
-														{/* Header with icon, tier info, and status */}
-														<div className="flex items-center justify-between mb-3">
+													<div className="border rounded-xl p-4 bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]">
+														{/* Header with icon, tier info, status badge, and settings */}
+														<div className="flex items-start justify-between mb-4">
 															<div className="flex items-center gap-3">
-																<div className="size-10 rounded-full bg-[var(--vscode-editor-background)] border border-[var(--vscode-widget-border)] flex items-center justify-center">
-																	<span className="codicon codicon-history text-[var(--vscode-foreground)]"></span>
+																<div
+																	className={`size-9 rounded-lg flex items-center justify-center ${
+																		isLightTheme
+																			? "bg-gradient-to-br from-amber-400/30 to-amber-200/10 ring-1 ring-amber-500/25"
+																			: "bg-gradient-to-br from-amber-500/30 to-amber-300/10 ring-1 ring-amber-400/25"
+																	}`}>
+																	<span
+																		className={`codicon codicon-credit-card ${isLightTheme ? "text-amber-600" : "text-amber-300"}`}></span>
 																</div>
-																<div>
+																<div className="leading-none">
 																	<div className="font-semibold text-[var(--vscode-foreground)]">
 																		{t("kilocode:profile.kiloPass.title")}
 																	</div>
-																	<div className="text-sm text-[var(--vscode-descriptionForeground)]">
+																	<div className="text-sm text-[var(--vscode-descriptionForeground)] mt-0.5">
 																		{t(
 																			`kilocode:profile.kiloPass.tiers.${kiloPassState.tier}`,
 																		)}{" "}
@@ -323,296 +329,340 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																	</div>
 																</div>
 															</div>
-															<span
-																className={`text-xs px-3 py-1 rounded-full font-medium border ${
-																	kiloPassState.cancelAtPeriodEnd
-																		? isLightTheme
-																			? "border-amber-600 text-amber-600"
-																			: "border-yellow-600 text-yellow-500"
-																		: kiloPassState.status === "active"
-																			? "border-[var(--vscode-widget-border)] text-[var(--vscode-foreground)]"
-																			: kiloPassState.status === "canceled"
+															<div className="flex items-center gap-2">
+																<span
+																	className={`text-xs px-3 py-1 rounded font-medium border ${
+																		kiloPassState.cancelAtPeriodEnd
+																			? isLightTheme
+																				? "border-amber-500 text-amber-600"
+																				: "border-amber-600/50 text-amber-400"
+																			: kiloPassState.status === "active"
 																				? isLightTheme
-																					? "border-amber-600 text-amber-600"
-																					: "border-yellow-600 text-yellow-500"
-																				: "border-[var(--vscode-widget-border)] text-[var(--vscode-descriptionForeground)]"
-																}`}>
-																{kiloPassState.cancelAtPeriodEnd
-																	? t("kilocode:profile.kiloPass.status.cancelling")
-																	: t(
-																			`kilocode:profile.kiloPass.status.${kiloPassState.status}`,
-																		)}
-															</span>
+																					? "border-gray-400 text-gray-700"
+																					: "border-[var(--vscode-widget-border)] text-[var(--vscode-foreground)]"
+																				: isLightTheme
+																					? "border-amber-500 text-amber-600"
+																					: "border-amber-600/50 text-amber-400"
+																	}`}>
+																	{kiloPassState.cancelAtPeriodEnd
+																		? t(
+																				"kilocode:profile.kiloPass.status.cancelling",
+																			)
+																		: t(
+																				`kilocode:profile.kiloPass.status.${kiloPassState.status}`,
+																			)}
+																</span>
+																<button
+																	onClick={() => {
+																		vscode.postMessage({
+																			type: "openExternal",
+																			url: getAppUrl("/profile"),
+																		})
+																	}}
+																	className={`size-9 rounded border flex items-center justify-center hover:bg-[var(--vscode-toolbar-hoverBackground)] ${
+																		isLightTheme
+																			? "border-gray-300"
+																			: "border-[var(--vscode-widget-border)]"
+																	}`}>
+																	<span className="codicon codicon-settings-gear text-[var(--vscode-descriptionForeground)]"></span>
+																</button>
+															</div>
 														</div>
 
-														{/* Boost Mode Section - always rendered since data comes from backend */}
+														{/* Usage Progress Section */}
 														{(() => {
+															const baseUsd = kiloPassState.currentPeriodBaseCreditsUsd
 															const usageUsd = kiloPassState.currentPeriodUsageUsd
-															const totalUsd = kiloPassState.currentPeriodBaseCreditsUsd
-															const isBonusUnlocked = kiloPassState.isBonusUnlocked
-															const bonusCreditsUsd =
-																kiloPassState.currentPeriodBonusCreditsUsd
-															const remainingToUnlock = totalUsd - usageUsd
+															const bonusUsd =
+																kiloPassState.currentPeriodBonusCreditsUsd ?? 0
+															const totalAvailable = baseUsd + bonusUsd
+															const nonNegativeUsage = Math.max(0, usageUsd)
+
+															// Calculate percentages for the progress bar
+															const pctOfBaseInTotal =
+																totalAvailable > 0
+																	? (baseUsd / totalAvailable) * 100
+																	: 0
+															const usagePctOfTotal =
+																totalAvailable > 0
+																	? Math.min(
+																			(nonNegativeUsage / totalAvailable) * 100,
+																			100,
+																		)
+																	: 0
+															const paidFillPct = Math.min(
+																usagePctOfTotal,
+																pctOfBaseInTotal,
+															)
+															const bonusFillPct = Math.max(
+																0,
+																usagePctOfTotal - pctOfBaseInTotal,
+															)
+
+															// Determine status color
+															const isOverAvailable = usageUsd > totalAvailable
+															const statusColorClass = isOverAvailable
+																? "text-red-400"
+																: kiloPassState.isBonusUnlocked
+																	? isLightTheme
+																		? "text-emerald-600"
+																		: "text-emerald-300"
+																	: isLightTheme
+																		? "text-amber-600"
+																		: "text-amber-300"
 
 															return (
-																<>
-																	{/* Boost Mode Bar (when unlocked) or Monthly Usage Progress (when not unlocked) */}
-																	{isBonusUnlocked ? (
+																<div
+																	className={`rounded-lg border p-3 mb-3 ${
+																		isLightTheme
+																			? "bg-gray-50/50 border-gray-200"
+																			: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
+																	}`}>
+																	{/* Header: This month's usage + amount */}
+																	<div className="flex items-center justify-between mb-2 text-sm">
+																		<span className="text-[var(--vscode-descriptionForeground)]">
+																			{t(
+																				"kilocode:profile.kiloPass.boost.monthlyUsage",
+																			)}
+																		</span>
+																		<span
+																			className={`font-mono font-semibold ${statusColorClass}`}>
+																			${nonNegativeUsage.toFixed(2)} / $
+																			{totalAvailable.toFixed(2)}
+																		</span>
+																	</div>
+
+																	{/* Two-tone progress bar */}
+																	<div className="space-y-2">
 																		<div
-																			className={`mb-2 relative rounded-lg border overflow-hidden py-2 px-4 flex items-center justify-center gap-2 ${
+																			className={`relative h-3 rounded-full overflow-visible ${
 																				isLightTheme
-																					? "border-teal-500 bg-gradient-to-r from-teal-50 via-violet-50 to-teal-50"
-																					: "border-[var(--vscode-widget-border)] bg-gradient-to-r from-emerald-500/10 via-violet-500/10 to-emerald-500/10"
+																					? "bg-gray-200/50"
+																					: "bg-[var(--vscode-widget-border)]/30"
 																			}`}>
-																			{/* Animated gradient background */}
+																			{/* Background segments showing paid vs bonus sections */}
 																			<div
-																				className={`pointer-events-none absolute -inset-1/2 opacity-60 blur-2xl animate-[spin_18s_linear_infinite] ${
-																					isLightTheme
-																						? ""
-																						: "mix-blend-screen"
-																				}`}
+																				className="absolute inset-y-0 left-0 opacity-30"
 																				style={{
-																					background:
-																						"conic-gradient(from 90deg at 50% 50%, rgba(16,185,129,0.22), rgba(168,85,247,0.22), rgba(16,185,129,0.22))",
+																					width: `${pctOfBaseInTotal}%`,
+																					background: isLightTheme
+																						? "rgba(245,158,11,0.3)"
+																						: "rgba(245,158,11,0.20)",
 																				}}
 																			/>
-																			<span className="relative flex items-center justify-center size-4">
-																				<span className="absolute inset-0 rounded-full bg-teal-400/30 opacity-60 animate-ping" />
-																				<span
-																					className={`codicon codicon-zap relative animate-pulse ${
-																						isLightTheme
-																							? "text-teal-600"
-																							: "text-emerald-400"
-																					}`}></span>
-																			</span>
-																			{isLightTheme ? (
-																				<span className="relative font-bold text-sm text-teal-700">
-																					{t(
-																						"kilocode:profile.kiloPass.boost.mode",
-																					)}
-																				</span>
-																			) : (
-																				<span className="relative font-bold text-sm bg-gradient-to-r from-emerald-400 via-violet-300 to-emerald-400 bg-clip-text text-transparent">
-																					{t(
-																						"kilocode:profile.kiloPass.boost.mode",
-																					)}
-																				</span>
-																			)}
-																		</div>
-																	) : (
-																		<div className="mb-2">
-																			<div className="flex justify-between items-center mb-1">
-																				<span className="text-sm text-[var(--vscode-foreground)]">
-																					{t(
-																						"kilocode:profile.kiloPass.boost.monthlyUsage",
-																					)}
-																				</span>
-																				<span
-																					className={`text-sm ${isLightTheme ? "text-orange-600 font-medium" : "text-yellow-500 font-medium"}`}>
-																					${usageUsd.toFixed(2)} / $
-																					{totalUsd.toFixed(2)}
-																				</span>
-																			</div>
-																			<div className="h-2 bg-[var(--vscode-editor-background)] rounded-full overflow-hidden border border-[var(--vscode-widget-border)]">
+																			<div
+																				className="absolute inset-y-0 opacity-30"
+																				style={{
+																					left: `${pctOfBaseInTotal}%`,
+																					width: `${100 - pctOfBaseInTotal}%`,
+																					background: isLightTheme
+																						? "rgba(16,185,129,0.3)"
+																						: "rgba(16,185,129,0.20)",
+																				}}
+																			/>
+
+																			{/* Filled paid portion */}
+																			<div
+																				className={`absolute inset-y-0 left-0 rounded-l-full transition-all duration-300 ${
+																					isLightTheme
+																						? "bg-gradient-to-r from-amber-500 to-amber-400"
+																						: "bg-gradient-to-r from-amber-500 to-amber-300"
+																				}`}
+																				style={{ width: `${paidFillPct}%` }}
+																			/>
+
+																			{/* Filled bonus portion */}
+																			{bonusFillPct > 0 && (
 																				<div
-																					className={`h-full rounded-full transition-all duration-300 ${isLightTheme ? "bg-orange-500" : "bg-yellow-500"}`}
+																					className={`absolute inset-y-0 rounded-r-full transition-all duration-300 ${
+																						isLightTheme
+																							? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+																							: "bg-gradient-to-r from-emerald-500 to-emerald-300"
+																					}`}
 																					style={{
-																						width: `${Math.min((usageUsd / totalUsd) * 100, 100)}%`,
+																						left: `${pctOfBaseInTotal}%`,
+																						width: `${bonusFillPct}%`,
 																					}}
 																				/>
-																			</div>
-																		</div>
-																	)}
-
-																	{/* Boost Status Card */}
-																	<div
-																		className={`rounded-lg p-2.5 mb-2 border ${
-																			isBonusUnlocked
-																				? isLightTheme
-																					? "bg-teal-50 border-teal-500"
-																					: "bg-emerald-950/30 border-emerald-700"
-																				: isLightTheme
-																					? "bg-teal-50/30 border-teal-400 border-dashed"
-																					: "bg-emerald-950/20 border-emerald-800/50 border-dashed"
-																		}`}>
-																		<div className="flex items-center justify-between">
-																			<div className="flex items-center gap-2">
-																				<div
-																					className={`size-8 rounded-lg flex items-center justify-center ${
-																						isBonusUnlocked
-																							? isLightTheme
-																								? "bg-teal-600"
-																								: "bg-emerald-600"
-																							: isLightTheme
-																								? "bg-teal-100"
-																								: "bg-emerald-900/50"
-																					}`}>
-																					{isBonusUnlocked ? (
-																						<span className="codicon codicon-zap text-white"></span>
-																					) : (
-																						<span
-																							className={`codicon codicon-lock ${isLightTheme ? "text-teal-600" : "text-emerald-500"}`}></span>
-																					)}
-																				</div>
-																				<span className="text-[var(--vscode-foreground)] text-sm">
-																					{isBonusUnlocked ? (
-																						t(
-																							"kilocode:profile.kiloPass.boost.unlocked",
-																						)
-																					) : (
-																						<Trans
-																							i18nKey="kilocode:profile.kiloPass.boost.useToUnlock"
-																							values={{
-																								amount: remainingToUnlock.toFixed(
-																									2,
-																								),
-																							}}
-																							components={{
-																								amount: (
-																									<span
-																										className={
-																											isLightTheme
-																												? "text-teal-600 font-medium"
-																												: "text-emerald-400 font-medium"
-																										}
-																									/>
-																								),
-																							}}
-																						/>
-																					)}
-																				</span>
-																			</div>
-																			{/* Show usage/total + bonus when unlocked, just bonus when not */}
-																			{isBonusUnlocked ? (
-																				<div className="flex items-center gap-2">
-																					<span
-																						className={
-																							isLightTheme
-																								? "text-orange-600 font-medium"
-																								: "text-yellow-500 font-medium"
-																						}>
-																						${totalUsd.toFixed(2)} / $
-																						{totalUsd.toFixed(2)}
-																					</span>
-																					{bonusCreditsUsd != null && (
-																						<span className="text-[var(--vscode-descriptionForeground)] font-medium">
-																							+$
-																							{bonusCreditsUsd.toFixed(2)}
-																						</span>
-																					)}
-																				</div>
-																			) : (
-																				bonusCreditsUsd != null && (
-																					<span className="text-[var(--vscode-descriptionForeground)] font-mono font-medium">
-																						${bonusCreditsUsd.toFixed(2)}
-																					</span>
-																				)
 																			)}
+
+																			{/* Divider tick mark */}
+																			<div
+																				className={`absolute top-full mt-0.5 h-1.5 w-0.5 rounded ${
+																					isLightTheme
+																						? "bg-gray-400"
+																						: "bg-white/40"
+																				}`}
+																				style={{
+																					left: `calc(${pctOfBaseInTotal}% - 1px)`,
+																				}}
+																			/>
+																		</div>
+
+																		{/* Labels below bar */}
+																		<div className="relative h-4">
+																			<span
+																				className={`absolute -translate-x-1/2 font-mono text-xs font-semibold ${
+																					isLightTheme
+																						? "text-amber-600"
+																						: "text-amber-300"
+																				}`}
+																				style={{
+																					left: `${pctOfBaseInTotal}%`,
+																				}}>
+																				${baseUsd.toFixed(2)}
+																			</span>
+																			<span
+																				className={`absolute right-0 font-mono text-xs font-semibold ${
+																					isLightTheme
+																						? "text-emerald-600"
+																						: "text-emerald-300"
+																				}`}>
+																				${bonusUsd.toFixed(2)}
+																			</span>
+																		</div>
+
+																		{/* Legend */}
+																		<div className="flex items-center justify-between text-xs text-[var(--vscode-descriptionForeground)]">
+																			<div className="flex items-center gap-2">
+																				<span
+																					className={`h-2 w-2 rounded-sm ${
+																						isLightTheme
+																							? "bg-amber-500"
+																							: "bg-amber-400/80"
+																					}`}
+																				/>
+																				{t(
+																					"kilocode:profile.kiloPass.legend.paid",
+																				)}
+																			</div>
+																			<div className="flex items-center gap-2">
+																				<span
+																					className={`h-2 w-2 rounded-sm ${
+																						isLightTheme
+																							? "bg-emerald-500"
+																							: "bg-emerald-400/80"
+																					}`}
+																				/>
+																				{t(
+																					"kilocode:profile.kiloPass.legend.freeBonus",
+																				)}
+																			</div>
 																		</div>
 																	</div>
-																</>
+																</div>
 															)
 														})()}
 
-														{/* Streak and Next Boost */}
-														{kiloPassState.currentStreakMonths > 0 && (
-															<div className="flex items-center justify-between py-2 border-t border-[var(--vscode-widget-border)]">
-																<div className="flex items-center gap-2">
-																	<span>🔥</span>
-																	<span className="text-[var(--vscode-foreground)] font-medium">
-																		{kiloPassState.currentStreakMonths === 1
-																			? t("kilocode:profile.kiloPass.streak", {
-																					count: kiloPassState.currentStreakMonths,
-																				})
-																			: t(
-																					"kilocode:profile.kiloPass.streakPlural",
-																					{
-																						count: kiloPassState.currentStreakMonths,
-																					},
-																				)}
-																	</span>
-																</div>
-																{!kiloPassState.cancelAtPeriodEnd &&
-																	kiloPassState.nextBonusCreditsUsd && (
-																		<div className="flex items-center gap-1 text-sm">
-																			<span className="text-[var(--vscode-descriptionForeground)]">
-																				{t(
-																					"kilocode:profile.kiloPass.boost.nextBoost",
-																				)}
-																			</span>
-																			<span
-																				className={
-																					isLightTheme
-																						? "text-orange-600 font-medium"
-																						: "text-yellow-500 font-medium"
-																				}>
-																				$
-																				{kiloPassState.nextBonusCreditsUsd.toFixed(
-																					2,
-																				)}
-																			</span>
-																		</div>
-																	)}
-															</div>
-														)}
-
-														{/* Refill Date / Pass active until */}
-														{kiloPassState.nextBillingAt && (
-															<div className="flex items-center justify-between py-2 border-t border-[var(--vscode-widget-border)]">
-																<div className="flex items-center gap-2">
-																	<span className="codicon codicon-sync text-[var(--vscode-descriptionForeground)]"></span>
-																	<span className="text-[var(--vscode-descriptionForeground)]">
-																		{kiloPassState.cancelAtPeriodEnd
-																			? t(
-																					"kilocode:profile.kiloPass.passActiveUntil",
+														{/* Renewal / Active Until Row */}
+														{(kiloPassState.refillAt || kiloPassState.nextBillingAt) && (
+															<div
+																className={`rounded-lg border px-3 py-2 mb-3 ${
+																	isLightTheme
+																		? "bg-gray-50/50 border-gray-200"
+																		: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
+																}`}>
+																<div className="flex items-center justify-between text-sm">
+																	<div className="flex items-start gap-2">
+																		<span
+																			className={`codicon codicon-calendar mt-0.5 ${
+																				isLightTheme
+																					? "text-gray-400"
+																					: "text-white/40"
+																			}`}></span>
+																		<div className="text-[var(--vscode-descriptionForeground)]">
+																			{kiloPassState.cancelAtPeriodEnd ? (
+																				t(
+																					"kilocode:profile.kiloPass.activeUntilLabel",
 																				)
-																			: (() => {
-																					const refillDate = new Date(
-																						kiloPassState.nextBillingAt!,
-																					)
-																					const now = new Date()
-																					const diffTime =
-																						refillDate.getTime() -
-																						now.getTime()
-																					const diffDays = Math.ceil(
-																						diffTime /
-																							(1000 * 60 * 60 * 24),
-																					)
-																					return t(
-																						"kilocode:profile.kiloPass.refills",
-																						{ days: diffDays },
-																					)
-																				})()}
+																			) : (
+																				<>
+																					{(() => {
+																						const refillDate = new Date(
+																							kiloPassState.refillAt ||
+																								kiloPassState.nextBillingAt!,
+																						)
+																						const now = new Date()
+																						const diffDays = Math.ceil(
+																							(refillDate.getTime() -
+																								now.getTime()) /
+																								(1000 * 60 * 60 * 24),
+																						)
+																						const baseUsd =
+																							kiloPassState.currentPeriodBaseCreditsUsd
+																						const bonusUsd =
+																							kiloPassState.currentPeriodBonusCreditsUsd ??
+																							0
+
+																						return (
+																							<Trans
+																								i18nKey="kilocode:profile.kiloPass.renewsWithCredits"
+																								values={{
+																									days: diffDays,
+																									paid: baseUsd.toFixed(
+																										2,
+																									),
+																									bonus: bonusUsd.toFixed(
+																										2,
+																									),
+																								}}
+																								components={{
+																									paid: (
+																										<span
+																											className={
+																												isLightTheme
+																													? "font-mono font-semibold text-amber-600"
+																													: "font-mono font-semibold text-amber-300"
+																											}
+																										/>
+																									),
+																									bonus: (
+																										<span
+																											className={
+																												isLightTheme
+																													? "font-mono font-semibold text-emerald-600"
+																													: "font-mono font-semibold text-emerald-300"
+																											}
+																										/>
+																									),
+																								}}
+																							/>
+																						)
+																					})()}
+																				</>
+																			)}
+																		</div>
+																	</div>
+																	<span className="text-[var(--vscode-descriptionForeground)]">
+																		{new Date(
+																			kiloPassState.refillAt ||
+																				kiloPassState.nextBillingAt!,
+																		).toLocaleDateString("en-US", {
+																			month: "short",
+																			day: "numeric",
+																			year: "numeric",
+																		})}
 																	</span>
 																</div>
-																<span className="text-[var(--vscode-foreground)]">
-																	{new Date(
-																		kiloPassState.nextBillingAt,
-																	).toLocaleDateString("en-US", {
-																		month: "short",
-																		day: "numeric",
-																		year: "numeric",
-																	})}
-																</span>
 															</div>
 														)}
 
-														{/* Credits Note */}
-														<div className="mt-2 pt-2 border-t border-[var(--vscode-widget-border)]">
-															<p className="text-xs text-[var(--vscode-descriptionForeground)]">
-																{t("kilocode:profile.kiloPass.creditsNote")}
-															</p>
-														</div>
-
-														{/* Manage Subscription Button */}
-														<div className="mt-2">
-															<VSCodeButtonLink
-																href={getAppUrl("/profile")}
-																appearance="secondary"
-																className="w-full">
-																<span className="codicon codicon-link-external mr-2"></span>
-																{t("kilocode:profile.kiloPass.manage")}
-															</VSCodeButtonLink>
+														{/* Bottom clarification text */}
+														<div className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
+															<Trans
+																i18nKey="kilocode:profile.kiloPass.creditsExplanation"
+																values={{
+																	expiryDate: kiloPassState.refillAt
+																		? new Date(
+																				kiloPassState.refillAt,
+																			).toLocaleDateString("en-US", {
+																				month: "short",
+																				day: "numeric",
+																				year: "numeric",
+																			})
+																		: "",
+																}}
+															/>
 														</div>
 													</div>
 												</div>

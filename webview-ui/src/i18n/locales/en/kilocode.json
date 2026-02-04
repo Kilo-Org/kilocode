@@ -217,10 +217,15 @@
 			"subscriptionNote": "Pass credits never expire. Boost credits unlock after consuming a month of pass credits and expire at the end of each monthly cycle.",
 			"refills": "Refills in {{days}} days",
 			"passActiveUntil": "Pass active until",
-			"creditsNote": "Pass credits never expire. Unused boost credits expire on refill."
-		},
-		"detailedUsage": "Detailed Usage",
-		"createOrganization": "Create an Organization to Track Detailed Usage"
+			"creditsNote": "Pass credits never expire. Unused boost credits expire on refill.",
+			"legend": {
+				"paid": "Paid",
+				"freeBonus": "Free Bonus"
+			},
+			"activeUntilLabel": "Pass active until",
+			"renewsWithCredits": "Renews in {{days}} days: adds <paid>${{paid}}</paid> paid + <bonus>${{bonus}}</bonus> free bonus credits",
+			"creditsExplanation": "Paid credits never expire. Unused free bonus credits expire on {{expiryDate}}."
+		}
 	},
 	"docs": "Docs",
 	"rules": {
