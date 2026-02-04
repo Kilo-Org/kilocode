@@ -78,7 +78,6 @@ export class ClaudeCodeHandler implements ApiHandler, SingleCompletionHandler {
 			cacheWriteTokens: 0,
 		}
 
-		let isPaidUsage = true
 		let hasYieldedContent = false
 		let hasYieldedUsage = false
 
@@ -92,9 +91,9 @@ export class ClaudeCodeHandler implements ApiHandler, SingleCompletionHandler {
 				continue
 			}
 
+			// Skip init messages - we don't need apiKeySource for cost display
+			// Claude Code CLI provides total_cost_usd regardless of subscription status
 			if (chunk.type === "system" && chunk.subtype === "init") {
-				// Based on tests, subscription usage sets the `apiKeySource` to "none"
-				isPaidUsage = chunk.apiKeySource !== "none"
 				continue
 			}
 
@@ -190,7 +189,9 @@ export class ClaudeCodeHandler implements ApiHandler, SingleCompletionHandler {
 			}
 
 			if (chunk.type === "result" && "result" in chunk) {
-				usage.totalCost = isPaidUsage ? chunk.total_cost_usd : 0
+				// Always show the actual cost from CLI, even for subscription users
+				// This provides informational value about usage
+				usage.totalCost = chunk.total_cost_usd ?? 0
 				yield usage
 				hasYieldedUsage = true
 			}
