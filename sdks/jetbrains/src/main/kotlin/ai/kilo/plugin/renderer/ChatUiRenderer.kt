@@ -1,8 +1,8 @@
-package ai.kilo.plugin.ui.components.chat
+package ai.kilo.plugin.renderer
 
 import ai.kilo.plugin.model.*
-import ai.kilo.plugin.services.ChatUiStateManager
-import ai.kilo.plugin.services.MessageChange
+import ai.kilo.plugin.store.ChatUiStateManager
+import ai.kilo.plugin.store.MessageChange
 import ai.kilo.plugin.store.StoreEvent
 import ai.kilo.plugin.ui.KiloSpacing
 import ai.kilo.plugin.ui.KiloTheme

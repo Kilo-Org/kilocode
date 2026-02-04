@@ -1,6 +1,4 @@
-package ai.kilo.plugin.services
-
-import ai.kilo.plugin.model.ServerEvent
+package ai.kilo.plugin.api
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.*

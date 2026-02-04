@@ -1,7 +1,7 @@
 package ai.kilo.plugin.ui.components
 
 import ai.kilo.plugin.model.Todo
-import ai.kilo.plugin.services.ChatUiStateManager
+import ai.kilo.plugin.store.ChatUiStateManager
 import ai.kilo.plugin.ui.KiloTheme
 import ai.kilo.plugin.ui.KiloSpacing
 import ai.kilo.plugin.ui.KiloTypography

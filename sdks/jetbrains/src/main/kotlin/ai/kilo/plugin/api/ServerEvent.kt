@@ -1,4 +1,6 @@
-package ai.kilo.plugin.model
+package ai.kilo.plugin.api
+
+import ai.kilo.plugin.model.*
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

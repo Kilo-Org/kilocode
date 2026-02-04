@@ -1,5 +1,7 @@
 package ai.kilo.plugin.services
 
+import ai.kilo.plugin.api.KiloEventService
+import ai.kilo.plugin.api.ServerEvent
 import ai.kilo.plugin.model.*
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger

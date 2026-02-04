@@ -2,7 +2,7 @@ package ai.kilo.plugin.ui.components.input
 
 import ai.kilo.plugin.model.SessionStatus
 import ai.kilo.plugin.services.KiloAppState
-import ai.kilo.plugin.services.ChatUiStateManager
+import ai.kilo.plugin.store.ChatUiStateManager
 import ai.kilo.plugin.ui.KiloSpacing
 import ai.kilo.plugin.ui.KiloTheme
 import ai.kilo.plugin.ui.components.FileAutocomplete

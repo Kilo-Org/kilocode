@@ -3,7 +3,7 @@ package ai.kilo.plugin.ui.components.header
 import ai.kilo.plugin.model.Session
 import ai.kilo.plugin.model.SessionStatus
 import ai.kilo.plugin.services.KiloAppState
-import ai.kilo.plugin.services.KiloEventService
+import ai.kilo.plugin.api.KiloEventService
 import ai.kilo.plugin.ui.KiloSpacing
 import ai.kilo.plugin.ui.KiloTheme
 import ai.kilo.plugin.ui.KiloTypography
