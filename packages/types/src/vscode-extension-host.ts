@@ -639,6 +639,7 @@ export type ExtensionState = Pick<
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
 	hasOpenedModeSelector: boolean
+	hasCompletedOnboarding?: boolean // kilocode_change: Track if user has completed onboarding flow
 	openRouterImageApiKey?: string
 	kiloCodeImageApiKey?: string
 	openRouterUseMiddleOutTransform?: boolean
@@ -843,6 +844,7 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "toggleApiConfigPin"
 		| "hasOpenedModeSelector"
+		| "hasCompletedOnboarding" // kilocode_change: Mark onboarding as completed
 		| "clearCloudAuthSkipModel"
 		| "cloudButtonClicked"
 		| "rooCloudSignIn"
