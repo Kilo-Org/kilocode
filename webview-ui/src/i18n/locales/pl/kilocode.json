@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Jak chcesz zacząć?",
+		"freeModels": {
+			"title": "Darmowe modele",
+			"description": "Zacznij kodować od razu"
+		},
+		"premiumModels": {
+			"title": "Modele premium",
+			"description": "Zarejestruj się. Nowi użytkownicy otrzymują 5 $ kredytu"
+		},
+		"byok": {
+			"title": "Użyj własnego klucza",
+			"description": "Zaawansowane. Użyj własnego konta lub subskrypcji"
+		}
+	},
 	"welcome": {
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
