@@ -623,6 +623,75 @@ describe("ProviderTransform.message - anthropic empty content filtering", () => 
   })
 })
 
+describe("ProviderTransform.message - OpenRouter/Kilo Gateway thinking stripping", () => {
+  const claudeViaGateway = {
+    id: "openrouter/anthropic/claude-3-5-sonnet",
+    providerID: "openrouter",
+    api: {
+      id: "anthropic/claude-3-5-sonnet",
+      url: "https://openrouter.ai",
+      npm: "@kilocode/kilo-gateway",
+    },
+    name: "Claude 3.5 Sonnet (Gateway)",
+    capabilities: {
+      temperature: true,
+      reasoning: true,
+      attachment: true,
+      toolcall: true,
+      input: { text: true, audio: false, image: true, video: false, pdf: true },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: {
+      input: 0,
+      output: 0,
+      cache: { read: 0, write: 0 },
+    },
+    limit: {
+      context: 200000,
+      output: 8192,
+    },
+    status: "active",
+    options: {},
+    headers: {},
+  } as any
+
+  test("drops messages that become empty after stripping thinking/reasoning", () => {
+    const msgs = [
+      { role: "user", content: "Hello" },
+      {
+        role: "assistant",
+        content: [{ type: "thinking", text: "..." }, { type: "reasoning", text: "..." }, { type: "redacted_thinking" }],
+      },
+      { role: "user", content: "World" },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, claudeViaGateway, {})
+
+    expect(result).toHaveLength(2)
+    expect(result[0].content).toBe("Hello")
+    expect(result[1].content).toBe("World")
+  })
+
+  test("keeps messages that still contain supported parts after stripping", () => {
+    const msgs = [
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", text: "..." },
+          { type: "text", text: "Answer" },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, claudeViaGateway, {})
+
+    expect(result).toHaveLength(1)
+    expect(result[0].content).toHaveLength(1)
+    expect(result[0].content[0]).toEqual({ type: "text", text: "Answer" })
+  })
+})
+
 describe("ProviderTransform.message - strip openai metadata when store=false", () => {
   const openaiModel = {
     id: "openai/gpt-5",

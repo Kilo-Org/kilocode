@@ -285,7 +285,7 @@ export namespace ProviderTransform {
         return result
       }
 
-      msgs = msgs.map((msg): ModelMessage => {
+      msgs = msgs.flatMap((msg): ModelMessage[] => {
         // Handle string content (just strip metadata)
         if (!Array.isArray(msg.content)) {
           const result = { ...msg, providerOptions: stripReasoningData(msg.providerOptions) }
@@ -294,7 +294,7 @@ export namespace ProviderTransform {
               (msg as any).experimental_providerMetadata,
             )
           }
-          return result
+          return [result]
         }
         // Filter out reasoning parts from content and strip metadata from remaining parts
         const filtered = msg.content
@@ -307,6 +307,10 @@ export namespace ProviderTransform {
             providerMetadata: stripReasoningData(part.providerMetadata),
             experimental_providerMetadata: stripReasoningData(part.experimental_providerMetadata),
           }))
+
+        // Providers may reject empty array content; drop empty messages.
+        if (filtered.length === 0) return []
+
         // Also strip from message-level options/metadata
         const result = { ...msg, content: filtered, providerOptions: stripReasoningData(msg.providerOptions) }
         if ("experimental_providerMetadata" in msg) {
@@ -314,7 +318,7 @@ export namespace ProviderTransform {
             (msg as any).experimental_providerMetadata,
           )
         }
-        return result as ModelMessage
+        return [result as ModelMessage]
       })
     }
 
