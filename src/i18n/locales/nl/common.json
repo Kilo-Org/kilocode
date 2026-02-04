@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "Niet genoeg berichten om context van {{prevContextTokens}} tokens te comprimeren. Minimaal {{minimumMessageCount}} berichten zijn vereist, maar er zijn slechts {{messageCount}} beschikbaar.",
 		"condensed_recently": "Context is recent gecomprimeerd; deze poging wordt overgeslagen",
 		"condense_handler_invalid": "API-handler voor het comprimeren van context is ongeldig",
-		"condense_context_grew": "Contextgrootte nam toe van {{prevContextTokens}} naar {{newContextTokens}} tijdens comprimeren; deze poging wordt overgeslagen",
+		"condense_api_failed": "Comprimeer API-oproep mislukt: {{message}}",
 		"url_timeout": "De website deed er te lang over om te laden (timeout). Dit kan komen door een trage verbinding, een zware website of tijdelijke onbeschikbaarheid. Je kunt het later opnieuw proberen of controleren of de URL correct is.",
 		"url_not_found": "Het websiteadres kon niet worden gevonden. Controleer of de URL correct is en probeer opnieuw.",
 		"no_internet": "Geen internetverbinding. Controleer je netwerkverbinding en probeer opnieuw.",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Roo provider vereist cloud authenticatie. Log in bij Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API-sleutel bevat ongeldige karakters."
+			"invalidKeyInvalidChars": "API-sleutel bevat ongeldige karakters.",
+			"apiRequestFailed": "API-verzoek mislukt ({{status}})"
 		},
 		"manual_url_empty": "Voer een geldige callback-URL in",
 		"manual_url_no_query": "Ongeldige callback-URL: query-parameters ontbreken",
 		"manual_url_missing_params": "Ongeldige callback-URL: vereiste parameters ontbreken (code en state)",
 		"manual_url_auth_failed": "Handmatige URL-authenticatie mislukt",
-		"manual_url_auth_error": "Authenticatie mislukt"
+		"manual_url_auth_error": "Authenticatie mislukt",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Reactie onderbroken door gebruiker",
-		"responseInterruptedByApiError": "Reactie onderbroken door API-fout"
+		"responseInterruptedByApiError": "Reactie onderbroken door API-fout",
+		"streamTerminatedByProvider": "Provider heeft het verzoek beëindigd"
 	},
 	"storage": {
 		"prompt_custom_path": "Voer een aangepast opslagpad voor gespreksgeschiedenis in, laat leeg voor standaardlocatie",

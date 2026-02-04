@@ -43,6 +43,7 @@ vi.mock("@roo/modes", async () => {
 	return {
 		...actual,
 		getAllModes: () => mockModes,
+		defaultModeSlug: "code", // Export the default mode slug for tests
 	}
 })
 
@@ -225,5 +226,75 @@ describe("ModeSelector", () => {
 
 		const infoIcon = document.querySelector(".codicon-info")
 		expect(infoIcon).toBeInTheDocument()
+	})
+
+	test("falls back to default mode when current mode is not available", async () => {
+		// Set up modes including "code" as the default mode (which getAllModes returns first)
+		mockModes = [
+			{
+				slug: "code",
+				name: "Code",
+				description: "Code mode",
+				roleDefinition: "Role definition",
+				groups: ["read", "edit"],
+			},
+			{
+				slug: "other",
+				name: "Other",
+				description: "Other mode",
+				roleDefinition: "Role definition",
+				groups: ["read"],
+			},
+		]
+
+		const onChange = vi.fn()
+
+		render(
+			<ModeSelector
+				title="Mode Selector"
+				value={"non-existent-mode" as Mode}
+				onChange={onChange}
+				modeShortcutText="Ctrl+M"
+			/>,
+		)
+
+		// The component should automatically call onChange with the fallback mode (code)
+		// via useEffect after render
+		await vi.waitFor(() => {
+			expect(onChange).toHaveBeenCalledWith("code")
+		})
+	})
+
+	test("shows default mode name when current mode is not available", () => {
+		// Set up modes where "code" is available (the default mode)
+		mockModes = [
+			{
+				slug: "code",
+				name: "Code",
+				description: "Code mode",
+				roleDefinition: "Role definition",
+				groups: ["read", "edit"],
+			},
+			{
+				slug: "other",
+				name: "Other",
+				description: "Other mode",
+				roleDefinition: "Role definition",
+				groups: ["read"],
+			},
+		]
+
+		render(
+			<ModeSelector
+				title="Mode Selector"
+				value={"non-existent-mode" as Mode}
+				onChange={vi.fn()}
+				modeShortcutText="Ctrl+M"
+			/>,
+		)
+
+		// Should show the default mode name instead of empty string
+		const trigger = screen.getByTestId("mode-selector-trigger")
+		expect(trigger).toHaveTextContent("Code")
 	})
 })

@@ -46,5 +46,10 @@
 		"mostRelevant": "관련성 높은순"
 	},
 	"viewAllHistory": "모두 보기",
-	"shareSession": "세션 공유"
+	"subtasks_one": "{{count}} 부분작업",
+	"subtasks_other": "{{count}} 부분작업",
+	"subtaskTag": "부분작업",
+	"deleteWithSubtasks": "이는 {{count}} 부분작업도 삭제합니다. 확실하십니까?",
+	"expandSubtasks": "부분작업 확장",
+	"collapseSubtasks": "부분작업 축소"
 }

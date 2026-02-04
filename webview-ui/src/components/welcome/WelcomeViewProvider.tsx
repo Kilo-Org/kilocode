@@ -291,7 +291,7 @@ const WelcomeViewProvider = () => {
 	if (selectedProvider === null) {
 		return (
 			<Tab>
-				<TabContent className="flex flex-col gap-4 p-6 justify-center">
+				<TabContent className="relative flex flex-col gap-4 p-6 justify-center">
 					<RooHero />
 					<h2 className="mt-0 mb-0 text-xl">{t("welcome:landing.greeting")}</h2>
 
@@ -311,6 +311,14 @@ const WelcomeViewProvider = () => {
 						<VSCodeLink onClick={handleNoAccount} className="cursor-pointer">
 							{t("welcome:landing.noAccount")}
 						</VSCodeLink>
+					</div>
+
+					<div className="absolute bottom-6 left-6">
+						<button
+							onClick={() => vscode.postMessage({ type: "importSettings" })}
+							className="cursor-pointer bg-transparent border-none p-0 text-vscode-foreground hover:underline">
+							{t("welcome:importSettings")}
+						</button>
 					</div>
 				</TabContent>
 			</Tab>
@@ -336,7 +344,7 @@ const WelcomeViewProvider = () => {
 								(e.target as HTMLInputElement)) as HTMLInputElement
 							setSelectedProvider(target.value as ProviderOption)
 						}}>
-						{/* Roo Code Cloud Provider Option */}
+						{/* Roo Code Router Option */}
 						<VSCodeRadio value="roo" className="flex items-start gap-2">
 							<div className="flex-1 space-y-1 cursor-pointer">
 								<p className="text-lg font-semibold block -mt-1">

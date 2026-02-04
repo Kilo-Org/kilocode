@@ -1,4 +1,5 @@
 {
+	"back": "Görev görünümüne dön",
 	"common": {
 		"save": "Kaydet",
 		"done": "Tamamlandı",
@@ -7,6 +8,10 @@
 		"select": "Seç",
 		"add": "Başlık Ekle",
 		"remove": "Kaldır"
+	},
+	"search": {
+		"placeholder": "Ayarları ara...",
+		"noResults": "Ayar bulunamadı"
 	},
 	"header": {
 		"title": "Ayarlar",
@@ -24,6 +29,7 @@
 		"providers": "Sağlayıcılar",
 		"modes": "Modlar",
 		"mcp": "MCP Sunucuları",
+		"worktrees": "Worktrees",
 		"autoApprove": "Oto-Onay",
 		"browser": "Bilgisayar Erişimi",
 		"checkpoints": "Kontrol Noktaları",
@@ -36,9 +42,8 @@
 		"ui": "UI",
 		"experimental": "Deneysel",
 		"language": "Dil",
-		"about": "Kilo Code Hakkında",
-		"ghost": "Ghost",
-		"autoPurge": "Otomatik Temizlik"
+		"about": "Roo Code Hakkında",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -58,10 +63,46 @@
 		},
 		"community": "İpuçları mı istiyorsunuz yoksa sadece diğer Kilo Code kullanıcılarıyla takılmak mı istiyorsunuz? <redditLink>reddit.com/r/kilocode</redditLink> veya <discordLink>kilo.ai/discord</discordLink>'a katılın",
 		"contactAndCommunity": "İletişim ve Topluluk",
-		"manageSettings": "Ayarları Yönet"
+		"manageSettings": "Ayarları Yönet",
+		"debugMode": {
+			"label": "Debug modunu etkinleştir",
+			"description": "Görev başlığında API konuşma geçmişini ve UI mesajlarını geçici dosyalarda biçimlendirilmiş JSON olarak görüntülemek için ek düğmeler göstermek üzere debug modunu etkinleştirin."
+		}
 	},
 	"slashCommands": {
-		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
+		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>",
+		"workspaceCommands": "Çalışma Alanı Komutları",
+		"globalCommands": "Genel Komutlar",
+		"noWorkspaceCommands": "Bu projede henüz komut yok.",
+		"noGlobalCommands": "Henüz genel komut yok.",
+		"addCommand": "Eğik Çizgi Komutu Ekle",
+		"editCommand": "Komutu düzenle",
+		"deleteCommand": "Komutu sil",
+		"deleteDialog": {
+			"title": "Komutu sil",
+			"description": "\"{{name}}\" komutunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+			"confirm": "Sil",
+			"cancel": "İptal"
+		},
+		"createDialog": {
+			"title": "Yeni Eğik Çizgi Komutu Oluştur",
+			"nameLabel": "Ad",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Yalnızca küçük harfler, sayılar, tireleme ve alt çizgi",
+			"sourceLabel": "Konum",
+			"create": "Oluştur",
+			"cancel": "İptal"
+		},
+		"source": {
+			"global": "Genel (tüm çalışma alanlarında mevcut)",
+			"project": "Çalışma Alanı"
+		},
+		"validation": {
+			"nameRequired": "Ad gereklidir",
+			"nameTooLong": "Ad en fazla 64 karakter olmalıdır",
+			"nameInvalid": "Ad yalnızca harfleri, sayıları, tirelemeyi ve alt çizgiyi içerebilir"
+		},
+		"footer": "Sık kullanılan komutlara ve iş akışlarına hızlı erişim için eğik çizgi komutlarını kullanın."
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -254,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maksimum İstek",
-			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
 		},
 		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin",
@@ -302,10 +342,40 @@
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Özel temel URL kullan",
 		"useReasoning": "Akıl yürütmeyi etkinleştir",
 		"useHostHeader": "Özel Host başlığı kullan",
-		"useLegacyFormat": "Eski OpenAI API formatını kullan",
 		"customHeaders": "Özel Başlıklar",
 		"headerName": "Başlık adı",
 		"headerValue": "Başlık değeri",
@@ -768,7 +838,6 @@
 				"label": "Maksimum tanı mesajı",
 				"description": "Dosya başına dahil edilecek maksimum tanı mesajı sayısı. Bu sınır hem otomatik dahil etme (onay kutusu etkinleştirildiğinde) hem de manuel @problems bahisleri için geçerlidir. Daha yüksek değerler daha fazla bağlam sağlar ancak jeton kullanımını artırır.",
 				"resetTooltip": "Varsayılan değere sıfırla (50)",
-				"unlimited": "Sınırsız tanı mesajları",
 				"unlimitedLabel": "Sınırsız"
 			},
 			"delayAfterWrite": {
@@ -829,6 +898,15 @@
 			"label": "Terminal karakter sınırı",
 			"description": "Çıktı boyutuna katı bir üst sınır uygulayarak bellek sorunlarını önlemek için satır sınırını geçersiz kılar. Aşılırsa, başlangıcı ve sonu tutar ve içeriğin atlandığı yerde Kilo'ya bir yer tutucu gösterir. <0>Daha fazla bilgi edinin</0>"
 		},
+		"outputPreviewSize": {
+			"label": "Komut çıktısı önizleme boyutu",
+			"description": "Roo'nun doğrudan gördüğü komut çıktısı miktarını kontrol eder. Tam çıktı her zaman kaydedilir ve gerektiğinde erişilebilir.",
+			"options": {
+				"small": "Küçük (5KB)",
+				"medium": "Orta (10KB)",
+				"large": "Büyük (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal shell entegrasyon timeout",
 			"description": "Komut çalıştırmadan önce VS Code shell entegrasyonunu bekleme süresi. Shell yavaş başlıyorsa veya 'Shell Integration Unavailable' hatası görüyorsanız artırın. <0>Daha fazla bilgi edinin</0>"
@@ -840,10 +918,6 @@
 		"commandDelay": {
 			"label": "Terminal komut delay",
 			"description": "VS Code terminalin tüm outputu flush edebilmesi için her komuttan sonra kısa pause ekler (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Sadece tail output eksikse kullan; yoksa 0'da bırak. <0>Daha fazla bilgi edinin</0>"
-		},
-		"compressProgressBar": {
-			"label": "İlerleme çubuğu çıktısını sıkıştır",
-			"description": "İlerleme çubukları/spinner'ları daraltır, sadece son durumu tutar (token tasarrufu). <0>Daha fazla bilgi edinin</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell sayaç geçici çözümünü etkinleştir",
@@ -873,14 +947,6 @@
 	"advancedSettings": {
 		"title": "Gelişmiş ayarlar"
 	},
-	"toolProtocol": {
-		"label": "Araç Çağrı Protokolü",
-		"description": "Kilo Code'nun API ile nasıl iletişim kuracağını seçin. Yerel, sağlayıcının işlev çağırma API'sini kullanırken, XML, XML biçimli araç tanımlarını kullanır.",
-		"default": "Varsayılan",
-		"xml": "XML",
-		"native": "Yerel",
-		"currentDefault": "Varsayılan: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "Diff'ler aracılığıyla düzenlemeyi etkinleştir",
@@ -897,10 +963,6 @@
 					"unified": "Birleştirilmiş diff stratejisi, diff'leri uygulamak için birden çok yaklaşım benimser ve en iyi yaklaşımı seçer.",
 					"multiBlock": "Çoklu blok diff stratejisi, tek bir istekte bir dosyadaki birden çok kod bloğunu güncellemenize olanak tanır."
 				}
-			},
-			"matchPrecision": {
-				"label": "Eşleşme hassasiyeti",
-				"description": "Bu kaydırıcı, diff'ler uygulanırken kod bölümlerinin ne kadar hassas bir şekilde eşleşmesi gerektiğini kontrol eder. Daha düşük değerler daha esnek eşleşmeye izin verir ancak yanlış değiştirme riskini artırır. %100'ün altındaki değerleri son derece dikkatli kullanın."
 			}
 		},
 		"todoList": {
@@ -917,10 +979,6 @@
 			"name": "Deneysel içerik ekleme aracını kullan",
 			"description": "Deneysel içerik ekleme aracını etkinleştir, Kilo Code'nun bir diff oluşturma gereği duymadan belirli satır numaralarına içerik eklemesine olanak tanır."
 		},
-		"POWER_STEERING": {
-			"name": "Deneysel \"güç direksiyon\" modunu kullan",
-			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
@@ -932,28 +990,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplace'i Etkinleştir",
 			"description": "Etkinleştirildiğinde, Marketplace'ten MCP'leri ve özel modları yükleyebilirsiniz."
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir。"
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Fast Apply'ı etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları kod değişiklikleri için optimize edilmiş özel modellerle Fast Apply kullanarak düzenleyebilir. Kilo Gateway Provider, OpenRouter veya bir Morph API anahtarı gerektirir.",
-			"apiProvider": "API Sağlayıcı",
-			"apiProviderList": {
-				"current": "Mevcut"
-			},
-			"apiKey": "API anahtarı (isteğe bağlı)",
-			"placeholder": "API anahtarınızı girin (isteğe bağlı)",
-			"modelLabel": "Model Seçimi",
-			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
-			"models": {
-				"auto": "Otomatik (Varsayılan - en uygun olanı seçer)",
-				"morphFast": "Morph v3 Fast (Daha hızlı, düşük maliyet)",
-				"morphLarge": "Morph v3 Large (Daha yetenekli)",
-				"relace": "Relace Apply v3"
-			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",
@@ -991,14 +1027,6 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Model tarafından başlatılan slash komutlarını etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code iş akışlarını yürütmek için slash komutlarınızı çalıştırabilir."
-		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Paralel araç çağrıları",
-			"description": "Etkinleştirildiğinde, yerel protokol tek bir asistan mesaj turunda birden fazla araç yürütebilir."
-		},
-		"SPEECH_TO_TEXT": {
-			"description": "Etkinleştirildiğinde, Kilo Code sesinizi OpenAI'nin Whisper modeli kullanarak metne dönüştürebilir. Kayda başlamak için sohbetteki mikrofon düğmesine tıklayın. FFmpeg'in yüklü olması ve yapılandırılmış bir OpenAI API sağlayıcısı gereklidir.",
-			"name": "Konuşmadan Metne (STT)"
 		},
 		"CUSTOM_TOOLS": {
 			"name": "Özel araçları etkinleştir",
@@ -1054,8 +1082,6 @@
 		"allModels": "Tüm modeller"
 	},
 	"footer": {
-		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilo.ai/discord</discordLink>'a katılmaktan çekinmeyin",
-		"support": "Mali konular için lütfen <supportLink>https://kilo.ai/support</supportLink> adresinden Müşteri Desteği ile iletişime geçin",
 		"telemetry": {
 			"label": "Hata ve kullanım raporlamaya izin ver",
 			"description": "Kullanım verileri ve hata raporları göndererek Kilo Code'u geliştirmeye yardımcı olun. Hiçbir kod, istem veya kişisel bilgi asla gönderilmez. Daha fazla ayrıntı için gizlilik politikamıza bakın."
@@ -1177,5 +1203,58 @@
 			"label": "Mesaj göndermek için {{primaryMod}}+Enter gerekli",
 			"description": "Etkinleştirildiğinde, sadece Enter yerine mesaj göndermek için {{primaryMod}}+Enter'a basmalısınız"
 		}
+	},
+	"skills": {
+		"description": "Ajana bağlamsal talimatlar sağlayan becerileri yönetin. Beceriler, görevlerinizle ilgili olduklarında otomatik olarak uygulanır. <DocsLink>Daha fazla bilgi</DocsLink>",
+		"workspaceSkills": "Çalışma Alanı Becerileri",
+		"globalSkills": "Genel Beceriler",
+		"noWorkspaceSkills": "Bu projede henüz beceri yok.",
+		"noGlobalSkills": "Yapılandırılmış genel beceri yok. Tüm projelerde kullanılabilir ajan yetenekleri eklemek için bir tane oluşturun.",
+		"addSkill": "Beceri Ekle",
+		"editSkill": "Beceriyi düzenle",
+		"deleteSkill": "Beceriyi sil",
+		"configureModes": "Mod Kullanılabilirliği",
+		"modeAny": "Herhangi bir mod",
+		"modeCount": "{{count}} mod",
+		"deleteDialog": {
+			"title": "Beceriyi Sil",
+			"description": "\"{{name}}\" becerisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+			"confirm": "Sil",
+			"cancel": "İptal"
+		},
+		"modeDialog": {
+			"title": "Beceri Modlarını Yapılandır",
+			"description": "Bu beceriyi kullanabilecek modları seçin",
+			"intro": "Bağlamınızı hafif tutmak için, becerileri yalnızca onlara ihtiyaç duyan modlar için kullanılabilir hale getirilmesini öneririz.",
+			"anyMode": "Herhangi bir mod (her yerde mevcut)",
+			"save": "Kaydet",
+			"cancel": "İptal"
+		},
+		"createDialog": {
+			"title": "Yeni Beceri Oluştur",
+			"nameLabel": "Ad",
+			"namePlaceholder": "benim-beceri-adim",
+			"descriptionLabel": "Açıklama",
+			"descriptionPlaceholder": "Bu becerinin ne zaman kullanılması gerektiğini açıklayın...",
+			"sourceLabel": "Konum",
+			"modeLabel": "Mod (isteğe bağlı)",
+			"modePlaceholder": "Herhangi bir mod",
+			"modeHint": "Bu beceriyi belirli bir modla sınırlayın",
+			"modeAny": "Herhangi bir mod",
+			"create": "Oluştur",
+			"cancel": "İptal"
+		},
+		"source": {
+			"global": "Genel (tüm projelerde kullanılabilir)",
+			"project": "Proje (yalnızca bu çalışma alanı)"
+		},
+		"validation": {
+			"nameRequired": "Ad gereklidir",
+			"nameTooLong": "Ad en fazla 64 karakter olmalıdır",
+			"nameInvalid": "Ad 1-64 küçük harf, rakam veya kısa çizgi olmalıdır",
+			"descriptionRequired": "Açıklama gereklidir",
+			"descriptionTooLong": "Açıklama en fazla 1024 karakter olmalıdır"
+		},
+		"footer": "Skill Writer modu ile kendi becerilerinizi oluşturun. <MarketplaceLink>Modes Marketplace</MarketplaceLink>'de mevcut."
 	}
 }

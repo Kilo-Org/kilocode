@@ -1,7 +1,7 @@
-import { RecordNotCreatedError } from "./errors.js"
-import type { InsertToolError } from "../schema.js"
-import { toolErrors } from "../schema.js"
-import { client as db } from "../db.js"
+import { RecordNotCreatedError } from "./errors"
+import type { InsertToolError } from "../schema"
+import { toolErrors } from "../schema"
+import { client as db } from "../db"
 
 export const createToolError = async (args: InsertToolError) => {
 	const records = await db

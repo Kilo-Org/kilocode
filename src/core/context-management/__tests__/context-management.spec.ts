@@ -578,8 +578,8 @@ describe("Context Management", () => {
 			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
 				messages: [
 					{ role: "user", content: "First message" },
-					{ role: "assistant", content: mockSummary, isSummary: true },
-					{ role: "user", content: "Last message" },
+					{ role: "user", content: mockSummary, isSummary: true },
+					{ role: "assistant", content: "Last message" },
 				],
 				summary: mockSummary,
 				cost: mockCost,
@@ -612,17 +612,13 @@ describe("Context Management", () => {
 			})
 
 			// Verify summarizeConversation was called with the right parameters
-			expect(summarizeSpy).toHaveBeenCalledWith(
-				messagesWithSmallContent,
-				mockApiHandler,
-				"System prompt",
+			expect(summarizeSpy).toHaveBeenCalledWith({
+				messages: messagesWithSmallContent,
+				apiHandler: mockApiHandler,
+				systemPrompt: "System prompt",
 				taskId,
-				70001,
-				true,
-				undefined, // customCondensingPrompt
-				undefined, // condensingApiHandler
-				undefined, // useNativeTools
-			)
+				isAutomaticTrigger: true,
+			})
 
 			// Verify the result contains the summary information
 			expect(result).toMatchObject({
@@ -752,8 +748,8 @@ describe("Context Management", () => {
 			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
 				messages: [
 					{ role: "user", content: "First message" },
-					{ role: "assistant", content: mockSummary, isSummary: true },
-					{ role: "user", content: "Last message" },
+					{ role: "user", content: mockSummary, isSummary: true },
+					{ role: "assistant", content: "Last message" },
 				],
 				summary: mockSummary,
 				cost: mockCost,
@@ -788,17 +784,13 @@ describe("Context Management", () => {
 			})
 
 			// Verify summarizeConversation was called with the right parameters
-			expect(summarizeSpy).toHaveBeenCalledWith(
-				messagesWithSmallContent,
-				mockApiHandler,
-				"System prompt",
+			expect(summarizeSpy).toHaveBeenCalledWith({
+				messages: messagesWithSmallContent,
+				apiHandler: mockApiHandler,
+				systemPrompt: "System prompt",
 				taskId,
-				60000,
-				true,
-				undefined, // customCondensingPrompt
-				undefined, // condensingApiHandler
-				undefined, // useNativeTools
-			)
+				isAutomaticTrigger: true,
+			})
 
 			// Verify the result contains the summary information
 			expect(result).toMatchObject({
@@ -857,6 +849,215 @@ describe("Context Management", () => {
 	})
 
 	/**
+	 * Tests for filesReadByRoo being passed to summarizeConversation
+	 */
+	describe("filesReadByRoo parameters", () => {
+		const createModelInfo = (contextWindow: number, maxTokens?: number): ModelInfo => ({
+			contextWindow,
+			supportsPromptCache: true,
+			maxTokens,
+		})
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "First message" },
+			{ role: "assistant", content: "Second message" },
+			{ role: "user", content: "Third message" },
+			{ role: "assistant", content: "Fourth message" },
+			{ role: "user", content: "Fifth message" },
+		]
+
+		it("should pass filesReadByRoo, cwd, and rooIgnoreController to summarizeConversation when provided", async () => {
+			// Mock the summarizeConversation function
+			const mockSummary = "Summary with folded context"
+			const mockCost = 0.05
+			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
+				messages: [
+					{ role: "user", content: "First message" },
+					{ role: "assistant", content: mockSummary, isSummary: true },
+					{ role: "user", content: "Last message" },
+				],
+				summary: mockSummary,
+				cost: mockCost,
+				newContextTokens: 100,
+			}
+
+			const summarizeSpy = vi
+				.spyOn(condenseModule, "summarizeConversation")
+				.mockResolvedValue(mockSummarizeResponse)
+
+			const modelInfo = createModelInfo(100000, 30000)
+			const totalTokens = 70001 // Above threshold
+			const messagesWithSmallContent = [
+				...messages.slice(0, -1),
+				{ ...messages[messages.length - 1], content: "" },
+			]
+
+			const filesReadByRoo = ["src/test.ts", "src/utils.ts"]
+			const cwd = "/test/project"
+			const mockRooIgnoreController = {
+				filterPaths: vi.fn(),
+			} as unknown as import("../../ignore/RooIgnoreController").RooIgnoreController
+
+			const result = await manageContext({
+				messages: messagesWithSmallContent,
+				totalTokens,
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 100,
+				systemPrompt: "System prompt",
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+				filesReadByRoo,
+				cwd,
+				rooIgnoreController: mockRooIgnoreController,
+			})
+
+			// Verify summarizeConversation was called with filesReadByRoo, cwd, and rooIgnoreController
+			expect(summarizeSpy).toHaveBeenCalledWith({
+				messages: messagesWithSmallContent,
+				apiHandler: mockApiHandler,
+				systemPrompt: "System prompt",
+				taskId,
+				isAutomaticTrigger: true,
+				filesReadByRoo,
+				cwd,
+				rooIgnoreController: mockRooIgnoreController,
+			})
+
+			// Verify the result contains the summary information
+			expect(result).toMatchObject({
+				messages: mockSummarizeResponse.messages,
+				summary: mockSummary,
+				cost: mockCost,
+				prevContextTokens: totalTokens,
+			})
+
+			// Clean up
+			summarizeSpy.mockRestore()
+		})
+
+		it("should pass undefined filesReadByRoo parameters when not provided", async () => {
+			// Mock the summarizeConversation function
+			const mockSummary = "Summary without folded context"
+			const mockCost = 0.03
+			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
+				messages: [
+					{ role: "user", content: "First message" },
+					{ role: "assistant", content: mockSummary, isSummary: true },
+					{ role: "user", content: "Last message" },
+				],
+				summary: mockSummary,
+				cost: mockCost,
+				newContextTokens: 80,
+			}
+
+			const summarizeSpy = vi
+				.spyOn(condenseModule, "summarizeConversation")
+				.mockResolvedValue(mockSummarizeResponse)
+
+			const modelInfo = createModelInfo(100000, 30000)
+			const totalTokens = 70001 // Above threshold
+			const messagesWithSmallContent = [
+				...messages.slice(0, -1),
+				{ ...messages[messages.length - 1], content: "" },
+			]
+
+			const result = await manageContext({
+				messages: messagesWithSmallContent,
+				totalTokens,
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 100,
+				systemPrompt: "System prompt",
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+				// filesReadByRoo, cwd, rooIgnoreController are NOT provided
+			})
+
+			// Verify summarizeConversation was called with undefined parameters
+			expect(summarizeSpy).toHaveBeenCalledWith({
+				messages: messagesWithSmallContent,
+				apiHandler: mockApiHandler,
+				systemPrompt: "System prompt",
+				taskId,
+				isAutomaticTrigger: true,
+			})
+
+			// Verify the result
+			expect(result).toMatchObject({
+				summary: mockSummary,
+				cost: mockCost,
+			})
+
+			// Clean up
+			summarizeSpy.mockRestore()
+		})
+
+		it("should pass empty array filesReadByRoo when provided as empty", async () => {
+			// Mock the summarizeConversation function
+			const mockSummary = "Summary with empty file list"
+			const mockCost = 0.04
+			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
+				messages: [
+					{ role: "user", content: "First message" },
+					{ role: "assistant", content: mockSummary, isSummary: true },
+					{ role: "user", content: "Last message" },
+				],
+				summary: mockSummary,
+				cost: mockCost,
+				newContextTokens: 90,
+			}
+
+			const summarizeSpy = vi
+				.spyOn(condenseModule, "summarizeConversation")
+				.mockResolvedValue(mockSummarizeResponse)
+
+			const modelInfo = createModelInfo(100000, 30000)
+			const totalTokens = 70001 // Above threshold
+			const messagesWithSmallContent = [
+				...messages.slice(0, -1),
+				{ ...messages[messages.length - 1], content: "" },
+			]
+
+			const result = await manageContext({
+				messages: messagesWithSmallContent,
+				totalTokens,
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 100,
+				systemPrompt: "System prompt",
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+				filesReadByRoo: [], // Empty array
+				cwd: "/test/project",
+			})
+
+			// Verify summarizeConversation was called with empty array
+			expect(summarizeSpy).toHaveBeenCalledWith({
+				messages: messagesWithSmallContent,
+				apiHandler: mockApiHandler,
+				systemPrompt: "System prompt",
+				taskId,
+				isAutomaticTrigger: true,
+				filesReadByRoo: [],
+				cwd: "/test/project",
+			})
+
+			// Clean up
+			summarizeSpy.mockRestore()
+		})
+	})
+
+	/**
 	 * Tests for profile-specific thresholds functionality
 	 */
 	describe("profile-specific thresholds", () => {
@@ -901,8 +1102,8 @@ describe("Context Management", () => {
 			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
 				messages: [
 					{ role: "user", content: "First message" },
-					{ role: "assistant", content: mockSummary, isSummary: true },
-					{ role: "user", content: "Last message" },
+					{ role: "user", content: mockSummary, isSummary: true },
+					{ role: "assistant", content: "Last message" },
 				],
 				summary: mockSummary,
 				cost: mockCost,
@@ -967,8 +1168,8 @@ describe("Context Management", () => {
 			const mockSummarizeResponse: condenseModule.SummarizeResponse = {
 				messages: [
 					{ role: "user", content: "First message" },
-					{ role: "assistant", content: mockSummary, isSummary: true },
-					{ role: "user", content: "Last message" },
+					{ role: "user", content: mockSummary, isSummary: true },
+					{ role: "assistant", content: "Last message" },
 				],
 				summary: mockSummary,
 				cost: mockCost,

@@ -21,7 +21,6 @@ import { Dirent } from "fs"
 import { isLanguage } from "@roo-code/types"
 
 import type { SystemPromptSettings } from "../types"
-import { getEffectiveProtocol, isNativeProtocol } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
@@ -510,17 +509,13 @@ export async function addCustomInstructions(
 
 	const joinedSections = sections.join("\n\n")
 
-	const effectiveProtocol = getEffectiveProtocol(options.settings?.toolProtocol)
-
 	return joinedSections
 		? `
 ====
 
 USER'S CUSTOM INSTRUCTIONS
 
-The following additional instructions are provided by the user, and should be followed to the best of your ability${
-				isNativeProtocol(effectiveProtocol) ? "." : " without interfering with the TOOL USE guidelines."
-			}
+The following additional instructions are provided by the user, and should be followed to the best of your ability.
 
 ${joinedSections}
 `

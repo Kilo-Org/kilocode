@@ -2,22 +2,20 @@ import { useCallback, useState, useMemo, useEffect } from "react"
 import { useEvent } from "react-use"
 import { Trans } from "react-i18next"
 import { Checkbox } from "vscrui"
-import { VSCodeLink, VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import type { ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings, ExtensionMessage, ModelRecord } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { vscode } from "@src/utils/vscode"
 
 import { inputEventTransform } from "../transforms"
-import { ModelRecord } from "@roo/api"
+import { ModelPicker } from "../ModelPicker"
 
 type LMStudioProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
-	simplifySettings?: boolean
 }
 
 export const LMStudio = ({ apiConfiguration, setApiConfigurationField }: LMStudioProps) => {
@@ -59,46 +57,50 @@ export const LMStudio = ({ apiConfiguration, setApiConfigurationField }: LMStudi
 	}, [])
 
 	// Check if the selected model exists in the fetched models
-	const modelNotAvailable = useMemo(() => {
+	const modelNotAvailableError = useMemo(() => {
 		const selectedModel = apiConfiguration?.lmStudioModelId
-		if (!selectedModel) return false
+		if (!selectedModel) return undefined
 
 		// Check if model exists in local LM Studio models
 		if (Object.keys(lmStudioModels).length > 0 && selectedModel in lmStudioModels) {
-			return false // Model is available locally
+			return undefined // Model is available locally
 		}
 
 		// If we have router models data for LM Studio
 		if (routerModels.data?.lmstudio) {
 			const availableModels = Object.keys(routerModels.data.lmstudio)
 			// Show warning if model is not in the list (regardless of how many models there are)
-			return !availableModels.includes(selectedModel)
+			if (!availableModels.includes(selectedModel)) {
+				return t("settings:validation.modelAvailability", { modelId: selectedModel })
+			}
 		}
 
 		// If neither source has loaded yet, don't show warning
-		return false
-	}, [apiConfiguration?.lmStudioModelId, routerModels.data, lmStudioModels])
+		return undefined
+	}, [apiConfiguration?.lmStudioModelId, routerModels.data, lmStudioModels, t])
 
 	// Check if the draft model exists
-	const draftModelNotAvailable = useMemo(() => {
+	const draftModelNotAvailableError = useMemo(() => {
 		const draftModel = apiConfiguration?.lmStudioDraftModelId
-		if (!draftModel) return false
+		if (!draftModel) return undefined
 
 		// Check if model exists in local LM Studio models
 		if (Object.keys(lmStudioModels).length > 0 && draftModel in lmStudioModels) {
-			return false // Model is available locally
+			return undefined // Model is available locally
 		}
 
 		// If we have router models data for LM Studio
 		if (routerModels.data?.lmstudio) {
 			const availableModels = Object.keys(routerModels.data.lmstudio)
 			// Show warning if model is not in the list (regardless of how many models there are)
-			return !availableModels.includes(draftModel)
+			if (!availableModels.includes(draftModel)) {
+				return t("settings:validation.modelAvailability", { modelId: draftModel })
+			}
 		}
 
 		// If neither source has loaded yet, don't show warning
-		return false
-	}, [apiConfiguration?.lmStudioDraftModelId, routerModels.data, lmStudioModels])
+		return undefined
+	}, [apiConfiguration?.lmStudioDraftModelId, routerModels.data, lmStudioModels, t])
 
 	return (
 		<>
@@ -110,38 +112,17 @@ export const LMStudio = ({ apiConfiguration, setApiConfigurationField }: LMStudi
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.lmStudio.baseUrl")}</label>
 			</VSCodeTextField>
-			<VSCodeTextField
-				value={apiConfiguration?.lmStudioModelId || ""}
-				onInput={handleInputChange("lmStudioModelId")}
-				placeholder={t("settings:placeholders.modelId.lmStudio")}
-				className="w-full">
-				<label className="block font-medium mb-1">{t("settings:providers.lmStudio.modelId")}</label>
-			</VSCodeTextField>
-			{modelNotAvailable && (
-				<div className="flex flex-col gap-2 text-vscode-errorForeground text-sm">
-					<div className="flex flex-row items-center gap-1">
-						<div className="codicon codicon-close" />
-						<div>
-							{t("settings:validation.modelAvailability", { modelId: apiConfiguration?.lmStudioModelId })}
-						</div>
-					</div>
-				</div>
-			)}
-			{Object.keys(lmStudioModels).length > 0 && (
-				<VSCodeRadioGroup
-					value={
-						(apiConfiguration?.lmStudioModelId || "") in lmStudioModels
-							? apiConfiguration?.lmStudioModelId
-							: ""
-					}
-					onChange={handleInputChange("lmStudioModelId")}>
-					{Object.keys(lmStudioModels).map((model) => (
-						<VSCodeRadio key={model} value={model} checked={apiConfiguration?.lmStudioModelId === model}>
-							{model}
-						</VSCodeRadio>
-					))}
-				</VSCodeRadioGroup>
-			)}
+			<ModelPicker
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				defaultModelId=""
+				models={lmStudioModels}
+				modelIdKey="lmStudioModelId"
+				serviceName="LM Studio"
+				serviceUrl="https://lmstudio.ai/docs"
+				errorMessage={modelNotAvailableError}
+				hidePricing
+			/>
 			<Checkbox
 				checked={apiConfiguration?.lmStudioSpeculativeDecodingEnabled === true}
 				onChange={(checked) => {
@@ -151,61 +132,21 @@ export const LMStudio = ({ apiConfiguration, setApiConfigurationField }: LMStudi
 			</Checkbox>
 			{apiConfiguration?.lmStudioSpeculativeDecodingEnabled && (
 				<>
-					<div>
-						<VSCodeTextField
-							value={apiConfiguration?.lmStudioDraftModelId || ""}
-							onInput={handleInputChange("lmStudioDraftModelId")}
-							placeholder={t("settings:placeholders.modelId.lmStudioDraft")}
-							className="w-full">
-							<label className="block font-medium mb-1">
-								{t("settings:providers.lmStudio.draftModelId")}
-							</label>
-						</VSCodeTextField>
-						<div className="text-sm text-vscode-descriptionForeground">
-							{t("settings:providers.lmStudio.draftModelDesc")}
-						</div>
-						{draftModelNotAvailable && (
-							<div className="flex flex-col gap-2 text-vscode-errorForeground text-sm mt-2">
-								<div className="flex flex-row items-center gap-1">
-									<div className="codicon codicon-close" />
-									<div>
-										{t("settings:validation.modelAvailability", {
-											modelId: apiConfiguration?.lmStudioDraftModelId,
-										})}
-									</div>
-								</div>
-							</div>
-						)}
+					<ModelPicker
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						defaultModelId=""
+						models={lmStudioModels}
+						modelIdKey="lmStudioDraftModelId"
+						serviceName="LM Studio"
+						serviceUrl="https://lmstudio.ai/docs"
+						label={t("settings:providers.lmStudio.draftModelId")}
+						errorMessage={draftModelNotAvailableError}
+						hidePricing
+					/>
+					<div className="text-sm text-vscode-descriptionForeground">
+						{t("settings:providers.lmStudio.draftModelDesc")}
 					</div>
-					{Object.keys(lmStudioModels).length > 0 && (
-						<>
-							<div className="font-medium">{t("settings:providers.lmStudio.selectDraftModel")}</div>
-							<VSCodeRadioGroup
-								value={
-									(apiConfiguration?.lmStudioDraftModelId || "") in lmStudioModels
-										? apiConfiguration?.lmStudioDraftModelId
-										: ""
-								}
-								onChange={handleInputChange("lmStudioDraftModelId")}>
-								{Object.keys(lmStudioModels).map((model) => (
-									<VSCodeRadio key={`draft-${model}`} value={model}>
-										{model}
-									</VSCodeRadio>
-								))}
-							</VSCodeRadioGroup>
-							{Object.keys(lmStudioModels).length === 0 && (
-								<div
-									className="text-sm rounded-xs p-2"
-									style={{
-										backgroundColor: "var(--vscode-inputValidation-infoBackground)",
-										border: "1px solid var(--vscode-inputValidation-infoBorder)",
-										color: "var(--vscode-inputValidation-infoForeground)",
-									}}>
-									{t("settings:providers.lmStudio.noModelsFound")}
-								</div>
-							)}
-						</>
-					)}
 				</>
 			)}
 			<div className="text-sm text-vscode-descriptionForeground">

@@ -106,7 +106,6 @@ export const parseVercelAiGatewayModel = ({ id, model }: { id: string; model: Ve
 		contextWindow: model.context_window,
 		supportsImages,
 		supportsPromptCache,
-		supportsNativeTools: true,
 		inputPrice: parseApiPrice(model.pricing?.input),
 		outputPrice: parseApiPrice(model.pricing?.output),
 		cacheWritesPrice,

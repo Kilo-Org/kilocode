@@ -4,7 +4,7 @@ import OpenAI from "openai"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 import { getModelMaxOutputTokens } from "../../shared/api"
-import { XmlMatcher } from "../../utils/xml-matcher"
+import { TagMatcher } from "../../utils/tag-matcher"
 import { convertToR1Format } from "../transform/r1-format"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
@@ -47,8 +47,8 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
-			...(metadata?.tools && { tools: metadata.tools }),
-			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+			tools: metadata?.tools,
+			tool_choice: metadata?.tool_choice,
 		}
 
 		// Only add temperature if model supports it
@@ -72,7 +72,7 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 				messages: convertToR1Format([{ role: "user", content: systemPrompt }, ...messages]),
 			})
 
-			const matcher = new XmlMatcher(
+			const matcher = new TagMatcher(
 				"think",
 				(chunk) =>
 					({

@@ -28,7 +28,8 @@
 		"openInCloud": "Buka tugas di Roo Code Cloud",
 		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka.",
 		"openApiHistory": "Buka Riwayat API",
-		"openUiHistory": "Buka Riwayat UI"
+		"openUiHistory": "Buka Riwayat UI",
+		"backToParentTask": "Tugas Induk"
 	},
 	"history": {
 		"title": "Riwayat"
@@ -57,7 +58,10 @@
 	"tokenProgress": {
 		"availableSpace": "Ruang tersedia: {{amount}} token",
 		"tokensUsed": "Token digunakan: {{used}} dari {{total}}",
-		"reservedForResponse": "Dicadangkan untuk respons model: {{amount}} token"
+		"reservedForResponse": "Dicadangkan untuk respons model: {{amount}} token",
+		"tokensUsedLabel": "Token digunakan",
+		"reservedForResponseLabel": "Dicadangkan untuk respons",
+		"availableSpaceLabel": "Ruang tersedia"
 	},
 	"reject": {
 		"title": "Tolak",
@@ -96,10 +100,15 @@
 		"title": "Hentikan",
 		"tooltip": "Akhiri tugas saat ini"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Hentikan tugas saat ini"
+	},
 	"cancel": {
 		"title": "Batal",
 		"tooltip": "Batalkan operasi saat ini"
 	},
+	"enqueueMessage": "Tambahkan pesan ke antrean (akan dikirim setelah tugas saat ini selesai)",
 	"scrollToBottom": "Gulir ke bawah chat",
 	"about": "Buat, refaktor, dan debug kode dengan bantuan AI. Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
 	"docs": "Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
@@ -152,15 +161,15 @@
 		"rateLimitWait": "Pembatasan rate",
 		"errorTitle": "Kesalahan Penyedia {{code}}",
 		"errorMessage": {
-			"docs": "Dokumentasi",
-			"goToSettings": "Pengaturan",
 			"400": "Penyedia tidak dapat memproses permintaan seperti yang dibuat. Hentikan tugas dan coba pendekatan berbeda.",
 			"401": "Tidak dapat mengautentikasi dengan penyedia. Harap periksa konfigurasi kunci API Anda.",
 			"402": "Tampaknya Anda telah kehabisan dana/kredit di akun Anda. Pergi ke penyedia Anda dan tambahkan lebih banyak untuk melanjutkan.",
 			"403": "Tidak sah. Kunci API Anda valid, tetapi penyedia menolak untuk menyelesaikan permintaan ini.",
 			"429": "Terlalu banyak permintaan. Anda dibatasi tingkat oleh penyedia. Harap tunggu sebentar sebelum panggilan API berikutnya Anda.",
 			"500": "Kesalahan server penyedia. Ada yang salah di sisi penyedia, tidak ada yang salah dengan permintaan Anda.",
-			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Kilo.",
+			"docs": "Dokumentasi",
+			"goToSettings": "Pengaturan",
+			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Roo Code.",
 			"connection": "Kesalahan koneksi. Pastikan Anda memiliki koneksi internet yang berfungsi.",
 			"claudeCodeNotAuthenticated": "Anda perlu masuk untuk menggunakan Claude Code. Buka Pengaturan dan klik \"Masuk ke Claude Code\" untuk mengautentikasi."
 		}
@@ -198,6 +207,10 @@
 			"messagesRemoved_other": "{{count}} pesan dihapus",
 			"description": "Pesan lama telah dihapus dari percakapan untuk tetap dalam batas jendela konteks. Ini adalah pendekatan yang cepat tetapi kurang mempertahankan konteks dibandingkan dengan kondensasi."
 		}
+	},
+	"skill": {
+		"wantsToLoad": "Roo ingin memuat keterampilan",
+		"didLoad": "Roo telah memuat keterampilan"
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
@@ -292,7 +305,8 @@
 		"completionContent": "Subtugas Selesai",
 		"resultContent": "Hasil Subtugas",
 		"defaultResult": "Silakan lanjutkan ke tugas berikutnya.",
-		"completionInstructions": "Subtugas selesai! Kamu bisa meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk."
+		"completionInstructions": "Subtugas selesai! Kamu bisa meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk.",
+		"goToSubtask": "Lihat tugas"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code punya pertanyaan"
@@ -315,7 +329,8 @@
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
 		"copied": "Disalin!",
-		"diagnostics": "Dapatkan informasi kesalahan terperinci"
+		"diagnostics": "Dapatkan informasi kesalahan terperinci",
+		"proxyProvider": "Tampaknya kamu menggunakan penyedia berbasis proxy. Pastikan untuk memeriksa log-nya dan memastikan tidak menulis ulang permintaan Roo."
 	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
@@ -336,7 +351,7 @@
 		"triggerLabel_zero": "0 disetujui otomatis",
 		"triggerLabel_one": "1 disetujui otomatis",
 		"triggerLabel_other": "{{count}} disetujui otomatis",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} Dirilis",
@@ -350,8 +365,9 @@
 		},
 		"release": {
 			"heading": "Yang Baru:",
-			"skills": "Roo sekarang mendukung <skillsLink>Agent Skills</skillsLink> - paket yang dapat digunakan kembali dari prompt, alat, dan sumber daya untuk memperluas kemampuan Roo.",
-			"nativeToolCalling": "Pemanggilan alat native sekarang diperlukan untuk semua tugas baru. <blogLink>Pelajari lebih lanjut</blogLink> tentang motivasi dan apa yang harus dilakukan jika mengalami masalah."
+			"parallelTools": "Panggilan Alat Paralel: Alat sekarang dijalankan secara paralel secara default, mempercepat operasi multi-file dan tugas kompleks secara signifikan.",
+			"readFileIndentation": "Pembacaan File yang Lebih Cerdas: Mode indentasi baru mengekstrak blok kode semantik lengkap (fungsi, kelas) tanpa pemotongan di tengah fungsi—ideal saat menargetkan baris tertentu dari hasil pencarian.",
+			"readCommandOutput": "Output Terminal Tanpa Kerugian: Alat read_command_output baru mengambil output perintah lengkap dari eksekusi yang dipotong dengan paginasi dan filter regex."
 		},
 		"cloudAgents": {
 			"heading": "Baru di Cloud:",
@@ -370,9 +386,15 @@
 		"copyToInput": "Salin ke input (sama dengan shift + klik)",
 		"timerPrefix": "Persetujuan otomatis diaktifkan. Memilih dalam {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Biaya (termasuk subtugas): ${{cost}}",
+		"total": "Total Biaya: ${{cost}}",
+		"includesSubtasks": "Termasuk biaya subtugas"
+	},
 	"browser": {
 		"session": "Sesi Browser",
-		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
+		"active": "Aktif",
+		"rooWantsToUse": "Roo ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
 		"screenshot": "Screenshot browser",
@@ -496,5 +518,17 @@
 		"updated": "Memperbarui daftar to-do",
 		"completed": "Selesai",
 		"started": "Dimulai"
+	},
+	"tooManyTools": {
+		"title": "Terlalu banyak alat diaktifkan",
+		"toolsPart_one": "{{count}} alat",
+		"toolsPart_other": "{{count}} alat",
+		"serversPart_one": "{{count}} server MCP",
+		"serversPart_other": "{{count}} server MCP",
+		"messageTemplate": "Anda memiliki {{tools}} diaktifkan melalui {{servers}}. Jumlah yang begitu besar dapat membingungkan model dan menyebabkan kesalahan. Cobalah untuk menjaganya di bawah {{threshold}}.",
+		"openMcpSettings": "Buka Pengaturan MCP"
+	},
+	"readCommandOutput": {
+		"title": "Roo read command output"
 	}
 }

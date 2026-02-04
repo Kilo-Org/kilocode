@@ -1086,6 +1086,68 @@ describe.skip("ChatView - Message Queueing Tests", () => {
 			}),
 		)
 	})
+
+	it("queues messages during command_output state instead of losing them", async () => {
+		const { getByTestId } = renderChatView()
+
+		// Hydrate state with command_output ask (Proceed While Running state)
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+				{
+					type: "ask",
+					ask: "command_output",
+					ts: Date.now(),
+					text: "",
+					partial: false, // Non-partial so buttons are enabled
+				},
+			],
+		})
+
+		// Wait for state to be updated - need to allow time for React effects to propagate
+		// (clineAsk state update -> clineAskRef.current update)
+		await waitFor(() => {
+			expect(getByTestId("chat-textarea")).toBeInTheDocument()
+		})
+
+		// Allow React effects to complete (clineAsk -> clineAskRef sync)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50))
+		})
+
+		// Clear message calls before simulating user input
+		vi.mocked(vscode.postMessage).mockClear()
+
+		// Simulate user typing and sending a message during command execution
+		const chatTextArea = getByTestId("chat-textarea")
+		const input = chatTextArea.querySelector("input")! as HTMLInputElement
+
+		await act(async () => {
+			fireEvent.change(input, { target: { value: "message during command execution" } })
+			fireEvent.keyDown(input, { key: "Enter", code: "Enter" })
+		})
+
+		// Verify that the message was queued (not lost via terminalOperation)
+		await waitFor(() => {
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "queueMessage",
+				text: "message during command execution",
+				images: [],
+			})
+		})
+
+		// Verify it was NOT sent as terminalOperation (which would lose the message)
+		expect(vscode.postMessage).not.toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "terminalOperation",
+			}),
+		)
+	})
 })
 
 describe("ChatView - Context Condensing Indicator Tests", () => {

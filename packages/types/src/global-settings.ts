@@ -24,11 +24,40 @@ import { fastApplyModelSchema, ghostServiceSettingsSchema, fastApplyApiProviderS
 export const DEFAULT_WRITE_DELAY_MS = 1000
 
 /**
- * Default terminal output character limit constant.
- * This provides a reasonable default that aligns with typical terminal usage
- * while preventing context window explosions from extremely long lines.
+ * Terminal output preview size options for persisted command output.
+ *
+ * Controls how much command output is kept in memory as a "preview" before
+ * the LLM decides to retrieve more via `read_command_output`. Larger previews
+ * mean more immediate context but consume more of the context window.
+ *
+ * - `small`: 5KB preview - Best for long-running commands with verbose output
+ * - `medium`: 10KB preview - Balanced default for most use cases
+ * - `large`: 20KB preview - Best when commands produce critical info early
+ *
+ * @see OutputInterceptor - Uses this setting to determine when to spill to disk
+ * @see PersistedCommandOutput - Contains the resulting preview and artifact reference
  */
-export const DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT = 50_000
+export type TerminalOutputPreviewSize = "small" | "medium" | "large"
+
+/**
+ * Byte limits for each terminal output preview size.
+ *
+ * Maps preview size names to their corresponding byte thresholds.
+ * When command output exceeds these thresholds, the excess is persisted
+ * to disk and made available via the `read_command_output` tool.
+ */
+export const TERMINAL_PREVIEW_BYTES: Record<TerminalOutputPreviewSize, number> = {
+	small: 5 * 1024, // 5KB
+	medium: 10 * 1024, // 10KB
+	large: 20 * 1024, // 20KB
+}
+
+/**
+ * Default terminal output preview size.
+ * The "medium" (10KB) setting provides a good balance between immediate
+ * visibility and context window conservation for most use cases.
+ */
+export const DEFAULT_TERMINAL_OUTPUT_PREVIEW_SIZE: TerminalOutputPreviewSize = "medium"
 
 /**
  * Minimum checkpoint timeout in seconds.
@@ -65,7 +94,6 @@ export const globalSettingsSchema = z.object({
 	openRouterImageGenerationSelectedModel: z.string().optional(),
 	kiloCodeImageApiKey: z.string().optional(),
 
-	condensingApiConfigId: z.string().optional(),
 	customCondensingPrompt: z.string().optional(),
 
 	autoApprovalEnabled: z.boolean().optional(),
@@ -95,8 +123,6 @@ export const globalSettingsSchema = z.object({
 	allowedMaxCost: z.number().nullish(),
 	autoCondenseContext: z.boolean().optional(),
 	autoCondenseContextPercent: z.number().optional(),
-	maxConcurrentFileReads: z.number().optional(),
-	allowVeryLargeReads: z.boolean().optional(), // kilocode_change
 
 	/**
 	 * Whether to include current time in the environment details
@@ -177,12 +203,10 @@ export const globalSettingsSchema = z.object({
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
 	enableSubfolderRules: z.boolean().optional(),
-	maxReadFileLine: z.number().optional(),
 	maxImageFileSize: z.number().optional(),
 	maxTotalImageSize: z.number().optional(),
 
-	terminalOutputLineLimit: z.number().optional(),
-	terminalOutputCharacterLimit: z.number().optional(),
+	terminalOutputPreviewSize: z.enum(["small", "medium", "large"]).optional(),
 	terminalShellIntegrationTimeout: z.number().optional(),
 	terminalShellIntegrationDisabled: z.boolean().optional(),
 	terminalCommandDelay: z.number().optional(),
@@ -191,13 +215,10 @@ export const globalSettingsSchema = z.object({
 	terminalZshOhMy: z.boolean().optional(),
 	terminalZshP10k: z.boolean().optional(),
 	terminalZdotdir: z.boolean().optional(),
-	terminalCompressProgressBar: z.boolean().optional(),
 
 	diagnosticsEnabled: z.boolean().optional(),
 
 	rateLimitSeconds: z.number().optional(),
-	diffEnabled: z.boolean().optional(),
-	fuzzyMatchThreshold: z.number().optional(),
 	experiments: experimentsSchema.optional(),
 
 	// kilocode_change start: Morph fast apply
@@ -214,8 +235,6 @@ export const globalSettingsSchema = z.object({
 	telemetrySetting: telemetrySettingsSchema.optional(),
 
 	mcpEnabled: z.boolean().optional(),
-	enableMcpServerCreation: z.boolean().optional(),
-	mcpMarketplaceCatalog: z.any().optional(), // kilocode_change: MCP marketplace catalog
 
 	mode: z.string().optional(),
 	modeApiConfigs: z.record(z.string(), z.string()).optional(),
@@ -242,7 +261,20 @@ export const globalSettingsSchema = z.object({
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
-	appendSystemPrompt: z.string().optional(), // kilocode_change: Custom text to append to system prompt (CLI only)
+	lastSettingsExportPath: z.string().optional(),
+	lastTaskExportPath: z.string().optional(),
+	lastImageSavePath: z.string().optional(),
+
+	/**
+	 * Path to worktree to auto-open after switching workspaces.
+	 * Used by the worktree feature to open the Roo Code sidebar in a new window.
+	 */
+	worktreeAutoOpenPath: z.string().optional(),
+	/**
+	 * Whether to show the worktree selector in the home screen.
+	 * @default true
+	 */
+	showWorktreesInHomeScreen: z.boolean().optional(),
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>
@@ -387,8 +419,6 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	systemNotificationsEnabled: true, // kilocode_change
 	ghostServiceSettings: {}, // kilocode_change
 
-	terminalOutputLineLimit: 500,
-	terminalOutputCharacterLimit: DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	terminalShellIntegrationTimeout: 30000,
 	terminalCommandDelay: 0,
 	terminalPowershellCounter: false,
@@ -396,13 +426,9 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	terminalZshClearEolMark: true,
 	terminalZshP10k: false,
 	terminalZdotdir: true,
-	terminalCompressProgressBar: true,
 	terminalShellIntegrationDisabled: true,
 
 	diagnosticsEnabled: true,
-
-	diffEnabled: true,
-	fuzzyMatchThreshold: 1,
 
 	enableCheckpoints: false,
 
@@ -419,7 +445,6 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	maxWorkspaceFiles: 200,
 	maxGitStatusFiles: 20,
 	showRooIgnoredFiles: true,
-	maxReadFileLine: -1, // -1 to enable full file reading.
 
 	includeDiagnosticMessages: true,
 	maxDiagnosticMessages: 50,

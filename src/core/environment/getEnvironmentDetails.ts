@@ -6,10 +6,7 @@ import pWaitFor from "p-wait-for"
 import delay from "delay"
 
 import type { ExperimentId } from "@roo-code/types"
-import { DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT } from "@roo-code/types"
 
-import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
-import { EXPERIMENT_IDS, experiments as Experiments } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
 import { defaultModeSlug, getFullModeDetails } from "../../shared/modes"
 import { getApiMetrics } from "../../shared/getApiMetrics"
@@ -59,11 +56,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 
 	const clineProvider = cline.providerRef.deref()
 	const state = await clineProvider?.getState()
-	const {
-		terminalOutputLineLimit = 500,
-		terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
-		maxWorkspaceFiles = 200,
-	} = state ?? {}
+	const { maxWorkspaceFiles = 200 } = state ?? {}
 
 	// It could be useful for cline to know if the user went from one or no
 	// file to another between messages, so we always include this context.
@@ -145,11 +138,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			let newOutput = TerminalRegistry.getUnretrievedOutput(busyTerminal.id)
 
 			if (newOutput) {
-				newOutput = Terminal.compressTerminalOutput(
-					newOutput,
-					terminalOutputLineLimit,
-					terminalOutputCharacterLimit,
-				)
+				newOutput = Terminal.compressTerminalOutput(newOutput)
 				terminalDetails += `\n### New Output\n${newOutput}`
 			}
 		}
@@ -177,11 +166,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 				let output = process.getUnretrievedOutput()
 
 				if (output) {
-					output = Terminal.compressTerminalOutput(
-						output,
-						terminalOutputLineLimit,
-						terminalOutputCharacterLimit,
-					)
+					output = Terminal.compressTerminalOutput(output)
 					terminalOutputs.push(`Command: \`${process.command}\`\n${output}`)
 				}
 			}
@@ -281,27 +266,13 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		language: language ?? formatLanguage(vscode.env.language),
 	})
 
-	const currentMode = modeDetails.slug ?? mode // kilocode_change: don't try to use non-existent modes
-	// Use the task's locked tool protocol for consistent environment details.
-	// This ensures the model sees the same tool format it was started with,
-	// even if user settings have changed. Fall back to resolving fresh if
-	// the task hasn't been fully initialized yet (shouldn't happen in practice).
-	const modelInfo = cline.api.getModel().info
-	const toolProtocol = resolveToolProtocol(state?.apiConfiguration ?? {}, modelInfo, cline.taskToolProtocol)
+	const toolFormat = "native"
 
 	details += `\n\n# Current Mode\n`
 	details += `<slug>${currentMode}</slug>\n`
 	details += `<name>${modeDetails.name}</name>\n`
 	details += `<model>${modelId}</model>\n`
-	details += `<tool_format>${toolProtocol}</tool_format>\n`
-
-	if (Experiments.isEnabled(experiments ?? {}, EXPERIMENT_IDS.POWER_STEERING)) {
-		details += `<role>${modeDetails.roleDefinition}</role>\n`
-
-		if (modeDetails.customInstructions) {
-			details += `<custom_instructions>${modeDetails.customInstructions}</custom_instructions>\n`
-		}
-	}
+	details += `<tool_format>${toolFormat}</tool_format>\n`
 
 	// Add browser session status - Only show when active to prevent cluttering context
 	const isBrowserActive = cline.browserSession.isSessionActive()

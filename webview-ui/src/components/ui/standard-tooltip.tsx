@@ -2,7 +2,7 @@ import { ReactNode } from "react"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip"
 
-export const STANDARD_TOOLTIP_DELAY = 300
+export const STANDARD_TOOLTIP_DELAY = 600
 
 interface StandardTooltipProps {
 	/** The element(s) that trigger the tooltip */
@@ -21,10 +21,12 @@ interface StandardTooltipProps {
 	asChild?: boolean
 	/** Maximum width of the tooltip content */
 	maxWidth?: number | string
+	/** Delay in milliseconds before showing the tooltip */
+	delay?: number
 }
 
 /**
- * StandardTooltip component that enforces consistent 300ms delay across the application.
+ * StandardTooltip component with a configurable delay (defaults to 600ms).
  * This component wraps the Radix UI tooltip with a standardized delay duration.
  *
  * @example
@@ -36,6 +38,11 @@ interface StandardTooltipProps {
  * // With custom positioning
  * <StandardTooltip content="Long tooltip text" side="right" sideOffset={8}>
  *   <IconButton icon="info" />
+ * </StandardTooltip>
+ *
+ * // With custom delay
+ * <StandardTooltip content="Quick tooltip" delay={100}>
+ *   <Button>Hover me</Button>
  * </StandardTooltip>
  *
  * @note This replaces native HTML title attributes for consistent timing.
@@ -51,6 +58,7 @@ export function StandardTooltip({
 	className,
 	asChild = true,
 	maxWidth,
+	delay = STANDARD_TOOLTIP_DELAY,
 }: StandardTooltipProps) {
 	// Don't render tooltip if content is empty or only whitespace.
 	if (!content || (typeof content === "string" && !content.trim())) {
@@ -60,9 +68,14 @@ export function StandardTooltip({
 	const style = maxWidth ? { maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth } : undefined
 
 	return (
-		<Tooltip>
+		<Tooltip delayDuration={delay}>
 			<TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-			<TooltipContent side={side} align={align} sideOffset={sideOffset} className={className} style={style}>
+			<TooltipContent
+				side={side}
+				align={align}
+				sideOffset={sideOffset}
+				className={`rounded-lg p-2 ${className}`}
+				style={style}>
 				{content}
 			</TooltipContent>
 		</Tooltip>

@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "El nombre de la habilidad debe tener entre 1 y {{maxLength}} caracteres (se recibieron {{length}})",
+		"name_format": "El nombre de la habilidad solo puede contener letras minúsculas, números y guiones (sin guiones al inicio o al final, sin guiones consecutivos)",
+		"description_length": "La descripción de la habilidad debe tener entre 1 y 1024 caracteres (se recibieron {{length}})",
+		"no_workspace": "No se puede crear la habilidad del proyecto: no hay ninguna carpeta de espacio de trabajo abierta",
+		"already_exists": "La habilidad \"{{name}}\" ya existe en {{path}}",
+		"not_found": "No se encontró la habilidad \"{{name}}\" en {{source}}{{modeInfo}}",
+		"missing_create_fields": "Faltan campos obligatorios: skillName, source o skillDescription",
+		"missing_move_fields": "Faltan campos obligatorios: skillName o source",
+		"missing_update_modes_fields": "Faltan campos obligatorios: skillName o source",
+		"manager_unavailable": "El gestor de habilidades no está disponible",
+		"missing_delete_fields": "Faltan campos obligatorios: skillName o source",
+		"skill_not_found": "No se encontró la habilidad \"{{name}}\"",
+		"cannot_modify_builtin": "Las habilidades integradas no se pueden crear ni eliminar",
+		"cannot_open_builtin": "Las habilidades integradas no se pueden abrir como archivos"
+	}
+}

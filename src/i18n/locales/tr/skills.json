@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Beceri adı 1-{{maxLength}} karakter olmalıdır ({{length}} alındı)",
+		"name_format": "Beceri adı yalnızca küçük harfler, rakamlar ve tire içerebilir (başta veya sonda tire yok, ardışık tire yok)",
+		"description_length": "Beceri açıklaması 1-1024 karakter olmalıdır ({{length}} alındı)",
+		"no_workspace": "Proje becerisi oluşturulamıyor: açık çalışma alanı klasörü yok",
+		"already_exists": "\"{{name}}\" becerisi zaten {{path}} konumunda mevcut",
+		"not_found": "\"{{name}}\" becerisi {{source}}{{modeInfo}} içinde bulunamadı",
+		"missing_create_fields": "Gerekli alanlar eksik: skillName, source veya skillDescription",
+		"missing_move_fields": "Gerekli alanlar eksik: skillName veya source",
+		"missing_update_modes_fields": "Gerekli alanlar eksik: skillName veya source",
+		"manager_unavailable": "Beceri yöneticisi kullanılamıyor",
+		"missing_delete_fields": "Gerekli alanlar eksik: skillName veya source",
+		"skill_not_found": "\"{{name}}\" becerisi bulunamadı",
+		"cannot_modify_builtin": "Yerleşik beceriler oluşturulamaz veya silinemez",
+		"cannot_open_builtin": "Yerleşik beceriler dosya olarak açılamaz"
+	}
+}

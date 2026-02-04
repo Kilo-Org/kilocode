@@ -15,7 +15,9 @@ describe("ExecaTerminal", () => {
 
 		const callbacks: RooTerminalCallbacks = {
 			onLine: vi.fn(),
-			onCompleted: (output) => (result = output),
+			onCompleted: (output) => {
+				result = output
+			},
 			onShellExecutionStarted: vi.fn(),
 			onShellExecutionComplete: vi.fn(),
 		}

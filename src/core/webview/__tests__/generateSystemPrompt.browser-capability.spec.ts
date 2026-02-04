@@ -58,15 +58,10 @@ function makeProviderStub() {
 			customModePrompts: undefined,
 			customInstructions: undefined,
 			browserViewportSize: "900x600",
-			diffEnabled: false,
 			mcpEnabled: false,
-			fuzzyMatchThreshold: 1.0,
 			experiments: {},
-			enableMcpServerCreation: false,
 			browserToolEnabled: true, // critical: enabled in settings
 			language: "en",
-			maxReadFileLine: -1,
-			maxConcurrentFileReads: 5,
 		}),
 	} as any
 }

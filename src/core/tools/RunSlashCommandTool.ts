@@ -14,16 +14,9 @@ interface RunSlashCommandParams {
 export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 	readonly name = "run_slash_command" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): RunSlashCommandParams {
-		return {
-			command: params.command || "",
-			args: params.args,
-		}
-	}
-
 	async execute(params: RunSlashCommandParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { command: commandName, args } = params
-		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
+		const { askApproval, handleError, pushToolResult } = callbacks
 
 		// Check if run slash command experiment is enabled
 		const provider = task.providerRef.deref()
@@ -128,8 +121,8 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 
 		const partialMessage = JSON.stringify({
 			tool: "runSlashCommand",
-			command: this.removeClosingTag("command", commandName, block.partial),
-			args: this.removeClosingTag("args", args, block.partial),
+			command: commandName,
+			args: args,
 		})
 
 		await task.ask("tool", partialMessage, block.partial).catch(() => {})

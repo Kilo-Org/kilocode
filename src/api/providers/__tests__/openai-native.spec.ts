@@ -221,46 +221,6 @@ describe("OpenAiNativeHandler", () => {
 			expect(modelInfo.id).toBe("gpt-5.1-codex-max") // Default model
 			expect(modelInfo.info).toBeDefined()
 		})
-
-		it("should have defaultToolProtocol: native for all OpenAI Native models", () => {
-			// Test that all models have defaultToolProtocol: native
-			const testModels = [
-				"gpt-5.1-codex-max",
-				"gpt-5.2",
-				"gpt-5.2-codex",
-				"gpt-5.1",
-				"gpt-5",
-				"gpt-5-mini",
-				"gpt-5-nano",
-				"gpt-4.1",
-				"gpt-4.1-mini",
-				"gpt-4.1-nano",
-				"o3",
-				"o3-high",
-				"o3-low",
-				"o4-mini",
-				"o4-mini-high",
-				"o4-mini-low",
-				"o3-mini",
-				"o3-mini-high",
-				"o3-mini-low",
-				"o1",
-				"o1-preview",
-				"o1-mini",
-				"gpt-4o",
-				"gpt-4o-mini",
-				"codex-mini-latest",
-			]
-
-			for (const modelId of testModels) {
-				const testHandler = new OpenAiNativeHandler({
-					openAiNativeApiKey: "test-api-key",
-					apiModelId: modelId,
-				})
-				const modelInfo = testHandler.getModel()
-				expect(modelInfo.info.defaultToolProtocol).toBe("native")
-			}
-		})
 	})
 
 	describe("GPT-5 models", () => {
@@ -320,7 +280,6 @@ describe("OpenAiNativeHandler", () => {
 					headers: expect.objectContaining({
 						"Content-Type": "application/json",
 						Authorization: "Bearer test-api-key",
-						Accept: "text/event-stream",
 					}),
 					body: expect.any(String),
 				}),
@@ -1326,7 +1285,6 @@ describe("GPT-5 streaming event coverage (additional)", () => {
 					headers: expect.objectContaining({
 						"Content-Type": "application/json",
 						Authorization: "Bearer test-api-key",
-						Accept: "text/event-stream",
 					}),
 					body: expect.any(String),
 				}),

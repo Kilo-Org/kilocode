@@ -81,7 +81,6 @@ describe("CloudSettingsService - Response Parsing", () => {
 				version: 2,
 				defaultSettings: {
 					maxOpenTabsContext: 10,
-					maxReadFileLine: 1000,
 				},
 				allowList: {
 					allowAll: false,

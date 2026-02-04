@@ -38,8 +38,12 @@ vi.mock("fs/promises", async (importOriginal) => {
 	}
 })
 
+const { mockPWaitFor } = vi.hoisted(() => {
+	return { mockPWaitFor: vi.fn().mockImplementation(async () => Promise.resolve()) }
+})
+
 vi.mock("p-wait-for", () => ({
-	default: vi.fn().mockImplementation(async () => Promise.resolve()),
+	default: mockPWaitFor,
 }))
 
 vi.mock("vscode", () => {
@@ -102,7 +106,7 @@ vi.mock("vscode", () => {
 
 vi.mock("../../mentions", () => ({
 	parseMentions: vi.fn().mockImplementation((text) => {
-		return Promise.resolve(`processed: ${text}`)
+		return Promise.resolve({ text: `processed: ${text}`, mode: undefined, contentBlocks: [] })
 	}),
 	openMention: vi.fn(),
 	getLatestTerminalOutput: vi.fn(),
@@ -210,6 +214,7 @@ describe("flushPendingToolResultsToHistory", () => {
 
 		mockProvider.postMessageToWebview = vi.fn().mockResolvedValue(undefined)
 		mockProvider.postStateToWebview = vi.fn().mockResolvedValue(undefined)
+		mockProvider.postStateToWebviewWithoutTaskHistory = vi.fn().mockResolvedValue(undefined)
 		mockProvider.updateTaskHistory = vi.fn().mockResolvedValue(undefined)
 	})
 
@@ -347,5 +352,100 @@ describe("flushPendingToolResultsToHistory", () => {
 		// Message should have timestamp
 		expect((task.apiConversationHistory[0] as any).ts).toBeGreaterThanOrEqual(beforeTs)
 		expect((task.apiConversationHistory[0] as any).ts).toBeLessThanOrEqual(afterTs)
+	})
+
+	it("should skip waiting for assistantMessageSavedToHistory when flag is already true", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		// Set flag to true (assistant message already saved)
+		task.assistantMessageSavedToHistory = true
+
+		// Set up pending tool result
+		task.userMessageContent = [
+			{
+				type: "tool_result",
+				tool_use_id: "tool-skip-wait",
+				content: "Result when flag is true",
+			},
+		]
+
+		// Clear mock call history
+		mockPWaitFor.mockClear()
+
+		await task.flushPendingToolResultsToHistory()
+
+		// Should not have called pWaitFor since flag was already true
+		expect(mockPWaitFor).not.toHaveBeenCalled()
+
+		// Should still save the message
+		expect(task.apiConversationHistory.length).toBe(1)
+		expect((task.apiConversationHistory[0].content as any[])[0].tool_use_id).toBe("tool-skip-wait")
+	})
+
+	it("should wait for assistantMessageSavedToHistory when flag is false", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		// Flag is false by default - assistant message not yet saved
+		expect(task.assistantMessageSavedToHistory).toBe(false)
+
+		// Set up pending tool result
+		task.userMessageContent = [
+			{
+				type: "tool_result",
+				tool_use_id: "tool-wait",
+				content: "Result when flag is false",
+			},
+		]
+
+		// Clear mock call history
+		mockPWaitFor.mockClear()
+
+		await task.flushPendingToolResultsToHistory()
+
+		// Should have called pWaitFor since flag was false
+		expect(mockPWaitFor).toHaveBeenCalled()
+
+		// Should still save the message (mock resolves immediately)
+		expect(task.apiConversationHistory.length).toBe(1)
+	})
+
+	it("should not flush when task is aborted during wait", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "test task",
+			startTask: false,
+		})
+
+		// Flag is false - will need to wait
+		task.assistantMessageSavedToHistory = false
+
+		// Set up pending tool result
+		task.userMessageContent = [
+			{
+				type: "tool_result",
+				tool_use_id: "tool-aborted",
+				content: "Should not be saved",
+			},
+		]
+
+		// Set abort flag - this will cause the condition in pWaitFor to return true
+		// AND will cause early return after the wait
+		task.abort = true
+
+		await task.flushPendingToolResultsToHistory()
+
+		// Should not have saved anything since task was aborted
+		expect(task.apiConversationHistory.length).toBe(0)
 	})
 })

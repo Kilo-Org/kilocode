@@ -1,20 +1,24 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+import { createCerebras } from "@ai-sdk/cerebras"
+import { streamText, generateText, ToolSet } from "ai"
 
-import { type CerebrasModelId, cerebrasDefaultModelId, cerebrasModels } from "@roo-code/types"
+import { cerebrasModels, cerebrasDefaultModelId, type CerebrasModelId, type ModelInfo } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
-import { calculateApiCostOpenAI } from "../../shared/cost"
-import { ApiStream } from "../transform/stream"
-import { convertToOpenAiMessages } from "../transform/openai-format"
-import { XmlMatcher } from "../../utils/xml-matcher"
 
-import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
-import { BaseProvider } from "./base-provider"
+import {
+	convertToAiSdkMessages,
+	convertToolsForAiSdk,
+	processAiSdkStreamPart,
+	mapToolChoice,
+	handleAiSdkError,
+} from "../transform/ai-sdk"
+import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
+import { getModelParams } from "../transform/model-params"
+
 import { DEFAULT_HEADERS } from "./constants"
-import { t } from "../../i18n"
-
-const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
-const CEREBRAS_DEFAULT_TEMPERATURE = 0
+import { BaseProvider } from "./base-provider"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 // kilocode_change start
 /**
@@ -25,389 +29,139 @@ const CEREBRAS_DEFAULT_TEMPERATURE = 0
  */
 const CEREBRAS_DEFAULT_MAX_TOKENS = 8_192
 const CEREBRAS_INTEGRATION_HEADER = "X-Cerebras-3rd-Party-Integration"
-const CEREBRAS_INTEGRATION_NAME = "kilocode"
-// kilocode_change end
+const CEREBRAS_INTEGRATION_NAME = "roocode"
+const CEREBRAS_DEFAULT_TEMPERATURE = 0
 
 /**
- * Removes thinking tokens from text to prevent model confusion when processing conversation history.
- * This is crucial because models can get confused by their own thinking tokens in input.
+ * Cerebras provider using the dedicated @ai-sdk/cerebras package.
+ * Provides high-speed inference powered by Wafer-Scale Engines.
  */
-function stripThinkingTokens(text: string): string {
-	// Remove <think>...</think> blocks entirely, including nested ones
-	return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim()
-}
-
-/**
- * Flattens OpenAI message content to simple strings that Cerebras can handle.
- * Cerebras doesn't support complex content arrays like OpenAI does.
- */
-function flattenMessageContent(content: any): string {
-	if (typeof content === "string") {
-		return content
-	}
-
-	if (Array.isArray(content)) {
-		return content
-			.map((part) => {
-				if (typeof part === "string") {
-					return part
-				}
-				if (part.type === "text") {
-					return part.text || ""
-				}
-				if (part.type === "image_url") {
-					return "[Image]" // Placeholder for images since Cerebras doesn't support images
-				}
-				return ""
-			})
-			.filter(Boolean)
-			.join("\n")
-	}
-
-	// Fallback for any other content types
-	return String(content || "")
-}
-
-/**
- * Converts OpenAI messages to Cerebras-compatible format with simple string content.
- * Also strips thinking tokens from assistant messages to prevent model confusion.
- */
-function convertToCerebrasMessages(openaiMessages: any[]): Array<{ role: string; content: string }> {
-	return openaiMessages
-		.map((msg) => {
-			let content = flattenMessageContent(msg.content)
-
-			// Strip thinking tokens from assistant messages to prevent confusion
-			if (msg.role === "assistant") {
-				content = stripThinkingTokens(content)
-			}
-
-			return {
-				role: msg.role,
-				content,
-			}
-		})
-		.filter((msg) => msg.content.trim() !== "") // Remove empty messages
-}
-
 export class CerebrasHandler extends BaseProvider implements SingleCompletionHandler {
-	private apiKey: string
-	private providerModels: typeof cerebrasModels
-	private defaultProviderModelId: CerebrasModelId
-	private options: ApiHandlerOptions
-	private lastUsage: { inputTokens: number; outputTokens: number } = { inputTokens: 0, outputTokens: 0 }
+	protected options: ApiHandlerOptions
+	protected provider: ReturnType<typeof createCerebras>
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		this.apiKey = options.cerebrasApiKey || ""
-		this.providerModels = cerebrasModels
-		this.defaultProviderModelId = cerebrasDefaultModelId
 
-		if (!this.apiKey) {
-			throw new Error("Cerebras API key is required")
-		}
+		// Create the Cerebras provider using AI SDK
+		this.provider = createCerebras({
+			apiKey: options.cerebrasApiKey ?? "not-provided",
+			headers: {
+				...DEFAULT_HEADERS,
+				[CEREBRAS_INTEGRATION_HEADER]: CEREBRAS_INTEGRATION_NAME,
+			},
+		})
 	}
 
-	getModel(): { id: CerebrasModelId; info: (typeof cerebrasModels)[CerebrasModelId] } {
-		const modelId = this.options.apiModelId as CerebrasModelId
-		const validModelId = modelId && this.providerModels[modelId] ? modelId : this.defaultProviderModelId
+	override getModel(): { id: string; info: ModelInfo; maxTokens?: number; temperature?: number } {
+		const id = (this.options.apiModelId ?? cerebrasDefaultModelId) as CerebrasModelId
+		const info = cerebrasModels[id as keyof typeof cerebrasModels] || cerebrasModels[cerebrasDefaultModelId]
+		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
+		return { id, info, ...params }
+	}
 
+	/**
+	 * Get the language model for the configured model ID.
+	 */
+	protected getLanguageModel() {
+		const { id } = this.getModel()
+		return this.provider(id)
+	}
+
+	/**
+	 * Process usage metrics from the AI SDK response.
+	 */
+	protected processUsageMetrics(usage: {
+		inputTokens?: number
+		outputTokens?: number
+		details?: {
+			cachedInputTokens?: number
+			reasoningTokens?: number
+		}
+	}): ApiStreamUsageChunk {
 		return {
-			id: validModelId,
-			info: this.providerModels[validModelId],
+			type: "usage",
+			inputTokens: usage.inputTokens || 0,
+			outputTokens: usage.outputTokens || 0,
+			cacheReadTokens: usage.details?.cachedInputTokens,
+			reasoningTokens: usage.details?.reasoningTokens,
 		}
 	}
 
 	/**
-	 * Override convertToolSchemaForOpenAI to remove unsupported schema fields for Cerebras.
-	 * Cerebras doesn't support minItems/maxItems in array schemas with strict mode.
+	 * Get the max tokens parameter to include in the request.
 	 */
-	protected override convertToolSchemaForOpenAI(schema: any): any {
-		const converted = super.convertToolSchemaForOpenAI(schema)
-		return this.stripUnsupportedSchemaFields(converted)
+	protected getMaxOutputTokens(): number | undefined {
+		const { info } = this.getModel()
+		return this.options.modelMaxTokens || info.maxTokens || undefined
 	}
 
 	/**
-	 * Recursively strips unsupported schema fields for Cerebras.
-	 * Cerebras strict mode doesn't support minItems, maxItems on arrays.
+	 * Create a message stream using the AI SDK.
 	 */
-	private stripUnsupportedSchemaFields(schema: any): any {
-		if (!schema || typeof schema !== "object") {
-			return schema
-		}
-
-		const result = { ...schema }
-
-		// Remove unsupported array constraints
-		if (result.type === "array" || (Array.isArray(result.type) && result.type.includes("array"))) {
-			delete result.minItems
-			delete result.maxItems
-		}
-
-		// Recursively process properties
-		if (result.properties) {
-			const newProps = { ...result.properties }
-			for (const key of Object.keys(newProps)) {
-				newProps[key] = this.stripUnsupportedSchemaFields(newProps[key])
-			}
-			result.properties = newProps
-		}
-
-		// Recursively process array items
-		if (result.items) {
-			result.items = this.stripUnsupportedSchemaFields(result.items)
-		}
-
-		return result
-	}
-
-	async *createMessage(
+	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const { id: model, info: modelInfo } = this.getModel()
-		const max_tokens = modelInfo.maxTokens
-		const supportsNativeTools = modelInfo.supportsNativeTools ?? false
-		const temperature = this.options.modelTemperature ?? CEREBRAS_DEFAULT_TEMPERATURE
+		const { temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		// Check if we should use native tool calling
-		const useNativeTools =
-			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
+		// Convert messages to AI SDK format
+		const aiSdkMessages = convertToAiSdkMessages(messages)
 
-		// Convert Anthropic messages to OpenAI format (Cerebras is OpenAI-compatible)
-		const openaiMessages = convertToOpenAiMessages(messages)
+		// Convert tools to OpenAI format first, then to AI SDK format
+		const openAiTools = this.convertToolsForOpenAI(metadata?.tools)
+		const aiSdkTools = convertToolsForAiSdk(openAiTools) as ToolSet | undefined
 
-		// Prepare request body following Cerebras API specification exactly
-		// Use conservative default to avoid premature rate limiting (Cerebras reserves quota upfront)
-		const effectiveMaxTokens = Math.min(max_tokens || CEREBRAS_DEFAULT_MAX_TOKENS, CEREBRAS_DEFAULT_MAX_TOKENS) // kilocode_change
-		const requestBody: Record<string, any> = {
-			model,
-			messages: [{ role: "system", content: systemPrompt }, ...openaiMessages],
-			stream: true,
-			// Use max_completion_tokens (Cerebras-specific parameter)
-			...(effectiveMaxTokens > 0 ? { max_completion_tokens: effectiveMaxTokens } : {}), // kilocode_change
-			// Clamp temperature to Cerebras range (0 to 1.5)
-			...(temperature !== undefined && temperature !== CEREBRAS_DEFAULT_TEMPERATURE
-				? {
-						temperature: Math.max(0, Math.min(1.5, temperature)),
-					}
-				: {}),
-			// Native tool calling support
-			...(useNativeTools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-			...(useNativeTools && metadata.tool_choice && { tool_choice: metadata.tool_choice }),
-			...(useNativeTools && { parallel_tool_calls: metadata?.parallelToolCalls ?? false }),
+		// Build the request options
+		const requestOptions: Parameters<typeof streamText>[0] = {
+			model: languageModel,
+			system: systemPrompt,
+			messages: aiSdkMessages,
+			temperature: this.options.modelTemperature ?? temperature ?? CEREBRAS_DEFAULT_TEMPERATURE,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			tools: aiSdkTools,
+			toolChoice: mapToolChoice(metadata?.tool_choice),
 		}
 
+		// Use streamText for streaming responses
+		const result = streamText(requestOptions)
+
 		try {
-			const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
-				method: "POST",
-				headers: {
-					...DEFAULT_HEADERS,
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.apiKey}`,
-					[CEREBRAS_INTEGRATION_HEADER]: CEREBRAS_INTEGRATION_NAME, // kilocode_change
-				},
-				body: JSON.stringify(requestBody),
-			})
-
-			if (!response.ok) {
-				const errorText = await response.text()
-
-				let errorMessage = "Unknown error"
-				try {
-					const errorJson = JSON.parse(errorText)
-					errorMessage = errorJson.error?.message || errorJson.message || JSON.stringify(errorJson, null, 2)
-				} catch {
-					errorMessage = errorText || `HTTP ${response.status}`
-				}
-
-				// Provide more actionable error messages
-				if (response.status === 401) {
-					throw new Error(t("common:errors.cerebras.authenticationFailed"))
-				} else if (response.status === 403) {
-					throw new Error(t("common:errors.cerebras.accessForbidden"))
-				} else if (response.status === 429) {
-					throw new Error(t("common:errors.cerebras.rateLimitExceeded"))
-				} else if (response.status >= 500) {
-					throw new Error(t("common:errors.cerebras.serverError", { status: response.status }))
-				} else {
-					throw new Error(
-						t("common:errors.cerebras.genericError", { status: response.status, message: errorMessage }),
-					)
+			// Process the full stream to get all events including reasoning
+			for await (const part of result.fullStream) {
+				for (const chunk of processAiSdkStreamPart(part)) {
+					yield chunk
 				}
 			}
 
-			if (!response.body) {
-				throw new Error(t("common:errors.cerebras.noResponseBody"))
-			}
-
-			// Initialize XmlMatcher to parse <think>...</think> tags
-			const matcher = new XmlMatcher(
-				"think",
-				(chunk) =>
-					({
-						type: chunk.matched ? "reasoning" : "text",
-						text: chunk.data,
-					}) as const,
-			)
-
-			const reader = response.body.getReader()
-			const decoder = new TextDecoder()
-			let buffer = ""
-			let inputTokens = 0
-			let outputTokens = 0
-
-			try {
-				while (true) {
-					const { done, value } = await reader.read()
-					if (done) break
-
-					buffer += decoder.decode(value, { stream: true })
-					const lines = buffer.split("\n")
-					buffer = lines.pop() || "" // Keep the last incomplete line in the buffer
-
-					for (const line of lines) {
-						if (line.trim() === "") continue
-
-						try {
-							if (line.startsWith("data: ")) {
-								const jsonStr = line.slice(6).trim()
-								if (jsonStr === "[DONE]") {
-									continue
-								}
-
-								const parsed = JSON.parse(jsonStr)
-
-								const delta = parsed.choices?.[0]?.delta
-
-								// Handle text content - parse for thinking tokens
-								if (delta?.content) {
-									const content = delta.content
-
-									// Use XmlMatcher to parse <think>...</think> tags
-									for (const chunk of matcher.update(content)) {
-										yield chunk
-									}
-								}
-
-								// Handle tool calls in stream - emit partial chunks for NativeToolCallParser
-								if (delta?.tool_calls) {
-									for (const toolCall of delta.tool_calls) {
-										yield {
-											type: "tool_call_partial",
-											index: toolCall.index,
-											id: toolCall.id,
-											name: toolCall.function?.name,
-											arguments: toolCall.function?.arguments,
-										}
-									}
-								}
-
-								// Handle usage information if available
-								if (parsed.usage) {
-									inputTokens = parsed.usage.prompt_tokens || 0
-									outputTokens = parsed.usage.completion_tokens || 0
-								}
-							}
-						} catch (error) {
-							// Silently ignore malformed streaming data lines
-						}
-					}
-				}
-			} finally {
-				reader.releaseLock()
-			}
-
-			// Process any remaining content in the matcher
-			for (const chunk of matcher.final()) {
-				yield chunk
-			}
-
-			// Provide token usage estimate if not available from API
-			if (inputTokens === 0 || outputTokens === 0) {
-				const inputText =
-					systemPrompt +
-					openaiMessages
-						.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
-						.join("")
-				inputTokens = inputTokens || Math.ceil(inputText.length / 4) // Rough estimate: 4 chars per token
-				outputTokens = outputTokens || Math.ceil((max_tokens || 1000) / 10) // Rough estimate
-			}
-
-			// Store usage for cost calculation
-			this.lastUsage = { inputTokens, outputTokens }
-
-			yield {
-				type: "usage",
-				inputTokens,
-				outputTokens,
+			// Yield usage metrics at the end
+			const usage = await result.usage
+			if (usage) {
+				yield this.processUsageMetrics(usage)
 			}
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(t("common:errors.cerebras.completionError", { error: error.message }))
-			}
-			throw error
+			// Handle AI SDK errors (AI_RetryError, AI_APICallError, etc.)
+			throw handleAiSdkError(error, "Cerebras")
 		}
 	}
 
+	/**
+	 * Complete a prompt using the AI SDK generateText.
+	 */
 	async completePrompt(prompt: string): Promise<string> {
-		const { id: model } = this.getModel()
+		const { temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		// Prepare request body for non-streaming completion
-		const requestBody = {
-			model,
-			messages: [{ role: "user", content: prompt }],
-			stream: false,
-		}
+		const { text } = await generateText({
+			model: languageModel,
+			prompt,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			temperature: this.options.modelTemperature ?? temperature ?? CEREBRAS_DEFAULT_TEMPERATURE,
+		})
 
-		try {
-			const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
-				method: "POST",
-				headers: {
-					...DEFAULT_HEADERS,
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.apiKey}`,
-					[CEREBRAS_INTEGRATION_HEADER]: CEREBRAS_INTEGRATION_NAME, // kilocode_change
-				},
-				body: JSON.stringify(requestBody),
-			})
-
-			if (!response.ok) {
-				const errorText = await response.text()
-
-				// Provide consistent error handling with createMessage
-				if (response.status === 401) {
-					throw new Error(t("common:errors.cerebras.authenticationFailed"))
-				} else if (response.status === 403) {
-					throw new Error(t("common:errors.cerebras.accessForbidden"))
-				} else if (response.status === 429) {
-					throw new Error(t("common:errors.cerebras.rateLimitExceeded"))
-				} else if (response.status >= 500) {
-					throw new Error(t("common:errors.cerebras.serverError", { status: response.status }))
-				} else {
-					throw new Error(
-						t("common:errors.cerebras.genericError", { status: response.status, message: errorText }),
-					)
-				}
-			}
-
-			const result = await response.json()
-			return result.choices?.[0]?.message?.content || ""
-		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(t("common:errors.cerebras.completionError", { error: error.message }))
-			}
-			throw error
-		}
-	}
-
-	getApiCost(metadata: ApiHandlerCreateMessageMetadata): number {
-		const { info } = this.getModel()
-		// Use actual token usage from the last request
-		const { inputTokens, outputTokens } = this.lastUsage
-		const { totalCost } = calculateApiCostOpenAI(info, inputTokens, outputTokens)
-		return totalCost
+		return text
 	}
 }

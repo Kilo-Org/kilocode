@@ -125,5 +125,9 @@
 		"delegated_to": "Didelegasikan ke tugas {{childId}}",
 		"delegation_completed": "Subtugas selesai, melanjutkan tugas induk",
 		"awaiting_child": "Menunggu tugas anak {{childId}}"
+	},
+	"costs": {
+		"own": "Sendiri",
+		"subtasks": "Subtugas"
 	}
 }

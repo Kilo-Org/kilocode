@@ -575,7 +575,7 @@ describe("ToolRepetitionDetector", () => {
 				params: {}, // Empty for native protocol
 				partial: false,
 				nativeArgs: {
-					files: [{ path: "file1.ts" }],
+					path: "file1.ts",
 				},
 			}
 
@@ -585,7 +585,7 @@ describe("ToolRepetitionDetector", () => {
 				params: {}, // Empty for native protocol
 				partial: false,
 				nativeArgs: {
-					files: [{ path: "file2.ts" }],
+					path: "file2.ts",
 				},
 			}
 
@@ -609,7 +609,7 @@ describe("ToolRepetitionDetector", () => {
 				params: {}, // Empty for native protocol
 				partial: false,
 				nativeArgs: {
-					files: [{ path: "same-file.ts" }],
+					path: "same-file.ts",
 				},
 			}
 
@@ -625,7 +625,7 @@ describe("ToolRepetitionDetector", () => {
 			expect(result.askUser).toBeDefined()
 		})
 
-		it("should differentiate read_file calls with multiple files in different orders", () => {
+		it("should treat different slice offsets as distinct read_file calls", () => {
 			const detector = new ToolRepetitionDetector(2)
 
 			const readFile1: ToolUse = {
@@ -634,7 +634,9 @@ describe("ToolRepetitionDetector", () => {
 				params: {},
 				partial: false,
 				nativeArgs: {
-					files: [{ path: "a.ts" }, { path: "b.ts" }],
+					path: "a.ts",
+					offset: 1,
+					limit: 2000,
 				},
 			}
 
@@ -644,11 +646,13 @@ describe("ToolRepetitionDetector", () => {
 				params: {},
 				partial: false,
 				nativeArgs: {
-					files: [{ path: "b.ts" }, { path: "a.ts" }],
+					path: "a.ts",
+					offset: 2001,
+					limit: 2000,
 				},
 			}
 
-			// Different order should be treated as different calls
+			// Different offsets should be treated as different calls
 			expect(detector.check(readFile1).allowExecution).toBe(true)
 			expect(detector.check(readFile2).allowExecution).toBe(true)
 		})

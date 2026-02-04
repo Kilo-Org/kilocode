@@ -58,7 +58,6 @@ export async function getDeepInfraModels(
 			contextWindow,
 			supportsImages: tags.includes("vision"),
 			supportsPromptCache: tags.includes("prompt_cache"),
-			supportsNativeTools: true,
 			inputPrice: meta.pricing?.input_tokens,
 			outputPrice: meta.pricing?.output_tokens,
 			cacheReadsPrice: meta.pricing?.cache_read_tokens,

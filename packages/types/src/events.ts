@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { clineMessageSchema, tokenUsageSchema } from "./message.js"
+import { clineMessageSchema, queuedMessageSchema, tokenUsageSchema } from "./message.js"
 import { toolNamesSchema, toolUsageSchema } from "./tool.js"
 
 /**
@@ -35,6 +35,7 @@ export enum RooCodeEventName {
 	TaskModeSwitched = "taskModeSwitched",
 	TaskAskResponded = "taskAskResponded",
 	TaskUserMessage = "taskUserMessage",
+	QueuedMessagesUpdated = "queuedMessagesUpdated",
 
 	// Task Analytics
 	TaskTokenUsageUpdated = "taskTokenUsageUpdated",
@@ -100,6 +101,7 @@ export const rooCodeEventsSchema = z.object({
 	[RooCodeEventName.TaskModeSwitched]: z.tuple([z.string(), z.string()]),
 	[RooCodeEventName.TaskAskResponded]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskUserMessage]: z.tuple([z.string()]),
+	[RooCodeEventName.QueuedMessagesUpdated]: z.tuple([z.string(), z.array(queuedMessageSchema)]),
 
 	[RooCodeEventName.TaskToolFailed]: z.tuple([z.string(), toolNamesSchema, z.string()]),
 	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema, toolUsageSchema]),
@@ -215,6 +217,11 @@ export const taskEventSchema = z.discriminatedUnion("eventName", [
 	z.object({
 		eventName: z.literal(RooCodeEventName.TaskAskResponded),
 		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskAskResponded],
+		taskId: z.number().optional(),
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.QueuedMessagesUpdated),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.QueuedMessagesUpdated],
 		taskId: z.number().optional(),
 	}),
 

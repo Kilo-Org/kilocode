@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "Fet",
+	"description": "Els worktrees de Git et permeten treballar en diverses branques alhora en directoris separats. Cada worktree té la seva pròpia finestra de VS Code amb Roo Code.",
+
+	"notGitRepo": "Aquest espai de treball no és un repositori Git. Els worktrees necessiten un repositori Git per funcionar.",
+	"multiRootNotSupported": "Els worktrees no són compatibles amb espais de treball de múltiples arrels. Obre una sola carpeta per fer servir worktrees.",
+	"subfolderNotSupported": "Aquest espai de treball és una subcarpeta d'un repositori Git. Obre l'arrel del repositori per fer servir worktrees.",
+	"gitRoot": "Arrel de Git",
+
+	"includeFileExists": "S'ha trobat el fitxer .worktreeinclude: es copiaran fitxers als worktrees nous",
+	"noIncludeFile": "No s'ha trobat cap fitxer .worktreeinclude",
+	"createFromGitignore": "Crea a partir de .gitignore",
+
+	"primary": "Principal",
+	"current": "Actual",
+	"locked": "Bloquejat",
+	"detachedHead": "HEAD separat",
+	"noBranch": "Sense branca",
+
+	"switchInThisWindow": "Canvia a worktree",
+	"openInNewWindow": "Obre en una finestra nova",
+	"delete": "Suprimeix",
+	"newWorktree": "Worktree nou",
+
+	"createWorktree": "Crea worktree",
+	"branchName": "Nom de la branca",
+	"createNewBranch": "Crea una branca nova",
+	"checkoutExisting": "Fes checkout d'una branca existent",
+	"baseBranch": "Branca base",
+	"loadingBranches": "Carregant branques...",
+	"selectBranch": "Selecciona una branca",
+	"searchBranch": "Cercar branques...",
+	"noBranchFound": "No s'ha trobat cap branca",
+	"localBranches": "Branques locals",
+	"remoteBranches": "Branques remotes",
+	"worktreePath": "En",
+	"selectWorktreeLocation": "Selecciona la ubicació del Worktree",
+	"selectFolderForWorktree": "Selecciona carpeta per al worktree nou",
+	"noIncludeFileWarning": "No hi ha cap fitxer .worktreeinclude",
+	"noIncludeFileHint": "Sense un fitxer .worktreeinclude, fitxers com node_modules no es copiaran al worktree nou. Potser hauràs d'executar npm install després de crear-lo.",
+	"create": "Crea",
+	"creating": "S'està creant...",
+	"copyingFiles": "S'estan copiant fitxers...",
+	"copyingProgress": "{{item}} — {{copied}} copiat",
+	"cancel": "Cancel·la",
+
+	"deleteWorktree": "Suprimeix worktree",
+	"deleteWarning": "Aquesta acció no es pot desfer. S'eliminarà:",
+	"deleteWarningBranch": "La branca i qualsevol canvi sense confirmar",
+	"deleteWarningFiles": "Tots els fitxers del directori del worktree",
+	"deleteNoticeLarge": "Si és un gran repositori, podria trigar una mica.",
+	"forceDelete": "Força la supressió",
+	"worktreeIsLocked": "el worktree està bloquejat",
+	"deleting": "S'està suprimint...",
+
+	"close": "Tanca",
+
+	"showInHomeScreen": "Mostra worktrees a la pantalla d'inici",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Canvia entre worktrees",
+		"description": "Els worktrees de Git et permeten treballar en diverses branques simultàniament. Fes clic per canviar l'espai de treball.",
+		"settings": "Gestiona Worktrees",
+		"info": "Els worktrees de Git et permeten tenir diversos directoris de treball adjunts al mateix repositori."
+	}
+}

@@ -1,4 +1,5 @@
 {
+	"back": "タスク ビューに戻る",
 	"common": {
 		"save": "保存",
 		"done": "完了",
@@ -7,6 +8,10 @@
 		"select": "選択",
 		"add": "ヘッダーを追加",
 		"remove": "削除"
+	},
+	"search": {
+		"placeholder": "設定を検索...",
+		"noResults": "設定が見つかりません"
 	},
 	"header": {
 		"title": "設定",
@@ -24,6 +29,7 @@
 		"providers": "プロバイダー",
 		"modes": "モード",
 		"mcp": "MCPサーバー",
+		"worktrees": "Worktrees",
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
@@ -36,9 +42,8 @@
 		"ui": "UI",
 		"experimental": "実験的",
 		"language": "言語",
-		"about": "Kilo Codeについて",
-		"autoPurge": "自動クリーンアップ",
-		"ghost": "Ghost"
+		"about": "Roo Codeについて",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -58,10 +63,46 @@
 		},
 		"community": "ヒントが欲しいですか、または他のKilo Codeユーザーと交流したいですか？<redditLink>reddit.com/r/kilocode</redditLink>または<discordLink>kilo.ai/discord</discordLink>に参加してください",
 		"contactAndCommunity": "お問い合わせとコミュニティ",
-		"manageSettings": "設定を管理"
+		"manageSettings": "設定を管理",
+		"debugMode": {
+			"label": "デバッグモードを有効にする",
+			"description": "デバッグモードを有効にすると、タスクヘッダーにAPI会話履歴とUIメッセージをフォーマットされたJSONとして一時ファイルで表示するための追加ボタンが表示されます。"
+		}
 	},
 	"slashCommands": {
-		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
+		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>",
+		"workspaceCommands": "ワークスペースコマンド",
+		"globalCommands": "グローバルコマンド",
+		"noWorkspaceCommands": "このプロジェクトにはまだコマンドがありません。",
+		"noGlobalCommands": "グローバルコマンドはまだありません。",
+		"addCommand": "スラッシュコマンドを追加",
+		"editCommand": "コマンドを編集",
+		"deleteCommand": "コマンドを削除",
+		"deleteDialog": {
+			"title": "コマンドを削除",
+			"description": "コマンド \"{{name}}\" を削除してもよろしいですか？このアクションは取り消せません。",
+			"confirm": "削除",
+			"cancel": "キャンセル"
+		},
+		"createDialog": {
+			"title": "新しいスラッシュコマンドを作成",
+			"nameLabel": "名前",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "小文字、数字、ハイフン、アンダースコアのみ",
+			"sourceLabel": "場所",
+			"create": "作成",
+			"cancel": "キャンセル"
+		},
+		"source": {
+			"global": "グローバル（すべてのワークスペースで利用可能）",
+			"project": "ワークスペース"
+		},
+		"validation": {
+			"nameRequired": "名前は必須です",
+			"nameTooLong": "名前は64文字以下である必要があります",
+			"nameInvalid": "名前は文字、数字、ハイフン、アンダースコアのみを含める必要があります"
+		},
+		"footer": "スラッシュコマンドを使用して、頻繁に使用するプロンプトとワークフローにすばやくアクセスします。"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
@@ -259,7 +300,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "最大リクエスト数",
-			"description": "タスクを続行するための承認を求める前に、自動的にこの数のAPIリクエストを行います。",
 			"unlimited": "無制限"
 		},
 		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
@@ -307,10 +347,40 @@
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
 		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
-		"useLegacyFormat": "レガシーOpenAI API形式を使用",
 		"customHeaders": "カスタムヘッダー",
 		"headerName": "ヘッダー名",
 		"headerValue": "ヘッダー値",
@@ -773,7 +843,6 @@
 				"label": "最大診断メッセージ数",
 				"description": "ファイルごとに含める診断メッセージの最大数。この制限は、自動インクルード（チェックボックスが有効な場合）と手動の@problemsメンションの両方に適用されます。値を高くするとより多くのコンテキストが提供されますが、トークンの使用量が増加します。",
 				"resetTooltip": "デフォルト値（50）にリセット",
-				"unlimited": "無制限の診断メッセージ",
 				"unlimitedLabel": "無制限"
 			},
 			"delayAfterWrite": {
@@ -834,6 +903,15 @@
 			"label": "ターミナル文字制限",
 			"description": "出力サイズにハードキャップを適用してメモリ問題を防ぐため、行制限を上書きします。超過した場合、最初と最後を保持し、コンテンツがスキップされた箇所にKiloにプレースホルダーを表示します。<0>詳細情報</0>"
 		},
+		"outputPreviewSize": {
+			"label": "コマンド出力プレビューサイズ",
+			"description": "Rooが直接確認できるコマンド出力の量を制御します。完全な出力は常に保存され、必要に応じてアクセス可能です。",
+			"options": {
+				"small": "小 (5KB)",
+				"medium": "中 (10KB)",
+				"large": "大 (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "ターミナルシェル統合タイムアウト",
 			"description": "コマンドを実行する前�����VS Codeシェル統合を待機する時間。シェルが遅く起動する場合や「シェル統合が利用できません」というエラーが表示される場合は、この値を増やしてください。<0>詳細</0>"
@@ -845,10 +923,6 @@
 		"commandDelay": {
 			"label": "ターミナルコマンド遅延",
 			"description": "VS Codeターミナルがすべての出力をフラッシュできるよう、各コマンド後に短い一時停止を追加します（bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep）。末尾出力が欠落している場合のみ使用；それ以外は0のままにします。<0>詳細情報</0>"
-		},
-		"compressProgressBar": {
-			"label": "プログレスバー出力を圧���������",
-			"description": "プログレスバー/スピナーを折りたたんで、最終状態のみを保持します（トークンを節約します）。<0>詳細情報</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShellカウンターの回避策を有効にする",
@@ -878,14 +952,6 @@
 	"advancedSettings": {
 		"title": "詳細設定"
 	},
-	"toolProtocol": {
-		"label": "ツールコールプロトコル",
-		"description": "Kilo Code が API と通信する方法を選択します。ネイティブはプロバイダーの関数呼び出し API を使用し、XML は XML 形式のツール定義を使用します。",
-		"default": "デフォルト",
-		"xml": "XML",
-		"native": "ネイティブ",
-		"currentDefault": "デフォルト: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "diff経由の編集を有効化",
@@ -902,10 +968,6 @@
 					"unified": "統合diff戦略はdiffを適用するための複数のアプローチを取り、最良のアプローチを選択します。",
 					"multiBlock": "マルチブロックdiff戦略は、1つのリクエストでファイル内の複数のコードブロックを更新できます。"
 				}
-			},
-			"matchPrecision": {
-				"label": "マッチ精度",
-				"description": "このスライダーは、diffを適用する際にコードセクションがどれだけ正確に一致する必要があるかを制御します。低い値はより柔軟なマッチングを可能にしますが、誤った置換のリスクが高まります。100%未満の値は細心の注意を払って使用してください。"
 			}
 		},
 		"todoList": {
@@ -922,10 +984,6 @@
 			"name": "実験的なコンテンツ挿入ツールを使用する",
 			"description": "実験的なコンテンツ挿入ツールを有効にし、Kilo Codeがdiffを作成せずに特定の行番号にコンテンツを挿入できるようにします。"
 		},
-		"POWER_STEERING": {
-			"name": "実験的な「パワーステアリング」モードを使用する",
-			"description": "有効にすると、Kilo Codeはより頻繁にモデルに現在のモード定義の詳細を思い出させます。これにより、役割定義とカスタム指示へのより強い遵守が実現しますが、メッセージごとにより多くのtokenを使用します。"
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "実験的なマルチブロックdiffツールを使用する",
 			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
@@ -937,10 +995,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplaceを有効にする",
 			"description": "有効にすると、MarketplaceからMCPとカスタムモードをインストールできます。"
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "同時ファイル編集を有効にする",
-			"description": "有効にすると、Kilo Codeは単一のリクエストで複数のファイルを編集できます。無効にすると、Kilo Codeはファイルを一つずつ編集する必要があります。これを無効にすることで、能力の低いモデルで作業する場合や、ファイル変更をより細かく制御したい場合に役立ちます。"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "バックグラウンド編集",
@@ -997,14 +1051,6 @@
 			"name": "モデル開始スラッシュコマンドを有効にする",
 			"description": "有効にすると、Kilo Codeがワークフローを実行するためにあなたのスラッシュコマンドを実行できます。"
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "並列ツール呼び出し",
-			"description": "有効にすると、ネイティブプロトコルは単一のアシスタントメッセージターンで複数のツールを実行できます。"
-		},
-		"SPEECH_TO_TEXT": {
-			"name": "音声認識 (STT)",
-			"description": "有効にすると、Kilo CodeはOpenAIのWhisperモデルを使用して音声をテキストに変換できます。録音を開始するには、チャット内のマイクボタンをクリックしてください。FFmpegのインストールと、設定済みのOpenAI APIプロバイダーが必要です。"
-		},
 		"CUSTOM_TOOLS": {
 			"name": "カスタムツールを有効化",
 			"description": "有効にすると、Kiloはプロジェクトの .kilocode/tools ディレクトリまたはグローバルツール用の ~/.kilocode/tools からカスタム TypeScript/JavaScript ツールを読み込んで使用できます。注意：これらのツールは自動的に承認されます。",
@@ -1059,8 +1105,6 @@
 		"allModels": "すべてのモデル"
 	},
 	"footer": {
-		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilo.ai/discord</discordLink>に参加してください",
-		"support": "財務に関するご質問は、<supportLink>https://kilo.ai/support</supportLink>のカスタマーサポートまでお問い合わせください",
 		"telemetry": {
 			"label": "匿名のエラーと使用状況レポートを許可",
 			"description": "匿名の使用データとエラーレポートを送信してKilo Codeの改善にご協力ください。コード、プロンプト、個人情報が送信されることはありません。詳細については、プライバシーポリシーをご覧ください。"
@@ -1182,5 +1226,58 @@
 			"label": "メッセージを送信するには{{primaryMod}}+Enterが必要",
 			"description": "有効にすると、Enterだけでなく{{primaryMod}}+Enterを押してメッセージを送信する必要があります"
 		}
+	},
+	"skills": {
+		"description": "エージェントにコンテキスト指示を提供するスキルを管理します。スキルはタスクに関連する場合に自動的に適用されます。<DocsLink>詳細を見る</DocsLink>",
+		"workspaceSkills": "ワークスペーススキル",
+		"globalSkills": "グローバルスキル",
+		"noWorkspaceSkills": "このプロジェクトにはまだスキルがありません。",
+		"noGlobalSkills": "グローバルスキルが設定されていません。すべてのプロジェクトで利用可能なエージェント機能を追加するには、作成してください。",
+		"addSkill": "スキルを追加",
+		"editSkill": "スキルを編集",
+		"deleteSkill": "スキルを削除",
+		"configureModes": "モード可用性",
+		"modeAny": "任意のモード",
+		"modeCount": "{{count}} モード",
+		"deleteDialog": {
+			"title": "スキルを削除",
+			"description": "スキル「{{name}}」を削除してもよろしいですか？この操作は元に戻せません。",
+			"confirm": "削除",
+			"cancel": "キャンセル"
+		},
+		"modeDialog": {
+			"title": "スキルモードを設定",
+			"description": "このスキルを使用できるモードを選択します",
+			"intro": "コンテキストを軽く保つために、必要なモードのみでスキルを利用可能にすることをお勧めします。",
+			"anyMode": "任意のモード（どこでも利用可能）",
+			"save": "保存",
+			"cancel": "キャンセル"
+		},
+		"createDialog": {
+			"title": "新しいスキルを作成",
+			"nameLabel": "名前",
+			"namePlaceholder": "my-skill-name",
+			"descriptionLabel": "説明",
+			"descriptionPlaceholder": "このスキルをいつ使用するか説明してください...",
+			"sourceLabel": "場所",
+			"modeLabel": "モード（オプション）",
+			"modePlaceholder": "全てのモード",
+			"modeHint": "このスキルを特定のモードに制限する",
+			"modeAny": "全てのモード",
+			"create": "作成",
+			"cancel": "キャンセル"
+		},
+		"source": {
+			"global": "グローバル（すべてのプロジェクトで利用可能）",
+			"project": "プロジェクト（このワークスペースのみ）"
+		},
+		"validation": {
+			"nameRequired": "名前は必須です",
+			"nameTooLong": "名前は64文字以内である必要があります",
+			"nameInvalid": "名前は1〜64文字の小文字、数字、またはハイフンである必要があります",
+			"descriptionRequired": "説明は必須です",
+			"descriptionTooLong": "説明は1024文字以内である必要があります"
+		},
+		"footer": "スキルライターモードで独自のスキルを作成します。<MarketplaceLink>モードマーケットプレイス</MarketplaceLink>で入手可能です。"
 	}
 }

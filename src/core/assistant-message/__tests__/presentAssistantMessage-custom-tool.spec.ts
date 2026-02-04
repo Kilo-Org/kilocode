@@ -7,6 +7,11 @@ import { presentAssistantMessage } from "../presentAssistantMessage"
 vi.mock("../../task/Task")
 vi.mock("../../tools/validateToolUse", () => ({
 	validateToolUse: vi.fn(),
+	isValidToolName: vi.fn((toolName: string) =>
+		["read_file", "write_to_file", "ask_followup_question", "attempt_completion", "use_mcp_tool"].includes(
+			toolName,
+		),
+	),
 }))
 
 // Mock custom tool registry - must be done inline without external variable references
@@ -49,7 +54,6 @@ describe("presentAssistantMessage - Custom Tool Recording", () => {
 			didCompleteReadingStream: false,
 			didRejectTool: false,
 			didAlreadyUseTool: false,
-			diffEnabled: false,
 			consecutiveMistakeCount: 0,
 			clineMessages: [],
 			api: {
@@ -77,6 +81,18 @@ describe("presentAssistantMessage - Custom Tool Recording", () => {
 			say: vi.fn().mockResolvedValue(undefined),
 			ask: vi.fn().mockResolvedValue({ response: "yesButtonClicked" }),
 		}
+
+		// Add pushToolResultToUserContent method after mockTask is created so it can reference mockTask
+		mockTask.pushToolResultToUserContent = vi.fn().mockImplementation((toolResult: any) => {
+			const existingResult = mockTask.userMessageContent.find(
+				(block: any) => block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+			)
+			if (existingResult) {
+				return false
+			}
+			mockTask.userMessageContent.push(toolResult)
+			return true
+		})
 	})
 
 	describe("Custom tool usage recording", () => {
@@ -104,39 +120,7 @@ describe("presentAssistantMessage - Custom Tool Recording", () => {
 
 			// Should record as "custom_tool", not "my_custom_tool"
 			expect(mockTask.recordToolUsage).toHaveBeenCalledWith("custom_tool")
-			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(
-				mockTask.taskId,
-				"custom_tool",
-				"native",
-			)
-		})
-
-		it("should record custom tool usage as 'custom_tool' in XML protocol", async () => {
-			mockTask.assistantMessageContent = [
-				{
-					type: "tool_use",
-					// No ID = XML protocol
-					name: "my_custom_tool",
-					params: { value: "test" },
-					partial: false,
-				},
-			]
-
-			vi.mocked(customToolRegistry.has).mockReturnValue(true)
-			vi.mocked(customToolRegistry.get).mockReturnValue({
-				name: "my_custom_tool",
-				description: "A custom tool",
-				execute: vi.fn().mockResolvedValue("Custom tool result"),
-			})
-
-			await presentAssistantMessage(mockTask)
-
-			expect(mockTask.recordToolUsage).toHaveBeenCalledWith("custom_tool")
-			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(
-				mockTask.taskId,
-				"custom_tool",
-				"xml",
-			)
+			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(mockTask.taskId, "custom_tool")
 		})
 	})
 
@@ -189,11 +173,7 @@ describe("presentAssistantMessage - Custom Tool Recording", () => {
 
 			// Should record as "read_file", not "custom_tool"
 			expect(mockTask.recordToolUsage).toHaveBeenCalledWith("read_file")
-			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(
-				mockTask.taskId,
-				"read_file",
-				"native",
-			)
+			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(mockTask.taskId, "read_file")
 		})
 
 		it("should record MCP tool usage as 'use_mcp_tool' (not custom_tool)", async () => {
@@ -235,11 +215,7 @@ describe("presentAssistantMessage - Custom Tool Recording", () => {
 
 			// Should record as "use_mcp_tool", not "custom_tool"
 			expect(mockTask.recordToolUsage).toHaveBeenCalledWith("use_mcp_tool")
-			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(
-				mockTask.taskId,
-				"use_mcp_tool",
-				"native",
-			)
+			expect(TelemetryService.instance.captureToolUsage).toHaveBeenCalledWith(mockTask.taskId, "use_mcp_tool")
 		})
 	})
 

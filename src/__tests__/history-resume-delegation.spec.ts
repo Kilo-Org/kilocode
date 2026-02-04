@@ -288,6 +288,56 @@ describe("History resume delegation - parent metadata transitions", () => {
 		expect((injectedMsg.content[0] as any).tool_use_id).toBe("toolu_abc123")
 	})
 
+	it("reopenParentFromDelegation injects plain text when no new_task tool_use exists in API history", async () => {
+		const provider = {
+			contextProxy: { globalStorageUri: { fsPath: "/storage" } },
+			getTaskWithId: vi.fn().mockResolvedValue({
+				historyItem: {
+					id: "p-no-tool",
+					status: "delegated",
+					awaitingChildId: "c-no-tool",
+					childIds: [],
+					ts: 100,
+					task: "Parent without tool_use",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+				},
+			}),
+			emit: vi.fn(),
+			getCurrentTask: vi.fn(() => ({ taskId: "c-no-tool" })),
+			removeClineFromStack: vi.fn().mockResolvedValue(undefined),
+			createTaskWithHistoryItem: vi.fn().mockResolvedValue({
+				taskId: "p-no-tool",
+				resumeAfterDelegation: vi.fn().mockResolvedValue(undefined),
+				overwriteClineMessages: vi.fn().mockResolvedValue(undefined),
+				overwriteApiConversationHistory: vi.fn().mockResolvedValue(undefined),
+			}),
+			updateTaskHistory: vi.fn().mockResolvedValue([]),
+		} as unknown as ClineProvider
+
+		// No assistant tool_use in history
+		const existingUiMessages = [{ type: "ask", ask: "tool", text: "subtask request", ts: 50 }]
+		const existingApiMessages = [{ role: "user", content: [{ type: "text", text: "Create a subtask" }], ts: 40 }]
+
+		vi.mocked(readTaskMessages).mockResolvedValue(existingUiMessages as any)
+		vi.mocked(readApiMessages).mockResolvedValue(existingApiMessages as any)
+
+		await (ClineProvider.prototype as any).reopenParentFromDelegation.call(provider, {
+			parentTaskId: "p-no-tool",
+			childTaskId: "c-no-tool",
+			completionResultSummary: "Subtask completed without tool_use",
+		})
+
+		const apiCall = vi.mocked(saveApiMessages).mock.calls[0][0]
+		// Should append a user text note
+		expect(apiCall.messages).toHaveLength(2)
+		const injected = apiCall.messages[1]
+		expect(injected.role).toBe("user")
+		expect((injected.content[0] as any).type).toBe("text")
+		expect((injected.content[0] as any).text).toContain("Subtask c-no-tool completed")
+	})
+
 	it("reopenParentFromDelegation sets skipPrevResponseIdOnce via resumeAfterDelegation", async () => {
 		const parentInstance: any = {
 			skipPrevResponseIdOnce: false,

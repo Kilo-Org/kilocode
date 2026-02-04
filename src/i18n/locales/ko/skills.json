@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "스킬 이름은 1-{{maxLength}}자여야 합니다({{length}}자 수신됨)",
+		"name_format": "스킬 이름은 소문자, 숫자, 하이픈만 포함할 수 있습니다(앞뒤 하이픈 없음, 연속 하이픈 없음)",
+		"description_length": "스킬 설명은 1-1024자여야 합니다({{length}}자 수신됨)",
+		"no_workspace": "프로젝트 스킬을 생성할 수 없습니다: 열린 작업 공간 폴더가 없습니다",
+		"already_exists": "스킬 \"{{name}}\"이(가) 이미 {{path}}에 존재합니다",
+		"not_found": "{{source}}{{modeInfo}}에서 스킬 \"{{name}}\"을(를) 찾을 수 없습니다",
+		"missing_create_fields": "필수 필드 누락: skillName, source 또는 skillDescription",
+		"missing_move_fields": "필수 필드 누락: skillName 또는 source",
+		"missing_update_modes_fields": "필수 필드 누락: skillName 또는 source",
+		"manager_unavailable": "스킬 관리자를 사용할 수 없습니다",
+		"missing_delete_fields": "필수 필드 누락: skillName 또는 source",
+		"skill_not_found": "스킬 \"{{name}}\"을(를) 찾을 수 없습니다",
+		"cannot_modify_builtin": "기본 제공 스킬은 생성하거나 삭제할 수 없습니다",
+		"cannot_open_builtin": "기본 제공 스킬은 파일로 열 수 없습니다"
+	}
+}

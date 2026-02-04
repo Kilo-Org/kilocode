@@ -1,18 +1,19 @@
 import fs from "fs/promises"
 import path from "path"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { fileExistsAtPath } from "../../utils/fs"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface SearchReplaceParams {
 	file_path: string
@@ -23,17 +24,9 @@ interface SearchReplaceParams {
 export class SearchReplaceTool extends BaseTool<"search_replace"> {
 	readonly name = "search_replace" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): SearchReplaceParams {
-		return {
-			file_path: params.file_path || "",
-			old_string: params.old_string || "",
-			new_string: params.new_string || "",
-		}
-	}
-
 	async execute(params: SearchReplaceParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { file_path, old_string, new_string } = params
-		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
+		const { askApproval, handleError, pushToolResult } = callbacks
 
 		try {
 			// Validate required parameters
@@ -63,10 +56,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				task.consecutiveMistakeCount++
 				task.recordToolError("search_replace")
 				pushToolResult(
-					formatResponse.toolError(
-						"The 'old_string' and 'new_string' parameters must be different.",
-						toolProtocol,
-					),
+					formatResponse.toolError("The 'old_string' and 'new_string' parameters must be different."),
 				)
 				return
 			}
@@ -83,7 +73,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 
 			if (!accessAllowed) {
 				await task.say("rooignore_error", relPath)
-				pushToolResult(formatResponse.rooIgnoreError(relPath, toolProtocol))
+				pushToolResult(formatResponse.rooIgnoreError(relPath))
 				return
 			}
 
@@ -98,7 +88,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				task.recordToolError("search_replace")
 				const errorMessage = `File not found: ${relPath}. Cannot perform search and replace on a non-existent file.`
 				await task.say("error", errorMessage)
-				pushToolResult(formatResponse.toolError(errorMessage, toolProtocol))
+				pushToolResult(formatResponse.toolError(errorMessage))
 				return
 			}
 
@@ -112,7 +102,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				task.recordToolError("search_replace")
 				const errorMessage = `Failed to read file '${relPath}'. Please verify file permissions and try again.`
 				await task.say("error", errorMessage)
-				pushToolResult(formatResponse.toolError(errorMessage, toolProtocol))
+				pushToolResult(formatResponse.toolError(errorMessage))
 				return
 			}
 
@@ -129,7 +119,6 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				pushToolResult(
 					formatResponse.toolError(
 						`No match found for the specified 'old_string'. Please ensure it matches the file contents exactly, including whitespace and indentation.`,
-						toolProtocol,
 					),
 				)
 				return
@@ -141,7 +130,6 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				pushToolResult(
 					formatResponse.toolError(
 						`Found ${matchCount} matches for the specified 'old_string'. This tool can only replace ONE occurrence at a time. Please provide more context (3-5 lines before and after) to uniquely identify the specific instance you want to change.`,
-						toolProtocol,
 					),
 				)
 				return
@@ -240,18 +228,25 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			// Record successful tool usage and cleanup
 			task.recordToolUsage("search_replace")
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 
 			// Process any queued messages after file edit completes
 			task.processQueuedMessages()
 		} catch (error) {
 			await handleError("search and replace", error as Error)
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 		}
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"search_replace">): Promise<void> {
 		const filePath: string | undefined = block.params.file_path
 		const oldString: string | undefined = block.params.old_string
+
+		// Wait for path to stabilize before showing UI (prevents truncated paths)
+		if (!this.hasPathStabilized(filePath)) {
+			return
+		}
 
 		let operationPreview: string | undefined
 		if (oldString) {
@@ -260,14 +255,14 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			operationPreview = `replacing: "${preview}"`
 		}
 
-		// Determine relative path for display
-		let relPath = filePath || ""
-		if (filePath && path.isAbsolute(filePath)) {
-			relPath = path.relative(task.cwd, filePath)
+		// Determine relative path for display (filePath is guaranteed non-null after hasPathStabilized)
+		let relPath = filePath!
+		if (path.isAbsolute(relPath)) {
+			relPath = path.relative(task.cwd, relPath)
 		}
 
-		const absolutePath = relPath ? path.resolve(task.cwd, relPath) : ""
-		const isOutsideWorkspace = absolutePath ? isPathOutsideWorkspace(absolutePath) : false
+		const absolutePath = path.resolve(task.cwd, relPath)
+		const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)
 
 		const sharedMessageProps: ClineSayTool = {
 			tool: "appliedDiff",

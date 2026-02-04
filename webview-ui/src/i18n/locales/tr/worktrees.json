@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "Tamam",
+	"description": "Git worktrees, ayrı dizinlerde aynı anda birden fazla branch üzerinde çalışmana olanak tanır. Her worktree, Roo Code ile kendi VS Code penceresine sahip olur.",
+
+	"notGitRepo": "Bu çalışma alanı bir Git deposu değil. Worktrees'in çalışması için bir Git deposu gerekir.",
+	"multiRootNotSupported": "Worktrees, multi-root çalışma alanlarında desteklenmez. Worktrees kullanmak için tek bir klasör aç.",
+	"subfolderNotSupported": "Bu çalışma alanı bir Git deposunun alt klasörü. Worktrees kullanmak için deponun kökünü aç.",
+	"gitRoot": "Git kökü",
+
+	"includeFileExists": ".worktreeinclude dosyası bulundu — dosyalar yeni worktrees'e kopyalanacak",
+	"noIncludeFile": ".worktreeinclude dosyası bulunamadı",
+	"createFromGitignore": ".gitignore'dan oluştur",
+
+	"primary": "Birincil",
+	"current": "Mevcut",
+	"locked": "Kilitli",
+	"detachedHead": "Detached HEAD",
+	"noBranch": "Branch yok",
+
+	"switchInThisWindow": "Worktree'ye geç",
+	"openInNewWindow": "Yeni pencerede aç",
+	"delete": "Sil",
+	"newWorktree": "Yeni Worktree",
+
+	"createWorktree": "Worktree oluştur",
+	"branchName": "Branch adı",
+	"createNewBranch": "Yeni branch oluştur",
+	"checkoutExisting": "Mevcut branch'i checkout et",
+	"baseBranch": "Temel branch",
+	"loadingBranches": "Branch'ler yükleniyor...",
+	"selectBranch": "Branch seç",
+	"searchBranch": "Branch ara...",
+	"noBranchFound": "Branch bulunamadı",
+	"localBranches": "Yerel branch'ler",
+	"remoteBranches": "Uzak branch'ler",
+	"worktreePath": "In",
+	"selectWorktreeLocation": "Worktree Konumunu Seç",
+	"selectFolderForWorktree": "Yeni worktree için klasör seç",
+	"noIncludeFileWarning": ".worktreeinclude dosyası yok",
+	"noIncludeFileHint": ".worktreeinclude dosyası olmadan node_modules gibi dosyalar yeni worktree'ye kopyalanmaz. Oluşturduktan sonra npm install çalıştırman gerekebilir.",
+	"create": "Oluştur",
+	"creating": "Oluşturuluyor...",
+	"copyingFiles": "Dosyalar kopyalanıyor...",
+	"copyingProgress": "{{item}} — {{copied}} kopyalandı",
+	"cancel": "İptal",
+
+	"deleteWorktree": "Worktree'yi sil",
+	"deleteWarning": "Bu işlem geri alınamaz. Şunlar silinecek:",
+	"deleteWarningBranch": "Branch'i ve commit edilmemiş tüm değişiklikler",
+	"deleteWarningFiles": "worktree dizinindeki tüm dosyalar",
+	"deleteNoticeLarge": "Bu büyük bir depo ise, biraz zaman alabilir.",
+	"forceDelete": "Silmeye zorla",
+	"worktreeIsLocked": "worktree kilitli",
+	"deleting": "Siliniyor...",
+
+	"close": "Kapat",
+
+	"showInHomeScreen": "Ana ekranda worktrees göster",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Worktree'ler arasında geç",
+		"description": "Git worktree'leri aynı anda birden fazla branch'te çalışmanı sağlar. Workspace'i değiştirmek için tıkla.",
+		"settings": "Worktree'leri Yönet",
+		"info": "Git worktree'leri aynı depo ile bağlantılı birden fazla çalışma dizinine sahip olmanı sağlar."
+	}
+}

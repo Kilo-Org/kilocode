@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Nama skill harus 1-{{maxLength}} karakter (diterima {{length}})",
+		"name_format": "Nama skill hanya boleh berisi huruf kecil, angka, dan tanda hubung (tanpa tanda hubung di awal atau akhir, tanpa tanda hubung berturut-turut)",
+		"description_length": "Deskripsi skill harus 1-1024 karakter (diterima {{length}})",
+		"no_workspace": "Tidak dapat membuat skill proyek: tidak ada folder workspace yang terbuka",
+		"already_exists": "Skill \"{{name}}\" sudah ada di {{path}}",
+		"not_found": "Skill \"{{name}}\" tidak ditemukan di {{source}}{{modeInfo}}",
+		"missing_create_fields": "Bidang wajib tidak ada: skillName, source, atau skillDescription",
+		"missing_move_fields": "Bidang wajib tidak ada: skillName atau source",
+		"missing_update_modes_fields": "Bidang wajib tidak ada: skillName atau source",
+		"manager_unavailable": "Manajer skill tidak tersedia",
+		"missing_delete_fields": "Bidang wajib tidak ada: skillName atau source",
+		"skill_not_found": "Skill \"{{name}}\" tidak ditemukan",
+		"cannot_modify_builtin": "Skill bawaan tidak dapat dibuat atau dihapus",
+		"cannot_open_builtin": "Skill bawaan tidak dapat dibuka sebagai file"
+	}
+}

@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "{{prevContextTokens}} 토큰의 컨텍스트를 압축할 메시지가 충분하지 않습니다. 최소 {{minimumMessageCount}}개의 메시지가 필요하지만 {{messageCount}}개만 사용 가능합니다.",
 		"condensed_recently": "컨텍스트가 최근 압축되었습니다; 이 시도를 건너뜁니다",
 		"condense_handler_invalid": "컨텍스트 압축을 위한 API 핸들러가 유효하지 않습니다",
-		"condense_context_grew": "압축 중 컨텍스트 크기가 {{prevContextTokens}}에서 {{newContextTokens}}로 증가했습니다; 이 시도를 건너뜁니다",
+		"condense_api_failed": "압축 API 호출 실패: {{message}}",
 		"url_timeout": "웹사이트 로딩이 너무 오래 걸렸습니다(타임아웃). 느린 연결, 무거운 웹사이트 또는 일시적으로 사용할 수 없는 상태일 수 있습니다. 나중에 다시 시도하거나 URL이 올바른지 확인해 주세요.",
 		"url_not_found": "웹사이트 주소를 찾을 수 없습니다. URL이 올바른지 확인하고 다시 시도해 주세요.",
 		"no_internet": "인터넷 연결이 없습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Roo 제공업체는 클라우드 인증이 필요합니다. Roo Code Cloud에 로그인하세요."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API 키에 유효하지 않은 문자가 포함되어 있습니다."
+			"invalidKeyInvalidChars": "API 키에 유효하지 않은 문자가 포함되어 있습니다.",
+			"apiRequestFailed": "API 요청 실패 ({{status}})"
 		},
 		"manual_url_empty": "유효한 콜백 URL을 입력하세요",
 		"manual_url_no_query": "유효하지 않은 콜백 URL: 쿼리 매개변수 누락",
 		"manual_url_missing_params": "유효하지 않은 콜백 URL: 필요한 매개변수 누락 (code와 state)",
 		"manual_url_auth_failed": "수동 URL 인증 실패",
-		"manual_url_auth_error": "인증 실패"
+		"manual_url_auth_error": "인증 실패",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "선택된 터미널 내용이 없습니다",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "사용자에 의해 응답이 중단됨",
-		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨"
+		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨",
+		"streamTerminatedByProvider": "제공자가 요청을 종료함"
 	},
 	"storage": {
 		"prompt_custom_path": "대화 내역을 위한 사용자 지정 저장 경로를 입력하세요. 기본 위치를 사용하려면 비워두세요",

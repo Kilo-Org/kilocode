@@ -39,7 +39,6 @@ describe("attemptCompletionTool", () => {
 	let mockPushToolResult: ReturnType<typeof vi.fn>
 	let mockAskApproval: ReturnType<typeof vi.fn>
 	let mockHandleError: ReturnType<typeof vi.fn>
-	let mockRemoveClosingTag: ReturnType<typeof vi.fn>
 	let mockToolDescription: ReturnType<typeof vi.fn>
 	let mockAskFinishSubTaskApproval: ReturnType<typeof vi.fn>
 	let mockGetConfiguration: ReturnType<typeof vi.fn>
@@ -48,7 +47,6 @@ describe("attemptCompletionTool", () => {
 		mockPushToolResult = vi.fn()
 		mockAskApproval = vi.fn()
 		mockHandleError = vi.fn()
-		mockRemoveClosingTag = vi.fn()
 		mockToolDescription = vi.fn()
 		mockAskFinishSubTaskApproval = vi.fn()
 		mockGetConfiguration = vi.fn(() => ({
@@ -67,6 +65,15 @@ describe("attemptCompletionTool", () => {
 			consecutiveMistakeCount: 0,
 			recordToolError: vi.fn(),
 			todoList: undefined,
+			say: vi.fn().mockResolvedValue(undefined),
+			ask: vi.fn().mockResolvedValue({ response: "yesButtonClicked", text: "", images: [] }),
+			emitFinalTokenUsageUpdate: vi.fn(),
+			emit: vi.fn(),
+			getTokenUsage: vi.fn().mockReturnValue({}),
+			toolUsage: {},
+			taskId: "task_1",
+			apiConfiguration: { apiProvider: "test" } as any,
+			api: { getModel: vi.fn().mockReturnValue({ id: "test-model", info: {} }) } as any,
 		}
 	})
 
@@ -76,6 +83,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -85,10 +93,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -102,6 +108,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -111,10 +118,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -127,6 +132,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -141,10 +147,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -157,6 +161,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -181,10 +186,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -200,6 +203,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -224,10 +228,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -243,6 +245,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -268,10 +271,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -287,6 +288,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -311,10 +313,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -331,6 +331,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -355,10 +356,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -375,6 +374,7 @@ describe("attemptCompletionTool", () => {
 				type: "tool_use",
 				name: "attempt_completion",
 				params: { result: "Task completed successfully" },
+				nativeArgs: { result: "Task completed successfully" },
 				partial: false,
 			}
 
@@ -399,10 +399,8 @@ describe("attemptCompletionTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -420,6 +418,7 @@ describe("attemptCompletionTool", () => {
 					type: "tool_use",
 					name: "attempt_completion",
 					params: { result: "Task completed successfully" },
+					nativeArgs: { result: "Task completed successfully" },
 					partial: false,
 				}
 
@@ -430,10 +429,8 @@ describe("attemptCompletionTool", () => {
 					askApproval: mockAskApproval,
 					handleError: mockHandleError,
 					pushToolResult: mockPushToolResult,
-					removeClosingTag: mockRemoveClosingTag,
 					askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 					toolDescription: mockToolDescription,
-					toolProtocol: "xml",
 				}
 
 				const mockSay = vi.fn()
@@ -455,6 +452,7 @@ describe("attemptCompletionTool", () => {
 					type: "tool_use",
 					name: "attempt_completion",
 					params: { result: "Task completed successfully" },
+					nativeArgs: { result: "Task completed successfully" },
 					partial: false,
 				}
 
@@ -465,10 +463,8 @@ describe("attemptCompletionTool", () => {
 					askApproval: mockAskApproval,
 					handleError: mockHandleError,
 					pushToolResult: mockPushToolResult,
-					removeClosingTag: mockRemoveClosingTag,
 					askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 					toolDescription: mockToolDescription,
-					toolProtocol: "xml",
 				}
 
 				await attemptCompletionTool.handle(mockTask as Task, block, callbacks)

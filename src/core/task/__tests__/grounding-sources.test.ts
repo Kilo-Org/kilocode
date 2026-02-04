@@ -112,7 +112,7 @@ vi.mock("fs/promises", () => ({
 
 // Mock mentions
 vi.mock("../../mentions", () => ({
-	parseMentions: vi.fn().mockImplementation((text) => Promise.resolve(text)),
+	parseMentions: vi.fn().mockImplementation((text) => Promise.resolve({ text, mode: undefined, contentBlocks: [] })),
 	openMention: vi.fn(),
 	getLatestTerminalOutput: vi.fn(),
 }))
@@ -166,6 +166,7 @@ describe("Task grounding sources handling", () => {
 		// Mock provider with necessary methods
 		mockProvider = {
 			postStateToWebview: vi.fn().mockResolvedValue(undefined),
+			postStateToWebviewWithoutTaskHistory: vi.fn().mockResolvedValue(undefined),
 			getState: vi.fn().mockResolvedValue({
 				mode: "code",
 				experiments: {},

@@ -27,6 +27,7 @@ vi.mock("vscode", () => ({
 		showSaveDialog: vi.fn(),
 		showErrorMessage: vi.fn(),
 		showInformationMessage: vi.fn(),
+		showWarningMessage: vi.fn(),
 	},
 	Uri: {
 		file: vi.fn((filePath) => ({ fsPath: filePath })),
@@ -68,15 +69,6 @@ vi.mock("../../../api", () => ({
 	buildApiHandler: vi.fn().mockImplementation((config) => {
 		// Return different model info based on the provider and model
 		const getModelInfo = () => {
-			if (config.apiProvider === "claude-code") {
-				return {
-					id: config.apiModelId || "claude-sonnet-4-5",
-					info: {
-						supportsReasoningBudget: false,
-						requiredReasoningBudget: false,
-					},
-				}
-			}
 			if (config.apiProvider === "anthropic" && config.apiModelId === "claude-3-5-sonnet-20241022") {
 				return {
 					id: "claude-3-5-sonnet-20241022",
@@ -126,6 +118,7 @@ describe("importExport", () => {
 			setValue: vi.fn(),
 			export: vi.fn().mockImplementation(() => Promise.resolve({})),
 			setProviderSettings: vi.fn(),
+			getValue: vi.fn(),
 		} as unknown as ReturnType<typeof vi.mocked<ContextProxy>>
 
 		mockCustomModesManager = { updateCustomMode: vi.fn() } as unknown as ReturnType<
@@ -157,6 +150,7 @@ describe("importExport", () => {
 			expect(vscode.window.showOpenDialog).toHaveBeenCalledWith({
 				filters: { JSON: ["json"] },
 				canSelectMany: false,
+				defaultUri: expect.anything(), // Defaults to Downloads or last export path
 			})
 
 			expect(fs.readFile).not.toHaveBeenCalled()
@@ -458,6 +452,7 @@ describe("importExport", () => {
 			const mockProvider = {
 				settingsImportedAt: 0,
 				postStateToWebview: vi.fn().mockResolvedValue(undefined),
+				postStateToWebviewWithoutTaskHistory: vi.fn().mockResolvedValue(undefined),
 			}
 
 			// Mock the showErrorMessage to capture the error
@@ -483,18 +478,17 @@ describe("importExport", () => {
 
 		it("should handle import when reasoning budget fields are missing from config", async () => {
 			// This test verifies that import works correctly when reasoning budget fields are not present
-			// Using claude-code provider which doesn't support reasoning budgets
 
 			;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
 
 			const mockFileContent = JSON.stringify({
 				providerProfiles: {
-					currentApiConfigName: "claude-code-provider",
+					currentApiConfigName: "openai-provider",
 					apiConfigs: {
-						"claude-code-provider": {
-							apiProvider: "claude-code" as ProviderName,
-							apiModelId: "claude-3-5-sonnet-20241022",
-							id: "claude-code-id",
+						"openai-provider": {
+							apiProvider: "openai" as ProviderName,
+							apiModelId: "gpt-4",
+							id: "openai-id",
 							apiKey: "test-key",
 							// No modelMaxTokens or modelMaxThinkingTokens fields
 						},
@@ -512,7 +506,7 @@ describe("importExport", () => {
 
 			mockProviderSettingsManager.export.mockResolvedValue(previousProviderProfiles)
 			mockProviderSettingsManager.listConfig.mockResolvedValue([
-				{ name: "claude-code-provider", id: "claude-code-id", apiProvider: "claude-code" as ProviderName },
+				{ name: "openai-provider", id: "openai-id", apiProvider: "openai" as ProviderName },
 				{ name: "default", id: "default-id", apiProvider: "anthropic" as ProviderName },
 			])
 
@@ -529,21 +523,502 @@ describe("importExport", () => {
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 
 			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
-				currentApiConfigName: "claude-code-provider",
+				currentApiConfigName: "openai-provider",
 				apiConfigs: {
 					default: { apiProvider: "anthropic" as ProviderName, id: "default-id" },
-					"claude-code-provider": {
-						apiProvider: "claude-code" as ProviderName,
-						apiModelId: "claude-3-5-sonnet-20241022",
+					"openai-provider": {
+						apiProvider: "openai" as ProviderName,
+						apiModelId: "gpt-4",
 						apiKey: "test-key",
-						id: "claude-code-id",
+						id: "openai-id",
 					},
 				},
 				modeApiConfigs: {},
 			})
 
 			expect(mockContextProxy.setValues).toHaveBeenCalledWith({ mode: "code", autoApprovalEnabled: true })
-			expect(mockContextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "claude-code-provider")
+			expect(mockContextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "openai-provider")
+		})
+
+		describe("lenient import with invalid providers", () => {
+			it("should sanitize profiles with invalid apiProvider and return warnings", async () => {
+				// Test importing a profile with a removed/invalid provider like "claude-code"
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "valid-profile",
+						apiConfigs: {
+							"valid-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "test-key",
+								id: "valid-id",
+							},
+							"invalid-profile": {
+								apiProvider: "claude-code", // Invalid/removed provider
+								apiKey: "some-key",
+								id: "invalid-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "valid-profile", id: "valid-id", apiProvider: "openai" as ProviderName },
+					{ name: "default", id: "default-id", apiProvider: "anthropic" as ProviderName },
+				])
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should succeed
+				expect(result.success).toBe(true)
+
+				// Should have warnings about the sanitized profile
+				expect(result).toHaveProperty("warnings")
+				expect((result as { warnings?: string[] }).warnings).toBeDefined()
+				expect((result as { warnings?: string[] }).warnings!.length).toBeGreaterThan(0)
+				expect((result as { warnings?: string[] }).warnings![0]).toContain("invalid-profile")
+				expect((result as { warnings?: string[] }).warnings![0]).toContain("claude-code")
+
+				// The valid profile should be imported
+				expect(mockProviderSettingsManager.import).toHaveBeenCalled()
+				const importedProfiles = mockProviderSettingsManager.import.mock.calls[0][0]
+				expect(importedProfiles.apiConfigs["valid-profile"]).toBeDefined()
+				expect(importedProfiles.apiConfigs["valid-profile"].apiProvider).toBe("openai")
+
+				// The invalid profile should still be imported but without apiProvider
+				expect(importedProfiles.apiConfigs["invalid-profile"]).toBeDefined()
+				expect(importedProfiles.apiConfigs["invalid-profile"].apiProvider).toBeUndefined()
+			})
+
+			it("should skip completely invalid profiles and return warnings", async () => {
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "valid-profile",
+						apiConfigs: {
+							"valid-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "test-key",
+								id: "valid-id",
+							},
+							"type-invalid": {
+								// Invalid type - modelTemperature should be a number, not a string
+								modelTemperature: "not-a-number",
+								id: "type-invalid-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "valid-profile", id: "valid-id", apiProvider: "openai" as ProviderName },
+				])
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should succeed (valid profile was imported)
+				expect(result.success).toBe(true)
+
+				// Should have warnings about the skipped profile
+				expect((result as { warnings?: string[] }).warnings).toBeDefined()
+				expect((result as { warnings?: string[] }).warnings!.some((w) => w.includes("type-invalid"))).toBe(true)
+				expect((result as { warnings?: string[] }).warnings!.some((w) => w.includes("skipped"))).toBe(true)
+
+				// The valid profile should be imported
+				const importedProfiles = mockProviderSettingsManager.import.mock.calls[0][0]
+				expect(importedProfiles.apiConfigs["valid-profile"]).toBeDefined()
+
+				// The type-invalid profile should NOT be imported
+				expect(importedProfiles.apiConfigs["type-invalid"]).toBeUndefined()
+			})
+
+			it("should fail when NO valid profiles can be imported", async () => {
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "invalid-profile",
+						apiConfigs: {
+							"invalid-profile-1": {
+								// Invalid type - rateLimitSeconds should be number
+								rateLimitSeconds: "not-a-number",
+								id: "invalid-1",
+							},
+							"invalid-profile-2": {
+								// Invalid type - modelTemperature should be number
+								modelTemperature: { invalid: "object" },
+								id: "invalid-2",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should fail since all profiles have schema validation errors
+				expect(result.success).toBe(false)
+				expect(result.error).toContain("No valid profiles could be imported")
+
+				// Should NOT have called import since there were no valid profiles
+				expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
+			})
+
+			it("should show warning notification when importing with warnings via importSettingsWithFeedback", async () => {
+				const filePath = "/mock/path/settings.json"
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "valid-profile",
+						apiConfigs: {
+							"valid-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "test-key",
+								id: "valid-id",
+							},
+							"problematic-profile": {
+								apiProvider: "removed-provider", // Invalid provider
+								apiKey: "some-key",
+								id: "problematic-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+				;(fs.access as Mock).mockResolvedValue(undefined)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "valid-profile", id: "valid-id", apiProvider: "openai" as ProviderName },
+				])
+
+				const mockProvider = {
+					settingsImportedAt: 0,
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+				}
+
+				const showWarningMessageSpy = vi.spyOn(vscode.window, "showWarningMessage").mockResolvedValue(undefined)
+				const showInfoMessageSpy = vi
+					.spyOn(vscode.window, "showInformationMessage")
+					.mockResolvedValue(undefined)
+				const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+				await importSettingsWithFeedback(
+					{
+						providerSettingsManager: mockProviderSettingsManager,
+						contextProxy: mockContextProxy,
+						customModesManager: mockCustomModesManager,
+						provider: mockProvider,
+					},
+					filePath,
+				)
+
+				// Should show warning message with short summary (not full details)
+				expect(showWarningMessageSpy).toHaveBeenCalledWith(
+					expect.stringContaining("1 profile had issues during import."),
+				)
+				expect(showWarningMessageSpy).toHaveBeenCalledWith(
+					expect.stringContaining("See Developer Tools console for details."),
+				)
+				// Should log full details to console
+				expect(consoleWarnSpy).toHaveBeenCalledWith(
+					"Settings import completed with warnings:",
+					expect.arrayContaining([expect.stringContaining("problematic-profile")]),
+				)
+				expect(showInfoMessageSpy).not.toHaveBeenCalled()
+
+				// Provider state should still be updated
+				expect(mockProvider.settingsImportedAt).toBeGreaterThan(0)
+				expect(mockProvider.postStateToWebview).toHaveBeenCalled()
+
+				showWarningMessageSpy.mockRestore()
+				showInfoMessageSpy.mockRestore()
+				consoleWarnSpy.mockRestore()
+			})
+
+			it("should handle multiple profiles with mixed valid and invalid providers", async () => {
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "anthropic-profile",
+						apiConfigs: {
+							"anthropic-profile": {
+								apiProvider: "anthropic" as ProviderName,
+								anthropicApiKey: "key-1",
+								id: "anthropic-id",
+							},
+							"openai-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "key-2",
+								id: "openai-id",
+							},
+							"old-claude-profile": {
+								apiProvider: "claude-code", // Removed provider
+								apiKey: "key-3",
+								id: "claude-id",
+							},
+							"another-invalid": {
+								apiProvider: "some-old-provider", // Another removed provider
+								apiKey: "key-4",
+								id: "another-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "anthropic-profile", id: "anthropic-id", apiProvider: "anthropic" as ProviderName },
+					{ name: "openai-profile", id: "openai-id", apiProvider: "openai" as ProviderName },
+				])
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should succeed
+				expect(result.success).toBe(true)
+
+				// Should have multiple warnings
+				const warnings = (result as { warnings?: string[] }).warnings!
+				expect(warnings.length).toBe(2) // Two profiles had invalid providers
+				expect(warnings.some((w) => w.includes("old-claude-profile"))).toBe(true)
+				expect(warnings.some((w) => w.includes("another-invalid"))).toBe(true)
+
+				// Valid profiles should be imported correctly
+				const importedProfiles = mockProviderSettingsManager.import.mock.calls[0][0]
+				expect(importedProfiles.apiConfigs["anthropic-profile"].apiProvider).toBe("anthropic")
+				expect(importedProfiles.apiConfigs["openai-profile"].apiProvider).toBe("openai")
+
+				// Invalid provider profiles should have apiProvider removed
+				expect(importedProfiles.apiConfigs["old-claude-profile"].apiProvider).toBeUndefined()
+				expect(importedProfiles.apiConfigs["another-invalid"].apiProvider).toBeUndefined()
+			})
+
+			it("should fallback currentApiConfigName when the imported current profile was skipped", async () => {
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				// Import file where currentApiConfigName points to an invalid profile that gets skipped
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "invalid-current-profile", // This profile is completely invalid
+						apiConfigs: {
+							"invalid-current-profile": {
+								// Invalid type - rateLimitSeconds should be number
+								rateLimitSeconds: "not-a-number",
+								id: "invalid-current-id",
+							},
+							"valid-fallback-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "test-key",
+								id: "fallback-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "valid-fallback-profile", id: "fallback-id", apiProvider: "openai" as ProviderName },
+				])
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should succeed
+				expect(result.success).toBe(true)
+
+				// Should have warnings about the skipped profile AND the fallback
+				const warnings = (result as { warnings?: string[] }).warnings!
+				expect(warnings).toBeDefined()
+				expect(warnings.some((w) => w.includes("invalid-current-profile") && w.includes("skipped"))).toBe(true)
+				expect(
+					warnings.some(
+						(w) =>
+							w.includes("invalid-current-profile") &&
+							w.includes("not available") &&
+							w.includes("valid-fallback-profile"),
+					),
+				).toBe(true)
+
+				// The currentApiConfigName should be set to the valid fallback profile, not the invalid one
+				const importedProfiles = mockProviderSettingsManager.import.mock.calls[0][0]
+				expect(importedProfiles.currentApiConfigName).toBe("valid-fallback-profile")
+
+				// contextProxy should also be set with the fallback profile name
+				expect(mockContextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "valid-fallback-profile")
+
+				// The invalid profile should NOT be imported
+				expect(importedProfiles.apiConfigs["invalid-current-profile"]).toBeUndefined()
+				// The valid fallback profile should be imported
+				expect(importedProfiles.apiConfigs["valid-fallback-profile"]).toBeDefined()
+			})
+
+			it("should keep previous currentApiConfigName when all imported profiles are invalid", async () => {
+				;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+				// All profiles in the import are invalid, but we have existing profiles
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "invalid-profile",
+						apiConfigs: {
+							"invalid-profile": {
+								rateLimitSeconds: "not-a-number",
+								id: "invalid-id",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "existing-profile",
+					apiConfigs: {
+						"existing-profile": { apiProvider: "anthropic" as ProviderName, id: "existing-id" },
+					},
+				})
+
+				const result = await importSettings({
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				})
+
+				// Import should fail because no valid profiles could be imported
+				expect(result.success).toBe(false)
+				expect(result.error).toContain("No valid profiles could be imported")
+			})
+
+			it("should show plural summary for multiple profile warnings via importSettingsWithFeedback", async () => {
+				const filePath = "/mock/path/settings.json"
+				const mockFileContent = JSON.stringify({
+					providerProfiles: {
+						currentApiConfigName: "valid-profile",
+						apiConfigs: {
+							"valid-profile": {
+								apiProvider: "openai" as ProviderName,
+								apiKey: "test-key",
+								id: "valid-id",
+							},
+							"problematic-profile-1": {
+								apiProvider: "removed-provider-1",
+								apiKey: "key-1",
+								id: "problematic-id-1",
+							},
+							"problematic-profile-2": {
+								apiProvider: "removed-provider-2",
+								apiKey: "key-2",
+								id: "problematic-id-2",
+							},
+						},
+					},
+					globalSettings: { mode: "code" },
+				})
+
+				;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+				;(fs.access as Mock).mockResolvedValue(undefined)
+
+				mockProviderSettingsManager.export.mockResolvedValue({
+					currentApiConfigName: "default",
+					apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+				})
+				mockProviderSettingsManager.listConfig.mockResolvedValue([
+					{ name: "valid-profile", id: "valid-id", apiProvider: "openai" as ProviderName },
+				])
+
+				const mockProvider = {
+					settingsImportedAt: 0,
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+				}
+
+				const showWarningMessageSpy = vi.spyOn(vscode.window, "showWarningMessage").mockResolvedValue(undefined)
+				const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+				await importSettingsWithFeedback(
+					{
+						providerSettingsManager: mockProviderSettingsManager,
+						contextProxy: mockContextProxy,
+						customModesManager: mockCustomModesManager,
+						provider: mockProvider,
+					},
+					filePath,
+				)
+
+				// Should show warning message with plural summary for multiple warnings
+				expect(showWarningMessageSpy).toHaveBeenCalledWith(
+					expect.stringContaining("2 profiles had issues during import."),
+				)
+				// Should log full details to console
+				expect(consoleWarnSpy).toHaveBeenCalledWith(
+					"Settings import completed with warnings:",
+					expect.arrayContaining([
+						expect.stringContaining("problematic-profile-1"),
+						expect.stringContaining("problematic-profile-2"),
+					]),
+				)
+
+				showWarningMessageSpy.mockRestore()
+				consoleWarnSpy.mockRestore()
+			})
 		})
 	})
 
@@ -702,9 +1177,7 @@ describe("importExport", () => {
 				defaultUri: expect.anything(),
 			})
 
-			expect(vscode.Uri.file).toHaveBeenCalledWith(
-				path.join("/mock/home", "Documents", "kilo-code-settings.json"),
-			)
+			expect(vscode.Uri.file).toHaveBeenCalledWith(path.join("/mock/home", "Downloads", "roo-code-settings.json"))
 		})
 
 		describe("codebase indexing export", () => {
@@ -1723,27 +2196,27 @@ describe("importExport", () => {
 		it.each([
 			{
 				testCase: "supportsReasoningBudget is false",
-				providerName: "claude-code-provider",
-				modelId: "claude-sonnet-4-5",
-				providerId: "claude-code-id",
+				providerName: "deepseek-provider",
+				modelId: "deepseek-chat",
+				providerId: "deepseek-id",
 			},
 			{
 				testCase: "requiredReasoningBudget is false",
-				providerName: "claude-code-provider-2",
-				modelId: "claude-sonnet-4-5",
-				providerId: "claude-code-id-2",
+				providerName: "deepseek-provider-2",
+				modelId: "deepseek-coder",
+				providerId: "deepseek-id-2",
 			},
 			{
 				testCase: "both supportsReasoningBudget and requiredReasoningBudget are false",
-				providerName: "claude-code-provider-3",
-				modelId: "claude-3-5-haiku-20241022",
-				providerId: "claude-code-id-3",
+				providerName: "deepseek-provider-3",
+				modelId: "deepseek-reasoner",
+				providerId: "deepseek-id-3",
 			},
 		])(
 			"should exclude modelMaxTokens and modelMaxThinkingTokens when $testCase",
 			async ({ providerName, modelId, providerId }) => {
 				// This test verifies that token fields are excluded when model doesn't support reasoning budget
-				// Using claude-code provider which has supportsReasoningBudget: false and requiredReasoningBudget: false
+				// Using deepseek provider which uses apiModelId and has supportsReasoningBudget: false
 
 				;(vscode.window.showSaveDialog as Mock).mockResolvedValue({
 					fsPath: "/mock/path/roo-code-settings.json",
@@ -1755,12 +2228,12 @@ describe("importExport", () => {
 				// Wait for initialization to complete
 				await realProviderSettingsManager.initialize()
 
-				// Save a claude-code provider config with token fields
+				// Save a deepseek provider config with token fields
 				await realProviderSettingsManager.saveConfig(providerName, {
-					apiProvider: "claude-code" as ProviderName,
+					apiProvider: "deepseek" as ProviderName,
 					apiModelId: modelId,
 					id: providerId,
-					apiKey: "test-key",
+					deepSeekApiKey: "test-key",
 					modelMaxTokens: 4096, // This should be removed during export
 					modelMaxThinkingTokens: 2048, // This should be removed during export
 				})

@@ -1,4 +1,5 @@
 {
+	"back": "Zurück zur Aufgabenansicht",
 	"common": {
 		"save": "Speichern",
 		"done": "Fertig",
@@ -7,6 +8,10 @@
 		"select": "Auswählen",
 		"add": "Header hinzufügen",
 		"remove": "Entfernen"
+	},
+	"search": {
+		"placeholder": "Einstellungen durchsuchen...",
+		"noResults": "Keine Einstellungen gefunden"
 	},
 	"header": {
 		"title": "Einstellungen",
@@ -24,6 +29,7 @@
 		"providers": "Anbieter",
 		"modes": "Modi",
 		"mcp": "MCP-Server",
+		"worktrees": "Worktrees",
 		"autoApprove": "Auto-Genehmigung",
 		"browser": "Computerzugriff",
 		"checkpoints": "Kontrollpunkte",
@@ -36,8 +42,8 @@
 		"ui": "UI",
 		"experimental": "Experimentell",
 		"language": "Sprache",
-		"about": "Über Kilo Code",
-		"autoPurge": "Auto-Bereinigung"
+		"about": "Über Roo Code",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -57,10 +63,46 @@
 		},
 		"community": "Möchtest du Tipps oder dich einfach mit anderen Kilo Code-Nutzern austauschen? Tritt <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilo.ai/discord</discordLink> bei",
 		"contactAndCommunity": "Kontakt & Community",
-		"manageSettings": "Einstellungen verwalten"
+		"manageSettings": "Einstellungen verwalten",
+		"debugMode": {
+			"label": "Debug-Modus aktivieren",
+			"description": "Aktiviere den Debug-Modus, um zusätzliche Buttons im Task-Header zum Anzeigen der API-Konversationshistorie und UI-Nachrichten als formatiertes JSON in temporären Dateien zu erhalten."
+		}
 	},
 	"slashCommands": {
-		"description": "Verwalte deine Slash-Befehle, um benutzerdefinierte Workflows und Aktionen schnell auszuführen. <DocsLink>Mehr erfahren</DocsLink>"
+		"description": "Verwalte deine Slash-Befehle, um benutzerdefinierte Workflows und Aktionen schnell auszuführen. <DocsLink>Mehr erfahren</DocsLink>",
+		"workspaceCommands": "Workspace-Befehle",
+		"globalCommands": "Globale Befehle",
+		"noWorkspaceCommands": "Noch keine Befehle in diesem Projekt.",
+		"noGlobalCommands": "Noch keine globalen Befehle.",
+		"addCommand": "Slash-Befehl hinzufügen",
+		"editCommand": "Befehl bearbeiten",
+		"deleteCommand": "Befehl löschen",
+		"deleteDialog": {
+			"title": "Befehl löschen",
+			"description": "Bist du sicher, dass du den Befehl \"{{name}}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+			"confirm": "Löschen",
+			"cancel": "Abbrechen"
+		},
+		"createDialog": {
+			"title": "Neuen Slash-Befehl erstellen",
+			"nameLabel": "Name",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Nur Kleinbuchstaben, Zahlen, Bindestriche und Unterstriche",
+			"sourceLabel": "Speicherort",
+			"create": "Erstellen",
+			"cancel": "Abbrechen"
+		},
+		"source": {
+			"global": "Global (in allen Workspaces verfügbar)",
+			"project": "Workspace"
+		},
+		"validation": {
+			"nameRequired": "Name ist erforderlich",
+			"nameTooLong": "Name muss 64 Zeichen oder weniger sein",
+			"nameInvalid": "Name darf nur Buchstaben, Zahlen, Bindestriche und Unterstriche enthalten"
+		},
+		"footer": "Nutze Slash-Befehle, um schnell auf häufig verwendete Prompts und Workflows zuzugreifen."
 	},
 	"prompts": {
 		"description": "Konfiguriere Support-Prompts, die für schnelle Aktionen wie das Verbessern von Prompts, das Erklären von Code und das Beheben von Problemen verwendet werden. Diese Prompts helfen Kilo Code dabei, bessere Unterstützung für häufige Entwicklungsaufgaben zu bieten."
@@ -253,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maximale Anfragen",
-			"description": "Automatisch so viele API-Anfragen stellen, bevor du um die Erlaubnis gebeten wirst, mit der Aufgabe fortzufahren.",
 			"unlimited": "Unbegrenzt"
 		},
 		"selectOptionsFirst": "Wähle mindestens eine Option unten aus, um die automatische Genehmigung zu aktivieren",
@@ -310,12 +351,40 @@
 		"doubaoApiKey": "Doubao API-Schlüssel",
 		"getDoubaoApiKey": "Doubao API-Schlüssel erhalten",
 		"apiKeyStorageNotice": "API-Schlüssel werden sicher im VSCode Secret Storage gespeichert",
-		"glamaApiKey": "Glama API-Schlüssel",
-		"getGlamaApiKey": "Glama API-Schlüssel erhalten",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"useReasoning": "Reasoning aktivieren",
 		"useHostHeader": "Benutzerdefinierten Host-Header verwenden",
-		"useLegacyFormat": "Altes OpenAI API-Format verwenden",
 		"customHeaders": "Benutzerdefinierte Headers",
 		"headerName": "Header-Name",
 		"headerValue": "Header-Wert",
@@ -827,6 +896,15 @@
 			"label": "Terminal-Zeichenlimit",
 			"description": "Überschreibt das Zeilenlimit, um Speicherprobleme durch eine harte Obergrenze für die Ausgabegröße zu vermeiden. Bei Überschreitung behält es Anfang und Ende und zeigt Kilo einen Platzhalter, wo Inhalt übersprungen wird. <0>Mehr erfahren</0>"
 		},
+		"outputPreviewSize": {
+			"label": "Befehlsausgabe-Vorschaugröße",
+			"description": "Steuert, wie viel Befehlsausgabe Roo direkt sieht. Die vollständige Ausgabe wird immer gespeichert und ist bei Bedarf zugänglich.",
+			"options": {
+				"small": "Klein (5KB)",
+				"medium": "Mittel (10KB)",
+				"large": "Groß (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal-Shell-Integrations-Timeout",
 			"description": "Wie lange auf VS Code Shell-Integration gewartet wird, bevor Befehle ausgeführt werden. Erhöhe den Wert, wenn deine Shell langsam startet oder du 'Shell-Integration nicht verfügbar'-Fehler siehst. <0>Mehr erfahren</0>"
@@ -838,10 +916,6 @@
 		"commandDelay": {
 			"label": "Terminal-Befehlsverzögerung",
 			"description": "Fügt nach jedem Befehl eine kurze Pause hinzu, damit das VS Code-Terminal alle Ausgaben leeren kann (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Verwende dies nur, wenn du fehlende Tail-Ausgabe siehst; sonst lass es bei 0. <0>Mehr erfahren</0>"
-		},
-		"compressProgressBar": {
-			"label": "Fortschrittsbalken-Ausgabe komprimieren",
-			"description": "Klappt Fortschrittsbalken/Spinner zusammen, sodass nur der Endzustand erhalten bleibt (spart Token). <0>Mehr erfahren</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell-Zähler-Workaround aktivieren",
@@ -871,14 +945,6 @@
 	"advancedSettings": {
 		"title": "Erweiterte Einstellungen"
 	},
-	"toolProtocol": {
-		"label": "Tool-Aufruf-Protokoll",
-		"description": "Wähle, wie Kilo Code mit der API kommuniziert. Nativ verwendet die Funktionsaufruf-API des Anbieters, während XML XML-formatierte Werkzeugdefinitionen verwendet.",
-		"default": "Standard",
-		"xml": "XML",
-		"native": "Nativ",
-		"currentDefault": "Standard: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "Bearbeitung durch Diffs aktivieren",
@@ -895,10 +961,6 @@
 					"unified": "Die einheitliche Diff-Strategie wendet mehrere Ansätze zur Anwendung von Diffs an und wählt den besten Ansatz.",
 					"multiBlock": "Die Mehrblock-Diff-Strategie ermöglicht das Aktualisieren mehrerer Codeblöcke in einer Datei in einer Anfrage."
 				}
-			},
-			"matchPrecision": {
-				"label": "Übereinstimmungspräzision",
-				"description": "Dieser Schieberegler steuert, wie genau Codeabschnitte bei der Anwendung von Diffs übereinstimmen müssen. Niedrigere Werte ermöglichen eine flexiblere Übereinstimmung, erhöhen aber das Risiko falscher Ersetzungen. Verwende Werte unter 100 % mit äußerster Vorsicht."
 			}
 		},
 		"todoList": {
@@ -915,10 +977,6 @@
 			"name": "Experimentelles Inhalts-Einfügewerkzeug verwenden",
 			"description": "Aktiviere das experimentelle Inhalts-Einfügewerkzeug, mit dem Kilo Code Inhalte an bestimmten Zeilennummern einfügen kann, ohne einen Diff erstellen zu müssen."
 		},
-		"POWER_STEERING": {
-			"name": "Experimentellen \"Power Steering\"-Modus verwenden",
-			"description": "Wenn aktiviert, erinnert Kilo Code das Modell häufiger an die Details seiner aktuellen Modusdefinition. Dies führt zu einer stärkeren Einhaltung von Rollendefinitionen und benutzerdefinierten Anweisungen, verbraucht aber mehr Token pro Nachricht."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Gleichzeitiges Lesen von Dateien aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage lesen. Wenn deaktiviert, muss Kilo Code Dateien einzeln lesen. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über den Dateizugriff haben möchtest."
@@ -930,28 +988,6 @@
 		"MARKETPLACE": {
 			"name": "Marktplatz aktivieren",
 			"description": "Wenn aktiviert, kannst du MCPs und benutzerdefinierte Modi aus dem Marketplace installieren."
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage bearbeiten. Wenn deaktiviert, muss Kilo Code Dateien einzeln bearbeiten. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über Dateiänderungen haben möchtest."
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Fast Apply aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Modifikationen optimiert sind. Erfordert den Kilo Gateway Provider, OpenRouter oder einen Morph API-Schlüssel.",
-			"apiProvider": "API-Anbieter",
-			"apiProviderList": {
-				"current": "Aktuell"
-			},
-			"apiKey": "API-Schlüssel (optional)",
-			"placeholder": "Gib deinen API-Schlüssel ein (optional)",
-			"modelLabel": "Modellauswahl",
-			"modelDescription": "Wähle, welches Fast Apply-Modell für Dateibearbeitungen verwendet werden soll",
-			"models": {
-				"auto": "Automatisch (Standard - wählt das beste verfügbare)",
-				"morphFast": "Morph v3 Fast (Schneller, niedrigere Kosten)",
-				"morphLarge": "Morph v3 Large (Leistungsfähiger)",
-				"relace": "Relace Apply v3"
-			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Hintergrundbearbeitung",
@@ -985,14 +1021,6 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Modellinitierte Slash-Befehle aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code deine Slash-Befehle ausführen, um Workflows zu starten."
-		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Parallele Tool-Aufrufe",
-			"description": "Wenn aktiviert, kann das native Protokoll mehrere Tools in einer einzigen Assistenten-Nachrichtenrunde ausführen."
-		},
-		"SPEECH_TO_TEXT": {
-			"name": "Sprache-zu-Text (STT)",
-			"description": "Wenn aktiviert, kann Kilo Code Ihre Sprache mit OpenAIs Whisper-Modell in Text umwandeln. Klicken Sie auf das Mikrofon-Symbol im Chat, um die Aufnahme zu starten. Erfordert eine installierte FFmpeg-Version und einen konfigurierten OpenAI API-Anbieter."
 		},
 		"CUSTOM_TOOLS": {
 			"name": "Benutzerdefinierte Tools aktivieren",
@@ -1048,8 +1076,6 @@
 		"allModels": "Alle Modelle"
 	},
 	"footer": {
-		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilo.ai/discord</discordLink> beitreten",
-		"support": "Für finanzielle Fragen wende dich bitte an den Kundensupport unter <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Fehler- und Nutzungsberichte zulassen",
 			"description": "Hilf dabei, Kilo Code zu verbessern, indem du Nutzungsdaten und Fehlerberichte sendest. Es werden niemals Code, Prompts oder persönliche Informationen gesendet. Weitere Details findest du in unserer Datenschutzrichtlinie."
@@ -1171,5 +1197,58 @@
 			"label": "{{primaryMod}}+Enter zum Senden erfordern",
 			"description": "Wenn aktiviert, musst du {{primaryMod}}+Enter drücken, um Nachrichten zu senden, anstatt nur Enter"
 		}
+	},
+	"skills": {
+		"description": "Verwalten Sie Skills, die dem Agenten kontextbezogene Anweisungen bereitstellen. Skills werden automatisch angewendet, wenn sie für Ihre Aufgaben relevant sind. <DocsLink>Mehr erfahren</DocsLink>",
+		"workspaceSkills": "Workspace-Skills",
+		"globalSkills": "Globale Skills",
+		"noWorkspaceSkills": "Noch keine Skills in diesem Projekt.",
+		"noGlobalSkills": "Noch keine globalen Skills.",
+		"addSkill": "Skill hinzufügen",
+		"editSkill": "Skill bearbeiten",
+		"deleteSkill": "Skill löschen",
+		"configureModes": "Modverfügbarkeit",
+		"modeAny": "Beliebiger Modus",
+		"modeCount": "{{count}} Modi",
+		"deleteDialog": {
+			"title": "Skill löschen",
+			"description": "Bist du sicher, dass du den Skill \"{{name}}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+			"confirm": "Löschen",
+			"cancel": "Abbrechen"
+		},
+		"modeDialog": {
+			"title": "Skill-Modi konfigurieren",
+			"description": "Wähle aus, welche Modi diesen Skill nutzen können",
+			"intro": "Um deinen Kontext leicht zu halten, empfehlen wir, Skills nur für die Modi verfügbar zu machen, die sie benötigen.",
+			"anyMode": "Beliebiger Modus (überall verfügbar)",
+			"save": "Speichern",
+			"cancel": "Abbrechen"
+		},
+		"createDialog": {
+			"title": "Neuen Skill erstellen",
+			"nameLabel": "Name",
+			"namePlaceholder": "my-skill-name",
+			"descriptionLabel": "Beschreibung",
+			"descriptionPlaceholder": "Beschreibe, wann dieser Skill verwendet werden sollte...",
+			"sourceLabel": "Speicherort",
+			"modeLabel": "Modus (optional)",
+			"modePlaceholder": "Beliebiger Modus",
+			"modeAny": "Beliebiger Modus",
+			"modeHint": "Beschränke diesen Skill auf einen bestimmten Modus",
+			"create": "Erstellen",
+			"cancel": "Abbrechen"
+		},
+		"source": {
+			"global": "Global (in allen Projekten verfügbar)",
+			"project": "Projekt (nur dieser Workspace)"
+		},
+		"validation": {
+			"nameRequired": "Name ist erforderlich",
+			"nameTooLong": "Name muss 64 Zeichen oder weniger sein",
+			"nameInvalid": "Name muss 1-64 Kleinbuchstaben, Zahlen oder Bindestriche sein",
+			"descriptionRequired": "Beschreibung ist erforderlich",
+			"descriptionTooLong": "Beschreibung muss 1024 Zeichen oder weniger sein"
+		},
+		"footer": "Erstelle deine eigenen Skills mit dem Skill Writer Modus, verfügbar im <MarketplaceLink>Modes Marketplace</MarketplaceLink>."
 	}
 }

@@ -1041,29 +1041,6 @@ function sum(a, b) {
 		})
 	})
 
-	describe("getToolDescription", () => {
-		let strategy: MultiSearchReplaceDiffStrategy
-
-		beforeEach(() => {
-			strategy = new MultiSearchReplaceDiffStrategy()
-		})
-
-		it("should include the current workspace directory", async () => {
-			const cwd = "/test/dir"
-			const description = await strategy.getToolDescription({ cwd })
-			expect(description).toContain(`relative to the current workspace directory ${cwd}`)
-		})
-
-		it("should include required format elements", async () => {
-			const description = await strategy.getToolDescription({ cwd: "/test" })
-			expect(description).toContain("<<<<<<< SEARCH")
-			expect(description).toContain("=======")
-			expect(description).toContain(">>>>>>> REPLACE")
-			expect(description).toContain("<apply_diff>")
-			expect(description).toContain("</apply_diff>")
-		})
-	})
-
 	describe("line marker validation in REPLACE sections", () => {
 		let strategy: MultiSearchReplaceDiffStrategy
 

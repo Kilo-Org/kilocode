@@ -1,13 +1,11 @@
 import { render, screen, act } from "@/utils/test-utils"
 
 import {
-	ProviderSettings,
-	ExperimentId,
-	openRouterDefaultModelId, // kilocode_change
+	type ProviderSettings,
+	type ExperimentId,
+	type ExtensionState,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 } from "@roo-code/types"
-
-import { ExtensionState } from "@roo/ExtensionMessage"
 
 import { ExtensionStateContextProvider, useExtensionState, mergeExtensionState } from "../ExtensionStateContext"
 
@@ -229,7 +227,6 @@ describe("mergeExtensionState", () => {
 		const baseState: ExtensionState = {
 			version: "",
 			mcpEnabled: false,
-			enableMcpServerCreation: false,
 			clineMessages: [],
 			taskHistoryFullLength: 0, // kilocode_change
 			taskHistoryVersion: 0, // kilocode_change
@@ -246,8 +243,6 @@ describe("mergeExtensionState", () => {
 			showRooIgnoredFiles: true,
 			enableSubfolderRules: false,
 			renderContext: "sidebar",
-			maxReadFileLine: 500,
-			showAutoApproveMenu: false,
 			cloudUserInfo: null,
 			organizationAllowList: { allowAll: true, providers: {} },
 			autoCondenseContext: true,
@@ -278,16 +273,9 @@ describe("mergeExtensionState", () => {
 			...baseState,
 			apiConfiguration: { modelMaxThinkingTokens: 456, modelTemperature: 0.3 },
 			experiments: {
-				powerSteering: true,
-				multiFileApplyDiff: true,
 				preventFocusDisruption: false,
-				morphFastApply: false, // kilocode_change
-				speechToText: false, // kilocode_change
-				newTaskRequireTodos: false,
 				imageGeneration: false,
 				runSlashCommand: false,
-				nativeToolCalling: false,
-				multipleNativeToolCalls: false,
 				customTools: false,
 			} as Record<ExperimentId, boolean>,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS + 5,
@@ -301,16 +289,9 @@ describe("mergeExtensionState", () => {
 		})
 
 		expect(result.experiments).toEqual({
-			powerSteering: true,
-			multiFileApplyDiff: true,
 			preventFocusDisruption: false,
-			morphFastApply: false, // kilocode_change
-			speechToText: false, // kilocode_change
-			newTaskRequireTodos: false,
 			imageGeneration: false,
 			runSlashCommand: false,
-			nativeToolCalling: false,
-			multipleNativeToolCalls: false,
 			customTools: false,
 		})
 	})

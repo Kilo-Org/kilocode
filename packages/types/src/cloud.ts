@@ -94,14 +94,10 @@ export type OrganizationAllowList = z.infer<typeof organizationAllowListSchema>
 export const organizationDefaultSettingsSchema = globalSettingsSchema
 	.pick({
 		enableCheckpoints: true,
-		fuzzyMatchThreshold: true,
 		maxOpenTabsContext: true,
-		maxReadFileLine: true,
 		maxWorkspaceFiles: true,
 		showRooIgnoredFiles: true,
 		terminalCommandDelay: true,
-		terminalCompressProgressBar: true,
-		terminalOutputLineLimit: true,
 		terminalShellIntegrationDisabled: true,
 		terminalShellIntegrationTimeout: true,
 		terminalZshClearEolMark: true,
@@ -110,10 +106,8 @@ export const organizationDefaultSettingsSchema = globalSettingsSchema
 	.merge(
 		z.object({
 			maxOpenTabsContext: z.number().int().nonnegative().optional(),
-			maxReadFileLine: z.number().int().gte(-1).optional(),
 			maxWorkspaceFiles: z.number().int().nonnegative().optional(),
 			terminalCommandDelay: z.number().int().nonnegative().optional(),
-			terminalOutputLineLimit: z.number().int().nonnegative().optional(),
 			terminalShellIntegrationTimeout: z.number().int().nonnegative().optional(),
 		}),
 	)
@@ -139,6 +133,7 @@ export const organizationCloudSettingsSchema = z.object({
 	taskShareExpirationDays: z.number().int().positive().optional(),
 	allowMembersViewAllTasks: z.boolean().optional(),
 	workspaceTaskVisibility: workspaceTaskVisibilitySchema.optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
@@ -184,6 +179,7 @@ export type UserFeatures = z.infer<typeof userFeaturesSchema>
 export const userSettingsConfigSchema = z.object({
 	extensionBridgeEnabled: z.boolean().optional(),
 	taskSyncEnabled: z.boolean().optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type UserSettingsConfig = z.infer<typeof userSettingsConfigSchema>
@@ -213,6 +209,7 @@ export const ORGANIZATION_DEFAULT: OrganizationSettings = {
 		allowPublicTaskSharing: true,
 		taskShareExpirationDays: 30,
 		allowMembersViewAllTasks: true,
+		llmEnhancedFeaturesEnabled: false,
 	},
 	defaultSettings: {},
 	allowList: ORGANIZATION_ALLOW_ALL,

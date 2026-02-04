@@ -120,7 +120,6 @@ void void_param_prototype(
     void    /* Explicit void parameter */
 );
 
-
 // Testing function prototype with function pointer parameter
 void function_pointer_prototype(
     void (*callback)(void*),

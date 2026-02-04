@@ -28,7 +28,6 @@ describe("generateImageTool", () => {
 	let mockAskApproval: any
 	let mockHandleError: any
 	let mockPushToolResult: any
-	let mockRemoveClosingTag: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -67,7 +66,6 @@ describe("generateImageTool", () => {
 		mockAskApproval = vi.fn().mockResolvedValue(true)
 		mockHandleError = vi.fn()
 		mockPushToolResult = vi.fn()
-		mockRemoveClosingTag = vi.fn((tag, content) => content || "")
 
 		// Mock file system operations
 		vi.mocked(fileUtils.fileExistsAtPath).mockResolvedValue(true)
@@ -86,6 +84,10 @@ describe("generateImageTool", () => {
 					prompt: "Generate a test image",
 					path: "test-image.png",
 				},
+				nativeArgs: {
+					prompt: "Generate a test image",
+					path: "test-image.png",
+				},
 				partial: true,
 			}
 
@@ -93,8 +95,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should not process anything when partial
@@ -112,6 +112,11 @@ describe("generateImageTool", () => {
 					path: "upscaled-image.png",
 					image: "source-image.png",
 				},
+				nativeArgs: {
+					prompt: "Upscale this image",
+					path: "upscaled-image.png",
+					image: "source-image.png",
+				},
 				partial: true,
 			}
 
@@ -119,8 +124,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should not process anything when partial
@@ -135,6 +138,10 @@ describe("generateImageTool", () => {
 				type: "tool_use",
 				name: "generate_image",
 				params: {
+					prompt: "Generate a test image",
+					path: "test-image.png",
+				},
+				nativeArgs: {
 					prompt: "Generate a test image",
 					path: "test-image.png",
 				},
@@ -158,8 +165,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should process the complete block
@@ -173,6 +178,10 @@ describe("generateImageTool", () => {
 				type: "tool_use",
 				name: "generate_image",
 				params: {
+					prompt: "Generate a test image",
+					path: "test-image.png",
+				},
+				nativeArgs: {
 					prompt: "Generate a test image",
 					path: "test-image.png",
 				},
@@ -200,8 +209,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Check that cline.say was called with image data containing cache-busting parameter
@@ -230,6 +237,9 @@ describe("generateImageTool", () => {
 				params: {
 					path: "test-image.png",
 				},
+				nativeArgs: {
+					path: "test-image.png",
+				} as any,
 				partial: false,
 			}
 
@@ -237,8 +247,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.consecutiveMistakeCount).toBe(1)
@@ -254,6 +262,9 @@ describe("generateImageTool", () => {
 				params: {
 					prompt: "Generate a test image",
 				},
+				nativeArgs: {
+					prompt: "Generate a test image",
+				} as any,
 				partial: false,
 			}
 
@@ -261,8 +272,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.consecutiveMistakeCount).toBe(1)
@@ -288,6 +297,10 @@ describe("generateImageTool", () => {
 					prompt: "Generate a test image",
 					path: "test-image.png",
 				},
+				nativeArgs: {
+					prompt: "Generate a test image",
+					path: "test-image.png",
+				},
 				partial: false,
 			}
 
@@ -295,8 +308,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalledWith(
@@ -319,6 +330,11 @@ describe("generateImageTool", () => {
 					path: "upscaled.png",
 					image: "non-existent.png",
 				},
+				nativeArgs: {
+					prompt: "Upscale this image",
+					path: "upscaled.png",
+					image: "non-existent.png",
+				},
 				partial: false,
 			}
 
@@ -326,8 +342,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Input image not found"))
@@ -343,6 +357,11 @@ describe("generateImageTool", () => {
 					path: "upscaled.png",
 					image: "test.bmp", // Unsupported format
 				},
+				nativeArgs: {
+					prompt: "Upscale this image",
+					path: "upscaled.png",
+					image: "test.bmp",
+				},
 				partial: false,
 			}
 
@@ -350,8 +369,6 @@ describe("generateImageTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Unsupported image format"))

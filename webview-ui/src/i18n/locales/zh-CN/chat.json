@@ -28,7 +28,8 @@
 		"openInCloud": "在 Roo Code Cloud 中打开任务",
 		"openInCloudIntro": "从任何地方继续监控或与 Roo 交互。扫描、点击或复制以打开。",
 		"openApiHistory": "打开 API 历史",
-		"openUiHistory": "打开 UI 历史"
+		"openUiHistory": "打开 UI 历史",
+		"backToParentTask": "父任务"
 	},
 	"history": {
 		"title": "历史"
@@ -38,7 +39,10 @@
 	"tokenProgress": {
 		"availableSpace": "可用: {{amount}}",
 		"tokensUsed": "已使用: {{used}} / {{total}}",
-		"reservedForResponse": "已保留: {{amount}}"
+		"reservedForResponse": "已保留: {{amount}}",
+		"tokensUsedLabel": "已使用 Token",
+		"reservedForResponseLabel": "为回复保留",
+		"availableSpaceLabel": "可用空间"
 	},
 	"retry": {
 		"title": "重试",
@@ -92,6 +96,11 @@
 		"title": "取消",
 		"tooltip": "取消当前操作"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "停止当前任务"
+	},
+	"enqueueMessage": "将消息加入队列（当前任务完成后发送）",
 	"scrollToBottom": "滚动到聊天底部",
 	"about": "通过 AI 辅助生成、重构和调试代码。查看我们的 <DocsLink>文档</DocsLink> 了解更多。",
 	"docs": "查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
@@ -149,15 +158,15 @@
 		"rateLimitWait": "请求频率限制",
 		"errorTitle": "提供商错误 {{code}}",
 		"errorMessage": {
-			"docs": "文档",
-			"goToSettings": "设置",
 			"400": "提供商无法按此方式处理请求。请停止任务并尝试不同方法。",
 			"401": "无法向提供商进行身份验证。请检查您的 API 密钥配置。",
 			"402": "您的账户余额/积分似乎已用尽。请前往提供商处充值以继续。",
 			"403": "无权限。您的 API 密钥有效，但提供商拒绝完成此请求。",
 			"429": "请求过于频繁。提供商已对您的请求进行速率限制。请在下一次 API 调用前稍候。",
 			"500": "提供商服务器错误。提供商端出现问题，您的请求无问题。",
-			"unknown": "未知 API 错误。请联系 Kilo 支持。",
+			"docs": "文档",
+			"goToSettings": "设置",
+			"unknown": "未知 API 错误。请联系 Roo Code 支持。",
 			"connection": "连接错误。确保您有可用的互联网连接。",
 			"claudeCodeNotAuthenticated": "你需要登录才能使用 Claude Code。前往设置并点击「登录到 Claude Code」进行身份验证。"
 		}
@@ -268,7 +277,8 @@
 		"completionContent": "子任务已完成",
 		"resultContent": "子任务结果",
 		"defaultResult": "请继续下一个任务。",
-		"completionInstructions": "子任务已完成！您可以查看结果并提出修改或下一步建议。如果一切正常，请确认以将结果返回给主任务。"
+		"completionInstructions": "子任务已完成！您可以查看结果并提出修改或下一步建议。如果一切正常，请确认以将结果返回给主任务。",
+		"goToSubtask": "查看任务"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code有一个问题"
@@ -286,7 +296,8 @@
 		"title": "错误详情",
 		"copyToClipboard": "复制到剪贴板",
 		"copied": "已复制!",
-		"diagnostics": "获取详细错误信息"
+		"diagnostics": "获取详细错误信息",
+		"proxyProvider": "看起来你在使用基于代理的提供商。请检查日志并确保它不会重写 Roo 的请求。"
 	},
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
@@ -307,7 +318,7 @@
 		"triggerLabel_zero": "0 个自动批准",
 		"triggerLabel_one": "1 个自动批准",
 		"triggerLabel_other": "{{count}} 个自动批准",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -328,6 +339,10 @@
 			"description": "为保持在上下文窗口限制内，已从对话中移除较旧的消息。与压缩相比，这是一种快速但上下文保留较少的方法。"
 		}
 	},
+	"skill": {
+		"wantsToLoad": "Roo 想要加载技能",
+		"didLoad": "Roo 加载了技能"
+	},
 	"followUpSuggest": {
 		"copyToInput": "复制到输入框（或按住Shift点击）",
 		"timerPrefix": "自动批准已启用。{{seconds}}秒后选择中…"
@@ -344,8 +359,9 @@
 		},
 		"release": {
 			"heading": "新增功能：",
-			"skills": "Roo 现支持 <skillsLink>Agent Skills</skillsLink> - 可复用的提示词、工具和资源包，扩展 Roo 的功能。",
-			"nativeToolCalling": "所有新任务现在需要使用原生工具调用。<blogLink>了解更多</blogLink>相关信息和解决方案。"
+			"parallelTools": "并行工具调用：工具现在默认并行执行，大大加快多文件操作和复杂任务的速度。",
+			"readFileIndentation": "更智能的文件读取：新的缩进模式可提取完整的语义代码块（函数、类），无需中断函数——适合从搜索结果中指定特定行。",
+			"readCommandOutput": "无损终端输出：新的 read_command_output 工具可从截断的执行中检索完整的命令输出，并支持分页和正则表达式过滤。"
 		},
 		"cloudAgents": {
 			"heading": "云端新功能：",
@@ -356,9 +372,15 @@
 		"careers": "此外，<careersLink>我们正在招聘！</careersLink>",
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/KiloCode</redditLink> 上关注我们 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "总成本（包括子任务）: ${{cost}}",
+		"total": "总成本: ${{cost}}",
+		"includesSubtasks": "包括子任务成本"
+	},
 	"browser": {
 		"session": "浏览器会话",
-		"rooWantsToUse": "Kilo Code想使用浏览器",
+		"active": "活动中",
+		"rooWantsToUse": "Roo想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
 		"screenshot": "浏览器截图",
@@ -497,5 +519,17 @@
 		"updated": "已更新待办事项列表",
 		"completed": "已完成",
 		"started": "已开始"
+	},
+	"tooManyTools": {
+		"title": "启用的工具过多",
+		"toolsPart_one": "{{count}} 个工具",
+		"toolsPart_other": "{{count}} 个工具",
+		"serversPart_one": "{{count}} 个 MCP 服务",
+		"serversPart_other": "{{count}} 个 MCP 服务",
+		"messageTemplate": "你通过 {{servers}} 启用了 {{tools}}。这么多数量会混淆模型并导致错误。建议将其保持在 {{threshold}} 以下。",
+		"openMcpSettings": "打开 MCP 设置"
+	},
+	"readCommandOutput": {
+		"title": "Roo read command output"
 	}
 }

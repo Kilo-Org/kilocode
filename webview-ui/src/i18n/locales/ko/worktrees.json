@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "완료",
+	"description": "Git worktrees를 사용하면 별도의 디렉터리에서 여러 브랜치를 동시에 작업할 수 있습니다. 각 worktree는 Roo Code가 포함된 자체 VS Code 창을 가집니다.",
+
+	"notGitRepo": "이 워크스페이스는 Git 저장소가 아닙니다. worktrees를 사용하려면 Git 저장소가 필요합니다.",
+	"multiRootNotSupported": "멀티 루트 워크스페이스에서는 worktrees가 지원되지 않습니다. worktrees를 사용하려면 단일 폴더를 여세요.",
+	"subfolderNotSupported": "이 워크스페이스는 Git 저장소의 하위 폴더입니다. worktrees를 사용하려면 저장소 루트를 여세요.",
+	"gitRoot": "Git 루트",
+
+	"includeFileExists": ".worktreeinclude 파일을 찾았습니다 — 파일이 새 worktrees로 복사됩니다",
+	"noIncludeFile": ".worktreeinclude 파일을 찾지 못했습니다",
+	"createFromGitignore": ".gitignore에서 만들기",
+
+	"primary": "기본",
+	"current": "현재",
+	"locked": "잠김",
+	"detachedHead": "Detached HEAD",
+	"noBranch": "브랜치 없음",
+
+	"switchInThisWindow": "Worktree로 전환",
+	"openInNewWindow": "새 창에서 열기",
+	"delete": "삭제",
+	"newWorktree": "새 Worktree",
+
+	"createWorktree": "Worktree 만들기",
+	"branchName": "브랜치 이름",
+	"createNewBranch": "새 브랜치 만들기",
+	"checkoutExisting": "기존 브랜치 체크아웃",
+	"baseBranch": "기준 브랜치",
+	"loadingBranches": "브랜치 로딩 중...",
+	"selectBranch": "브랜치 선택",
+	"searchBranch": "브랜치 검색...",
+	"noBranchFound": "브랜치를 찾을 수 없습니다",
+	"localBranches": "로컬 브랜치",
+	"remoteBranches": "원격 브랜치",
+	"worktreePath": "In",
+	"selectWorktreeLocation": "Worktree 위치 선택",
+	"selectFolderForWorktree": "새 worktree의 폴더 선택",
+	"noIncludeFileWarning": ".worktreeinclude 파일 없음",
+	"noIncludeFileHint": ".worktreeinclude 파일이 없으면 node_modules 같은 파일이 새 worktree로 복사되지 않습니다. 생성 후 npm install을 실행해야 할 수도 있습니다.",
+	"create": "만들기",
+	"creating": "만드는 중...",
+	"copyingFiles": "파일 복사 중...",
+	"copyingProgress": "{{item}} — {{copied}} 복사됨",
+	"cancel": "취소",
+
+	"deleteWorktree": "Worktree 삭제",
+	"deleteWarning": "이 작업은 되돌릴 수 없습니다. 다음이 삭제됩니다:",
+	"deleteWarningBranch": "브랜치 및 커밋되지 않은 모든 변경 사항",
+	"deleteWarningFiles": "worktree 디렉터리의 모든 파일",
+	"deleteNoticeLarge": "대규모 저장소의 경우 시간이 조금 걸릴 수 있습니다.",
+	"forceDelete": "강제 삭제",
+	"worktreeIsLocked": "worktree가 잠겨 있습니다",
+	"deleting": "삭제 중...",
+
+	"close": "닫기",
+
+	"showInHomeScreen": "홈 화면에 worktrees 표시",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Worktree 간 전환",
+		"description": "Git worktree를 사용하면 동시에 여러 브랜치에서 작업할 수 있습니다. 클릭하여 워크스페이스를 전환합니다.",
+		"settings": "Worktree 관리",
+		"info": "Git worktree를 사용하면 동일한 저장소에 여러 작업 디렉터리를 연결할 수 있습니다."
+	}
+}

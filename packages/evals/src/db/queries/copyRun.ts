@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm"
 import type { NodePgDatabase } from "drizzle-orm/node-postgres"
 
-import type { InsertRun, InsertTask, InsertTaskMetrics, InsertToolError } from "../schema.js"
-import { schema } from "../schema.js"
+import type { InsertRun, InsertTask, InsertTaskMetrics, InsertToolError } from "../schema"
+import { schema } from "../schema"
 
-import { RecordNotFoundError, RecordNotCreatedError } from "./errors.js"
+import { RecordNotFoundError, RecordNotCreatedError } from "./errors"
 
 export const copyRun = async ({
 	sourceDb,

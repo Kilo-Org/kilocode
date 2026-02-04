@@ -46,5 +46,10 @@
 		"mostRelevant": "सबसे प्रासंगिक"
 	},
 	"viewAllHistory": "सभी देखें",
-	"shareSession": "सत्र साझा करें"
+	"subtasks_one": "{{count}} उप-कार्य",
+	"subtasks_other": "{{count}} उप-कार्य",
+	"subtaskTag": "उप-कार्य",
+	"deleteWithSubtasks": "यह {{count}} उप-कार्य(कों) को भी हटा देगा। क्या आप निश्चित हैं?",
+	"expandSubtasks": "उप-कार्य विस्तारित करें",
+	"collapseSubtasks": "उप-कार्य संपीड़ित करें"
 }

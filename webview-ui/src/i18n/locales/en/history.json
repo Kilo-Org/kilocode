@@ -46,5 +46,10 @@
 		"mostRelevant": "Most Relevant"
 	},
 	"viewAllHistory": "View all",
-	"shareSession": "Share Session"
+	"subtasks_one": "{{count}} subtask",
+	"subtasks_other": "{{count}} subtasks",
+	"subtaskTag": "Subtask",
+	"deleteWithSubtasks": "This will also delete {{count}} subtask(s). Are you sure?",
+	"expandSubtasks": "Expand subtasks",
+	"collapseSubtasks": "Collapse subtasks"
 }

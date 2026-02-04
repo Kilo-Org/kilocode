@@ -1,6 +1,6 @@
 import axios from "axios"
 
-import type { ModelRecord } from "../../../shared/api"
+import type { ModelRecord } from "@roo-code/types"
 
 import { DEFAULT_HEADERS } from "../constants"
 /**
@@ -45,7 +45,6 @@ export async function getLiteLLMModels(apiKey: string, baseUrl: string): Promise
 					contextWindow: modelInfo.max_input_tokens || 200000,
 					supportsImages: Boolean(modelInfo.supports_vision),
 					supportsPromptCache: Boolean(modelInfo.supports_prompt_caching),
-					supportsNativeTools: true,
 					inputPrice: modelInfo.input_cost_per_token ? modelInfo.input_cost_per_token * 1000000 : undefined,
 					outputPrice: modelInfo.output_cost_per_token
 						? modelInfo.output_cost_per_token * 1000000

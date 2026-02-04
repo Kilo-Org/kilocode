@@ -46,5 +46,10 @@
 		"mostRelevant": "Наиболее релевантные"
 	},
 	"viewAllHistory": "Посмотреть все",
-	"shareSession": "Поделиться сеансом"
+	"subtasks_one": "{{count}} подзадача",
+	"subtasks_other": "{{count}} подзадач",
+	"subtaskTag": "Подзадача",
+	"deleteWithSubtasks": "Это также удалит {{count}} подзадачу(и). Вы уверены?",
+	"expandSubtasks": "Развернуть подзадачи",
+	"collapseSubtasks": "Свернуть подзадачи"
 }

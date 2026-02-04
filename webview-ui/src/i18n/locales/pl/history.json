@@ -46,5 +46,10 @@
 		"mostRelevant": "Najbardziej trafne"
 	},
 	"viewAllHistory": "Zobacz wszystko",
-	"shareSession": "Udostępnij sesję"
+	"subtasks_one": "{{count}} podzadanie",
+	"subtasks_other": "{{count}} podzadań",
+	"subtaskTag": "Podzadanie",
+	"deleteWithSubtasks": "Spowoduje to usunięcie {{count}} podzadania(ń). Jesteś pewny?",
+	"expandSubtasks": "Rozwiń podzadania",
+	"collapseSubtasks": "Zwiń podzadania"
 }

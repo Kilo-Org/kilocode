@@ -40,6 +40,12 @@ vi.mock("../fetchers/modelCache", () => ({
 			"claude-3-opus": { ...litellmDefaultModelInfo, maxTokens: 8192 },
 			"llama-3": { ...litellmDefaultModelInfo, maxTokens: 8192 },
 			"gpt-4-turbo": { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			// Gemini models for thought signature injection tests
+			"gemini-3-pro": { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			"gemini-3-flash": { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			"gemini-2.5-pro": { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			"google/gemini-3-pro": { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			"vertex_ai/gemini-3-pro": { ...litellmDefaultModelInfo, maxTokens: 8192 },
 		})
 	}),
 	getModelsFromCache: vi.fn().mockReturnValue(undefined),
@@ -387,6 +393,532 @@ describe("LiteLLMHandler", () => {
 			const createCall = mockCreate.mock.calls[0][0]
 			expect(createCall.max_tokens).toBeUndefined()
 			expect(createCall.max_completion_tokens).toBeUndefined()
+		})
+	})
+
+	describe("Gemini thought signature injection", () => {
+		describe("isGeminiModel detection", () => {
+			it("should detect Gemini 3 models", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const isGeminiModel = (handler as any).isGeminiModel.bind(handler)
+
+				expect(isGeminiModel("gemini-3-pro")).toBe(true)
+				expect(isGeminiModel("gemini-3-flash")).toBe(true)
+				expect(isGeminiModel("gemini-3-pro-preview")).toBe(true)
+			})
+
+			it("should detect Gemini 2.5 models", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const isGeminiModel = (handler as any).isGeminiModel.bind(handler)
+
+				expect(isGeminiModel("gemini-2.5-pro")).toBe(true)
+				expect(isGeminiModel("gemini-2.5-flash")).toBe(true)
+			})
+
+			it("should detect Gemini models with spaces (LiteLLM model groups)", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const isGeminiModel = (handler as any).isGeminiModel.bind(handler)
+
+				// LiteLLM model groups often use space-separated names with title case
+				expect(isGeminiModel("Gemini 3 Pro")).toBe(true)
+				expect(isGeminiModel("Gemini 3 Flash")).toBe(true)
+				expect(isGeminiModel("gemini 3 pro")).toBe(true)
+				expect(isGeminiModel("Gemini 2.5 Pro")).toBe(true)
+				expect(isGeminiModel("gemini 2.5 flash")).toBe(true)
+			})
+
+			it("should detect provider-prefixed Gemini models", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const isGeminiModel = (handler as any).isGeminiModel.bind(handler)
+
+				expect(isGeminiModel("google/gemini-3-pro")).toBe(true)
+				expect(isGeminiModel("vertex_ai/gemini-3-pro")).toBe(true)
+				expect(isGeminiModel("vertex/gemini-2.5-pro")).toBe(true)
+				// Space-separated variants with provider prefix
+				expect(isGeminiModel("google/gemini 3 pro")).toBe(true)
+				expect(isGeminiModel("vertex_ai/gemini 2.5 pro")).toBe(true)
+			})
+
+			it("should not detect non-Gemini models", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const isGeminiModel = (handler as any).isGeminiModel.bind(handler)
+
+				expect(isGeminiModel("gpt-4")).toBe(false)
+				expect(isGeminiModel("claude-3-opus")).toBe(false)
+				expect(isGeminiModel("gemini-1.5-pro")).toBe(false)
+				expect(isGeminiModel("gemini-2.0-flash")).toBe(false)
+			})
+		})
+
+		describe("injectThoughtSignatureForGemini", () => {
+			// Base64 encoded "skip_thought_signature_validator"
+			const dummySignature = Buffer.from("skip_thought_signature_validator").toString("base64")
+
+			it("should inject provider_specific_fields.thought_signature for assistant messages with tool_calls", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const injectThoughtSignature = (handler as any).injectThoughtSignatureForGemini.bind(handler)
+
+				const messages = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: "",
+						tool_calls: [
+							{ id: "call_123", type: "function", function: { name: "test_tool", arguments: "{}" } },
+						],
+					},
+					{ role: "tool", tool_call_id: "call_123", content: "result" },
+				]
+
+				const result = injectThoughtSignature(messages)
+
+				// The first tool call should have provider_specific_fields.thought_signature injected
+				expect(result[1].tool_calls[0].provider_specific_fields).toBeDefined()
+				expect(result[1].tool_calls[0].provider_specific_fields.thought_signature).toBe(dummySignature)
+			})
+
+			it("should not inject if assistant message has no tool_calls", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const injectThoughtSignature = (handler as any).injectThoughtSignatureForGemini.bind(handler)
+
+				const messages = [
+					{ role: "user", content: "Hello" },
+					{ role: "assistant", content: "Hi there!" },
+				]
+
+				const result = injectThoughtSignature(messages)
+
+				// No changes should be made
+				expect(result[1].tool_calls).toBeUndefined()
+			})
+
+			it("should always overwrite existing thought_signature", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const injectThoughtSignature = (handler as any).injectThoughtSignatureForGemini.bind(handler)
+
+				const existingSignature = "existing_signature_base64"
+
+				const messages = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: "",
+						tool_calls: [
+							{
+								id: "call_123",
+								type: "function",
+								function: { name: "test_tool", arguments: "{}" },
+								provider_specific_fields: { thought_signature: existingSignature },
+							},
+						],
+					},
+				]
+
+				const result = injectThoughtSignature(messages)
+
+				// Should overwrite with dummy signature (always inject to ensure compatibility)
+				expect(result[1].tool_calls[0].provider_specific_fields.thought_signature).toBe(dummySignature)
+			})
+
+			it("should inject signature into ALL tool calls for parallel calls", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const injectThoughtSignature = (handler as any).injectThoughtSignatureForGemini.bind(handler)
+
+				const messages = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: "",
+						tool_calls: [
+							{ id: "call_first", type: "function", function: { name: "tool1", arguments: "{}" } },
+							{ id: "call_second", type: "function", function: { name: "tool2", arguments: "{}" } },
+							{ id: "call_third", type: "function", function: { name: "tool3", arguments: "{}" } },
+						],
+					},
+				]
+
+				const result = injectThoughtSignature(messages)
+
+				// ALL tool calls should have the signature
+				expect(result[1].tool_calls[0].provider_specific_fields.thought_signature).toBe(dummySignature)
+				expect(result[1].tool_calls[1].provider_specific_fields.thought_signature).toBe(dummySignature)
+				expect(result[1].tool_calls[2].provider_specific_fields.thought_signature).toBe(dummySignature)
+			})
+
+			it("should preserve existing provider_specific_fields when adding thought_signature", () => {
+				const handler = new LiteLLMHandler(mockOptions)
+				const injectThoughtSignature = (handler as any).injectThoughtSignatureForGemini.bind(handler)
+
+				const messages = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: "",
+						tool_calls: [
+							{
+								id: "call_123",
+								type: "function",
+								function: { name: "test_tool", arguments: "{}" },
+								provider_specific_fields: { other_field: "value" },
+							},
+						],
+					},
+				]
+
+				const result = injectThoughtSignature(messages)
+
+				// Should have both existing field and new thought_signature
+				expect(result[1].tool_calls[0].provider_specific_fields.other_field).toBe("value")
+				expect(result[1].tool_calls[0].provider_specific_fields.thought_signature).toBe(dummySignature)
+			})
+		})
+
+		describe("createMessage integration with Gemini models", () => {
+			// Base64 encoded "skip_thought_signature_validator"
+			const dummySignature = Buffer.from("skip_thought_signature_validator").toString("base64")
+
+			it("should inject thought signatures for Gemini 3 models with native tools", async () => {
+				const optionsWithGemini: ApiHandlerOptions = {
+					...mockOptions,
+					litellmModelId: "gemini-3-pro",
+				}
+				handler = new LiteLLMHandler(optionsWithGemini)
+
+				// Mock fetchModel to return a Gemini model
+				vi.spyOn(handler as any, "fetchModel").mockResolvedValue({
+					id: "gemini-3-pro",
+					info: { ...litellmDefaultModelInfo, maxTokens: 8192 },
+				})
+
+				const systemPrompt = "You are a helpful assistant"
+				// Simulate conversation history with a tool call from a previous model (Claude)
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: [
+							{ type: "text", text: "I'll help you with that." },
+							{ type: "tool_use", id: "toolu_123", name: "read_file", input: { path: "test.txt" } },
+						],
+					},
+					{
+						role: "user",
+						content: [{ type: "tool_result", tool_use_id: "toolu_123", content: "file contents" }],
+					},
+					{ role: "user", content: "Thanks!" },
+				]
+
+				// Mock the stream response
+				const mockStream = {
+					async *[Symbol.asyncIterator]() {
+						yield {
+							choices: [{ delta: { content: "You're welcome!" } }],
+							usage: {
+								prompt_tokens: 100,
+								completion_tokens: 20,
+							},
+						}
+					},
+				}
+
+				mockCreate.mockReturnValue({
+					withResponse: vi.fn().mockResolvedValue({ data: mockStream }),
+				})
+
+				// Provide tools and native protocol to trigger the injection
+				const metadata = {
+					tools: [
+						{
+							type: "function",
+							function: { name: "read_file", description: "Read a file", parameters: {} },
+						},
+					],
+				}
+
+				const generator = handler.createMessage(systemPrompt, messages, metadata as any)
+				for await (const _chunk of generator) {
+					// Consume the generator
+				}
+
+				// Verify that the assistant message with tool_calls has thought_signature injected
+				const createCall = mockCreate.mock.calls[0][0]
+				const assistantMessage = createCall.messages.find(
+					(msg: any) => msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0,
+				)
+
+				expect(assistantMessage).toBeDefined()
+				// First tool call should have the thought signature
+				expect(assistantMessage.tool_calls[0].provider_specific_fields).toBeDefined()
+				expect(assistantMessage.tool_calls[0].provider_specific_fields.thought_signature).toBe(dummySignature)
+			})
+
+			it("should not inject thought signatures for non-Gemini models", async () => {
+				const optionsWithGPT4: ApiHandlerOptions = {
+					...mockOptions,
+					litellmModelId: "gpt-4",
+				}
+				handler = new LiteLLMHandler(optionsWithGPT4)
+
+				vi.spyOn(handler as any, "fetchModel").mockResolvedValue({
+					id: "gpt-4",
+					info: { ...litellmDefaultModelInfo, maxTokens: 8192 },
+				})
+
+				const systemPrompt = "You are a helpful assistant"
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{ role: "user", content: "Hello" },
+					{
+						role: "assistant",
+						content: [
+							{ type: "text", text: "I'll help you with that." },
+							{ type: "tool_use", id: "toolu_123", name: "read_file", input: { path: "test.txt" } },
+						],
+					},
+					{
+						role: "user",
+						content: [{ type: "tool_result", tool_use_id: "toolu_123", content: "file contents" }],
+					},
+				]
+
+				const mockStream = {
+					async *[Symbol.asyncIterator]() {
+						yield {
+							choices: [{ delta: { content: "Response" } }],
+							usage: { prompt_tokens: 100, completion_tokens: 20 },
+						}
+					},
+				}
+
+				mockCreate.mockReturnValue({
+					withResponse: vi.fn().mockResolvedValue({ data: mockStream }),
+				})
+
+				const metadata = {
+					tools: [
+						{
+							type: "function",
+							function: { name: "read_file", description: "Read a file", parameters: {} },
+						},
+					],
+				}
+
+				const generator = handler.createMessage(systemPrompt, messages, metadata as any)
+				for await (const _chunk of generator) {
+					// Consume
+				}
+
+				// Verify that thought_signature was NOT injected for non-Gemini model
+				const createCall = mockCreate.mock.calls[0][0]
+				const assistantMessage = createCall.messages.find(
+					(msg: any) => msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0,
+				)
+
+				expect(assistantMessage).toBeDefined()
+				// Tool calls should not have provider_specific_fields added
+				expect(assistantMessage.tool_calls[0].provider_specific_fields).toBeUndefined()
+			})
+		})
+	})
+
+	describe("tool ID normalization", () => {
+		it("should truncate tool IDs longer than 64 characters", async () => {
+			const optionsWithBedrock: ApiHandlerOptions = {
+				...mockOptions,
+				litellmModelId: "bedrock/anthropic.claude-3-sonnet",
+			}
+			handler = new LiteLLMHandler(optionsWithBedrock)
+
+			vi.spyOn(handler as any, "fetchModel").mockResolvedValue({
+				id: "bedrock/anthropic.claude-3-sonnet",
+				info: { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			})
+
+			// Create a tool ID longer than 64 characters
+			const longToolId = "toolu_" + "a".repeat(70) // 76 characters total
+
+			const systemPrompt = "You are a helpful assistant"
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: "Hello" },
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "I'll help you with that." },
+						{ type: "tool_use", id: longToolId, name: "read_file", input: { path: "test.txt" } },
+					],
+				},
+				{
+					role: "user",
+					content: [{ type: "tool_result", tool_use_id: longToolId, content: "file contents" }],
+				},
+			]
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						choices: [{ delta: { content: "Response" } }],
+						usage: { prompt_tokens: 100, completion_tokens: 20 },
+					}
+				},
+			}
+
+			mockCreate.mockReturnValue({
+				withResponse: vi.fn().mockResolvedValue({ data: mockStream }),
+			})
+
+			const generator = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of generator) {
+				// Consume
+			}
+
+			// Verify that tool IDs are truncated to 64 characters or less
+			const createCall = mockCreate.mock.calls[0][0]
+			const assistantMessage = createCall.messages.find(
+				(msg: any) => msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0,
+			)
+			const toolMessage = createCall.messages.find((msg: any) => msg.role === "tool")
+
+			expect(assistantMessage).toBeDefined()
+			expect(assistantMessage.tool_calls[0].id.length).toBeLessThanOrEqual(64)
+
+			expect(toolMessage).toBeDefined()
+			expect(toolMessage.tool_call_id.length).toBeLessThanOrEqual(64)
+		})
+
+		it("should not modify tool IDs that are already within 64 characters", async () => {
+			const optionsWithBedrock: ApiHandlerOptions = {
+				...mockOptions,
+				litellmModelId: "bedrock/anthropic.claude-3-sonnet",
+			}
+			handler = new LiteLLMHandler(optionsWithBedrock)
+
+			vi.spyOn(handler as any, "fetchModel").mockResolvedValue({
+				id: "bedrock/anthropic.claude-3-sonnet",
+				info: { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			})
+
+			// Create a tool ID within 64 characters
+			const shortToolId = "toolu_01ABC123" // Well under 64 characters
+
+			const systemPrompt = "You are a helpful assistant"
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: "Hello" },
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "I'll help you with that." },
+						{ type: "tool_use", id: shortToolId, name: "read_file", input: { path: "test.txt" } },
+					],
+				},
+				{
+					role: "user",
+					content: [{ type: "tool_result", tool_use_id: shortToolId, content: "file contents" }],
+				},
+			]
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						choices: [{ delta: { content: "Response" } }],
+						usage: { prompt_tokens: 100, completion_tokens: 20 },
+					}
+				},
+			}
+
+			mockCreate.mockReturnValue({
+				withResponse: vi.fn().mockResolvedValue({ data: mockStream }),
+			})
+
+			const generator = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of generator) {
+				// Consume
+			}
+
+			// Verify that tool IDs are unchanged
+			const createCall = mockCreate.mock.calls[0][0]
+			const assistantMessage = createCall.messages.find(
+				(msg: any) => msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0,
+			)
+			const toolMessage = createCall.messages.find((msg: any) => msg.role === "tool")
+
+			expect(assistantMessage).toBeDefined()
+			expect(assistantMessage.tool_calls[0].id).toBe(shortToolId)
+
+			expect(toolMessage).toBeDefined()
+			expect(toolMessage.tool_call_id).toBe(shortToolId)
+		})
+
+		it("should maintain uniqueness with hash suffix when truncating", async () => {
+			const optionsWithBedrock: ApiHandlerOptions = {
+				...mockOptions,
+				litellmModelId: "bedrock/anthropic.claude-3-sonnet",
+			}
+			handler = new LiteLLMHandler(optionsWithBedrock)
+
+			vi.spyOn(handler as any, "fetchModel").mockResolvedValue({
+				id: "bedrock/anthropic.claude-3-sonnet",
+				info: { ...litellmDefaultModelInfo, maxTokens: 8192 },
+			})
+
+			// Create two tool IDs that differ only near the end
+			const longToolId1 = "toolu_" + "a".repeat(60) + "_suffix1"
+			const longToolId2 = "toolu_" + "a".repeat(60) + "_suffix2"
+
+			const systemPrompt = "You are a helpful assistant"
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: "Hello" },
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "I'll help." },
+						{ type: "tool_use", id: longToolId1, name: "read_file", input: { path: "test1.txt" } },
+						{ type: "tool_use", id: longToolId2, name: "read_file", input: { path: "test2.txt" } },
+					],
+				},
+				{
+					role: "user",
+					content: [
+						{ type: "tool_result", tool_use_id: longToolId1, content: "file1 contents" },
+						{ type: "tool_result", tool_use_id: longToolId2, content: "file2 contents" },
+					],
+				},
+			]
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						choices: [{ delta: { content: "Response" } }],
+						usage: { prompt_tokens: 100, completion_tokens: 20 },
+					}
+				},
+			}
+
+			mockCreate.mockReturnValue({
+				withResponse: vi.fn().mockResolvedValue({ data: mockStream }),
+			})
+
+			const generator = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of generator) {
+				// Consume
+			}
+
+			// Verify that truncated tool IDs are unique (hash suffix ensures this)
+			const createCall = mockCreate.mock.calls[0][0]
+			const assistantMessage = createCall.messages.find(
+				(msg: any) => msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0,
+			)
+
+			expect(assistantMessage).toBeDefined()
+			expect(assistantMessage.tool_calls).toHaveLength(2)
+
+			const id1 = assistantMessage.tool_calls[0].id
+			const id2 = assistantMessage.tool_calls[1].id
+
+			// Both should be truncated to 64 characters
+			expect(id1.length).toBeLessThanOrEqual(64)
+			expect(id2.length).toBeLessThanOrEqual(64)
+
+			// They should be different (hash suffix ensures uniqueness)
+			expect(id1).not.toBe(id2)
 		})
 	})
 })

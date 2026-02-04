@@ -1,4 +1,5 @@
 {
+	"back": "Quay lại chế độ xem tác vụ",
 	"common": {
 		"save": "Lưu",
 		"done": "Hoàn thành",
@@ -7,6 +8,10 @@
 		"select": "Chọn",
 		"add": "Thêm tiêu đề",
 		"remove": "Xóa"
+	},
+	"search": {
+		"placeholder": "Tìm kiếm cài đặt...",
+		"noResults": "Không tìm thấy cài đặt"
 	},
 	"header": {
 		"title": "Cài đặt",
@@ -24,6 +29,7 @@
 		"providers": "Nhà cung cấp",
 		"modes": "Chế độ",
 		"mcp": "Máy chủ MCP",
+		"worktrees": "Worktrees",
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
@@ -37,7 +43,7 @@
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
-		"autoPurge": "Tự động dọn dẹp"
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -57,10 +63,46 @@
 		},
 		"community": "Muốn nhận mẹo hoặc chỉ muốn giao lưu với những người dùng Kilo Code khác? Tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Liên Hệ & Cộng Đồng",
-		"manageSettings": "Quản Lý Cài Đặt"
+		"manageSettings": "Quản Lý Cài Đặt",
+		"debugMode": {
+			"label": "Bật chế độ debug",
+			"description": "Bật chế độ debug để hiển thị các nút bổ sung trong tiêu đề nhiệm vụ cho phép xem lịch sử hội thoại API và tin nhắn UI dưới dạng JSON được định dạng trong các tệp tạm thời."
+		}
 	},
 	"slashCommands": {
-		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
+		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>",
+		"workspaceCommands": "Lệnh không gian làm việc",
+		"globalCommands": "Lệnh toàn cầu",
+		"noWorkspaceCommands": "Chưa có lệnh trong dự án này.",
+		"noGlobalCommands": "Chưa có lệnh toàn cầu.",
+		"addCommand": "Thêm lệnh Slash",
+		"editCommand": "Chỉnh sửa lệnh",
+		"deleteCommand": "Xóa lệnh",
+		"deleteDialog": {
+			"title": "Xóa lệnh",
+			"description": "Bạn có chắc chắn muốn xóa lệnh \"{{name}}\" không? Không thể hoàn tác hành động này.",
+			"confirm": "Xóa",
+			"cancel": "Hủy"
+		},
+		"createDialog": {
+			"title": "Tạo lệnh Slash mới",
+			"nameLabel": "Tên",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Chỉ chữ cái thường, số, dấu gạch ngang và dấu gạch dưới",
+			"sourceLabel": "Vị trí",
+			"create": "Tạo",
+			"cancel": "Hủy"
+		},
+		"source": {
+			"global": "Toàn cầu (có sẵn ở tất cả các không gian làm việc)",
+			"project": "Không gian làm việc"
+		},
+		"validation": {
+			"nameRequired": "Tên là bắt buộc",
+			"nameTooLong": "Tên phải có 64 ký tự hoặc ít hơn",
+			"nameInvalid": "Tên chỉ có thể chứa chữ cái, số, dấu gạch ngang và dấu gạch dưới"
+		},
+		"footer": "Sử dụng lệnh slash để truy cập nhanh các prompt và quy trình công việc được sử dụng thường xuyên."
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -253,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Số lượng yêu cầu tối đa",
-			"description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ.",
 			"unlimited": "Không giới hạn"
 		},
 		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt",
@@ -309,10 +350,40 @@
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
-		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
 		"customHeaders": "Tiêu đề tùy chỉnh",
 		"headerName": "Tên tiêu đề",
 		"headerValue": "Giá trị tiêu đề",
@@ -767,7 +838,6 @@
 				"label": "Thông báo chẩn đoán tối đa",
 				"description": "Số lượng thông báo chẩn đoán tối đa được bao gồm cho mỗi tệp. Giới hạn này áp dụng cho cả việc bao gồm tự động (khi hộp kiểm được bật) và đề cập thủ công @problems. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng mức sử dụng token.",
 				"resetTooltip": "Đặt lại về giá trị mặc định (50)",
-				"unlimited": "Thông báo chẩn đoán không giới hạn",
 				"unlimitedLabel": "Không giới hạn"
 			},
 			"delayAfterWrite": {
@@ -828,6 +898,15 @@
 			"label": "Giới hạn ký tự terminal",
 			"description": "Ghi đè giới hạn dòng để tránh vấn đề bộ nhớ bằng cách áp đặt giới hạn cứng cho kích thước đầu ra. Nếu vượt quá, giữ đầu và cuối, hiển thị placeholder cho Kilo nơi nội dung bị bỏ qua. <0>Tìm hiểu thêm</0>"
 		},
+		"outputPreviewSize": {
+			"label": "Kích thước xem trước đầu ra lệnh",
+			"description": "Kiểm soát lượng đầu ra lệnh mà Roo nhìn thấy trực tiếp. Đầu ra đầy đủ luôn được lưu và có thể truy cập khi cần thiết.",
+			"options": {
+				"small": "Nhỏ (5KB)",
+				"medium": "Trung bình (10KB)",
+				"large": "Lớn (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "Timeout tích hợp shell terminal",
 			"description": "Thời gian đợi tích hợp shell VS Code trước khi chạy lệnh. Tăng nếu shell khởi động chậm hoặc thấy lỗi 'Shell Integration Unavailable'. <0>Tìm hiểu thêm</0>"
@@ -839,10 +918,6 @@
 		"commandDelay": {
 			"label": "Delay lệnh terminal",
 			"description": "Thêm khoảng dừng ngắn sau mỗi lệnh để VS Code terminal flush tất cả output (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Chỉ dùng nếu thiếu tail output; nếu không để ở 0. <0>Tìm hiểu thêm</0>"
-		},
-		"compressProgressBar": {
-			"label": "Nén đầu ra thanh tiến trình",
-			"description": "Thu gọn các thanh tiến trình/vòng quay để chỉ giữ lại trạng thái cuối cùng (tiết kiệm token). <0>Tìm hiểu thêm</0>"
 		},
 		"powershellCounter": {
 			"label": "Bật workaround bộ đếm PowerShell",
@@ -872,14 +947,6 @@
 	"advancedSettings": {
 		"title": "Cài đặt nâng cao"
 	},
-	"toolProtocol": {
-		"label": "Giao thức gọi công cụ",
-		"description": "Chọn cách Kilo Code giao tiếp với API. Native sử dụng API gọi hàm của nhà cung cấp, trong khi XML sử dụng định nghĩa công cụ định dạng XML.",
-		"default": "Mặc định",
-		"xml": "XML",
-		"native": "Native",
-		"currentDefault": "Mặc định: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "Bật chỉnh sửa qua diff",
@@ -896,10 +963,6 @@
 					"unified": "Chiến lược diff thống nhất thực hiện nhiều cách tiếp cận để áp dụng diff và chọn cách tiếp cận tốt nhất.",
 					"multiBlock": "Chiến lược diff đa khối cho phép cập nhật nhiều khối mã trong một tệp trong một yêu cầu."
 				}
-			},
-			"matchPrecision": {
-				"label": "Độ chính xác khớp",
-				"description": "Thanh trượt này kiểm soát mức độ chính xác các phần mã phải khớp khi áp dụng diff. Giá trị thấp hơn cho phép khớp linh hoạt hơn nhưng tăng nguy cơ thay thế không chính xác. Sử dụng giá trị dưới 100% với sự thận trọng cao."
 			}
 		},
 		"todoList": {
@@ -916,10 +979,6 @@
 			"name": "Sử dụng công cụ chèn nội dung thử nghiệm",
 			"description": "Bật công cụ chèn nội dung thử nghiệm, cho phép Kilo Code chèn nội dung tại số dòng cụ thể mà không cần tạo diff."
 		},
-		"POWER_STEERING": {
-			"name": "Sử dụng chế độ \"power steering\" thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
@@ -931,10 +990,6 @@
 		"MARKETPLACE": {
 			"name": "Bật Marketplace",
 			"description": "Khi được bật, bạn có thể cài đặt MCP và chế độ tùy chỉnh từ Marketplace."
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "Bật chỉnh sửa tệp đồng thời",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Chỉnh sửa nền",
@@ -991,14 +1046,6 @@
 			"name": "Bật lệnh slash do mô hình khởi tạo",
 			"description": "Khi được bật, Kilo Code có thể chạy các lệnh slash của bạn để thực hiện các quy trình làm việc."
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Lệnh gọi công cụ song song",
-			"description": "Khi được bật, giao thức native có thể thực thi nhiều công cụ trong một lượt tin nhắn của trợ lý."
-		},
-		"SPEECH_TO_TEXT": {
-			"name": "Chuyển Giọng nói thành Văn bản (STT)",
-			"description": "Khi được bật, Kilo Code có thể chuyển đổi giọng nói của bạn thành văn bản bằng mô hình Whisper của OpenAI. Nhấp vào nút microphone trong chat để bắt đầu ghi âm. Yêu cầu cài đặt FFmpeg và cấu hình nhà cung cấp API OpenAI."
-		},
 		"CUSTOM_TOOLS": {
 			"name": "Bật công cụ tùy chỉnh",
 			"description": "Khi được bật, Kilo có thể tải và sử dụng các công cụ TypeScript/JavaScript tùy chỉnh từ thư mục .kilocode/tools của dự án hoặc ~/.kilocode/tools cho các công cụ toàn cục. Lưu ý: các công cụ này sẽ được tự động phê duyệt.",
@@ -1053,8 +1100,6 @@
 		"allModels": "Tất cả mô hình"
 	},
 	"footer": {
-		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
-		"support": "Đối với các câu hỏi về tài chính, vui lòng liên hệ Hỗ trợ khách hàng tại <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Cho phép báo cáo lỗi và sử dụng ẩn danh",
 			"description": "Giúp cải thiện Kilo Code bằng cách gửi dữ liệu sử dụng ẩn danh và báo cáo lỗi. Không bao giờ gửi mã, lời nhắc hoặc thông tin cá nhân. Xem chính sách bảo mật của chúng tôi để biết thêm chi tiết."
@@ -1176,5 +1221,58 @@
 			"label": "Yêu cầu {{primaryMod}}+Enter để gửi tin nhắn",
 			"description": "Khi được bật, bạn phải nhấn {{primaryMod}}+Enter để gửi tin nhắn thay vì chỉ nhấn Enter"
 		}
+	},
+	"skills": {
+		"description": "Quản lý các skill cung cấp hướng dẫn theo ngữ cảnh cho agent. Các skill được áp dụng tự động khi chúng liên quan đến nhiệm vụ của bạn. <DocsLink>Tìm hiểu thêm</DocsLink>",
+		"workspaceSkills": "Kỹ năng không gian làm việc",
+		"globalSkills": "Skills Toàn Cục",
+		"noWorkspaceSkills": "Chưa có kỹ năng trong dự án này.",
+		"noGlobalSkills": "Không có skill toàn cục nào được cấu hình. Tạo một skill để thêm khả năng agent có sẵn trong tất cả các dự án.",
+		"addSkill": "Thêm Skill",
+		"editSkill": "Chỉnh sửa skill",
+		"deleteSkill": "Xóa skill",
+		"configureModes": "Tính khả dụng của chế độ",
+		"modeAny": "Bất kỳ chế độ nào",
+		"modeCount": "{{count}} chế độ",
+		"deleteDialog": {
+			"title": "Xóa Skill",
+			"description": "Bạn có chắc chắn muốn xóa skill \"{{name}}\" không? Hành động này không thể hoàn tác.",
+			"confirm": "Xóa",
+			"cancel": "Hủy"
+		},
+		"modeDialog": {
+			"title": "Cấu hình chế độ Skill",
+			"description": "Chọn chế độ nào có thể sử dụng skill này",
+			"intro": "Để giữ bối cảnh của bạn nhẹ, chúng tôi khuyên bạn nên chỉ cung cấp các kỹ năng cho các chế độ cần chúng.",
+			"anyMode": "Bất kỳ chế độ nào (có sẵn ở mọi nơi)",
+			"save": "Lưu",
+			"cancel": "Hủy"
+		},
+		"createDialog": {
+			"title": "Tạo Skill Mới",
+			"nameLabel": "Tên",
+			"namePlaceholder": "ten-skill-cua-toi",
+			"descriptionLabel": "Mô tả",
+			"descriptionPlaceholder": "Mô tả khi nào nên sử dụng skill này...",
+			"sourceLabel": "Vị trí",
+			"modeLabel": "Chế độ (tùy chọn)",
+			"modePlaceholder": "Bất kỳ chế độ nào",
+			"modeHint": "Hạn chế skill này cho một chế độ cụ thể",
+			"modeAny": "Bất kỳ chế độ nào",
+			"create": "Tạo",
+			"cancel": "Hủy"
+		},
+		"source": {
+			"global": "Toàn cục (có sẵn trong tất cả các dự án)",
+			"project": "Dự án (chỉ workspace này)"
+		},
+		"validation": {
+			"nameRequired": "Tên là bắt buộc",
+			"nameTooLong": "Tên phải có tối đa 64 ký tự",
+			"nameInvalid": "Tên phải là 1-64 chữ thường, số hoặc dấu gạch ngang",
+			"descriptionRequired": "Mô tả là bắt buộc",
+			"descriptionTooLong": "Mô tả phải có tối đa 1024 ký tự"
+		},
+		"footer": "Tạo các skill của riêng bạn với chế độ Skill Writer, có sẵn tại <MarketplaceLink>Modes Marketplace</MarketplaceLink>."
 	}
 }

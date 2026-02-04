@@ -1,9 +1,9 @@
 import pMap from "p-map"
 
-import { EVALS_REPO_PATH, exerciseLanguages, getExercisesForLanguage } from "../exercises/index.js"
-import { createRun, createTask } from "../db/index.js"
+import { EVALS_REPO_PATH, exerciseLanguages, getExercisesForLanguage } from "../exercises/index"
+import { createRun, createTask } from "../db/index"
 
-import { runEvals } from "./runEvals.js"
+import { runEvals } from "./runEvals"
 
 export const runCi = async ({
 	concurrency = 1,

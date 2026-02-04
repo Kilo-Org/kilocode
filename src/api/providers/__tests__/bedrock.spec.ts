@@ -754,14 +754,17 @@ describe("AwsBedrockHandler", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			// Should include anthropic_beta in additionalModelRequestFields
+			// Should include anthropic_beta in additionalModelRequestFields with both 1M context and fine-grained-tool-streaming
 			expect(commandArg.additionalModelRequestFields).toBeDefined()
-			expect(commandArg.additionalModelRequestFields.anthropic_beta).toEqual(["context-1m-2025-08-07"])
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain("context-1m-2025-08-07")
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain(
+				"fine-grained-tool-streaming-2025-05-14",
+			)
 			// Should not include anthropic_version since thinking is not enabled
 			expect(commandArg.additionalModelRequestFields.anthropic_version).toBeUndefined()
 		})
 
-		it("should not include anthropic_beta parameter when 1M context is disabled", async () => {
+		it("should not include 1M context beta when 1M context is disabled but still include fine-grained-tool-streaming", async () => {
 			const handler = new AwsBedrockHandler({
 				apiModelId: BEDROCK_1M_CONTEXT_MODEL_IDS[0],
 				awsAccessKey: "test",
@@ -784,11 +787,16 @@ describe("AwsBedrockHandler", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			// Should not include anthropic_beta in additionalModelRequestFields
-			expect(commandArg.additionalModelRequestFields).toBeUndefined()
+			// Should include anthropic_beta with fine-grained-tool-streaming for Claude models
+			expect(commandArg.additionalModelRequestFields).toBeDefined()
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain(
+				"fine-grained-tool-streaming-2025-05-14",
+			)
+			// Should NOT include 1M context beta
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).not.toContain("context-1m-2025-08-07")
 		})
 
-		it("should not include anthropic_beta parameter for non-Claude Sonnet 4 models", async () => {
+		it("should not include 1M context beta for non-Claude Sonnet 4 models but still include fine-grained-tool-streaming", async () => {
 			const handler = new AwsBedrockHandler({
 				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 				awsAccessKey: "test",
@@ -811,8 +819,13 @@ describe("AwsBedrockHandler", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			// Should not include anthropic_beta for non-Sonnet 4 models
-			expect(commandArg.additionalModelRequestFields).toBeUndefined()
+			// Should include anthropic_beta with fine-grained-tool-streaming for Claude models (even non-Sonnet 4)
+			expect(commandArg.additionalModelRequestFields).toBeDefined()
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain(
+				"fine-grained-tool-streaming-2025-05-14",
+			)
+			// Should NOT include 1M context beta for non-Sonnet 4 models
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).not.toContain("context-1m-2025-08-07")
 		})
 
 		it("should enable 1M context window with cross-region inference for Claude Sonnet 4", () => {
@@ -859,9 +872,12 @@ describe("AwsBedrockHandler", () => {
 				mockConverseStreamCommand.mock.calls.length - 1
 			][0] as any
 
-			// Should include anthropic_beta in additionalModelRequestFields
+			// Should include anthropic_beta in additionalModelRequestFields with both 1M context and fine-grained-tool-streaming
 			expect(commandArg.additionalModelRequestFields).toBeDefined()
-			expect(commandArg.additionalModelRequestFields.anthropic_beta).toEqual(["context-1m-2025-08-07"])
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain("context-1m-2025-08-07")
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain(
+				"fine-grained-tool-streaming-2025-05-14",
+			)
 			// Should not include anthropic_version since thinking is not enabled
 			expect(commandArg.additionalModelRequestFields.anthropic_version).toBeUndefined()
 			// Model ID should have cross-region prefix

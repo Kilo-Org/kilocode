@@ -9,101 +9,41 @@ vi.mock("../../../../services/code-index/managed/ManagedIndexer", () => ({
 }))
 
 import { getToolUseGuidelinesSection } from "../tool-use-guidelines"
-import { TOOL_PROTOCOL } from "@roo-code/types"
-import { EXPERIMENT_IDS } from "../../../../shared/experiments"
 
 describe("getToolUseGuidelinesSection", () => {
-	describe("XML protocol", () => {
-		it("should include proper numbered guidelines", () => {
-			const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.XML)
+	it("should include proper numbered guidelines", () => {
+		const guidelines = getToolUseGuidelinesSection()
 
-			// Check that all numbered items are present with correct numbering
-			expect(guidelines).toContain("1. Assess what information")
-			expect(guidelines).toContain("2. Choose the most appropriate tool")
-			expect(guidelines).toContain("3. If multiple actions are needed")
-			expect(guidelines).toContain("4. Formulate your tool use")
-			expect(guidelines).toContain("5. After each tool use")
-			expect(guidelines).toContain("6. ALWAYS wait for user confirmation")
-		})
-
-		it("should include XML-specific guidelines", () => {
-			const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.XML)
-
-			expect(guidelines).toContain("Formulate your tool use using the XML format specified for each tool")
-			expect(guidelines).toContain("use one tool at a time per message")
-			expect(guidelines).toContain("ALWAYS wait for user confirmation")
-		})
-
-		it("should include iterative process guidelines", () => {
-			const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.XML)
-
-			expect(guidelines).toContain("It is crucial to proceed step-by-step")
-			expect(guidelines).toContain("1. Confirm the success of each step before proceeding")
-			expect(guidelines).toContain("2. Address any issues or errors that arise immediately")
-			expect(guidelines).toContain("3. Adapt your approach based on new information")
-			expect(guidelines).toContain("4. Ensure that each action builds correctly")
-		})
+		expect(guidelines).toContain("1. Assess what information")
+		expect(guidelines).toContain("2. Choose the most appropriate tool")
+		expect(guidelines).toContain("3. If multiple actions are needed")
 	})
 
-	describe("native protocol", () => {
-		describe("with MULTIPLE_NATIVE_TOOL_CALLS disabled (default)", () => {
-			it("should include proper numbered guidelines", () => {
-				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE)
+	it("should include multiple-tools-per-message guidance", () => {
+		const guidelines = getToolUseGuidelinesSection()
 
-				// Check that all numbered items are present with correct numbering
-				expect(guidelines).toContain("1. Assess what information")
-				expect(guidelines).toContain("2. Choose the most appropriate tool")
-				expect(guidelines).toContain("3. If multiple actions are needed")
-				expect(guidelines).toContain("4. After each tool use")
-			})
-
-			it("should include single-tool-per-message guidance when experiment disabled", () => {
-				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE, {})
-
-				expect(guidelines).toContain("use one tool at a time per message")
-				expect(guidelines).not.toContain("you may use multiple tools in a single message")
-				expect(guidelines).not.toContain("Formulate your tool use using the XML format")
-				expect(guidelines).not.toContain("ALWAYS wait for user confirmation")
-			})
-
-			it("should include simplified iterative process guidelines", () => {
-				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE)
-
-				expect(guidelines).toContain("carefully considering the user's response after tool executions")
-				// Native protocol doesn't have the step-by-step list
-				expect(guidelines).not.toContain("It is crucial to proceed step-by-step")
-			})
-		})
-
-		describe("with MULTIPLE_NATIVE_TOOL_CALLS enabled", () => {
-			it("should include multiple-tools-per-message guidance when experiment enabled", () => {
-				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE, {
-					[EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS]: true,
-				})
-
-				expect(guidelines).toContain("you may use multiple tools in a single message")
-				expect(guidelines).not.toContain("use one tool at a time per message")
-			})
-
-			it("should include simplified iterative process guidelines", () => {
-				const guidelines = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE, {
-					[EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS]: true,
-				})
-
-				expect(guidelines).toContain("carefully considering the user's response after tool executions")
-				expect(guidelines).not.toContain("It is crucial to proceed step-by-step")
-			})
-		})
+		expect(guidelines).toContain("you may use multiple tools in a single message")
+		expect(guidelines).not.toContain("use one tool at a time per message")
 	})
 
-	it("should include common guidance regardless of protocol", () => {
-		const guidelinesXml = getToolUseGuidelinesSection(TOOL_PROTOCOL.XML)
-		const guidelinesNative = getToolUseGuidelinesSection(TOOL_PROTOCOL.NATIVE)
+	it("should use simplified footer without step-by-step language", () => {
+		const guidelines = getToolUseGuidelinesSection()
 
-		for (const guidelines of [guidelinesXml, guidelinesNative]) {
-			expect(guidelines).toContain("Assess what information you already have")
-			expect(guidelines).toContain("Choose the most appropriate tool")
-			expect(guidelines).toContain("After each tool use, the user will respond")
-		}
+		expect(guidelines).toContain("carefully considering the user's response after tool executions")
+		expect(guidelines).not.toContain("It is crucial to proceed step-by-step")
+		expect(guidelines).not.toContain("ALWAYS wait for user confirmation after each tool use")
+	})
+
+	it("should include common guidance", () => {
+		const guidelines = getToolUseGuidelinesSection()
+		expect(guidelines).toContain("Assess what information you already have")
+		expect(guidelines).toContain("Choose the most appropriate tool")
+		expect(guidelines).not.toContain("<actual_tool_name>")
+	})
+
+	it("should not include per-tool confirmation guidelines", () => {
+		const guidelines = getToolUseGuidelinesSection()
+
+		expect(guidelines).not.toContain("After each tool use, the user will respond with the result")
 	})
 })

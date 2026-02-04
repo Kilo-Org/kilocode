@@ -28,7 +28,8 @@
 		"openInCloud": "Roo Code Cloud에서 작업 열기",
 		"openInCloudIntro": "어디서나 Roo를 계속 모니터링하거나 상호작용할 수 있습니다. 스캔, 클릭 또는 복사하여 열기.",
 		"openApiHistory": "API 기록 열기",
-		"openUiHistory": "UI 기록 열기"
+		"openUiHistory": "UI 기록 열기",
+		"backToParentTask": "상위 작업"
 	},
 	"history": {
 		"title": "기록"
@@ -38,7 +39,10 @@
 	"tokenProgress": {
 		"availableSpace": "사용 가능한 공간: {{amount}} 토큰",
 		"tokensUsed": "사용된 토큰: {{used}} / {{total}}",
-		"reservedForResponse": "모델 응답용 예약: {{amount}} 토큰"
+		"reservedForResponse": "모델 응답용 예약: {{amount}} 토큰",
+		"tokensUsedLabel": "사용된 토큰",
+		"reservedForResponseLabel": "응답용으로 예약됨",
+		"availableSpaceLabel": "사용 가능한 공간"
 	},
 	"retry": {
 		"title": "다시 시도",
@@ -88,10 +92,15 @@
 		"title": "종료",
 		"tooltip": "현재 작업 종료"
 	},
+	"stop": {
+		"title": "정지",
+		"tooltip": "현재 작업 정지"
+	},
 	"cancel": {
 		"title": "취소",
 		"tooltip": "현재 작업 취소"
 	},
+	"enqueueMessage": "메시지를 대기열에 추가 (현재 작업 완료 후 전송)",
 	"scrollToBottom": "채팅 하단으로 스크롤",
 	"about": "AI 지원으로 코드를 생성, 리팩터링 및 디버깅합니다. 자세한 내용은 <DocsLink>문서</DocsLink>를 참조하세요.",
 	"docs": "더 알아보려면 <DocsLink>문서</DocsLink>를 확인하세요.",
@@ -149,15 +158,15 @@
 		"rateLimitWait": "속도 제한",
 		"errorTitle": "공급자 오류 {{code}}",
 		"errorMessage": {
-			"docs": "문서",
-			"goToSettings": "설정",
 			"400": "공급자가 요청을 처리할 수 없습니다. 작업을 중지하고 다른 방법을 시도하세요.",
 			"401": "공급자로 인증할 수 없습니다. API 키 구성을 확인하세요.",
 			"402": "계정의 자금/크레딧이 부족한 것 같습니다. 공급자에게 가서 더 추가하세요.",
 			"403": "권한 없음. API 키는 유효하지만 공급자가 이 요청을 완료하기를 거부했습니다.",
 			"429": "너무 많은 요청입니다. 공급자에 의해 요청 제한이 적용되고 있습니다. 다음 API 호출 전에 잠깐 기다려주세요.",
 			"500": "공급자 서버 오류입니다. 공급자 쪽에 문제가 있으며 요청에는 문제가 없습니다.",
-			"unknown": "알 수 없는 API 오류입니다. Kilo 지원팀에 문의하세요.",
+			"docs": "문서",
+			"goToSettings": "설정",
+			"unknown": "알 수 없는 API 오류입니다. Roo Code 지원팀에 문의하세요.",
 			"connection": "연결 오류입니다. 인터넷 연결이 제대로 작동하는지 확인하세요.",
 			"claudeCodeNotAuthenticated": "Claude Code를 사용하려면 로그인해야 합니다. 설정으로 이동하여 \"Claude Code에 로그인\"을 클릭하여 인증하세요."
 		}
@@ -267,7 +276,8 @@
 		"completionContent": "하위 작업 완료",
 		"resultContent": "하위 작업 결과",
 		"defaultResult": "다음 작업을 계속 진행해주세요.",
-		"completionInstructions": "하위 작업 완료! 결과를 검토하고 수정 사항이나 다음 단계를 제안할 수 있습니다. 모든 것이 괜찮아 보이면, 부모 작업에 결과를 반환하기 위해 확인해주세요."
+		"completionInstructions": "하위 작업 완료! 결과를 검토하고 수정 사항이나 다음 단계를 제안할 수 있습니다. 모든 것이 괜찮아 보이면, 부모 작업에 결과를 반환하기 위해 확인해주세요.",
+		"goToSubtask": "작업 보기"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code에게 질문이 있습니다"
@@ -285,7 +295,8 @@
 		"title": "오류 세부 정보",
 		"copyToClipboard": "클립보드에 복사",
 		"copied": "복사됨!",
-		"diagnostics": "상세한 오류 정보 가져오기"
+		"diagnostics": "상세한 오류 정보 가져오기",
+		"proxyProvider": "프록시 기반 제공자를 사용하는 것 같습니다. 로그를 확인하고 Roo의 요청을 다시 작성하지 않는지 확인하세요."
 	},
 	"powershell": {
 		"issues": "Windows PowerShell에 문제가 있는 것 같습니다. 다음을 참조하세요"
@@ -306,7 +317,7 @@
 		"triggerLabel_zero": "0개 자동 승인됨",
 		"triggerLabel_one": "1개 자동 승인됨",
 		"triggerLabel_other": "{{count}}개 자동 승인됨",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "생각 중",
@@ -327,6 +338,10 @@
 			"description": "컨텍스트 윈도우 제한 내에 유지하기 위해 대화에서 오래된 메시지가 제거되었습니다. 이것은 압축에 비해 빠르지만 컨텍스트 보존 능력이 낮은 접근 방식입니다."
 		}
 	},
+	"skill": {
+		"wantsToLoad": "Roo가 스킬을 로드하려고 합니다",
+		"didLoad": "Roo가 스킬을 로드했습니다"
+	},
 	"followUpSuggest": {
 		"copyToInput": "입력창에 복사 (또는 Shift + 클릭)",
 		"timerPrefix": "자동 승인 활성화됨. {{seconds}}초 후 선택 중…"
@@ -343,8 +358,9 @@
 		},
 		"release": {
 			"heading": "새로운 기능:",
-			"skills": "Roo는 이제 <skillsLink>Agent Skills</skillsLink>를 지원합니다 - Roo의 기능을 확장하기 위한 프롬프트, 도구 및 리소스의 재사용 가능한 패키지입니다.",
-			"nativeToolCalling": "모든 새 작업에 이제 네이티브 도구 호출이 필요합니다. <blogLink>자세히 알아보기</blogLink> 동기 및 문제가 발생한 경우 수행할 작업에 대해."
+			"parallelTools": "병렬 도구 호출: 도구가 이제 기본적으로 병렬로 실행되어 다중 파일 작업과 복잡한 작업의 속도를 크게 높입니다.",
+			"readFileIndentation": "더 똑똑한 파일 읽기: 새로운 들여쓰기 모드는 함수 중간 절단 없이 완전한 의미 있는 코드 블록(함수, 클래스)을 추출합니다—검색 결과에서 특정 라인을 대상으로 할 때 이상적입니다.",
+			"readCommandOutput": "손실 없는 터미널 출력: 새로운 read_command_output 도구는 페이지 매김 및 정규식 필터링을 통해 잘린 실행에서 전체 명령 출력을 검색합니다."
 		},
 		"cloudAgents": {
 			"heading": "클라우드의 새로운 기능:",
@@ -355,9 +371,15 @@
 		"careers": "그리고, <careersLink>채용 중입니다!</careersLink>",
 		"socialLinks": "<xLink>X</xLink>, <discordLink>Discord</discordLink>, 또는 <redditLink>r/KiloCode</redditLink>에서 만나요 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "총 비용 (하위 작업 포함): ${{cost}}",
+		"total": "총 비용: ${{cost}}",
+		"includesSubtasks": "하위 작업 비용 포함"
+	},
 	"browser": {
 		"session": "브라우저 세션",
-		"rooWantsToUse": "Kilo Code가 브라우저를 사용하고 싶어합니다",
+		"active": "활성",
+		"rooWantsToUse": "Roo가 브라우저를 사용하고 싶어합니다",
 		"consoleLogs": "콘솔 로그",
 		"noNewLogs": "(새 로그 없음)",
 		"screenshot": "브라우저 스크린샷",
@@ -496,5 +518,17 @@
 		"updated": "할 일 목록을 업데이트했습니다",
 		"completed": "완료됨",
 		"started": "시작됨"
+	},
+	"tooManyTools": {
+		"title": "활성화된 도구가 너무 많습니다",
+		"toolsPart_one": "{{count}}개 도구",
+		"toolsPart_other": "{{count}}개 도구",
+		"serversPart_one": "{{count}}개 MCP 서버",
+		"serversPart_other": "{{count}}개 MCP 서버",
+		"messageTemplate": "{{servers}}를 통해 {{tools}}가 활성화되어 있습니다. 이렇게 많은 수의 도구는 모델을 혼동시키고 오류를 유발할 수 있습니다. {{threshold}} 이하로 유지하도록 노력하세요.",
+		"openMcpSettings": "MCP 설정 열기"
+	},
+	"readCommandOutput": {
+		"title": "Roo read command output"
 	}
 }

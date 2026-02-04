@@ -1,6 +1,12 @@
-import { type ClineAsk, type McpServerUse, type FollowUpData, isNonBlockingAsk } from "@roo-code/types"
+import {
+	type ClineAsk,
+	type ClineSayTool,
+	type McpServerUse,
+	type FollowUpData,
+	type ExtensionState,
+	isNonBlockingAsk,
+} from "@roo-code/types"
 
-import type { ClineSayTool, ExtensionState } from "../../shared/ExtensionMessage"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 
 import { isWriteToolAction, isReadOnlyToolAction } from "./tools"
@@ -146,14 +152,11 @@ export async function checkAutoApproval({
 			return { decision: "approve" }
 		}
 
-		if (tool?.tool === "fetchInstructions") {
-			if (tool.content === "create_mode") {
-				return state.alwaysAllowModeSwitch === true ? { decision: "approve" } : { decision: "ask" }
-			}
-
-			if (tool.content === "create_mcp_server") {
-				return state.alwaysAllowMcp === true ? { decision: "approve" } : { decision: "ask" }
-			}
+		// The skill tool only loads pre-defined instructions from built-in, global, or project skills.
+		// It does not read arbitrary files - skills must be explicitly installed/defined by the user.
+		// Auto-approval is intentional to provide a seamless experience when loading task instructions.
+		if (tool.tool === "skill") {
+			return { decision: "approve" }
 		}
 
 		if (tool?.tool === "switchMode") {

@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "Fertig",
+	"description": "Git-Worktrees ermöglichen dir, gleichzeitig an mehreren Branches in separaten Verzeichnissen zu arbeiten. Jeder Worktree bekommt sein eigenes VS Code-Fenster mit Roo Code.",
+
+	"notGitRepo": "Dieser Workspace ist kein Git-Repository. Worktrees benötigen ein Git-Repository, um zu funktionieren.",
+	"multiRootNotSupported": "Worktrees werden in Multi-Root-Workspaces nicht unterstützt. Öffne einen einzelnen Ordner, um Worktrees zu verwenden.",
+	"subfolderNotSupported": "Dieser Workspace ist ein Unterordner eines Git-Repositories. Öffne das Repository-Root, um Worktrees zu verwenden.",
+	"gitRoot": "Git-Root",
+
+	"includeFileExists": ".worktreeinclude-Datei gefunden – Dateien werden in neue Worktrees kopiert",
+	"noIncludeFile": "Keine .worktreeinclude-Datei gefunden",
+	"createFromGitignore": "Aus .gitignore erstellen",
+
+	"primary": "Primär",
+	"current": "Aktuell",
+	"locked": "Gesperrt",
+	"detachedHead": "Detached HEAD",
+	"noBranch": "Kein Branch",
+
+	"switchInThisWindow": "Zu Worktree wechseln",
+	"openInNewWindow": "In neuem Fenster öffnen",
+	"delete": "Löschen",
+	"newWorktree": "Neuer Worktree",
+
+	"createWorktree": "Worktree erstellen",
+	"branchName": "Branch-Name",
+	"createNewBranch": "Neuen Branch erstellen",
+	"checkoutExisting": "Vorhandenen Branch auschecken",
+	"baseBranch": "Basis-Branch",
+	"loadingBranches": "Branches werden geladen...",
+	"selectBranch": "Branch auswählen",
+	"searchBranch": "Branches durchsuchen...",
+	"noBranchFound": "Kein Branch gefunden",
+	"localBranches": "Lokale Branches",
+	"remoteBranches": "Remote-Branches",
+	"worktreePath": "In",
+	"selectWorktreeLocation": "Worktree-Speicherort auswählen",
+	"selectFolderForWorktree": "Ordner für neuen Worktree auswählen",
+	"noIncludeFileWarning": "Keine .worktreeinclude-Datei",
+	"noIncludeFileHint": "Ohne eine .worktreeinclude-Datei werden Dateien wie node_modules nicht in den neuen Worktree kopiert. Möglicherweise musst du nach dem Erstellen npm install ausführen.",
+	"create": "Erstellen",
+	"creating": "Wird erstellt...",
+	"copyingFiles": "Dateien werden kopiert...",
+	"copyingProgress": "{{item}} — {{copied}} kopiert",
+	"cancel": "Abbrechen",
+
+	"deleteWorktree": "Worktree löschen",
+	"deleteWarning": "Diese Aktion kann nicht rückgängig gemacht werden. Folgendes wird gelöscht:",
+	"deleteWarningBranch": "Der Branch und alle nicht committeten Änderungen",
+	"deleteWarningFiles": "Alle Dateien im Worktree-Verzeichnis",
+	"deleteNoticeLarge": "Bei großen Repositorys kann dies eine Weile dauern.",
+	"forceDelete": "Löschen erzwingen",
+	"worktreeIsLocked": "Worktree ist gesperrt",
+	"deleting": "Wird gelöscht...",
+
+	"close": "Schließen",
+
+	"showInHomeScreen": "Worktrees auf dem Startbildschirm anzeigen",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Zwischen Worktrees wechseln",
+		"description": "Git Worktrees ermöglichen dir, gleichzeitig an mehreren Branches zu arbeiten. Klicke hier, um den Workspace zu wechseln.",
+		"settings": "Worktrees verwalten",
+		"info": "Git Worktrees ermöglichen dir, mehrere Arbeitsverzeichnisse mit demselben Repository zu verbinden."
+	}
+}

@@ -62,7 +62,46 @@ export function validateToolUse(
 	}
 }
 
-const EDIT_OPERATION_PARAMS = ["diff", "content", "operations", "search", "replace", "args", "line"] as const
+const EDIT_OPERATION_PARAMS = [
+	"diff",
+	"content",
+	"operations",
+	"search",
+	"replace",
+	"args",
+	"line",
+	"patch", // Used by apply_patch
+	"old_string", // Used by search_replace and edit_file
+	"new_string", // Used by search_replace and edit_file
+] as const
+
+// Markers used in apply_patch format to identify file operations
+const PATCH_FILE_MARKERS = ["*** Add File: ", "*** Delete File: ", "*** Update File: "] as const
+
+/**
+ * Extract file paths from apply_patch content.
+ * The patch format uses markers like "*** Add File: path", "*** Delete File: path", "*** Update File: path"
+ * @param patchContent The patch content string
+ * @returns Array of file paths found in the patch
+ */
+function extractFilePathsFromPatch(patchContent: string): string[] {
+	const filePaths: string[] = []
+	const lines = patchContent.split("\n")
+
+	for (const line of lines) {
+		for (const marker of PATCH_FILE_MARKERS) {
+			if (line.startsWith(marker)) {
+				const path = line.substring(marker.length).trim()
+				if (path) {
+					filePaths.push(path)
+				}
+				break
+			}
+		}
+	}
+
+	return filePaths
+}
 
 function getGroupOptions(group: GroupEntry): GroupOptions | undefined {
 	return Array.isArray(group) ? group[1] : undefined
@@ -155,8 +194,7 @@ export function isToolAllowedForMode(
 
 		// For the edit group, check file regex if specified
 		if (groupName === "edit" && options.fileRegex) {
-			// kilocode_change: support multiple edit tool param names
-			const filePath = toolParams?.path ?? toolParams?.target_file ?? toolParams?.file_path
+			const filePath = toolParams?.path || toolParams?.file_path
 			// Check if this is an actual edit operation (not just path-only for streaming)
 			const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => toolParams?.[param])
 
@@ -165,41 +203,23 @@ export function isToolAllowedForMode(
 				throw new FileRestrictionError(mode.name, options.fileRegex, options.description, filePath, tool)
 			}
 
-			// Handle XML args parameter (used by MULTI_FILE_APPLY_DIFF experiment)
-			if (toolParams?.args && typeof toolParams.args === "string") {
-				// Extract file paths from XML args with improved validation
-				try {
-					const filePathMatches = toolParams.args.match(/<path>([^<]+)<\/path>/g)
-					if (filePathMatches) {
-						for (const match of filePathMatches) {
-							// More robust path extraction with validation
-							const pathMatch = match.match(/<path>([^<]+)<\/path>/)
-							if (pathMatch && pathMatch[1]) {
-								const extractedPath = pathMatch[1].trim()
-								// Validate that the path is not empty and doesn't contain invalid characters
-								if (extractedPath && !extractedPath.includes("<") && !extractedPath.includes(">")) {
-									if (!doesFileMatchRegex(extractedPath, options.fileRegex)) {
-										throw new FileRestrictionError(
-											mode.name,
-											options.fileRegex,
-											options.description,
-											extractedPath,
-											tool,
-										)
-									}
-								}
-							}
-						}
+			// Handle apply_patch: extract file paths from patch content and validate each
+			if (tool === "apply_patch" && typeof toolParams?.patch === "string") {
+				const patchFilePaths = extractFilePathsFromPatch(toolParams.patch)
+				for (const patchFilePath of patchFilePaths) {
+					if (!doesFileMatchRegex(patchFilePath, options.fileRegex)) {
+						throw new FileRestrictionError(
+							mode.name,
+							options.fileRegex,
+							options.description,
+							patchFilePath,
+							tool,
+						)
 					}
-				} catch (error) {
-					// Re-throw FileRestrictionError as it's an expected validation error
-					if (error instanceof FileRestrictionError) {
-						throw error
-					}
-					// If XML parsing fails, log the error but don't block the operation
-					console.warn(`Failed to parse XML args for file restriction validation: ${error}`)
 				}
 			}
+
+			// Native-only: multi-file edits provide structured params; no legacy XML args parsing.
 		}
 
 		return true

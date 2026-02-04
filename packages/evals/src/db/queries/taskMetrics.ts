@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm"
 
-import { RecordNotFoundError, RecordNotCreatedError } from "./errors.js"
-import type { InsertTaskMetrics, UpdateTaskMetrics } from "../schema.js"
-import { taskMetrics } from "../schema.js"
-import { client as db } from "../db.js"
+import { RecordNotFoundError, RecordNotCreatedError } from "./errors"
+import type { InsertTaskMetrics, UpdateTaskMetrics } from "../schema"
+import { taskMetrics } from "../schema"
+import { client as db } from "../db"
 
 export const findTaskMetrics = async (id: number) => {
 	const run = await db.query.taskMetrics.findFirst({ where: eq(taskMetrics.id, id) })

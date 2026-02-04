@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "स्किल का नाम 1-{{maxLength}} वर्णों का होना चाहिए ({{length}} प्राप्त हुआ)",
+		"name_format": "स्किल के नाम में केवल छोटे अक्षर, संख्याएं और हाइफ़न हो सकते हैं (शुरुआत या अंत में हाइफ़न नहीं, लगातार हाइफ़न नहीं)",
+		"description_length": "स्किल का विवरण 1-1024 वर्णों का होना चाहिए ({{length}} प्राप्त हुआ)",
+		"no_workspace": "प्रोजेक्ट स्किल नहीं बनाया जा सकता: कोई वर्कस्पेस फ़ोल्डर खुला नहीं है",
+		"already_exists": "स्किल \"{{name}}\" पहले से {{path}} पर मौजूद है",
+		"not_found": "स्किल \"{{name}}\" {{source}}{{modeInfo}} में नहीं मिला",
+		"missing_create_fields": "आवश्यक फ़ील्ड गायब हैं: skillName, source, या skillDescription",
+		"missing_move_fields": "आवश्यक फ़ील्ड गायब हैं: skillName या source",
+		"missing_update_modes_fields": "आवश्यक फ़ील्ड गायब हैं: skillName या source",
+		"manager_unavailable": "स्किल मैनेजर उपलब्ध नहीं है",
+		"missing_delete_fields": "आवश्यक फ़ील्ड गायब हैं: skillName या source",
+		"skill_not_found": "स्किल \"{{name}}\" नहीं मिला",
+		"cannot_modify_builtin": "बिल्ट-इन स्किल्स को बनाया या हटाया नहीं जा सकता",
+		"cannot_open_builtin": "बिल्ट-इन स्किल्स को फाइलों के रूप में नहीं खोला जा सकता"
+	}
+}

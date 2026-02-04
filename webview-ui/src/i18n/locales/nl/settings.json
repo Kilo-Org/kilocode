@@ -1,4 +1,5 @@
 {
+	"back": "Terug naar takenoverzicht",
 	"common": {
 		"save": "Opslaan",
 		"done": "Gereed",
@@ -7,6 +8,10 @@
 		"select": "Selecteren",
 		"add": "Header toevoegen",
 		"remove": "Verwijderen"
+	},
+	"search": {
+		"placeholder": "Instellingen zoeken...",
+		"noResults": "Geen instellingen gevonden"
 	},
 	"header": {
 		"title": "Instellingen",
@@ -24,6 +29,7 @@
 		"providers": "Providers",
 		"modes": "Modi",
 		"mcp": "MCP-servers",
+		"worktrees": "Worktrees",
 		"autoApprove": "Auto-goedkeuren",
 		"browser": "Browser",
 		"checkpoints": "Checkpoints",
@@ -36,8 +42,8 @@
 		"ui": "UI",
 		"experimental": "Experimenteel",
 		"language": "Taal",
-		"about": "Over Kilo Code",
-		"autoPurge": "Auto-opruimen"
+		"about": "Over Roo Code",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -57,10 +63,46 @@
 		},
 		"community": "Wil je tips of gewoon even hangen met andere Kilo Code-gebruikers? Sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Gemeenschap",
-		"manageSettings": "Instellingen Beheren"
+		"manageSettings": "Instellingen Beheren",
+		"debugMode": {
+			"label": "Debugmodus inschakelen",
+			"description": "Schakel de debugmodus in om extra knoppen in de taakkoptekst te tonen voor het bekijken van API-gesprekgeschiedenis en UI-berichten als opgemaakte JSON in tijdelijke bestanden."
+		}
 	},
 	"slashCommands": {
-		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
+		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>",
+		"workspaceCommands": "Werkruimteopdrachten",
+		"globalCommands": "Globale opdrachten",
+		"noWorkspaceCommands": "Nog geen opdrachten in dit project.",
+		"noGlobalCommands": "Nog geen globale opdrachten.",
+		"addCommand": "Slash-opdracht toevoegen",
+		"editCommand": "Opdracht bewerken",
+		"deleteCommand": "Opdracht verwijderen",
+		"deleteDialog": {
+			"title": "Opdracht verwijderen",
+			"description": "Weet je zeker dat je de opdracht \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.",
+			"confirm": "Verwijderen",
+			"cancel": "Annuleren"
+		},
+		"createDialog": {
+			"title": "Nieuw slash-commando maken",
+			"nameLabel": "Naam",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "Alleen kleine letters, cijfers, streepjes en onderstrepen",
+			"sourceLabel": "Locatie",
+			"create": "Maken",
+			"cancel": "Annuleren"
+		},
+		"source": {
+			"global": "Globaal (beschikbaar in alle werkruimten)",
+			"project": "Werkruimte"
+		},
+		"validation": {
+			"nameRequired": "Naam is vereist",
+			"nameTooLong": "Naam mag max. 64 tekens zijn",
+			"nameInvalid": "Naam mag alleen letters, cijfers, streepjes en onderstrepen bevatten"
+		},
+		"footer": "Gebruik slash-commando's voor snelle toegang tot veelgebruikte prompts en workflows."
 	},
 	"prompts": {
 		"description": "Configureer ondersteuningsprompts die worden gebruikt voor snelle acties zoals het verbeteren van prompts, het uitleggen van code en het oplossen van problemen. Deze prompts helpen Kilo Code om betere ondersteuning te bieden voor veelvoorkomende ontwikkelingstaken."
@@ -253,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maximale verzoeken",
-			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
 			"unlimited": "Onbeperkt"
 		},
 		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen",
@@ -301,10 +342,40 @@
 		"glamaApiKey": "Glama API-sleutel",
 		"getGlamaApiKey": "Glama API-sleutel ophalen",
 		"apiKeyStorageNotice": "API-sleutels worden veilig opgeslagen in de geheime opslag van VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Aangepaste basis-URL gebruiken",
 		"useReasoning": "Redenering inschakelen",
 		"useHostHeader": "Aangepaste Host-header gebruiken",
-		"useLegacyFormat": "Verouderd OpenAI API-formaat gebruiken",
 		"customHeaders": "Aangepaste headers",
 		"headerName": "Headernaam",
 		"headerValue": "Headerwaarde",
@@ -777,7 +848,6 @@
 				"label": "Maximale diagnostische berichten",
 				"description": "Maximaal aantal diagnostische berichten dat per bestand moet worden opgenomen. Deze limiet geldt voor zowel automatische opname (wanneer checkbox is ingeschakeld) als handmatige @problems vermeldingen. Hogere waarden bieden meer context maar verhogen het tokengebruik.",
 				"resetTooltip": "Reset naar standaardwaarde (50)",
-				"unlimited": "Onbeperkte diagnostische berichten",
 				"unlimitedLabel": "Onbeperkt"
 			},
 			"delayAfterWrite": {
@@ -828,6 +898,15 @@
 			"label": "Terminal-tekenlimiet",
 			"description": "Overschrijft de regellimiet om geheugenproblemen te voorkomen door een harde limiet op uitvoergrootte af te dwingen. Bij overschrijding behoudt het begin en einde en toont een placeholder aan Kilo waar inhoud wordt overgeslagen. <0>Meer informatie</0>"
 		},
+		"outputPreviewSize": {
+			"label": "Grootte opdrachtuitvoer voorvertoning",
+			"description": "Bepaalt hoeveel opdrachtuitvoer Roo direct ziet. Volledige uitvoer wordt altijd opgeslagen en is toegankelijk wanneer nodig.",
+			"options": {
+				"small": "Klein (5KB)",
+				"medium": "Gemiddeld (10KB)",
+				"large": "Groot (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal-shell-integratie timeout",
 			"description": "Hoe lang te wachten op VS Code-shell-integratie voordat commando's worden uitgevoerd. Verhoog als je shell traag opstart of je 'Shell-Integratie Niet Beschikbaar'-fouten ziet. <0>Meer informatie</0>"
@@ -839,10 +918,6 @@
 		"commandDelay": {
 			"label": "Terminal-commandovertraging",
 			"description": "Voegt korte pauze toe na elk commando zodat VS Code-terminal alle uitvoer kan flushen (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Gebruik alleen als je ontbrekende tail-uitvoer ziet; anders op 0 laten. <0>Meer informatie</0>"
-		},
-		"compressProgressBar": {
-			"label": "Voortgangsbalk-uitvoer comprimeren",
-			"description": "Klapt voortgangsbalken/spinners in zodat alleen eindstatus behouden blijft (bespaart tokens). <0>Meer informatie</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell-teller workaround inschakelen",
@@ -872,14 +947,6 @@
 	"advancedSettings": {
 		"title": "Geavanceerde instellingen"
 	},
-	"toolProtocol": {
-		"label": "Tool Call Protocol",
-		"description": "Kies hoe Kilo Code communiceert met de API. Native gebruikt de functie-aanroep API van de provider, terwijl XML gebruikmaakt van XML-geformatteerde tooldefinities.",
-		"default": "Standaard",
-		"xml": "XML",
-		"native": "Native",
-		"currentDefault": "Standaard: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "Bewerken via diffs inschakelen",
@@ -896,10 +963,6 @@
 					"unified": "Unified diff-strategie gebruikt meerdere methoden om diffs toe te passen en kiest de beste aanpak.",
 					"multiBlock": "Multi-block diff-strategie laat toe om meerdere codeblokken in één verzoek bij te werken."
 				}
-			},
-			"matchPrecision": {
-				"label": "Matchnauwkeurigheid",
-				"description": "Deze schuifregelaar bepaalt hoe nauwkeurig codeblokken moeten overeenkomen bij het toepassen van diffs. Lagere waarden laten flexibelere matching toe maar verhogen het risico op verkeerde vervangingen. Gebruik waarden onder 100% met uiterste voorzichtigheid."
 			}
 		},
 		"todoList": {
@@ -916,10 +979,6 @@
 			"name": "Experimentele inhoud-invoeg-tool gebruiken",
 			"description": "Schakel de experimentele inhoud-invoeg-tool in, waarmee Kilo Code inhoud op specifieke regelnummers kan invoegen zonder een diff te maken."
 		},
-		"POWER_STEERING": {
-			"name": "Experimentele 'power steering'-modus gebruiken",
-			"description": "Indien ingeschakeld, herinnert Kilo Code het model vaker aan de details van de huidige modusdefinitie. Dit leidt tot sterkere naleving van roldefinities en aangepaste instructies, maar gebruikt meer tokens per bericht."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentele multi-block diff-tool gebruiken",
 			"description": "Indien ingeschakeld, gebruikt Kilo Code de multi-block diff-tool. Hiermee wordt geprobeerd meerdere codeblokken in het bestand in één verzoek bij te werken."
@@ -931,28 +990,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplace inschakelen",
 			"description": "Wanneer ingeschakeld kun je MCP's en aangepaste modi uit de Marketplace installeren."
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen。"
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Fast Apply inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
-			"apiProvider": "API-provider",
-			"apiProviderList": {
-				"current": "Huidig"
-			},
-			"apiKey": "API-sleutel (optioneel)",
-			"placeholder": "Voer je API-sleutel in (optioneel)",
-			"modelLabel": "Modelselectie",
-			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
-			"models": {
-				"auto": "Automatisch (Standaard - kiest beste beschikbare)",
-				"morphFast": "Morph v3 Fast (Sneller, lagere kosten)",
-				"morphLarge": "Morph v3 Large (Meer capabel)",
-				"relace": "Relace Apply v3"
-			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Achtergrondbewerking",
@@ -990,14 +1027,6 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Model-geïnitieerde slash-commando's inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code je slash-commando's uitvoeren om workflows uit te voeren."
-		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "Parallelle tool-aanroepen",
-			"description": "Wanneer ingeschakeld, kan het native protocol meerdere tools uitvoeren in één enkele assistent-berichtbeurt."
-		},
-		"SPEECH_TO_TEXT": {
-			"name": "Spraak-naar-Tekst (STT)",
-			"description": "Wanneer ingeschakeld kan Kilo Code je stem naar tekst transcriberen met behulp van OpenAI's Whisper model. Klik op de microfoonknop in de chat om op te nemen. Vereist dat FFmpeg geïnstalleerd is en een geconfigureerde OpenAI API provider."
 		},
 		"CUSTOM_TOOLS": {
 			"name": "Aangepaste tools inschakelen",
@@ -1053,8 +1082,6 @@
 		"allModels": "Alle modellen"
 	},
 	"footer": {
-		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
-		"support": "Voor financiële vragen kunt u contact opnemen met de klantenservice via <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Fout- en gebruiksrapportage toestaan",
 			"description": "Help Kilo Code te verbeteren door gebruiksgegevens en foutmeldingen te verzenden. Er worden nooit code, prompts of persoonlijke gegevens verzonden. Zie ons privacybeleid voor meer informatie."
@@ -1176,5 +1203,58 @@
 			"label": "Vereist {{primaryMod}}+Enter om berichten te versturen",
 			"description": "Wanneer ingeschakeld, moet je {{primaryMod}}+Enter indrukken om berichten te versturen in plaats van alleen Enter"
 		}
+	},
+	"skills": {
+		"description": "Beheer skills die contextuele instructies aan de agent verstrekken. Skills worden automatisch toegepast wanneer ze relevant zijn voor uw taken. <DocsLink>Meer informatie</DocsLink>",
+		"workspaceSkills": "Werkruimteskills",
+		"globalSkills": "Globale skills",
+		"noWorkspaceSkills": "Nog geen skills in dit project.",
+		"noGlobalSkills": "Nog geen globale skills.",
+		"addSkill": "Skill toevoegen",
+		"editSkill": "Skill bewerken",
+		"deleteSkill": "Skill verwijderen",
+		"configureModes": "Modebeschikbaarheid",
+		"modeAny": "Elke modus",
+		"modeCount": "{{count}} modus",
+		"deleteDialog": {
+			"title": "Skill verwijderen",
+			"description": "Weet u zeker dat u de skill \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+			"confirm": "Verwijderen",
+			"cancel": "Annuleren"
+		},
+		"modeDialog": {
+			"title": "Skillmodi configureren",
+			"description": "Kies welke modi deze skill kunnen gebruiken",
+			"intro": "Om je context licht te houden, raden we aan skills alleen beschikbaar te maken voor de modi die ze nodig hebben.",
+			"anyMode": "Elke modus (overal beschikbaar)",
+			"save": "Opslaan",
+			"cancel": "Annuleren"
+		},
+		"createDialog": {
+			"title": "Nieuwe Skill maken",
+			"nameLabel": "Naam",
+			"namePlaceholder": "mijn-skill-naam",
+			"descriptionLabel": "Beschrijving",
+			"descriptionPlaceholder": "Beschrijf wanneer deze skill moet worden gebruikt...",
+			"sourceLabel": "Locatie",
+			"modeLabel": "Modus (optioneel)",
+			"modePlaceholder": "Elke modus",
+			"modeHint": "Beperk deze skill tot een specifieke modus",
+			"modeAny": "Elke modus",
+			"create": "Maken",
+			"cancel": "Annuleren"
+		},
+		"source": {
+			"global": "Globaal (beschikbaar in alle projecten)",
+			"project": "Project (alleen deze workspace)"
+		},
+		"validation": {
+			"nameRequired": "Naam is verplicht",
+			"nameTooLong": "Naam moet maximaal 64 tekens zijn",
+			"nameInvalid": "Naam moet 1-64 kleine letters, cijfers of streepjes zijn",
+			"descriptionRequired": "Beschrijving is verplicht",
+			"descriptionTooLong": "Beschrijving moet maximaal 1024 tekens zijn"
+		},
+		"footer": "Maak je eigen skills met de Skill Writer modus, beschikbaar in de <MarketplaceLink>Modes Marketplace</MarketplaceLink>."
 	}
 }

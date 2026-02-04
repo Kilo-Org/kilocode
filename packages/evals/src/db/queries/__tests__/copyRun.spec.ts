@@ -2,14 +2,14 @@
 
 import { eq } from "drizzle-orm"
 
-import { copyRun } from "../copyRun.js"
-import { createRun } from "../runs.js"
-import { createTask } from "../tasks.js"
-import { createTaskMetrics } from "../taskMetrics.js"
-import { createToolError } from "../toolErrors.js"
-import { RecordNotFoundError } from "../errors.js"
-import { schema } from "../../schema.js"
-import { client as db } from "../../db.js"
+import { copyRun } from "../copyRun"
+import { createRun } from "../runs"
+import { createTask } from "../tasks"
+import { createTaskMetrics } from "../taskMetrics"
+import { createToolError } from "../toolErrors"
+import { RecordNotFoundError } from "../errors"
+import { schema } from "../../schema"
+import { client as db } from "../../db"
 
 describe("copyRun", () => {
 	let sourceRunId: number

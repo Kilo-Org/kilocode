@@ -1,13 +1,7 @@
+import type { ToolName } from "@roo-code/types"
+
 import { Task } from "../task/Task"
-import type {
-	ToolUse,
-	HandleError,
-	PushToolResult,
-	RemoveClosingTag,
-	AskApproval,
-	NativeToolArgs,
-} from "../../shared/tools"
-import type { ToolName, ToolProtocol } from "@roo-code/types"
+import type { ToolUse, HandleError, PushToolResult, AskApproval, NativeToolArgs } from "../../shared/tools"
 
 /**
  * Callbacks passed to tool execution
@@ -16,8 +10,6 @@ export interface ToolCallbacks {
 	askApproval: AskApproval
 	handleError: HandleError
 	pushToolResult: PushToolResult
-	removeClosingTag: RemoveClosingTag
-	toolProtocol: ToolProtocol
 	toolCallId?: string
 }
 
@@ -30,14 +22,7 @@ type ToolParams<TName extends ToolName> = TName extends keyof NativeToolArgs ? N
 /**
  * Abstract base class for all tools.
  *
- * Provides a consistent architecture where:
- * - XML/legacy protocol: params → parseLegacy() → typed params → execute()
- * - Native protocol: nativeArgs already contain typed data → execute()
- *
- * Each tool extends this class and implements:
- * - parseLegacy(): Convert XML/legacy string params to typed params
- * - execute(): Protocol-agnostic core logic using typed params
- * - handlePartial(): (optional) Handle streaming partial messages
+ * Tools receive typed arguments from native tool calling via `ToolUse.nativeArgs`.
  *
  * @template TName - The specific tool name, which determines native arg types
  */
@@ -48,23 +33,15 @@ export abstract class BaseTool<TName extends ToolName> {
 	abstract readonly name: TName
 
 	/**
-	 * Parse XML/legacy string-based parameters into typed parameters.
-	 *
-	 * For XML protocol, this converts params.args (XML string) or params.path (legacy)
-	 * into a typed structure that execute() can use.
-	 *
-	 * @param params - Raw ToolUse.params from XML protocol
-	 * @returns Typed parameters for execute()
-	 * @throws Error if parsing fails
+	 * Track the last seen path during streaming to detect when the path has stabilized.
+	 * Used by hasPathStabilized() to prevent displaying truncated paths from partial-json parsing.
 	 */
-	abstract parseLegacy(params: Partial<Record<string, string>>): ToolParams<TName>
+	protected lastSeenPartialPath: string | undefined = undefined
 
 	/**
 	 * Execute the tool with typed parameters.
 	 *
-	 * This is the protocol-agnostic core logic. It receives typed parameters
-	 * (from parseLegacy for XML, or directly from native protocol) and performs
-	 * the tool's operation.
+	 * Receives typed parameters from native tool calling via `ToolUse.nativeArgs`.
 	 *
 	 * @param params - Typed parameters
 	 * @param task - Task instance with state and API access
@@ -87,37 +64,38 @@ export abstract class BaseTool<TName extends ToolName> {
 	}
 
 	/**
-	 * Remove partial closing XML tags from text during streaming.
+	 * Check if a path parameter has stabilized during streaming.
 	 *
-	 * This utility helps clean up partial XML tag artifacts that can appear
-	 * at the end of streamed content, preventing them from being displayed to users.
+	 * During native tool call streaming, the partial-json library may return truncated
+	 * string values when chunk boundaries fall mid-value. This method tracks the path
+	 * value between consecutive handlePartial() calls and returns true only when the
+	 * path has stopped changing (stabilized).
 	 *
-	 * @param tag - The tag name to check for partial closing
-	 * @param text - The text content to clean
-	 * @param isPartial - Whether this is a partial message (if false, returns text as-is)
-	 * @returns Cleaned text with partial closing tags removed
+	 * Usage in handlePartial():
+	 * ```typescript
+	 * if (!this.hasPathStabilized(block.params.path)) {
+	 *     return // Path still changing, wait for it to stabilize
+	 * }
+	 * // Path is stable, proceed with UI updates
+	 * ```
+	 *
+	 * @param path - The current path value from the partial block
+	 * @returns true if path has stabilized (same value seen twice) and is non-empty, false otherwise
 	 */
-	protected removeClosingTag(tag: string, text: string | undefined, isPartial: boolean): string {
-		if (!isPartial) {
-			return text || ""
-		}
+	protected hasPathStabilized(path: string | undefined): boolean {
+		const pathHasStabilized = this.lastSeenPartialPath !== undefined && this.lastSeenPartialPath === path
+		this.lastSeenPartialPath = path
+		return pathHasStabilized && !!path
+	}
 
-		if (!text) {
-			return ""
-		}
-
-		// This regex dynamically constructs a pattern to match the closing tag:
-		// - Optionally matches whitespace before the tag
-		// - Matches '<' or '</' optionally followed by any subset of characters from the tag name
-		const tagRegex = new RegExp(
-			`\\s?<\/?${tag
-				.split("")
-				.map((char) => `(?:${char})?`)
-				.join("")}$`,
-			"g",
-		)
-
-		return text.replace(tagRegex, "")
+	/**
+	 * Reset the partial state tracking.
+	 *
+	 * Should be called at the end of execute() (both success and error paths)
+	 * to ensure clean state for the next tool invocation.
+	 */
+	resetPartialState(): void {
+		this.lastSeenPartialPath = undefined
 	}
 
 	/**
@@ -125,7 +103,7 @@ export abstract class BaseTool<TName extends ToolName> {
 	 *
 	 * Handles the complete flow:
 	 * 1. Partial message handling (if partial)
-	 * 2. Parameter parsing (parseLegacy for XML, or use nativeArgs directly)
+	 * 2. Parameter parsing (nativeArgs only)
 	 * 3. Core execution (execute)
 	 *
 	 * @param task - Task instance
@@ -147,22 +125,34 @@ export abstract class BaseTool<TName extends ToolName> {
 			return
 		}
 
-		// Determine protocol and parse parameters accordingly
+		// Native-only: obtain typed parameters from `nativeArgs`.
 		let params: ToolParams<TName>
 		try {
 			if (block.nativeArgs !== undefined) {
-				// Native protocol: typed args provided by NativeToolCallParser
-				// TypeScript knows nativeArgs is properly typed based on TName
+				// Native: typed args provided by NativeToolCallParser.
 				params = block.nativeArgs as ToolParams<TName>
 			} else {
-				// XML/legacy protocol: parse string params into typed params
-				params = this.parseLegacy(block.params)
+				// If legacy/XML markup was provided via params, surface a clear error.
+				const paramsText = (() => {
+					try {
+						return JSON.stringify(block.params ?? {})
+					} catch {
+						return ""
+					}
+				})()
+				if (paramsText.includes("<") && paramsText.includes(">")) {
+					throw new Error(
+						"XML tool calls are no longer supported. Use native tool calling (nativeArgs) instead.",
+					)
+				}
+				throw new Error("Tool call is missing native arguments (nativeArgs).")
 			}
 		} catch (error) {
 			console.error(`Error parsing parameters:`, error)
 			const errorMessage = `Failed to parse ${this.name} parameters: ${error instanceof Error ? error.message : String(error)}`
 			await callbacks.handleError(`parsing ${this.name} args`, new Error(errorMessage))
-			callbacks.pushToolResult(`<error>${errorMessage}</error>`)
+			// Note: handleError already emits a tool_result via formatResponse.toolError in the caller.
+			// Do NOT call pushToolResult here to avoid duplicate tool_result payloads.
 			return
 		}
 

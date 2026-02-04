@@ -8,12 +8,16 @@ vi.mock("@/utils/vscode")
 
 vi.mock("@/i18n/TranslationContext", () => ({
 	useAppTranslation: () => ({
-		t: (key: string) => {
+		t: (key: string, options?: Record<string, unknown>) => {
 			const translations: Record<string, string> = {
 				"history:deleteTask": "Delete Task",
 				"history:deleteTaskMessage": "Are you sure you want to delete this task? This action cannot be undone.",
 				"history:cancel": "Cancel",
 				"history:delete": "Delete",
+			}
+			// Handle deleteWithSubtasks with interpolation
+			if (key === "history:deleteWithSubtasks" && options?.count !== undefined) {
+				return `This will also delete ${options.count} subtask(s). Are you sure?`
 			}
 			return translations[key] || key
 		},
@@ -154,6 +158,57 @@ describe("DeleteTaskDialog", () => {
 		expect(vscode.postMessage).toHaveBeenCalledWith({
 			type: "deleteTaskWithId",
 			text: mockTaskId,
+		})
+	})
+
+	describe("cascade delete warning", () => {
+		it("shows warning message when deleting parent with subtasks", () => {
+			render(
+				<DeleteTaskDialog taskId={mockTaskId} open={true} onOpenChange={mockOnOpenChange} subtaskCount={3} />,
+			)
+
+			expect(screen.getByText("This will also delete 3 subtask(s). Are you sure?")).toBeInTheDocument()
+		})
+
+		it("shows standard message when no subtasks", () => {
+			render(
+				<DeleteTaskDialog taskId={mockTaskId} open={true} onOpenChange={mockOnOpenChange} subtaskCount={0} />,
+			)
+
+			expect(
+				screen.getByText("Are you sure you want to delete this task? This action cannot be undone."),
+			).toBeInTheDocument()
+		})
+
+		it("shows standard message when subtaskCount is not provided", () => {
+			render(<DeleteTaskDialog taskId={mockTaskId} open={true} onOpenChange={mockOnOpenChange} />)
+
+			expect(
+				screen.getByText("Are you sure you want to delete this task? This action cannot be undone."),
+			).toBeInTheDocument()
+		})
+
+		it("shows singular subtask warning for single subtask", () => {
+			render(
+				<DeleteTaskDialog taskId={mockTaskId} open={true} onOpenChange={mockOnOpenChange} subtaskCount={1} />,
+			)
+
+			expect(screen.getByText("This will also delete 1 subtask(s). Are you sure?")).toBeInTheDocument()
+		})
+
+		it("still deletes task when cascade warning is shown", () => {
+			render(
+				<DeleteTaskDialog taskId={mockTaskId} open={true} onOpenChange={mockOnOpenChange} subtaskCount={5} />,
+			)
+
+			const deleteButton = screen.getByText("Delete")
+			fireEvent.click(deleteButton)
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "deleteTaskWithId",
+				text: mockTaskId,
+			})
+			expect(mockOnOpenChange).toHaveBeenCalledWith(false)
 		})
 	})
 })

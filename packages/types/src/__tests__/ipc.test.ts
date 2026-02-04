@@ -27,7 +27,7 @@ describe("IPC Types", () => {
 				const result = taskCommandSchema.safeParse(resumeTaskCommand)
 				expect(result.success).toBe(true)
 
-				if (result.success) {
+				if (result.success && result.data.commandName === TaskCommandName.ResumeTask) {
 					expect(result.data.commandName).toBe("ResumeTask")
 					expect(result.data.data).toBe("non-existent-task-id")
 				}
@@ -45,7 +45,7 @@ describe("IPC Types", () => {
 			const result = taskCommandSchema.safeParse(resumeTaskCommand)
 			expect(result.success).toBe(true)
 
-			if (result.success) {
+			if (result.success && result.data.commandName === TaskCommandName.ResumeTask) {
 				expect(result.data.commandName).toBe("ResumeTask")
 				expect(result.data.data).toBe("task-123")
 			}

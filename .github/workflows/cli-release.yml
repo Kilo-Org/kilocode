@@ -1,0 +1,390 @@
+name: CLI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0). Leave empty to use package.json version.'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run (build and test but do not create release).'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # Build CLI for each platform.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin-arm64
+            runs-on: macos-latest
+          - os: ubuntu-latest
+            platform: linux-x64
+            runs-on: ubuntu-latest
+
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(node -p "require('./apps/cli/package.json').version")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=cli-v$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+      - name: Build extension bundle
+        run: pnpm bundle
+
+      - name: Build CLI
+        run: pnpm --filter @roo-code/cli build
+
+      - name: Create release tarball
+        id: tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          RELEASE_DIR="roo-cli-${PLATFORM}"
+          TARBALL="roo-cli-${PLATFORM}.tar.gz"
+
+          # Clean up any previous build.
+          rm -rf "$RELEASE_DIR"
+          rm -f "$TARBALL"
+
+          # Create directory structure.
+          mkdir -p "$RELEASE_DIR/bin"
+          mkdir -p "$RELEASE_DIR/lib"
+          mkdir -p "$RELEASE_DIR/extension"
+
+          # Copy CLI dist files.
+          echo "Copying CLI files..."
+          cp -r apps/cli/dist/* "$RELEASE_DIR/lib/"
+
+          # Create package.json for npm install.
+          echo "Creating package.json..."
+          node -e "
+            const pkg = require('./apps/cli/package.json');
+            const newPkg = {
+              name: '@roo-code/cli',
+              version: '$VERSION',
+              type: 'module',
+              dependencies: {
+                '@inkjs/ui': pkg.dependencies['@inkjs/ui'],
+                '@trpc/client': pkg.dependencies['@trpc/client'],
+                'commander': pkg.dependencies.commander,
+                'fuzzysort': pkg.dependencies.fuzzysort,
+                'ink': pkg.dependencies.ink,
+                'p-wait-for': pkg.dependencies['p-wait-for'],
+                'react': pkg.dependencies.react,
+                'superjson': pkg.dependencies.superjson,
+                'zustand': pkg.dependencies.zustand
+              }
+            };
+            console.log(JSON.stringify(newPkg, null, 2));
+          " > "$RELEASE_DIR/package.json"
+
+          # Copy extension bundle.
+          echo "Copying extension bundle..."
+          cp -r src/dist/* "$RELEASE_DIR/extension/"
+
+          # Add package.json to extension directory for CommonJS.
+          echo '{"type": "commonjs"}' > "$RELEASE_DIR/extension/package.json"
+
+          # Find and copy ripgrep binary.
+          echo "Looking for ripgrep binary..."
+          RIPGREP_PATH=$(find node_modules -path "*/@vscode/ripgrep/bin/rg" -type f 2>/dev/null | head -1)
+          if [ -n "$RIPGREP_PATH" ] && [ -f "$RIPGREP_PATH" ]; then
+            echo "Found ripgrep at: $RIPGREP_PATH"
+            mkdir -p "$RELEASE_DIR/node_modules/@vscode/ripgrep/bin"
+            cp "$RIPGREP_PATH" "$RELEASE_DIR/node_modules/@vscode/ripgrep/bin/"
+            chmod +x "$RELEASE_DIR/node_modules/@vscode/ripgrep/bin/rg"
+            mkdir -p "$RELEASE_DIR/bin"
+            cp "$RIPGREP_PATH" "$RELEASE_DIR/bin/"
+            chmod +x "$RELEASE_DIR/bin/rg"
+          else
+            echo "Warning: ripgrep binary not found"
+          fi
+
+          # Create the wrapper script
+          echo "Creating wrapper script..."
+          printf '%s\n' '#!/usr/bin/env node' \
+            '' \
+            "import { fileURLToPath } from 'url';" \
+            "import { dirname, join } from 'path';" \
+            '' \
+            'const __filename = fileURLToPath(import.meta.url);' \
+            'const __dirname = dirname(__filename);' \
+            '' \
+            '// Set environment variables for the CLI' \
+            "process.env.ROO_CLI_ROOT = join(__dirname, '..');" \
+            "process.env.ROO_EXTENSION_PATH = join(__dirname, '..', 'extension');" \
+            "process.env.ROO_RIPGREP_PATH = join(__dirname, 'rg');" \
+            '' \
+            '// Import and run the actual CLI' \
+            "await import(join(__dirname, '..', 'lib', 'index.js'));" \
+            > "$RELEASE_DIR/bin/roo"
+
+          chmod +x "$RELEASE_DIR/bin/roo"
+
+          # Create empty .env file.
+          touch "$RELEASE_DIR/.env"
+
+          # Create tarball.
+          echo "Creating tarball..."
+          tar -czvf "$TARBALL" "$RELEASE_DIR"
+
+          # Clean up release directory.
+          rm -rf "$RELEASE_DIR"
+
+          # Create checksum.
+          if command -v sha256sum &> /dev/null; then
+            sha256sum "$TARBALL" > "${TARBALL}.sha256"
+          elif command -v shasum &> /dev/null; then
+            shasum -a 256 "$TARBALL" > "${TARBALL}.sha256"
+          fi
+
+          echo "tarball=$TARBALL" >> $GITHUB_OUTPUT
+          echo "Created: $TARBALL"
+          ls -la "$TARBALL"
+
+      - name: Verify tarball
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          TARBALL="roo-cli-${PLATFORM}.tar.gz"
+
+          # Create temp directory for verification.
+          VERIFY_DIR=$(mktemp -d)
+
+          # Extract and verify structure.
+          tar -xzf "$TARBALL" -C "$VERIFY_DIR"
+
+          echo "Verifying tarball contents..."
+          ls -la "$VERIFY_DIR/roo-cli-${PLATFORM}/"
+
+          # Check required files exist.
+          test -f "$VERIFY_DIR/roo-cli-${PLATFORM}/bin/roo" || { echo "Missing bin/roo"; exit 1; }
+          test -f "$VERIFY_DIR/roo-cli-${PLATFORM}/lib/index.js" || { echo "Missing lib/index.js"; exit 1; }
+          test -f "$VERIFY_DIR/roo-cli-${PLATFORM}/package.json" || { echo "Missing package.json"; exit 1; }
+          test -d "$VERIFY_DIR/roo-cli-${PLATFORM}/extension" || { echo "Missing extension directory"; exit 1; }
+
+          echo "Tarball verification passed!"
+
+          # Cleanup.
+          rm -rf "$VERIFY_DIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.platform }}
+          path: |
+            roo-cli-${{ matrix.platform }}.tar.gz
+            roo-cli-${{ matrix.platform }}.tar.gz.sha256
+          retention-days: 7
+
+  # Create GitHub release with all platform artifacts.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(node -p "require('./apps/cli/package.json').version")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=cli-v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
+          find artifacts -name "*.sha256" -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Extract changelog
+        id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          CHANGELOG_FILE="apps/cli/CHANGELOG.md"
+
+          if [ -f "$CHANGELOG_FILE" ]; then
+            # Extract content between version headers.
+            CONTENT=$(awk -v version="$VERSION" '
+              BEGIN { found = 0; content = ""; target = "[" version "]" }
+              /^## \[/ {
+                if (found) { exit }
+                if (index($0, target) > 0) { found = 1; next }
+              }
+              found { content = content $0 "\n" }
+              END { print content }
+            ' "$CHANGELOG_FILE")
+
+            if [ -n "$CONTENT" ]; then
+              echo "Found changelog content"
+              echo "content<<EOF" >> $GITHUB_OUTPUT
+              echo "$CONTENT" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "No changelog content found for version $VERSION"
+              echo "content=" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No changelog file found"
+            echo "content=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate checksums summary
+        id: checksums
+        run: |
+          echo "checksums<<EOF" >> $GITHUB_OUTPUT
+          cat release/*.sha256 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check for existing release
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" &> /dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing release
+        if: steps.check_release.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          echo "Deleting existing release $TAG..."
+          gh release delete "$TAG" --yes || true
+          git push origin ":refs/tags/$TAG" || true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          CHANGELOG_CONTENT: ${{ steps.changelog.outputs.content }}
+          CHECKSUMS: ${{ steps.checksums.outputs.checksums }}
+        run: |
+          NOTES_FILE=$(mktemp)
+
+          if [ -n "$CHANGELOG_CONTENT" ]; then
+            echo "## What's New" >> "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+            echo "$CHANGELOG_CONTENT" >> "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+          fi
+
+          echo "## Installation" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo '```bash' >> "$NOTES_FILE"
+          echo "curl -fsSL https://raw.githubusercontent.com/RooCodeInc/Roo-Code/main/apps/cli/install.sh | sh" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "Or install a specific version:" >> "$NOTES_FILE"
+          echo '```bash' >> "$NOTES_FILE"
+          echo "ROO_VERSION=$VERSION curl -fsSL https://raw.githubusercontent.com/RooCodeInc/Roo-Code/main/apps/cli/install.sh | sh" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "## Requirements" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "- Node.js 20 or higher" >> "$NOTES_FILE"
+          echo "- macOS Apple Silicon (M1/M2/M3/M4) or Linux x64" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "## Usage" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo '```bash' >> "$NOTES_FILE"
+          echo "# Run a task" >> "$NOTES_FILE"
+          echo 'roo "What is this project?"' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "# See all options" >> "$NOTES_FILE"
+          echo "roo --help" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "## Platform Support" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "This release includes binaries for:" >> "$NOTES_FILE"
+          echo '- `roo-cli-darwin-arm64.tar.gz` - macOS Apple Silicon (M1/M2/M3)' >> "$NOTES_FILE"
+          echo '- `roo-cli-linux-x64.tar.gz` - Linux x64' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "## Checksums" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+          echo "$CHECKSUMS" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+
+          gh release create "$TAG" \
+            --title "Roo Code CLI v$VERSION" \
+            --notes-file "$NOTES_FILE" \
+            --prerelease \
+            release/*
+
+          rm -f "$NOTES_FILE"
+          echo "Release created: https://github.com/${{ github.repository }}/releases/tag/$TAG"
+
+  # Summary job for dry runs
+  summary:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run }}
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Show build summary
+        run: |
+          echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following artifacts were built:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          find artifacts -name "*.tar.gz" | while read f; do
+            SIZE=$(ls -lh "$f" | awk '{print $5}')
+            echo "- $(basename $f) ($SIZE)" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checksums" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat artifacts/*/*.sha256 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

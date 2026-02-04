@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "No hay suficientes mensajes para condensar el contexto de {{prevContextTokens}} tokens. Se requieren al menos {{minimumMessageCount}} mensajes, pero solo {{messageCount}} están disponibles.",
 		"condensed_recently": "El contexto se condensó recientemente; se omite este intento",
 		"condense_handler_invalid": "El manejador de API para condensar el contexto no es válido",
-		"condense_context_grew": "El tamaño del contexto aumentó de {{prevContextTokens}} a {{newContextTokens}} durante la condensación; se omite este intento",
+		"condense_api_failed": "La llamada API de condensación falló: {{message}}",
 		"url_timeout": "El sitio web tardó demasiado en cargar (timeout). Esto podría deberse a una conexión lenta, un sitio web pesado o que esté temporalmente no disponible. Puedes intentarlo más tarde o verificar si la URL es correcta.",
 		"url_not_found": "No se pudo encontrar la dirección del sitio web. Por favor verifica si la URL es correcta e inténtalo de nuevo.",
 		"no_internet": "Sin conexión a internet. Por favor verifica tu conexión de red e inténtalo de nuevo.",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "El proveedor Roo requiere autenticación en la nube. Por favor, inicia sesión en Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "La clave API contiene caracteres inválidos."
+			"invalidKeyInvalidChars": "La clave API contiene caracteres inválidos.",
+			"apiRequestFailed": "La solicitud API falló ({{status}})"
 		},
 		"manual_url_empty": "Por favor, introduce una URL de callback válida",
 		"manual_url_no_query": "URL de callback inválida: faltan parámetros de consulta",
 		"manual_url_missing_params": "URL de callback inválida: faltan parámetros requeridos (code y state)",
 		"manual_url_auth_failed": "Autenticación manual por URL falló",
-		"manual_url_auth_error": "Error de autenticación"
+		"manual_url_auth_error": "Error de autenticación",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "No hay contenido de terminal seleccionado",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Respuesta interrumpida por el usuario",
-		"responseInterruptedByApiError": "Respuesta interrumpida por error de API"
+		"responseInterruptedByApiError": "Respuesta interrumpida por error de API",
+		"streamTerminatedByProvider": "El proveedor finalizó la solicitud"
 	},
 	"storage": {
 		"prompt_custom_path": "Ingresa la ruta de almacenamiento personalizada para el historial de conversaciones, déjala vacía para usar la ubicación predeterminada",

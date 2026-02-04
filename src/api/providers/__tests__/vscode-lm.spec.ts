@@ -180,7 +180,7 @@ describe("VsCodeLmHandler", () => {
 			})
 		})
 
-		it("should handle tool calls as text when not using native tool protocol", async () => {
+		it("should emit tool_call chunks when tools are provided", async () => {
 			const systemPrompt = "You are a helpful assistant"
 			const messages: Anthropic.Messages.MessageParam[] = [
 				{
@@ -210,7 +210,27 @@ describe("VsCodeLmHandler", () => {
 				})(),
 			})
 
-			const stream = handler.createMessage(systemPrompt, messages)
+			const tools = [
+				{
+					type: "function" as const,
+					function: {
+						name: "calculator",
+						description: "A simple calculator",
+						parameters: {
+							type: "object",
+							properties: {
+								operation: { type: "string" },
+								numbers: { type: "array", items: { type: "number" } },
+							},
+						},
+					},
+				},
+			]
+
+			const stream = handler.createMessage(systemPrompt, messages, {
+				taskId: "test-task",
+				tools,
+			})
 			const chunks = []
 			for await (const chunk of stream) {
 				chunks.push(chunk)
@@ -218,12 +238,14 @@ describe("VsCodeLmHandler", () => {
 
 			expect(chunks).toHaveLength(2) // Tool call chunk + usage chunk
 			expect(chunks[0]).toEqual({
-				type: "text",
-				text: JSON.stringify({ type: "tool_call", ...toolCallData }),
+				type: "tool_call",
+				id: toolCallData.callId,
+				name: toolCallData.name,
+				arguments: JSON.stringify(toolCallData.arguments),
 			})
 		})
 
-		it("should handle native tool calls when using native tool protocol", async () => {
+		it("should handle native tool calls when tools are provided", async () => {
 			const systemPrompt = "You are a helpful assistant"
 			const messages: Anthropic.Messages.MessageParam[] = [
 				{
@@ -272,7 +294,6 @@ describe("VsCodeLmHandler", () => {
 
 			const stream = handler.createMessage(systemPrompt, messages, {
 				taskId: "test-task",
-				toolProtocol: "native",
 				tools,
 			})
 			const chunks = []
@@ -289,7 +310,7 @@ describe("VsCodeLmHandler", () => {
 			})
 		})
 
-		it("should pass tools to request options when using native tool protocol", async () => {
+		it("should pass tools to request options when tools are provided", async () => {
 			const systemPrompt = "You are a helpful assistant"
 			const messages: Anthropic.Messages.MessageParam[] = [
 				{
@@ -327,7 +348,6 @@ describe("VsCodeLmHandler", () => {
 
 			const stream = handler.createMessage(systemPrompt, messages, {
 				taskId: "test-task",
-				toolProtocol: "native",
 				tools,
 			})
 			const chunks = []
@@ -376,10 +396,11 @@ describe("VsCodeLmHandler", () => {
 	describe("getModel", () => {
 		it("should return model info when client exists", async () => {
 			const mockModel = { ...mockLanguageModelChat }
-			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
-
-			// Initialize client
-			await handler["getClient"]()
+			// The handler starts async initialization in the constructor.
+			// Make the test deterministic by explicitly (re)initializing here.
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValue([mockModel])
+			handler["client"] = null
+			await handler.initializeClient()
 
 			const model = handler.getModel()
 			expect(model.id).toBe("test-model")
@@ -395,24 +416,84 @@ describe("VsCodeLmHandler", () => {
 			expect(model.info).toBeDefined()
 		})
 
-		it("should return supportsNativeTools and defaultToolProtocol in model info", async () => {
+		it("should return basic model info when client exists", async () => {
 			const mockModel = { ...mockLanguageModelChat }
-			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
-
-			// Initialize client
-			await handler["getClient"]()
+			// The handler starts async initialization in the constructor.
+			// Make the test deterministic by explicitly (re)initializing here.
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValue([mockModel])
+			handler["client"] = null
+			await handler.initializeClient()
 
 			const model = handler.getModel()
-			expect(model.info.supportsNativeTools).toBe(true)
-			expect(model.info.defaultToolProtocol).toBe("native")
+			expect(model.info).toBeDefined()
+			expect(model.info.contextWindow).toBe(4096)
 		})
 
-		it("should return supportsNativeTools and defaultToolProtocol in fallback model info", () => {
+		it("should return fallback model info when no client exists", () => {
 			// Clear the client first
 			handler["client"] = null
 			const model = handler.getModel()
-			expect(model.info.supportsNativeTools).toBe(true)
-			expect(model.info.defaultToolProtocol).toBe("native")
+			expect(model.info).toBeDefined()
+		})
+	})
+
+	describe("countTokens", () => {
+		beforeEach(() => {
+			handler["client"] = mockLanguageModelChat
+		})
+
+		it("should count tokens when called outside of an active request", async () => {
+			// Ensure no active request cancellation token exists
+			handler["currentRequestCancellation"] = null
+
+			mockLanguageModelChat.countTokens.mockResolvedValueOnce(42)
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [{ type: "text", text: "Hello world" }]
+			const result = await handler.countTokens(content)
+
+			expect(result).toBe(42)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith("Hello world", expect.any(Object))
+		})
+
+		it("should count tokens when called during an active request", async () => {
+			// Simulate an active request with a cancellation token
+			const mockCancellation = {
+				token: { isCancellationRequested: false, onCancellationRequested: vi.fn() },
+				cancel: vi.fn(),
+				dispose: vi.fn(),
+			}
+			handler["currentRequestCancellation"] = mockCancellation as any
+
+			mockLanguageModelChat.countTokens.mockResolvedValueOnce(50)
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [{ type: "text", text: "Test content" }]
+			const result = await handler.countTokens(content)
+
+			expect(result).toBe(50)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith("Test content", mockCancellation.token)
+		})
+
+		it("should return 0 when no client is available", async () => {
+			handler["client"] = null
+			handler["currentRequestCancellation"] = null
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [{ type: "text", text: "Hello" }]
+			const result = await handler.countTokens(content)
+
+			expect(result).toBe(0)
+		})
+
+		it("should handle image blocks with placeholder", async () => {
+			handler["currentRequestCancellation"] = null
+			mockLanguageModelChat.countTokens.mockResolvedValueOnce(5)
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{ type: "image", source: { type: "base64", media_type: "image/png", data: "abc" } },
+			]
+			const result = await handler.countTokens(content)
+
+			expect(result).toBe(5)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith("[IMAGE]", expect.any(Object))
 		})
 	})
 

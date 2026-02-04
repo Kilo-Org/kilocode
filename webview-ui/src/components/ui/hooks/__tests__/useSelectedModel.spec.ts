@@ -424,155 +424,6 @@ describe("useSelectedModel", () => {
 		})
 	})
 
-	describe("claude-code provider", () => {
-		it("should return claude-code model with correct model info", () => {
-			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
-				},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			mockUseOpenRouterModelProviders.mockReturnValue({
-				data: {},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			const apiConfiguration: ProviderSettings = {
-				apiProvider: "claude-code",
-				apiModelId: "claude-sonnet-4-5", // Use valid claude-code model ID
-			}
-
-			const wrapper = createWrapper()
-			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
-
-			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-5")
-			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
-			expect(result.current.info?.supportsPromptCache).toBe(true) // Claude Code now supports prompt cache
-			// Verify it inherits other properties from claude-code models
-			expect(result.current.info?.maxTokens).toBe(32768)
-			expect(result.current.info?.contextWindow).toBe(200_000)
-		})
-
-		it("should use default claude-code model when no modelId is specified", () => {
-			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
-				},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			mockUseOpenRouterModelProviders.mockReturnValue({
-				data: {},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			const apiConfiguration: ProviderSettings = {
-				apiProvider: "claude-code",
-			}
-
-			const wrapper = createWrapper()
-			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
-
-			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-5") // Default model
-			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
-		})
-	})
-
-	// kilocode_change start
-	describe("litellm provider", () => {
-		beforeEach(() => {
-			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {},
-					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
-				},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			mockUseOpenRouterModelProviders.mockReturnValue({
-				data: {},
-				isLoading: false,
-				isError: false,
-			} as any)
-		})
-
-		it("should not crash when litellmDefaultModelId is not found in routerModels.litellm", () => {
-			const apiConfiguration: ProviderSettings = {
-				apiProvider: "litellm",
-				litellmModelId: "claude-3-7-sonnet-20250219", // Default LiteLLM model ID, but not present in routerModels.litellm
-			}
-
-			const wrapper = createWrapper()
-			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
-
-			// Should not crash; falls back to LiteLLM defaults when model metadata is missing
-			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
-			expect(result.current.info).toEqual(litellmDefaultModelInfo)
-		})
-
-		it("should return model info when litellm model exists in routerModels.litellm", () => {
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 8192,
-				supportsImages: false,
-				supportsPromptCache: false,
-				supportsNativeTools: true,
-				defaultToolProtocol: "native",
-			}
-
-			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {},
-					unbound: {},
-					litellm: {
-						"claude-3-7-sonnet-20250219": modelInfo,
-					},
-					"io-intelligence": {},
-				},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			const apiConfiguration: ProviderSettings = {
-				apiProvider: "litellm",
-				litellmModelId: "claude-3-7-sonnet-20250219",
-			}
-
-			const wrapper = createWrapper()
-			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
-
-			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
-			expect(result.current.info).toEqual(modelInfo)
-		})
-	})
-	// kilocode_change end
-
 	describe("bedrock provider with 1M context", () => {
 		beforeEach(() => {
 			mockUseRouterModels.mockReturnValue({
@@ -673,7 +524,6 @@ describe("useSelectedModel", () => {
 			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
 			// Should use litellmDefaultModelInfo as fallback
 			expect(result.current.info).toEqual(litellmDefaultModelInfo)
-			expect(result.current.info?.supportsNativeTools).toBe(true)
 		})
 
 		it("should use litellmDefaultModelInfo when selected model not found in routerModels", () => {
@@ -688,7 +538,6 @@ describe("useSelectedModel", () => {
 							contextWindow: 8192,
 							supportsImages: false,
 							supportsPromptCache: false,
-							supportsNativeTools: true,
 						},
 					},
 					"io-intelligence": {},
@@ -710,16 +559,14 @@ describe("useSelectedModel", () => {
 			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
 			// Should use litellmDefaultModelInfo as fallback since default model also not in router models
 			expect(result.current.info).toEqual(litellmDefaultModelInfo)
-			expect(result.current.info?.supportsNativeTools).toBe(true)
 		})
 
-		it("should merge only native tool defaults with routerModels when model exists", () => {
+		it("should return routerModels info when model exists", () => {
 			const customModelInfo: ModelInfo = {
 				maxTokens: 16384,
 				contextWindow: 128000,
 				supportsImages: true,
 				supportsPromptCache: true,
-				supportsNativeTools: true,
 				description: "Custom LiteLLM model",
 			}
 
@@ -747,15 +594,7 @@ describe("useSelectedModel", () => {
 
 			expect(result.current.provider).toBe("litellm")
 			expect(result.current.id).toBe("custom-model")
-			// Should only merge native tool defaults, not prices or other model-specific info
-			// Router model values override the defaults
-			const nativeToolDefaults = {
-				supportsNativeTools: litellmDefaultModelInfo.supportsNativeTools,
-				defaultToolProtocol: litellmDefaultModelInfo.defaultToolProtocol,
-			}
-			expect(result.current.info).toEqual({ ...nativeToolDefaults, ...customModelInfo })
-			expect(result.current.info?.supportsNativeTools).toBe(true)
-			expect(result.current.info?.defaultToolProtocol).toBe("native")
+			expect(result.current.info).toEqual(customModelInfo)
 		})
 	})
 
@@ -792,11 +631,9 @@ describe("useSelectedModel", () => {
 			expect(result.current.provider).toBe("openai")
 			expect(result.current.id).toBe("gpt-4o")
 			expect(result.current.info).toEqual(openAiModelInfoSaneDefaults)
-			expect(result.current.info?.supportsNativeTools).toBe(true)
-			expect(result.current.info?.defaultToolProtocol).toBe("native")
 		})
 
-		it("should merge native tool defaults with custom model info", () => {
+		it("should return custom model info when provided", () => {
 			const customModelInfo: ModelInfo = {
 				maxTokens: 16384,
 				contextWindow: 128000,
@@ -818,24 +655,15 @@ describe("useSelectedModel", () => {
 
 			expect(result.current.provider).toBe("openai")
 			expect(result.current.id).toBe("custom-model")
-			// Should merge native tool defaults with custom model info
-			const nativeToolDefaults = {
-				supportsNativeTools: openAiModelInfoSaneDefaults.supportsNativeTools,
-				defaultToolProtocol: openAiModelInfoSaneDefaults.defaultToolProtocol,
-			}
-			expect(result.current.info).toEqual({ ...nativeToolDefaults, ...customModelInfo })
-			expect(result.current.info?.supportsNativeTools).toBe(true)
-			expect(result.current.info?.defaultToolProtocol).toBe("native")
+			expect(result.current.info).toEqual(customModelInfo)
 		})
 
-		it("should allow custom model info to override native tool defaults", () => {
+		it("should return custom model info as-is", () => {
 			const customModelInfo: ModelInfo = {
 				maxTokens: 8192,
 				contextWindow: 32000,
 				supportsImages: false,
 				supportsPromptCache: false,
-				supportsNativeTools: false, // Explicitly disable
-				defaultToolProtocol: "xml", // Override default to use XML instead of native
 			}
 
 			const apiConfiguration: ProviderSettings = {
@@ -849,9 +677,7 @@ describe("useSelectedModel", () => {
 
 			expect(result.current.provider).toBe("openai")
 			expect(result.current.id).toBe("custom-model-no-tools")
-			// Custom model info should override the native tool defaults
-			expect(result.current.info?.supportsNativeTools).toBe(false)
-			expect(result.current.info?.defaultToolProtocol).toBe("xml")
+			expect(result.current.info).toEqual(customModelInfo)
 		})
 	})
 })

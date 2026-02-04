@@ -187,18 +187,21 @@ describe("Nested delegation resume (A → B → C)", () => {
 			type: "tool_use",
 			name: "attempt_completion",
 			params: { result: "C finished" },
+			nativeArgs: { result: "C finished" },
 			partial: false,
 		} as any
 
 		const askFinishSubTaskApproval = vi.fn(async () => true)
+		const handleError = vi.fn(async (_action: string, err: Error) => {
+			// Fail fast in this test if the tool hits an error path.
+			throw err
+		})
 
 		await attemptCompletionTool.handle(clineC, blockC, {
 			askApproval: vi.fn(),
-			handleError: vi.fn(),
+			handleError,
 			pushToolResult: vi.fn(),
-			removeClosingTag: vi.fn((_, v?: string) => v ?? ""),
 			askFinishSubTaskApproval,
-			toolProtocol: "xml",
 			toolDescription: () => "desc",
 		} as any)
 
@@ -231,20 +234,21 @@ describe("Nested delegation resume (A → B → C)", () => {
 			type: "tool_use",
 			name: "attempt_completion",
 			params: { result: "B finished" },
+			nativeArgs: { result: "B finished" },
 			partial: false,
 		} as any
 
 		await attemptCompletionTool.handle(clineB, blockB, {
 			askApproval: vi.fn(),
-			handleError: vi.fn(),
+			handleError,
 			pushToolResult: vi.fn(),
-			removeClosingTag: vi.fn((_, v?: string) => v ?? ""),
 			askFinishSubTaskApproval,
-			toolProtocol: "xml",
 			toolDescription: () => "desc",
 		} as any)
 
-		// After B completes, A must be current
+		// After B completes, A should become current
+		// Note: delegation resume may fall back to a non-tool_result user message when the parent history
+		// does not contain a new_task tool_use. This should not prevent reopening the parent.
 		expect(currentActiveId).toBe("A")
 
 		// Ensure no resume_task asks were scheduled: verified indirectly by startTask:false on both hops

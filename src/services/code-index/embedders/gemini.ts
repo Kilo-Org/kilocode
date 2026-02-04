@@ -10,14 +10,32 @@ import { TelemetryService } from "@roo-code/telemetry"
  * with configuration for Google's Gemini embedding API.
  *
  * Supported models:
- * - text-embedding-004 (dimension: 768)
- * - gemini-embedding-001 (dimension: 2048)
+ * - gemini-embedding-001 (dimension: 3072)
+ *
+ * Note: text-embedding-004 has been deprecated and is automatically
+ * migrated to gemini-embedding-001 for backward compatibility.
  */
 export class GeminiEmbedder implements IEmbedder {
 	private readonly openAICompatibleEmbedder: OpenAICompatibleEmbedder
 	private static readonly GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 	private static readonly DEFAULT_MODEL = "gemini-embedding-001"
+	/**
+	 * Deprecated models that are automatically migrated to their replacements.
+	 * Users with these models configured will be silently migrated without interruption.
+	 */
+	private static readonly DEPRECATED_MODEL_MIGRATIONS: Record<string, string> = {
+		"text-embedding-004": "gemini-embedding-001",
+	}
 	private readonly modelId: string
+
+	/**
+	 * Migrates deprecated model IDs to their replacements.
+	 * @param modelId The model ID to potentially migrate
+	 * @returns The migrated model ID, or the original if no migration is needed
+	 */
+	private static migrateModelId(modelId: string): string {
+		return GeminiEmbedder.DEPRECATED_MODEL_MIGRATIONS[modelId] ?? modelId
+	}
 
 	/**
 	 * Creates a new Gemini embedder
@@ -29,8 +47,11 @@ export class GeminiEmbedder implements IEmbedder {
 			throw new Error(t("embeddings:validation.apiKeyRequired"))
 		}
 
-		// Use provided model or default
-		this.modelId = modelId || GeminiEmbedder.DEFAULT_MODEL
+		// Migrate deprecated models to their replacements silently
+		const migratedModelId = modelId ? GeminiEmbedder.migrateModelId(modelId) : undefined
+
+		// Use provided model (after migration) or default
+		this.modelId = migratedModelId || GeminiEmbedder.DEFAULT_MODEL
 
 		// Create an OpenAI Compatible embedder with Gemini's configuration
 		this.openAICompatibleEmbedder = new OpenAICompatibleEmbedder(

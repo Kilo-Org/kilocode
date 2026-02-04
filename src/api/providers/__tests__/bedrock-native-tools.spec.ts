@@ -135,23 +135,18 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 						parameters: {
 							type: "object",
 							properties: {
-								files: {
-									type: "array",
-									items: {
-										type: "object",
-										properties: {
-											path: { type: "string" },
-											line_ranges: {
-												type: ["array", "null"],
-												items: { type: "integer" },
-												description: "Optional line ranges",
-											},
+								path: { type: "string" },
+								indentation: {
+									type: ["object", "null"],
+									properties: {
+										anchor_line: {
+											type: ["integer", "null"],
+											description: "Optional anchor line",
 										},
-										required: ["path", "line_ranges"],
 									},
 								},
 							},
-							required: ["files"],
+							required: ["path"],
 						},
 					},
 				},
@@ -167,15 +162,14 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			expect(executeCommandSchema.properties.cwd.type).toBeUndefined()
 			expect(executeCommandSchema.properties.cwd.description).toBe("Working directory (optional)")
 
-			// Second tool: line_ranges should be transformed from type: ["array", "null"] to anyOf
-			// with items moved inside the array variant (required by GPT-5-mini strict schema validation)
+			// Second tool: nested nullable object should be transformed from type: ["object", "null"] to anyOf
 			const readFileSchema = bedrockTools[1].toolSpec.inputSchema.json as any
-			const lineRanges = readFileSchema.properties.files.items.properties.line_ranges
-			expect(lineRanges.anyOf).toEqual([{ type: "array", items: { type: "integer" } }, { type: "null" }])
-			expect(lineRanges.type).toBeUndefined()
-			// items should now be inside the array variant, not at root
-			expect(lineRanges.items).toBeUndefined()
-			expect(lineRanges.description).toBe("Optional line ranges")
+			const indentation = readFileSchema.properties.indentation
+			expect(indentation.anyOf).toBeDefined()
+			expect(indentation.type).toBeUndefined()
+			// Object-level schema properties are preserved at the root, not inside the anyOf object variant
+			expect(indentation.additionalProperties).toBe(false)
+			expect(indentation.properties.anchor_line.anyOf).toEqual([{ type: "integer" }, { type: "null" }])
 		})
 
 		it("should filter non-function tools", () => {
@@ -242,11 +236,7 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 	})
 
 	describe("createMessage with native tools", () => {
-		it("should include toolConfig when tools are provided with native protocol", async () => {
-			// Override model info to support native tools
-			const modelInfo = handler.getModel().info
-			;(modelInfo as any).supportsNativeTools = true
-
+		it("should include toolConfig when tools are provided", async () => {
 			const handlerWithNativeTools = new AwsBedrockHandler({
 				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 				awsAccessKey: "test-access-key",
@@ -254,18 +244,9 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 				awsRegion: "us-east-1",
 			})
 
-			// Manually set supportsNativeTools
-			const getModelOriginal = handlerWithNativeTools.getModel.bind(handlerWithNativeTools)
-			handlerWithNativeTools.getModel = () => {
-				const model = getModelOriginal()
-				model.info.supportsNativeTools = true
-				return model
-			}
-
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: testTools,
-				toolProtocol: "native",
 			}
 
 			const generator = handlerWithNativeTools.createMessage(
@@ -285,7 +266,7 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			expect(commandArg.toolConfig.toolChoice).toEqual({ auto: {} })
 		})
 
-		it("should not include toolConfig when toolProtocol is xml", async () => {
+		it("should always include toolConfig (tools are always present after PR #10841)", async () => {
 			const handlerWithNativeTools = new AwsBedrockHandler({
 				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 				awsAccessKey: "test-access-key",
@@ -293,18 +274,9 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 				awsRegion: "us-east-1",
 			})
 
-			// Manually set supportsNativeTools
-			const getModelOriginal = handlerWithNativeTools.getModel.bind(handlerWithNativeTools)
-			handlerWithNativeTools.getModel = () => {
-				const model = getModelOriginal()
-				model.info.supportsNativeTools = true
-				return model
-			}
-
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
-				tools: testTools,
-				toolProtocol: "xml", // XML protocol should not use native tools
+				// Even without explicit tools, tools are always present (minimum 6 from ALWAYS_AVAILABLE_TOOLS)
 			}
 
 			const generator = handlerWithNativeTools.createMessage(
@@ -318,10 +290,13 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			expect(commandArg.toolConfig).toBeUndefined()
+			// Tools are now always present
+			expect(commandArg.toolConfig).toBeDefined()
+			expect(commandArg.toolConfig.tools).toBeDefined()
+			expect(commandArg.toolConfig.toolChoice).toEqual({ auto: {} })
 		})
 
-		it("should not include toolConfig when tool_choice is none", async () => {
+		it("should include toolConfig with undefined toolChoice when tool_choice is none", async () => {
 			const handlerWithNativeTools = new AwsBedrockHandler({
 				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 				awsAccessKey: "test-access-key",
@@ -329,18 +304,9 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 				awsRegion: "us-east-1",
 			})
 
-			// Manually set supportsNativeTools
-			const getModelOriginal = handlerWithNativeTools.getModel.bind(handlerWithNativeTools)
-			handlerWithNativeTools.getModel = () => {
-				const model = getModelOriginal()
-				model.info.supportsNativeTools = true
-				return model
-			}
-
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: testTools,
-				toolProtocol: "native",
 				tool_choice: "none", // Explicitly disable tool use
 			}
 
@@ -355,7 +321,9 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			expect(commandArg.toolConfig).toBeUndefined()
+			// toolConfig is still provided but toolChoice is undefined for "none"
+			expect(commandArg.toolConfig).toBeDefined()
+			expect(commandArg.toolConfig.toolChoice).toBeUndefined()
 		})
 
 		it("should include fine-grained tool streaming beta for Claude models with native tools", async () => {
@@ -366,18 +334,9 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 				awsRegion: "us-east-1",
 			})
 
-			// Manually set supportsNativeTools
-			const getModelOriginal = handlerWithNativeTools.getModel.bind(handlerWithNativeTools)
-			handlerWithNativeTools.getModel = () => {
-				const model = getModelOriginal()
-				model.info.supportsNativeTools = true
-				return model
-			}
-
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: testTools,
-				toolProtocol: "native",
 			}
 
 			const generator = handlerWithNativeTools.createMessage(
@@ -398,7 +357,7 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			)
 		})
 
-		it("should not include fine-grained tool streaming beta when not using native tools", async () => {
+		it("should always include fine-grained tool streaming beta for Claude models", async () => {
 			const handlerWithNativeTools = new AwsBedrockHandler({
 				apiModelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 				awsAccessKey: "test-access-key",
@@ -422,12 +381,11 @@ describe("AwsBedrockHandler Native Tool Calling", () => {
 			expect(mockConverseStreamCommand).toHaveBeenCalled()
 			const commandArg = mockConverseStreamCommand.mock.calls[0][0] as any
 
-			// Should not include anthropic_beta when not using native tools
-			if (commandArg.additionalModelRequestFields?.anthropic_beta) {
-				expect(commandArg.additionalModelRequestFields.anthropic_beta).not.toContain(
-					"fine-grained-tool-streaming-2025-05-14",
-				)
-			}
+			// Should always include anthropic_beta with fine-grained-tool-streaming for Claude models
+			expect(commandArg.additionalModelRequestFields).toBeDefined()
+			expect(commandArg.additionalModelRequestFields.anthropic_beta).toContain(
+				"fine-grained-tool-streaming-2025-05-14",
+			)
 		})
 	})
 

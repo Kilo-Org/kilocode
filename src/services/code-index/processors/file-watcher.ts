@@ -522,8 +522,12 @@ export class FileWatcher implements IFileWatcher {
 	 */
 	async processFile(filePath: string): Promise<FileProcessingResult> {
 		try {
+			// Get relative path for ignore checks
+			const relativeFilePath = generateRelativeFilePath(filePath, this.workspacePath)
+
 			// Check if file is in an ignored directory
-			if (isPathInIgnoredDirectory(filePath)) {
+			// Use relative path to avoid matching parent directories outside the workspace
+			if (isPathInIgnoredDirectory(relativeFilePath)) {
 				return {
 					path: filePath,
 					status: "skipped" as const,
@@ -532,7 +536,6 @@ export class FileWatcher implements IFileWatcher {
 			}
 
 			// Check if file should be ignored
-			const relativeFilePath = generateRelativeFilePath(filePath, this.workspacePath)
 			if (
 				!this.ignoreController.validateAccess(filePath) ||
 				(this.ignoreInstance && this.ignoreInstance.ignores(relativeFilePath))

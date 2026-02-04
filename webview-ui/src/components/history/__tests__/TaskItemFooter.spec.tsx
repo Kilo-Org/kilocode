@@ -82,4 +82,16 @@ describe("TaskItemFooter", () => {
 
 		expect(screen.queryByTestId("delete-task-button")).not.toBeInTheDocument()
 	})
+
+	it("shows subtask tag when isSubtask is true", () => {
+		render(<TaskItemFooter item={mockItem} variant="full" isSubtask={true} />)
+
+		expect(screen.getByText("history:subtaskTag")).toBeInTheDocument()
+	})
+
+	it("does not show subtask tag when isSubtask is false", () => {
+		render(<TaskItemFooter item={mockItem} variant="full" isSubtask={false} />)
+
+		expect(screen.queryByText("history:subtaskTag")).not.toBeInTheDocument()
+	})
 })

@@ -4,12 +4,16 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { Anthropic } from "@anthropic-ai/sdk"
 import { presentAssistantMessage } from "../presentAssistantMessage"
 import { Task } from "../../task/Task"
-import { TOOL_PROTOCOL } from "@roo-code/types"
 
 // Mock dependencies
 vi.mock("../../task/Task")
 vi.mock("../../tools/validateToolUse", () => ({
 	validateToolUse: vi.fn(),
+	isValidToolName: vi.fn((toolName: string) =>
+		["read_file", "write_to_file", "ask_followup_question", "attempt_completion", "use_mcp_tool"].includes(
+			toolName,
+		),
+	),
 }))
 vi.mock("@roo-code/telemetry", () => ({
 	TelemetryService: {
@@ -20,7 +24,7 @@ vi.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
-describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => {
+describe("presentAssistantMessage - Image Handling in Native Tool Calling", () => {
 	let mockTask: any
 
 	beforeEach(() => {
@@ -37,7 +41,6 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 			didCompleteReadingStream: false,
 			didRejectTool: false,
 			didAlreadyUseTool: false,
-			diffEnabled: false,
 			consecutiveMistakeCount: 0,
 			api: {
 				getModel: () => ({ id: "test-model", info: {} }),
@@ -60,17 +63,30 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 			say: vi.fn().mockResolvedValue(undefined),
 			ask: vi.fn().mockResolvedValue({ response: "yesButtonClicked" }),
 		}
+
+		// Add pushToolResultToUserContent method after mockTask is created so it can reference mockTask
+		mockTask.pushToolResultToUserContent = vi.fn().mockImplementation((toolResult: any) => {
+			const existingResult = mockTask.userMessageContent.find(
+				(block: any) => block.type === "tool_result" && block.tool_use_id === toolResult.tool_use_id,
+			)
+			if (existingResult) {
+				return false
+			}
+			mockTask.userMessageContent.push(toolResult)
+			return true
+		})
 	})
 
-	it("should preserve images in tool_result for native protocol", async () => {
-		// Set up a tool_use block with an ID (indicates native protocol)
+	it("should preserve images in tool_result for native tool calling", async () => {
+		// Set up a tool_use block with an ID (indicates native tool calling)
 		const toolCallId = "tool_call_123"
 		mockTask.assistantMessageContent = [
 			{
 				type: "tool_use",
-				id: toolCallId, // ID indicates native protocol
+				id: toolCallId, // ID indicates native tool calling
 				name: "ask_followup_question",
 				params: { question: "What do you see?" },
+				nativeArgs: { question: "What do you see?", follow_up: [] },
 			},
 		]
 
@@ -104,7 +120,7 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 		expect(toolResult).toBeDefined()
 		expect(toolResult.tool_use_id).toBe(toolCallId)
 
-		// For native protocol, tool_result content should be a string (text only)
+		// For native tool calling, tool_result content should be a string (text only)
 		expect(typeof toolResult.content).toBe("string")
 		expect(toolResult.content).toContain("I see a cat")
 
@@ -114,7 +130,7 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 		expect(imageBlocks[0].source.data).toBe("base64ImageData")
 	})
 
-	it("should convert to string when no images are present (native protocol)", async () => {
+	it("should convert to string when no images are present (native tool calling)", async () => {
 		// Set up a tool_use block with an ID (indicates native protocol)
 		const toolCallId = "tool_call_456"
 		mockTask.assistantMessageContent = [
@@ -123,6 +139,7 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 				id: toolCallId,
 				name: "ask_followup_question",
 				params: { question: "What is your name?" },
+				nativeArgs: { question: "What is your name?", follow_up: [] },
 			},
 		]
 
@@ -145,12 +162,11 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 		expect(typeof toolResult.content).toBe("string")
 	})
 
-	it("should preserve images in content array for XML protocol (existing behavior)", async () => {
-		// Set up a tool_use block WITHOUT an ID (indicates XML protocol)
+	it("should fail fast when tool_use is missing id (legacy/XML-style tool call)", async () => {
+		// tool_use without an id is treated as legacy/XML-style tool call and must be rejected.
 		mockTask.assistantMessageContent = [
 			{
 				type: "tool_use",
-				// No ID = XML protocol
 				name: "ask_followup_question",
 				params: { question: "What do you see?" },
 			},
@@ -164,14 +180,13 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 
 		await presentAssistantMessage(mockTask)
 
-		// For XML protocol, content is added as separate blocks
-		// Check that both text and image blocks were added
-		const hasTextBlock = mockTask.userMessageContent.some((item: any) => item.type === "text")
-		const hasImageBlock = mockTask.userMessageContent.some((item: any) => item.type === "image")
-
-		expect(hasTextBlock).toBe(true)
-		// XML protocol preserves images as separate blocks in userMessageContent
-		expect(hasImageBlock).toBe(true)
+		const textBlocks = mockTask.userMessageContent.filter((item: any) => item.type === "text")
+		expect(textBlocks.length).toBeGreaterThan(0)
+		expect(textBlocks.some((b: any) => String(b.text).includes("XML tool calls are no longer supported"))).toBe(
+			true,
+		)
+		// Should not proceed to execute tool or add images as tool output.
+		expect(mockTask.userMessageContent.some((item: any) => item.type === "image")).toBe(false)
 	})
 
 	it("should handle empty tool result gracefully", async () => {
@@ -204,7 +219,7 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 	})
 
 	describe("Multiple tool calls handling", () => {
-		it("should send tool_result with is_error for skipped tools in native protocol when didRejectTool is true", async () => {
+		it("should send tool_result with is_error for skipped tools in native tool calling when didRejectTool is true", async () => {
 			// Simulate multiple tool calls with native protocol (all have IDs)
 			const toolCallId1 = "tool_call_001"
 			const toolCallId2 = "tool_call_002"
@@ -249,63 +264,15 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 			expect(textBlocks.length).toBe(0)
 		})
 
-		it("should send tool_result with is_error for skipped tools in native protocol when didAlreadyUseTool is true", async () => {
-			// Simulate multiple tool calls with native protocol
-			const toolCallId1 = "tool_call_003"
-			const toolCallId2 = "tool_call_004"
-
+		it("should reject subsequent tool calls when a legacy/XML-style tool call is encountered", async () => {
 			mockTask.assistantMessageContent = [
 				{
 					type: "tool_use",
-					id: toolCallId1,
 					name: "read_file",
 					params: { path: "test.txt" },
 				},
 				{
 					type: "tool_use",
-					id: toolCallId2,
-					name: "write_to_file",
-					params: { path: "output.txt", content: "test" },
-				},
-			]
-
-			// First tool was already used
-			mockTask.didAlreadyUseTool = true
-
-			// Process the second tool (should be skipped)
-			mockTask.currentStreamingContentIndex = 1
-			await presentAssistantMessage(mockTask)
-
-			// Find the tool_result for the second tool
-			const toolResult = mockTask.userMessageContent.find(
-				(item: any) => item.type === "tool_result" && item.tool_use_id === toolCallId2,
-			)
-
-			// Verify that a tool_result block was created (not a text block)
-			expect(toolResult).toBeDefined()
-			expect(toolResult.tool_use_id).toBe(toolCallId2)
-			expect(toolResult.is_error).toBe(true)
-			expect(toolResult.content).toContain("was not executed because a tool has already been used")
-
-			// Ensure no text blocks were added for this rejection
-			const textBlocks = mockTask.userMessageContent.filter(
-				(item: any) => item.type === "text" && item.text.includes("was not executed because"),
-			)
-			expect(textBlocks.length).toBe(0)
-		})
-
-		it("should send text blocks for skipped tools in XML protocol (no tool IDs)", async () => {
-			// Simulate multiple tool calls with XML protocol (no IDs)
-			mockTask.assistantMessageContent = [
-				{
-					type: "tool_use",
-					// No ID = XML protocol
-					name: "read_file",
-					params: { path: "test.txt" },
-				},
-				{
-					type: "tool_use",
-					// No ID = XML protocol
 					name: "write_to_file",
 					params: { path: "output.txt", content: "test" },
 				},
@@ -318,18 +285,15 @@ describe("presentAssistantMessage - Image Handling in Native Tool Calls", () => 
 			mockTask.currentStreamingContentIndex = 1
 			await presentAssistantMessage(mockTask)
 
-			// For XML protocol, should add text block (not tool_result)
-			const textBlocks = mockTask.userMessageContent.filter(
-				(item: any) => item.type === "text" && item.text.includes("due to user rejecting"),
+			const textBlocks = mockTask.userMessageContent.filter((item: any) => item.type === "text")
+			expect(textBlocks.some((b: any) => String(b.text).includes("XML tool calls are no longer supported"))).toBe(
+				true,
 			)
-			expect(textBlocks.length).toBeGreaterThan(0)
-
 			// Ensure no tool_result blocks were added
-			const toolResults = mockTask.userMessageContent.filter((item: any) => item.type === "tool_result")
-			expect(toolResults.length).toBe(0)
+			expect(mockTask.userMessageContent.some((item: any) => item.type === "tool_result")).toBe(false)
 		})
 
-		it("should handle partial tool blocks when didRejectTool is true in native protocol", async () => {
+		it("should handle partial tool blocks when didRejectTool is true in native tool calling", async () => {
 			const toolCallId = "tool_call_005"
 
 			mockTask.assistantMessageContent = [

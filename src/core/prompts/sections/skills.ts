@@ -33,10 +33,11 @@ export async function getSkillsSection(
 		.map((skill) => {
 			const name = escapeXml(skill.name)
 			const description = escapeXml(skill.description)
-			// Per the Agent Skills integration guidance for filesystem-based agents,
-			// location should be an absolute path to the SKILL.md file.
-			const location = escapeXml(skill.path)
-			return `  <skill>\n    <name>${name}</name>\n    <description>${description}</description>\n    <location>${location}</location>\n  </skill>`
+			// Only include location for file-based skills (not built-in)
+			// Built-in skills are loaded via the skill tool by name, not by path
+			const isFileBasedSkill = skill.source !== "built-in" && skill.path !== "built-in"
+			const locationLine = isFileBasedSkill ? `\n    <location>${escapeXml(skill.path)}</location>` : ""
+			return `  <skill>\n    <name>${name}</name>\n    <description>${description}</description>${locationLine}\n  </skill>`
 		})
 		.join("\n")
 
@@ -62,9 +63,9 @@ Step 2: Branching Decision
 <if_skill_applies>
 - Select EXACTLY ONE skill.
 - Prefer the most specific skill when multiple skills match.
-- Read the full SKILL.md file at the skill's <location>.
-- Load the SKILL.md contents fully into context BEFORE continuing.
-- Follow the SKILL.md instructions precisely.
+- Use the skill tool to load the skill by name.
+- Load the skill's instructions fully into context BEFORE continuing.
+- Follow the skill instructions precisely.
 - Do NOT respond outside the skill-defined flow.
 </if_skill_applies>
 
@@ -74,11 +75,21 @@ Step 2: Branching Decision
 </if_no_skill_applies>
 
 CONSTRAINTS:
-- Do NOT load every SKILL.md up front.
-- Load SKILL.md ONLY after a skill is selected.
+- Do NOT load every skill up front.
+- Load skills ONLY after a skill is selected.
 - Do NOT skip this check.
 - FAILURE to perform this check is an error.
 </mandatory_skill_check>
+
+<linked_file_handling>
+- When a skill is loaded, ONLY the skill instructions are present.
+- Files linked from the skill are NOT loaded automatically.
+- The model MUST explicitly decide to read a linked file based on task relevance.
+- Do NOT assume the contents of linked files unless they have been explicitly read.
+- Prefer reading the minimum necessary linked file.
+- Avoid reading multiple linked files unless required.
+- Treat linked files as progressive disclosure, not mandatory context.
+</linked_file_handling>
 
 <context_notes>
 - The skill list is already filtered for the current mode: "${currentMode}".

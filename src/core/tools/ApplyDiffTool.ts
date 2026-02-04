@@ -1,10 +1,9 @@
 import path from "path"
 import fs from "fs/promises"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
@@ -13,9 +12,10 @@ import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface ApplyDiffParams {
 	path: string
@@ -25,15 +25,8 @@ interface ApplyDiffParams {
 export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 	readonly name = "apply_diff" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): ApplyDiffParams {
-		return {
-			path: params.path || "",
-			diff: params.diff || "",
-		}
-	}
-
 	async execute(params: ApplyDiffParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
+		const { askApproval, handleError, pushToolResult } = callbacks
 		let { path: relPath, diff: diffContent } = params
 
 		if (diffContent && !task.api.getModel().id.includes("claude")) {
@@ -59,7 +52,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 			if (!accessAllowed) {
 				await task.say("rooignore_error", relPath)
-				pushToolResult(formatResponse.rooIgnoreError(relPath, toolProtocol))
+				pushToolResult(formatResponse.rooIgnoreError(relPath))
 				return
 			}
 
@@ -266,7 +259,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			let partFailHint = ""
 
 			if (diffResult.failParts && diffResult.failParts.length > 0) {
-				partFailHint = `But unable to apply all diff parts to file: ${absolutePath}, silently use <read_file> tool to check newest file version and re-apply diffs\n`
+				partFailHint = `But unable to apply all diff parts to file: ${absolutePath}. Use the read_file tool to check the newest file version and re-apply diffs.\n`
 			}
 
 			// Get the formatted response message
@@ -286,6 +279,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			}
 
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 
 			// Process any queued messages after file edit completes
 			task.processQueuedMessages()
@@ -294,6 +288,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 		} catch (error) {
 			await handleError("applying diff", error as Error)
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 			task.processQueuedMessages()
 			return
 		}
@@ -303,9 +298,14 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 		const relPath: string | undefined = block.params.path
 		const diffContent: string | undefined = block.params.diff
 
+		// Wait for path to stabilize before showing UI (prevents truncated paths)
+		if (!this.hasPathStabilized(relPath)) {
+			return
+		}
+
 		const sharedMessageProps: ClineSayTool = {
 			tool: "appliedDiff",
-			path: getReadablePath(task.cwd, relPath || ""),
+			path: getReadablePath(task.cwd, relPath),
 			diff: diffContent,
 		}
 

@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Il nome della skill deve essere di 1-{{maxLength}} caratteri (ricevuti {{length}})",
+		"name_format": "Il nome della skill può contenere solo lettere minuscole, numeri e trattini (senza trattini iniziali o finali, senza trattini consecutivi)",
+		"description_length": "La descrizione della skill deve essere di 1-1024 caratteri (ricevuti {{length}})",
+		"no_workspace": "Impossibile creare la skill del progetto: nessuna cartella di workspace aperta",
+		"already_exists": "La skill \"{{name}}\" esiste già in {{path}}",
+		"not_found": "Skill \"{{name}}\" non trovata in {{source}}{{modeInfo}}",
+		"missing_create_fields": "Campi obbligatori mancanti: skillName, source o skillDescription",
+		"missing_move_fields": "Campi obbligatori mancanti: skillName o source",
+		"missing_update_modes_fields": "Campi obbligatori mancanti: skillName o source",
+		"manager_unavailable": "Il gestore delle skill non è disponibile",
+		"missing_delete_fields": "Campi obbligatori mancanti: skillName o source",
+		"skill_not_found": "Skill \"{{name}}\" non trovata",
+		"cannot_modify_builtin": "Le skill integrate non possono essere create o eliminate",
+		"cannot_open_builtin": "Le skill integrate non possono essere aperte come file"
+	}
+}

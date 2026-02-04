@@ -1,6 +1,5 @@
-import { RooModelsResponseSchema, type ModelInfo } from "@roo-code/types"
+import { RooModelsResponseSchema, type ModelInfo, type ModelRecord } from "@roo-code/types"
 
-import type { ModelRecord } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
 
 import { DEFAULT_HEADERS } from "../constants"
@@ -93,9 +92,6 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 				// Determine if the model requires reasoning effort based on tags
 				const requiredReasoningEffort = tags.includes("reasoning-required")
 
-				// Determine if the model supports native tool calling based on tags
-				const supportsNativeTools = tags.includes("tool-use")
-
 				// Determine if the model should hide vendor/company identity (stealth mode)
 				const isStealthModel = tags.includes("stealth")
 
@@ -112,7 +108,6 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 					supportsImages,
 					supportsReasoningEffort,
 					requiredReasoningEffort,
-					supportsNativeTools,
 					supportsPromptCache: Boolean(cacheReadPrice !== undefined),
 					inputPrice,
 					outputPrice,
@@ -122,7 +117,6 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 					deprecated: model.deprecated || false,
 					isFree: tags.includes("free"),
 					defaultTemperature: model.default_temperature,
-					defaultToolProtocol: "native" as const,
 					isStealthModel: isStealthModel || undefined,
 				}
 

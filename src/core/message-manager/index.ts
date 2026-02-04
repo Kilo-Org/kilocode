@@ -1,7 +1,10 @@
+import * as path from "path"
 import { Task } from "../task/Task"
 import { ClineMessage } from "@roo-code/types"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { cleanupAfterTruncation } from "../condense"
+import { OutputInterceptor } from "../../integrations/terminal/OutputInterceptor"
+import { getTaskDirectoryPath } from "../../utils/storage"
 
 export interface RewindOptions {
 	/** Whether to include the target message in deletion (edit=true, delete=false) */
@@ -207,12 +210,62 @@ export class MessageManager {
 			apiHistory = cleanupAfterTruncation(apiHistory)
 		}
 
+		// Step 6: Cleanup orphaned command output artifacts
+		// Collect timestamps from remaining messages to identify valid artifact IDs
+		// Artifacts whose IDs don't match any remaining message timestamp will be removed
+		if (!skipCleanup) {
+			const validIds = new Set<string>()
+
+			// Collect timestamps from remaining clineMessages
+			for (const msg of this.task.clineMessages) {
+				if (msg.ts) {
+					validIds.add(String(msg.ts))
+				}
+			}
+
+			// Collect timestamps from remaining apiHistory
+			for (const msg of apiHistory) {
+				if (msg.ts) {
+					validIds.add(String(msg.ts))
+				}
+			}
+
+			// Cleanup artifacts asynchronously (fire-and-forget with error handling)
+			this.cleanupOrphanedArtifacts(validIds).catch((error) => {
+				console.error("[MessageManager] Error cleaning up orphaned command output artifacts:", error)
+			})
+		}
+
 		// Only write if the history actually changed
 		const historyChanged =
 			apiHistory.length !== originalHistory.length || apiHistory.some((msg, i) => msg !== originalHistory[i])
 
 		if (historyChanged) {
 			await this.task.overwriteApiConversationHistory(apiHistory)
+		}
+	}
+
+	/**
+	 * Cleanup orphaned command output artifacts.
+	 * Removes artifact files whose execution IDs don't match any remaining message timestamps.
+	 */
+	private async cleanupOrphanedArtifacts(validIds: Set<string>): Promise<void> {
+		try {
+			// Access globalStoragePath and taskId through the task reference
+			const task = this.task as any // Access private member
+			const globalStoragePath = task.globalStoragePath
+			const taskId = task.taskId
+
+			if (!globalStoragePath || !taskId) {
+				return
+			}
+
+			const taskDir = await getTaskDirectoryPath(globalStoragePath, taskId)
+			const outputDir = path.join(taskDir, "command-output")
+			await OutputInterceptor.cleanupByIds(outputDir, validIds)
+		} catch (error) {
+			// Silently fail - cleanup is best-effort
+			console.debug("[MessageManager] Artifact cleanup skipped:", error)
 		}
 	}
 }

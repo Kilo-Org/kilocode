@@ -229,15 +229,21 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			return 0
 		}
 
-		if (!this.currentRequestCancellation) {
-			console.warn("Kilo Code <Language Model API>: No cancellation token available for token counting")
-			return 0
-		}
-
 		// Validate input
 		if (!text) {
 			console.debug("Kilo Code <Language Model API>: Empty text provided for token counting")
 			return 0
+		}
+
+		// Create a temporary cancellation token if we don't have one (e.g., when called outside a request)
+		let cancellationToken: vscode.CancellationToken
+		let tempCancellation: vscode.CancellationTokenSource | null = null
+
+		if (this.currentRequestCancellation) {
+			cancellationToken = this.currentRequestCancellation.token
+		} else {
+			tempCancellation = new vscode.CancellationTokenSource()
+			cancellationToken = tempCancellation.token
 		}
 
 		try {
@@ -245,7 +251,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			let tokenCount: number
 
 			if (typeof text === "string") {
-				tokenCount = await this.client.countTokens(text, this.currentRequestCancellation.token)
+				tokenCount = await this.client.countTokens(text, cancellationToken)
 			} else if (text instanceof vscode.LanguageModelChatMessage) {
 				// For chat messages, ensure we have content
 				if (!text.content || (Array.isArray(text.content) && text.content.length === 0)) {
@@ -253,7 +259,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 					return 0
 				}
 				const countMessage = extractTextCountFromMessage(text)
-				tokenCount = await this.client.countTokens(countMessage, this.currentRequestCancellation.token)
+				tokenCount = await this.client.countTokens(countMessage, cancellationToken)
 			} else {
 				console.warn("Kilo Code <Language Model API>: Invalid input type for token counting")
 				return 0
@@ -287,6 +293,11 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			}
 
 			return 0 // Fallback to prevent stream interruption
+		} finally {
+			// Clean up temporary cancellation token
+			if (tempCancellation) {
+				tempCancellation.dispose()
+			}
 		}
 	}
 
@@ -381,18 +392,11 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 		// Accumulate the text and count at the end of the stream to reduce token counting overhead.
 		let accumulatedText: string = ""
 
-		// Determine if we're using native tool protocol
-		const useNativeTools = metadata?.toolProtocol === "native" && metadata?.tools && metadata.tools.length > 0
-
 		try {
 			// Create the response stream with required options
 			const requestOptions: vscode.LanguageModelChatRequestOptions = {
-				justification: `Kilo Code would like to use '${client.name}' from '${client.vendor}', Click 'Allow' to proceed.`,
-			}
-
-			// Add tools to request options when using native tool protocol
-			if (useNativeTools && metadata?.tools) {
-				requestOptions.tools = convertToVsCodeLmTools(metadata.tools)
+				justification: `Roo Code would like to use '${client.name}' from '${client.vendor}', Click 'Allow' to proceed.`,
+				tools: convertToVsCodeLmTools(metadata?.tools ?? []),
 			}
 
 			const response: vscode.LanguageModelChatResponse = await client.sendRequest(
@@ -441,8 +445,8 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 							inputSize: JSON.stringify(chunk.input).length,
 						})
 
-						// Yield native tool_call chunk when using native tool protocol
-						if (useNativeTools) {
+						// Yield native tool_call chunk when tools are provided
+						if (metadata?.tools?.length) {
 							const argumentsString = JSON.stringify(chunk.input)
 							accumulatedText += argumentsString
 							yield {
@@ -450,22 +454,6 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 								id: chunk.callId,
 								name: chunk.name,
 								arguments: argumentsString,
-							}
-						} else {
-							// Fallback: Convert tool calls to text format for XML tool protocol
-							const toolCall = {
-								type: "tool_call",
-								name: chunk.name,
-								arguments: chunk.input,
-								callId: chunk.callId,
-							}
-
-							const toolCallText = JSON.stringify(toolCall)
-							accumulatedText += toolCallText
-
-							yield {
-								type: "text",
-								text: toolCallText,
 							}
 						}
 					} catch (error) {
@@ -550,8 +538,6 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 						: openAiModelInfoSaneDefaults.contextWindow,
 				supportsImages: false, // VSCode Language Model API currently doesn't support image inputs
 				supportsPromptCache: true,
-				supportsNativeTools: true, // VSCode Language Model API supports native tool calling
-				defaultToolProtocol: "native", // Use native tool protocol by default
 				inputPrice: 0,
 				outputPrice: 0,
 				description: `VSCode Language Model: ${modelId}`,
@@ -571,8 +557,6 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			id: fallbackId,
 			info: {
 				...openAiModelInfoSaneDefaults,
-				supportsNativeTools: true, // VSCode Language Model API supports native tool calling
-				defaultToolProtocol: "native", // Use native tool protocol by default
 				description: `VSCode Language Model (Fallback): ${fallbackId}`,
 			},
 		}

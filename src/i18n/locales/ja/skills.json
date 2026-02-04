@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "スキル名は1-{{maxLength}}文字である必要があります（{{length}}文字を受信）",
+		"name_format": "スキル名には小文字、数字、ハイフンのみ使用できます（先頭または末尾のハイフン、連続するハイフンは不可）",
+		"description_length": "スキルの説明は1-1024文字である必要があります（{{length}}文字を受信）",
+		"no_workspace": "プロジェクトスキルを作成できません：ワークスペースフォルダが開かれていません",
+		"already_exists": "スキル「{{name}}」は既に{{path}}に存在します",
+		"not_found": "スキル「{{name}}」が{{source}}{{modeInfo}}に見つかりません",
+		"missing_create_fields": "必須フィールドが不足しています：skillName、source、またはskillDescription",
+		"missing_move_fields": "必須フィールドが不足しています：skillNameまたはsource",
+		"missing_update_modes_fields": "必須フィールドが不足しています：skillNameまたはsource",
+		"manager_unavailable": "スキルマネージャーが利用できません",
+		"missing_delete_fields": "必須フィールドが不足しています：skillNameまたはsource",
+		"skill_not_found": "スキル「{{name}}」が見つかりません",
+		"cannot_modify_builtin": "組み込みスキルは作成または削除できません",
+		"cannot_open_builtin": "組み込みスキルはファイルとして開けません"
+	}
+}

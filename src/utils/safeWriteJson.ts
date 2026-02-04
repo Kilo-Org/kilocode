@@ -2,8 +2,20 @@ import * as fs from "fs/promises"
 import * as fsSync from "fs"
 import * as path from "path"
 import * as lockfile from "proper-lockfile"
-import Disassembler from "stream-json/Disassembler"
-import Stringer from "stream-json/Stringer"
+import { JsonStreamStringify } from "json-stream-stringify"
+
+/**
+ * Options for safeWriteJson function
+ */
+export interface SafeWriteJsonOptions {
+	/**
+	 * Whether to pretty-print the JSON output with indentation.
+	 * When true, uses tab characters for indentation.
+	 * When false or undefined, outputs compact JSON.
+	 * @default false
+	 */
+	prettyPrint?: boolean
+}
 
 /**
  * Safely writes JSON data to a file.
@@ -12,13 +24,15 @@ import Stringer from "stream-json/Stringer"
  * - Writes to a temporary file first.
  * - If the target file exists, it's backed up before being replaced.
  * - Attempts to roll back and clean up in case of errors.
+ * - Supports pretty-printing with indentation while maintaining streaming efficiency.
  *
  * @param {string} filePath - The absolute path to the target file.
  * @param {any} data - The data to serialize to JSON and write.
+ * @param {SafeWriteJsonOptions} options - Optional configuration for JSON formatting.
  * @returns {Promise<void>}
  */
 
-async function safeWriteJson(filePath: string, data: any): Promise<void> {
+async function safeWriteJson(filePath: string, data: any, options?: SafeWriteJsonOptions): Promise<void> {
 	const absoluteFilePath = path.resolve(filePath)
 	let releaseLock = async () => {} // Initialized to a no-op
 
@@ -75,7 +89,7 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
 			`.${path.basename(absoluteFilePath)}.new_${Date.now()}_${Math.random().toString(36).substring(2)}.tmp`,
 		)
 
-		await _streamDataToFile(actualTempNewFilePath, data)
+		await _streamDataToFile(actualTempNewFilePath, data, options?.prettyPrint)
 
 		// Step 2: Check if the target file exists. If so, rename it to a backup path.
 		try {
@@ -182,53 +196,27 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
  * Helper function to stream JSON data to a file.
  * @param targetPath The path to write the stream to.
  * @param data The data to stream.
+ * @param prettyPrint Whether to format the JSON with indentation.
  * @returns Promise<void>
  */
-async function _streamDataToFile(targetPath: string, data: any): Promise<void> {
+async function _streamDataToFile(targetPath: string, data: any, prettyPrint = false): Promise<void> {
 	// Stream data to avoid high memory usage for large JSON objects.
 	const fileWriteStream = fsSync.createWriteStream(targetPath, { encoding: "utf8" })
-	const disassembler = Disassembler.disassembler()
-	// Output will be compact JSON as standard Stringer is used.
-	const stringer = Stringer.stringer()
+
+	// JsonStreamStringify traverses the object and streams tokens directly
+	// The 'spaces' parameter adds indentation during streaming, not via a separate pass
+	// Convert undefined to null for valid JSON serialization (undefined is not valid JSON)
+	const stringifyStream = new JsonStreamStringify(
+		data === undefined ? null : data,
+		undefined, // replacer
+		prettyPrint ? "\t" : undefined, // spaces for indentation
+	)
 
 	return new Promise<void>((resolve, reject) => {
-		let errorOccurred = false
-		const handleError = (_streamName: string) => (err: Error) => {
-			if (!errorOccurred) {
-				errorOccurred = true
-				if (!fileWriteStream.destroyed) {
-					fileWriteStream.destroy(err)
-				}
-				reject(err)
-			}
-		}
-
-		disassembler.on("error", handleError("Disassembler"))
-		stringer.on("error", handleError("Stringer"))
-		fileWriteStream.on("error", (err: Error) => {
-			if (!errorOccurred) {
-				errorOccurred = true
-				reject(err)
-			}
-		})
-
-		fileWriteStream.on("finish", () => {
-			if (!errorOccurred) {
-				resolve()
-			}
-		})
-
-		disassembler.pipe(stringer).pipe(fileWriteStream)
-
-		// stream-json's Disassembler might error if `data` is undefined.
-		// JSON.stringify(undefined) would produce the string "undefined" if it's the root value.
-		// Writing 'null' is a safer JSON representation for a root undefined value.
-		if (data === undefined) {
-			disassembler.write(null)
-		} else {
-			disassembler.write(data)
-		}
-		disassembler.end()
+		stringifyStream.on("error", reject)
+		fileWriteStream.on("error", reject)
+		fileWriteStream.on("finish", resolve)
+		stringifyStream.pipe(fileWriteStream)
 	})
 }
 

@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from "@/utils/test-utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { type ModelInfo, type ProviderSettings, openAiModelInfoSaneDefaults } from "@roo-code/types"
+import { openAiCodexDefaultModelId } from "@roo-code/types"
 
 import * as ExtensionStateContext from "@src/context/ExtensionStateContext"
 const { ExtensionStateContextProvider } = ExtensionStateContext
@@ -165,33 +166,6 @@ vi.mock("../RateLimitSecondsControl", () => ({
 	),
 }))
 
-// Mock DiffSettingsControl for tests
-vi.mock("../DiffSettingsControl", () => ({
-	DiffSettingsControl: ({ diffEnabled, fuzzyMatchThreshold, onChange }: any) => (
-		<div data-testid="diff-settings-control">
-			<label>
-				Enable editing through diffs
-				<input
-					type="checkbox"
-					checked={diffEnabled}
-					onChange={(e) => onChange("diffEnabled", e.target.checked)}
-				/>
-			</label>
-			<div>
-				Fuzzy match threshold
-				<input
-					type="range"
-					value={fuzzyMatchThreshold || 1.0}
-					onChange={(e) => onChange("fuzzyMatchThreshold", parseFloat(e.target.value))}
-					min={0.8}
-					max={1}
-					step={0.005}
-				/>
-			</div>
-		</div>
-	),
-}))
-
 // Mock TodoListSettingsControl for tests
 vi.mock("../TodoListSettingsControl", () => ({
 	TodoListSettingsControl: ({ todoListEnabled, onChange }: any) => (
@@ -313,23 +287,41 @@ const renderApiOptions = (props: Partial<ApiOptionsProps> = {}) => {
 }
 
 describe("ApiOptions", () => {
-	it("shows diff settings, temperature and rate limit controls by default", () => {
+	it("resets model to provider default when switching to openai-codex with an invalid prior apiModelId", () => {
+		const mockSetApiConfigurationField = vi.fn()
+
 		renderApiOptions({
 			apiConfiguration: {
-				diffEnabled: true,
-				fuzzyMatchThreshold: 0.95,
+				apiProvider: "anthropic",
+				// Simulate a previously-selected model ID from another provider.
+				// When switching to OpenAI - ChatGPT Plus/Pro, this is invalid and should be reset.
+				apiModelId: "claude-3-5-sonnet-20241022",
 			},
+			setApiConfigurationField: mockSetApiConfigurationField,
 		})
-		// Check for DiffSettingsControl by looking for text content
-		expect(screen.getByText(/enable editing through diffs/i)).toBeInTheDocument()
+
+		const providerSelectContainer = screen.getByTestId("provider-select")
+		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
+		expect(providerSelect).toBeInTheDocument()
+
+		fireEvent.change(providerSelect, { target: { value: "openai-codex" } })
+
+		// Provider is updated
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiProvider", "openai-codex")
+		// Model is reset to the provider default since the previous value is invalid for this provider
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", openAiCodexDefaultModelId, false)
+	})
+
+	it("shows temperature and rate limit controls by default", () => {
+		renderApiOptions({
+			apiConfiguration: {},
+		})
 		expect(screen.getByTestId("temperature-control")).toBeInTheDocument()
 		expect(screen.getByTestId("rate-limit-seconds-control")).toBeInTheDocument()
 	})
 
 	it("hides all controls when fromWelcomeView is true", () => {
 		renderApiOptions({ fromWelcomeView: true })
-		// Check for absence of DiffSettingsControl text
-		expect(screen.queryByText(/enable editing through diffs/i)).not.toBeInTheDocument()
 		expect(screen.queryByTestId("temperature-control")).not.toBeInTheDocument()
 		expect(screen.queryByTestId("rate-limit-seconds-control")).not.toBeInTheDocument()
 	})

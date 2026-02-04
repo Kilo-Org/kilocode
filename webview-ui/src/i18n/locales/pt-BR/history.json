@@ -46,5 +46,10 @@
 		"mostRelevant": "Mais relevantes"
 	},
 	"viewAllHistory": "Ver tudo",
-	"shareSession": "Compartilhar sessão"
+	"subtasks_one": "{{count}} subtarefa",
+	"subtasks_other": "{{count}} subtarefas",
+	"subtaskTag": "Subtarefa",
+	"deleteWithSubtasks": "Isso também excluirá {{count}} subtarefa(s). Tem certeza?",
+	"expandSubtasks": "Expandir subtarefas",
+	"collapseSubtasks": "Recolher subtarefas"
 }

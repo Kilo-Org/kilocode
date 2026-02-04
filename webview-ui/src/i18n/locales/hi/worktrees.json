@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "हो गया",
+	"description": "Git worktrees आपको अलग-अलग डायरेक्टरी में एक साथ कई ब्रांच पर काम करने देते हैं। हर worktree को Roo Code के साथ अपनी अलग VS Code विंडो मिलती है।",
+
+	"notGitRepo": "यह workspace Git repository नहीं है। worktrees को काम करने के लिए Git repository चाहिए।",
+	"multiRootNotSupported": "Multi-root workspaces में worktrees समर्थित नहीं हैं। worktrees उपयोग करने के लिए एक ही फ़ोल्डर खोलें।",
+	"subfolderNotSupported": "यह workspace Git repository का subfolder है। worktrees उपयोग करने के लिए repository root खोलें।",
+	"gitRoot": "Git root",
+
+	"includeFileExists": ".worktreeinclude फ़ाइल मिली — नए worktrees में फ़ाइलें कॉपी की जाएँगी",
+	"noIncludeFile": ".worktreeinclude फ़ाइल नहीं मिली",
+	"createFromGitignore": ".gitignore से बनाएँ",
+
+	"primary": "मुख्य",
+	"current": "वर्तमान",
+	"locked": "लॉक्ड",
+	"detachedHead": "Detached HEAD",
+	"noBranch": "कोई ब्रांच नहीं",
+
+	"switchInThisWindow": "Worktree पर स्विच करें",
+	"openInNewWindow": "नई विंडो में खोलें",
+	"delete": "हटाएँ",
+	"newWorktree": "नया Worktree",
+
+	"createWorktree": "Worktree बनाएँ",
+	"branchName": "ब्रांच नाम",
+	"createNewBranch": "नई ब्रांच बनाएँ",
+	"checkoutExisting": "मौजूदा ब्रांच checkout करें",
+	"baseBranch": "बेस ब्रांच",
+	"loadingBranches": "ब्रांच लोड हो रहे हैं...",
+	"selectBranch": "ब्रांच चुनें",
+	"searchBranch": "ब्रांच खोजें...",
+	"noBranchFound": "कोई ब्रांच नहीं मिली",
+	"localBranches": "लोकल ब्रांच",
+	"remoteBranches": "रिमोट ब्रांच",
+	"worktreePath": "में",
+	"selectWorktreeLocation": "Worktree स्थान चुनें",
+	"selectFolderForWorktree": "नए worktree के लिए फ़ोल्डर चुनें",
+	"noIncludeFileWarning": ".worktreeinclude फ़ाइल नहीं है",
+	"noIncludeFileHint": ".worktreeinclude फ़ाइल के बिना, node_modules जैसी फ़ाइलें नए worktree में कॉपी नहीं होंगी। इसे बनाने के बाद आपको npm install चलाना पड़ सकता है।",
+	"create": "बनाएँ",
+	"creating": "बनाया जा रहा है...",
+	"copyingFiles": "फ़ाइलें कॉपी की जा रही हैं...",
+	"copyingProgress": "{{item}} — {{copied}} कॉपी किया गया",
+	"cancel": "रद्द करें",
+
+	"deleteWorktree": "Worktree हटाएँ",
+	"deleteWarning": "यह कार्रवाई वापस नहीं ली जा सकती। निम्नलिखित हटाया जाएगा:",
+	"deleteWarningBranch": "ब्रांच और सभी uncommitted बदलाव",
+	"deleteWarningFiles": "worktree डायरेक्टरी की सभी फ़ाइलें",
+	"deleteNoticeLarge": "अगर यह एक बड़ी रिपोज़िटरी है तो यह कुछ समय ले सकता है।",
+	"forceDelete": "जबरन हटाएँ",
+	"worktreeIsLocked": "worktree लॉक्ड है",
+	"deleting": "हटाया जा रहा है...",
+
+	"close": "बंद करें",
+
+	"showInHomeScreen": "होम स्क्रीन में worktrees दिखाएँ",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Worktrees के बीच स्विच करें",
+		"description": "Git worktrees आपको एक साथ कई ब्रांच पर काम करने देते हैं। workspace स्विच करने के लिए क्लिक करें।",
+		"settings": "Worktrees को प्रबंधित करें",
+		"info": "Git worktrees आपको एक ही रिपोज़िटरी से जुड़ी कई working directories रखने देते हैं।"
+	}
+}

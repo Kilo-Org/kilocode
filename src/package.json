@@ -2,9 +2,9 @@
 	"name": "kilo-code",
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
-	"publisher": "kilocode",
-	"version": "4.146.0",
-	"icon": "assets/icons/logo-outline-black.png",
+	"publisher": "RooVeterinaryInc",
+	"version": "3.46.2",
+	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
 		"theme": "light"
@@ -622,6 +622,24 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%settings.debug.description%"
+				},
+				"roo-cline.debugProxy.enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.debugProxy.enabled.description%",
+					"markdownDescription": "%settings.debugProxy.enabled.description%"
+				},
+				"roo-cline.debugProxy.serverUrl": {
+					"type": "string",
+					"default": "http://127.0.0.1:8888",
+					"description": "%settings.debugProxy.serverUrl.description%",
+					"markdownDescription": "%settings.debugProxy.serverUrl.description%"
+				},
+				"roo-cline.debugProxy.tlsInsecure": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.debugProxy.tlsInsecure.description%",
+					"markdownDescription": "%settings.debugProxy.tlsInsecure.description%"
 				}
 			}
 		},
@@ -651,6 +669,8 @@
 		"pretest": "turbo run kilo-code#bundle --cwd ..",
 		"test": "vitest run",
 		"format": "prettier --write .",
+		"generate:skills": "tsx services/skills/generate-built-in-skills.ts",
+		"prebundle": "pnpm generate:skills",
 		"bundle": "node esbuild.mjs",
 		"vscode:prepublish": "pnpm bundle --production",
 		"vsix:clean": "rimraf ../bin",
@@ -662,9 +682,16 @@
 		"clean": "rimraf README.md CHANGELOG.md LICENSE dist logs mock .turbo"
 	},
 	"dependencies": {
-		"@anthropic-ai/bedrock-sdk": "^0.22.0",
-		"@anthropic-ai/sdk": "^0.51.0",
-		"@anthropic-ai/vertex-sdk": "^0.11.3",
+		"@ai-sdk/cerebras": "^1.0.0",
+		"@ai-sdk/deepseek": "^2.0.14",
+		"@ai-sdk/fireworks": "^2.0.26",
+		"@ai-sdk/groq": "^3.0.19",
+		"@ai-sdk/mistral": "^3.0.0",
+		"@ai-sdk/xai": "^3.0.46",
+		"sambanova-ai-provider": "^1.2.2",
+		"@anthropic-ai/bedrock-sdk": "^0.10.2",
+		"@anthropic-ai/sdk": "^0.37.0",
+		"@anthropic-ai/vertex-sdk": "^0.7.0",
 		"@aws-sdk/client-bedrock-runtime": "^3.922.0",
 		"@aws-sdk/credential-providers": "^3.922.0",
 		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
@@ -699,15 +726,14 @@
 		"fuse.js": "^7.1.0",
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
+		"global-agent": "^3.0.0",
 		"google-auth-library": "^9.15.1",
 		"gray-matter": "^4.0.3",
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"is-wsl": "^3.1.0",
 		"isbinaryfile": "^5.0.2",
-		"js-tiktoken": "^1.0.8",
-		"jsdom": "^26.0.0",
-		"json5": "^2.2.3",
+		"json-stream-stringify": "^3.1.6",
 		"jwt-decode": "^4.0.0",
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.1.0",
@@ -751,7 +777,7 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.12",
 		"turndown": "^7.2.0",
-		"uri-js": "^4.4.1",
+		"undici": "^6.21.3",
 		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.25.6",
@@ -759,9 +785,11 @@
 		"ws": "^8.18.0",
 		"xlsx": "^0.18.5",
 		"yaml": "^2.8.0",
-		"zod": "3.25.61"
+		"zod": "3.25.76"
 	},
 	"devDependencies": {
+		"@ai-sdk/openai-compatible": "^1.0.0",
+		"@openrouter/ai-sdk-provider": "^2.0.4",
 		"@roo-code/build": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
@@ -789,8 +817,7 @@
 		"@types/ws": "^8.5.13",
 		"@vscode/test-electron": "^2.5.2",
 		"@vscode/vsce": "3.3.2",
-		"dotenv": "^16.4.7",
-		"esbuild": "^0.25.0",
+		"ai": "^6.0.0",
 		"esbuild-wasm": "^0.25.0",
 		"execa": "^9.5.2",
 		"glob": "^11.1.0",
@@ -802,7 +829,6 @@
 		"rimraf": "^6.1.0",
 		"tsup": "^8.4.0",
 		"tsx": "^4.19.3",
-		"typescript": "5.8.3",
 		"vitest": "^3.2.3",
 		"zod-to-ts": "^1.2.0"
 	}

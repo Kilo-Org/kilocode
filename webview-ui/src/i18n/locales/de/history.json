@@ -53,5 +53,10 @@
 		"mostRelevant": "Relevanteste"
 	},
 	"viewAllHistory": "Alle anzeigen",
-	"shareSession": "Sitzung teilen"
+	"subtasks_one": "{{count}} Teilaufgabe",
+	"subtasks_other": "{{count}} Teilaufgaben",
+	"subtaskTag": "Teilaufgabe",
+	"deleteWithSubtasks": "Dies löscht auch {{count}} Teilaufgabe(n). Bist du sicher?",
+	"expandSubtasks": "Teilaufgaben erweitern",
+	"collapseSubtasks": "Teilaufgaben einklappen"
 }

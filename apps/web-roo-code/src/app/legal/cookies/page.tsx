@@ -100,6 +100,19 @@ export default function CookiePolicy() {
 									<td className="border border-border px-4 py-3">1 year</td>
 									<td className="border border-border px-4 py-3 font-mono text-sm">ph_*</td>
 								</tr>
+								<tr>
+									<td className="border border-border px-4 py-3 font-medium">HubSpot</td>
+									<td className="border border-border px-4 py-3">
+										Marketing automation and visitor tracking
+									</td>
+									<td className="border border-border px-4 py-3">
+										Analytics (only with your consent)
+									</td>
+									<td className="border border-border px-4 py-3">13 months</td>
+									<td className="border border-border px-4 py-3 font-mono text-sm">
+										hubspotutk, __hstc, __hssrc, __hssc
+									</td>
+								</tr>
 							</tbody>
 						</table>
 					</div>
@@ -122,6 +135,15 @@ export default function CookiePolicy() {
 							PostHog Privacy Policy
 						</a>
 					</p>
+					<p>
+						<a
+							href="https://legal.hubspot.com/privacy-policy"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-primary hover:underline">
+							HubSpot Privacy Policy
+						</a>
+					</p>
 
 					<h2 className="mt-12 text-2xl font-bold">Essential cookies</h2>
 					<p>
@@ -133,10 +155,10 @@ export default function CookiePolicy() {
 
 					<h2 className="mt-12 text-2xl font-bold">Analytics cookies</h2>
 					<p>
-						We use PostHog analytics cookies to understand how visitors interact with our website. This
-						helps us improve our services and user experience. Analytics cookies are placed only if you give
-						consent through our cookie banner. The lawful basis for processing these cookies is your
-						consent, which you can withdraw at any time.
+						We use PostHog and HubSpot analytics cookies to understand how visitors interact with our
+						website. This helps us improve our services, user experience, and marketing efforts. Analytics
+						cookies are placed only if you give consent through our cookie banner. The lawful basis for
+						processing these cookies is your consent, which you can withdraw at any time.
 					</p>
 
 					<h2 className="mt-12 text-2xl font-bold">Third-party services</h2>

@@ -89,7 +89,6 @@ describe("searchAndReplaceTool", () => {
 	let mockAskApproval: ReturnType<typeof vi.fn>
 	let mockHandleError: ReturnType<typeof vi.fn>
 	let mockPushToolResult: ReturnType<typeof vi.fn>
-	let mockRemoveClosingTag: ReturnType<typeof vi.fn>
 	let toolResult: ToolResponse | undefined
 
 	beforeEach(() => {
@@ -149,7 +148,6 @@ describe("searchAndReplaceTool", () => {
 
 		mockAskApproval = vi.fn().mockResolvedValue(true)
 		mockHandleError = vi.fn().mockResolvedValue(undefined)
-		mockRemoveClosingTag = vi.fn((tag, content) => content)
 
 		toolResult = undefined
 	})
@@ -175,14 +173,22 @@ describe("searchAndReplaceTool", () => {
 		mockedFsReadFile.mockResolvedValue(fileContent)
 		mockTask.rooIgnoreController.validateAccess.mockReturnValue(accessAllowed)
 
+		const baseParams: Record<string, unknown> = {
+			path: testFilePath,
+			operations: JSON.stringify([{ search: "Line 2", replace: "Modified Line 2" }]),
+		}
+		const fullParams: Record<string, unknown> = { ...baseParams, ...params }
+		const nativeArgs: Record<string, unknown> = {
+			path: fullParams.path,
+			operations:
+				typeof fullParams.operations === "string" ? JSON.parse(fullParams.operations) : fullParams.operations,
+		}
+
 		const toolUse: ToolUse = {
 			type: "tool_use",
 			name: "search_and_replace",
-			params: {
-				path: testFilePath,
-				operations: JSON.stringify([{ search: "Line 2", replace: "Modified Line 2" }]),
-				...params,
-			},
+			params: fullParams as any,
+			nativeArgs: nativeArgs as any,
 			partial: isPartial,
 		}
 
@@ -194,8 +200,6 @@ describe("searchAndReplaceTool", () => {
 			askApproval: mockAskApproval,
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
-			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "native",
 		})
 
 		return toolResult
@@ -346,7 +350,10 @@ describe("searchAndReplaceTool", () => {
 	})
 
 	describe("partial block handling", () => {
-		it("handles partial block without errors", async () => {
+		it("handles partial block without errors after path stabilizes", async () => {
+			// Path stabilization requires two consecutive calls with the same path
+			// First call sets lastSeenPartialPath, second call sees it has stabilized
+			await executeSearchAndReplaceTool({}, { isPartial: true })
 			await executeSearchAndReplaceTool({}, { isPartial: true })
 
 			expect(mockTask.ask).toHaveBeenCalled()
@@ -364,6 +371,10 @@ describe("searchAndReplaceTool", () => {
 					path: testFilePath,
 					operations: JSON.stringify([{ search: "Line 2", replace: "Modified" }]),
 				},
+				nativeArgs: {
+					path: testFilePath,
+					operations: [{ search: "Line 2", replace: "Modified" }],
+				},
 				partial: false,
 			}
 
@@ -376,8 +387,6 @@ describe("searchAndReplaceTool", () => {
 				askApproval: mockAskApproval,
 				handleError: mockHandleError,
 				pushToolResult: localPushToolResult,
-				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "native",
 			})
 
 			expect(capturedResult).toContain("Error:")

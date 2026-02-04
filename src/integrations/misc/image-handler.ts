@@ -90,20 +90,14 @@ export async function openImage(dataUriOrPath: string, options?: { values?: { ac
 	}
 }
 
-export async function saveImage(dataUri: string) {
+export async function saveImage(dataUri: string, defaultUri: vscode.Uri): Promise<vscode.Uri | undefined> {
 	const matches = dataUri.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/)
 	if (!matches) {
 		vscode.window.showErrorMessage(t("common:errors.invalid_data_uri"))
-		return
+		return undefined
 	}
 	const [, format, base64Data] = matches
 	const imageBuffer = Buffer.from(base64Data, "base64")
-
-	// Get workspace path or fallback to home directory
-	const workspacePath = getWorkspacePath()
-	const defaultPath = workspacePath || os.homedir()
-	const defaultFileName = `img_${Date.now()}.${format}`
-	const defaultUri = vscode.Uri.file(path.join(defaultPath, defaultFileName))
 
 	// Show save dialog
 	const saveUri = await vscode.window.showSaveDialog({
@@ -116,15 +110,17 @@ export async function saveImage(dataUri: string) {
 
 	if (!saveUri) {
 		// User cancelled the save dialog
-		return
+		return undefined
 	}
 
 	try {
 		// Write the image to the selected location
 		await vscode.workspace.fs.writeFile(saveUri, imageBuffer)
 		vscode.window.showInformationMessage(t("common:info.image_saved", { path: saveUri.fsPath }))
+		return saveUri
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		vscode.window.showErrorMessage(t("common:errors.error_saving_image", { errorMessage }))
+		return undefined
 	}
 }

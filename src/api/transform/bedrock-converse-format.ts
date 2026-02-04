@@ -1,5 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { ConversationRole, Message, ContentBlock } from "@aws-sdk/client-bedrock-runtime"
+import { sanitizeOpenAiCallId } from "../../utils/tool-id"
 
 interface BedrockMessageContent {
 	type: "text" | "image" | "video" | "tool_use" | "tool_result"
@@ -25,14 +26,8 @@ interface BedrockMessageContent {
 /**
  * Convert Anthropic messages to Bedrock Converse format
  * @param anthropicMessages Messages in Anthropic format
- * @param options Optional configuration for conversion
- * @param options.useNativeTools When true, keeps tool_use input as JSON object instead of XML string
  */
-export function convertToBedrockConverseMessages(
-	anthropicMessages: Anthropic.Messages.MessageParam[],
-	options?: { useNativeTools?: boolean },
-): Message[] {
-	const useNativeTools = options?.useNativeTools ?? false
+export function convertToBedrockConverseMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
 	return anthropicMessages.map((anthropicMessage) => {
 		// Map Anthropic roles to Bedrock roles
 		const role: ConversationRole = anthropicMessage.role === "assistant" ? "assistant" : "user"
@@ -93,74 +88,24 @@ export function convertToBedrockConverseMessages(
 			}
 
 			if (messageBlock.type === "tool_use") {
-				if (useNativeTools) {
-					// For native tool calling, keep input as JSON object for Bedrock's toolUse format
-					return {
-						toolUse: {
-							toolUseId: messageBlock.id || "",
-							name: messageBlock.name || "",
-							input: messageBlock.input || {},
-						},
-					} as ContentBlock
-				} else {
-					// Convert tool use to XML text format for XML-based tool calling
-					return {
-						text: `<tool_use>\n<tool_name>${messageBlock.name}</tool_name>\n<tool_input>${JSON.stringify(messageBlock.input)}</tool_input>\n</tool_use>`,
-					} as ContentBlock
-				}
+				// Native-only: keep input as JSON object for Bedrock's toolUse format
+				return {
+					toolUse: {
+						toolUseId: sanitizeOpenAiCallId(messageBlock.id || ""),
+						name: messageBlock.name || "",
+						input: messageBlock.input || {},
+					},
+				} as ContentBlock
 			}
 
 			if (messageBlock.type === "tool_result") {
-				// When NOT using native tools, convert tool_result to text format
-				// This matches how tool_use is converted to XML text when native tools are disabled.
-				// Without this, Bedrock will error with "toolConfig field must be defined when using
-				// toolUse and toolResult content blocks" because toolResult blocks require toolConfig.
-				if (!useNativeTools) {
-					let toolResultContent: string
-					if (messageBlock.content) {
-						if (typeof messageBlock.content === "string") {
-							toolResultContent = messageBlock.content
-						} else if (Array.isArray(messageBlock.content)) {
-							toolResultContent = messageBlock.content
-								.map((item) => (typeof item === "string" ? item : item.text || String(item)))
-								.join("\n")
-						} else {
-							toolResultContent = String(messageBlock.output || "")
-						}
-					} else if (messageBlock.output) {
-						if (typeof messageBlock.output === "string") {
-							toolResultContent = messageBlock.output
-						} else if (Array.isArray(messageBlock.output)) {
-							toolResultContent = messageBlock.output
-								.map((part) => {
-									if (typeof part === "object" && "text" in part) {
-										return part.text
-									}
-									if (typeof part === "object" && "type" in part && part.type === "image") {
-										return "(see following message for image)"
-									}
-									return String(part)
-								})
-								.join("\n")
-						} else {
-							toolResultContent = String(messageBlock.output)
-						}
-					} else {
-						toolResultContent = ""
-					}
-
-					return {
-						text: `<tool_result>\n<tool_use_id>${messageBlock.tool_use_id || ""}</tool_use_id>\n<output>${toolResultContent}</output>\n</tool_result>`,
-					} as ContentBlock
-				}
-
 				// Handle content field - can be string or array (native tool format)
 				if (messageBlock.content) {
 					// Content is a string
 					if (typeof messageBlock.content === "string") {
 						return {
 							toolResult: {
-								toolUseId: messageBlock.tool_use_id || "",
+								toolUseId: sanitizeOpenAiCallId(messageBlock.tool_use_id || ""),
 								content: [
 									{
 										text: messageBlock.content,
@@ -174,7 +119,7 @@ export function convertToBedrockConverseMessages(
 					if (Array.isArray(messageBlock.content)) {
 						return {
 							toolResult: {
-								toolUseId: messageBlock.tool_use_id || "",
+								toolUseId: sanitizeOpenAiCallId(messageBlock.tool_use_id || ""),
 								content: messageBlock.content.map((item) => ({
 									text: typeof item === "string" ? item : item.text || String(item),
 								})),
@@ -188,7 +133,7 @@ export function convertToBedrockConverseMessages(
 				if (messageBlock.output && typeof messageBlock.output === "string") {
 					return {
 						toolResult: {
-							toolUseId: messageBlock.tool_use_id || "",
+							toolUseId: sanitizeOpenAiCallId(messageBlock.tool_use_id || ""),
 							content: [
 								{
 									text: messageBlock.output,
@@ -202,7 +147,7 @@ export function convertToBedrockConverseMessages(
 				if (Array.isArray(messageBlock.output)) {
 					return {
 						toolResult: {
-							toolUseId: messageBlock.tool_use_id || "",
+							toolUseId: sanitizeOpenAiCallId(messageBlock.tool_use_id || ""),
 							content: messageBlock.output.map((part) => {
 								if (typeof part === "object" && "text" in part) {
 									return { text: part.text }
@@ -221,7 +166,7 @@ export function convertToBedrockConverseMessages(
 				// Default case
 				return {
 					toolResult: {
-						toolUseId: messageBlock.tool_use_id || "",
+						toolUseId: sanitizeOpenAiCallId(messageBlock.tool_use_id || ""),
 						content: [
 							{
 								text: String(messageBlock.output || ""),

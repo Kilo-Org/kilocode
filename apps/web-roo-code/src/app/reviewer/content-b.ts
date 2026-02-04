@@ -1,7 +1,7 @@
 import { type AgentPageContent } from "@/app/shared/agent-page-content"
 
 // Workaround for next/image choking on these for some reason
-const hero = { src: "hero" } // kilocode_change: import hero from "/public/heroes/agent-reviewer.png"
+import hero from "../../../public/heroes/agent-reviewer.png"
 
 // Re-export for convenience
 export type { AgentPageContent }

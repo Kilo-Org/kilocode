@@ -376,7 +376,7 @@ suite.skip("Roo Code read_file Tool", function () {
 		}
 	})
 
-	test("Should read file with line range", async function () {
+	test("Should read file with slice offset/limit", async function () {
 		const api = globalThis.api
 		const messages: ClineMessage[] = []
 		let taskCompleted = false
@@ -446,7 +446,7 @@ suite.skip("Roo Code read_file Tool", function () {
 					alwaysAllowReadOnly: true,
 					alwaysAllowReadOnlyOutsideWorkspace: true,
 				},
-				text: `Use the read_file tool to read the file "${fileName}" and show me what's on lines 2, 3, and 4. The file contains lines like "Line 1", "Line 2", etc. Assume the file exists and you can read it directly.`,
+				text: `Use the read_file tool to read the file "${fileName}" using slice mode with offset=2 and limit=3 (1-based offset). The file contains lines like "Line 1", "Line 2", etc. After reading, show me the three lines you read.`,
 			})
 
 			// Wait for task completion
@@ -455,9 +455,8 @@ suite.skip("Roo Code read_file Tool", function () {
 			// Verify tool was executed
 			assert.ok(toolExecuted, "The read_file tool should have been executed")
 
-			// Verify the tool returned the correct lines (when line range is used)
+			// Verify the tool returned the correct lines (offset=2, limit=3 -> lines 2-4)
 			if (toolResult && (toolResult as string).includes(" | ")) {
-				// The result includes line numbers
 				assert.ok(
 					(toolResult as string).includes("2 | Line 2"),
 					"Tool result should include line 2 with line number",

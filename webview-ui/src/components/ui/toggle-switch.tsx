@@ -17,7 +17,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 	"aria-label": ariaLabel,
 	"data-testid": dataTestId,
 }) => {
-	const dimensions = size === "small" ? { width: 16, height: 8, dotSize: 4 } : { width: 20, height: 10, dotSize: 6 }
+	const dimensions = size === "small" ? { width: 20, height: 10, dotSize: 8 } : { width: 26, height: 10, dotSize: 6 }
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" || e.key === " ") {
@@ -40,12 +40,12 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 				height: `${dimensions.height}px`,
 				backgroundColor: checked
 					? "var(--vscode-button-background)"
-					: "var(--vscode-titleBar-inactiveForeground)",
+					: "var(--vscode-button-secondaryBackground)",
 				borderRadius: `${dimensions.height / 2}px`,
 				position: "relative",
 				cursor: disabled ? "not-allowed" : "pointer",
 				transition: "background-color 0.2s",
-				opacity: disabled ? 0.4 : checked ? 0.8 : 0.6,
+				opacity: disabled ? 0.6 : 1,
 			}}
 			onClick={disabled ? undefined : onChange}
 			onKeyDown={handleKeyDown}>
@@ -53,7 +53,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 				style={{
 					width: `${dimensions.dotSize}px`,
 					height: `${dimensions.dotSize}px`,
-					backgroundColor: "var(--vscode-titleBar-activeForeground)",
+					backgroundColor: "var(--vscode-foreground)",
 					borderRadius: "50%",
 					position: "absolute",
 					top: `${(dimensions.height - dimensions.dotSize) / 2}px`,

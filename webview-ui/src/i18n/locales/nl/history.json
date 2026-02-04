@@ -46,5 +46,10 @@
 		"mostRelevant": "Meest relevant"
 	},
 	"viewAllHistory": "Alles bekijken",
-	"shareSession": "Sessie delen"
+	"subtasks_one": "{{count}} subtaak",
+	"subtasks_other": "{{count}} subtaken",
+	"subtaskTag": "Subtaak",
+	"deleteWithSubtasks": "Dit zal ook {{count}} subtaak(en) verwijderen. Weet je het zeker?",
+	"expandSubtasks": "Subtaken uitvouwen",
+	"collapseSubtasks": "Subtaken samenvouwen"
 }

@@ -15,14 +15,13 @@ describe("modelEndpointCache", () => {
 
 	describe("getModelEndpoints", () => {
 		it("should copy model-level capabilities from parent model to endpoints", async () => {
-			// Mock the parent model data with native tools support
+			// Mock the parent model data with capabilities
 			const mockParentModels = {
 				"anthropic/claude-sonnet-4": {
 					maxTokens: 8192,
 					contextWindow: 200000,
 					supportsImages: true,
 					supportsPromptCache: true,
-					supportsNativeTools: true, // Parent supports native tools
 					supportsReasoningEffort: true,
 					supportedParameters: ["max_tokens", "temperature", "reasoning"] as any,
 					inputPrice: 3,
@@ -39,7 +38,7 @@ describe("modelEndpointCache", () => {
 					supportsPromptCache: true,
 					inputPrice: 3,
 					outputPrice: 15,
-					// Note: No supportsNativeTools, supportsReasoningEffort, or supportedParameters
+					// Note: No supportsReasoningEffort, or supportedParameters
 				},
 				"amazon-bedrock": {
 					maxTokens: 8192,
@@ -61,11 +60,9 @@ describe("modelEndpointCache", () => {
 			})
 
 			// Verify capabilities were copied from parent to ALL endpoints
-			expect(result.anthropic.supportsNativeTools).toBe(true)
 			expect(result.anthropic.supportsReasoningEffort).toBe(true)
 			expect(result.anthropic.supportedParameters).toEqual(["max_tokens", "temperature", "reasoning"])
 
-			expect(result["amazon-bedrock"].supportsNativeTools).toBe(true)
 			expect(result["amazon-bedrock"].supportsReasoningEffort).toBe(true)
 			expect(result["amazon-bedrock"].supportedParameters).toEqual(["max_tokens", "temperature", "reasoning"])
 		})
@@ -76,7 +73,6 @@ describe("modelEndpointCache", () => {
 					maxTokens: 1000,
 					contextWindow: 10000,
 					supportsPromptCache: false,
-					supportsNativeTools: true,
 					supportedParameters: ["max_tokens", "temperature"] as any,
 				},
 			}
@@ -131,9 +127,9 @@ describe("modelEndpointCache", () => {
 				endpoint: "anthropic",
 			})
 
-			// Should not crash, but capabilities will be undefined
+			// Should not crash, but copied capabilities will be undefined
 			expect(result.anthropic).toBeDefined()
-			expect(result.anthropic.supportsNativeTools).toBeUndefined()
+			expect(result.anthropic.supportedParameters).toBeUndefined()
 		})
 
 		it("should return empty object for non-openrouter providers", async () => {

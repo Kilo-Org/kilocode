@@ -69,14 +69,11 @@ describe("ProviderSettingsManager", () => {
 						default: {
 							config: {},
 							id: "default",
-							diffEnabled: true,
-							fuzzyMatchThreshold: 1.0,
 						},
 					},
 					modeApiConfigs: {},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
@@ -105,7 +102,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 					},
 				}),
 			)
@@ -258,7 +254,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: false,
 					},
@@ -299,7 +294,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: false,
@@ -348,7 +342,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
@@ -386,7 +379,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
@@ -417,7 +409,6 @@ describe("ProviderSettingsManager", () => {
 					},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
@@ -653,7 +644,6 @@ describe("ProviderSettingsManager", () => {
 					apiConfigs: { default: {} },
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 					},
 				}),
@@ -782,7 +772,6 @@ describe("ProviderSettingsManager", () => {
 					apiConfigs: { test: { apiProvider: "anthropic", id: "test-id" } },
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 					},
 				}),
@@ -815,7 +804,6 @@ describe("ProviderSettingsManager", () => {
 				},
 				migrations: {
 					rateLimitSecondsMigrated: true,
-					diffSettingsMigrated: true,
 					openAiHeadersMigrated: true,
 					consecutiveMistakeLimitMigrated: true,
 					todoListEnabledMigrated: true,

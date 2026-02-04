@@ -9,7 +9,7 @@ import {
 	VSCodeTextField,
 } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
-import { ChevronDown, X, Upload, Download, MessageSquare } from "lucide-react"
+import { ChevronDown, X, Upload, Download } from "lucide-react"
 
 import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema } from "@roo-code/types"
 
@@ -30,7 +30,6 @@ import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { Section } from "@src/components/settings/Section"
-import { SectionHeader } from "@src/components/settings/SectionHeader"
 import {
 	Button,
 	Select,
@@ -601,17 +600,12 @@ const ModesView = () => {
 
 	return (
 		<div>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<MessageSquare className="w-4" />
-					<div>{t("prompts:title")}</div>
-				</div>
-			</SectionHeader>
-
 			<Section>
 				<div>
 					<div onClick={(e) => e.stopPropagation()} className="flex justify-between items-center mb-3">
-						<h3 className="text-vscode-foreground m-0">{t("prompts:modes.title")}</h3>
+						<h3 className="text-[1.25em] font-semibold text-vscode-foreground mt-4 mb-2">
+							{t("prompts:modes.title")}
+						</h3>
 						<div className="flex gap-2">
 							<div className="relative inline-block">
 								<StandardTooltip content={t("prompts:modes.editModesConfig")}>

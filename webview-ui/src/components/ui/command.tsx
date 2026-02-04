@@ -57,13 +57,28 @@ CommandInput.displayName = CommandPrimitive.Input.displayName
 const CommandList = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.List>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-	<CommandPrimitive.List
-		ref={ref}
-		className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-		{...props}
-	/>
-))
+>(({ className, onWheel, ...props }, ref) => {
+	const handleWheel = React.useCallback(
+		(e: React.WheelEvent<HTMLDivElement>) => {
+			// Manually handle scroll to work around VSCode webview scroll issues
+			const target = e.currentTarget
+			e.preventDefault()
+			target.scrollTop += e.deltaY
+			e.stopPropagation()
+			onWheel?.(e)
+		},
+		[onWheel],
+	)
+
+	return (
+		<CommandPrimitive.List
+			ref={ref}
+			className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden overscroll-contain", className)}
+			onWheel={handleWheel}
+			{...props}
+		/>
+	)
+})
 
 CommandList.displayName = CommandPrimitive.List.displayName
 

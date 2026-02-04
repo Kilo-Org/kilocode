@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "Không đủ tin nhắn để nén ngữ cảnh của {{prevContextTokens}} token. Cần ít nhất {{minimumMessageCount}} tin nhắn, nhưng chỉ có {{messageCount}} tin nhắn khả dụng.",
 		"condensed_recently": "Ngữ cảnh đã được nén gần đây; bỏ qua lần thử này",
 		"condense_handler_invalid": "Trình xử lý API để nén ngữ cảnh không hợp lệ",
-		"condense_context_grew": "Kích thước ngữ cảnh tăng từ {{prevContextTokens}} lên {{newContextTokens}} trong quá trình nén; bỏ qua lần thử này",
+		"condense_api_failed": "Cuộc gọi API nén thất bại: {{message}}",
 		"url_timeout": "Trang web mất quá nhiều thời gian để tải (timeout). Điều này có thể do kết nối chậm, trang web nặng hoặc tạm thời không khả dụng. Bạn có thể thử lại sau hoặc kiểm tra xem URL có đúng không.",
 		"url_not_found": "Không thể tìm thấy địa chỉ trang web. Vui lòng kiểm tra URL có đúng không và thử lại.",
 		"no_internet": "Không có kết nối internet. Vui lòng kiểm tra kết nối mạng và thử lại.",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Nhà cung cấp Roo yêu cầu xác thực đám mây. Vui lòng đăng nhập vào Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ."
+			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ.",
+			"apiRequestFailed": "Yêu cầu API thất bại ({{status}})"
 		},
 		"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
 		"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
 		"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
 		"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
-		"manual_url_auth_error": "Xác thực thất bại"
+		"manual_url_auth_error": "Xác thực thất bại",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Không có nội dung terminal được chọn",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Phản hồi bị gián đoạn bởi người dùng",
-		"responseInterruptedByApiError": "Phản hồi bị gián đoạn bởi lỗi API"
+		"responseInterruptedByApiError": "Phản hồi bị gián đoạn bởi lỗi API",
+		"streamTerminatedByProvider": "Nhà cung cấp đã kết thúc yêu cầu"
 	},
 	"storage": {
 		"prompt_custom_path": "Nhập đường dẫn lưu trữ tùy chỉnh cho lịch sử hội thoại, để trống để sử dụng vị trí mặc định",

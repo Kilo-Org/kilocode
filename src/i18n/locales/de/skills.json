@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Skill-Name muss 1-{{maxLength}} Zeichen lang sein (erhalten: {{length}})",
+		"name_format": "Skill-Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten (keine führenden oder nachgestellten Bindestriche, keine aufeinanderfolgenden Bindestriche)",
+		"description_length": "Skill-Beschreibung muss 1-1024 Zeichen lang sein (erhalten: {{length}})",
+		"no_workspace": "Projekt-Skill kann nicht erstellt werden: kein Workspace-Ordner ist geöffnet",
+		"already_exists": "Skill \"{{name}}\" existiert bereits unter {{path}}",
+		"not_found": "Skill \"{{name}}\" nicht gefunden in {{source}}{{modeInfo}}",
+		"missing_create_fields": "Erforderliche Felder fehlen: skillName, source oder skillDescription",
+		"missing_move_fields": "Erforderliche Felder fehlen: skillName oder source",
+		"missing_update_modes_fields": "Erforderliche Felder fehlen: skillName oder source",
+		"manager_unavailable": "Skill-Manager nicht verfügbar",
+		"missing_delete_fields": "Erforderliche Felder fehlen: skillName oder source",
+		"skill_not_found": "Skill \"{{name}}\" nicht gefunden",
+		"cannot_modify_builtin": "Integrierte Skills können nicht erstellt oder gelöscht werden",
+		"cannot_open_builtin": "Integrierte Skills können nicht als Dateien geöffnet werden"
+	}
+}

@@ -199,7 +199,6 @@ describe("DeepInfraHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 			await messageGenerator.next()
 
@@ -213,9 +212,11 @@ describe("DeepInfraHandler", () => {
 							}),
 						}),
 					]),
-					parallel_tool_calls: false,
 				}),
 			)
+			// parallel_tool_calls should be true by default when not explicitly set
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).toHaveProperty("parallel_tool_calls", true)
 		})
 
 		it("should include tool_choice when provided", async () => {
@@ -232,7 +233,6 @@ describe("DeepInfraHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				tool_choice: "auto",
 			})
 			await messageGenerator.next()
@@ -244,7 +244,7 @@ describe("DeepInfraHandler", () => {
 			)
 		})
 
-		it("should not include tools when toolProtocol is xml", async () => {
+		it("should always include tools and tool_choice in request (tools are always present after PR #10841)", async () => {
 			mockWithResponse.mockResolvedValueOnce({
 				data: {
 					[Symbol.asyncIterator]: () => ({
@@ -257,14 +257,15 @@ describe("DeepInfraHandler", () => {
 
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
-				tools: testTools,
-				toolProtocol: "xml",
 			})
 			await messageGenerator.next()
 
 			const callArgs = mockCreate.mock.calls[mockCreate.mock.calls.length - 1][0]
-			expect(callArgs).not.toHaveProperty("tools")
-			expect(callArgs).not.toHaveProperty("tool_choice")
+			// Tools are now always present (minimum 6 from ALWAYS_AVAILABLE_TOOLS)
+			expect(callArgs).toHaveProperty("tools")
+			expect(callArgs).toHaveProperty("tool_choice")
+			// parallel_tool_calls should be true by default when not explicitly set
+			expect(callArgs).toHaveProperty("parallel_tool_calls", true)
 		})
 
 		it("should yield tool_call_partial chunks during streaming", async () => {
@@ -321,7 +322,6 @@ describe("DeepInfraHandler", () => {
 			const stream = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 
 			const chunks = []
@@ -360,7 +360,6 @@ describe("DeepInfraHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				parallelToolCalls: true,
 			})
 			await messageGenerator.next()

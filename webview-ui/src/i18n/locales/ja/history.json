@@ -46,5 +46,10 @@
 		"mostRelevant": "最も関連性の高い"
 	},
 	"viewAllHistory": "すべて表示",
-	"shareSession": "セッションを共有"
+	"subtasks_one": "{{count}} サブタスク",
+	"subtasks_other": "{{count}} サブタスク",
+	"subtaskTag": "サブタスク",
+	"deleteWithSubtasks": "これにより {{count}} サブタスクも削除されます。よろしいですか?",
+	"expandSubtasks": "サブタスクを展開",
+	"collapseSubtasks": "サブタスクを折りたたむ"
 }

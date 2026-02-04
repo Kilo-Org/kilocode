@@ -1,22 +1,27 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { Mistral } from "@mistralai/mistralai"
-import OpenAI from "openai"
+import { createMistral } from "@ai-sdk/mistral"
+import { streamText, generateText, ToolSet, LanguageModel } from "ai"
 
 import {
-	type MistralModelId,
-	mistralDefaultModelId,
 	mistralModels,
+	mistralDefaultModelId,
+	type MistralModelId,
+	type ModelInfo,
 	MISTRAL_DEFAULT_TEMPERATURE,
-	ApiProviderError,
 } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
 
-import { ApiHandlerOptions } from "../../shared/api"
+import type { ApiHandlerOptions } from "../../shared/api"
 
-import { convertToMistralMessages } from "../transform/mistral-format"
-import { ApiStream } from "../transform/stream"
-import { handleProviderError } from "./utils/error-handler"
+import {
+	convertToAiSdkMessages,
+	convertToolsForAiSdk,
+	processAiSdkStreamPart,
+	handleAiSdkError,
+} from "../transform/ai-sdk"
+import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
+import { getModelParams } from "../transform/model-params"
 
+import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants" // kilocode_change
@@ -24,210 +29,178 @@ import { streamSse } from "../../services/continuedev/core/fetch/stream" // kilo
 import type { CompletionUsage } from "./openrouter" // kilocode_change
 import type { FimHandler } from "./kilocode/FimHandler" // kilocode_change
 
-// Type helper to handle thinking chunks from Mistral API
-// The SDK includes ThinkChunk but TypeScript has trouble with the discriminated union
-type ContentChunkWithThinking = {
-	type: string
-	text?: string
-	thinking?: Array<{ type: string; text?: string }>
-}
-
-// Type for Mistral tool calls in stream delta
-type MistralToolCall = {
-	id?: string
-	type?: string
-	function?: {
-		name?: string
-		arguments?: string
-	}
-}
-
-// Type for Mistral tool definition - matches Mistral SDK Tool type
-type MistralTool = {
-	type: "function"
-	function: {
-		name: string
-		description?: string
-		parameters: Record<string, unknown>
-	}
-}
-
+/**
+ * Mistral provider using the dedicated @ai-sdk/mistral package.
+ * Provides access to Mistral AI models including Codestral, Mistral Large, and more.
+ */
 export class MistralHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
-	private client: Mistral
-	private readonly providerName = "Mistral"
+	protected provider: ReturnType<typeof createMistral>
 
 	constructor(options: ApiHandlerOptions) {
 		super()
+		this.options = options
 
-		if (!options.mistralApiKey) {
-			throw new Error("Mistral API key is required")
-		}
+		const modelId = options.apiModelId ?? mistralDefaultModelId
 
-		// Set default model ID if not provided.
-		const apiModelId = options.apiModelId || mistralDefaultModelId
-		this.options = { ...options, apiModelId }
+		// Determine the base URL based on the model (Codestral uses a different endpoint)
+		const baseURL = modelId.startsWith("codestral-")
+			? options.mistralCodestralUrl || "https://codestral.mistral.ai/v1"
+			: "https://api.mistral.ai/v1"
 
-		this.client = new Mistral({
-			serverURL: apiModelId.startsWith("codestral-")
-				? this.options.mistralCodestralUrl || "https://codestral.mistral.ai"
-				: "https://api.mistral.ai",
-			apiKey: this.options.mistralApiKey,
+		// Create the Mistral provider using AI SDK
+		this.provider = createMistral({
+			apiKey: options.mistralApiKey ?? "not-provided",
+			baseURL,
+			headers: DEFAULT_HEADERS,
 		})
 	}
 
+	override getModel(): { id: string; info: ModelInfo; maxTokens?: number; temperature?: number } {
+		const id = (this.options.apiModelId ?? mistralDefaultModelId) as MistralModelId
+		const info = mistralModels[id as keyof typeof mistralModels] || mistralModels[mistralDefaultModelId]
+		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
+		return { id, info, ...params }
+	}
+
+	/**
+	 * Get the language model for the configured model ID.
+	 */
+	protected getLanguageModel(): LanguageModel {
+		const { id } = this.getModel()
+		// Type assertion needed due to version mismatch between @ai-sdk/mistral and ai packages
+		return this.provider(id) as unknown as LanguageModel
+	}
+
+	/**
+	 * Process usage metrics from the AI SDK response.
+	 */
+	protected processUsageMetrics(usage: {
+		inputTokens?: number
+		outputTokens?: number
+		details?: {
+			cachedInputTokens?: number
+			reasoningTokens?: number
+		}
+	}): ApiStreamUsageChunk {
+		return {
+			type: "usage",
+			inputTokens: usage.inputTokens || 0,
+			outputTokens: usage.outputTokens || 0,
+			cacheReadTokens: usage.details?.cachedInputTokens,
+			reasoningTokens: usage.details?.reasoningTokens,
+		}
+	}
+
+	/**
+	 * Map OpenAI tool_choice to AI SDK toolChoice format.
+	 */
+	protected mapToolChoice(
+		toolChoice: any,
+	): "auto" | "none" | "required" | { type: "tool"; toolName: string } | undefined {
+		if (!toolChoice) {
+			return undefined
+		}
+
+		// Handle string values
+		if (typeof toolChoice === "string") {
+			switch (toolChoice) {
+				case "auto":
+					return "auto"
+				case "none":
+					return "none"
+				case "required":
+				case "any":
+					return "required"
+				default:
+					return "auto"
+			}
+		}
+
+		// Handle object values (OpenAI ChatCompletionNamedToolChoice format)
+		if (typeof toolChoice === "object" && "type" in toolChoice) {
+			if (toolChoice.type === "function" && "function" in toolChoice && toolChoice.function?.name) {
+				return { type: "tool", toolName: toolChoice.function.name }
+			}
+		}
+
+		return undefined
+	}
+
+	/**
+	 * Get the max tokens parameter to include in the request.
+	 */
+	protected getMaxOutputTokens(): number | undefined {
+		const { info } = this.getModel()
+		return this.options.modelMaxTokens || info.maxTokens || undefined
+	}
+
+	/**
+	 * Create a message stream using the AI SDK.
+	 */
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const { id: model, info, maxTokens, temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		// Build request options
-		const requestOptions: {
-			model: string
-			messages: ReturnType<typeof convertToMistralMessages>
-			maxTokens: number
-			temperature: number
-			tools?: MistralTool[]
-			toolChoice?: "auto" | "none" | "any" | "required" | { type: "function"; function: { name: string } }
-		} = {
-			model,
-			messages: [{ role: "system", content: systemPrompt }, ...convertToMistralMessages(messages)],
-			maxTokens: maxTokens ?? info.maxTokens,
-			temperature,
+		// Convert messages to AI SDK format
+		const aiSdkMessages = convertToAiSdkMessages(messages)
+
+		// Convert tools to OpenAI format first, then to AI SDK format
+		const openAiTools = this.convertToolsForOpenAI(metadata?.tools)
+		const aiSdkTools = convertToolsForAiSdk(openAiTools) as ToolSet | undefined
+
+		// Build the request options
+		// Use MISTRAL_DEFAULT_TEMPERATURE (1) as fallback to match original behavior
+		const requestOptions: Parameters<typeof streamText>[0] = {
+			model: languageModel,
+			system: systemPrompt,
+			messages: aiSdkMessages,
+			temperature: this.options.modelTemperature ?? MISTRAL_DEFAULT_TEMPERATURE,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			tools: aiSdkTools,
+			toolChoice: this.mapToolChoice(metadata?.tool_choice),
 		}
 
-		// Add tools if provided and toolProtocol is not 'xml' and model supports native tools
-		const supportsNativeTools = info.supportsNativeTools ?? false
-		if (metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml" && supportsNativeTools) {
-			requestOptions.tools = this.convertToolsForMistral(metadata.tools)
-			// Always use "any" to require tool use
-			requestOptions.toolChoice = "any"
-		}
+		// Use streamText for streaming responses
+		const result = streamText(requestOptions)
 
-		// Temporary debug log for QA
-		// console.log("[MISTRAL DEBUG] Raw API request body:", requestOptions)
-
-		let response
 		try {
-			response = await this.client.chat.stream(requestOptions)
+			// Process the full stream to get all events including reasoning
+			for await (const part of result.fullStream) {
+				for (const chunk of processAiSdkStreamPart(part)) {
+					yield chunk
+				}
+			}
+
+			// Yield usage metrics at the end
+			const usage = await result.usage
+			if (usage) {
+				yield this.processUsageMetrics(usage)
+			}
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "createMessage")
-			TelemetryService.instance.captureException(apiError)
-			throw new Error(`Mistral completion error: ${errorMessage}`)
-		}
-
-		for await (const event of response) {
-			const delta = event.data.choices[0]?.delta
-
-			if (delta?.content) {
-				if (typeof delta.content === "string") {
-					// Handle string content as text
-					yield { type: "text", text: delta.content }
-				} else if (Array.isArray(delta.content)) {
-					// Handle array of content chunks
-					// The SDK v1.9.18 supports ThinkChunk with type "thinking"
-					for (const chunk of delta.content as ContentChunkWithThinking[]) {
-						if (chunk.type === "thinking" && chunk.thinking) {
-							// Handle thinking content as reasoning chunks
-							// ThinkChunk has a 'thinking' property that contains an array of text/reference chunks
-							for (const thinkingPart of chunk.thinking) {
-								if (thinkingPart.type === "text" && thinkingPart.text) {
-									yield { type: "reasoning", text: thinkingPart.text }
-								}
-							}
-						} else if (chunk.type === "text" && chunk.text) {
-							// Handle text content normally
-							yield { type: "text", text: chunk.text }
-						}
-					}
-				}
-			}
-
-			// Handle tool calls in stream
-			// Mistral SDK provides tool_calls in delta similar to OpenAI format
-			const toolCalls = (delta as { toolCalls?: MistralToolCall[] })?.toolCalls
-			if (toolCalls) {
-				for (let i = 0; i < toolCalls.length; i++) {
-					const toolCall = toolCalls[i]
-					yield {
-						type: "tool_call_partial",
-						index: i,
-						id: toolCall.id,
-						name: toolCall.function?.name,
-						arguments: toolCall.function?.arguments,
-					}
-				}
-			}
-
-			if (event.data.usage) {
-				yield {
-					type: "usage",
-					inputTokens: event.data.usage.promptTokens || 0,
-					outputTokens: event.data.usage.completionTokens || 0,
-				}
-			}
+			// Handle AI SDK errors (AI_RetryError, AI_APICallError, etc.)
+			throw handleAiSdkError(error, "Mistral")
 		}
 	}
 
 	/**
-	 * Convert OpenAI tool definitions to Mistral format.
-	 * Mistral uses the same format as OpenAI for function tools.
+	 * Complete a prompt using the AI SDK generateText.
 	 */
-	private convertToolsForMistral(tools: OpenAI.Chat.ChatCompletionTool[]): MistralTool[] {
-		return tools
-			.filter((tool) => tool.type === "function")
-			.map((tool) => ({
-				type: "function" as const,
-				function: {
-					name: tool.function.name,
-					description: tool.function.description,
-					// Mistral SDK requires parameters to be defined, use empty object as fallback
-					parameters: (tool.function.parameters as Record<string, unknown>) || {},
-				},
-			}))
-	}
-
-	override getModel() {
-		const id = this.options.apiModelId ?? mistralDefaultModelId
-		const info = mistralModels[id as MistralModelId] ?? mistralModels[mistralDefaultModelId]
-
-		// @TODO: Move this to the `getModelParams` function.
-		const maxTokens = this.options.includeMaxTokens ? info.maxTokens : undefined
-		const temperature = this.options.modelTemperature ?? MISTRAL_DEFAULT_TEMPERATURE
-
-		return { id, info, maxTokens, temperature }
-	}
-
 	async completePrompt(prompt: string): Promise<string> {
-		const { id: model, temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		try {
-			const response = await this.client.chat.complete({
-				model,
-				messages: [{ role: "user", content: prompt }],
-				temperature,
-			})
+		// Use MISTRAL_DEFAULT_TEMPERATURE (1) as fallback to match original behavior
+		const { text } = await generateText({
+			model: languageModel,
+			prompt,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			temperature: this.options.modelTemperature ?? MISTRAL_DEFAULT_TEMPERATURE,
+		})
 
-			const content = response.choices?.[0]?.message.content
-
-			if (Array.isArray(content)) {
-				// Only return text content, filter out thinking content for non-streaming
-				return (content as ContentChunkWithThinking[])
-					.filter((c) => c.type === "text" && c.text)
-					.map((c) => c.text || "")
-					.join("")
-			}
-
-			return content || ""
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "completePrompt")
-			TelemetryService.instance.captureException(apiError)
-			throw new Error(`Mistral completion error: ${errorMessage}`)
-		}
+		return text
 	}
 
 	// kilocode_change start

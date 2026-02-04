@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "Nicht genügend Nachrichten zum Verdichten des Kontexts von {{prevContextTokens}} Token. Mindestens {{minimumMessageCount}} Nachrichten sind erforderlich, aber nur {{messageCount}} sind verfügbar.",
 		"condensed_recently": "Kontext wurde kürzlich verdichtet; dieser Versuch wird übersprungen",
 		"condense_handler_invalid": "API-Handler zum Verdichten des Kontexts ist ungültig",
-		"condense_context_grew": "Kontextgröße ist von {{prevContextTokens}} auf {{newContextTokens}} während der Verdichtung gewachsen; dieser Versuch wird übersprungen",
+		"condense_api_failed": "Verdichtungs-API-Aufruf fehlgeschlagen: {{message}}",
 		"url_timeout": "Die Website hat zu lange zum Laden gebraucht (Timeout). Das könnte an einer langsamen Verbindung, einer schweren Website oder vorübergehender Nichtverfügbarkeit liegen. Du kannst es später nochmal versuchen oder prüfen, ob die URL korrekt ist.",
 		"url_not_found": "Die Website-Adresse konnte nicht gefunden werden. Bitte prüfe, ob die URL korrekt ist und versuche es erneut.",
 		"no_internet": "Keine Internetverbindung. Bitte prüfe deine Netzwerkverbindung und versuche es erneut.",
@@ -144,8 +144,27 @@
 		"roo": {
 			"authenticationRequired": "Roo-Anbieter erfordert Cloud-Authentifizierung. Bitte melde dich bei Roo Code Cloud an."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Nicht bei OpenAI Codex authentifiziert. Bitte melde dich über den OpenAI Codex OAuth-Flow an.",
+			"invalidRequest": "Ungültige Anfrage an die Codex-API. Bitte überprüfe deine Eingabeparameter.",
+			"authenticationFailed": "Authentifizierung fehlgeschlagen. Bitte authentifiziere dich erneut bei OpenAI Codex.",
+			"accessDenied": "Zugriff verweigert. Dein ChatGPT-Abonnement enthält möglicherweise keinen Codex-Zugang.",
+			"endpointNotFound": "Codex-API-Endpunkt nicht gefunden.",
+			"rateLimitExceeded": "Ratenlimit überschritten. Bitte versuche es später erneut.",
+			"serviceError": "OpenAI Codex Dienstfehler. Bitte versuche es später erneut.",
+			"genericError": "Codex-API-Fehler ({{status}})",
+			"noResponseBody": "Codex-API-Fehler: Kein Antworttext",
+			"connectionFailed": "Verbindung zur Codex-API fehlgeschlagen: {{message}}",
+			"unexpectedConnectionError": "Unerwarteter Fehler beim Verbinden mit der Codex-API",
+			"apiError": "Codex-API-Fehler: {{message}}",
+			"responseFailed": "Antwort fehlgeschlagen: {{message}}",
+			"streamProcessingError": "Fehler beim Verarbeiten des Antwort-Streams: {{message}}",
+			"unexpectedStreamError": "Unerwarteter Fehler beim Verarbeiten des Antwort-Streams",
+			"completionError": "OpenAI Codex Vervollständigungsfehler: {{message}}"
+		},
 		"api": {
-			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen."
+			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen.",
+			"apiRequestFailed": "API-Anfrage fehlgeschlagen ({{status}})"
 		},
 		"manual_url_empty": "Bitte gib eine gültige Callback-URL ein",
 		"manual_url_no_query": "Ungültige Callback-URL: Query-Parameter fehlen",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Antwort vom Benutzer unterbrochen",
-		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen"
+		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen",
+		"streamTerminatedByProvider": "Der Anbieter hat die Anfrage beendet"
 	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",

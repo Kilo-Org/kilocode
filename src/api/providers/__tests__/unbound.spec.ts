@@ -15,7 +15,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				contextWindow: 200000,
 				supportsImages: true,
 				supportsPromptCache: true,
-				supportsNativeTools: true,
 				inputPrice: 3,
 				outputPrice: 15,
 				cacheWritesPrice: 3.75,
@@ -28,7 +27,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				contextWindow: 200000,
 				supportsImages: true,
 				supportsPromptCache: true,
-				supportsNativeTools: true,
 				inputPrice: 3,
 				outputPrice: 15,
 				cacheWritesPrice: 3.75,
@@ -41,7 +39,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				contextWindow: 200000,
 				supportsImages: true,
 				supportsPromptCache: true,
-				supportsNativeTools: true,
 				inputPrice: 3,
 				outputPrice: 15,
 				cacheWritesPrice: 3.75,
@@ -54,7 +51,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				contextWindow: 128000,
 				supportsImages: true,
 				supportsPromptCache: false,
-				supportsNativeTools: true,
 				inputPrice: 5,
 				outputPrice: 15,
 				description: "GPT-4o",
@@ -64,7 +60,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				contextWindow: 128000,
 				supportsImages: true,
 				supportsPromptCache: false,
-				supportsNativeTools: true,
 				inputPrice: 1,
 				outputPrice: 3,
 				description: "O3 Mini",
@@ -353,7 +348,7 @@ describe("UnboundHandler", () => {
 			},
 		]
 
-		it("should include tools in request when model supports native tools and tools are provided", async () => {
+		it("should include tools in request when tools are provided", async () => {
 			mockWithResponse.mockResolvedValueOnce({
 				data: {
 					[Symbol.asyncIterator]: () => ({
@@ -367,7 +362,6 @@ describe("UnboundHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 			await messageGenerator.next()
 
@@ -381,7 +375,7 @@ describe("UnboundHandler", () => {
 							}),
 						}),
 					]),
-					parallel_tool_calls: false,
+					parallel_tool_calls: true,
 				}),
 				expect.objectContaining({
 					headers: {
@@ -405,7 +399,6 @@ describe("UnboundHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				tool_choice: "auto",
 			})
 			await messageGenerator.next()
@@ -422,7 +415,7 @@ describe("UnboundHandler", () => {
 			)
 		})
 
-		it("should not include tools when toolProtocol is xml", async () => {
+		it("should always include tools and tool_choice (tools are guaranteed to be present after ALWAYS_AVAILABLE_TOOLS)", async () => {
 			mockWithResponse.mockResolvedValueOnce({
 				data: {
 					[Symbol.asyncIterator]: () => ({
@@ -435,14 +428,14 @@ describe("UnboundHandler", () => {
 
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
-				tools: testTools,
-				toolProtocol: "xml",
 			})
 			await messageGenerator.next()
 
+			// Tools are now always present (minimum 6 from ALWAYS_AVAILABLE_TOOLS)
 			const callArgs = mockCreate.mock.calls[mockCreate.mock.calls.length - 1][0]
-			expect(callArgs).not.toHaveProperty("tools")
-			expect(callArgs).not.toHaveProperty("tool_choice")
+			expect(callArgs).toHaveProperty("tools")
+			expect(callArgs).toHaveProperty("tool_choice")
+			expect(callArgs).toHaveProperty("parallel_tool_calls", true)
 		})
 
 		it("should yield tool_call_partial chunks during streaming", async () => {
@@ -499,7 +492,6 @@ describe("UnboundHandler", () => {
 			const stream = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 
 			const chunks = []
@@ -538,7 +530,6 @@ describe("UnboundHandler", () => {
 			const messageGenerator = handler.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				parallelToolCalls: true,
 			})
 			await messageGenerator.next()

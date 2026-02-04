@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "完成",
+	"description": "Git worktrees 讓您能在不同目錄中同時處理多個分支。每個 worktree 都會有一個搭配 Roo Code 的獨立 VS Code 視窗。",
+
+	"notGitRepo": "此工作區不是 Git 儲存庫。Worktree 功能需要 Git 儲存庫才能運作。",
+	"multiRootNotSupported": "多根工作區不支援 worktree。請開啟單一資料夾以使用 worktree。",
+	"subfolderNotSupported": "此工作區是 Git 儲存庫的子資料夾。請開啟儲存庫根目錄以使用 worktree。",
+	"gitRoot": "Git 根目錄",
+
+	"includeFileExists": "已找到 .worktreeinclude 檔案，檔案將複製到新的 worktree",
+	"noIncludeFile": "未找到 .worktreeinclude 檔案",
+	"createFromGitignore": "從 .gitignore 建立",
+
+	"primary": "主要",
+	"current": "目前",
+	"locked": "已鎖定",
+	"detachedHead": "分離的 HEAD",
+	"noBranch": "無分支",
+
+	"switchInThisWindow": "切換到 worktree",
+	"openInNewWindow": "在新視窗開啟",
+	"delete": "刪除",
+	"newWorktree": "新增 Worktree",
+
+	"createWorktree": "建立 Worktree",
+	"branchName": "分支名稱",
+	"createNewBranch": "建立新分支",
+	"checkoutExisting": "切換到現有分支",
+	"baseBranch": "基準分支",
+	"loadingBranches": "正在載入分支...",
+	"selectBranch": "選擇分支",
+	"searchBranch": "搜尋分支...",
+	"noBranchFound": "找不到分支",
+	"localBranches": "本機分支",
+	"remoteBranches": "遠端分支",
+	"worktreePath": "位於",
+	"selectWorktreeLocation": "選取 Worktree 位置",
+	"selectFolderForWorktree": "為新 worktree 選取資料夾",
+	"noIncludeFileWarning": "沒有 .worktreeinclude 檔案",
+	"noIncludeFileHint": "沒有 .worktreeinclude 檔案時，node_modules 等檔案不會複製到新的 worktree。建立後可能需要執行 npm install。",
+	"create": "建立",
+	"creating": "正在建立...",
+	"copyingFiles": "正在複製檔案...",
+	"copyingProgress": "{{item}} — {{copied}} 已複製",
+	"cancel": "取消",
+
+	"deleteWorktree": "刪除 Worktree",
+	"deleteWarning": "此操作無法復原。將刪除以下內容：",
+	"deleteWarningBranch": "分支以及所有未提交的變更",
+	"deleteWarningFiles": "worktree 目錄中的所有檔案",
+	"deleteNoticeLarge": "如果這是大型儲存庫，可能需要一些時間。",
+	"forceDelete": "強制刪除",
+	"worktreeIsLocked": "worktree 已鎖定",
+	"deleting": "正在刪除...",
+
+	"close": "關閉",
+
+	"showInHomeScreen": "在主畫面顯示 worktree",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "在 worktree 之間切換",
+		"description": "Git worktree 讓你能在多個分支上同時工作。點選以切換工作區。",
+		"settings": "管理 Worktrees",
+		"info": "Git worktree 允許你將多個工作目錄連線到同一個儲存庫。"
+	}
+}

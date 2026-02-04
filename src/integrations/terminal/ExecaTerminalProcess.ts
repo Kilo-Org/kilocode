@@ -213,12 +213,9 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		// Continue with the rest of the abort logic
 		if (this.pid) {
 			// Also check for any child processes
-			// kilocode_change start
-			;(async () => {
-				try {
-					const childPids = await getChildPids(this.pid!)
-					if (childPids.length > 0) {
-						console.error(`[ExecaTerminalProcess#abort] SIGKILL children -> ${childPids.join(", ")}`)
+			psTree(this.pid, async (err, children) => {
+				if (!err) {
+					const pids = children.map((p) => parseInt(p.PID))
 
 						for (const pid of childPids) {
 							try {

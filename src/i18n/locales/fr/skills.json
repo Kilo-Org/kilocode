@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Le nom de la compétence doit contenir entre 1 et {{maxLength}} caractères ({{length}} reçu)",
+		"name_format": "Le nom de la compétence ne peut contenir que des lettres minuscules, des chiffres et des traits d'union (pas de trait d'union initial ou final, pas de traits d'union consécutifs)",
+		"description_length": "La description de la compétence doit contenir entre 1 et 1024 caractères ({{length}} reçu)",
+		"no_workspace": "Impossible de créer la compétence de projet : aucun dossier d'espace de travail n'est ouvert",
+		"already_exists": "La compétence \"{{name}}\" existe déjà à {{path}}",
+		"not_found": "Compétence \"{{name}}\" introuvable dans {{source}}{{modeInfo}}",
+		"missing_create_fields": "Champs obligatoires manquants : skillName, source ou skillDescription",
+		"missing_move_fields": "Champs obligatoires manquants : skillName ou source",
+		"missing_update_modes_fields": "Champs obligatoires manquants : skillName ou source",
+		"manager_unavailable": "Le gestionnaire de compétences n'est pas disponible",
+		"missing_delete_fields": "Champs obligatoires manquants : skillName ou source",
+		"skill_not_found": "Compétence \"{{name}}\" introuvable",
+		"cannot_modify_builtin": "Les compétences intégrées ne peuvent pas être créées ou supprimées",
+		"cannot_open_builtin": "Les compétences intégrées ne peuvent pas être ouvertes en tant que fichiers"
+	}
+}

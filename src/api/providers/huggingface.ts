@@ -1,20 +1,37 @@
-import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import { streamText, generateText, ToolSet } from "ai"
 
-import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
-import { ApiStream } from "../transform/stream"
-import { convertToOpenAiMessages } from "../transform/openai-format"
-import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import type { ModelRecord, ModelInfo } from "@roo-code/types"
+
+import type { ApiHandlerOptions } from "../../shared/api"
+
+import {
+	convertToAiSdkMessages,
+	convertToolsForAiSdk,
+	processAiSdkStreamPart,
+	mapToolChoice,
+	handleAiSdkError,
+} from "../transform/ai-sdk"
+import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
+import { getModelParams } from "../transform/model-params"
+
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import { getHuggingFaceModels, getCachedHuggingFaceModels } from "./fetchers/huggingface"
-import { handleOpenAIError } from "./utils/openai-error-handler"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
+const HUGGINGFACE_DEFAULT_TEMPERATURE = 0.7
+
+/**
+ * HuggingFace provider using @ai-sdk/openai-compatible for OpenAI-compatible API.
+ * Uses HuggingFace's OpenAI-compatible endpoint to enable tool message support.
+ * @see https://github.com/vercel/ai/issues/10766 - Workaround for tool messages not supported in @ai-sdk/huggingface
+ */
 export class HuggingFaceHandler extends BaseProvider implements SingleCompletionHandler {
-	private client: OpenAI
-	private options: ApiHandlerOptions
+	protected options: ApiHandlerOptions
+	protected provider: ReturnType<typeof createOpenAICompatible>
 	private modelCache: ModelRecord | null = null
-	private readonly providerName = "HuggingFace"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -24,10 +41,14 @@ export class HuggingFaceHandler extends BaseProvider implements SingleCompletion
 			throw new Error("Hugging Face API key is required")
 		}
 
-		this.client = new OpenAI({
+		// Create an OpenAI-compatible provider pointing to HuggingFace's /v1 endpoint
+		// This fixes "tool messages not supported" error - the HuggingFace SDK doesn't
+		// properly handle function_call_output format, but OpenAI SDK does
+		this.provider = createOpenAICompatible({
+			name: "huggingface",
 			baseURL: "https://router.huggingface.co/v1",
 			apiKey: this.options.huggingFaceApiKey,
-			defaultHeaders: DEFAULT_HEADERS,
+			headers: DEFAULT_HEADERS,
 		})
 
 		// Try to get cached models first
@@ -45,91 +66,146 @@ export class HuggingFaceHandler extends BaseProvider implements SingleCompletion
 		}
 	}
 
+	override getModel(): { id: string; info: ModelInfo; maxTokens?: number; temperature?: number } {
+		const id = this.options.huggingFaceModelId || "meta-llama/Llama-3.3-70B-Instruct"
+
+		// Try to get model info from cache
+		const cachedInfo = this.modelCache?.[id]
+
+		const info: ModelInfo = cachedInfo || {
+			maxTokens: 8192,
+			contextWindow: 131072,
+			supportsImages: false,
+			supportsPromptCache: false,
+		}
+
+		const params = getModelParams({
+			format: "openai",
+			modelId: id,
+			model: info,
+			settings: this.options,
+			defaultTemperature: HUGGINGFACE_DEFAULT_TEMPERATURE,
+		})
+
+		return { id, info, ...params }
+	}
+
+	/**
+	 * Get the language model for the configured model ID.
+	 */
+	protected getLanguageModel() {
+		const { id } = this.getModel()
+		return this.provider(id)
+	}
+
+	/**
+	 * Process usage metrics from the AI SDK response.
+	 */
+	protected processUsageMetrics(
+		usage: {
+			inputTokens?: number
+			outputTokens?: number
+			details?: {
+				cachedInputTokens?: number
+				reasoningTokens?: number
+			}
+		},
+		providerMetadata?: {
+			huggingface?: {
+				promptCacheHitTokens?: number
+				promptCacheMissTokens?: number
+			}
+		},
+	): ApiStreamUsageChunk {
+		// Extract cache metrics from HuggingFace's providerMetadata if available
+		const cacheReadTokens = providerMetadata?.huggingface?.promptCacheHitTokens ?? usage.details?.cachedInputTokens
+		const cacheWriteTokens = providerMetadata?.huggingface?.promptCacheMissTokens
+
+		return {
+			type: "usage",
+			inputTokens: usage.inputTokens || 0,
+			outputTokens: usage.outputTokens || 0,
+			cacheReadTokens,
+			cacheWriteTokens,
+			reasoningTokens: usage.details?.reasoningTokens,
+		}
+	}
+
+	/**
+	 * Get the max tokens parameter to include in the request.
+	 */
+	protected getMaxOutputTokens(): number | undefined {
+		const { info } = this.getModel()
+		return this.options.modelMaxTokens || info.maxTokens || undefined
+	}
+
+	/**
+	 * Create a message stream using the AI SDK.
+	 */
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const modelId = this.options.huggingFaceModelId || "meta-llama/Llama-3.3-70B-Instruct"
-		const temperature = this.options.modelTemperature ?? 0.7
+		const { temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
-			model: modelId,
-			temperature,
-			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
-			stream: true,
-			stream_options: { include_usage: true },
+		// Convert messages to AI SDK format
+		const aiSdkMessages = convertToAiSdkMessages(messages)
+
+		// Convert tools to OpenAI format first, then to AI SDK format
+		const openAiTools = this.convertToolsForOpenAI(metadata?.tools)
+		const aiSdkTools = convertToolsForAiSdk(openAiTools) as ToolSet | undefined
+
+		// Build the request options
+		const requestOptions: Parameters<typeof streamText>[0] = {
+			model: languageModel,
+			system: systemPrompt,
+			messages: aiSdkMessages,
+			temperature: this.options.modelTemperature ?? temperature ?? HUGGINGFACE_DEFAULT_TEMPERATURE,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			tools: aiSdkTools,
+			toolChoice: mapToolChoice(metadata?.tool_choice),
 		}
 
-		// Add max_tokens if specified
-		if (this.options.includeMaxTokens && this.options.modelMaxTokens) {
-			params.max_tokens = this.options.modelMaxTokens
-		}
+		// Use streamText for streaming responses
+		const result = streamText(requestOptions)
 
-		let stream
 		try {
-			stream = await this.client.chat.completions.create(params)
+			// Process the full stream to get all events
+			for await (const part of result.fullStream) {
+				// Use the processAiSdkStreamPart utility to convert stream parts
+				for (const chunk of processAiSdkStreamPart(part)) {
+					yield chunk
+				}
+			}
+
+			// Yield usage metrics at the end, including cache metrics from providerMetadata
+			const usage = await result.usage
+			const providerMetadata = await result.providerMetadata
+			if (usage) {
+				yield this.processUsageMetrics(usage, providerMetadata as any)
+			}
 		} catch (error) {
-			throw handleOpenAIError(error, this.providerName)
-		}
-
-		for await (const chunk of stream) {
-			const delta = chunk.choices[0]?.delta
-
-			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
-				}
-			}
-
-			if (chunk.usage) {
-				yield {
-					type: "usage",
-					inputTokens: chunk.usage.prompt_tokens || 0,
-					outputTokens: chunk.usage.completion_tokens || 0,
-				}
-			}
+			// Handle AI SDK errors (AI_RetryError, AI_APICallError, etc.)
+			throw handleAiSdkError(error, "HuggingFace")
 		}
 	}
 
+	/**
+	 * Complete a prompt using the AI SDK generateText.
+	 */
 	async completePrompt(prompt: string): Promise<string> {
-		const modelId = this.options.huggingFaceModelId || "meta-llama/Llama-3.3-70B-Instruct"
+		const { temperature } = this.getModel()
+		const languageModel = this.getLanguageModel()
 
-		try {
-			const response = await this.client.chat.completions.create({
-				model: modelId,
-				messages: [{ role: "user", content: prompt }],
-			})
+		const { text } = await generateText({
+			model: languageModel,
+			prompt,
+			maxOutputTokens: this.getMaxOutputTokens(),
+			temperature: this.options.modelTemperature ?? temperature ?? HUGGINGFACE_DEFAULT_TEMPERATURE,
+		})
 
-			return response.choices[0]?.message.content || ""
-		} catch (error) {
-			throw handleOpenAIError(error, this.providerName)
-		}
-	}
-
-	override getModel() {
-		const modelId = this.options.huggingFaceModelId || "meta-llama/Llama-3.3-70B-Instruct"
-
-		// Try to get model info from cache
-		const modelInfo = this.modelCache?.[modelId]
-
-		if (modelInfo) {
-			return {
-				id: modelId,
-				info: modelInfo,
-			}
-		}
-
-		// Fallback to default values if model not found in cache
-		return {
-			id: modelId,
-			info: {
-				maxTokens: 8192,
-				contextWindow: 131072,
-				supportsImages: false,
-				supportsPromptCache: false,
-			},
-		}
+		return text
 	}
 }

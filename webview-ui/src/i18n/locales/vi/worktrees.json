@@ -1,0 +1,69 @@
+{
+	"title": "Worktrees",
+	"done": "Xong",
+	"description": "Git worktrees cho phép bạn làm việc đồng thời trên nhiều nhánh trong các thư mục riêng. Mỗi worktree có một cửa sổ VS Code riêng với Roo Code.",
+
+	"notGitRepo": "Workspace này không phải là kho Git. Worktrees cần một kho Git để hoạt động.",
+	"multiRootNotSupported": "Worktrees không được hỗ trợ trong workspace đa gốc. Hãy mở một thư mục đơn để dùng worktrees.",
+	"subfolderNotSupported": "Workspace này là một thư mục con của kho Git. Hãy mở thư mục gốc của kho để dùng worktrees.",
+	"gitRoot": "Thư mục gốc Git",
+
+	"includeFileExists": "Đã tìm thấy tệp .worktreeinclude — các tệp sẽ được sao chép sang worktrees mới",
+	"noIncludeFile": "Không tìm thấy tệp .worktreeinclude",
+	"createFromGitignore": "Tạo từ .gitignore",
+
+	"primary": "Chính",
+	"current": "Hiện tại",
+	"locked": "Đã khóa",
+	"detachedHead": "Detached HEAD",
+	"noBranch": "Không có nhánh",
+
+	"switchInThisWindow": "Chuyển sang worktree",
+	"openInNewWindow": "Mở trong cửa sổ mới",
+	"delete": "Xóa",
+	"newWorktree": "Worktree Mới",
+
+	"createWorktree": "Tạo Worktree",
+	"branchName": "Tên nhánh",
+	"createNewBranch": "Tạo nhánh mới",
+	"checkoutExisting": "Checkout nhánh hiện có",
+	"baseBranch": "Nhánh gốc",
+	"loadingBranches": "Đang tải nhánh...",
+	"selectBranch": "Chọn nhánh",
+	"searchBranch": "Tìm nhánh...",
+	"noBranchFound": "Không tìm thấy nhánh",
+	"localBranches": "Nhánh cục bộ",
+	"remoteBranches": "Nhánh từ xa",
+	"worktreePath": "Trong",
+	"selectWorktreeLocation": "Chọn vị trí Worktree",
+	"selectFolderForWorktree": "Chọn thư mục cho worktree mới",
+	"noIncludeFileWarning": "Không có tệp .worktreeinclude",
+	"noIncludeFileHint": "Không có tệp .worktreeinclude thì các tệp như node_modules sẽ không được sao chép sang worktree mới. Bạn có thể cần chạy npm install sau khi tạo.",
+	"create": "Tạo",
+	"creating": "Đang tạo...",
+	"copyingFiles": "Đang sao chép tệp...",
+	"copyingProgress": "{{item}} — {{copied}} đã sao chép",
+	"cancel": "Hủy",
+
+	"deleteWorktree": "Xóa Worktree",
+	"deleteWarning": "Không thể hoàn tác thao tác này. Những thứ sau sẽ bị xóa:",
+	"deleteWarningBranch": "Nhánh và tất cả thay đổi chưa commit",
+	"deleteWarningFiles": "Tất cả tệp trong thư mục worktree",
+	"deleteNoticeLarge": "Nếu đây là kho lớn, có thể mất một chút thời gian.",
+	"forceDelete": "Buộc xóa",
+	"worktreeIsLocked": "worktree đang bị khóa",
+	"deleting": "Đang xóa...",
+
+	"close": "Đóng",
+
+	"showInHomeScreen": "Hiển thị worktrees trên màn hình chính",
+
+	"selector": {
+		"worktree": "Worktree",
+		"title": "Worktrees",
+		"tooltip": "Chuyển đổi giữa các worktrees",
+		"description": "Git worktrees cho phép bạn làm việc trên nhiều nhánh cùng lúc. Nhấp để chuyển workspace.",
+		"settings": "Quản lý Worktrees",
+		"info": "Git worktrees cho phép bạn có nhiều thư mục làm việc được kết nối với cùng một kho."
+	}
+}

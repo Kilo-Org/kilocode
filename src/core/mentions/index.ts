@@ -9,8 +9,9 @@ import { mentionRegexGlobal, commandRegexGlobal, unescapeSpaces } from "../../sh
 import { getCommitInfo, getWorkingState } from "../../utils/git"
 
 import { openFile } from "../../integrations/misc/open-file"
-import { extractTextFromFile } from "../../integrations/misc/extract-text"
+import { extractTextFromFileWithMetadata, type ExtractTextResult } from "../../integrations/misc/extract-text"
 import { diagnosticsToProblemsString } from "../../integrations/diagnostics"
+import { DEFAULT_LINE_LIMIT } from "../prompts/tools/native-tools/read_file"
 
 import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 
@@ -72,9 +73,57 @@ export async function openMention(cwd: string, mention?: string): Promise<void> 
 	}
 }
 
+/**
+ * Represents a content block generated from an @ mention.
+ * These are returned separately from the user's text to enable
+ * proper formatting as distinct message blocks.
+ */
+export interface MentionContentBlock {
+	type: "file" | "folder" | "url" | "diagnostics" | "git_changes" | "git_commit" | "terminal" | "command"
+	/** Path for file/folder mentions */
+	path?: string
+	/** The content to display */
+	content: string
+	/** Metadata about truncation (for files) */
+	metadata?: {
+		totalLines: number
+		returnedLines: number
+		wasTruncated: boolean
+		linesShown?: [number, number]
+	}
+}
+
 export interface ParseMentionsResult {
+	/** User's text with @ mentions replaced by clean path references */
 	text: string
+	/** Separate content blocks for each mention (file content, URLs, etc.) */
+	contentBlocks: MentionContentBlock[]
+	slashCommandHelp?: string
 	mode?: string // Mode from the first slash command that has one
+}
+
+/**
+ * Formats file content to look like a read_file tool result.
+ * Includes Gemini-style truncation warning when content is truncated.
+ */
+function formatFileReadResult(filePath: string, result: ExtractTextResult): string {
+	const header = `[read_file for '${filePath}']`
+
+	if (result.wasTruncated && result.linesShown) {
+		const [start, end] = result.linesShown
+		const nextOffset = end + 1
+		return `${header}
+IMPORTANT: File content truncated.
+Status: Showing lines ${start}-${end} of ${result.totalLines} total lines.
+To read more: Use the read_file tool with offset=${nextOffset} and limit=${DEFAULT_LINE_LIMIT}.
+
+File: ${filePath}
+${result.content}`
+	}
+
+	return `${header}
+File: ${filePath}
+${result.content}`
 }
 
 export async function parseMentions(
@@ -86,10 +135,10 @@ export async function parseMentions(
 	showRooIgnoredFiles: boolean = false,
 	includeDiagnosticMessages: boolean = true,
 	maxDiagnosticMessages: number = 50,
-	maxReadFileLine?: number,
 ): Promise<ParseMentionsResult> {
 	const mentions: Set<string> = new Set()
 	const validCommands: Map<string, Command> = new Map()
+	const contentBlocks: MentionContentBlock[] = []
 	let commandMode: string | undefined // Track mode from the first slash command that has one
 
 	// First pass: check which command mentions exist and cache the results
@@ -119,7 +168,7 @@ export async function parseMentions(
 		}
 	}
 
-	// Only replace text for commands that actually exist
+	// Only replace text for commands that actually exist (keep "see below" for commands)
 	let parsedText = text
 	for (const [match, commandName] of commandMatches) {
 		if (validCommands.has(commandName)) {
@@ -127,16 +176,17 @@ export async function parseMentions(
 		}
 	}
 
-	// Second pass: handle regular mentions
+	// Second pass: handle regular mentions - replace with clean references
+	// Content will be provided as separate blocks that look like read_file results
 	parsedText = parsedText.replace(mentionRegexGlobal, (match, mention) => {
 		mentions.add(mention)
 		if (mention.startsWith("http")) {
+			// Keep old style for URLs (still XML-based)
 			return `'${mention}' (see below for site content)`
 		} else if (mention.startsWith("/")) {
+			// Clean path reference - no "see below" since we format like tool results
 			const mentionPath = mention.slice(1)
-			return mentionPath.endsWith("/")
-				? `'${mentionPath}' (see below for folder content)`
-				: `'${mentionPath}' (see below for file content)`
+			return mentionPath.endsWith("/") ? `'${mentionPath}'` : `'${mentionPath}'`
 		} else if (mention === "problems") {
 			return `Workspace Problems (see below for diagnostics)`
 		} else if (mention === "git-changes") {
@@ -189,31 +239,26 @@ export async function parseMentions(
 					result = `Error fetching content: ${rawErrorMessage}`
 				}
 			}
+			// URLs still use XML format (appended to text for backwards compat)
 			parsedText += `\n\n<url_content url="${mention}">\n${result}\n</url_content>`
 		} else if (mention.startsWith("/")) {
 			const mentionPath = mention.slice(1)
 			try {
-				const content = await getFileOrFolderContent(
+				const fileResult = await getFileOrFolderContentWithMetadata(
 					mentionPath,
 					cwd,
 					rooIgnoreController,
 					showRooIgnoredFiles,
-					maxReadFileLine,
+					fileContextTracker,
 				)
-				if (mention.endsWith("/")) {
-					parsedText += `\n\n<folder_content path="${mentionPath}">\n${content}\n</folder_content>`
-				} else {
-					parsedText += `\n\n<file_content path="${mentionPath}">\n${content}\n</file_content>`
-					if (fileContextTracker) {
-						await fileContextTracker.trackFileContext(mentionPath, "file_mentioned")
-					}
-				}
+				contentBlocks.push(fileResult)
 			} catch (error) {
-				if (mention.endsWith("/")) {
-					parsedText += `\n\n<folder_content path="${mentionPath}">\nError fetching content: ${error.message}\n</folder_content>`
-				} else {
-					parsedText += `\n\n<file_content path="${mentionPath}">\nError fetching content: ${error.message}\n</file_content>`
-				}
+				const errorMsg = error instanceof Error ? error.message : String(error)
+				contentBlocks.push({
+					type: mention.endsWith("/") ? "folder" : "file",
+					path: mentionPath,
+					content: `[read_file for '${mentionPath}']\nError: ${errorMsg}`,
+				})
 			}
 		} else if (mention === "problems") {
 			try {
@@ -247,6 +292,7 @@ export async function parseMentions(
 	}
 
 	// Process valid command mentions using cached results
+	let slashCommandHelp = ""
 	for (const [commandName, command] of validCommands) {
 		try {
 			let commandOutput = ""
@@ -254,9 +300,9 @@ export async function parseMentions(
 				commandOutput += `Description: ${command.description}\n\n`
 			}
 			commandOutput += command.content
-			parsedText += `\n\n<command name="${commandName}">\n${commandOutput}\n</command>`
+			slashCommandHelp += `\n\n<command name="${commandName}">\n${commandOutput}\n</command>`
 		} catch (error) {
-			parsedText += `\n\n<command name="${commandName}">\nError loading command '${commandName}': ${error.message}\n</command>`
+			slashCommandHelp += `\n\n<command name="${commandName}">\nError loading command '${commandName}': ${error.message}\n</command>`
 		}
 	}
 
@@ -268,25 +314,49 @@ export async function parseMentions(
 		}
 	}
 
-	return { text: parsedText, mode: commandMode }
+	return {
+		text: parsedText,
+		contentBlocks,
+		mode: commandMode,
+		slashCommandHelp: slashCommandHelp.trim() || undefined,
+	}
 }
 
-async function getFileOrFolderContent(
+/**
+ * Gets file or folder content and returns it as a MentionContentBlock
+ * formatted to look like a read_file tool result.
+ */
+async function getFileOrFolderContentWithMetadata(
 	mentionPath: string,
 	cwd: string,
 	rooIgnoreController?: any,
 	showRooIgnoredFiles: boolean = false,
-	maxReadFileLine?: number,
-): Promise<string> {
+	fileContextTracker?: FileContextTracker,
+): Promise<MentionContentBlock> {
 	const unescapedPath = unescapeSpaces(mentionPath)
 	const absPath = path.resolve(cwd, unescapedPath)
+	const isFolder = mentionPath.endsWith("/")
 
 	try {
 		const stats = await fs.stat(absPath)
 
 		if (stats.isFile()) {
-			if (rooIgnoreController && !rooIgnoreController.validateAccess(absPath)) {
-				return `(File ${mentionPath} is ignored by .kilocodeignore)`
+			// Avoid trying to include image binary content as text context.
+			// Image mentions are handled separately via image attachment flow.
+			const isBinary = await isBinaryFile(absPath).catch(() => false)
+			if (isBinary) {
+				return {
+					type: "file",
+					path: mentionPath,
+					content: `[read_file for '${mentionPath}']\nNote: Binary file omitted from context.`,
+				}
+			}
+			if (rooIgnoreController && !rooIgnoreController.validateAccess(unescapedPath)) {
+				return {
+					type: "file",
+					path: mentionPath,
+					content: `[read_file for '${mentionPath}']\nNote: File is ignored by .rooignore.`,
+				}
 			}
 			// kilocode_change start
 			if (isSupportedImageFormat(path.extname(absPath))) {
@@ -294,15 +364,36 @@ async function getFileOrFolderContent(
 			}
 			// kilocode_change end
 			try {
-				const content = await extractTextFromFile(absPath, maxReadFileLine)
-				return content
+				const result = await extractTextFromFileWithMetadata(absPath)
+
+				// Track file context
+				if (fileContextTracker) {
+					await fileContextTracker.trackFileContext(mentionPath, "file_mentioned")
+				}
+
+				return {
+					type: "file",
+					path: mentionPath,
+					content: formatFileReadResult(mentionPath, result),
+					metadata: {
+						totalLines: result.totalLines,
+						returnedLines: result.returnedLines,
+						wasTruncated: result.wasTruncated,
+						linesShown: result.linesShown,
+					},
+				}
 			} catch (error) {
-				return `(Failed to read contents of ${mentionPath}): ${error.message}`
+				const errorMsg = error instanceof Error ? error.message : String(error)
+				return {
+					type: "file",
+					path: mentionPath,
+					content: `[read_file for '${mentionPath}']\nError: ${errorMsg}`,
+				}
 			}
 		} else if (stats.isDirectory()) {
 			const entries = await fs.readdir(absPath, { withFileTypes: true })
-			let folderContent = ""
-			const fileContentPromises: Promise<string | undefined>[] = []
+			let folderListing = ""
+			const fileReadResults: string[] = []
 			const LOCK_SYMBOL = "🔒"
 
 			for (let index = 0; index < entries.length; index++) {
@@ -323,38 +414,48 @@ async function getFileOrFolderContent(
 				const displayName = isIgnored ? `${LOCK_SYMBOL} ${entry.name}` : entry.name
 
 				if (entry.isFile()) {
-					folderContent += `${linePrefix}${displayName}\n`
+					folderListing += `${linePrefix}${displayName}\n`
 					if (!isIgnored) {
 						const filePath = path.join(mentionPath, entry.name)
 						const absoluteFilePath = path.resolve(absPath, entry.name)
-						fileContentPromises.push(
-							(async () => {
-								try {
-									const isBinary = await isBinaryFile(absoluteFilePath).catch(() => false)
-									if (isBinary) {
-										return undefined
-									}
-									const content = await extractTextFromFile(absoluteFilePath, maxReadFileLine)
-									return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
-								} catch (error) {
-									return undefined
-								}
-							})(),
-						)
+						try {
+							const isBinary = await isBinaryFile(absoluteFilePath).catch(() => false)
+							if (!isBinary) {
+								const result = await extractTextFromFileWithMetadata(absoluteFilePath)
+								fileReadResults.push(formatFileReadResult(filePath.toPosix(), result))
+							}
+						} catch (error) {
+							// Skip files that can't be read
+						}
 					}
 				} else if (entry.isDirectory()) {
-					folderContent += `${linePrefix}${displayName}/\n`
+					folderListing += `${linePrefix}${displayName}/\n`
 				} else {
-					folderContent += `${linePrefix}${displayName}\n`
+					folderListing += `${linePrefix}${displayName}\n`
 				}
 			}
-			const fileContents = (await Promise.all(fileContentPromises)).filter((content) => content)
-			return `${folderContent}\n${fileContents.join("\n\n")}`.trim()
+
+			// Format folder content similar to read_file output
+			let content = `[read_file for folder '${mentionPath}']\nFolder listing:\n${folderListing}`
+			if (fileReadResults.length > 0) {
+				content += `\n\n--- File Contents ---\n\n${fileReadResults.join("\n\n")}`
+			}
+
+			return {
+				type: "folder",
+				path: mentionPath,
+				content,
+			}
 		} else {
-			return `(Failed to read contents of ${mentionPath})`
+			return {
+				type: isFolder ? "folder" : "file",
+				path: mentionPath,
+				content: `[read_file for '${mentionPath}']\nError: Unable to read (not a file or directory)`,
+			}
 		}
 	} catch (error) {
-		throw new Error(`Failed to access path "${mentionPath}": ${error.message}`)
+		const errorMsg = error instanceof Error ? error.message : String(error)
+		throw new Error(`Failed to access path "${mentionPath}": ${errorMsg}`)
 	}
 }
 

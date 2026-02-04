@@ -43,10 +43,10 @@ suite.skip("Roo Code use_mcp_tool Tool", function () {
 
 		const mcpConfig = {
 			mcpServers: {
-				filesystem: {
-					command: "npx",
-					args: ["-y", "@modelcontextprotocol/server-filesystem", workspaceDir],
-					alwaysAllow: [],
+				time: {
+					command: "uvx",
+					args: ["mcp-server-time"],
+					alwaysAllow: ["get_current_time", "convert_time"],
 				},
 			},
 		}

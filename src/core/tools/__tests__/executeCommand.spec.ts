@@ -40,7 +40,6 @@ describe("executeCommand", () => {
 		mockProvider = {
 			postMessageToWebview: vitest.fn(),
 			getState: vitest.fn().mockResolvedValue({
-				terminalOutputLineLimit: 500,
 				terminalShellIntegrationDisabled: false,
 			}),
 		}
@@ -100,7 +99,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo test",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -141,7 +139,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo test",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -174,7 +171,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo test",
 				terminalShellIntegrationDisabled: true, // Forces ExecaTerminal
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -205,7 +201,6 @@ describe("executeCommand", () => {
 				command: "echo test",
 				customCwd,
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -235,7 +230,6 @@ describe("executeCommand", () => {
 				command: "echo test",
 				customCwd: relativeCwd,
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -258,7 +252,6 @@ describe("executeCommand", () => {
 				command: "echo test",
 				customCwd: nonExistentCwd,
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -285,7 +278,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo test",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -308,7 +300,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo test",
 				terminalShellIntegrationDisabled: true,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -334,7 +325,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "echo success",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -360,7 +350,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "exit 1",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -394,7 +383,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "long-running-command",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute
@@ -436,7 +424,6 @@ describe("executeCommand", () => {
 				executionId: "test-123",
 				command: "cd src && pwd",
 				terminalShellIntegrationDisabled: false,
-				terminalOutputLineLimit: 500,
 			}
 
 			// Execute

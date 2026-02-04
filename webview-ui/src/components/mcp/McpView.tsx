@@ -1,18 +1,13 @@
 import React, { useState } from "react"
 import { Trans } from "react-i18next"
-import {
-	VSCodeCheckbox,
-	VSCodeLink,
-	VSCodePanels,
-	VSCodePanelTab,
-	VSCodePanelView,
-} from "@vscode/webview-ui-toolkit/react"
+import { VSCodeLink, VSCodePanels, VSCodePanelTab, VSCodePanelView } from "@vscode/webview-ui-toolkit/react"
 
-import { McpServer } from "@roo/mcp"
+import type { McpServer } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { useTooManyTools } from "@src/hooks/useTooManyTools"
 import {
 	Button,
 	Dialog,
@@ -34,30 +29,15 @@ import McpResourceRow from "./McpResourceRow"
 // import McpEnabledToggle from "./McpEnabledToggle" // kilocode_change not used
 import { McpErrorRow } from "./McpErrorRow"
 
-type McpViewProps = {
-	onDone: () => void
-	hideHeader?: boolean // kilocode_change
-}
-
-const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
-	const {
-		mcpServers: servers,
-		alwaysAllowMcp,
-		mcpEnabled,
-		enableMcpServerCreation,
-		setEnableMcpServerCreation,
-	} = useExtensionState()
+const McpView = () => {
+	const { mcpServers: servers, alwaysAllowMcp, mcpEnabled } = useExtensionState()
 
 	const { t } = useAppTranslation()
+	const { isOverThreshold, title, message } = useTooManyTools()
 
 	return (
-		// kilocode_change: add relative className
-		<Tab className="relative">
-			{/*  kilocode_change: display header conditionally */}
-			<TabHeader style={{ display: hideHeader ? "none" : "flex" }} className="flex justify-between items-center">
-				<h3 className="text-vscode-foreground m-0">{t("mcp:title")}</h3>
-				<Button onClick={onDone}>{t("mcp:done")}</Button>
-			</TabHeader>
+		<div>
+			<SectionHeader>{t("mcp:title")}</SectionHeader>
 
 			<Section>
 				<div
@@ -80,36 +60,30 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 
 				{mcpEnabled && (
 					<>
-						{/* kilocode_change: display: none; we always allow mcp server creation */}
-						<div style={{ display: "none", marginBottom: 15 }}>
-							<VSCodeCheckbox
-								checked={enableMcpServerCreation}
-								onChange={(e: any) => {
-									setEnableMcpServerCreation(e.target.checked)
-									vscode.postMessage({ type: "enableMcpServerCreation", bool: e.target.checked })
-								}}>
-								<span style={{ fontWeight: "500" }}>{t("mcp:enableServerCreation.title")}</span>
-							</VSCodeCheckbox>
-							<div
-								style={{
-									fontSize: "12px",
-									marginTop: "5px",
-									color: "var(--vscode-descriptionForeground)",
-								}}>
-								<Trans i18nKey="mcp:enableServerCreation.description">
-									<VSCodeLink
-										href={buildDocLink(
-											"features/mcp/using-mcp-in-kilo-code#how-to-use-kilo-code-to-create-an-mcp-server",
-											"mcp_server_creation",
-										)}
-										style={{ display: "inline" }}>
-										Learn about server creation
-									</VSCodeLink>
-									<strong>new</strong>
-								</Trans>
-								<p style={{ marginTop: "8px" }}>{t("mcp:enableServerCreation.hint")}</p>
+						{/* Too Many Tools Warning */}
+						{isOverThreshold && (
+							<div style={{ marginBottom: 15 }}>
+								<div
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "6px",
+										fontWeight: "500",
+										color: "var(--vscode-editorWarning-foreground)",
+										marginBottom: "5px",
+									}}>
+									<span className="codicon codicon-warning" />
+									{title}
+								</div>
+								<div
+									style={{
+										fontSize: "12px",
+										color: "var(--vscode-descriptionForeground)",
+									}}>
+									{message}
+								</div>
 							</div>
-						</div>
+						)}
 
 						{/* Server List */}
 						{servers.length > 0 && (

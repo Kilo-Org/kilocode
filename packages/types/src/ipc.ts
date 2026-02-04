@@ -64,11 +64,9 @@ export const taskCommandSchema = z.discriminatedUnion("commandName", [
 	}),
 	z.object({
 		commandName: z.literal(TaskCommandName.CancelTask),
-		data: z.string(),
 	}),
 	z.object({
 		commandName: z.literal(TaskCommandName.CloseTask),
-		data: z.string(),
 	}),
 	z.object({
 		commandName: z.literal(TaskCommandName.ResumeTask),

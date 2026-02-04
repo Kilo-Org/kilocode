@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "{{prevContextTokens}}トークンのコンテキストを圧縮するのに十分なメッセージがありません。最低{{minimumMessageCount}}件のメッセージが必要ですが、{{messageCount}}件しか利用できません。",
 		"condensed_recently": "コンテキストは最近圧縮されました；この試行をスキップします",
 		"condense_handler_invalid": "コンテキストを圧縮するためのAPIハンドラーが無効です",
-		"condense_context_grew": "圧縮中にコンテキストサイズが{{prevContextTokens}}から{{newContextTokens}}に増加しました；この試行をスキップします",
+		"condense_api_failed": "圧縮API呼び出しが失敗しました：{{message}}",
 		"url_timeout": "ウェブサイトの読み込みがタイムアウトしました。接続が遅い、ウェブサイトが重い、または一時的に利用できない可能性があります。後でもう一度試すか、URLが正しいか確認してください。",
 		"url_not_found": "ウェブサイトのアドレスが見つかりませんでした。URLが正しいか確認してもう一度試してください。",
 		"no_internet": "インターネット接続がありません。ネットワーク接続を確認してもう一度試してください。",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Rooプロバイダーはクラウド認証が必要です。Roo Code Cloudにサインインしてください。"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "APIキーに無効な文字が含まれています。"
+			"invalidKeyInvalidChars": "APIキーに無効な文字が含まれています。",
+			"apiRequestFailed": "APIリクエストが失敗しました ({{status}})"
 		},
 		"manual_url_empty": "有効なコールバック URL を入力してください",
 		"manual_url_no_query": "無効なコールバック URL：クエリパラメータがありません",
 		"manual_url_missing_params": "無効なコールバック URL：必要なパラメータ（code と state）がありません",
 		"manual_url_auth_failed": "手動 URL 認証が失敗しました",
-		"manual_url_auth_error": "認証に失敗しました"
+		"manual_url_auth_error": "認証に失敗しました",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "選択されたターミナルコンテンツがありません",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "ユーザーによって応答が中断されました",
-		"responseInterruptedByApiError": "APIエラーによって応答が中断されました"
+		"responseInterruptedByApiError": "APIエラーによって応答が中断されました",
+		"streamTerminatedByProvider": "プロバイダーがリクエストを終了しました"
 	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",

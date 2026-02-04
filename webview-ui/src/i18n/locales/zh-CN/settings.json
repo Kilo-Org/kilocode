@@ -1,4 +1,5 @@
 {
+	"back": "返回任务视图",
 	"common": {
 		"save": "保存",
 		"done": "完成",
@@ -7,6 +8,10 @@
 		"select": "选择",
 		"add": "添加标头",
 		"remove": "移除"
+	},
+	"search": {
+		"placeholder": "搜索设置...",
+		"noResults": "未找到设置"
 	},
 	"header": {
 		"title": "设置",
@@ -23,7 +28,8 @@
 	"sections": {
 		"providers": "提供商",
 		"modes": "模式",
-		"mcp": "MCP 服务器",
+		"mcp": "MCP 服务",
+		"worktrees": "Worktrees",
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
@@ -36,8 +42,8 @@
 		"ui": "UI",
 		"experimental": "实验性",
 		"language": "语言",
-		"about": "关于 Kilo Code",
-		"autoPurge": "自动清理"
+		"about": "关于 Roo Code",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -57,10 +63,46 @@
 		},
 		"community": "想要获取使用技巧或与其他 Kilo Code 用户交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "联系与社区",
-		"manageSettings": "管理设置"
+		"manageSettings": "管理设置",
+		"debugMode": {
+			"label": "启用调试模式",
+			"description": "启用调试模式以在任务标题栏显示额外按钮，用于在临时文件中查看 API 对话历史和 UI 消息的格式化 JSON。"
+		}
 	},
 	"slashCommands": {
-		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
+		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>",
+		"workspaceCommands": "工作区命令",
+		"globalCommands": "全局命令",
+		"noWorkspaceCommands": "此项目中还没有命令。",
+		"noGlobalCommands": "还没有全局命令。",
+		"addCommand": "添加斜杠命令",
+		"editCommand": "编辑命令",
+		"deleteCommand": "删除命令",
+		"deleteDialog": {
+			"title": "删除命令",
+			"description": "确定要删除命令 \"{{name}}\" 吗？此操作无法撤销。",
+			"confirm": "删除",
+			"cancel": "取消"
+		},
+		"createDialog": {
+			"title": "创建新斜杠命令",
+			"nameLabel": "名称",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "仅限小写字母、数字、连字符和下划线",
+			"sourceLabel": "位置",
+			"create": "创建",
+			"cancel": "取消"
+		},
+		"source": {
+			"global": "全局（在所有工作区中可用）",
+			"project": "工作区"
+		},
+		"validation": {
+			"nameRequired": "名称为必填项",
+			"nameTooLong": "名称必须为 64 个字符或更少",
+			"nameInvalid": "名称只能包含字母、数字、连字符和下划线"
+		},
+		"footer": "使用斜杠命令快速访问经常使用的提示词和工作流。"
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
@@ -253,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "最大请求数",
-			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
 		},
 		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
@@ -301,10 +342,40 @@
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
 		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useReasoning": "启用推理",
 		"useHostHeader": "使用自定义 Host 标头",
-		"useLegacyFormat": "使用传统 OpenAI API 格式",
 		"customHeaders": "自定义标头",
 		"headerName": "标头名称",
 		"headerValue": "标头值",
@@ -767,7 +838,6 @@
 				"label": "最大诊断消息数",
 				"description": "每个文件包含的最大诊断消息数。此限制适用于自动包含（启用复选框时）和手动 @problems 提及。较高的值提供更多上下文，但会增加令牌使用量。",
 				"resetTooltip": "重置为默认值 (50)",
-				"unlimited": "无限制诊断消息",
 				"unlimitedLabel": "无限制"
 			},
 			"delayAfterWrite": {
@@ -828,6 +898,15 @@
 			"label": "终端字符限制",
 			"description": "通过强制限制输出大小来覆盖行限制以防止内存问题。如果超出，保留开头和结尾并向 Kilo 显示内容被跳过的占位符。<0>了解更多</0>"
 		},
+		"outputPreviewSize": {
+			"label": "命令输出预览大小",
+			"description": "控制 Roo 直接看到的命令输出量。完整输出始终会被保存，需要时可以访问。",
+			"options": {
+				"small": "小 (5KB)",
+				"medium": "中 (10KB)",
+				"large": "大 (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "终端 shell 集成超时",
 			"description": "运行命令前等待 VS Code shell 集成的时间。如果 shell 启动缓慢或看到 'Shell Integration Unavailable' 错误，请提高此值。<0>了解更多</0>"
@@ -839,10 +918,6 @@
 		"commandDelay": {
 			"label": "终端命令延迟",
 			"description": "在每个命令后添加短暂暂停，以便 VS Code 终端刷新所有输出（bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep）。仅在看到缺少尾部输出时使用；否则保持为 0。<0>了解更多</0>"
-		},
-		"compressProgressBar": {
-			"label": "压缩进度条输出",
-			"description": "折叠进度条/旋转器，仅保留最终状态（节省 token）。<0>了解更多</0>"
 		},
 		"powershellCounter": {
 			"label": "启用 PowerShell 计数器解决方案",
@@ -872,14 +947,6 @@
 	"advancedSettings": {
 		"title": "高级设置"
 	},
-	"toolProtocol": {
-		"label": "工具调用协议",
-		"description": "选择 Kilo Code 如何与 API 通信。原生使用提供商的函数调用 API，而 XML 使用 XML 格式的工具定义。",
-		"default": "默认",
-		"xml": "XML",
-		"native": "原生",
-		"currentDefault": "默认: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "启用diff更新",
@@ -896,10 +963,6 @@
 					"unified": "统一 diff 策略采用多种方法应用差异并选择最佳方法。",
 					"multiBlock": "多块 diff 策略允许在一个请求中更新文件中的多个代码块。"
 				}
-			},
-			"matchPrecision": {
-				"label": "匹配精度",
-				"description": "控制代码匹配的精确程度。数值越低匹配越宽松（容错率高但风险大），建议保持100%以确保安全。"
 			}
 		},
 		"todoList": {
@@ -916,14 +979,6 @@
 			"name": "启用插入内容工具",
 			"description": "允许 Kilo Code 在特定行号插入内容，无需处理差异。"
 		},
-		"POWER_STEERING": {
-			"name": "启用增强导向模式",
-			"description": "开启后，Kilo Code 将更频繁地向模型推送当前模式定义的详细信息，从而强化对角色设定和自定义指令的遵循力度。注意：此模式会提升每条消息的 token 消耗量。"
-		},
-		"AUTOCOMPLETE": {
-			"name": "使用实验性“自动完成”功能",
-			"description": "启用后，Kilo Code 会在您键入时提供内联代码建议。"
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "允许批量搜索和替换",
 			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
@@ -935,10 +990,6 @@
 		"MARKETPLACE": {
 			"name": "启用 Marketplace",
 			"description": "启用后，你可以从 Marketplace 安装 MCP 和自定义模式。"
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "启用并发文件编辑",
-			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
@@ -995,14 +1046,6 @@
 			"name": "启用模型发起的斜杠命令",
 			"description": "启用后 Kilo Code 可运行斜杠命令执行工作流程。"
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "并行工具调用",
-			"description": "启用后，原生协议可在单个助手消息轮次中执行多个工具。"
-		},
-		"SPEECH_TO_TEXT": {
-			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
-			"name": "语音转文本 (STT)"
-		},
 		"CUSTOM_TOOLS": {
 			"name": "启用自定义工具",
 			"description": "启用后 Kilo 可从项目中的 .kilocode/tools 目录或全局工具目录 ~/.kilocode/tools 加载并使用自定义 TypeScript/JavaScript 工具。注意：这些工具将自动获批。",
@@ -1057,8 +1100,6 @@
 		"allModels": "全部模型"
 	},
 	"footer": {
-		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
-		"support": "如有财务问题，请联系客户支持 <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允许错误和使用情况报告",
 			"description": "通过发送使用数据和错误报告帮助改进 Kilo Code。绝不会发送代码、提示词或个人信息。详情请查看我们的隐私政策。"
@@ -1180,5 +1221,58 @@
 			"label": "需要 {{primaryMod}}+Enter 发送消息",
 			"description": "启用后，必须按 {{primaryMod}}+Enter 发送消息，而不仅仅是 Enter"
 		}
+	},
+	"skills": {
+		"description": "管理为代理提供上下文指令的技能。技能会在与您的任务相关时自动应用。<DocsLink>了解更多</DocsLink>",
+		"workspaceSkills": "工作区技能",
+		"globalSkills": "全局技能",
+		"noWorkspaceSkills": "此项目中还没有技能。",
+		"noGlobalSkills": "未配置全局技能。创建一个以添加在所有项目中可用的代理功能。",
+		"addSkill": "添加技能",
+		"editSkill": "编辑技能",
+		"deleteSkill": "删除技能",
+		"configureModes": "模式可用性",
+		"modeAny": "任意模式",
+		"modeCount": "{{count}} 种模式",
+		"deleteDialog": {
+			"title": "删除技能",
+			"description": "您确定要删除技能\"{{name}}\"吗？此操作无法撤销。",
+			"confirm": "删除",
+			"cancel": "取消"
+		},
+		"modeDialog": {
+			"title": "配置技能模式",
+			"description": "选择哪些模式可以使用此技能",
+			"intro": "为了保持上下文简洁，我们建议只在需要的模式中提供技能。",
+			"anyMode": "任何模式（随处可用）",
+			"save": "保存",
+			"cancel": "取消"
+		},
+		"createDialog": {
+			"title": "创建新技能",
+			"nameLabel": "名称",
+			"namePlaceholder": "my-skill-name",
+			"descriptionLabel": "描述",
+			"descriptionPlaceholder": "描述何时应使用此技能...",
+			"sourceLabel": "位置",
+			"modeLabel": "模式（可选）",
+			"modePlaceholder": "任何模式",
+			"modeHint": "将此技能限制为特定模式",
+			"modeAny": "任何模式",
+			"create": "创建",
+			"cancel": "取消"
+		},
+		"source": {
+			"global": "全局（在所有项目中可用）",
+			"project": "项目（仅此工作区）"
+		},
+		"validation": {
+			"nameRequired": "名称为必填项",
+			"nameTooLong": "名称不得超过64个字符",
+			"nameInvalid": "名称必须为1-64个小写字母、数字或连字符",
+			"descriptionRequired": "描述为必填项",
+			"descriptionTooLong": "描述不得超过1024个字符"
+		},
+		"footer": "使用技能编写器模式创建您自己的技能，可在 <MarketplaceLink>模式市集</MarketplaceLink> 中获得。"
 	}
 }

@@ -53,5 +53,10 @@
 		"mostRelevant": "Paling Relevan"
 	},
 	"viewAllHistory": "Lihat semua",
-	"shareSession": "Bagikan Sesi"
+	"subtasks_one": "{{count}} subtask",
+	"subtasks_other": "{{count}} subtask",
+	"subtaskTag": "Subtask",
+	"deleteWithSubtasks": "Ini juga akan menghapus {{count}} subtask. Apakah Anda yakin?",
+	"expandSubtasks": "Perluas subtask",
+	"collapseSubtasks": "Tutup subtask"
 }

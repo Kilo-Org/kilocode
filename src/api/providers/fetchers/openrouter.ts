@@ -238,14 +238,6 @@ export const parseOpenRouterModel = ({
 
 	const supportsPromptCache = typeof cacheReadsPrice !== "undefined" // some models support caching but don't charge a cacheWritesPrice, e.g. GPT-5
 
-	const supportsNativeTools = supportedParameters ? supportedParameters.includes("tools") : undefined
-
-	// kilocode_change start
-	const resolvedVersionedSettings = model.versioned_settings
-		? resolveVersionedSettings<ModelSettings>(model.versioned_settings)
-		: {}
-	// kilocode_change end
-
 	const modelInfo: ModelInfo = {
 		maxTokens: maxTokens || Math.ceil(model.context_length * 0.2),
 		contextWindow: model.context_length,
@@ -257,18 +249,7 @@ export const parseOpenRouterModel = ({
 		cacheReadsPrice,
 		description: model.description,
 		supportsReasoningEffort: supportedParameters ? supportedParameters.includes("reasoning") : undefined,
-		supportsNativeTools,
 		supportedParameters: supportedParameters ? supportedParameters.filter(isModelParameter) : undefined,
-		// kilocode_change start
-		displayName,
-		preferredIndex: model.preferredIndex,
-		supportsVerbosity: !!supportedParameters?.includes("verbosity") || undefined,
-		...parseModelSettings(
-			Object.keys(resolvedVersionedSettings).length > 0 ? resolvedVersionedSettings : (model.settings ?? {}),
-		),
-		// kilocode_change end
-		// Default to native tool protocol when native tools are supported
-		defaultToolProtocol: supportsNativeTools ? ("native" as const) : undefined,
 	}
 
 	if (OPEN_ROUTER_REASONING_BUDGET_MODELS.has(id)) {

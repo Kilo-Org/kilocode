@@ -19,9 +19,11 @@ import { useTaskWithId } from "@/kilocode/hooks/useTaskHistory"
 
 interface DeleteTaskDialogProps extends AlertDialogProps {
 	taskId: string
+	/** Number of subtasks that will also be deleted (for cascade delete warning) */
+	subtaskCount?: number
 }
 
-export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) => {
+export const DeleteTaskDialog = ({ taskId, subtaskCount = 0, ...props }: DeleteTaskDialogProps) => {
 	const { t } = useAppTranslation()
 	const [isEnterPressed] = useKeyPress("Enter")
 	const { data: tasks } = useTaskWithId([taskId]) // kilocode_change
@@ -44,19 +46,16 @@ export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) =>
 		}
 	}, [taskId, isEnterPressed, onDelete])
 
+	// Determine the message to show
+	const message =
+		subtaskCount > 0 ? t("history:deleteWithSubtasks", { count: subtaskCount }) : t("history:deleteTaskMessage")
+
 	return (
 		<AlertDialog {...props}>
 			<AlertDialogContent onEscapeKeyDown={() => onOpenChange?.(false)}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t("history:deleteTask")}</AlertDialogTitle>
-					{/* kilocode_change start */}
-					<AlertDialogDescription>
-						{isFavorited ? (
-							<div className="text-yellow-500 mb-2">{t("history:deleteTaskFavoritedWarning")}</div>
-						) : null}
-						{t("history:deleteTaskMessage")}
-					</AlertDialogDescription>
-					{/* kilocode_change end */}
+					<AlertDialogDescription>{message}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel asChild>

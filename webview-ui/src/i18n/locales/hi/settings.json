@@ -1,4 +1,5 @@
 {
+	"back": "टास्क व्यू पर वापस जाओ",
 	"common": {
 		"save": "सहेजें",
 		"done": "पूर्ण",
@@ -7,6 +8,10 @@
 		"select": "चुनें",
 		"add": "हेडर जोड़ें",
 		"remove": "हटाएं"
+	},
+	"search": {
+		"placeholder": "सेटिंग्स खोजें...",
+		"noResults": "कोई सेटिंग नहीं मिली"
 	},
 	"header": {
 		"title": "सेटिंग्स",
@@ -24,6 +29,7 @@
 		"providers": "प्रदाता",
 		"modes": "मोड",
 		"mcp": "एमसीपी सर्वर",
+		"worktrees": "Worktrees",
 		"autoApprove": "अनुमोदन",
 		"browser": "ब्राउज़र",
 		"checkpoints": "चेकपॉइंट",
@@ -37,7 +43,7 @@
 		"experimental": "प्रायोगिक",
 		"language": "भाषा",
 		"about": "परिचय",
-		"autoPurge": "स्वचालित सफाई"
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -57,10 +63,46 @@
 		},
 		"community": "सुझाव चाहिए या बस अन्य Kilo Code उपयोगकर्ताओं के साथ घूमना चाहते हैं? <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल हों",
 		"contactAndCommunity": "संपर्क और समुदाय",
-		"manageSettings": "सेटिंग्स प्रबंधित करें"
+		"manageSettings": "सेटिंग्स प्रबंधित करें",
+		"debugMode": {
+			"label": "डिबग मोड सक्षम करें",
+			"description": "टास्क हेडर में अतिरिक्त बटन दिखाने के लिए डिबग मोड सक्षम करें जो API वार्तालाप इतिहास और UI संदेशों को अस्थायी फ़ाइलों में सुंदर JSON के रूप में देखने की अनुमति देते हैं।"
+		}
 	},
 	"slashCommands": {
-		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>"
+		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>",
+		"workspaceCommands": "वर्कस्पेस कमांड",
+		"globalCommands": "ग्लोबल कमांड",
+		"noWorkspaceCommands": "इस प्रोजेक्ट में अभी तक कोई कमांड नहीं।",
+		"noGlobalCommands": "अभी तक कोई ग्लोबल कमांड नहीं।",
+		"addCommand": "स्लैश कमांड जोड़ें",
+		"editCommand": "कमांड संपादित करें",
+		"deleteCommand": "कमांड हटाएं",
+		"deleteDialog": {
+			"title": "कमांड हटाएं",
+			"description": "क्या आप वाकई कमांड \"{{name}}\" को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+			"confirm": "हटाएं",
+			"cancel": "रद्द करें"
+		},
+		"createDialog": {
+			"title": "नया स्लैश कमांड बनाएं",
+			"nameLabel": "नाम",
+			"namePlaceholder": "my-command-name",
+			"nameHint": "केवल लोअरकेस अक्षर, संख्याएं, हाइफन और अंडरस्कोर",
+			"sourceLabel": "स्थान",
+			"create": "बनाएं",
+			"cancel": "रद्द करें"
+		},
+		"source": {
+			"global": "ग्लोबल (सभी वर्कस्पेस में उपलब्ध)",
+			"project": "वर्कस्पेस"
+		},
+		"validation": {
+			"nameRequired": "नाम आवश्यक है",
+			"nameTooLong": "नाम 64 वर्ण या उससे कम होना चाहिए",
+			"nameInvalid": "नाम में केवल अक्षर, संख्याएं, हाइफन और अंडरस्कोर हो सकते हैं"
+		},
+		"footer": "अक्सर उपयोग किए जाने वाले संकेतों और वर्कफ़्लो तक तेज़ी से पहुंचने के लिए स्लैश कमांड का उपयोग करें।"
 	},
 	"prompts": {
 		"description": "प्रॉम्प्ट्स को बेहतर बनाना, कोड की व्याख्या करना और समस्याओं को ठीक करना जैसी त्वरित कार्रवाइयों के लिए उपयोग किए जाने वाले सहायक प्रॉम्प्ट्स को कॉन्फ़िगर करें। ये प्रॉम्प्ट्स Kilo Code को सामान्य विकास कार्यों के लिए बेहतर सहायता प्रदान करने में मदद करते हैं।"
@@ -253,7 +295,6 @@
 		},
 		"apiRequestLimit": {
 			"title": "अधिकतम अनुरोध",
-			"description": "कार्य जारी रखने के लिए अनुमति मांगने से पहले स्वचालित रूप से इतने API अनुरोध करें।",
 			"unlimited": "असीमित"
 		},
 		"selectOptionsFirst": "स्वतः-अनुमोदन सक्षम करने के लिए नीचे से कम से कम एक विकल्प चुनें",
@@ -307,12 +348,40 @@
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी",
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी प्राप्त करें",
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
-		"glamaApiKey": "Glama API कुंजी",
-		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"useReasoning": "तर्क सक्षम करें",
 		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
-		"useLegacyFormat": "पुराने OpenAI API प्रारूप का उपयोग करें",
 		"customHeaders": "कस्टम हेडर्स",
 		"headerName": "हेडर नाम",
 		"headerValue": "हेडर मूल्य",
@@ -767,7 +836,6 @@
 				"label": "अधिकतम डायग्नोस्टिक संदेश",
 				"description": "प्रति फ़ाइल शामिल किए जाने वाले डायग्नोस्टिक संदेशों की अधिकतम संख्या। यह सीमा स्वचालित समावेशन (जब चेकबॉक्स सक्षम है) और मैन्युअल @problems उल्लेख दोनों पर लागू होती है। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन टोकन उपयोग बढ़ाते हैं।",
 				"resetTooltip": "डिफ़ॉल्ट मान पर रीसेट करें (50)",
-				"unlimited": "असीमित डायग्नोस्टिक संदेश",
 				"unlimitedLabel": "असीमित"
 			},
 			"delayAfterWrite": {
@@ -828,6 +896,15 @@
 			"label": "टर्मिनल वर्ण सीमा",
 			"description": "मेमोरी समस्याओं को रोकने के लिए आउटपुट आकार पर कठोर सीमा लगाकर लाइन सीमा को ओवरराइड करता है। यदि पार हो जाती है, तो शुरुआत और अंत रखता है और Kilo को प्लेसहोल्डर दिखाता है जहां सामग्री छोड़ी गई है। <0>अधिक जानें</0>"
 		},
+		"outputPreviewSize": {
+			"label": "कमांड आउटपुट पूर्वावलोकन आकार",
+			"description": "नियंत्रित करता है कि Roo कितना कमांड आउटपुट सीधे देखता है। पूर्ण आउटपुट हमेशा सहेजा जाता है और आवश्यकता पड़ने पर सुलभ होता है।",
+			"options": {
+				"small": "छोटा (5KB)",
+				"medium": "मध्यम (10KB)",
+				"large": "बड़ा (20KB)"
+			}
+		},
 		"shellIntegrationTimeout": {
 			"label": "टर्मिनल शेल एकीकरण टाइमआउट",
 			"description": "कमांड चलाने से पहले VS Code शेल एकीकरण की प्रतीक्षा करने का समय। यदि आपका शेल धीरे शुरू होता है या आप 'Shell Integration Unavailable' त्रुटियां देखते हैं तो बढ़ाएं। <0>अधिक जानें</0>"
@@ -839,10 +916,6 @@
 		"commandDelay": {
 			"label": "टर्मिनल कमांड विलंब",
 			"description": "प्रत्येक कमांड के बाद छोटा विराम जोड़ता है ताकि VS Code टर्मिनल सभी आउटपुट फ्लश कर सके (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep)। केवल तभी उपयोग करें जब टेल आउटपुट गायब हो; अन्यथा 0 पर छोड़ दें। <0>अधिक जानें</0>"
-		},
-		"compressProgressBar": {
-			"label": "प्रगति बार आउटपुट संपीड़ित करें",
-			"description": "प्रगति बार/स्पिनर को संक्षिप्त करता है ताकि केवल अंतिम स्थिति रखी जाए (token बचाता है)। <0>अधिक जानें</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell काउंटर समाधान सक्षम करें",
@@ -872,14 +945,6 @@
 	"advancedSettings": {
 		"title": "उन्नत सेटिंग्स"
 	},
-	"toolProtocol": {
-		"label": "टूल कॉल प्रोटोकॉल",
-		"description": "चुनें कि रू एपीआई के साथ कैसे संचार करता है। नेटिव प्रदाता के फ़ंक्शन कॉलिंग एपीआई का उपयोग करता है, जबकि एक्सएमएल एक्सएमएल-स्वरूपित टूल परिभाषाओं का उपयोग करता है।",
-		"default": "डिफ़ॉल्ट",
-		"xml": "एक्सएमएल",
-		"native": "नेटिव",
-		"currentDefault": "डिफ़ॉल्ट: {{protocol}}"
-	},
 	"advanced": {
 		"diff": {
 			"label": "diffs के माध्यम से संपादन सक्षम करें",
@@ -896,10 +961,6 @@
 					"unified": "एकीकृत diff रणनीति diffs लागू करने के लिए कई दृष्टिकोण लेती है और सर्वोत्तम दृष्टिकोण चुनती है।",
 					"multiBlock": "मल्टी-ब्लॉक diff रणनीति एक अनुरोध में एक फाइल में कई कोड ब्लॉक अपडेट करने की अनुमति देती है।"
 				}
-			},
-			"matchPrecision": {
-				"label": "मिलान सटीकता",
-				"description": "यह स्लाइडर नियंत्रित करता है कि diffs लागू करते समय कोड अनुभागों को कितनी सटीकता से मेल खाना चाहिए। निम्न मान अधिक लचीले मिलान की अनुमति देते हैं लेकिन गलत प्रतिस्थापन का जोखिम बढ़ाते हैं। 100% से नीचे के मानों का उपयोग अत्यधिक सावधानी के साथ करें।"
 			}
 		},
 		"todoList": {
@@ -916,10 +977,6 @@
 			"name": "प्रायोगिक सामग्री सम्मिलित करने के उपकरण का उपयोग करें",
 			"description": "प्रायोगिक सामग्री सम्मिलित करने के उपकरण को सक्षम करें, जो Kilo Code को diff बनाए बिना विशिष्ट लाइन नंबरों पर सामग्री सम्मिलित करने की अनुमति देता है।"
 		},
-		"POWER_STEERING": {
-			"name": "प्रायोगिक \"पावर स्टीयरिंग\" मोड का उपयोग करें",
-			"description": "जब सक्षम किया जाता है, तो Kilo Code मॉडल को उसके वर्तमान मोड परिभाषा के विवरण के बारे में अधिक बार याद दिलाएगा। इससे भूमिका परिभाषाओं और कस्टम निर्देशों के प्रति अधिक मजबूत अनुपालन होगा, लेकिन प्रति संदेश अधिक token का उपयोग होगा।"
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "प्रायोगिक मल्टी ब्लॉक diff उपकरण का उपयोग करें",
 			"description": "जब सक्षम किया जाता है, तो Kilo Code मल्टी ब्लॉक diff उपकरण का उपयोग करेगा। यह एक अनुरोध में फ़ाइल में कई कोड ब्लॉक अपडेट करने का प्रयास करेगा।"
@@ -931,28 +988,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplace सक्षम करें",
 			"description": "जब सक्षम होता है, तो आप Marketplace से MCP और कस्टम मोड इंस्टॉल कर सकते हैं।"
-		},
-		"MULTI_FILE_APPLY_DIFF": {
-			"name": "समानांतर फ़ाइल संपादन सक्षम करें",
-			"description": "जब सक्षम किया जाता है, तो Kilo Code एक ही अनुरोध में कई फ़ाइलों को संपादित कर सकता है। जब अक्षम किया जाता है, तो Kilo Code को एक समय में एक फ़ाइल संपादित करनी होगी। इसे अक्षम करना तब मदद कर सकता है जब आप कम सक्षम मॉडल के साथ काम कर रहे हों या जब आप फ़ाइल संशोधनों पर अधिक नियंत्रण चाहते हों।"
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Gateway Provider, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
-			"apiProvider": "API प्रदाता",
-			"apiProviderList": {
-				"current": "वर्तमान"
-			},
-			"apiKey": "API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी API कुंजी दर्ज करें (वैकल्पिक)",
-			"modelLabel": "मॉडल चयन",
-			"modelDescription": "फ़ाइल संपादन के लिए किस Fast Apply मॉडल का उपयोग करना है चुनें",
-			"models": {
-				"auto": "स्वचालित (डिफ़ॉल्ट - सर्वोत्तम उपलब्ध चुनता है)",
-				"morphFast": "Morph v3 Fast (तेज़, कम लागत)",
-				"morphLarge": "Morph v3 Large (अधिक सक्षम)",
-				"relace": "Relace Apply v3"
-			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "बैकग्राउंड संपादन",
@@ -990,14 +1025,6 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "मॉडल द्वारा शुरू किए गए स्लैश कमांड सक्षम करें",
 			"description": "जब सक्षम होता है, Kilo Code वर्कफ़्लो चलाने के लिए आपके स्लैश कमांड चला सकता है।"
-		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "समानांतर टूल कॉल",
-			"description": "सक्षम होने पर, नेटिव प्रोटोकॉल एकल सहायक संदेश टर्न में एकाधिक टूल निष्पादित कर सकता है।"
-		},
-		"SPEECH_TO_TEXT": {
-			"name": "वाक्-से-पाठ (STT)",
-			"description": "जब सक्षम किया जाता है, तो Kilo Code OpenAI के Whisper मॉडल का उपयोग करके आपकी आवाज़ को टेक्स्ट में बदल सकता है। रिकॉर्डिंग शुरू करने के लिए चैट में माइक्रोफ़ोन बटन पर क्लिक करें। इसके लिए FFmpeg इंस्टॉल होना और एक कॉन्फ़िगर किया गया OpenAI API प्रोवाइडर होना आवश्यक है।"
 		},
 		"CUSTOM_TOOLS": {
 			"name": "कस्टम टूल सक्षम करें",
@@ -1053,8 +1080,6 @@
 		"allModels": "सभी मॉडल"
 	},
 	"footer": {
-		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",
-		"support": "वित्तीय प्रश्नों के लिए, कृपया <supportLink>https://kilo.ai/support</supportLink> पर ग्राहक सहायता से संपर्क करें",
 		"telemetry": {
 			"label": "त्रुटि और उपयोग रिपोर्टिंग की अनुमति दें",
 			"description": "उपयोग डेटा और त्रुटि रिपोर्ट भेजकर Kilo Code को बेहतर बनाने में मदद करें। कोड, प्रॉम्प्ट, या व्यक्तिगत जानकारी कभी भी नहीं भेजी जाती है। अधिक विवरण के लिए हमारी गोपनीयता नीति देखें।"
@@ -1176,5 +1201,58 @@
 			"label": "संदेश भेजने के लिए {{primaryMod}}+Enter की आवश्यकता है",
 			"description": "जब सक्षम हो, तो आपको केवल Enter के बजाय संदेश भेजने के लिए {{primaryMod}}+Enter दबाना होगा"
 		}
+	},
+	"skills": {
+		"description": "Skills का प्रबंधन करें जो एजेंट को संदर्भात्मक निर्देश प्रदान करते हैं। जब आपके कार्यों के लिए प्रासंगिक हों तो Skills स्वचालित रूप से लागू होते हैं। <DocsLink>और जानें</DocsLink>",
+		"workspaceSkills": "वर्कस्पेस Skills",
+		"globalSkills": "ग्लोबल Skills",
+		"noWorkspaceSkills": "इस प्रोजेक्ट में अभी तक कोई skills नहीं।",
+		"noGlobalSkills": "अभी तक कोई ग्लोबल skills नहीं।",
+		"addSkill": "Skill जोड़ें",
+		"editSkill": "Skill संपादित करें",
+		"deleteSkill": "Skill हटाएं",
+		"configureModes": "मोड उपलब्धता",
+		"modeAny": "कोई भी मोड",
+		"modeCount": "{{count}} मोड",
+		"deleteDialog": {
+			"title": "Skill हटाएं",
+			"description": "क्या आप वाकई skill \"{{name}}\" को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+			"confirm": "हटाएं",
+			"cancel": "रद्द करें"
+		},
+		"modeDialog": {
+			"title": "Skill मोड कॉन्फ़िगर करें",
+			"description": "चुनें कि कौन से मोड इस Skill का उपयोग कर सकते हैं",
+			"intro": "अपना संदर्भ हल्का रखने के लिए, हम अनुशंसा करते हैं कि Skill को केवल उन मोड के लिए उपलब्ध बनाएं जिन्हें इसकी आवश्यकता है।",
+			"anyMode": "कोई भी मोड (हर जगह उपलब्ध)",
+			"save": "सहेजें",
+			"cancel": "रद्द करें"
+		},
+		"createDialog": {
+			"title": "नया Skill बनाएं",
+			"nameLabel": "नाम",
+			"namePlaceholder": "my-skill-name",
+			"descriptionLabel": "विवरण",
+			"descriptionPlaceholder": "वर्णन करें कि इस skill का उपयोग कब किया जाना चाहिए...",
+			"sourceLabel": "स्थान",
+			"modeLabel": "मोड (वैकल्पिक)",
+			"modePlaceholder": "कोई भी मोड",
+			"modeHint": "इस skill को किसी विशिष्ट मोड तक सीमित करें",
+			"modeAny": "कोई भी मोड",
+			"create": "बनाएं",
+			"cancel": "रद्द करें"
+		},
+		"source": {
+			"global": "ग्लोबल (सभी प्रोजेक्ट्स में उपलब्ध)",
+			"project": "प्रोजेक्ट (केवल यह वर्कस्पेस)"
+		},
+		"validation": {
+			"nameRequired": "नाम आवश्यक है",
+			"nameTooLong": "नाम 64 वर्णों से अधिक नहीं होना चाहिए",
+			"nameInvalid": "नाम 1-64 छोटे अक्षर, संख्याएं या हाइफ़न होना चाहिए",
+			"descriptionRequired": "विवरण आवश्यक है",
+			"descriptionTooLong": "विवरण 1024 वर्णों से अधिक नहीं होना चाहिए"
+		},
+		"footer": "Skill Writer मोड के साथ अपने स्वयं के Skills बनाएं, <MarketplaceLink>Modes Marketplace</MarketplaceLink> में उपलब्ध।"
 	}
 }

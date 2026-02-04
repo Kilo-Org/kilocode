@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Tên kỹ năng phải từ 1-{{maxLength}} ký tự (nhận được {{length}})",
+		"name_format": "Tên kỹ năng chỉ có thể chứa chữ cái thường, số và dấu gạch ngang (không có dấu gạch ngang đầu hoặc cuối, không có dấu gạch ngang liên tiếp)",
+		"description_length": "Mô tả kỹ năng phải từ 1-1024 ký tự (nhận được {{length}})",
+		"no_workspace": "Không thể tạo kỹ năng dự án: không có thư mục vùng làm việc nào được mở",
+		"already_exists": "Kỹ năng \"{{name}}\" đã tồn tại tại {{path}}",
+		"not_found": "Không tìm thấy kỹ năng \"{{name}}\" trong {{source}}{{modeInfo}}",
+		"missing_create_fields": "Thiếu các trường bắt buộc: skillName, source hoặc skillDescription",
+		"missing_move_fields": "Thiếu các trường bắt buộc: skillName hoặc source",
+		"missing_update_modes_fields": "Thiếu các trường bắt buộc: skillName hoặc source",
+		"manager_unavailable": "Trình quản lý kỹ năng không khả dụng",
+		"missing_delete_fields": "Thiếu các trường bắt buộc: skillName hoặc source",
+		"skill_not_found": "Không tìm thấy kỹ năng \"{{name}}\"",
+		"cannot_modify_builtin": "Không thể tạo hoặc xóa kỹ năng tích hợp sẵn",
+		"cannot_open_builtin": "Không thể mở kỹ năng tích hợp sẵn dưới dạng tệp"
+	}
+}

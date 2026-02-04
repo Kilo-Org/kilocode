@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "{{prevContextTokens}} टोकन के संदर्भ को संक्षिप्त करने के लिए पर्याप्त संदेश नहीं हैं। कम से कम {{minimumMessageCount}} संदेश आवश्यक हैं, लेकिन केवल {{messageCount}} उपलब्ध हैं।",
 		"condensed_recently": "संदर्भ हाल ही में संक्षिप्त किया गया था; इस प्रयास को छोड़ा जा रहा है",
 		"condense_handler_invalid": "संदर्भ को संक्षिप्त करने के लिए API हैंडलर अमान्य है",
-		"condense_context_grew": "संक्षिप्तीकरण के दौरान संदर्भ का आकार {{prevContextTokens}} से बढ़कर {{newContextTokens}} हो गया; इस प्रयास को छोड़ा जा रहा है",
+		"condense_api_failed": "संक्षिप्तीकरण API कॉल विफल: {{message}}",
 		"url_timeout": "वेबसाइट लोड होने में बहुत समय लगा (टाइमआउट)। यह धीमे कनेक्शन, भारी वेबसाइट या अस्थायी रूप से अनुपलब्ध होने के कारण हो सकता है। आप बाद में फिर से कोशिश कर सकते हैं या जांच सकते हैं कि URL सही है या नहीं।",
 		"url_not_found": "वेबसाइट का पता नहीं मिल सका। कृपया जांचें कि URL सही है और फिर से कोशिश करें।",
 		"no_internet": "इंटरनेट कनेक्शन नहीं है। कृपया अपना नेटवर्क कनेक्शन जांचें और फिर से कोशिश करें।",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Roo प्रदाता को क्लाउड प्रमाणीकरण की आवश्यकता है। कृपया Roo Code Cloud में साइन इन करें।"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API कुंजी में अमान्य वर्ण हैं।"
+			"invalidKeyInvalidChars": "API कुंजी में अमान्य वर्ण हैं।",
+			"apiRequestFailed": "API अनुरोध विफल ({{status}})"
 		},
 		"manual_url_empty": "कृपया एक वैध callback URL दर्ज करें",
 		"manual_url_no_query": "अवैध callback URL: क्वेरी पैरामीटर गुम हैं",
 		"manual_url_missing_params": "अवैध callback URL: आवश्यक पैरामीटर गुम हैं (code और state)",
 		"manual_url_auth_failed": "मैनुअल URL प्रमाणीकरण असफल",
-		"manual_url_auth_error": "प्रमाणीकरण असफल"
+		"manual_url_auth_error": "प्रमाणीकरण असफल",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "कोई टर्मिनल सामग्री चयनित नहीं",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "उपयोगकर्ता द्वारा प्रतिक्रिया बाधित",
-		"responseInterruptedByApiError": "API त्रुटि द्वारा प्रतिक्रिया बाधित"
+		"responseInterruptedByApiError": "API त्रुटि द्वारा प्रतिक्रिया बाधित",
+		"streamTerminatedByProvider": "प्रदाता ने अनुरोध समाप्त किया"
 	},
 	"storage": {
 		"prompt_custom_path": "वार्तालाप इतिहास के लिए कस्टम स्टोरेज पाथ दर्ज करें, डिफ़ॉल्ट स्थान का उपयोग करने के लिए खाली छोड़ दें",

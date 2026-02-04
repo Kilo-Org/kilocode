@@ -21,7 +21,7 @@ export function formatPathTooltip(path?: string, additionalContent?: string): st
 	const formattedPath = removeLeadingNonAlphanumeric(path) + "\u200E"
 
 	if (additionalContent) {
-		return formattedPath + additionalContent
+		return formattedPath + " " + additionalContent
 	}
 
 	return formattedPath

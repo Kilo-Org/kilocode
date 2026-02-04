@@ -48,15 +48,8 @@
 	"settings.apiRequestTimeout.description": "Temps maximum en secondes d'attente pour les réponses de l'API (0 = pas de timeout, 1-86400s, par défaut : 600s). Des valeurs plus élevées sont recommandées pour les fournisseurs locaux comme LM Studio et Ollama qui peuvent nécessiter plus de temps de traitement.",
 	"settings.newTaskRequireTodos.description": "Exiger le paramètre todos lors de la création de nouvelles tâches avec l'outil new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La taille du lot pour les opérations d'embedding lors de l'indexation du code. Ajustez ceci selon les limites de votre fournisseur d'API. Par défaut, c'est 60.",
-	"settings.toolProtocol.description": "Protocole d'outil à utiliser pour les interactions AI. XML est le protocole par défaut et recommandé. Natif est expérimental et peut ne pas fonctionner avec tous les fournisseurs.",
 	"settings.debug.description": "Active le mode debug pour afficher des boutons supplémentaires permettant de visualiser l'historique de conversation de l'API et les messages de l'interface utilisateur sous forme de JSON formaté dans des fichiers temporaires.",
-	"ghost.input.title": "Écrivain fantôme Kilo Code",
-	"ghost.input.placeholder": "Décrivez ce que vous voulez coder...",
-	"ghost.commands.generateSuggestions": "Kilo Code : Générer des Modifications Suggérées",
-	"ghost.commands.displaySuggestions": "Afficher les Modifications Suggérées",
-	"ghost.commands.cancelSuggestions": "Annuler les Modifications Suggérées",
-	"ghost.commands.applyCurrentSuggestion": "Appliquer la Modification Suggérée Actuelle",
-	"ghost.commands.applyAllSuggestions": "Appliquer Toutes les Modifications Suggérées",
-	"ghost.commands.goToNextSuggestion": "Aller à la Suggestion Suivante",
-	"ghost.commands.goToPreviousSuggestion": "Aller à la Suggestion Précédente"
+	"settings.debugProxy.enabled.description": "**Activer le Debug Proxy** — Redirige toutes les requêtes réseau sortantes via un proxy pour le debug MITM. Actif uniquement quand tu es en mode debug (F5).",
+	"settings.debugProxy.serverUrl.description": "URL du proxy (par ex. `http://127.0.0.1:8888`). Utilisée uniquement quand le **Debug Proxy** est activé.",
+	"settings.debugProxy.tlsInsecure.description": "Accepter les certificats auto-signés du proxy. **Requis pour l'inspection MITM.** ⚠️ Non sécurisé — à utiliser uniquement pour le debug local."
 }

@@ -6,12 +6,9 @@ import { CodeIndexManager } from "../../services/code-index/manager"
 import { getWorkspacePath } from "../../utils/path"
 import { formatResponse } from "../prompts/responses"
 import { VectorStoreSearchResult } from "../../services/code-index/interfaces"
+import type { ToolUse } from "../../shared/tools"
+
 import { BaseTool, ToolCallbacks } from "./BaseTool"
-import type {
-	PushToolResult, // kilocode_change
-	ToolUse,
-} from "../../shared/tools"
-import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer" // kilocode_change
 
 interface CodebaseSearchParams {
 	query: string
@@ -21,23 +18,9 @@ interface CodebaseSearchParams {
 export class CodebaseSearchTool extends BaseTool<"codebase_search"> {
 	readonly name = "codebase_search" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): CodebaseSearchParams {
-		let query = params.query
-		let directoryPrefix = params.path
-
-		if (directoryPrefix) {
-			directoryPrefix = path.normalize(directoryPrefix)
-		}
-
-		return {
-			query: query || "",
-			path: directoryPrefix,
-		}
-	}
-
 	async execute(params: CodebaseSearchParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
-		let { query, path: directoryPrefix } = params // kilocode_change: const=>let
+		const { askApproval, handleError, pushToolResult } = callbacks
+		const { query, path: directoryPrefix } = params
 
 		const workspacePath = task.cwd && task.cwd.trim() !== "" ? task.cwd : getWorkspacePath()
 

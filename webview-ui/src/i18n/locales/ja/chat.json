@@ -28,7 +28,8 @@
 		"openInCloud": "Roo Code Cloudでタスクを開く",
 		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。",
 		"openApiHistory": "API履歴を開く",
-		"openUiHistory": "UI履歴を開く"
+		"openUiHistory": "UI履歴を開く",
+		"backToParentTask": "親タスク"
 	},
 	"history": {
 		"title": "履歴"
@@ -38,7 +39,10 @@
 	"tokenProgress": {
 		"availableSpace": "利用可能な空き容量: {{amount}} トークン",
 		"tokensUsed": "使用トークン: {{used}} / {{total}}",
-		"reservedForResponse": "モデル応答用に予約: {{amount}} トークン"
+		"reservedForResponse": "モデル応答用に予約: {{amount}} トークン",
+		"tokensUsedLabel": "使用トークン",
+		"reservedForResponseLabel": "応答用に予約",
+		"availableSpaceLabel": "利用可能な空き容量"
 	},
 	"retry": {
 		"title": "再試行",
@@ -88,10 +92,15 @@
 		"title": "終了",
 		"tooltip": "現在のタスクを終了"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "現在のタスクを停止"
+	},
 	"cancel": {
 		"title": "キャンセル",
 		"tooltip": "現在の操作をキャンセル"
 	},
+	"enqueueMessage": "メッセージをキューに追加（現在のタスク完了後に送信されます）",
 	"scrollToBottom": "チャットの最下部にスクロール",
 	"about": "AIアシスタンスでコードを生成、リファクタリング、デバッグします。詳細については、<DocsLink>ドキュメント</DocsLink>をご確認ください。",
 	"docs": "詳細については、<DocsLink>ドキュメント</DocsLink>をご確認ください。",
@@ -149,15 +158,15 @@
 		"rateLimitWait": "レート制限中",
 		"errorTitle": "プロバイダーエラー {{code}}",
 		"errorMessage": {
-			"docs": "ドキュメント",
-			"goToSettings": "設定",
 			"400": "プロバイダーはリクエストをそのまま処理できませんでした。タスクを停止して別のアプローチを試してください。",
 			"401": "プロバイダーで認証できませんでした。API キーの設定を確認してください。",
 			"402": "アカウントの資金/クレジットが不足しているようです。プロバイダーに移動してさらに追加してください。",
 			"403": "認可されていません。API キーは有効ですが、プロバイダーがこのリクエストの完了を拒否しました。",
 			"429": "リクエストが多すぎます。プロバイダーによってレート制限されています。次の API 呼び出しの前にお待ちください。",
 			"500": "プロバイダー サーバー エラー。プロバイダー側に問題があり、リクエスト自体に問題はありません。",
-			"unknown": "不明な API エラー。Kilo のサポートにお問い合わせください。",
+			"docs": "ドキュメント",
+			"goToSettings": "設定",
+			"unknown": "不明な API エラー。Roo Code のサポートにお問い合わせください。",
 			"connection": "接続エラー。インターネット接続が機能していることを確認してください。",
 			"claudeCodeNotAuthenticated": "Claude Codeを使用するにはサインインが必要です。設定に移動して「Claude Codeにサインイン」をクリックして認証してください。"
 		}
@@ -267,7 +276,8 @@
 		"completionContent": "サブタスク完了",
 		"resultContent": "サブタスク結果",
 		"defaultResult": "次のタスクに進んでください。",
-		"completionInstructions": "サブタスク完了！結果を確認し、修正や次のステップを提案できます。問題なければ、親タスクに結果を返すために確認してください。"
+		"completionInstructions": "サブタスク完了！結果を確認し、修正や次のステップを提案できます。問題なければ、親タスクに結果を返すために確認してください。",
+		"goToSubtask": "タスクを表示"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Codeは質問があります"
@@ -285,7 +295,8 @@
 		"title": "エラー詳細",
 		"copyToClipboard": "クリップボードにコピー",
 		"copied": "コピーしました！",
-		"diagnostics": "詳細なエラー情報を取得"
+		"diagnostics": "詳細なエラー情報を取得",
+		"proxyProvider": "プロキシベースのプロバイダーを使用しているようです。ログを確認し、Rooのリクエストを書き換えていないことを確認してください。"
 	},
 	"powershell": {
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
@@ -306,7 +317,7 @@
 		"triggerLabel_zero": "0個の自動承認",
 		"triggerLabel_one": "1個の自動承認済み",
 		"triggerLabel_other": "{{count}}個の自動承認済み",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "考え中",
@@ -327,6 +338,10 @@
 			"description": "コンテキストウィンドウの制限内に収めるため、古いメッセージが会話から削除されました。これは圧縮と比較して高速ですが、コンテキストの保持性が低いアプローチです。"
 		}
 	},
+	"skill": {
+		"wantsToLoad": "Rooはスキルを読み込もうとしています",
+		"didLoad": "Rooはスキルを読み込みました"
+	},
 	"followUpSuggest": {
 		"copyToInput": "入力欄にコピー（またはShift + クリック）",
 		"timerPrefix": "自動承認が有効です。{{seconds}}秒後に選択中…"
@@ -343,8 +358,9 @@
 		},
 		"release": {
 			"heading": "新機能:",
-			"skills": "Rooが<skillsLink>Agent Skills</skillsLink>に対応しました - Rooの機能を拡張するためのプロンプト、ツール、リソースの再利用可能なパッケージです。",
-			"nativeToolCalling": "すべての新しいタスクではネイティブツール呼び出しが必須になりました。<blogLink>詳しく知る</blogLink>理由と問題が発生した場合の対応方法について。"
+			"parallelTools": "並列ツール呼び出し: ツールはデフォルトで並列実行され、マルチファイル操作と複雑なタスクが大幅に高速化されます。",
+			"readFileIndentation": "より賢いファイル読み取り: 新しいインデンテーションモードは、完全なセマンティックコードブロック (関数、クラス) を関数中断なしで抽出—検索結果から特定の行をターゲットにするのに最適です。",
+			"readCommandOutput": "ロスレス端末出力: 新しい read_command_output ツールは、ページネーションと正規表現フィルタリングを備えた切り詰められた実行から完全なコマンド出力を取得します。"
 		},
 		"cloudAgents": {
 			"heading": "クラウドの新機能:",
@@ -355,9 +371,15 @@
 		"careers": "また、<careersLink>採用中です！</careersLink>",
 		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/KiloCode</redditLink>でフォローしてください 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "合計コスト（サブタスク含む）: ${{cost}}",
+		"total": "合計コスト: ${{cost}}",
+		"includesSubtasks": "サブタスクのコストを含む"
+	},
 	"browser": {
 		"session": "ブラウザセッション",
-		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
+		"active": "アクティブ",
+		"rooWantsToUse": "Rooはブラウザを使用したい",
 		"consoleLogs": "コンソールログ",
 		"noNewLogs": "(新しいログはありません)",
 		"screenshot": "ブラウザのスクリーンショット",
@@ -496,5 +518,17 @@
 		"updated": "To-Doリストを更新しました",
 		"completed": "完了",
 		"started": "開始"
+	},
+	"tooManyTools": {
+		"title": "有効になっているツールが多すぎます",
+		"toolsPart_one": "{{count}} ツール",
+		"toolsPart_other": "{{count}} ツール",
+		"serversPart_one": "{{count}} MCP サーバー",
+		"serversPart_other": "{{count}} MCP サーバー",
+		"messageTemplate": "{{servers}}経由で{{tools}}が有効になっています。このような高い数は、モデルを混乱させてエラーを引き起こす可能性があります。{{threshold}}以下に保つようにしてください。",
+		"openMcpSettings": "MCP 設定を開く"
+	},
+	"readCommandOutput": {
+		"title": "Rooがコマンド出力を読み込みました"
 	}
 }

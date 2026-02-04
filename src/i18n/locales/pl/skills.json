@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Nazwa umiejętności musi mieć 1-{{maxLength}} znaków (otrzymano {{length}})",
+		"name_format": "Nazwa umiejętności może zawierać tylko małe litery, cyfry i myślniki (bez myślników na początku lub końcu, bez następujących po sobie myślników)",
+		"description_length": "Opis umiejętności musi mieć 1-1024 znaków (otrzymano {{length}})",
+		"no_workspace": "Nie można utworzyć umiejętności projektu: nie otwarto folderu obszaru roboczego",
+		"already_exists": "Umiejętność \"{{name}}\" już istnieje w {{path}}",
+		"not_found": "Nie znaleziono umiejętności \"{{name}}\" w {{source}}{{modeInfo}}",
+		"missing_create_fields": "Brakuje wymaganych pól: skillName, source lub skillDescription",
+		"missing_move_fields": "Brakuje wymaganych pól: skillName lub source",
+		"missing_update_modes_fields": "Brakuje wymaganych pól: skillName lub source",
+		"manager_unavailable": "Menedżer umiejętności niedostępny",
+		"missing_delete_fields": "Brakuje wymaganych pól: skillName lub source",
+		"skill_not_found": "Nie znaleziono umiejętności \"{{name}}\"",
+		"cannot_modify_builtin": "Wbudowane umiejętności nie mogą być tworzone ani usuwane",
+		"cannot_open_builtin": "Wbudowane umiejętności nie mogą być otwierane jako pliki"
+	}
+}

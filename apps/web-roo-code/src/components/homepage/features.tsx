@@ -39,7 +39,7 @@ export const features: Feature[] = [
 		icon: CheckCheck,
 		title: "Granular auto-approval",
 		description:
-			"Control each action and make Roo as autonomous as you want as you build confidence. Or go YOLO and let it rip.",
+			"Control each action and make Roo as autonomous as you want as you build confidence. Or go BRRR and let it rip.",
 	},
 	{
 		icon: Boxes,
@@ -92,7 +92,7 @@ export function Features() {
 			opacity: 1,
 			transition: {
 				duration: 1.2,
-				ease: "easeOut",
+				ease: "easeOut" as const,
 			},
 		},
 	}

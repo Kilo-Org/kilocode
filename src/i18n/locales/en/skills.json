@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Skill name must be 1-{{maxLength}} characters (got {{length}})",
+		"name_format": "Skill name must be lowercase letters/numbers/hyphens only (no leading/trailing hyphen, no consecutive hyphens)",
+		"description_length": "Skill description must be 1-1024 characters (got {{length}})",
+		"no_workspace": "Cannot create project skill: no workspace folder is open",
+		"already_exists": "Skill \"{{name}}\" already exists at {{path}}",
+		"not_found": "Skill \"{{name}}\" not found in {{source}}{{modeInfo}}",
+		"missing_create_fields": "Missing required fields: skillName, source, or skillDescription",
+		"missing_move_fields": "Missing required fields: skillName or source",
+		"missing_update_modes_fields": "Missing required fields: skillName or source",
+		"manager_unavailable": "Skills manager not available",
+		"missing_delete_fields": "Missing required fields: skillName or source",
+		"skill_not_found": "Skill \"{{name}}\" not found",
+		"cannot_modify_builtin": "Built-in skills cannot be created, deleted, or moved",
+		"cannot_open_builtin": "Built-in skills cannot be opened as files"
+	}
+}

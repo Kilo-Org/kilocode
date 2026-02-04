@@ -3,28 +3,21 @@ import { memo } from "react"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
-// import { useTaskSearch } from "./useTaskSearch" // kilocode_change
-import TaskItem from "./TaskItem"
-import { useTaskHistory } from "@/kilocode/hooks/useTaskHistory"
+import { useTaskSearch } from "./useTaskSearch"
+import { useGroupedTasks } from "./useGroupedTasks"
+import TaskGroupItem from "./TaskGroupItem"
 
-const HistoryPreview = ({ taskHistoryVersion }: { taskHistoryVersion: number } /*kilocode_change*/) => {
-	// kilocode_change start
-	const { data } = useTaskHistory(
-		{
-			workspace: "current",
-			sort: "newest",
-			favoritesOnly: false,
-			pageIndex: 0,
-		},
-		taskHistoryVersion,
-	)
-	const tasks = data?.historyItems ?? []
-	// kilocode_change end
+const HistoryPreview = () => {
+	const { tasks, searchQuery } = useTaskSearch()
+	const { groups, toggleExpand } = useGroupedTasks(tasks, searchQuery)
 	const { t } = useAppTranslation()
 
 	const handleViewAllHistory = () => {
 		vscode.postMessage({ type: "switchTab", tab: "history" })
 	}
+
+	// Show up to 4 groups (parent + subtasks count as 1 block)
+	const displayGroups = groups.slice(0, 4)
 
 	return (
 		<div className="flex flex-col gap-1">
@@ -37,10 +30,15 @@ const HistoryPreview = ({ taskHistoryVersion }: { taskHistoryVersion: number } /
 					{t("history:viewAllHistory")}
 				</button>
 			</div>
-			{tasks.length !== 0 && (
+			{displayGroups.length !== 0 && (
 				<>
-					{tasks.slice(0, 4).map((item) => (
-						<TaskItem key={item.id} item={item} variant="compact" />
+					{displayGroups.map((group) => (
+						<TaskGroupItem
+							key={group.parent.id}
+							group={group}
+							variant="compact"
+							onToggleExpand={() => toggleExpand(group.parent.id)}
+						/>
 					))}
 				</>
 			)}

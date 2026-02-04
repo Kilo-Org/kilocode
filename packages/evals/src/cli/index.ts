@@ -2,11 +2,11 @@ import * as fs from "fs"
 
 import { run, command, option, flag, number, boolean } from "cmd-ts"
 
-import { EVALS_REPO_PATH } from "../exercises/index.js"
+import { EVALS_REPO_PATH } from "../exercises/index"
 
-import { runCi } from "./runCi.js"
-import { runEvals } from "./runEvals.js"
-import { processTask } from "./runTask.js"
+import { runCi } from "./runCi"
+import { runEvals } from "./runEvals"
+import { processTask } from "./processTask"
 
 const main = async () => {
 	await run(

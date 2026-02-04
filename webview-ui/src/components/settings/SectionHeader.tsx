@@ -11,11 +11,11 @@ export const SectionHeader = ({ description, children, className, ...props }: Se
 	return (
 		<div
 			className={cn(
-				"sticky top-0 z-10 text-vscode-sideBar-foreground bg-vscode-sideBar-background brightness-90 px-5 py-4",
+				"sticky top-0 z-10 text-vscode-sideBar-foreground bg-vscode-sideBar-background px-5 pt-6 pb-4",
 				className,
 			)}
 			{...props}>
-			<h4 className="m-0">{children}</h4>
+			<h3 className="text-[1.25em] font-semibold text-vscode-foreground m-0">{children}</h3>
 			{description && <p className="text-vscode-descriptionForeground text-sm mt-2 mb-0">{description}</p>}
 		</div>
 	)

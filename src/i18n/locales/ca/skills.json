@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "El nom de l'habilitat ha de tenir entre 1 i {{maxLength}} caràcters (s'han rebut {{length}})",
+		"name_format": "El nom de l'habilitat només pot contenir lletres minúscules, números i guions (sense guions inicials o finals, sense guions consecutius)",
+		"description_length": "La descripció de l'habilitat ha de tenir entre 1 i 1024 caràcters (s'han rebut {{length}})",
+		"no_workspace": "No es pot crear l'habilitat del projecte: no hi ha cap carpeta d'espai de treball oberta",
+		"already_exists": "L'habilitat \"{{name}}\" ja existeix a {{path}}",
+		"not_found": "No s'ha trobat l'habilitat \"{{name}}\" a {{source}}{{modeInfo}}",
+		"missing_create_fields": "Falten camps obligatoris: skillName, source o skillDescription",
+		"missing_move_fields": "Falten camps obligatoris: skillName o source",
+		"missing_update_modes_fields": "Falten camps obligatoris: skillName o source",
+		"manager_unavailable": "El gestor d'habilitats no està disponible",
+		"missing_delete_fields": "Falten camps obligatoris: skillName o source",
+		"skill_not_found": "No s'ha trobat l'habilitat \"{{name}}\"",
+		"cannot_modify_builtin": "Les habilitats integrades no es poden crear ni eliminar",
+		"cannot_open_builtin": "Les habilitats integrades no es poden obrir com a fitxers"
+	}
+}

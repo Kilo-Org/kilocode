@@ -13,7 +13,7 @@ const checkboxVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"border-vscode-foreground data-[state=checked]:bg-vscode-foreground data-[state=checked]:text-primary-foreground",
+					"border-vscode-foreground data-[state=checked]:bg-primary data-[state=checked]:text-foreground",
 				description:
 					"border-vscode-descriptionForeground data-[state=checked]:bg-vscode-descriptionForeground data-[state=checked]:text-white",
 			},

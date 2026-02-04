@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Vaardigheidsnaam moet 1-{{maxLength}} tekens lang zijn ({{length}} ontvangen)",
+		"name_format": "Vaardigheidsnaam mag alleen kleine letters, cijfers en koppeltekens bevatten (geen voorloop- of achterloop-koppeltekens, geen opeenvolgende koppeltekens)",
+		"description_length": "Vaardigheidsbeschrijving moet 1-1024 tekens lang zijn ({{length}} ontvangen)",
+		"no_workspace": "Kan projectvaardigheid niet aanmaken: geen werkruimtemap geopend",
+		"already_exists": "Vaardigheid \"{{name}}\" bestaat al op {{path}}",
+		"not_found": "Vaardigheid \"{{name}}\" niet gevonden in {{source}}{{modeInfo}}",
+		"missing_create_fields": "Vereiste velden ontbreken: skillName, source of skillDescription",
+		"missing_move_fields": "Vereiste velden ontbreken: skillName of source",
+		"missing_update_modes_fields": "Vereiste velden ontbreken: skillName of source",
+		"manager_unavailable": "Vaardigheidenbeheerder niet beschikbaar",
+		"missing_delete_fields": "Vereiste velden ontbreken: skillName of source",
+		"skill_not_found": "Vaardigheid \"{{name}}\" niet gevonden",
+		"cannot_modify_builtin": "Ingebouwde vaardigheden kunnen niet worden aangemaakt of verwijderd",
+		"cannot_open_builtin": "Ingebouwde vaardigheden kunnen niet als bestanden worden geopend"
+	}
+}

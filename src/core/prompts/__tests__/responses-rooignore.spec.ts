@@ -51,12 +51,13 @@ describe("RooIgnore Response Formatting", () => {
 		it("should format error message for ignored files", () => {
 			const errorMessage = formatResponse.rooIgnoreError("secrets/api-keys.json")
 
-			// Verify error message format
-			expect(errorMessage).toContain(
-				"Access to secrets/api-keys.json is blocked by the .kilocodeignore file settings",
-			)
-			expect(errorMessage).toContain("continue in the task without using this file")
-			expect(errorMessage).toContain("ask the user to update the .kilocodeignore file")
+			// Verify error message format (JSON)
+			const parsed = JSON.parse(errorMessage) as any
+			expect(parsed.status).toBe("error")
+			expect(parsed.type).toBe("access_denied")
+			expect(parsed.path).toBe("secrets/api-keys.json")
+			expect(parsed.suggestion).toContain("continue without this file")
+			expect(parsed.suggestion).toContain("update the .rooignore file")
 		})
 
 		/**
@@ -68,7 +69,8 @@ describe("RooIgnore Response Formatting", () => {
 			// Test each path
 			for (const testPath of paths) {
 				const errorMessage = formatResponse.rooIgnoreError(testPath)
-				expect(errorMessage).toContain(`Access to ${testPath} is blocked`)
+				const parsed = JSON.parse(errorMessage) as any
+				expect(parsed.path).toBe(testPath)
 			}
 		})
 	})

@@ -28,7 +28,8 @@
 		"openInCloud": "Taak openen in Roo Code Cloud",
 		"openInCloudIntro": "Blijf Roo vanaf elke locatie monitoren of ermee interacteren. Scan, klik of kopieer om te openen.",
 		"openApiHistory": "API-geschiedenis openen",
-		"openUiHistory": "UI-geschiedenis openen"
+		"openUiHistory": "UI-geschiedenis openen",
+		"backToParentTask": "Bovenliggende taak"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -57,7 +58,10 @@
 	"tokenProgress": {
 		"availableSpace": "Beschikbare ruimte: {{amount}} tokens",
 		"tokensUsed": "Gebruikte tokens: {{used}} van {{total}}",
-		"reservedForResponse": "Gereserveerd voor modelantwoord: {{amount}} tokens"
+		"reservedForResponse": "Gereserveerd voor modelantwoord: {{amount}} tokens",
+		"tokensUsedLabel": "Gebruikte tokens",
+		"reservedForResponseLabel": "Gereserveerd voor antwoord",
+		"availableSpaceLabel": "Beschikbare ruimte"
 	},
 	"reject": {
 		"title": "Weigeren",
@@ -88,10 +92,15 @@
 		"title": "Beëindigen",
 		"tooltip": "Beëindig de huidige taak"
 	},
+	"stop": {
+		"title": "Stoppen",
+		"tooltip": "Stop de huidige taak"
+	},
 	"cancel": {
 		"title": "Annuleren",
 		"tooltip": "Annuleer de huidige bewerking"
 	},
+	"enqueueMessage": "Bericht aan de wachtrij toevoegen (wordt verzonden nadat de huidige taak is voltooid)",
 	"scrollToBottom": "Scroll naar onderaan de chat",
 	"about": "Genereer, refactor en debug code met AI-assistentie. Bekijk onze <DocsLink>documentatie</DocsLink> voor meer informatie.",
 	"docs": "Bekijk onze <DocsLink>documentatie</DocsLink> voor meer informatie.",
@@ -262,7 +271,8 @@
 		"completionContent": "Subtaak voltooid",
 		"resultContent": "Subtaakresultaten",
 		"defaultResult": "Ga verder met de volgende taak.",
-		"completionInstructions": "Subtaak voltooid! Je kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles goed is, bevestig dan om het resultaat terug te sturen naar de hoofdtaak."
+		"completionInstructions": "Subtaak voltooid! Je kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles goed is, bevestig dan om het resultaat terug te sturen naar de hoofdtaak.",
+		"goToSubtask": "Taak weergeven"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code heeft een vraag"
@@ -285,7 +295,8 @@
 		"title": "Foutdetails",
 		"copyToClipboard": "Naar klembord kopiëren",
 		"copied": "Gekopieerd!",
-		"diagnostics": "Gedetailleerde foutinformatie ophalen"
+		"diagnostics": "Gedetailleerde foutinformatie ophalen",
+		"proxyProvider": "Je lijkt een proxy-gebaseerde provider te gebruiken. Zorg ervoor dat je de logs controleert en dat het geen Roo-verzoeken herschrijft."
 	},
 	"powershell": {
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
@@ -306,7 +317,7 @@
 		"triggerLabel_zero": "0 automatisch goedgekeurd",
 		"triggerLabel_one": "1 automatisch goedgekeurd",
 		"triggerLabel_other": "{{count}} automatisch goedgekeurd",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} uitgebracht",
@@ -320,8 +331,9 @@
 		},
 		"release": {
 			"heading": "Wat is er nieuw:",
-			"skills": "Roo ondersteunt nu <skillsLink>Agent Skills</skillsLink> - herbruikbare pakketten van prompts, tools en resources om de mogelijkheden van Roo uit te breiden.",
-			"nativeToolCalling": "Native tool calling is nu vereist voor alle nieuwe taken. <blogLink>Meer informatie</blogLink> over de motivatie en wat je moet doen als je problemen ondervindt."
+			"parallelTools": "Parallelle Gereedschaproepen: Gereedschappen worden nu standaard parallel uitgevoerd, wat multi-file operaties en complexe taken aanzienlijk versnelt.",
+			"readFileIndentation": "Slimmer Bestand Lezen: Nieuwe inspringingmodus extraheert volledige semantische codeblokken (functies, klassen) zonder afkapping in het midden van de functie—ideaal voor het richten op specifieke lijnen uit zoekresultaten.",
+			"readCommandOutput": "Verliesvrije Terminaluitvoer: Nieuw read_command_output gereedschap haalt volledige opdrachtuitvoer op van afgekapte uitvoeringen met paginering en regex-filtering."
 		},
 		"cloudAgents": {
 			"heading": "Nieuw in de Cloud:",
@@ -351,13 +363,23 @@
 			"description": "Oudere berichten zijn uit het gesprek verwijderd om binnen de limiet van het contextvenster te blijven. Dit is een snelle maar minder contextbehoudende aanpak in vergelijking met samenvoeging."
 		}
 	},
+	"skill": {
+		"wantsToLoad": "Roo wil een vaardigheid laden",
+		"didLoad": "Roo heeft een vaardigheid geladen"
+	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)",
 		"timerPrefix": "Automatisch goedkeuren ingeschakeld. Selecteren in {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Totale kosten (inclusief subtaken): ${{cost}}",
+		"total": "Totale kosten: ${{cost}}",
+		"includesSubtasks": "Inclusief kosten van subtaken"
+	},
 	"browser": {
 		"session": "Browsersessie",
-		"rooWantsToUse": "Kilo Code wil de browser gebruiken",
+		"active": "Actief",
+		"rooWantsToUse": "Roo wil de browser gebruiken",
 		"consoleLogs": "Console-logboeken",
 		"noNewLogs": "(Geen nieuwe logboeken)",
 		"screenshot": "Browserschermopname",
@@ -496,5 +518,17 @@
 		"updated": "De to-do-lijst is bijgewerkt",
 		"completed": "Voltooid",
 		"started": "Gestart"
+	},
+	"tooManyTools": {
+		"title": "Te veel tools ingeschakeld",
+		"toolsPart_one": "{{count}} tool",
+		"toolsPart_other": "{{count}} tools",
+		"serversPart_one": "{{count}} MCP server",
+		"serversPart_other": "{{count}} MCP servers",
+		"messageTemplate": "Je hebt {{tools}} ingeschakeld via {{servers}}. Zoveel tools kunnen het model verwarren en tot fouten leiden. Probeer dit onder {{threshold}} te houden.",
+		"openMcpSettings": "MCP-instellingen openen"
+	},
+	"readCommandOutput": {
+		"title": "Roo read command output"
 	}
 }

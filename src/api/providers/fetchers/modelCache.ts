@@ -5,7 +5,7 @@ import * as fsSync from "fs"
 import NodeCache from "node-cache"
 import { z } from "zod"
 
-import type { ProviderName } from "@roo-code/types"
+import type { ProviderName, ModelRecord } from "@roo-code/types"
 import { modelInfoSchema, TelemetryEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -13,7 +13,7 @@ import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { getCacheDirectoryPath } from "../../../utils/storage"
-import type { RouterName, ModelRecord } from "../../../shared/api"
+import type { RouterName } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
@@ -78,12 +78,7 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 
 	switch (provider) {
 		case "openrouter":
-			// kilocode_change start: base url and bearer token
-			models = await getOpenRouterModels({
-				openRouterBaseUrl: options.baseUrl,
-				headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : undefined,
-			})
-			// kilocode_change end
+			models = await getOpenRouterModels({ openRouterBaseUrl: options.baseUrl })
 			break
 		case "requesty":
 			// Requesty models endpoint requires an API key for per-user custom policies.

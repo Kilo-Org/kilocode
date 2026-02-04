@@ -1,6 +1,9 @@
 {
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
 		"types": ["vitest/globals"]
 	},
 	"include": ["src", "drizzle.config.ts", "vitest-global-setup.ts"],

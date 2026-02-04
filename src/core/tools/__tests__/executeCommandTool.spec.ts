@@ -5,7 +5,7 @@ import * as vscode from "vscode"
 
 import { Task } from "../../task/Task"
 import { formatResponse } from "../../prompts/responses"
-import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
+import { ToolUse, AskApproval, HandleError, PushToolResult } from "../../../shared/tools"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 
 // Mock dependencies
@@ -47,7 +47,6 @@ describe("executeCommandTool", () => {
 	let mockAskApproval: any
 	let mockHandleError: any
 	let mockPushToolResult: any
-	let mockRemoveClosingTag: any
 	let mockToolUse: ToolUse<"execute_command">
 
 	beforeEach(() => {
@@ -86,7 +85,6 @@ describe("executeCommandTool", () => {
 		mockAskApproval = vitest.fn().mockResolvedValue(true)
 		mockHandleError = vitest.fn().mockResolvedValue(undefined)
 		mockPushToolResult = vitest.fn()
-		mockRemoveClosingTag = vitest.fn().mockReturnValue("command")
 
 		// Setup vscode config mock
 		const mockConfig = {
@@ -99,6 +97,9 @@ describe("executeCommandTool", () => {
 			type: "tool_use",
 			name: "execute_command",
 			params: {
+				command: "echo test",
+			},
+			nativeArgs: {
 				command: "echo test",
 			},
 			partial: false,
@@ -140,14 +141,13 @@ describe("executeCommandTool", () => {
 		it("should execute a command normally", async () => {
 			// Setup
 			mockToolUse.params.command = "echo test"
+			mockToolUse.nativeArgs = { command: "echo test" }
 
 			// Execute using the class-based handle method
 			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
 				askApproval: mockAskApproval as unknown as AskApproval,
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
-				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify
@@ -162,14 +162,13 @@ describe("executeCommandTool", () => {
 			// Setup
 			mockToolUse.params.command = "echo test"
 			mockToolUse.params.cwd = "/custom/path"
+			mockToolUse.nativeArgs = { command: "echo test", cwd: "/custom/path" }
 
 			// Execute
 			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
 				askApproval: mockAskApproval as unknown as AskApproval,
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
-				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify - confirm the command was approved and result was pushed
@@ -185,14 +184,14 @@ describe("executeCommandTool", () => {
 		it("should handle missing command parameter", async () => {
 			// Setup
 			mockToolUse.params.command = undefined
+			// Native tool calls must still supply a value; simulate a missing value with an empty string.
+			mockToolUse.nativeArgs = { command: "" }
 
 			// Execute
 			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
 				askApproval: mockAskApproval as unknown as AskApproval,
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
-				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify
@@ -207,14 +206,13 @@ describe("executeCommandTool", () => {
 			// Setup
 			mockToolUse.params.command = "echo test"
 			mockAskApproval.mockResolvedValue(false)
+			mockToolUse.nativeArgs = { command: "echo test" }
 
 			// Execute
 			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
 				askApproval: mockAskApproval as unknown as AskApproval,
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
-				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify
@@ -226,6 +224,7 @@ describe("executeCommandTool", () => {
 		it("should handle rooignore validation failures", async () => {
 			// Setup
 			mockToolUse.params.command = "cat .env"
+			mockToolUse.nativeArgs = { command: "cat .env" }
 			// Override the validateCommand mock to return a filename
 			const validateCommandMock = vitest.fn().mockReturnValue(".env")
 			mockCline.rooIgnoreController = {
@@ -240,14 +239,12 @@ describe("executeCommandTool", () => {
 				askApproval: mockAskApproval as unknown as AskApproval,
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
-				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify
 			expect(validateCommandMock).toHaveBeenCalledWith("cat .env")
 			expect(mockCline.say).toHaveBeenCalledWith("rooignore_error", ".env")
-			expect(formatResponse.rooIgnoreError).toHaveBeenCalledWith(".env", "xml")
+			expect(formatResponse.rooIgnoreError).toHaveBeenCalledWith(".env")
 			expect(mockPushToolResult).toHaveBeenCalledWith(mockRooIgnoreError)
 			expect(mockAskApproval).not.toHaveBeenCalled()
 			// executeCommandInTerminal should not be called since rooignore blocked it

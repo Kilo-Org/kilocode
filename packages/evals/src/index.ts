@@ -1,2 +1,2 @@
-export * from "./db/index.js"
-export * from "./exercises/index.js"
+export * from "./db"
+export * from "./exercises"

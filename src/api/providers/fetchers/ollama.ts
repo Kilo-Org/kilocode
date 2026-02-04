@@ -37,32 +37,16 @@ type OllamaModelsResponse = z.infer<typeof OllamaModelsResponseSchema>
 
 type OllamaModelInfoResponse = z.infer<typeof OllamaModelInfoResponseSchema>
 
-export const parseOllamaModel = (
-	rawModel: OllamaModelInfoResponse,
-	// kilocode_change start
-	baseUrl?: string,
-	numCtx?: number,
-	// kilocode_change end
-): ModelInfo => {
-	// kilocode_change start
+export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo | null => {
 	const contextKey = Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
 	const contextLengthFromModelInfo =
 		contextKey && typeof rawModel.model_info[contextKey] === "number" ? rawModel.model_info[contextKey] : undefined
 
-	const contextLengthFromModelParameters =
-		typeof rawModel.parameters === "string"
-			? parseInt(rawModel.parameters.match(/^num_ctx\s+(\d+)/m)?.[1] ?? "", 10) || undefined
-			: undefined
-
-	const contextLengthFromEnvironment = parseInt(process.env.OLLAMA_CONTEXT_LENGTH ?? "", 10) || undefined
-
-	const contextWindow =
-		numCtx ??
-		(baseUrl?.toLowerCase().startsWith("https://ollama.com") ? contextLengthFromModelInfo : undefined) ??
-		contextLengthFromEnvironment ??
-		(contextLengthFromModelParameters !== 40960 ? contextLengthFromModelParameters : undefined) ?? // Alledgedly Ollama sometimes returns an undefind context as 40960
-		4096 // This is usually the default: https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size
-	// kilocode_change end
+	// Filter out models that don't support tools. Models without tool capability won't work.
+	const supportsTools = rawModel.capabilities?.includes("tools") ?? false
+	if (!supportsTools) {
+		return null
+	}
 
 	const modelInfo: ModelInfo = Object.assign({}, ollamaDefaultModelInfo, {
 		description: `Family: ${rawModel.details.family}, Context: ${contextWindow}, Size: ${rawModel.details.parameter_size}`,
@@ -112,13 +96,11 @@ export async function getOllamaModels(
 							{ headers },
 						)
 						.then((ollamaModelInfo) => {
-							models[ollamaModel.name] = parseOllamaModel(
-								ollamaModelInfo.data,
-								// kilocode_change start
-								baseUrl,
-								numCtx,
-								// kilocode_change end
-							)
+							const modelInfo = parseOllamaModel(ollamaModelInfo.data)
+							// Only include models that support native tools
+							if (modelInfo) {
+								models[ollamaModel.name] = modelInfo
+							}
 						}),
 				)
 			}

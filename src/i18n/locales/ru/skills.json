@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "Имя навыка должно быть от 1 до {{maxLength}} символов (получено {{length}})",
+		"name_format": "Имя навыка может содержать только строчные буквы, цифры и дефисы (без начальных или конечных дефисов, без последовательных дефисов)",
+		"description_length": "Описание навыка должно быть от 1 до 1024 символов (получено {{length}})",
+		"no_workspace": "Невозможно создать навык проекта: не открыта папка рабочего пространства",
+		"already_exists": "Навык \"{{name}}\" уже существует в {{path}}",
+		"not_found": "Навык \"{{name}}\" не найден в {{source}}{{modeInfo}}",
+		"missing_create_fields": "Отсутствуют обязательные поля: skillName, source или skillDescription",
+		"missing_move_fields": "Отсутствуют обязательные поля: skillName или source",
+		"missing_update_modes_fields": "Отсутствуют обязательные поля: skillName или source",
+		"manager_unavailable": "Менеджер навыков недоступен",
+		"missing_delete_fields": "Отсутствуют обязательные поля: skillName или source",
+		"skill_not_found": "Навык \"{{name}}\" не найден",
+		"cannot_modify_builtin": "Встроенные навыки нельзя создавать или удалять",
+		"cannot_open_builtin": "Встроенные навыки нельзя открыть как файлы"
+	}
+}

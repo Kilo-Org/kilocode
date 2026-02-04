@@ -2,12 +2,12 @@ import { desc, eq, inArray, sql, sum } from "drizzle-orm"
 
 import type { ToolUsage } from "@roo-code/types"
 
-import { RecordNotFoundError, RecordNotCreatedError } from "./errors.js"
-import type { InsertRun, UpdateRun } from "../schema.js"
-import { schema } from "../schema.js"
-import { client as db } from "../db.js"
-import { createTaskMetrics } from "./taskMetrics.js"
-import { getTasks } from "./tasks.js"
+import { RecordNotFoundError, RecordNotCreatedError } from "./errors"
+import type { InsertRun, UpdateRun } from "../schema"
+import { schema } from "../schema"
+import { client as db } from "../db"
+import { createTaskMetrics } from "./taskMetrics"
+import { getTasks } from "./tasks"
 
 export const findRun = async (id: number) => {
 	const run = await db.query.runs.findFirst({ where: eq(schema.runs.id, id) })

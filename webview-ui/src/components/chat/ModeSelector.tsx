@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react"
 
 import { type ModeConfig, type CustomModePrompts, TelemetryEventName } from "@roo-code/types"
 
-import { type Mode, getAllModes } from "@roo/modes"
+import { type Mode, getAllModes, defaultModeSlug } from "@roo/modes"
 
 import { vscode } from "@/utils/vscode"
 import { telemetryClient } from "@/utils/TelemetryClient"
@@ -46,6 +46,7 @@ export const ModeSelector = ({
 	const searchInputRef = React.useRef<HTMLInputElement>(null)
 	const selectedItemRef = React.useRef<HTMLDivElement>(null)
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+	const lastNotifiedInvalidModeRef = React.useRef<string | null>(null)
 	const portalContainer = useRooPortal("roo-portal")
 	const { hasOpenedModeSelector, setHasOpenedModeSelector } = useExtensionState()
 	const { t } = useAppTranslation()
@@ -71,8 +72,31 @@ export const ModeSelector = ({
 		}))
 	}, [customModes, customModePrompts])
 
-	// Find the selected mode.
-	const selectedMode = React.useMemo(() => modes.find((mode) => mode.slug === value), [modes, value])
+	// Find the selected mode, falling back to default if current mode doesn't exist (e.g., after workspace switch)
+	const selectedMode = React.useMemo(() => {
+		return modes.find((mode) => mode.slug === value) ?? modes.find((mode) => mode.slug === defaultModeSlug)
+	}, [modes, value])
+
+	// Notify parent when current mode is invalid so it can update its state
+	React.useEffect(() => {
+		const isValidMode = modes.some((mode) => mode.slug === value)
+
+		if (isValidMode) {
+			lastNotifiedInvalidModeRef.current = null
+			return
+		}
+
+		if (lastNotifiedInvalidModeRef.current === value) {
+			return
+		}
+
+		const fallbackMode = modes.find((mode) => mode.slug === defaultModeSlug)
+		if (fallbackMode) {
+			lastNotifiedInvalidModeRef.current = value
+			onChange(fallbackMode.slug as Mode)
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- onChange omitted to prevent loops when parent doesn't memoize
+	}, [modes, value])
 
 	// Memoize searchable items for fuzzy search with separate name and
 	// description search.

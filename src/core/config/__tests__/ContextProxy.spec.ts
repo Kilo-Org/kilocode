@@ -70,13 +70,18 @@ describe("ContextProxy", () => {
 
 	describe("constructor", () => {
 		it("should initialize state cache with all global state keys", () => {
-			// +1 for the migration check of old nested settings
-			expect(mockGlobalState.get).toHaveBeenCalledTimes(GLOBAL_STATE_KEYS.length + 1)
+			// +3 for the migration checks:
+			// 1. openRouterImageGenerationSettings
+			// 2. customCondensingPrompt
+			// 3. customSupportPrompts (for migrateOldDefaultCondensingPrompt)
+			expect(mockGlobalState.get).toHaveBeenCalledTimes(GLOBAL_STATE_KEYS.length + 3)
 			for (const key of GLOBAL_STATE_KEYS) {
 				expect(mockGlobalState.get).toHaveBeenCalledWith(key)
 			}
-			// Also check for migration call
+			// Also check for migration calls
 			expect(mockGlobalState.get).toHaveBeenCalledWith("openRouterImageGenerationSettings")
+			expect(mockGlobalState.get).toHaveBeenCalledWith("customCondensingPrompt")
+			expect(mockGlobalState.get).toHaveBeenCalledWith("customSupportPrompts")
 		})
 
 		it("should initialize secret cache with all secret keys", () => {
@@ -99,8 +104,8 @@ describe("ContextProxy", () => {
 			const result = proxy.getGlobalState("apiProvider")
 			expect(result).toBe("deepseek")
 
-			// Original context should be called once during updateGlobalState (+1 for migration check)
-			expect(mockGlobalState.get).toHaveBeenCalledTimes(GLOBAL_STATE_KEYS.length + 1) // From initialization + migration check
+			// Original context should be called once during updateGlobalState (+3 for migration checks)
+			expect(mockGlobalState.get).toHaveBeenCalledTimes(GLOBAL_STATE_KEYS.length + 3) // From initialization + migration checks
 		})
 
 		it("should handle default values correctly", async () => {
@@ -501,6 +506,125 @@ describe("ContextProxy", () => {
 
 			// Should not throw and should return undefined
 			expect(settings.apiProvider).toBeUndefined()
+		})
+	})
+
+	describe("old default condensing prompt migration", () => {
+		// The old v1 default condensing prompt from before PR #10873
+		const OLD_V1_DEFAULT_CONDENSE_PROMPT = `Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
+This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing with the conversation and supporting any continuing tasks.
+
+Your summary should be structured as follows:
+Context: The context to continue the conversation with. If applicable based on the current task, this should include:
+		1. Previous Conversation: High level details about what was discussed throughout the entire conversation with the user. This should be written to allow someone to be able to follow the general overarching conversation flow.
+		2. Current Work: Describe in detail what was being worked on prior to this request to summarize the conversation. Pay special attention to the more recent messages in the conversation.
+		3. Key Technical Concepts: List all important technical concepts, technologies, coding conventions, and frameworks discussed, which might be relevant for continuing with this work.
+		4. Relevant Files and Code: If applicable, enumerate specific files and code sections examined, modified, or created for the task continuation. Pay special attention to the most recent messages and changes.
+		5. Problem Solving: Document problems solved thus far and any ongoing troubleshooting efforts.
+		6. Pending Tasks and Next Steps: Outline all pending tasks that you have explicitly been asked to work on, as well as list the next steps you will take for all outstanding work, if applicable. Include code snippets where they add clarity. For any next steps, include direct quotes from the most recent conversation showing exactly what task you were working on and where you left off. This should be verbatim to ensure there's no information loss in context between tasks.
+
+Example summary structure:
+1. Previous Conversation:
+		[Detailed description]
+2. Current Work:
+		[Detailed description]
+3. Key Technical Concepts:
+		- [Concept 1]
+		- [Concept 2]
+		- [...]
+4. Relevant Files and Code:
+		- [File Name 1]
+	- [Summary of why this file is important]
+	- [Summary of the changes made to this file, if any]
+	- [Important Code Snippet]
+		- [File Name 2]
+	- [Important Code Snippet]
+		- [...]
+5. Problem Solving:
+		[Detailed description]
+6. Pending Tasks and Next Steps:
+		- [Task 1 details & next steps]
+		- [Task 2 details & next steps]
+		- [...]
+
+Output only the summary of the conversation so far, without any additional commentary or explanation.`
+
+		it("should clear old v1 default condensing prompt from customSupportPrompts during initialization", async () => {
+			// Reset and create a new proxy with old v1 default prompt in customSupportPrompts
+			vi.clearAllMocks()
+			mockGlobalState.get.mockImplementation((key: string) => {
+				if (key === "customSupportPrompts") {
+					return { CONDENSE: OLD_V1_DEFAULT_CONDENSE_PROMPT }
+				}
+				return undefined
+			})
+
+			const proxyWithOldDefault = new ContextProxy(mockContext)
+			await proxyWithOldDefault.initialize()
+
+			// Should have cleared the old default by updating customSupportPrompts to undefined
+			// (since CONDENSE was the only key)
+			expect(mockGlobalState.update).toHaveBeenCalledWith("customSupportPrompts", undefined)
+		})
+
+		it("should preserve other custom prompts when clearing old v1 default", async () => {
+			// Reset and create a new proxy with old v1 default plus other custom prompts
+			vi.clearAllMocks()
+			mockGlobalState.get.mockImplementation((key: string) => {
+				if (key === "customSupportPrompts") {
+					return {
+						CONDENSE: OLD_V1_DEFAULT_CONDENSE_PROMPT,
+						EXPLAIN: "Custom explain prompt",
+					}
+				}
+				return undefined
+			})
+
+			const proxyWithOldDefault = new ContextProxy(mockContext)
+			await proxyWithOldDefault.initialize()
+
+			// Should have updated customSupportPrompts to keep EXPLAIN but remove CONDENSE
+			expect(mockGlobalState.update).toHaveBeenCalledWith("customSupportPrompts", {
+				EXPLAIN: "Custom explain prompt",
+			})
+		})
+
+		it("should not clear truly customized condensing prompts", async () => {
+			// Reset and create a new proxy with a truly customized condensing prompt
+			vi.clearAllMocks()
+			const customPrompt = "My custom condensing instructions"
+			mockGlobalState.get.mockImplementation((key: string) => {
+				if (key === "customSupportPrompts") {
+					return { CONDENSE: customPrompt }
+				}
+				return undefined
+			})
+
+			const proxyWithCustomPrompt = new ContextProxy(mockContext)
+			await proxyWithCustomPrompt.initialize()
+
+			// Should NOT have called update for customSupportPrompts (custom prompt should be preserved)
+			const updateCalls = mockGlobalState.update.mock.calls
+			const customSupportPromptsUpdateCalls = updateCalls.filter(
+				(call: any[]) => call[0] === "customSupportPrompts",
+			)
+			expect(customSupportPromptsUpdateCalls.length).toBe(0)
+		})
+
+		it("should not fail when customSupportPrompts is undefined", async () => {
+			// Reset and create a new proxy with no customSupportPrompts
+			vi.clearAllMocks()
+			mockGlobalState.get.mockReturnValue(undefined)
+
+			const proxyWithNoPrompts = new ContextProxy(mockContext)
+			await proxyWithNoPrompts.initialize()
+
+			// Should not have called update for customSupportPrompts
+			const updateCalls = mockGlobalState.update.mock.calls
+			const customSupportPromptsUpdateCalls = updateCalls.filter(
+				(call: any[]) => call[0] === "customSupportPrompts",
+			)
+			expect(customSupportPromptsUpdateCalls.length).toBe(0)
 		})
 	})
 })

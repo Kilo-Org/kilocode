@@ -40,12 +40,6 @@ export function toRouterName(value?: string): RouterName {
 	throw new Error(`Invalid router name: ${value}`)
 }
 
-// RouterModels
-
-export type ModelRecord = Record<string, ModelInfo>
-
-export type RouterModels = Record<RouterName, ModelRecord>
-
 // Reasoning
 
 export const shouldUseReasoningBudget = ({

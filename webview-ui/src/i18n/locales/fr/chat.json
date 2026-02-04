@@ -28,7 +28,8 @@
 		"openInCloud": "Ouvrir la tâche dans Roo Code Cloud",
 		"openInCloudIntro": "Continue à surveiller ou interagir avec Roo depuis n'importe où. Scanne, clique ou copie pour ouvrir.",
 		"openApiHistory": "Ouvrir l'historique de l'API",
-		"openUiHistory": "Ouvrir l'historique de l'UI"
+		"openUiHistory": "Ouvrir l'historique de l'UI",
+		"backToParentTask": "Tâche parente"
 	},
 	"history": {
 		"title": "Historique"
@@ -38,7 +39,10 @@
 	"tokenProgress": {
 		"availableSpace": "Espace disponible : {{amount}} tokens",
 		"tokensUsed": "Tokens utilisés : {{used}} sur {{total}}",
-		"reservedForResponse": "Réservé pour la réponse du modèle : {{amount}} tokens"
+		"reservedForResponse": "Réservé pour la réponse du modèle : {{amount}} tokens",
+		"tokensUsedLabel": "Tokens utilisés",
+		"reservedForResponseLabel": "Réservé pour la réponse",
+		"availableSpaceLabel": "Espace disponible"
 	},
 	"retry": {
 		"title": "Réessayer",
@@ -88,10 +92,15 @@
 		"title": "Terminer",
 		"tooltip": "Terminer la tâche actuelle"
 	},
+	"stop": {
+		"title": "Arrêter",
+		"tooltip": "Arrêter la tâche en cours"
+	},
 	"cancel": {
 		"title": "Annuler",
 		"tooltip": "Annuler l'opération actuelle"
 	},
+	"enqueueMessage": "Ajouter le message à la file d'attente (sera envoyé après la fin de la tâche en cours)",
 	"scrollToBottom": "Défiler jusqu'au bas du chat",
 	"about": "Génère, refactorise et débogue du code avec l'assistance de l'IA. Consulte notre <DocsLink>documentation</DocsLink> pour en savoir plus.",
 	"docs": "Consultez notre <DocsLink>documentation</DocsLink> pour en savoir plus.",
@@ -149,15 +158,15 @@
 		"rateLimitWait": "Limitation du débit",
 		"errorTitle": "Erreur du fournisseur {{code}}",
 		"errorMessage": {
-			"docs": "Documentation",
-			"goToSettings": "Paramètres",
 			"400": "Le fournisseur n'a pas pu traiter la demande telle que présentée. Arrête la tâche et essaie une approche différente.",
 			"401": "Impossible de s'authentifier auprès du fournisseur. Veuillez vérifier la configuration de votre clé API.",
 			"402": "Il semble que vous ayez épuisé vos fonds/crédits sur votre compte. Allez chez votre fournisseur et ajoutez-en plus pour continuer.",
 			"403": "Non autorisé. Votre clé API est valide, mais le fournisseur a refusé de compléter cette demande.",
 			"429": "Trop de demandes. Vous êtes limité par le fournisseur. Veuillez attendre un peu avant votre prochain appel API.",
 			"500": "Erreur du serveur du fournisseur. Quelque chose ne va pas du côté du fournisseur, il n'y a rien de mal avec votre demande.",
-			"unknown": "Erreur API inconnue. Veuillez contacter le support Kilo.",
+			"docs": "Documentation",
+			"goToSettings": "Paramètres",
+			"unknown": "Erreur API inconnue. Veuillez contacter le support Roo Code.",
 			"connection": "Erreur de connexion. Assurez-vous que vous avez une connexion Internet fonctionnelle.",
 			"claudeCodeNotAuthenticated": "Vous devez vous connecter pour utiliser Claude Code. Allez dans les Paramètres et cliquez sur \"Se connecter à Claude Code\" pour vous authentifier."
 		}
@@ -267,7 +276,8 @@
 		"completionContent": "Sous-tâche terminée",
 		"resultContent": "Résultats de la sous-tâche",
 		"defaultResult": "Veuillez continuer avec la tâche suivante.",
-		"completionInstructions": "Sous-tâche terminée ! Vous pouvez examiner les résultats et suggérer des corrections ou les prochaines étapes. Si tout semble bon, confirmez pour retourner le résultat à la tâche parente."
+		"completionInstructions": "Sous-tâche terminée ! Vous pouvez examiner les résultats et suggérer des corrections ou les prochaines étapes. Si tout semble bon, confirmez pour retourner le résultat à la tâche parente.",
+		"goToSubtask": "Afficher la tâche"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code a une question"
@@ -285,7 +295,8 @@
 		"title": "Détails de l'erreur",
 		"copyToClipboard": "Copier dans le presse-papiers",
 		"copied": "Copié !",
-		"diagnostics": "Obtenir les détails de l'erreur"
+		"diagnostics": "Obtenir les détails de l'erreur",
+		"proxyProvider": "Il semble que tu utilises un fournisseur basé sur un proxy. Assure-toi de vérifier ses journaux et de t'assurer qu'il ne réécrit pas les demandes de Roo."
 	},
 	"powershell": {
 		"issues": "Il semble que vous rencontriez des problèmes avec Windows PowerShell, veuillez consulter ce"
@@ -306,7 +317,7 @@
 		"triggerLabel_zero": "0 approuvé automatiquement",
 		"triggerLabel_one": "1 approuvé automatiquement",
 		"triggerLabel_other": "{{count}} approuvés automatiquement",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Réflexion",
@@ -327,6 +338,10 @@
 			"description": "Les messages plus anciens ont été supprimés de la conversation pour rester dans la limite de la fenêtre de contexte. C'est une approche rapide mais moins conservatrice du contexte par rapport à la condensation."
 		}
 	},
+	"skill": {
+		"wantsToLoad": "Roo veut charger une compétence",
+		"didLoad": "Roo a chargé une compétence"
+	},
 	"followUpSuggest": {
 		"copyToInput": "Copier vers l'entrée (ou Shift + clic)",
 		"timerPrefix": "Approbation automatique activée. Sélection dans {{seconds}}s…"
@@ -343,8 +358,9 @@
 		},
 		"release": {
 			"heading": "Quoi de neuf :",
-			"skills": "Roo supporte maintenant les <skillsLink>Agent Skills</skillsLink> - des packages réutilisables de prompts, d'outils et de ressources pour étendre les capacités de Roo.",
-			"nativeToolCalling": "L'appel natif des outils est maintenant obligatoire pour toutes les nouvelles tâches. <blogLink>En savoir plus</blogLink> sur la motivation et ce qu'il faut faire si tu rencontres des problèmes."
+			"parallelTools": "Appels d'outils parallèles : Les outils s'exécutent maintenant en parallèle par défaut, accélérant considérablement les opérations multi-fichiers et les tâches complexes.",
+			"readFileIndentation": "Lecture de fichiers plus intelligente : Le nouveau mode d'indentation extrait les blocs de code sémantiques complets (fonctions, classes) sans troncature au milieu de la fonction—idéal pour cibler des lignes spécifiques des résultats de recherche.",
+			"readCommandOutput": "Sortie de terminal sans perte : Le nouvel outil read_command_output récupère la sortie complète de la commande à partir d'exécutions tronquées avec pagination et filtrage regex."
 		},
 		"cloudAgents": {
 			"heading": "Nouveautés dans le Cloud :",
@@ -355,9 +371,15 @@
 		"careers": "Aussi, <careersLink>on recrute !</careersLink>",
 		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Coût total (sous-tâches comprises) : ${{cost}}",
+		"total": "Coût total : ${{cost}}",
+		"includesSubtasks": "Inclut les coûts des sous-tâches"
+	},
 	"browser": {
 		"session": "Session du navigateur",
-		"rooWantsToUse": "Kilo Code veut utiliser le navigateur",
+		"active": "Actif",
+		"rooWantsToUse": "Roo veut utiliser le navigateur",
 		"consoleLogs": "Journaux de console",
 		"noNewLogs": "(Pas de nouveaux journaux)",
 		"screenshot": "Capture d'écran du navigateur",
@@ -496,5 +518,17 @@
 		"updated": "La liste des tâches a été mise à jour",
 		"completed": "Terminé",
 		"started": "Commencé"
+	},
+	"tooManyTools": {
+		"title": "Trop d'outils activés",
+		"toolsPart_one": "{{count}} outil",
+		"toolsPart_other": "{{count}} outils",
+		"serversPart_one": "{{count}} serveur MCP",
+		"serversPart_other": "{{count}} serveurs MCP",
+		"messageTemplate": "Tu as {{tools}} activés via {{servers}}. Un nombre aussi élevé peut confondre le modèle et entraîner des erreurs. Essaie de le maintenir en dessous de {{threshold}}.",
+		"openMcpSettings": "Ouvrir les paramètres MCP"
+	},
+	"readCommandOutput": {
+		"title": "Roo read command output"
 	}
 }

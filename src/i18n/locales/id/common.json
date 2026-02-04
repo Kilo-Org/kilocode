@@ -70,7 +70,7 @@
 		"condense_not_enough_messages": "Tidak cukup pesan untuk mengompres konteks {{prevContextTokens}} token. Setidaknya {{minimumMessageCount}} pesan diperlukan, tetapi hanya {{messageCount}} yang tersedia.",
 		"condensed_recently": "Konteks baru saja dikompres; melewati percobaan ini",
 		"condense_handler_invalid": "Handler API untuk mengompres konteks tidak valid",
-		"condense_context_grew": "Ukuran konteks bertambah dari {{prevContextTokens}} menjadi {{newContextTokens}} saat mengompres; melewati percobaan ini",
+		"condense_api_failed": "Panggilan API pengompresan gagal: {{message}}",
 		"url_timeout": "Situs web membutuhkan waktu terlalu lama untuk dimuat (timeout). Ini bisa disebabkan oleh koneksi lambat, situs web berat, atau sementara tidak tersedia. Kamu bisa mencoba lagi nanti atau memeriksa apakah URL sudah benar.",
 		"url_not_found": "Alamat situs web tidak dapat ditemukan. Silakan periksa apakah URL sudah benar dan coba lagi.",
 		"no_internet": "Tidak ada koneksi internet. Silakan periksa koneksi jaringan kamu dan coba lagi.",
@@ -145,13 +145,32 @@
 			"authenticationRequired": "Penyedia Roo memerlukan autentikasi cloud. Silakan masuk ke Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "Kunci API mengandung karakter tidak valid."
+			"invalidKeyInvalidChars": "Kunci API mengandung karakter tidak valid.",
+			"apiRequestFailed": "Permintaan API gagal ({{status}})"
 		},
 		"manual_url_empty": "Silakan masukkan URL callback yang valid",
 		"manual_url_no_query": "URL callback tidak valid: parameter query hilang",
 		"manual_url_missing_params": "URL callback tidak valid: parameter yang diperlukan hilang (code dan state)",
 		"manual_url_auth_failed": "Autentikasi URL manual gagal",
-		"manual_url_auth_error": "Autentikasi gagal"
+		"manual_url_auth_error": "Autentikasi gagal",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
@@ -194,7 +213,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Respons diinterupsi oleh pengguna",
-		"responseInterruptedByApiError": "Respons diinterupsi oleh error API"
+		"responseInterruptedByApiError": "Respons diinterupsi oleh error API",
+		"streamTerminatedByProvider": "Penyedia mengakhiri permintaan"
 	},
 	"storage": {
 		"prompt_custom_path": "Masukkan path penyimpanan riwayat percakapan kustom, biarkan kosong untuk menggunakan lokasi default",

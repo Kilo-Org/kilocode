@@ -1,0 +1,18 @@
+{
+	"errors": {
+		"name_length": "技能名稱必須為 1-{{maxLength}} 個字元（收到 {{length}} 個）",
+		"name_format": "技能名稱只能包含小寫字母、數字和連字號（不能有前導或尾隨連字號，不能有連續連字號）",
+		"description_length": "技能描述必須為 1-1024 個字元（收到 {{length}} 個）",
+		"no_workspace": "無法建立專案技能：未開啟工作區資料夾",
+		"already_exists": "技能「{{name}}」已存在於 {{path}}",
+		"not_found": "在 {{source}}{{modeInfo}} 中找不到技能「{{name}}」",
+		"missing_create_fields": "缺少必填欄位：skillName、source 或 skillDescription",
+		"missing_move_fields": "缺少必填欄位：skillName 或 source",
+		"missing_update_modes_fields": "缺少必填欄位：skillName 或 source",
+		"manager_unavailable": "技能管理器無法使用",
+		"missing_delete_fields": "缺少必填欄位：skillName 或 source",
+		"skill_not_found": "找不到技能「{{name}}」",
+		"cannot_modify_builtin": "內建技能無法建立或刪除",
+		"cannot_open_builtin": "內建技能無法作為檔案開啟"
+	}
+}

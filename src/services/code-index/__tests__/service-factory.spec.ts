@@ -286,7 +286,7 @@ describe("CodeIndexServiceFactory", () => {
 			// Arrange
 			const testConfig = {
 				embedderProvider: "gemini",
-				modelId: "text-embedding-004",
+				modelId: "gemini-embedding-001",
 				geminiOptions: {
 					apiKey: "test-gemini-api-key",
 				},
@@ -297,6 +297,25 @@ describe("CodeIndexServiceFactory", () => {
 			factory.createEmbedder()
 
 			// Assert
+			expect(MockedGeminiEmbedder).toHaveBeenCalledWith("test-gemini-api-key", "gemini-embedding-001")
+		})
+
+		it("should pass deprecated text-embedding-004 modelId to GeminiEmbedder (migration happens inside GeminiEmbedder)", () => {
+			// Arrange - service-factory passes the config modelId directly;
+			// GeminiEmbedder handles the migration internally
+			const testConfig = {
+				embedderProvider: "gemini",
+				modelId: "text-embedding-004",
+				geminiOptions: {
+					apiKey: "test-gemini-api-key",
+				},
+			}
+			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
+
+			// Act
+			factory.createEmbedder()
+
+			// Assert - factory passes the original modelId; GeminiEmbedder migrates it internally
 			expect(MockedGeminiEmbedder).toHaveBeenCalledWith("test-gemini-api-key", "text-embedding-004")
 		})
 

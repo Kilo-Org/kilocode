@@ -51,7 +51,6 @@ describe("getChutesModels", () => {
 			contextWindow: 128000,
 			supportsImages: false,
 			supportsPromptCache: false,
-			supportsNativeTools: false,
 			inputPrice: 0,
 			outputPrice: 0,
 			description: "Chutes AI model: test/new-model",
@@ -162,7 +161,7 @@ describe("getChutesModels", () => {
 		expect(models["test/image-model"].supportsImages).toBe(true)
 	})
 
-	it("should detect native tool support from supported_features", async () => {
+	it("should accept supported_features containing tools", async () => {
 		const mockResponse = {
 			data: {
 				data: [
@@ -184,10 +183,11 @@ describe("getChutesModels", () => {
 
 		const models = await getChutesModels("test-api-key")
 
-		expect(models["test/tools-model"].supportsNativeTools).toBe(true)
+		expect(models["test/tools-model"]).toBeDefined()
+		expect(models["test/tools-model"].contextWindow).toBe(128000)
 	})
 
-	it("should not enable native tool support when tools is not in supported_features", async () => {
+	it("should accept supported_features without tools", async () => {
 		const mockResponse = {
 			data: {
 				data: [
@@ -209,8 +209,8 @@ describe("getChutesModels", () => {
 
 		const models = await getChutesModels("test-api-key")
 
-		expect(models["test/no-tools-model"].supportsNativeTools).toBe(false)
-		expect(models["test/no-tools-model"].defaultToolProtocol).toBeUndefined()
+		expect(models["test/no-tools-model"]).toBeDefined()
+		expect(models["test/no-tools-model"].contextWindow).toBe(128000)
 	})
 
 	it("should skip empty objects in API response and still process valid models", async () => {
@@ -336,7 +336,6 @@ describe("getChutesModels", () => {
 		// Both valid models should be processed
 		expect(models["test/valid-1"]).toBeDefined()
 		expect(models["test/valid-2"]).toBeDefined()
-		expect(models["test/valid-2"].supportsNativeTools).toBe(true)
 
 		consoleErrorSpy.mockRestore()
 	})

@@ -86,9 +86,9 @@ describe("normalizeToolSchema", () => {
 				type: "object",
 				properties: {
 					path: { type: "string" },
-					line_ranges: {
+					tags: {
 						type: ["array", "null"],
-						items: { type: "integer" },
+						items: { type: "string" },
 					},
 				},
 			},
@@ -104,8 +104,8 @@ describe("normalizeToolSchema", () => {
 				type: "object",
 				properties: {
 					path: { type: "string" },
-					line_ranges: {
-						anyOf: [{ type: "array", items: { type: "integer" } }, { type: "null" }],
+					tags: {
+						anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }],
 					},
 				},
 				additionalProperties: false,
@@ -123,7 +123,7 @@ describe("normalizeToolSchema", () => {
 						type: "object",
 						properties: {
 							path: { type: "string" },
-							line_ranges: {
+							ranges: {
 								type: ["array", "null"],
 								items: {
 									type: "array",
@@ -131,7 +131,7 @@ describe("normalizeToolSchema", () => {
 								},
 							},
 						},
-						required: ["path", "line_ranges"],
+						required: ["path", "ranges"],
 					},
 				},
 			},
@@ -144,13 +144,15 @@ describe("normalizeToolSchema", () => {
 		const filesItems = properties.files.items as Record<string, unknown>
 		const filesItemsProps = filesItems.properties as Record<string, Record<string, unknown>>
 		// Array-specific properties (items) should be moved inside the array variant
-		expect(filesItemsProps.line_ranges.anyOf).toEqual([
+		expect(filesItemsProps.ranges.anyOf).toEqual([
 			{ type: "array", items: { type: "array", items: { type: "integer" } } },
 			{ type: "null" },
 		])
 	})
 
-	it("should recursively transform anyOf arrays", () => {
+	it("should flatten top-level anyOf and recursively transform nested schemas", () => {
+		// Top-level anyOf is flattened for provider compatibility (OpenRouter/Claude)
+		// but nested anyOf inside properties is preserved
 		const input = {
 			anyOf: [
 				{
@@ -165,18 +167,14 @@ describe("normalizeToolSchema", () => {
 
 		const result = normalizeToolSchema(input)
 
-		// additionalProperties: false should ONLY be on object types, not on null or primitive types
+		// Top-level anyOf should be flattened to the object variant
+		// Nested type array should be converted to anyOf
 		expect(result).toEqual({
-			anyOf: [
-				{
-					type: "object",
-					properties: {
-						optional: { anyOf: [{ type: "string" }, { type: "null" }] },
-					},
-					additionalProperties: false,
-				},
-				{ type: "null" },
-			],
+			type: "object",
+			properties: {
+				optional: { anyOf: [{ type: "string" }, { type: "null" }] },
+			},
+			additionalProperties: false,
 		})
 	})
 
@@ -226,60 +224,32 @@ describe("normalizeToolSchema", () => {
 		const input = {
 			type: "object",
 			properties: {
-				files: {
-					type: "array",
-					description: "List of files to read",
-					items: {
-						type: "object",
-						properties: {
-							path: {
-								type: "string",
-								description: "Path to the file",
-							},
-							line_ranges: {
-								type: ["array", "null"],
-								description: "Optional line ranges",
-								items: {
-									type: "array",
-									items: { type: "integer" },
-									minItems: 2,
-									maxItems: 2,
-								},
-							},
+				path: {
+					type: "string",
+					description: "Path to the file",
+				},
+				indentation: {
+					type: ["object", "null"],
+					properties: {
+						anchor_line: {
+							type: ["integer", "null"],
 						},
-						required: ["path", "line_ranges"],
-						additionalProperties: false,
 					},
-					minItems: 1,
 				},
 			},
-			required: ["files"],
+			required: ["path"],
 			additionalProperties: false,
 		}
 
 		const result = normalizeToolSchema(input)
 
-		// Verify the line_ranges was transformed with items inside the array variant
-		const files = (result.properties as Record<string, unknown>).files as Record<string, unknown>
-		const items = files.items as Record<string, unknown>
-		const props = items.properties as Record<string, Record<string, unknown>>
-		// Array-specific properties (items, minItems, maxItems) should be moved inside the array variant
-		expect(props.line_ranges.anyOf).toEqual([
-			{
-				type: "array",
-				items: {
-					type: "array",
-					items: { type: "integer" },
-					minItems: 2,
-					maxItems: 2,
-				},
-			},
-			{ type: "null" },
-		])
-		// items should NOT be at root level anymore
-		expect(props.line_ranges.items).toBeUndefined()
-		// Other properties are preserved at root level
-		expect(props.line_ranges.description).toBe("Optional line ranges")
+		// Verify nested nullable objects are transformed correctly
+		const props = result.properties as Record<string, Record<string, unknown>>
+		expect(props.indentation.anyOf).toEqual([{ type: "object" }, { type: "null" }])
+		expect(props.indentation.additionalProperties).toBe(false)
+		expect((props.indentation.properties as Record<string, unknown>).anchor_line).toEqual({
+			anyOf: [{ type: "integer" }, { type: "null" }],
+		})
 	})
 
 	describe("format field handling", () => {
@@ -458,6 +428,161 @@ describe("normalizeToolSchema", () => {
 			expect(props.url.format).toBeUndefined()
 			expect(props.url.type).toBe("string")
 			expect(props.url.description).toBe("URL to fetch")
+		})
+
+		describe("top-level anyOf/oneOf/allOf flattening", () => {
+			it("should flatten top-level anyOf to object schema", () => {
+				// This is the type of schema that caused the OpenRouter error:
+				// "input_schema does not support oneOf, allOf, or anyOf at the top level"
+				const input = {
+					anyOf: [
+						{
+							type: "object",
+							properties: {
+								name: { type: "string" },
+							},
+							required: ["name"],
+						},
+						{ type: "null" },
+					],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				// Should flatten to the object variant
+				expect(result.anyOf).toBeUndefined()
+				expect(result.type).toBe("object")
+				expect(result.properties).toBeDefined()
+				expect((result.properties as Record<string, unknown>).name).toEqual({ type: "string" })
+				expect(result.additionalProperties).toBe(false)
+			})
+
+			it("should flatten top-level oneOf to object schema", () => {
+				const input = {
+					oneOf: [
+						{
+							type: "object",
+							properties: {
+								url: { type: "string" },
+							},
+						},
+						{
+							type: "object",
+							properties: {
+								path: { type: "string" },
+							},
+						},
+					],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				// Should use the first object variant
+				expect(result.oneOf).toBeUndefined()
+				expect(result.type).toBe("object")
+				expect((result.properties as Record<string, unknown>).url).toBeDefined()
+			})
+
+			it("should flatten top-level allOf to object schema", () => {
+				const input = {
+					allOf: [
+						{
+							type: "object",
+							properties: {
+								base: { type: "string" },
+							},
+						},
+						{
+							properties: {
+								extra: { type: "number" },
+							},
+						},
+					],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				// Should use the first object variant
+				expect(result.allOf).toBeUndefined()
+				expect(result.type).toBe("object")
+			})
+
+			it("should preserve description when flattening top-level anyOf", () => {
+				const input = {
+					description: "Input for the tool",
+					anyOf: [
+						{
+							type: "object",
+							properties: {
+								data: { type: "string" },
+							},
+						},
+						{ type: "null" },
+					],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				expect(result.description).toBe("Input for the tool")
+				expect(result.anyOf).toBeUndefined()
+				expect(result.type).toBe("object")
+			})
+
+			it("should create generic object schema if no object variant found", () => {
+				const input = {
+					anyOf: [{ type: "string" }, { type: "number" }],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				// Should create a fallback object schema
+				expect(result.anyOf).toBeUndefined()
+				expect(result.type).toBe("object")
+				expect(result.additionalProperties).toBe(false)
+			})
+
+			it("should NOT flatten nested anyOf (only top-level)", () => {
+				const input = {
+					type: "object",
+					properties: {
+						field: {
+							anyOf: [{ type: "string" }, { type: "null" }],
+						},
+					},
+				}
+
+				const result = normalizeToolSchema(input)
+
+				// Nested anyOf should be preserved
+				const props = result.properties as Record<string, Record<string, unknown>>
+				expect(props.field.anyOf).toBeDefined()
+			})
+
+			it("should handle MCP server schema with top-level anyOf", () => {
+				// Real-world example: some MCP servers define optional nullable root schemas
+				const input = {
+					$schema: "http://json-schema.org/draft-07/schema#",
+					anyOf: [
+						{
+							type: "object",
+							additionalProperties: false,
+							properties: {
+								issueId: { type: "string", description: "The issue ID" },
+								body: { type: "string", description: "The content" },
+							},
+							required: ["issueId", "body"],
+						},
+					],
+				}
+
+				const result = normalizeToolSchema(input)
+
+				expect(result.anyOf).toBeUndefined()
+				expect(result.type).toBe("object")
+				expect(result.properties).toBeDefined()
+				expect(result.required).toContain("issueId")
+				expect(result.required).toContain("body")
+			})
 		})
 	})
 })

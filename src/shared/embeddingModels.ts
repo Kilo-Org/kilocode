@@ -2,28 +2,7 @@
  * Defines profiles for different embedding models, including their dimensions.
  */
 
-export type EmbedderProvider =
-	| "openai"
-	| "ollama"
-	| "openai-compatible"
-	| "gemini"
-	| "mistral"
-	| "vercel-ai-gateway"
-	| "bedrock"
-	| "openrouter" // Add other providers as needed
-
-export interface EmbeddingModelProfile {
-	dimension: number
-	scoreThreshold?: number // Model-specific minimum score threshold for semantic search
-	queryPrefix?: string // Optional prefix required by the model for queries
-	// Add other model-specific properties if needed, e.g., context window size
-}
-
-export type EmbeddingModelProfiles = {
-	[provider in EmbedderProvider]?: {
-		[modelId: string]: EmbeddingModelProfile
-	}
-}
+import type { EmbedderProvider, EmbeddingModelProfiles } from "@roo-code/types"
 
 // Example profiles - expand this list as needed
 export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
@@ -55,8 +34,10 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		},
 	},
 	gemini: {
-		"text-embedding-004": { dimension: 768 },
 		"gemini-embedding-001": { dimension: 3072, scoreThreshold: 0.4 },
+		// Deprecated: text-embedding-004 is migrated to gemini-embedding-001 in GeminiEmbedder
+		// Kept here for backward-compatible dimension lookup in createVectorStore()
+		"text-embedding-004": { dimension: 3072, scoreThreshold: 0.4 },
 	},
 	mistral: {
 		"codestral-embed-2505": { dimension: 1536, scoreThreshold: 0.4 },

@@ -140,6 +140,27 @@ describe("convertAnthropicMessageToGemini", () => {
 		])
 	})
 
+	it("should only attach thoughtSignature to the first functionCall in the message", () => {
+		const anthropicMessage: Anthropic.Messages.MessageParam = {
+			role: "assistant",
+			content: [
+				{ type: "thoughtSignature", thoughtSignature: "sig-123" } as any,
+				{ type: "tool_use", id: "call-1", name: "toolA", input: { a: 1 } },
+				{ type: "tool_use", id: "call-2", name: "toolB", input: { b: 2 } },
+			],
+		}
+
+		const result = convertAnthropicMessageToGemini(anthropicMessage)
+		expect(result).toHaveLength(1)
+
+		const parts = result[0]!.parts as any[]
+		const functionCallParts = parts.filter((p) => p.functionCall)
+		expect(functionCallParts).toHaveLength(2)
+
+		expect(functionCallParts[0].thoughtSignature).toBe("sig-123")
+		expect(functionCallParts[1].thoughtSignature).toBeUndefined()
+	})
+
 	it("should convert a message with tool result as string", () => {
 		const toolIdToName = new Map<string, string>()
 		toolIdToName.set("calculator-123", "calculator")

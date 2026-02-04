@@ -46,5 +46,10 @@
 		"mostRelevant": "Più rilevanti"
 	},
 	"viewAllHistory": "Visualizza tutto",
-	"shareSession": "Condividi sessione"
+	"subtasks_one": "{{count}} sottoattività",
+	"subtasks_other": "{{count}} sottoattività",
+	"subtaskTag": "Sottoattività",
+	"deleteWithSubtasks": "Questo eliminerà anche {{count}} sottoattività. Sei sicuro?",
+	"expandSubtasks": "Espandi sottoattività",
+	"collapseSubtasks": "Comprimi sottoattività"
 }

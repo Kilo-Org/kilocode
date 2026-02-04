@@ -28,6 +28,42 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 
 // Mock UI components
 vi.mock("@src/components/ui", () => ({
+	ToggleSwitch: ({ checked, onChange, "aria-label": ariaLabel, "data-testid": dataTestId }: any) => (
+		<button role="switch" aria-checked={checked} aria-label={ariaLabel} data-testid={dataTestId} onClick={onChange}>
+			Toggle
+		</button>
+	),
+	Input: ({ value, onChange, placeholder, id, type, className, ...props }: any) => (
+		<input
+			type={type || "text"}
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
+	Textarea: ({ value, onChange, placeholder, id, className, ...props }: any) => (
+		<textarea
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
+	Checkbox: ({ checked, onCheckedChange, id, className, ...props }: any) => (
+		<input
+			type="checkbox"
+			checked={checked}
+			onChange={(e) => onCheckedChange?.(e.target.checked)}
+			id={id}
+			className={className}
+			{...props}
+		/>
+	),
 	AlertDialog: ({ open, children }: any) => (open ? <div data-testid="alert-dialog">{children}</div> : null),
 	AlertDialogContent: ({ children }: any) => <div>{children}</div>,
 	AlertDialogTitle: ({ children }: any) => <div data-testid="alert-title">{children}</div>,
@@ -42,6 +78,47 @@ vi.mock("@src/components/ui", () => ({
 		</button>
 	),
 	StandardTooltip: ({ children }: any) => <>{children}</>,
+	Popover: ({ children }: any) => <>{children}</>,
+	PopoverTrigger: ({ children }: any) => <>{children}</>,
+	PopoverContent: ({ children }: any) => <div>{children}</div>,
+	Tooltip: ({ children }: any) => <>{children}</>,
+	TooltipProvider: ({ children }: any) => <>{children}</>,
+	TooltipTrigger: ({ children }: any) => <>{children}</>,
+	TooltipContent: ({ children }: any) => <div>{children}</div>,
+	// Add Dialog components (used by CreateSkillDialog)
+	Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+	DialogContent: ({ children, className }: any) => (
+		<div data-testid="dialog-content" className={className}>
+			{children}
+		</div>
+	),
+	DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
+	DialogTitle: ({ children }: any) => <div data-testid="dialog-title">{children}</div>,
+	DialogDescription: ({ children }: any) => <div data-testid="dialog-description">{children}</div>,
+	DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>,
+	// Add Select components (used by CreateSkillDialog)
+	Select: ({ children, value, onValueChange: _onValueChange }: any) => (
+		<div data-testid="select" data-value={value}>
+			{children}
+		</div>
+	),
+	SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+	SelectItem: ({ children, value }: any) => (
+		<div data-testid={`select-item-${value}`} data-value={value}>
+			{children}
+		</div>
+	),
+	SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
+	SelectValue: ({ placeholder }: any) => <div data-testid="select-value">{placeholder}</div>,
+}))
+
+// Mock ModesView and McpView since they're rendered during indexing
+vi.mock("@src/components/modes/ModesView", () => ({
+	default: () => null,
+}))
+
+vi.mock("@src/components/mcp/McpView", () => ({
+	default: () => null,
 }))
 
 // Mock Tab components
@@ -109,6 +186,10 @@ vi.mock("../UISettings", () => ({
 	UISettings: () => null,
 }))
 
+vi.mock("../SettingsSearch", () => ({
+	SettingsSearch: () => null,
+}))
+
 describe("SettingsView - Change Detection Fix", () => {
 	let queryClient: QueryClient
 
@@ -141,9 +222,7 @@ describe("SettingsView - Change Detection Fix", () => {
 		browserToolEnabled: false,
 		browserViewportSize: "1280x720",
 		enableCheckpoints: false,
-		diffEnabled: true,
 		experiments: {},
-		fuzzyMatchThreshold: 1.0,
 		maxOpenTabsContext: 10,
 		maxWorkspaceFiles: 200,
 		mcpEnabled: false,
@@ -170,9 +249,6 @@ describe("SettingsView - Change Detection Fix", () => {
 		maxReadFileLine: -1,
 		maxImageFileSize: 5,
 		maxTotalImageSize: 20,
-		terminalCompressProgressBar: false,
-		maxConcurrentFileReads: 5,
-		condensingApiConfigId: "",
 		customCondensingPrompt: "",
 		customSupportPrompts: {},
 		profileThresholds: {},

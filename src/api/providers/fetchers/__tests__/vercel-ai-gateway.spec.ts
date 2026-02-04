@@ -173,7 +173,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 				maxTokens: 8000,
 				contextWindow: 100000,
 				supportsImages: false,
-				supportsNativeTools: true,
 				supportsPromptCache: false,
 				inputPrice: 2500000,
 				outputPrice: 10000000,

@@ -24,17 +24,9 @@ import { t } from "../../i18n"
 export class GenerateImageTool extends BaseTool<"generate_image"> {
 	readonly name = "generate_image" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): GenerateImageParams {
-		return {
-			prompt: params.prompt || "",
-			path: params.path || "",
-			image: params.image,
-		}
-	}
-
 	async execute(params: GenerateImageParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { prompt, path: relPath, image: inputImagePath } = params
-		const { handleError, pushToolResult, askApproval, removeClosingTag, toolProtocol } = callbacks
+		const { handleError, pushToolResult, askApproval } = callbacks
 
 		const provider = task.providerRef.deref()
 		const state = await provider?.getState()
@@ -69,7 +61,7 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 		const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 		if (!accessAllowed) {
 			await task.say("rooignore_error", relPath)
-			pushToolResult(formatResponse.rooIgnoreError(relPath, toolProtocol))
+			pushToolResult(formatResponse.rooIgnoreError(relPath))
 			return
 		}
 
@@ -90,7 +82,7 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 			const inputImageAccessAllowed = task.rooIgnoreController?.validateAccess(inputImagePath)
 			if (!inputImageAccessAllowed) {
 				await task.say("rooignore_error", inputImagePath)
-				pushToolResult(formatResponse.rooIgnoreError(inputImagePath, toolProtocol))
+				pushToolResult(formatResponse.rooIgnoreError(inputImagePath))
 				return
 			}
 
@@ -176,12 +168,12 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 			return
 		}
 
-		const fullPath = path.resolve(task.cwd, removeClosingTag("path", relPath))
+		const fullPath = path.resolve(task.cwd, relPath)
 		const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
 
 		const sharedMessageProps = {
 			tool: "generateImage" as const,
-			path: getReadablePath(task.cwd, removeClosingTag("path", relPath)),
+			path: getReadablePath(task.cwd, relPath),
 			content: prompt,
 			isOutsideWorkspace,
 			isProtected: isWriteProtected,

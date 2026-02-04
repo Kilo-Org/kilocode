@@ -1,15 +1,28 @@
 import { HTMLAttributes } from "react"
 import React from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { Database, FoldVertical } from "lucide-react"
+import { VSCodeCheckbox, VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
+import { FoldVertical } from "lucide-react"
+
+import { supportPrompt } from "@roo/support-prompt"
 
 import { cn } from "@/lib/utils"
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Button } from "@/components/ui"
+import {
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Slider,
+	Button,
+	StandardTooltip,
+} from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SearchableSetting } from "./SearchableSetting"
 import { vscode } from "@/utils/vscode"
 
 type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
@@ -20,11 +33,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
 	enableSubfolderRules?: boolean
-	maxReadFileLine?: number
 	maxImageFileSize?: number
 	maxTotalImageSize?: number
-	maxConcurrentFileReads?: number
-	allowVeryLargeReads?: boolean // kilocode_change
 	profileThresholds?: Record<string, number>
 	includeDiagnosticMessages?: boolean
 	maxDiagnosticMessages?: number
@@ -32,6 +42,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	includeCurrentTime?: boolean
 	includeCurrentCost?: boolean
 	maxGitStatusFiles?: number
+	customSupportPrompts: Record<string, string | undefined>
+	setCustomSupportPrompts: (prompts: Record<string, string | undefined>) => void
 	setCachedStateField: SetCachedStateField<
 		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
@@ -39,11 +51,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
 		| "enableSubfolderRules"
-		| "maxReadFileLine"
 		| "maxImageFileSize"
 		| "maxTotalImageSize"
-		| "maxConcurrentFileReads"
-		| "allowVeryLargeReads" // kilocode_change
 		| "profileThresholds"
 		| "includeDiagnosticMessages"
 		| "maxDiagnosticMessages"
@@ -63,11 +72,8 @@ export const ContextManagementSettings = ({
 	showRooIgnoredFiles,
 	enableSubfolderRules,
 	setCachedStateField,
-	maxReadFileLine,
 	maxImageFileSize,
 	maxTotalImageSize,
-	maxConcurrentFileReads,
-	allowVeryLargeReads, // kilocode_change
 	profileThresholds = {},
 	includeDiagnosticMessages,
 	maxDiagnosticMessages,
@@ -75,11 +81,36 @@ export const ContextManagementSettings = ({
 	includeCurrentTime,
 	includeCurrentCost,
 	maxGitStatusFiles,
+	customSupportPrompts,
+	setCustomSupportPrompts,
 	className,
 	...props
 }: ContextManagementSettingsProps) => {
 	const { t } = useAppTranslation()
 	const [selectedThresholdProfile, setSelectedThresholdProfile] = React.useState<string>("default")
+
+	// Helper function to get the CONDENSE prompt value
+	const getCondensePromptValue = (): string => {
+		return supportPrompt.get(customSupportPrompts, "CONDENSE")
+	}
+
+	// Helper function to update the CONDENSE prompt
+	const updateCondensePrompt = (value: string | undefined) => {
+		const updatedPrompts = { ...customSupportPrompts }
+		if (value === undefined) {
+			delete updatedPrompts["CONDENSE"]
+		} else {
+			updatedPrompts["CONDENSE"] = value
+		}
+		setCustomSupportPrompts(updatedPrompts)
+	}
+
+	// Helper function to reset the CONDENSE prompt to default
+	const handleCondenseReset = () => {
+		const updatedPrompts = { ...customSupportPrompts }
+		delete updatedPrompts["CONDENSE"]
+		setCustomSupportPrompts(updatedPrompts)
+	}
 
 	// Helper function to get the current threshold value based on selected profile
 	const getCurrentThresholdValue = () => {
@@ -110,14 +141,14 @@ export const ContextManagementSettings = ({
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
 			<SectionHeader description={t("settings:contextManagement.description")}>
-				<div className="flex items-center gap-2">
-					<Database className="w-4" />
-					<div>{t("settings:sections.contextManagement")}</div>
-				</div>
+				{t("settings:sections.contextManagement")}
 			</SectionHeader>
 
 			<Section>
-				<div>
+				<SearchableSetting
+					settingId="context-open-tabs"
+					section="contextManagement"
+					label={t("settings:contextManagement.openTabs.label")}>
 					<span className="block font-medium mb-1">{t("settings:contextManagement.openTabs.label")}</span>
 					<div className="flex items-center gap-2">
 						<Slider
@@ -133,9 +164,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.openTabs.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-workspace-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.workspaceFiles.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.workspaceFiles.label")}
 					</span>
@@ -153,9 +187,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.workspaceFiles.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-max-git-status-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxGitStatusFiles.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.maxGitStatusFiles.label")}
 					</span>
@@ -173,29 +210,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.maxGitStatusFiles.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
-					<span className="block font-medium mb-1">
-						{t("settings:contextManagement.maxConcurrentFileReads.label")}
-					</span>
-					<div className="flex items-center gap-2">
-						<Slider
-							min={1}
-							max={100}
-							step={1}
-							value={[Math.max(1, maxConcurrentFileReads ?? 5)]}
-							onValueChange={([value]) => setCachedStateField("maxConcurrentFileReads", value)}
-							data-testid="max-concurrent-file-reads-slider"
-						/>
-						<span className="w-10 text-sm">{Math.max(1, maxConcurrentFileReads ?? 5)}</span>
-					</div>
-					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
-						{t("settings:contextManagement.maxConcurrentFileReads.description")}
-					</div>
-				</div>
-
-				<div>
+				<SearchableSetting
+					settingId="context-show-rooignored-files"
+					section="contextManagement"
+					label={t("settings:contextManagement.rooignore.label")}>
 					<VSCodeCheckbox
 						checked={showRooIgnoredFiles}
 						onChange={(e: any) => setCachedStateField("showRooIgnoredFiles", e.target.checked)}
@@ -207,9 +227,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.rooignore.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-enable-subfolder-rules"
+					section="contextManagement"
+					label={t("settings:contextManagement.enableSubfolderRules.label")}>
 					<VSCodeCheckbox
 						checked={enableSubfolderRules}
 						onChange={(e: any) => setCachedStateField("enableSubfolderRules", e.target.checked)}
@@ -221,59 +244,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.enableSubfolderRules.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
-					<div className="flex flex-col gap-2">
-						<span className="font-medium">{t("settings:contextManagement.maxReadFile.label")}</span>
-						<div className="flex items-center gap-4">
-							<Input
-								type="number"
-								pattern="-?[0-9]*"
-								className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-								value={maxReadFileLine ?? -1}
-								min={-1}
-								onChange={(e) => {
-									const newValue = parseInt(e.target.value, 10)
-									if (!isNaN(newValue) && newValue >= -1) {
-										setCachedStateField("maxReadFileLine", newValue)
-									}
-								}}
-								onClick={(e) => e.currentTarget.select()}
-								data-testid="max-read-file-line-input"
-								disabled={maxReadFileLine === -1}
-							/>
-							<span>{t("settings:contextManagement.maxReadFile.lines")}</span>
-							<VSCodeCheckbox
-								checked={maxReadFileLine === -1}
-								onChange={(e: any) =>
-									setCachedStateField("maxReadFileLine", e.target.checked ? -1 : 500)
-								}
-								data-testid="max-read-file-always-full-checkbox">
-								{t("settings:contextManagement.maxReadFile.always_full_read")}
-							</VSCodeCheckbox>
-						</div>
-					</div>
-					<div className="text-vscode-descriptionForeground text-sm mt-2">
-						{t("settings:contextManagement.maxReadFile.description")}
-					</div>
-				</div>
-				{/*kilocode_change start*/}
-				<div>
-					<VSCodeCheckbox
-						checked={allowVeryLargeReads}
-						onChange={(e: any) => setCachedStateField("allowVeryLargeReads", e.target.checked)}>
-						<label className="block font-medium mb-1">
-							{t("kilocode:settings.contextManagement.allowVeryLargeReads.label")}
-						</label>
-					</VSCodeCheckbox>
-					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
-						{t("kilocode:settings.contextManagement.allowVeryLargeReads.description")}
-					</div>
-				</div>
-				{/*kilocode_change end*/}
-
-				<div>
+				<SearchableSetting
+					settingId="context-max-image-file-size"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxImageFileSize.label")}>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxImageFileSize.label")}</span>
 						<div className="flex items-center gap-4">
@@ -299,9 +275,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
 						{t("settings:contextManagement.maxImageFileSize.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-max-total-image-size"
+					section="contextManagement"
+					label={t("settings:contextManagement.maxTotalImageSize.label")}>
 					<div className="flex flex-col gap-2">
 						<span className="font-medium">{t("settings:contextManagement.maxTotalImageSize.label")}</span>
 						<div className="flex items-center gap-4">
@@ -327,9 +306,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
 						{t("settings:contextManagement.maxTotalImageSize.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-include-diagnostic-messages"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.includeMessages.label")}>
 					<VSCodeCheckbox
 						checked={includeDiagnosticMessages}
 						onChange={(e: any) => setCachedStateField("includeDiagnosticMessages", e.target.checked)}
@@ -341,9 +323,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.diagnostics.includeMessages.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-max-diagnostic-messages"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.maxMessages.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.diagnostics.maxMessages.label")}
 					</span>
@@ -396,9 +381,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.diagnostics.maxMessages.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-write-delay"
+					section="contextManagement"
+					label={t("settings:contextManagement.diagnostics.delayAfterWrite.label")}>
 					<span className="block font-medium mb-1">
 						{t("settings:contextManagement.diagnostics.delayAfterWrite.label")}
 					</span>
@@ -416,9 +404,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.diagnostics.delayAfterWrite.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-include-current-time"
+					section="contextManagement"
+					label={t("settings:contextManagement.includeCurrentTime.label")}>
 					<VSCodeCheckbox
 						checked={includeCurrentTime}
 						onChange={(e: any) => setCachedStateField("includeCurrentTime", e.target.checked)}
@@ -430,9 +421,12 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.includeCurrentTime.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 
-				<div>
+				<SearchableSetting
+					settingId="context-include-current-cost"
+					section="contextManagement"
+					label={t("settings:contextManagement.includeCurrentCost.label")}>
 					<VSCodeCheckbox
 						checked={includeCurrentCost}
 						onChange={(e: any) => setCachedStateField("includeCurrentCost", e.target.checked)}
@@ -444,15 +438,52 @@ export const ContextManagementSettings = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.includeCurrentCost.description")}
 					</div>
-				</div>
+				</SearchableSetting>
 			</Section>
 			<Section className="pt-2">
-				<VSCodeCheckbox
-					checked={autoCondenseContext}
-					onChange={(e: any) => setCachedStateField("autoCondenseContext", e.target.checked)}
-					data-testid="auto-condense-context-checkbox">
-					<span className="font-medium">{t("settings:contextManagement.autoCondenseContext.name")}</span>
-				</VSCodeCheckbox>
+				{/* Context Condensing Prompt Editor */}
+				<SearchableSetting
+					settingId="context-condense-prompt"
+					section="contextManagement"
+					label={t("prompts:supportPrompts.types.CONDENSE.label")}>
+					<div className="flex justify-between items-center mb-1">
+						<label className="block font-medium">{t("prompts:supportPrompts.types.CONDENSE.label")}</label>
+						<StandardTooltip content={t("prompts:supportPrompts.resetPrompt", { promptType: "CONDENSE" })}>
+							<Button variant="ghost" size="icon" onClick={handleCondenseReset}>
+								<span className="codicon codicon-discard"></span>
+							</Button>
+						</StandardTooltip>
+					</div>
+					<div className="text-sm text-vscode-descriptionForeground mb-2">
+						{t("prompts:supportPrompts.types.CONDENSE.description")}
+					</div>
+					<VSCodeTextArea
+						resize="vertical"
+						value={getCondensePromptValue()}
+						onInput={(e) => {
+							const value =
+								(e as unknown as CustomEvent)?.detail?.target?.value ??
+								((e as any).target as HTMLTextAreaElement).value
+							updateCondensePrompt(value)
+						}}
+						rows={6}
+						className="w-full"
+						data-testid="condense-prompt-textarea"
+					/>
+				</SearchableSetting>
+
+				{/* Auto Condense Context */}
+				<SearchableSetting
+					settingId="context-auto-condense"
+					section="contextManagement"
+					label={t("settings:contextManagement.autoCondenseContext.name")}>
+					<VSCodeCheckbox
+						checked={autoCondenseContext}
+						onChange={(e: any) => setCachedStateField("autoCondenseContext", e.target.checked)}
+						data-testid="auto-condense-context-checkbox">
+						<span className="font-medium">{t("settings:contextManagement.autoCondenseContext.name")}</span>
+					</VSCodeCheckbox>
+				</SearchableSetting>
 				{autoCondenseContext && (
 					<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
 						<div className="flex items-center gap-4 font-bold">

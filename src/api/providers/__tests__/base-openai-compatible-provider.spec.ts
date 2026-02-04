@@ -57,7 +57,7 @@ describe("BaseOpenAiCompatibleProvider", () => {
 		vi.restoreAllMocks()
 	})
 
-	describe("XmlMatcher reasoning tags", () => {
+	describe("TagMatcher reasoning tags", () => {
 		it("should handle reasoning tags (<think>) from stream", async () => {
 			mockCreate.mockImplementationOnce(() => {
 				return {
@@ -87,7 +87,7 @@ describe("BaseOpenAiCompatibleProvider", () => {
 				chunks.push(chunk)
 			}
 
-			// XmlMatcher yields chunks as they're processed
+			// TagMatcher yields chunks as they're processed
 			expect(chunks).toEqual([
 				{ type: "reasoning", text: "Let me think" },
 				{ type: "reasoning", text: " about this" },
@@ -124,7 +124,7 @@ describe("BaseOpenAiCompatibleProvider", () => {
 				chunks.push(chunk)
 			}
 
-			// When a complete tag arrives in one chunk, XmlMatcher may not parse it
+			// When a complete tag arrives in one chunk, TagMatcher may not parse it
 			// This test documents the actual behavior
 			expect(chunks.length).toBeGreaterThan(0)
 			expect(chunks[0]).toEqual({ type: "text", text: "Regular text before " })
@@ -151,7 +151,7 @@ describe("BaseOpenAiCompatibleProvider", () => {
 				chunks.push(chunk)
 			}
 
-			// XmlMatcher should handle incomplete tags and flush remaining content
+			// TagMatcher should handle incomplete tags and flush remaining content
 			expect(chunks.length).toBeGreaterThan(0)
 			expect(
 				chunks.some(

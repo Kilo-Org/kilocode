@@ -14,16 +14,9 @@ interface SwitchModeParams {
 export class SwitchModeTool extends BaseTool<"switch_mode"> {
 	readonly name = "switch_mode" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): SwitchModeParams {
-		return {
-			mode_slug: params.mode_slug || "",
-			reason: params.reason || "",
-		}
-	}
-
 	async execute(params: SwitchModeParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { mode_slug, reason } = params
-		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
+		const { askApproval, handleError, pushToolResult } = callbacks
 
 		try {
 			if (!mode_slug) {
@@ -83,8 +76,8 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 		const partialMessage = JSON.stringify({
 			tool: "switchMode",
-			mode: this.removeClosingTag("mode_slug", mode_slug, block.partial),
-			reason: this.removeClosingTag("reason", reason, block.partial),
+			mode: mode_slug ?? "",
+			reason: reason ?? "",
 		})
 
 		await task.ask("tool", partialMessage, block.partial).catch(() => {})

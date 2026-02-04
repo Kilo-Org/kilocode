@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@/utils/test-utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-import type { Command } from "@roo/ExtensionMessage"
+import type { Command } from "@roo-code/types"
 
 import { ExtensionStateContextProvider } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
@@ -54,58 +54,82 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	Button: ({ children, onClick, disabled, className, variant, size, tabIndex }: any) => (
+	Button: ({ children, onClick, disabled, className, variant, size }: any) => (
 		<button
 			onClick={onClick}
 			disabled={disabled}
 			className={className}
 			data-variant={variant}
 			data-size={size}
-			tabIndex={tabIndex}
 			data-testid="button">
 			{children}
 		</button>
 	),
-	StandardTooltip: ({ children, content }: any) => (
-		<div title={content} data-testid="tooltip">
+	StandardTooltip: ({ children }: any) => <>{children}</>,
+	Dialog: ({ children, open, _onOpenChange }: any) => (
+		<div data-testid="dialog" data-open={open}>
+			{open && children}
+		</div>
+	),
+	DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
+	DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
+	DialogTitle: ({ children }: any) => <div data-testid="dialog-title">{children}</div>,
+	DialogDescription: ({ children }: any) => <div data-testid="dialog-description">{children}</div>,
+	DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>,
+	Input: ({ id, value, onChange, placeholder, maxLength, className }: any) => (
+		<input
+			id={id}
+			value={value}
+			onChange={onChange}
+			placeholder={placeholder}
+			maxLength={maxLength}
+			className={className}
+			data-testid={`input-${id}`}
+		/>
+	),
+	Select: ({ children, value, onValueChange }: any) => (
+		<div data-testid="select" data-value={value} onClick={() => onValueChange?.("global")}>
 			{children}
 		</div>
 	),
+	SelectTrigger: ({ children, className }: any) => (
+		<button data-testid="select-trigger" className={className}>
+			{children}
+		</button>
+	),
+	SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+	SelectItem: ({ children, value }: any) => (
+		<div data-testid={`select-item-${value}`} data-value={value}>
+			{children}
+		</div>
+	),
+	SelectValue: () => <span data-testid="select-value" />,
 }))
 
-// Mock SlashCommandItem component - we need to handle the built-in check
-vi.mock("../../chat/SlashCommandItem", () => ({
-	SlashCommandItem: ({ command, onDelete, onClick }: any) => (
-		<div data-testid={`command-item-${command.name}`}>
-			<span>{command.name}</span>
-			{command.description && <span>{command.description}</span>}
-			{command.source !== "built-in" && (
-				<button onClick={() => onDelete(command)} data-testid={`delete-${command.name}`}>
-					Delete
-				</button>
+// Mock CreateSlashCommandDialog component
+vi.mock("../CreateSlashCommandDialog", () => ({
+	CreateSlashCommandDialog: ({ open, onOpenChange, onCommandCreated }: any) => (
+		<div data-testid="create-command-dialog" data-open={open}>
+			{open && (
+				<>
+					<button onClick={() => onOpenChange(false)} data-testid="close-dialog">
+						Close
+					</button>
+					<button onClick={onCommandCreated} data-testid="create-command-button">
+						Create
+					</button>
+				</>
 			)}
-			<button onClick={() => onClick?.(command)} data-testid={`click-${command.name}`}>
-				Click
-			</button>
 		</div>
 	),
 }))
 
-// Mock SectionHeader and Section components
+// Mock SectionHeader component
 vi.mock("../SectionHeader", () => ({
 	SectionHeader: ({ children }: any) => <div data-testid="section-header">{children}</div>,
 }))
 
-vi.mock("../Section", () => ({
-	Section: ({ children }: any) => <div data-testid="section">{children}</div>,
-}))
-
 const mockCommands: Command[] = [
-	{
-		name: "built-in-command",
-		description: "A built-in command",
-		source: "built-in",
-	},
 	{
 		name: "global-command",
 		description: "A global command",
@@ -140,7 +164,7 @@ const renderSlashCommandsSettings = (commands: Command[] = mockCommands, cwd?: s
 	// Update the mock state before rendering
 	mockExtensionState = {
 		commands,
-		cwd: cwd || "/workspace",
+		cwd: cwd !== undefined ? cwd : "/workspace",
 	}
 
 	return render(
@@ -157,21 +181,11 @@ describe("SlashCommandsSettings", () => {
 		vi.clearAllMocks()
 	})
 
-	it("renders section header with icon and title", () => {
+	it("renders section header", () => {
 		renderSlashCommandsSettings()
 
 		expect(screen.getByTestId("section-header")).toBeInTheDocument()
 		expect(screen.getByText("settings:sections.slashCommands")).toBeInTheDocument()
-	})
-
-	it("renders description with documentation link", () => {
-		renderSlashCommandsSettings()
-
-		// The Trans component doesn't render the link in our mock, so we just check for the description
-		const description = screen.getByText((_content, element) => {
-			return element?.className === "text-sm text-vscode-descriptionForeground"
-		})
-		expect(description).toBeInTheDocument()
 	})
 
 	it("requests commands on mount", () => {
@@ -180,219 +194,114 @@ describe("SlashCommandsSettings", () => {
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "requestCommands" })
 	})
 
-	it("displays built-in commands in their own section", () => {
+	it("displays project commands section when in a workspace", () => {
 		renderSlashCommandsSettings()
 
-		expect(screen.getByText("chat:slashCommands.builtInCommands")).toBeInTheDocument()
-		expect(screen.getByTestId("command-item-built-in-command")).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.workspaceCommands")).toBeInTheDocument()
 	})
 
-	it("displays global commands in their own section", () => {
+	it("displays global commands section", () => {
 		renderSlashCommandsSettings()
 
-		expect(screen.getByText("chat:slashCommands.globalCommands")).toBeInTheDocument()
-		expect(screen.getByTestId("command-item-global-command")).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.globalCommands")).toBeInTheDocument()
 	})
 
-	it("displays project commands when in a workspace", () => {
+	it("hides project commands section when not in workspace", () => {
+		const globalOnlyCommands = mockCommands.filter((c) => c.source === "global")
+		renderSlashCommandsSettings(globalOnlyCommands, "")
+
+		expect(screen.queryByText("settings:slashCommands.workspaceCommands")).not.toBeInTheDocument()
+	})
+
+	it("shows empty state message for global commands when none exist", () => {
+		const projectOnlyCommands = mockCommands.filter((c) => c.source === "project")
+		renderSlashCommandsSettings(projectOnlyCommands)
+
+		expect(screen.getByText("settings:slashCommands.noGlobalCommands")).toBeInTheDocument()
+	})
+
+	it("shows empty state message for workspace commands when none exist", () => {
+		const globalOnlyCommands = mockCommands.filter((c) => c.source === "global")
+		renderSlashCommandsSettings(globalOnlyCommands)
+
+		expect(screen.getByText("settings:slashCommands.noWorkspaceCommands")).toBeInTheDocument()
+	})
+
+	it("groups commands by source correctly", () => {
 		renderSlashCommandsSettings()
 
-		expect(screen.getByText("chat:slashCommands.workspaceCommands")).toBeInTheDocument()
-		expect(screen.getByTestId("command-item-project-command")).toBeInTheDocument()
+		// Should show both sections
+		expect(screen.getByText("settings:slashCommands.workspaceCommands")).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.globalCommands")).toBeInTheDocument()
+
+		// Should show command names
+		expect(screen.getByText("global-command")).toBeInTheDocument()
+		expect(screen.getByText("project-command")).toBeInTheDocument()
 	})
 
-	it("does not display project commands when not in a workspace", () => {
-		// Pass empty string for cwd to simulate no workspace
-		// The component checks Boolean(cwd) which is false for empty string
-		// However, it seems the component still renders the section but without commands
-		const commandsWithoutProject = mockCommands.filter((cmd) => cmd.source !== "project")
-		renderSlashCommandsSettings(commandsWithoutProject, "")
-
-		// Project commands should not be shown
-		expect(screen.queryByTestId("command-item-project-command")).not.toBeInTheDocument()
-
-		// The section might still be rendered but should be empty of project commands
-		// This is acceptable behavior as it allows users to add project commands even without a workspace
-	})
-
-	it("shows input field for creating new global command", () => {
+	it("displays command descriptions", () => {
 		renderSlashCommandsSettings()
 
-		const input = screen.getAllByPlaceholderText("chat:slashCommands.newGlobalCommandPlaceholder")[0]
-		expect(input).toBeInTheDocument()
+		expect(screen.getByText("A global command")).toBeInTheDocument()
+		expect(screen.getByText("A project command")).toBeInTheDocument()
 	})
 
-	it("shows input field for creating new workspace command when in workspace", () => {
+	it("opens create command dialog when add button is clicked", () => {
 		renderSlashCommandsSettings()
 
-		const input = screen.getByPlaceholderText("chat:slashCommands.newWorkspaceCommandPlaceholder")
-		expect(input).toBeInTheDocument()
-	})
+		// Find the "Add Slash Command" button and click it
+		const addButton = screen.getByText("settings:slashCommands.addCommand").closest("button")
+		expect(addButton).toBeInTheDocument()
+		fireEvent.click(addButton!)
 
-	it("creates new global command when entering name and clicking add button", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "new-command" } })
-		fireEvent.click(addButton)
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "new-command.md",
-				values: { source: "global" },
-			})
-		})
-
-		expect(input.value).toBe("")
-	})
-
-	it("creates new workspace command when entering name and clicking add button", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getByPlaceholderText(
-			"chat:slashCommands.newWorkspaceCommandPlaceholder",
-		) as HTMLInputElement
-		const addButtons = screen.getAllByTestId("button")
-		const workspaceAddButton = addButtons[1] // Second add button is for workspace
-
-		fireEvent.change(input, { target: { value: "workspace-command" } })
-		fireEvent.click(workspaceAddButton)
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "workspace-command.md",
-				values: { source: "project" },
-			})
-		})
-
-		expect(input.value).toBe("")
-	})
-
-	it("appends .md extension if not present when creating command", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "command-without-extension" } })
-		fireEvent.click(addButton)
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "command-without-extension.md",
-				values: { source: "global" },
-			})
-		})
-	})
-
-	it("does not double-append .md extension if already present", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "command-with-extension.md" } })
-		fireEvent.click(addButton)
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "command-with-extension.md",
-				values: { source: "global" },
-			})
-		})
-	})
-
-	it("creates command on Enter key press", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-
-		fireEvent.change(input, { target: { value: "enter-command" } })
-		fireEvent.keyDown(input, { key: "Enter" })
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "enter-command.md",
-				values: { source: "global" },
-			})
-		})
-	})
-
-	it("disables add button when input is empty", () => {
-		renderSlashCommandsSettings()
-
-		const addButton = screen.getAllByTestId("button")[0]
-		expect(addButton).toBeDisabled()
-	})
-
-	it("enables add button when input has value", () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "test" } })
-		expect(addButton).not.toBeDisabled()
+		// Dialog should now be open
+		expect(screen.getByTestId("create-command-dialog")).toHaveAttribute("data-open", "true")
 	})
 
 	it("opens delete confirmation dialog when delete button is clicked", () => {
 		renderSlashCommandsSettings()
 
-		const deleteButton = screen.getByTestId("delete-global-command")
-		fireEvent.click(deleteButton)
+		// Find the delete button for the global command (using the button with Trash2 icon)
+		const deleteButtons = screen.getAllByTestId("button").filter((btn) => btn.querySelector(".text-destructive"))
+		fireEvent.click(deleteButtons[0])
 
+		// Alert dialog should be open with delete confirmation
 		expect(screen.getByTestId("alert-dialog")).toHaveAttribute("data-open", "true")
-		expect(screen.getByText("chat:slashCommands.deleteDialog.title")).toBeInTheDocument()
-		expect(screen.getByText("chat:slashCommands.deleteDialog.description global-command")).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.deleteDialog.title")).toBeInTheDocument()
 	})
 
 	it("deletes command when confirmation is clicked", async () => {
 		renderSlashCommandsSettings()
 
-		const deleteButton = screen.getByTestId("delete-global-command")
-		fireEvent.click(deleteButton)
+		// Click delete button for global command
+		const deleteButtons = screen.getAllByTestId("button").filter((btn) => btn.querySelector(".text-destructive"))
+		fireEvent.click(deleteButtons[0])
 
+		// Click confirm delete
 		const confirmButton = screen.getByTestId("alert-dialog-action")
 		fireEvent.click(confirmButton)
 
 		await waitFor(() => {
 			expect(vscode.postMessage).toHaveBeenCalledWith({
 				type: "deleteCommand",
-				text: "global-command",
-				values: { source: "global" },
+				text: expect.any(String),
+				values: { source: expect.any(String) },
 			})
 		})
-
-		expect(screen.getByTestId("alert-dialog")).toHaveAttribute("data-open", "false")
 	})
 
 	it("cancels deletion when cancel is clicked", () => {
 		renderSlashCommandsSettings()
 
-		const deleteButton = screen.getByTestId("delete-global-command")
-		fireEvent.click(deleteButton)
+		// Click delete button
+		const deleteButtons = screen.getAllByTestId("button").filter((btn) => btn.querySelector(".text-destructive"))
+		fireEvent.click(deleteButtons[0])
 
+		// Click cancel
 		const cancelButton = screen.getByTestId("alert-dialog-cancel")
 		fireEvent.click(cancelButton)
 
-		expect(screen.getByTestId("alert-dialog")).toHaveAttribute("data-open", "false")
+		// Dialog should be closed and no delete message sent
 		expect(vscode.postMessage).not.toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: "deleteCommand",
@@ -400,19 +309,49 @@ describe("SlashCommandsSettings", () => {
 		)
 	})
 
+	it("opens command file when edit button is clicked", () => {
+		renderSlashCommandsSettings()
+
+		// Clear mocks after initial mount
+		vi.clearAllMocks()
+
+		// Find edit buttons (icon size buttons without text-destructive, with lucide-square-pen icon)
+		const allButtons = screen.getAllByTestId("button")
+		const editButtons = allButtons.filter(
+			(btn) =>
+				btn.getAttribute("data-size") === "icon" &&
+				!btn.querySelector('[class*="text-destructive"]') &&
+				btn.querySelector('[class*="lucide-square-pen"]'),
+		)
+
+		// Click the first edit button
+		fireEvent.click(editButtons[0])
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "openFile",
+			text: expect.any(String),
+		})
+	})
+
 	it("refreshes commands after deletion", async () => {
 		renderSlashCommandsSettings()
 
-		const deleteButton = screen.getByTestId("delete-global-command")
-		fireEvent.click(deleteButton)
+		// Click delete button
+		const deleteButtons = screen.getAllByTestId("button").filter((btn) => btn.querySelector(".text-destructive"))
+		fireEvent.click(deleteButtons[0])
 
+		// Click confirm delete
 		const confirmButton = screen.getByTestId("alert-dialog-action")
 		fireEvent.click(confirmButton)
 
-		// Wait for the setTimeout to execute
+		// Wait for refresh to be called after timeout
 		await waitFor(
 			() => {
-				expect(vscode.postMessage).toHaveBeenCalledWith({ type: "requestCommands" })
+				// Initial mount call + refresh after deletion
+				const requestCommandsCalls = (vscode.postMessage as any).mock.calls.filter(
+					(call: any) => call[0].type === "requestCommands",
+				)
+				expect(requestCommandsCalls.length).toBeGreaterThanOrEqual(2)
 			},
 			{ timeout: 200 },
 		)
@@ -421,105 +360,59 @@ describe("SlashCommandsSettings", () => {
 	it("refreshes commands after creating new command", async () => {
 		renderSlashCommandsSettings()
 
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
+		// Open create dialog
+		const addButton = screen.getByText("settings:slashCommands.addCommand").closest("button")
+		fireEvent.click(addButton!)
 
-		fireEvent.change(input, { target: { value: "new-command" } })
-		fireEvent.click(addButton)
+		// Click create button in dialog
+		const createButton = screen.getByTestId("create-command-button")
+		fireEvent.click(createButton)
 
-		// Wait for the setTimeout to execute
+		// Wait for refresh to be called after timeout
 		await waitFor(
 			() => {
-				expect(vscode.postMessage).toHaveBeenCalledWith({ type: "requestCommands" })
+				// Initial mount call + refresh after creation
+				const requestCommandsCalls = (vscode.postMessage as any).mock.calls.filter(
+					(call: any) => call[0].type === "requestCommands",
+				)
+				expect(requestCommandsCalls.length).toBeGreaterThanOrEqual(2)
 			},
 			{ timeout: 600 },
 		)
 	})
 
-	it("handles command click event", () => {
-		renderSlashCommandsSettings()
-
-		const commandButton = screen.getByTestId("click-global-command")
-		fireEvent.click(commandButton)
-
-		// The current implementation just logs to console
-		// In a real scenario, this might open the command file for editing
-		expect(commandButton).toBeInTheDocument()
-	})
-
-	it("does not show delete button for built-in commands", () => {
-		renderSlashCommandsSettings()
-
-		// The SlashCommandItem component handles this internally
-		// We're just verifying the command is rendered
-		expect(screen.getByTestId("command-item-built-in-command")).toBeInTheDocument()
-	})
-
-	it("trims whitespace from command names", async () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "  trimmed-command  " } })
-		fireEvent.click(addButton)
-
-		await waitFor(() => {
-			expect(vscode.postMessage).toHaveBeenCalledWith({
-				type: "createCommand",
-				text: "trimmed-command.md",
-				values: { source: "global" },
-			})
-		})
-	})
-
-	it("does not create command with empty name after trimming", () => {
-		renderSlashCommandsSettings()
-
-		const input = screen.getAllByPlaceholderText(
-			"chat:slashCommands.newGlobalCommandPlaceholder",
-		)[0] as HTMLInputElement
-		const addButton = screen.getAllByTestId("button")[0]
-
-		fireEvent.change(input, { target: { value: "   " } })
-
-		expect(addButton).toBeDisabled()
-	})
-
 	it("renders empty state when no commands exist", () => {
 		renderSlashCommandsSettings([])
 
-		// Should still show the input fields for creating new commands
-		expect(screen.getAllByPlaceholderText("chat:slashCommands.newGlobalCommandPlaceholder")[0]).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.noGlobalCommands")).toBeInTheDocument()
+		expect(screen.getByText("settings:slashCommands.noWorkspaceCommands")).toBeInTheDocument()
 	})
 
 	it("handles multiple commands of the same type", () => {
 		const multipleCommands: Command[] = [
-			{
-				name: "global-1",
-				description: "First global",
-				source: "global",
-			},
-			{
-				name: "global-2",
-				description: "Second global",
-				source: "global",
-			},
-			{
-				name: "global-3",
-				description: "Third global",
-				source: "global",
-			},
+			{ name: "global-1", description: "First global", source: "global" },
+			{ name: "global-2", description: "Second global", source: "global" },
+			{ name: "project-1", description: "First project", source: "project" },
 		]
 
 		renderSlashCommandsSettings(multipleCommands)
 
-		expect(screen.getByTestId("command-item-global-1")).toBeInTheDocument()
-		expect(screen.getByTestId("command-item-global-2")).toBeInTheDocument()
-		expect(screen.getByTestId("command-item-global-3")).toBeInTheDocument()
+		expect(screen.getByText("global-1")).toBeInTheDocument()
+		expect(screen.getByText("global-2")).toBeInTheDocument()
+		expect(screen.getByText("project-1")).toBeInTheDocument()
+	})
+
+	it("renders a single add command button", () => {
+		renderSlashCommandsSettings()
+
+		// Should only have one "Add Slash Command" button
+		const addButtons = screen.getAllByText("settings:slashCommands.addCommand")
+		expect(addButtons.length).toBe(1)
+	})
+
+	it("renders footer text", () => {
+		renderSlashCommandsSettings()
+
+		expect(screen.getByText("settings:slashCommands.footer")).toBeInTheDocument()
 	})
 })

@@ -58,7 +58,7 @@ export function convertOpenAIToolsToAnthropic(tools: OpenAI.Chat.ChatCompletionT
  * - { type: "function", function: { name } } → { type: "tool", name }
  *
  * @param toolChoice - OpenAI tool_choice parameter
- * @param parallelToolCalls - When true, allows parallel tool calls. When false (default), disables parallel tool calls.
+ * @param parallelToolCalls - When true (default), allows parallel tool calls. When false, disables parallel tool calls.
  * @returns Anthropic ToolChoice or undefined if tools should be omitted
  *
  * @example
@@ -67,16 +67,16 @@ export function convertOpenAIToolsToAnthropic(tools: OpenAI.Chat.ChatCompletionT
  * // Returns: { type: "auto", disable_parallel_tool_use: true }
  *
  * convertOpenAIToolChoiceToAnthropic({ type: "function", function: { name: "get_weather" } })
- * // Returns: { type: "tool", name: "get_weather", disable_parallel_tool_use: true }
+ * // Returns: { type: "tool", name: "get_weather", disable_parallel_tool_use: false }
  * ```
  */
 export function convertOpenAIToolChoiceToAnthropic(
 	toolChoice: OpenAI.Chat.ChatCompletionCreateParams["tool_choice"],
 	parallelToolCalls?: boolean,
 ): Anthropic.Messages.MessageCreateParams["tool_choice"] | undefined {
-	// Anthropic allows parallel tool calls by default. When parallelToolCalls is false or undefined,
+	// Parallel tool calls are enabled by default. When parallelToolCalls is explicitly false,
 	// we disable parallel tool use to ensure one tool call at a time.
-	const disableParallelToolUse = !parallelToolCalls
+	const disableParallelToolUse = parallelToolCalls === false
 
 	if (!toolChoice) {
 		// Default to auto with parallel tool use control

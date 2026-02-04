@@ -165,7 +165,7 @@
 		--accent: var(--vscode-list-hoverBackground);
 		--accent-foreground: var(--vscode-list-hoverForeground);
 		--destructive: var(--vscode-errorForeground);
-		--destructive-foreground: var(--vscode-button-foreground);
+		--destructive-foreground: var(--vscode-editor-background);
 		--border: var(--vscode-input-border, transparent); /* --border gets theme value or transparent fallback */
 		--input: var(--vscode-input-background);
 		--ring: var(--vscode-input-border);
@@ -212,6 +212,29 @@
 	/* Search result highlighting */
 	.history-item-highlight {
 		@apply underline;
+	}
+
+	/* Custom smooth bounce animation for Roo hero */
+	@keyframes smooth-bounce {
+		0% {
+			transform: translateY(0);
+		}
+		25% {
+			transform: translateY(-25%);
+		}
+		50% {
+			transform: translateY(0);
+		}
+		75% {
+			transform: translateY(-12.5%);
+		}
+		100% {
+			transform: translateY(0);
+		}
+	}
+
+	.animate-smooth-bounce {
+		animation: smooth-bounce 1s ease-in-out infinite;
 	}
 }
 
@@ -574,4 +597,21 @@ input[cmdk-input]:focus {
 
 .animate-sun {
 	animation: sun 30s linear infinite;
+}
+
+/* Settings search highlight animation */
+@keyframes settings-highlight-fade {
+	0% {
+		background-color: color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+.settings-highlight {
+	animation: settings-highlight-fade 1.5s ease-out forwards;
+	border-radius: 4px;
+	padding: 8px;
+	margin: -8px;
 }

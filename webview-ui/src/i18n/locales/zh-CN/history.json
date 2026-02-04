@@ -46,5 +46,10 @@
 		"mostRelevant": "最相关"
 	},
 	"viewAllHistory": "查看全部",
-	"shareSession": "分享会话"
+	"subtasks_one": "{{count}} 子任务",
+	"subtasks_other": "{{count}} 子任务",
+	"subtaskTag": "子任务",
+	"deleteWithSubtasks": "这也将删除 {{count}} 个子任务。您确定吗？",
+	"expandSubtasks": "展开子任务",
+	"collapseSubtasks": "收起子任务"
 }

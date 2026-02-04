@@ -1,20 +1,19 @@
 import { memo } from "react"
-import type { HistoryItem } from "@roo-code/types"
+import { ArrowRight, Folder } from "lucide-react"
+import type { DisplayHistoryItem } from "./types"
 
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import TaskItemFooter from "./TaskItemFooter"
-
-interface DisplayHistoryItem extends HistoryItem {
-	highlight?: string
-}
+import { StandardTooltip } from "../ui"
 
 interface TaskItemProps {
 	item: DisplayHistoryItem
 	variant: "compact" | "full"
 	showWorkspace?: boolean
+	hasSubtasks?: boolean
 	isSelectionMode?: boolean
 	isSelected?: boolean
 	onToggleSelection?: (taskId: string, isSelected: boolean) => void
@@ -26,6 +25,7 @@ const TaskItem = ({
 	item,
 	variant,
 	showWorkspace = false,
+	hasSubtasks = false,
 	isSelectionMode = false,
 	isSelected = false,
 	onToggleSelection,
@@ -47,7 +47,9 @@ const TaskItem = ({
 			key={item.id}
 			data-testid={`task-item-${item.id}`}
 			className={cn(
-				"cursor-pointer group bg-vscode-editor-background rounded relative overflow-hidden border border-transparent hover:bg-vscode-list-hoverBackground transition-colors", // kilocode_change: no rounded borders
+				"cursor-pointer group relative overflow-hidden",
+				"text-vscode-foreground/80 hover:text-vscode-foreground transition-colors",
+				hasSubtasks ? "rounded-t-xl" : "rounded-xl",
 				className,
 			)}
 			onClick={handleClick}>
@@ -68,32 +70,52 @@ const TaskItem = ({
 				)}
 
 				<div className="flex-1 min-w-0">
-					<div
-						className={cn(
-							"overflow-hidden whitespace-pre-wrap font-light text-vscode-foreground text-ellipsis line-clamp-3",
-							{
-								"text-base": !isCompact,
-							},
-							!isCompact && isSelectionMode ? "mb-1" : "",
+					<div className="flex items-start gap-1">
+						{item.highlight ? (
+							<div
+								className={cn(
+									"flex-1 min-w-0 overflow-hidden whitespace-pre-wrap font-light text-ellipsis line-clamp-3",
+									{
+										"text-base": !isCompact,
+									},
+									!isCompact && isSelectionMode ? "mb-1" : "",
+								)}
+								data-testid="task-content"
+								dangerouslySetInnerHTML={{ __html: item.highlight }}
+							/>
+						) : (
+							<div
+								className={cn(
+									"flex-1 min-w-0 overflow-hidden whitespace-pre-wrap font-light text-ellipsis line-clamp-3",
+									{
+										"text-base": !isCompact,
+									},
+									!isCompact && isSelectionMode ? "mb-1" : "",
+								)}
+								data-testid="task-content">
+								<StandardTooltip content={item.task}>
+									<span>{item.task}</span>
+								</StandardTooltip>
+							</div>
 						)}
-						data-testid="task-content"
-						{...(item.highlight ? { dangerouslySetInnerHTML: { __html: item.highlight } } : {})}>
-						{item.highlight ? undefined : item.task}
+						{/* Arrow icon that appears on hover */}
+						<ArrowRight className="size-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
 					</div>
+
+					{showWorkspace && item.workspace && (
+						<div className="flex items-center font-mono gap-1 text-vscode-descriptionForeground text-xs mt-1">
+							<Folder className="size-3" />
+							<span>{item.workspace}</span>
+						</div>
+					)}
 
 					<TaskItemFooter
 						item={item}
 						variant={variant}
 						isSelectionMode={isSelectionMode}
+						isSubtask={item.isSubtask}
 						onDelete={onDelete}
 					/>
-
-					{showWorkspace && item.workspace && (
-						<div className="flex flex-row gap-1 text-vscode-descriptionForeground text-xs mt-1">
-							<span className="codicon codicon-folder scale-80" />
-							<span>{item.workspace}</span>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>

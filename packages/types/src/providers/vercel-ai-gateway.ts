@@ -90,7 +90,6 @@ export const vercelAiGatewayDefaultModelInfo: ModelInfo = {
 	contextWindow: 200000,
 	supportsImages: true,
 	supportsPromptCache: true,
-	supportsNativeTools: true,
 	inputPrice: 3,
 	outputPrice: 15,
 	cacheWritesPrice: 3.75,

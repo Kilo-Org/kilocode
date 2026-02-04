@@ -8,18 +8,16 @@ import {
 	vertexDefaultModelId,
 	vertexModels,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
-	TOOL_PROTOCOL,
 	VERTEX_1M_CONTEXT_MODEL_IDS,
 } from "@roo-code/types"
+import { safeJsonParse } from "@roo-code/core"
 
 import { ApiHandlerOptions } from "../../shared/api"
-import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { ApiStream } from "../transform/stream"
 import { addCacheBreakpoints } from "../transform/caching/vertex"
 import { getModelParams } from "../transform/model-params"
 import { filterNonAnthropicBlocks } from "../transform/anthropic-filter"
-import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import {
 	convertOpenAIToolsToAnthropic,
 	convertOpenAIToolChoiceToAnthropic,
@@ -79,22 +77,10 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
 		const sanitizedMessages = filterNonAnthropicBlocks(messages)
 
-		// Enable native tools using resolveToolProtocol (which checks model's defaultToolProtocol)
-		// This matches the approach used in AnthropicHandler
-		// Also exclude tools when tool_choice is "none" since that means "don't use tools"
-		const toolProtocol = resolveToolProtocol(this.options, info, metadata?.toolProtocol)
-		const shouldIncludeNativeTools =
-			metadata?.tools &&
-			metadata.tools.length > 0 &&
-			toolProtocol === TOOL_PROTOCOL.NATIVE &&
-			metadata?.tool_choice !== "none"
-
-		const nativeToolParams = shouldIncludeNativeTools
-			? {
-					tools: convertOpenAIToolsToAnthropic(metadata.tools!),
-					tool_choice: convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
-				}
-			: {}
+		const nativeToolParams = {
+			tools: convertOpenAIToolsToAnthropic(metadata?.tools ?? []),
+			tool_choice: convertOpenAIToolChoiceToAnthropic(metadata?.tool_choice, metadata?.parallelToolCalls),
+		}
 
 		/**
 		 * Vertex API has specific limitations for prompt caching:

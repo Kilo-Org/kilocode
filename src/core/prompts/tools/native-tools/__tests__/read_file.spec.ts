@@ -1,5 +1,5 @@
 import type OpenAI from "openai"
-import { createReadFileTool, type ReadFileToolOptions } from "../read_file"
+import { createReadFileTool } from "../read_file"
 
 // Helper type to access function tools
 type FunctionTool = OpenAI.Chat.ChatCompletionTool & { type: "function" }
@@ -8,117 +8,88 @@ type FunctionTool = OpenAI.Chat.ChatCompletionTool & { type: "function" }
 const getFunctionDef = (tool: OpenAI.Chat.ChatCompletionTool) => (tool as FunctionTool).function
 
 describe("createReadFileTool", () => {
-	describe("maxConcurrentFileReads documentation", () => {
-		it("should include default maxConcurrentFileReads limit (5) in description", () => {
+	describe("single-file-per-call documentation", () => {
+		it("should indicate single-file-per-call and suggest parallel tool calls", () => {
 			const tool = createReadFileTool()
 			const description = getFunctionDef(tool).description
 
-			expect(description).toContain("maximum of 5 files")
-			expect(description).toContain("If you need to read more files, use multiple sequential read_file requests")
-		})
-
-		it("should include custom maxConcurrentFileReads limit in description", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 3 })
-			const description = getFunctionDef(tool).description
-
-			expect(description).toContain("maximum of 3 files")
-			expect(description).toContain("within 3-file limit")
-		})
-
-		it("should indicate single file reads only when maxConcurrentFileReads is 1", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 1 })
-			const description = getFunctionDef(tool).description
-
-			expect(description).toContain("Multiple file reads are currently disabled")
-			expect(description).toContain("only read one file at a time")
-			expect(description).not.toContain("Example multiple files")
-		})
-
-		it("should use singular 'Read a file' in base description when maxConcurrentFileReads is 1", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 1 })
-			const description = getFunctionDef(tool).description
-
-			expect(description).toMatch(/^Read a file/)
-			expect(description).not.toContain("Read one or more files")
-		})
-
-		it("should use plural 'Read one or more files' in base description when maxConcurrentFileReads is > 1", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 5 })
-			const description = getFunctionDef(tool).description
-
-			expect(description).toMatch(/^Read one or more files/)
-		})
-
-		it("should not show multiple files example when maxConcurrentFileReads is 1", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 1, partialReadsEnabled: true })
-			const description = getFunctionDef(tool).description
-
-			expect(description).not.toContain("Example multiple files")
-		})
-
-		it("should show multiple files example when maxConcurrentFileReads is > 1", () => {
-			const tool = createReadFileTool({ maxConcurrentFileReads: 5, partialReadsEnabled: true })
-			const description = getFunctionDef(tool).description
-
-			expect(description).toContain("Example multiple files")
+			expect(description).toContain("exactly one file per call")
+			expect(description).toContain("multiple parallel read_file calls")
 		})
 	})
 
-	describe("partialReadsEnabled option", () => {
-		it("should include line_ranges in description when partialReadsEnabled is true", () => {
-			const tool = createReadFileTool({ partialReadsEnabled: true })
+	describe("indentation mode", () => {
+		it("should always include indentation mode in description", () => {
+			const tool = createReadFileTool()
 			const description = getFunctionDef(tool).description
 
-			expect(description).toContain("line_ranges")
-			expect(description).toContain("Example with line ranges")
+			expect(description).toContain("indentation")
 		})
 
-		it("should not include line_ranges in description when partialReadsEnabled is false", () => {
-			const tool = createReadFileTool({ partialReadsEnabled: false })
-			const description = getFunctionDef(tool).description
-
-			expect(description).not.toContain("line_ranges")
-			expect(description).not.toContain("Example with line ranges")
-		})
-
-		it("should include line_ranges parameter in schema when partialReadsEnabled is true", () => {
-			const tool = createReadFileTool({ partialReadsEnabled: true })
+		it("should always include indentation parameter in schema", () => {
+			const tool = createReadFileTool()
 			const schema = getFunctionDef(tool).parameters as any
 
-			expect(schema.properties.files.items.properties).toHaveProperty("line_ranges")
+			expect(schema.properties).toHaveProperty("indentation")
 		})
 
-		it("should not include line_ranges parameter in schema when partialReadsEnabled is false", () => {
-			const tool = createReadFileTool({ partialReadsEnabled: false })
+		it("should include mode parameter in schema", () => {
+			const tool = createReadFileTool()
 			const schema = getFunctionDef(tool).parameters as any
 
-			expect(schema.properties.files.items.properties).not.toHaveProperty("line_ranges")
+			expect(schema.properties).toHaveProperty("mode")
+			expect(schema.properties.mode.enum).toContain("slice")
+			expect(schema.properties.mode.enum).toContain("indentation")
+		})
+
+		it("should include offset and limit parameters in schema", () => {
+			const tool = createReadFileTool()
+			const schema = getFunctionDef(tool).parameters as any
+
+			expect(schema.properties).toHaveProperty("offset")
+			expect(schema.properties).toHaveProperty("limit")
 		})
 	})
 
-	describe("combined options", () => {
-		it("should correctly combine low maxConcurrentFileReads with partialReadsEnabled", () => {
-			const tool = createReadFileTool({
-				maxConcurrentFileReads: 2,
-				partialReadsEnabled: true,
-			})
+	describe("supportsImages option", () => {
+		it("should include image format documentation when supportsImages is true", () => {
+			const tool = createReadFileTool({ supportsImages: true })
 			const description = getFunctionDef(tool).description
 
-			expect(description).toContain("maximum of 2 files")
-			expect(description).toContain("line_ranges")
-			expect(description).toContain("within 2-file limit")
+			expect(description).toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
 		})
 
-		it("should correctly handle maxConcurrentFileReads of 1 with partialReadsEnabled false", () => {
-			const tool = createReadFileTool({
-				maxConcurrentFileReads: 1,
-				partialReadsEnabled: false,
-			})
+		it("should not include image format documentation when supportsImages is false", () => {
+			const tool = createReadFileTool({ supportsImages: false })
 			const description = getFunctionDef(tool).description
 
-			expect(description).toContain("only read one file at a time")
-			expect(description).not.toContain("line_ranges")
-			expect(description).not.toContain("Example multiple files")
+			expect(description).not.toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+			expect(description).toContain("may not handle other binary files properly")
+		})
+
+		it("should default supportsImages to false", () => {
+			const tool = createReadFileTool({})
+			const description = getFunctionDef(tool).description
+
+			expect(description).not.toContain(
+				"Automatically processes and returns image files (PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, ICO, AVIF) for visual analysis",
+			)
+		})
+
+		it("should always include PDF and DOCX support in description", () => {
+			const toolWithImages = createReadFileTool({ supportsImages: true })
+			const toolWithoutImages = createReadFileTool({ supportsImages: false })
+
+			expect(getFunctionDef(toolWithImages).description).toContain(
+				"Supports text extraction from PDF and DOCX files",
+			)
+			expect(getFunctionDef(toolWithoutImages).description).toContain(
+				"Supports text extraction from PDF and DOCX files",
+			)
 		})
 	})
 
@@ -141,18 +112,11 @@ describe("createReadFileTool", () => {
 			expect(getFunctionDef(tool).strict).toBe(true)
 		})
 
-		it("should require files parameter", () => {
+		it("should require path parameter", () => {
 			const tool = createReadFileTool()
 			const schema = getFunctionDef(tool).parameters as any
 
-			expect(schema.required).toContain("files")
-		})
-
-		it("should require path in file objects", () => {
-			const tool = createReadFileTool({ partialReadsEnabled: false })
-			const schema = getFunctionDef(tool).parameters as any
-
-			expect(schema.properties.files.items.required).toContain("path")
+			expect(schema.required).toContain("path")
 		})
 	})
 })

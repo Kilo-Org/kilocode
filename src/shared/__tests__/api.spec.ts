@@ -9,7 +9,7 @@ describe("getModelMaxOutputTokens", () => {
 		supportsPromptCache: true,
 	}
 
-	test("should return model maxTokens when not using claude-code provider and maxTokens is within 20% of context window", () => {
+	test("should return model maxTokens when maxTokens is within 20% of context window", () => {
 		const settings: ProviderSettings = {
 			apiProvider: "anthropic",
 		}

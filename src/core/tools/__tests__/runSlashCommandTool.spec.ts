@@ -39,7 +39,6 @@ describe("runSlashCommandTool", () => {
 			askApproval: vi.fn().mockResolvedValue(true),
 			handleError: vi.fn(),
 			pushToolResult: vi.fn(),
-			removeClosingTag: vi.fn((tag, text) => text || ""),
 		}
 	})
 
@@ -49,6 +48,9 @@ describe("runSlashCommandTool", () => {
 			name: "run_slash_command" as const,
 			params: {},
 			partial: false,
+			nativeArgs: {
+				command: "",
+			},
 		}
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
@@ -63,10 +65,11 @@ describe("runSlashCommandTool", () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "nonexistent",
 			},
-			partial: false,
 		}
 
 		vi.mocked(getCommand).mockResolvedValue(undefined)
@@ -84,10 +87,11 @@ describe("runSlashCommandTool", () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -111,10 +115,11 @@ describe("runSlashCommandTool", () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -155,11 +160,12 @@ Initialize project content here`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "test",
 				args: "focus on unit tests",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -192,10 +198,11 @@ Run tests with specific focus`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "deploy",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -225,6 +232,7 @@ Deploy application to production`,
 			name: "run_slash_command" as const,
 			params: {
 				command: "init",
+				args: "",
 			},
 			partial: true,
 		}
@@ -248,10 +256,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const error = new Error("Test error")
@@ -266,10 +275,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "nonexistent",
 			},
-			partial: false,
 		}
 
 		vi.mocked(getCommand).mockResolvedValue(undefined)
@@ -286,10 +296,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		mockTask.consecutiveMistakeCount = 5
@@ -313,10 +324,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "debug-app",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -360,10 +372,11 @@ Start debugging the application`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "test",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -395,10 +408,11 @@ Start debugging the application`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "debug-app",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
