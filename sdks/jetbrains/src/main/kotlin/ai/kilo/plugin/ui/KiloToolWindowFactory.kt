@@ -96,6 +96,13 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         }
 
         /**
+         * Check if sessions view is currently active for the given project.
+         */
+        fun isSessionsViewActive(project: Project): Boolean {
+            return mainPanels[project]?.isSessionsViewActive() ?: false
+        }
+
+        /**
          * Abort the current generation for the given project.
          */
         fun abortGeneration(project: Project) {

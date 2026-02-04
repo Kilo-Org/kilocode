@@ -195,7 +195,7 @@ object KiloSizes {
     val buttonHeightLg = JBUI.scale(32)
     
     // Session list cell height
-    val sessionCellHeight = JBUI.scale(36)
+    val sessionCellHeight = JBUI.scale(24)
     
     // Sidebar width
     val sidebarWidth = JBUI.scale(240)

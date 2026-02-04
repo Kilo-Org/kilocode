@@ -67,11 +67,39 @@ object ChatComponentBuilder {
             toolPartWrappers, textPartCache
         )
 
+        // Build footer info with token usage and copyable text
+        val footerInfo = buildFooterInfo(message, messageWithParts.parts)
+
         return ChatContentBlock(
             entityType = entityType,
             content = content,
             timestamp = message.time.created,
-            sessionStartTime = sessionStartTime
+            sessionStartTime = sessionStartTime,
+            footerInfo = footerInfo
+        )
+    }
+
+    private fun buildFooterInfo(message: ai.kilo.plugin.model.Message, parts: List<ai.kilo.plugin.model.Part>): BlockFooterInfo? {
+        val tokens = message.tokens
+
+        // Extract all text content for copy button
+        val textContent = parts
+            .filter { it.type == "text" && !it.text.isNullOrBlank() }
+            .mapNotNull { it.text }
+            .joinToString("\n\n")
+            .takeIf { it.isNotBlank() }
+
+        // Only create footer if there's something to show
+        if (tokens == null && textContent == null) {
+            return null
+        }
+
+        return BlockFooterInfo(
+            inputTokens = tokens?.input?.takeIf { it > 0 },
+            outputTokens = tokens?.output?.takeIf { it > 0 },
+            cacheReadTokens = tokens?.cache?.read?.takeIf { it > 0 },
+            cacheWriteTokens = tokens?.cache?.write?.takeIf { it > 0 },
+            copyableContent = textContent
         )
     }
 
@@ -163,6 +191,7 @@ object ChatComponentBuilder {
             content = content,
             timestamp = messageTimestamp,
             sessionStartTime = sessionStartTime
+            // No footerInfo for parts - only message-level gets footer
         )
     }
 

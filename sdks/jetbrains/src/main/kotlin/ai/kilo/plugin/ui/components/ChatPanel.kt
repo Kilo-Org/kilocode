@@ -34,7 +34,7 @@ class ChatPanel(
     private val scrollPane: JBScrollPane
     private val promptInput: PromptInputPanel
     private val emptyStateLabel = JBLabel("Start typing to begin a new conversation")
-    private val headerPanel = ChatHeaderPanel(scope, appState)
+    private val headerPanel = ChatHeaderPanel(project, scope, appState)
     private val typingIndicator = TypingIndicator()
     private val attachedFilesPanel = AttachedFilesPanel(project, appState)
     private val errorBanner = ErrorBanner(
@@ -139,7 +139,25 @@ class ChatPanel(
             override fun onScrollToBottomNeeded() {
                 scrollToBottomIfNeeded()
             }
+
+            override fun onTokenUsageChanged(tokenUsage: TokenUsage?) {
+                val contextLimit = getContextLimit()
+                headerPanel.updateTokenUsage(tokenUsage, contextLimit)
+            }
         }
+    }
+
+    private fun getContextLimit(): Int? {
+        val modelRef = appState.selectedModel.value ?: return null
+        val providers = appState.providers.value ?: return null
+
+        for (provider in providers.all) {
+            if (provider.id == modelRef.providerID) {
+                val model = provider.models[modelRef.modelID]
+                return model?.limit?.context
+            }
+        }
+        return null
     }
 
     private fun updateTypingIndicator() {

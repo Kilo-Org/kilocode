@@ -67,28 +67,28 @@ class SessionListPanel(
         sessionList.fixedCellHeight = KiloSizes.sessionCellHeight // 36px matching web client
         sessionList.background = KiloTheme.backgroundStronger
 
-        // Selection listener
+        // Single-click selects (for highlighting), double-click opens session
         sessionList.addListSelectionListener { e ->
             if (!e.valueIsAdjusting) {
-                val selected = sessionList.selectedValue
-                if (selected != null && selected.id != selectedSessionId) {
-                    selectedSessionId = selected.id
-                    scope.launch {
-                        store.selectSession(selected.id)
-                    }
-                    // Switch back to chat view
-                    onSessionSelected?.invoke()
-                }
+                // Just track selection, don't switch views
             }
         }
 
-        // Double-click to rename
+        // Double-click to open session and switch to chat view
         sessionList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.clickCount == 2) {
                     val index = sessionList.locationToIndex(e.point)
                     if (index >= 0) {
-                        // Could implement inline rename here
+                        val selected = sessionListModel.getElementAt(index)
+                        if (selected.id != selectedSessionId) {
+                            selectedSessionId = selected.id
+                            scope.launch {
+                                store.selectSession(selected.id)
+                            }
+                        }
+                        // Switch back to chat view
+                        onSessionSelected?.invoke()
                     }
                 }
             }
@@ -160,7 +160,16 @@ class SessionListPanel(
 
         if (confirm == JOptionPane.YES_OPTION) {
             scope.launch {
-                store.deleteSession(session.id)
+                val success = store.deleteSession(session.id)
+                if (success) {
+                    // Immediately remove from local list for responsive UI
+                    val index = (0 until sessionListModel.size()).firstOrNull {
+                        sessionListModel.getElementAt(it).id == session.id
+                    }
+                    if (index != null) {
+                        sessionListModel.removeElementAt(index)
+                    }
+                }
             }
         }
     }

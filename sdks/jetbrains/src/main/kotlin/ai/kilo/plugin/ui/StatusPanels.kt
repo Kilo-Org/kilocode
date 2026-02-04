@@ -10,7 +10,7 @@ import javax.swing.SwingConstants
  */
 class LoadingPanel : JBPanel<LoadingPanel>(GridBagLayout()) {
     init {
-        add(JBLabel("Starting Kilo1...", SwingConstants.CENTER))
+        add(JBLabel("Starting Kilo...", SwingConstants.CENTER))
     }
 }
 

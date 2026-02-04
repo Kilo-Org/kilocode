@@ -98,7 +98,6 @@ class KiloServerService(private val project: Project) : Disposable {
             val ready = waitForHealth(maxRetries = 30, delayMs = 200)
             if (ready) {
                 isRunning = true
-                notifyInfo("Kilo server started on port $port")
                 log.info("Kilo server ready on port $port")
                 Result.success(port)
             } else {

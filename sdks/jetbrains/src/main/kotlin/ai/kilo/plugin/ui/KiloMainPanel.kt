@@ -86,6 +86,8 @@ class KiloMainPanel(
         }
     }
 
+    fun isSessionsViewActive(): Boolean = currentView == VIEW_SESSIONS
+
     fun focusInput() = chatPanel.focusInput()
 
     fun abortGeneration() = chatPanel.abortGeneration()

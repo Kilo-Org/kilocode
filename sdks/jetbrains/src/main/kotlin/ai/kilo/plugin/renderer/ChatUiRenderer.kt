@@ -61,6 +61,7 @@ class ChatUiRenderer(
         fun onErrorChanged(error: String?)
         fun onStreamingStateChanged(isStreaming: Boolean)
         fun onScrollToBottomNeeded()
+        fun onTokenUsageChanged(tokenUsage: TokenUsage?)
     }
 
     fun setListener(listener: Listener) {
@@ -193,6 +194,19 @@ class ChatUiRenderer(
                             refreshMessageView(messageId)
                         }
                     }
+                    is StoreEvent.MessageUpdated -> {
+                        if (event.sessionId == activeSessionId) {
+                            // Update message in currentMessages and refresh token usage
+                            currentMessages = currentMessages.map { msg ->
+                                if (msg.info.id == event.message.id) {
+                                    msg.copy(info = event.message)
+                                } else msg
+                            }
+                            // Refresh token usage when message is updated (e.g., when it finishes)
+                            val tokenUsage = calculateTotalTokenUsage(currentMessages)
+                            listener?.onTokenUsageChanged(tokenUsage)
+                        }
+                    }
                     else -> {}
                 }
             }
@@ -215,6 +229,21 @@ class ChatUiRenderer(
         }
         val lastUser = messages.lastOrNull { it.info.role == "user" }
         currentAgent = lastUser?.info?.agent
+
+        // Calculate total token usage from all messages
+        val totalTokens = calculateTotalTokenUsage(messages)
+        listener?.onTokenUsageChanged(totalTokens)
+    }
+
+    /**
+     * Get token usage from the last assistant message.
+     * This represents the current context window state (not cumulative).
+     */
+    private fun calculateTotalTokenUsage(messages: List<MessageWithParts>): TokenUsage? {
+        // Use tokens from the last assistant message (matches web app behavior)
+        return messages
+            .lastOrNull { it.info.role == "assistant" }
+            ?.info?.tokens
     }
 
     private fun updateCurrentMessageParts(messageId: String, part: Part) {

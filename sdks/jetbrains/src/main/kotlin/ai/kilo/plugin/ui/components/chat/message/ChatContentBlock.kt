@@ -2,11 +2,14 @@ package ai.kilo.plugin.ui.components.chat.message
 
 import ai.kilo.plugin.ui.KiloTheme
 import ai.kilo.plugin.ui.KiloSpacing
+import ai.kilo.plugin.ui.KiloSizes
+import ai.kilo.plugin.ui.KiloTypography
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.*
+import java.awt.datatransfer.StringSelection
 import javax.swing.*
 
 /**
@@ -127,24 +130,60 @@ sealed class SessionEntityType(val icon: Icon?) {
 }
 
 /**
+ * Data class for footer information displayed at the bottom of a ChatContentBlock.
+ */
+data class BlockFooterInfo(
+    val inputTokens: Int? = null,
+    val outputTokens: Int? = null,
+    val cacheReadTokens: Int? = null,
+    val cacheWriteTokens: Int? = null,
+    val copyableContent: String? = null,
+    val additionalActions: List<FooterAction> = emptyList()
+) {
+    fun hasContent(): Boolean =
+        inputTokens != null ||
+        outputTokens != null ||
+        cacheReadTokens != null ||
+        cacheWriteTokens != null ||
+        copyableContent != null ||
+        additionalActions.isNotEmpty()
+}
+
+/**
+ * Represents a custom action button in the footer.
+ */
+data class FooterAction(
+    val label: String,
+    val icon: Icon? = null,
+    val tooltip: String? = null,
+    val onClick: () -> Unit
+)
+
+/**
  * Generic collapsible UI container for chat entities (messages, parts, tools, etc.).
  *
- * ┌─────────────────────────────────────────────┐
- * │  Header: [EntityType] · metadata · +time [▼] │
- * ├─────────────────────────────────────────────┤
- * │  Content: (any JComponent)                  │
- * └─────────────────────────────────────────────┘
+ * ┌──────────────────────────────────────────────────┐
+ * │  Header: [EntityType] · metadata · +time     [▼] │
+ * ├──────────────────────────────────────────────────┤
+ * │  Content: (any JComponent)                       │
+ * ├──────────────────────────────────────────────────┤
+ * │  Footer: in: 1.2K · out: 856        [Copy] [...] │
+ * └──────────────────────────────────────────────────┘
+ *
+ * The footer is optional and only shown when [BlockFooterInfo] is provided.
  */
 class ChatContentBlock(
     private val entityType: SessionEntityType,
     private val content: JComponent,
     private val timestamp: Long? = null,
     private val sessionStartTime: Long? = null,
-    initiallyCollapsed: Boolean = false
+    initiallyCollapsed: Boolean = false,
+    private val footerInfo: BlockFooterInfo? = null
 ) : BorderLayoutPanel() {
 
     private var isCollapsed = initiallyCollapsed
     private val contentBlock: JPanel
+    private val footerBlock: JPanel?
     private val collapseIcon: JBLabel
 
     init {
@@ -249,12 +288,104 @@ class ChatContentBlock(
         }
         stackedPanel.add(contentBlock)
 
+        // Footer block (optional)
+        footerBlock = if (footerInfo != null && footerInfo.hasContent()) {
+            createFooterPanel(footerInfo).apply {
+                alignmentX = Component.LEFT_ALIGNMENT
+                isVisible = !isCollapsed
+            }
+        } else null
+        footerBlock?.let { stackedPanel.add(it) }
+
         addToCenter(stackedPanel)
+    }
+
+    private fun createFooterPanel(info: BlockFooterInfo): JPanel {
+        return JPanel(BorderLayout()).apply {
+            isOpaque = true
+            background = KiloTheme.surfaceRaisedBase
+            border = BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+                JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+            )
+
+            // Left side: token info
+            val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.sm, 0)).apply {
+                isOpaque = false
+
+                // Token info
+                val tokenParts = mutableListOf<String>()
+                info.inputTokens?.let { tokenParts.add("in: ${formatTokenCount(it)}") }
+                info.outputTokens?.let { tokenParts.add("out: ${formatTokenCount(it)}") }
+                info.cacheReadTokens?.let { if (it > 0) tokenParts.add("cache↓: ${formatTokenCount(it)}") }
+                info.cacheWriteTokens?.let { if (it > 0) tokenParts.add("cache↑: ${formatTokenCount(it)}") }
+
+                if (tokenParts.isNotEmpty()) {
+                    add(JBLabel(tokenParts.joinToString(" · ")).apply {
+                        foreground = KiloTheme.textWeaker
+                        font = font.deriveFont(KiloTypography.fontSizeSmall)
+                    })
+                }
+            }
+            add(leftPanel, BorderLayout.CENTER)
+
+            // Right side: action buttons
+            val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, KiloSpacing.xs, 0)).apply {
+                isOpaque = false
+
+                // Copy button
+                if (info.copyableContent != null) {
+                    add(createActionButton("Copy", AllIcons.Actions.Copy, "Copy to clipboard") {
+                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                        clipboard.setContents(StringSelection(info.copyableContent), null)
+                    })
+                }
+
+                // Additional custom actions
+                info.additionalActions.forEach { action ->
+                    add(createActionButton(action.label, action.icon, action.tooltip, action.onClick))
+                }
+            }
+            add(rightPanel, BorderLayout.EAST)
+        }
+    }
+
+    private fun createActionButton(
+        label: String,
+        icon: Icon?,
+        tooltip: String?,
+        onClick: () -> Unit
+    ): JButton {
+        return JButton(label, icon).apply {
+            this.toolTipText = tooltip
+            isFocusPainted = false
+            isBorderPainted = false
+            isContentAreaFilled = false
+            foreground = KiloTheme.textWeak
+            font = font.deriveFont(KiloTypography.fontSizeSmall)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            preferredSize = Dimension(
+                preferredSize.width,
+                KiloSizes.buttonHeightSm
+            )
+
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseEntered(e: java.awt.event.MouseEvent) {
+                    foreground = KiloTheme.textInteractive
+                }
+                override fun mouseExited(e: java.awt.event.MouseEvent) {
+                    foreground = KiloTheme.textWeak
+                }
+            })
+
+            addActionListener { onClick() }
+        }
     }
 
     private fun toggleCollapsed() {
         isCollapsed = !isCollapsed
         contentBlock.isVisible = !isCollapsed
+        footerBlock?.isVisible = !isCollapsed
         collapseIcon.icon = if (isCollapsed) AllIcons.General.ArrowRight else AllIcons.General.ArrowDown
         collapseIcon.toolTipText = if (isCollapsed) "Expand" else "Collapse"
         revalidate()
@@ -292,6 +423,18 @@ class ChatContentBlock(
                     val secs = (offsetMs % 60000) / 1000
                     "+%d:%02d".format(minutes, secs)
                 }
+            }
+        }
+
+        /**
+         * Format token count with K suffix for large numbers.
+         */
+        fun formatTokenCount(count: Int): String {
+            return when {
+                count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
+                count >= 10_000 -> "%.0fK".format(count / 1_000.0)
+                count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+                else -> count.toString()
             }
         }
     }
