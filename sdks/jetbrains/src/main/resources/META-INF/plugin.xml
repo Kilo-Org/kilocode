@@ -18,7 +18,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window -->
-        <toolWindow factoryClass="ai.kilo.plugin.toolwindow.KiloToolWindowFactory"
+        <toolWindow factoryClass="ai.kilo.plugin.ui.KiloToolWindowFactory"
                     id="Kilo"
                     icon="/icons/kilo.svg"
                     anchor="right"

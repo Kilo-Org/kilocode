@@ -1,6 +1,6 @@
 package ai.kilo.plugin.actions
 
-import ai.kilo.plugin.toolwindow.KiloToolWindowFactory
+import ai.kilo.plugin.ui.KiloToolWindowFactory
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
