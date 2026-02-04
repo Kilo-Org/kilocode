@@ -19,6 +19,6 @@ export const syntheticModels: Record<string, ModelInfo> = {
 		supportsComputerUse: false,
 		supportsReasoningEffort: false,
 		supportsReasoningBudget: false,
-		supportedParameters: [],
+		// kilocode_change: omit supportedParameters so defaults apply
 	},
 }
