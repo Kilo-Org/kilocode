@@ -13,7 +13,7 @@ import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
 
-// kilocode_change start
+// kilocode_change start - normalize kilo baseURL org handling
 const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
   if (!baseURL) return undefined
   const trimmed = baseURL.replace(/\/+$/, "")
