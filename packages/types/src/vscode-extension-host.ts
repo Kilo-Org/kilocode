@@ -655,7 +655,6 @@ export type ExtensionState = Pick<
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo; activeProfileNumber?: number } // kilocode_change: Add virtual quota active model for UI display with profile number
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 	showDiffStats?: boolean // kilocode_change: Show diff stats in task header
-	claudeCodeIsAuthenticated?: boolean
 	openAiCodexIsAuthenticated?: boolean
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason

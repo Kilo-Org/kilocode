@@ -27,7 +27,8 @@ import {
 	vscodeLlmDefaultModelId,
 	openRouterDefaultModelId,
 	claudeCodeModels,
-	normalizeClaudeCodeModelId,
+	claudeCodeDefaultModelId,
+	type ClaudeCodeModelId,
 	openAiCodexModels,
 	sambaNovaModels,
 	doubaoModels,
@@ -463,12 +464,10 @@ function getSelectedModel({
 		// kilocode_change end
 
 		case "claude-code": {
-			// Claude Code models extend anthropic models but with images and prompt caching disabled
-			// Normalize legacy model IDs to current canonical model IDs for backward compatibility
-			const rawId = apiConfiguration.apiModelId ?? defaultModelId
-			const normalizedId = normalizeClaudeCodeModelId(rawId)
-			const info = claudeCodeModels[normalizedId]
-			return { id: normalizedId, info: { ...openAiModelInfoSaneDefaults, ...info } }
+			// Claude Code uses short aliases (sonnet, opus) or full dated model IDs
+			const id = apiConfiguration.apiModelId ?? claudeCodeDefaultModelId
+			const info = claudeCodeModels[id as ClaudeCodeModelId]
+			return { id, info }
 		}
 		case "cerebras": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId

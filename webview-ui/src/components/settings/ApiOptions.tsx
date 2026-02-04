@@ -167,13 +167,8 @@ const ApiOptions = ({
 	currentApiConfigName, // kilocode_change
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
-	const {
-		organizationAllowList,
-		kilocodeDefaultModel,
-		cloudIsAuthenticated,
-		claudeCodeIsAuthenticated,
-		openAiCodexIsAuthenticated,
-	} = useExtensionState()
+	const { organizationAllowList, kilocodeDefaultModel, cloudIsAuthenticated, openAiCodexIsAuthenticated } =
+		useExtensionState()
 
 	const [customHeaders, setCustomHeaders] = useState<[string, string][]>(() => {
 		const headers = apiConfiguration?.openAiHeaders || {}
@@ -676,7 +671,6 @@ const ApiOptions = ({
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
 					simplifySettings={fromWelcomeView}
-					claudeCodeIsAuthenticated={claudeCodeIsAuthenticated}
 				/>
 			)}
 

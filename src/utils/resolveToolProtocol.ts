@@ -15,21 +15,26 @@ type ApiMessageForDetection = Anthropic.MessageParam & {
  * Resolve the effective tool protocol.
  *
  * **Deprecation Note (XML Protocol):**
- * XML tool protocol has been deprecated. All models now use Native tool calling.
+ * XML tool protocol has been deprecated. Most models now use Native tool calling.
  * User/profile preferences (`providerSettings.toolProtocol`) and model defaults
  * (`modelInfo.defaultToolProtocol`) are ignored.
  *
+ * **Exception: Claude Code Provider**
+ * Claude Code CLI uses `--disallowedTools` which prevents native tool_use blocks.
+ * Therefore, Claude Code must use XML protocol for tool calls.
+ *
  * Precedence:
  * 1. Locked Protocol (task-level lock for resumed tasks - highest priority)
- * 2. Native (always, for all new tasks)
+ * 2. XML (for claude-code provider - required due to CLI limitations)
+ * 3. Native (for all other providers)
  *
- * @param _providerSettings - The provider settings (toolProtocol field is ignored)
+ * @param providerSettings - The provider settings (used to check apiProvider)
  * @param _modelInfo - Unused, kept for API compatibility
  * @param lockedProtocol - Optional task-locked protocol that takes absolute precedence
  * @returns The resolved tool protocol (either "xml" or "native")
  */
 export function resolveToolProtocol(
-	_providerSettings: ProviderSettings,
+	providerSettings: ProviderSettings,
 	_modelInfo?: unknown,
 	lockedProtocol?: ToolProtocol,
 ): ToolProtocol {
@@ -39,8 +44,14 @@ export function resolveToolProtocol(
 		return lockedProtocol
 	}
 
-	// 2. Always return Native protocol for new tasks
-	// All models now support native tools; XML is deprecated
+	// 2. Claude Code provider MUST use XML protocol
+	// Claude Code CLI uses --disallowedTools which prevents native tool_use blocks.
+	// The model must use XML-formatted tool calls in the text response instead.
+	if (providerSettings.apiProvider === "claude-code") {
+		return TOOL_PROTOCOL.XML
+	}
+
+	// 3. All other providers use Native protocol
 	return TOOL_PROTOCOL.NATIVE
 }
 

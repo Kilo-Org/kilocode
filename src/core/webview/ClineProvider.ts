@@ -2558,14 +2558,6 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
-			claudeCodeIsAuthenticated: await (async () => {
-				try {
-					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
-					return await claudeCodeOAuthManager.isAuthenticated()
-				} catch {
-					return false
-				}
-			})(),
 			openAiCodexIsAuthenticated: await (async () => {
 				try {
 					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
