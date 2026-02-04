@@ -891,10 +891,15 @@ export async function presentAssistantMessage(cline: Task) {
 				// If execution is not allowed, notify user and break.
 				if (!repetitionCheck.allowExecution && repetitionCheck.askUser) {
 					// Handle repetition similar to mistake_limit_reached pattern.
-					const { response, text, images } = await cline.ask(
-						repetitionCheck.askUser.messageKey as ClineAsk,
+					const result = await cline.handleMistakeLimitReached(
 						repetitionCheck.askUser.messageDetail.replace("{toolName}", block.name),
 					)
+
+					if (!result) {
+						return
+					}
+
+					const { response, text, images } = result
 
 					if (response === "messageResponse") {
 						// Add user feedback to userContent.

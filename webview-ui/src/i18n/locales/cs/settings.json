@@ -262,7 +262,19 @@
 		"followupQuestions": {
 			"label": "Otázka",
 			"description": "Automaticky vybrat první navrhovanou odpověď pro následné otázky po uplynutí nastaveného časového limitu",
-			"timeoutLabel": "Doba čekání před automatickým výběrem první odpovědi"
+			"timeoutLabel": "Doba čekání przed automatickým výběrem první odpovědi"
+		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Zobrazit tlačítko Ralph v režimu chatu, které umožňuje schopnost smyčky autonomního agenta",
+			"loopLimit": {
+				"label": "Limit smyčky",
+				"description": "Maximální počet opakování, kdy Ralph automaticky restartuje úkol. Nastavte na 0 pro neomezené smyčky."
+			},
+			"completionDelimiter": {
+				"label": "Oddělovač dokončení",
+				"description": "Pokud je tento text nalezen ve výsledku dokončení, Ralph přestane opakovat smyčku."
+			}
 		},
 		"execute": {
 			"label": "Spustit",

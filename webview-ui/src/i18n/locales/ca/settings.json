@@ -239,6 +239,18 @@
 			"description": "Seleccionar automàticament la primera resposta suggerida per a preguntes de seguiment després del temps d'espera configurat",
 			"timeoutLabel": "Temps d'espera abans de seleccionar automàticament la primera resposta"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Mostra el botó Ralph al mode xat que habilita la capacitat de bucle d'agent autònom",
+			"loopLimit": {
+				"label": "Límit de bucle",
+				"description": "Nombre màxim de vegades que Ralph reiniciarà automàticament la tasca. Estableix a 0 per a bucles il·limitats."
+			},
+			"completionDelimiter": {
+				"label": "Delimitador de finalització",
+				"description": "Si es troba aquest text en el resultat de la finalització, Ralph deixarà de fer bucles."
+			}
+		},
 		"execute": {
 			"label": "Executar",
 			"description": "Executar automàticament comandes de terminal permeses sense requerir aprovació",

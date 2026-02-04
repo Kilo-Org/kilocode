@@ -170,6 +170,13 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				}
 			}
 
+			// kilocode_change start
+			const restarted = await task.handleRalphRestart(result)
+			if (restarted) {
+				return
+			}
+			// kilocode_change end
+
 			const { response, text, images } = await task.ask("completion_result", "", false)
 
 			if (response === "yesButtonClicked") {

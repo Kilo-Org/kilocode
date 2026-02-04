@@ -243,6 +243,18 @@
 			"description": "Secara otomatis memilih jawaban pertama yang disarankan untuk pertanyaan lanjutan setelah batas waktu yang dikonfigurasi",
 			"timeoutLabel": "Waktu tunggu sebelum otomatis memilih jawaban pertama"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Tampilkan tombol Ralph dalam mode chat yang mengaktifkan kemampuan loop agen otonom",
+			"loopLimit": {
+				"label": "Batas Loop",
+				"description": "Jumlah maksimum kali Ralph akan secara otomatis memulai ulang tugas. Atur ke 0 untuk loop tak terbatas."
+			},
+			"completionDelimiter": {
+				"label": "Pemisah Penyelesaian",
+				"description": "Jika teks ini ditemukan dalam hasil penyelesaian, Ralph akan berhenti melakukan looping."
+			}
+		},
 		"execute": {
 			"label": "Eksekusi",
 			"description": "Secara otomatis mengeksekusi perintah terminal yang diizinkan tanpa memerlukan persetujuan",

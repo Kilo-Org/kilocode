@@ -31,7 +31,7 @@ import { KiloProfileSelector } from "../kilocode/chat/KiloProfileSelector"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { ImageWarningBanner } from "./ImageWarningBanner"
-import { VolumeX, Pin, Check, WandSparkles, SendHorizontal, Paperclip, MessageSquareX } from "lucide-react"
+import { VolumeX, Pin, Check, WandSparkles, SendHorizontal, Paperclip, MessageSquareX, Infinity } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { MicrophoneButton } from "./MicrophoneButton" // kilocode_change: STT microphone button
 import { VolumeVisualizer } from "./VolumeVisualizer" // kilocode_change: STT volume level visual
@@ -164,6 +164,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			ghostServiceSettings, // kilocode_change
 			language, // User's VSCode display language
 			experiments, // kilocode_change: For speechToText experiment flag
+			ralphEnabled, // kilocode_change
+			setRalphEnabled, // kilocode_change
+			alwaysAllowRalph, // kilocode_change
 		} = useExtensionState()
 
 		// kilocode_change start: Manage STT status and error state with auto-clearing
@@ -1964,6 +1967,35 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									/>
 									{/* kilocode_change end */}
 								</div>
+
+								{/* kilocode_change start */}
+								{alwaysAllowRalph && (
+								<StandardTooltip content={`Ralph Mode ${ralphEnabled ? "on" : "off"}`}>
+									<button
+										aria-label={`Ralph Mode ${ralphEnabled ? "on" : "off"}`}
+										onClick={() => {
+											const newValue = !ralphEnabled
+											setRalphEnabled(newValue)
+											vscode.postMessage({ type: "ralphEnabled", bool: newValue })
+										}}
+										className={cn(
+											"relative inline-flex items-center justify-center",
+											"bg-transparent border-none p-1.5",
+											"rounded-md min-w-[28px] min-h-[28px]",
+											"transition-all duration-150",
+											"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+											"active:bg-[rgba(255,255,255,0.1)]",
+											"cursor-pointer",
+											ralphEnabled
+												? "text-vscode-charts-orange opacity-100"
+												: "text-vscode-descriptionForeground opacity-60 hover:opacity-100",
+										)}>
+										<Infinity className="w-4 h-4" />
+									</button>
+								</StandardTooltip>
+								)}
+								{/* kilocode_change end */}
 
 								<KiloProfileSelector
 									currentConfigId={currentConfigId}

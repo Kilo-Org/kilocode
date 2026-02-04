@@ -243,6 +243,18 @@
 			"description": "Seleccionar automáticamente la primera respuesta sugerida para preguntas de seguimiento después del tiempo de espera configurado",
 			"timeoutLabel": "Tiempo de espera antes de seleccionar automáticamente la primera respuesta"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Mostrar el botón Ralph en el modo chat que habilita la capacidad de bucle del agente autónomo",
+			"loopLimit": {
+				"label": "Límite de bucles",
+				"description": "Número máximo de veces que Ralph reiniciará automáticamente la tarea. Establecer en 0 para bucles ilimitados."
+			},
+			"completionDelimiter": {
+				"label": "Delimitador de finalización",
+				"description": "Si se encuentra este texto en el resultado de la finalización, Ralph dejará de hacer bucles."
+			}
+		},
 		"execute": {
 			"label": "Ejecutar",
 			"description": "Ejecutar automáticamente comandos de terminal permitidos sin requerir aprobación",

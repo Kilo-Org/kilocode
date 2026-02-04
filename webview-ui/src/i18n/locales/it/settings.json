@@ -248,6 +248,18 @@
 			"description": "Seleziona automaticamente la prima risposta suggerita per le domande di follow-up dopo il timeout configurato",
 			"timeoutLabel": "Tempo di attesa prima di selezionare automaticamente la prima risposta"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Mostra il pulsante Ralph in modalità chat che abilita la capacità di loop dell'agente autonomo",
+			"loopLimit": {
+				"label": "Limite di loop",
+				"description": "Numero massimo di volte in cui Ralph riavvierà automaticamente l'attività. Impostare a 0 per loop illimitati."
+			},
+			"completionDelimiter": {
+				"label": "Delimitatore di completamento",
+				"description": "Se questo testo viene trovato nel risultato del completamento, Ralph smetterà di eseguire il loop."
+			}
+		},
 		"execute": {
 			"label": "Esegui",
 			"description": "Esegui automaticamente i comandi del terminale consentiti senza richiedere approvazione",
