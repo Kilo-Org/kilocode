@@ -1,5 +1,6 @@
 // kilocode_change - new file
 
+import { describe, expect, test } from "bun:test"
 import { normalizeKiloOpenRouterURL } from "@kilocode/kilo-gateway"
 
 describe("normalizeKiloOpenRouterURL", () => {
@@ -12,7 +13,7 @@ describe("normalizeKiloOpenRouterURL", () => {
     expect(result.kilocodeOrganizationId).toBe("org_b")
   })
 
-  test("converts /api/openrouter to /api/organizations/<id>/openrouter when org is provided", () => {
+  test("normalizes /api/openrouter and preserves org selection", () => {
     const result = normalizeKiloOpenRouterURL({
       baseURL: "https://api.kilo.ai/api/openrouter",
       kilocodeOrganizationId: "org_123",

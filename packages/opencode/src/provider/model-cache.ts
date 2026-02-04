@@ -199,10 +199,11 @@ export namespace ModelCache {
           options.kilocodeToken = auth.key
         } else if (auth.type === "oauth") {
           options.kilocodeToken = auth.access
-          // kilocode_change - default org selection from oauth auth
+          // kilocode_change start
           if (options.kilocodeOrganizationId === undefined && auth.accountId) {
             options.kilocodeOrganizationId = auth.accountId
           }
+          // kilocode_change end
         }
       }
 
@@ -211,9 +212,11 @@ export namespace ModelCache {
       if (env.KILO_API_KEY) {
         options.kilocodeToken = env.KILO_API_KEY
       }
-      if (env.KILO_ORG_ID) {
+      // kilocode_change start
+      if (env.KILO_ORG_ID && options.kilocodeOrganizationId === undefined) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
       }
+      // kilocode_change end
 
       log.debug("auth options resolved", {
         providerID,

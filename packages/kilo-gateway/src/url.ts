@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 const trim = (value: string): string => value.replace(/\/+$/, "")
 
 const ensureSlash = (value: string): string => (value[value.length - 1] === "/" ? value : `${value}/`)
