@@ -246,5 +246,17 @@ jobs:
                     --title "Release CLI - v${version}" \
                     --notes "$changelog_content" \
                     --target main \
-                    cli/dist/kilocode-cli-${version}.tgz                  
+                    cli/dist/kilocode-cli-${version}.tgz
                   echo "Successfully created CLI GitHub Release v${version}"
+
+    trigger-homebrew-tap:
+        needs: [check-version, create-release]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Trigger Homebrew Tap Update
+              env:
+                  GH_TOKEN: ${{ secrets.KILO_GITHUB_TOKEN }}
+              run: |
+                  gh workflow run update-formula.yml \
+                    --repo Kilo-Org/homebrew-tap \
+                    --field version=${{ needs.check-version.outputs.version }}
