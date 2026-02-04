@@ -101,6 +101,44 @@ describe("ProviderTransform.options - setCacheKey", () => {
     })
     expect(result.store).toBe(false)
   })
+
+  // kilocode_change start
+  test("kilo gpt-5 promptCacheKey is scoped by kilocodeOrganizationId", () => {
+    const kiloModel = {
+      ...mockModel,
+      providerID: "kilo",
+      api: {
+        id: "gpt-5.2-codex",
+        url: "https://api.kilo.ai/api/openrouter/",
+        npm: "@kilocode/kilo-gateway",
+      },
+    }
+    const result = ProviderTransform.options({
+      model: kiloModel,
+      sessionID,
+      providerOptions: { kilocodeOrganizationId: "org_123" },
+    })
+    expect(result.promptCacheKey).toBe(`${sessionID}:org_123`)
+  })
+
+  test("kilo gpt-5 promptCacheKey falls back to sessionID without org", () => {
+    const kiloModel = {
+      ...mockModel,
+      providerID: "kilo",
+      api: {
+        id: "gpt-5.2-codex",
+        url: "https://api.kilo.ai/api/openrouter/",
+        npm: "@kilocode/kilo-gateway",
+      },
+    }
+    const result = ProviderTransform.options({
+      model: kiloModel,
+      sessionID,
+      providerOptions: {},
+    })
+    expect(result.promptCacheKey).toBe(sessionID)
+  })
+  // kilocode_change end
 })
 
 describe("ProviderTransform.maxOutputTokens", () => {

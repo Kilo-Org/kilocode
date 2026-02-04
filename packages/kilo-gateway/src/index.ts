@@ -10,6 +10,7 @@ export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
 export { buildKiloHeaders, getEditorNameHeader, DEFAULT_HEADERS } from "./headers.js"
+export { normalizeKiloOpenRouterURL } from "./url.js"
 
 // ============================================================================
 // Auth

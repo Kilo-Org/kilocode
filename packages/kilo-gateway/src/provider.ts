@@ -1,9 +1,10 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { createOpenRouter as createOpenRouterSdk } from "@openrouter/ai-sdk-provider"
 import type { Provider as SDK } from "ai"
 import type { KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, DEFAULT_HEADERS } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import { normalizeKiloOpenRouterURL } from "./url.js"
 
 /**
  * Create a KiloCode provider instance
@@ -27,22 +28,19 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
 
   // Determine base URL
   const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
-
-  // Build OpenRouter URL - only append /openrouter/ if not already present
-  const openRouterUrl = baseApiUrl.includes("/openrouter")
-    ? baseApiUrl
-    : baseApiUrl.endsWith("/")
-      ? `${baseApiUrl}openrouter/`
-      : `${baseApiUrl}/openrouter/`
+  const normalized = normalizeKiloOpenRouterURL({
+    baseURL: baseApiUrl,
+    kilocodeOrganizationId: options.kilocodeOrganizationId,
+  })
 
   // Merge custom headers with defaults
-  const customHeaders = {
+  const customHeaders: Record<string, string> = {
     ...DEFAULT_HEADERS,
     ...buildKiloHeaders(undefined, {
-      kilocodeOrganizationId: options.kilocodeOrganizationId,
+      kilocodeOrganizationId: normalized.kilocodeOrganizationId,
       kilocodeTesterWarningsDisabledUntil: undefined,
     }),
-    ...options.headers,
+    ...(options.headers ?? {}),
   }
 
   // Create custom fetch wrapper to add dynamic headers
@@ -51,9 +49,9 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
     const headers = new Headers(init?.headers)
 
     // Add custom headers
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      headers.set(key, value)
-    })
+    for (const key in customHeaders) {
+      headers.set(key, customHeaders[key])
+    }
 
     // Add authorization if API key exists
     if (apiKey) {
@@ -67,8 +65,8 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
   }
 
   // Create OpenRouter provider with KiloCode configuration
-  return createOpenRouter({
-    baseURL: openRouterUrl,
+  return createOpenRouterSdk({
+    baseURL: normalized.baseURL,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,

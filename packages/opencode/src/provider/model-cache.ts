@@ -199,6 +199,10 @@ export namespace ModelCache {
           options.kilocodeToken = auth.key
         } else if (auth.type === "oauth") {
           options.kilocodeToken = auth.access
+          // kilocode_change - default org selection from oauth auth
+          if (options.kilocodeOrganizationId === undefined && auth.accountId) {
+            options.kilocodeOrganizationId = auth.accountId
+          }
         }
       }
 

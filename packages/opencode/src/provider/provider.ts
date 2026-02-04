@@ -508,7 +508,11 @@ export namespace Provider {
 
       // Build options from KILO_* env vars
       const options: Record<string, string> = {}
-      if (env.KILO_ORG_ID) {
+      const auth = await Auth.get("kilo")
+      if (auth?.type === "oauth" && auth.accountId) {
+        // kilocode_change - prefer selected org from auth over env defaults
+        options.kilocodeOrganizationId = auth.accountId
+      } else if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
       }
       if (!hasKey) {

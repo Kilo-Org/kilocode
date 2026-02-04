@@ -18,10 +18,20 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (!baseURL) return undefined
   const trimmed = baseURL.replace(/\/+$/, "")
   if (orgId) {
-    if (trimmed.includes("/api/organizations/")) return trimmed
+    if (/\/api\/organizations\/[^/]+/.test(trimmed)) {
+      return trimmed.replace(/\/api\/organizations\/[^/]+/, `/api/organizations/${orgId}`)
+    }
+    if (trimmed.includes("/api/openrouter")) {
+      return trimmed.replace("/api/openrouter", `/api/organizations/${orgId}`)
+    }
+    if (trimmed.endsWith("/openrouter")) {
+      return trimmed.replace(/\/openrouter$/, `/organizations/${orgId}`)
+    }
     if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${orgId}`
     return `${trimmed}/api/organizations/${orgId}`
   }
+
+  if (trimmed.includes("/api/organizations/")) return trimmed
   if (trimmed.includes("/openrouter")) return trimmed
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`

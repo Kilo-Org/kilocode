@@ -620,7 +620,15 @@ export namespace ProviderTransform {
 
       // kilocode_change - include kilo provider for encrypted reasoning content
       if (input.model.providerID.startsWith("opencode") || input.model.api.npm === "@kilocode/kilo-gateway") {
-        result["promptCacheKey"] = input.sessionID
+        // kilocode_change start
+        const key = iife(() => {
+          if (input.model.api.npm !== "@kilocode/kilo-gateway") return input.sessionID
+          const org = input.providerOptions?.["kilocodeOrganizationId"]
+          if (typeof org !== "string" || org.length === 0) return input.sessionID
+          return `${input.sessionID}:${org}`
+        })
+        // kilocode_change end
+        result["promptCacheKey"] = key
         result["include"] = ["reasoning.encrypted_content"]
         result["reasoningSummary"] = "auto"
       }
