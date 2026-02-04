@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test"
+import { describe, test, expect, beforeEach, spyOn } from "bun:test"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
 import { PostHogSpanExporter } from "../otel-exporter.js"
