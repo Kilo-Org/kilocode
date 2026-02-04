@@ -16,7 +16,7 @@ env:
 
 jobs:
     compile:
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -46,7 +46,7 @@ jobs:
               run: pnpm lint
 
     check-translations:
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -75,7 +75,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [depot-ubuntu-24.04-4, windows-latest]
+                os: [blacksmith-4vcpu-ubuntu-2404, windows-latest]
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [depot-ubuntu-24.04-4, windows-latest]
+                os: [blacksmith-4vcpu-ubuntu-2404, windows-latest]
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -145,13 +145,13 @@ jobs:
 
     unit-test:
         needs: [test-extension, test-webview]
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         steps:
             - name: NO-OP
               run: echo "All unit tests passed."
 
     test-jetbrains:
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         steps:
             - name: Checkout code
               uses: actions/checkout@v6
@@ -201,7 +201,7 @@ jobs:
               shell: bash
 
     test-cli:
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         steps:
             - name: Checkout code
               uses: actions/checkout@v6

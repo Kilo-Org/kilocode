@@ -15,7 +15,7 @@ env:
 jobs:
     # Job 1: Create version bump PR when changesets are merged to main
     changeset-pr-version-bump:
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: blacksmith-4vcpu-ubuntu-2404
         permissions:
             contents: write
             pull-requests: write
