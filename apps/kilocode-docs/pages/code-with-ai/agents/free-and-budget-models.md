@@ -96,11 +96,11 @@ When you need more capability than free models provide, these options deliver ex
 @src/components/UserProfile.tsx:45-67
 ```
 
-**Use Memory Bank effectively:**
+**Reuse context effectively:**
 
-- Store project context once in [Memory Bank](/docs/customize/context/memory-bank)
+- Keep key project notes in your repository (e.g., a AGENTS.md or docs folder)
 - Reduces need to re-explain project details
-- Saves 200-500 tokens per conversation
+- Saves tokens per conversation
 
 **Strategic file mentions:**
 
