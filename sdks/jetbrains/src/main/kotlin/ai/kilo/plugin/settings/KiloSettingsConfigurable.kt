@@ -1,5 +1,6 @@
 package ai.kilo.plugin.settings
 
+import ai.kilo.plugin.ui.KiloTheme
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
@@ -24,6 +25,7 @@ class KiloSettingsConfigurable : Configurable {
     private var serverPortField: JBTextField? = null
     private var defaultAgentField: JBTextField? = null
     private var mockModeCheckbox: JBCheckBox? = null
+    private var uiDebugCheckbox: JBCheckBox? = null
 
     override fun getDisplayName(): String = "Kilo"
 
@@ -49,6 +51,8 @@ class KiloSettingsConfigurable : Configurable {
         }
 
         mockModeCheckbox = JBCheckBox("Enable mock mode (UI development)")
+
+        uiDebugCheckbox = JBCheckBox("UI debug mode (show borders & headers)")
 
         panel = FormBuilder.createFormBuilder()
             .addLabeledComponent(
@@ -105,6 +109,15 @@ class KiloSettingsConfigurable : Configurable {
                 },
                 0
             )
+            .addVerticalGap(10)
+            .addComponent(uiDebugCheckbox!!, 1)
+            .addComponent(
+                JBLabel("Shows borders and headers on UI components for layout debugging").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
             .addComponentFillVertically(JPanel(), 0)
             .panel
 
@@ -119,7 +132,8 @@ class KiloSettingsConfigurable : Configurable {
                 autoStartCheckbox?.isSelected != state.autoStartServer ||
                 parsePort(serverPortField?.text) != state.serverPort ||
                 parseAgent(defaultAgentField?.text) != state.defaultAgent ||
-                mockModeCheckbox?.isSelected != state.mockModeEnabled
+                mockModeCheckbox?.isSelected != state.mockModeEnabled ||
+                uiDebugCheckbox?.isSelected != state.uiDebugMode
     }
 
     override fun apply() {
@@ -131,6 +145,10 @@ class KiloSettingsConfigurable : Configurable {
         state.serverPort = parsePort(serverPortField?.text)
         state.defaultAgent = parseAgent(defaultAgentField?.text)
         state.mockModeEnabled = mockModeCheckbox?.isSelected ?: false
+        state.uiDebugMode = uiDebugCheckbox?.isSelected ?: false
+
+        // Sync with KiloTheme
+        KiloTheme.UI_DEBUG = state.uiDebugMode
     }
 
     override fun reset() {
@@ -142,6 +160,7 @@ class KiloSettingsConfigurable : Configurable {
         serverPortField?.text = state.serverPort?.toString() ?: ""
         defaultAgentField?.text = state.defaultAgent ?: ""
         mockModeCheckbox?.isSelected = state.mockModeEnabled
+        uiDebugCheckbox?.isSelected = state.uiDebugMode
     }
 
     override fun disposeUIResources() {
@@ -151,6 +170,7 @@ class KiloSettingsConfigurable : Configurable {
         serverPortField = null
         defaultAgentField = null
         mockModeCheckbox = null
+        uiDebugCheckbox = null
     }
 
     override fun getPreferredFocusedComponent(): JComponent? = executablePathField

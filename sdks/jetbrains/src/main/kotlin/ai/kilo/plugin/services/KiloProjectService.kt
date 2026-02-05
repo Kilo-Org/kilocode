@@ -1,7 +1,9 @@
 package ai.kilo.plugin.services
 
 import ai.kilo.plugin.api.KiloEventService
+import ai.kilo.plugin.settings.KiloSettings
 import ai.kilo.plugin.store.ChatUiStateManager
+import ai.kilo.plugin.ui.KiloTheme
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -26,6 +28,11 @@ data class KiloServices(
 class KiloProjectService(private val project: Project) : Disposable {
     private val log = Logger.getInstance(KiloProjectService::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    init {
+        // Load UI_DEBUG from saved settings
+        KiloTheme.UI_DEBUG = KiloSettings.getInstance().state.uiDebugMode
+    }
 
     private var serverService: KiloServerService? = null
     private var apiClient: KiloApiClient? = null

@@ -185,12 +185,14 @@ class ChatContentBlock(
     private val contentBlock: JPanel
     private val footerBlock: JPanel?
     private val collapseIcon: JBLabel
+    private lateinit var header: JPanel
+    private lateinit var stackedPanel: JPanel
 
     init {
         isOpaque = false
-        border = JBUI.Borders.customLine(KiloTheme.borderWeak, 1)
+        border = if (KiloTheme.UI_DEBUG) JBUI.Borders.customLine(KiloTheme.borderWeak, 1) else JBUI.Borders.empty()
 
-        val stackedPanel = JPanel().apply {
+        stackedPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
         }
@@ -210,13 +212,17 @@ class ChatContentBlock(
         }
 
         // Header block with BorderLayout for left content and right icon
-        val header = JPanel(BorderLayout()).apply {
+        header = JPanel(BorderLayout()).apply {
             isOpaque = true
             background = KiloTheme.surfaceRaisedBase
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(KiloTheme.borderWeak, 0, 0, 1, 0),
+            border = if (KiloTheme.UI_DEBUG) {
+                BorderFactory.createCompoundBorder(
+                    JBUI.Borders.customLine(KiloTheme.borderWeak, 0, 0, 1, 0),
+                    JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+                )
+            } else {
                 JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
-            )
+            }
             alignmentX = Component.LEFT_ALIGNMENT
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
 
@@ -276,7 +282,10 @@ class ChatContentBlock(
 
             addMouseListener(clickListener)
         }
-        stackedPanel.add(header)
+        // Only show header in debug mode
+        if (KiloTheme.UI_DEBUG) {
+            stackedPanel.add(header)
+        }
 
         // Content block
         contentBlock = JPanel(BorderLayout()).apply {
@@ -304,10 +313,14 @@ class ChatContentBlock(
         return JPanel(BorderLayout()).apply {
             isOpaque = true
             background = KiloTheme.surfaceRaisedBase
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+            border = if (KiloTheme.UI_DEBUG) {
+                BorderFactory.createCompoundBorder(
+                    JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+                    JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+                )
+            } else {
                 JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
-            )
+            }
 
             // Left side: token info
             val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, KiloSpacing.sm, 0)).apply {
@@ -390,6 +403,41 @@ class ChatContentBlock(
         collapseIcon.toolTipText = if (isCollapsed) "Expand" else "Collapse"
         revalidate()
         repaint()
+    }
+
+    /**
+     * Update debug mode visuals. Called by renderer when UI_DEBUG changes.
+     */
+    fun updateDebugMode(debug: Boolean) {
+        // Update outer border
+        border = if (debug) JBUI.Borders.customLine(KiloTheme.borderWeak, 1) else JBUI.Borders.empty()
+
+        // Update header visibility
+        if (debug && header.parent == null) {
+            stackedPanel.add(header, 0)
+        } else if (!debug && header.parent != null) {
+            stackedPanel.remove(header)
+        }
+
+        // Update header border
+        header.border = if (debug) {
+            BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(KiloTheme.borderWeak, 0, 0, 1, 0),
+                JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+            )
+        } else {
+            JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+        }
+
+        // Update footer border
+        footerBlock?.border = if (debug) {
+            BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(KiloTheme.borderWeak, 1, 0, 0, 0),
+                JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+            )
+        } else {
+            JBUI.Borders.empty(KiloSpacing.xs, KiloSpacing.sm)
+        }
     }
 
     fun setCollapsed(collapsed: Boolean) {

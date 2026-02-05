@@ -4,6 +4,7 @@ import ai.kilo.plugin.model.*
 import ai.kilo.plugin.services.KiloProjectService
 import ai.kilo.plugin.store.ChatUiStateManager
 import ai.kilo.plugin.store.MessageChange
+import ai.kilo.plugin.ui.KiloTheme
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
@@ -47,11 +48,27 @@ class MockControlDialog(private val project: Project) : DialogWrapper(project, f
         val panel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(8)))
         panel.border = JBUI.Borders.empty(8)
 
-        val row = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
-        row.add(JBLabel("Type:"))
-        row.add(typeCombo)
+        val contentPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
 
-        panel.add(row, BorderLayout.CENTER)
+        // Debug toggle row
+        val debugRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        val debugCheckbox = JCheckBox("UI_DEBUG (show borders & headers)", KiloTheme.UI_DEBUG).apply {
+            addActionListener {
+                KiloTheme.UI_DEBUG = isSelected
+            }
+        }
+        debugRow.add(debugCheckbox)
+        contentPanel.add(debugRow)
+
+        // Type selector row
+        val typeRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        typeRow.add(JBLabel("Type:"))
+        typeRow.add(typeCombo)
+        contentPanel.add(typeRow)
+
+        panel.add(contentPanel, BorderLayout.CENTER)
         panel.add(JBLabel("Select a type and click 'Render' to inject mock data"), BorderLayout.SOUTH)
 
         return panel

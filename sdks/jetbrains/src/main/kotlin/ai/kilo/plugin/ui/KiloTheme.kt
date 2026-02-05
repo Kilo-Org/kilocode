@@ -11,6 +11,26 @@ import java.awt.Color
  * Color values are derived from packages/ui/src/styles/theme.css and colors.css
  */
 object KiloTheme {
+    // ============ DEBUG MODE ============
+    /** Enable to show borders and headers for debugging layout. Can be toggled at runtime. */
+    var UI_DEBUG = false
+        set(value) {
+            if (field != value) {
+                field = value
+                uiDebugListeners.forEach { it(value) }
+            }
+        }
+
+    private val uiDebugListeners = mutableListOf<(Boolean) -> Unit>()
+
+    fun addUiDebugListener(listener: (Boolean) -> Unit) {
+        uiDebugListeners.add(listener)
+    }
+
+    fun removeUiDebugListener(listener: (Boolean) -> Unit) {
+        uiDebugListeners.remove(listener)
+    }
+
     // ============ BACKGROUND COLORS ============
     // Main app backgrounds
     val backgroundBase = JBColor(0xF8F7F7, 0x131010)

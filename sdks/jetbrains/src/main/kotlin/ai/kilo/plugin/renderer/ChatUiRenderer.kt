@@ -55,6 +55,15 @@ class ChatUiRenderer(
     // Callback for ChatPanel (thin UI updates only)
     private var listener: Listener? = null
 
+    // UI_DEBUG listener
+    private val uiDebugListener: (Boolean) -> Unit = { debug ->
+        // Update all cached components
+        messageViewCache.values.forEach { it.updateDebugMode(debug) }
+        // Single revalidate/repaint on container
+        messagesPanel.revalidate()
+        messagesPanel.repaint()
+    }
+
     interface Listener {
         fun onSessionChanged(session: Session?)
         fun onStatusChanged(status: SessionStatus?)
@@ -69,6 +78,8 @@ class ChatUiRenderer(
     }
 
     fun start() {
+        // Listen for UI_DEBUG changes
+        KiloTheme.addUiDebugListener(uiDebugListener)
         subscribeToSessionChanges()
         subscribeToMessageChanges()
         subscribeToStatusFlow()
@@ -414,6 +425,7 @@ class ChatUiRenderer(
     val messages: List<MessageWithParts> get() = currentMessages
 
     fun dispose() {
+        KiloTheme.removeUiDebugListener(uiDebugListener)
         toolPartWrappers.forEach { it.dispose() }
         toolPartWrappers.clear()
         messageViewCache.clear()
