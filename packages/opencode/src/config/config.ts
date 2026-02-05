@@ -354,15 +354,19 @@ export namespace Config {
 
     const parsed = await pkgFile.json().catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    // kilocode_change start - check correct package name
+    const depVersion = dependencies["@kilocode/plugin"]
+    // kilocode_change end
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      // kilocode_change start - check correct package name
+      const isOutdated = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
+      // kilocode_change end
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@kilocode/plugin", // kilocode_change
         cachedVersion: depVersion,
       })
       return true
