@@ -3,8 +3,10 @@
 out/**
 node_modules/**
 src/**
+webview-ui/**
 .gitignore
 .yarnrc
+.npmrc
 esbuild.js
 vsc-extension-quickstart.md
 **/tsconfig.json
@@ -12,3 +14,7 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+pnpm-lock.yaml
+
+# Include bin/ directory for CLI binary (production)
+!bin/**

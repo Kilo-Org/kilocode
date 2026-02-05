@@ -75,13 +75,15 @@
     "@gitlab/gitlab-ai-provider": "3.4.0",
     "@hono/standard-validator": "0.1.5",
     "@hono/zod-validator": "catalog:",
+    "@kilocode/kilo-gateway": "workspace:*",
+    "@kilocode/kilo-telemetry": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "@modelcontextprotocol/sdk": "1.25.2",
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
-    "@kilocode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
-    "@kilocode/sdk": "workspace:*",
     "@opencode-ai/util": "workspace:*",
     "@openrouter/ai-sdk-provider": "1.5.4",
     "@opentui/core": "0.1.77",
@@ -121,8 +123,6 @@
     "xdg-basedir": "5.1.0",
     "yargs": "18.0.0",
     "zod": "catalog:",
-    "zod-to-json-schema": "3.24.5",
-    "@kilocode/kilo-gateway": "workspace:*",
-    "@kilocode/kilo-telemetry": "workspace:*"
+    "zod-to-json-schema": "3.24.5"
   }
 }
