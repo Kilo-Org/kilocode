@@ -19,7 +19,7 @@ Without a solution to this memory problem, AI assistants remain powerful but sta
 
 Memory Bank is a system of structured documentation that enables Kilo Code to **better understand your project** and **maintain context across coding sessions**. It transforms your AI assistant from a stateless tool into a persistent development partner with perfect recall of your project details. Kilo Code automatically reads your Memory Bank files to rebuild its understanding of your project whenever you start a new session.
 
-When Memory Bank is active, Kilo Code begins each task with `[Memory Bank: Active]` and a brief summary of your project context, ensuring consistent understanding without repetitive explanations.
+When Memory Bank is active, Kilo Code can include a `[Memory Bank: Active]` status indicator and a brief summary of your project context, ensuring consistent understanding without repetitive explanations.
 
 ## Key Benefits
 
@@ -33,7 +33,7 @@ When Memory Bank is active, Kilo Code begins each task with `[Memory Bank: Activ
 
 Memory Bank is built on Kilo Code's [Custom Rules](/docs/customize/custom-rules) feature, providing a specialized framework for project documentation. Memory Bank files are standard markdown files stored in `.kilocode/rules/memory-bank` folder within your project repository. They're not hidden or proprietary - they're regular documentation files that both you and Kilo Code can access.
 
-At the start of every task, Kilo Code reads all Memory Bank files to build a comprehensive understanding of your project. This happens automatically without requiring any action from you. Kilo Code then indicates successful Memory Bank activation with `[Memory Bank: Active]` at the beginning of its response, followed by a brief summary of its understanding of your project.
+At the start of every task, Kilo Code reads all Memory Bank files to build a comprehensive understanding of your project. This happens automatically without requiring any action from you. Kilo Code may indicate successful Memory Bank activation with `[Memory Bank: Active]` at the beginning of its response, followed by a brief summary of its understanding of your project.
 
 Files are organized in a hierarchical structure that builds a complete picture of your project:
 
@@ -221,6 +221,8 @@ Kilo Code uses status indicators to clearly communicate Memory Bank status:
 
 These indicators appear at the beginning of Kilo Code's responses, providing immediate confirmation of Memory Bank status.
 
+Status indicators are not guaranteed in every client or mode. If you do not see them, Memory Bank can still be active. Verify by checking the `.kilocode/rules/memory-bank/` files or asking Kilo to summarize what it read from the memory bank.
+
 ### Documentation Updates
 
 Memory Bank updates should automatically occur when:
@@ -266,7 +268,7 @@ Yes! While Kilo Code manages most of the files, you can edit any of them manuall
 
 ### What happens if memory bank files are missing?
 
-If memory bank files are missing, Kilo Code will indicate this with `[Memory Bank: Missing]` at the beginning of its response and suggest initializing the memory bank.
+If memory bank files are missing, Kilo Code may indicate this with `[Memory Bank: Missing]` at the beginning of its response and suggest initializing the memory bank.
 
 ### Does Memory Bank work with all AI models?
 
@@ -319,4 +321,4 @@ Testing shows that while Memory Bank uses more tokens initially, it dramatically
 
 ## Remember
 
-The Memory Bank is Kilo Code's only link to previous work. Its effectiveness depends entirely on maintaining clear, accurate documentation and confirming context preservation in every interaction. When you see `[Memory Bank: Active]` at the beginning of a response, you can be confident that Kilo Code has a comprehensive understanding of your project.
+The Memory Bank is Kilo Code's only link to previous work. Its effectiveness depends entirely on maintaining clear, accurate documentation and confirming context preservation in every interaction. If you see `[Memory Bank: Active]` at the beginning of a response, you can be confident that Kilo Code has a comprehensive understanding of your project.
