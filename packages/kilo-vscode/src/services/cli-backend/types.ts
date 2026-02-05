@@ -64,7 +64,7 @@ export type SSEEvent =
   | { type: "session.status"; properties: { sessionID: string; status: SessionStatusInfo } }
   | { type: "session.idle"; properties: { sessionID: string } }
   | { type: "message.updated"; properties: { info: MessageInfo } }
-  | { type: "message.part.updated"; properties: { part: MessagePart; delta?: string } }
+  | { type: "message.part.updated"; properties: { messageID: string; part: MessagePart; delta?: string } }
   | { type: "permission.asked"; properties: PermissionRequest }
   | {
       type: "permission.replied"

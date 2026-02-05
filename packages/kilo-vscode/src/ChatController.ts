@@ -371,10 +371,13 @@ export class ChatController implements vscode.Disposable {
 	 * Handle SSE events from the backend
 	 */
 	private handleSSEEvent(event: SSEEvent): void {
+		console.log('[Kilo New] ChatController: 📥 SSE event received:', event.type);
+		
 		// Only process events for the current session
 		if ('sessionID' in event.properties) {
 			const eventSessionId = event.properties.sessionID;
 			if (this.currentSessionId && eventSessionId !== this.currentSessionId) {
+				console.log('[Kilo New] ChatController: ⏭️ Skipping event for different session:', eventSessionId, 'current:', this.currentSessionId);
 				return;
 			}
 		}
@@ -383,6 +386,8 @@ export class ChatController implements vscode.Disposable {
 			case 'message.updated': {
 				// A new message was created or updated
 				const { info } = event.properties;
+				console.log('[Kilo New] ChatController: 📝 message.updated - role:', info.role, 'id:', info.id, 'sessionID:', info.sessionID);
+				
 				if (info.role === 'assistant') {
 					// Create or update assistant message
 					const existingMessages = this.messages.get(info.sessionID) || [];
@@ -390,6 +395,7 @@ export class ChatController implements vscode.Disposable {
 					
 					if (existingIndex === -1) {
 						// New assistant message
+						console.log('[Kilo New] ChatController: ✨ Creating new assistant message:', info.id);
 						const assistantMessage: ChatMessage = {
 							id: info.id,
 							sessionId: info.sessionID,
@@ -400,11 +406,14 @@ export class ChatController implements vscode.Disposable {
 						existingMessages.push(assistantMessage);
 						this.messages.set(info.sessionID, existingMessages);
 						
+						console.log('[Kilo New] ChatController: 📤 Posting chat/messageAppended to webview');
 						this.postMessage({
 							type: 'chat/messageAppended',
 							sessionId: info.sessionID,
 							message: assistantMessage,
 						});
+					} else {
+						console.log('[Kilo New] ChatController: 🔄 Assistant message already exists:', info.id);
 					}
 				}
 				break;
@@ -412,52 +421,47 @@ export class ChatController implements vscode.Disposable {
 
 			case 'message.part.updated': {
 				// A message part was updated (streaming content)
+				// Note: messageID can be at event.properties.messageID OR event.properties.part.messageID
+				// depending on the backend version
 				const { part, delta } = event.properties;
+				const messageID = event.properties.messageID || (part as { messageID?: string }).messageID;
+				console.log('[Kilo New] ChatController: 📝 message.part.updated - messageID:', messageID, 'partId:', part.id, 'type:', part.type, 'delta length:', delta?.length);
+				
+				if (!messageID) {
+					console.warn('[Kilo New] ChatController: ⚠️ No messageID found in event.properties or part:', JSON.stringify(event.properties));
+					break;
+				}
+				
 				const convertedPart = this.convertBackendPart(part);
 				
-				// Find the message this part belongs to
+				// Find the message this part belongs to using messageID from the event
 				const sessionMessages = this.messages.get(this.currentSessionId || '') || [];
-				const message = sessionMessages.find(m => 
-					m.parts?.some(p => p.id === part.id) || m.role === 'assistant'
-				);
+				const message = sessionMessages.find(m => m.id === messageID);
 				
-				if (message) {
-					// Update or add the part
-					const existingPartIndex = message.parts?.findIndex(p => p.id === part.id) ?? -1;
-					if (existingPartIndex >= 0 && message.parts) {
-						message.parts[existingPartIndex] = convertedPart;
-					} else {
-						message.parts = message.parts || [];
-						message.parts.push(convertedPart);
+				if (!message) {
+					console.warn('[Kilo New] ChatController: ⚠️ No message found for messageID:', messageID, 'available messages:', sessionMessages.map(m => m.id));
+					// The message might not have been created yet - store the part for later
+					// For now, try to find any assistant message as fallback
+					const fallbackMessage = sessionMessages.find(m => m.role === 'assistant');
+					if (fallbackMessage) {
+						console.log('[Kilo New] ChatController: 🔄 Using fallback assistant message:', fallbackMessage.id);
+						this.updateMessagePart(fallbackMessage, convertedPart, part, messageID, delta);
 					}
-					
-					// Send delta for streaming text
-					if (delta && part.type === 'text') {
-						this.postMessage({
-							type: 'chat/messageDelta',
-							sessionId: this.currentSessionId || '',
-							messageId: message.id,
-							partId: part.id,
-							delta,
-							part: convertedPart,
-						});
-					} else {
-						// Send full part update for non-text parts
-						this.postMessage({
-							type: 'chat/partUpdated',
-							sessionId: this.currentSessionId || '',
-							messageId: message.id,
-							part: convertedPart,
-						});
-					}
+					break;
 				}
+				
+				console.log('[Kilo New] ChatController: ✅ Found message for part:', message.id);
+				this.updateMessagePart(message, convertedPart, part, messageID, delta);
 				break;
 			}
 
 			case 'session.status': {
 				const { sessionID, status } = event.properties;
+				console.log('[Kilo New] ChatController: 📊 session.status -', status.type, 'for session:', sessionID);
+				
 				if (status.type === 'idle') {
 					// Session is idle - request finished
+					console.log('[Kilo New] ChatController: 📤 Posting chat/requestState (finished) to webview');
 					this.postMessage({
 						type: 'chat/requestState',
 						sessionId: sessionID,
@@ -465,6 +469,7 @@ export class ChatController implements vscode.Disposable {
 					});
 				} else if (status.type === 'busy') {
 					// Session is busy - streaming
+					console.log('[Kilo New] ChatController: 📤 Posting chat/requestState (streaming) to webview');
 					this.postMessage({
 						type: 'chat/requestState',
 						sessionId: sessionID,
@@ -476,6 +481,8 @@ export class ChatController implements vscode.Disposable {
 
 			case 'session.idle': {
 				const { sessionID } = event.properties;
+				console.log('[Kilo New] ChatController: 📊 session.idle for session:', sessionID);
+				console.log('[Kilo New] ChatController: 📤 Posting chat/requestState (finished) to webview');
 				this.postMessage({
 					type: 'chat/requestState',
 					sessionId: sessionID,
@@ -487,10 +494,56 @@ export class ChatController implements vscode.Disposable {
 			case 'session.updated': {
 				// Session info was updated (e.g., title changed)
 				const { info } = event.properties;
+				console.log('[Kilo New] ChatController: 📝 session.updated - id:', info.id, 'title:', info.title);
 				const session = this.convertBackendSession(info);
 				this.sessions.set(session.id, session);
 				break;
 			}
+			
+			default:
+				console.log('[Kilo New] ChatController: ❓ Unhandled SSE event type:', event.type);
+		}
+	}
+
+	/**
+	 * Update a message part and post the appropriate message to the webview
+	 */
+	private updateMessagePart(
+		message: ChatMessage,
+		convertedPart: MessagePart,
+		backendPart: { id: string; type: string },
+		messageID: string,
+		delta?: string
+	): void {
+		// Update or add the part
+		const existingPartIndex = message.parts?.findIndex(p => p.id === backendPart.id) ?? -1;
+		if (existingPartIndex >= 0 && message.parts) {
+			message.parts[existingPartIndex] = convertedPart;
+		} else {
+			message.parts = message.parts || [];
+			message.parts.push(convertedPart);
+		}
+		
+		// Send delta for streaming text
+		if (delta && backendPart.type === 'text') {
+			console.log('[Kilo New] ChatController: 📤 Posting chat/messageDelta to webview - messageId:', messageID, 'partId:', backendPart.id);
+			this.postMessage({
+				type: 'chat/messageDelta',
+				sessionId: this.currentSessionId || '',
+				messageId: messageID,
+				partId: backendPart.id,
+				delta,
+				part: convertedPart,
+			});
+		} else {
+			// Send full part update for non-text parts
+			console.log('[Kilo New] ChatController: 📤 Posting chat/partUpdated to webview - messageId:', messageID, 'partId:', backendPart.id);
+			this.postMessage({
+				type: 'chat/partUpdated',
+				sessionId: this.currentSessionId || '',
+				messageId: messageID,
+				part: convertedPart,
+			});
 		}
 	}
 

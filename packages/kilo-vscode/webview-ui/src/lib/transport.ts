@@ -198,6 +198,7 @@ export interface ChatTransport {
   onMessageDelta(handler: (data: { sessionId: string; messageId: string; partId: string; delta: string; part?: MessagePart }) => void): () => void;
   onPartUpdated(handler: (data: { sessionId: string; messageId: string; part: MessagePart }) => void): () => void;
   onRequestState(handler: (data: { sessionId: string; state: string; error?: string }) => void): () => void;
+  onSessionCreated(handler: (data: { session: SessionInfo }) => void): () => void;
   onError(handler: (data: { error: string; details?: string }) => void): () => void;
 }
 
@@ -304,6 +305,12 @@ export function createChatTransport(): ChatTransport {
           state: msg.state,
           error: msg.error,
         });
+      });
+    },
+
+    onSessionCreated(handler) {
+      return on('chat/sessionCreated', (msg) => {
+        handler({ session: msg.session });
       });
     },
 

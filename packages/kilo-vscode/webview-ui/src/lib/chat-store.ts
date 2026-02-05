@@ -82,7 +82,51 @@ export function createChatStore(): ChatStore {
 
   // Set up event listeners
   const unsubMessageAppended = transport.onMessageAppended(({ sessionId, message }) => {
+    console.log('[Kilo New] chat-store: onMessageAppended - incomingSessionId:', sessionId, 'currentSessionId:', state.currentSessionId);
+    
     setState(produce(draft => {
+      // If we receive a message for a different session and our current session is a local one,
+      // this means the backend has migrated our local session to a real backend session.
+      // We should switch to the new session ID.
+      if (draft.currentSessionId &&
+          draft.currentSessionId !== sessionId &&
+          draft.currentSessionId.startsWith('local_session_')) {
+        console.log('[Kilo New] chat-store: Session migration detected - switching from', draft.currentSessionId, 'to', sessionId);
+        
+        // Move any existing messages from the local session to the new session
+        const localMessages = draft.messages[draft.currentSessionId] || [];
+        if (localMessages.length > 0) {
+          console.log('[Kilo New] chat-store: Moving', localMessages.length, 'messages from local session to backend session');
+          if (!draft.messages[sessionId]) {
+            draft.messages[sessionId] = [];
+          }
+          // Prepend local messages to the new session
+          draft.messages[sessionId] = [...localMessages, ...draft.messages[sessionId]];
+          delete draft.messages[draft.currentSessionId];
+        }
+        
+        // Copy request state
+        if (draft.requestState[draft.currentSessionId]) {
+          draft.requestState[sessionId] = draft.requestState[draft.currentSessionId];
+          delete draft.requestState[draft.currentSessionId];
+        }
+        
+        // Update current session ID
+        draft.currentSessionId = sessionId;
+        
+        // Update sessions list - remove local session, add backend session if not present
+        const localSessionIndex = draft.sessions.findIndex(s => s.id.startsWith('local_session_'));
+        if (localSessionIndex >= 0) {
+          draft.sessions.splice(localSessionIndex, 1);
+        }
+        if (!draft.sessions.find(s => s.id === sessionId)) {
+          draft.sessions.unshift({
+            id: sessionId,
+            time: { created: Date.now() },
+          });
+        }
+      }
+      
       if (!draft.messages[sessionId]) {
         draft.messages[sessionId] = [];
       }
@@ -97,6 +141,7 @@ export function createChatStore(): ChatStore {
   });
 
   const unsubMessageDelta = transport.onMessageDelta(({ sessionId, messageId, partId, delta, part }) => {
+    console.log('[Kilo New] chat-store: onMessageDelta - incomingSessionId:', sessionId, 'currentSessionId:', state.currentSessionId, 'messageId:', messageId);
     setState(produce(draft => {
       // Update or create the part
       if (!draft.parts[messageId]) {
@@ -153,6 +198,51 @@ export function createChatStore(): ChatStore {
     setState('error', error);
   });
 
+  // Handle session migration from backend
+  // This is sent when the ChatController migrates a local session to a backend session
+  const unsubSessionCreated = transport.onSessionCreated(({ session }) => {
+    console.log('[Kilo New] chat-store: onSessionCreated - newSessionId:', session.id, 'currentSessionId:', state.currentSessionId);
+    
+    setState(produce(draft => {
+      const oldSessionId = draft.currentSessionId;
+      
+      // Only migrate if current session is a local session
+      if (oldSessionId && oldSessionId.startsWith('local_session_')) {
+        console.log('[Kilo New] chat-store: Session migration via onSessionCreated - switching from', oldSessionId, 'to', session.id);
+        
+        // Move messages from local session to new session
+        const localMessages = draft.messages[oldSessionId] || [];
+        if (localMessages.length > 0) {
+          console.log('[Kilo New] chat-store: Moving', localMessages.length, 'messages from local session to backend session');
+          draft.messages[session.id] = localMessages;
+          delete draft.messages[oldSessionId];
+        } else {
+          draft.messages[session.id] = [];
+        }
+        
+        // Copy request state
+        if (draft.requestState[oldSessionId]) {
+          draft.requestState[session.id] = draft.requestState[oldSessionId];
+          delete draft.requestState[oldSessionId];
+        }
+        
+        // Remove local session from sessions list
+        const localSessionIndex = draft.sessions.findIndex(s => s.id === oldSessionId);
+        if (localSessionIndex >= 0) {
+          draft.sessions.splice(localSessionIndex, 1);
+        }
+      }
+      
+      // Add new session to sessions list if not present
+      if (!draft.sessions.find(s => s.id === session.id)) {
+        draft.sessions.unshift(session);
+      }
+      
+      // Update current session ID
+      draft.currentSessionId = session.id;
+    }));
+  });
+
   // Clean up on unmount
   if (typeof window !== 'undefined') {
     onCleanup(() => {
@@ -160,6 +250,7 @@ export function createChatStore(): ChatStore {
       unsubMessageDelta();
       unsubPartUpdated();
       unsubRequestState();
+      unsubSessionCreated();
       unsubError();
     });
   }
