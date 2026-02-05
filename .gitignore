@@ -4,6 +4,8 @@ node_modules
 .sst
 .env
 .idea
+.vscode
+!packages/kilo-vscode/.vscode
 .codex
 *~
 playground
