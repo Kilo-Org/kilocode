@@ -187,6 +187,12 @@ The indexer automatically excludes:
 - **Dependencies**: Requires external services (embedding provider + Qdrant)
 - **Language Coverage**: Limited to Tree-sitter supported languages for optimal parsing
 
+## Troubleshooting
+
+### Embeddings fail or indexing stalls (llama.cpp / Ollama)
+
+If your local embedding server is based on llama.cpp (including Ollama), indexing can fail with errors about `n_ubatch` or `GGML_ASSERT`. Ensure both batch size (`-b`) and micro-batch size (`-ub`) are set and equal for embedding models, then restart the server. For Ollama, set equivalent options in your model configuration.
+
 ## Using the Search Feature
 
 Once indexed, Kilo Code can use the [`codebase_search`](/docs/automate/tools/codebase-search) tool to find relevant code:
