@@ -486,7 +486,8 @@ class ChatUiStateManager(
 
     suspend fun createSession(): Session? {
         return try {
-            val session = apiClient.createSession()
+            val title = "New task - ${java.time.Instant.now()}"
+            val session = apiClient.createSession(title = title)
             synchronized(sessionsLock) {
                 val i = sessionsList.binarySearch { it.id.compareTo(session.id) }
                 if (i < 0) {
@@ -516,18 +517,41 @@ class ChatUiStateManager(
     }
 
     suspend fun clearAllSessions(): Boolean {
-        return try {
-            val sessionIds = synchronized(sessionsLock) { sessionsList.map { it.id } }
-            for (id in sessionIds) {
-                apiClient.deleteSession(id)
-            }
-            _currentSessionId.value = null
-            true
-        } catch (e: Exception) {
-            log.error("Failed to clear sessions", e)
-            _error.value = e.message
-            false
+        // Capture session IDs before clearing local state
+        val sessionIds = synchronized(sessionsLock) { sessionsList.map { it.id } }
+
+        // Immediately clear all local state
+        synchronized(sessionsLock) {
+            sessionsList.clear()
         }
+        messagesMap.clear()
+        partsMap.clear()
+        permissionsMap.clear()
+        questionsMap.clear()
+        sessionStatusesMap.clear()
+        todosMap.clear()
+
+        // Sync all flows to update UI immediately
+        syncSessionsFlow()
+        syncMessagesFlow()
+        syncPermissionsFlow()
+        syncQuestionsFlow()
+        _sessionStatuses.value = emptyMap()
+        _todos.value = emptyMap()
+        _currentSessionId.value = null
+
+        // Delete sessions on server in background
+        scope.launch {
+            for (id in sessionIds) {
+                try {
+                    apiClient.deleteSession(id)
+                } catch (e: Exception) {
+                    log.warn("Failed to delete session $id from server", e)
+                }
+            }
+        }
+
+        return true
     }
 
     suspend fun renameSession(sessionId: String, title: String): Session? {

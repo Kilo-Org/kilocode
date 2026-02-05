@@ -59,8 +59,8 @@
 
         <action id="Kilo.NewSession"
                 class="ai.kilo.plugin.actions.NewSessionAction"
-                text="New Session"
-                description="Start a new chat session"
+                text="New Task"
+                description="Start a new task"
                 icon="AllIcons.General.Add">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift K"/>
@@ -131,7 +131,7 @@
                 class="ai.kilo.plugin.actions.ServerInfoAction"
                 text="Server Info"
                 description="Show Kilo server information"
-                icon="AllIcons.General.Information"/>
+                icon="AllIcons.Status.InfoOutline"/>
 
         <action id="Kilo.MockControl"
                 class="ai.kilo.plugin.mock.OpenMockControlAction"

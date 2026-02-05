@@ -28,6 +28,6 @@ class NewSessionAction : AnAction(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.project != null
-        e.presentation.text = "New Session"
+        e.presentation.text = "New Task"
     }
 }
