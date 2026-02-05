@@ -351,7 +351,14 @@ program
 	.command("auth")
 	.description("Manage authentication for the Kilo Code CLI")
 	.action(async () => {
-		await authWizard()
+		try {
+			await authWizard()
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			console.error("Error:", errorMessage)
+			logs.error("Auth command failed", "Index", { error: errorMessage })
+			process.exit(1)
+		}
 	})
 
 // Config command - opens the config file in the default editor
@@ -373,24 +380,31 @@ program
 	.description("Run a system compatibility check for the Kilo Code CLI")
 	.argument("[mode]", `The mode to debug (${DEBUG_MODES.join(", ")})`, "")
 	.action(async (mode: string) => {
-		// If no mode is provided, show available debug modes (helpful UX)
-		if (!mode) {
-			console.log(`Available debug modes: ${DEBUG_MODES.join(", ")}`)
-			process.exit(0)
-		}
+		try {
+			// If no mode is provided, show available debug modes (helpful UX)
+			if (!mode) {
+				console.log(`Available debug modes: ${DEBUG_MODES.join(", ")}`)
+				process.exit(0)
+			}
 
-		if (!DEBUG_MODES.includes(mode)) {
-			console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
+			if (!DEBUG_MODES.includes(mode)) {
+				console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
+				process.exit(1)
+			}
+
+			const debugFunction = DEBUG_FUNCTIONS[mode as keyof typeof DEBUG_FUNCTIONS]
+			if (!debugFunction) {
+				console.error(`Error: Debug function not implemented for mode: ${mode}`)
+				process.exit(1)
+			}
+
+			await debugFunction()
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			console.error("Error:", errorMessage)
+			logs.error("Debug command failed", "Index", { error: errorMessage })
 			process.exit(1)
 		}
-
-		const debugFunction = DEBUG_FUNCTIONS[mode as keyof typeof DEBUG_FUNCTIONS]
-		if (!debugFunction) {
-			console.error(`Error: Debug function not implemented for mode: ${mode}`)
-			process.exit(1)
-		}
-
-		await debugFunction()
 	})
 
 // Models command - list available models as JSON for programmatic use
@@ -400,8 +414,15 @@ program
 	.option("--provider <id>", "Use specific provider instead of default")
 	.option("--json", "Output as JSON (default)", true)
 	.action(async (options: { provider?: string; json?: boolean }) => {
-		const { modelsApiCommand } = await import("./commands/models-api.js")
-		await modelsApiCommand(options)
+		try {
+			const { modelsApiCommand } = await import("./commands/models-api.js")
+			await modelsApiCommand(options)
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			console.error("Error:", errorMessage)
+			logs.error("Models command failed", "Index", { error: errorMessage })
+			process.exit(1)
+		}
 	})
 
 // Handle process termination signals
@@ -425,5 +446,23 @@ process.on("SIGTERM", async () => {
 	}
 })
 
+// Handle uncaught errors to prevent silent failures
+process.on("uncaughtException", (error) => {
+	console.error("Fatal error:", error.message)
+	logs.error("Uncaught exception", "Index", { error: error.message, stack: error.stack })
+	process.exit(1)
+})
+
+process.on("unhandledRejection", (reason, promise) => {
+	const errorMessage = reason instanceof Error ? reason.message : String(reason)
+	console.error("Fatal error:", errorMessage)
+	logs.error("Unhandled rejection", "Index", { reason: errorMessage })
+	process.exit(1)
+})
+
 // Parse command line arguments
-program.parse()
+program.parseAsync().catch((error) => {
+	console.error("Fatal error:", error.message)
+	logs.error("Program parse error", "Index", { error: error.message, stack: error.stack })
+	process.exit(1)
+})
