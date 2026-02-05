@@ -106,6 +106,7 @@ export class ChatTransport {
   private todosUpdatedEmitter = new EventEmitter<ChatTodosUpdatedMessage>()
 
   private messageHandler: ((event: MessageEvent) => void) | null = null
+  private listenerAttached = false
   private initialized = false
 
   constructor() {
@@ -131,6 +132,15 @@ export class ChatTransport {
     }
     console.log("[Kilo New] ChatTransport: Sending message:", message)
     this.vscode.postMessage(message)
+  }
+
+  private ensureListener(): void {
+    if (this.listenerAttached) return
+
+    this.messageHandler = this.handleMessage.bind(this)
+    window.addEventListener("message", this.messageHandler)
+    this.listenerAttached = true
+    console.log("[Kilo New] ChatTransport: window.message listener attached")
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -203,8 +213,7 @@ export class ChatTransport {
       return
     }
 
-    this.messageHandler = this.handleMessage.bind(this)
-    window.addEventListener("message", this.messageHandler)
+    this.ensureListener()
     this.initialized = true
 
     this.postMessage({
@@ -223,6 +232,8 @@ export class ChatTransport {
       window.removeEventListener("message", this.messageHandler)
       this.messageHandler = null
     }
+
+    this.listenerAttached = false
 
     // Clear all pending requests
     for (const [, pending] of this.pendingRequests) {
@@ -251,11 +262,19 @@ export class ChatTransport {
    * Load a session - returns promise that resolves when sessionLoaded received
    */
   loadSession(sessionId?: string, timeout = 30000): Promise<SessionState> {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: loadSession called before init(); auto-initializing")
+      this.init({})
+    }
+
     const requestId = this.generateRequestId()
+    console.log("[Kilo New] ChatTransport: loadSession request:", { requestId, sessionId, timeout })
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pendingRequests.delete(requestId)
+        console.warn("[Kilo New] ChatTransport: loadSession timeout:", { requestId, sessionId, timeout })
         reject(new Error(`Load session timeout after ${timeout}ms`))
       }, timeout)
 
@@ -291,7 +310,21 @@ export class ChatTransport {
     attachments?: PromptAttachment[],
     model?: string
   ): string {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: sendPrompt called before init(); auto-initializing")
+      this.init({})
+    }
+
     const requestId = this.generateRequestId()
+
+    console.log("[Kilo New] ChatTransport: sendPrompt request:", {
+      requestId,
+      sessionId,
+      preview: text.slice(0, 80),
+      attachmentCount: attachments?.length ?? 0,
+      hasModel: !!model,
+    })
 
     this.postMessage({
       type: "chat/sendPrompt",
@@ -309,6 +342,13 @@ export class ChatTransport {
    * Abort the current request
    */
   abort(sessionId: string): void {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: abort called before init(); auto-initializing")
+      this.init({})
+    }
+
+    console.log("[Kilo New] ChatTransport: abort request:", { sessionId })
     this.postMessage({
       type: "chat/abort",
       sessionId,
@@ -319,6 +359,13 @@ export class ChatTransport {
    * Set the model for future requests
    */
   setModel(model: string, sessionId?: string): void {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: setModel called before init(); auto-initializing")
+      this.init({})
+    }
+
+    console.log("[Kilo New] ChatTransport: setModel request:", { model, sessionId })
     this.postMessage({
       type: "chat/setModel",
       model,
@@ -334,6 +381,17 @@ export class ChatTransport {
     permissionRequestId: string,
     reply: "once" | "always" | "reject"
   ): void {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: replyToPermission called before init(); auto-initializing")
+      this.init({})
+    }
+
+    console.log("[Kilo New] ChatTransport: permissionReply request:", {
+      sessionId,
+      permissionRequestId,
+      reply,
+    })
     this.postMessage({
       type: "chat/permissionReply",
       sessionId,
@@ -346,11 +404,24 @@ export class ChatTransport {
    * Create a new session
    */
   createSession(title?: string, parentId?: string, timeout = 10000): Promise<SessionInfo> {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: createSession called before init(); auto-initializing")
+      this.init({})
+    }
+
     const requestId = this.generateRequestId()
+    console.log("[Kilo New] ChatTransport: createSession request:", {
+      requestId,
+      title,
+      parentId,
+      timeout,
+    })
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pendingRequests.delete(requestId)
+        console.warn("[Kilo New] ChatTransport: createSession timeout:", { requestId, timeout })
         reject(new Error(`Create session timeout after ${timeout}ms`))
       }, timeout)
 
@@ -376,11 +447,19 @@ export class ChatTransport {
    * List available sessions
    */
   listSessions(timeout = 10000): Promise<SessionInfo[]> {
+    this.ensureListener()
+    if (!this.initialized) {
+      console.warn("[Kilo New] ChatTransport: listSessions called before init(); auto-initializing")
+      this.init({})
+    }
+
     const requestId = this.generateRequestId()
+    console.log("[Kilo New] ChatTransport: listSessions request:", { requestId, timeout })
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pendingRequests.delete(requestId)
+        console.warn("[Kilo New] ChatTransport: listSessions timeout:", { requestId, timeout })
         reject(new Error(`List sessions timeout after ${timeout}ms`))
       }, timeout)
 

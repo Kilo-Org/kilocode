@@ -15,6 +15,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 	private sseClient: SSEClient | null = null;
 	private webviewView: vscode.WebviewView | null = null;
 	private chatController: ChatController | null = null;
+	private webviewMessageDisposable: vscode.Disposable | null = null;
+	private pendingWebviewMessages: unknown[] = [];
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
@@ -28,8 +30,25 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		_context: vscode.WebviewViewResolveContext,
 		_token: vscode.CancellationToken
 	) {
+		console.log('[Kilo New] KiloProvider: resolveWebviewView called');
+		console.log('[Kilo New] KiloProvider: Creating webview view:', {
+			viewType: KiloProvider.viewType,
+			hasWebview: !!webviewView.webview,
+		});
+
 		// Store the webview reference
 		this.webviewView = webviewView;
+
+		// IMPORTANT: attach the message listener immediately.
+		// The webview can start posting messages (chat/init, chat/loadSession) before
+		// the CLI backend is ready and before ChatController is created.
+		// If we only register onDidReceiveMessage inside ChatController, those early
+		// messages are dropped and the webview waits forever ("Loading session...").
+		this.webviewMessageDisposable?.dispose();
+		this.webviewMessageDisposable = webviewView.webview.onDidReceiveMessage((message) => {
+			void this.routeWebviewMessage(message);
+		});
+		console.log('[Kilo New] KiloProvider: webview.onDidReceiveMessage listener attached');
 
 		// Set up webview options
 		webviewView.webview.options = {
@@ -38,10 +57,28 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		};
 
 		// Set HTML content
+		console.log('[Kilo New] KiloProvider: Setting webview HTML');
 		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
 		// Initialize connection to CLI backend
+		console.log('[Kilo New] KiloProvider: Initializing ChatController + backend connection');
 		this.initializeConnection(webviewView.webview);
+	}
+
+	private async routeWebviewMessage(message: unknown): Promise<void> {
+		if (this.chatController) {
+			await this.chatController.receiveMessage(message);
+			return;
+		}
+
+		// Buffer until ChatController exists. Keep buffer bounded.
+		this.pendingWebviewMessages.push(message);
+		if (this.pendingWebviewMessages.length > 50) {
+			this.pendingWebviewMessages.shift();
+		}
+		console.log('[Kilo New] KiloProvider: Buffered webview message (controller not ready yet)', {
+			bufferSize: this.pendingWebviewMessages.length,
+		});
 	}
 
 	/**
@@ -69,6 +106,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 
 			// Get workspace directory
 			const workspaceDir = this.getWorkspaceDirectory();
+			console.log('[Kilo New] KiloProvider: Workspace directory:', workspaceDir);
 
 			// Create ChatController to handle all message routing
 			this.chatController = new ChatController(webview, {
@@ -78,6 +116,18 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 			});
 			console.log('[Kilo New] KiloProvider: 🎮 Created ChatController');
 
+			// Flush any messages that arrived before the controller was ready.
+			if (this.pendingWebviewMessages.length > 0) {
+				console.log('[Kilo New] KiloProvider: Flushing buffered webview messages', {
+					count: this.pendingWebviewMessages.length,
+				});
+				const toFlush = [...this.pendingWebviewMessages];
+				this.pendingWebviewMessages = [];
+				for (const msg of toFlush) {
+					await this.chatController.receiveMessage(msg);
+				}
+			}
+
 			// Connect SSE with workspace directory
 			console.log('[Kilo New] KiloProvider: 📂 Connecting SSE with workspace:', workspaceDir);
 			this.sseClient.connect(workspaceDir);
@@ -85,6 +135,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 			console.log('[Kilo New] KiloProvider: ✅ initializeConnection completed successfully');
 		} catch (error) {
 			console.error('[Kilo New] KiloProvider: ❌ Failed to initialize connection:', error);
+			// Best-effort: clear the buffer so we don't replay stale messages later.
+			this.pendingWebviewMessages = [];
 			this.postMessage({
 				type: 'chat/error',
 				message: error instanceof Error ? error.message : 'Failed to connect to CLI backend',
@@ -159,6 +211,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		this.chatController?.dispose();
 		this.sseClient?.dispose();
 		this.serverManager.dispose();
+		this.webviewMessageDisposable?.dispose();
+		this.webviewMessageDisposable = null;
+		this.pendingWebviewMessages = [];
 	}
 }
 

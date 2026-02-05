@@ -59,11 +59,6 @@ export class ChatController implements vscode.Disposable {
     this.sseClient = config.sseClient;
     this.workspaceDirectory = config.workspaceDirectory;
 
-    // Set up message handler
-    this.disposables.push(
-      webview.onDidReceiveMessage((message) => this.handleWebviewMessage(message))
-    );
-
     // Set up SSE event handler
     const unsubscribeSSE = this.sseClient.onEvent((event) => this.handleSSEEvent(event));
     this.disposables.push({ dispose: unsubscribeSSE });
@@ -78,7 +73,7 @@ export class ChatController implements vscode.Disposable {
   /**
    * Handle incoming messages from the webview
    */
-  private async handleWebviewMessage(message: unknown): Promise<void> {
+  public async receiveMessage(message: unknown): Promise<void> {
     if (!isWebviewMessage(message)) {
       console.warn("[Kilo New] ChatController: Received unknown message:", message);
       return;

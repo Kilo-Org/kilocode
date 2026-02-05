@@ -93,6 +93,12 @@ export interface TransportProviderProps {
 export const TransportProvider: ParentComponent<TransportProviderProps> = (props) => {
   const transport = getChatTransport()
 
+  console.log("[Kilo New] TransportProvider: Render", {
+    autoInit: props.autoInit ?? true,
+    hasContext: !!props.context,
+    initialSessionId: props.initialSessionId,
+  })
+
   // Reactive state
   const [currentSession, setCurrentSession] = createSignal<SessionInfo | null>(null)
   const [sessionStatus, setSessionStatus] = createSignal<SessionStatusInfo>({ type: "idle" })
@@ -111,12 +117,22 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
 
   // Handle new messages
   const unsubMessageAppended = transport.onMessageAppended((msg) => {
+    console.log("[Kilo New] TransportProvider: messageAppended", {
+      sessionId: msg.sessionId,
+      currentSessionId: currentSession()?.id,
+      messageId: msg.message.id,
+    })
     if (msg.sessionId !== currentSession()?.id) return
     setMessages(produce((msgs) => msgs.push(msg.message)))
   })
 
   // Handle message updates
   const unsubMessageUpdated = transport.onMessageUpdated((msg) => {
+    console.log("[Kilo New] TransportProvider: messageUpdated", {
+      sessionId: msg.sessionId,
+      currentSessionId: currentSession()?.id,
+      messageId: msg.message.id,
+    })
     if (msg.sessionId !== currentSession()?.id) return
     setMessages(
       (m) => m.id === msg.message.id,
@@ -129,6 +145,14 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
 
   // Handle streaming deltas
   const unsubMessageDelta = transport.onMessageDelta((delta) => {
+    console.log("[Kilo New] TransportProvider: messageDelta", {
+      sessionId: delta.sessionId,
+      currentSessionId: currentSession()?.id,
+      messageId: delta.messageId,
+      partId: delta.part.id,
+      partType: delta.part.type,
+      deltaLength: delta.delta?.length ?? 0,
+    })
     if (delta.sessionId !== currentSession()?.id) return
 
     setMessages(
@@ -161,6 +185,12 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
 
   // Handle request state changes
   const unsubRequestState = transport.onRequestState((state) => {
+    console.log("[Kilo New] TransportProvider: requestState", {
+      sessionId: state.sessionId,
+      currentSessionId: currentSession()?.id,
+      status: state.state.status,
+      requestId: state.state.requestId,
+    })
     if (state.sessionId !== currentSession()?.id) return
 
     batch(() => {
@@ -179,6 +209,11 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
 
   // Handle session status changes
   const unsubSessionStatus = transport.onSessionStatus((status) => {
+    console.log("[Kilo New] TransportProvider: sessionStatus", {
+      sessionId: status.sessionId,
+      currentSessionId: currentSession()?.id,
+      statusType: status.status.type,
+    })
     if (status.sessionId !== currentSession()?.id) return
     setSessionStatus(status.status)
   })
@@ -186,17 +221,32 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
   // Handle errors
   const unsubError = transport.onError((err) => {
     console.error("[Kilo New] TransportProvider: Error:", err)
-    setError(err.message)
+    // Important: if we error while loading a session, stop the loading spinner.
+    // Otherwise the UI can show "Loading session..." indefinitely.
+    batch(() => {
+      setError(err.message)
+      setIsLoading(false)
+    })
   })
 
   // Handle permission requests
   const unsubPermissionRequest = transport.onPermissionRequest((req) => {
+    console.log("[Kilo New] TransportProvider: permissionRequest", {
+      sessionId: req.request.sessionID,
+      currentSessionId: currentSession()?.id,
+      permissionId: req.request.id,
+      permission: req.request.permission,
+    })
     if (req.request.sessionID !== currentSession()?.id) return
     setPendingPermissions(produce((perms) => perms.push(req.request)))
   })
 
   // Handle session updates
   const unsubSessionUpdated = transport.onSessionUpdated((msg) => {
+    console.log("[Kilo New] TransportProvider: sessionUpdated", {
+      sessionId: msg.session.id,
+      currentSessionId: currentSession()?.id,
+    })
     if (msg.session.id === currentSession()?.id) {
       setCurrentSession(msg.session)
     }
@@ -204,6 +254,11 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
 
   // Handle todos updates
   const unsubTodosUpdated = transport.onTodosUpdated((msg) => {
+    console.log("[Kilo New] TransportProvider: todosUpdated", {
+      sessionId: msg.sessionId,
+      currentSessionId: currentSession()?.id,
+      todoCount: msg.todos.length,
+    })
     if (msg.sessionId !== currentSession()?.id) return
     setTodos(msg.todos)
   })
@@ -213,11 +268,19 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
   // ============================================================================
 
   const loadSession = async (sessionId?: string): Promise<void> => {
+    console.log("[Kilo New] TransportProvider: loadSession() called", { sessionId })
     setIsLoading(true)
     setError(null)
 
     try {
       const state = await transport.loadSession(sessionId)
+      console.log("[Kilo New] TransportProvider: loadSession() resolved", {
+        sessionId: state.session.id,
+        messageCount: state.messages.length,
+        statusType: state.status.type,
+        pendingPermissionCount: state.pendingPermissions?.length ?? 0,
+        todoCount: state.todos?.length ?? 0,
+      })
 
       batch(() => {
         setCurrentSession(state.session)
@@ -289,10 +352,14 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
   createEffect(() => {
     const autoInit = props.autoInit ?? true
     if (autoInit) {
+      console.log("[Kilo New] TransportProvider: autoInit effect -> transport.init")
       transport.init(props.context ?? {})
 
       // Auto-load session if specified
       if (props.initialSessionId !== undefined) {
+        console.log("[Kilo New] TransportProvider: autoInit effect -> loadSession", {
+          initialSessionId: props.initialSessionId,
+        })
         loadSession(props.initialSessionId)
       }
     }
