@@ -398,11 +398,68 @@ Filter tasks by workspace or favorites:
 
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
-## Config reference for providers
+## Configuration
+
+Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same JSON configuration format. Configuration can be managed through:
+
+- **Interactive CLI**: Run `kilocode config` or use `/config` during a session
+- **Configuration file**: Edit `~/.kilocode/config.json` directly
+- **Project-level config**: Create `kilocode.json` in your project root
+
+### Config File Location
+
+| Scope | Location |
+|-------|----------|
+| Global | `~/.kilocode/config.json` |
+| Project | `./kilocode.json` |
+
+Project-level configuration takes precedence over global settings.
+
+### Key Configuration Options
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4.5",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "ask"
+  },
+  "instructions": ["AGENTS.md", ".cursor/rules/*.md"]
+}
+```
+
+**Common options:**
+
+- `model` - Default model to use
+- `provider` - Provider-specific settings (API keys, base URLs)
+- `permission` - Tool permissions (`allow`, `ask`, or `deny`)
+- `instructions` - Paths to instruction files loaded into context
+- `mcp` - MCP server configurations
+- `disabled_providers` / `enabled_providers` - Control which providers are available
+
+### Variable Substitution
+
+Config files support variable substitution:
+
+- `{env:VARIABLE_NAME}` - Substitute environment variables
+- `{file:path/to/file}` - Substitute file contents
+
+{% callout type="tip" %}
+For comprehensive configuration documentation including all options, formatters, compaction settings, and more, see the [OpenCode Configuration Docs](https://opencode.ai/docs/config).
+{% /callout %}
+
+## Provider Configuration
 
 Kilo gives you the ability to bring your own keys for a number of model providers and AI gateways, like OpenRouter and Vercel AI Gateway. Each provider has unique configuration options and some let you set environment variables.
 
-You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit .config files manually. You can also run:
+You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit config files manually. You can also run:
 
 `kilocode config`
 
