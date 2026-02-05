@@ -398,6 +398,63 @@ Filter tasks by workspace or favorites:
 
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
+## Configuration
+
+The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+
+### Config File Location
+
+| Scope      | Path                                |
+| ---------- | ----------------------------------- |
+| **Global** | `~/.config/kilocode/kilocode.json`  |
+| **Project**| `./kilocode.json` (in project root) |
+
+Project-level configuration takes precedence over global settings.
+
+### Key Configuration Options
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Common configuration options include:
+
+- **`model`** - Default model to use
+- **`provider`** - Provider-specific settings (API keys, base URLs, custom models)
+- **`mcp`** - MCP server configuration
+- **`permission`** - Tool permission settings (`allow` or `ask`)
+- **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
+- **`formatter`** - Code formatter configuration
+- **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+
+### Environment Variables
+
+Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
+
+```json
+{
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+
 ## Config reference for providers
 
 Kilo gives you the ability to bring your own keys for a number of model providers and AI gateways, like OpenRouter and Vercel AI Gateway. Each provider has unique configuration options and some let you set environment variables.
