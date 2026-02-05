@@ -1,8 +1,6 @@
 import { defineConfig } from "vite"
 import solid from "vite-plugin-solid"
 
-const dev = process.env.NODE_ENV !== "production"
-
 export default defineConfig({
   plugins: [solid()],
   root: "src/webview",

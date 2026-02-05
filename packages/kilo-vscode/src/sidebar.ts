@@ -1,15 +1,27 @@
 import * as vscode from "vscode"
+import { ServerWatcher, type ServerInfo } from "./server"
+
+export interface WebviewMessage {
+  type: string
+  [key: string]: unknown
+}
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView
+  private serverWatcher: ServerWatcher
 
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) {
+    this.serverWatcher = new ServerWatcher()
+    this.serverWatcher.onChange((info) => {
+      this.sendServerInfo(info)
+    })
+  }
 
-  resolveWebviewView(
+  async resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
-  ): void | Thenable<void> {
+  ): Promise<void> {
     this.view = webviewView
 
     webviewView.webview.options = {
@@ -19,17 +31,48 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this.getHtml(webviewView.webview)
 
-    webviewView.webview.onDidReceiveMessage((message) => {
-      switch (message.type) {
-        case "increment":
-          vscode.window.showInformationMessage(`Count: ${message.count}`)
-          break
-      }
+    webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
+      this.handleMessage(message)
     })
 
     if (this.context.extensionMode === vscode.ExtensionMode.Development) {
       this.setupDevReload(webviewView)
     }
+
+    const server = await this.serverWatcher.start()
+    this.sendServerInfo(server)
+
+    webviewView.onDidDispose(() => {
+      this.serverWatcher.dispose()
+    })
+  }
+
+  private handleMessage(message: WebviewMessage) {
+    switch (message.type) {
+      case "ready":
+        this.sendServerInfo(this.serverWatcher.server)
+        this.sendWorkspaceInfo()
+        break
+      case "log":
+        console.log("[webview]", message.message)
+        break
+    }
+  }
+
+  private sendServerInfo(info: ServerInfo | null) {
+    this.view?.webview.postMessage({
+      type: "server",
+      server: info,
+    })
+  }
+
+  private sendWorkspaceInfo() {
+    const folders = vscode.workspace.workspaceFolders
+    const directory = folders?.[0]?.uri.fsPath ?? null
+    this.view?.webview.postMessage({
+      type: "workspace",
+      directory,
+    })
   }
 
   private setupDevReload(webviewView: vscode.WebviewView) {
@@ -63,7 +106,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;"
+      content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:; connect-src http://localhost:* https://localhost:*;"
     />
     <link rel="stylesheet" href="${styleUri}?v=${bust}" />
     <title>Kilo</title>

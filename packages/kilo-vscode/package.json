@@ -54,6 +54,7 @@
     "test": "vscode-test"
   },
   "dependencies": {
+    "@opencode-ai/sdk": "workspace:*",
     "solid-js": "^1.9.11"
   },
   "devDependencies": {
