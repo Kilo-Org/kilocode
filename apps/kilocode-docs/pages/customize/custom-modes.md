@@ -168,7 +168,7 @@ customModes:
 
 - **Purpose:** A unique identifier for the mode
 - **Format:** Must match the pattern `/^[a-zA-Z0-9-]+$/` (only letters, numbers, and hyphens)
-- **Usage:** Used internally and in file/directory names for mode-specific rules (e.g., `.kilo/rules-{slug}/`)
+- **Usage:** Used internally and in file/directory names for mode-specific rules (e.g., `.kilocode/rules-{slug}/`)
 - **Recommendation:** Keep it short and descriptive
 
 **YAML Example:** `slug: docs-writer`
@@ -303,29 +303,31 @@ The migration process preserves the original JSON file for rollback purposes.
 
 You can provide instructions for custom modes using dedicated files or directories within your workspace, allowing for better organization and version control.
 
-### Preferred Method: Directory (`.kilo/rules-{mode-slug}/`)
+### Preferred Method: Directory (`.kilocode/rules-{mode-slug}/`)
 
 ```
 .
-├── .kilo/
+├── .kilocode/
 │   └── rules-docs-writer/  # Example for mode slug "docs-writer"
 │       ├── 01-style-guide.md
 │       └── 02-formatting.txt
 └── ... (other project files)
 ```
 
-### Fallback Method: Single File (`.kilorules-{mode-slug}`)
+### Fallback Method: Single File (`.kilocoderules-{mode-slug}`)
 
 ```
 .
-├── .kilorules-docs-writer  # Example for mode slug "docs-writer"
+├── .kilocoderules-docs-writer  # Example for mode slug "docs-writer"
 └── ... (other project files)
 ```
 
+**Legacy file names:** `.clinerules-{slug}` and `.kilorules-{slug}` are deprecated and may not load in newer versions.
+
 **Rules Directory Scope:**
 
-- **Global modes:** Rules are stored in `~/.kilo/rules-{slug}/`
-- **Project modes:** Rules are stored in `{workspace}/.kilo/rules-{slug}/`
+- **Global modes:** Rules are stored in `~/.kilocode/rules-{slug}/`
+- **Project modes:** Rules are stored in `{workspace}/.kilocode/rules-{slug}/`
 
 The directory method takes precedence if it exists and contains files. Files within the directory are read recursively and appended in alphabetical order.
 
