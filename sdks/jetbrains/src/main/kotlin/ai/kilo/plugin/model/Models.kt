@@ -585,3 +585,34 @@ data class PathInfo(
     val worktree: String? = null,
     val directory: String
 )
+
+// ==================== Auth ====================
+
+@Serializable
+data class AuthMethod(
+    val type: String,  // "oauth" or "api"
+    val label: String
+)
+
+@Serializable
+data class AuthMethodsResponse(
+    val methods: Map<String, List<AuthMethod>> = emptyMap()
+)
+
+@Serializable
+data class AuthAuthorizeRequest(
+    val method: Int
+)
+
+@Serializable
+data class AuthAuthorization(
+    val url: String,
+    val method: String,  // "auto" or "code"
+    val instructions: String
+)
+
+@Serializable
+data class AuthCallbackRequest(
+    val method: Int,
+    val code: String? = null
+)

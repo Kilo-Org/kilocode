@@ -63,6 +63,8 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         // Add gear menu actions
         if (toolWindow is ToolWindowEx) {
             val gearActions = DefaultActionGroup().apply {
+                actionManager.getAction("Kilo.Providers")?.let { add(it) }
+                addSeparator()
                 actionManager.getAction("Kilo.ClearSessions")?.let { add(it) }
                 actionManager.getAction("Kilo.ServerInfo")?.let { add(it) }
                 actionManager.getAction("Kilo.MockControl")?.let { add(it) }

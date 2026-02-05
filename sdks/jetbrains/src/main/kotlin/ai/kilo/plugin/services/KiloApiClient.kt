@@ -312,6 +312,35 @@ class KiloApiClient(
         return get("/path") { json.decodeFromString(it) }
     }
 
+    // ==================== Auth ====================
+
+    /**
+     * Get available auth methods for all providers.
+     */
+    suspend fun getAuthMethods(): Map<String, List<AuthMethod>> {
+        return get("/provider/auth") { json.decodeFromString(it) }
+    }
+
+    /**
+     * Start OAuth authorization flow for a provider.
+     * Returns the URL and instructions to show to the user.
+     */
+    suspend fun authorizeProvider(providerID: String, methodIndex: Int = 0): AuthAuthorization {
+        val body = json.encodeToString(AuthAuthorizeRequest(method = methodIndex))
+        return post("/provider/$providerID/oauth/authorize", body) { json.decodeFromString(it) }
+    }
+
+    /**
+     * Complete OAuth callback for a provider.
+     * For "auto" method, this polls until the user completes auth in the browser.
+     * For "code" method, pass the authorization code.
+     * Returns true on success.
+     */
+    suspend fun authCallback(providerID: String, methodIndex: Int = 0, code: String? = null): Boolean {
+        val body = json.encodeToString(AuthCallbackRequest(method = methodIndex, code = code))
+        return post("/provider/$providerID/oauth/callback", body) { json.decodeFromString(it) }
+    }
+
     /**
      * Get the SSE event stream URL.
      */

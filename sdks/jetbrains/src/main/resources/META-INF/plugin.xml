@@ -137,5 +137,17 @@
                 class="ai.kilo.plugin.mock.OpenMockControlAction"
                 text="Mock Control"
                 description="Inject mock data for UI testing"/>
+
+        <action id="Kilo.Auth"
+                class="ai.kilo.plugin.actions.AuthAction"
+                text="Sign In"
+                description="Sign in to Kilo"
+                icon="AllIcons.Actions.Login"/>
+
+        <action id="Kilo.Providers"
+                class="ai.kilo.plugin.actions.ProvidersAction"
+                text="Providers"
+                description="Manage connected providers"
+                icon="AllIcons.General.GearPlain"/>
     </actions>
 </idea-plugin>
