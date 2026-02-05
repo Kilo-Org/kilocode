@@ -137,7 +137,11 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 			this.sseClient = new SSEClient(config);
 			console.log('[Kilo New] KiloProvider: 🔌 Created HttpClient and SSEClient');
 
-			// Set up SSE event handling
+			// Pass backend clients to ChatController
+			this.chatController.setBackendClients(this.httpClient, this.sseClient);
+			console.log('[Kilo New] KiloProvider: 🔗 Backend clients passed to ChatController');
+
+			// Set up SSE event handling for KiloProvider's own use
 			this.sseClient.onEvent((event) => {
 				console.log('[Kilo New] KiloProvider: 📨 Received SSE event:', event.type);
 				this.handleSSEEvent(event);

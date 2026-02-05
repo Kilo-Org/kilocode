@@ -14,6 +14,13 @@ import type {
 	ChatMessage,
 	MessagePart,
 } from './shared/protocol';
+import type {
+	HttpClient,
+	SSEClient,
+	SSEEvent,
+	SessionInfo as BackendSessionInfo,
+	MessagePart as BackendMessagePart,
+} from './services/cli-backend';
 
 export interface ChatControllerOptions {
 	extensionUri: vscode.Uri;
@@ -25,18 +32,37 @@ export class ChatController implements vscode.Disposable {
 	private webview: vscode.Webview | undefined;
 	private sessions: Map<string, SessionInfo> = new Map();
 	private messages: Map<string, ChatMessage[]> = new Map();
-	private sessionCounter = 0;
+	private currentSessionId: string | null = null;
 	private messageCounter = 0;
 	private partCounter = 0;
 	
-	// Backend configuration
-	private serverUrl = 'http://localhost:8741';
+	// Backend clients (injected from KiloProvider)
+	private httpClient: HttpClient | null = null;
+	private sseClient: SSEClient | null = null;
+	private sseUnsubscribe: (() => void) | null = null;
+	
+	// Workspace configuration
 	private workspaceFolder: string;
 
 	constructor(private options: ChatControllerOptions) {
 		this.workspaceFolder = options.workspaceFolder || 
 			vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
 			'';
+	}
+
+	/**
+	 * Set the backend clients for API communication
+	 */
+	public setBackendClients(httpClient: HttpClient, sseClient: SSEClient): void {
+		this.httpClient = httpClient;
+		this.sseClient = sseClient;
+		
+		// Subscribe to SSE events
+		this.sseUnsubscribe = this.sseClient.onEvent((event) => {
+			this.handleSSEEvent(event);
+		});
+		
+		console.log('[Kilo New] ChatController: Backend clients configured');
 	}
 
 	/**
@@ -85,12 +111,13 @@ export class ChatController implements vscode.Disposable {
 	}
 
 	private async handleInit(message: WebviewToExtensionMessage & { type: 'chat/init' }): Promise<void> {
-		// TODO: Connect to actual OpenCode backend
-		// For now, return a mock configuration
+		const workspaceFolder = message.workspaceFolder || this.workspaceFolder;
+		this.workspaceFolder = workspaceFolder;
 		
+		// Build configuration
 		const config: ChatConfig = {
-			serverUrl: this.serverUrl,
-			workspaceFolder: message.workspaceFolder || this.workspaceFolder,
+			serverUrl: this.httpClient ? 'connected' : 'disconnected',
+			workspaceFolder,
 			agents: [
 				{ name: 'code', description: 'General coding assistant' },
 				{ name: 'architect', description: 'System design and architecture' },
@@ -107,8 +134,22 @@ export class ChatController implements vscode.Disposable {
 			],
 		};
 
-		// Get existing sessions or create empty list
-		const sessions = Array.from(this.sessions.values());
+		// Load sessions from backend if connected
+		let sessions: SessionInfo[] = [];
+		if (this.httpClient) {
+			try {
+				const backendSessions = await this.httpClient.listSessions(workspaceFolder);
+				sessions = backendSessions.map(s => this.convertBackendSession(s));
+				// Cache sessions locally
+				for (const session of sessions) {
+					this.sessions.set(session.id, session);
+				}
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to load sessions:', error);
+			}
+		} else {
+			sessions = Array.from(this.sessions.values());
+		}
 
 		this.postMessage({
 			type: 'chat/initialized',
@@ -120,18 +161,46 @@ export class ChatController implements vscode.Disposable {
 	}
 
 	private async handleLoadSession(message: WebviewToExtensionMessage & { type: 'chat/loadSession' }): Promise<void> {
-		const session = this.sessions.get(message.sessionId);
+		const { sessionId } = message;
 		
+		// Try to load from backend first
+		if (this.httpClient) {
+			try {
+				const backendSession = await this.httpClient.getSession(sessionId, this.workspaceFolder);
+				const session = this.convertBackendSession(backendSession);
+				this.sessions.set(sessionId, session);
+				this.currentSessionId = sessionId;
+				
+				// Load messages from backend
+				const backendMessages = await this.httpClient.getMessages(sessionId, this.workspaceFolder);
+				const messages = backendMessages.map(m => this.convertBackendMessage(m, sessionId));
+				this.messages.set(sessionId, messages);
+				
+				this.postMessage({
+					type: 'chat/sessionLoaded',
+					requestId: message.requestId,
+					session,
+					messages,
+				});
+				return;
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to load session from backend:', error);
+			}
+		}
+		
+		// Fall back to local cache
+		const session = this.sessions.get(sessionId);
 		if (!session) {
 			this.postMessage({
 				type: 'chat/error',
 				requestId: message.requestId,
-				error: `Session not found: ${message.sessionId}`,
+				error: `Session not found: ${sessionId}`,
 			});
 			return;
 		}
 
-		const messages = this.messages.get(message.sessionId) || [];
+		const messages = this.messages.get(sessionId) || [];
+		this.currentSessionId = sessionId;
 
 		this.postMessage({
 			type: 'chat/sessionLoaded',
@@ -142,8 +211,34 @@ export class ChatController implements vscode.Disposable {
 	}
 
 	private async handleCreateSession(message: WebviewToExtensionMessage & { type: 'chat/createSession' }): Promise<void> {
-		const sessionId = `session_${++this.sessionCounter}_${Date.now()}`;
+		// Create session via backend if connected
+		if (this.httpClient) {
+			try {
+				const backendSession = await this.httpClient.createSession(this.workspaceFolder);
+				const session = this.convertBackendSession(backendSession);
+				this.sessions.set(session.id, session);
+				this.messages.set(session.id, []);
+				this.currentSessionId = session.id;
+				
+				this.postMessage({
+					type: 'chat/sessionCreated',
+					requestId: message.requestId,
+					session,
+				});
+				return;
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to create session:', error);
+				this.postMessage({
+					type: 'chat/error',
+					requestId: message.requestId,
+					error: error instanceof Error ? error.message : 'Failed to create session',
+				});
+				return;
+			}
+		}
 		
+		// Fall back to local session creation (for testing without backend)
+		const sessionId = `local_session_${Date.now()}`;
 		const session: SessionInfo = {
 			id: sessionId,
 			time: {
@@ -153,6 +248,7 @@ export class ChatController implements vscode.Disposable {
 
 		this.sessions.set(sessionId, session);
 		this.messages.set(sessionId, []);
+		this.currentSessionId = sessionId;
 
 		this.postMessage({
 			type: 'chat/sessionCreated',
@@ -163,6 +259,7 @@ export class ChatController implements vscode.Disposable {
 
 	private async handleSendPrompt(message: WebviewToExtensionMessage & { type: 'chat/sendPrompt' }): Promise<void> {
 		const { sessionId, text, agent, model } = message;
+		this.currentSessionId = sessionId;
 
 		// Notify that request has started
 		this.postMessage({
@@ -171,7 +268,7 @@ export class ChatController implements vscode.Disposable {
 			state: 'started',
 		});
 
-		// Create user message
+		// Create user message locally for immediate display
 		const userMessageId = `msg_${++this.messageCounter}_${Date.now()}`;
 		const userMessage: ChatMessage = {
 			id: userMessageId,
@@ -199,102 +296,213 @@ export class ChatController implements vscode.Disposable {
 			message: userMessage,
 		});
 
-		// TODO: Send to actual OpenCode backend
-		// For now, simulate a response
-		await this.simulateAssistantResponse(sessionId, text, agent, model);
-	}
-
-	private async simulateAssistantResponse(
-		sessionId: string,
-		userText: string,
-		agent?: string,
-		model?: { providerId: string; modelId: string }
-	): Promise<void> {
-		// Create assistant message
-		const assistantMessageId = `msg_${++this.messageCounter}_${Date.now()}`;
-		const partId = `part_${++this.partCounter}_${Date.now()}`;
-		
-		const assistantMessage: ChatMessage = {
-			id: assistantMessageId,
-			sessionId,
-			role: 'assistant',
-			time: { created: Date.now() },
-			agent,
-			model,
-			parts: [{
-				id: partId,
-				messageId: assistantMessageId,
-				type: 'text',
-				content: '',
-			}],
-		};
-
-		// Store and broadcast assistant message
-		const sessionMessages = this.messages.get(sessionId) || [];
-		sessionMessages.push(assistantMessage);
-		this.messages.set(sessionId, sessionMessages);
-
-		this.postMessage({
-			type: 'chat/messageAppended',
-			sessionId,
-			message: assistantMessage,
-		});
-
-		// Simulate streaming response
-		const responseText = `I received your message: "${userText}"\n\nThis is a simulated response. The chat UI is working! 🎉\n\nTo connect this to a real backend, the ChatController needs to be updated to communicate with the OpenCode server at ${this.serverUrl}.`;
-		
-		const words = responseText.split(' ');
-		let content = '';
-
-		for (let i = 0; i < words.length; i++) {
-			await new Promise(resolve => setTimeout(resolve, 50));
-			
-			const delta = (i > 0 ? ' ' : '') + words[i];
-			content += delta;
-
+		// Send to backend if connected
+		if (this.httpClient) {
+			try {
+				// Send message to backend - response will come via SSE events
+				await this.httpClient.sendMessage(
+					sessionId,
+					[{ type: 'text', text }],
+					this.workspaceFolder
+				);
+				// Note: The assistant response will be streamed via SSE events
+				// which are handled in handleSSEEvent()
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to send message:', error);
+				this.postMessage({
+					type: 'chat/requestState',
+					sessionId,
+					state: 'error',
+					error: error instanceof Error ? error.message : 'Failed to send message',
+				});
+			}
+		} else {
+			// No backend connected - send error
 			this.postMessage({
-				type: 'chat/messageDelta',
+				type: 'chat/requestState',
 				sessionId,
-				messageId: assistantMessageId,
-				partId,
-				delta,
-				part: {
-					id: partId,
-					messageId: assistantMessageId,
-					type: 'text',
-					content,
-				},
+				state: 'error',
+				error: 'Backend not connected. Please ensure the OpenCode server is running.',
 			});
 		}
+	}
 
-		// Update session title from first user message
-		const session = this.sessions.get(sessionId);
-		if (session && !session.title) {
-			session.title = userText.slice(0, 50) + (userText.length > 50 ? '...' : '');
-			session.time.updated = Date.now();
-			this.sessions.set(sessionId, session);
+	/**
+	 * Handle SSE events from the backend
+	 */
+	private handleSSEEvent(event: SSEEvent): void {
+		// Only process events for the current session
+		if ('sessionID' in event.properties) {
+			const eventSessionId = event.properties.sessionID;
+			if (this.currentSessionId && eventSessionId !== this.currentSessionId) {
+				return;
+			}
 		}
 
-		// Notify completion
-		this.postMessage({
-			type: 'chat/requestState',
-			sessionId,
-			state: 'finished',
-		});
+		switch (event.type) {
+			case 'message.updated': {
+				// A new message was created or updated
+				const { info } = event.properties;
+				if (info.role === 'assistant') {
+					// Create or update assistant message
+					const existingMessages = this.messages.get(info.sessionID) || [];
+					const existingIndex = existingMessages.findIndex(m => m.id === info.id);
+					
+					if (existingIndex === -1) {
+						// New assistant message
+						const assistantMessage: ChatMessage = {
+							id: info.id,
+							sessionId: info.sessionID,
+							role: 'assistant',
+							time: { created: info.time.created },
+							parts: [],
+						};
+						existingMessages.push(assistantMessage);
+						this.messages.set(info.sessionID, existingMessages);
+						
+						this.postMessage({
+							type: 'chat/messageAppended',
+							sessionId: info.sessionID,
+							message: assistantMessage,
+						});
+					}
+				}
+				break;
+			}
+
+			case 'message.part.updated': {
+				// A message part was updated (streaming content)
+				const { part, delta } = event.properties;
+				const convertedPart = this.convertBackendPart(part);
+				
+				// Find the message this part belongs to
+				const sessionMessages = this.messages.get(this.currentSessionId || '') || [];
+				const message = sessionMessages.find(m => 
+					m.parts?.some(p => p.id === part.id) || m.role === 'assistant'
+				);
+				
+				if (message) {
+					// Update or add the part
+					const existingPartIndex = message.parts?.findIndex(p => p.id === part.id) ?? -1;
+					if (existingPartIndex >= 0 && message.parts) {
+						message.parts[existingPartIndex] = convertedPart;
+					} else {
+						message.parts = message.parts || [];
+						message.parts.push(convertedPart);
+					}
+					
+					// Send delta for streaming text
+					if (delta && part.type === 'text') {
+						this.postMessage({
+							type: 'chat/messageDelta',
+							sessionId: this.currentSessionId || '',
+							messageId: message.id,
+							partId: part.id,
+							delta,
+							part: convertedPart,
+						});
+					} else {
+						// Send full part update for non-text parts
+						this.postMessage({
+							type: 'chat/partUpdated',
+							sessionId: this.currentSessionId || '',
+							messageId: message.id,
+							part: convertedPart,
+						});
+					}
+				}
+				break;
+			}
+
+			case 'session.status': {
+				const { sessionID, status } = event.properties;
+				if (status.type === 'idle') {
+					// Session is idle - request finished
+					this.postMessage({
+						type: 'chat/requestState',
+						sessionId: sessionID,
+						state: 'finished',
+					});
+				} else if (status.type === 'busy') {
+					// Session is busy - streaming
+					this.postMessage({
+						type: 'chat/requestState',
+						sessionId: sessionID,
+						state: 'streaming',
+					});
+				}
+				break;
+			}
+
+			case 'session.idle': {
+				const { sessionID } = event.properties;
+				this.postMessage({
+					type: 'chat/requestState',
+					sessionId: sessionID,
+					state: 'finished',
+				});
+				break;
+			}
+
+			case 'session.updated': {
+				// Session info was updated (e.g., title changed)
+				const { info } = event.properties;
+				const session = this.convertBackendSession(info);
+				this.sessions.set(session.id, session);
+				break;
+			}
+		}
 	}
 
 	private async handleAbort(message: WebviewToExtensionMessage & { type: 'chat/abort' }): Promise<void> {
-		// TODO: Implement actual abort logic with backend
-		this.postMessage({
-			type: 'chat/requestState',
-			sessionId: message.sessionId,
-			state: 'aborted',
-		});
+		const { sessionId } = message;
+		
+		if (this.httpClient) {
+			try {
+				await this.httpClient.abortSession(sessionId, this.workspaceFolder);
+				this.postMessage({
+					type: 'chat/requestState',
+					sessionId,
+					state: 'aborted',
+				});
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to abort:', error);
+				this.postMessage({
+					type: 'chat/requestState',
+					sessionId,
+					state: 'error',
+					error: error instanceof Error ? error.message : 'Failed to abort',
+				});
+			}
+		} else {
+			this.postMessage({
+				type: 'chat/requestState',
+				sessionId,
+				state: 'aborted',
+			});
+		}
 	}
 
 	private async handleListSessions(message: WebviewToExtensionMessage & { type: 'chat/listSessions' }): Promise<void> {
-		const sessions = Array.from(this.sessions.values())
-			.sort((a, b) => (b.time.updated || b.time.created) - (a.time.updated || a.time.created));
+		let sessions: SessionInfo[] = [];
+		
+		if (this.httpClient) {
+			try {
+				const backendSessions = await this.httpClient.listSessions(this.workspaceFolder);
+				sessions = backendSessions.map(s => this.convertBackendSession(s));
+				// Update local cache
+				for (const session of sessions) {
+					this.sessions.set(session.id, session);
+				}
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to list sessions:', error);
+				sessions = Array.from(this.sessions.values());
+			}
+		} else {
+			sessions = Array.from(this.sessions.values());
+		}
+		
+		sessions.sort((a, b) => (b.time.updated || b.time.created) - (a.time.updated || a.time.created));
 
 		this.postMessage({
 			type: 'chat/sessionsListed',
@@ -303,7 +511,83 @@ export class ChatController implements vscode.Disposable {
 		});
 	}
 
+	/**
+	 * Convert backend session to protocol session
+	 */
+	private convertBackendSession(backend: BackendSessionInfo): SessionInfo {
+		return {
+			id: backend.id,
+			title: backend.title || undefined,
+			parentId: backend.parentID,
+			time: {
+				created: backend.time.created,
+				updated: backend.time.updated,
+			},
+		};
+	}
+
+	/**
+	 * Convert backend message to protocol message
+	 */
+	private convertBackendMessage(
+		backend: { info: { id: string; sessionID: string; role: 'user' | 'assistant'; time: { created: number; completed?: number } }; parts: BackendMessagePart[] },
+		sessionId: string
+	): ChatMessage {
+		return {
+			id: backend.info.id,
+			sessionId,
+			role: backend.info.role,
+			time: { created: backend.info.time.created },
+			parts: backend.parts.map(p => this.convertBackendPart(p)),
+		};
+	}
+
+	/**
+	 * Convert backend message part to protocol message part
+	 */
+	private convertBackendPart(backend: BackendMessagePart): MessagePart {
+		const base = {
+			id: backend.id,
+			messageId: '', // Will be set by caller if needed
+		};
+
+		switch (backend.type) {
+			case 'text':
+				return {
+					...base,
+					type: 'text',
+					content: backend.text,
+				};
+			case 'tool':
+				return {
+					...base,
+					type: 'tool-invocation',
+					tool: {
+						name: backend.tool,
+						input: backend.state.input,
+						output: backend.state.status === 'completed' ? backend.state.output : undefined,
+					},
+				};
+			case 'reasoning':
+				return {
+					...base,
+					type: 'text',
+					content: backend.text,
+				};
+			default:
+				return {
+					...base,
+					type: 'text',
+					content: '',
+				};
+		}
+	}
+
 	public dispose(): void {
+		if (this.sseUnsubscribe) {
+			this.sseUnsubscribe();
+			this.sseUnsubscribe = null;
+		}
 		this.disposables.forEach(d => d.dispose());
 		this.disposables = [];
 	}
