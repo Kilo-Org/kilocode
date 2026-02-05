@@ -58,8 +58,18 @@ export function kilo_initializeSessionManager({
 				onSessionSynced: (message) => {
 					log(`Session synced: ${message.sessionId}`)
 				},
-				onSessionTitleGenerated: (message) => {
+				onSessionTitleGenerated: async (message) => {
 					log(`Session title generated: ${message.sessionId} - ${message.title}`)
+					// Update task history with the generated title
+					const taskHistory = provider.getTaskHistory()
+					const historyItem = taskHistory.find((item) => item.id === message.sessionId)
+					if (historyItem) {
+						await provider.updateTaskHistory({
+							...historyItem,
+							title: message.title,
+						})
+						await provider.postStateToWebview()
+					}
 				},
 				platform: vscode.env.appName,
 				getOrganizationId: async (taskId: string) => {

@@ -109,4 +109,57 @@ describe("TaskItem", () => {
 		const taskItem = screen.getByTestId("task-item-1")
 		expect(taskItem).toHaveClass("hover:bg-vscode-list-hoverBackground")
 	})
+
+	// kilocode_change start: Test title display
+	it("displays title when available instead of task", () => {
+		const taskWithTitle = {
+			...mockTask,
+			title: "Generated Session Title",
+		}
+		render(
+			<TaskItem
+				item={taskWithTitle}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Generated Session Title")).toBeInTheDocument()
+		expect(screen.queryByText("Test task")).not.toBeInTheDocument()
+	})
+
+	it("falls back to task when title is not available", () => {
+		render(
+			<TaskItem
+				item={mockTask}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+	})
+
+	it("falls back to task when title is empty string", () => {
+		const taskWithEmptyTitle = {
+			...mockTask,
+			title: "",
+		}
+		render(
+			<TaskItem
+				item={taskWithEmptyTitle}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+	})
+	// kilocode_change end
 })
