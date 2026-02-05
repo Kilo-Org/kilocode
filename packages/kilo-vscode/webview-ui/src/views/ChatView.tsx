@@ -321,7 +321,7 @@ export const ChatView: Component = () => {
 
       <PromptInput
         onSubmit={handleSendMessage}
-        disabled={transport.isLoading()}
+        disabled={false}
         working={isWorking()}
         onAbort={handleAbort}
       />

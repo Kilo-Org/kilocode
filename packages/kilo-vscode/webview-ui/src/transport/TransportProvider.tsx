@@ -216,16 +216,24 @@ export const TransportProvider: ParentComponent<TransportProviderProps> = (props
     setIsLoading(true)
     setError(null)
 
-    const state = await transport.loadSession(sessionId)
+    try {
+      const state = await transport.loadSession(sessionId)
 
-    batch(() => {
-      setCurrentSession(state.session)
-      setMessages(state.messages)
-      setSessionStatus(state.status)
-      setPendingPermissions(state.pendingPermissions ?? [])
-      setTodos(state.todos ?? [])
-      setIsLoading(false)
-    })
+      batch(() => {
+        setCurrentSession(state.session)
+        setMessages(state.messages)
+        setSessionStatus(state.status)
+        setPendingPermissions(state.pendingPermissions ?? [])
+        setTodos(state.todos ?? [])
+        setIsLoading(false)
+      })
+    } catch (err) {
+      console.error("[Kilo New] TransportProvider: Failed to load session:", err)
+      batch(() => {
+        setError(err instanceof Error ? err.message : String(err))
+        setIsLoading(false)
+      })
+    }
   }
 
   const sendPrompt = (text: string, attachments?: unknown[]): string => {
