@@ -228,9 +228,12 @@ export namespace LLM {
           : input.model.providerID !== "anthropic"
             ? DEFAULT_HEADERS // kilocode_change
             : undefined),
+        // kilocode_change start - attach task/session id for gateway analytics
+        ...(input.model.api.npm === "@kilocode/kilo-gateway" ? { "x-kilocode-taskid": input.sessionID } : {}),
         ...(input.model.api.npm === "@kilocode/kilo-gateway" && input.agent.name
           ? { "x-kilocode-mode": input.agent.name.toLowerCase() }
           : {}),
+        // kilocode_change end
         ...input.model.headers,
         ...headers,
       },
