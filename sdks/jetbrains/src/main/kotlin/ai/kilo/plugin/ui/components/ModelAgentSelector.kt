@@ -106,9 +106,10 @@ class ModelAgentSelector(
                 agents = agentList.filter { it.hidden != true }
                 providers = providerResponse
 
-                // Set defaults if not selected
+                // Set defaults if not selected (server returns agents sorted with default first)
                 if (selectedAgent == null && agents.isNotEmpty()) {
-                    selectedAgent = agents.firstOrNull { it.name == "code" } ?: agents.first()
+                    selectedAgent = agents.first()
+                    appState.setSelectedAgent(selectedAgent?.name)
                     updateLabels()
                 }
 
@@ -205,6 +206,7 @@ class ModelAgentSelector(
                     val agent = list.selectedValue
                     if (agent != null) {
                         selectedAgent = agent
+                        appState.setSelectedAgent(agent.name)
                         updateLabels()
                         onSelectionChanged(this@ModelAgentSelector)
                         popup?.cancel()
@@ -220,6 +222,7 @@ class ModelAgentSelector(
                     val agent = list.selectedValue
                     if (agent != null) {
                         selectedAgent = agent
+                        appState.setSelectedAgent(agent.name)
                         updateLabels()
                         onSelectionChanged(this@ModelAgentSelector)
                         popup?.cancel()

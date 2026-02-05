@@ -140,8 +140,8 @@ class PromptInputPanel(
         addToCenter(layeredPane)
     }
 
-    private val modeSelector = ModeSelector()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val modeSelector = ModeSelector(scope, appState)
     private val modelSelector = ModelSelector(scope, appState)
 
     private val sendButton = JBLabel(AllIcons.Actions.Execute).apply {
