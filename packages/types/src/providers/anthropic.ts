@@ -92,6 +92,21 @@ export const anthropicModels = {
 		cacheReadsPrice: 1.5, // $1.50 per million tokens
 		supportsReasoningBudget: true,
 	},
+	"claude-opus-4-6": {
+		maxTokens: 32_000, // Overridden to 8k if `enableReasoningEffort` is false.
+		contextWindow: 1_000_000, // 1M token context window (beta feature)
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		inputPrice: 5.0, // $5 per million input tokens
+		outputPrice: 25.0, // $25 per million output tokens
+		cacheWritesPrice: 6.25, // $6.25 per million tokens (1.25x input)
+		cacheReadsPrice: 0.5, // $0.50 per million tokens (0.1x input)
+		supportsReasoningBudget: true,
+		description:
+			"Claude Opus 4.6: Anthropic's most intelligent model with improved coding, planning, and agentic capabilities. Features 1M token context window (beta) and state-of-the-art performance on complex reasoning tasks.",
+	},
 	"claude-3-7-sonnet-20250219:thinking": {
 		maxTokens: 128_000, // Unlocked by passing `beta` flag to the model. Otherwise, it's 64k.
 		contextWindow: 200_000,
