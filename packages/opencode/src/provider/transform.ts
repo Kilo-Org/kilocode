@@ -445,8 +445,31 @@ export namespace ProviderTransform {
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
-      // kilocode_change start - Claude and GPT models via Kilo Gateway
+      // kilocode_change start
       case "@kilocode/kilo-gateway":
+        // kilocode_change - adaptive thinking with effort levels
+        // TODO: Enable when @ai-sdk/anthropic supports thinking.type: "adaptive"
+        const ADAPTIVE_THINKING_ENABLED = false
+        if (ADAPTIVE_THINKING_ENABLED && id.includes("claude-opus-4-6")) {
+          return {
+            low: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "low" },
+            },
+            medium: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "medium" },
+            },
+            high: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "high" },
+            },
+            max: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "max" },
+            },
+          }
+        }
         // Claude/Anthropic models support reasoning via effort levels through OpenRouter API
         // OpenRouter maps effort to budget_tokens percentages (xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%)
         if (
@@ -563,6 +586,30 @@ export namespace ProviderTransform {
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
       case "@ai-sdk/google-vertex/anthropic":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
+        // kilocode_change start
+        // TODO: Enable when @ai-sdk/anthropic supports thinking.type: "adaptive"
+        const ADAPTIVE_THINKING_ENABLED_ANTHROPIC = false
+        if (ADAPTIVE_THINKING_ENABLED_ANTHROPIC && id.includes("claude-opus-4-6")) {
+          return {
+            low: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "low" },
+            },
+            medium: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "medium" },
+            },
+            high: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "high" },
+            },
+            max: {
+              thinking: { type: "adaptive" },
+              output_config: { effort: "max" },
+            },
+          }
+        }
+        // kilocode_change end
         return {
           high: {
             thinking: {
@@ -840,6 +887,11 @@ export namespace ProviderTransform {
 
     if (npm === "@ai-sdk/anthropic" || npm === "@ai-sdk/google-vertex/anthropic") {
       const thinking = options?.["thinking"]
+      // kilocode_change start - adaptive thinking doesn't use budgetTokens
+      if (thinking?.["type"] === "adaptive") {
+        return standardLimit
+      }
+      // kilocode_change end
       const budgetTokens = typeof thinking?.["budgetTokens"] === "number" ? thinking["budgetTokens"] : 0
       const enabled = thinking?.["type"] === "enabled"
       if (enabled && budgetTokens > 0) {
