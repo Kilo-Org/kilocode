@@ -258,7 +258,47 @@ export class ChatController implements vscode.Disposable {
 	}
 
 	private async handleSendPrompt(message: WebviewToExtensionMessage & { type: 'chat/sendPrompt' }): Promise<void> {
-		const { sessionId, text, agent, model } = message;
+		let { sessionId } = message;
+		const { text, agent, model } = message;
+
+		// If the webview sent a local placeholder session id, we need to create a real backend session first
+		if (sessionId.startsWith('local_session_') && this.httpClient) {
+			console.log('[Kilo New] ChatController: Detected local session id, creating backend session first');
+			try {
+				const backendSession = await this.httpClient.createSession(this.workspaceFolder);
+				const newSession = this.convertBackendSession(backendSession);
+				
+				// Migrate local session data to the new backend session
+				const localMessages = this.messages.get(sessionId) || [];
+				this.sessions.delete(sessionId);
+				this.messages.delete(sessionId);
+				
+				this.sessions.set(newSession.id, newSession);
+				this.messages.set(newSession.id, localMessages);
+				
+				// Update sessionId to use the real backend id
+				sessionId = newSession.id;
+				
+				// Notify webview of the session id change
+				this.postMessage({
+					type: 'chat/sessionCreated',
+					requestId: message.requestId,
+					session: newSession,
+				});
+				
+				console.log('[Kilo New] ChatController: Migrated local session to backend session:', sessionId);
+			} catch (error) {
+				console.error('[Kilo New] ChatController: Failed to create backend session:', error);
+				this.postMessage({
+					type: 'chat/requestState',
+					sessionId,
+					state: 'error',
+					error: error instanceof Error ? error.message : 'Failed to create backend session',
+				});
+				return;
+			}
+		}
+
 		this.currentSessionId = sessionId;
 
 		// Notify that request has started

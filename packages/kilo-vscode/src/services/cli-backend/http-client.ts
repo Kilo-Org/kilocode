@@ -34,6 +34,48 @@ export class HttpClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`
 
+    const bodySummary = (() => {
+      if (body === undefined) {
+        return { hasBody: false }
+      }
+
+      if (typeof body !== "object" || body === null) {
+        return { hasBody: true, kind: typeof body }
+      }
+
+      const record = body as Record<string, unknown>
+      const parts = record["parts"]
+      if (Array.isArray(parts)) {
+        return {
+          hasBody: true,
+          kind: "object",
+          keys: Object.keys(record),
+          parts: parts.map((p) => {
+            if (typeof p !== "object" || p === null) {
+              return { kind: typeof p }
+            }
+            const part = p as Record<string, unknown>
+            const type = typeof part["type"] === "string" ? (part["type"] as string) : "(missing)"
+            const text = typeof part["text"] === "string" ? (part["text"] as string) : null
+            return {
+              type,
+              keys: Object.keys(part),
+              textLength: text ? text.length : undefined,
+            }
+          }),
+        }
+      }
+
+      return { hasBody: true, kind: "object", keys: Object.keys(record) }
+    })()
+
+    console.log("[Kilo New] HTTP: ➡️ Request", {
+      method,
+      path,
+      directory: options?.directory,
+      body: bodySummary,
+    })
+
     const headers: Record<string, string> = {
       Authorization: this.authHeader,
       "Content-Type": "application/json",
@@ -49,6 +91,15 @@ export class HttpClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
+    console.log("[Kilo New] HTTP: ⬅️ Response", {
+      method,
+      path,
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get("content-type"),
+      contentLength: response.headers.get("content-length"),
+    })
+
     if (!response.ok) {
       let errorMessage: string
       try {
@@ -60,7 +111,40 @@ export class HttpClient {
       throw new Error(`HTTP ${response.status}: ${errorMessage}`)
     }
 
-    return response.json() as Promise<T>
+    // Handle empty responses (204 No Content or empty body with 200)
+    const contentLength = response.headers.get("content-length")
+    if (response.status === 204 || contentLength === "0") {
+      console.log("[Kilo New] HTTP: ℹ️ Empty response body, returning undefined")
+      return undefined as T
+    }
+
+    const responseForDebug = response.clone()
+    try {
+      const text = await response.text()
+      // Handle truly empty responses even when content-length header is missing
+      if (!text || text.trim() === "") {
+        console.log("[Kilo New] HTTP: ℹ️ Empty response text, returning undefined")
+        return undefined as T
+      }
+      return JSON.parse(text) as T
+    } catch (error) {
+      let raw = ""
+      try {
+        raw = await responseForDebug.text()
+      } catch {
+        // ignore
+      }
+
+      console.error("[Kilo New] HTTP: ❌ Failed to parse JSON response", {
+        method,
+        path,
+        status: response.status,
+        contentType: response.headers.get("content-type"),
+        rawLength: raw.length,
+        rawSnippet: raw.slice(0, 500),
+      })
+      throw error
+    }
   }
 
   // ============================================
@@ -94,13 +178,15 @@ export class HttpClient {
 
   /**
    * Send a message to a session.
+   * Note: The backend may return an empty response (200 with no body).
+   * The actual message data is streamed via SSE events.
    */
   async sendMessage(
     sessionId: string,
     parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>,
     directory: string
-  ): Promise<{ info: MessageInfo; parts: MessagePart[] }> {
-    return this.request<{ info: MessageInfo; parts: MessagePart[] }>(
+  ): Promise<{ info: MessageInfo; parts: MessagePart[] } | void> {
+    return this.request<{ info: MessageInfo; parts: MessagePart[] } | void>(
       "POST",
       `/session/${sessionId}/message`,
       { parts },
