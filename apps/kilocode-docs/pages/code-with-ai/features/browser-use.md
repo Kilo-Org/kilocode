@@ -8,7 +8,7 @@ description: "Using Kilo Code to interact with web browsers"
 Kilo Code provides sophisticated browser automation capabilities that let you interact with websites directly from VS Code. This feature enables testing web applications, automating browser tasks, and capturing screenshots without leaving your development environment.
 
 {% callout type="info" title="Model Support Required" %}
-Browser Use within Kilo Code requires the use and advanced agentic model, and has only been tested with Claude Sonnet 3.5, 3.7, and 4
+Browser Use within Kilo Code requires an advanced agentic model, and has only been tested with Claude Sonnet 3.5, 3.7, and 4
 {% /callout %}
 
 ## How Browser Use Works
@@ -23,6 +23,11 @@ By default, Kilo Code uses a built-in browser that:
 All of this happens directly within VS Code, with no setup required.
 
 ## Using Browser Use
+
+
+{% callout type="note" title="Screenshots are being updated" %}
+We are refreshing screenshots to match current Kilo branding. Steps and labels below are up to date.
+{% /callout %}
 
 A typical browser interaction follows this pattern:
 
@@ -45,7 +50,6 @@ Can you check if my website at https://kilocode.ai is displaying correctly?
 Browse http://localhost:3000, scroll down to the bottom of the page and check if the footer information is displaying correctly.
 ```
 
-{% image src="/docs/img/browser-use/KiloCodeBrowser.png" alt="Browser use example" width="300" /%}
 
 ## How Browser Actions Work
 
@@ -85,7 +89,6 @@ To change Browser / Computer Use settings in Kilo:
 
 1. Open Settings by clicking the gear icon {% codicon name="gear" /%} → Browser / Computer Use
 
-    {% image src="/docs/img/browser-use/browser-use.png" alt="Browser settings menu" width="600" /%}
 
 ### Enable/Disable Browser Use
 
@@ -95,7 +98,6 @@ To change this setting:
 
 1. Check or uncheck the "Enable browser tool" checkbox within your Browser / Computer Use settings
 
-    {% image src="/docs/img/browser-use/browser-use-2.png" alt="Enable browser tool setting" width="300" /%}
 
 ### Viewport Size
 
@@ -113,7 +115,6 @@ To change this setting:
     - Mobile (360x640)
 3. Select your desired resolution.
 
-    {% image src="/docs/img/browser-use/browser-use-3.png" alt="Viewport size setting" width="600" /%}
 
 ### Screenshot Quality
 
@@ -131,7 +132,6 @@ To change this setting:
     - 60-70%: Balanced for most general browsing
     - 80%+: Use when fine visual details are critical
 
-    {% image src="/docs/img/browser-use/browser-use-4.png" alt="Screenshot quality setting" width="600" /%}
 
 ### Remote Browser Connection
 
@@ -151,7 +151,6 @@ To enable this feature:
 1. Check the "Use remote browser connection" box in Browser / Computer Use settings
 2. Click "Test Connection" to verify
 
-    {% image src="/docs/img/browser-use/browser-use-5.png" alt="Remote browser connection setting" width="600" /%}
 
 #### Common Use Cases
 
