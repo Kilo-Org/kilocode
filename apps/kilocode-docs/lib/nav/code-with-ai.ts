@@ -33,6 +33,10 @@ export const CodeWithAiNav: NavSection[] = [
 				children: "Model Selection",
 			},
 			{
+				href: "/code-with-ai/agents/auto-model",
+				children: "Auto Model",
+			},
+			{
 				href: "/code-with-ai/agents/free-and-budget-models",
 				children: "Free & Budget Models",
 			},

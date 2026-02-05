@@ -627,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "Verbositas Output",
+			"max": "Max",
 			"high": "Tinggi",
 			"medium": "Sedang",
 			"low": "Rendah",

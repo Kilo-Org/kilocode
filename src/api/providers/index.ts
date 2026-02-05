@@ -22,6 +22,8 @@ export { OpenAiCodexHandler } from "./openai-codex"
 export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
 export { OpenAiCompatibleResponsesHandler } from "./openai-responses" // kilocode_change
+export { OpenAICompatibleHandler } from "./openai-compatible"
+export type { OpenAICompatibleConfig } from "./openai-compatible"
 export { OpenRouterHandler } from "./openrouter"
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"

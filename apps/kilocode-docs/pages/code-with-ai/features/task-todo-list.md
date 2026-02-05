@@ -1,4 +1,4 @@
---- 
+---
 title: "Task Todo List"
 description: "Track and manage tasks with AI-generated todo lists"
 ---
@@ -117,4 +117,3 @@ You can disable todo lists in Settings -> Advanced -> **Enable todo list tool**.
 
 **The catch**: Less control, but faster execution.
 {% /callout %}
-

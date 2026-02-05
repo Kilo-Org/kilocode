@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "5.2.2",
+	"version": "5.4.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -765,9 +765,11 @@
 		"ws": "^8.18.0",
 		"xlsx": "^0.18.5",
 		"yaml": "^2.8.0",
-		"zod": "3.25.61"
+		"zod": "3.25.76"
 	},
 	"devDependencies": {
+		"@ai-sdk/openai-compatible": "^1.0.0",
+		"@openrouter/ai-sdk-provider": "^2.0.4",
 		"@roo-code/build": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
@@ -798,6 +800,7 @@
 		"@vscode/vsce": "3.3.2",
 		"dotenv": "^16.4.7",
 		"esbuild": "^0.25.0",
+		"ai": "^6.0.0",
 		"esbuild-wasm": "^0.25.0",
 		"execa": "^9.5.2",
 		"glob": "^11.1.0",

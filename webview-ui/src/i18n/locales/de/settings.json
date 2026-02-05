@@ -636,6 +636,7 @@
 		},
 		"verbosity": {
 			"label": "Ausgabe-Ausführlichkeit",
+			"max": "Max",
 			"high": "Hoch",
 			"medium": "Mittel",
 			"low": "Niedrig",

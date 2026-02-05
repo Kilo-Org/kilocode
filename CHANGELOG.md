@@ -1,5 +1,51 @@
 # kilo-code
 
+## 5.4.0
+
+### Minor Changes
+
+- [#4096](https://github.com/Kilo-Org/kilocode/pull/4096) [`4eb0646`](https://github.com/Kilo-Org/kilocode/commit/4eb06462f78ab7446b319e1736fa837e86e3f1df) Thanks [@OlivierBarbier](https://github.com/OlivierBarbier)! - Fix: Importing a configuration file blocks the configuration of provider parameters #2349
+
+### Patch Changes
+
+- [#5686](https://github.com/Kilo-Org/kilocode/pull/5686) [`e6c26b7`](https://github.com/Kilo-Org/kilocode/commit/e6c26b7e8e468a565017fb05958cd4814d69daa1) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add Claude Opus 4.6 model with adaptive thinking support
+
+- [#4021](https://github.com/Kilo-Org/kilocode/pull/4021) [`b8a6c4e`](https://github.com/Kilo-Org/kilocode/commit/b8a6c4e6b4eab9397efbbaa04202f92816e5afd4) Thanks [@In-line](https://github.com/In-line)! - Add React Compiler integration to improve UI responsiveness
+
+## 5.3.0
+
+### Minor Changes
+
+- [#5649](https://github.com/Kilo-Org/kilocode/pull/5649) [`6fbb740`](https://github.com/Kilo-Org/kilocode/commit/6fbb74084f4090d42ad583dd6ce62c2d3f7826f2) Thanks [@iscekic](https://github.com/iscekic)! - send x-kilocode-mode header
+
+- [#5531](https://github.com/Kilo-Org/kilocode/pull/5531) [`66dbaf2`](https://github.com/Kilo-Org/kilocode/commit/66dbaf2dac3f0d1163b7a9409805d32a9a80af1c) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Add new welcome screen for improved onboarding
+
+### Patch Changes
+
+- [#5582](https://github.com/Kilo-Org/kilocode/pull/5582) [`dc669ab`](https://github.com/Kilo-Org/kilocode/commit/dc669ab484a3d015cea1cadb57271b58a23ef796) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Use brand-colored Kilo Code icons throughout the extension for better visibility
+
+- [#5616](https://github.com/Kilo-Org/kilocode/pull/5616) [`9e139f5`](https://github.com/Kilo-Org/kilocode/commit/9e139f50bc52913fa7e42d3ba4c9090263a14f0b) Thanks [@EloiRamos](https://github.com/EloiRamos)! - fix(ui): prevent TypeError when trimming input during model switching
+
+- [#2792](https://github.com/Kilo-Org/kilocode/pull/2792) [`907fb53`](https://github.com/Kilo-Org/kilocode/commit/907fb53aca1f70b1e3e2f91fbb3bcbdc6b514a48) Thanks [@Honyii](https://github.com/Honyii)! - Added CONTRIBUTING.md file for onboarding new contributors
+
+- [#5638](https://github.com/Kilo-Org/kilocode/pull/5638) [`a5b9106`](https://github.com/Kilo-Org/kilocode/commit/a5b9106e6cebc1a63c1ef5fa507cfaab65aa8ebc) Thanks [@Drilmo](https://github.com/Drilmo)! - fix(agent-manager): sync messages when panel is reopened
+
+    Fixed a bug where closing and reopening the Agent Manager panel would show "Waiting for agent response..." instead of the conversation messages.
+
+- [#5644](https://github.com/Kilo-Org/kilocode/pull/5644) [`e3f353f`](https://github.com/Kilo-Org/kilocode/commit/e3f353f596288b9b8e60b00fa88e60f179160c9a) Thanks [@bernaferrari](https://github.com/bernaferrari)! - Fix contrast on "ideas" intro screen
+
+- [#5583](https://github.com/Kilo-Org/kilocode/pull/5583) [`a23c936`](https://github.com/Kilo-Org/kilocode/commit/a23c9361a5a15cf7bd59efd9c8ea9987e2ec82cc) Thanks [@crazyrabbit0](https://github.com/crazyrabbit0)! - Fix double scroll bar in ModelSelector and KiloProfileSelector by increasing max-height.
+
+- [#5567](https://github.com/Kilo-Org/kilocode/pull/5567) [`9729ab2`](https://github.com/Kilo-Org/kilocode/commit/9729ab2c808a69fadbb8c095e5a626fa75e42859) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Updated chat UI theme to use muted, theme-aware colors for Checkpoint, Thinking, and user message styling
+
+- [#5577](https://github.com/Kilo-Org/kilocode/pull/5577) [`a57f9ac`](https://github.com/Kilo-Org/kilocode/commit/a57f9acb2c07b0888fcfa566c2d345879f890941) Thanks [@Patel230](https://github.com/Patel230)! - fix: allow Ollama models without tool support for autocomplete
+
+- [#5628](https://github.com/Kilo-Org/kilocode/pull/5628) [`84c6db2`](https://github.com/Kilo-Org/kilocode/commit/84c6db2ff906b6d18625dc0de21a77a0e573f4ac) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Prevent chat auto-scroll from jumping while you read older messages.
+
+- [#5214](https://github.com/Kilo-Org/kilocode/pull/5214) [`28a46d1`](https://github.com/Kilo-Org/kilocode/commit/28a46d17fe91f13ec0687bb6834b31e2ec454687) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add GLM-4.7 Flash model to recommended models list for Z.ai provider
+
+- [#5662](https://github.com/Kilo-Org/kilocode/pull/5662) [`228745b`](https://github.com/Kilo-Org/kilocode/commit/228745b4159cd28b7a8fb8d1db1b89e9beb49539) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add improved support for Kimi 2.5 reasoning through AI SDK
+
 ## 5.2.2
 
 ### Patch Changes

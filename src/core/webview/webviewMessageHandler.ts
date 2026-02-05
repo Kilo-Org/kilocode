@@ -875,7 +875,7 @@ export const webviewMessageHandler = async (
 				customModesManager: provider.customModesManager,
 				provider: provider,
 			})
-
+			await provider.postMessageToWebview({ type: "settingsImported" })
 			break
 		}
 		case "exportSettings":
