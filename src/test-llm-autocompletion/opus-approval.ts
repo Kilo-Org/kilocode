@@ -3,7 +3,7 @@ import { DEFAULT_HEADERS } from "../api/providers/constants.js"
 import { getKiloBaseUriFromToken } from "./llm-client.js"
 import { ContextFile } from "./test-cases.js"
 
-const OPUS_MODEL = "anthropic/claude-opus-4.5"
+const OPUS_MODEL = "anthropic/claude-opus-4.6"
 
 export async function askOpusApproval(
 	input: string,
