@@ -152,15 +152,19 @@ describe("extractTextFromFile - Large File Handling", () => {
 		expect(result).toContain("[File truncated: showing 500 of 10000 total lines")
 	})
 
-	it("should handle maxReadFileLine of 0 by throwing an error", async () => {
+	it("should handle maxReadFileLine of 0 by treating as unlimited", async () => {
 		const fileContent = "Line 1\nLine 2\nLine 3"
 
 		mockedFs.readFile.mockResolvedValue(fileContent as any)
 
-		// maxReadFileLine of 0 should throw an error
-		await expect(extractTextFromFile("/test/file.ts", 0)).rejects.toThrow(
-			"Invalid maxReadFileLine: 0. Must be a positive integer or -1 for unlimited.",
-		)
+		// maxReadFileLine of 0 should be treated as unlimited (same as -1)
+		const result = await extractTextFromFile("/test/file.ts", 0)
+
+		// Should include all content with line numbers
+		expect(result).toContain("1 | Line 1")
+		expect(result).toContain("2 | Line 2")
+		expect(result).toContain("3 | Line 3")
+		expect(result).not.toContain("[File truncated:")
 	})
 
 	it("should handle negative maxReadFileLine by treating as undefined", async () => {
