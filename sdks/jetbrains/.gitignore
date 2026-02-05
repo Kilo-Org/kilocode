@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+out/
+
+# IntelliJ Platform
+.intellijPlatform/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.class
+.kotlin/
+
+# Local configuration
+local.properties

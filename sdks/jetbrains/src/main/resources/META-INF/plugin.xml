@@ -1,0 +1,153 @@
+<idea-plugin>
+    <id>ai.kilo.jetbrains</id>
+    <name>Kilo</name>
+    <vendor email="support@kilo.ai" url="https://kilo.ai">Kilo</vendor>
+
+    <description><![CDATA[
+    <p>AI coding assistant powered by Kilo CLI.</p>
+    <p>Kilo helps you write code faster with an AI assistant that understands your codebase.</p>
+    <ul>
+        <li>Chat with AI about your code</li>
+        <li>Get code suggestions and explanations</li>
+        <li>Refactor and improve existing code</li>
+        <li>Generate new code from natural language</li>
+    </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool Window -->
+        <toolWindow factoryClass="ai.kilo.plugin.ui.KiloToolWindowFactory"
+                    id="Kilo"
+                    icon="/icons/kilo.svg"
+                    anchor="right"
+                    secondary="false"/>
+
+        <!-- Project Service -->
+        <projectService serviceImplementation="ai.kilo.plugin.services.KiloProjectService"/>
+
+        <!-- Application Service -->
+        <applicationService serviceImplementation="ai.kilo.plugin.services.KiloApplicationService"/>
+
+        <!-- Notification Group -->
+        <notificationGroup id="Kilo Notifications"
+                          displayType="BALLOON"
+                          toolWindowId="Kilo"/>
+
+        <!-- Settings -->
+        <applicationService serviceImplementation="ai.kilo.plugin.settings.KiloSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="ai.kilo.plugin.settings.KiloSettingsConfigurable"
+                id="ai.kilo.plugin.settings"
+                displayName="Kilo"/>
+    </extensions>
+
+    <actions>
+        <!-- Main Actions -->
+        <action id="Kilo.OpenToolWindow"
+                class="ai.kilo.plugin.actions.OpenKiloAction"
+                text="Open Kilo"
+                description="Open Kilo AI assistant"
+                icon="/icons/kilo.svg">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ESCAPE"/>
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+
+        <action id="Kilo.NewSession"
+                class="ai.kilo.plugin.actions.NewSessionAction"
+                text="New Task"
+                description="Start a new task"
+                icon="AllIcons.General.Add">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift K"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift K"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift K"/>
+        </action>
+
+        <action id="Kilo.AddFileToContext"
+                class="ai.kilo.plugin.actions.AddFileToContextAction"
+                text="Add File to Kilo"
+                description="Add current file to Kilo context"
+                icon="/icons/kilo.svg">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt K"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+
+        <action id="Kilo.AddSelectionToContext"
+                class="ai.kilo.plugin.actions.AddSelectionToContextAction"
+                text="Add Selection to Kilo"
+                description="Add selected code to Kilo context">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+
+        <action id="Kilo.FocusInput"
+                class="ai.kilo.plugin.actions.FocusInputAction"
+                text="Focus Kilo Input"
+                description="Focus the Kilo chat input field"
+                icon="/icons/kilo.svg">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl L"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta L"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta L"/>
+        </action>
+
+        <action id="Kilo.AbortGeneration"
+                class="ai.kilo.plugin.actions.AbortGenerationAction"
+                text="Abort Kilo Generation"
+                description="Stop the current AI generation">
+        </action>
+
+        <action id="Kilo.ToggleSessions"
+                class="ai.kilo.plugin.actions.ToggleSessionsAction"
+                text="History"
+                description="Show chat history"
+                icon="AllIcons.Vcs.History">
+        </action>
+
+        <!-- Tool Window Toolbar Actions -->
+        <group id="Kilo.ToolWindowToolbar">
+            <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.ToggleSessions"/>
+            <separator/>
+            <action id="Kilo.Toolbar.Settings"
+                    class="ai.kilo.plugin.actions.OpenSettingsAction"
+                    text="Settings"
+                    description="Open Kilo settings"
+                    icon="AllIcons.General.Settings"/>
+        </group>
+
+        <!-- Tool Window Gear Menu Actions -->
+        <action id="Kilo.ClearSessions"
+                class="ai.kilo.plugin.actions.ClearSessionsAction"
+                text="Clear Sessions"
+                description="Clear all chat sessions"
+                icon="AllIcons.Actions.GC"/>
+
+        <action id="Kilo.ServerInfo"
+                class="ai.kilo.plugin.actions.ServerInfoAction"
+                text="Server Info"
+                description="Show Kilo server information"
+                icon="AllIcons.Status.InfoOutline"/>
+
+        <action id="Kilo.MockControl"
+                class="ai.kilo.plugin.mock.OpenMockControlAction"
+                text="Mock Control"
+                description="Inject mock data for UI testing"/>
+
+        <action id="Kilo.Auth"
+                class="ai.kilo.plugin.actions.AuthAction"
+                text="Sign In"
+                description="Sign in to Kilo"
+                icon="AllIcons.Actions.Login"/>
+
+        <action id="Kilo.Providers"
+                class="ai.kilo.plugin.actions.ProvidersAction"
+                text="Providers"
+                description="Manage connected providers"
+                icon="AllIcons.General.GearPlain"/>
+    </actions>
+</idea-plugin>

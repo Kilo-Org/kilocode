@@ -1,0 +1,187 @@
+package ai.kilo.plugin.settings
+
+import ai.kilo.plugin.ui.KiloTheme
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.fields.ExtendableTextField
+import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.JBUI
+import javax.swing.JComponent
+import javax.swing.JPanel
+
+/**
+ * Settings UI for the Kilo plugin.
+ * Accessible via Settings > Tools > Kilo
+ */
+class KiloSettingsConfigurable : Configurable {
+
+    private var panel: JPanel? = null
+    private var executablePathField: TextFieldWithBrowseButton? = null
+    private var autoStartCheckbox: JBCheckBox? = null
+    private var serverPortField: JBTextField? = null
+    private var defaultAgentField: JBTextField? = null
+    private var mockModeCheckbox: JBCheckBox? = null
+    private var uiDebugCheckbox: JBCheckBox? = null
+
+    override fun getDisplayName(): String = "Kilo"
+
+    override fun createComponent(): JComponent {
+        executablePathField = TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(
+                "Select Kilo Executable",
+                "Choose the path to the kilo or opencode executable",
+                null,
+                FileChooserDescriptorFactory.createSingleFileDescriptor()
+            )
+            toolTipText = "Leave empty to auto-detect kilo or opencode in PATH"
+        }
+
+        autoStartCheckbox = JBCheckBox("Auto-start server when project opens")
+
+        serverPortField = JBTextField(10).apply {
+            toolTipText = "Leave empty for random port"
+        }
+
+        defaultAgentField = JBTextField(20).apply {
+            toolTipText = "Default agent is 'code'"
+        }
+
+        mockModeCheckbox = JBCheckBox("Enable mock mode (UI development)")
+
+        uiDebugCheckbox = JBCheckBox("UI debug mode (show borders & headers)")
+
+        panel = FormBuilder.createFormBuilder()
+            .addLabeledComponent(
+                JBLabel("Executable path:"),
+                executablePathField!!,
+                1,
+                false
+            )
+            .addComponent(
+                JBLabel("Leave empty to auto-detect kilo or opencode in PATH").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
+            .addVerticalGap(10)
+            .addComponent(autoStartCheckbox!!, 1)
+            .addVerticalGap(10)
+            .addLabeledComponent(
+                JBLabel("Server port:"),
+                serverPortField!!,
+                1,
+                false
+            )
+            .addComponent(
+                JBLabel("Leave empty for random port assignment").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
+            .addVerticalGap(10)
+            .addLabeledComponent(
+                JBLabel("Default agent:"),
+                defaultAgentField!!,
+                1,
+                false
+            )
+            .addComponent(
+                JBLabel("Agent to use by default (e.g., code, plan, debug)").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
+            .addVerticalGap(20)
+            .addSeparator()
+            .addVerticalGap(10)
+            .addComponent(mockModeCheckbox!!, 1)
+            .addComponent(
+                JBLabel("Shows a control bar to inject mock data for UI testing").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
+            .addVerticalGap(10)
+            .addComponent(uiDebugCheckbox!!, 1)
+            .addComponent(
+                JBLabel("Shows borders and headers on UI components for layout debugging").apply {
+                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                    font = JBUI.Fonts.smallFont()
+                },
+                0
+            )
+            .addComponentFillVertically(JPanel(), 0)
+            .panel
+
+        return panel!!
+    }
+
+    override fun isModified(): Boolean {
+        val settings = KiloSettings.getInstance()
+        val state = settings.state
+
+        return executablePathField?.text != state.kiloExecutablePath ||
+                autoStartCheckbox?.isSelected != state.autoStartServer ||
+                parsePort(serverPortField?.text) != state.serverPort ||
+                parseAgent(defaultAgentField?.text) != state.defaultAgent ||
+                mockModeCheckbox?.isSelected != state.mockModeEnabled ||
+                uiDebugCheckbox?.isSelected != state.uiDebugMode
+    }
+
+    override fun apply() {
+        val settings = KiloSettings.getInstance()
+        val state = settings.state
+
+        state.kiloExecutablePath = executablePathField?.text ?: ""
+        state.autoStartServer = autoStartCheckbox?.isSelected ?: true
+        state.serverPort = parsePort(serverPortField?.text)
+        state.defaultAgent = parseAgent(defaultAgentField?.text)
+        state.mockModeEnabled = mockModeCheckbox?.isSelected ?: false
+        state.uiDebugMode = uiDebugCheckbox?.isSelected ?: false
+
+        // Sync with KiloTheme
+        KiloTheme.UI_DEBUG = state.uiDebugMode
+    }
+
+    override fun reset() {
+        val settings = KiloSettings.getInstance()
+        val state = settings.state
+
+        executablePathField?.text = state.kiloExecutablePath
+        autoStartCheckbox?.isSelected = state.autoStartServer
+        serverPortField?.text = state.serverPort?.toString() ?: ""
+        defaultAgentField?.text = state.defaultAgent ?: ""
+        mockModeCheckbox?.isSelected = state.mockModeEnabled
+        uiDebugCheckbox?.isSelected = state.uiDebugMode
+    }
+
+    override fun disposeUIResources() {
+        panel = null
+        executablePathField = null
+        autoStartCheckbox = null
+        serverPortField = null
+        defaultAgentField = null
+        mockModeCheckbox = null
+        uiDebugCheckbox = null
+    }
+
+    override fun getPreferredFocusedComponent(): JComponent? = executablePathField
+
+    private fun parsePort(text: String?): Int? {
+        if (text.isNullOrBlank()) return null
+        return text.trim().toIntOrNull()?.takeIf { it in 1024..65535 }
+    }
+
+    private fun parseAgent(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+        return text.trim().takeIf { it.isNotEmpty() }
+    }
+}
