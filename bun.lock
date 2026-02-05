@@ -23,7 +23,7 @@
     },
     "packages/app": {
       "name": "@opencode-ai/app",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/sdk": "workspace:*",
@@ -74,7 +74,7 @@
     },
     "packages/console/app": {
       "name": "@opencode-ai/console-app",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@cloudflare/vite-plugin": "1.15.2",
         "@ibm/plex": "6.4.1",
@@ -108,7 +108,7 @@
     },
     "packages/console/core": {
       "name": "@opencode-ai/console-core",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@aws-sdk/client-sts": "3.782.0",
         "@jsx-email/render": "1.1.1",
@@ -135,7 +135,7 @@
     },
     "packages/console/function": {
       "name": "@opencode-ai/console-function",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@ai-sdk/anthropic": "2.0.0",
         "@ai-sdk/openai": "2.0.2",
@@ -159,7 +159,7 @@
     },
     "packages/console/mail": {
       "name": "@opencode-ai/console-mail",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@jsx-email/all": "2.2.3",
         "@jsx-email/cli": "1.4.3",
@@ -171,7 +171,7 @@
     },
     "packages/console/resource": {
       "name": "@opencode-ai/console-resource",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@cloudflare/workers-types": "catalog:",
       },
@@ -184,7 +184,7 @@
     },
     "packages/desktop": {
       "name": "@opencode-ai/desktop",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@opencode-ai/app": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
@@ -215,7 +215,7 @@
     },
     "packages/enterprise": {
       "name": "@opencode-ai/enterprise",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@opencode-ai/ui": "workspace:*",
         "@opencode-ai/util": "workspace:*",
@@ -244,7 +244,7 @@
     },
     "packages/function": {
       "name": "@opencode-ai/function",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@octokit/auth-app": "8.0.1",
         "@octokit/rest": "catalog:",
@@ -260,7 +260,7 @@
     },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@clack/prompts": "1.0.0-alpha.1",
         "@kilocode/plugin": "workspace:*",
@@ -292,7 +292,7 @@
     },
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
-      "version": "1.0.13",
+      "version": "1.0.16",
       "devDependencies": {
         "@tsconfig/node22": "catalog:",
         "@types/bun": "catalog:",
@@ -302,7 +302,7 @@
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@kilocode/kilo-gateway": "workspace:*",
         "@opentelemetry/api": "1.9.0",
@@ -322,7 +322,7 @@
     },
     "packages/kilo-vscode": {
       "name": "kilo-code",
-      "version": "0.0.1",
+      "version": "1.0.16",
       "dependencies": {
         "eventsource": "^2.0.2",
         "solid-js": "^1.9.11",
@@ -343,7 +343,7 @@
     },
     "packages/opencode": {
       "name": "@kilocode/cli",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "bin": {
         "kilo": "./bin/kilo",
         "kilocode": "./bin/kilocode",
@@ -451,7 +451,7 @@
     },
     "packages/plugin": {
       "name": "@kilocode/plugin",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "zod": "catalog:",
@@ -465,14 +465,14 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "devDependencies": {
         "@types/bun": "catalog:",
       },
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "devDependencies": {
         "@hey-api/openapi-ts": "0.90.10",
         "@tsconfig/node22": "catalog:",
@@ -483,7 +483,7 @@
     },
     "packages/slack": {
       "name": "@opencode-ai/slack",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@slack/bolt": "^3.17.1",
@@ -496,7 +496,7 @@
     },
     "packages/ui": {
       "name": "@opencode-ai/ui",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -538,7 +538,7 @@
     },
     "packages/util": {
       "name": "@opencode-ai/util",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "zod": "catalog:",
       },
@@ -549,7 +549,7 @@
     },
     "packages/web": {
       "name": "@opencode-ai/web",
-      "version": "1.0.14",
+      "version": "1.0.16",
       "dependencies": {
         "@astrojs/cloudflare": "12.6.3",
         "@astrojs/markdown-remark": "6.3.1",
@@ -580,7 +580,7 @@
     },
     "script/upstream": {
       "name": "@kilocode/upstream-merge",
-      "version": "1.0.0",
+      "version": "1.0.16",
       "dependencies": {
         "ts-morph": "^24.0.0",
       },

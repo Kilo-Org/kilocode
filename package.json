@@ -102,5 +102,5 @@
   "patchedDependencies": {
     "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
   },
-  "version": "1.0.14"
+  "version": "1.0.16"
 }

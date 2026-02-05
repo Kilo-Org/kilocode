@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code",
   "description": "Kilo Code AI Agent & Autocomplete",
-  "version": "0.0.1",
+  "version": "1.0.16",
   "engines": {
     "vscode": "^1.109.0"
   },
