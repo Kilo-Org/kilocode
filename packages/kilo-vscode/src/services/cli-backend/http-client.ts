@@ -1,26 +1,26 @@
-import type { ServerConfig, SessionInfo, MessageInfo, MessagePart } from "./types"
+import type { ServerConfig, SessionInfo, MessageInfo, MessagePart } from "./types";
 
 /**
  * HTTP Client for communicating with the CLI backend server.
  * Handles all REST API calls for session management, messaging, and permissions.
  */
 export class HttpClient {
-  private readonly baseUrl: string
-  private readonly authHeader: string
-  private readonly authUsername = "opencode"
+  private readonly baseUrl: string;
+  private readonly authHeader: string;
+  private readonly authUsername = "opencode";
 
   constructor(config: ServerConfig) {
-    this.baseUrl = config.baseUrl
+    this.baseUrl = config.baseUrl;
     // Auth header format: Basic base64("opencode:password")
     // NOTE: The CLI server expects a non-empty username ("opencode"). Using an empty username
     // (":password") results in 401 for both REST and SSE endpoints.
-    this.authHeader = `Basic ${Buffer.from(`${this.authUsername}:${config.password}`).toString("base64")}`
+    this.authHeader = `Basic ${Buffer.from(`${this.authUsername}:${config.password}`).toString("base64")}`;
 
     // Safe debug logging: no secrets.
     console.log("[Kilo New] HTTP: 🔐 Auth configured", {
       username: this.authUsername,
       passwordLength: config.password.length,
-    })
+    });
   }
 
   /**
@@ -32,35 +32,35 @@ export class HttpClient {
     body?: unknown,
     options?: { directory?: string }
   ): Promise<T> {
-    const url = `${this.baseUrl}${path}`
+    const url = `${this.baseUrl}${path}`;
 
     const headers: Record<string, string> = {
       Authorization: this.authHeader,
       "Content-Type": "application/json",
-    }
+    };
 
     if (options?.directory) {
-      headers["x-opencode-directory"] = options.directory
+      headers["x-opencode-directory"] = options.directory;
     }
 
     const response = await fetch(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-    })
+    });
 
     if (!response.ok) {
-      let errorMessage: string
+      let errorMessage: string;
       try {
-        const errorJson = (await response.json()) as { error?: string; message?: string }
-        errorMessage = errorJson.error || errorJson.message || response.statusText
+        const errorJson = (await response.json()) as { error?: string; message?: string };
+        errorMessage = errorJson.error || errorJson.message || response.statusText;
       } catch {
-        errorMessage = response.statusText
+        errorMessage = response.statusText;
       }
-      throw new Error(`HTTP ${response.status}: ${errorMessage}`)
+      throw new Error(`HTTP ${response.status}: ${errorMessage}`);
     }
 
-    return response.json() as Promise<T>
+    return response.json() as Promise<T>;
   }
 
   // ============================================
@@ -71,21 +71,21 @@ export class HttpClient {
    * Create a new session in the specified directory.
    */
   async createSession(directory: string): Promise<SessionInfo> {
-    return this.request<SessionInfo>("POST", "/session", {}, { directory })
+    return this.request<SessionInfo>("POST", "/session", {}, { directory });
   }
 
   /**
    * Get information about an existing session.
    */
   async getSession(sessionId: string, directory: string): Promise<SessionInfo> {
-    return this.request<SessionInfo>("GET", `/session/${sessionId}`, undefined, { directory })
+    return this.request<SessionInfo>("GET", `/session/${sessionId}`, undefined, { directory });
   }
 
   /**
    * List all sessions in the specified directory.
    */
   async listSessions(directory: string): Promise<SessionInfo[]> {
-    return this.request<SessionInfo[]>("GET", "/session", undefined, { directory })
+    return this.request<SessionInfo[]>("GET", "/session", undefined, { directory });
   }
 
   // ============================================
@@ -105,7 +105,7 @@ export class HttpClient {
       `/session/${sessionId}/message`,
       { parts },
       { directory }
-    )
+    );
   }
 
   /**
@@ -120,7 +120,7 @@ export class HttpClient {
       `/session/${sessionId}/message`,
       undefined,
       { directory }
-    )
+    );
   }
 
   // ============================================
@@ -131,8 +131,8 @@ export class HttpClient {
    * Abort the current operation in a session.
    */
   async abortSession(sessionId: string, directory: string): Promise<boolean> {
-    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory })
-    return true
+    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory });
+    return true;
   }
 
   // ============================================
@@ -153,7 +153,7 @@ export class HttpClient {
       `/session/${sessionId}/permissions/${permissionId}`,
       { response },
       { directory }
-    )
-    return true
+    );
+    return true;
   }
 }

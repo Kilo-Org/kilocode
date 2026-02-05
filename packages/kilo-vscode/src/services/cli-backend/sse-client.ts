@@ -1,5 +1,5 @@
-import EventSource from "eventsource"
-import type { ServerConfig, SSEEvent } from "./types"
+import EventSource from "eventsource";
+import type { ServerConfig, SSEEvent } from "./types";
 
 // Type definitions for handlers
 export type SSEEventHandler = (event: SSEEvent) => void
@@ -11,11 +11,11 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  * Manages EventSource connection and distributes events to subscribers.
  */
 export class SSEClient {
-  private eventSource: EventSource | null = null
-  private handlers: Set<SSEEventHandler> = new Set()
-  private errorHandlers: Set<SSEErrorHandler> = new Set()
-  private stateHandlers: Set<SSEStateHandler> = new Set()
-  private readonly authUsername = "opencode"
+  private eventSource: EventSource | null = null;
+  private handlers: Set<SSEEventHandler> = new Set();
+  private errorHandlers: Set<SSEErrorHandler> = new Set();
+  private stateHandlers: Set<SSEStateHandler> = new Set();
+  private readonly authUsername = "opencode";
 
   constructor(private readonly config: ServerConfig) {}
 
@@ -29,19 +29,19 @@ export class SSEClient {
     // Return early if already connected
     if (this.eventSource) {
       console.log('[Kilo New] SSE: ⚠️ Already connected, skipping');
-      return
+      return;
     }
 
     // Notify connecting state
     console.log('[Kilo New] SSE: 🔄 Setting state to "connecting"');
-    this.notifyState("connecting")
+    this.notifyState("connecting");
 
     // Build URL with directory parameter
-    const url = `${this.config.baseUrl}/event?directory=${encodeURIComponent(directory)}`
+    const url = `${this.config.baseUrl}/event?directory=${encodeURIComponent(directory)}`;
     console.log('[Kilo New] SSE: 🌐 Connecting to URL:', url);
 
     // Create auth header
-    const authHeader = `Basic ${Buffer.from(`${this.authUsername}:${this.config.password}`).toString("base64")}`
+    const authHeader = `Basic ${Buffer.from(`${this.authUsername}:${this.config.password}`).toString("base64")}`;
     console.log('[Kilo New] SSE: 🔑 Auth header created', {
       username: this.authUsername,
       passwordLength: this.config.password.length,
@@ -53,33 +53,33 @@ export class SSEClient {
       headers: {
         Authorization: authHeader,
       },
-    })
+    });
 
     // Set up onopen handler
     this.eventSource.onopen = () => {
       console.log('[Kilo New] SSE: ✅ EventSource opened successfully');
-      this.notifyState("connected")
-    }
+      this.notifyState("connected");
+    };
 
     // Set up onmessage handler
     this.eventSource.onmessage = (messageEvent) => {
       console.log('[Kilo New] SSE: 📨 Received message event:', messageEvent.data);
       try {
-        const event = JSON.parse(messageEvent.data) as SSEEvent
+        const event = JSON.parse(messageEvent.data) as SSEEvent;
         console.log('[Kilo New] SSE: 📦 Parsed event type:', event.type);
-        this.notifyEvent(event)
+        this.notifyEvent(event);
       } catch (error) {
-        console.error("[Kilo New] SSE: ❌ Failed to parse event:", error)
-        this.notifyError(error instanceof Error ? error : new Error(String(error)))
+        console.error("[Kilo New] SSE: ❌ Failed to parse event:", error);
+        this.notifyError(error instanceof Error ? error : new Error(String(error)));
       }
-    }
+    };
 
     // Set up onerror handler
     this.eventSource.onerror = (errorEvent) => {
-      console.error("[Kilo New] SSE: ❌ EventSource error:", errorEvent)
-      this.notifyError(new Error("EventSource connection error"))
-      this.notifyState("disconnected")
-    }
+      console.error("[Kilo New] SSE: ❌ EventSource error:", errorEvent);
+      this.notifyError(new Error("EventSource connection error"));
+      this.notifyState("disconnected");
+    };
   }
 
   /**
@@ -87,10 +87,10 @@ export class SSEClient {
    */
   disconnect(): void {
     if (this.eventSource) {
-      this.eventSource.close()
-      this.eventSource = null
+      this.eventSource.close();
+      this.eventSource = null;
     }
-    this.notifyState("disconnected")
+    this.notifyState("disconnected");
   }
 
   /**
@@ -99,10 +99,10 @@ export class SSEClient {
    * @returns Unsubscribe function
    */
   onEvent(handler: SSEEventHandler): () => void {
-    this.handlers.add(handler)
+    this.handlers.add(handler);
     return () => {
-      this.handlers.delete(handler)
-    }
+      this.handlers.delete(handler);
+    };
   }
 
   /**
@@ -111,10 +111,10 @@ export class SSEClient {
    * @returns Unsubscribe function
    */
   onError(handler: SSEErrorHandler): () => void {
-    this.errorHandlers.add(handler)
+    this.errorHandlers.add(handler);
     return () => {
-      this.errorHandlers.delete(handler)
-    }
+      this.errorHandlers.delete(handler);
+    };
   }
 
   /**
@@ -123,10 +123,10 @@ export class SSEClient {
    * @returns Unsubscribe function
    */
   onStateChange(handler: SSEStateHandler): () => void {
-    this.stateHandlers.add(handler)
+    this.stateHandlers.add(handler);
     return () => {
-      this.stateHandlers.delete(handler)
-    }
+      this.stateHandlers.delete(handler);
+    };
   }
 
   /**
@@ -135,9 +135,9 @@ export class SSEClient {
   private notifyEvent(event: SSEEvent): void {
     for (const handler of this.handlers) {
       try {
-        handler(event)
+        handler(event);
       } catch (error) {
-        console.error("[Kilo New] SSE: Error in event handler:", error)
+        console.error("[Kilo New] SSE: Error in event handler:", error);
       }
     }
   }
@@ -148,9 +148,9 @@ export class SSEClient {
   private notifyError(error: Error): void {
     for (const handler of this.errorHandlers) {
       try {
-        handler(error)
+        handler(error);
       } catch (err) {
-        console.error("[Kilo New] SSE: Error in error handler:", err)
+        console.error("[Kilo New] SSE: Error in error handler:", err);
       }
     }
   }
@@ -161,9 +161,9 @@ export class SSEClient {
   private notifyState(state: "connecting" | "connected" | "disconnected"): void {
     for (const handler of this.stateHandlers) {
       try {
-        handler(state)
+        handler(state);
       } catch (error) {
-        console.error("[Kilo New] SSE: Error in state handler:", error)
+        console.error("[Kilo New] SSE: Error in state handler:", error);
       }
     }
   }
@@ -172,9 +172,9 @@ export class SSEClient {
    * Dispose of the client, disconnecting and clearing all handlers.
    */
   dispose(): void {
-    this.disconnect()
-    this.handlers.clear()
-    this.errorHandlers.clear()
-    this.stateHandlers.clear()
+    this.disconnect();
+    this.handlers.clear();
+    this.errorHandlers.clear();
+    this.stateHandlers.clear();
   }
 }

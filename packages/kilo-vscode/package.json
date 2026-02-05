@@ -113,6 +113,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/luxon": "^3.4.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.109.0",
@@ -126,7 +127,14 @@
     "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
+    "@kilocode/sdk": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
+    "@opencode-ai/util": "workspace:*",
+    "@solid-primitives/active-element": "^2.0.22",
+    "@solidjs/router": "^0.15.3",
+    "@thisbeyond/solid-dnd": "^0.7.5",
     "eventsource": "^2.0.2",
+    "luxon": "^3.5.0",
     "solid-js": "^1.9.11"
   }
 }

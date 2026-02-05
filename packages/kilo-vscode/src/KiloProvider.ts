@@ -3,10 +3,9 @@ import {
 	ServerManager,
 	HttpClient,
 	SSEClient,
-	type SessionInfo,
-	type SSEEvent,
 	type ServerConfig,
 } from './services/cli-backend';
+import { ChatController } from './controllers';
 
 export class KiloProvider implements vscode.WebviewViewProvider {
 	public static readonly viewType = 'kilo-code.new.sidebarView';
@@ -15,7 +14,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 	private httpClient: HttpClient | null = null;
 	private sseClient: SSEClient | null = null;
 	private webviewView: vscode.WebviewView | null = null;
-	private currentSession: SessionInfo | null = null;
+	private chatController: ChatController | null = null;
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
@@ -41,32 +40,14 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		// Set HTML content
 		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-		// Handle messages from webview
-		webviewView.webview.onDidReceiveMessage(async (message) => {
-			switch (message.type) {
-				case 'sendMessage':
-					await this.handleSendMessage(message.text);
-					break;
-				case 'abort':
-					await this.handleAbort();
-					break;
-				case 'permissionResponse':
-					await this.handlePermissionResponse(
-						message.permissionId,
-						message.response
-					);
-					break;
-			}
-		});
-
 		// Initialize connection to CLI backend
-		this.initializeConnection();
+		this.initializeConnection(webviewView.webview);
 	}
 
 	/**
 	 * Initialize connection to the CLI backend server.
 	 */
-	private async initializeConnection(): Promise<void> {
+	private async initializeConnection(webview: vscode.Webview): Promise<void> {
 		console.log('[Kilo New] KiloProvider: 🔧 Starting initializeConnection...');
 		try {
 			// Get server from server manager
@@ -86,169 +67,29 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 			this.sseClient = new SSEClient(config);
 			console.log('[Kilo New] KiloProvider: 🔌 Created HttpClient and SSEClient');
 
-			// Set up SSE event handling
-			this.sseClient.onEvent((event) => {
-				console.log('[Kilo New] KiloProvider: 📨 Received SSE event:', event.type);
-				this.handleSSEEvent(event);
-			});
+			// Get workspace directory
+			const workspaceDir = this.getWorkspaceDirectory();
 
-			this.sseClient.onStateChange((state) => {
-				console.log('[Kilo New] KiloProvider: 🔄 SSE state changed to:', state);
-				console.log('[Kilo New] KiloProvider: 📤 Posting connectionState message to webview:', state);
-				this.postMessage({
-					type: 'connectionState',
-					state,
-				});
+			// Create ChatController to handle all message routing
+			this.chatController = new ChatController(webview, {
+				httpClient: this.httpClient,
+				sseClient: this.sseClient,
+				workspaceDirectory: workspaceDir,
 			});
+			console.log('[Kilo New] KiloProvider: 🎮 Created ChatController');
 
 			// Connect SSE with workspace directory
-			const workspaceDir = this.getWorkspaceDirectory();
 			console.log('[Kilo New] KiloProvider: 📂 Connecting SSE with workspace:', workspaceDir);
 			this.sseClient.connect(workspaceDir);
 
-			// Post "ready" message to webview with server info
-			console.log('[Kilo New] KiloProvider: 📤 Posting ready message to webview');
-			this.postMessage({
-				type: 'ready',
-				serverInfo: {
-					port: server.port,
-				},
-			});
 			console.log('[Kilo New] KiloProvider: ✅ initializeConnection completed successfully');
 		} catch (error) {
 			console.error('[Kilo New] KiloProvider: ❌ Failed to initialize connection:', error);
 			this.postMessage({
-				type: 'error',
+				type: 'chat/error',
 				message: error instanceof Error ? error.message : 'Failed to connect to CLI backend',
+				code: 'CONNECTION_ERROR',
 			});
-		}
-	}
-
-	/**
-	 * Handle sending a message from the webview.
-	 */
-	private async handleSendMessage(text: string): Promise<void> {
-		if (!this.httpClient) {
-			this.postMessage({
-				type: 'error',
-				message: 'Not connected to CLI backend',
-			});
-			return;
-		}
-
-		try {
-			const workspaceDir = this.getWorkspaceDirectory();
-
-			// Create session if needed
-			if (!this.currentSession) {
-				this.currentSession = await this.httpClient.createSession(workspaceDir);
-			}
-
-			// Send message with text part
-			await this.httpClient.sendMessage(
-				this.currentSession.id,
-				[{ type: 'text', text }],
-				workspaceDir
-			);
-		} catch (error) {
-			console.error('[Kilo New] KiloProvider: Failed to send message:', error);
-			this.postMessage({
-				type: 'error',
-				message: error instanceof Error ? error.message : 'Failed to send message',
-			});
-		}
-	}
-
-	/**
-	 * Handle abort request from the webview.
-	 */
-	private async handleAbort(): Promise<void> {
-		if (!this.httpClient || !this.currentSession) {
-			return;
-		}
-
-		try {
-			const workspaceDir = this.getWorkspaceDirectory();
-			await this.httpClient.abortSession(this.currentSession.id, workspaceDir);
-		} catch (error) {
-			console.error('[Kilo New] KiloProvider: Failed to abort session:', error);
-		}
-	}
-
-	/**
-	 * Handle permission response from the webview.
-	 */
-	private async handlePermissionResponse(
-		permissionId: string,
-		response: 'once' | 'always' | 'reject'
-	): Promise<void> {
-		if (!this.httpClient || !this.currentSession) {
-			return;
-		}
-
-		try {
-			const workspaceDir = this.getWorkspaceDirectory();
-			await this.httpClient.respondToPermission(
-				this.currentSession.id,
-				permissionId,
-				response,
-				workspaceDir
-			);
-		} catch (error) {
-			console.error('[Kilo New] KiloProvider: Failed to respond to permission:', error);
-		}
-	}
-
-	/**
-	 * Handle SSE events from the CLI backend.
-	 */
-	private handleSSEEvent(event: SSEEvent): void {
-		// Filter events by sessionID (only process events for current session)
-		if ('sessionID' in event.properties) {
-			if (this.currentSession && event.properties.sessionID !== this.currentSession.id) {
-				return;
-			}
-		}
-
-		// Forward relevant events to webview
-		switch (event.type) {
-			case 'message.part.updated':
-				this.postMessage({
-					type: 'partUpdated',
-					part: event.properties.part,
-					delta: event.properties.delta,
-				});
-				break;
-
-			case 'session.status':
-				this.postMessage({
-					type: 'sessionStatus',
-					sessionID: event.properties.sessionID,
-					status: event.properties.status,
-				});
-				break;
-
-			case 'permission.asked':
-				this.postMessage({
-					type: 'permissionRequest',
-					...event.properties,
-				});
-				break;
-
-			case 'todo.updated':
-				this.postMessage({
-					type: 'todoUpdated',
-					sessionID: event.properties.sessionID,
-					items: event.properties.items,
-				});
-				break;
-
-			case 'session.created':
-				// Store session if we don't have one yet
-				if (!this.currentSession) {
-					this.currentSession = event.properties.info;
-				}
-				break;
 		}
 	}
 
@@ -315,6 +156,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 	 * Dispose of the provider and clean up resources.
 	 */
 	dispose(): void {
+		this.chatController?.dispose();
 		this.sseClient?.dispose();
 		this.serverManager.dispose();
 	}

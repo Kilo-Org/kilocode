@@ -1,7 +1,11 @@
 import { Component, createSignal, onMount, onCleanup, Switch, Match } from "solid-js";
 import Settings, { type ConnectionState } from "./components/Settings";
+import { TransportProvider } from "./transport/TransportProvider";
+import { ChatView } from "./views/ChatView";
+import "./views/chat-view.css";
 
 type ViewType = 
+  | "chat"
   | "newTask"
   | "marketplace"
   | "history"
@@ -44,7 +48,8 @@ const DummyView: Component<{ title: string }> = (props) => {
 };
 
 const App: Component = () => {
-  const [currentView, setCurrentView] = createSignal<ViewType>("newTask");
+  // Default to chat view now
+  const [currentView, setCurrentView] = createSignal<ViewType>("chat");
   const [serverPort, setServerPort] = createSignal<number | null>(null);
   const [connectionState, setConnectionState] = createSignal<ConnectionState>("disconnected");
 
@@ -52,18 +57,18 @@ const App: Component = () => {
     // Debug: log *all* messages received from the extension host.
     console.log("[Kilo New] App: 📨 window.message received:", {
       data: event.data,
-      origin: (event as any).origin,
+      origin: (event as MessageEvent).origin,
     });
 
     const message = event.data as WebviewMessage;
-    console.log("[Kilo New] App: 🔎 Parsed message.type:", (message as any)?.type);
+    console.log("[Kilo New] App: 🔎 Parsed message.type:", (message as WebviewMessage)?.type);
     
     switch (message.type) {
       case "action":
         console.log("[Kilo New] App: 🎬 action:", message.action);
         switch (message.action) {
           case "plusButtonClicked":
-            setCurrentView("newTask");
+            setCurrentView("chat"); // Changed from newTask to chat
             break;
           case "marketplaceButtonClicked":
             setCurrentView("marketplace");
@@ -91,7 +96,7 @@ const App: Component = () => {
         break;
       default:
         // If the extension sends a new message type, we want to see it immediately.
-        console.warn("[Kilo New] App: ⚠️ Unknown message type:", event.data);
+        // Note: Chat protocol messages are handled by TransportProvider, not here
         break;
     }
   };
@@ -107,10 +112,17 @@ const App: Component = () => {
   });
 
   return (
-    <div class="container">
-      <Switch fallback={<DummyView title="New Task" />}>
+    <div class="container" style={{ height: "100vh", overflow: "hidden" }}>
+      <Switch fallback={<DummyView title="Unknown View" />}>
+        <Match when={currentView() === "chat"}>
+          <TransportProvider autoInit={true}>
+            <ChatView />
+          </TransportProvider>
+        </Match>
         <Match when={currentView() === "newTask"}>
-          <DummyView title="New Task" />
+          <TransportProvider autoInit={true}>
+            <ChatView />
+          </TransportProvider>
         </Match>
         <Match when={currentView() === "marketplace"}>
           <DummyView title="Marketplace" />

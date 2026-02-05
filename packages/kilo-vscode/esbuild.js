@@ -1,8 +1,26 @@
 const esbuild = require("esbuild");
 const { solidPlugin } = require("esbuild-plugin-solid");
+const path = require("path");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+
+/**
+ * Plugin to resolve @/ path aliases for the webview build
+ * @type {import('esbuild').Plugin}
+ */
+const aliasPlugin = {
+	name: 'alias',
+	setup(build) {
+		// Resolve @/ to webview-ui/src/opencode-app/
+		build.onResolve({ filter: /^@\// }, args => {
+			const resolved = args.path.replace(/^@\//, '');
+			return {
+				path: path.resolve(__dirname, 'webview-ui/src/opencode-app', resolved),
+			};
+		});
+	},
+};
 
 /**
  * @type {import('esbuild').Plugin}
@@ -60,6 +78,7 @@ async function main() {
 		outfile: 'dist/webview.js',
 		logLevel: 'silent',
 		plugins: [
+			aliasPlugin,
 			solidPlugin(),
 			esbuildProblemMatcherPlugin,
 		],
