@@ -54,7 +54,8 @@ const extraArgs = (() => {
 
 const [serverPort, webPort] = await Promise.all([freePort(), freePort()])
 
-const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-e2e-"))
+// kilocode_change - canonicalize to avoid Windows 8.3 short path mismatches
+const sandbox = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-e2e-")))
 
 const serverEnv = {
   ...process.env,
