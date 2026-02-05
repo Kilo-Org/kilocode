@@ -76,6 +76,11 @@ Easily share, back up, and template your custom modes. This feature lets you exp
     - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
     - **Global:** Available in all projects (saved to global settings)
 
+{% callout type="note" title="YAML only" %}
+Imports currently accept `.yaml` files. If you have JSON, convert it to YAML or paste it into `.kilocodemodes`.
+{% /callout %}
+
+
 ### Changing Slugs on Import
 
 When importing modes, you can change the slug in the exported YAML file before importing:
@@ -102,26 +107,24 @@ Kilo Code will guide you through the process, prompting for necessary informatio
 **Create modes from job postings:** If there's a real world job posting for something you want a custom mode to do, try asking Code mode to `Create a custom mode based on the job posting at @[url]`. This can help you quickly create specialized modes with realistic role definitions.
 {% /callout %}
 
-### 2. Using the Prompts Tab
+### 2. Using the Modes View
 
-1. **Open Prompts Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
-2. **Create New Mode:** Click the <Codicon name="add" /> button to the right of the Modes heading
-3. **Fill in Fields:**
+1. Open the Kilo Code sidebar and select **Modes**.
+2. Click the add button to create a new custom mode.
+3. Fill in the fields and click **Create Mode**.
 
-{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Prompts tab" width="600" caption="Custom mode creation interface in the Prompts tab" /%}
-
-_The custom mode creation interface showing fields for name, slug, description, save location, role definition, available tools, custom instructions._
-
-The interface provides fields for Name, Slug, Description, Save Location, Role Definition, When to Use (optional), Available Tools, and Custom Instructions. After filling these, click the "Create Mode" button. Kilo Code will save the new mode in YAML format.
+The interface provides fields for Name, Slug, Description, Save Location, Role Definition, When to Use (optional), Available Tools, and Custom Instructions. Kilo Code saves the new mode in YAML format.
 
 ### 3. Manual Configuration (YAML & JSON)
 
 You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code now supports both YAML (preferred) and JSON formats.
 
-- **Global Modes:** Edit the `custom_modes.yaml` (preferred) or `custom_modes.json` file. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Global Prompts") > "Edit Global Modes"
-- **Project Modes:** Edit the `.kilocodemodes` file (which can be YAML or JSON) in your project root. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Project Prompts") > "Edit Project Modes"
+- **Global Modes:** Edit `custom_modes.yaml` (preferred). Open it via Settings > **Edit Global Modes**, or open the file directly from your user settings folder.
+- **Project Modes:** Edit `.kilocodemodes` in your project root (YAML or JSON). Open it via Settings > **Edit Project Modes**.
 
 These files define an array/list of custom modes.
+
+**Note:** `custom_modes.json` is a legacy fallback used for migration. When `custom_modes.yaml` exists, the JSON file is not kept in sync.
 
 ## YAML Configuration Format (Preferred)
 
