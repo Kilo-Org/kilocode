@@ -69,7 +69,7 @@
     "test": "vscode-test"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "fuzzysort": "3.1.0",
     "solid-js": "^1.9.11"
   },
