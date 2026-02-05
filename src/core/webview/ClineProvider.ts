@@ -554,8 +554,14 @@ export class ClineProvider
 			const cleanupFunctions = this.taskEventListeners.get(task)
 
 			if (cleanupFunctions) {
-				cleanupFunctions.forEach((cleanup) => cleanup())
-				this.taskEventListeners.delete(task)
+				try {
+					cleanupFunctions.forEach((cleanup) => cleanup())
+					this.taskEventListeners.delete(task)
+				} catch (error) {
+					console.error(`Error running cleanup functions for task ${task.taskId}:`, error)
+					// Still delete to prevent memory leaks
+					this.taskEventListeners.delete(task)
+				}
 			}
 
 			// Make sure no reference kept, once promises end it will be
@@ -656,59 +662,130 @@ export class ClineProvider
 		this.log("Disposing ClineProvider...")
 
 		// Clear all tasks from the stack.
-		while (this.clineStack.length > 0) {
-			await this.removeClineFromStack()
+		try {
+			while (this.clineStack.length > 0) {
+				await this.removeClineFromStack()
+			}
+			this.log("Cleared all tasks")
+		} catch (error) {
+			console.error("Error clearing task stack:", error)
 		}
-
-		this.log("Cleared all tasks")
 
 		// Clear all pending edit operations to prevent memory leaks
-		this.clearAllPendingEditOperations()
-		this.log("Cleared pending operations")
-
-		if (this.view && "dispose" in this.view) {
-			this.view.dispose()
-			this.log("Disposed webview")
+		try {
+			this.clearAllPendingEditOperations()
+			this.log("Cleared pending operations")
+		} catch (error) {
+			console.error("Error clearing pending operations:", error)
 		}
 
-		this.clearWebviewResources()
+		// Dispose webview
+		try {
+			if (this.view && "dispose" in this.view) {
+				this.view.dispose()
+				this.log("Disposed webview")
+			}
+		} catch (error) {
+			console.error("Error disposing webview:", error)
+		}
+
+		// Clear webview resources
+		try {
+			this.clearWebviewResources()
+		} catch (error) {
+			console.error("Error clearing webview resources:", error)
+		}
 
 		// Clean up cloud service event listener
-		if (CloudService.hasInstance()) {
-			CloudService.instance.off("settings-updated", this.handleCloudSettingsUpdate)
-		}
-
-		while (this.disposables.length) {
-			const x = this.disposables.pop()
-
-			if (x) {
-				x.dispose()
+		try {
+			if (CloudService.hasInstance()) {
+				CloudService.instance.off("settings-updated", this.handleCloudSettingsUpdate)
 			}
+		} catch (error) {
+			console.error("Error removing cloud service listener:", error)
 		}
 
-		this._workspaceTracker?.dispose()
-		this._workspaceTracker = undefined
-		await this.mcpHub?.unregisterClient()
-		this.mcpHub = undefined
-		await this.skillsManager?.dispose()
-		this.skillsManager = undefined
-		this.marketplaceManager?.cleanup()
-		this.customModesManager?.dispose()
+		// Dispose all disposables
+		try {
+			while (this.disposables.length) {
+				const x = this.disposables.pop()
 
-		// kilocode_change start - Stop auto-purge scheduler and device auth service
-		if (this.autoPurgeScheduler) {
-			this.autoPurgeScheduler.stop()
-			this.autoPurgeScheduler = undefined
+				if (x) {
+					try {
+						x.dispose()
+					} catch (disposeError) {
+						console.error("Error disposing individual disposable:", disposeError)
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Error disposing disposables:", error)
 		}
-		// kilocode_change end
+
+		// Dispose workspace tracker
+		try {
+			this._workspaceTracker?.dispose()
+			this._workspaceTracker = undefined
+		} catch (error) {
+			console.error("Error disposing workspace tracker:", error)
+		}
+
+		// Unregister MCP client
+		try {
+			await this.mcpHub?.unregisterClient()
+			this.mcpHub = undefined
+		} catch (error) {
+			console.error("Error unregistering MCP client:", error)
+		}
+
+		// Dispose skills manager
+		try {
+			await this.skillsManager?.dispose()
+			this.skillsManager = undefined
+		} catch (error) {
+			console.error("Error disposing skills manager:", error)
+		}
+
+		// Cleanup marketplace manager
+		try {
+			this.marketplaceManager?.cleanup()
+		} catch (error) {
+			console.error("Error cleaning up marketplace manager:", error)
+		}
+
+		// Dispose custom modes manager
+		try {
+			this.customModesManager?.dispose()
+		} catch (error) {
+			console.error("Error disposing custom modes manager:", error)
+		}
+
+		// Stop auto-purge scheduler
+		try {
+			if (this.autoPurgeScheduler) {
+				this.autoPurgeScheduler.stop()
+				this.autoPurgeScheduler = undefined
+			}
+		} catch (error) {
+			console.error("Error stopping auto-purge scheduler:", error)
+		}
 
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 
-		// Clean up any event listeners attached to this provider
-		this.removeAllListeners()
+		// Clean up event listeners
+		try {
+			this.removeAllListeners()
+		} catch (error) {
+			console.error("Error removing event listeners:", error)
+		}
 
-		McpServerManager.unregisterProvider(this)
+		// Unregister from MCP server manager
+		try {
+			McpServerManager.unregisterProvider(this)
+		} catch (error) {
+			console.error("Error unregistering from MCP server manager:", error)
+		}
 	}
 
 	public static getVisibleInstance(): ClineProvider | undefined {
@@ -720,10 +797,15 @@ export class ClineProvider
 
 		// If no visible provider, try to show the sidebar view
 		if (!visibleProvider) {
-			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
-			// Wait briefly for the view to become visible
-			await delay(100)
-			visibleProvider = ClineProvider.getVisibleInstance()
+			try {
+				await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
+				// Wait briefly for the view to become visible
+				await delay(100)
+				visibleProvider = ClineProvider.getVisibleInstance()
+			} catch (error) {
+				console.error("Error focusing sidebar:", error)
+				// Continue without focusing - return undefined if no visible provider
+			}
 		}
 
 		// If still no visible provider, return

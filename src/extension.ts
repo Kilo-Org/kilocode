@@ -525,7 +525,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerTerminalActions(context)
 
 	// Allows other extensions to activate once Kilo Code is ready.
-	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
+	try {
+		vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
+	} catch (error) {
+		console.error("Error executing activation completed command:", error)
+		// Continue - extension should still function even if notification fails
+	}
 
 	// Implements the `RooCodeAPI` interface.
 	const socketPath = process.env.KILO_IPC_SOCKET_PATH ?? process.env.ROO_CODE_IPC_SOCKET_PATH // kilocode_change
