@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ChatController } from './ChatController';
 import {
 	ServerManager,
 	HttpClient,
@@ -7,6 +8,7 @@ import {
 	type SSEEvent,
 	type ServerConfig,
 } from './services/cli-backend';
+import type { WebviewToExtensionMessage } from './shared/protocol';
 
 export class KiloProvider implements vscode.WebviewViewProvider {
 	public static readonly viewType = 'kilo-code.new.sidebarView';
@@ -16,12 +18,17 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 	private sseClient: SSEClient | null = null;
 	private webviewView: vscode.WebviewView | null = null;
 	private currentSession: SessionInfo | null = null;
+	private readonly chatController: ChatController;
+	private readonly disposables: vscode.Disposable[] = [];
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
 		context: vscode.ExtensionContext
 	) {
 		this.serverManager = new ServerManager(context);
+		this.chatController = new ChatController({
+			extensionUri,
+		});
 	}
 
 	public resolveWebviewView(
@@ -41,26 +48,70 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		// Set HTML content
 		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-		// Handle messages from webview
-		webviewView.webview.onDidReceiveMessage(async (message) => {
-			switch (message.type) {
-				case 'sendMessage':
-					await this.handleSendMessage(message.text);
-					break;
-				case 'abort':
-					await this.handleAbort();
-					break;
-				case 'permissionResponse':
-					await this.handlePermissionResponse(
-						message.permissionId,
-						message.response
-					);
-					break;
-			}
+		// Set up ChatController with this webview (chat-webview implementation)
+		this.chatController.setWebview(webviewView.webview);
+
+		// Handle messages from the webview (keep both chat-webview + CLI backend wiring)
+		this.disposables.push(
+			webviewView.webview.onDidReceiveMessage(async (message: unknown) => {
+				if (!message || typeof message !== 'object') {
+					return;
+				}
+
+				const payload = message as Record<string, unknown>;
+				const type = payload['type'];
+				if (typeof type !== 'string') {
+					return;
+				}
+
+				console.log('[Kilo New] Received message from webview:', type);
+
+				// UI navigation actions (not chat / not backend)
+				if (type === 'action') {
+					return;
+				}
+
+				// Chat-webview protocol
+				if (type.startsWith('chat/')) {
+					await this.chatController.handleMessage(message as WebviewToExtensionMessage);
+					return;
+				}
+
+				// CLI backend protocol (PR #141)
+				switch (type) {
+					case 'sendMessage': {
+						const text = payload['text'];
+						if (typeof text === 'string') {
+							await this.handleSendMessage(text);
+						}
+						break;
+					}
+					case 'abort': {
+						await this.handleAbort();
+						break;
+					}
+					case 'permissionResponse': {
+						const permissionId = payload['permissionId'];
+						const response = payload['response'];
+						if (
+							typeof permissionId === 'string' &&
+							(response === 'once' || response === 'always' || response === 'reject')
+						) {
+							await this.handlePermissionResponse(permissionId, response);
+						}
+						break;
+					}
+				}
+			})
+		);
+
+		// Clean up when the view is disposed
+		webviewView.onDidDispose(() => {
+			this.disposables.forEach((d) => d.dispose());
 		});
 
 		// Initialize connection to CLI backend
-		this.initializeConnection();
+		void this.initializeConnection();
 	}
 
 	/**
@@ -315,6 +366,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 	 * Dispose of the provider and clean up resources.
 	 */
 	dispose(): void {
+		this.chatController.dispose();
+		this.disposables.forEach((d) => d.dispose());
 		this.sseClient?.dispose();
 		this.serverManager.dispose();
 	}

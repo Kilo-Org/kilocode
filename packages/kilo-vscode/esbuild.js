@@ -1,4 +1,5 @@
 const esbuild = require("esbuild");
+const path = require("path");
 const { solidPlugin } = require("esbuild-plugin-solid");
 
 const production = process.argv.includes('--production');
@@ -59,6 +60,9 @@ async function main() {
 		platform: 'browser',
 		outfile: 'dist/webview.js',
 		logLevel: 'silent',
+		alias: {
+			'@': path.resolve(__dirname, 'webview-ui/src/opencode-app'),
+		},
 		plugins: [
 			solidPlugin(),
 			esbuildProblemMatcherPlugin,

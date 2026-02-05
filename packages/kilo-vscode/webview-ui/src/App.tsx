@@ -1,8 +1,10 @@
 import { Component, createSignal, onMount, onCleanup, Switch, Match } from "solid-js";
 import Settings, { type ConnectionState } from "./components/Settings";
+import { ChatView } from "./ChatView";
 
 type ViewType = 
   | "newTask"
+  | "chat"
   | "marketplace"
   | "history"
   | "profile"
@@ -44,7 +46,8 @@ const DummyView: Component<{ title: string }> = (props) => {
 };
 
 const App: Component = () => {
-  const [currentView, setCurrentView] = createSignal<ViewType>("newTask");
+  // Default to chat view
+  const [currentView, setCurrentView] = createSignal<ViewType>("chat");
   const [serverPort, setServerPort] = createSignal<number | null>(null);
   const [connectionState, setConnectionState] = createSignal<ConnectionState>("disconnected");
 
@@ -55,17 +58,17 @@ const App: Component = () => {
       origin: (event as any).origin,
     });
 
-    const message = event.data as WebviewMessage;
-    console.log("[Kilo New] App: 🔎 Parsed message.type:", (message as any)?.type);
-    
-    switch (message.type) {
-      case "action":
-        console.log("[Kilo New] App: 🎬 action:", message.action);
-        switch (message.action) {
-          case "plusButtonClicked":
-            setCurrentView("newTask");
+  const message = event.data as WebviewMessage;
+  console.log("[Kilo New] App: 🔎 Parsed message.type:", (message as any)?.type);
+  
+  switch (message.type) {
+    case "action":
+      console.log("[Kilo New] App: 🎬 action:", message.action);
+      switch (message.action) {
+        case "plusButtonClicked":
+            setCurrentView("chat");
             break;
-          case "marketplaceButtonClicked":
+        case "marketplaceButtonClicked":
             setCurrentView("marketplace");
             break;
           case "historyButtonClicked":
@@ -107,10 +110,10 @@ const App: Component = () => {
   });
 
   return (
-    <div class="container">
-      <Switch fallback={<DummyView title="New Task" />}>
-        <Match when={currentView() === "newTask"}>
-          <DummyView title="New Task" />
+    <div class="app-container">
+      <Switch fallback={<ChatView />}>
+        <Match when={currentView() === "chat"}>
+          <ChatView />
         </Match>
         <Match when={currentView() === "marketplace"}>
           <DummyView title="Marketplace" />

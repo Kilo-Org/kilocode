@@ -10,7 +10,11 @@
 		"noEmit": true,
 		"isolatedModules": true,
 		"esModuleInterop": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["src/opencode-app/*"]
+		}
 	},
 	"include": ["src/**/*"]
 }
