@@ -152,7 +152,7 @@ object ChatComponentBuilder {
     ): JComponent {
         val (entityType, content) = when (part.type) {
             "text" -> {
-                val markdownPanel = MarkdownPanel(project).apply {
+                val markdownPanel = MarkdownPanel().apply {
                     isOpaque = false
                     setMarkdown(part.text ?: "")
                 }

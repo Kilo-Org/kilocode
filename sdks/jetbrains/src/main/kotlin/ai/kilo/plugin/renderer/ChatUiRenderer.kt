@@ -379,7 +379,7 @@ class ChatUiRenderer(
     }
 
     private fun createMessageBlock(message: MessageWithParts): ChatContentBlock {
-        return ChatComponentBuilder.createMessageBlock(
+        val block = ChatComponentBuilder.createMessageBlock(
             project = project,
             messageWithParts = message,
             pendingRequests = pendingRequests,
@@ -407,6 +407,8 @@ class ChatUiRenderer(
                 }
             }
         )
+
+        return block
     }
 
     private fun clearCachesForSessionChange() {

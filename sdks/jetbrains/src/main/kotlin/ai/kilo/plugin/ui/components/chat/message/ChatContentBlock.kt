@@ -297,14 +297,15 @@ class ChatContentBlock(
         }
         stackedPanel.add(contentBlock)
 
-        // Footer block (optional)
-        footerBlock = if (footerInfo != null && footerInfo.hasContent()) {
-            createFooterPanel(footerInfo).apply {
-                alignmentX = Component.LEFT_ALIGNMENT
-                isVisible = !isCollapsed
-            }
-        } else null
-        footerBlock?.let { stackedPanel.add(it) }
+        // Footer block (disabled for now)
+        footerBlock = null
+        // footerBlock = if (footerInfo != null && footerInfo.hasContent()) {
+        //     createFooterPanel(footerInfo).apply {
+        //         alignmentX = Component.LEFT_ALIGNMENT
+        //         isVisible = !isCollapsed
+        //     }
+        // } else null
+        // footerBlock?.let { stackedPanel.add(it) }
 
         addToCenter(stackedPanel)
     }
