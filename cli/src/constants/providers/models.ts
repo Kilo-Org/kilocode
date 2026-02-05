@@ -77,7 +77,7 @@ export interface ModelInfo {
 	supportsComputerUse?: boolean
 	supportsPromptCache: boolean
 	promptCacheRetention?: "in_memory" | "24h"
-	supportsVerbosity?: boolean
+	supportsVerbosity?: boolean | ("low" | "medium" | "high" | "max")[] // kilocode_change
 	supportsReasoningBudget?: boolean
 	supportsReasoningBinary?: boolean
 	supportsTemperature?: boolean

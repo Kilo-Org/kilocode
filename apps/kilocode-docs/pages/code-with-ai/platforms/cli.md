@@ -62,30 +62,32 @@ Upgrade the Kilo CLI package:
 
 ### CLI commands
 
-| Command               | Description                                                      | Example                        |
-| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| `kilocode`            | Start interactive                                                |                                |
-| `/mode`               | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`           |
-| `/model`              | Learn about available models and switch between them             |                                |
-| `/model list`         | List available models                                            |                                |
-| `/model info`         | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v`    |
-| `/model select`       | Select and switch to a new model                                 |                                |
-| `/checkpoint list`    | List all available checkpoints                                   |                                |
-| `/checkpoint restore` | Revert to a specific checkpoint (destructive action)             | `/checkpoint restore 41db173a` |
-| `/tasks`              | View task history                                                |                                |
-| `/tasks search`       | Search tasks by query                                            | `/tasks search bug fix`        |
-| `/tasks select`       | Switch to a specific task                                        | `/tasks select abc123`         |
-| `/tasks page`         | Go to a specific page                                            | `/tasks page 2`                |
-| `/tasks next`         | Go to next page of task history                                  |                                |
-| `/tasks prev`         | Go to previous page of task history                              |                                |
-| `/tasks sort`         | Change sort order                                                | `/tasks sort most-expensive`   |
-| `/tasks filter`       | Filter tasks                                                     | `/tasks filter favorites`      |
-| `/teams`              | List all organizations you can switch into                       |                                |
-| `/teams select`       | Switch to a different organization                               |                                |
-| `/config`             | Open configuration editor (same as `kilocode config`)            |                                |
-| `/new`                | Start a new task with the agent with a clean slate               |                                |
-| `/help`               | List available commands and how to use them                      |                                |
-| `/exit`               | Exit the CLI                                                     |                                |
+| Command                     | Description                                                      | Example                        |
+| --------------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `kilocode`                  | Start interactive                                                |                                |
+| `/mode`                     | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`           |
+| `/model`                    | Learn about available models and switch between them             |                                |
+| `/model list`               | List available models                                            |                                |
+| `/model info`               | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v`    |
+| `/model select`             | Select and switch to a new model                                 |                                |
+| `/checkpoint list`          | List all available checkpoints                                   |                                |
+| `/checkpoint restore`       | Revert to a specific checkpoint (destructive action)             | `/checkpoint restore 41db173a` |
+| `/tasks`                    | View task history                                                |                                |
+| `/tasks search`             | Search tasks by query                                            | `/tasks search bug fix`        |
+| `/tasks select`             | Switch to a specific task                                        | `/tasks select abc123`         |
+| `/tasks page`               | Go to a specific page                                            | `/tasks page 2`                |
+| `/tasks next`               | Go to next page of task history                                  |                                |
+| `/tasks prev`               | Go to previous page of task history                              |                                |
+| `/tasks sort`               | Change sort order                                                | `/tasks sort most-expensive`   |
+| `/tasks filter`             | Filter tasks                                                     | `/tasks filter favorites`      |
+| `/teams`                    | List all organizations you can switch into                       |                                |
+| `/teams select`             | Switch to a different organization                               |                                |
+| `/config`                   | Open configuration editor (same as `kilocode config`)            |                                |
+| `/new`                      | Start a new task with the agent with a clean slate               |                                |
+| `/local-review`             | Review current branch changes vs base branch                     |                                |
+| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged)                   |                                |
+| `/help`                     | List available commands and how to use them                      |                                |
+| `/exit`                     | Exit the CLI                                                     |                                |
 
 ## Skills
 
@@ -319,6 +321,17 @@ Make sure you've committed or backed up any work you want to keep before restori
 {% /callout %}
 
 **Aliases:** `/cp` can be used as a shorthand for `/checkpoint`
+
+## Local Code Reviews
+
+Review your code locally before pushing — catch issues early without waiting for PR reviews. Local code reviews give you AI-powered feedback on your changes without creating a public pull request.
+
+### Commands
+
+| Command                     | Description                                    |
+| --------------------------- | ---------------------------------------------- |
+| `/local-review`             | Review current branch changes vs base branch   |
+| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
 
 ## Task History
 

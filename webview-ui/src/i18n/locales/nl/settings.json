@@ -627,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "Uitvoerbaarheid",
+			"max": "Max",
 			"high": "Hoog",
 			"medium": "Gemiddeld",
 			"low": "Laag",

@@ -7,6 +7,13 @@ description: "Project-level configuration with agents.md files"
 
 AGENTS.md files provide a standardized way to configure AI agent behavior across different AI coding tools. They allow you to define project-specific instructions, coding standards, and guidelines that AI agents should follow when working with your codebase.
 
+{% callout type="note" title="Memory Bank Deprecation" %}
+The Kilo Code **memory bank** feature has been deprecated in favor of AGENTS.md. If you have existing memory bank content you'd like to migrate:
+
+1. Examine the contents in `.kilocode/rules/memory-bank/`
+2. Move that content into your project's `AGENTS.md` file (or ask Kilo to do it for you)
+{% /callout %}
+
 ## What is AGENTS.md?
 
 AGENTS.md is an open standard for configuring AI agent behavior in software projects. It's a simple Markdown file placed at the root of your project that contains instructions for AI coding assistants. The standard is supported by multiple AI coding tools, including Kilo Code, Cursor, and Windsurf.

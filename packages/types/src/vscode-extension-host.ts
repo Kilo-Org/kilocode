@@ -194,6 +194,7 @@ export interface ExtensionMessage {
 		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
 		| "stt:devices" // kilocode_change: Microphone devices list
 		| "stt:deviceSelected" // kilocode_change: Device selection confirmation
+		| "settingsImported" // kilocode_change
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
