@@ -991,10 +991,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					break
 				// kilocode_change start: Review mode
 				case "askReviewScope":
-					if (message.reviewScopeInfo) {
-						setReviewScopeInfo(message.reviewScopeInfo)
-						setShowReviewScopeSelector(true)
-					}
+					setReviewScopeInfo(message.reviewScopeInfo ?? null)
+					setShowReviewScopeSelector(true)
 					break
 				// kilocode_change end: Review mode
 			}

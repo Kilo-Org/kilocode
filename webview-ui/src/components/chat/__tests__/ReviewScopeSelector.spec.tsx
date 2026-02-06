@@ -249,12 +249,18 @@ describe("ReviewScopeSelector", () => {
 	})
 
 	describe("Null scopeInfo handling", () => {
-		it("handles null scopeInfo gracefully", () => {
+		it("shows loading state when scopeInfo is null", () => {
 			render(<ReviewScopeSelector {...defaultProps} scopeInfo={null} />)
 
 			expect(screen.getByText("Select Review Scope")).toBeInTheDocument()
-			// Should show nothing to review since both are unavailable
-			expect(screen.getByText("No changes found to review")).toBeInTheDocument()
+			expect(screen.getByText("Loading scope information...")).toBeInTheDocument()
+		})
+
+		it("disables start review button when loading", () => {
+			render(<ReviewScopeSelector {...defaultProps} scopeInfo={null} />)
+
+			const startButton = screen.getByText("Start Review")
+			expect(startButton).toBeDisabled()
 		})
 	})
 })

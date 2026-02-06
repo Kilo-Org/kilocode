@@ -73,7 +73,7 @@ export function ReviewScopeSelector({ open, onOpenChange, scopeInfo }: ReviewSco
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-md">
+			<DialogContent className="max-w-md min-h-[420px]">
 				<DialogHeader>
 					<DialogTitle>{t("review:scopeSelector.title", "Select Review Scope")}</DialogTitle>
 					<DialogDescription>
@@ -81,7 +81,14 @@ export function ReviewScopeSelector({ open, onOpenChange, scopeInfo }: ReviewSco
 					</DialogDescription>
 				</DialogHeader>
 
-				{scopeInfo?.error ? (
+				{scopeInfo === null ? (
+					<div className="flex items-center justify-center p-6 gap-2 text-vscode-descriptionForeground">
+						<span className="codicon codicon-loading codicon-modifier-spin" />
+						<span className="text-sm">
+							{t("review:scopeSelector.loading", "Loading scope information...")}
+						</span>
+					</div>
+				) : scopeInfo?.error ? (
 					<div className="flex items-center gap-2 p-3 bg-vscode-inputValidation-errorBackground text-vscode-inputValidation-errorForeground rounded">
 						<AlertCircle className="size-4 shrink-0" />
 						<span className="text-sm">{scopeInfo.error}</span>
@@ -210,7 +217,10 @@ export function ReviewScopeSelector({ open, onOpenChange, scopeInfo }: ReviewSco
 					<Button variant="outline" onClick={handleCancel}>
 						{t("common:cancel", "Cancel")}
 					</Button>
-					<Button variant="primary" onClick={handleStartReview} disabled={!hasAnythingToReview}>
+					<Button
+						variant="primary"
+						onClick={handleStartReview}
+						disabled={scopeInfo === null || !hasAnythingToReview}>
 						{t("review:scopeSelector.startReview", "Start Review")}
 					</Button>
 				</DialogFooter>
