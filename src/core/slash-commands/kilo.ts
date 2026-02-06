@@ -1,6 +1,7 @@
 // kilocode_change whole file
 
 import { ClineRulesToggles } from "../../shared/cline-rules"
+import { SkillMetadata } from "../../shared/skills"
 import fs from "fs/promises"
 import path from "path"
 import {
@@ -27,6 +28,7 @@ export async function parseKiloSlashCommands(
 	text: string,
 	localWorkflowToggles: ClineRulesToggles,
 	globalWorkflowToggles: ClineRulesToggles,
+	skills: SkillMetadata[] = [],
 ): Promise<{ processedText: string; needsRulesFileCheck: boolean }> {
 	const condenseAliases = condenseToolResponse
 
@@ -73,6 +75,22 @@ export async function parseKiloSlashCommands(
 				return { processedText, needsRulesFileCheck: false }
 			} catch (error) {
 				console.error(`Error reading workflow file ${matchingWorkflow.fullPath}: ${error}`)
+			}
+		}
+
+		// Check for matching skill
+		const matchingSkill = skills.find((skill) => skill.name === commandName)
+		if (matchingSkill) {
+			try {
+				const skillContent = (await fs.readFile(matchingSkill.path, "utf8")).trim()
+
+				const processedText =
+					`<explicit_instructions type="${matchingSkill.name}">\n${skillContent}\n</explicit_instructions>\n` +
+					textWithoutSlashCommand
+
+				return { processedText, needsRulesFileCheck: false }
+			} catch (error) {
+				console.error(`Error reading skill file ${matchingSkill.path}: ${error}`)
 			}
 		}
 	}

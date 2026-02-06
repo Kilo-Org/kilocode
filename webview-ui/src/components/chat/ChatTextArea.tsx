@@ -49,7 +49,7 @@ import {
 	shouldShowSlashCommandsMenu,
 	getMatchingSlashCommands,
 	insertSlashCommand,
-	validateSlashCommand,
+	findSlashCommand,
 } from "@/utils/slash-commands"
 // kilocode_change end
 
@@ -159,6 +159,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			togglePinnedApiConfig,
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
+			skills, // kilocode_change
 			taskHistoryVersion, // kilocode_change
 			clineMessages,
 			ghostServiceSettings, // kilocode_change
@@ -691,6 +692,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								customModes,
 								localWorkflows,
 								globalWorkflows,
+								skills,
 							) // kilocode_change
 
 							if (commands.length === 0) {
@@ -710,6 +712,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							customModes,
 							localWorkflows,
 							globalWorkflows,
+							skills,
 						)
 						if (commands.length > 0) {
 							handleSlashCommandsSelect(commands[selectedSlashCommandsIndex])
@@ -886,6 +889,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				showSlashCommandsMenu, // kilocode_change start
 				localWorkflows,
 				globalWorkflows,
+				skills,
 				customModes,
 				handleSlashCommandsSelect,
 				selectedSlashCommandsIndex,
@@ -949,6 +953,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					customModes,
 					localWorkflows,
 					globalWorkflows,
+					skills,
 				)
 				// kilocode_change end
 
@@ -1024,10 +1029,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				// kilocode_change start: workflow toggles dependencies
+				// kilocode_change start: workflow toggles and skills dependencies
 				customModes,
 				localWorkflows,
 				globalWorkflows,
+				skills,
 				// kilocode_change end
 				setInputValue,
 				setSearchRequestId,
@@ -1187,12 +1193,27 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				// extract and validate the exact command text
 				const commandText = processedText.substring(slashIndex + 1, endIndex)
-				const isValidCommand = validateSlashCommand(commandText, customModes)
+				const matchedCommand = findSlashCommand(
+					commandText,
+					customModes,
+					localWorkflows,
+					globalWorkflows,
+					skills,
+				)
 
-				if (isValidCommand) {
+				if (matchedCommand) {
 					const fullCommand = processedText.substring(slashIndex, endIndex) // includes slash
+					const typeClass = matchedCommand.type ? ` slash-command-type-${matchedCommand.type}` : ""
 
-					const highlighted = `<mark class="slash-command-match-textarea-highlight">${fullCommand}</mark>`
+					let highlighted = `<mark class="slash-command-match-textarea-highlight${typeClass}">${fullCommand}</mark>`
+
+					// Show argument hint as ghost text when command has one and user hasn't typed args yet
+					// Skip if FIM autocomplete ghost text is active to avoid overlapping hints
+					const textAfterCommand = processedText.substring(endIndex).trim()
+					if (matchedCommand.argumentHint && !textAfterCommand && !autocompleteText) {
+						highlighted += ` <span class="slash-command-argument-hint">${escapeHtml(matchedCommand.argumentHint)}</span>`
+					}
+
 					processedText =
 						processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
 				}
@@ -1225,7 +1246,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes, autocompleteText, inputValue, isRecording, previewRanges]) // kilocode_change - merged dependencies
+		}, [customModes, localWorkflows, globalWorkflows, skills, autocompleteText, inputValue, isRecording, previewRanges]) // kilocode_change - merged dependencies
 
 		useLayoutEffect(() => {
 			updateHighlights()

@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useEffect } from "react"
-import { SlashCommand, getMatchingSlashCommands } from "@/utils/slash-commands"
+import { SlashCommand, SlashCommandSource, SlashCommandType, getMatchingSlashCommands } from "@/utils/slash-commands"
 import { useExtensionState } from "@/context/ExtensionStateContext" // kilocode_change
 
 interface SlashCommandMenuProps {
@@ -11,6 +11,33 @@ interface SlashCommandMenuProps {
 	customModes?: any[]
 }
 
+const typeBadgeColors: Record<string, { bg: string; text: string }> = {
+	command: { bg: "rgba(58, 150, 221, 0.15)", text: "rgba(58, 150, 221, 0.9)" },
+	mode: { bg: "rgba(160, 100, 230, 0.15)", text: "rgba(160, 100, 230, 0.9)" },
+	workflow: { bg: "rgba(80, 180, 100, 0.15)", text: "rgba(80, 180, 100, 0.9)" },
+	skill: { bg: "rgba(220, 160, 50, 0.15)", text: "rgba(220, 160, 50, 0.9)" },
+}
+
+const defaultBadgeColors = { bg: "rgba(128, 128, 128, 0.15)", text: "var(--vscode-descriptionForeground)" }
+
+function getTypeBadgeColors(type?: SlashCommandType): { bg: string; text: string } {
+	return (type && typeBadgeColors[type]) || defaultBadgeColors
+}
+
+function getSourceLabel(source?: SlashCommandSource): string | null {
+	switch (source) {
+		case "project":
+			return "project"
+		case "global":
+			return "global"
+		case "organization":
+			return "org"
+		case "built-in":
+		default:
+			return null
+	}
+}
+
 const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	onSelect,
 	selectedIndex,
@@ -19,7 +46,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	query,
 	customModes,
 }) => {
-	const { localWorkflows, globalWorkflows } = useExtensionState() // kilocode_change
+	const { localWorkflows, globalWorkflows, skills } = useExtensionState() // kilocode_change
 	const menuRef = useRef<HTMLDivElement>(null)
 
 	const handleClick = useCallback(
@@ -47,7 +74,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	}, [selectedIndex])
 
 	// Filter commands based on query
-	const filteredCommands = getMatchingSlashCommands(query, customModes, localWorkflows, globalWorkflows) // kilocode_change
+	const filteredCommands = getMatchingSlashCommands(query, customModes, localWorkflows, globalWorkflows, skills) // kilocode_change
 
 	return (
 		<div
@@ -69,8 +96,27 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 							} hover:bg-[var(--vscode-list-hoverBackground)]`}
 							onClick={() => handleClick(command)}
 							onMouseEnter={() => setSelectedIndex(index)}>
-							<div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-								/{command.name}
+							<div className="flex items-center justify-between gap-2">
+								<div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+									/{command.name}
+								</div>
+								<div className="flex items-center gap-1 shrink-0">
+									{command.type && (
+										<span
+											className="text-[0.7em] px-1.5 py-0.5 rounded-sm leading-none"
+											style={{
+												backgroundColor: getTypeBadgeColors(command.type).bg,
+												color: getTypeBadgeColors(command.type).text,
+											}}>
+											{command.type}
+										</span>
+									)}
+									{getSourceLabel(command.source) && (
+										<span className="text-[0.65em] text-[var(--vscode-descriptionForeground)] opacity-70 leading-none">
+											{getSourceLabel(command.source)}
+										</span>
+									)}
+								</div>
 							</div>
 							<div className="text-[0.85em] text-[var(--vscode-descriptionForeground)] whitespace-normal overflow-hidden text-ellipsis">
 								{command.description}

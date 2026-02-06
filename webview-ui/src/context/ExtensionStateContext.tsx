@@ -84,6 +84,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	localWorkflows: ClineRulesToggles
 	// kilocode_change start
 	commands: Command[]
+	skills: Array<{ name: string; description: string; path: string; source: "global" | "project"; mode?: string }>
 	organizationAllowList: OrganizationAllowList
 	organizationSettingsVersion: number
 	cloudIsAuthenticated: boolean
@@ -372,6 +373,16 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [filePaths, setFilePaths] = useState<string[]>([])
 	const [openedTabs, setOpenedTabs] = useState<Array<{ label: string; isActive: boolean; path?: string }>>([])
 	const [commands, setCommands] = useState<Command[]>([])
+	const [skills, setSkills] = useState<
+		Array<{
+			name: string
+			description: string
+			path: string
+			source: "global" | "project"
+			mode?: string
+			argumentHint?: string
+		}>
+	>([])
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] }) // kilocode_change
 	const [currentCheckpoint, setCurrentCheckpoint] = useState<string>()
@@ -477,6 +488,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					setCommands(message.commands ?? [])
 					break
 				}
+				case "skillsData": {
+					setSkills(message.skills ?? [])
+					break
+				}
 				case "messageUpdated": {
 					const clineMessage = message.clineMessage!
 					setState((prevState) => {
@@ -576,6 +591,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		localWorkflows,
 		// kilocode_change end
 		commands,
+		skills,
 		soundVolume: state.soundVolume,
 		ttsSpeed: state.ttsSpeed,
 		fuzzyMatchThreshold: state.fuzzyMatchThreshold,

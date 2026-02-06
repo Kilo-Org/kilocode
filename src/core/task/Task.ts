@@ -4047,10 +4047,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							)
 
 							// when parsing slash commands, we still want to allow the user to provide their desired context
+							const currentMode = await this.getTaskMode()
+							const skillsForMode =
+								this.providerRef.deref()?.getSkillsManager()?.getSkillsForMode(currentMode) ?? []
 							const { processedText, needsRulesFileCheck: needsCheck } = await parseKiloSlashCommands(
 								parsedText.text,
 								localWorkflowToggles,
 								globalWorkflowToggles,
+								skillsForMode,
 							)
 
 							if (needsCheck) {

@@ -165,6 +165,10 @@ export class SkillsManager {
 				return
 			}
 
+			// Extract optional argument-hint from frontmatter
+			const argumentHint =
+				typeof frontmatter["argument-hint"] === "string" ? frontmatter["argument-hint"].trim() : undefined
+
 			// Create unique key combining name, source, and mode for override resolution
 			const skillKey = this.getSkillKey(effectiveSkillName, source, mode)
 
@@ -174,6 +178,7 @@ export class SkillsManager {
 				path: skillMdPath,
 				source,
 				mode, // undefined for generic skills, string for mode-specific
+				...(argumentHint && { argumentHint }),
 			})
 		} catch (error) {
 			console.error(`Failed to load skill at ${skillDir}:`, error)
