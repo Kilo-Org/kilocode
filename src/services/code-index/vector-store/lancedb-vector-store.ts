@@ -358,9 +358,22 @@ export class LanceDBVectorStore implements IVectorStore {
 		try {
 			const table = await this.getTable()
 			const workspaceRoot = this.workspacePath
-			const normalizedPaths = filePaths.map((fp) =>
-				path.normalize(path.isAbsolute(fp) ? path.relative(workspaceRoot, fp) : fp),
-			)
+			const normalizedPaths = filePaths.map((fp) => {
+				// We store file paths as provided by the indexer (typically workspace-relative).
+				// When callers pass absolute paths, we *only* convert to workspace-relative when:
+				//  - the workspace root itself is absolute (prevents weird results in tests/mocks)
+				//  - the file is actually inside the workspace
+				// Otherwise, keep the absolute path unchanged.
+				if (path.isAbsolute(fp) && path.isAbsolute(workspaceRoot)) {
+					const relative = path.relative(workspaceRoot, fp)
+					const isInsideWorkspace =
+						relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
+
+					return path.normalize(isInsideWorkspace ? relative : fp)
+				}
+
+				return path.normalize(fp)
+			})
 
 			// Create filter condition for multiple file paths
 			const escapedPaths = normalizedPaths.map((fp) => `'${this.escapeSqlString(fp)}'`).join(", ")
