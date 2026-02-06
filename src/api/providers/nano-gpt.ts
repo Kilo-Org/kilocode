@@ -98,6 +98,19 @@ export class NanoGptHandler extends BaseProvider implements SingleCompletionHand
 				}
 			}
 
+			// Handle native reasoning fields (reasoning_content or reasoning)
+			if (delta) {
+				for (const key of ["reasoning_content", "reasoning"] as const) {
+					if (key in delta) {
+						const reasoning_content = ((delta as any)[key] as string | undefined) || ""
+						if (reasoning_content?.trim()) {
+							yield { type: "reasoning", text: reasoning_content }
+						}
+						break
+					}
+				}
+			}
+
 			// Handle native tool calls
 			if (delta?.tool_calls) {
 				for (const toolCall of delta.tool_calls) {
