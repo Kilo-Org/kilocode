@@ -272,8 +272,11 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		// reasoning model and that reasoning is required to be enabled.
 		// The actual model ID honored by Anthropic's API does not have this
 		// suffix.
+		// The `@vertex` suffix is used to distinguish Vertex AI models but should
+		// be removed before sending to the API.
+		let cleanId = id.replace(/@vertex$/, "").replace(/:thinking$/, "")
 		return {
-			id: id.endsWith(":thinking") ? id.replace(":thinking", "") : id,
+			id: cleanId,
 			info,
 			betas: betas.length > 0 ? betas : undefined,
 			...params,
