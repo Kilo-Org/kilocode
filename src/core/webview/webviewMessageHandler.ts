@@ -956,6 +956,7 @@ export const webviewMessageHandler = async (
 					},
 				},
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
+				{ key: "lmstudio", options: { provider: "lmstudio", baseUrl: apiConfiguration.lmStudioBaseUrl } },
 				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
 				{
 					key: "deepinfra",
@@ -1058,7 +1059,7 @@ export const webviewMessageHandler = async (
 				if (result.status === "fulfilled") {
 					routerModels[routerName] = result.value.models
 
-					// Ollama and LM Studio settings pages still need these events. They are not fetched here.
+					// Ollama and LM Studio settings pages still need these dedicated events (requestOllamaModels, requestLmStudioModels).
 				} else {
 					// Handle rejection: Post a specific error message for this provider.
 					const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
