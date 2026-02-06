@@ -10,7 +10,7 @@ export const moonshotModels = {
 	"kimi-for-coding": {
 		maxTokens: 32_000,
 		contextWindow: 131_072,
-		supportsImages: false,
+		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningBinary: true,
 		supportsAdaptiveThinking: true,
@@ -100,7 +100,7 @@ export const moonshotModels = {
 	"kimi-k2.5": {
 		maxTokens: 16_384,
 		contextWindow: 262_144,
-		supportsImages: false,
+		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningBinary: true,
 		supportsAdaptiveThinking: true,

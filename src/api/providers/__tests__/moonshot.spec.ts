@@ -129,6 +129,17 @@ describe("MoonshotHandler", () => {
 
 			expect(strictModelInfo.supportsNativeTools).toBe(true)
 			expect(strictModelInfo.defaultToolProtocol).toBe("native")
+			expect(model.info.supportsImages).toBe(true)
+		})
+
+		it("should expose image capability for kimi-for-coding", () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-for-coding",
+			})
+			const model = strictHandler.getModel()
+
+			expect(model.info.supportsImages).toBe(true)
 		})
 		// kilocode_change end
 	})
