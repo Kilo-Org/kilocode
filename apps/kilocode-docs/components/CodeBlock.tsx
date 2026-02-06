@@ -5,18 +5,30 @@ import { Codicon } from "./Codicon"
 
 export function CodeBlock({ children, "data-language": language }) {
 	const ref = React.useRef(null)
+	const timeoutRef = React.useRef(null)
 	const [copied, setCopied] = React.useState(false)
 
 	React.useEffect(() => {
 		if (ref.current) Prism.highlightElement(ref.current, false)
 	}, [children])
 
+	React.useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current)
+			}
+		}
+	}, [])
+
 	const handleCopy = async () => {
 		const code = ref.current?.textContent || ""
 		try {
 			await navigator.clipboard.writeText(code)
 			setCopied(true)
-			setTimeout(() => setCopied(false), 2000)
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current)
+			}
+			timeoutRef.current = setTimeout(() => setCopied(false), 2000)
 		} catch (err) {
 			console.error("Failed to copy code:", err)
 		}
@@ -25,6 +37,7 @@ export function CodeBlock({ children, "data-language": language }) {
 	return (
 		<div className="code" aria-live="polite">
 			<button
+				type="button"
 				className="copy-button"
 				onClick={handleCopy}
 				aria-label="Copy code to clipboard"

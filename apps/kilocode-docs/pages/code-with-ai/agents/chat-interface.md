@@ -131,11 +131,3 @@ This feature streamlines the interaction when Kilo Code requires clarification, 
 {% /callout %}
 
 Ready to start coding? Open the chat panel and describe what you want to build!
-
-```
-
-```
-
-```
-
-```
