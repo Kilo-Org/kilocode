@@ -53,7 +53,7 @@
 		"jotai": "^2.15.2",
 		"katex": "^0.16.11",
 		"knuth-shuffle-seeded": "^1.0.6",
-		"lru-cache": "^11.1.0",
+		"lru-cache": "^11.2.5",
 		"lucide-react": "^0.518.0",
 		"mermaid": "^11.4.1",
 		"posthog-js": "^1.227.2",

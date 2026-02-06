@@ -87,7 +87,7 @@
 		"jwt-decode": "^4.0.0",
 		"linguist-languages": "^9.2.0",
 		"lodash.debounce": "^4.0.8",
-		"lru-cache": "^11.2.4",
+		"lru-cache": "^11.2.5",
 		"mammoth": "^1.11.0",
 		"marked": "^15.0.0",
 		"marked-terminal": "^7.3.0",
