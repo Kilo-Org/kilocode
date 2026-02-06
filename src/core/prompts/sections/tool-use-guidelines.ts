@@ -37,6 +37,10 @@ export function getToolUseGuidelinesSection(
 				`${itemNumber++}. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,
 			)
 		}
+
+		guidelinesList.push(
+			`${itemNumber++}. CRITICAL: You must use the API's native tool format. Do NOT simply write text describing the tool use (e.g., "[Tool Use: ...]" or JSON blocks in text). The system will strictly reject any text that mimics a tool call. You must use the proper API structure for function calling.`,
+		)
 	} else {
 		guidelinesList.push(
 			`${itemNumber++}. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,

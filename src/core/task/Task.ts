@@ -3804,6 +3804,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					)
 
 					if (!didToolUse) {
+						// Check for hallucinated tool use pattern
+						const hallucinatedTool = this.assistantMessageContent.find(
+							(block) => block.type === "text" && block.content.trim().match(/^\[Tool Use: .+\]/i),
+						)
+
 						// Increment consecutive no-tool-use counter
 						this.consecutiveNoToolUseCount++
 
@@ -3814,10 +3819,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							this.consecutiveMistakeCount++
 						}
 
+						let responseText = formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml")
+
+						if (hallucinatedTool) {
+							responseText +=
+								"\n\n[ERROR] You are outputting tool calls as text (e.g. '[Tool Use: ...]'). This is invalid. You MUST use the native tool calling capability provided by the API. Do not write the tool use in the text response."
+						}
+
 						// Use the task's locked protocol for consistent behavior
 						this.userMessageContent.push({
 							type: "text",
-							text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml"),
+							text: responseText,
 						})
 					} else {
 						// Reset counter when tools are used successfully
