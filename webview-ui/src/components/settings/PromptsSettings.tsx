@@ -54,6 +54,8 @@ const PromptsSettings = ({
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
 	const [activeSupportOption, setActiveSupportOption] = useState<SupportPromptType>("ENHANCE")
+	// Local state for condensing prompt to prevent flickering during typing
+	const [localCondensingPrompt, setLocalCondensingPrompt] = useState<string | undefined>(undefined)
 
 	useEffect(() => {
 		const handler = (event: MessageEvent) => {
@@ -69,6 +71,13 @@ const PromptsSettings = ({
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
 	}, [])
+
+	// Initialize local condensing prompt when switching to CONDENSE tab
+	useEffect(() => {
+		if (activeSupportOption === "CONDENSE") {
+			setLocalCondensingPrompt(customCondensingPrompt)
+		}
+	}, [activeSupportOption, customCondensingPrompt])
 
 	const updateSupportPrompt = (type: SupportPromptType, value: string | undefined) => {
 		// Don't trim during editing to preserve intentional whitespace
@@ -120,8 +129,9 @@ const PromptsSettings = ({
 
 	const getSupportPromptValue = (type: SupportPromptType): string => {
 		if (type === "CONDENSE") {
-			// Preserve empty string - only fall back to default when value is nullish
-			return customCondensingPrompt ?? supportPrompt.default.CONDENSE
+			// Use local state during editing to prevent flickering
+			// Fall back to extension state, then to default
+			return localCondensingPrompt ?? customCondensingPrompt ?? supportPrompt.default.CONDENSE
 		}
 		return supportPrompt.get(customSupportPrompts, type)
 	}
@@ -186,7 +196,21 @@ const PromptsSettings = ({
 							const value =
 								(e as unknown as CustomEvent)?.detail?.target?.value ??
 								((e as any).target as HTMLTextAreaElement).value
+							// For CONDENSE, update local state immediately to prevent flickering
+							if (activeSupportOption === "CONDENSE") {
+								setLocalCondensingPrompt(value)
+							}
 							updateSupportPrompt(activeSupportOption, value)
+						}}
+						onBlur={(e) => {
+							// For CONDENSE, sync with extension state on blur
+							if (activeSupportOption === "CONDENSE") {
+								const value =
+									(e as unknown as CustomEvent)?.detail?.target?.value ??
+									((e as any).target as HTMLTextAreaElement).value
+								setLocalCondensingPrompt(undefined)
+								updateSupportPrompt(activeSupportOption, value)
+							}
 						}}
 						rows={6}
 						className="w-full"
