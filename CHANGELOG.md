@@ -1,5 +1,15 @@
 # kilo-code
 
+## 5.4.1
+
+### Patch Changes
+
+- [#5695](https://github.com/Kilo-Org/kilocode/pull/5695) [`8097ad6`](https://github.com/Kilo-Org/kilocode/commit/8097ad63b455dca2224f2811af69a0333a43fd79) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for GPT 5.3 codex in OpenAI Codex provider
+
+- [#5584](https://github.com/Kilo-Org/kilocode/pull/5584) [`bd34af4`](https://github.com/Kilo-Org/kilocode/commit/bd34af4170ec3146f1c9c8ca8d8df28502b4b1fa) Thanks [@Neonsy](https://github.com/Neonsy)! - Add a favorited-task checkbox to batch delete in task history.
+
+- [#4770](https://github.com/Kilo-Org/kilocode/pull/4770) [`abaf633`](https://github.com/Kilo-Org/kilocode/commit/abaf6334f22d14496e38151c329887346525f090) Thanks [@JustinReyes28](https://github.com/JustinReyes28)! - feat: Add new "devstral-2512" Mistral model configuration
+
 ## 5.4.0
 
 ### Minor Changes
