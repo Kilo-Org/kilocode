@@ -34,7 +34,7 @@ function filePathToUrlPath(filePath: string, pagesDir: string): string {
 	// Remove .md extension
 	relativePath = relativePath.replace(/\.md$/, "")
 	// Handle index files
-	relativePath = relativePath.replace(/\/index$/, "")
+	relativePath = relativePath.replace(/(^|\/)index$/, "")
 	// Convert to URL path
 	return "/" + relativePath
 }
