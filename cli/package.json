@@ -97,7 +97,7 @@
 		"node-machine-id": "^1.1.12",
 		"ollama": "^0.6.3",
 		"openai": "^6.16.0",
-		"os-name": "^6.1.0",
+		"os-name": "^7.0.0",
 		"p-limit": "^7.2.0",
 		"p-wait-for": "^6.0.0",
 		"package-json": "^10.0.1",
