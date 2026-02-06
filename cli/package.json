@@ -102,7 +102,7 @@
 		"p-wait-for": "^6.0.0",
 		"package-json": "^10.0.1",
 		"pdf-parse": "^2.4.5",
-		"pkce-challenge": "^5.0.1",
+		"pkce-challenge": "^6.0.0",
 		"posthog-node": "^5.20.0",
 		"pretty-bytes": "^7.1.0",
 		"proper-lockfile": "^4.1.2",
