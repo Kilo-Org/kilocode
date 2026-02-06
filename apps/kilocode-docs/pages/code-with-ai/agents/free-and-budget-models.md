@@ -16,6 +16,7 @@ From time to time, Kilo works with AI inference providers to offer free models. 
 - **MiniMax M2.1 (free)** - A capable model from MiniMax with strong general-purpose performance.
 - **Z.AI: GLM 4.7 (free)** - Latest variant of the GLM family, purpose-built for agent-centric applications.
 - **MoonshotAI: Kimi K2.5 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
+- **Pony Alpha (free)** - A free model available through OpenRouter during its evaluation period.
 - **Giga Potato (free)** - A stealth release model that is free in its evaluation period.
 - **Arcee AI: Trinity Large Preview (free)** - A preview model from Arcee AI with strong capabilities.
 
