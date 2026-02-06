@@ -369,6 +369,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	apiConversationHistory: ApiMessage[] = []
 	clineMessages: ClineMessage[] = []
 
+	/**
+	 * cumulative cost of API calls from messages that were deleted during this session.
+	 * this ensures the total cost displayed to the user reflects all API usage,
+	 * even if messages are removed from the conversation history.
+	 */
+	private _deletedApiCost: number = 0
+
 	// Ask
 	private askResponse?: ClineAskResponse
 	private askResponseText?: string
@@ -1320,6 +1327,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				apiConfigName: this._taskApiConfigName, // Use the task's own provider profile, not the current provider profile.
 				initialStatus: this.initialStatus,
 				toolProtocol: this._taskToolProtocol, // Persist the locked tool protocol.
+				cumulativeTotalCost: this.getCumulativeTotalCost(), // include deleted message costs.
 			})
 
 			// Emit token/tool usage updates using debounced function
@@ -4946,7 +4954,31 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public getTokenUsage(): TokenUsage {
-		return getApiMetrics(this.combineMessages(this.clineMessages.slice(1)))
+		const metrics = getApiMetrics(this.combineMessages(this.clineMessages.slice(1)))
+		// add deleted API costs to the total cost
+		return {
+			...metrics,
+			totalCost: metrics.totalCost + this._deletedApiCost,
+		}
+	}
+
+	/**
+	 * get cumulative total cost including deleted messages.
+	 * this is the cost that should be persisted in history.
+	 */
+	public getCumulativeTotalCost(): number {
+		const metrics = getApiMetrics(this.combineMessages(this.clineMessages.slice(1)))
+		return metrics.totalCost + this._deletedApiCost
+	}
+
+	/**
+	 * add cost from deleted messages to the cumulative total.
+	 * called by message deletion handlers to preserve true session cost.
+	 */
+	public addDeletedApiCost(cost: number): void {
+		if (cost > 0) {
+			this._deletedApiCost += cost
+		}
 	}
 
 	public recordToolUsage(toolName: ToolName) {
