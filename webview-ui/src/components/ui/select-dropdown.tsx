@@ -9,6 +9,7 @@ import { useRooPortal } from "./hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
 import { StandardTooltip } from "@/components/ui"
 import { IconProps } from "@radix-ui/react-icons/dist/types" // kilocode_change
+import { HighlightedText } from "./highlighted-text" // kilocode_change
 
 export enum DropdownOptionType {
 	ITEM = "item",
@@ -26,6 +27,7 @@ export interface DropdownOption {
 	disabled?: boolean
 	type?: DropdownOptionType
 	pinned?: boolean
+	matchingPositions?: Set<number> // kilocode_change
 }
 
 export interface SelectDropdownProps {
@@ -134,26 +136,31 @@ export const SelectDropdown = React.memo(
 
 			// Filter options based on search value using memoized Fzf instance
 			const filteredOptions = React.useMemo(() => {
-				// If search is disabled or no search value, return all options without filtering
-				if (disableSearch || !searchValue) return options
+				// Get fuzzy matching items AND their positions
+				const matchingResults = fzfInstance.find(searchValue)
+				const matchMap = new Map(matchingResults.map((r) => [r.item.original.value, r.positions]))
 
-				// Get fuzzy matching items - only perform search if we have a search value
-				const matchingItems = fzfInstance.find(searchValue).map((result) => result.item.original)
-
-				// Always include separators, shortcuts, and labels
-				return options.filter((option) => {
+				// Always include separators, shortcuts, and labels, and matched items
+				return options.reduce((acc, option) => {
 					if (
 						option.type === DropdownOptionType.SEPARATOR ||
 						option.type === DropdownOptionType.SHORTCUT ||
 						option.type === DropdownOptionType.LABEL // kilocode_change: include LABEL in filtered results
 					) {
-						return true
+						acc.push(option)
+						return acc
 					}
 
 					// Include if it's in the matching items
-					return matchingItems.some((item) => item.value === option.value)
-				})
-			}, [options, searchValue, fzfInstance, disableSearch])
+					const positions = matchMap.get(option.value)
+					if (positions) {
+						// Clone option to add matching positions without mutating original
+						acc.push({ ...option, matchingPositions: positions })
+					}
+
+					return acc
+				}, [] as DropdownOption[])
+			}, [options, searchValue, fzfInstance])
 
 			// Group options by type and handle separators and labels
 			// kilocode_change start: improved handling for section labels
@@ -374,7 +381,12 @@ export const SelectDropdown = React.memo(
 																	)}
 																/>
 																<div className="flex-1">
-																	<div>{option.label}</div>
+																	<div className="flex items-center">
+																		<HighlightedText
+																			text={option.label}
+																			matchingPositions={option.matchingPositions}
+																		/>
+																	</div>
 																	{option.description && (
 																		<div className="text-[11px] opacity-50 mt-0.5">
 																			{option.description}

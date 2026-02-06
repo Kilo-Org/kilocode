@@ -15,6 +15,7 @@ interface FzfOptions<T> {
 
 interface FzfResult<T> {
 	item: T
+	positions: Set<number>
 }
 
 // Single source of truth for word boundary characters
@@ -45,9 +46,9 @@ export class Fzf<T> {
 	 * @param query The search string
 	 * @returns Array of results with item and metadata, in original order
 	 */
-	find(query: string): FzfResult<T>[] {
+	public find(query: string): FzfResult<T>[] {
 		if (!query || query.trim() === "") {
-			return this.items.map((item) => ({ item }))
+			return this.items.map((item) => ({ item, positions: new Set() }))
 		}
 
 		const normalizedQuery = query.toLowerCase().trim()
@@ -60,24 +61,34 @@ export class Fzf<T> {
 
 		// If no words after splitting (e.g., query was just punctuation), return all items
 		if (queryWords.length === 0) {
-			return this.items.map((item) => ({ item }))
+			return this.items.map((item) => ({ item, positions: new Set() }))
 		}
 
 		for (const item of this.items) {
 			const text = this.selector(item)
+			const tokens = this.tokenize(text)
 
 			// For multi-word queries, all words must match
 			if (queryWords.length > 1) {
-				const allMatch = queryWords.every((word) => this.matchAcronym(text, word))
+				const allPositions = new Set<number>()
+				const allMatch = queryWords.every((word) => {
+					const positions = this.matchAcronym(tokens, word)
+					if (positions) {
+						positions.forEach((p) => allPositions.add(p))
+						return true
+					}
+					return false
+				})
 
 				if (allMatch) {
-					results.push({ item })
+					results.push({ item, positions: allPositions })
 				}
 			} else {
 				// Single word query - use the filtered word, not the original query
 				// This handles cases like "gpt-" which becomes ["gpt"]
-				if (this.matchAcronym(text, queryWords[0])) {
-					results.push({ item })
+				const positions = this.matchAcronym(tokens, queryWords[0])
+				if (positions) {
+					results.push({ item, positions })
 				}
 			}
 		}
@@ -85,57 +96,74 @@ export class Fzf<T> {
 		return results
 	}
 
+	private tokenize(text: string): { word: string; index: number }[] {
+		const tokens: { word: string; index: number }[] = []
+		let currentIndex = 0
+		const words = text.split(WORD_BOUNDARY_REGEX).filter((w) => w.length > 0)
+
+		for (const word of words) {
+			const index = text.indexOf(word, currentIndex)
+			if (index !== -1) {
+				tokens.push({ word, index })
+				currentIndex = index + word.length
+			}
+		}
+		return tokens
+	}
+
 	/**
-	 * Match query as an acronym against text.
+	 * Match query as an acronym against text tokens.
 	 * For example, "clso" matches "Claude Sonnet" (Cl + So)
 	 * Each character in the query should match the start of a word in the text.
 	 */
-	private matchAcronym(text: string, query: string): boolean {
-		// Split original text to find word boundaries (including camelCase transitions)
-		// Then lowercase the words for case-insensitive matching
-		const words = text
-			.split(WORD_BOUNDARY_REGEX)
-			.filter((w) => w.length > 0)
-			.map((w) => w.toLowerCase())
+	private matchAcronym(tokens: { word: string; index: number }[], query: string): Set<number> | null {
+		// Lowercase the words for case-insensitive matching
+		const lowerWords = tokens.map((t) => t.word.toLowerCase())
 
 		// Recursive helper function to try matching from a given word index
-		const tryMatch = (wordIdx: number, queryIdx: number): boolean => {
+		const tryMatch = (wordIdx: number, queryIdx: number, currentPositions: Set<number>): Set<number> | null => {
 			// Base case: we've consumed the entire query
 			if (queryIdx === query.length) {
-				return true
+				return currentPositions
 			}
 
 			// Base case: no more words to try
-			if (wordIdx >= words.length) {
-				return false
+			if (wordIdx >= lowerWords.length) {
+				return null
 			}
 
-			const word = words[wordIdx]
+			const word = lowerWords[wordIdx]
+			const token = tokens[wordIdx]
 
 			// Try to match as many consecutive characters as possible from this word
 			let matchedInWord = 0
+
+			// Helper to clone set for branching
+			const nextPositions = new Set(currentPositions)
 
 			while (
 				queryIdx + matchedInWord < query.length &&
 				matchedInWord < word.length &&
 				word[matchedInWord] === query[queryIdx + matchedInWord]
 			) {
+				nextPositions.add(token.index + matchedInWord)
 				matchedInWord++
 			}
 
 			// If we matched something, try to continue from the next word
 			if (matchedInWord > 0) {
-				if (tryMatch(wordIdx + 1, queryIdx + matchedInWord)) {
-					return true
+				const result = tryMatch(wordIdx + 1, queryIdx + matchedInWord, nextPositions)
+				if (result) {
+					return result
 				}
 				// If continuing didn't work, fall through to try skipping this word
 			}
 
 			// Try skipping this word and continuing with the next
 			// This allows backtracking when a partial match doesn't lead to a full match
-			return tryMatch(wordIdx + 1, queryIdx)
+			return tryMatch(wordIdx + 1, queryIdx, currentPositions)
 		}
 
-		return tryMatch(0, 0)
+		return tryMatch(0, 0, new Set())
 	}
 }
