@@ -244,7 +244,7 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 				}
 
 				if (content.length > 0) {
-					formattedInput.push({ role: "user", content })
+					formattedInput.push({ type: "message", role: "user", content })
 				}
 
 				if (toolResults.length > 0) {
@@ -272,7 +272,7 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 				}
 
 				if (content.length > 0) {
-					formattedInput.push({ role: "assistant", content })
+					formattedInput.push({ type: "message", role: "assistant", content })
 				}
 
 				if (toolCalls.length > 0) {
@@ -507,6 +507,7 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 				model: model.id,
 				input: [
 					{
+						type: "message",
 						role: "user",
 						content: [{ type: "input_text", text: prompt }],
 					},
