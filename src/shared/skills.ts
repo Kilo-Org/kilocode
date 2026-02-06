@@ -8,6 +8,7 @@ export interface SkillMetadata {
 	path: string // Absolute path to SKILL.md
 	source: "global" | "project" // Where the skill was discovered
 	mode?: string // If set, skill is only available in this mode
+	argumentHint?: string // Optional: usage hint shown after command selection (from frontmatter argument-hint)
 }
 
 /**

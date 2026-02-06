@@ -8,6 +8,34 @@
 	color: transparent;
 }
 
+/* Type-specific slash command highlight colors */
+.slash-command-match-textarea-highlight.slash-command-type-command {
+	background-color: rgba(58, 150, 221, 0.2);
+	box-shadow: 0 0 0 0.5px rgba(58, 150, 221, 0.3);
+}
+
+.slash-command-match-textarea-highlight.slash-command-type-mode {
+	background-color: rgba(160, 100, 230, 0.2);
+	box-shadow: 0 0 0 0.5px rgba(160, 100, 230, 0.3);
+}
+
+.slash-command-match-textarea-highlight.slash-command-type-workflow {
+	background-color: rgba(80, 180, 100, 0.2);
+	box-shadow: 0 0 0 0.5px rgba(80, 180, 100, 0.3);
+}
+
+.slash-command-match-textarea-highlight.slash-command-type-skill {
+	background-color: rgba(220, 160, 50, 0.2);
+	box-shadow: 0 0 0 0.5px rgba(220, 160, 50, 0.3);
+}
+
+/* Argument hint ghost text after slash commands */
+.slash-command-argument-hint {
+	color: var(--vscode-editorGhostText-foreground, var(--vscode-descriptionForeground));
+	opacity: 0.5;
+	pointer-events: none;
+}
+
 /* Custom slow pulse animation for task progress squares */
 @keyframes slow-pulse {
 	0%,

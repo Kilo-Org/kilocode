@@ -6,10 +6,23 @@ import { getBasename } from "./kilocode/path-webview"
 import { Fzf } from "@/lib/word-boundary-fzf" // kilocode_change
 import { ClineRulesToggles } from "@roo/cline-rules"
 
+export type SlashCommandType = "command" | "mode" | "workflow" | "skill"
+export type SlashCommandSource = "built-in" | "project" | "global" | "organization"
+
 export interface SlashCommand {
 	name: string
 	description?: string
 	section?: "default" | "custom"
+	type?: SlashCommandType
+	source?: SlashCommandSource
+	argumentHint?: string
+}
+
+export interface SkillInfo {
+	name: string
+	description: string
+	source: "global" | "project"
+	argumentHint?: string
 }
 
 // Create a function to get all supported slash commands
@@ -17,24 +30,39 @@ export function getSupportedSlashCommands(
 	customModes?: any[],
 	localWorkflowToggles: ClineRulesToggles = {},
 	globalWorkflowToggles: ClineRulesToggles = {},
+	skills: SkillInfo[] = [],
 ): SlashCommand[] {
 	// Start with non-mode commands
 	const baseCommands: SlashCommand[] = [
 		{
 			name: "newtask",
 			description: "Create a new task with context from the current task",
+			type: "command",
+			source: "built-in",
 		},
 		{
 			name: "newrule",
 			description: "Create a new Kilo rule with context from your conversation",
+			type: "command",
+			source: "built-in",
 		},
-		{ name: "reportbug", description: "Create a KiloCode GitHub issue" },
+		{ name: "reportbug", description: "Create a KiloCode GitHub issue", type: "command", source: "built-in" },
 		// kilocode_change start
-		{ name: "init", description: "Initialize Kilo Code for this workspace" },
-		{ name: "smol", description: "Condenses your current context window" },
-		{ name: "condense", description: "Condenses your current context window" },
-		{ name: "compact", description: "Condenses your current context window" },
-		{ name: "session", description: "Session management <fork|share|show>" },
+		{ name: "init", description: "Initialize Kilo Code for this workspace", type: "command", source: "built-in" },
+		{ name: "smol", description: "Condenses your current context window", type: "command", source: "built-in" },
+		{
+			name: "condense",
+			description: "Condenses your current context window",
+			type: "command",
+			source: "built-in",
+		},
+		{ name: "compact", description: "Condenses your current context window", type: "command", source: "built-in" },
+		{
+			name: "session",
+			description: "Session management <fork|share|show>",
+			type: "command",
+			source: "built-in",
+		},
 		// kilocode_change end
 	]
 
@@ -42,11 +70,24 @@ export function getSupportedSlashCommands(
 	const modeCommands = getAllModes(customModes).map((mode) => ({
 		name: mode.slug,
 		description: `Switch to ${mode.name.replace(/^[💻🏗️❓🪲🪃]+ /, "")} mode`,
+		type: "mode" as const,
+		source: (mode.source ?? "built-in") as SlashCommandSource,
 	}))
 
 	// add workflow commands
 	const workflowCommands = getWorkflowCommands(localWorkflowToggles, globalWorkflowToggles)
-	return [...baseCommands, ...modeCommands, ...workflowCommands]
+
+	// add skill commands
+	const skillCommands: SlashCommand[] = skills.map((skill) => ({
+		name: skill.name,
+		description: skill.description,
+		section: "custom" as const,
+		type: "skill" as const,
+		source: skill.source as SlashCommandSource,
+		...(skill.argumentHint && { argumentHint: skill.argumentHint }),
+	}))
+
+	return [...baseCommands, ...modeCommands, ...workflowCommands, ...skillCommands]
 }
 
 // Export a default instance for backward compatibility
@@ -66,6 +107,7 @@ export function shouldShowSlashCommandsMenu(
 	customModes?: any[],
 	localWorkflowToggles: ClineRulesToggles = {},
 	globalWorkflowToggles: ClineRulesToggles = {},
+	skills: SkillInfo[] = [],
 ): boolean {
 	// kilocode_change end
 	const beforeCursor = text.slice(0, cursorPosition)
@@ -93,17 +135,25 @@ export function shouldShowSlashCommandsMenu(
 
 	// kilocode_change start: If there are no matching commands for the current query, don't show the menu.
 	// This prevents an empty menu from capturing Enter/Tab and blocking message submission.
-	const matches = getMatchingSlashCommands(textAfterSlash, customModes, localWorkflowToggles, globalWorkflowToggles)
+	const matches = getMatchingSlashCommands(
+		textAfterSlash,
+		customModes,
+		localWorkflowToggles,
+		globalWorkflowToggles,
+		skills,
+	)
 	return matches.length > 0
 	// kilocode_change end
 }
 
-function enabledWorkflowToggles(workflowToggles: ClineRulesToggles): SlashCommand[] {
+function enabledWorkflowToggles(workflowToggles: ClineRulesToggles, source: "project" | "global"): SlashCommand[] {
 	return Object.entries(workflowToggles)
 		.filter(([_, enabled]) => enabled)
 		.map(([filePath, _]) => ({
 			name: getBasename(filePath),
-			section: "custom",
+			section: "custom" as const,
+			type: "workflow" as const,
+			source,
 		}))
 }
 
@@ -111,7 +161,10 @@ export function getWorkflowCommands(
 	localWorkflowToggles: ClineRulesToggles = {},
 	globalWorkflowToggles: ClineRulesToggles = {},
 ): SlashCommand[] {
-	return [...enabledWorkflowToggles(localWorkflowToggles), ...enabledWorkflowToggles(globalWorkflowToggles)]
+	return [
+		...enabledWorkflowToggles(localWorkflowToggles, "project"),
+		...enabledWorkflowToggles(globalWorkflowToggles, "global"),
+	]
 }
 
 /**
@@ -122,8 +175,9 @@ export function getMatchingSlashCommands(
 	customModes?: any[],
 	localWorkflowToggles: ClineRulesToggles = {},
 	globalWorkflowToggles: ClineRulesToggles = {},
+	skills: SkillInfo[] = [],
 ): SlashCommand[] {
-	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles)
+	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles, skills)
 
 	if (!query) {
 		return [...commands]
@@ -162,12 +216,13 @@ export function validateSlashCommand(
 	customModes?: any[],
 	localWorkflowToggles: ClineRulesToggles = {},
 	globalWorkflowToggles: ClineRulesToggles = {},
+	skills: SkillInfo[] = [],
 ): "full" | "partial" | null {
 	if (!command) {
 		return null
 	}
 
-	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles)
+	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles, skills)
 
 	// Check for exact match (command name equals query, case-insensitive via FZF)
 	const lowerCommand = command.toLowerCase()
@@ -188,3 +243,21 @@ export function validateSlashCommand(
 
 	return null // no match
 }
+
+// kilocode_change start: Find matching slash command to get its type for highlighting
+export function findSlashCommand(
+	command: string,
+	customModes?: any[],
+	localWorkflowToggles: ClineRulesToggles = {},
+	globalWorkflowToggles: ClineRulesToggles = {},
+	skills: SkillInfo[] = [],
+): SlashCommand | null {
+	if (!command) {
+		return null
+	}
+
+	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles, skills)
+	const lowerCommand = command.toLowerCase()
+	return commands.find((cmd) => cmd.name.toLowerCase() === lowerCommand) ?? null
+}
+// kilocode_change end
