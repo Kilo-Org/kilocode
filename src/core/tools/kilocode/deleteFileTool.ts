@@ -7,6 +7,7 @@ import { formatResponse } from "../../prompts/responses"
 import { getReadablePath } from "../../../utils/path"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
+import { FileModificationNotificationService } from "../../../services/file-modification/FileModificationNotificationService"
 
 interface DirectoryStats {
 	totalFiles: number
@@ -235,6 +236,15 @@ export async function deleteFileTool(
 			}
 
 			await fs.unlink(absolutePath)
+
+			// kilocode_change start: Notify file modification service
+			await FileModificationNotificationService.getInstance().notifyFileModified({
+				filePath: relPath,
+				absolutePath: absolutePath,
+				operation: "delete",
+				source: "vscode_api",
+			})
+			// kilocode_change end
 
 			const successMsg = `Deleted file: ${relativePath}`
 			pushToolResult(formatResponse.toolResult(successMsg))
