@@ -159,6 +159,59 @@
 			"action": "Mua Ngay",
 			"viewAll": "Xem tất cả tùy chọn giá"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Đăng ký để chi tiêu AI dự đoán được với tín dụng thưởng tăng dần",
+			"recommended": "Đề xuất",
+			"perMonth": "/tháng",
+			"action": "Đăng ký",
+			"learnMore": "Tìm hiểu thêm về Kilo Pass",
+			"yourSubscription": "Kilo Pass của bạn",
+			"status": {
+				"active": "Đang hoạt động",
+				"canceled": "Đã hủy",
+				"past_due": "Quá hạn",
+				"trialing": "Dùng thử",
+				"paused": "Tạm dừng",
+				"cancelling": "Đang hủy"
+			},
+			"tiers": {
+				"tier_19": "Khởi đầu",
+				"tier_49": "Pro",
+				"tier_199": "Chuyên gia"
+			},
+			"cadence": {
+				"monthly": "Hàng tháng",
+				"yearly": "Hàng năm"
+			},
+			"nextBilling": "Thanh toán tiếp theo: {{date}}",
+			"activeUntil": "Hoạt động đến: {{date}}",
+			"streak": "{{count}} tháng liên tiếp",
+			"streakPlural": "{{count}} tháng liên tiếp",
+			"bonusCredits": "+${{amount}} thưởng {{date}}",
+			"manage": "Quản lý đăng ký",
+			"boost": {
+				"mode": "Chế độ Boost",
+				"unlocked": "Đã mở khóa Boost!",
+				"unlockProgress": "${{amount}} để mở khóa Boost",
+				"monthlyUsage": "Sử dụng hàng tháng",
+				"nextBoost": "Boost tiếp theo",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Sử dụng <amount>${{amount}}</amount> để mở khóa Boost"
+			},
+			"refills": "Nạp lại trong {{days}} ngày",
+			"passActiveUntil": "Pass hoạt động đến",
+			"creditsNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng boost chưa sử dụng hết hạn khi nạp lại.",
+			"promo": "Mở khóa <boost>Chế độ Boost</boost> để nhận tới 50% tín dụng miễn phí.",
+			"plans": {
+				"monthly": "Hàng tháng",
+				"perMonth": "/tháng",
+				"includesCredits": "Bao gồm <highlight>${{price}}/tháng</highlight> tín dụng Pass",
+				"upToBoost": "Tới <highlight>{{percent}}%</highlight> tín dụng Boost",
+				"firstMonthBoost": "Tháng đầu: <highlight>+{{percent}}%</highlight> tín dụng Boost"
+			},
+			"subscriptionNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng Boost được mở khóa sau khi tiêu thụ một tháng tín dụng Pass và hết hạn vào cuối mỗi chu kỳ hàng tháng."
+		},
 		"detailedUsage": "Sử dụng chi tiết",
 		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"
 	},

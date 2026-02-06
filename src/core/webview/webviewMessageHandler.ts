@@ -2929,6 +2929,48 @@ export const webviewMessageHandler = async (
 				})
 			}
 			break
+		// kilocode_change start: Fetch Kilo Pass subscription state
+		case "fetchKiloPassStateRequest":
+			try {
+				const { apiConfiguration } = await provider.getState()
+				const kilocodeToken = apiConfiguration?.kilocodeToken
+
+				if (!kilocodeToken) {
+					provider.postMessageToWebview({
+						type: "kiloPassStateResponse",
+						payload: { success: true, data: { subscription: null } },
+					})
+					break
+				}
+
+				const headers: Record<string, string> = {
+					Authorization: `Bearer ${kilocodeToken}`,
+					"Content-Type": "application/json",
+				}
+				const url = getKiloUrlFromToken("https://api.kilo.ai/api/trpc/kiloPass.getState", kilocodeToken)
+				const response = await axios.get(url, { headers })
+
+				const subscriptionData =
+					response.data?.result?.data?.json ?? response.data?.result?.data ?? response.data
+
+				provider.postMessageToWebview({
+					type: "kiloPassStateResponse",
+					payload: { success: true, data: subscriptionData },
+				})
+			} catch (error: any) {
+				const errorMessage =
+					error.response?.data?.error?.message ||
+					error.response?.data?.message ||
+					error.message ||
+					"Failed to fetch Kilo Pass state from backend."
+				provider.log(`Error fetching Kilo Pass state: ${errorMessage}`)
+				provider.postMessageToWebview({
+					type: "kiloPassStateResponse",
+					payload: { success: false, error: errorMessage },
+				})
+			}
+			break
+		// kilocode_change end
 		case "shopBuyCredits": // New handler
 			try {
 				const { apiConfiguration } = await provider.getState()

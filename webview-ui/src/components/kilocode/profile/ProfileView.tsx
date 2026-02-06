@@ -1,7 +1,10 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useMemo } from "react"
+import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import {
 	BalanceDataResponsePayload,
+	KiloPassStateResponsePayload,
+	KiloPassSubscriptionState,
 	ProfileData,
 	ProfileDataResponsePayload,
 	WebviewMessage,
@@ -25,15 +28,25 @@ interface ProfileViewProps {
 const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 	const { apiConfiguration, currentApiConfigName, uriScheme, uiKind } = useExtensionState()
 	const { t } = useAppTranslation()
+
+	// Detect VS Code light theme (VS Code uses vscode-light/vscode-dark classes on body)
+	const isLightTheme = useMemo(() => {
+		if (typeof document === "undefined") return false
+		const cls = document.body.className
+		return /\bvscode-light\b|\bvscode-high-contrast-light\b/i.test(cls)
+	}, [])
 	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
 	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
 	const [isLoadingUser, setIsLoadingUser] = React.useState(true)
+	const [kiloPassState, setKiloPassState] = React.useState<KiloPassSubscriptionState | null>(null)
+	const [isLoadingKiloPass, setIsLoadingKiloPass] = React.useState(true)
 	const organizationId = apiConfiguration?.kilocodeOrganizationId
 
 	useEffect(() => {
 		vscode.postMessage({ type: "fetchProfileDataRequest" })
 		vscode.postMessage({ type: "fetchBalanceDataRequest" })
+		vscode.postMessage({ type: "fetchKiloPassStateRequest" })
 	}, [apiConfiguration?.kilocodeToken, organizationId])
 
 	useEffect(() => {
@@ -58,12 +71,24 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 					setBalance(null)
 				}
 				setIsLoadingBalance(false)
+			} else if (message.type === "kiloPassStateResponse") {
+				const payload = message.payload as KiloPassStateResponsePayload
+				if (payload.success) {
+					setKiloPassState(payload.data?.subscription || null)
+				} else {
+					console.error("Error fetching Kilo Pass state:", payload.error)
+					setKiloPassState(null)
+				}
+				setIsLoadingKiloPass(false)
 			} else if (message.type === "updateProfileData") {
 				vscode.postMessage({
 					type: "fetchProfileDataRequest",
 				})
 				vscode.postMessage({
 					type: "fetchBalanceDataRequest",
+				})
+				vscode.postMessage({
+					type: "fetchKiloPassStateRequest",
 				})
 			}
 		}
@@ -89,6 +114,27 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 		})
 	}
 
+	const subscriptionPlans = [
+		{
+			name: "Starter",
+			price: 19,
+			boostBonus: 9.5,
+			recommended: false,
+		},
+		{
+			name: "Pro",
+			price: 49,
+			boostBonus: 24.5,
+			recommended: true,
+		},
+		{
+			name: "Expert",
+			price: 199,
+			boostBonus: 99.5,
+			recommended: false,
+		},
+	]
+
 	const creditPackages = [
 		{
 			credits: 20,
@@ -107,6 +153,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 			popular: false,
 		},
 	]
+
+	const handleGetKiloPass = () => {
+		vscode.postMessage({
+			type: "openExternal",
+			url: getAppUrl("/profile"),
+		})
+	}
 
 	const handleBuyCredits = (credits: number) => () => {
 		vscode.postMessage({
@@ -236,9 +289,519 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 										)}
 									</div>
 
-									{/* Buy Credits Section - Only show for personal accounts */}
+									{/* Kilo Pass & Credits Section - Only show for personal accounts */}
 									{!organizationId && (
 										<div className="w-full mt-8">
+											{/* Kilo Pass Section */}
+											{isLoadingKiloPass ? (
+												<div className="text-center text-[var(--vscode-descriptionForeground)] mb-6">
+													{t("kilocode:profile.loading")}
+												</div>
+											) : kiloPassState ? (
+												/* Show current subscription info - matching backend design */
+												<div className="mb-6">
+													{/* Main subscription card */}
+													<div className="border rounded-xl p-4 bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]">
+														{/* Header with icon, tier info, status badge, and settings */}
+														<div className="flex items-start justify-between mb-4">
+															<div className="flex items-center gap-3">
+																<div
+																	className={`size-9 rounded-lg flex items-center justify-center ${
+																		isLightTheme
+																			? "bg-gradient-to-br from-amber-400/30 to-amber-200/10 ring-1 ring-amber-500/25"
+																			: "bg-gradient-to-br from-amber-500/30 to-amber-300/10 ring-1 ring-amber-400/25"
+																	}`}>
+																	<span
+																		className={`codicon codicon-credit-card ${isLightTheme ? "text-amber-600" : "text-amber-300"}`}></span>
+																</div>
+																<div className="leading-none">
+																	<div className="font-semibold text-[var(--vscode-foreground)]">
+																		{t("kilocode:profile.kiloPass.title")}
+																	</div>
+																	<div className="text-sm text-[var(--vscode-descriptionForeground)] mt-0.5">
+																		{t(
+																			`kilocode:profile.kiloPass.tiers.${kiloPassState.tier}`,
+																		)}{" "}
+																		•{" "}
+																		{t(
+																			`kilocode:profile.kiloPass.cadence.${kiloPassState.cadence}`,
+																		)}
+																	</div>
+																</div>
+															</div>
+															<div className="flex items-center gap-2">
+																<span
+																	className={`text-xs px-3 py-1 rounded font-medium border ${
+																		kiloPassState.cancelAtPeriodEnd
+																			? isLightTheme
+																				? "border-amber-500 text-amber-600"
+																				: "border-amber-600/50 text-amber-400"
+																			: kiloPassState.status === "active"
+																				? isLightTheme
+																					? "border-gray-400 text-gray-700"
+																					: "border-[var(--vscode-widget-border)] text-[var(--vscode-foreground)]"
+																				: isLightTheme
+																					? "border-amber-500 text-amber-600"
+																					: "border-amber-600/50 text-amber-400"
+																	}`}>
+																	{kiloPassState.cancelAtPeriodEnd
+																		? t(
+																				"kilocode:profile.kiloPass.status.cancelling",
+																			)
+																		: t(
+																				`kilocode:profile.kiloPass.status.${kiloPassState.status}`,
+																			)}
+																</span>
+																<button
+																	onClick={() => {
+																		vscode.postMessage({
+																			type: "openExternal",
+																			url: getAppUrl("/profile"),
+																		})
+																	}}
+																	className={`size-9 rounded border flex items-center justify-center hover:bg-[var(--vscode-toolbar-hoverBackground)] ${
+																		isLightTheme
+																			? "border-gray-300"
+																			: "border-[var(--vscode-widget-border)]"
+																	}`}>
+																	<span className="codicon codicon-settings-gear text-[var(--vscode-descriptionForeground)]"></span>
+																</button>
+															</div>
+														</div>
+
+														{/* Usage Progress Section */}
+														{(() => {
+															const baseUsd = kiloPassState.currentPeriodBaseCreditsUsd
+															const usageUsd = kiloPassState.currentPeriodUsageUsd
+															const bonusUsd =
+																kiloPassState.currentPeriodBonusCreditsUsd ?? 0
+															const totalAvailable = baseUsd + bonusUsd
+															const nonNegativeUsage = Math.max(0, usageUsd)
+
+															// Calculate percentages for the progress bar
+															const pctOfBaseInTotal =
+																totalAvailable > 0
+																	? (baseUsd / totalAvailable) * 100
+																	: 0
+															const usagePctOfTotal =
+																totalAvailable > 0
+																	? Math.min(
+																			(nonNegativeUsage / totalAvailable) * 100,
+																			100,
+																		)
+																	: 0
+															const paidFillPct = Math.min(
+																usagePctOfTotal,
+																pctOfBaseInTotal,
+															)
+															const bonusFillPct = Math.max(
+																0,
+																usagePctOfTotal - pctOfBaseInTotal,
+															)
+
+															// Determine status color
+															const isOverAvailable = usageUsd > totalAvailable
+															const statusColorClass = isOverAvailable
+																? "text-red-400"
+																: kiloPassState.isBonusUnlocked
+																	? isLightTheme
+																		? "text-emerald-600"
+																		: "text-emerald-300"
+																	: isLightTheme
+																		? "text-amber-600"
+																		: "text-amber-300"
+
+															return (
+																<div
+																	className={`rounded-lg border p-3 mb-3 ${
+																		isLightTheme
+																			? "bg-gray-50/50 border-gray-200"
+																			: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
+																	}`}>
+																	{/* Header: This month's usage + amount */}
+																	<div className="flex items-center justify-between mb-2 text-sm">
+																		<span className="text-[var(--vscode-descriptionForeground)]">
+																			{t(
+																				"kilocode:profile.kiloPass.boost.monthlyUsage",
+																			)}
+																		</span>
+																		<span
+																			className={`font-mono font-semibold ${statusColorClass}`}>
+																			${nonNegativeUsage.toFixed(2)} / $
+																			{totalAvailable.toFixed(2)}
+																		</span>
+																	</div>
+
+																	{/* Two-tone progress bar */}
+																	<div className="space-y-2">
+																		<div
+																			className={`relative h-3 rounded-full overflow-visible ${
+																				isLightTheme
+																					? "bg-gray-200/50"
+																					: "bg-[var(--vscode-widget-border)]/30"
+																			}`}>
+																			{/* Background segments showing paid vs bonus sections */}
+																			<div
+																				className="absolute inset-y-0 left-0 opacity-30"
+																				style={{
+																					width: `${pctOfBaseInTotal}%`,
+																					background: isLightTheme
+																						? "rgba(245,158,11,0.3)"
+																						: "rgba(245,158,11,0.20)",
+																				}}
+																			/>
+																			<div
+																				className="absolute inset-y-0 opacity-30"
+																				style={{
+																					left: `${pctOfBaseInTotal}%`,
+																					width: `${100 - pctOfBaseInTotal}%`,
+																					background: isLightTheme
+																						? "rgba(16,185,129,0.3)"
+																						: "rgba(16,185,129,0.20)",
+																				}}
+																			/>
+
+																			{/* Filled paid portion */}
+																			<div
+																				className={`absolute inset-y-0 left-0 rounded-l-full transition-all duration-300 ${
+																					isLightTheme
+																						? "bg-gradient-to-r from-amber-500 to-amber-400"
+																						: "bg-gradient-to-r from-amber-500 to-amber-300"
+																				}`}
+																				style={{ width: `${paidFillPct}%` }}
+																			/>
+
+																			{/* Filled bonus portion */}
+																			{bonusFillPct > 0 && (
+																				<div
+																					className={`absolute inset-y-0 rounded-r-full transition-all duration-300 ${
+																						isLightTheme
+																							? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+																							: "bg-gradient-to-r from-emerald-500 to-emerald-300"
+																					}`}
+																					style={{
+																						left: `${pctOfBaseInTotal}%`,
+																						width: `${bonusFillPct}%`,
+																					}}
+																				/>
+																			)}
+
+																			{/* Divider tick mark */}
+																			<div
+																				className={`absolute top-full mt-0.5 h-1.5 w-0.5 rounded ${
+																					isLightTheme
+																						? "bg-gray-400"
+																						: "bg-white/40"
+																				}`}
+																				style={{
+																					left: `calc(${pctOfBaseInTotal}% - 1px)`,
+																				}}
+																			/>
+																		</div>
+
+																		{/* Labels below bar */}
+																		<div className="relative h-4">
+																			<span
+																				className={`absolute -translate-x-1/2 font-mono text-xs font-semibold ${
+																					isLightTheme
+																						? "text-amber-600"
+																						: "text-amber-300"
+																				}`}
+																				style={{
+																					left: `${pctOfBaseInTotal}%`,
+																				}}>
+																				${baseUsd.toFixed(2)}
+																			</span>
+																			<span
+																				className={`absolute right-0 font-mono text-xs font-semibold ${
+																					isLightTheme
+																						? "text-emerald-600"
+																						: "text-emerald-300"
+																				}`}>
+																				${bonusUsd.toFixed(2)}
+																			</span>
+																		</div>
+
+																		{/* Legend */}
+																		<div className="flex items-center justify-between text-xs text-[var(--vscode-descriptionForeground)]">
+																			<div className="flex items-center gap-2">
+																				<span
+																					className={`h-2 w-2 rounded-sm ${
+																						isLightTheme
+																							? "bg-amber-500"
+																							: "bg-amber-400/80"
+																					}`}
+																				/>
+																				{t(
+																					"kilocode:profile.kiloPass.legend.paid",
+																				)}
+																			</div>
+																			<div className="flex items-center gap-2">
+																				<span
+																					className={`h-2 w-2 rounded-sm ${
+																						isLightTheme
+																							? "bg-emerald-500"
+																							: "bg-emerald-400/80"
+																					}`}
+																				/>
+																				{t(
+																					"kilocode:profile.kiloPass.legend.freeBonus",
+																				)}
+																			</div>
+																		</div>
+																	</div>
+																</div>
+															)
+														})()}
+
+														{/* Renewal / Active Until Row */}
+														{(kiloPassState.refillAt || kiloPassState.nextBillingAt) && (
+															<div
+																className={`rounded-lg border px-3 py-2 mb-3 ${
+																	isLightTheme
+																		? "bg-gray-50/50 border-gray-200"
+																		: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
+																}`}>
+																<div className="flex items-center justify-between text-sm">
+																	<div className="flex items-start gap-2">
+																		<span
+																			className={`codicon codicon-calendar mt-0.5 ${
+																				isLightTheme
+																					? "text-gray-400"
+																					: "text-white/40"
+																			}`}></span>
+																		<div className="text-[var(--vscode-descriptionForeground)]">
+																			{kiloPassState.cancelAtPeriodEnd ? (
+																				t(
+																					"kilocode:profile.kiloPass.activeUntilLabel",
+																				)
+																			) : (
+																				<>
+																					{(() => {
+																						const refillDate = new Date(
+																							kiloPassState.refillAt ||
+																								kiloPassState.nextBillingAt!,
+																						)
+																						const now = new Date()
+																						const diffDays = Math.ceil(
+																							(refillDate.getTime() -
+																								now.getTime()) /
+																								(1000 * 60 * 60 * 24),
+																						)
+																						const baseUsd =
+																							kiloPassState.currentPeriodBaseCreditsUsd
+																						const bonusUsd =
+																							kiloPassState.currentPeriodBonusCreditsUsd ??
+																							0
+
+																						return (
+																							<Trans
+																								i18nKey="kilocode:profile.kiloPass.renewsWithCredits"
+																								values={{
+																									days: diffDays,
+																									paid: baseUsd.toFixed(
+																										2,
+																									),
+																									bonus: bonusUsd.toFixed(
+																										2,
+																									),
+																								}}
+																								components={{
+																									paid: (
+																										<span
+																											className={
+																												isLightTheme
+																													? "font-mono font-semibold text-amber-600"
+																													: "font-mono font-semibold text-amber-300"
+																											}
+																										/>
+																									),
+																									bonus: (
+																										<span
+																											className={
+																												isLightTheme
+																													? "font-mono font-semibold text-emerald-600"
+																													: "font-mono font-semibold text-emerald-300"
+																											}
+																										/>
+																									),
+																								}}
+																							/>
+																						)
+																					})()}
+																				</>
+																			)}
+																		</div>
+																	</div>
+																	<span className="text-[var(--vscode-descriptionForeground)]">
+																		{new Date(
+																			kiloPassState.refillAt ||
+																				kiloPassState.nextBillingAt!,
+																		).toLocaleDateString("en-US", {
+																			month: "short",
+																			day: "numeric",
+																			year: "numeric",
+																		})}
+																	</span>
+																</div>
+															</div>
+														)}
+
+														{/* Bottom clarification text */}
+														<div className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
+															<Trans
+																i18nKey="kilocode:profile.kiloPass.creditsExplanation"
+																values={{
+																	expiryDate: kiloPassState.refillAt
+																		? new Date(
+																				kiloPassState.refillAt,
+																			).toLocaleDateString("en-US", {
+																				month: "short",
+																				day: "numeric",
+																				year: "numeric",
+																			})
+																		: "",
+																}}
+															/>
+														</div>
+													</div>
+												</div>
+											) : (
+												/* Show subscription options */
+												<>
+													<div className="text-xl font-semibold text-[var(--vscode-foreground)] mb-1 text-center">
+														{t("kilocode:profile.kiloPass.title")}
+													</div>
+													<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-4 text-center">
+														<Trans
+															i18nKey="kilocode:profile.kiloPass.promo"
+															components={{
+																boost: (
+																	<span
+																		className={
+																			isLightTheme
+																				? "text-teal-600 font-medium"
+																				: "text-emerald-400 font-medium"
+																		}
+																	/>
+																),
+															}}
+														/>
+													</div>
+
+													<div className="grid grid-cols-1 min-[300px]:grid-cols-3 gap-3 mb-4">
+														{subscriptionPlans.map((plan) => (
+															<div
+																key={plan.name}
+																className={`relative border rounded-lg p-3 bg-[var(--vscode-editor-background)] transition-all hover:shadow-md ${
+																	plan.recommended
+																		? "border-[var(--vscode-button-background)] ring-1 ring-[var(--vscode-button-background)]"
+																		: "border-[var(--vscode-input-border)]"
+																}`}>
+																{plan.recommended && (
+																	<div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+																		<span className="bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] text-xs px-2 py-0.5 rounded-full font-medium">
+																			{t("kilocode:profile.kiloPass.recommended")}
+																		</span>
+																	</div>
+																)}
+
+																{/* Header: Plan name + Monthly */}
+																<div className="flex justify-between items-center mb-2">
+																	<span className="font-semibold text-[var(--vscode-foreground)]">
+																		{plan.name}
+																	</span>
+																	<span className="text-xs text-[var(--vscode-descriptionForeground)]">
+																		{t("kilocode:profile.kiloPass.plans.monthly")}
+																	</span>
+																</div>
+
+																{/* Price */}
+																<div className="text-2xl font-bold text-[var(--vscode-foreground)] mb-3">
+																	${plan.price}
+																	<span className="text-sm font-normal text-[var(--vscode-descriptionForeground)]">
+																		{t("kilocode:profile.kiloPass.plans.perMonth")}
+																	</span>
+																</div>
+
+																{/* Details */}
+																<div className="space-y-1 text-xs mb-3">
+																	<div className="text-[var(--vscode-descriptionForeground)]">
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.includesCredits"
+																			values={{ price: plan.price }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-orange-600 font-medium"
+																								: "text-yellow-500 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
+																	</div>
+																	<div className="text-[var(--vscode-descriptionForeground)]">
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.upToBoost"
+																			values={{ percent: 40 }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-teal-600 font-medium"
+																								: "text-emerald-400 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
+																	</div>
+																	<div className="text-[var(--vscode-descriptionForeground)]">
+																		<Trans
+																			i18nKey="kilocode:profile.kiloPass.plans.firstMonthBoost"
+																			values={{ percent: 50 }}
+																			components={{
+																				highlight: (
+																					<span
+																						className={
+																							isLightTheme
+																								? "text-teal-600 font-medium"
+																								: "text-emerald-400 font-medium"
+																						}
+																					/>
+																				),
+																			}}
+																		/>
+																	</div>
+																</div>
+
+																{/* Button */}
+																<VSCodeButton
+																	appearance={
+																		plan.recommended ? "primary" : "secondary"
+																	}
+																	className="w-full"
+																	onClick={handleGetKiloPass}>
+																	{t("kilocode:profile.kiloPass.action")}
+																</VSCodeButton>
+															</div>
+														))}
+													</div>
+
+													{/* Footer info */}
+													<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
+														{t("kilocode:profile.kiloPass.subscriptionNote")}
+													</div>
+												</>
+											)}
+
+											<VSCodeDivider className="w-full my-6" />
+
+											{/* Buy Credits Section */}
 											<div className="text-lg font-semibold text-[var(--vscode-foreground)] mb-4 text-center">
 												{t("kilocode:profile.shop.title")}
 											</div>
