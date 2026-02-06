@@ -98,17 +98,19 @@ export const ModelPicker = ({
 
 	const [searchValue, setSearchValue] = useState("")
 
-	// kilocode_change: Case-insensitive search
+	// kilocode_change: Case-insensitive search with dash/space normalization
+	const normalizeForSearch = (str: string) => str.toLowerCase().replace(/[-_\s]/g, "")
+
 	const filteredPreferredIds = useMemo(() => {
 		if (!searchValue.trim()) return preferredModelIds
-		const searchLower = searchValue.toLowerCase()
-		return preferredModelIds.filter((id) => id.toLowerCase().includes(searchLower))
+		const searchNormalized = normalizeForSearch(searchValue)
+		return preferredModelIds.filter((id) => normalizeForSearch(id).includes(searchNormalized))
 	}, [preferredModelIds, searchValue])
 
 	const filteredRestIds = useMemo(() => {
 		if (!searchValue.trim()) return restModelIds
-		const searchLower = searchValue.toLowerCase()
-		return restModelIds.filter((id) => id.toLowerCase().includes(searchLower))
+		const searchNormalized = normalizeForSearch(searchValue)
+		return restModelIds.filter((id) => normalizeForSearch(id).includes(searchNormalized))
 	}, [restModelIds, searchValue])
 
 	const onSelect = useCallback(
