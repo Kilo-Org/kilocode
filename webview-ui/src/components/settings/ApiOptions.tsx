@@ -47,6 +47,7 @@ import {
 	deepInfraDefaultModelId,
 	minimaxDefaultModelId,
 	nanoGptDefaultModelId, //kilocode_change
+	poeDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -119,6 +120,7 @@ import {
 	VercelAiGateway,
 	DeepInfra,
 	MiniMax,
+	Poe,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -292,6 +294,7 @@ const ApiOptions = ({
 				selectedProvider === "deepinfra" ||
 				selectedProvider === "chutes" || // kilocode_change
 				selectedProvider === "synthetic" || // kilocode_change
+				selectedProvider === "poe" ||
 				selectedProvider === "roo"
 			) {
 				vscode.postMessage({ type: "requestRouterModels" })
@@ -456,6 +459,7 @@ const ApiOptions = ({
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
 				inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId },
+				poe: { field: "poeModelId", default: poeDefaultModelId },
 				// kilocode_change end
 			}
 
@@ -662,6 +666,17 @@ const ApiOptions = ({
 				/>
 			)}
 			{/* kilocode_change end */}
+
+			{selectedProvider === "poe" && (
+				<Poe
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
 
 			{selectedProvider === "anthropic" && (
 				<Anthropic

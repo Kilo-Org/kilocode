@@ -404,6 +404,13 @@ function getSelectedModel({
 			const info = routerModels.deepinfra?.[id]
 			return { id, info }
 		}
+		// kilocode_change start
+		case "poe": {
+			const id = getValidatedModelId(apiConfiguration.poeModelId, routerModels.poe, defaultModelId)
+			const info = routerModels.poe?.[id]
+			return { id, info }
+		}
+		// kilocode_change end
 		case "vscode-lm": {
 			const id = apiConfiguration?.vsCodeLmModelSelector
 				? `${apiConfiguration.vsCodeLmModelSelector.vendor}/${apiConfiguration.vsCodeLmModelSelector.family}`

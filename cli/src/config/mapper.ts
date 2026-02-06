@@ -130,6 +130,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 			return provider.ioIntelligenceModelId || ""
 		case "ovhcloud":
 			return provider.ovhCloudAiEndpointsModelId || ""
+		case "poe":
+			return provider.poeModelId || ""
 		case "inception":
 			return provider.inceptionLabsModelId || ""
 		case "bedrock":
