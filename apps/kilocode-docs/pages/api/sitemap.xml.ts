@@ -36,7 +36,7 @@ function filePathToUrlPath(filePath: string, pagesDir: string): string {
 	// Handle index files
 	relativePath = relativePath.replace(/(^|\/)index$/, "")
 	// Convert to URL path
-	return "/" + relativePath
+	return "/" + relativePath.split(path.sep).join("/")
 }
 
 /**
