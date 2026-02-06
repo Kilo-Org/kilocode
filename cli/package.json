@@ -82,7 +82,7 @@
 		"is-wsl": "^3.1.0",
 		"isbinaryfile": "^6.0.0",
 		"jotai": "^2.16.1",
-		"jsdom": "^27.4.0",
+		"jsdom": "^28.0.0",
 		"json5": "^2.2.3",
 		"jwt-decode": "^4.0.0",
 		"linguist-languages": "^9.2.0",
