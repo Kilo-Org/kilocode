@@ -111,6 +111,42 @@ describe("ThinkingBudget", () => {
 		expect(screen.queryByTestId("reasoning-effort")).not.toBeInTheDocument()
 	})
 
+	// kilocode_change start
+	it("should default binary reasoning toggle to enabled when setting is unset", () => {
+		render(
+			<ThinkingBudget
+				{...defaultProps}
+				apiConfiguration={{}}
+				modelInfo={{
+					...mockModelInfo,
+					supportsReasoningBinary: true,
+					supportsReasoningBudget: false,
+					supportsReasoningEffort: false,
+				}}
+			/>,
+		)
+
+		expect(screen.getByRole("checkbox")).toBeChecked()
+	})
+
+	it("should keep binary reasoning toggle disabled when explicitly set to false", () => {
+		render(
+			<ThinkingBudget
+				{...defaultProps}
+				apiConfiguration={{ enableReasoningEffort: false }}
+				modelInfo={{
+					...mockModelInfo,
+					supportsReasoningBinary: true,
+					supportsReasoningBudget: false,
+					supportsReasoningEffort: false,
+				}}
+			/>,
+		)
+
+		expect(screen.getByRole("checkbox")).not.toBeChecked()
+	})
+	// kilocode_change end
+
 	it("should render sliders when model supports thinking", () => {
 		render(<ThinkingBudget {...defaultProps} />)
 

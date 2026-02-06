@@ -7,6 +7,10 @@ import { getModelParams } from "../transform/model-params"
 
 import { OpenAICompatibleHandler, OpenAICompatibleConfig } from "./openai-compatible"
 
+// kilocode_change start
+const STRICT_KIMI_MODELS = new Set(["kimi-k2.5", "kimi-for-coding"])
+// kilocode_change end
+
 export class MoonshotHandler extends OpenAICompatibleHandler {
 	constructor(options: ApiHandlerOptions) {
 		const modelId = options.apiModelId ?? moonshotDefaultModelId
@@ -67,4 +71,50 @@ export class MoonshotHandler extends OpenAICompatibleHandler {
 		// Moonshot always requires max_tokens
 		return this.options.modelMaxTokens || modelInfo.maxTokens || undefined
 	}
+
+	// kilocode_change start
+	private isStrictKimiModel(modelId: string): boolean {
+		return STRICT_KIMI_MODELS.has(modelId)
+	}
+
+	private isStrictKimiThinkingEnabled(): boolean {
+		return this.options.enableReasoningEffort !== false
+	}
+
+	protected override getRequestTemperature(model: { id: string; temperature?: number }): number | undefined {
+		if (this.isStrictKimiModel(model.id)) {
+			return this.isStrictKimiThinkingEnabled() ? 1.0 : 0.6
+		}
+
+		return super.getRequestTemperature(model)
+	}
+
+	protected override getProviderOptions(
+		model: { id: string; info: ModelInfo },
+		metadata?: Parameters<OpenAICompatibleHandler["getProviderOptions"]>[1],
+	): ReturnType<OpenAICompatibleHandler["getProviderOptions"]> {
+		const inheritedProviderOptions = super.getProviderOptions(model, metadata)
+		if (!this.isStrictKimiModel(model.id)) {
+			return inheritedProviderOptions
+		}
+
+		const thinking = {
+			type: (this.isStrictKimiThinkingEnabled() ? "enabled" : "disabled") as "enabled" | "disabled",
+		}
+		const existingMoonshotOptions =
+			inheritedProviderOptions?.moonshot &&
+			typeof inheritedProviderOptions.moonshot === "object" &&
+			!Array.isArray(inheritedProviderOptions.moonshot)
+				? inheritedProviderOptions.moonshot
+				: {}
+
+		return {
+			...inheritedProviderOptions,
+			moonshot: {
+				...existingMoonshotOptions,
+				thinking,
+			},
+		}
+	}
+	// kilocode_change end
 }
