@@ -108,7 +108,7 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 	): any {
 		interface ResponsesRequestBody {
 			model: string
-			input: Array<{ type: "message"; role: "user" | "assistant"; content: any[] }>
+			input: Array<{ role: "user" | "assistant"; content: any[] } | { type: string; content: string }>
 			stream: boolean
 			reasoning?: { summary?: "auto" }
 			text?: { verbosity: string }
