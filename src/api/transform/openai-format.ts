@@ -470,15 +470,28 @@ export function convertToOpenAiMessages(
 				}
 
 				// Process tool use messages
-				let tool_calls: OpenAI.Chat.ChatCompletionMessageToolCall[] = toolMessages.map((toolMessage) => ({
-					id: normalizeId(toolMessage.id),
-					type: "function",
-					function: {
-						name: toolMessage.name,
-						// json string
-						arguments: JSON.stringify(toolMessage.input),
-					},
-				}))
+				// Use type assertion to access extra_content which may be added for Gemini 3 support
+				let tool_calls: (OpenAI.Chat.ChatCompletionMessageToolCall & {
+					extra_content?: Record<string, unknown>
+				})[] = toolMessages.map((toolMessage) => {
+					const toolCall: OpenAI.Chat.ChatCompletionMessageToolCall & {
+						extra_content?: Record<string, unknown>
+					} = {
+						id: normalizeId(toolMessage.id),
+						type: "function",
+						function: {
+							name: toolMessage.name,
+							// json string
+							arguments: JSON.stringify(toolMessage.input),
+						},
+					}
+					// Preserve extra_content for Gemini 3 thought_signature support
+					const toolMessageWithExtra = toolMessage as any
+					if (toolMessageWithExtra.extra_content) {
+						toolCall.extra_content = toolMessageWithExtra.extra_content
+					}
+					return toolCall
+				})
 
 				// Check if the message has reasoning_details (used by Gemini 3, xAI, etc.)
 				const messageWithDetails = anthropicMessage as any
