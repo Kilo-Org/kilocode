@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Generování zprávy commitu",
 				"description": "Generuj popisné zprávy commitu na základě tvých staged git změn. Přizpůsob prompt pro generování zpráv, které dodržují nejlepší postupy tvého repozitáře."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Automatický výběr pravidel",
+				"description": "Automaticky vybírá relevantní vlastní pravidla na základě tvého úkolu. AI analyzuje tvůj prompt a určí, která pravidla se vztahují na aktuální práci."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Můžeš vybrat konfiguraci API pro automatický výběr pravidel, nebo použít aktuálně vybranou."
 		}
 	},
 	"advancedSystemPrompt": {

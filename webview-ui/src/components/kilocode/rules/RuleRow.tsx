@@ -6,7 +6,8 @@ const RuleRow: React.FC<{
 	rulePath: string
 	enabled: boolean
 	toggleRule: (rulePath: string, enabled: boolean) => void
-}> = ({ rulePath, enabled, toggleRule }) => {
+	disabled?: boolean
+}> = ({ rulePath, enabled, toggleRule, disabled }) => {
 	const handleEditClick = () => {
 		vscode.postMessage({
 			type: "openFile",
@@ -21,12 +22,18 @@ const RuleRow: React.FC<{
 		})
 	}
 
+	const handleToggle = () => {
+		if (!disabled) {
+			toggleRule(rulePath, !enabled)
+		}
+	}
+
 	return (
 		<div className="mb-2.5">
 			<div
 				className={`flex items-center p-2 rounded bg-[var(--vscode-textCodeBlock-background)] h-[18px] ${
 					enabled ? "opacity-100" : "opacity-60"
-				}`}>
+				} ${disabled ? "opacity-50" : ""}`}>
 				<span
 					className="flex-1 overflow-hidden break-all whitespace-normal flex items-center mr-1"
 					title={rulePath}>
@@ -36,17 +43,20 @@ const RuleRow: React.FC<{
 					<div
 						role="switch"
 						aria-checked={enabled}
-						tabIndex={0}
-						className={`w-[20px] h-[10px] rounded-[5px] relative cursor-pointer transition-colors duration-200 flex items-center ${
+						aria-disabled={disabled}
+						tabIndex={disabled ? -1 : 0}
+						className={`w-[20px] h-[10px] rounded-[5px] relative transition-colors duration-200 flex items-center ${
+							disabled ? "cursor-not-allowed" : "cursor-pointer"
+						} ${
 							enabled
 								? "bg-[var(--vscode-testing-iconPassed)] opacity-90"
 								: "bg-[var(--vscode-titleBar-inactiveForeground)] opacity-50"
 						}`}
-						onClick={() => toggleRule(rulePath, !enabled)}
+						onClick={handleToggle}
 						onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") {
+							if (!disabled && (e.key === "Enter" || e.key === " ")) {
 								e.preventDefault()
-								toggleRule(rulePath, !enabled)
+								handleToggle()
 							}
 						}}>
 						<div

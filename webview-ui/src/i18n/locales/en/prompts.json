@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Commit Message Generation",
 				"description": "Generate descriptive commit messages based on your staged git changes. Customize the prompt to generate messages that follow your repository's best practices."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Auto-Select Rules",
+				"description": "Automatically select relevant custom rules based on your task. The AI analyzes your prompt and determines which rules apply to the current work."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "You can select an API configuration to use for auto-selecting rules, or use whatever is currently selected."
 		}
 	},
 	"advancedSystemPrompt": {

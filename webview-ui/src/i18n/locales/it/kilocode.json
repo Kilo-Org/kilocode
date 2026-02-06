@@ -198,6 +198,10 @@
 		"newFile": {
 			"newWorkflowFile": "Nuovo file flusso di lavoro...",
 			"newRuleFile": "Nuovo file regola..."
+		},
+		"autoSelect": {
+			"label": "Selezione automatica delle regole",
+			"description": "Seleziona automaticamente le regole rilevanti in base al tuo prompt. Utilizza il modello configurato nelle impostazioni Prompt."
 		}
 	},
 	"taskTimeline": {

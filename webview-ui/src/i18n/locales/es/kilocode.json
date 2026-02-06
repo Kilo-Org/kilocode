@@ -164,6 +164,10 @@
 	},
 	"docs": "Documentos",
 	"rules": {
+		"autoSelect": {
+			"label": "Auto-seleccionar reglas",
+			"description": "Selecciona automáticamente reglas relevantes basadas en tu prompt. Utiliza el modelo configurado en la configuración de Prompts."
+		},
 		"tooltip": "Gestionar el comportamiento del agente ({{types}})",
 		"agentBehaviourTypes": {
 			"rules": "Reglas",

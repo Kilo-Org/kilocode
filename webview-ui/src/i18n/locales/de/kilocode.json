@@ -165,6 +165,10 @@
 	"docs": "Dokumentation",
 	"rules": {
 		"tooltip": "Agentenverhalten verwalten ({{types}})",
+		"autoSelect": {
+			"label": "Regeln automatisch auswählen",
+			"description": "Wähle automatisch relevante Regeln basierend auf deinem prompt. Nutzt das Modell, das in den Prompts-Einstellungen konfiguriert ist."
+		},
 		"agentBehaviourTypes": {
 			"rules": "Regeln",
 			"workflows": "Workflows",

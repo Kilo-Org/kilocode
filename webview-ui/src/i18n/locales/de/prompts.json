@@ -155,7 +155,14 @@
 			"COMMIT_MESSAGE": {
 				"label": "Commit-Nachricht-Generierung",
 				"description": "Generiere beschreibende Commit-Nachrichten basierend auf deinen bereitgestellten Git-Änderungen. Passe den Prompt an, um Nachrichten zu erstellen, die den Best Practices deines Repositories entsprechen."
+			},
+			"AUTO_SELECT_RULES": {
+				"label": "Regeln automatisch auswählen",
+				"description": "Wählt automatisch relevante benutzerdefinierte Regeln basierend auf deiner Aufgabe aus. Die KI analysiert deinen Prompt und bestimmt, welche Regeln für die aktuelle Arbeit gelten."
 			}
+		},
+		"autoSelectRules": {
+			"apiConfigDescription": "Du kannst eine API-Konfiguration für die automatische Regelauswahl festlegen oder die derzeit ausgewählte verwenden."
 		}
 	},
 	"advancedSystemPrompt": {

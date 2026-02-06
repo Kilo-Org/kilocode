@@ -7,6 +7,7 @@ interface RulesWorkflowsSectionProps {
 	localItems: [string, boolean][]
 	toggleGlobal: (path: string, enabled: boolean) => void
 	toggleLocal: (path: string, enabled: boolean) => void
+	disabled?: boolean
 }
 
 const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
@@ -15,6 +16,7 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 	localItems,
 	toggleGlobal,
 	toggleLocal,
+	disabled,
 }) => {
 	const { t } = useTranslation()
 
@@ -27,12 +29,24 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 		<>
 			<div className="mb-3">
 				<div className="text-sm font-normal mb-2">{t(globalSectionKey)}</div>
-				<RulesToggleList rules={globalItems} toggleRule={toggleGlobal} isGlobal={true} ruleType={type} />
+				<RulesToggleList
+					rules={globalItems}
+					toggleRule={toggleGlobal}
+					isGlobal={true}
+					ruleType={type}
+					disabled={disabled}
+				/>
 			</div>
 
 			<div style={{ marginBottom: -10 }}>
 				<div className="text-sm font-normal mb-2">{t(workspaceSectionKey)}</div>
-				<RulesToggleList rules={localItems} toggleRule={toggleLocal} isGlobal={false} ruleType={type} />
+				<RulesToggleList
+					rules={localItems}
+					toggleRule={toggleLocal}
+					isGlobal={false}
+					ruleType={type}
+					disabled={disabled}
+				/>
 			</div>
 		</>
 	)

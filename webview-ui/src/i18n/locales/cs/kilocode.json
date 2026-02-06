@@ -198,6 +198,10 @@
 		"newFile": {
 			"newWorkflowFile": "Nový soubor pracovního postupu...",
 			"newRuleFile": "Nový soubor pravidla..."
+		},
+		"autoSelect": {
+			"label": "Automaticky vybrat pravidla",
+			"description": "Automaticky vybrat relevantní pravidla na základě tvého promptu. Používá model nakonfigurovaný v nastavení Prompts."
 		}
 	},
 	"taskTimeline": {
