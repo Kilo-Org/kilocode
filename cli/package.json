@@ -116,7 +116,7 @@
 		"sanitize-filename": "^1.6.3",
 		"say": "^0.16.0",
 		"semver": "^7.7.3",
-		"serialize-error": "^12.0.0",
+		"serialize-error": "^13.0.1",
 		"shiki": "^3.21.0",
 		"simple-git": "^3.30.0",
 		"socket.io-client": "^4.8.3",
