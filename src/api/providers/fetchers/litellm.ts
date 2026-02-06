@@ -12,6 +12,12 @@ import { DEFAULT_HEADERS } from "../constants"
  * @throws Will throw an error if the request fails or the response is not as expected.
  */
 export async function getLiteLLMModels(apiKey: string, baseUrl: string): Promise<ModelRecord> {
+	// kilocode_change start: Skip fetching if base URL is not provided or invalid
+	if (!baseUrl || baseUrl.trim() === "") {
+		return {}
+	}
+	// kilocode_change end
+
 	try {
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",

@@ -82,6 +82,12 @@ function parseIOIntelligenceModel(model: IOIntelligenceModel): ModelInfo {
  * <mcreference link="https://docs.io.net/reference/get-started-with-io-intelligence-api" index="1">1</mcreference>
  */
 export async function getIOIntelligenceModels(apiKey?: string): Promise<ModelRecord> {
+	// kilocode_change start: Skip fetching if API key is not provided
+	if (!apiKey) {
+		return {}
+	}
+	// kilocode_change end
+
 	const now = Date.now()
 
 	if (cache && now - cache.timestamp < IO_INTELLIGENCE_CACHE_DURATION) {
@@ -93,13 +99,7 @@ export async function getIOIntelligenceModels(apiKey?: string): Promise<ModelRec
 	try {
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
-		}
-
-		if (apiKey) {
-			headers.Authorization = `Bearer ${apiKey}`
-		} else {
-			console.error("IO Intelligence API key is required")
-			throw new Error("IO Intelligence API key is required")
+			Authorization: `Bearer ${apiKey}`, // kilocode_change: apiKey is always defined here
 		}
 
 		const response = await axios.get<IOIntelligenceApiResponse>(

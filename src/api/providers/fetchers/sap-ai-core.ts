@@ -289,6 +289,12 @@ export async function getSapAiCoreModels(
 	sapAiCoreResourceGroup?: string,
 	sapAiCoreUseOrchestration?: boolean,
 ): Promise<ModelRecord> {
+	// kilocode_change start: Skip fetching if service key is not provided
+	if (!sapAiCoreServiceKey) {
+		return {}
+	}
+	// kilocode_change end
+
 	const client = new SapAiCoreFetcher({
 		serviceKey: sapAiCoreServiceKey,
 		resourceGroup: sapAiCoreResourceGroup,
@@ -313,6 +319,12 @@ export async function getSapAiCoreDeployments(
 	sapAiCoreServiceKey?: string,
 	sapAiCoreResourceGroup: string = "default",
 ): Promise<DeploymentRecord> {
+	// kilocode_change start: Skip fetching if service key is not provided
+	if (!sapAiCoreServiceKey) {
+		return {}
+	}
+	// kilocode_change end
+
 	const client = new SapAiCoreFetcher({
 		serviceKey: sapAiCoreServiceKey,
 		resourceGroup: sapAiCoreResourceGroup,

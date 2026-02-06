@@ -68,8 +68,9 @@ describe("SAP AI Core API", () => {
 			nockDone()
 		})
 
-		it("throws error when service key is not provided", async () => {
-			await expect(sapAiCore.getSapAiCoreModels(undefined)).rejects.toThrow("SAP AI Core service key is required")
+		it("returns empty object when service key is not provided", async () => {
+			const result = await sapAiCore.getSapAiCoreModels(undefined) // kilocode_change
+			expect(result).toEqual({}) // kilocode_change
 		})
 
 		it("throws error when service key is invalid JSON", async () => {
@@ -112,10 +113,9 @@ describe("SAP AI Core API", () => {
 			nockDone()
 		})
 
-		it("throws error when service key is not provided", async () => {
-			await expect(sapAiCore.getSapAiCoreDeployments(undefined)).rejects.toThrow(
-				"SAP AI Core service key is required",
-			)
+		it("returns empty object when service key is not provided", async () => {
+			const result = await sapAiCore.getSapAiCoreDeployments(undefined) // kilocode_change
+			expect(result).toEqual({}) // kilocode_change
 		})
 	})
 
