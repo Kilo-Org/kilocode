@@ -2,6 +2,8 @@ import { useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { win32FlushInputBuffer } from "../win32"
+// kilocode_change - import resetTerminalState for mouse tracking cleanup
+import { resetTerminalState } from "@tui/util/terminal"
 type Exit = ((reason?: unknown) => Promise<void>) & {
   message: {
     set: (value?: string) => () => void
@@ -34,6 +36,8 @@ export const { use: useExit, provider: ExitProvider } = createSimpleContext({
         renderer.setTerminalTitle("")
         renderer.destroy()
         win32FlushInputBuffer()
+        // kilocode_change - reset terminal state to disable mouse tracking
+        resetTerminalState()
         await input.onExit?.()
         if (reason) {
           const formatted = FormatError(reason) ?? FormatUnknownError(reason)
