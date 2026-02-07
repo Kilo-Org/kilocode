@@ -1,7 +1,10 @@
 import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelModeInfo } from "./types"
+import { DEFAULT_MODE_SLUG } from "@roo-code/types"
 
 export interface CreateSessionOptions {
 	parallelMode?: boolean
+	model?: string
+	mode?: string
 }
 
 const MAX_SESSIONS = 10
@@ -67,6 +70,8 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
+			model: options?.model,
+			mode: options?.mode ?? DEFAULT_MODE_SLUG,
 		}
 
 		this.sessions.set(sessionId, session)
@@ -142,6 +147,18 @@ export class AgentRegistry {
 		if (session) {
 			session.pid = pid
 		}
+	}
+
+	/**
+	 * Update the mode for a session.
+	 */
+	public updateSessionMode(sessionId: string, mode: string): AgentSession | undefined {
+		const session = this.sessions.get(sessionId)
+		if (!session) {
+			return undefined
+		}
+		session.mode = mode
+		return session
 	}
 
 	/**

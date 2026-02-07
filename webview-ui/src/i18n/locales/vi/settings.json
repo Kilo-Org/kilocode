@@ -1,4 +1,5 @@
 {
+	"back": "Quay lại chế độ xem tác vụ",
 	"common": {
 		"save": "Lưu",
 		"done": "Hoàn thành",
@@ -7,6 +8,10 @@
 		"select": "Chọn",
 		"add": "Thêm tiêu đề",
 		"remove": "Xóa"
+	},
+	"search": {
+		"placeholder": "Tìm kiếm cài đặt...",
+		"noResults": "Không tìm thấy cài đặt"
 	},
 	"header": {
 		"title": "Cài đặt",
@@ -37,7 +42,9 @@
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
-		"autoPurge": "Tự động dọn dẹp"
+		"autoPurge": "Tự động dọn dẹp",
+		"agentBehaviour": "Hành Vi Agent",
+		"ghost": "Tự Động Hoàn Thành"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Muốn nhận mẹo hoặc chỉ muốn giao lưu với những người dùng Kilo Code khác? Tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Liên Hệ & Cộng Đồng",
-		"manageSettings": "Quản Lý Cài Đặt"
+		"manageSettings": "Quản Lý Cài Đặt",
+		"debugMode": {
+			"label": "Bật chế độ debug",
+			"description": "Bật chế độ debug để hiển thị các nút bổ sung trong tiêu đề nhiệm vụ cho phép xem lịch sử hội thoại API và tin nhắn UI dưới dạng JSON được định dạng trong các tệp tạm thời."
+		}
 	},
 	"slashCommands": {
 		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
@@ -94,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
+		"openaiCompatibleResponsesProvider": "Tương thích OpenAI (Responses)",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
 		"openAiCompatibleBaseUrlLabel": "URL cơ sở",
@@ -214,11 +226,6 @@
 			"label": "Trình duyệt",
 			"description": "Tự động thực hiện các hành động trình duyệt mà không cần phê duyệt. Lưu ý: Chỉ áp dụng khi mô hình hỗ trợ sử dụng máy tính"
 		},
-		"retry": {
-			"label": "Thử lại",
-			"description": "Tự động thử lại các yêu cầu API thất bại khi máy chủ trả về phản hồi lỗi",
-			"delayLabel": "Trì hoãn trước khi thử lại yêu cầu"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Bật tự động phê duyệt các công cụ MCP riêng lẻ trong chế độ xem Máy chủ MCP (yêu cầu cả cài đặt này và hộp kiểm \"Luôn cho phép\" của công cụ)"
@@ -277,6 +284,7 @@
 		"makeActiveProfile": "Đặt làm hồ sơ hoạt động",
 		"makeActiveTooltip": "Kích hoạt hồ sơ này để sử dụng cho các yêu cầu API",
 		"apiProvider": "Nhà cung cấp API",
+		"apiProviderDocs": "Tài liệu Nhà cung cấp",
 		"model": "Mẫu",
 		"nameEmpty": "Tên không được để trống",
 		"nameExists": "Đã tồn tại một hồ sơ với tên này",
@@ -313,10 +321,40 @@
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
-		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
 		"customHeaders": "Tiêu đề tùy chỉnh",
 		"headerName": "Tên tiêu đề",
 		"headerValue": "Giá trị tiêu đề",
@@ -332,7 +370,6 @@
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"getRequestyBaseUrl": "URL cơ sở",
 		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
-		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
@@ -342,6 +379,8 @@
 		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
+		"vertex1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"basetenApiKey": "Khóa API Baseten",
 		"getBasetenApiKey": "Lấy khóa API Baseten",
 		"cerebrasApiKey": "Khóa API Cerebras",
@@ -442,6 +481,14 @@
 		"awsRegion": "Vùng AWS",
 		"awsCrossRegion": "Sử dụng suy luận liên vùng",
 		"awsGlobalInference": "Sử dụng suy luận toàn cầu (tự động chọn Khu vực AWS tối ưu)",
+		"awsServiceTier": "Cấp độ dịch vụ",
+		"awsServiceTierStandard": "Tiêu chuẩn",
+		"awsServiceTierStandardDesc": "Hiệu suất và chi phí cân bằng",
+		"awsServiceTierFlex": "Linh hoạt (giảm giá 50%)",
+		"awsServiceTierFlexDesc": "Chi phí thấp hơn, độ trễ cao hơn cho các tác vụ không quan trọng",
+		"awsServiceTierPriority": "Ưu tiên (Phí thêm 75%)",
+		"awsServiceTierPriorityDesc": "Hiệu suất nhanh nhất cho các ứng dụng quan trọng",
+		"awsServiceTierNote": "Các cấp độ dịch vụ ảnh hưởng đến giá và hiệu suất. Linh hoạt cung cấp giảm giá 50% với độ trễ cao hơn, Ưu tiên cung cấp hiệu suất tốt hơn 25% với phí thêm 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Sử dụng điểm cuối VPC tùy chỉnh",
 			"vpcEndpointUrlPlaceholder": "Nhập URL điểm cuối VPC (tùy chọn)",
@@ -580,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",
+			"max": "Max",
 			"high": "Cao",
 			"medium": "Trung bình",
 			"low": "Thấp",
@@ -592,21 +640,6 @@
 			"placeholder": "Mặc định: claude",
 			"maxTokensLabel": "Số token đầu ra tối đa",
 			"maxTokensDescription": "Số lượng token đầu ra tối đa cho các phản hồi của Claude Code. Mặc định là 8000."
-		},
-		"geminiCli": {
-			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ công cụ Gemini CLI và không yêu cầu khóa API.",
-			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",
-			"oauthPathDescription": "Đường dẫn đến tệp thông tin xác thực OAuth. Để trống để sử dụng vị trí mặc định (~/.gemini/oauth_creds.json).",
-			"instructions": "Nếu bạn chưa xác thực, vui lòng chạy",
-			"instructionsContinued": "trong terminal của bạn trước.",
-			"setupLink": "Hướng dẫn Thiết lập Gemini CLI",
-			"requirementsTitle": "Yêu cầu Quan trọng",
-			"requirement1": "Trước tiên, bạn cần cài đặt công cụ Gemini CLI",
-			"requirement2": "Sau đó, chạy gemini trong terminal của bạn và đảm bảo bạn đăng nhập bằng Google",
-			"requirement3": "Chỉ hoạt động với tài khoản Google cá nhân (không phải tài khoản Google Workspace)",
-			"requirement4": "Không sử dụng khóa API - xác thực được xử lý qua OAuth",
-			"requirement5": "Yêu cầu công cụ Gemini CLI được cài đặt và xác thực trước",
-			"freeAccess": "Truy cập miễn phí qua xác thực OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",
@@ -798,6 +831,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status tệp tối đa",
 			"description": "Số lượng mục tệp tối đa để bao gồm trong ngữ cảnh trạng thái git. Đặt thành 0 để tắt. Thông tin nhánh và các commit luôn được hiển thị khi > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Bật quy tắc thư mục con",
+			"description": "Khám phá và tải đệ quy các tệp .roo/rules và AGENTS.md từ các thư mục con. Hữu ích cho monorepo có quy tắc theo gói."
 		}
 	},
 	"terminal": {
@@ -987,6 +1024,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Chuyển Giọng nói thành Văn bản (STT)",
 			"description": "Khi được bật, Kilo Code có thể chuyển đổi giọng nói của bạn thành văn bản bằng mô hình Whisper của OpenAI. Nhấp vào nút microphone trong chat để bắt đầu ghi âm. Yêu cầu cài đặt FFmpeg và cấu hình nhà cung cấp API OpenAI."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Bật công cụ tùy chỉnh",
+			"description": "Khi được bật, Kilo có thể tải và sử dụng các công cụ TypeScript/JavaScript tùy chỉnh từ thư mục .kilocode/tools của dự án hoặc ~/.kilocode/tools cho các công cụ toàn cục. Lưu ý: các công cụ này sẽ được tự động phê duyệt.",
+			"toolsHeader": "Công cụ tùy chỉnh có sẵn",
+			"noTools": "Không có công cụ tùy chỉnh nào được tải. Thêm tệp .ts hoặc .js vào thư mục .kilocode/tools của dự án hoặc ~/.kilocode/tools cho các công cụ toàn cục.",
+			"refreshButton": "Làm mới",
+			"refreshing": "Đang làm mới...",
+			"refreshSuccess": "Làm mới công cụ thành công",
+			"refreshError": "Không thể làm mới công cụ",
+			"toolParameters": "Thông số"
 		}
 	},
 	"promptCaching": {
@@ -1026,7 +1074,9 @@
 		"searchPlaceholder": "Tìm kiếm",
 		"noMatchFound": "Không tìm thấy kết quả",
 		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}",
-		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau."
+		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau.",
+		"recommendedModels": "Mô hình được đề xuất",
+		"allModels": "Tất cả mô hình"
 	},
 	"footer": {
 		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
@@ -1115,6 +1165,10 @@
 		"showTimestamps": {
 			"label": "Hiển thị dấu thời gian",
 			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
+		},
+		"showDiffStats": {
+			"label": "Hiển thị thống kê diff",
+			"description": "Hiển thị thống kê số dòng thêm/xóa trong tiêu đề tác vụ"
 		}
 	},
 	"ghost": {

@@ -14,7 +14,9 @@
 		"shareSession": "Udostępnij sesję",
 		"shareConfirmMessage": "Czy chcesz publicznie udostępnić migawkę tej sesji?",
 		"shareConfirmYes": "Tak",
-		"shareConfirmNo": "Nie"
+		"shareConfirmNo": "Nie",
+		"options": "Opcje",
+		"configureSetupScript": "Skrypt setup worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Tryb YOLO - operacje narzędzi są automatycznie zatwierdzane",
 		"starting": "Uruchamianie...",
 		"startAriaLabel": "Uruchom agenta z podanym poleceniem",
-		"keyboardHint": "Naciśnij Enter, aby uruchomić, Shift+Enter dla nowej linii",
 		"runModeLocal": "Lokalny",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Chmura",
@@ -57,7 +58,13 @@
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
 		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
-		"openTerminal": "Otwórz terminal"
+		"openTerminal": "Otwórz terminal",
+		"selectModel": "Wybierz model",
+		"modelTooltip": "Wybierz, którego modelu AI użyć w tej sesji",
+		"defaultModel": "Domyślny model",
+		"loadingModels": "Ładowanie...",
+		"selectMode": "Wybierz tryb",
+		"modeTooltip": "Tryb: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",
@@ -72,7 +79,9 @@
 		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}",
 		"expandOutput": "Rozwiń wyjście",
 		"collapseOutput": "Zwiń wyjście",
-		"copyCommand": "Kopiuj polecenie"
+		"copyCommand": "Kopiuj polecenie",
+		"thinking": "Myślenie",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",
@@ -82,9 +91,12 @@
 		"cancelTitle": "Anuluj agenta",
 		"finishToBranchTitle": "Zakończ worktree i przygotuj branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Zakończ worktree i przygotuj branch",
+		"createPRTitle": "Utwórz pull request",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
-		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"
+		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii",
+		"addImage": "Dodaj obraz",
+		"removeImage": "Usuń obraz"
 	},
 	"status": {
 		"running": "działa",

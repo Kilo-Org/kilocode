@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "どのように始めますか？",
+		"freeModels": {
+			"title": "無料モデル",
+			"description": "すぐにコーディングを開始"
+		},
+		"premiumModels": {
+			"title": "プレミアムモデル",
+			"description": "登録。新規ユーザーは5ドルのクレジットを獲得"
+		},
+		"byok": {
+			"title": "自分のキーを使用",
+			"description": "上級者向け。自分のアカウントまたはサブスクリプションを使用"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Codeへようこそ！",
 		"introText1": "Kilo Codeは無料のオープンソースAIコーディングエージェントです。",
-		"introText2": "Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5、その他450以上の最新のAIモデルと連携します。",
+		"introText2": "Claude Opus 4.5、Gemini 3 Pro、GPT-5.2、その他450以上の最新のAIモデルと連携します。",
 		"introText3": "無料アカウントを作成して、初回チャージ時に$20のボーナスクレジットを獲得しましょう。",
 		"ctaButton": "始める",
 		"manualModeButton": "自分のAPIキーを使う",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています",
-		"newOrganization": "仕事でKiloを使用していますか？"
+		"switchToFreeModel": "無料モデルに切り替える"
 	},
 	"pagination": {
 		"previous": "前へ",
@@ -26,6 +41,11 @@
 		"continueWith": "{{model}}で続行",
 		"continue": "続行"
 	},
+	"unauthorizedError": {
+		"title": "{{modelId}}モデルを使用するにはサインインが必要です",
+		"message": "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを使用できます。",
+		"loginButton": "サインイン"
+	},
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
@@ -38,13 +58,16 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCPサーバー"
+			"mcp": "MCPサーバー",
+			"agentBehaviour": "エージェントの動作",
+			"skills": "スキル"
 		},
 		"provider": {
 			"account": "Kilo Code アカウント",
 			"apiKey": "Kilo Code APIキー",
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト",
+			"loginForPremiumModels": "ログインしてプレミアムモデルと機能にアクセス",
 			"providerRouting": {
 				"title": "プロバイダールーティング",
 				"managedByOrganization": "組織レベルのプロバイダールーティングを管理",
@@ -63,8 +86,7 @@
 					"deny": "プロンプトトレーニングを拒否",
 					"zdr": "データ保持なし"
 				}
-			},
-			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。"
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "コンテキストウィンドウ",
@@ -149,7 +171,14 @@
 	},
 	"docs": "ドキュメント",
 	"rules": {
-		"tooltip": "Kilo Codeルールとワークフローを管理",
+		"tooltip": "エージェントの挙動を管理 ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "ルール",
+			"workflows": "ワークフロー",
+			"mcps": "MCP",
+			"modes": "モード",
+			"skills": "スキル"
+		},
 		"ariaLabel": "Kilo Codeルール",
 		"tabs": {
 			"rules": "ルール",
@@ -209,6 +238,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "初めてですか？",
+		"tryOneOfThese": "これらのアイデアを試して始めましょう：",
 		"suggestionText": "クールなアイデアのために<suggestionButton>ここをクリック</suggestionButton>してから、<sendIcon />をタップして私がマジックを行うのを見てください！",
 		"ideas": {
 			"idea1": "マウスの動きに反応する回転する光る3D球体を作成してください。アプリをブラウザで動作させてください。",
@@ -223,7 +253,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "トリガー",
+			"codeEditorSuggestions": "コードエディタの提案",
+			"chatSuggestions": "チャットの提案",
 			"keybindingDescription": "Autocomplete機能はコマンドでトリガーできます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。",
 			"enableAutoTrigger": {
 				"label": "Autocompleteを有効にする",
@@ -322,6 +353,9 @@
 		},
 		"mcp": {
 			"description": "これらのMCPサーバーはコミュニティによって管理されています。<1>こちら</1>をクリックして、あなた自身のMCP設定を編集してください。"
+		},
+		"skills": {
+			"description": "コミュニティのスキルを閲覧・発見できます。スキルは特定のタスクに対する専門的な指示を提供します。"
 		}
 	},
 	"modes": {
@@ -357,6 +391,26 @@
 			"ffmpegMessage": "FFmpegのインストールを手伝ってください"
 		},
 		"misconfiguredState": "設定により利用不可",
-		"errorState": "エラーのため利用できません"
+		"errorState": "エラーのため利用できません",
+		"microphone": {
+			"label": "マイクロフォン",
+			"defaultOption": "システムデフォルト",
+			"description": "音声からテキストへの変換用のマイクデバイスを選択してください",
+			"loading": "マイクデバイスを読み込んでいます...",
+			"noDevices": "マイクデバイスが見つかりません",
+			"refresh": "更新"
+		}
+	},
+	"skills": {
+		"description": "スキルは特定のタスクに対する専門的な指示を提供します。リクエストに関連する場合、自動的に適用されます。",
+		"noSkills": "スキルがインストールされていません",
+		"projectSkills": "プロジェクトスキル",
+		"globalSkills": "グローバルスキル",
+		"deleteDialog": {
+			"title": "スキルを削除",
+			"description": "スキル「{{skillName}}」を削除してもよろしいですか？この操作は元に戻せません。",
+			"cancel": "キャンセル",
+			"delete": "削除"
+		}
 	}
 }

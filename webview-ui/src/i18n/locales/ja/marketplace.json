@@ -147,10 +147,24 @@
 			"title": "MCPサーバーを削除",
 			"message": "MCPサーバー「{{mcpName}}」を本当に削除しますか？"
 		},
+		"skill": {
+			"title": "スキルを削除",
+			"message": "スキル「{{skillName}}」を本当に削除しますか？"
+		},
 		"cancel": "キャンセル",
 		"confirm": "削除"
 	},
 	"footer": {
 		"issueText": "Marketplaceアイテムで問題を見つけた、または新しいアイテムの提案がありますか？<0>GitHub issueを開いて</0>お知らせください！"
+	},
+	"skills": {
+		"loading": "スキルを読み込み中...",
+		"searchPlaceholder": "スキルを検索...",
+		"allCategories": "すべて",
+		"resultsCount": "{{count}}個のスキルが見つかりました",
+		"noResults": "条件に一致するスキルが見つかりません",
+		"install": "インストール",
+		"installTitle": "{{name}}スキルをインストール",
+		"installing": "インストール中..."
 	}
 }

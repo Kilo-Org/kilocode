@@ -1,4 +1,5 @@
 {
+	"back": "Görev görünümüne dön",
 	"common": {
 		"save": "Kaydet",
 		"done": "Tamamlandı",
@@ -7,6 +8,10 @@
 		"select": "Seç",
 		"add": "Başlık Ekle",
 		"remove": "Kaldır"
+	},
+	"search": {
+		"placeholder": "Ayarları ara...",
+		"noResults": "Ayar bulunamadı"
 	},
 	"header": {
 		"title": "Ayarlar",
@@ -38,7 +43,8 @@
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
 		"ghost": "Ghost",
-		"autoPurge": "Otomatik Temizlik"
+		"autoPurge": "Otomatik Temizlik",
+		"agentBehaviour": "Ajan Davranışı"
 	},
 	"about": {
 		"bugReport": {
@@ -58,7 +64,11 @@
 		},
 		"community": "İpuçları mı istiyorsunuz yoksa sadece diğer Kilo Code kullanıcılarıyla takılmak mı istiyorsunuz? <redditLink>reddit.com/r/kilocode</redditLink> veya <discordLink>kilo.ai/discord</discordLink>'a katılın",
 		"contactAndCommunity": "İletişim ve Topluluk",
-		"manageSettings": "Ayarları Yönet"
+		"manageSettings": "Ayarları Yönet",
+		"debugMode": {
+			"label": "Debug modunu etkinleştir",
+			"description": "Görev başlığında API konuşma geçmişini ve UI mesajlarını geçici dosyalarda biçimlendirilmiş JSON olarak görüntülemek için ek düğmeler göstermek üzere debug modunu etkinleştirin."
+		}
 	},
 	"slashCommands": {
 		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
@@ -95,6 +105,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter Sağlayıcı Yönlendirmesi",
 		"openRouterProviderRoutingDescription": "OpenRouter, gömme modeliniz için mevcut en iyi sağlayıcılara istekleri yönlendirir. Varsayılan olarak, istekler çalışma süresini en üst düzeye çıkarmak için en iyi sağlayıcılar arasında dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
+		"openaiCompatibleResponsesProvider": "OpenAI Uyumlu (Responses)",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
 		"openAiCompatibleBaseUrlLabel": "Temel URL",
@@ -215,11 +226,6 @@
 			"label": "Tarayıcı",
 			"description": "Onay gerektirmeden otomatik olarak tarayıcı eylemleri gerçekleştir. Not: Yalnızca model bilgisayar kullanımını desteklediğinde geçerlidir"
 		},
-		"retry": {
-			"label": "Yeniden Dene",
-			"description": "Sunucu bir hata yanıtı döndürdüğünde başarısız API isteklerini otomatik olarak yeniden dene",
-			"delayLabel": "İsteği yeniden denemeden önce gecikme"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "MCP Sunucuları görünümünde bireysel MCP araçlarının otomatik onayını etkinleştir (hem bu ayar hem de aracın \"Her zaman izin ver\" onay kutusu gerekir)"
@@ -278,6 +284,7 @@
 		"makeActiveProfile": "Aktif profil yap",
 		"makeActiveTooltip": "API istekleri için bu profili etkinleştir",
 		"apiProvider": "API Sağlayıcı",
+		"apiProviderDocs": "Sağlayıcı Belgeleri",
 		"model": "Model",
 		"nameEmpty": "İsim boş olamaz",
 		"nameExists": "Bu isme sahip bir profil zaten mevcut",
@@ -306,10 +313,40 @@
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Özel temel URL kullan",
 		"useReasoning": "Akıl yürütmeyi etkinleştir",
 		"useHostHeader": "Özel Host başlığı kullan",
-		"useLegacyFormat": "Eski OpenAI API formatını kullan",
 		"customHeaders": "Özel Başlıklar",
 		"headerName": "Başlık adı",
 		"headerValue": "Başlık değeri",
@@ -325,7 +362,6 @@
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"getRequestyBaseUrl": "Temel URL",
 		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
-		"openRouterTransformsText": "İstem ve mesaj zincirlerini bağlam boyutuna sıkıştır (<a>OpenRouter Dönüşümleri</a>)",
 		"anthropicApiKey": "Anthropic API Anahtarı",
 		"getAnthropicApiKey": "Anthropic API Anahtarı Al",
 		"anthropicUseAuthToken": "Anthropic API Anahtarını X-Api-Key yerine Authorization başlığı olarak geçir",
@@ -335,6 +371,8 @@
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
 		"awsBedrock1MContextBetaLabel": "1M bağlam penceresini etkinleştir (Beta)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
+		"vertex1MContextBetaLabel": "1M bağlam penceresini etkinleştir (Beta)",
+		"vertex1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
 		"basetenApiKey": "Baseten API Anahtarı",
 		"getBasetenApiKey": "Baseten API Anahtarı Al",
 		"cerebrasApiKey": "Cerebras API Anahtarı",
@@ -409,6 +447,14 @@
 		"awsRegion": "AWS Bölgesi",
 		"awsCrossRegion": "Bölgeler arası çıkarım kullan",
 		"awsGlobalInference": "Genel çıkarımı kullan (en uygun AWS Bölgesini otomatik seç)",
+		"awsServiceTier": "Hizmet seviyesi",
+		"awsServiceTierStandard": "Standart",
+		"awsServiceTierStandardDesc": "Dengeli performans ve maliyet",
+		"awsServiceTierFlex": "Esnek (%50 indirim)",
+		"awsServiceTierFlexDesc": "Daha düşük maliyet, kritik olmayan görevler için daha yüksek gecikme",
+		"awsServiceTierPriority": "Öncelik (%75 ek ücret)",
+		"awsServiceTierPriorityDesc": "İş açısından kritik uygulamalar için en hızlı performans",
+		"awsServiceTierNote": "Hizmet seviyeleri fiyatlandırmayı ve performansı etkiler. Esnek %50 indirim sunarken daha yüksek gecikmeye sahiptir, Öncelik %25 daha iyi performans sunarken %75 ek ücrete sahiptir.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Özel VPC uç noktası kullan",
 			"vpcEndpointUrlPlaceholder": "VPC uç noktası URL'sini girin (isteğe bağlı)",
@@ -467,14 +513,14 @@
 		"nanoGptApiKey": "Nano-GPT API Anahtarı",
 		"getNanoGptApiKey": "Nano-GPT API Anahtarı Al",
 		"nanoGptModelList": "Model Listesi",
-		"humanRelay": {
-			"description": "API anahtarı gerekmez, ancak kullanıcının bilgileri web sohbet yapay zekasına kopyalayıp yapıştırması gerekir.",
-			"instructions": "Kullanım sırasında bir iletişim kutusu açılacak ve mevcut mesaj otomatik olarak panoya kopyalanacaktır. Bunları web yapay zekalarına (ChatGPT veya Claude gibi) yapıştırmanız, ardından yapay zekanın yanıtını iletişim kutusuna kopyalayıp onay düğmesine tıklamanız gerekir."
-		},
 		"nanoGptModelListOptions": {
 			"all": "Tüm Modeller",
 			"personalized": "Kişiselleştirilmiş Modeller",
 			"subscription": "Abonelik Modelleri"
+		},
+		"humanRelay": {
+			"description": "API anahtarı gerekmez, ancak kullanıcının bilgileri web sohbet yapay zekasına kopyalayıp yapıştırması gerekir.",
+			"instructions": "Kullanım sırasında bir iletişim kutusu açılacak ve mevcut mesaj otomatik olarak panoya kopyalanacaktır. Bunları web yapay zekalarına (ChatGPT veya Claude gibi) yapıştırmanız, ardından yapay zekanın yanıtını iletişim kutusuna kopyalayıp onay düğmesine tıklamanız gerekir."
 		},
 		"roo": {
 			"authenticatedMessage": "Roo Code Cloud hesabın üzerinden güvenli bir şekilde kimlik doğrulandı.",
@@ -555,6 +601,7 @@
 		},
 		"verbosity": {
 			"label": "Çıktı Ayrıntı Düzeyi",
+			"max": "Max",
 			"high": "Yüksek",
 			"medium": "Orta",
 			"low": "Düşük",
@@ -567,21 +614,6 @@
 			"placeholder": "Varsayılan: claude",
 			"maxTokensLabel": "Maksimum Çıktı Token sayısı",
 			"maxTokensDescription": "Claude Code yanıtları için maksimum çıktı token sayısı. Varsayılan 8000'dir."
-		},
-		"geminiCli": {
-			"description": "Bu sağlayıcı Gemini CLI aracından OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
-			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",
-			"oauthPathDescription": "OAuth kimlik bilgileri dosyasının yolu. Varsayılan konumu kullanmak için boş bırakın (~/.gemini/oauth_creds.json).",
-			"instructions": "Henüz kimlik doğrulaması yapmadıysanız, önce",
-			"instructionsContinued": "komutunu terminalinizde çalıştırın.",
-			"setupLink": "Gemini CLI Kurulum Talimatları",
-			"requirementsTitle": "Önemli Gereksinimler",
-			"requirement1": "Önce Gemini CLI aracını yüklemeniz gerekir",
-			"requirement2": "Sonra terminalinizde gemini çalıştırın ve Google ile giriş yaptığınızdan emin olun",
-			"requirement3": "Sadece kişisel Google hesaplarıyla çalışır (Google Workspace hesapları değil)",
-			"requirement4": "API anahtarları kullanmaz - kimlik doğrulama OAuth ile yapılır",
-			"requirement5": "Gemini CLI aracının önce yüklenmesi ve kimlik doğrulaması yapılması gerekir",
-			"freeAccess": "OAuth kimlik doğrulaması ile ücretsiz erişim"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",
@@ -799,6 +831,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git durumu maks. dosya",
 			"description": "Git durum bağlamına dahil edilecek maksimum dosya girişi sayısı. Devre dışı bırakmak için 0 olarak ayarlayın. Dal bilgisi ve commit'ler > 0 olduğunda her zaman gösterilir."
+		},
+		"enableSubfolderRules": {
+			"label": "Alt klasör kurallarını etkinleştir",
+			"description": "Alt dizinlerden .roo/rules ve AGENTS.md dosyalarını yinelemeli olarak keşfet ve yükle. Paket başına kuralları olan monorepo'lar için kullanışlı."
 		}
 	},
 	"terminal": {
@@ -988,6 +1024,17 @@
 		"SPEECH_TO_TEXT": {
 			"description": "Etkinleştirildiğinde, Kilo Code sesinizi OpenAI'nin Whisper modeli kullanarak metne dönüştürebilir. Kayda başlamak için sohbetteki mikrofon düğmesine tıklayın. FFmpeg'in yüklü olması ve yapılandırılmış bir OpenAI API sağlayıcısı gereklidir.",
 			"name": "Konuşmadan Metne (STT)"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Özel araçları etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo projenizin .kilocode/tools dizininden veya global araçlar için ~/.kilocode/tools dizininden özel TypeScript/JavaScript araçlarını yükleyebilir ve kullanabilir. Not: bu araçlar otomatik olarak onaylanacaktır.",
+			"toolsHeader": "Kullanılabilir Özel Araçlar",
+			"noTools": "Özel araç yüklenmedi. Projenizin .kilocode/tools dizinine veya global araçlar için ~/.kilocode/tools dizinine .ts veya .js dosyaları ekleyin.",
+			"refreshButton": "Yenile",
+			"refreshing": "Yenileniyor...",
+			"refreshSuccess": "Araçlar başarıyla yenilendi",
+			"refreshError": "Araçlar yenilenemedi",
+			"toolParameters": "Parametreler"
 		}
 	},
 	"promptCaching": {
@@ -1027,7 +1074,9 @@
 		"searchPlaceholder": "Ara",
 		"noMatchFound": "Eşleşme bulunamadı",
 		"useCustomModel": "Özel kullan: {{modelId}}",
-		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz."
+		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz.",
+		"recommendedModels": "Önerilen modeller",
+		"allModels": "Tüm modeller"
 	},
 	"footer": {
 		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilo.ai/discord</discordLink>'a katılmaktan çekinmeyin",
@@ -1116,6 +1165,10 @@
 		"showTimestamps": {
 			"label": "Zaman damgalarını göster",
 			"description": "Sohbet görünümündeki her mesaj için zaman damgası göster"
+		},
+		"showDiffStats": {
+			"label": "Diff istatistiklerini göster",
+			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
 	"ghost": {

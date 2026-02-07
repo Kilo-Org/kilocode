@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI Kódovací Agent, Copilot a Automatické Dokončování",
-	"extension.description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu.",
+	"extension.description": "Open Source AI agent pro kódování, který generuje kód z přirozeného jazyka, automatizuje úkoly a spouští příkazy terminálu. Nabízí inline automatické dokončování, automatizaci prohlížeče, automatický refaktoring a vlastní režimy pro plánování, kódování a ladění. Podporuje více než 500 AI modelů včetně Claude (Anthropic), Gemini, Grok, GPT, Codex a GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -58,5 +58,8 @@
 	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
 	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
 	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh",
-	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech."
+	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech.",
+	"settings.debugProxy.enabled.description": "**Povolit Debug Proxy** — Přesměrovat všechny odchozí síťové požadavky přes proxy pro ladění MITM. Aktivní pouze při běhu v režimu ladění (F5).",
+	"settings.debugProxy.serverUrl.description": "URL Proxy (např. `http://127.0.0.1:8888`). Používá se pouze když je **Debug Proxy** povoleno.",
+	"settings.debugProxy.tlsInsecure.description": "Přijímat certifikáty podepsané samým sebou od proxy. **Vyžadováno pro inspekci MITM.** ⚠️ Nebezpečné — používej pouze pro lokální ladění."
 }

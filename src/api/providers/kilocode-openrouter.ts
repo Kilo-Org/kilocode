@@ -13,6 +13,7 @@ import {
 	X_KILOCODE_ORGANIZATIONID,
 	X_KILOCODE_TASKID,
 	X_KILOCODE_PROJECTID,
+	X_KILOCODE_MODE,
 	X_KILOCODE_TESTER,
 	X_KILOCODE_EDITORNAME,
 } from "../../shared/kilocode/headers"
@@ -20,6 +21,7 @@ import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
+import type { FimHandler } from "./kilocode/FimHandler"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -56,6 +58,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
 		const headers: Record<string, string> = {
 			[X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
+		}
+
+		if (metadata?.mode) {
+			headers[X_KILOCODE_MODE] = metadata.mode
 		}
 
 		if (metadata?.taskId) {
@@ -119,8 +125,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
-			throw new Error(KILOCODE_TOKEN_REQUIRED_ERROR)
+		if (!this.options.openRouterBaseUrl) {
+			throw new Error("OpenRouter base URL is required")
 		}
 
 		const [models, endpoints, defaultModel] = await Promise.all([
@@ -134,26 +140,22 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 				modelId: this.options.kilocodeModel,
 				endpoint: this.options.openRouterSpecificProvider,
 			}),
-			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId, this.options),
+			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId),
 		])
 
 		this.models = models
 		this.endpoints = endpoints
-		this.defaultModel = defaultModel
+		this.defaultModel = defaultModel.defaultModel
 		return this.getModel()
 	}
 
-	supportsFim(): boolean {
+	fimSupport(): FimHandler | undefined {
 		const modelId = this.options.kilocodeModel ?? this.defaultModel
-		return modelId.includes("codestral")
-	}
-
-	async completeFim(prefix: string, suffix: string, taskId?: string): Promise<string> {
-		let result = ""
-		for await (const chunk of this.streamFim(prefix, suffix, taskId)) {
-			result += chunk
+		if (!modelId.includes("codestral")) {
+			return undefined
 		}
-		return result
+
+		return this
 	}
 
 	async *streamFim(

@@ -35,7 +35,7 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					hideAnnouncement()
 				}
 			}}>
-			<DialogContent className="max-w-96">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{t("chat:announcement.title", { version: Package.version })}</DialogTitle>
 				</DialogHeader>
@@ -44,8 +44,9 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					<div className="mb-4">
 						<p className="mb-3">{t("chat:announcement.release.heading")}</p>
 						<ul className="list-disc list-inside text-sm space-y-1.5">
-							<li>{t("chat:announcement.release.contextRewind")}</li>
-							<li>{t("chat:announcement.release.rooProvider")}</li>
+							<li>{t("chat:announcement.release.openaiCodexProvider")}</li>
+							<li>{t("chat:announcement.release.gpt52codexModel")}</li>
+							<li>{t("chat:announcement.release.bugFixes")}</li>
 						</ul>
 					</div>
 

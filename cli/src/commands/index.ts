@@ -24,7 +24,7 @@ import { sessionCommand } from "./session.js"
 import { condenseCommand } from "./condense.js"
 
 /**
- * Initialize all commands
+ * Initialize all built-in commands
  */
 export function initializeCommands(): void {
 	// Register all commands

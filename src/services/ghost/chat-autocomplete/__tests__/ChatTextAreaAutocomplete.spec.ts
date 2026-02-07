@@ -45,46 +45,41 @@ describe("ChatTextAreaAutocomplete", () => {
 		})
 	})
 
-	describe("isFimAvailable", () => {
-		it("should return false when model is not loaded", () => {
-			const result = autocomplete.isFimAvailable()
-			expect(result).toBe(false)
-		})
-	})
-
-	describe("isUnwantedSuggestion", () => {
-		it("should filter code patterns (comments, preprocessor, short/empty)", () => {
-			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
-
-			// Comments
-			expect(filter("// comment")).toBe(true)
-			expect(filter("/* comment")).toBe(true)
-			expect(filter("*")).toBe(true)
+	describe("cleanSuggestion", () => {
+		it("should filter code patterns (comments, preprocessor)", () => {
+			// Comments - filtered by the regex check in cleanSuggestion
+			expect(autocomplete.cleanSuggestion("// comment", "")).toBe("")
+			expect(autocomplete.cleanSuggestion("/* comment", "")).toBe("")
+			expect(autocomplete.cleanSuggestion("* something", "")).toBe("")
 
 			// Code patterns
-			expect(filter("#include")).toBe(true)
-			expect(filter("# Header")).toBe(true)
+			expect(autocomplete.cleanSuggestion("#include", "")).toBe("")
+			expect(autocomplete.cleanSuggestion("# Header", "")).toBe("")
+		})
 
-			// Meaningless content
-			expect(filter("")).toBe(true)
-			expect(filter("a")).toBe(true)
-			expect(filter("...")).toBe(true)
+		it("should filter empty content", () => {
+			// Empty content is filtered by postprocessGhostSuggestion
+			expect(autocomplete.cleanSuggestion("", "")).toBe("")
 		})
 
 		it("should accept natural language suggestions", () => {
-			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
-
-			expect(filter("Hello world")).toBe(false)
-			expect(filter("Can you help me")).toBe(false)
-			expect(filter("test123")).toBe(false)
-			expect(filter("What's up?")).toBe(false)
+			expect(autocomplete.cleanSuggestion("Hello world", "")).toBe("Hello world")
+			expect(autocomplete.cleanSuggestion("Can you help me", "")).toBe("Can you help me")
+			expect(autocomplete.cleanSuggestion("test123", "")).toBe("test123")
+			expect(autocomplete.cleanSuggestion("What's up?", "")).toBe("What's up?")
 		})
 
 		it("should accept symbols in middle of text", () => {
-			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
+			expect(autocomplete.cleanSuggestion("Text with # in middle", "")).toBe("Text with # in middle")
+			expect(autocomplete.cleanSuggestion("Hello // but not a comment", "")).toBe("Hello // but not a comment")
+		})
 
-			expect(filter("Text with # in middle")).toBe(false)
-			expect(filter("Hello // but not a comment")).toBe(false)
+		it("should truncate at first newline", () => {
+			expect(autocomplete.cleanSuggestion("First line\nSecond line", "")).toBe("First line")
+		})
+
+		it("should remove prefix overlap", () => {
+			expect(autocomplete.cleanSuggestion("Hello world", "Hello ")).toBe("world")
 		})
 	})
 })

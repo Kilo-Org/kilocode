@@ -1,9 +1,9 @@
 import type { ModelInfo } from "../model.js"
 
 export type FireworksModelId =
-	| "accounts/fireworks/models/kimi-k2-thinking" // kilocode_change
 	| "accounts/fireworks/models/kimi-k2-instruct"
 	| "accounts/fireworks/models/kimi-k2-instruct-0905"
+	| "accounts/fireworks/models/kimi-k2-thinking"
 	| "accounts/fireworks/models/minimax-m2"
 	| "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507"
 	| "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct"
@@ -19,24 +19,13 @@ export type FireworksModelId =
 export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct-0905"
 
 export const fireworksModels = {
-	// kilocode_change start
-	"accounts/fireworks/models/kimi-k2-thinking": {
-		maxTokens: 4096,
-		contextWindow: 262144,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.6,
-		outputPrice: 2.5,
-		description:
-			"Kimi K2 Thinking is the latest, most capable version of open-source thinking model. Starting with Kimi K2, we built it as a thinking agent that reasons step-by-step while dynamically invoking tools.",
-	},
-	// kilocode_change end
 	"accounts/fireworks/models/kimi-k2-instruct-0905": {
 		maxTokens: 16384,
 		contextWindow: 262144,
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.6,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.15,
@@ -49,10 +38,26 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.6,
 		outputPrice: 2.5,
 		description:
 			"Kimi K2 is a state-of-the-art mixture-of-experts (MoE) language model with 32 billion activated parameters and 1 trillion total parameters. Trained with the Muon optimizer, Kimi K2 achieves exceptional performance across frontier knowledge, reasoning, and coding tasks while being meticulously optimized for agentic capabilities.",
+	},
+	"accounts/fireworks/models/kimi-k2-thinking": {
+		maxTokens: 16000,
+		contextWindow: 256000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		supportsTemperature: true,
+		preserveReasoning: true,
+		defaultTemperature: 1.0,
+		inputPrice: 0.6,
+		outputPrice: 2.5,
+		cacheReadsPrice: 0.15,
+		description:
+			"The kimi-k2-thinking model is a general-purpose agentic reasoning model developed by Moonshot AI. Thanks to its strength in deep reasoning and multi-turn tool use, it can solve even the hardest problems.",
 	},
 	"accounts/fireworks/models/minimax-m2": {
 		maxTokens: 4096,
@@ -60,6 +65,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.3,
 		outputPrice: 1.2,
 		description:
@@ -71,6 +77,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.22,
 		outputPrice: 0.88,
 		description: "Latest Qwen3 thinking model, competitive against the best closed source models in Jul 2025.",
@@ -81,6 +88,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.45,
 		outputPrice: 1.8,
 		description: "Qwen3's most agentic code model to date.",
@@ -91,6 +99,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3,
 		outputPrice: 8,
 		description:
@@ -102,6 +111,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.9,
 		outputPrice: 0.9,
 		description:
@@ -113,6 +123,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.56,
 		outputPrice: 1.68,
 		description:
@@ -124,6 +135,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -135,6 +147,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -146,6 +159,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -157,6 +171,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.07,
 		outputPrice: 0.3,
 		description:
@@ -168,6 +183,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.15,
 		outputPrice: 0.6,
 		description:

@@ -17,21 +17,33 @@
 		}
 	},
 	"chooseProvider": "Um seine Magie zu entfalten, benötigt Kilo Code einen API-Schlüssel.",
+	"landing": {
+		"greeting": "Willkommen bei Roo Code!",
+		"introduction": "Mit einer Reihe von integrierten und erweiterbaren Modi ermöglicht dir Roo Code, zu planen, zu architektieren, zu coden, zu debuggen und deine Produktivität wie nie zuvor zu steigern.",
+		"accountMention": "Um zu beginnen, erstelle dein Roo Code Cloud Konto. Erhalte leistungsstarke Modelle, Webkontrolle, Analysen, Support und mehr.",
+		"getStarted": "Roo-Konto erstellen",
+		"noAccount": "oder ohne Konto verwenden"
+	},
 	"providerSignup": {
-		"rooCloudProvider": "Roo Code Cloud Provider",
-		"rooCloudDescription": "Der einfachste Weg, Roo zu nutzen. Eine kuratierte Mischung aus kostenlosen und bezahlten Modellen zu niedrigen Kosten",
-		"learnMore": "mehr erfahren",
-		"useAnotherProvider": "Anderen Anbieter verwenden",
+		"heading": "Wähle deinen Anbieter",
+		"chooseProvider": "Roo braucht einen LLM-Anbieter, um zu funktionieren. Wähle einen aus, um loszulegen. Du kannst später mehr hinzufügen.",
+		"rooCloudProvider": "Roo Code Router",
+		"rooCloudDescription": "Der einfachste Weg loszulegen ist mit dem Roo Code Router: eine kuratierte Mischung aus kostenlosen und bezahlten Modellen zu niedrigen Kosten.",
+		"learnMore": "Weitere Informationen",
+		"useAnotherProvider": "3rd-party Provider",
 		"useAnotherProviderDescription": "Gib einen API-Schlüssel ein und leg los.",
-		"noApiKeys": "Du möchtest dich nicht mit Schlüsseln herumschlagen? Geh mit dem Roo Code Cloud Provider.",
-		"getStarted": "Loslegen"
+		"noApiKeys": "Du möchtest dich nicht mit API-Schlüsseln und separaten Konten rumschlagen?",
+		"backToRoo": "Geh mit dem Roo Code Router.",
+		"goBack": "Zurück",
+		"finish": "Beenden"
 	},
 	"waitingForCloud": {
-		"heading": "Wir bringen dich zu Roo Code Cloud...",
+		"heading": "Anmeldung bei Roo Code Cloud...",
 		"description": "Wir bringen dich in deinen Browser, um dich für Roo Code Cloud zu registrieren. Dann bringen wir dich hierher zurück, um das Einrichten abzuschließen.",
 		"noPrompt": "Wenn du nicht aufgefordert wirst, eine URL zu öffnen, <clickHere>klick hier</clickHere>.",
 		"havingTrouble": "Wenn du die Anmeldung abgeschlossen hast, aber Probleme hast, <clickHere>klick hier</clickHere>.",
 		"pasteUrl": "Füge die Callback-URL aus deinem Browser ein:",
+		"docsLink": "Funktioniert nicht? <DocsLink>Schau dir die Dokumentation an</DocsLink>.",
 		"invalidURL": "Das sieht nicht wie eine gültige Callback-URL aus. Bitte kopiere das, was Roo Code Cloud in deinem Browser anzeigt.",
 		"goBack": "Zurück"
 	},

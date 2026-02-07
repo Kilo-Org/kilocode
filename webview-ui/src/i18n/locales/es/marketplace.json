@@ -149,10 +149,24 @@
 			"title": "Eliminar servidor MCP",
 			"message": "¿Estás seguro de que quieres eliminar el servidor MCP \"{{mcpName}}\"?"
 		},
+		"skill": {
+			"title": "Eliminar habilidad",
+			"message": "¿Estás seguro de que quieres eliminar la habilidad \"{{skillName}}\"?"
+		},
 		"cancel": "Cancelar",
 		"confirm": "Eliminar"
 	},
 	"footer": {
 		"issueText": "¿Encontraste un problema con un elemento del marketplace o tienes sugerencias para nuevos? ¡<0>Abre un issue en GitHub</0> para hacérnoslo saber!"
+	},
+	"skills": {
+		"loading": "Cargando habilidades...",
+		"searchPlaceholder": "Buscar habilidades...",
+		"allCategories": "Todas",
+		"resultsCount": "{{count}} habilidades encontradas",
+		"noResults": "No se encontraron habilidades que coincidan con tus criterios",
+		"install": "Instalar",
+		"installTitle": "Instalar habilidad {{name}}",
+		"installing": "Instalando..."
 	}
 }

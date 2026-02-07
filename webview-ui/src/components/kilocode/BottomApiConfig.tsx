@@ -22,7 +22,11 @@ export const BottomApiConfig = () => {
 					//kilocode_change: Pass virtual quota active model to ModelSelector
 					virtualQuotaActiveModel={
 						virtualQuotaActiveModel
-							? { id: virtualQuotaActiveModel.id, name: virtualQuotaActiveModel.id }
+							? {
+									id: virtualQuotaActiveModel.id,
+									name: virtualQuotaActiveModel.id,
+									activeProfileNumber: virtualQuotaActiveModel.activeProfileNumber,
+								}
 							: undefined
 					}
 					//kilocode_change: Pass intelligent active model to ModelSelector

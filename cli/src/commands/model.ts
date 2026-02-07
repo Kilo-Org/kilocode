@@ -3,10 +3,10 @@
  */
 
 import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
-import type { ModelRecord } from "../constants/providers/models.js"
 import type { ProviderConfig } from "../config/types.js"
 import type { RouterModels } from "../types/messages.js"
 import {
+	type ModelRecord,
 	getModelsByProvider,
 	getCurrentModelId,
 	sortModelsByPreference,
@@ -57,6 +57,7 @@ async function ensureRouterModels(context: CommandContext): Promise<boolean> {
 		"io-intelligence",
 		"vercel-ai-gateway",
 		"ovhcloud",
+		"nano-gpt",
 	].includes(routerName)
 
 	if (!needsRouterModels) {
@@ -927,6 +928,7 @@ export const modelCommand: Command = {
 			name: "model-or-list-subcommand",
 			description: "Model name (for info/select) or list subcommand (page, next, prev, sort, filter)",
 			required: false,
+			provider: modelAutocompleteProvider,
 			conditionalProviders: [
 				{
 					condition: (context) => {

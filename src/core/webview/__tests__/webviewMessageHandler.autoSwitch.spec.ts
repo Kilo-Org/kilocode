@@ -145,7 +145,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "test-token",
 					kilocodeOrganizationId: "org-1",
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 
 			// Verify flag was set to true after the recursive call
@@ -155,7 +155,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(refreshOrganizationModes).toHaveBeenCalled()
 
 			// Verify models were flushed and refetched (via upsertApiConfiguration handler)
-			expect(flushModels).toHaveBeenCalledWith("kilocode")
+			expect(flushModels).toHaveBeenCalledWith(
+				{
+					provider: "kilocode",
+					kilocodeOrganizationId: "org-1",
+					kilocodeToken: "test-token",
+				},
+				true,
+			)
 			expect(getModels).toHaveBeenCalledWith({
 				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
@@ -223,7 +230,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify flushModels was called (via upsertApiConfiguration)
-			expect(flushModels).toHaveBeenCalledWith("kilocode")
+			expect(flushModels).toHaveBeenCalledWith(
+				{
+					provider: "kilocode",
+					kilocodeOrganizationId: "org-1",
+					kilocodeToken: "test-token",
+				},
+				true,
+			)
 
 			// Verify getModels was called with organization ID (via upsertApiConfiguration)
 			expect(getModels).toHaveBeenCalledWith({
@@ -393,7 +407,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "new-token",
 					kilocodeOrganizationId: undefined,
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 		})
 
@@ -555,7 +569,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 					kilocodeToken: "test-token",
 					kilocodeOrganizationId: "org-1",
 				},
-				false,
+				true, // Changed: Now correctly activates the profile (fix for PR #5415 bug)
 			)
 
 			// Verify log message mentions the correct organization

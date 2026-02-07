@@ -4,9 +4,11 @@ import {
 	organizationCloudSettingsSchema,
 	organizationFeaturesSchema,
 	organizationSettingsSchema,
+	userSettingsConfigSchema,
 	type OrganizationCloudSettings,
 	type OrganizationFeatures,
 	type OrganizationSettings,
+	type UserSettingsConfig,
 	type WorkspaceTaskVisibility,
 } from "../cloud.js"
 
@@ -175,6 +177,82 @@ describe("organizationSettingsSchema with features", () => {
 	})
 })
 
+describe("organizationCloudSettingsSchema with allowPublicTaskSharing", () => {
+	it("should validate without allowPublicTaskSharing property", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.allowPublicTaskSharing).toBeUndefined()
+	})
+
+	it("should validate with allowPublicTaskSharing as true", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			allowPublicTaskSharing: true,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.allowPublicTaskSharing).toBe(true)
+	})
+
+	it("should validate with allowPublicTaskSharing as false", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			allowPublicTaskSharing: false,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.allowPublicTaskSharing).toBe(false)
+	})
+
+	it("should reject non-boolean allowPublicTaskSharing", () => {
+		const input = {
+			allowPublicTaskSharing: "true",
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(false)
+	})
+
+	it("should have correct TypeScript type", () => {
+		// Type-only test to ensure TypeScript compilation
+		const settings: OrganizationCloudSettings = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			allowPublicTaskSharing: true,
+		}
+		expect(settings.allowPublicTaskSharing).toBe(true)
+
+		const settingsWithoutPublicSharing: OrganizationCloudSettings = {
+			recordTaskMessages: false,
+		}
+		expect(settingsWithoutPublicSharing.allowPublicTaskSharing).toBeUndefined()
+	})
+
+	it("should validate in organizationSettingsSchema with allowPublicTaskSharing", () => {
+		const input = {
+			version: 1,
+			cloudSettings: {
+				recordTaskMessages: true,
+				enableTaskSharing: true,
+				allowPublicTaskSharing: false,
+			},
+			defaultSettings: {},
+			allowList: {
+				allowAll: true,
+				providers: {},
+			},
+		}
+		const result = organizationSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.cloudSettings?.allowPublicTaskSharing).toBe(false)
+	})
+})
+
 describe("organizationCloudSettingsSchema with workspaceTaskVisibility", () => {
 	it("should validate without workspaceTaskVisibility property", () => {
 		const input = {
@@ -253,5 +331,153 @@ describe("organizationCloudSettingsSchema with workspaceTaskVisibility", () => {
 		const result = organizationSettingsSchema.safeParse(input)
 		expect(result.success).toBe(true)
 		expect(result.data?.cloudSettings?.workspaceTaskVisibility).toBe("list-only")
+	})
+})
+
+describe("organizationCloudSettingsSchema with llmEnhancedFeaturesEnabled", () => {
+	it("should validate without llmEnhancedFeaturesEnabled property", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBeUndefined()
+	})
+
+	it("should validate with llmEnhancedFeaturesEnabled as true", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			llmEnhancedFeaturesEnabled: true,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBe(true)
+	})
+
+	it("should validate with llmEnhancedFeaturesEnabled as false", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			llmEnhancedFeaturesEnabled: false,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBe(false)
+	})
+
+	it("should reject non-boolean llmEnhancedFeaturesEnabled", () => {
+		const input = {
+			llmEnhancedFeaturesEnabled: "true",
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(false)
+	})
+
+	it("should have correct TypeScript type", () => {
+		// Type-only test to ensure TypeScript compilation
+		const settings: OrganizationCloudSettings = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+			llmEnhancedFeaturesEnabled: true,
+		}
+		expect(settings.llmEnhancedFeaturesEnabled).toBe(true)
+
+		const settingsWithoutLlmFeatures: OrganizationCloudSettings = {
+			recordTaskMessages: false,
+		}
+		expect(settingsWithoutLlmFeatures.llmEnhancedFeaturesEnabled).toBeUndefined()
+	})
+
+	it("should validate in organizationSettingsSchema with llmEnhancedFeaturesEnabled", () => {
+		const input = {
+			version: 1,
+			cloudSettings: {
+				recordTaskMessages: true,
+				enableTaskSharing: true,
+				llmEnhancedFeaturesEnabled: false,
+			},
+			defaultSettings: {},
+			allowList: {
+				allowAll: true,
+				providers: {},
+			},
+		}
+		const result = organizationSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.cloudSettings?.llmEnhancedFeaturesEnabled).toBe(false)
+	})
+})
+
+describe("userSettingsConfigSchema with llmEnhancedFeaturesEnabled", () => {
+	it("should validate without llmEnhancedFeaturesEnabled property", () => {
+		const input = {
+			extensionBridgeEnabled: true,
+			taskSyncEnabled: true,
+		}
+		const result = userSettingsConfigSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBeUndefined()
+	})
+
+	it("should validate with llmEnhancedFeaturesEnabled as true", () => {
+		const input = {
+			extensionBridgeEnabled: true,
+			taskSyncEnabled: true,
+			llmEnhancedFeaturesEnabled: true,
+		}
+		const result = userSettingsConfigSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBe(true)
+	})
+
+	it("should validate with llmEnhancedFeaturesEnabled as false", () => {
+		const input = {
+			extensionBridgeEnabled: true,
+			taskSyncEnabled: true,
+			llmEnhancedFeaturesEnabled: false,
+		}
+		const result = userSettingsConfigSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBe(false)
+	})
+
+	it("should reject non-boolean llmEnhancedFeaturesEnabled", () => {
+		const input = {
+			llmEnhancedFeaturesEnabled: "true",
+		}
+		const result = userSettingsConfigSchema.safeParse(input)
+		expect(result.success).toBe(false)
+	})
+
+	it("should have correct TypeScript type", () => {
+		// Type-only test to ensure TypeScript compilation
+		const settings: UserSettingsConfig = {
+			extensionBridgeEnabled: true,
+			taskSyncEnabled: true,
+			llmEnhancedFeaturesEnabled: true,
+		}
+		expect(settings.llmEnhancedFeaturesEnabled).toBe(true)
+
+		const settingsWithoutLlmFeatures: UserSettingsConfig = {
+			extensionBridgeEnabled: false,
+		}
+		expect(settingsWithoutLlmFeatures.llmEnhancedFeaturesEnabled).toBeUndefined()
+	})
+
+	it("should validate empty object", () => {
+		const result = userSettingsConfigSchema.safeParse({})
+		expect(result.success).toBe(true)
+		expect(result.data).toEqual({})
+	})
+
+	it("should validate with only llmEnhancedFeaturesEnabled", () => {
+		const input = {
+			llmEnhancedFeaturesEnabled: true,
+		}
+		const result = userSettingsConfigSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.llmEnhancedFeaturesEnabled).toBe(true)
 	})
 })

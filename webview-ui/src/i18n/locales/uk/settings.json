@@ -1,4 +1,9 @@
 {
+	"back": "Повернутися до перегляду завдань",
+	"search": {
+		"placeholder": "Пошук налаштувань...",
+		"noResults": "Налаштувань не знайдено"
+	},
 	"common": {
 		"save": "Зберегти",
 		"done": "Готово",
@@ -38,9 +43,14 @@
 		"language": "Мова",
 		"about": "Про Kilo Code",
 		"autoPurge": "Авто-очищення",
+		"agentBehaviour": "Поведінка агента",
 		"ghost": "Ghost"
 	},
 	"about": {
+		"debugMode": {
+			"label": "Увімкнути режим налагодження",
+			"description": "Увімкнути режим налагодження для відображення додаткових кнопок у заголовку завдання для перегляду історії розмов API та повідомлень UI як prettified JSON у тимчасових файлах."
+		},
 		"contactSupport": "Зв'язатися зі службою підтримки",
 		"contactSupportDesc": "Потребуєш допомоги? Зв'яжися з нашою службою підтримки клієнтів для отримання персоналізованої допомоги.",
 		"joinCommunity": "Приєднатися до спільноти",
@@ -128,6 +138,7 @@
 		"openRouterProviderRoutingLabel": "Маршрутизація провайдера OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter направляє запити до найкращих доступних провайдерів для вашої моделі вбудовувань. За замовчуванням запити розподіляються між провідними провайдерами для максимального часу безвідмовної роботи. Однак ви можете вибрати конкретного провайдера для використання цієї моделі.",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
+		"openaiCompatibleResponsesProvider": "Сумісний з OpenAI (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
 		"openaiKeyLabel": "Ключ OpenAI:",
@@ -339,6 +350,37 @@
 		"apiKeyStorageNotice": "Ключі API надійно зберігаються в Secret Storage VSCode",
 		"glamaApiKey": "Ключ API Glama",
 		"getGlamaApiKey": "Отримати ключ API Glama",
+		"openAiCodexRateLimits": {
+			"title": "Ліміти використання для Codex{{planLabel}}",
+			"loading": "Завантаження лімітів використання...",
+			"loadError": "Не вдалося завантажити ліміти використання",
+			"retry": "Спробувати знову",
+			"usedPercent": "{{percent}}% використано",
+			"resetsIn": "Скинеться через {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Зараз",
+				"notAvailable": "Недоступно"
+			},
+			"duration": {
+				"daysHours": "{{days}}д {{hours}}г",
+				"hoursMinutes": "{{hours}}г {{minutes}}хв",
+				"minutes": "{{minutes}}хв"
+			},
+			"window": {
+				"usage": "Використання",
+				"fiveHour": "5-годинний ліміт",
+				"oneHour": "1-годинний ліміт",
+				"daily": "Денний ліміт",
+				"weekly": "Тижневий ліміт",
+				"days": "{{days}}д ліміт",
+				"hours": "{{hours}}г ліміт",
+				"minutes": "{{minutes}}хв ліміт"
+			}
+		},
 		"useCustomBaseUrl": "Використовувати власний базовий URL",
 		"useReasoning": "Увімкнути міркування",
 		"useHostHeader": "Використовувати власний заголовок Host",
@@ -364,6 +406,8 @@
 		"anthropicUseAuthToken": "Передавати ключ API Anthropic як заголовок Authorization замість X-Api-Key",
 		"anthropic1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
+		"vertex1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"anthropicUseAzureDeployment": "Використовувати ім'я розгортання Azure",
@@ -446,6 +490,7 @@
 			"supportedProvidersDesc3": "Дізнатися більше про режим оркестрації"
 		},
 		"awsApiKey": "Ключ API Amazon Bedrock",
+		"apiProviderDocs": "Документація провайдера",
 		"apiKey": "Ключ API",
 		"openAiBaseUrl": "Базовий URL",
 		"getOpenAiApiKey": "Отримати ключ API OpenAI",
@@ -466,6 +511,14 @@
 		"awsRegion": "Регіон AWS",
 		"awsCrossRegion": "Використовувати міжрегіональний висновок",
 		"awsGlobalInference": "Використовувати глобальний висновок (автоматичний вибір оптимального регіону AWS)",
+		"awsServiceTier": "Рівень сервісу",
+		"awsServiceTierStandard": "Стандартний",
+		"awsServiceTierStandardDesc": "Збалансована продуктивність і вартість",
+		"awsServiceTierFlex": "Гнучкий (знижка 50%)",
+		"awsServiceTierFlexDesc": "Нижча вартість, вища затримка для некритичних завдань",
+		"awsServiceTierPriority": "Пріоритетний (надбавка 75%)",
+		"awsServiceTierPriorityDesc": "Найшвидша продуктивність для важливих застосунків",
+		"awsServiceTierNote": "Рівні сервісу впливають на ціни та продуктивність. Гнучкий пропонує знижку 50% з вищою затримкою, Пріоритетний пропонує на 25% кращу продуктивність з надбавкою 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Використовувати власний кінцевий пункт VPC",
 			"vpcEndpointUrlPlaceholder": "Введіть URL кінцевого пункту VPC (необов'язково)",
@@ -618,6 +671,7 @@
 		},
 		"verbosity": {
 			"label": "Рівень деталізації виводу",
+			"max": "Max",
 			"high": "Високий",
 			"medium": "Середній",
 			"low": "Низький",
@@ -630,21 +684,6 @@
 			"placeholder": "За замовчуванням: claude",
 			"maxTokensLabel": "Макс. вихідних токенів",
 			"maxTokensDescription": "Максимальна кількість вихідних токенів для відповідей Claude Code. За замовчуванням 8000."
-		},
-		"geminiCli": {
-			"description": "Цей провайдер використовує OAuth-аутентифікацію інструменту Gemini CLI і не потребує API-ключів.",
-			"oauthPath": "Шлях до облікових даних OAuth (необов'язково)",
-			"oauthPathDescription": "Шлях до файлу облікових даних OAuth. Залиште порожнім для використання місця за замовчуванням (~/.gemini/oauth_creds.json).",
-			"instructions": "Якщо ти ще не пройшов аутентифікацію, будь ласка, виконай",
-			"instructionsContinued": "у своєму терміналі спочатку.",
-			"setupLink": "Інструкції налаштування Gemini CLI",
-			"requirementsTitle": "Важливі вимоги",
-			"requirement1": "Спочатку тобі потрібно встановити інструмент Gemini CLI",
-			"requirement2": "Потім запусти gemini у своєму терміналі і переконайся, що увійшов через Google",
-			"requirement3": "Працює лише з особистими обліковими записами Google (не обліковими записами Google Workspace)",
-			"requirement4": "Не використовує API-ключі - аутентифікація здійснюється через OAuth",
-			"requirement5": "Потребує, щоб інструмент Gemini CLI був спочатку встановлений і аутентифікований",
-			"freeAccess": "Безкоштовний доступ через OAuth-аутентифікацію"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
@@ -781,6 +820,10 @@
 		"showTimestamps": {
 			"label": "Показувати часові мітки",
 			"description": "Показувати часову мітку для кожного повідомлення у вікні чату"
+		},
+		"showDiffStats": {
+			"label": "Показувати статистику diff",
+			"description": "Відображати статистику доданих/видалених рядків у заголовку завдання"
 		}
 	},
 	"notifications": {
@@ -895,6 +938,10 @@
 		"maxGitStatusFiles": {
 			"label": "Макс. файлів статусу Git",
 			"description": "Максимальна кількість записів файлів для включення в контекст статусу git. Встановіть 0 для вимкнення. Інформація про гілку завжди показується, коли > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Увімкнути правила підпапок",
+			"description": "Рекурсивно знаходити та завантажувати файли .roo/rules та AGENTS.md з підкаталогів. Корисно для монорепозиторіїв з правилами для кожного пакета."
 		}
 	},
 	"terminal": {
@@ -1094,6 +1141,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Мовлення в текст (STT)",
 			"description": "Коли увімкнено, Kilo Code може транскрибувати ваш голос у текст за допомогою моделі Whisper від OpenAI. Натисніть кнопку мікрофона в чаті, щоб почати запис. Потребує встановленого FFmpeg та налаштованого провайдера OpenAI API."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Увімкнути власні інструменти",
+			"description": "Коли увімкнено, Kilo може завантажувати та використовувати власні інструменти TypeScript/JavaScript з каталогу .kilocode/tools вашого проекту або ~/.kilocode/tools для глобальних інструментів. Примітка: ці інструменти будуть автоматично схвалені.",
+			"toolsHeader": "Доступні власні інструменти",
+			"noTools": "Жодних власних інструментів не завантажено. Додайте файли .ts або .js до каталогу .kilocode/tools вашого проекту або ~/.kilocode/tools для глобальних інструментів.",
+			"refreshButton": "Оновити",
+			"refreshing": "Оновлення...",
+			"refreshSuccess": "Інструменти успішно оновлено",
+			"refreshError": "Не вдалося оновити інструменти",
+			"toolParameters": "Параметри"
 		}
 	},
 	"promptCaching": {
@@ -1135,7 +1193,9 @@
 		"searchPlaceholder": "Пошук",
 		"noMatchFound": "Збігів не знайдено",
 		"useCustomModel": "Використовувати власну: {{modelId}}",
-		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше."
+		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше.",
+		"recommendedModels": "Рекомендовані моделі",
+		"allModels": "Усі моделі"
 	},
 	"footer": {
 		"feedback": "Якщо у тебе є питання або відгуки, не соромся відкрити issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> або приєднатися до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilo.ai/discord</discordLink>.",

@@ -212,4 +212,132 @@ describe("getChutesModels", () => {
 		expect(models["test/no-tools-model"].supportsNativeTools).toBe(false)
 		expect(models["test/no-tools-model"].defaultToolProtocol).toBeUndefined()
 	})
+
+	it("should skip empty objects in API response and still process valid models", async () => {
+		const mockResponse = {
+			data: {
+				data: [
+					{
+						id: "test/valid-model",
+						object: "model",
+						owned_by: "test",
+						created: 1234567890,
+						context_length: 128000,
+						max_model_len: 8192,
+						input_modalities: ["text"],
+					},
+					{}, // Empty object - should be skipped
+					{
+						id: "test/another-valid-model",
+						object: "model",
+						context_length: 64000,
+						max_model_len: 4096,
+					},
+				],
+			},
+		}
+
+		mockedAxios.get.mockResolvedValue(mockResponse)
+
+		const models = await getChutesModels("test-api-key")
+
+		// Valid models should be processed
+		expect(models["test/valid-model"]).toBeDefined()
+		expect(models["test/valid-model"].contextWindow).toBe(128000)
+		expect(models["test/another-valid-model"]).toBeDefined()
+		expect(models["test/another-valid-model"].contextWindow).toBe(64000)
+	})
+
+	it("should skip models without id field", async () => {
+		const mockResponse = {
+			data: {
+				data: [
+					{
+						// Missing id field
+						object: "model",
+						context_length: 128000,
+						max_model_len: 8192,
+					},
+					{
+						id: "test/valid-model",
+						context_length: 64000,
+						max_model_len: 4096,
+					},
+				],
+			},
+		}
+
+		mockedAxios.get.mockResolvedValue(mockResponse)
+
+		const models = await getChutesModels("test-api-key")
+
+		// Only the valid model should be added
+		expect(models["test/valid-model"]).toBeDefined()
+		// Hardcoded models should still exist
+		expect(Object.keys(models).length).toBeGreaterThan(1)
+	})
+
+	it("should calculate maxTokens fallback when max_model_len is missing", async () => {
+		const mockResponse = {
+			data: {
+				data: [
+					{
+						id: "test/no-max-len-model",
+						object: "model",
+						context_length: 100000,
+						// max_model_len is missing
+						input_modalities: ["text"],
+					},
+				],
+			},
+		}
+
+		mockedAxios.get.mockResolvedValue(mockResponse)
+
+		const models = await getChutesModels("test-api-key")
+
+		// Should calculate maxTokens as 20% of contextWindow
+		expect(models["test/no-max-len-model"]).toBeDefined()
+		expect(models["test/no-max-len-model"].maxTokens).toBe(20000) // 100000 * 0.2
+		expect(models["test/no-max-len-model"].contextWindow).toBe(100000)
+	})
+
+	it("should gracefully handle response with mixed valid and invalid items", async () => {
+		const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+		const mockResponse = {
+			data: {
+				data: [
+					{
+						id: "test/valid-1",
+						context_length: 128000,
+						max_model_len: 8192,
+					},
+					{}, // Empty - will be skipped
+					null, // Null - will be skipped
+					{
+						id: "", // Empty string id - will be skipped
+						context_length: 64000,
+					},
+					{
+						id: "test/valid-2",
+						context_length: 256000,
+						max_model_len: 16384,
+						supported_features: ["tools"],
+					},
+				],
+			},
+		}
+
+		mockedAxios.get.mockResolvedValue(mockResponse)
+
+		const models = await getChutesModels("test-api-key")
+
+		// Both valid models should be processed
+		expect(models["test/valid-1"]).toBeDefined()
+		expect(models["test/valid-2"]).toBeDefined()
+		expect(models["test/valid-2"].supportsNativeTools).toBe(true)
+
+		consoleErrorSpy.mockRestore()
+	})
 })

@@ -1,7 +1,12 @@
 import { ToolProtocol, TOOL_PROTOCOL } from "@roo-code/types"
 import { isNativeProtocol } from "@roo-code/types"
 
-export function getToolUseGuidelinesSection(protocol: ToolProtocol = TOOL_PROTOCOL.XML): string {
+import { experiments, EXPERIMENT_IDS } from "../../../shared/experiments"
+
+export function getToolUseGuidelinesSection(
+	protocol: ToolProtocol = TOOL_PROTOCOL.XML,
+	experimentFlags?: Record<string, boolean>,
+): string {
 	// Build guidelines array with automatic numbering
 	let itemNumber = 1
 	const guidelinesList: string[] = []
@@ -17,9 +22,21 @@ export function getToolUseGuidelinesSection(protocol: ToolProtocol = TOOL_PROTOC
 
 	// Remaining guidelines - different for native vs XML protocol
 	if (isNativeProtocol(protocol)) {
-		guidelinesList.push(
-			`${itemNumber++}. If multiple actions are needed, you may use multiple tools in a single message when appropriate, or use tools iteratively across messages. Each tool use should be informed by the results of previous tool uses. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,
+		// Check if multiple native tool calls is enabled via experiment
+		const isMultipleNativeToolCallsEnabled = experiments.isEnabled(
+			experimentFlags ?? {},
+			EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS,
 		)
+
+		if (isMultipleNativeToolCallsEnabled) {
+			guidelinesList.push(
+				`${itemNumber++}. If multiple actions are needed, you may use multiple tools in a single message when appropriate, or use tools iteratively across messages. Each tool use should be informed by the results of previous tool uses. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,
+			)
+		} else {
+			guidelinesList.push(
+				`${itemNumber++}. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,
+			)
+		}
 	} else {
 		guidelinesList.push(
 			`${itemNumber++}. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,

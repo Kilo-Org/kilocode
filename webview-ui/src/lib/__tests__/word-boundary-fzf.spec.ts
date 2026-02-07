@@ -105,6 +105,14 @@ describe("Fzf - Word Boundary Matching", () => {
 
 			expect(results).toHaveLength(1)
 		})
+
+		it("should recognize parentheses as word separators", () => {
+			const items = [{ id: 1, name: "xAI: Grok Code Fast 1 (free)" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+			const results = fzf.find("free")
+
+			expect(results).toHaveLength(1)
+		})
 	})
 
 	describe("Empty and whitespace queries", () => {

@@ -30,6 +30,16 @@ describe("Slash Command Matching", () => {
 			const results = getMatchingSlashCommands("")
 			expect(results.length).toBeGreaterThan(0)
 		})
+
+		it("should include condense aliases in results", () => {
+			const results = getMatchingSlashCommands("cond")
+			expect(results.some((r) => r.name === "condense")).toBe(true)
+		})
+
+		it("should include init in results", () => {
+			const results = getMatchingSlashCommands("init")
+			expect(results.some((r) => r.name === "init")).toBe(true)
+		})
 	})
 
 	describe("validateSlashCommand - case insensitivity", () => {
@@ -37,6 +47,17 @@ describe("Slash Command Matching", () => {
 			expect(validateSlashCommand("newtask")).toBe("full")
 			expect(validateSlashCommand("NEWTASK")).toBe("full")
 			expect(validateSlashCommand("NewTask")).toBe("full")
+		})
+
+		it("should validate condense aliases", () => {
+			expect(validateSlashCommand("smol")).toBe("full")
+			expect(validateSlashCommand("condense")).toBe("full")
+			expect(validateSlashCommand("compact")).toBe("full")
+		})
+
+		it("should validate init", () => {
+			expect(validateSlashCommand("init")).toBe("full")
+			expect(validateSlashCommand("INIT")).toBe("full")
 		})
 
 		it("should validate partial matches regardless of case", () => {
@@ -52,6 +73,18 @@ describe("Slash Command Matching", () => {
 	describe("shouldShowSlashCommandsMenu", () => {
 		it("should show menu when typing after slash", () => {
 			expect(shouldShowSlashCommandsMenu("/new", 4)).toBe(true)
+		})
+
+		it("should hide menu when there are no matching commands", () => {
+			expect(shouldShowSlashCommandsMenu("/doesnotexist", "/doesnotexist".length)).toBe(false)
+		})
+
+		it("should show menu when query matches a known command", () => {
+			expect(shouldShowSlashCommandsMenu("/newt", "/newt".length)).toBe(true)
+		})
+
+		it("should show menu for /init", () => {
+			expect(shouldShowSlashCommandsMenu("/init", "/init".length)).toBe(true)
 		})
 
 		it("should hide menu when there's whitespace after slash", () => {

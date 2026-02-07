@@ -1,13 +1,15 @@
 import * as path from "path"
 
+import { type ClineSayTool } from "@roo-code/types"
+
 import { Task } from "../task/Task"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
 import { listFiles } from "../../services/glob/list-files"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface ListFilesParams {
 	path: string

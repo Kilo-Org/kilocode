@@ -11,7 +11,7 @@ import {
 } from "../../llm/countTokens"
 import { getUriPathBasename } from "../../util/uri"
 import { SnippetPayload } from "../snippets"
-import { AutocompleteSnippet } from "../snippets/types"
+import { AutocompleteSnippet } from "../types"
 import { AutocompleteTemplate, getTemplateForModel } from "./AutocompleteTemplate"
 import { getSnippets } from "./filtering"
 import { formatSnippets } from "./formatting"

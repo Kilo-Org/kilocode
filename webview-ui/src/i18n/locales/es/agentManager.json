@@ -14,7 +14,9 @@
 		"shareSession": "Compartir sesión",
 		"shareConfirmMessage": "¿Te gustaría compartir públicamente una instantánea de esta sesión?",
 		"shareConfirmYes": "Sí",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Opciones",
+		"configureSetupScript": "Script de setup de worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un nuevo agente",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Modo YOLO - las operaciones de herramientas se aprueban automáticamente",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente con el prompt proporcionado",
-		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Nube",
@@ -55,7 +56,13 @@
 		"branchPickerTooltip": "Cambiar rama base",
 		"noBranches": "No se encontraron ramas",
 		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda",
-		"openTerminal": "Abrir terminal"
+		"openTerminal": "Abrir terminal",
+		"selectModel": "Seleccionar modelo",
+		"modelTooltip": "Elige qué modelo de IA usar para esta sesión",
+		"defaultModel": "Modelo predeterminado",
+		"loadingModels": "Cargando...",
+		"selectMode": "Seleccionar modo",
+		"modeTooltip": "Modo: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",
@@ -70,7 +77,9 @@
 		"usingTool": "Usando herramienta: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir salida",
 		"collapseOutput": "Colapsar salida",
-		"copyCommand": "Copiar comando"
+		"copyCommand": "Copiar comando",
+		"thinking": "Pensando",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agente ejecutándose en modo totalmente automático - no se permite entrada",
@@ -80,9 +89,12 @@
 		"cancelTitle": "Cancelar agente",
 		"finishToBranchTitle": "Finalizar worktree y preparar branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finalizar worktree y preparar branch",
+		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar mensaje",
 		"resumeTitle": "Reanudar agente",
-		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea"
+		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea",
+		"addImage": "Añadir imagen",
+		"removeImage": "Eliminar imagen"
 	},
 	"status": {
 		"running": "en ejecución",

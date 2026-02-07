@@ -124,7 +124,7 @@ export type OrganizationDefaultSettings = z.infer<typeof organizationDefaultSett
  * WorkspaceTaskVisibility
  */
 
-const workspaceTaskVisibilitySchema = z.enum(["all", "list-only", "full-lockdown"])
+const workspaceTaskVisibilitySchema = z.enum(["all", "list-only", "admins-and-creator", "creator", "full-lockdown"])
 
 export type WorkspaceTaskVisibility = z.infer<typeof workspaceTaskVisibilitySchema>
 
@@ -135,9 +135,11 @@ export type WorkspaceTaskVisibility = z.infer<typeof workspaceTaskVisibilitySche
 export const organizationCloudSettingsSchema = z.object({
 	recordTaskMessages: z.boolean().optional(),
 	enableTaskSharing: z.boolean().optional(),
+	allowPublicTaskSharing: z.boolean().optional(),
 	taskShareExpirationDays: z.number().int().positive().optional(),
 	allowMembersViewAllTasks: z.boolean().optional(),
 	workspaceTaskVisibility: workspaceTaskVisibilitySchema.optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
@@ -183,6 +185,7 @@ export type UserFeatures = z.infer<typeof userFeaturesSchema>
 export const userSettingsConfigSchema = z.object({
 	extensionBridgeEnabled: z.boolean().optional(),
 	taskSyncEnabled: z.boolean().optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type UserSettingsConfig = z.infer<typeof userSettingsConfigSchema>
@@ -209,8 +212,10 @@ export const ORGANIZATION_DEFAULT: OrganizationSettings = {
 	cloudSettings: {
 		recordTaskMessages: true,
 		enableTaskSharing: true,
+		allowPublicTaskSharing: true,
 		taskShareExpirationDays: 30,
 		allowMembersViewAllTasks: true,
+		llmEnhancedFeaturesEnabled: false,
 	},
 	defaultSettings: {},
 	allowList: ORGANIZATION_ALLOW_ALL,

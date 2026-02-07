@@ -7,6 +7,8 @@ import { atom } from "jotai"
 import type { WebviewMessage, ProviderSettings, ClineAskResponse } from "../../types/messages.js"
 import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from "./service.js"
 import { resetMessageCutoffAtom, yoloModeAtom, isCancellingAtom } from "./ui.js"
+import { extensionModeAtom, customModesAtom } from "./extension.js"
+import { getAllModes } from "../../constants/modes/defaults.js"
 import { logs } from "../../services/logs.js"
 
 /**
@@ -320,4 +322,35 @@ export const toggleYoloModeAtom = atom(null, async (get, set) => {
 		bool: newValue,
 	}
 	await set(sendWebviewMessageAtom, message)
+})
+
+/**
+ * Action atom to cycle to the next mode
+ * Cycles through all available modes (default + custom) in order
+ */
+export const cycleNextModeAtom = atom(null, async (get, set) => {
+	const currentMode = get(extensionModeAtom)
+	const customModes = get(customModesAtom)
+	const allModes = getAllModes(customModes)
+
+	// Find current mode index
+	const currentIndex = allModes.findIndex((mode) => mode.slug === currentMode)
+
+	// Calculate next mode index (wrap around to 0 if at end)
+	const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % allModes.length
+	const nextMode = allModes[nextIndex]
+
+	if (nextMode) {
+		// Update local state immediately for responsive UI
+		set(extensionModeAtom, nextMode.slug)
+
+		// Send mode change to extension
+		const message: WebviewMessage = {
+			type: "mode",
+			text: nextMode.slug,
+		}
+		await set(sendWebviewMessageAtom, message)
+
+		logs.info(`Cycled to mode: ${nextMode.slug}`, "actions")
+	}
 })

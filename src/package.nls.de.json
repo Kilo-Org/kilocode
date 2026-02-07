@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: KI-Codierungs-Agent, Copilot und Autovervollständigung",
-	"extension.description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code.",
+	"extension.description": "Open-Source-KI-Codierungs-Agent, der Code aus natürlicher Sprache generiert, Aufgaben automatisiert und Terminal-Befehle ausführt. Mit Inline-Autovervollständigung, Browser-Automatisierung, automatischem Refactoring und benutzerdefinierten Modi für Planung, Codierung und Debugging. Unterstützt über 500 KI-Modelle einschließlich Claude (Anthropic), Gemini, Grok, GPT, Codex und GLM.",
 	"command.newTask.title": "Neue Aufgabe",
 	"command.explainCode.title": "Code Erklären",
 	"command.fixCode.title": "Code Reparieren",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "Die Batch-Größe für Embedding-Operationen während der Code-Indexierung. Passe dies an die Limits deines API-Anbieters an. Standard ist 60.",
 	"settings.toolProtocol.description": "Tool-Protokoll, das für KI-Interaktionen verwendet werden soll. XML ist das Standard- und empfohlene Protokoll. Nativ ist experimentell und funktioniert möglicherweise nicht mit allen Anbietern.",
 	"settings.debug.description": "Aktiviere den Debug-Modus, um zusätzliche Schaltflächen zum Anzeigen des API-Konversationsverlaufs und der UI-Nachrichten als formatiertes JSON in temporären Dateien anzuzeigen.",
+	"settings.debugProxy.enabled.description": "**Debug-Proxy aktivieren** — Leite alle ausgehenden Netzwerkanfragen über einen Proxy für MITM-Debugging. Nur aktiv, wenn du im Debug-Modus (F5) läufst.",
+	"settings.debugProxy.serverUrl.description": "Proxy-URL (z. B. `http://127.0.0.1:8888`). Wird nur verwendet, wenn der **Debug-Proxy** aktiviert ist.",
+	"settings.debugProxy.tlsInsecure.description": "Akzeptiere selbstsignierte Zertifikate vom Proxy. **Erforderlich für MITM-Inspektion.** ⚠️ Unsicher – verwende das nur für lokales Debugging.",
 	"ghost.input.title": "Kilo Code Geisterschreiber",
 	"ghost.input.placeholder": "Beschreiben Sie, was Sie programmieren möchten...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Vorgeschlagene Bearbeitungen Generieren",

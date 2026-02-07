@@ -14,7 +14,9 @@
 		"shareSession": "Поделиться сессией",
 		"shareConfirmMessage": "Хотите опубликовать снимок этой сессии?",
 		"shareConfirmYes": "Да",
-		"shareConfirmNo": "Нет"
+		"shareConfirmNo": "Нет",
+		"options": "Параметры",
+		"configureSetupScript": "Скрипт настройки worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Режим YOLO - операции с инструментами одобряются автоматически",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустить агента с указанным промптом",
-		"keyboardHint": "Нажмите Enter для запуска, Shift+Enter для новой строки",
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Облако",
@@ -57,7 +58,13 @@
 		"branchPickerTooltip": "Сменить базовую ветку",
 		"noBranches": "Ветки не найдены",
 		"noMatchingBranches": "Нет веток, соответствующих твоему поиску",
-		"openTerminal": "Открыть терминал"
+		"openTerminal": "Открыть терминал",
+		"selectModel": "Выбрать модель",
+		"modelTooltip": "Выбери, какую AI-модель использовать для этой сессии",
+		"defaultModel": "Модель по умолчанию",
+		"loadingModels": "Загрузка...",
+		"selectMode": "Выбрать режим",
+		"modeTooltip": "Режим: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
@@ -72,7 +79,9 @@
 		"usingTool": "Использование инструмента: **{{tool}}** {{details}}",
 		"expandOutput": "Развернуть вывод",
 		"collapseOutput": "Свернуть вывод",
-		"copyCommand": "Копировать команду"
+		"copyCommand": "Копировать команду",
+		"thinking": "Обдумывание",
+		"thinkingSeconds": "{{count}}с"
 	},
 	"chatInput": {
 		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",
@@ -82,9 +91,12 @@
 		"cancelTitle": "Отменить агента",
 		"finishToBranchTitle": "Завершить worktree и подготовить branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Завершить worktree и подготовить branch",
+		"createPRTitle": "Создать pull request",
 		"sendTitle": "Отправить сообщение",
 		"resumeTitle": "Возобновить агента",
-		"hint": "Enter для отправки, Shift+Enter для новой строки"
+		"hint": "Enter для отправки, Shift+Enter для новой строки",
+		"addImage": "Добавить изображение",
+		"removeImage": "Удалить изображение"
 	},
 	"status": {
 		"running": "выполняется",

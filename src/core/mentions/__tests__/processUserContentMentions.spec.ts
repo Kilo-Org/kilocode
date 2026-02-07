@@ -22,8 +22,11 @@ describe("processUserContentMentions", () => {
 		mockFileContextTracker = {} as FileContextTracker
 		mockRooIgnoreController = {}
 
-		// Default mock implementation
-		vi.mocked(parseMentions).mockImplementation(async (text) => `parsed: ${text}`)
+		// Default mock implementation - returns ParseMentionsResult object
+		vi.mocked(parseMentions).mockImplementation(async (text) => ({
+			text: `parsed: ${text}`,
+			mode: undefined,
+		}))
 	})
 
 	describe("maxReadFileLine parameter", () => {
@@ -134,10 +137,11 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalled()
-			expect(result[0]).toEqual({
+			expect(result.content[0]).toEqual({
 				type: "text",
 				text: "parsed: <task>Do something</task>",
 			})
+			expect(result.mode).toBeUndefined()
 		})
 
 		it("should process text blocks with <feedback> tags", async () => {
@@ -156,10 +160,11 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalled()
-			expect(result[0]).toEqual({
+			expect(result.content[0]).toEqual({
 				type: "text",
 				text: "parsed: <feedback>Fix this issue</feedback>",
 			})
+			expect(result.mode).toBeUndefined()
 		})
 
 		it("should not process text blocks without task or feedback tags", async () => {
@@ -178,7 +183,8 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).not.toHaveBeenCalled()
-			expect(result[0]).toEqual(userContent[0])
+			expect(result.content[0]).toEqual(userContent[0])
+			expect(result.mode).toBeUndefined()
 		})
 
 		it("should process tool_result blocks with string content", async () => {
@@ -198,11 +204,12 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalled()
-			expect(result[0]).toEqual({
+			expect(result.content[0]).toEqual({
 				type: "tool_result",
 				tool_use_id: "123",
 				content: "parsed: <feedback>Tool feedback</feedback>",
 			})
+			expect(result.mode).toBeUndefined()
 		})
 
 		it("should process tool_result blocks with array content", async () => {
@@ -231,7 +238,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledTimes(1)
-			expect(result[0]).toEqual({
+			expect(result.content[0]).toEqual({
 				type: "tool_result",
 				tool_use_id: "123",
 				content: [
@@ -245,6 +252,7 @@ describe("processUserContentMentions", () => {
 					},
 				],
 			})
+			expect(result.mode).toBeUndefined()
 		})
 
 		it("should handle mixed content types", async () => {
@@ -277,17 +285,18 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledTimes(2)
-			expect(result).toHaveLength(3)
-			expect(result[0]).toEqual({
+			expect(result.content).toHaveLength(3)
+			expect(result.content[0]).toEqual({
 				type: "text",
 				text: "parsed: <task>First task</task>",
 			})
-			expect(result[1]).toEqual(userContent[1]) // Image block unchanged
-			expect(result[2]).toEqual({
+			expect(result.content[1]).toEqual(userContent[1]) // Image block unchanged
+			expect(result.content[2]).toEqual({
 				type: "tool_result",
 				tool_use_id: "456",
 				content: "parsed: <feedback>Feedback</feedback>",
 			})
+			expect(result.mode).toBeUndefined()
 		})
 	})
 

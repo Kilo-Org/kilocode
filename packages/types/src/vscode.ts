@@ -32,7 +32,6 @@ export const commandIds = [
 
 	"plusButtonClicked",
 	"promptsButtonClicked",
-	"mcpButtonClicked",
 
 	"historyButtonClicked",
 	"marketplaceButtonClicked",
@@ -41,6 +40,7 @@ export const commandIds = [
 	"settingsButtonClicked",
 
 	"openInNewTab",
+	"open", // kilocode_change
 	"agentManagerOpen", // kilocode_change
 
 	"showHumanRelayDialog",

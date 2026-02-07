@@ -1,55 +1,34 @@
 {
 	"name": "kilocode-docs",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"private": true,
 	"scripts": {
-		"docusaurus": "docusaurus",
-		"start": "cross-env NODE_OPTIONS='-r dotenv/config' docusaurus start --host 0.0.0.0",
-		"build": "cross-env NODE_OPTIONS='-r dotenv/config' docusaurus build",
-		"swizzle": "docusaurus swizzle",
-		"deploy": "docusaurus deploy",
-		"clear": "docusaurus clear",
-		"serve": "docusaurus serve --host 0.0.0.0",
-		"write-translations": "docusaurus write-translations",
-		"write-heading-ids": "docusaurus write-heading-ids",
-		"typecheck": "tsc",
-		"prepare": "husky"
+		"dev": "next dev --webpack --port 3002",
+		"build": "next build --webpack",
+		"start": "next start",
+		"test": "vitest run"
 	},
 	"dependencies": {
-		"@docusaurus/core": "^3.8.1",
-		"@docusaurus/plugin-client-redirects": "^3.8.1",
-		"@docusaurus/preset-classic": "^3.8.1",
-		"@easyops-cn/docusaurus-search-local": "^0.48.5",
-		"@mdx-js/react": "^3.0.0",
-		"@vscode/codicons": "^0.0.36",
-		"clsx": "^2.0.0",
-		"posthog-docusaurus": "^2.0.4",
-		"prism-react-renderer": "^2.3.0",
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"@docsearch/css": "^4",
+		"@docsearch/js": "^4",
+		"@markdoc/markdoc": "^0.5.4",
+		"@markdoc/next.js": "^0.5.0",
+		"@vscode/codicons": "^0.0.44",
+		"next": "^16.1.5",
+		"posthog-js": "^1.335.3",
+		"prismjs": "^1.30.0",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
 	},
 	"devDependencies": {
-		"@docusaurus/module-type-aliases": "^3.8.1",
-		"@docusaurus/tsconfig": "^3.8.1",
-		"@docusaurus/types": "^3.8.1",
-		"cross-env": "^10.0.0",
-		"dotenv": "^16.4.7",
-		"husky": "^9.1.7",
-		"typescript": "~5.6.2"
-	},
-	"browserslist": {
-		"production": [
-			">0.5%",
-			"not dead",
-			"not op_mini all"
-		],
-		"development": [
-			"last 3 chrome version",
-			"last 3 firefox version",
-			"last 5 safari version"
-		]
-	},
-	"engines": {
-		"node": ">=18.0"
+		"@tailwindcss/postcss": "^4.1.18",
+		"@types/node": "^25.0.10",
+		"@types/react": "^19.2.9",
+		"@types/react-dom": "^19.2.3",
+		"autoprefixer": "^10.4.23",
+		"postcss": "^8.5.6",
+		"tailwindcss": "^4.1.18",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.3"
 	}
 }

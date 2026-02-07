@@ -9,7 +9,7 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameter
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
-import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
+import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
 
 function uriToFsPath(filepath: string): string {
 	if (filepath.startsWith("file://")) {

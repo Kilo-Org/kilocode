@@ -17,13 +17,25 @@
 		}
 	},
 	"chooseProvider": "عشان يشتغل سحر Kilo Code، يلزم مفتاح API.",
+	"landing": {
+		"greeting": "مرحباً بك في Roo Code!",
+		"introduction": "مع مجموعة من Modes المدمجة والقابلة للتوسيع، Roo Code يتيح لك التخطيط والتصميم والبرمجة وتصحيح الأخطاء وزيادة إنتاجيتك بشكل لم تشهده من قبل.",
+		"accountMention": "للبدء، أنشئ حساب Roo Code Cloud الخاص بك. احصل على نماذج قوية والتحكم بالويب والتحليلات والدعم والمزيد.",
+		"getStarted": "إنشاء حساب Roo",
+		"noAccount": "أو الاستخدام بدون حساب"
+	},
 	"providerSignup": {
+		"heading": "اختر المزوّد",
+		"chooseProvider": "Roo يحتاج مزوّد LLM للعمل. اختر واحد للبدء، تقدر تضيف أكثر لاحقاً.",
 		"rooCloudProvider": "مزوّد Roo Code Cloud",
 		"rooCloudDescription": "أبسط طريقة لاستخدام Roo. مزيج مختار من النماذج المجانية والمدفوعة بتكلفة منخفضة",
 		"learnMore": "اعرف أكثر",
 		"useAnotherProvider": "استخدم مزوّد آخر",
 		"useAnotherProviderDescription": "أدخل مفتاح API وانطلق.",
 		"noApiKeys": "ما تبي تتعامل مع المفاتيح؟ استخدم مزوّد Roo Code Cloud.",
+		"backToRoo": "اذهب مع مزوّد Roo Code Cloud.",
+		"goBack": "ارجع",
+		"finish": "انتهى",
 		"getStarted": "ابدأ"
 	},
 	"waitingForCloud": {
@@ -32,6 +44,7 @@
 		"noPrompt": "إذا ما طلع لك رابط للفتح، <clickHere>اضغط هنا</clickHere>.",
 		"havingTrouble": "إذا خلصت التسجيل بس عندك مشاكل، <clickHere>اضغط هنا</clickHere>.",
 		"pasteUrl": "الصق رابط الاستدعاء من المتصفح:",
+		"docsLink": "ما يشتغل؟ <DocsLink>راجع التوثيق</DocsLink>.",
 		"invalidURL": "هذا ما يبدو رابط استدعاء صحيح. الرجاء نسخ ما يعرضه Roo Code Cloud في المتصفح.",
 		"goBack": "ارجع"
 	},

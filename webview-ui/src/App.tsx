@@ -2,26 +2,26 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-import { ExtensionMessage } from "@roo/ExtensionMessage"
+import { type ExtensionMessage, TelemetryEventName } from "@roo-code/types"
+
 import TranslationProvider from "./i18n/TranslationContext"
 import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager"
 
 import { vscode } from "./utils/vscode"
 import { telemetryClient } from "./utils/TelemetryClient"
-import { TelemetryEventName } from "@roo-code/types"
 import { initializeSourceMaps, exposeSourceMapsForDebugging } from "./utils/sourceMapInitializer"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
-import WelcomeView from "./components/kilocode/welcome/WelcomeView" // kilocode_change
+import OnboardingView from "./components/kilocode/welcome/OnboardingView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
 import McpView from "./components/mcp/McpView" // kilocode_change
 import AuthView from "./components/kilocode/auth/AuthView" // kilocode_change
 import { MarketplaceView } from "./components/marketplace/MarketplaceView"
-import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 import { MemoryService } from "./services/MemoryService" // kilocode_change
+import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import { CheckpointRestoreDialog } from "./components/chat/CheckpointRestoreDialog"
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -68,7 +68,6 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
 	promptsButtonClicked: "settings", // kilocode_change: Navigate to settings with modes section
-	mcpButtonClicked: "mcp", // kilocode_change
 	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
 
@@ -81,7 +80,6 @@ const defaultSectionByAction: Partial<Record<NonNullable<ExtensionMessage["actio
 const App = () => {
 	const {
 		didHydrateState,
-		showWelcome,
 		shouldShowAnnouncement,
 		telemetrySetting,
 		telemetryKey,
@@ -95,6 +93,8 @@ const App = () => {
 		renderContext,
 		mdmCompliant,
 		apiConfiguration, // kilocode_change
+		hasCompletedOnboarding, // kilocode_change: Track onboarding state
+		taskHistoryFullLength, // kilocode_change: Used to detect existing users
 	} = useExtensionState()
 
 	// Create a persistent state manager
@@ -315,16 +315,54 @@ const App = () => {
 		}
 	}, [tab])
 
+	// kilocode_change start: Onboarding handlers
+	const handleSelectFreeModels = useCallback(() => {
+		// Mark onboarding as complete - the default profile is already set up with a free model
+		vscode.postMessage({ type: "hasCompletedOnboarding", bool: true })
+	}, [])
+
+	const handleSelectPremiumModels = useCallback(() => {
+		// Mark onboarding as complete
+		vscode.postMessage({ type: "hasCompletedOnboarding", bool: true })
+		// Navigate to auth view which will show the device code and handle the OAuth flow
+		// The AuthView auto-starts device auth on mount
+		switchTab("auth")
+		setAuthReturnTo("chat")
+	}, [switchTab])
+
+	const handleSelectBYOK = useCallback(() => {
+		// Mark onboarding as complete
+		vscode.postMessage({ type: "hasCompletedOnboarding", bool: true })
+		// Navigate to settings with providers section
+		switchTab("settings")
+		setCurrentSection("providers")
+	}, [switchTab])
+
+	// One-time migration: mark existing users as having completed onboarding
+	useEffect(() => {
+		if (hasCompletedOnboarding !== true && (taskHistoryFullLength ?? 0) > 0) {
+			vscode.postMessage({ type: "hasCompletedOnboarding", bool: true })
+		}
+	}, [hasCompletedOnboarding, taskHistoryFullLength])
+	// kilocode_change end
+
 	if (!didHydrateState) {
 		return null
 	}
 
+	// kilocode_change start: Show OnboardingView for new users who haven't completed onboarding
+	const showOnboarding = hasCompletedOnboarding !== true
+
 	// Do not conditionally load ChatView, it's expensive and there's state we
 	// don't want to lose (user input, disableInput, askResponse promise, etc.)
-	// kilocode_change: no WelcomeViewProvider toggle
-	return showWelcome ? (
-		<WelcomeView />
+	return showOnboarding ? (
+		<OnboardingView
+			onSelectFreeModels={handleSelectFreeModels}
+			onSelectPremiumModels={handleSelectPremiumModels}
+			onSelectBYOK={handleSelectBYOK}
+		/>
 	) : (
+		// kilocode_change end
 		<>
 			{/* kilocode_change start */}
 			<MemoryWarningBanner />

@@ -1,7 +1,7 @@
 // kilocode_change - new file: Speech-to-text availability check (extracted from ClineProvider)
 import type { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { getOpenAiApiKey } from "../../services/stt/utils/getOpenAiCredentials"
-import { FFmpegCaptureService } from "../../services/stt/FFmpegCaptureService"
+import { findFFmpeg } from "../../services/stt/FFmpegDeviceEnumerator"
 
 /**
  * Result type for speech-to-text availability check
@@ -35,7 +35,7 @@ export async function checkSpeechToTextAvailable(
 		}
 
 		// Check 2: FFmpeg installed
-		const ffmpegResult = FFmpegCaptureService.findFFmpeg()
+		const ffmpegResult = findFFmpeg()
 		if (!ffmpegResult.available) {
 			return { available: false, reason: "ffmpegNotInstalled" }
 		}

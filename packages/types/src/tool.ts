@@ -21,6 +21,7 @@ export const toolNames = [
 	"apply_diff",
 	"search_and_replace",
 	"search_replace",
+	"edit_file",
 	"apply_patch",
 	"search_files",
 	"list_files",
@@ -34,7 +35,7 @@ export const toolNames = [
 	"fetch_instructions",
 	"codebase_search",
 	// kilocode_change start
-	"edit_file",
+	"fast_edit_file",
 	"new_rule",
 	"report_bug",
 	"condense",
@@ -43,6 +44,7 @@ export const toolNames = [
 	"update_todo_list",
 	"run_slash_command",
 	"generate_image",
+	"custom_tool",
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)
@@ -78,6 +80,16 @@ export const TOOL_PROTOCOL = {
 export type ToolProtocol = (typeof TOOL_PROTOCOL)[keyof typeof TOOL_PROTOCOL]
 
 export const toolProtocolSchema = z.enum([TOOL_PROTOCOL.XML, TOOL_PROTOCOL.NATIVE]) // kilocode_change
+
+/**
+ * Default model info properties for native tool support.
+ * Used to merge with cached model info that may lack these fields.
+ * Router providers (Requesty, Unbound, LiteLLM) assume all models support native tools.
+ */
+export const NATIVE_TOOL_DEFAULTS = {
+	supportsNativeTools: true,
+	defaultToolProtocol: TOOL_PROTOCOL.NATIVE,
+} as const
 
 /**
  * Checks if the protocol is native (non-XML).

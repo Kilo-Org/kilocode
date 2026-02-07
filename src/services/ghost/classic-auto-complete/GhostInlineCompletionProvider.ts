@@ -217,6 +217,11 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
 	const lastNewlineIndex = prefix.lastIndexOf("\n")
 	const currentLinePrefix = prefix.slice(lastNewlineIndex + 1)
 
+	// if the first line contains no word characters, show the whole block
+	if (!currentLinePrefix.match(/\w/)) {
+		return false
+	}
+
 	// If the current line prefix contains non-whitespace, only show the first line
 	if (currentLinePrefix.trim().length > 0) {
 		return true
@@ -365,6 +370,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		suffix: string,
 		model: GhostModel,
 		telemetryContext: AutocompleteContext,
+		languageId?: string,
 	): FillInAtCursorSuggestion {
 		if (!suggestionText) {
 			this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
@@ -376,6 +382,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			prefix,
 			suffix,
 			model: model.getModelName() || "",
+			languageId,
 		})
 
 		if (processedText) {
@@ -676,9 +683,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		try {
-			// Curry processSuggestion with prefix, suffix, model, and telemetry context
+			// Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
 			const curriedProcessSuggestion = (text: string) =>
-				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext)
+				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
 
 			const result =
 				prompt.strategy === "fim"

@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
-	"extension.description": "Open Source AI coding assistant for planning, building, and fixing code.",
+	"extension.description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "The batch size for embedding operations during code indexing. Adjust this based on your API provider's limits. Default is 60.",
 	"settings.toolProtocol.description": "Tool protocol to use for AI interactions. XML is the default and recommended protocol. Native is experimental and may not work with all providers.",
 	"settings.debug.description": "Enable debug mode to show additional buttons for viewing API conversation history and UI messages as prettified JSON in temporary files.",
+	"settings.debugProxy.enabled.description": "**Enable Debug Proxy** — Route all outbound network requests through a proxy for MITM debugging. Only active when running in debug mode (F5).",
+	"settings.debugProxy.serverUrl.description": "Proxy URL (e.g., `http://127.0.0.1:8888`). Only used when **Debug Proxy** is enabled.",
+	"settings.debugProxy.tlsInsecure.description": "Accept self-signed certificates from the proxy. **Required for MITM inspection.** ⚠️ Insecure — only use for local debugging.",
 	"ghost.input.title": "Press 'Enter' to confirm or 'Escape' to cancel",
 	"ghost.input.placeholder": "Describe what you want to do...",
 	"ghost.commands.generateSuggestions": "Generate Suggested Edits",

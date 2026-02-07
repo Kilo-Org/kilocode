@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agente de Codificación IA, Copilot y Autocompletado",
-	"extension.description": "Asistente de codificación de IA de código abierto para planificar, crear y corregir código.",
+	"extension.description": "Agente de codificación IA de código abierto que genera código a partir de lenguaje natural, automatiza tareas y ejecuta comandos de terminal. Incluye autocompletado en línea, automatización del navegador, refactorización automática y modos personalizados para planificación, codificación y depuración. Compatible con más de 500 modelos de IA incluyendo Claude (Anthropic), Gemini, Grok, GPT, Codex y GLM.",
 	"command.newTask.title": "Nueva Tarea",
 	"command.explainCode.title": "Explicar Código",
 	"command.fixCode.title": "Corregir Código",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "El tamaño del lote para operaciones de embedding durante la indexación de código. Ajusta esto según los límites de tu proveedor de API. Por defecto es 60.",
 	"settings.toolProtocol.description": "Protocolo de herramienta a utilizar para las interacciones de IA. XML es el protocolo predeterminado y recomendado. Nativo es experimental y puede que no funcione con todos los proveedores.",
 	"settings.debug.description": "Activa el modo de depuración para mostrar botones adicionales para ver el historial de conversación de API y los mensajes de la interfaz de usuario como JSON embellecido en archivos temporales.",
+	"settings.debugProxy.enabled.description": "**Activar Debug Proxy** — Redirige todas las solicitudes de red salientes a través de un proxy para depuración MITM. Solo está activo cuando se ejecuta en modo depuración (F5).",
+	"settings.debugProxy.serverUrl.description": "URL del proxy (p. ej., `http://127.0.0.1:8888`). Solo se usa cuando **Debug Proxy** está activado.",
+	"settings.debugProxy.tlsInsecure.description": "Aceptar certificados autofirmados del proxy. **Necesario para la inspección MITM.** ⚠️ Inseguro: úsalo solo para depuración local.",
 	"ghost.input.title": "Presiona 'Enter' para confirmar o 'Escape' para cancelar",
 	"ghost.input.placeholder": "Describe lo que quieres hacer...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",

@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "Costo API",
+		"changes": "Modifiche",
 		"size": "Dimensione",
 		"contextWindow": "Lunghezza del contesto",
 		"closeAndStart": "Chiudi attività e iniziane una nuova",
@@ -88,10 +89,15 @@
 		"title": "Termina",
 		"tooltip": "Termina l'attività corrente"
 	},
+	"stop": {
+		"title": "Ferma",
+		"tooltip": "Ferma l'attività corrente"
+	},
 	"cancel": {
 		"title": "Annulla",
 		"tooltip": "Annulla l'operazione corrente"
 	},
+	"enqueueMessage": "Aggiungi il messaggio alla coda (sarà inviato dopo che l'attività corrente sarà terminata)",
 	"scrollToBottom": "Scorri fino alla fine della chat",
 	"about": "Genera, refactorizza e debugga codice con l'assistenza dell'IA. Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
 	"docs": "Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
@@ -149,17 +155,20 @@
 		"streaming": "Richiesta API...",
 		"cancelled": "Richiesta API annullata",
 		"streamingFailed": "Streaming API fallito",
-		"errorTitle": "Errore API {{code}}",
+		"rateLimitWait": "Limitazione della frequenza",
+		"errorTitle": "Errore del fornitore {{code}}",
 		"errorMessage": {
 			"docs": "Documentazione",
+			"goToSettings": "Impostazioni",
 			"400": "Il provider non ha potuto elaborare la richiesta come presentata. Interrompi l'attività e prova un approccio diverso.",
 			"401": "Impossibile autenticare con il provider. Verifica la configurazione della tua chiave API.",
 			"402": "Sembra che tu abbia esaurito i fondi/crediti nel tuo account. Vai al tuo provider e aggiungi altro per continuare.",
 			"403": "Non autorizzato. La tua chiave API è valida, ma il provider ha rifiutato di completare questa richiesta.",
 			"429": "Troppe richieste. Sei limitato dal provider. Attendi un po' prima della tua prossima chiamata API.",
 			"500": "Errore del server del provider. C'è qualcosa di sbagliato dal lato del provider, non c'è nulla di sbagliato nella tua richiesta.",
-			"unknown": "Errore API sconosciuto. Contatta il supporto di Kilo.",
-			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante."
+			"unknown": "Errore API sconosciuto, clicca su Dettagli per maggiori informazioni.",
+			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante.",
+			"claudeCodeNotAuthenticated": "Devi accedere per utilizzare Claude Code. Vai su Impostazioni e clicca su \"Accedi a Claude Code\" per autenticarti."
 		}
 	},
 	"checkpoint": {
@@ -270,10 +279,20 @@
 		"hasQuestion": "Kilo ha una domanda"
 	},
 	"taskCompleted": "Attività completata",
+	"modelResponseIncomplete": "Risposta del modello incompleta",
+	"modelResponseErrors": {
+		"noToolsUsed": "Il modello non ha utilizzato alcuno strumento nella sua risposta. Questo accade tipicamente quando il modello fornisce solo testo/ragionamento senza chiamare gli strumenti necessari per completare l'attività.",
+		"noToolsUsedDetails": "Il modello ha fornito testo/ragionamento ma non ha chiamato nessuno degli strumenti richiesti. Questo di solito indica che il modello ha frainteso l'attività o ha difficoltà a determinare quale strumento utilizzare. Il modello è stato automaticamente sollecitato a riprovare con l'uso appropriato degli strumenti.",
+		"noAssistantMessages": "Il modello non ha fornito alcun contenuto di risposta. Questo potrebbe indicare un problema con l'API o l'output del modello.",
+		"noAssistantMessagesDetails": "Il modello linguistico ha restituito una risposta vuota senza testo o chiamate a strumenti. Questo può accadere a causa di problemi API, limitazione della velocità o problemi specifici del modello. Il modello è stato automaticamente sollecitato a riprovare."
+	},
 	"errorDetails": {
+		"link": "Dettagli",
 		"title": "Dettagli errore",
 		"copyToClipboard": "Copia negli appunti",
-		"copied": "Copiato!"
+		"copied": "Copiato!",
+		"diagnostics": "Ottieni informazioni errore dettagliate",
+		"proxyProvider": "Sembra che tu stia utilizzando un provider basato su proxy. Assicurati di controllarne i log e di verificare che non stia riscrivendo le richieste di Roo."
 	},
 	"powershell": {
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
@@ -294,7 +313,7 @@
 		"triggerLabel_zero": "0 approvati automaticamente",
 		"triggerLabel_one": "1 approvato automaticamente",
 		"triggerLabel_other": "{{count}} approvati automaticamente",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Sto pensando",
@@ -330,9 +349,10 @@
 			"goToSettingsButton": "Vai alle Impostazioni"
 		},
 		"release": {
-			"heading": "Novità in questa versione:",
-			"contextRewind": "La condensazione migliorata del contesto ora ti consente di ripristinare il contesto precedente completo quando riavvolgi a un checkpoint",
-			"rooProvider": "Il provider Roo Code Cloud ora preserva il contenuto del ragionamento e utilizza gli strumenti nativi per impostazione predefinita per migliori prestazioni"
+			"heading": "Novità:",
+			"openaiCodexProvider": "Aggiunto il Provider OpenAI - ChatGPT Plus/Pro che offre accesso basato su abbonamento ai modelli Codex senza costi per token.",
+			"gpt52codexModel": "Aggiunto il nuovo modello gpt-5.2-codex a Roo Code Router, al provider OpenAI standard e altro.",
+			"bugFixes": "Corretti memory leak che causavano schermi grigi, problemi di firma del pensiero Gemini e altri miglioramenti di stabilità."
 		},
 		"cloudAgents": {
 			"heading": "Novità nel Cloud:",
@@ -343,8 +363,14 @@
 		"careers": "Inoltre, <careersLink>stiamo assumendo!</careersLink>",
 		"socialLinks": "Unisciti a noi su <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Costo totale (sottoattività incluse): ${{cost}}",
+		"total": "Costo totale: ${{cost}}",
+		"includesSubtasks": "Include i costi delle sottoattività"
+	},
 	"browser": {
 		"session": "Sessione del browser",
+		"active": "Attivo",
 		"rooWantsToUse": "Kilo Code vuole utilizzare il browser",
 		"consoleLogs": "Log della console",
 		"noNewLogs": "(Nessun nuovo log)",

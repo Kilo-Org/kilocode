@@ -6,13 +6,16 @@ vi.mock("../../applyDiffTool", () => ({
 	applyDiffToolLegacy: vi.fn(),
 }))
 
-// Mock ApplyDiffTool separately
+// Mock ApplyDiffTool separately - needs to export both the class and the instance
 vi.mock("../../ApplyDiffTool", () => ({
 	ApplyDiffTool: vi.fn(),
+	applyDiffTool: {
+		handle: vi.fn().mockResolvedValue(undefined),
+	},
 }))
 
 // Import after mocking to get the mocked version
-import { ApplyDiffTool } from "../../ApplyDiffTool"
+import { applyDiffTool as applyDiffToolInstance } from "../../ApplyDiffTool"
 
 describe("applyDiffTool experiment routing - JSON toolStyle", () => {
 	let mockCline: any
@@ -38,6 +41,7 @@ describe("applyDiffTool experiment routing - JSON toolStyle", () => {
 			apiConfiguration: {
 				toolStyle: "json",
 			},
+			taskToolProtocol: "xml", // Ensure it doesn't default to native
 			diffStrategy: {
 				applyDiff: vi.fn(),
 				getProgressStatus: vi.fn(),
@@ -46,7 +50,12 @@ describe("applyDiffTool experiment routing - JSON toolStyle", () => {
 				reset: vi.fn(),
 			},
 			api: {
-				getModel: vi.fn().mockReturnValue({ id: "test-model" }),
+				getModel: vi.fn().mockReturnValue({
+					id: "test-model",
+					info: {
+						supportsPromptCache: false,
+					},
+				}),
 			},
 			processQueuedMessages: vi.fn(),
 			recordToolError: vi.fn(),
@@ -95,7 +104,7 @@ describe("applyDiffTool experiment routing - JSON toolStyle", () => {
 			mockRemoveClosingTag,
 		)
 
-		expect(ApplyDiffTool).not.toHaveBeenCalled()
+		expect(applyDiffToolInstance.handle).not.toHaveBeenCalled()
 	})
 
 	it("should use new tool when provider is not available", async () => {
@@ -111,6 +120,6 @@ describe("applyDiffTool experiment routing - JSON toolStyle", () => {
 		)
 
 		// When provider is null, it should continue with new implementation (not call legacy)
-		expect(ApplyDiffTool).not.toHaveBeenCalled()
+		expect(applyDiffToolInstance.handle).not.toHaveBeenCalled()
 	})
 })

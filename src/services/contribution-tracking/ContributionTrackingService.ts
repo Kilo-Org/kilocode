@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import crypto from "crypto"
+import { createPatch } from "diff"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { fetchWithRetries } from "../../shared/http"
@@ -13,6 +14,7 @@ import {
 	TokenProvisionResponse as TokenProvisionResponseSchema,
 	type TrackContributionParams,
 } from "./contribution-tracking-types"
+import { FormatterService } from "./FormatterService"
 
 /**
  * Service for tracking AI contributions to the attributions worker
@@ -30,6 +32,7 @@ export class ContributionTrackingService {
 
 	// AI Attribution service URL
 	private static readonly CONTRIBUTION_SERVICE_URL = "https://ai-attribution.kiloapps.io/attributions/track"
+	// private static readonly CONTRIBUTION_SERVICE_URL = "http://localhost:8787/attributions/track"
 
 	// Refresh token 1 minute before expiry
 	private static readonly TOKEN_REFRESH_BUFFER_MS = 60 * 1000
@@ -143,27 +146,37 @@ export class ContributionTrackingService {
 
 	/**
 	 * Compute SHA-1 hash of line content
-	 * Normalizes line endings for consistent hashing
+	 * Normalizes whitespace and line endings for consistent hashing.
+	 *
+	 * This normalization is critical for the LCS-based matching on the server:
+	 * - Removes all leading/trailing whitespace (handles indentation changes)
+	 * - Removes line endings for cross-platform consistency
+	 *
+	 * This allows the server to match AI-generated lines even when users:
+	 * - Wrap code in try/catch, if blocks, or other scopes (indentation changes)
+	 * - Reformat the file with different tab/space settings
 	 */
 	private computeLineHash(lineContent: string): string {
-		// Remove line endings for consistent hashing across platforms
-		const normalized = lineContent.replace(/\r?\n$/, "")
+		// 1. Remove line endings for consistent hashing across platforms
+		// 2. Trim all leading/trailing whitespace to handle indentation changes
+		const normalized = lineContent.replace(/\r?\n$/, "").trim()
 		return crypto.createHash("sha1").update(normalized, "utf8").digest("hex")
 	}
 
 	/**
-	 * Extract line changes from unified diff
-	 * Returns arrays of added and removed lines with their hashes
+	 * Extract line numbers of added and removed lines from unified diff.
+	 * This only extracts the line numbers - hashes are computed separately
+	 * from the formatted content.
 	 *
 	 * @param unifiedDiff - The unified diff string
-	 * @returns Object containing arrays of added and removed line changes
+	 * @returns Object containing arrays of added and removed line numbers
 	 */
-	private extractLineChanges(unifiedDiff: string): {
-		linesAdded: LineChange[]
-		linesRemoved: LineChange[]
+	private extractLineNumbers(unifiedDiff: string): {
+		addedLineNumbers: number[]
+		removedLineNumbers: number[]
 	} {
-		const linesAdded: LineChange[] = []
-		const linesRemoved: LineChange[] = []
+		const addedLineNumbers: number[] = []
+		const removedLineNumbers: number[] = []
 
 		const lines = unifiedDiff.split("\n")
 		let currentLine = 0
@@ -178,18 +191,11 @@ export class ContributionTrackingService {
 				}
 			} else if (line.startsWith("+") && !line.startsWith("+++")) {
 				// Added line (skip +++ file markers)
-				const content = line.substring(1)
-				linesAdded.push({
-					line_number: currentLine++,
-					line_hash: this.computeLineHash(content),
-				})
+				addedLineNumbers.push(currentLine++)
 			} else if (line.startsWith("-") && !line.startsWith("---")) {
 				// Removed line (skip --- file markers)
-				const content = line.substring(1)
-				linesRemoved.push({
-					line_number: currentLine,
-					line_hash: this.computeLineHash(content),
-				})
+				// Note: removed lines don't increment currentLine since they're not in the new file
+				removedLineNumbers.push(currentLine)
 			} else if (!line.startsWith("\\")) {
 				// Context line (unchanged) - increment line counter
 				// Skip lines starting with \ (e.g., "\ No newline at end of file")
@@ -197,12 +203,74 @@ export class ContributionTrackingService {
 			}
 		}
 
+		return { addedLineNumbers, removedLineNumbers }
+	}
+
+	/**
+	 * Extract line changes by combining line numbers from the diff with
+	 * hashes computed from the formatted content.
+	 *
+	 * @param unifiedDiff - The unified diff string (for line numbers)
+	 * @param formattedContent - The formatted new file content (for hashing)
+	 * @returns Object containing arrays of added and removed line changes
+	 */
+	private extractLineChanges(
+		unifiedDiff: string,
+		formattedContent: string,
+	): {
+		linesAdded: LineChange[]
+		linesRemoved: LineChange[]
+	} {
+		const { addedLineNumbers, removedLineNumbers } = this.extractLineNumbers(unifiedDiff)
+
+		// Split formatted content into lines for hashing
+		const contentLines = formattedContent.split("\n")
+
+		// Build line changes for added lines using formatted content
+		const linesAdded: LineChange[] = addedLineNumbers.map((lineNumber) => {
+			// Line numbers are 1-indexed, array is 0-indexed
+			const lineContent = contentLines[lineNumber - 1] || ""
+			return {
+				line_number: lineNumber,
+				line_hash: this.computeLineHash(lineContent),
+			}
+		})
+
+		// For removed lines, we can't get the content from the new file
+		// (since they were removed). We'll use the line number with an empty hash
+		// as a placeholder - the backend will handle matching based on position.
+		const linesRemoved: LineChange[] = removedLineNumbers.map((lineNumber) => ({
+			line_number: lineNumber,
+			line_hash: "", // Removed lines don't have content in the new file
+		}))
+
 		return { linesAdded, linesRemoved }
+	}
+
+	/**
+	 * Generate a unified diff between original content and formatted content.
+	 * This creates a diff that reflects what the user will see after format-on-save.
+	 *
+	 * @param originalContent - The original file content before AI changes
+	 * @param formattedContent - The formatted new file content
+	 * @param filePath - The file path (used in diff header)
+	 * @returns A unified diff string
+	 */
+	private generateFormattedDiff(originalContent: string, formattedContent: string, filePath: string): string {
+		// Normalize line endings for consistent diffing
+		const normalizedOriginal = originalContent.replace(/\r\n/g, "\n")
+		const normalizedFormatted = formattedContent.replace(/\r\n/g, "\n")
+
+		// Generate unified diff with full context (context: 3 is standard)
+		return createPatch(filePath, normalizedOriginal, normalizedFormatted, undefined, undefined, { context: 3 })
 	}
 
 	/**
 	 * Track a file edit contribution
 	 * This is the main public method that should be called when a user accepts or rejects a file edit
+	 *
+	 * The newContent will be formatted using VSCode's formatters before hashing to ensure
+	 * fingerprints match what the user sees after format-on-save.
 	 *
 	 * @param params - Parameters for tracking the contribution
 	 *
@@ -212,7 +280,8 @@ export class ContributionTrackingService {
 	 * await service.trackContribution({
 	 *   cwd: '/path/to/repo',
 	 *   filePath: 'src/file.ts',
-	 *   unifiedDiff: '...',
+	 *   originalContent: '// original file content...',
+	 *   newContent: '// new file content...',
 	 *   status: 'accepted',
 	 *   taskId: 'task_123',
 	 *   organizationId: 'org_456',
@@ -245,8 +314,17 @@ export class ContributionTrackingService {
 				return
 			}
 
-			// Extract line changes from the unified diff
-			const { linesAdded, linesRemoved } = this.extractLineChanges(params.unifiedDiff)
+			// Format the new content using VSCode's formatters
+			// This ensures fingerprints match what the user sees after format-on-save
+			const formatterService = FormatterService.getInstance()
+			const formattedContent = await formatterService.formatContentForFile(params.newContent, params.filePath)
+
+			// Generate a new diff between original content and formatted content
+			// This ensures line numbers match the formatted output
+			const formattedDiff = this.generateFormattedDiff(params.originalContent, formattedContent, params.filePath)
+
+			// Extract line changes from the formatted diff
+			const { linesAdded, linesRemoved } = this.extractLineChanges(formattedDiff, formattedContent)
 
 			// Get a valid token for the attributions service
 			const cachedToken = await this.getValidToken(params.organizationId, params.kilocodeToken)
@@ -305,6 +383,9 @@ export class ContributionTrackingService {
  * and catching/logging any errors. Callsites can simply fire and forget
  * without needing to handle errors themselves.
  *
+ * The newContent will be formatted using VSCode's formatters before hashing to ensure
+ * fingerprints match what the user sees after format-on-save.
+ *
  * @param params - Parameters for tracking the contribution
  *
  * @example
@@ -313,7 +394,8 @@ export class ContributionTrackingService {
  * trackContribution({
  *   cwd: task.cwd,
  *   filePath: relPath,
- *   unifiedDiff: unifiedPatch,
+ *   originalContent: originalFileContent,
+ *   newContent: diffResult.content,
  *   status: didApprove ? "accepted" : "rejected",
  *   taskId: task.taskId,
  *   organizationId: state?.apiConfiguration?.kilocodeOrganizationId,

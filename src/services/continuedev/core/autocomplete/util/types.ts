@@ -1,5 +1,5 @@
 import { Position, Range, RangeInFile, TabAutocompleteOptions } from "../.."
-import { AutocompleteCodeSnippet } from "../snippets/types"
+import { AutocompleteCodeSnippet } from "../types"
 
 export type RecentlyEditedRange = RangeInFile & {
 	timestamp: number

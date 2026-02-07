@@ -70,6 +70,22 @@ kilocode --parallel --auto "improve xyz"
 kilocode --parallel --auto "improve abc"
 ```
 
+### Custom System Prompt
+
+Append custom instructions to the system prompt:
+
+```bash
+# Inline text
+kilocode --append-system-prompt "Always use TypeScript strict mode"
+
+# From a file
+kilocode --append-system-prompt-file ./prompts/custom-instructions.md
+
+# Both (inline text first, then file content)
+kilocode --append-system-prompt "Context: Production deployment" \
+         --append-system-prompt-file ./prompts/deploy-guidelines.md
+```
+
 ### Autonomous mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
@@ -84,6 +100,33 @@ echo "Fix the bug in app.ts" | kilocode --auto
 # Run in autonomous mode with timeout (in seconds)
 kilocode --auto "Run tests" --timeout 300
 ```
+
+#### Task Completion Hook
+
+Use `--on-task-completed` to send a follow-up prompt to the agent when the main task completes. This is useful for automating post-task actions like creating pull requests.
+
+```bash
+# Create a PR after the task completes
+kilocode --auto "Implement feature X" --on-task-completed "Create a pull request with a descriptive title and body"
+
+# Run tests and report results
+kilocode --auto "Fix the failing tests" --on-task-completed "Summarize what was fixed and verify all tests pass"
+
+# Commit changes with a specific message format
+kilocode --auto "Refactor the auth module" --on-task-completed "Commit all changes with a conventional commit message"
+```
+
+**Requirements:**
+
+- Requires `--auto` mode
+- Prompt cannot be empty
+- Maximum prompt length: 50,000 characters
+
+**Behavior:**
+
+- After the main task completes, the prompt is sent to the agent as a follow-up message
+- The agent has 90 seconds to complete the follow-up action
+- Supports markdown, special characters, and multi-line prompts
 
 #### Autonomous mode Behavior
 
@@ -161,6 +204,20 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
 
+#### Context Management Configuration
+
+You can also configure context management settings:
+
+```json
+{
+	"maxConcurrentFileReads": 5
+}
+```
+
+**Configuration Options:**
+
+- `maxConcurrentFileReads`: Maximum number of files that can be read in a single `read_file` request (default: 5, minimum: 1). The AI will be instructed about this limit and requests exceeding it will be rejected. Set to `1` to disable multi-file reads.
+
 #### Command Approval Patterns
 
 The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
@@ -235,49 +292,4 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### Getting Started
-
-To build and run the CLI locally off your branch:
-
-#### Build the VS Code extension
-
-```shell
-cd src
-pnpm bundle
-pnpm vsix
-pnpm vsix:unpackged
-cd ..
-```
-
-#### Install CLI dependencies
-
-```shell
-cd cli
-pnpm install
-pnpm deps:install
-```
-
-#### Build the CLI
-
-```shell
-pnpm clean
-pnpm clean:kilocode
-pnpm copy:kilocode
-pnpm build
-```
-
-#### Configure CLI settings
-
-```shell
-pnpm start config
-```
-
-#### Run the built CLI
-
-```shell
-pnpm start
-```
-
-### Using DevTools
-
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
+See [Development Guide](docs/DEVELOPMENT.md) for setup instructions.

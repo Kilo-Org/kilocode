@@ -1,10 +1,12 @@
 import * as path from "path"
 
 // Use vi.hoisted to ensure mocks are available during hoisting
-const { mockStat, mockReadFile, mockHomedir } = vi.hoisted(() => ({
+const { mockStat, mockReadFile, mockHomedir, mockExecuteRipgrep, mockExistsSync } = vi.hoisted(() => ({
 	mockStat: vi.fn(),
 	mockReadFile: vi.fn(),
 	mockHomedir: vi.fn(),
+	mockExecuteRipgrep: vi.fn(),
+	mockExistsSync: vi.fn(),
 }))
 
 // Mock fs/promises module
@@ -20,6 +22,19 @@ vi.mock("os", () => ({
 	homedir: mockHomedir,
 }))
 
+// Mock fs (sync) module used for legacy .roo fallback checks
+vi.mock("fs", () => ({
+	default: {
+		existsSync: mockExistsSync,
+	},
+	existsSync: mockExistsSync,
+}))
+
+// Mock executeRipgrep from search service
+vi.mock("../../search/file-search", () => ({
+	executeRipgrep: mockExecuteRipgrep,
+}))
+
 import {
 	getGlobalRooDirectory,
 	getProjectRooDirectoryForCwd,
@@ -27,6 +42,9 @@ import {
 	fileExists,
 	readFileIfExists,
 	getRooDirectoriesForCwd,
+	getAllRooDirectoriesForCwd,
+	getAgentsDirectoriesForCwd,
+	discoverSubfolderRooDirectories,
 	loadConfiguration,
 } from "../index"
 
@@ -42,8 +60,17 @@ describe("RooConfigService", () => {
 
 	describe("getGlobalRooDirectory", () => {
 		it("should return correct path for global .roo directory", () => {
+			mockExistsSync.mockReturnValue(false)
 			const result = getGlobalRooDirectory()
 			expect(result).toBe(path.join("/mock/home", ".kilocode"))
+		})
+
+		it("should fallback to legacy .roo when it exists and .kilocode does not", () => {
+			mockExistsSync.mockImplementation((p: string) => p === path.join("/mock/home", ".roo"))
+
+			const result = getGlobalRooDirectory()
+
+			expect(result).toBe(path.join("/mock/home", ".roo"))
 		})
 
 		it("should handle different home directories", () => {
@@ -55,9 +82,19 @@ describe("RooConfigService", () => {
 
 	describe("getProjectRooDirectoryForCwd", () => {
 		it("should return correct path for given cwd", () => {
+			mockExistsSync.mockReturnValue(false)
 			const cwd = "/custom/project/path"
 			const result = getProjectRooDirectoryForCwd(cwd)
 			expect(result).toBe(path.join(cwd, ".kilocode"))
+		})
+
+		it("should fallback to legacy .roo when it exists and .kilocode does not", () => {
+			const cwd = "/custom/project/path"
+			mockExistsSync.mockImplementation((p: string) => p === path.join(cwd, ".roo"))
+
+			const result = getProjectRooDirectoryForCwd(cwd)
+
+			expect(result).toBe(path.join(cwd, ".roo"))
 		})
 	})
 
@@ -206,6 +243,7 @@ describe("RooConfigService", () => {
 
 	describe("getRooDirectoriesForCwd", () => {
 		it("should return directories for given cwd", () => {
+			mockExistsSync.mockReturnValue(false)
 			const cwd = "/custom/project/path"
 
 			const result = getRooDirectoriesForCwd(cwd)
@@ -216,6 +254,7 @@ describe("RooConfigService", () => {
 
 	describe("loadConfiguration", () => {
 		it("should load global configuration only when project does not exist", async () => {
+			mockExistsSync.mockReturnValue(false)
 			const error = new Error("ENOENT") as any
 			error.code = "ENOENT"
 			mockReadFile.mockResolvedValueOnce("global content").mockRejectedValueOnce(error)
@@ -230,6 +269,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should load project configuration only when global does not exist", async () => {
+			mockExistsSync.mockReturnValue(false)
 			const error = new Error("ENOENT") as any
 			error.code = "ENOENT"
 			mockReadFile.mockRejectedValueOnce(error).mockResolvedValueOnce("project content")
@@ -244,6 +284,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should merge global and project configurations with project overriding global", async () => {
+			mockExistsSync.mockReturnValue(false)
 			mockReadFile.mockResolvedValueOnce("global content").mockResolvedValueOnce("project content")
 
 			const result = await loadConfiguration("rules/rules.md", "/project/path")
@@ -256,6 +297,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should return empty merged content when neither exists", async () => {
+			mockExistsSync.mockReturnValue(false)
 			const error = new Error("ENOENT") as any
 			error.code = "ENOENT"
 			mockReadFile.mockRejectedValueOnce(error).mockRejectedValueOnce(error)
@@ -270,6 +312,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should propagate unexpected errors from global file read", async () => {
+			mockExistsSync.mockReturnValue(false)
 			const error = new Error("Permission denied") as any
 			error.code = "EACCES"
 			mockReadFile.mockRejectedValueOnce(error)
@@ -278,6 +321,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should propagate unexpected errors from project file read", async () => {
+			mockExistsSync.mockReturnValue(false)
 			const globalError = new Error("ENOENT") as any
 			globalError.code = "ENOENT"
 			const projectError = new Error("Permission denied") as any
@@ -289,6 +333,7 @@ describe("RooConfigService", () => {
 		})
 
 		it("should use correct file paths", async () => {
+			mockExistsSync.mockReturnValue(false)
 			mockReadFile.mockResolvedValue("content")
 
 			await loadConfiguration("rules/rules.md", "/project/path")
@@ -298,6 +343,205 @@ describe("RooConfigService", () => {
 				path.join("/project/path", ".kilocode", "rules/rules.md"),
 				"utf-8",
 			)
+		})
+	})
+
+	describe("discoverSubfolderRooDirectories", () => {
+		it("should return empty array when no subfolder .roo directories found", async () => {
+			mockExecuteRipgrep.mockResolvedValue([])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([])
+		})
+
+		it("should discover .kilocode directories from subfolders", async () => {
+			// Find any file inside .kilocode directories
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "package-a/.kilocode/rules/rule.md", type: "file" },
+				{ path: "package-b/.kilocode/workflows/rule.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([
+				path.join("/project/path", "package-a", ".kilocode"),
+				path.join("/project/path", "package-b", ".kilocode"),
+			])
+		})
+
+		it("should sort discovered directories alphabetically", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "zebra/.kilocode/rules/rule.md", type: "file" },
+				{ path: "apple/.kilocode/rules/rule.md", type: "file" },
+				{ path: "mango/.kilocode/rules/rule.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([
+				path.join("/project/path", "apple", ".kilocode"),
+				path.join("/project/path", "mango", ".kilocode"),
+				path.join("/project/path", "zebra", ".kilocode"),
+			])
+		})
+
+		it("should exclude root .kilocode and .roo directories", async () => {
+			// These would match the root dirs, which should be excluded
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: ".kilocode/rules/rule.md", type: "file" }, // root - excluded
+				{ path: ".roo/rules/rule.md", type: "file" }, // root legacy - excluded
+				{ path: "subfolder/.kilocode/rules/rule.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			// Should only include subfolder, not roots
+			expect(result).toEqual([path.join("/project/path", "subfolder", ".kilocode")])
+		})
+
+		it("should handle nested subdirectories", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "packages/core/.kilocode/rules/rule.md", type: "file" },
+				{ path: "packages/utils/.kilocode/workflows/rule.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([
+				path.join("/project/path", "packages/core", ".kilocode"),
+				path.join("/project/path", "packages/utils", ".kilocode"),
+			])
+		})
+
+		it("should return empty array on ripgrep error", async () => {
+			mockExecuteRipgrep.mockRejectedValue(new Error("ripgrep failed"))
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([])
+		})
+
+		it("should deduplicate config directories from multiple files", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "package-a/.kilocode/rules/rule1.md", type: "file" },
+				{ path: "package-a/.kilocode/rules/rule2.md", type: "file" },
+				{ path: "package-a/.kilocode/workflows/rule3.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			// Should only include package-a/.kilocode once
+			expect(result).toEqual([path.join("/project/path", "package-a", ".kilocode")])
+		})
+
+		it("should discover .kilocode/.roo directories with any content", async () => {
+			// Should find config directories regardless of what's inside them
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "package-a/.kilocode/rules/rule.md", type: "file" },
+				{ path: "package-b/.kilocode/workflows/code-rule.md", type: "file" },
+				{ path: "package-c/.roo/rules-architect/arch-rule.md", type: "file" }, // legacy
+				{ path: "package-d/.roo/config/settings.json", type: "file" }, // legacy
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([
+				path.join("/project/path", "package-a", ".kilocode"),
+				path.join("/project/path", "package-b", ".kilocode"),
+				path.join("/project/path", "package-c", ".roo"),
+				path.join("/project/path", "package-d", ".roo"),
+			])
+		})
+
+		it("should prefer .kilocode over .roo when both exist in the same subfolder", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "package-a/.roo/rules/rule.md", type: "file" },
+				{ path: "package-a/.kilocode/rules/rule.md", type: "file" },
+			])
+
+			const result = await discoverSubfolderRooDirectories("/project/path")
+
+			expect(result).toEqual([path.join("/project/path", "package-a", ".kilocode")])
+		})
+	})
+
+	describe("getAllRooDirectoriesForCwd", () => {
+		it("should return global, project, and subfolder directories", async () => {
+			mockExistsSync.mockReturnValue(false)
+			mockExecuteRipgrep.mockResolvedValueOnce([{ path: "subfolder/.kilocode/rules/rule.md", type: "file" }])
+
+			const result = await getAllRooDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual([
+				path.join("/mock/home", ".kilocode"), // global
+				path.join("/project/path", ".kilocode"), // project
+				path.join("/project/path", "subfolder", ".kilocode"), // subfolder
+			])
+		})
+
+		it("should return only global and project when no subfolders", async () => {
+			mockExistsSync.mockReturnValue(false)
+			mockExecuteRipgrep.mockResolvedValue([])
+
+			const result = await getAllRooDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual([path.join("/mock/home", ".kilocode"), path.join("/project/path", ".kilocode")])
+		})
+
+		it("should maintain order: global, project, subfolders (alphabetically)", async () => {
+			mockExistsSync.mockReturnValue(false)
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "zebra/.kilocode/rules/rule.md", type: "file" },
+				{ path: "apple/.kilocode/rules/rule.md", type: "file" },
+			])
+
+			const result = await getAllRooDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual([
+				path.join("/mock/home", ".kilocode"), // global first
+				path.join("/project/path", ".kilocode"), // project second
+				path.join("/project/path", "apple", ".kilocode"), // subfolders alphabetically
+				path.join("/project/path", "zebra", ".kilocode"),
+			])
+		})
+	})
+
+	describe("getAgentsDirectoriesForCwd", () => {
+		it("should return root directory and parent directories of subfolder .roo dirs", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([{ path: "package-a/.kilocode/rules/rule.md", type: "file" }])
+
+			const result = await getAgentsDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual([
+				"/project/path", // root
+				path.join("/project/path", "package-a"), // parent of config dir
+			])
+		})
+
+		it("should always include root even when no subfolders", async () => {
+			mockExecuteRipgrep.mockResolvedValue([])
+
+			const result = await getAgentsDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual(["/project/path"])
+		})
+
+		it("should include multiple subfolder parent directories", async () => {
+			mockExecuteRipgrep.mockResolvedValueOnce([
+				{ path: "package-a/.kilocode/rules/rule.md", type: "file" },
+				{ path: "package-b/.kilocode/workflows/rule.md", type: "file" },
+				{ path: "packages/core/.kilocode/rules/rule.md", type: "file" },
+			])
+
+			const result = await getAgentsDirectoriesForCwd("/project/path")
+
+			expect(result).toEqual([
+				"/project/path",
+				path.join("/project/path", "package-a"),
+				path.join("/project/path", "package-b"),
+				path.join("/project/path", "packages/core"),
+			])
 		})
 	})
 })

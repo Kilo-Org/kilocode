@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { Database } from "lucide-react"
 
+import type { IndexingStatus, IndexingStatusUpdateMessage } from "@roo-code/types"
+
 import { cn } from "@src/lib/utils"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-
-import type { IndexingStatus, IndexingStatusUpdateMessage } from "@roo/ExtensionMessage"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { PopoverTrigger, StandardTooltip, Button } from "@src/components/ui"

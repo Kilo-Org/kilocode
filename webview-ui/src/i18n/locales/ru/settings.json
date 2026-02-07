@@ -1,4 +1,5 @@
 {
+	"back": "Назад к списку задач",
 	"common": {
 		"save": "Сохранить",
 		"done": "Готово",
@@ -7,6 +8,10 @@
 		"select": "Выбрать",
 		"add": "Добавить заголовок",
 		"remove": "Удалить"
+	},
+	"search": {
+		"placeholder": "Поиск параметров...",
+		"noResults": "Параметры не найдены"
 	},
 	"header": {
 		"title": "Настройки",
@@ -37,7 +42,9 @@
 		"experimental": "Экспериментальное",
 		"language": "Язык",
 		"about": "О Kilo Code",
-		"autoPurge": "Авто-очистка"
+		"autoPurge": "Авто-очистка",
+		"agentBehaviour": "Поведение агента",
+		"ghost": "Автодополнение"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Хотите получить советы или просто пообщаться с другими пользователями Kilo Code? Присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Контакты и Сообщество",
-		"manageSettings": "Управление Настройками"
+		"manageSettings": "Управление Настройками",
+		"debugMode": {
+			"label": "Включить режим отладки",
+			"description": "Включите режим отладки для отображения дополнительных кнопок в заголовке задачи для просмотра истории разговоров API и сообщений UI в виде форматированного JSON во временных файлах."
+		}
 	},
 	"slashCommands": {
 		"description": "Управляйте своими слэш-командами для быстрого выполнения пользовательских рабочих процессов и действий. <DocsLink>Узнать больше</DocsLink>"
@@ -94,6 +105,7 @@
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
 		"openaiCompatibleProvider": "OpenAI-совместимый",
+		"openaiCompatibleResponsesProvider": "OpenAI-совместимый (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введите ваш ключ API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Базовый URL",
@@ -214,11 +226,6 @@
 			"label": "Браузер",
 			"description": "Автоматически выполнять действия в браузере без необходимости одобрения. Применяется только, если модель поддерживает использование компьютера"
 		},
-		"retry": {
-			"label": "Повтор",
-			"description": "Автоматически повторять неудачные запросы к API при ошибке сервера",
-			"delayLabel": "Задержка перед повтором запроса"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Включить автоодобрение отдельных инструментов MCP в представлении MCP Servers (требуется включить как этот параметр, так и индивидуальный чекбокс инструмента \"Всегда разрешать\")"
@@ -277,6 +284,7 @@
 		"makeActiveProfile": "Сделать активным профилем",
 		"makeActiveTooltip": "Активируй этот профиль для использования в API-запросах",
 		"apiProvider": "Провайдер API",
+		"apiProviderDocs": "Документация провайдера",
 		"model": "Модель",
 		"nameEmpty": "Имя не может быть пустым",
 		"nameExists": "Профиль с таким именем уже существует",
@@ -305,10 +313,40 @@
 		"glamaApiKey": "API-ключ Glama",
 		"getGlamaApiKey": "Получить API-ключ Glama",
 		"apiKeyStorageNotice": "API-ключи хранятся безопасно в Secret Storage VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"useReasoning": "Включить рассуждения",
 		"useHostHeader": "Использовать пользовательский Host-заголовок",
-		"useLegacyFormat": "Использовать устаревший формат OpenAI API",
 		"customHeaders": "Пользовательские заголовки",
 		"headerName": "Имя заголовка",
 		"headerValue": "Значение заголовка",
@@ -324,7 +362,6 @@
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
-		"openRouterTransformsText": "Сжимать подсказки и цепочки сообщений до размера контекста (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
@@ -334,6 +371,8 @@
 		"anthropic1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
 		"awsBedrock1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
+		"vertex1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-ключ",
 		"getBasetenApiKey": "Получить Baseten API-ключ",
 		"cerebrasApiKey": "Cerebras API-ключ",
@@ -434,6 +473,14 @@
 		"awsRegion": "Регион AWS",
 		"awsCrossRegion": "Использовать кросс-региональный вывод",
 		"awsGlobalInference": "Использовать глобальный вывод (автоматический выбор оптимального региона AWS)",
+		"awsServiceTier": "Уровень обслуживания",
+		"awsServiceTierStandard": "Стандартный",
+		"awsServiceTierStandardDesc": "Сбалансированная производительность и стоимость",
+		"awsServiceTierFlex": "Гибкий (50% скидка)",
+		"awsServiceTierFlexDesc": "Более низкая стоимость, более высокая задержка для некритичных задач",
+		"awsServiceTierPriority": "Приоритетный (75% надбавка)",
+		"awsServiceTierPriorityDesc": "Максимальная производительность для критичных приложений",
+		"awsServiceTierNote": "Уровни обслуживания влияют на цены и производительность. Гибкий предлагает 50% скидку с более высокой задержкой, Приоритетный предлагает 25% лучшую производительность с 75% надбавкой.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Использовать пользовательскую конечную точку VPC",
 			"vpcEndpointUrlPlaceholder": "Введите URL конечной точки VPC (опционально)",
@@ -580,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "Подробность вывода",
+			"max": "Max",
 			"high": "Высокая",
 			"medium": "Средняя",
 			"low": "Низкая",
@@ -592,21 +640,6 @@
 			"placeholder": "По умолчанию: claude",
 			"maxTokensLabel": "Макс. выходных токенов",
 			"maxTokensDescription": "Максимальное количество выходных токенов для ответов Claude Code. По умолчанию 8000."
-		},
-		"geminiCli": {
-			"description": "Этот провайдер использует OAuth-аутентификацию из инструмента Gemini CLI и не требует API-ключей.",
-			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
-			"oauthPathDescription": "Путь к файлу учетных данных OAuth. Оставьте пустым для использования местоположения по умолчанию (~/.gemini/oauth_creds.json).",
-			"instructions": "Если вы еще не прошли аутентификацию, выполните",
-			"instructionsContinued": "в вашем терминале сначала.",
-			"setupLink": "Инструкции по настройке Gemini CLI",
-			"requirementsTitle": "Важные требования",
-			"requirement1": "Сначала вам нужно установить инструмент Gemini CLI",
-			"requirement2": "Затем запустите gemini в вашем терминале и убедитесь, что вы вошли в Google",
-			"requirement3": "Работает только с личными аккаунтами Google (не с аккаунтами Google Workspace)",
-			"requirement4": "Не использует API-ключи - аутентификация обрабатывается через OAuth",
-			"requirement5": "Требует, чтобы инструмент Gemini CLI был сначала установлен и аутентифицирован",
-			"freeAccess": "Бесплатный доступ через OAuth-аутентификацию"
 		},
 		"qwenCode": {
 			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
@@ -798,6 +831,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git статус макс. файлов",
 			"description": "Максимальное количество записей файлов для включения в контекст статуса git. Установите значение 0, чтобы отключить. Информация о ветке и коммитах всегда отображается, если значение > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Включить правила подпапок",
+			"description": "Рекурсивно обнаруживать и загружать файлы .roo/rules и AGENTS.md из подкаталогов. Полезно для монорепозиториев с правилами для каждого пакета."
 		}
 	},
 	"terminal": {
@@ -987,6 +1024,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Речь-в-текст (STT)",
 			"description": "При включении Kilo Code может преобразовывать вашу речь в текст с помощью модели Whisper от OpenAI. Нажмите кнопку микрофона в чате, чтобы начать запись. Требуется установленный FFmpeg и настроенный API-провайдер OpenAI."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Включить пользовательские инструменты",
+			"description": "Если включено, Kilo может загружать и использовать пользовательские инструменты TypeScript/JavaScript из каталога .kilocode/tools вашего проекта или ~/.kilocode/tools для глобальных инструментов. Примечание: эти инструменты будут одобрены автоматически.",
+			"toolsHeader": "Доступные пользовательские инструменты",
+			"noTools": "Пользовательские инструменты не загружены. Добавьте файлы .ts или .js в каталог .kilocode/tools вашего проекта или ~/.kilocode/tools для глобальных инструментов.",
+			"refreshButton": "Обновить",
+			"refreshing": "Обновление...",
+			"refreshSuccess": "Инструменты успешно обновлены",
+			"refreshError": "Не удалось обновить инструменты",
+			"toolParameters": "Параметры"
 		}
 	},
 	"promptCaching": {
@@ -1026,7 +1074,9 @@
 		"searchPlaceholder": "Поиск",
 		"noMatchFound": "Совпадений не найдено",
 		"useCustomModel": "Использовать пользовательскую: {{modelId}}",
-		"simplifiedExplanation": "Ты сможешь настроить подробные параметры модели позже."
+		"simplifiedExplanation": "Ты сможешь настроить подробные параметры модели позже.",
+		"recommendedModels": "Рекомендуемые модели",
+		"allModels": "Все модели"
 	},
 	"footer": {
 		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
@@ -1115,6 +1165,10 @@
 		"showTimestamps": {
 			"label": "Показывать временные метки",
 			"description": "Показывать временную метку для каждого сообщения в представлении чата"
+		},
+		"showDiffStats": {
+			"label": "Показывать статистику изменений",
+			"description": "Отображать статистику добавленных/удалённых строк в заголовке задачи"
 		}
 	},
 	"ghost": {

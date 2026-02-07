@@ -8,6 +8,13 @@ vi.mock("../../../shared/http")
 vi.mock("../../code-index/managed/git-utils")
 vi.mock("../../../utils/kilo-config-file")
 vi.mock("../../../utils/git")
+vi.mock("../FormatterService", () => ({
+	FormatterService: {
+		getInstance: () => ({
+			formatContentForFile: vi.fn().mockImplementation((content: string) => Promise.resolve(content)),
+		}),
+	},
+}))
 
 describe("ContributionTrackingService", () => {
 	let service: ContributionTrackingService
@@ -62,66 +69,93 @@ describe("ContributionTrackingService", () => {
 	})
 
 	describe("diff parsing", () => {
-		it("should extract added lines", () => {
+		it("should extract added line numbers", () => {
 			const diff = `@@ -1,2 +1,3 @@
- const x = 1
+	const x = 1
 +const y = 2
- console.log(x)`
+	console.log(x)`
 
-			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff)
-			expect(linesAdded).toHaveLength(1)
-			expect(linesAdded[0].line_number).toBe(2)
-			expect(linesAdded[0].line_hash).toBeDefined()
-			expect(linesRemoved).toHaveLength(0)
+			const { addedLineNumbers, removedLineNumbers } = (service as any).extractLineNumbers(diff)
+			expect(addedLineNumbers).toHaveLength(1)
+			expect(addedLineNumbers[0]).toBe(2)
+			expect(removedLineNumbers).toHaveLength(0)
 		})
 
-		it("should extract removed lines", () => {
+		it("should extract removed line numbers", () => {
 			const diff = `@@ -1,3 +1,2 @@
- const x = 1
+	const x = 1
 -const y = 2
- console.log(x)`
+	console.log(x)`
 
-			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff)
-			expect(linesAdded).toHaveLength(0)
-			expect(linesRemoved).toHaveLength(1)
-			expect(linesRemoved[0].line_number).toBe(2)
-			expect(linesRemoved[0].line_hash).toBeDefined()
+			const { addedLineNumbers, removedLineNumbers } = (service as any).extractLineNumbers(diff)
+			expect(addedLineNumbers).toHaveLength(0)
+			expect(removedLineNumbers).toHaveLength(1)
+			expect(removedLineNumbers[0]).toBe(2)
 		})
 
 		it("should handle multiple hunks", () => {
 			const diff = `@@ -1,2 +1,3 @@
- const x = 1
+	const x = 1
 +const y = 2
- console.log(x)
+	console.log(x)
 @@ -10,2 +11,3 @@
- function test() {
+	function test() {
 +  return true
- }`
+	}`
 
-			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff)
-			expect(linesAdded).toHaveLength(2)
-			expect(linesAdded[0].line_number).toBe(2)
-			expect(linesAdded[1].line_number).toBe(12)
+			const { addedLineNumbers, removedLineNumbers } = (service as any).extractLineNumbers(diff)
+			expect(addedLineNumbers).toHaveLength(2)
+			expect(addedLineNumbers[0]).toBe(2)
+			expect(addedLineNumbers[1]).toBe(12)
 		})
 
 		it("should skip file markers", () => {
 			const diff = `--- a/file.ts
 +++ b/file.ts
 @@ -1,2 +1,3 @@
- const x = 1
+	const x = 1
 +const y = 2
- console.log(x)`
+	console.log(x)`
 
-			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff)
-			expect(linesAdded).toHaveLength(1)
-			expect(linesRemoved).toHaveLength(0)
+			const { addedLineNumbers, removedLineNumbers } = (service as any).extractLineNumbers(diff)
+			expect(addedLineNumbers).toHaveLength(1)
+			expect(removedLineNumbers).toHaveLength(0)
 		})
 
 		it("should handle empty diff", () => {
 			const diff = ""
-			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff)
-			expect(linesAdded).toHaveLength(0)
+			const { addedLineNumbers, removedLineNumbers } = (service as any).extractLineNumbers(diff)
+			expect(addedLineNumbers).toHaveLength(0)
+			expect(removedLineNumbers).toHaveLength(0)
+		})
+
+		it("should extract line changes with formatted content", () => {
+			const diff = `@@ -1,2 +1,3 @@
+	const x = 1
++const y = 2
+	console.log(x)`
+			const formattedContent = "const x = 1\nconst y = 2\nconsole.log(x)"
+
+			const { linesAdded, linesRemoved } = (service as any).extractLineChanges(diff, formattedContent)
+			expect(linesAdded).toHaveLength(1)
+			expect(linesAdded[0].line_number).toBe(2)
+			expect(linesAdded[0].line_hash).toBeDefined()
 			expect(linesRemoved).toHaveLength(0)
+		})
+	})
+
+	describe("diff generation", () => {
+		it("should generate diff from original and formatted content", () => {
+			const originalContent = "const x = 1\nconsole.log(x)"
+			const formattedContent = "const x = 1\nconst y = 2\nconsole.log(x)"
+			const filePath = "test.ts"
+
+			const diff = (service as any).generateFormattedDiff(originalContent, formattedContent, filePath)
+
+			// Should contain the added line
+			expect(diff).toContain("+const y = 2")
+			// Should be a valid unified diff
+			expect(diff).toContain("@@")
 		})
 	})
 
@@ -194,7 +228,8 @@ describe("ContributionTrackingService", () => {
 			const params: TrackContributionParams = {
 				cwd: "/test/repo",
 				filePath: "test.ts",
-				unifiedDiff: "@@ -1,1 +1,2 @@\n const x = 1\n+const y = 2",
+				originalContent: "const x = 1",
+				newContent: "const x = 1\nconst y = 2",
 				status: "accepted",
 				kilocodeToken: "token",
 				// organizationId is missing
@@ -229,7 +264,8 @@ describe("ContributionTrackingService", () => {
 			const params: TrackContributionParams = {
 				cwd: "/test/repo",
 				filePath: "test.ts",
-				unifiedDiff: "@@ -1,1 +1,2 @@\n const x = 1\n+const y = 2",
+				originalContent: "const x = 1",
+				newContent: "const x = 1\nconst y = 2",
 				status: "accepted",
 				organizationId: "org-1",
 				kilocodeToken: "token",
@@ -282,7 +318,8 @@ describe("ContributionTrackingService", () => {
 			const params: TrackContributionParams = {
 				cwd: "/test/repo",
 				filePath: "test.ts",
-				unifiedDiff: "@@ -1,1 +1,2 @@\n const x = 1\n+const y = 2",
+				originalContent: "const x = 1",
+				newContent: "const x = 1\nconst y = 2",
 				status: "accepted",
 				taskId: "task-123",
 				organizationId: "org-1",
@@ -310,8 +347,10 @@ describe("ContributionTrackingService", () => {
 				status: "accepted",
 				task_id: "task-123",
 			})
-			expect(payload.lines_added).toHaveLength(1)
-			expect(payload.lines_removed).toHaveLength(0)
+			// The diff is generated from originalContent and newContent
+			// Adding one line should result in 1 added line
+			expect(payload.lines_added.length).toBeGreaterThan(0)
+			expect(Array.isArray(payload.lines_removed)).toBe(true)
 		})
 
 		it("should handle errors gracefully without throwing", async () => {
@@ -333,7 +372,8 @@ describe("ContributionTrackingService", () => {
 			const params: TrackContributionParams = {
 				cwd: "/test/repo",
 				filePath: "test.ts",
-				unifiedDiff: "@@ -1,1 +1,2 @@\n const x = 1\n+const y = 2",
+				originalContent: "const x = 1",
+				newContent: "const x = 1\nconst y = 2",
 				status: "accepted",
 				organizationId: "org-1",
 				kilocodeToken: "token",

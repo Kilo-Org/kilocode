@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI कोडिंग एजेंट, Copilot और ऑटोकम्पलीट",
-	"extension.description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।",
+	"extension.description": "ओपन सोर्स AI कोडिंग एजेंट जो प्राकृतिक भाषा से कोड जेनरेट करता है, कार्यों को स्वचालित करता है और टर्मिनल कमांड चलाता है। इनलाइन ऑटोकम्पलीट, ब्राउज़र ऑटोमेशन, स्वचालित रीफैक्टरिंग और प्लानिंग, कोडिंग और डिबगिंग के लिए कस्टम मोड शामिल हैं। Claude (Anthropic), Gemini, Grok, GPT, Codex और GLM सहित 500+ AI मॉडल का समर्थन करता है।",
 	"command.newTask.title": "नया कार्य",
 	"command.explainCode.title": "कोड समझाएं",
 	"command.fixCode.title": "कोड ठीक करें",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "कोड इंडेक्सिंग के दौरान एम्बेडिंग ऑपरेशन के लिए बैच साइज़। इसे अपने API प्रदाता की सीमाओं के अनुसार समायोजित करें। डिफ़ॉल्ट 60 है।",
 	"settings.toolProtocol.description": "एआई इंटरैक्शन के लिए उपयोग करने वाला टूल प्रोटोकॉल। एक्सएमएल डिफ़ॉल्ट और अनुशंसित प्रोटोकॉल है। नेटिव प्रायोगिक है और सभी प्रदाताओं के साथ काम नहीं कर सकता है।",
 	"settings.debug.description": "API conversation history और UI messages को temporary files में prettified JSON के रूप में देखने के लिए अतिरिक्त बटन दिखाने के लिए debug mode सक्षम करें।",
+	"settings.debugProxy.enabled.description": "**Debug Proxy सक्षम करो** — सभी आउटबाउंड network requests को MITM debugging के लिए proxy के ज़रिए route करो। सिर्फ तब active रहेगा जब तुम debug mode (F5) में चला रहे हो।",
+	"settings.debugProxy.serverUrl.description": "Proxy URL (जैसे `http://127.0.0.1:8888`)। सिर्फ तब इस्तेमाल होती है जब **Debug Proxy** enabled हो।",
+	"settings.debugProxy.tlsInsecure.description": "Proxy से आने वाले self-signed certificates accept करो। **MITM inspection के लिए ज़रूरी।** ⚠️ Insecure — सिर्फ local debugging के लिए इस्तेमाल करो।",
 	"ghost.input.title": "पुष्टि के लिए 'Enter' दबाएं या रद्द करने के लिए 'Escape' दबाएं",
 	"ghost.input.placeholder": "वर्णन करें कि आप क्या करना चाहते हैं...",
 	"ghost.commands.generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",

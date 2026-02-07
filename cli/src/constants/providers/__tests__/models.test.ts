@@ -44,7 +44,6 @@ describe("Static Provider Models", () => {
 			"fireworks",
 			"featherless",
 			"claude-code",
-			"gemini-cli",
 		]
 
 		it.each(staticProviders)("should return non-empty models for %s provider", (provider) => {
@@ -216,6 +215,20 @@ describe("Static Provider Models", () => {
 			deepinfra: {},
 			"vercel-ai-gateway": {},
 			ovhcloud: {},
+			"nano-gpt": {
+				"deepseek/deepseek-v3.2": {
+					contextWindow: 128000,
+					supportsPromptCache: false,
+					inputPrice: 0.14,
+					outputPrice: 0.28,
+				},
+				"openai/gpt-4o": {
+					contextWindow: 128000,
+					supportsPromptCache: false,
+					inputPrice: 2.5,
+					outputPrice: 10,
+				},
+			},
 		}
 
 		it("should return router models for openrouter provider", () => {
@@ -261,6 +274,41 @@ describe("Static Provider Models", () => {
 			expect(result.models).toBeDefined()
 			expect(Object.keys(result.models).length).toBe(0)
 		})
+
+		describe("nano-gpt provider", () => {
+			it("should return router models for nano-gpt provider", () => {
+				const result = getModelsByProvider({
+					provider: "nano-gpt",
+					routerModels: mockRouterModels,
+					kilocodeDefaultModel: "",
+				})
+
+				expect(result.models).toBe(mockRouterModels["nano-gpt"])
+				expect(Object.keys(result.models)).toContain("deepseek/deepseek-v3.2")
+				expect(Object.keys(result.models)).toContain("openai/gpt-4o")
+			})
+
+			it("should return empty models when routerModels is null", () => {
+				const result = getModelsByProvider({
+					provider: "nano-gpt",
+					routerModels: null,
+					kilocodeDefaultModel: "",
+				})
+
+				expect(result.models).toEqual({})
+			})
+
+			it("should have correct default model for nano-gpt", () => {
+				const result = getModelsByProvider({
+					provider: "nano-gpt",
+					routerModels: mockRouterModels,
+					kilocodeDefaultModel: "",
+				})
+
+				// Default model should be defined
+				expect(result.defaultModel).toBeDefined()
+			})
+		})
 	})
 
 	describe("getModelsByProvider - Edge Cases", () => {
@@ -285,17 +333,6 @@ describe("Static Provider Models", () => {
 
 			expect(result.models).toEqual({})
 			expect(result.defaultModel).toBe("gpt-3.5-turbo")
-		})
-
-		it("should handle human-relay provider", () => {
-			const result = getModelsByProvider({
-				provider: "human-relay",
-				routerModels: null,
-				kilocodeDefaultModel: "",
-			})
-
-			expect(result.models).toEqual({})
-			expect(result.defaultModel).toBe("")
 		})
 
 		it("should handle fake-ai provider", () => {
@@ -350,6 +387,10 @@ describe("Static Provider Models", () => {
 			expect(PROVIDER_TO_ROUTER_NAME.litellm).toBe("litellm")
 		})
 
+		it("should map nano-gpt to nano-gpt router name", () => {
+			expect(PROVIDER_TO_ROUTER_NAME["nano-gpt"]).toBe("nano-gpt")
+		})
+
 		it("should map static providers to null", () => {
 			expect(PROVIDER_TO_ROUTER_NAME.anthropic).toBeNull()
 			expect(PROVIDER_TO_ROUTER_NAME.gemini).toBeNull()
@@ -366,6 +407,10 @@ describe("Static Provider Models", () => {
 			expect(providerSupportsModelList("litellm")).toBe(true)
 		})
 
+		it("should return true for nano-gpt provider", () => {
+			expect(providerSupportsModelList("nano-gpt")).toBe(true)
+		})
+
 		it("should return false for static providers", () => {
 			expect(providerSupportsModelList("anthropic")).toBe(false)
 			expect(providerSupportsModelList("gemini")).toBe(false)
@@ -380,6 +425,10 @@ describe("Static Provider Models", () => {
 			expect(getRouterNameForProvider("ollama")).toBe("ollama")
 		})
 
+		it("should return nano-gpt for nano-gpt provider", () => {
+			expect(getRouterNameForProvider("nano-gpt")).toBe("nano-gpt")
+		})
+
 		it("should return null for static providers", () => {
 			expect(getRouterNameForProvider("anthropic")).toBeNull()
 			expect(getRouterNameForProvider("gemini")).toBeNull()
@@ -390,6 +439,10 @@ describe("Static Provider Models", () => {
 		it("should return correct field names for router providers", () => {
 			expect(getModelFieldForProvider("openrouter")).toBe("openRouterModelId")
 			expect(getModelFieldForProvider("ollama")).toBe("ollamaModelId")
+		})
+
+		it("should return nanoGptModelId for nano-gpt provider", () => {
+			expect(getModelFieldForProvider("nano-gpt")).toBe("nanoGptModelId")
 		})
 
 		it("should return null for static providers", () => {

@@ -9,6 +9,7 @@
 		"tokens": "Tokeny",
 		"cache": "Pamięć podręczna",
 		"apiCost": "Koszt API",
+		"changes": "Zmiany",
 		"size": "Rozmiar",
 		"contextWindow": "Okno kontekstu",
 		"closeAndStart": "Zamknij zadanie i rozpocznij nowe",
@@ -88,10 +89,15 @@
 		"title": "Zakończ",
 		"tooltip": "Zakończ bieżące zadanie"
 	},
+	"stop": {
+		"title": "Zatrzymaj",
+		"tooltip": "Zatrzymaj bieżące zadanie"
+	},
 	"cancel": {
 		"title": "Anuluj",
 		"tooltip": "Anuluj bieżącą operację"
 	},
+	"enqueueMessage": "Dodaj wiadomość do kolejki (zostanie wysłana po zakończeniu bieżącego zadania)",
 	"scrollToBottom": "Przewiń do dołu czatu",
 	"about": "Generuj, refaktoryzuj i debuguj kod z pomocą sztucznej inteligencji. Sprawdź naszą <DocsLink>dokumentację</DocsLink>, żeby dowiedzieć się więcej.",
 	"docs": "Sprawdź naszą <DocsLink>dokumentację</DocsLink>, aby dowiedzieć się więcej.",
@@ -146,17 +152,20 @@
 		"streaming": "Zapytanie API...",
 		"cancelled": "Zapytanie API anulowane",
 		"streamingFailed": "Strumieniowanie API nie powiodło się",
-		"errorTitle": "Błąd API {{code}}",
+		"rateLimitWait": "Ograniczenie szybkości",
+		"errorTitle": "Błąd dostawcy {{code}}",
 		"errorMessage": {
 			"docs": "Dokumentacja",
+			"goToSettings": "Ustawienia",
 			"400": "Dostawca nie mógł przetworzyć żądania. Zatrzymaj zadanie i spróbuj innego podejścia.",
 			"401": "Nie można uwierzytelnić u dostawcy. Sprawdź konfigurację klucza API.",
 			"402": "Wygląda na to, że wyczerpałeś środki/kredyty na swoim koncie. Przejdź do dostawcy i dodaj więcej, aby kontynuować.",
 			"403": "Brak autoryzacji. Twój klucz API jest ważny, ale dostawca odmówił ukończenia tego żądania.",
 			"429": "Zbyt wiele żądań. Dostawca ogranicza Ci szybkość żądań. Poczekaj chwilę przed następnym wywołaniem API.",
 			"500": "Błąd serwera dostawcy. Po stronie dostawcy coś się nie powiodło, w Twoim żądaniu nie ma nic złego.",
-			"unknown": "Nieznany błąd API. Skontaktuj się z pomocą techniczną Kilo.",
-			"connection": "Błąd połączenia. Upewnij się, że masz działające połączenie internetowe."
+			"unknown": "Nieznany błąd API, kliknij Szczegóły, aby uzyskać więcej informacji.",
+			"connection": "Błąd połączenia. Upewnij się, że masz działające połączenie internetowe.",
+			"claudeCodeNotAuthenticated": "Musisz się zalogować, aby korzystać z Claude Code. Przejdź do Ustawień i kliknij \"Zaloguj się do Claude Code\", aby się uwierzytelnić."
 		}
 	},
 	"checkpoint": {
@@ -270,10 +279,20 @@
 		"hasQuestion": "Kilo Code ma pytanie"
 	},
 	"taskCompleted": "Zadanie zakończone",
+	"modelResponseIncomplete": "Odpowiedź modelu niekompletna",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model nie użył żadnych narzędzi w swojej odpowiedzi. Zwykle dzieje się tak, gdy model dostarcza tylko tekst/rozumowanie bez wywołania wymaganych narzędzi do wykonania zadania.",
+		"noToolsUsedDetails": "Model dostarczył tekst/rozumowanie, ale nie wywołał żadnego z wymaganych narzędzi. Zazwyczaj oznacza to, że model źle zrozumiał zadanie lub ma trudności z określeniem, którego narzędzia użyć. Model został automatycznie poproszony o ponowną próbę z odpowiednim użyciem narzędzi.",
+		"noAssistantMessages": "Model nie dostarczył żadnej odpowiedzi. Może to wskazywać na problem z API lub wyjściem modelu.",
+		"noAssistantMessagesDetails": "Model językowy zwrócił pustą odpowiedź bez żadnego tekstu ani wywołań narzędzi. Może się to zdarzyć z powodu problemów z API, limitów szybkości lub problemów specyficznych dla modelu. Model został automatycznie poproszony o ponowną próbę."
+	},
 	"errorDetails": {
+		"link": "Szczegóły",
 		"title": "Szczegóły błędu",
 		"copyToClipboard": "Kopiuj do schowka",
-		"copied": "Skopiowano!"
+		"copied": "Skopiowano!",
+		"diagnostics": "Uzyskaj szczegółowe informacje o błędzie",
+		"proxyProvider": "Wygląda na to, że używasz dostawcy opartego na proxy. Pamiętaj, aby sprawdzić jego dzienniki i upewnić się, że nie przepisuje żądań Roo."
 	},
 	"powershell": {
 		"issues": "Wygląda na to, że masz problemy z Windows PowerShell, proszę zapoznaj się z tym"
@@ -294,7 +313,7 @@
 		"triggerLabel_zero": "0 automatycznie zatwierdzone",
 		"triggerLabel_one": "1 automatycznie zatwierdzony",
 		"triggerLabel_other": "{{count}} automatycznie zatwierdzonych",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Myślenie",
@@ -330,9 +349,10 @@
 			"goToSettingsButton": "Przejdź do Ustawień"
 		},
 		"release": {
-			"heading": "Nowości:",
-			"contextRewind": "Ulepszona kondensacja kontekstu pozwala teraz przywrócić pełny poprzedni kontekst przy przewijaniu do punktu kontrolnego",
-			"rooProvider": "Dostawca Roo Code Cloud teraz zachowuje zawartość rozumowania i domyślnie używa narzędzi natywnych dla lepszej wydajności"
+			"heading": "Co nowego:",
+			"openaiCodexProvider": "Dodano dostawcę OpenAI - ChatGPT Plus/Pro, który zapewnia dostęp oparty na subskrypcji do modeli Codex bez kosztów per-token.",
+			"gpt52codexModel": "Nowy model gpt-5.2-codex został dodany do Roo Code Router, standardowego dostawcy OpenAI i więcej.",
+			"bugFixes": "Naprawiono wycieki pamięci powodujące szare ekrany, problemy z podpisami myśli Gemini i inne ulepszenia stabilności."
 		},
 		"cloudAgents": {
 			"heading": "Nowości w chmurze:",
@@ -343,8 +363,14 @@
 		"careers": "Dodatkowo, <careersLink>zatrudniamy!</careersLink>",
 		"socialLinks": "Dołącz do nas na <xLink>X</xLink>, <discordLink>Discord</discordLink>, lub <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Całkowity koszt (w tym podzadania): ${{cost}}",
+		"total": "Całkowity koszt: ${{cost}}",
+		"includesSubtasks": "Zawiera koszty podzadań"
+	},
 	"browser": {
 		"session": "Sesja przeglądarki",
+		"active": "Aktywna",
 		"rooWantsToUse": "Kilo Code chce użyć przeglądarki",
 		"consoleLogs": "Logi konsoli",
 		"noNewLogs": "(Brak nowych logów)",

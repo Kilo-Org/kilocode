@@ -9,6 +9,7 @@
 		"tokens": "Tokenlar",
 		"cache": "Önbellek",
 		"apiCost": "API Maliyeti",
+		"changes": "Değişiklikler",
 		"size": "Boyut",
 		"contextWindow": "Bağlam Uzunluğu",
 		"closeAndStart": "Görevi kapat ve yeni bir görev başlat",
@@ -88,10 +89,15 @@
 		"title": "Sonlandır",
 		"tooltip": "Mevcut görevi sonlandır"
 	},
+	"stop": {
+		"title": "Durdur",
+		"tooltip": "Mevcut görevi durdur"
+	},
 	"cancel": {
 		"title": "İptal",
 		"tooltip": "Mevcut işlemi iptal et"
 	},
+	"enqueueMessage": "Mesajı kuyruğa ekle (mevcut görev tamamlandıktan sonra gönderilecek)",
 	"scrollToBottom": "Sohbetin altına kaydır",
 	"about": "AI yardımıyla kod oluşturun, yeniden düzenleyin ve hatalarını ayıklayın. Daha fazla bilgi için <DocsLink>belgelerimize</DocsLink> göz atın.",
 	"docs": "Daha fazla bilgi için <DocsLink>belgelerimize</DocsLink> göz atın.",
@@ -146,17 +152,20 @@
 		"streaming": "API İsteği...",
 		"cancelled": "API İsteği İptal Edildi",
 		"streamingFailed": "API Akışı Başarısız",
-		"errorTitle": "API Hatası {{code}}",
+		"rateLimitWait": "Hız sınırlaması",
+		"errorTitle": "Sağlayıcı Hatası {{code}}",
 		"errorMessage": {
 			"docs": "Belgeler",
+			"goToSettings": "Ayarlar",
 			"400": "Sağlayıcı isteği bu şekilde işleyemedi. Görevi durdur ve farklı bir yaklaşım dene.",
 			"401": "Sağlayıcı ile kimlik doğrulaması yapılamadı. Lütfen API anahtarı yapılandırmanızı kontrol edin.",
 			"402": "Hesabınızda para/kredi bitti gibi görünüyor. Sağlayıcıya git ve devam etmek için daha fazla ekle.",
 			"403": "Yetkisiz. API anahtarınız geçerli ama sağlayıcı bu isteği tamamlamayı reddetti.",
 			"429": "Çok fazla istek. Sağlayıcı tarafından oran sınırlaması uygulanıyor. Lütfen sonraki API çağrısından önce biraz bekle.",
 			"500": "Sağlayıcı sunucu hatası. Sağlayıcı tarafında bir sorun var, isteğinizde sorun yok.",
-			"unknown": "Bilinmeyen API hatası. Lütfen Kilo desteğiyle iletişime geç.",
-			"connection": "Bağlantı hatası. Çalışan bir internet bağlantınız olduğundan emin olun."
+			"unknown": "Bilinmeyen API hatası, daha fazla bilgi için Ayrıntılar'a tıklayın.",
+			"connection": "Bağlantı hatası. Çalışan bir internet bağlantınız olduğundan emin olun.",
+			"claudeCodeNotAuthenticated": "Claude Code'u kullanmak için oturum açmanız gerekiyor. Ayarlar'a gidin ve kimlik doğrulaması yapmak için \"Claude Code'da Oturum Aç\" seçeneğine tıklayın."
 		}
 	},
 	"checkpoint": {
@@ -271,10 +280,20 @@
 		"hasQuestion": "Kilo Code'nun bir sorusu var"
 	},
 	"taskCompleted": "Görev Tamamlandı",
+	"modelResponseIncomplete": "Model yanıtı eksik",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model yanıtında herhangi bir araç kullanamadı. Bu genellikle model, görevi tamamlamak için gerekli araçları çağırmadan yalnızca metin/akıl yürütme sağladığında olur.",
+		"noToolsUsedDetails": "Model metin/akıl yürütme sağladı ancak gerekli araçlardan hiçbirini çağırmadı. Bu genellikle modelin görevi yanlış anladığını veya hangi aracı kullanacağını belirlemekte zorlandığını gösterir. Model, uygun araç kullanımıyla yeniden denemesi için otomatik olarak istenmiştir.",
+		"noAssistantMessages": "Model herhangi bir yanıt içeriği sağlamadı. Bu, API veya modelin çıktısıyla ilgili bir sorunu gösterebilir.",
+		"noAssistantMessagesDetails": "Dil modeli herhangi bir metin veya araç çağrısı olmadan boş bir yanıt döndürdü. Bu, API sorunları, hız sınırlaması veya modele özgü sorunlar nedeniyle olabilir. Model otomatik olarak yeniden denemeye yönlendirildi."
+	},
 	"errorDetails": {
+		"link": "Ayrıntılar",
 		"title": "Hata Detayları",
 		"copyToClipboard": "Panoya Kopyala",
-		"copied": "Kopyalandı!"
+		"copied": "Kopyalandı!",
+		"diagnostics": "Ayrıntılı hata bilgisi al",
+		"proxyProvider": "Proxy tabanlı bir sağlayıcı kullanıyor gibi görünüyorsun. Günlüklerini kontrol ettiğinden ve Roo'nun isteklerini yeniden yazmadığından emin ol."
 	},
 	"powershell": {
 		"issues": "Windows PowerShell ile ilgili sorunlar yaşıyor gibi görünüyorsunuz, lütfen şu konuya bakın"
@@ -295,7 +314,7 @@
 		"triggerLabel_zero": "0 otomatik onaylandı",
 		"triggerLabel_one": "1 otomatik onaylandı",
 		"triggerLabel_other": "{{count}} otomatik onaylandı",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Düşünüyor",
@@ -331,9 +350,10 @@
 			"goToSettingsButton": "Ayarlar'a Git"
 		},
 		"release": {
-			"heading": "Bu sürümdeki yenilikler:",
-			"contextRewind": "İyileştirilmiş bağlam sıkıştırması, artık bir kontrol noktasına geri sarma sırasında tam önceki bağlamı geri yüklemenizi sağlıyor",
-			"rooProvider": "Roo Code Cloud sağlayıcısı artık akıl yürütme içeriğini korur ve daha iyi performans için varsayılan olarak yerel araçları kullanır"
+			"heading": "Yenilikler:",
+			"openaiCodexProvider": "Codex modellerine abonelik tabanlı erişim sağlayan OpenAI - ChatGPT Plus/Pro Sağlayıcısı eklendi, token başına maliyet yok.",
+			"gpt52codexModel": "Yeni gpt-5.2-codex modeli Roo Code Router, standart OpenAI sağlayıcısı ve diğerlerine eklendi.",
+			"bugFixes": "Gri ekranlara neden olan bellek sızıntıları, Gemini düşünce imzası sorunları ve diğer stabilite iyileştirmeleri düzeltildi."
 		},
 		"cloudAgents": {
 			"heading": "Cloud'daki yenilikler:",
@@ -344,8 +364,14 @@
 		"careers": "Ayrıca, <careersLink>işe alım yapıyoruz!</careersLink>",
 		"socialLinks": "Bize <xLink>X</xLink>, <discordLink>Discord</discordLink>, veya <redditLink>r/KiloCode</redditLink>'da katılın 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Toplam Maliyet (alt görevler dahil): ${{cost}}",
+		"total": "Toplam Maliyet: ${{cost}}",
+		"includesSubtasks": "Alt görev maliyetlerini içerir"
+	},
 	"browser": {
 		"session": "Tarayıcı Oturumu",
+		"active": "Aktif",
 		"rooWantsToUse": "Kilo Code tarayıcıyı kullanmak istiyor",
 		"consoleLogs": "Konsol Kayıtları",
 		"noNewLogs": "(Yeni kayıt yok)",

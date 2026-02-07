@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { VSCodeCheckbox, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { type ProviderSettings, type OrganizationAllowList, requestyDefaultModelId } from "@roo-code/types"
-
-import type { RouterModels } from "@roo/api"
+import {
+	type ProviderSettings,
+	type OrganizationAllowList,
+	type RouterModels,
+	requestyDefaultModelId,
+} from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -30,7 +33,6 @@ export const Requesty = ({
 	apiConfiguration,
 	setApiConfigurationField,
 	routerModels,
-	refetchRouterModels,
 	organizationAllowList,
 	modelValidationError,
 	uriScheme,
@@ -127,8 +129,7 @@ export const Requesty = ({
 			<Button
 				variant="outline"
 				onClick={() => {
-					vscode.postMessage({ type: "flushRouterModels", text: "requesty" })
-					refetchRouterModels()
+					vscode.postMessage({ type: "requestRouterModels", values: { provider: "requesty", refresh: true } })
 				}}>
 				<div className="flex items-center gap-2">
 					<span className="codicon codicon-refresh" />

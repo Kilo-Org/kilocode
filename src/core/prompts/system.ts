@@ -1,15 +1,17 @@
 import * as vscode from "vscode"
 import * as os from "os"
 
-import type {
-	ModeConfig,
-	PromptComponent,
-	CustomModePrompts,
-	TodoItem,
+import {
+	type ModeConfig,
+	type PromptComponent,
+	type CustomModePrompts,
+	type TodoItem,
+	getEffectiveProtocol,
+	isNativeProtocol,
 	Experiments, // kilocode_change
 } from "@roo-code/types"
 
-import type { SystemPromptSettings } from "./types"
+import { customToolRegistry, formatXml } from "@roo-code/core"
 
 import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelection } from "../../shared/modes"
 import { DiffStrategy } from "../../shared/tools"
@@ -21,8 +23,8 @@ import { SkillsManager } from "../../services/skills/SkillsManager"
 
 import { PromptVariables, loadSystemPromptFile } from "./sections/custom-system-prompt"
 
+import type { SystemPromptSettings } from "./types"
 import { getToolDescriptionsForMode } from "./tools"
-import { getEffectiveProtocol, isNativeProtocol } from "@roo-code/types"
 import {
 	getRulesSection,
 	getSystemInfoSection,
@@ -109,7 +111,7 @@ async function generatePrompt(
 	])
 
 	// Build tools catalog section only for XML protocol
-	const toolsCatalog = isNativeProtocol(effectiveProtocol)
+	const builtInToolsCatalog = isNativeProtocol(effectiveProtocol)
 		? ""
 		: `\n\n${getToolDescriptionsForMode(
 				mode,
@@ -128,13 +130,25 @@ async function generatePrompt(
 				clineProviderState, // kilocode_change
 			)}`
 
+	let customToolsSection = ""
+
+	if (experiments?.customTools && !isNativeProtocol(effectiveProtocol)) {
+		const customTools = customToolRegistry.getAllSerialized()
+
+		if (customTools.length > 0) {
+			customToolsSection = `\n\n${formatXml(customTools)}`
+		}
+	}
+
+	const toolsCatalog = builtInToolsCatalog + customToolsSection
+
 	const basePrompt = `${roleDefinition}
 
 ${markdownFormattingSection()}
 
-${getSharedToolUseSection(effectiveProtocol)}${toolsCatalog}
+${getSharedToolUseSection(effectiveProtocol, experiments)}${toolsCatalog}
 
-${getToolUseGuidelinesSection(effectiveProtocol)}
+${getToolUseGuidelinesSection(effectiveProtocol, experiments)}
 
 ${mcpServersSection}
 

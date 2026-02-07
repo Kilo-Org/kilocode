@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "API-Kosten",
+		"changes": "Änderungen",
 		"size": "Größe",
 		"contextWindow": "Kontextfenster",
 		"closeAndStart": "Aufgabe schließen und neue starten",
@@ -88,10 +89,15 @@
 		"title": "Beenden",
 		"tooltip": "Aktuelle Aufgabe beenden"
 	},
+	"stop": {
+		"title": "Stoppen",
+		"tooltip": "Aktuelle Aufgabe stoppen"
+	},
 	"cancel": {
 		"title": "Abbrechen",
 		"tooltip": "Aktuelle Operation abbrechen"
 	},
+	"enqueueMessage": "Nachricht zur Warteschlange hinzufügen (wird nach Abschluss der aktuellen Aufgabe gesendet)",
 	"scrollToBottom": "Zum Chat-Ende scrollen",
 	"about": "Generiere, überarbeite und debugge Code mit KI-Unterstützung. Schau dir unsere <DocsLink>Dokumentation</DocsLink> an, um mehr zu erfahren.",
 	"docs": "Schau in unsere <DocsLink>Dokumentation</DocsLink>, um mehr zu erfahren.",
@@ -146,17 +152,20 @@
 		"streaming": "API-Anfrage...",
 		"cancelled": "API-Anfrage abgebrochen",
 		"streamingFailed": "API-Streaming fehlgeschlagen",
-		"errorTitle": "API-Fehler {{code}}",
+		"rateLimitWait": "Ratenbegrenzung",
+		"errorTitle": "Anbieter-Fehler {{code}}",
 		"errorMessage": {
 			"docs": "Dokumentation",
+			"goToSettings": "Einstellungen",
 			"400": "Der Anbieter konnte die Anfrage nicht wie gestellt verarbeiten. Beende die Aufgabe und versuche einen anderen Ansatz.",
 			"401": "Authentifizierung beim Anbieter fehlgeschlagen. Bitte überprüfe deine API-Schlüssel-Konfiguration.",
 			"402": "Es sieht so aus, als ob dir die Guthaben/Credits in deinem Konto ausgegangen sind. Gehe zu deinem Anbieter und füge mehr hinzu, um fortzufahren.",
 			"403": "Nicht autorisiert. Dein API-Schlüssel ist gültig, aber der Anbieter hat sich geweigert, diese Anfrage zu erfüllen.",
 			"429": "Zu viele Anfragen. Du wirst vom Anbieter rate-limitiert. Bitte warte ein wenig, bevor du den nächsten API-Aufruf machst.",
 			"500": "Fehler auf dem Server des Anbieters. Es stimmt etwas mit der Anbieterseite nicht, mit deiner Anfrage stimmt alles.",
-			"unknown": "Unbekannter API-Fehler. Bitte kontaktiere den Kilo Support.",
-			"connection": "Verbindungsfehler. Stelle sicher, dass du eine funktionierende Internetverbindung hast."
+			"connection": "Verbindungsfehler. Stelle sicher, dass du eine funktionierende Internetverbindung hast.",
+			"claudeCodeNotAuthenticated": "Du musst dich anmelden, um Claude Code zu verwenden. Gehe zu den Einstellungen und klicke auf \"Bei Claude Code anmelden\", um dich zu authentifizieren.",
+			"unknown": "Unbekannter API-Fehler, klicke auf Details für weitere Informationen."
 		}
 	},
 	"checkpoint": {
@@ -270,10 +279,20 @@
 		"hasQuestion": "Kilo Code hat eine Frage"
 	},
 	"taskCompleted": "Aufgabe abgeschlossen",
+	"modelResponseIncomplete": "Modellantwort unvollständig",
+	"modelResponseErrors": {
+		"noToolsUsed": "Das Modell hat in seiner Antwort keine Tools verwendet. Dies passiert normalerweise, wenn das Modell nur Text/Überlegungen liefert, ohne die erforderlichen Tools aufzurufen, um die Aufgabe zu erledigen.",
+		"noToolsUsedDetails": "Das Modell hat Text/Überlegungen geliefert, aber keine der erforderlichen Tools aufgerufen. Dies deutet normalerweise darauf hin, dass das Modell die Aufgabe missverstanden hat oder Schwierigkeiten hat zu bestimmen, welches Tool verwendet werden soll. Das Modell wurde automatisch aufgefordert, es erneut mit der richtigen Tool-Verwendung zu versuchen.",
+		"noAssistantMessages": "Das Modell hat keinen Antwortinhalt geliefert. Dies kann auf ein Problem mit der API oder der Modellausgabe hindeuten.",
+		"noAssistantMessagesDetails": "Das Sprachmodell hat eine leere Antwort ohne Text oder Tool-Aufrufe zurückgegeben. Dies kann aufgrund von API-Problemen, Ratenbegrenzung oder modellspezifischen Problemen passieren. Das Modell wurde automatisch aufgefordert, es erneut zu versuchen."
+	},
 	"errorDetails": {
+		"link": "Details",
 		"title": "Fehlerdetails",
 		"copyToClipboard": "In Zwischenablage kopieren",
-		"copied": "Kopiert!"
+		"copied": "Kopiert!",
+		"diagnostics": "Detaillierte Fehlerinformationen abrufen",
+		"proxyProvider": "Du scheinst einen Proxy-basierten Anbieter zu verwenden. Überprüfe unbedingt seine Protokolle und stelle sicher, dass er Roos Anfragen nicht umschreibt."
 	},
 	"powershell": {
 		"issues": "Es scheint, dass du Probleme mit Windows PowerShell hast, bitte sieh dir dies an"
@@ -294,7 +313,7 @@
 		"triggerLabel_zero": "0 automatisch genehmigt",
 		"triggerLabel_one": "1 automatisch genehmigt",
 		"triggerLabel_other": "{{count}} automatisch genehmigt",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Denke nach",
@@ -330,9 +349,10 @@
 			"goToSettingsButton": "Zu den Einstellungen"
 		},
 		"release": {
-			"heading": "Neu in dieser Version:",
-			"contextRewind": "Verbessertes Kontext-Komprimieren ermöglicht es dir nun, den vollständigen vorherigen Kontext wiederherzustellen, wenn du zu einem Checkpoint zurückspulst",
-			"rooProvider": "Der Roo Code Cloud-Provider behält nun den Reasoning-Inhalt bei und nutzt standardmäßig native Tools für bessere Performance"
+			"heading": "Was ist neu:",
+			"openaiCodexProvider": "OpenAI - ChatGPT Plus/Pro Provider hinzugefügt, der abonnementbasierten Zugriff auf Codex Modelle ohne Pro-Token-Kosten bietet.",
+			"gpt52codexModel": "Das neue gpt-5.2-codex Modell wurde dem Roo Code Router, dem Standard OpenAI Provider und mehr hinzugefügt.",
+			"bugFixes": "Speicherlecks, die graue Bildschirme verursachten, Gemini-Gedanken-Signatur-Probleme und weitere Stabilitätsverbesserungen behoben."
 		},
 		"cloudAgents": {
 			"heading": "Neu in der Cloud:",
@@ -343,8 +363,14 @@
 		"careers": "Außerdem, <careersLink>wir stellen ein!</careersLink>",
 		"socialLinks": "Folge uns auf <xLink>X</xLink>, <discordLink>Discord</discordLink> oder <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Gesamtkosten (inkl. Unteraufgaben): ${{cost}}",
+		"total": "Gesamtkosten: ${{cost}}",
+		"includesSubtasks": "Enthält Kosten für Unteraufgaben"
+	},
 	"browser": {
 		"session": "Browser-Sitzung",
+		"active": "Aktiv",
 		"rooWantsToUse": "Kilo Code möchte den Browser verwenden",
 		"consoleLogs": "Konsolenprotokolle",
 		"noNewLogs": "(Keine neuen Protokolle)",

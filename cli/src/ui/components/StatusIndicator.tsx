@@ -10,9 +10,9 @@ import { useTheme } from "../../state/hooks/useTheme.js"
 import { HotkeyBadge } from "./HotkeyBadge.js"
 import { ThinkingAnimation } from "./ThinkingAnimation.js"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, isCancellingAtom } from "../../state/atoms/ui.js"
+import { isStreamingAtom, isCancellingAtom, isProcessingAtom } from "../../state/atoms/ui.js"
 import { hasResumeTaskAtom } from "../../state/atoms/extension.js"
-import { exitPromptVisibleAtom } from "../../state/atoms/keyboard.js"
+import { exitPromptVisibleAtom, pendingImagePastesAtom, pendingTextPastesAtom } from "../../state/atoms/keyboard.js"
 import { useEffect } from "react"
 
 /** Safety timeout to auto-reset cancelling state if extension doesn't respond */
@@ -38,10 +38,15 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const theme = useTheme()
 	const { hotkeys, shouldShow } = useHotkeys()
 	const isStreaming = useAtomValue(isStreamingAtom)
+	const isProcessing = useAtomValue(isProcessingAtom)
 	const isCancelling = useAtomValue(isCancellingAtom)
 	const setIsCancelling = useSetAtom(isCancellingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const exitPromptVisible = useAtomValue(exitPromptVisibleAtom)
+	const pendingImagePastes = useAtomValue(pendingImagePastesAtom)
+	const pendingTextPastes = useAtomValue(pendingTextPastesAtom)
+	const isPastingImage = pendingImagePastes > 0
+	const isPastingText = pendingTextPastes > 0
 	const exitModifierKey = "Ctrl" // Ctrl+C is the universal terminal interrupt signal on all platforms
 
 	// Reset cancelling state when streaming stops
@@ -75,10 +80,18 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 					<Text color={theme.semantic.warning}>Press {exitModifierKey}+C again to exit.</Text>
 				) : (
 					<>
-							{isCancelling && <ThinkingAnimation text="Cancelling..." />}
-							{isStreaming && !isCancelling && <ThinkingAnimation />}
-							{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
-						</>
+						{isPastingImage && <ThinkingAnimation text="Pasting image..." />}
+						{isPastingText && !isPastingImage && <ThinkingAnimation text="Pasting text..." />}
+						{isCancelling && !isPastingImage && !isPastingText && (
+							<ThinkingAnimation text="Cancelling..." />
+						)}
+						{(isStreaming || isProcessing) && !isCancelling && !isPastingImage && !isPastingText && (
+							<ThinkingAnimation />
+						)}
+						{hasResumeTask && !isPastingImage && !isPastingText && (
+							<Text color={theme.ui.text.dimmed}>Task ready to resume</Text>
+						)}
+					</>
 				)}
 			</Box>
 

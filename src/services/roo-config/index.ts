@@ -26,7 +26,16 @@ import fsSync from "fs" // kilocode_change
  */
 export function getGlobalRooDirectory(): string {
 	const homeDir = os.homedir()
-	return path.join(homeDir, ".kilocode") // kilocode_change
+	const kiloDir = path.join(homeDir, ".kilocode") // kilocode_change
+	const rooDir = path.join(homeDir, ".roo") // kilocode_change
+
+	// kilocode_change start: Prefer .kilocode; fallback to legacy .roo for backwards compatibility.
+	if (fsSync.existsSync(rooDir) && !fsSync.existsSync(kiloDir)) {
+		return rooDir
+	}
+
+	return kiloDir
+	// kilocode_change end
 }
 
 /**
@@ -120,6 +129,109 @@ export async function readFileIfExists(filePath: string): Promise<string | null>
 }
 
 /**
+ * Discovers all .roo directories in subdirectories of the workspace
+ *
+ * @param cwd - Current working directory (workspace root)
+ * @returns Array of absolute paths to .roo directories found in subdirectories,
+ *          sorted alphabetically. Does not include the root .roo directory.
+ *
+ * @example
+ * ```typescript
+ * const subfolderRoos = await discoverSubfolderRooDirectories('/Users/john/monorepo')
+ * // Returns:
+ * // [
+ * //   '/Users/john/monorepo/package-a/.roo',
+ * //   '/Users/john/monorepo/package-b/.roo',
+ * //   '/Users/john/monorepo/packages/shared/.roo'
+ * // ]
+ * ```
+ *
+ * @example Directory structure:
+ * ```
+ * /Users/john/monorepo/
+ * ├── .roo/                    # Root .roo (NOT included - use getProjectRooDirectoryForCwd)
+ * ├── package-a/
+ * │   └── .roo/                # Included
+ * │       └── rules/
+ * ├── package-b/
+ * │   └── .roo/                # Included
+ * │       └── rules-code/
+ * └── packages/
+ *     └── shared/
+ *         └── .roo/            # Included (nested)
+ *             └── rules/
+ * ```
+ */
+export async function discoverSubfolderRooDirectories(cwd: string): Promise<string[]> {
+	try {
+		// Dynamic import to avoid vscode dependency at module load time
+		// This is necessary because file-search.ts imports vscode, which is not
+		// available in the webview context
+		const { executeRipgrep } = await import("../search/file-search")
+
+		// Use ripgrep to find any file inside any .kilocode or legacy .roo directory.
+		// This efficiently discovers all config folders regardless of their content.
+		const args = [
+			"--files",
+			"--hidden",
+			"--follow",
+			"-g",
+			"**/.kilocode/**", // kilocode_change
+			"-g",
+			"**/.roo/**", // kilocode_change (legacy)
+			"-g",
+			"!node_modules/**",
+			"-g",
+			"!.git/**",
+			cwd,
+		]
+
+		const results = await executeRipgrep({ args, workspacePath: cwd })
+
+		// Extract unique config directory paths.
+		// Prefer .kilocode when both .kilocode and .roo exist for the same parent folder.
+		const configDirsByParent = new Map<string, string>() // parentDir -> configDir
+		const rootKiloDir = path.join(cwd, ".kilocode") // kilocode_change
+		const rootRooDir = path.join(cwd, ".roo")
+
+		for (const result of results) {
+			// Match paths like:
+			// - "subfolder/.kilocode/anything" (preferred)
+			// - "subfolder/.roo/anything" (legacy)
+			// Handle both forward slashes (Unix) and backslashes (Windows)
+			const match = result.path.match(/^(.+?)[/\\]\.(kilocode|roo)[/\\]/)
+			if (!match?.[1] || !match?.[2]) continue
+
+			const parentRel = match[1]
+			const dirName = match[2] as "kilocode" | "roo"
+			const configDir = path.join(cwd, parentRel, `.${dirName}`)
+
+			// Exclude the root config dirs (already handled by getProjectRooDirectoryForCwd)
+			if (configDir === rootKiloDir || configDir === rootRooDir) {
+				continue
+			}
+
+			const existing = configDirsByParent.get(parentRel)
+			if (!existing) {
+				configDirsByParent.set(parentRel, configDir)
+				continue
+			}
+
+			// Prefer .kilocode over legacy .roo for the same parent folder
+			if (existing.endsWith(`${path.sep}.roo`) && dirName === "kilocode") {
+				configDirsByParent.set(parentRel, configDir)
+			}
+		}
+
+		// Return sorted alphabetically
+		return Array.from(configDirsByParent.values()).sort()
+	} catch (error) {
+		// If discovery fails (e.g., ripgrep not available), return empty array
+		return []
+	}
+}
+
+/**
  * Gets the ordered list of .roo directories to check (global first, then project-local)
  *
  * @param cwd - Current working directory (project path)
@@ -160,6 +272,71 @@ export function getRooDirectoriesForCwd(cwd: string): string[] {
 
 	// Add project-local directory second
 	directories.push(getProjectRooDirectoryForCwd(cwd))
+
+	return directories
+}
+
+/**
+ * Gets the ordered list of all .roo directories including subdirectories
+ *
+ * @param cwd - Current working directory (project path)
+ * @returns Array of directory paths in order: [global, project-local, ...subfolders (alphabetically)]
+ *
+ * @example
+ * ```typescript
+ * // For a monorepo at /Users/john/monorepo with .roo in subfolders
+ * const directories = await getAllRooDirectoriesForCwd('/Users/john/monorepo')
+ * // Returns:
+ * // [
+ * //   '/Users/john/.roo',                    // Global directory
+ * //   '/Users/john/monorepo/.roo',           // Project-local directory
+ * //   '/Users/john/monorepo/package-a/.roo', // Subfolder (alphabetical)
+ * //   '/Users/john/monorepo/package-b/.roo'  // Subfolder (alphabetical)
+ * // ]
+ * ```
+ */
+export async function getAllRooDirectoriesForCwd(cwd: string): Promise<string[]> {
+	const directories: string[] = []
+
+	// Add global directory first
+	directories.push(getGlobalRooDirectory())
+
+	// Add project-local directory second
+	directories.push(getProjectRooDirectoryForCwd(cwd))
+
+	// Discover and add subfolder .roo directories
+	const subfolderDirs = await discoverSubfolderRooDirectories(cwd)
+	directories.push(...subfolderDirs)
+
+	return directories
+}
+
+/**
+ * Gets parent directories containing .roo folders, in order from root to subfolders
+ *
+ * @param cwd - Current working directory (project path)
+ * @returns Array of parent directory paths (not .roo paths) containing AGENTS.md or .roo
+ *
+ * @example
+ * ```typescript
+ * const dirs = await getAgentsDirectoriesForCwd('/Users/john/monorepo')
+ * // Returns: ['/Users/john/monorepo', '/Users/john/monorepo/package-a', ...]
+ * ```
+ */
+export async function getAgentsDirectoriesForCwd(cwd: string): Promise<string[]> {
+	const directories: string[] = []
+
+	// Always include the root directory
+	directories.push(cwd)
+
+	// Get all subfolder .roo directories
+	const subfolderRooDirs = await discoverSubfolderRooDirectories(cwd)
+
+	// Extract parent directories (remove .roo from path)
+	for (const rooDir of subfolderRooDirs) {
+		const parentDir = path.dirname(rooDir)
+		directories.push(parentDir)
+	}
 
 	return directories
 }

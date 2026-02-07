@@ -2,9 +2,8 @@ import React, { memo, useEffect, useMemo, useRef, useState } from "react"
 import deepEqual from "fast-deep-equal"
 import { useTranslation } from "react-i18next"
 import type { TFunction } from "i18next"
-import type { ClineMessage } from "@roo-code/types"
 
-import { BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo/ExtensionMessage"
+import type { ClineMessage, BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -69,7 +68,9 @@ const getBrowserActionText = (
 				coordinate: executedCoordinate || getViewportCoordinate(coordinate),
 			})
 		case "resize":
-			return t("chat:browser.actions.resized", { size: size?.split(/[x,]/).join(" x ") })
+			return t("chat:browser.actions.resized", {
+				size: typeof size === "string" ? size.split(/[x,]/).join(" x ") : String(size || ""), // kilocode_change
+			})
 		case "screenshot":
 			return t("chat:browser.actions.screenshotSaved")
 		case "close":

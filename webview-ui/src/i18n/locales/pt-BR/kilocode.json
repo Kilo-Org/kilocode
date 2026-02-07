@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Como você gostaria de começar?",
+		"freeModels": {
+			"title": "Modelos gratuitos",
+			"description": "Comece a programar imediatamente"
+		},
+		"premiumModels": {
+			"title": "Modelos premium",
+			"description": "Cadastre-se. Novos usuários recebem US$ 5 em créditos"
+		},
+		"byok": {
+			"title": "Traga sua própria chave",
+			"description": "Avançado. Use sua própria conta ou assinatura"
+		}
+	},
 	"welcome": {
 		"greeting": "Bem-vindo ao Kilo Code!",
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
-		"introText2": "Funciona com os mais recentes modelos de IA como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e mais de 450 outros.",
+		"introText2": "Funciona com os mais recentes modelos de IA como Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, e mais de 450 outros.",
 		"introText3": "Crie uma conta gratuita e receba $20 em créditos bônus ao recarregar pela primeira vez.",
 		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
 		"lowBalance": "Seu saldo do Kilo Code está baixo",
-		"newOrganization": "Usando o Kilo para trabalho?"
+		"switchToFreeModel": "Mudar para um modelo gratuito"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -26,6 +41,11 @@
 		"continueWith": "Continuar com {{model}}",
 		"continue": "Continuar"
 	},
+	"unauthorizedError": {
+		"title": "Você precisa fazer login para usar o modelo {{modelId}}",
+		"message": "Faça login ou crie uma conta para acessar mais de 500 modelos, usar créditos a preço de custo ou trazer sua própria chave.",
+		"loginButton": "Fazer Login"
+	},
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
@@ -38,14 +58,16 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Servidores MCP"
+			"mcp": "Servidores MCP",
+			"agentBehaviour": "Comportamento do Agente",
+			"skills": "Habilidades"
 		},
 		"provider": {
 			"account": "Conta Kilo Code",
 			"apiKey": "Chave de API do Kilo Code",
 			"login": "Entrar no Kilo Code",
 			"logout": "Sair do Kilo Code",
-			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
+			"loginForPremiumModels": "Faça login para acessar modelos e recursos premium",
 			"providerRouting": {
 				"title": "Roteamento de Provedor",
 				"managedByOrganization": "Gerenciar roteamento de provedor em nível de organização",
@@ -142,7 +164,14 @@
 	},
 	"docs": "Documentação",
 	"rules": {
-		"tooltip": "Gerenciar Regras e Fluxos de Trabalho do Kilo Code",
+		"tooltip": "Gerenciar o comportamento do agente ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regras",
+			"workflows": "Fluxos de Trabalho",
+			"mcps": "MCPs",
+			"modes": "Modos",
+			"skills": "Habilidades"
+		},
 		"ariaLabel": "Regras do Kilo Code",
 		"tabs": {
 			"rules": "Regras",
@@ -202,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Novo aqui?",
+		"tryOneOfThese": "Experimente uma dessas ideias para começar:",
 		"suggestionText": "<suggestionButton>Clique aqui</suggestionButton> para uma ideia legal, depois toque em <sendIcon /> e me veja fazer mágica!",
 		"ideas": {
 			"idea1": "Crie uma esfera 3D giratória e brilhante que responde aos movimentos do mouse. Faça o app funcionar no navegador.",
@@ -214,36 +244,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Autocompletar",
 		"settings": {
-			"triggers": "Gatilhos",
-			"keybindingDescription": "As funcionalidades do Autocomplete podem ser ativadas por comandos. Você pode configurar os <DocsLink>Atalhos de Teclado aqui</DocsLink>.",
+			"codeEditorSuggestions": "Sugestões do Editor de Código",
+			"chatSuggestions": "Sugestões do Chat",
+			"model": "Modelo",
+			"provider": "Provedor",
 			"enableAutoTrigger": {
-				"label": "Habilitar Autocomplete",
-				"description": "Quando habilitado, o Kilo Code ativará automaticamente o Autocomplete quando você parar de digitar. Isso pode ser útil para correções rápidas e sugestões."
+				"label": "Ativar sugestões automaticamente",
+				"description": "Mostrar automaticamente sugestões de código inline quando você pausa de digitar."
 			},
 			"autoTriggerDelay": {
 				"label": "Atraso da Ativação Automática",
-				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
+				"description": "O atraso em segundos antes das sugestões aparecerem após você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode consumir mais recursos."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Preenchimento Automático Manual ({{keybinding}})",
-				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+				"label": "Ativar por atalho de teclado ({{keybinding}})",
+				"description": "Pressione {{keybinding}} para solicitar uma sugestão de código na posição do cursor. <DocsLink>Editar atalho</DocsLink>"
 			},
-			"keybindingNotFound": "não encontrado",
-			"configureAutocompleteProfile": "Use qualquer modelo indo para perfis e configurando um Perfil do Tipo de Perfil Autocompletar.",
-			"model": "Modelo",
-			"provider": "Provedor",
 			"enableChatAutocomplete": {
-				"label": "Preenchimento Automático do Chat",
-				"description": "Quando ativado, o Kilo Code irá sugerir conclusões enquanto você digita no campo de chat. Pressione Tab para aceitar as sugestões."
+				"label": "Ativar autocompletar do chat",
+				"description": "Mostrar sugestões enquanto você digita no campo de entrada do chat. Pressione Tab para aceitar sugestões."
 			},
 			"snooze": {
-				"label": "Adiar Autocomplete",
-				"description": "Pausar temporariamente as sugestões de autocomplete por um período especificado.",
+				"label": "Pausar sugestões",
+				"description": "Pausar temporariamente as sugestões por uma duração especificada.",
 				"button": "Adiar",
 				"unsnooze": "Reativar",
-				"currentlySnoozed": "O autocomplete está adiado no momento.",
+				"currentlySnoozed": "As sugestões estão atualmente pausadas.",
 				"duration": {
 					"1min": "1 minuto",
 					"5min": "5 minutos",
@@ -252,6 +280,7 @@
 					"1hour": "1 hora"
 				}
 			},
+			"keybindingNotFound": "não encontrado",
 			"noModelConfigured": {
 				"title": "Nenhum modelo de autocomplete configurado",
 				"description": "Para habilitar o autocomplete, adicione um perfil com um destes provedores suportados:",
@@ -261,7 +290,8 @@
 				"title": "Sem créditos na sua conta",
 				"description": "Sua conta Kilo Code não tem créditos. Para usar o autocomplete, adicione créditos à sua conta.",
 				"buyCredits": "Comprar créditos →"
-			}
+			},
+			"configureAutocompleteProfile": "Use qualquer modelo indo para perfis e configurando um Perfil do Tipo de Perfil Autocompletar."
 		}
 	},
 	"virtualProvider": {
@@ -322,6 +352,9 @@
 		},
 		"modes": {
 			"description": "Estes modos estão disponíveis na comunidade. Clique <1>aqui</1> para editar seus próprios modos personalizados."
+		},
+		"skills": {
+			"description": "Navegue e descubra habilidades da comunidade. As habilidades fornecem instruções especializadas para tarefas específicas."
 		}
 	},
 	"modes": {
@@ -357,6 +390,26 @@
 			"ffmpegMessage": "Ajude-me a instalar o FFmpeg"
 		},
 		"misconfiguredState": "Indisponível devido à configuração",
-		"errorState": "Indisponível devido a erro"
+		"errorState": "Indisponível devido a erro",
+		"microphone": {
+			"label": "Microfone",
+			"loading": "Carregando dispositivos de microfone...",
+			"defaultOption": "Padrão do Sistema",
+			"description": "Selecione o dispositivo de microfone para conversão de fala em texto",
+			"noDevices": "Nenhum dispositivo de microfone encontrado",
+			"refresh": "Atualizar"
+		}
+	},
+	"skills": {
+		"description": "As habilidades fornecem instruções especializadas para tarefas específicas. Elas são aplicadas automaticamente quando relevantes para sua solicitação.",
+		"noSkills": "Nenhuma habilidade instalada",
+		"projectSkills": "Habilidades do Projeto",
+		"globalSkills": "Habilidades Globais",
+		"deleteDialog": {
+			"title": "Excluir Habilidade",
+			"description": "Tem certeza de que deseja excluir a habilidade \"{{skillName}}\"? Esta ação não pode ser desfeita.",
+			"cancel": "Cancelar",
+			"delete": "Excluir"
+		}
 	}
 }

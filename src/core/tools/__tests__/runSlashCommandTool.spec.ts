@@ -307,4 +307,133 @@ Deploy application to production`,
 
 		expect(mockTask.consecutiveMistakeCount).toBe(0)
 	})
+
+	it("should switch mode when mode is specified in command", async () => {
+		const mockHandleModeSwitch = vi.fn()
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {
+				command: "debug-app",
+			},
+			partial: false,
+		}
+
+		const mockCommand = {
+			name: "debug-app",
+			content: "Start debugging the application",
+			source: "project" as const,
+			filePath: ".roo/commands/debug-app.md",
+			description: "Debug the application",
+			mode: "debug",
+		}
+
+		mockTask.providerRef.deref = vi.fn().mockReturnValue({
+			getState: vi.fn().mockResolvedValue({
+				experiments: {
+					runSlashCommand: true,
+				},
+				customModes: undefined,
+			}),
+			handleModeSwitch: mockHandleModeSwitch,
+		})
+
+		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+
+		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+
+		expect(mockHandleModeSwitch).toHaveBeenCalledWith("debug")
+		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
+			`Command: /debug-app
+Description: Debug the application
+Mode: debug
+Source: project
+
+--- Command Content ---
+
+Start debugging the application`,
+		)
+	})
+
+	it("should not switch mode when mode is not specified in command", async () => {
+		const mockHandleModeSwitch = vi.fn()
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {
+				command: "test",
+			},
+			partial: false,
+		}
+
+		const mockCommand = {
+			name: "test",
+			content: "Run tests",
+			source: "project" as const,
+			filePath: ".roo/commands/test.md",
+			description: "Run project tests",
+		}
+
+		mockTask.providerRef.deref = vi.fn().mockReturnValue({
+			getState: vi.fn().mockResolvedValue({
+				experiments: {
+					runSlashCommand: true,
+				},
+				customModes: undefined,
+			}),
+			handleModeSwitch: mockHandleModeSwitch,
+		})
+
+		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+
+		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+
+		expect(mockHandleModeSwitch).not.toHaveBeenCalled()
+	})
+
+	it("should include mode in askApproval message when mode is specified", async () => {
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {
+				command: "debug-app",
+			},
+			partial: false,
+		}
+
+		const mockCommand = {
+			name: "debug-app",
+			content: "Start debugging",
+			source: "project" as const,
+			filePath: ".roo/commands/debug-app.md",
+			description: "Debug the application",
+			mode: "debug",
+		}
+
+		mockTask.providerRef.deref = vi.fn().mockReturnValue({
+			getState: vi.fn().mockResolvedValue({
+				experiments: {
+					runSlashCommand: true,
+				},
+				customModes: undefined,
+			}),
+			handleModeSwitch: vi.fn(),
+		})
+
+		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+
+		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+
+		expect(mockCallbacks.askApproval).toHaveBeenCalledWith(
+			"tool",
+			JSON.stringify({
+				tool: "runSlashCommand",
+				command: "debug-app",
+				args: undefined,
+				source: "project",
+				description: "Debug the application",
+				mode: "debug",
+			}),
+		)
+	})
 })

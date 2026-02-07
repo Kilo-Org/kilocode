@@ -14,6 +14,13 @@ describe("askFollowupQuestionTool", () => {
 			ask: vi.fn().mockResolvedValue({ text: "Test response" }),
 			say: vi.fn().mockResolvedValue(undefined),
 			consecutiveMistakeCount: 0,
+			// kilocode_change start
+			providerRef: {
+				deref: () => ({
+					getState: () => Promise.resolve({ yoloMode: false }),
+				}),
+			},
+			// kilocode_change end
 		}
 
 		mockPushToolResult = vi.fn((result) => {
@@ -102,6 +109,44 @@ describe("askFollowupQuestionTool", () => {
 			false,
 		)
 	})
+
+	// kilocode_change start
+	describe("yoloMode behavior", () => {
+		it("should return error message when yoloMode is enabled", async () => {
+			const yoloMockCline = {
+				...mockCline,
+				providerRef: {
+					deref: () => ({
+						getState: () => Promise.resolve({ yoloMode: true }),
+					}),
+				},
+			}
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "ask_followup_question",
+				params: {
+					question: "What would you like to do?",
+					follow_up: "<suggest>Option 1</suggest>",
+				},
+				partial: false,
+			}
+
+			await askFollowupQuestionTool.handle(yoloMockCline, block as ToolUse<"ask_followup_question">, {
+				askApproval: vi.fn(),
+				handleError: vi.fn(),
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: vi.fn((tag, content) => content),
+				toolProtocol: "xml",
+			})
+
+			// Should not call ask in yoloMode
+			expect(yoloMockCline.ask).not.toHaveBeenCalled()
+			// Should return an error message
+			expect(toolResult).toContain("not available in yolo mode")
+		})
+	})
+	// kilocode_change end
 
 	describe("handlePartial with native protocol", () => {
 		it("should only send question during partial streaming to avoid raw JSON display", async () => {

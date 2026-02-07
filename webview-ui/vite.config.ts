@@ -93,7 +93,11 @@ export default defineConfig(({ mode }) => {
 	}
 
 	const plugins: PluginOption[] = [
-		react(),
+		react({
+			babel: {
+				plugins: [["babel-plugin-react-compiler", { target: "18" }]],
+			},
+		}),
 		tailwindcss(),
 		persistPortPlugin(),
 		wasmPlugin(),
@@ -121,12 +125,15 @@ export default defineConfig(({ mode }) => {
 			// Use a single combined CSS bundle so both webviews share styles
 			cssCodeSplit: true, // kilocode_change: changed to true to enable cssPerEntryPlugin
 			rollupOptions: {
+				// Externalize vscode module - it's imported by file-search.ts which is
+				// dynamically imported by roo-config/index.ts, but should never be bundled
+				// in the webview since it's not available in the browser context
+				external: ["vscode"],
 				input: {
 					index: resolve(__dirname, "index.html"), // kilocode_change - DO NOT CHANGE
 					"agent-manager": resolve(__dirname, "agent-manager.html"), // kilocode_change
 					"browser-panel": resolve(__dirname, "browser-panel.html"),
 				},
-				external: ["vscode"], // kilocode_change: we inadvertently import vscode into the webview: @roo/modes => src/shared/modes => ../core/prompts/sections/custom-instructions
 				output: {
 					entryFileNames: `assets/[name].js`,
 					chunkFileNames: (chunkInfo) => {

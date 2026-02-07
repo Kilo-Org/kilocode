@@ -6,7 +6,8 @@ import type { Mock } from "vitest"
 
 import { getEnvironmentDetails } from "../getEnvironmentDetails"
 import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
-import { defaultModeSlug, getFullModeDetails, getModeBySlug, isToolAllowedForMode } from "../../../shared/modes"
+import { getFullModeDetails } from "../../../shared/modes"
+import { isToolAllowedForMode } from "../../tools/validateToolUse"
 import { getApiMetrics } from "../../../shared/getApiMetrics"
 import { listFiles } from "../../../services/glob/list-files"
 import { TerminalRegistry } from "../../../integrations/terminal/TerminalRegistry"
@@ -54,6 +55,7 @@ vi.mock("../../../integrations/terminal/Terminal")
 vi.mock("../../../utils/path")
 vi.mock("../../../utils/git")
 vi.mock("../../prompts/responses")
+vi.mock("../../tools/validateToolUse")
 
 describe("getEnvironmentDetails", () => {
 	const mockCwd = "/test/path"

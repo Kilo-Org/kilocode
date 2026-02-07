@@ -14,7 +14,9 @@
 		"shareSession": "Поділитися сесією",
 		"shareConfirmMessage": "Хочете опублікувати знімок цієї сесії?",
 		"shareConfirmYes": "Так",
-		"shareConfirmNo": "Ні"
+		"shareConfirmNo": "Ні",
+		"options": "Параметри",
+		"configureSetupScript": "Скрипт налаштування worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Режим YOLO - операції з інструментами схвалюються автоматично",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустити агента з наданим промптом",
-		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка",
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Хмара",
@@ -57,7 +58,13 @@
 		"branchPickerTooltip": "Змінити базову гілку",
 		"noBranches": "Гілки не знайдено",
 		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку",
-		"openTerminal": "Відкрити термінал"
+		"openTerminal": "Відкрити термінал",
+		"selectModel": "Вибрати модель",
+		"modelTooltip": "Вибери, яку AI-модель використовувати для цієї сесії",
+		"defaultModel": "Модель за замовчуванням",
+		"loadingModels": "Завантаження...",
+		"selectMode": "Вибрати режим",
+		"modeTooltip": "Режим: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",
@@ -72,7 +79,9 @@
 		"usingTool": "Використання інструменту: **{{tool}}** {{details}}",
 		"expandOutput": "Розгорнути вивід",
 		"collapseOutput": "Згорнути вивід",
-		"copyCommand": "Копіювати команду"
+		"copyCommand": "Копіювати команду",
+		"thinking": "Думаю",
+		"thinkingSeconds": "{{count}}с"
 	},
 	"chatInput": {
 		"autoMode": "Агент працює в повністю автоматичному режимі - введення заборонено",
@@ -82,9 +91,12 @@
 		"cancelTitle": "Скасувати агента",
 		"finishToBranchTitle": "Завершити worktree та підготувати branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Завершити worktree та підготувати branch",
+		"createPRTitle": "Створити pull request",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
-		"hint": "Enter для надсилання, Shift+Enter для нового рядка"
+		"hint": "Enter для надсилання, Shift+Enter для нового рядка",
+		"addImage": "Додати зображення",
+		"removeImage": "Видалити зображення"
 	},
 	"status": {
 		"running": "виконується",

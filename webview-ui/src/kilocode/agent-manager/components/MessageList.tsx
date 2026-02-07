@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from "react"
+import React, { useEffect, useRef, useCallback, useMemo, useState } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
@@ -17,7 +17,11 @@ import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
 import { CommandExecutionBlock } from "./CommandExecutionBlock"
+import { ProgressIndicator } from "./ProgressIndicator"
+import { ReasoningBlock } from "./ReasoningBlock"
+import MessageThumbnails from "./MessageThumbnails"
 import { vscode } from "../utils/vscode"
+import { StandardTooltip } from "../../../components/ui" // kilocode_change
 import {
 	MessageCircle,
 	MessageCircleQuestion,
@@ -28,6 +32,7 @@ import {
 	User,
 	Clock,
 	Loader,
+	ChevronDown,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -59,6 +64,7 @@ function extractCommandMetadata(msg: ClineMessage): { exitCode?: number; status?
  */
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
+	const { t: tChat } = useTranslation("chat") // kilocode_change
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
 	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId))
 	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId))
@@ -66,6 +72,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
+	const [isAtBottom, setIsAtBottom] = useState(true) // kilocode_change
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
@@ -96,13 +103,13 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (combinedMessages.length > 0) {
+		if (isAtBottom && combinedMessages.length > 0) {
 			virtuosoRef.current?.scrollToIndex({
 				index: combinedMessages.length - 1,
 				behavior: "smooth",
 			})
 		}
-	}, [combinedMessages.length])
+	}, [combinedMessages.length, isAtBottom])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -140,6 +147,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const allItems = useMemo(() => {
 		return [...combinedMessages, ...queue.map((q) => ({ type: "queued" as const, data: q }))]
 	}, [combinedMessages, queue])
+	const showScrollToBottom = !isAtBottom && allItems.length > 0 // kilocode_change
 
 	// Item content renderer for Virtuoso
 	const itemContent = useCallback(
@@ -199,10 +207,32 @@ export function MessageList({ sessionId }: MessageListProps) {
 				ref={virtuosoRef}
 				data={allItems}
 				itemContent={itemContent}
-				followOutput="smooth"
+				followOutput={isAtBottom ? "smooth" : false} // kilocode_change
+				atBottomStateChange={setIsAtBottom} // kilocode_change
 				increaseViewportBy={{ top: 400, bottom: 400 }}
 				className="am-messages-list"
 			/>
+			{showScrollToBottom && (
+				<div className="am-scroll-to-bottom">
+					{" "}
+					{/* kilocode_change */}
+					<StandardTooltip content={tChat("scrollToBottom")}>
+						<button
+							type="button"
+							className="am-btn am-btn-secondary am-scroll-to-bottom-btn"
+							aria-label={tChat("scrollToBottom")}
+							onClick={() => {
+								if (allItems.length === 0) return
+								virtuosoRef.current?.scrollToIndex({
+									index: allItems.length - 1,
+									behavior: "smooth",
+								})
+							}}>
+							<ChevronDown size={16} />
+						</button>
+					</StandardTooltip>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -249,11 +279,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 	if (message.type === "say") {
 		switch (message.say) {
 			case "api_req_started": {
-				icon = <ArrowRightLeft size={16} className="opacity-70" />
 				title = t("messages.apiRequest")
 				const info = safeJsonParse<{ cost?: number }>(messageText)
-				if (info?.cost !== undefined) {
-					extraInfo = <span className="am-message-cost">${info.cost.toFixed(4)}</span>
+				const hasCost = info?.cost !== undefined && info.cost !== null
+				// Show spinner when this is the last message and no cost yet (API request in progress)
+				if (hasCost) {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
+					extraInfo = <span className="am-message-cost">${info.cost!.toFixed(4)}</span>
+				} else if (isLast) {
+					icon = <ProgressIndicator />
+				} else {
+					icon = <ArrowRightLeft size={16} className="opacity-70" />
 				}
 				// Don't show content for API req started, just header
 				content = null
@@ -268,7 +304,14 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 			case "user_feedback": {
 				icon = <User size={16} />
 				title = t("messages.youSaid")
-				content = <SimpleMarkdown content={messageText} />
+				content = (
+					<>
+						<SimpleMarkdown content={messageText} />
+						{message.images && message.images.length > 0 && (
+							<MessageThumbnails images={message.images} style={{ marginTop: "8px" }} />
+						)}
+					</>
+				)
 				break
 			}
 			case "completion_result": {
@@ -282,6 +325,17 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 				title = t("messages.error")
 				content = <SimpleMarkdown content={messageText} />
 				break
+			}
+			case "reasoning": {
+				// Return early - reasoning block has its own wrapper
+				return (
+					<ReasoningBlock
+						content={messageText}
+						ts={message.ts}
+						isStreaming={message.partial ?? false}
+						isLast={isLast}
+					/>
+				)
 			}
 			case "api_req_finished":
 			case "checkpoint_saved":
@@ -425,6 +479,9 @@ function QueuedMessageItem({ queuedMessage, isSending: _isSending, onRetry, onDi
 				</div>
 				<div className="am-message-body">
 					<SimpleMarkdown content={queuedMessage.content} />
+					{queuedMessage.images && queuedMessage.images.length > 0 && (
+						<MessageThumbnails images={queuedMessage.images} style={{ marginTop: "8px" }} />
+					)}
 				</div>
 				{queuedMessage.status === "failed" && (
 					<div className="mt-2 space-y-2">

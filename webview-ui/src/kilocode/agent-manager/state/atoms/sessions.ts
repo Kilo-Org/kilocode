@@ -8,6 +8,7 @@ export interface ParallelModeInfo {
 	enabled: boolean
 	branch?: string
 	worktreePath?: string
+	parentBranch?: string
 	completionMessage?: string
 }
 
@@ -25,6 +26,8 @@ export interface AgentSession {
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
+	model?: string // Model ID used for this session
+	mode?: string // Mode slug used for this session (e.g., "code", "architect")
 }
 
 /**
@@ -45,6 +48,7 @@ export interface RemoteSession {
 	created_at: string
 	updated_at: string
 	git_url?: string
+	last_model?: string | null
 }
 
 // Core atoms
@@ -59,6 +63,12 @@ export const startSessionFailedCounterAtom = atom(0)
 
 // Per-session input value for the chat input field
 export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""))
+
+// Per-session images (data URLs) for the chat input field
+export const sessionImagesAtomFamily = atomFamily((_sessionId: string) => atom<string[]>([]))
+
+// Maximum images per message (limited to fit in the input field UI)
+export const MAX_IMAGES_PER_MESSAGE = 4
 
 // User preference for run mode (persisted across new agent forms)
 export type RunMode = "local" | "worktree"
@@ -106,6 +116,7 @@ function toAgentSession(remote: RemoteSession): AgentSession {
 		endTime: Number.isNaN(updatedTime) ? 0 : updatedTime,
 		source: "remote",
 		gitUrl: remote.git_url,
+		model: remote.last_model ?? undefined,
 	}
 }
 
@@ -197,6 +208,20 @@ export const updateSessionStatusAtom = atom(
 		})
 	},
 )
+
+export const updateSessionModeAtom = atom(null, (get, set, payload: { sessionId: string; mode: string }) => {
+	const current = get(sessionsMapAtom)
+	const session = current[payload.sessionId]
+	if (!session) return
+
+	set(sessionsMapAtom, {
+		...current,
+		[payload.sessionId]: {
+			...session,
+			mode: payload.mode,
+		},
+	})
+})
 
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)

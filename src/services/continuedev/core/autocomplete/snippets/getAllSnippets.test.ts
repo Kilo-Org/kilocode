@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { getAllSnippets, getAllSnippetsWithoutRace } from "./getAllSnippets"
-import { AutocompleteSnippetType } from "./types"
+import { AutocompleteSnippetType } from "../types"
 import type { HelperVars } from "../util/HelperVars"
 import type { IDE } from "../../index"
 import type { GetLspDefinitionsFunction } from "../types"

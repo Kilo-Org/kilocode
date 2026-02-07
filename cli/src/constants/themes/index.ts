@@ -23,6 +23,7 @@ import { shadesOfPurpleTheme } from "./shades-of-purple.js"
 import { ayuLightTheme } from "./ayu-light.js"
 import { ansiTheme } from "./ansi.js"
 import { ansiLightTheme } from "./ansi-light.js"
+import { colorblindTheme } from "./colorblind.js"
 
 /**
  * Registry of all available themes
@@ -42,6 +43,7 @@ const themeRegistry: Record<ThemeId, Theme> = {
 	"ayu-light": ayuLightTheme,
 	ansi: ansiTheme,
 	"ansi-light": ansiLightTheme,
+	colorblind: colorblindTheme,
 }
 
 /**
@@ -125,3 +127,4 @@ export { shadesOfPurpleTheme } from "./shades-of-purple.js"
 export { ayuLightTheme } from "./ayu-light.js"
 export { ansiTheme } from "./ansi.js"
 export { ansiLightTheme } from "./ansi-light.js"
+export { colorblindTheme } from "./colorblind.js"

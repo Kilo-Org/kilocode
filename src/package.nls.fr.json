@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agent de Codage IA, Copilot et Autocomplétion",
-	"extension.description": "Assistant de codage d'IA Open Source pour la planification, la création et la correction de code.",
+	"extension.description": "Agent de codage IA Open Source qui génère du code à partir du langage naturel, automatise les tâches et exécute des commandes de terminal. Comprend l'autocomplétion en ligne, l'automatisation du navigateur, le refactoring automatique et des modes personnalisés pour la planification, le codage et le débogage. Compatible avec plus de 500 modèles d'IA dont Claude (Anthropic), Gemini, Grok, GPT, Codex et GLM.",
 	"command.newTask.title": "Nouvelle Tâche",
 	"command.explainCode.title": "Expliquer le Code",
 	"command.fixCode.title": "Corriger le Code",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "La taille du lot pour les opérations d'embedding lors de l'indexation du code. Ajustez ceci selon les limites de votre fournisseur d'API. Par défaut, c'est 60.",
 	"settings.toolProtocol.description": "Protocole d'outil à utiliser pour les interactions AI. XML est le protocole par défaut et recommandé. Natif est expérimental et peut ne pas fonctionner avec tous les fournisseurs.",
 	"settings.debug.description": "Active le mode debug pour afficher des boutons supplémentaires permettant de visualiser l'historique de conversation de l'API et les messages de l'interface utilisateur sous forme de JSON formaté dans des fichiers temporaires.",
+	"settings.debugProxy.enabled.description": "**Activer le Debug Proxy** — Redirige toutes les requêtes réseau sortantes via un proxy pour le debug MITM. Actif uniquement quand tu es en mode debug (F5).",
+	"settings.debugProxy.serverUrl.description": "URL du proxy (par ex. `http://127.0.0.1:8888`). Utilisée uniquement quand le **Debug Proxy** est activé.",
+	"settings.debugProxy.tlsInsecure.description": "Accepter les certificats auto-signés du proxy. **Requis pour l'inspection MITM.** ⚠️ Non sécurisé — à utiliser uniquement pour le debug local.",
 	"ghost.input.title": "Écrivain fantôme Kilo Code",
 	"ghost.input.placeholder": "Décrivez ce que vous voulez coder...",
 	"ghost.commands.generateSuggestions": "Kilo Code : Générer des Modifications Suggérées",

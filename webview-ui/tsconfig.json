@@ -26,5 +26,6 @@
 			"@roo/*": ["../src/shared/*"]
 		}
 	},
-	"include": ["src", "../src/shared", "vitest.setup.ts"]
+	"include": ["src", "../src/shared", "vitest.setup.ts"],
+	"exclude": ["../src/shared/kilocode/cli-sessions/extension"]
 }

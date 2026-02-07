@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu."
+		"description": "Open source AI agent pro kódování, který generuje kód z přirozeného jazyka, automatizuje úlohy a spouští příkazy v terminálu. Nabízí inline automatické doplňování, automatizaci prohlížeče, automatický refaktoring a vlastní režimy pro plánování, kódování a ladění. Podporuje více než 500 AI modelů včetně Claude (Anthropic), Gemini, Grok, GPT, Codex a GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu.",
 			"notFound": "Spustitelný soubor Claude Code '{{claudePath}}' nebyl nalezen.\n\nNainstalujte prosím Claude Code CLI:\n1. Navštivte {{installationUrl}} pro stažení Claude Code\n2. Postupujte podle pokynů pro instalaci pro váš operační systém\n3. Ujistěte se, že příkaz 'claude' je dostupný v PATH\n4. Alternativně nakonfigurujte vlastní cestu v nastavení Kilo Code pod 'Cesta Claude Code'\n\nPůvodní chyba: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}",
-			"tokenRefreshFailed": "Nepodařilo se obnovit OAuth token: {{error}}",
-			"onboardingTimeout": "Onboarding operace vypršela po 60 sekundách. Zkuste to prosím později.",
-			"projectDiscoveryFailed": "Nepodařilo se objevit ID projektu. Ujistěte se, že jste autentizováni pomocí 'gemini auth'.",
-			"rateLimitExceeded": "Překročen limit rychlosti. Limity bezplatné úrovně byly dosaženy.",
-			"badRequest": "Špatný požadavek: {{details}}",
-			"apiError": "Chyba Gemini CLI API: {{error}}",
-			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}"
 		},
@@ -141,6 +131,24 @@
 		"roo": {
 			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Nejsi autentizován s OpenAI Codex. Prosím přihlas se pomocí OpenAI Codex OAuth.",
+			"invalidRequest": "Neplatný požadavek na Codex API. Zkontroluj prosím své vstupní parametry.",
+			"authenticationFailed": "Autentizace selhala. Prosím autentizuj se znovu s OpenAI Codex.",
+			"accessDenied": "Přístup odepřen. Tvé předplatné ChatGPT možná nezahrnuje přístup k Codex.",
+			"endpointNotFound": "Koncový bod Codex API nebyl nalezen.",
+			"rateLimitExceeded": "Překročen limit rychlosti. Zkus to prosím později.",
+			"serviceError": "Chyba služby OpenAI Codex. Zkus to prosím později.",
+			"genericError": "Chyba Codex API ({{status}})",
+			"noResponseBody": "Chyba Codex API: Žádné tělo odpovědi",
+			"connectionFailed": "Nepodařilo se připojit k Codex API: {{message}}",
+			"unexpectedConnectionError": "Neočekávaná chyba při připojování k Codex API",
+			"apiError": "Chyba Codex API: {{message}}",
+			"responseFailed": "Odpověď selhala: {{message}}",
+			"streamProcessingError": "Chyba při zpracování odpovědního proudu: {{message}}",
+			"unexpectedStreamError": "Neočekávaná chyba při zpracování odpovědního proudu",
+			"completionError": "Chyba dokončení OpenAI Codex: {{message}}"
+		},
 		"message": {
 			"no_active_task_to_delete": "Nebyla nalezena aktivní úloha. Nelze smazat zprávy.",
 			"invalid_timestamp_for_deletion": "Pro smazání byl poskytnut neplatný časový údaj.",
@@ -156,7 +164,8 @@
 		"manual_url_auth_failed": "Ověření se nezdařilo",
 		"manual_url_auth_error": "Došlo k chybě ověření",
 		"api": {
-			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky."
+			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky.",
+			"apiRequestFailed": "API požadavek selhal ({{status}})"
 		}
 	},
 	"warnings": {
@@ -251,7 +260,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Odpověď přerušena uživatelem",
-		"responseInterruptedByApiError": "Odpověď přerušena chybou API"
+		"responseInterruptedByApiError": "Odpověď přerušena chybou API",
+		"streamTerminatedByProvider": "Poskytovatel ukončil požadavek"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

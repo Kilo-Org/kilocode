@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。"
+		"description": "自然言語からコードを生成し、タスクを自動化し、ターミナルコマンドを実行するオープンソースAIコーディングエージェント。インライン自動補完、ブラウザ自動化、自動リファクタリング、計画・コーディング・デバッグ用のカスタムモードを搭載。Claude (Anthropic)、Gemini、Grok、GPT、Codex、GLMを含む500以上のAIモデルに対応。"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "エラー出力：{{output}}",
 			"processExitedWithError": "Claude Code プロセスがコード {{exitCode}} で終了しました。エラー出力：{{output}}",
 			"stoppedWithReason": "Claude Code が理由により停止しました：{{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}",
-			"tokenRefreshFailed": "OAuthトークンの更新に失敗しました: {{error}}",
-			"onboardingTimeout": "オンボーディング操作が60秒でタイムアウトしました。後でもう一度お試しください。",
-			"projectDiscoveryFailed": "プロジェクトIDを発見できませんでした。'gemini auth'で認証されていることを確認してください。",
-			"rateLimitExceeded": "レート制限を超過しました。無料プランの制限に達しています。",
-			"badRequest": "不正なリクエスト: {{details}}",
-			"apiError": "Gemini CLI APIエラー: {{error}}",
-			"completionError": "Gemini CLI補完エラー: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"message": {
 			"no_active_task_to_delete": "メッセージを削除するアクティブなタスクがありません",
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Rooプロバイダーはクラウド認証が必要です。Roo Code Cloudにサインインしてください。"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "APIキーに無効な文字が含まれています。"
+			"invalidKeyInvalidChars": "APIキーに無効な文字が含まれています。",
+			"apiRequestFailed": "APIリクエストが失敗しました ({{status}})"
 		},
 		"manual_url_empty": "有効なコールバック URL を入力してください",
 		"manual_url_no_query": "無効なコールバック URL：クエリパラメータがありません",
 		"manual_url_missing_params": "無効なコールバック URL：必要なパラメータ（code と state）がありません",
 		"manual_url_auth_failed": "手動 URL 認証が失敗しました",
-		"manual_url_auth_error": "認証に失敗しました"
+		"manual_url_auth_error": "認証に失敗しました",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "選択されたターミナルコンテンツがありません",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "ユーザーによって応答が中断されました",
-		"responseInterruptedByApiError": "APIエラーによって応答が中断されました"
+		"responseInterruptedByApiError": "APIエラーによって応答が中断されました",
+		"streamTerminatedByProvider": "プロバイダーがリクエストを終了しました"
 	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",
@@ -210,12 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq APIキー",
-			"getGroqApiKey": "Groq APIキーを取得",
-			"claudeCode": {
-				"pathLabel": "Claude Code パス",
-				"description": "Claude Code CLI へのオプションのパス。設定されていない場合は、デフォルトで「claude」になります。",
-				"placeholder": "デフォルト: claude"
-			}
+			"getGroqApiKey": "Groq APIキーを取得"
 		}
 	},
 	"customModes": {

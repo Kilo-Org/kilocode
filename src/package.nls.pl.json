@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agent Kodowania AI, Copilot i Autouzupełnianie",
-	"extension.description": "Asystent kodowania AI o otwartym kodzie źródłowym do planowania, tworzenia i naprawiania kodu.",
+	"extension.description": "Agent kodowania AI o otwartym kodzie źródłowym, który generuje kod z języka naturalnego, automatyzuje zadania i wykonuje polecenia terminala. Oferuje autouzupełnianie inline, automatyzację przeglądarki, automatyczny refaktoring oraz niestandardowe tryby do planowania, kodowania i debugowania. Obsługuje ponad 500 modeli AI, w tym Claude (Anthropic), Gemini, Grok, GPT, Codex i GLM.",
 	"command.newTask.title": "Nowe Zadanie",
 	"command.explainCode.title": "Wyjaśnij Kod",
 	"command.fixCode.title": "Napraw Kod",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "Rozmiar partii dla operacji osadzania podczas indeksowania kodu. Dostosuj to w oparciu o limity twojego dostawcy API. Domyślnie to 60.",
 	"settings.toolProtocol.description": "Protokół narzędzi do użycia w interakcjach z AI. XML jest domyślnym i zalecanym protokołem. Natywny jest eksperymentalny i może nie działać ze wszystkimi dostawcami.",
 	"settings.debug.description": "Włącz tryb debugowania, aby wyświetlić dodatkowe przyciski do przeglądania historii rozmów API i komunikatów interfejsu użytkownika jako sformatowany JSON w plikach tymczasowych.",
+	"settings.debugProxy.enabled.description": "**Włącz Debug Proxy** — Kieruj wszystkie wychodzące żądania sieciowe przez proxy na potrzeby debugowania MITM. Aktywne tylko wtedy, gdy uruchamiasz w trybie debugowania (F5).",
+	"settings.debugProxy.serverUrl.description": "URL proxy (np. `http://127.0.0.1:8888`). Używany tylko wtedy, gdy **Debug Proxy** jest włączony.",
+	"settings.debugProxy.tlsInsecure.description": "Akceptuj certyfikaty self-signed z proxy. **Wymagane do inspekcji MITM.** ⚠️ Niezabezpieczone — używaj tylko do lokalnego debugowania.",
 	"ghost.input.title": "Naciśnij 'Enter' aby potwierdzić lub 'Escape' aby anulować",
 	"ghost.input.placeholder": "Opisz co chcesz zrobić...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generuj Sugestie Edycji",

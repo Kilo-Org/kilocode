@@ -6,37 +6,49 @@
 	"routers": {
 		"requesty": {
 			"description": "Twój zoptymalizowany router LLM",
-			"incentive": "$1 darmowego kredytu"
+			"incentive": "Bezpłatny kredyt w wysokości $1"
 		},
 		"openrouter": {
-			"description": "Ujednolicony interfejs dla LLMs"
+			"description": "Ujednolicony interfejs dla LLM"
 		},
 		"roo": {
-			"description": "Najlepsze darmowe modele na start",
-			"incentive": "Wypróbuj Roo za darmo"
+			"description": "Najlepsze bezpłatne modele dla początkujących",
+			"incentive": "Wypróbuj Roo bezpłatnie"
 		}
 	},
 	"chooseProvider": "Aby działać, Kilo Code potrzebuje klucza API.",
+	"landing": {
+		"greeting": "Witaj w Roo Code!",
+		"introduction": "Dzięki szerokiej gamie wbudowanych i rozszerzalnych Trybów, Roo Code pozwala planować, projektować architekturę, kodować, debugować i zwiększać produktywność jak nigdy dotąd.",
+		"accountMention": "Aby rozpocząć, utwórz konto Roo Code Cloud. Otrzymaj potężne modele, kontrolę internetową, analizę, wsparcie i wiele więcej.",
+		"getStarted": "Utwórz konto Roo",
+		"noAccount": "lub używaj bez konta"
+	},
 	"providerSignup": {
+		"heading": "Wybierz swojego dostawcę",
+		"chooseProvider": "Roo potrzebuje dostawcy LLM, aby działać. Wybierz jeden, aby zacząć, możesz dodać więcej później.",
 		"rooCloudProvider": "Dostawca Roo Code Cloud",
-		"rooCloudDescription": "Najprostszy sposób korzystania z Roo. Wybrana mieszanka darmowych i płatnych modeli po niskich kosztach",
-		"learnMore": "dowiedz się więcej",
-		"useAnotherProvider": "Użyj innego dostawcy",
+		"rooCloudDescription": "Najłatwiejszy sposób na rozpoczęcie to skorzystanie z Dostawcy Roo Code Cloud: starannie wybrany mix bezpłatnych i płatnych modeli w niskiej cenie.",
+		"learnMore": "Dowiedz się więcej",
+		"useAnotherProvider": "Dostawca trzeciej strony",
 		"useAnotherProviderDescription": "Wprowadź klucz API i zacznij.",
-		"noApiKeys": "Nie chcesz się zajmować kluczami? Wybierz Dostawcę Roo Code Cloud.",
-		"getStarted": "Rozpocznij"
+		"noApiKeys": "Nie chcesz radzić sobie z kluczami API i oddzielnymi kontami?",
+		"backToRoo": "Wybierz Dostawcę Roo Code Cloud.",
+		"goBack": "Wróć",
+		"finish": "Zakończ"
 	},
 	"waitingForCloud": {
-		"heading": "Zabieramy cię do Roo Code Cloud...",
-		"description": "Ukończ rejestrację w przeglądarce i automatycznie wrócisz tutaj.",
+		"heading": "Logowanie do Roo Code Cloud...",
+		"description": "Zaprowadzimy Cię do przeglądarki, aby zarejestrować się w Roo Code Cloud. Następnie wrócimy tutaj, aby ukończyć.",
 		"noPrompt": "Jeśli nie zostaniesz poproszony o otwarcie adresu URL, <clickHere>kliknij tutaj</clickHere>.",
 		"havingTrouble": "Jeśli ukończyłeś rejestrację, ale masz problemy, <clickHere>kliknij tutaj</clickHere>.",
 		"pasteUrl": "Wklej adres URL wywołania zwrotnego z przeglądarki:",
-		"invalidURL": "To nie wygląda na ważny adres URL wywołania zwrotnego. Skopiuj to, co Roo Code Cloud pokazuje w Twojej przeglądarce.",
+		"docsLink": "Nie działa? <DocsLink>Sprawdź dokumentację</DocsLink>.",
+		"invalidURL": "To nie wygląda na prawidłowy adres URL wywołania zwrotnego. Skopiuj to, co Roo Code Cloud wyświetla w przeglądarce.",
 		"goBack": "Wróć"
 	},
-	"startRouter": "Zalecamy korzystanie z routera LLM:",
-	"startCustom": "Lub możesz użyć własnego klucza API:",
+	"startRouter": "Rekomendujemy użycie routera LLM:",
+	"startCustom": "Lub możesz przynieść swój własny klucz API:",
 	"telemetry": {
 		"helpImprove": "Pomóż ulepszyć Kilo Code",
 		"helpImproveMessage": "Kilo Code zbiera dane o błędach i użyciu, aby pomóc nam w naprawianiu błędów i ulepszaniu rozszerzenia. Ta telemetria nie zbiera kodu, promptów ani informacji osobistych. Możesz to wyłączyć w <settingsLink>ustawieniach</settingsLink>."

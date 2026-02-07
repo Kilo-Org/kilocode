@@ -17,6 +17,7 @@ export interface Command {
 	filePath: string
 	description?: string
 	argumentHint?: string
+	mode?: string
 }
 
 /**
@@ -215,6 +216,7 @@ async function tryLoadCommand(
 		let parsed
 		let description: string | undefined
 		let argumentHint: string | undefined
+		let mode: string | undefined
 		let commandContent: string
 
 		try {
@@ -228,11 +230,13 @@ async function tryLoadCommand(
 				typeof parsed.data["argument-hint"] === "string" && parsed.data["argument-hint"].trim()
 					? parsed.data["argument-hint"].trim()
 					: undefined
+			mode = typeof parsed.data.mode === "string" && parsed.data.mode.trim() ? parsed.data.mode.trim() : undefined
 			commandContent = parsed.content.trim()
 		} catch {
 			// If frontmatter parsing fails, treat the entire content as command content
 			description = undefined
 			argumentHint = undefined
+			mode = undefined
 			commandContent = content.trim()
 		}
 
@@ -243,6 +247,7 @@ async function tryLoadCommand(
 			filePath: resolvedPath,
 			description,
 			argumentHint,
+			mode,
 		}
 	} catch {
 		// Directory doesn't exist or can't be read
@@ -296,6 +301,7 @@ async function scanCommandDirectory(
 				let parsed
 				let description: string | undefined
 				let argumentHint: string | undefined
+				let mode: string | undefined
 				let commandContent: string
 
 				try {
@@ -309,11 +315,16 @@ async function scanCommandDirectory(
 						typeof parsed.data["argument-hint"] === "string" && parsed.data["argument-hint"].trim()
 							? parsed.data["argument-hint"].trim()
 							: undefined
+					mode =
+						typeof parsed.data.mode === "string" && parsed.data.mode.trim()
+							? parsed.data.mode.trim()
+							: undefined
 					commandContent = parsed.content.trim()
 				} catch {
 					// If frontmatter parsing fails, treat the entire content as command content
 					description = undefined
 					argumentHint = undefined
+					mode = undefined
 					commandContent = content.trim()
 				}
 
@@ -326,6 +337,7 @@ async function scanCommandDirectory(
 						filePath: resolvedPath,
 						description,
 						argumentHint,
+						mode,
 					})
 				}
 			} catch (error) {

@@ -219,8 +219,8 @@ describe.skip("SYSTEM_PROMPT", () => {
 			undefined, // partialReadsEnabled
 		)
 
-		// Should include edit_file tool
-		expect(prompt).toContain("## edit_file")
+		// Should include fast_edit_file tool
+		expect(prompt).toContain("## fast_edit_file")
 
 		// Should NOT include traditional editing tools
 		expect(prompt).not.toContain("## apply_diff")
@@ -228,10 +228,10 @@ describe.skip("SYSTEM_PROMPT", () => {
 
 		// Should contain Fast Apply-specific instructions
 		expect(prompt).toContain("FastApply is enabled")
-		expect(prompt).toContain("ONLY use the edit_file tool for file modifications")
+		expect(prompt).toContain("ONLY use the fast_edit_file tool for file modifications")
 	})
 
-	it("should include traditional editing tools and exclude edit_file when morphFastApply is disabled", async () => {
+	it("should include traditional editing tools and exclude fast_edit_file when morphFastApply is disabled", async () => {
 		const experimentsWithoutMorph = {
 			morphFastApply: false,
 		}
@@ -255,8 +255,8 @@ describe.skip("SYSTEM_PROMPT", () => {
 			undefined, // partialReadsEnabled
 		)
 
-		// Should NOT include edit_file tool
-		expect(prompt).not.toContain("## edit_file")
+		// Should NOT include fast_edit_file tool
+		expect(prompt).not.toContain("## fast_edit_file")
 
 		// Should include traditional editing tools
 		expect(prompt).toContain("## apply_diff")

@@ -6,12 +6,29 @@ export type AnthropicModelId = keyof typeof anthropicModels
 export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-5"
 
 export const anthropicModels = {
+	// kilocode_change start
+	"claude-opus-4-6": {
+		maxTokens: 128_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
+		supportsAdaptiveThinking: true,
+		supportsVerbosity: ["low", "medium", "high", "max"],
+	},
+	// kilocode_change end
 	"claude-sonnet-4-5": {
 		maxTokens: 64_000, // Overridden to 8k if `enableReasoningEffort` is false.
 		contextWindow: 200_000, // Default 200K, extendable to 1M with beta flag 'context-1m-2025-08-07'
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0, // $3 per million input tokens (≤200K context)
 		outputPrice: 15.0, // $15 per million output tokens (≤200K context)
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -34,6 +51,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0, // $3 per million input tokens (≤200K context)
 		outputPrice: 15.0, // $15 per million output tokens (≤200K context)
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -56,6 +74,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 5.0, // $5 per million input tokens
 		outputPrice: 25.0, // $25 per million output tokens
 		cacheWritesPrice: 6.25, // $6.25 per million tokens
@@ -69,6 +88,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0, // $15 per million input tokens
 		outputPrice: 75.0, // $75 per million output tokens
 		cacheWritesPrice: 18.75, // $18.75 per million tokens
@@ -81,6 +101,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0, // $15 per million input tokens
 		outputPrice: 75.0, // $75 per million output tokens
 		cacheWritesPrice: 18.75, // $18.75 per million tokens
@@ -93,6 +114,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0, // $3 per million input tokens
 		outputPrice: 15.0, // $15 per million output tokens
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -106,6 +128,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0, // $3 per million input tokens
 		outputPrice: 15.0, // $15 per million output tokens
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -117,6 +140,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0, // $3 per million input tokens
 		outputPrice: 15.0, // $15 per million output tokens
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -128,6 +152,7 @@ export const anthropicModels = {
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 1.0,
 		outputPrice: 5.0,
 		cacheWritesPrice: 1.25,
@@ -139,6 +164,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0,
 		outputPrice: 75.0,
 		cacheWritesPrice: 18.75,
@@ -150,6 +176,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.25,
 		outputPrice: 1.25,
 		cacheWritesPrice: 0.3,
@@ -161,7 +188,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
-		defaultToolProtocol: "native", // kilocode_change
+		defaultToolProtocol: "native",
 		inputPrice: 1.0,
 		outputPrice: 5.0,
 		cacheWritesPrice: 1.25,

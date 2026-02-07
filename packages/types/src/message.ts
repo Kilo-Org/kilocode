@@ -41,6 +41,7 @@ export const clineAsks = [
 	"auto_approval_max_req_reached",
 	// kilocode_change start
 	"payment_required_prompt", // Added for the low credits dialog
+	"unauthorized_prompt", // Added for unauthorized error when using paid models
 	"invalid_model",
 	"report_bug",
 	"condense",
@@ -60,6 +61,7 @@ export type ClineAsk = z.infer<typeof clineAskSchema>
 export const idleAsks = [
 	// kilocode_change start
 	"payment_required_prompt",
+	"unauthorized_prompt",
 	"invalid_model",
 	// kilocode_change end
 	"completion_result",
@@ -146,6 +148,7 @@ export function isNonBlockingAsk(ask: ClineAsk): ask is NonBlockingAsk {
  * - `api_req_finished`: Indicates an API request has completed successfully
  * - `api_req_retried`: Indicates an API request is being retried after a failure
  * - `api_req_retry_delayed`: Indicates an API request retry has been delayed
+ * - `api_req_rate_limit_wait`: Indicates a configured rate-limit wait (not an error)
  * - `api_req_deleted`: Indicates an API request has been deleted/cancelled
  * - `text`: General text message or assistant response
  * - `reasoning`: Assistant's reasoning or thought process (often hidden from user)
@@ -172,6 +175,7 @@ export const clineSays = [
 	"api_req_finished",
 	"api_req_retried",
 	"api_req_retry_delayed",
+	"api_req_rate_limit_wait",
 	"api_req_deleted",
 	"text",
 	"image",

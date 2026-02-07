@@ -1,13 +1,44 @@
 import { IDE, RangeInFileWithContents } from "../index"
 import { AutocompleteLanguageInfo } from "./constants/AutocompleteLanguageInfo"
-import { AutocompleteCodeSnippet } from "./snippets/types"
 
-/**
- * @deprecated This type should be removed in the future or renamed.
- * We have a new interface called AutocompleteSnippet which is more
- * general.
- */
-export type AutocompleteSnippetDeprecated = RangeInFileWithContents & {
+export enum AutocompleteSnippetType {
+	Code = "code",
+	Diff = "diff",
+	Clipboard = "clipboard",
+	Static = "static",
+}
+
+interface BaseAutocompleteSnippet {
+	content: string
+	type: AutocompleteSnippetType
+}
+
+export interface AutocompleteCodeSnippet extends BaseAutocompleteSnippet {
+	filepath: string
+	type: AutocompleteSnippetType.Code
+}
+
+export interface AutocompleteDiffSnippet extends BaseAutocompleteSnippet {
+	type: AutocompleteSnippetType.Diff
+}
+
+export interface AutocompleteClipboardSnippet extends BaseAutocompleteSnippet {
+	type: AutocompleteSnippetType.Clipboard
+	copiedAt: string
+}
+
+export interface AutocompleteStaticSnippet extends BaseAutocompleteSnippet {
+	type: AutocompleteSnippetType.Static
+	filepath: string
+}
+
+export type AutocompleteSnippet =
+	| AutocompleteCodeSnippet
+	| AutocompleteDiffSnippet
+	| AutocompleteClipboardSnippet
+	| AutocompleteStaticSnippet
+
+export type RankedSnippet = RangeInFileWithContents & {
 	score?: number
 }
 

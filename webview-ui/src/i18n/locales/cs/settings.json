@@ -1,4 +1,5 @@
 {
+	"back": "Zpět na zobrazení úkolů",
 	"common": {
 		"save": "Uložit",
 		"done": "Hotovo",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "Uložit změny",
 		"nothingChangedTooltip": "Nic se nezměnilo",
 		"doneButtonTooltip": "Zahodit neuložené změny a zavřít panel nastavení"
+	},
+	"search": {
+		"placeholder": "Hledat nastavení...",
+		"noResults": "Nenalezena žádná nastavení"
 	},
 	"unsavedChangesDialog": {
 		"title": "Neuložené změny",
@@ -37,7 +42,9 @@
 		"experimental": "Experimentální",
 		"language": "Jazyk",
 		"about": "O Kilo Code",
-		"autoPurge": "Automatické čištění"
+		"autoPurge": "Automatické čištění",
+		"agentBehaviour": "Chování agenta",
+		"ghost": "Automatické dokončování"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunityDesc": "Připoj se k ostatním uživatelům pro tipy a diskuse",
 		"community": "Chceš tipy nebo si jen popovídat s ostatními uživateli Kilo Code? Připoj se na <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt a komunita",
-		"manageSettings": "Spravovat nastavení"
+		"manageSettings": "Spravovat nastavení",
+		"debugMode": {
+			"label": "Povolit režim ladění",
+			"description": "Povolit režim ladění pro zobrazení dalších tlačítek v záhlaví úkolu pro zobrazení historie konverzace API a zpráv UI jako zpřehledněného JSON v dočasných souborech."
+		}
 	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
@@ -113,6 +124,7 @@
 		"openRouterProviderRoutingLabel": "Směrování poskytovatele OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model vkládání. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatibilní s OpenAI (Responses)",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Základní URL",
@@ -294,6 +306,7 @@
 		"makeActiveProfile": "Nastavit jako aktivní profil",
 		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
 		"apiProvider": "Poskytovatel API",
+		"apiProviderDocs": "Dokumentace poskytovatele",
 		"model": "Model",
 		"nameEmpty": "Jméno nemůže být prázdné",
 		"nameExists": "Profil s tímto názvem již existuje",
@@ -322,6 +335,37 @@
 		"apiKeyStorageNotice": "Klíče API jsou bezpečně uloženy v tajném úložišti VSCode",
 		"glamaApiKey": "Klíč API Glama",
 		"getGlamaApiKey": "Získat klíč API Glama",
+		"openAiCodexRateLimits": {
+			"title": "Limity využití pro Codex{{planLabel}}",
+			"loading": "Načítání limitů využití...",
+			"loadError": "Nepodařilo se načíst limity využití",
+			"retry": "Zkusit znovu",
+			"usedPercent": "{{percent}}% použito",
+			"resetsIn": "Obnoví se za {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Nyní",
+				"notAvailable": "Nedostupné"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Využití",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Denní limit",
+				"weekly": "Týdenní limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Použít vlastní základní URL",
 		"useReasoning": "Povolit uvažování",
 		"useHostHeader": "Použít vlastní hlavičku Host",
@@ -349,6 +393,8 @@
 		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
 		"awsBedrock1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"vertex1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"basetenApiKey": "Klíč API Baseten",
 		"basetenApiKeyPlaceholder": "Zadejte svůj klíč API Baseten",
 		"getBasetenApiKey": "Získat klíč API Baseten",
@@ -472,6 +518,14 @@
 		"awsRegion": "Region AWS",
 		"awsCrossRegion": "Použít meziregionální odvozování",
 		"awsGlobalInference": "Použít globální odvozování (automatický výběr optimálního regionu AWS)",
+		"awsServiceTier": "Úroveň služby",
+		"awsServiceTierStandard": "Standardní",
+		"awsServiceTierStandardDesc": "Vyvážený výkon a náklady",
+		"awsServiceTierFlex": "Flex (50% sleva)",
+		"awsServiceTierFlexDesc": "Nižší náklady, vyšší latence pro nekritické úkoly",
+		"awsServiceTierPriority": "Prioritní (75% příplatek)",
+		"awsServiceTierPriorityDesc": "Nejrychlejší výkon pro kritické aplikace",
+		"awsServiceTierNote": "Úrovně služeb ovlivňují ceny a výkon. Flex nabízí 50% slevu s vyšší latencí, Prioritní nabízí o 25% lepší výkon s 75% příplatkem.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Použít vlastní koncový bod VPC",
 			"vpcEndpointUrlPlaceholder": "Zadejte URL koncového bodu VPC (volitelné)",
@@ -481,7 +535,7 @@
 		"enablePromptCachingTitle": "Povolte ukládání výzev do mezipaměti, abyste zlepšili výkon a snížili náklady na podporované modely.",
 		"cacheUsageNote": "Poznámka: Pokud nevidíte využití mezipaměti, zkuste vybrat jiný model a poté znovu vybrat požadovaný model.",
 		"vscodeLmModel": "Jazykový model",
-		"vscodeLmWarning": "Poznámka: Jedná se o velmi experimentální integraci a podpora poskytovatele se bude lišit. Pokud se zobrazí chyba, že model není podporován, jedná se o problém na straně poskytovatele.",
+		"vscodeLmWarning": "Poznámka: Modely přístupné prostřednictvím API jazykového modelu VS Code mohou být zabaleny nebo doladěny poskytovatelem, takže se chování může lišit od použití stejného modelu přímo od typického poskytovatele nebo routeru. Chcete-li použít model z rozevírací nabídky jazykového modelu, nejprve přepněte na tento model a poté klikněte na Přijmout v promptu Copilot Chat; jinak může dojít k chybě, jako je 400 \"Požadovaný model není podporován\".",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Povolit kontext URL",
@@ -610,6 +664,7 @@
 		},
 		"verbosity": {
 			"label": "Podrobnost výstupu",
+			"max": "Max",
 			"high": "Vysoká",
 			"medium": "Střední",
 			"low": "Nízká",
@@ -622,21 +677,6 @@
 			"placeholder": "Výchozí: claude",
 			"maxTokensLabel": "Maximální počet výstupních tokenů",
 			"maxTokensDescription": "Maximální počet výstupních tokenů pro odpovědi Claude Code. Výchozí je 8000."
-		},
-		"geminiCli": {
-			"description": "Tento poskytovatel používá OAuth autentizaci z nástroje Gemini CLI a nevyžaduje klíče API.",
-			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
-			"oauthPathDescription": "Cesta k souboru přihlašovacích údajů OAuth. Ponechte prázdné pro použití výchozího umístění (~/.gemini/oauth_creds.json).",
-			"instructions": "Pokud jste se ještě neověřili, spusťte prosím",
-			"instructionsContinued": "ve vašem terminálu nejdříve.",
-			"setupLink": "Pokyny k nastavení Gemini CLI",
-			"requirementsTitle": "Důležité požadavky",
-			"requirement1": "Nejprve musíte nainstalovat nástroj Gemini CLI",
-			"requirement2": "Poté spusťte gemini ve vašem terminálu a ujistěte se, že se přihlásíte pomocí Google",
-			"requirement3": "Funguje pouze s osobními účty Google (ne s účty Google Workspace)",
-			"requirement4": "Nepoužívá klíče API - ověřování je řešeno přes OAuth",
-			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejdříve nainstalován a ověřen",
-			"freeAccess": "Přístup k bezplatné úrovni prostřednictvím OAuth autentizace"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
@@ -766,6 +806,10 @@
 		"showTimestamps": {
 			"label": "Zobrazit časová razítka",
 			"description": "Zobrazit časové razítko pro každou zprávu v zobrazení chatu"
+		},
+		"showDiffStats": {
+			"label": "Zobrazit statistiky diff",
+			"description": "Zobrazit statistiky přidaných/odebraných řádků v záhlaví úkolu"
 		}
 	},
 	"ghost": {
@@ -825,6 +869,10 @@
 			"label": "Zobrazit soubory ignorované .kilocodeignore v seznamech a vyhledáváních",
 			"description": "Pokud je povoleno, soubory odpovídající vzorům v .kilocodeignore se zobrazí v seznamech se symbolem zámku. Pokud je zakázáno, tyto soubory budou zcela skryty ze seznamů souborů a vyhledávání."
 		},
+		"enableSubfolderRules": {
+			"label": "Povolit pravidla podadresářů",
+			"description": "Rekurzivně objevovat a načítat soubory .roo/rules a AGENTS.md z podadresářů. Užitečné pro monorepa s pravidly specifickými pro balíčky."
+		},
 		"maxConcurrentFileReads": {
 			"label": "Limit souběžného čtení souborů",
 			"description": "Maximální počet souborů, které může nástroj 'read_file' zpracovávat souběžně. Vyšší hodnoty mohou urychlit čtení více malých souborů, ale zvyšují využití paměti."
@@ -877,7 +925,8 @@
 		"includeCurrentCost": {
 			"label": "Zahrnout aktuální náklady do kontextu",
 			"description": "Pokud je povoleno, aktuální náklady na využití API budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o náklady."
-		}
+		},
+		"apiProviderDocs": "Dokumentace poskytovatele"
 	},
 	"terminal": {
 		"basic": {
@@ -1069,6 +1118,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Převod řeči na text (STT)",
 			"description": "Když je povoleno, Kilo Code může přepsat váš hlas do textu pomocí modelu Whisper od OpenAI. Klikněte na tlačítko mikrofonu v chatu pro zahájení nahrávání. Vyžaduje nainstalovaný FFmpeg a nakonfigurovaného poskytovatele OpenAI API."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Povolit vlastní nástroje",
+			"description": "Pokud je povoleno, Kilo může načítat a používat vlastní nástroje TypeScript/JavaScript z adresáře .kilocode/tools vašeho projektu nebo ~/.kilocode/tools pro globální nástroje. Poznámka: tyto nástroje budou automaticky schváleny.",
+			"toolsHeader": "Dostupné vlastní nástroje",
+			"noTools": "Nejsou načteny žádné vlastní nástroje. Přidejte soubory .ts nebo .js do adresáře .kilocode/tools vašeho projektu nebo ~/.kilocode/tools pro globální nástroje.",
+			"refreshButton": "Obnovit",
+			"refreshing": "Obnovování...",
+			"refreshSuccess": "Nástroje úspěšně obnoveny",
+			"refreshError": "Nepodařilo se obnovit nástroje",
+			"toolParameters": "Parametry"
 		}
 	},
 	"promptCaching": {
@@ -1110,7 +1170,9 @@
 		"searchPlaceholder": "Hledat",
 		"noMatchFound": "Nebyla nalezena žádná shoda",
 		"useCustomModel": "Použít vlastní: {{modelId}}",
-		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později."
+		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později.",
+		"recommendedModels": "Doporučené modely",
+		"allModels": "Všechny modely"
 	},
 	"footer": {
 		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>.",

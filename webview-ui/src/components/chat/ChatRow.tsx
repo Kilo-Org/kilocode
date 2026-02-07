@@ -4,12 +4,19 @@ import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
 import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 
-import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
+import type {
+	ClineMessage,
+	FollowUpData,
+	SuggestionItem,
+	ClineApiReqInfo,
+	ClineAskUseMcpServer,
+	ClineSayTool,
+} from "@roo-code/types"
+
 import { Mode } from "@roo/modes"
 
-import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
-import { safeJsonParse } from "@roo/safeJsonParse"
+import { safeJsonParse } from "@roo/core"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
@@ -66,6 +73,7 @@ import {
 import { cn } from "@/lib/utils"
 import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
 import { PathTooltip } from "../ui/PathTooltip"
+import { OpenMarkdownPreviewButton } from "./OpenMarkdownPreviewButton"
 
 // kilocode_change start
 import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning"
@@ -74,6 +82,7 @@ import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar"
 import { StandardTooltip } from "../ui"
 import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay"
 import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
+import { UnauthorizedWarning } from "../kilocode/chat/UnauthorizedWarning"
 import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
@@ -343,6 +352,8 @@ export const ChatRowContent = ({
 						style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
 					<span style={{ color: successColor, fontWeight: "bold" }}>{t("chat:taskCompleted")}</span>,
 				]
+			case "api_req_rate_limit_wait":
+				return []
 			case "api_req_retry_delayed":
 				return []
 			case "api_req_started":
@@ -372,8 +383,10 @@ export const ChatRowContent = ({
 						getIconSpan("arrow-swap", normalColor)
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
-					) : (
+					) : isLast ? (
 						<ProgressIndicator />
+					) : (
+						getIconSpan("arrow-swap", normalColor)
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
@@ -415,13 +428,14 @@ export const ChatRowContent = ({
 		apiRequestFailedMessage,
 		t,
 		inferenceProvider, // kilocode_change
+		isLast,
 	])
 
 	const headerStyle: React.CSSProperties = {
 		display: "flex",
 		alignItems: "center",
 		gap: "10px",
-		marginBottom: "10px",
+		marginBottom: "4px", // kilocode_change
 		wordBreak: "break-word",
 	}
 
@@ -1214,6 +1228,7 @@ export const ChatRowContent = ({
 											? "https://github.com/cline/cline/wiki/TroubleShooting-%E2%80%90-%22PowerShell-is-not-recognized-as-an-internal-or-external-command%22"
 											: undefined
 									}
+									errorDetails={apiReqStreamingFailedMessage}
 								/>
 							)}
 						</>
@@ -1222,28 +1237,37 @@ export const ChatRowContent = ({
 					let body = t(`chat:apiRequest.failed`)
 					let retryInfo, rawError, code, docsURL
 					if (message.text !== undefined) {
-						// Try to show richer error message for that code, if available
-						const potentialCode = parseInt(message.text.substring(0, 3))
-						if (!isNaN(potentialCode) && potentialCode >= 400) {
-							code = potentialCode
-							const stringForError = `chat:apiRequest.errorMessage.${code}`
-							if (i18n.exists(stringForError)) {
-								body = t(stringForError)
-								// Fill this out in upcoming PRs
-								// Do not remove this
-								// switch(code) {
-								// 	case ERROR_CODE:
-								// 		docsURL = ???
-								// 		break;
-								// }
+						// Check for Claude Code authentication error first
+						if (message.text.includes("Not authenticated with Claude Code")) {
+							body = t("chat:apiRequest.errorMessage.claudeCodeNotAuthenticated")
+							docsURL = "roocode://settings?provider=claude-code"
+						} else {
+							// Try to show richer error message for that code, if available
+							const potentialCode = parseInt(message.text.substring(0, 3))
+							if (!isNaN(potentialCode) && potentialCode >= 400) {
+								code = potentialCode
+								const stringForError = `chat:apiRequest.errorMessage.${code}`
+								if (i18n.exists(stringForError)) {
+									body = t(stringForError)
+									// Fill this out in upcoming PRs
+									// Do not remove this
+									// switch(code) {
+									// 	case ERROR_CODE:
+									// 		docsURL = ???
+									// 		break;
+									// }
+								} else {
+									body = t("chat:apiRequest.errorMessage.unknown")
+									docsURL =
+										"mailto:support@roocode.com?subject=Unknown API Error&body=[Please include full error details]"
+								}
+							} else if (message.text.indexOf("Connection error") === 0) {
+								body = t("chat:apiRequest.errorMessage.connection")
 							} else {
+								// Non-HTTP-status-code error message - store full text as errorDetails
 								body = t("chat:apiRequest.errorMessage.unknown")
 								docsURL = "https://kilo.ai/support"
 							}
-						} else if (message.text.indexOf("Connection error") === 0) {
-							body = t("chat:apiRequest.errorMessage.connection")
-						} else {
-							body = message.text
 						}
 
 						// This isn't pretty, but since the retry logic happens at a lower level
@@ -1273,14 +1297,45 @@ export const ChatRowContent = ({
 							errorDetails={rawError}
 						/>
 					)
+				case "api_req_rate_limit_wait": {
+					const isWaiting = message.partial === true
+
+					const waitSeconds = (() => {
+						if (!message.text) return undefined
+						try {
+							const data = JSON.parse(message.text)
+							return typeof data.seconds === "number" ? data.seconds : undefined
+						} catch {
+							return undefined
+						}
+					})()
+
+					return isWaiting && waitSeconds !== undefined ? (
+						<div
+							className={`group text-sm transition-opacity opacity-100`}
+							style={{
+								...headerStyle,
+								marginBottom: 0,
+								justifyContent: "space-between",
+							}}>
+							<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
+								<ProgressIndicator />
+								<span style={{ color: normalColor }}>{t("chat:apiRequest.rateLimitWait")}</span>
+							</div>
+							<span className="text-xs font-light text-vscode-descriptionForeground">{waitSeconds}s</span>
+						</div>
+					) : null
+				}
 				case "api_req_finished":
 					return null // we should never see this message type
 				case "text":
 					return (
-						<div>
+						<div className="group">
 							<div style={headerStyle}>
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
+								<div style={{ flexGrow: 1 }} />
+								<OpenMarkdownPreviewButton markdown={message.text} />
 							</div>
 							<div className="pl-6">
 								<Markdown markdown={message.text} partial={message.partial} />
@@ -1307,7 +1362,7 @@ export const ChatRowContent = ({
 									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
 									isEditing
 										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
+										: "cursor-text p-1 bg-vscode-sideBar-background text-vscode-foreground", // kilocode_change
 								)}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
@@ -1407,17 +1462,48 @@ export const ChatRowContent = ({
 							}
 						/>
 					)
-				// kilocode_change end
+					// kilocode_change end
+					// Check if this is a model response error based on marker strings from backend
+					const isNoToolsUsedError = message.text === "MODEL_NO_TOOLS_USED"
+					const isNoAssistantMessagesError = message.text === "MODEL_NO_ASSISTANT_MESSAGES"
+
+					if (isNoToolsUsedError) {
+						return (
+							<ErrorRow
+								type="error"
+								title={t("chat:modelResponseIncomplete")}
+								message={t("chat:modelResponseErrors.noToolsUsed")}
+								errorDetails={t("chat:modelResponseErrors.noToolsUsedDetails")}
+							/>
+						)
+					}
+
+					if (isNoAssistantMessagesError) {
+						return (
+							<ErrorRow
+								type="error"
+								title={t("chat:modelResponseIncomplete")}
+								message={t("chat:modelResponseErrors.noAssistantMessages")}
+								errorDetails={t("chat:modelResponseErrors.noAssistantMessagesDetails")}
+							/>
+						)
+					}
+
+					// Fallback for generic errors
+					return (
+						<ErrorRow type="error" message={message.text || t("chat:error")} errorDetails={message.text} />
+					)
 				case "completion_result":
 					const commitRange = message.metadata?.kiloCode?.commitRange
 					return (
-						<>
+						<div className="group">
 							<div style={headerStyle}>
 								{icon}
 								{/* kilocode_change start */}
 								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
 									{title}
 									{showTimestamps && <ChatTimestamps ts={message.ts} />}
+									<OpenMarkdownPreviewButton markdown={message.text} />
 								</div>
 								{/* kilocode_change end */}
 							</div>
@@ -1433,7 +1519,7 @@ export const ChatRowContent = ({
 								)
 								// kilocode_change end
 							}
-						</>
+						</div>
 					)
 				case "shell_integration_warning":
 					return <CommandExecutionError />
@@ -1648,7 +1734,7 @@ export const ChatRowContent = ({
 		case "ask":
 			switch (message.ask) {
 				case "mistake_limit_reached":
-					return <ErrorRow type="mistake_limit" message={message.text || ""} />
+					return <ErrorRow type="mistake_limit" message={message.text || ""} errorDetails={message.text} />
 				case "command":
 					return (
 						<CommandExecution
@@ -1720,10 +1806,12 @@ export const ChatRowContent = ({
 				case "completion_result":
 					if (message.text) {
 						return (
-							<div>
+							<div className="group">
 								<div style={headerStyle}>
 									{icon}
 									{title}
+									<div style={{ flexGrow: 1 }} />
+									<OpenMarkdownPreviewButton markdown={message.text} />
 								</div>
 								<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 									<Markdown markdown={message.text} partial={message.partial} />
@@ -1783,12 +1871,10 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
-					return (
-						<LowCreditWarning
-							message={message}
-							isOrganization={!!apiConfiguration.kilocodeOrganizationId}
-						/>
-					)
+					return <LowCreditWarning message={message} />
+				}
+				case "unauthorized_prompt": {
+					return <UnauthorizedWarning message={message} />
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

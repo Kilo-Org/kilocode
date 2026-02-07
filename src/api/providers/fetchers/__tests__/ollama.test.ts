@@ -55,10 +55,82 @@ describe("Ollama Fetcher", () => {
 				description: "Family: qwen3, Context: 4096, Size: 32.8B", // kilocode_change
 			})
 		})
+
+		// kilocode_change: should return model with supportsNativeTools=false when capabilities does not include 'tools'
+		it("should return model with supportsNativeTools=false when capabilities does not include 'tools'", () => {
+			const modelDataWithoutTools = {
+				...ollamaModelsData["qwen3-2to16:latest"],
+				capabilities: ["completion"], // No "tools" capability
+			}
+
+			const parsedModel = parseOllamaModel(modelDataWithoutTools as any)
+
+			// kilocode_change start: Models without tools capability are still returned (for autocomplete), but marked as not supporting tools
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsNativeTools).toBe(false)
+			// kilocode_change end
+		})
+
+		it("should return model info when capabilities includes 'tools'", () => {
+			const modelDataWithTools = {
+				...ollamaModelsData["qwen3-2to16:latest"],
+				capabilities: ["completion", "tools"], // Has "tools" capability
+			}
+
+			const parsedModel = parseOllamaModel(modelDataWithTools as any)
+
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsNativeTools).toBe(true)
+		})
+
+		// kilocode_change: should return model with supportsNativeTools=false when capabilities is undefined
+		it("should return model with supportsNativeTools=false when capabilities is undefined", () => {
+			const modelDataWithoutCapabilities = {
+				...ollamaModelsData["qwen3-2to16:latest"],
+				capabilities: undefined, // No capabilities array
+			}
+
+			const parsedModel = parseOllamaModel(modelDataWithoutCapabilities as any)
+
+			// kilocode_change start: Models without explicit tools capability are still returned (for autocomplete)
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsNativeTools).toBe(false)
+			// kilocode_change end
+		})
+
+		// kilocode_change: should return model with vision but supportsNativeTools=false when no tools capability
+		it("should return model with vision but supportsNativeTools=false when no tools capability", () => {
+			const modelDataWithVision = {
+				...ollamaModelsData["qwen3-2to16:latest"],
+				capabilities: ["completion", "vision"],
+			}
+
+			const parsedModel = parseOllamaModel(modelDataWithVision as any)
+
+			// kilocode_change start: No "tools" capability but model is still returned (for autocomplete/vision tasks)
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsImages).toBe(true)
+			expect(parsedModel!.supportsNativeTools).toBe(false)
+			// kilocode_change
+		})
+
+		it("should return model with both vision and tools when both capabilities present", () => {
+			const modelDataWithBoth = {
+				...ollamaModelsData["qwen3-2to16:latest"],
+				capabilities: ["completion", "vision", "tools"],
+			}
+
+			const parsedModel = parseOllamaModel(modelDataWithBoth as any)
+
+			expect(parsedModel).not.toBeNull()
+			expect(parsedModel!.supportsImages).toBe(true)
+			expect(parsedModel!.supportsNativeTools).toBe(true)
+		})
 	})
 
 	describe("getOllamaModels", () => {
-		it("should fetch model list from /api/tags and details for each model from /api/show", async () => {
+		// kilocode_change: should fetch model list from /api/tags and include all models
+		it("should fetch model list from /api/tags and include all models", async () => {
 			const baseUrl = "http://localhost:11434"
 			const modelName = "devstral2to16:latest"
 
@@ -99,7 +171,7 @@ describe("Ollama Fetcher", () => {
 					"ollama.context_length": 4096,
 					"some.other.info": "value",
 				},
-				capabilities: ["completion"],
+				capabilities: ["completion", "tools"], // Has tools capability
 			}
 
 			mockedAxios.get.mockResolvedValueOnce({ data: mockApiTagsResponse })
@@ -120,6 +192,63 @@ describe("Ollama Fetcher", () => {
 
 			const expectedParsedDetails = parseOllamaModel(mockApiShowResponse as any)
 			expect(result[modelName]).toEqual(expectedParsedDetails)
+		})
+
+		// kilocode_change: should include models without tools capability but mark supportsNativeTools=false
+		it("should include models without tools capability but mark supportsNativeTools=false", async () => {
+			const baseUrl = "http://localhost:11434"
+			const modelName = "no-tools-model:latest"
+
+			const mockApiTagsResponse = {
+				models: [
+					{
+						name: modelName,
+						model: modelName,
+						modified_at: "2025-06-03T09:23:22.610222878-04:00",
+						size: 14333928010,
+						digest: "6a5f0c01d2c96c687d79e32fdd25b87087feb376bf9838f854d10be8cf3c10a5",
+						details: {
+							family: "llama",
+							families: ["llama"],
+							format: "gguf",
+							parameter_size: "23.6B",
+							parent_model: "",
+							quantization_level: "Q4_K_M",
+						},
+					},
+				],
+			}
+			const mockApiShowResponse = {
+				license: "Mock License",
+				modelfile: "FROM /path/to/blob\nTEMPLATE {{ .Prompt }}",
+				parameters: "num_ctx 4096\nstop_token <eos>",
+				template: "{{ .System }}USER: {{ .Prompt }}ASSISTANT:",
+				modified_at: "2025-06-03T09:23:22.610222878-04:00",
+				details: {
+					parent_model: "",
+					format: "gguf",
+					family: "llama",
+					families: ["llama"],
+					parameter_size: "23.6B",
+					quantization_level: "Q4_K_M",
+				},
+				model_info: {
+					"ollama.context_length": 4096,
+					"some.other.info": "value",
+				},
+				capabilities: ["completion"], // No tools capability
+			}
+
+			mockedAxios.get.mockResolvedValueOnce({ data: mockApiTagsResponse })
+			mockedAxios.post.mockResolvedValueOnce({ data: mockApiShowResponse })
+
+			const result = await getOllamaModels(baseUrl)
+
+			// kilocode_change start: Model without tools capability is now included (for autocomplete), but marked as not supporting tools
+			expect(Object.keys(result).length).toBe(1)
+			expect(result[modelName]).toBeDefined()
+			expect(result[modelName].supportsNativeTools).toBe(false)
+			// kilocode_change end
 		})
 
 		it("should return an empty list if the initial /api/tags call fails", async () => {
@@ -195,7 +324,7 @@ describe("Ollama Fetcher", () => {
 					"ollama.context_length": 4096,
 					"some.other.info": "value",
 				},
-				capabilities: ["completion"],
+				capabilities: ["completion", "tools"], // Has tools capability
 			}
 
 			mockedAxios.get.mockResolvedValueOnce({ data: mockApiTagsResponse })
@@ -260,7 +389,7 @@ describe("Ollama Fetcher", () => {
 					"ollama.context_length": 4096,
 					"some.other.info": "value",
 				},
-				capabilities: ["completion"],
+				capabilities: ["completion", "tools"], // Has tools capability
 			}
 
 			mockedAxios.get.mockResolvedValueOnce({ data: mockApiTagsResponse })

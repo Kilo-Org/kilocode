@@ -51,6 +51,7 @@ describe("getModelsByProvider", () => {
 			"human-relay", // no models
 			"nano-gpt", // dynamic provider - models fetched from API
 			"openai", // not implemented
+			"openai-responses", // not implemented
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
 			"vercel-ai-gateway", // different structure

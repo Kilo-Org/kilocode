@@ -7,6 +7,7 @@ import {
 	isMcpServerData,
 	parseMcpServerData,
 	formatUnknownMessageContent,
+	getToolIcon,
 } from "../utils.js"
 import type { ExtensionChatMessage } from "../../../../types/messages.js"
 
@@ -490,5 +491,31 @@ describe("formatUnknownMessageContent", () => {
 			const expected = JSON.stringify({ count: 42, price: 19.99 }, null, 2)
 			expect(formatUnknownMessageContent(input, "fallback")).toBe(expected)
 		})
+	})
+})
+
+describe("getToolIcon", () => {
+	it("should return 🗑️ for deleteFile tool", () => {
+		expect(getToolIcon("deleteFile")).toBe("🗑️")
+	})
+
+	it("should return ± for editedExistingFile tool", () => {
+		expect(getToolIcon("editedExistingFile")).toBe("±")
+	})
+
+	it("should return ± for appliedDiff tool", () => {
+		expect(getToolIcon("appliedDiff")).toBe("±")
+	})
+
+	it("should return 📄 for newFileCreated tool", () => {
+		expect(getToolIcon("newFileCreated")).toBe("📄")
+	})
+
+	it("should return 📝 for readFile tool", () => {
+		expect(getToolIcon("readFile")).toBe("📝")
+	})
+
+	it("should return ⚙ for unknown tools", () => {
+		expect(getToolIcon("unknownTool")).toBe("⚙")
 	})
 })

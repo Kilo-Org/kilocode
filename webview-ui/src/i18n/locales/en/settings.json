@@ -1,4 +1,5 @@
 {
+	"back": "Back to tasks view",
 	"common": {
 		"save": "Save",
 		"done": "Done",
@@ -12,7 +13,11 @@
 		"title": "Settings",
 		"saveButtonTooltip": "Save changes",
 		"nothingChangedTooltip": "Nothing changed",
-		"doneButtonTooltip": "Discard unsaved changes and close settings panel"
+		"doneButtonTooltip": "Discard unsaved changes and go back to tasks view"
+	},
+	"search": {
+		"placeholder": "Search settings...",
+		"noResults": "No settings found"
 	},
 	"unsavedChangesDialog": {
 		"title": "Unsaved Changes",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code",
-		"autoPurge": "Auto-Cleanup"
+		"autoPurge": "Auto-Cleanup",
+		"agentBehaviour": "Agent Behaviour",
+		"ghost": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Want tips or to just hang out with other Kilo Code users? Join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Community",
-		"manageSettings": "Manage Settings"
+		"manageSettings": "Manage Settings",
+		"debugMode": {
+			"label": "Enable debug mode",
+			"description": "Enable debug mode to show additional buttons in the task header for viewing API conversation history and UI messages as prettified JSON in temporary files."
+		}
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -109,6 +120,7 @@
 		"openRouterProviderRoutingLabel": "OpenRouter Provider Routing",
 		"openRouterProviderRoutingDescription": "OpenRouter routes requests to the best available providers for your embedding model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
 		"openaiCompatibleProvider": "OpenAI Compatible",
+		"openaiCompatibleResponsesProvider": "OpenAI Compatible (Responses)",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
 		"openAiCompatibleBaseUrlLabel": "Base URL",
@@ -222,11 +234,6 @@
 			"label": "Browser",
 			"description": "Automatically perform browser actions without requiring approval. Note: Only applies when the model supports computer use"
 		},
-		"retry": {
-			"label": "Retry",
-			"description": "Automatically retry failed API requests when server returns an error response",
-			"delayLabel": "Delay before retrying the request"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Enable auto-approval of individual MCP tools in the MCP Servers view (requires both this setting and the tool's individual \"Always allow\" checkbox)"
@@ -286,6 +293,7 @@
 		"makeActiveProfile": "Make Active Profile",
 		"makeActiveTooltip": "Activate this profile to use it for API requests",
 		"apiProvider": "API Provider",
+		"apiProviderDocs": "Provider Docs",
 		"model": "Model",
 		"nameEmpty": "Name cannot be empty",
 		"nameExists": "A profile with this name already exists",
@@ -323,10 +331,40 @@
 		"apiKeyStorageNotice": "API keys are stored securely in VSCode's Secret Storage",
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Get Glama API Key",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Use custom base URL",
 		"useReasoning": "Enable reasoning",
 		"useHostHeader": "Use custom Host header",
-		"useLegacyFormat": "Use legacy OpenAI API format",
 		"customHeaders": "Custom Headers",
 		"headerName": "Header name",
 		"headerValue": "Header value",
@@ -342,7 +380,6 @@
 		"getRequestyApiKey": "Create new Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Use custom base URL",
-		"openRouterTransformsText": "Compress prompts and message chains to the context size (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Get Anthropic API Key",
 		"anthropicUseAuthToken": "Pass Anthropic API Key as Authorization header instead of X-Api-Key",
@@ -352,6 +389,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Enter deployment name...",
 		"awsBedrock1MContextBetaLabel": "Enable 1M context window (Beta)",
 		"awsBedrock1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Enable 1M context window (Beta)",
+		"vertex1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
 		"basetenApiKey": "Baseten API Key",
 		"getBasetenApiKey": "Get Baseten API Key",
 		"cerebrasApiKey": "Cerebras API Key",
@@ -463,6 +502,14 @@
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Use cross-region inference",
 		"awsGlobalInference": "Use Global inference (auto-select optimal AWS Region)",
+		"awsServiceTier": "Service Tier",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Balanced performance and cost",
+		"awsServiceTierFlex": "Flex (50% discount)",
+		"awsServiceTierFlexDesc": "Lower cost, higher latency for non-critical tasks",
+		"awsServiceTierPriority": "Priority (75% premium)",
+		"awsServiceTierPriorityDesc": "Fastest performance for mission-critical applications",
+		"awsServiceTierNote": "Service tiers affect pricing and performance. Flex offers 50% discount with higher latency, Priority offers 25% better performance with 75% premium.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Use custom VPC endpoint",
 			"vpcEndpointUrlPlaceholder": "Enter VPC Endpoint URL (optional)",
@@ -600,6 +647,7 @@
 		},
 		"verbosity": {
 			"label": "Output Verbosity",
+			"max": "Max",
 			"high": "High",
 			"medium": "Medium",
 			"low": "Low",
@@ -612,21 +660,6 @@
 			"placeholder": "Default: claude",
 			"maxTokensLabel": "Max Output Tokens",
 			"maxTokensDescription": "Maximum number of output tokens for Claude Code responses. Default is 8000."
-		},
-		"geminiCli": {
-			"description": "This provider uses OAuth authentication from the Gemini CLI tool and does not require API keys.",
-			"oauthPath": "OAuth Credentials Path (optional)",
-			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.gemini/oauth_creds.json).",
-			"instructions": "If you haven't authenticated yet, please run",
-			"instructionsContinued": "in your terminal first.",
-			"setupLink": "Gemini CLI Setup Instructions",
-			"requirementsTitle": "Important Requirements",
-			"requirement1": "First, you need to install the Gemini CLI tool",
-			"requirement2": "Then, run gemini in your terminal and make sure you Log in with Google",
-			"requirement3": "Only works with personal Google accounts (not Google Workspace accounts)",
-			"requirement4": "Does not use API keys - authentication is handled via OAuth",
-			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
-			"freeAccess": "Free tier access via OAuth authentication"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth Credentials Path (optional)",
@@ -723,6 +756,10 @@
 		"showTimestamps": {
 			"label": "Show timestamps",
 			"description": "Show timestamp for every message in the chat view"
+		},
+		"showDiffStats": {
+			"label": "Show diff stats",
+			"description": "Display lines added/removed statistics in the task header"
 		}
 	},
 	"ghost": {
@@ -834,6 +871,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status max files",
 			"description": "Maximum number of file entries to include in git status context. Set to 0 to disable. Branch info is always shown when > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Enable subfolder rules",
+			"description": "Recursively discover and load .roo/rules and AGENTS.md files from subdirectories. Useful for monorepos with per-package rules."
 		}
 	},
 	"terminal": {
@@ -1019,6 +1060,17 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Parallel tool calls",
 			"description": "When enabled, the native protocol can execute multiple tools in a single assistant message turn."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Enable custom tools",
+			"description": "When enabled, Kilo can load and use custom TypeScript/JavaScript tools from your project's .kilocode/tools directory or ~/.kilocode/tools for global tools. Note: these tools will automatically be auto-approved.",
+			"toolsHeader": "Available Custom Tools",
+			"noTools": "No custom tools loaded. Add .ts or .js files to your project's .kilocode/tools directory or ~/.kilocode/tools for global tools.",
+			"refreshButton": "Refresh",
+			"refreshing": "Refreshing...",
+			"refreshSuccess": "Tools refreshed successfully",
+			"refreshError": "Failed to refresh tools",
+			"toolParameters": "Parameters"
 		}
 	},
 	"promptCaching": {
@@ -1058,7 +1110,9 @@
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
 		"useCustomModel": "Use custom: {{modelId}}",
-		"simplifiedExplanation": "You can adjust detailed model settings later."
+		"simplifiedExplanation": "You can adjust detailed model settings later.",
+		"recommendedModels": "Recommended models",
+		"allModels": "All models"
 	},
 	"footer": {
 		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>.",

@@ -23,14 +23,14 @@
 		"clean": "rimraf dist .turbo"
 	},
 	"dependencies": {
-		"zod": "^3.25.61"
+		"zod": "3.25.76"
 	},
 	"devDependencies": {
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/node": "20.x",
 		"globals": "^16.3.0",
-		"tsup": "^8.3.5",
+		"tsup": "^8.4.0",
 		"vitest": "^3.2.3"
 	}
 }

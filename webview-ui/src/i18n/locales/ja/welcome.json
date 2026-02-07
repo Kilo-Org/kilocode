@@ -6,10 +6,10 @@
 	"routers": {
 		"requesty": {
 			"description": "最適化されたLLMルーター",
-			"incentive": "$1の無料クレジット"
+			"incentive": "無料の$1クレジット"
 		},
 		"openrouter": {
-			"description": "LLMsのための統一インターフェース"
+			"description": "LLM向けの統一インターフェース"
 		},
 		"roo": {
 			"description": "始めるための最高の無料モデル",
@@ -17,29 +17,41 @@
 		}
 	},
 	"chooseProvider": "Kilo Codeが機能するには、APIキーが必要です。",
+	"landing": {
+		"greeting": "Roo Codeへようこそ！",
+		"introduction": "組み込みおよび拡張可能なモードを備えたRoo Codeは、計画、アーキテクチャ設計、コーディング、デバッグ、そして今までにない生産性向上を可能にします。",
+		"accountMention": "始めるには、Roo Code Cloudアカウントを作成してください。強力なモデル、ウェブコントロール、分析、サポート、その他をご利用いただけます。",
+		"getStarted": "Rooアカウントを作成",
+		"noAccount": "またはアカウントなしで使用"
+	},
 	"providerSignup": {
+		"heading": "プロバイダーを選択",
+		"chooseProvider": "Rooが機能するにはLLMプロバイダーが必要です。始めるために1つを選択してください。後から追加することもできます。",
 		"rooCloudProvider": "Roo Code Cloudプロバイダー",
-		"rooCloudDescription": "Rooを使用する最も簡単な方法。低コストで厳選された無料および有料モデルの組み合わせ",
+		"rooCloudDescription": "始める最も簡単な方法は、Roo Code Cloudプロバイダーを使用することです。無料および有料モデルの厳選されたミックスを低コストで提供します。",
 		"learnMore": "詳細を見る",
-		"useAnotherProvider": "別のプロバイダーを使用",
-		"useAnotherProviderDescription": "APIキーを入力して始める。",
-		"noApiKeys": "キーを扱いたくないですか？Roo Code Cloudプロバイダーを選びましょう。",
-		"getStarted": "始める"
+		"useAnotherProvider": "サードパーティプロバイダー",
+		"useAnotherProviderDescription": "APIキーを入力して開始します。",
+		"noApiKeys": "APIキーと別のアカウントを処理したくありませんか?",
+		"backToRoo": "Roo Code Cloudプロバイダーを選択してください。",
+		"goBack": "戻る",
+		"finish": "完了"
 	},
 	"waitingForCloud": {
-		"heading": "Roo Code Cloudにお連れします...",
-		"description": "ブラウザでサインアップを完了すると、自動的にここに戻ります。",
-		"noPrompt": "URLを開くように促されない場合は、<clickHere>ここをクリック</clickHere>してください。",
-		"havingTrouble": "サインアップを完了しましたが問題がある場合は、<clickHere>ここをクリック</clickHere>してください。",
-		"pasteUrl": "ブラウザからコールバックURLを貼り付けてください：",
-		"invalidURL": "有効なコールバックURLのようには見えません。Roo Code Cloudがブラウザに表示しているものをコピーしてください。",
+		"heading": "Roo Code Cloudにログイン中...",
+		"description": "Roo Code Cloudに登録するためにブラウザーに移動します。その後、ここに戻って完了します。",
+		"noPrompt": "URLを開くように求められない場合は、<clickHere>ここをクリック</clickHere>してください。",
+		"havingTrouble": "登録を完了しましたがトラブルが発生している場合は、<clickHere>ここをクリック</clickHere>してください。",
+		"pasteUrl": "ブラウザーに表示されているコールバックURLを貼り付けます:",
+		"docsLink": "機能していませんか？<DocsLink>ドキュメントを確認</DocsLink>してください。",
+		"invalidURL": "有効なコールバックURLのようには見えません。Roo Code Cloudがブラウザーに表示しているものをコピーしてください。",
 		"goBack": "戻る"
 	},
-	"startRouter": "LLMルーターの使用をお勧めします：",
-	"startCustom": "または、あなた自身のAPIキーを使用できます：",
+	"startRouter": "LLMルーターの使用をお勧めします:",
+	"startCustom": "または、独自のAPIキーを持ってくることもできます:",
 	"telemetry": {
 		"helpImprove": "Kilo Codeの改善にご協力ください",
 		"helpImproveMessage": "Kilo Codeはバグの修正と拡張機能の改善のため、エラーと使用データを収集します。このテレメトリはコード、プロンプト、個人情報を収集しません。<settingsLink>設定</settingsLink>でこれを無効にできます。"
 	},
-	"importSettings": "設定をインポート"
+	"importSettings": "設定のインポート"
 }

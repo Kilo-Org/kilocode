@@ -9,6 +9,7 @@
 		"tokens": "Token",
 		"cache": "Cache",
 		"apiCost": "Biaya API",
+		"changes": "Perubahan",
 		"size": "Ukuran",
 		"condenseContext": "Kondensasi konteks secara cerdas",
 		"contextWindow": "Panjang Konteks",
@@ -96,10 +97,15 @@
 		"title": "Hentikan",
 		"tooltip": "Akhiri tugas saat ini"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Hentikan tugas saat ini"
+	},
 	"cancel": {
 		"title": "Batal",
 		"tooltip": "Batalkan operasi saat ini"
 	},
+	"enqueueMessage": "Tambahkan pesan ke antrean (akan dikirim setelah tugas saat ini selesai)",
 	"scrollToBottom": "Gulir ke bawah chat",
 	"about": "Buat, refaktor, dan debug kode dengan bantuan AI. Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
 	"docs": "Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
@@ -149,17 +155,20 @@
 		"streaming": "Permintaan API...",
 		"cancelled": "Permintaan API Dibatalkan",
 		"streamingFailed": "Streaming API Gagal",
-		"errorTitle": "Kesalahan API {{code}}",
+		"rateLimitWait": "Pembatasan rate",
+		"errorTitle": "Kesalahan Penyedia {{code}}",
 		"errorMessage": {
 			"docs": "Dokumentasi",
+			"goToSettings": "Pengaturan",
 			"400": "Penyedia tidak dapat memproses permintaan seperti yang dibuat. Hentikan tugas dan coba pendekatan berbeda.",
 			"401": "Tidak dapat mengautentikasi dengan penyedia. Harap periksa konfigurasi kunci API Anda.",
 			"402": "Tampaknya Anda telah kehabisan dana/kredit di akun Anda. Pergi ke penyedia Anda dan tambahkan lebih banyak untuk melanjutkan.",
 			"403": "Tidak sah. Kunci API Anda valid, tetapi penyedia menolak untuk menyelesaikan permintaan ini.",
 			"429": "Terlalu banyak permintaan. Anda dibatasi tingkat oleh penyedia. Harap tunggu sebentar sebelum panggilan API berikutnya Anda.",
 			"500": "Kesalahan server penyedia. Ada yang salah di sisi penyedia, tidak ada yang salah dengan permintaan Anda.",
-			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Kilo.",
-			"connection": "Kesalahan koneksi. Pastikan Anda memiliki koneksi internet yang berfungsi."
+			"unknown": "Kesalahan API tidak diketahui, klik Detail untuk informasi lebih lanjut.",
+			"connection": "Kesalahan koneksi. Pastikan Anda memiliki koneksi internet yang berfungsi.",
+			"claudeCodeNotAuthenticated": "Anda perlu masuk untuk menggunakan Claude Code. Buka Pengaturan dan klik \"Masuk ke Claude Code\" untuk mengautentikasi."
 		}
 	},
 	"checkpoint": {
@@ -296,14 +305,24 @@
 	},
 	"taskCompleted": "Tugas Selesai",
 	"error": "Error",
+	"modelResponseIncomplete": "Respons Model Tidak Lengkap",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model gagal menggunakan alat apa pun dalam responsnya. Ini biasanya terjadi ketika model hanya memberikan teks/penalaran tanpa memanggil alat yang diperlukan untuk menyelesaikan tugas.",
+		"noToolsUsedDetails": "Model memberikan teks/penalaran tetapi tidak memanggil alat yang diperlukan. Ini biasanya menunjukkan bahwa model salah memahami tugas atau mengalami kesulitan menentukan alat mana yang akan digunakan. Model telah secara otomatis diminta untuk mencoba lagi dengan penggunaan alat yang tepat.",
+		"noAssistantMessages": "Model tidak memberikan konten respons apa pun. Ini mungkin menunjukkan masalah dengan API atau output model.",
+		"noAssistantMessagesDetails": "Model bahasa mengembalikan respons kosong tanpa teks atau panggilan alat apa pun. Ini dapat terjadi karena masalah API, pembatasan laju, atau masalah khusus model. Model telah secara otomatis diminta untuk mencoba lagi."
+	},
 	"diffError": {
 		"title": "Edit Tidak Berhasil"
 	},
 	"troubleMessage": "Kilo Code mengalami masalah...",
 	"errorDetails": {
+		"link": "Detail",
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
-		"copied": "Disalin!"
+		"copied": "Disalin!",
+		"diagnostics": "Dapatkan informasi kesalahan terperinci",
+		"proxyProvider": "Tampaknya kamu menggunakan penyedia berbasis proxy. Pastikan untuk memeriksa log-nya dan memastikan tidak menulis ulang permintaan Roo."
 	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
@@ -324,7 +343,7 @@
 		"triggerLabel_zero": "0 disetujui otomatis",
 		"triggerLabel_one": "1 disetujui otomatis",
 		"triggerLabel_other": "{{count}} disetujui otomatis",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} Dirilis",
@@ -337,9 +356,10 @@
 			"goToSettingsButton": "Pergi ke Pengaturan"
 		},
 		"release": {
-			"heading": "Terbaru:",
-			"contextRewind": "Kondensasi konteks yang ditingkatkan sekarang memungkinkan Anda mengembalikan konteks sebelumnya secara penuh saat memutar ulang ke checkpoint",
-			"rooProvider": "Penyedia Roo Code Cloud sekarang mempertahankan konten penalaran dan menggunakan alat asli secara default untuk kinerja yang lebih baik"
+			"heading": "Yang Baru:",
+			"openaiCodexProvider": "OpenAI - ChatGPT Plus/Pro Provider ditambahkan yang memberikan akses berbasis langganan ke model Codex tanpa biaya per-token.",
+			"gpt52codexModel": "Model gpt-5.2-codex baru ditambahkan ke Roo Code Router, provider OpenAI standar, dan lebih banyak lagi.",
+			"bugFixes": "Memperbaiki kebocoran memori yang menyebabkan layar abu-abu, masalah tanda tangan pemikiran Gemini, dan peningkatan stabilitas lainnya."
 		},
 		"cloudAgents": {
 			"heading": "Baru di Cloud:",
@@ -358,8 +378,14 @@
 		"copyToInput": "Salin ke input (sama dengan shift + klik)",
 		"timerPrefix": "Persetujuan otomatis diaktifkan. Memilih dalam {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Biaya (termasuk subtugas): ${{cost}}",
+		"total": "Total Biaya: ${{cost}}",
+		"includesSubtasks": "Termasuk biaya subtugas"
+	},
 	"browser": {
 		"session": "Sesi Browser",
+		"active": "Aktif",
 		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",

@@ -1,0 +1,30 @@
+{
+	"name": "@roo-code/core",
+	"description": "Platform agnostic core functionality for Roo Code.",
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./cli": "./src/cli.ts",
+		"./browser": "./src/browser.ts"
+	},
+	"scripts": {
+		"lint": "eslint src --ext=ts --max-warnings=0",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run",
+		"clean": "rimraf .turbo"
+	},
+	"dependencies": {
+		"@roo-code/types": "workspace:^",
+		"esbuild": "^0.25.0",
+		"execa": "^9.5.2",
+		"openai": "^5.12.2",
+		"zod": "^3.25.61"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@roo-code/config-typescript": "workspace:^",
+		"@types/node": "^24.1.0",
+		"vitest": "^3.2.3"
+	}
+}

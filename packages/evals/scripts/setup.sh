@@ -185,8 +185,8 @@ fi
 # Install language runtimes via mise
 if ! command -v node &>/dev/null; then
   echo "📦 Installing Node.js via mise..."
-  mise install node@20.19.2 || exit 1
-  mise use --global node@20.19.2 || exit 1
+  mise install node@20.20.0 || exit 1
+  mise use --global node@20.20.0 || exit 1
   eval "$(mise activate bash)"
   NODE_VERSION=$(node --version)
   echo "✅ Node.js is installed ($NODE_VERSION)"
@@ -195,7 +195,7 @@ else
   echo "✅ Node.js is installed ($NODE_VERSION)"
 fi
 
-if [[ $(node --version) != "v20.19.2" ]]; then
+if [[ $(node --version) != "v20.20.0" ]]; then
   NODE_VERSION=$(node --version)
   echo "🚨 You have the wrong version of node installed ($NODE_VERSION)."
   echo "💡 If you are using nvm then run 'nvm install' to install the version specified by the repo's .nvmrc."

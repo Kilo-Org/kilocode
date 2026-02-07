@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Trợ lý Lập trình AI, Copilot và Tự động Hoàn thành",
-	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
+	"extension.description": "Trợ lý lập trình AI nguồn mở tạo mã từ ngôn ngữ tự nhiên, tự động hóa tác vụ và chạy lệnh terminal. Bao gồm tự động hoàn thành inline, tự động hóa trình duyệt, tái cấu trúc tự động và các chế độ tùy chỉnh cho lập kế hoạch, lập trình và gỡ lỗi. Hỗ trợ hơn 500 mô hình AI bao gồm Claude (Anthropic), Gemini, Grok, GPT, Codex và GLM.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
 	"command.fixCode.title": "Sửa Mã",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "Kích thước lô cho các hoạt động nhúng trong quá trình lập chỉ mục mã. Điều chỉnh điều này dựa trên giới hạn của nhà cung cấp API của bạn. Mặc định là 60.",
 	"settings.toolProtocol.description": "Giao thức công cụ để sử dụng cho các tương tác AI. XML là giao thức mặc định và được khuyến nghị. Bản gốc là thử nghiệm và có thể không hoạt động với tất cả các nhà cung cấp.",
 	"settings.debug.description": "Bật chế độ gỡ lỗi để hiển thị các nút bổ sung để xem lịch sử hội thoại API và thông điệp giao diện người dùng dưới dạng JSON được định dạng trong các tệp tạm thời.",
+	"settings.debugProxy.enabled.description": "**Bật Debug Proxy** — Chuyển hướng tất cả yêu cầu mạng đi ra qua một proxy để debug MITM. Chỉ hoạt động khi bạn chạy ở chế độ gỡ lỗi (F5).",
+	"settings.debugProxy.serverUrl.description": "Proxy URL (vd: `http://127.0.0.1:8888`). Chỉ được dùng khi **Debug Proxy** được bật.",
+	"settings.debugProxy.tlsInsecure.description": "Chấp nhận chứng chỉ self-signed từ proxy. **Bắt buộc cho việc kiểm tra MITM.** ⚠️ Không an toàn — chỉ dùng cho debug cục bộ.",
 	"ghost.input.title": "Nhấn 'Enter' để xác nhận hoặc 'Escape' để hủy",
 	"ghost.input.placeholder": "Mô tả những gì bạn muốn làm...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",

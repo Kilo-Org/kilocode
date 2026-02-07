@@ -7,6 +7,14 @@ import { modeCommand } from "../mode.js"
 import type { CommandContext } from "../core/types.js"
 import type { ModeConfig } from "../../types/messages.js"
 
+// Mock getSearchedPaths
+vi.mock("../../config/customModes.js", () => ({
+	getSearchedPaths: vi.fn().mockReturnValue([
+		{ type: "global", path: "/global/path/custom_modes.yaml", found: false },
+		{ type: "project", path: "/project/path/.kilocodemodes", found: true, modesCount: 1 },
+	]),
+}))
+
 describe("modeCommand", () => {
 	let mockContext: CommandContext
 	let mockAddMessage: ReturnType<typeof vi.fn>
@@ -60,7 +68,12 @@ describe("modeCommand", () => {
 			sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
 			refreshTerminal: vi.fn().mockResolvedValue(undefined),
 			chatMessages: [],
-		}
+			currentTask: undefined,
+			modelListPageIndex: 0,
+			modelListFilters: { search: "" },
+			updateModelListFilters: vi.fn(),
+			updateModelListPageIndex: vi.fn(),
+		} as unknown as CommandContext
 	})
 
 	describe("command metadata", () => {
@@ -184,6 +197,9 @@ describe("modeCommand", () => {
 			const message = mockAddMessage.mock.calls[0][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain('Invalid mode "invalid-mode"')
+			expect(message.content).toContain("The CLI searched for custom modes in:")
+			expect(message.content).toContain("/global/path/custom_modes.yaml")
+			expect(message.content).toContain("/project/path/.kilocodemodes")
 			expect(message.content).toContain("Available modes:")
 		})
 
@@ -217,6 +233,8 @@ describe("modeCommand", () => {
 				name: "Custom Mode",
 				description: "A custom mode",
 				source: "project",
+				roleDefinition: "",
+				groups: ["read", "edit", "browser", "command", "mcp"],
 			}
 			mockContext.customModes = [customMode]
 			mockContext.args = []
@@ -235,6 +253,8 @@ describe("modeCommand", () => {
 				name: "Custom Mode",
 				description: "A custom mode",
 				source: "project",
+				roleDefinition: "",
+				groups: ["read", "edit", "browser", "command", "mcp"],
 			}
 			mockContext.customModes = [customMode]
 			mockContext.args = ["custom"]
@@ -250,6 +270,8 @@ describe("modeCommand", () => {
 				name: "Custom Mode",
 				description: "A custom mode",
 				source: "project",
+				roleDefinition: "",
+				groups: ["read", "edit", "browser", "command", "mcp"],
 			}
 			mockContext.customModes = [customMode]
 			mockContext.args = ["custom"]
@@ -266,6 +288,8 @@ describe("modeCommand", () => {
 				name: "Org Mode",
 				description: "An org mode",
 				source: "organization",
+				roleDefinition: "",
+				groups: ["read", "edit", "browser", "command", "mcp"],
 			}
 			mockContext.customModes = [orgMode]
 			mockContext.args = []

@@ -9,22 +9,31 @@ import {
 	anthropicDefaultModelId,
 	anthropicModels,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
+	ApiProviderError,
+	TOOL_PROTOCOL,
 } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { ApiStream } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 import { filterNonAnthropicBlocks } from "../transform/anthropic-filter"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+import { handleProviderError } from "./utils/error-handler"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
-import { convertOpenAIToolsToAnthropic } from "./kilocode/nativeToolCallHelpers"
+import {
+	convertOpenAIToolsToAnthropic,
+	convertOpenAIToolChoiceToAnthropic,
+} from "../../core/prompts/tools/native-tools/converters"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
+	private readonly providerName = "Anthropic"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -68,27 +77,47 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		}
 
 		// kilocode_change start
-		if (verbosity) {
+		if (thinking?.type === "adaptive") {
+			betas.push(
+				"adaptive-thinking-2026-01-28",
+				"interleaved-thinking-2025-05-14",
+				"effort-2025-11-24",
+				"max-effort-2026-01-24",
+			)
+		} else if (verbosity) {
 			betas.push("effort-2025-11-24")
 		}
 		// kilocode_change end
 
-		// Prepare native tool parameters if tools are provided and protocol is not XML
+		// Enable native tools by default using resolveToolProtocol (which checks model's defaultToolProtocol)
+		// This matches OpenRouter's approach of always including tools when provided
 		// Also exclude tools when tool_choice is "none" since that means "don't use tools"
+		// IMPORTANT: Use metadata.toolProtocol if provided (task's locked protocol) for consistency
+		const model = this.getModel()
+		const toolProtocol = resolveToolProtocol(this.options, model.info, metadata?.toolProtocol)
 		const shouldIncludeNativeTools =
 			metadata?.tools &&
 			metadata.tools.length > 0 &&
-			metadata?.toolProtocol !== "xml" &&
+			toolProtocol === TOOL_PROTOCOL.NATIVE &&
 			metadata?.tool_choice !== "none"
+
+		const isHaikuInstruct = modelId.toLowerCase().includes("haiku") && thinking?.type !== "enabled" // kilocode_change
 
 		const nativeToolParams = shouldIncludeNativeTools
 			? {
 					tools: convertOpenAIToolsToAnthropic(metadata.tools!),
-					tool_choice: this.convertOpenAIToolChoice(metadata.tool_choice, metadata.parallelToolCalls),
+					tool_choice:
+						// kilocode_change start
+						// Haiku will often forget to call tools and output random XML when tool_choice is not any
+						isHaikuInstruct
+							? { type: "any" as const, disable_parallel_tool_use: !metadata.parallelToolCalls }
+							: // kilocode_change end
+								convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
 				}
 			: {}
 
 		switch (modelId) {
+			case "claude-opus-4-6": // kilocode_change
 			case "claude-sonnet-4-5":
 			case "claude-sonnet-4-20250514":
 			case "claude-opus-4-5-20251101":
@@ -118,79 +147,104 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 				const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
 				const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
 
-				stream = await this.client.messages.create(
-					{
-						model: apiModelId, // kilocode_change
-						max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
-						temperature,
-						thinking,
-						// Setting cache breakpoint for system prompt so new tasks can reuse it.
-						system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
-						messages: sanitizedMessages.map((message, index) => {
-							if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
-								return {
-									...message,
-									content:
-										typeof message.content === "string"
-											? [{ type: "text", text: message.content, cache_control: cacheControl }]
-											: message.content.map((content, contentIndex) =>
-													contentIndex === message.content.length - 1
-														? { ...content, cache_control: cacheControl }
-														: content,
-												),
+				try {
+					stream = await this.client.messages.create(
+						{
+							model: apiModelId, // kilocode_change
+							max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
+							temperature,
+							thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
+							// Setting cache breakpoint for system prompt so new tasks can reuse it.
+							system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
+							messages: sanitizedMessages.map((message, index) => {
+								if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
+									return {
+										...message,
+										content:
+											typeof message.content === "string"
+												? [{ type: "text", text: message.content, cache_control: cacheControl }]
+												: message.content.map((content, contentIndex) =>
+														contentIndex === message.content.length - 1
+															? { ...content, cache_control: cacheControl }
+															: content,
+													),
+									}
 								}
-							}
-							return message
-						}),
-						stream: true,
-						// kilocode_change start
-						...(verbosity
-							? {
-									output_config: {
-										effort: verbosity,
-									},
-								}
-							: {}),
-						// kilocode_change end
-						...nativeToolParams,
-					},
-					(() => {
-						// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
-						// https://github.com/anthropics/anthropic-sdk-typescript?tab=readme-ov-file#default-headers
-						// https://github.com/anthropics/anthropic-sdk-typescript/commit/c920b77fc67bd839bfeb6716ceab9d7c9bbe7393
+								return message
+							}),
+							stream: true,
+							// kilocode_change start
+							...(verbosity
+								? {
+										output_config: {
+											effort: verbosity,
+										},
+									}
+								: {}),
+							// kilocode_change end
+							...nativeToolParams,
+						},
+						(() => {
+							// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
+							// https://github.com/anthropics/anthropic-sdk-typescript?tab=readme-ov-file#default-headers
+							// https://github.com/anthropics/anthropic-sdk-typescript/commit/c920b77fc67bd839bfeb6716ceab9d7c9bbe7393
 
-						// Then check for models that support prompt caching
-						switch (modelId) {
-							case "claude-sonnet-4-5":
-							case "claude-sonnet-4-20250514":
-							case "claude-opus-4-5-20251101":
-							case "claude-opus-4-1-20250805":
-							case "claude-opus-4-20250514":
-							case "claude-3-7-sonnet-20250219":
-							case "claude-3-5-sonnet-20241022":
-							case "claude-3-5-haiku-20241022":
-							case "claude-3-opus-20240229":
-							case "claude-haiku-4-5-20251001":
-							case "claude-3-haiku-20240307":
-								betas.push("prompt-caching-2024-07-31")
-								return { headers: { "anthropic-beta": betas.join(",") } }
-							default:
-								return undefined
-						}
-					})(),
-				)
+							// Then check for models that support prompt caching
+							switch (modelId) {
+								case "claude-opus-4-6": // kilocode_change
+								case "claude-sonnet-4-5":
+								case "claude-sonnet-4-20250514":
+								case "claude-opus-4-5-20251101":
+								case "claude-opus-4-1-20250805":
+								case "claude-opus-4-20250514":
+								case "claude-3-7-sonnet-20250219":
+								case "claude-3-5-sonnet-20241022":
+								case "claude-3-5-haiku-20241022":
+								case "claude-3-opus-20240229":
+								case "claude-haiku-4-5-20251001":
+								case "claude-3-haiku-20240307":
+									betas.push("prompt-caching-2024-07-31")
+									return { headers: { "anthropic-beta": betas.join(",") } }
+								default:
+									return undefined
+							}
+						})(),
+					)
+				} catch (error) {
+					TelemetryService.instance.captureException(
+						new ApiProviderError(
+							error instanceof Error ? error.message : String(error),
+							this.providerName,
+							modelId,
+							"createMessage",
+						),
+					)
+					throw error
+				}
 				break
 			}
 			default: {
-				stream = await this.client.messages.create({
-					model: apiModelId, // kilocode_change
-					max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
-					temperature,
-					system: [{ text: systemPrompt, type: "text" }],
-					messages: sanitizedMessages,
-					stream: true,
-					...nativeToolParams,
-				}) // kilocode_change removed: as any
+				try {
+					stream = await this.client.messages.create({
+						model: apiModelId, // kilocode_change
+						max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
+						temperature,
+						system: [{ text: systemPrompt, type: "text" }],
+						messages: sanitizedMessages,
+						stream: true,
+						...nativeToolParams,
+					}) // kilocode_change removed: as any
+				} catch (error) {
+					TelemetryService.instance.captureException(
+						new ApiProviderError(
+							error instanceof Error ? error.message : String(error),
+							this.providerName,
+							modelId,
+							"createMessage",
+						),
+					)
+					throw error
+				}
 				break
 			}
 		}
@@ -408,61 +462,31 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		}
 	}
 
-	/**
-	 * Converts OpenAI tool_choice to Anthropic ToolChoice format
-	 * @param toolChoice - OpenAI tool_choice parameter
-	 * @param parallelToolCalls - When true, allows parallel tool calls. When false (default), disables parallel tool calls.
-	 */
-	private convertOpenAIToolChoice(
-		toolChoice: OpenAI.Chat.ChatCompletionCreateParams["tool_choice"],
-		parallelToolCalls?: boolean,
-	): Anthropic.Messages.MessageCreateParams["tool_choice"] | undefined {
-		// Anthropic allows parallel tool calls by default. When parallelToolCalls is false or undefined,
-		// we disable parallel tool use to ensure one tool call at a time.
-		const disableParallelToolUse = !parallelToolCalls
-
-		if (!toolChoice) {
-			// Default to auto with parallel tool use control
-			return { type: "auto", disable_parallel_tool_use: disableParallelToolUse }
-		}
-
-		if (typeof toolChoice === "string") {
-			switch (toolChoice) {
-				case "none":
-					return undefined // Anthropic doesn't have "none", just omit tools
-				case "auto":
-					return { type: "auto", disable_parallel_tool_use: disableParallelToolUse }
-				case "required":
-					return { type: "any", disable_parallel_tool_use: disableParallelToolUse }
-				default:
-					return { type: "auto", disable_parallel_tool_use: disableParallelToolUse }
-			}
-		}
-
-		// Handle object form { type: "function", function: { name: string } }
-		if (typeof toolChoice === "object" && "function" in toolChoice) {
-			return {
-				type: "tool",
-				name: toolChoice.function.name,
-				disable_parallel_tool_use: disableParallelToolUse,
-			}
-		}
-
-		return { type: "auto", disable_parallel_tool_use: disableParallelToolUse }
-	}
-
 	async completePrompt(prompt: string) {
 		let { id: model, temperature } = this.getModel()
 		const apiModelId = this.options.anthropicDeploymentName?.trim() || model // kilocode_change
 
-		const message = await this.client.messages.create({
-			model: apiModelId, // kilocode_change
-			max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
-			thinking: undefined,
-			temperature,
-			messages: [{ role: "user", content: prompt }],
-			stream: false,
-		})
+		let message
+		try {
+			message = await this.client.messages.create({
+				model: apiModelId, // kilocode_change
+				max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
+				thinking: undefined,
+				temperature,
+				messages: [{ role: "user", content: prompt }],
+				stream: false,
+			})
+		} catch (error) {
+			TelemetryService.instance.captureException(
+				new ApiProviderError(
+					error instanceof Error ? error.message : String(error),
+					this.providerName,
+					model,
+					"completePrompt",
+				),
+			)
+			throw error
+		}
 
 		const content = message.content.find(({ type }) => type === "text")
 		return content?.type === "text" ? content.text : ""

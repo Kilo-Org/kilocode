@@ -14,6 +14,7 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
+	OpenAiCodexHandler,
 	LmStudioHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
@@ -33,7 +34,6 @@ import {
 	LiteLLMHandler,
 	// kilocode_change start
 	VirtualQuotaFallbackHandler,
-	GeminiCliHandler,
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
@@ -52,10 +52,13 @@ import {
 	DeepInfraHandler,
 	MiniMaxHandler,
 	BasetenHandler,
+	OpenAiCompatibleResponsesHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
+import type { FimHandler } from "./providers/kilocode/FimHandler" // kilocode_change
+export type { FimHandler } from "./providers/kilocode/FimHandler"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -136,6 +139,15 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * Only applies when toolProtocol is "native".
 	 */
 	parallelToolCalls?: boolean
+	/**
+	 * Optional array of tool names that the model is allowed to call.
+	 * When provided, all tool definitions are passed to the model (so it can reference
+	 * historical tool calls), but only the specified tools can actually be invoked.
+	 * This is used when switching modes to prevent model errors from missing tool
+	 * definitions while still restricting callable tools to the current mode's permissions.
+	 * Only applies to providers that support function calling restrictions (e.g., Gemini).
+	 */
+	allowedFunctionNames?: string[]
 }
 
 export interface ApiHandler {
@@ -157,6 +169,14 @@ export interface ApiHandler {
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
 
+	// kilocode_change start
+	/**
+	 * Returns a FimHandler if the provider supports FIM (Fill-In-the-Middle) completions,
+	 * or undefined if FIM is not supported.
+	 */
+	fimSupport?: () => FimHandler | undefined
+	// kilocode_change end
+
 	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }
 
@@ -167,8 +187,6 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change start
 		case "kilocode":
 			return new KilocodeOpenrouterHandler(options)
-		case "gemini-cli":
-			return new GeminiCliHandler(options)
 		case "virtual-quota-fallback":
 			return new VirtualQuotaFallbackHandler(options)
 		// kilocode_change end
@@ -196,8 +214,12 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new LmStudioHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
+		case "openai-codex":
+			return new OpenAiCodexHandler(options)
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
+		case "openai-responses": // kilocode_change
+			return new OpenAiCompatibleResponsesHandler(options) // kilocode_change
 		case "deepseek":
 			return new DeepSeekHandler(options)
 		case "doubao":
@@ -269,7 +291,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "baseten":
 			return new BasetenHandler(options)
 		default:
-			apiProvider satisfies "gemini-cli" | undefined
+			apiProvider satisfies undefined
 			return new AnthropicHandler(options)
 	}
 }

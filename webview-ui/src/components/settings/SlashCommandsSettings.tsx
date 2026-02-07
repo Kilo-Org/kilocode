@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react"
-import { Plus, Globe, Folder, Settings, SquareSlash } from "lucide-react"
+import { Plus, Globe, Folder, Settings } from "lucide-react"
 import { Trans } from "react-i18next"
 
-import type { Command } from "@roo/ExtensionMessage"
+import type { Command } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -22,6 +22,7 @@ import { buildDocLink } from "@/utils/docLinks"
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SearchableSetting } from "./SearchableSetting"
 import { SlashCommandItem } from "../chat/SlashCommandItem"
 
 export const SlashCommandsSettings: React.FC = () => {
@@ -102,16 +103,15 @@ export const SlashCommandsSettings: React.FC = () => {
 
 	return (
 		<div>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<SquareSlash className="w-4" />
-					<div>{t("settings:sections.slashCommands")}</div>
-				</div>
-			</SectionHeader>
+			<SectionHeader>{t("settings:sections.slashCommands")}</SectionHeader>
 
 			<Section>
 				{/* Description section */}
-				<div className="mb-4">
+				<SearchableSetting
+					settingId="slash-commands-description"
+					section="slashCommands"
+					label={t("settings:sections.slashCommands")}
+					className="mb-4">
 					<p className="text-sm text-vscode-descriptionForeground">
 						<Trans
 							i18nKey="settings:slashCommands.description"
@@ -128,10 +128,14 @@ export const SlashCommandsSettings: React.FC = () => {
 							}}
 						/>
 					</p>
-				</div>
+				</SearchableSetting>
 
 				{/* Global Commands Section */}
-				<div className="mb-6">
+				<SearchableSetting
+					settingId="slash-commands-global"
+					section="slashCommands"
+					label={t("chat:slashCommands.globalCommands")}
+					className="mb-6">
 					<div className="flex items-center gap-1.5 mb-2">
 						<Globe className="w-3 h-3" />
 						<h4 className="text-sm font-medium m-0">{t("chat:slashCommands.globalCommands")}</h4>
@@ -169,11 +173,15 @@ export const SlashCommandsSettings: React.FC = () => {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</SearchableSetting>
 
 				{/* Workspace Commands Section - Only show if in a workspace */}
 				{hasWorkspace && (
-					<div className="mb-6">
+					<SearchableSetting
+						settingId="slash-commands-workspace"
+						section="slashCommands"
+						label={t("chat:slashCommands.workspaceCommands")}
+						className="mb-6">
 						<div className="flex items-center gap-1.5 mb-2">
 							<Folder className="w-3 h-3" />
 							<h4 className="text-sm font-medium m-0">{t("chat:slashCommands.workspaceCommands")}</h4>
@@ -211,12 +219,16 @@ export const SlashCommandsSettings: React.FC = () => {
 								</Button>
 							</div>
 						</div>
-					</div>
+					</SearchableSetting>
 				)}
 
 				{/* Built-in Commands Section */}
 				{builtInCommands.length > 0 && (
-					<div className="mb-6">
+					<SearchableSetting
+						settingId="slash-commands-built-in"
+						section="slashCommands"
+						label={t("chat:slashCommands.builtInCommands")}
+						className="mb-6">
 						<div className="flex items-center gap-1.5 mb-2">
 							<Settings className="w-3 h-3" />
 							<h4 className="text-sm font-medium m-0">{t("chat:slashCommands.builtInCommands")}</h4>
@@ -231,7 +243,7 @@ export const SlashCommandsSettings: React.FC = () => {
 								/>
 							))}
 						</div>
-					</div>
+					</SearchableSetting>
 				)}
 			</Section>
 

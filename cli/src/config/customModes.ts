@@ -9,6 +9,28 @@ import { join } from "path"
 import { homedir } from "os"
 import { parse } from "yaml"
 import type { ModeConfig } from "../types/messages.js"
+import { logs } from "../services/logs.js"
+
+/**
+ * Represents a path that was searched for custom modes
+ */
+export interface SearchedPath {
+	type: "global" | "project"
+	path: string
+	found: boolean
+	modesCount?: number
+}
+
+// Track searched paths for error reporting
+let lastSearchedPaths: SearchedPath[] = []
+
+/**
+ * Get the paths that were searched in the last loadCustomModes call
+ * @returns Array of searched path info
+ */
+export function getSearchedPaths(): SearchedPath[] {
+	return lastSearchedPaths
+}
 
 /**
  * Get the global custom modes file path
@@ -118,42 +140,64 @@ function parseCustomModes(content: string, source: "global" | "project"): ModeCo
 
 /**
  * Load custom modes from global configuration
- * @returns Array of global custom modes
+ * @returns Object with modes array and path info
  */
-async function loadGlobalCustomModes(): Promise<ModeConfig[]> {
+async function loadGlobalCustomModes(): Promise<{ modes: ModeConfig[]; pathInfo: SearchedPath }> {
 	const globalPath = getGlobalModesPath()
+	const pathInfo: SearchedPath = {
+		type: "global",
+		path: globalPath,
+		found: false,
+		modesCount: 0,
+	}
 
 	if (!existsSync(globalPath)) {
-		return []
+		logs.debug(`Global custom modes file not found: ${globalPath}`, "CustomModes")
+		return { modes: [], pathInfo }
 	}
 
 	try {
 		const content = await readFile(globalPath, "utf-8")
-		return parseCustomModes(content, "global")
-	} catch (_error) {
-		// Silent fail - return empty array if reading fails
-		return []
+		const modes = parseCustomModes(content, "global")
+		pathInfo.found = true
+		pathInfo.modesCount = modes.length
+		logs.debug(`Loaded ${modes.length} global custom mode(s) from: ${globalPath}`, "CustomModes")
+		return { modes, pathInfo }
+	} catch (error) {
+		logs.debug(`Failed to read global custom modes file: ${globalPath}`, "CustomModes", { error })
+		return { modes: [], pathInfo }
 	}
 }
 
 /**
  * Load custom modes from project configuration
  * @param workspace - Workspace directory path
- * @returns Array of project custom modes
+ * @returns Object with modes array and path info
  */
-async function loadProjectCustomModes(workspace: string): Promise<ModeConfig[]> {
+async function loadProjectCustomModes(workspace: string): Promise<{ modes: ModeConfig[]; pathInfo: SearchedPath }> {
 	const projectPath = getProjectModesPath(workspace)
+	const pathInfo: SearchedPath = {
+		type: "project",
+		path: projectPath,
+		found: false,
+		modesCount: 0,
+	}
 
 	if (!existsSync(projectPath)) {
-		return []
+		logs.debug(`Project custom modes file not found: ${projectPath}`, "CustomModes")
+		return { modes: [], pathInfo }
 	}
 
 	try {
 		const content = await readFile(projectPath, "utf-8")
-		return parseCustomModes(content, "project")
-	} catch (_error) {
-		// Silent fail - return empty array if reading fails
-		return []
+		const modes = parseCustomModes(content, "project")
+		pathInfo.found = true
+		pathInfo.modesCount = modes.length
+		logs.debug(`Loaded ${modes.length} project custom mode(s) from: ${projectPath}`, "CustomModes")
+		return { modes, pathInfo }
+	} catch (error) {
+		logs.debug(`Failed to read project custom modes file: ${projectPath}`, "CustomModes", { error })
+		return { modes: [], pathInfo }
 	}
 }
 
@@ -164,19 +208,30 @@ async function loadProjectCustomModes(workspace: string): Promise<ModeConfig[]> 
  * @returns Array of all custom mode configurations
  */
 export async function loadCustomModes(workspace: string): Promise<ModeConfig[]> {
-	const [globalModes, projectModes] = await Promise.all([loadGlobalCustomModes(), loadProjectCustomModes(workspace)])
+	const [globalResult, projectResult] = await Promise.all([
+		loadGlobalCustomModes(),
+		loadProjectCustomModes(workspace),
+	])
+
+	// Store searched paths for error reporting
+	lastSearchedPaths = [globalResult.pathInfo, projectResult.pathInfo]
 
 	// Merge modes, with project modes taking precedence over global modes
 	const modesMap = new Map<string, ModeConfig>()
 
 	// Add global modes first
-	for (const mode of globalModes) {
+	for (const mode of globalResult.modes) {
 		modesMap.set(mode.slug, mode)
 	}
 
 	// Override with project modes
-	for (const mode of projectModes) {
+	for (const mode of projectResult.modes) {
 		modesMap.set(mode.slug, mode)
+	}
+
+	const totalModes = modesMap.size
+	if (totalModes > 0) {
+		logs.info(`Loaded ${totalModes} custom mode(s) total`, "CustomModes")
 	}
 
 	return Array.from(modesMap.values())

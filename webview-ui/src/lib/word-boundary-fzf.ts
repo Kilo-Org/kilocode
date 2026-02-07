@@ -19,8 +19,8 @@ interface FzfResult<T> {
 
 // Single source of truth for word boundary characters
 // - Split at positions before uppercase letters (camelCase/PascalCase: gitRebase → git, Rebase)
-// - Split at existing delimiters: hyphen, underscore, dot, colon, whitespace, forward/back slash
-const WORD_BOUNDARY_REGEX = /(?=[A-Z])|[-_.:\s/\\]+/
+// - Split at existing delimiters: hyphen, underscore, dot, colon, whitespace, forward/back slash, brackets/parentheses
+const WORD_BOUNDARY_REGEX = /(?=[A-Z])|[[\]_.:\s/\\(){}-]+/
 
 export class Fzf<T> {
 	private items: T[]

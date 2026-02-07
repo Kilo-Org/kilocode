@@ -43,9 +43,9 @@ export const parseOllamaModel = (
 	baseUrl?: string,
 	numCtx?: number,
 	// kilocode_change end
-): ModelInfo => {
+): ModelInfo | null => {
 	// kilocode_change start
-	const contextKey = Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
+	const contextKey = rawModel.model_info && Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
 	const contextLengthFromModelInfo =
 		contextKey && typeof rawModel.model_info[contextKey] === "number" ? rawModel.model_info[contextKey] : undefined
 
@@ -63,6 +63,9 @@ export const parseOllamaModel = (
 		(contextLengthFromModelParameters !== 40960 ? contextLengthFromModelParameters : undefined) ?? // Alledgedly Ollama sometimes returns an undefind context as 40960
 		4096 // This is usually the default: https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size
 	// kilocode_change end
+	// Determine native tool support from capabilities array
+	// The capabilities array is populated by Ollama based on model metadata
+	const supportsNativeTools = rawModel.capabilities?.includes("tools") ?? false
 
 	const modelInfo: ModelInfo = Object.assign({}, ollamaDefaultModelInfo, {
 		description: `Family: ${rawModel.details.family}, Context: ${contextWindow}, Size: ${rawModel.details.parameter_size}`,
@@ -70,6 +73,7 @@ export const parseOllamaModel = (
 		supportsPromptCache: true,
 		supportsImages: rawModel.capabilities?.includes("vision"),
 		maxTokens: contextWindow || ollamaDefaultModelInfo.contextWindow,
+		supportsNativeTools, // kilocode_change: Set based on actual capability (allows non-tool models for autocomplete)
 	})
 
 	return modelInfo
@@ -112,13 +116,17 @@ export async function getOllamaModels(
 							{ headers },
 						)
 						.then((ollamaModelInfo) => {
-							models[ollamaModel.name] = parseOllamaModel(
+							const modelInfo = parseOllamaModel(
 								ollamaModelInfo.data,
 								// kilocode_change start
 								baseUrl,
 								numCtx,
 								// kilocode_change end
 							)
+							// Only include models that support native tools
+							if (modelInfo) {
+								models[ollamaModel.name] = modelInfo
+							}
 						}),
 				)
 			}

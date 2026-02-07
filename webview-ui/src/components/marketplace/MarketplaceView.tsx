@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useContext } from "react"
 import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { MarketplaceViewStateManager } from "./MarketplaceViewStateManager"
 import { useStateManager } from "./useStateManager"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { vscode } from "@/utils/vscode"
 import { MarketplaceListView } from "./MarketplaceListView"
+import { SkillsMarketplace } from "./SkillsMarketplace" // kilocode_change
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ExtensionStateContext } from "@/context/ExtensionStateContext"
@@ -13,7 +15,7 @@ import { ExtensionStateContext } from "@/context/ExtensionStateContext"
 interface MarketplaceViewProps {
 	onDone?: () => void
 	stateManager: MarketplaceViewStateManager
-	targetTab?: "mcp" | "mode"
+	targetTab?: "mcp" | "mode" | "skills" // kilocode_change - Added skills tab
 	hideHeader?: boolean // kilocode_change
 }
 export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = false }: MarketplaceViewProps) {
@@ -44,7 +46,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 	}, [state.allItems, hasReceivedInitialState])
 
 	useEffect(() => {
-		if (targetTab && (targetTab === "mcp" || targetTab === "mode")) {
+		if (targetTab && (targetTab === "mcp" || targetTab === "mode" || targetTab === "skills")) {
 			manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: targetTab } })
 		}
 	}, [targetTab, manager])
@@ -117,6 +119,9 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 	)
 	// kilocode_change end - Header messages for each tab
 
+	// kilocode_change - Skills are now fetched as part of fetchMarketplaceData
+	// No separate fetch needed - skills come with the unified marketplace data
+
 	return (
 		<TooltipProvider delayDuration={300}>
 			{/* kilocode_change: header conditionally className relative or fixed */}
@@ -129,40 +134,57 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 						<h3 className="font-bold m-0">{t("marketplace:title")}</h3>
 						<div className="flex gap-2 items-center">
 							<Button
-								variant="primary"
-								onClick={() => {
-									onDone?.()
-								}}>
-								{t("marketplace:done")}
+								variant="ghost"
+								className="px-1.5 -ml-2"
+								onClick={() => onDone?.()}
+								aria-label={t("settings:back")}>
+								<ArrowLeft />
+								<span className="sr-only">{t("settings:back")}</span>
 							</Button>
+							<h3 className="font-bold m-0">{t("marketplace:title")}</h3>
 						</div>
 					</div>
 
 					<div className="w-full mt-2">
 						<div className="flex relative py-1">
 							<div className="absolute w-full h-[2px] -bottom-[2px] bg-vscode-input-border">
+								{/* kilocode_change start - Tab indicator with fixed 33.33% width */}
 								<div
 									className={cn(
-										"absolute w-1/2 h-[2px] bottom-0 bg-vscode-button-background transition-all duration-300 ease-in-out",
-										{
-											"left-0": state.activeTab === "mcp",
-											"left-1/2": state.activeTab === "mode",
-										},
+										"absolute h-[2px] bottom-0 bg-vscode-button-background transition-all duration-300 ease-in-out w-1/3",
 									)}
+									style={{
+										left:
+											state.activeTab === "mcp"
+												? "0%"
+												: state.activeTab === "mode"
+													? "33.33%"
+													: "66.66%",
+									}}
 								/>
+								{/* kilocode_change end */}
 							</div>
 							<button
-								className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
+								className="cursor-pointer flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
 								onClick={() => manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "mcp" } })}>
 								MCP
 							</button>
 							<button
-								className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
+								className="cursor-pointer flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
 								onClick={() =>
 									manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "mode" } })
 								}>
 								Modes
 							</button>
+							{/* kilocode_change start - Skills tab button */}
+							<button
+								className="flex items-center justify-center gap-2 flex-1 text-sm font-medium rounded-sm transition-colors duration-300 relative z-10 text-vscode-foreground"
+								onClick={() =>
+									manager.transition({ type: "SET_ACTIVE_TAB", payload: { tab: "skills" } })
+								}>
+								Skills
+							</button>
+							{/* kilocode_change end */}
 						</div>
 					</div>
 				</TabHeader>
@@ -186,6 +208,11 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 							headerMessage={modesHeaderMessage} // kilocode_change
 						/>
 					)}
+					{/* kilocode_change start - Skills marketplace tab content */}
+					{state.activeTab === "skills" && (
+						<SkillsMarketplace skills={stateManager.getSkills()} isLoading={state.isFetching} />
+					)}
+					{/* kilocode_change end */}
 				</TabContent>
 			</Tab>
 		</TooltipProvider>

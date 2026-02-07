@@ -3,7 +3,7 @@ import {
 	AutocompleteCodeSnippet,
 	AutocompleteSnippet,
 	AutocompleteSnippetType,
-} from "../snippets/types"
+} from "../types"
 
 const MAX_CLIPBOARD_AGE = 5 * 60 * 1000
 

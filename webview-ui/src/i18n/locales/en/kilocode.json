@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "How would you like to get started?",
+		"freeModels": {
+			"title": "Free models",
+			"description": "Start coding immediately"
+		},
+		"premiumModels": {
+			"title": "Premium models",
+			"description": "Sign up. New users get $5 in credits"
+		},
+		"byok": {
+			"title": "Bring my own Key",
+			"description": "Advanced. Use your own account or subscription"
+		}
+	},
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"introText2": "It works with the latest AI models like Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, and 450+ more.",
 		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low",
-		"newOrganization": "Using Kilo for work?"
+		"switchToFreeModel": "Switch to Free Model instead"
 	},
 	"memoryWarning": {
 		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
@@ -28,6 +43,11 @@
 		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
 		"continueWith": "Continue with {{model}}",
 		"continue": "Continue"
+	},
+	"unauthorizedError": {
+		"title": "You need to sign in to use the {{modelId}} model",
+		"message": "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
+		"loginButton": "Sign In"
 	},
 	"pricing": {
 		"costUnknown": "cost unknown",
@@ -46,13 +66,16 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Servers"
+			"mcp": "MCP Servers",
+			"agentBehaviour": "Agent Behaviour",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
 			"apiKey": "Kilo Code API Key",
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code",
+			"loginForPremiumModels": "Log in to access premium models & features",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Manage Organization-level Provider Routing",
@@ -70,8 +93,7 @@
 					"deny": "Deny prompt training",
 					"zdr": "Zero data retention"
 				}
-			},
-			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Context window",
@@ -149,7 +171,14 @@
 	},
 	"docs": "Docs",
 	"rules": {
-		"tooltip": "Manage Kilo Code Rules & Workflows",
+		"tooltip": "Manage Agent Behaviour ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Rules",
+			"workflows": "Workflows",
+			"mcps": "MCPs",
+			"modes": "Modes",
+			"skills": "Skills"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Rules",
@@ -209,6 +238,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "New here?",
+		"tryOneOfThese": "Try one of these ideas to get started:",
 		"suggestionText": "<suggestionButton>Click here</suggestionButton> for a cool idea, then tap on <sendIcon /> and watch me do magic!",
 		"ideas": {
 			"idea1": "Make a spinning, glowing 3D sphere that responds to mouse movements. Make the app work in the browser.",
@@ -230,31 +260,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Triggers",
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions",
 			"model": "Model",
 			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Pause to Complete",
-				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
+				"label": "Auto-trigger Suggestions",
+				"description": "Automatically show inline code suggestions when you pause typing."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto Trigger Delay",
-				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manual Autocomplete ({{keybinding}})",
-				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"enableChatAutocomplete": {
-				"label": "Chat Input Autocomplete",
-				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "Snooze Autocomplete",
-				"description": "Temporarily pause autocomplete suggestions for a specified duration.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "Snooze",
 				"unsnooze": "Unsnooze",
-				"currentlySnoozed": "Autocomplete is currently snoozed.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 minute",
 					"5min": "5 minutes",
@@ -320,6 +351,9 @@
 		},
 		"modes": {
 			"description": "These modes are available from the community. Click <1>here</1> to edit your own custom modes."
+		},
+		"skills": {
+			"description": "Browse and discover skills from the community. Skills provide specialized instructions for specific tasks."
 		}
 	},
 	"modes": {
@@ -355,6 +389,26 @@
 			"openAiReason": "You need a valid OpenAI provider with an API key to use voice transcription.",
 			"ffmpegReason": "You need FFmpeg installed. <ffmpegLink>Click here</ffmpegLink> to have Kilo help you install FFmpeg.",
 			"ffmpegMessage": "Help me install FFmpeg"
+		},
+		"microphone": {
+			"label": "Microphone",
+			"description": "Select the microphone device for speech-to-text",
+			"defaultOption": "System Default",
+			"loading": "Loading microphone devices...",
+			"noDevices": "No microphone devices found",
+			"refresh": "Refresh"
+		}
+	},
+	"skills": {
+		"description": "Skills provide specialized instructions for specific tasks. They are automatically applied when relevant to your request.",
+		"noSkills": "No skills installed",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Global Skills",
+		"deleteDialog": {
+			"title": "Delete Skill",
+			"description": "Are you sure you want to delete the skill \"{{skillName}}\"? This action cannot be undone.",
+			"cancel": "Cancel",
+			"delete": "Delete"
 		}
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI 编码代理、Copilot 和自动补全",
-	"extension.description": "用于规划、构建和修复代码的开源 AI 编码助手。",
+	"extension.description": "开源 AI 编码代理，可从自然语言生成代码、自动化任务并运行终端命令。具有内联自动补全、浏览器自动化、自动重构以及用于规划、编码和调试的自定义模式。支持 500 多种 AI 模型，包括 Claude (Anthropic)、Gemini、Grok、GPT、Codex 和 GLM。",
 	"command.newTask.title": "新建任务",
 	"command.explainCode.title": "解释代码",
 	"command.fixCode.title": "修复代码",
@@ -50,6 +50,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "代码索引期间嵌入操作的批处理大小。根据 API 提供商的限制调整此设置。默认值为 60。",
 	"settings.toolProtocol.description": "用于 AI 交互的工具协议。XML 是默认且推荐的协议。本机是实验性的，可能不适用于所有提供商。",
 	"settings.debug.description": "启用调试模式以显示额外按钮，用于在临时文件中以格式化 JSON 查看 API 对话历史和 UI 消息。",
+	"settings.debugProxy.enabled.description": "**启用 Debug Proxy** — 通过代理转发所有出站网络请求，用于 MITM 调试。只在调试模式 (F5) 运行时生效。",
+	"settings.debugProxy.serverUrl.description": "代理 URL（例如 `http://127.0.0.1:8888`）。仅在启用 **Debug Proxy** 时使用。",
+	"settings.debugProxy.tlsInsecure.description": "接受来自代理的 self-signed 证书。**MITM 检查所必需。** ⚠️ 不安全——只在本地调试时使用。",
 	"ghost.input.title": "Kilo Code 幽灵写手",
 	"ghost.input.placeholder": "描述您想要编程的内容...",
 	"ghost.commands.generateSuggestions": "Kilo Code：生成建议编辑",

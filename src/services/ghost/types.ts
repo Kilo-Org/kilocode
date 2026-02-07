@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/snippets/types"
+import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/types"
 import type {
 	Position,
 	Range,
@@ -137,7 +137,8 @@ export interface GhostStatusBarStateProps {
 	model?: string
 	provider?: string
 	profileName?: string | null
-	hasValidToken: boolean
+	hasKilocodeProfileWithNoBalance?: boolean
+	hasNoUsableProvider?: boolean
 	totalSessionCost: number
 	completionCount: number
 	sessionStartTime: number

@@ -8,7 +8,7 @@ import { useMemo, useCallback } from "react"
 import type { FollowupSuggestion } from "../atoms/ui.js"
 import {
 	followupSuggestionsAtom,
-	showFollowupSuggestionsAtom,
+	followupSuggestionsMenuVisibleAtom,
 	selectedIndexAtom,
 	setFollowupSuggestionsAtom,
 	clearFollowupSuggestionsAtom,
@@ -102,7 +102,7 @@ export interface UseFollowupSuggestionsReturn {
 export function useFollowupSuggestions(): UseFollowupSuggestionsReturn {
 	// Read atoms
 	const suggestions = useAtomValue(followupSuggestionsAtom)
-	const isVisible = useAtomValue(showFollowupSuggestionsAtom)
+	const isVisible = useAtomValue(followupSuggestionsMenuVisibleAtom)
 	const selectedIndex = useAtomValue(selectedIndexAtom)
 	const selectedSuggestion = useAtomValue(getSelectedFollowupAtom)
 	const hasSuggestions = useAtomValue(hasFollowupSuggestionsAtom)

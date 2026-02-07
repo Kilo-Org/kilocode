@@ -47,4 +47,15 @@ export class CloudShareService {
 			return false
 		}
 	}
+
+	async canSharePublicly(): Promise<boolean> {
+		try {
+			const cloudSettings = this.settingsService.getSettings()?.cloudSettings
+			// Public sharing requires both enableTaskSharing AND allowPublicTaskSharing to be true
+			return !!cloudSettings?.enableTaskSharing && cloudSettings?.allowPublicTaskSharing !== false
+		} catch (error) {
+			this.log("[ShareService] Error checking if task can be shared publicly:", error)
+			return false
+		}
+	}
 }

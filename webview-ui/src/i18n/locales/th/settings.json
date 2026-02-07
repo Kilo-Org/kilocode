@@ -1,4 +1,9 @@
 {
+	"back": "กลับไปยังมุมมองงาน",
+	"search": {
+		"placeholder": "ค้นหาการตั้งค่า...",
+		"noResults": "ไม่พบการตั้งค่า"
+	},
 	"common": {
 		"save": "บันทึก",
 		"done": "เสร็จสิ้น",
@@ -38,9 +43,14 @@
 		"experimental": "ทดลอง",
 		"language": "ภาษา",
 		"about": "เกี่ยวกับ Kilo Code",
-		"autoPurge": "ทำความสะอาดอัตโนมัติ"
+		"autoPurge": "ทำความสะอาดอัตโนมัติ",
+		"agentBehaviour": "พฤติกรรม Agent"
 	},
 	"about": {
+		"debugMode": {
+			"label": "เปิดใช้งานโหมดดีบัก",
+			"description": "เปิดใช้งานโหมดดีบักเพื่อแสดงปุ่มเพิ่มเติมในส่วนหัวของงานสำหรับการดูประวัติการสนทนา API และข้อความ UI ในรูปแบบ JSON ที่อ่านง่ายในไฟล์ชั่วคราว"
+		},
 		"bugReport": {
 			"label": "พบข้อผิดพลาด?",
 			"link": "รายงานบน GitHub"
@@ -128,6 +138,7 @@
 		"openRouterProviderRoutingLabel": "การกำหนดเส้นทางผู้ให้บริการ OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter กำหนดเส้นทางคำขอไปยังผู้ให้บริการที่ดีที่สุดสำหรับโมเดล embedding ของคุณ โดยค่าเริ่มต้น คำขอจะถูกกระจายโหลดไปยังผู้ให้บริการชั้นนำเพื่อเพิ่มเวลาทำงานสูงสุด อย่างไรก็ตาม คุณสามารถเลือกผู้ให้บริการเฉพาะสำหรับโมเดลนี้ได้",
 		"openaiCompatibleProvider": "เข้ากันได้กับ OpenAI",
+		"openaiCompatibleResponsesProvider": "เข้ากันได้กับ OpenAI (Responses)",
 		"openAiKeyLabel": "คีย์ API OpenAI",
 		"openAiKeyPlaceholder": "ป้อนคีย์ API OpenAI ของคุณ",
 		"openAiCompatibleBaseUrlLabel": "URL พื้นฐาน",
@@ -305,6 +316,7 @@
 		"makeActiveProfile": "ทำให้เป็นโปรไฟล์ที่ใช้งาน",
 		"makeActiveTooltip": "เปิดใช้งานโปรไฟล์นี้เพื่อใช้สำหรับคำขอ API",
 		"apiProvider": "ผู้ให้บริการ API",
+		"apiProviderDocs": "เอกสารผู้ให้บริการ",
 		"model": "โมเดล",
 		"nameEmpty": "ชื่อต้องไม่ว่างเปล่า",
 		"nameExists": "มีโปรไฟล์ชื่อนี้อยู่แล้ว",
@@ -333,6 +345,37 @@
 		"apiKeyStorageNotice": "คีย์ API จะถูกเก็บไว้อย่างปลอดภัยในที่เก็บข้อมูลลับของ VSCode",
 		"glamaApiKey": "คีย์ API ของ Glama",
 		"getGlamaApiKey": "รับคีย์ API ของ Glama",
+		"openAiCodexRateLimits": {
+			"title": "ขีดจำกัดการใช้งานสำหรับ Codex{{planLabel}}",
+			"loading": "กำลังโหลดขีดจำกัดการใช้งาน...",
+			"loadError": "ไม่สามารถโหลดขีดจำกัดการใช้งาน",
+			"retry": "ลองอีกครั้ง",
+			"usedPercent": "ใช้ไป {{percent}}%",
+			"resetsIn": "รีเซ็ตใน {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "ตอนนี้",
+				"notAvailable": "ไม่พร้อมใช้งาน"
+			},
+			"duration": {
+				"daysHours": "{{days}} วัน {{hours}} ชม.",
+				"hoursMinutes": "{{hours}} ชม. {{minutes}} นาที",
+				"minutes": "{{minutes}} นาที"
+			},
+			"window": {
+				"usage": "การใช้งาน",
+				"fiveHour": "ขีดจำกัด 5 ชม.",
+				"oneHour": "ขีดจำกัด 1 ชม.",
+				"daily": "ขีดจำกัดรายวัน",
+				"weekly": "ขีดจำกัดรายสัปดาห์",
+				"days": "ขีดจำกัด {{days}} วัน",
+				"hours": "ขีดจำกัด {{hours}} ชม.",
+				"minutes": "ขีดจำกัด {{minutes}} นาที"
+			}
+		},
 		"useCustomBaseUrl": "ใช้ URL พื้นฐานที่กำหนดเอง",
 		"useReasoning": "เปิดใช้งานการให้เหตุผล",
 		"useHostHeader": "ใช้ส่วนหัวโฮสต์ที่กำหนดเอง",
@@ -385,6 +428,8 @@
 		"minimaxApiKey": "คีย์ API ของ MiniMax",
 		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
 		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
+		"zaiApiKey": "คีย์ API ของ Z AI",
+		"getZaiApiKey": "รับคีย์ API ของ Z AI",
 		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
 		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
 		"geminiApiKey": "คีย์ API ของ Gemini",
@@ -440,6 +485,14 @@
 		"awsRegion": "ภูมิภาค AWS",
 		"awsCrossRegion": "ใช้การอนุมานข้ามภูมิภาค",
 		"awsGlobalInference": "ใช้การอนุมานแบบ Global (เลือกภูมิภาค AWS ที่เหมาะสมโดยอัตโนมัติ)",
+		"awsServiceTier": "ระดับบริการ",
+		"awsServiceTierStandard": "มาตรฐาน",
+		"awsServiceTierStandardDesc": "ประสิทธิภาพและค่าใช้จ่ายที่สมดุล",
+		"awsServiceTierFlex": "ยืดหยุ่น (ส่วนลด 50%)",
+		"awsServiceTierFlexDesc": "ค่าใช้จ่ายต่ำกว่า เวลาตอบสนองสูงขึ้น สำหรับงานที่ไม่สำคัญ",
+		"awsServiceTierPriority": "ลำดับความสำคัญ (ค่าใช้จ่ายเพิ่ม 75%)",
+		"awsServiceTierPriorityDesc": "ประสิทธิภาพที่เร็วที่สุดสำหรับแอปพลิเคชันที่สำคัญ",
+		"awsServiceTierNote": "ระดับบริการส่งผลต่อราคาและประสิทธิภาพ ยืดหยุ่นให้ส่วนลด 50% แต่มีเวลาตอบสนองสูงขึ้น ลำดับความสำคัญให้ประสิทธิภาพที่ดีขึ้น 25% แต่มีค่าใช้จ่ายเพิ่ม 75%",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "ใช้ปลายทาง VPC ที่กำหนดเอง",
 			"vpcEndpointUrlPlaceholder": "ป้อน URL ปลายทาง VPC (ไม่บังคับ)",
@@ -449,7 +502,9 @@
 		"enablePromptCachingTitle": "เปิดใช้งานการแคชพรอมต์เพื่อปรับปรุงประสิทธิภาพและลดค่าใช้จ่ายสำหรับโมเดลที่รองรับ",
 		"cacheUsageNote": "หมายเหตุ: หากคุณไม่เห็นการใช้งานแคช ให้ลองเลือกโมเดลอื่นแล้วเลือกโมเดลที่คุณต้องการอีกครั้ง",
 		"vscodeLmModel": "โมเดลภาษา",
-		"vscodeLmWarning": "หมายเหตุ: นี่เป็นการผสานรวมที่ทดลองมากและการสนับสนุนจากผู้ให้บริการจะแตกต่างกันไป หากคุณได้รับข้อผิดพลาดเกี่ยวกับโมเดลที่ไม่รองรับ นั่นเป็นปัญหาจากฝั่งผู้ให้บริการ",
+		"vscodeLmWarning": "หมายเหตุ: โมเดลที่เข้าถึงผ่าน VS Code Language Model API อาจถูกแพ็คหรือปรับแต่งโดยผู้ให้บริการ ดังนั้นพฤติกรรมอาจแตกต่างจากการใช้โมเดลเดียวกันโดยตรงจากผู้ให้บริการหรือ router ทั่วไป หากต้องการใช้โมเดลจากเมนู Language Model ให้เปลี่ยนไปใช้โมเดลนั้นก่อน จากนั้นคลิก Accept ใน Copilot Chat prompt มิฉะนั้นคุณอาจเห็นข้อผิดพลาดเช่น 400 \"The requested model is not supported\"",
+		"vertex1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
+		"vertex1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"googleCloudSetup": {
 			"title": "ในการใช้ Google Cloud Vertex AI คุณต้อง:",
 			"step1": "1. สร้างบัญชี Google Cloud เปิดใช้งาน Vertex AI API และเปิดใช้งานโมเดล Claude ที่ต้องการ",
@@ -578,6 +633,7 @@
 		},
 		"verbosity": {
 			"label": "ระดับความละเอียดของผลลัพธ์",
+			"max": "Max",
 			"high": "สูง",
 			"medium": "ปานกลาง",
 			"low": "ต่ำ",
@@ -590,21 +646,6 @@
 			"placeholder": "ค่าเริ่มต้น: claude",
 			"maxTokensLabel": "โทเค็นเอาต์พุตสูงสุด",
 			"maxTokensDescription": "จำนวนโทเค็นเอาต์พุตสูงสุดสำหรับการตอบสนองของ Claude Code ค่าเริ่มต้นคือ 8000"
-		},
-		"geminiCli": {
-			"description": "ผู้ให้บริการนี้ใช้การยืนยันตัวตน OAuth จากเครื่องมือ Gemini CLI และไม่ต้องการกุญแจ API",
-			"oauthPath": "เส้นทางข้อมูลประจำตัว OAuth (ไม่บังคับ)",
-			"oauthPathDescription": "เส้นทางไปยังไฟล์ข้อมูลประจำตัว OAuth ปล่อยว่างไว้เพื่อใช้ตำแหน่งเริ่มต้น (~/.gemini/oauth_creds.json)",
-			"instructions": "หากคุณยังไม่ได้ยืนยันตัวตน โปรดรัน",
-			"instructionsContinued": "ใน terminal ของคุณก่อน",
-			"setupLink": "คำแนะนำการตั้งค่า Gemini CLI",
-			"requirementsTitle": "ข้อกำหนดที่สำคัญ",
-			"requirement1": "ก่อนอื่น คุณต้องติดตั้งเครื่องมือ Gemini CLI",
-			"requirement2": "จากนั้น รัน gemini ใน terminal ของคุณและตรวจสอบให้แน่ใจว่าคุณเข้าสู่ระบบด้วย Google",
-			"requirement3": "ใช้งานได้เฉพาะกับบัญชี Google ส่วนตัว (ไม่ใช่บัญชี Google Workspace)",
-			"requirement4": "ไม่ใช้กุญแจ API - การยืนยันตัวตนจัดการผ่าน OAuth",
-			"requirement5": "ต้องการให้เครื่องมือ Gemini CLI ถูกติดตั้งและยืนยันตัวตนก่อน",
-			"freeAccess": "การเข้าถึงระดับฟรีผ่านการยืนยันตัวตน OAuth"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
@@ -764,6 +805,10 @@
 		"showTimestamps": {
 			"label": "แสดงตราเวลา",
 			"description": "แสดงตราเวลาสำหรับข้อความแต่ละข้อในมุมมองแชต"
+		},
+		"showDiffStats": {
+			"label": "แสดงสถิติ diff",
+			"description": "แสดงสถิติบรรทัดที่เพิ่ม/ลบในส่วนหัวของงาน"
 		}
 	},
 	"ghost": {
@@ -875,6 +920,10 @@
 		"maxGitStatusFiles": {
 			"label": "ไฟล์สถานะ Git สูงสุด",
 			"description": "จำนวนรายการไฟล์สูงสุดที่จะรวมไว้ในบริบทสถานะ git ตั้งค่าเป็น 0 เพื่อปิดใช้งาน ข้อมูลสาขาจะแสดงเสมอเมื่อ > 0"
+		},
+		"enableSubfolderRules": {
+			"label": "เปิดใช้งานกฎโฟลเดอร์ย่อย",
+			"description": "ค้นหาและโหลดไฟล์ .roo/rules และ AGENTS.md จากไดเรกทอรีย่อยแบบเรียกซ้ำ มีประโยชน์สำหรับ monorepos ที่มีกฎต่อแพ็คเกจ"
 		},
 		"gitStatusIncludeUntracked": {
 			"label": "รวมไฟล์ที่ไม่ได้ติดตาม",
@@ -1080,6 +1129,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "การแปลงเสียงพูดเป็นข้อความ (STT)",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแปลงเสียงของคุณเป็นข้อความได้โดยใช้โมเดล Whisper ของ OpenAI คลิกปุ่มไมโครโฟนในแชทเพื่อเริ่มบันทึกเสียง ต้องติดตั้ง FFmpeg และกำหนดค่าผู้ให้บริการ OpenAI API แล้ว"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "เปิดใช้งานเครื่องมือที่กำหนดเอง",
+			"description": "เมื่อเปิดใช้งาน Kilo สามารถโหลดและใช้เครื่องมือ TypeScript/JavaScript ที่กำหนดเองจากไดเรกทอรี .kilocode/tools ของโปรเจ็กต์ของคุณ หรือ ~/.kilocode/tools สำหรับเครื่องมือทั่วไป หมายเหตุ: เครื่องมือเหล่านี้จะได้รับการอนุมัติอัตโนมัติ",
+			"toolsHeader": "เครื่องมือที่กำหนดเองที่มี",
+			"noTools": "ไม่มีเครื่องมือที่กำหนดเองที่โหลด เพิ่มไฟล์ .ts หรือ .js ไปยังไดเรกทอรี .kilocode/tools ของโปรเจ็กต์ของคุณ หรือ ~/.kilocode/tools สำหรับเครื่องมือทั่วไป",
+			"refreshButton": "รีเฟรช",
+			"refreshing": "กำลังรีเฟรช...",
+			"refreshSuccess": "รีเฟรชเครื่องมือสำเร็จ",
+			"refreshError": "ไม่สามารถรีเฟรชเครื่องมือได้",
+			"toolParameters": "พารามิเตอร์"
 		}
 	},
 	"promptCaching": {
@@ -1121,7 +1181,9 @@
 		"searchPlaceholder": "ค้นหา",
 		"noMatchFound": "ไม่พบรายการที่ตรงกัน",
 		"useCustomModel": "ใช้แบบกำหนดเอง: {{modelId}}",
-		"simplifiedExplanation": "คุณสามารถปรับการตั้งค่าโมเดลโดยละเอียดได้ภายหลัง"
+		"simplifiedExplanation": "คุณสามารถปรับการตั้งค่าโมเดลโดยละเอียดได้ภายหลัง",
+		"recommendedModels": "โมเดลที่แนะนำ",
+		"allModels": "โมเดลทั้งหมด"
 	},
 	"footer": {
 		"feedback": "หากคุณมีคำถามหรือข้อเสนอแนะ โปรดเปิด issue ที่ <githubLink>github.com/Kilo-Org/kilocode</githubLink> หรือเข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>kilo.ai/discord</discordLink>",

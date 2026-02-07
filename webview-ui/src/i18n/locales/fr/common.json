@@ -125,5 +125,9 @@
 		"delegated_to": "Délégué à la tâche {{childId}}",
 		"delegation_completed": "Sous-tâche terminée, reprise de la tâche parent",
 		"awaiting_child": "En attente de la tâche enfant {{childId}}"
+	},
+	"costs": {
+		"own": "Propre",
+		"subtasks": "Sous-tâches"
 	}
 }

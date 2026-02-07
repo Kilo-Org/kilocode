@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: เอเจนต์เขียนโค้ด AI, Copilot และการเติมข้อความอัตโนมัติ",
-	"extension.description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด",
+	"extension.description": "เอเจนต์เขียนโค้ด AI แบบ Open Source ที่สร้างโค้ดจากภาษาธรรมชาติ ทำงานอัตโนมัติ และรันคำสั่ง Terminal มีฟีเจอร์เติมข้อความอัตโนมัติแบบ inline, ระบบอัตโนมัติของเบราว์เซอร์, การ refactor อัตโนมัติ และโหมดที่กำหนดเองสำหรับการวางแผน เขียนโค้ด และดีบัก รองรับโมเดล AI มากกว่า 500 รุ่น รวมถึง Claude (Anthropic), Gemini, Grok, GPT, Codex และ GLM",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -58,5 +58,8 @@
 	"ghost.commands.applyCurrentSuggestion": "ใช้ข้อเสนอแนะการแก้ไขปัจจุบัน",
 	"ghost.commands.applyAllSuggestions": "ใช้ข้อเสนอแนะการแก้ไขทั้งหมด",
 	"ghost.commands.goToNextSuggestion": "ไปยังข้อเสนอแนะถัดไป",
-	"ghost.commands.goToPreviousSuggestion": "ไปยังข้อเสนอแนะก่อนหน้า"
+	"ghost.commands.goToPreviousSuggestion": "ไปยังข้อเสนอแนะก่อนหน้า",
+	"settings.debugProxy.enabled.description": "**เปิดใช้งาน Debug Proxy** — จัดเส้นทางคำขอเครือข่ายขาออกทั้งหมดผ่าน proxy สำหรับการดีบัก MITM ใช้งานได้เฉพาะเมื่อทำงานในโหมดดีบัก (F5) เท่านั้น",
+	"settings.debugProxy.serverUrl.description": "URL ของ Proxy (เช่น `http://127.0.0.1:8888`) ใช้เฉพาะเมื่อเปิดใช้งาน **Debug Proxy**",
+	"settings.debugProxy.tlsInsecure.description": "ยอมรับใบรับรองที่ลงชื่อด้วยตนเองจาก proxy **จำเป็นสำหรับการตรวจสอบ MITM** ⚠️ ไม่ปลอดภัย — ใช้เฉพาะสำหรับการดีบักในเครื่องเท่านั้น"
 }

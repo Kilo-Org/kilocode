@@ -6,6 +6,52 @@ const TOKEN_FUDGE_FACTOR = 1.5
 
 let encoder: Tiktoken | null = null
 
+/**
+ * Serializes a tool_use block to text for token counting.
+ * Approximates how the API sees the tool call.
+ */
+function serializeToolUse(block: Anthropic.Messages.ToolUseBlockParam): string {
+	const parts = [`Tool: ${block.name}`]
+	if (block.input !== undefined) {
+		try {
+			parts.push(`Arguments: ${JSON.stringify(block.input)}`)
+		} catch {
+			parts.push(`Arguments: [serialization error]`)
+		}
+	}
+	return parts.join("\n")
+}
+
+/**
+ * Serializes a tool_result block to text for token counting.
+ * Handles both string content and array content.
+ */
+function serializeToolResult(block: Anthropic.Messages.ToolResultBlockParam): string {
+	const parts = [`Tool Result (${block.tool_use_id})`]
+
+	if (block.is_error) {
+		parts.push(`[Error]`)
+	}
+
+	const content = block.content
+	if (typeof content === "string") {
+		parts.push(content)
+	} else if (Array.isArray(content)) {
+		// Handle array of content blocks recursively
+		for (const item of content) {
+			if (item.type === "text") {
+				parts.push(item.text || "")
+			} else if (item.type === "image") {
+				parts.push("[Image content]")
+			} else {
+				parts.push(`[Unsupported content block: ${String((item as { type?: unknown }).type)}]`)
+			}
+		}
+	}
+
+	return parts.join("\n")
+}
+
 export async function tiktoken(content: Anthropic.Messages.ContentBlockParam[]): Promise<number> {
 	if (content.length === 0) {
 		return 0
@@ -36,6 +82,20 @@ export async function tiktoken(content: Anthropic.Messages.ContentBlockParam[]):
 				totalTokens += Math.ceil(Math.sqrt(base64Data.length))
 			} else {
 				totalTokens += 300 // Conservative estimate for unknown images
+			}
+		} else if (block.type === "tool_use") {
+			// Serialize tool_use block to text and count tokens
+			const serialized = serializeToolUse(block as Anthropic.Messages.ToolUseBlockParam)
+			if (serialized.length > 0) {
+				const tokens = encoder.encode(serialized, undefined, [])
+				totalTokens += tokens.length
+			}
+		} else if (block.type === "tool_result") {
+			// Serialize tool_result block to text and count tokens
+			const serialized = serializeToolResult(block as Anthropic.Messages.ToolResultBlockParam)
+			if (serialized.length > 0) {
+				const tokens = encoder.encode(serialized, undefined, [])
+				totalTokens += tokens.length
 			}
 		}
 	}

@@ -2,7 +2,7 @@
 	"name": "kilo-code",
 	"packageManager": "pnpm@10.8.1",
 	"engines": {
-		"node": "20.19.2"
+		"node": "20.20.0"
 	},
 	"scripts": {
 		"preinstall": "node scripts/bootstrap.mjs",
@@ -32,12 +32,13 @@
 		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
 		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
+		"jetbrains-host:build": "turbo jetbrains-host:build",
 		"cli:build": "turbo run cli:build",
 		"cli:bundle": "turbo run cli:bundle --force",
 		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
 		"cli:dev": "pnpm --filter @kilocode/cli run dev",
 		"cli:run": "pnpm --filter @kilocode/cli run start",
-		"docs:start": "pnpm --filter kilocode-docs start",
+		"docs:dev": "pnpm --filter kilocode-docs dev",
 		"docs:build": "pnpm --filter kilocode-docs build"
 	},
 	"devDependencies": {
@@ -61,7 +62,7 @@
 		"rimraf": "^6.0.1",
 		"tsx": "^4.19.3",
 		"turbo": "^2.6.0",
-		"typescript": "^5.4.5"
+		"typescript": "5.8.3"
 	},
 	"lint-staged": {
 		"*.{js,jsx,ts,tsx,json,css,md}": [
@@ -69,6 +70,9 @@
 		]
 	},
 	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@vscode/ripgrep"
+		],
 		"overrides": {
 			"tar-fs": ">=3.1.1",
 			"esbuild": ">=0.25.0",
@@ -76,7 +80,11 @@
 			"brace-expansion": "^2.0.2",
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2",
-			"glob": ">=11.1.0"
+			"glob": ">=11.1.0",
+			"@types/react": "^18.3.23",
+			"@types/react-dom": "^18.3.5",
+			"zod": "3.25.76",
+			"@sap-ai-sdk/prompt-registry>zod": "^4.0.0"
 		}
 	}
 }

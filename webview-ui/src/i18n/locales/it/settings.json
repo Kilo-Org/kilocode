@@ -1,4 +1,5 @@
 {
+	"back": "Torna alla vista attività",
 	"common": {
 		"save": "Salva",
 		"done": "Fatto",
@@ -7,6 +8,10 @@
 		"select": "Seleziona",
 		"add": "Aggiungi intestazione",
 		"remove": "Rimuovi"
+	},
+	"search": {
+		"placeholder": "Cerca impostazioni...",
+		"noResults": "Nessuna impostazione trovata"
 	},
 	"header": {
 		"title": "Impostazioni",
@@ -37,8 +42,9 @@
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"ghost": "Ghost",
-		"autoPurge": "Auto-pulizia"
+		"autoPurge": "Auto-pulizia",
+		"agentBehaviour": "Comportamento agente",
+		"ghost": "Ghost"
 	},
 	"about": {
 		"bugReport": {
@@ -58,7 +64,11 @@
 		},
 		"community": "Vuoi consigli o semplicemente uscire con altri utenti di Roo Code? Unisciti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contatti e Comunità",
-		"manageSettings": "Gestisci Impostazioni"
+		"manageSettings": "Gestisci Impostazioni",
+		"debugMode": {
+			"label": "Abilita modalità debug",
+			"description": "Abilita la modalità debug per mostrare pulsanti aggiuntivi nell'intestazione dell'attività che consentano di visualizzare la cronologia delle conversazioni API e i messaggi dell'interfaccia utente come JSON formattato in file temporanei."
+		}
 	},
 	"slashCommands": {
 		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
@@ -95,6 +105,7 @@
 		"mistralApiKeyLabel": "Chiave API:",
 		"mistralApiKeyPlaceholder": "Inserisci la tua chiave API Mistral",
 		"openaiCompatibleProvider": "Compatibile con OpenAI",
+		"openaiCompatibleResponsesProvider": "Compatibile con OpenAI (Responses)",
 		"openAiKeyLabel": "Chiave API OpenAI",
 		"openAiKeyPlaceholder": "Inserisci la tua chiave API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "URL di base",
@@ -278,6 +289,7 @@
 		"makeActiveProfile": "Rendi profilo attivo",
 		"makeActiveTooltip": "Attiva questo profilo per utilizzarlo nelle richieste API",
 		"apiProvider": "Fornitore API",
+		"apiProviderDocs": "Documentazione del Provider",
 		"model": "Modello",
 		"nameEmpty": "Il nome non può essere vuoto",
 		"nameExists": "Esiste già un profilo con questo nome",
@@ -315,10 +327,40 @@
 		"glamaApiKey": "Chiave API Glama",
 		"getGlamaApiKey": "Ottieni chiave API Glama",
 		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Usa URL base personalizzato",
 		"useReasoning": "Abilita ragionamento",
 		"useHostHeader": "Usa intestazione Host personalizzata",
-		"useLegacyFormat": "Usa formato API OpenAI legacy",
 		"customHeaders": "Intestazioni personalizzate",
 		"headerName": "Nome intestazione",
 		"headerValue": "Valore intestazione",
@@ -334,7 +376,6 @@
 		"getRequestyApiKey": "Ottieni chiave API Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilizza URL di base personalizzato",
-		"openRouterTransformsText": "Comprimi prompt e catene di messaggi alla dimensione del contesto (<a>Trasformazioni OpenRouter</a>)",
 		"anthropicApiKey": "Chiave API Anthropic",
 		"getAnthropicApiKey": "Ottieni chiave API Anthropic",
 		"anthropicUseAuthToken": "Passa la chiave API Anthropic come header di autorizzazione invece di X-Api-Key",
@@ -344,6 +385,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Inserisci nome deployment...",
 		"awsBedrock1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
+		"vertex1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",
 		"basetenApiKey": "Chiave API Baseten",
 		"getBasetenApiKey": "Ottieni chiave API Baseten",
 		"cerebrasApiKey": "Chiave API Cerebras",
@@ -376,6 +419,14 @@
 		"geminiApiKey": "Chiave API Gemini",
 		"getGroqApiKey": "Ottieni chiave API Groq",
 		"groqApiKey": "Chiave API Groq",
+		"nanoGptApiKey": "Chiave API Nano-GPT",
+		"getNanoGptApiKey": "Ottieni chiave API Nano-GPT",
+		"nanoGptModelList": "Elenco modelli",
+		"nanoGptModelListOptions": {
+			"all": "Tutti i modelli",
+			"personalized": "Modelli personalizzati",
+			"subscription": "Modelli in abbonamento"
+		},
 		"getSambaNovaApiKey": "Ottieni chiave API SambaNova",
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
@@ -444,6 +495,14 @@
 		"awsRegion": "Regione AWS",
 		"awsCrossRegion": "Usa inferenza cross-regione",
 		"awsGlobalInference": "Usa l'inferenza globale (selezione automatica della regione AWS ottimale)",
+		"awsServiceTier": "Livello di servizio",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Prestazioni e costo equilibrati",
+		"awsServiceTierFlex": "Flex (sconto del 50%)",
+		"awsServiceTierFlexDesc": "Costo inferiore, latenza più alta per attività non critiche",
+		"awsServiceTierPriority": "Priority (premio del 75%)",
+		"awsServiceTierPriorityDesc": "Prestazioni più veloci per applicazioni mission-critical",
+		"awsServiceTierNote": "I livelli di servizio influenzano i prezzi e le prestazioni. Flex offre uno sconto del 50% con latenza più alta, Priority offre il 25% di prestazioni migliori con un premio del 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usa endpoint VPC personalizzato",
 			"vpcEndpointUrlPlaceholder": "Inserisci URL endpoint VPC (opzionale)",
@@ -499,14 +558,6 @@
 		"getUnboundApiKey": "Ottieni chiave API Unbound",
 		"unboundRefreshModelsSuccess": "Lista dei modelli aggiornata! Ora puoi selezionare tra gli ultimi modelli.",
 		"unboundInvalidApiKey": "Chiave API non valida. Controlla la tua chiave API e riprova.",
-		"nanoGptApiKey": "Chiave API Nano-GPT",
-		"getNanoGptApiKey": "Ottieni chiave API Nano-GPT",
-		"nanoGptModelList": "Elenco modelli",
-		"nanoGptModelListOptions": {
-			"all": "Tutti i modelli",
-			"personalized": "Modelli personalizzati",
-			"subscription": "Modelli in abbonamento"
-		},
 		"humanRelay": {
 			"description": "Non è richiesta alcuna chiave API, ma l'utente dovrà aiutare a copiare e incollare le informazioni nella chat web AI.",
 			"instructions": "Durante l'uso, apparirà una finestra di dialogo e il messaggio corrente verrà automaticamente copiato negli appunti. Dovrai incollarlo nelle versioni web dell'AI (come ChatGPT o Claude), quindi copiare la risposta dell'AI nella finestra di dialogo e fare clic sul pulsante di conferma."
@@ -590,6 +641,7 @@
 		},
 		"verbosity": {
 			"label": "Verbosity dell'output",
+			"max": "Max",
 			"high": "Alta",
 			"medium": "Media",
 			"low": "Bassa",
@@ -602,21 +654,6 @@
 			"placeholder": "Predefinito: claude",
 			"maxTokensLabel": "Token di output massimi",
 			"maxTokensDescription": "Numero massimo di token di output per le risposte di Claude Code. Il valore predefinito è 8000."
-		},
-		"geminiCli": {
-			"description": "Questo provider utilizza l'autenticazione OAuth dallo strumento Gemini CLI e non richiede chiavi API.",
-			"oauthPath": "Percorso Credenziali OAuth (opzionale)",
-			"oauthPathDescription": "Percorso al file delle credenziali OAuth. Lascia vuoto per utilizzare la posizione predefinita (~/.gemini/oauth_creds.json).",
-			"instructions": "Se non ti sei ancora autenticato, esegui",
-			"instructionsContinued": "nel tuo terminale prima.",
-			"setupLink": "Istruzioni di Configurazione Gemini CLI",
-			"requirementsTitle": "Requisiti Importanti",
-			"requirement1": "Prima, devi installare lo strumento Gemini CLI",
-			"requirement2": "Poi, esegui gemini nel tuo terminale e assicurati di accedere con Google",
-			"requirement3": "Funziona solo con account Google personali (non account Google Workspace)",
-			"requirement4": "Non utilizza chiavi API - l'autenticazione è gestita tramite OAuth",
-			"requirement5": "Richiede che lo strumento Gemini CLI sia installato e autenticato prima",
-			"freeAccess": "Accesso gratuito tramite autenticazione OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Percorso credenziali OAuth (opzionale)",
@@ -799,6 +836,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status max file",
 			"description": "Numero massimo di voci di file da includere nel contesto dello stato di git. Imposta a 0 per disabilitare. Le informazioni sul ramo e sui commit vengono sempre mostrate quando > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Abilita regole sottocartelle",
+			"description": "Scopri e carica ricorsivamente i file .roo/rules e AGENTS.md dalle sottodirectory. Utile per i monorepo con regole per pacchetto."
 		}
 	},
 	"terminal": {
@@ -988,6 +1029,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Riconoscimento vocale (STT)",
 			"description": "Quando abilitato, Kilo Code può trascrivere la tua voce in testo utilizzando il modello Whisper di OpenAI. Clicca il pulsante del microfono nella chat per iniziare la registrazione. Richiede l'installazione di FFmpeg e un provider API OpenAI configurato."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Abilita strumenti personalizzati",
+			"description": "Quando abilitato, Kilo può caricare e utilizzare strumenti personalizzati TypeScript/JavaScript dalla directory .kilocode/tools del tuo progetto o ~/.kilocode/tools per strumenti globali. Nota: questi strumenti saranno automaticamente auto-approvati.",
+			"toolsHeader": "Strumenti personalizzati disponibili",
+			"noTools": "Nessuno strumento personalizzato caricato. Aggiungi file .ts o .js alla directory .kilocode/tools del tuo progetto o ~/.kilocode/tools per strumenti globali.",
+			"refreshButton": "Aggiorna",
+			"refreshing": "Aggiornamento in corso...",
+			"refreshSuccess": "Strumenti aggiornati con successo",
+			"refreshError": "Aggiornamento strumenti non riuscito",
+			"toolParameters": "Parametri"
 		}
 	},
 	"promptCaching": {
@@ -1027,7 +1079,9 @@
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "Nessuna corrispondenza trovata",
 		"useCustomModel": "Usa personalizzato: {{modelId}}",
-		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito."
+		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito.",
+		"recommendedModels": "Modelli consigliati",
+		"allModels": "Tutti i modelli"
 	},
 	"footer": {
 		"feedback": "Se hai domande o feedback, sentiti libero di aprire un issue su <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
@@ -1116,6 +1170,10 @@
 		"showTimestamps": {
 			"label": "Mostra timestamp",
 			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
+		},
+		"showDiffStats": {
+			"label": "Mostra statistiche diff",
+			"description": "Visualizza le statistiche delle righe aggiunte/rimosse nell'intestazione dell'attività"
 		}
 	},
 	"ghost": {

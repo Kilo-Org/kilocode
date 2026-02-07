@@ -21,11 +21,7 @@ import { SyncQueue } from "./SyncQueue.js"
 import { TokenValidationService } from "./TokenValidationService.js"
 import { SessionTitleService, type SessionTitleGeneratedMessage } from "./SessionTitleService.js"
 import { SessionLifecycleService } from "./SessionLifecycleService.js"
-import {
-	SessionSyncService,
-	type SessionCreatedMessage,
-	type SessionSyncedMessage,
-} from "./SessionSyncService.js"
+import { SessionSyncService, type SessionCreatedMessage, type SessionSyncedMessage } from "./SessionSyncService.js"
 import { LOG_SOURCES } from "../config.js"
 
 // Re-export types for external consumers

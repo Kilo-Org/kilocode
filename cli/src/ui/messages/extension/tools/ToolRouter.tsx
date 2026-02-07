@@ -20,6 +20,7 @@ import {
 	ToolFinishTaskMessage,
 	ToolFetchInstructionsMessage,
 	ToolRunSlashCommandMessage,
+	ToolDeleteFileMessage,
 } from "./index.js"
 
 /**
@@ -81,6 +82,9 @@ export const ToolRouter: React.FC<ToolMessageProps> = ({ message, toolData }) =>
 
 		case "runSlashCommand":
 			return <ToolRunSlashCommandMessage message={message} toolData={toolData} />
+
+		case "deleteFile":
+			return <ToolDeleteFileMessage message={message} toolData={toolData} />
 
 		default:
 			return (

@@ -58,7 +58,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								href="/provider"
 								className="block px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground">
 								<Brain className="size-3 inline mr-2 -mt-0.5" />
-								Roo Code Cloud Provider
+								Roo Code Router
 							</Link>
 						</div>
 					</div>
@@ -70,11 +70,6 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 						</button>
 						{/* Dropdown Menu */}
 						<div className="absolute left-0 top-12 mt-2 w-40 rounded-md border border-border bg-background py-1 shadow-lg opacity-0 -translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200">
-							<ScrollButton
-								targetId="faq"
-								className="block px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground">
-								FAQ
-							</ScrollButton>
 							<Link
 								href="/evals"
 								className="block px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground">
@@ -199,7 +194,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								href="/provider"
 								className="block w-full p-5 py-3 text-left text-foreground active:opacity-50"
 								onClick={() => setIsMenuOpen(false)}>
-								Roo Code Cloud Provider
+								Roo Code Router
 							</Link>
 						</div>
 

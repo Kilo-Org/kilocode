@@ -414,6 +414,52 @@ describe("ExtensionMessageRow", () => {
 			expect(lastFrame()).toBeDefined()
 			expect(lastFrame()).not.toContain("Unknown message type")
 		})
+
+		it("should handle 'ask' deleteFile tool messages for single file", () => {
+			const message: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "tool",
+				text: JSON.stringify({
+					tool: "deleteFile",
+					path: "src/test.ts",
+				}),
+			}
+
+			const { lastFrame } = render(<ExtensionMessageRow message={message} />)
+
+			expect(lastFrame()).toBeDefined()
+			expect(lastFrame()).not.toContain("Unknown tool")
+			expect(lastFrame()).toContain("Delete")
+			expect(lastFrame()).toContain("src/test.ts")
+		})
+
+		it("should handle 'ask' deleteFile tool messages for directory with stats", () => {
+			const message: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "tool",
+				text: JSON.stringify({
+					tool: "deleteFile",
+					path: "src/components",
+					stats: {
+						files: 5,
+						directories: 2,
+						size: 1024,
+						isComplete: true,
+					},
+				}),
+			}
+
+			const { lastFrame } = render(<ExtensionMessageRow message={message} />)
+
+			expect(lastFrame()).toBeDefined()
+			expect(lastFrame()).not.toContain("Unknown tool")
+			expect(lastFrame()).toContain("Delete")
+			expect(lastFrame()).toContain("src/components")
+			expect(lastFrame()).toContain("5 files")
+			expect(lastFrame()).toContain("2 dirs")
+		})
 	})
 
 	describe("MCP Server Messages", () => {

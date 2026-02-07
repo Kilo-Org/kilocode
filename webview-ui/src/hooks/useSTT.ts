@@ -1,7 +1,7 @@
 // kilocode_change - new file: React hook for STT (Speech-to-Text) functionality
 import { useState, useEffect, useCallback, useRef } from "react"
 import { vscode } from "../utils/vscode"
-import { STTSegment } from "../../../src/shared/sttContract"
+import { STTSegment, MicrophoneDevice } from "../../../src/shared/sttContract"
 
 export interface UseSTTOptions {
 	/** Called when recording completes with final text */
@@ -23,6 +23,16 @@ export interface UseSTTReturn {
 	stop: () => void
 	/** Cancel recording and discard */
 	cancel: () => void
+	/** Available microphone devices */
+	devices: MicrophoneDevice[]
+	/** Whether devices are currently loading */
+	isLoadingDevices: boolean
+	/** Load available microphone devices */
+	loadDevices: () => Promise<void>
+	/** Select a microphone device (null for system default) */
+	selectDevice: (device: MicrophoneDevice | null) => Promise<void>
+	/** Currently selected device (null means system default) */
+	selectedDevice: MicrophoneDevice | null
 }
 
 /**
@@ -46,6 +56,9 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 	const [realIsRecording, setRealIsRecording] = useState(false)
 	const [segments, setSegments] = useState<STTSegment[]>([])
 	const [volume, setVolume] = useState(0)
+	const [devices, setDevices] = useState<MicrophoneDevice[]>([])
+	const [isLoadingDevices, setIsLoadingDevices] = useState(false)
+	const [selectedDevice, setSelectedDevice] = useState<MicrophoneDevice | null>(null)
 
 	// Track session to ignore stale events
 	const sessionIdRef = useRef<string | null>(null)
@@ -78,8 +91,6 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 				case "stt:transcript":
 					// Ignore events from old sessions
 					if (msg.sessionId !== sessionIdRef.current) return
-					// Just pass through the segments from extension (stateless)
-					console.log("🎙️ [useSTT WebView] 📨 Received segments:", JSON.stringify(msg.segments, null, 2))
 					setSegments(msg.segments || [])
 					break
 
@@ -110,6 +121,15 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 					setSegments([])
 					sessionIdRef.current = null
 					break
+
+				case "stt:devices":
+					setDevices(msg.devices || [])
+					setIsLoadingDevices(false)
+					break
+
+				case "stt:deviceSelected":
+					setSelectedDevice(msg.device)
+					break
 			}
 		}
 
@@ -132,6 +152,15 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 		vscode.postMessage({ type: "stt:cancel" })
 	}, [])
 
+	const loadDevices = useCallback(async () => {
+		setIsLoadingDevices(true)
+		vscode.postMessage({ type: "stt:listDevices" })
+	}, [])
+
+	const selectDevice = useCallback(async (device: MicrophoneDevice | null) => {
+		vscode.postMessage({ type: "stt:selectDevice", device })
+	}, [])
+
 	return {
 		isRecording: optimisticIsRecording,
 		segments,
@@ -139,5 +168,10 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 		start,
 		stop,
 		cancel,
+		devices,
+		isLoadingDevices,
+		loadDevices,
+		selectDevice,
+		selectedDevice,
 	}
 }

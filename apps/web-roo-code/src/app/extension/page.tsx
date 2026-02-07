@@ -37,8 +37,8 @@ export default async function ExtensionPage() {
 								<p className="mt-4 max-w-lg text-lg text-muted-foreground text-center md:text-left sm:mt-6">
 									Specialized modes stay on task and ship great code.
 									<br />
-									Fully model-agnostic so you can use the best (or most cost-effective) model for
-									each task.
+									Fully model-agnostic so you can use the best (or most cost-effective) model for each
+									task.
 								</p>
 								<p className="max-w-lg text-lg text-muted-foreground text-center md:text-left sm:mt-6">
 									Stop chasing this week&apos;s hot new model or CLI tool and go deep with Roo Code.

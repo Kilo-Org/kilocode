@@ -20,15 +20,33 @@ vi.mock("fs/promises", () => ({
 	readFile: vi.fn(),
 }))
 
-vi.mock("path", () => ({
-	join: vi.fn((...args: string[]) => args.join("/")),
-	isAbsolute: vi.fn((p: string) => p.startsWith("/")),
-	basename: vi.fn((p: string) => p.split("/").pop() || ""),
-}))
+vi.mock("path", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("path")>()
+	return {
+		...actual,
+		default: {
+			...actual,
+			join: vi.fn((...args: string[]) => args.join("/")),
+			isAbsolute: vi.fn((p: string) => p.startsWith("/")),
+			basename: vi.fn((p: string) => p.split("/").pop() || ""),
+		},
+		join: vi.fn((...args: string[]) => args.join("/")),
+		isAbsolute: vi.fn((p: string) => p.startsWith("/")),
+		basename: vi.fn((p: string) => p.split("/").pop() || ""),
+	}
+})
 
-vi.mock("os", () => ({
-	homedir: vi.fn(() => "/home/user"),
-}))
+vi.mock("os", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("os")>()
+	return {
+		...actual,
+		default: {
+			...actual,
+			homedir: vi.fn(() => "/home/user"),
+		},
+		homedir: vi.fn(() => "/home/user"),
+	}
+})
 
 vi.mock("../fs", () => ({
 	fileExistsAtPath: vi.fn(),

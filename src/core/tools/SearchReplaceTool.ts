@@ -1,19 +1,19 @@
 import fs from "fs/promises"
 import path from "path"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { fileExistsAtPath } from "../../utils/fs"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
-import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface SearchReplaceParams {
 	file_path: string
@@ -106,6 +106,8 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			let fileContent: string
 			try {
 				fileContent = await fs.readFile(absolutePath, "utf8")
+				// Normalize line endings to LF for consistent matching
+				fileContent = fileContent.replace(/\r\n/g, "\n")
 			} catch (error) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("search_replace")
@@ -115,11 +117,12 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				return
 			}
 
-			const useCrLf_kilocode = fileContent.includes("\r\n")
-			const normalizedOldString_kilocode = normalizeLineEndings_kilocode(old_string, useCrLf_kilocode)
+			// Normalize line endings in search/replace strings to match file content
+			const normalizedOldString = old_string.replace(/\r\n/g, "\n")
+			const normalizedNewString = new_string.replace(/\r\n/g, "\n")
 
 			// Check for exact match (literal string, not regex)
-			const matchCount = fileContent.split(normalizedOldString_kilocode).length - 1
+			const matchCount = fileContent.split(normalizedOldString).length - 1
 
 			if (matchCount === 0) {
 				task.consecutiveMistakeCount++
@@ -146,8 +149,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			}
 
 			// Apply the single replacement
-			const normalizedNewString_kilocode = normalizeLineEndings_kilocode(new_string, useCrLf_kilocode)
-			const newContent = fileContent.replace(normalizedOldString_kilocode, normalizedNewString_kilocode)
+			const newContent = fileContent.replace(normalizedOldString, normalizedNewString)
 
 			// Check if any changes were made
 			if (newContent === fileContent) {
@@ -239,18 +241,25 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			// Record successful tool usage and cleanup
 			task.recordToolUsage("search_replace")
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 
 			// Process any queued messages after file edit completes
 			task.processQueuedMessages()
 		} catch (error) {
 			await handleError("search and replace", error as Error)
 			await task.diffViewProvider.reset()
+			this.resetPartialState()
 		}
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"search_replace">): Promise<void> {
 		const filePath: string | undefined = block.params.file_path
 		const oldString: string | undefined = block.params.old_string
+
+		// Wait for path to stabilize before showing UI (prevents truncated paths)
+		if (!this.hasPathStabilized(filePath)) {
+			return
+		}
 
 		let operationPreview: string | undefined
 		if (oldString) {
@@ -259,14 +268,14 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			operationPreview = `replacing: "${preview}"`
 		}
 
-		// Determine relative path for display
-		let relPath = filePath || ""
-		if (filePath && path.isAbsolute(filePath)) {
-			relPath = path.relative(task.cwd, filePath)
+		// Determine relative path for display (filePath is guaranteed non-null after hasPathStabilized)
+		let relPath = filePath!
+		if (path.isAbsolute(relPath)) {
+			relPath = path.relative(task.cwd, relPath)
 		}
 
-		const absolutePath = relPath ? path.resolve(task.cwd, relPath) : ""
-		const isOutsideWorkspace = absolutePath ? isPathOutsideWorkspace(absolutePath) : false
+		const absolutePath = path.resolve(task.cwd, relPath)
+		const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)
 
 		const sharedMessageProps: ClineSayTool = {
 			tool: "appliedDiff",

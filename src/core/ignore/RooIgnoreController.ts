@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import fsSync from "fs"
 import ignore, { Ignore } from "ignore"
 import * as vscode from "vscode"
+import "../../utils/path" // Import to enable String.prototype.toPosix()
 
 export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 
@@ -128,7 +129,12 @@ export class RooIgnoreController {
 
 		// Split command into parts and get the base command
 		const parts = command.trim().split(/\s+/)
-		const baseCommand = parts[0].toLowerCase()
+		const baseCommand = parts[0]?.toLowerCase()
+
+		// If no base command, allow the command
+		if (!baseCommand) {
+			return undefined
+		}
 
 		// Commands that read file contents
 		const fileReadingCommands = [
@@ -153,6 +159,10 @@ export class RooIgnoreController {
 			// Check each argument that could be a file path
 			for (let i = 1; i < parts.length; i++) {
 				const arg = parts[i]
+				// Skip undefined arguments
+				if (!arg) {
+					continue
+				}
 				// Skip command flags/options (both Unix and PowerShell style)
 				if (arg.startsWith("-") || arg.startsWith("/")) {
 					continue

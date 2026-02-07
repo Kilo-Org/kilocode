@@ -1,9 +1,11 @@
+import { type ClineSayTool } from "@roo-code/types"
+
 import { Task } from "../task/Task"
 import { fetchInstructions } from "../prompts/instructions/instructions"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface FetchInstructionsParams {
 	task: string

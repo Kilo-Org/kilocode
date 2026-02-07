@@ -14,7 +14,9 @@
 		"shareSession": "Chia sẻ phiên",
 		"shareConfirmMessage": "Bạn có muốn chia sẻ công khai một ảnh chụp của phiên này không?",
 		"shareConfirmYes": "Có",
-		"shareConfirmNo": "Không"
+		"shareConfirmNo": "Không",
+		"options": "Tùy chọn",
+		"configureSetupScript": "Script thiết lập worktree"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -28,7 +30,6 @@
 		"autoModeWarning": "Chế độ YOLO - các thao tác công cụ được tự động phê duyệt",
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
-		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
 		"runModeLocal": "Cục bộ",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Đám mây",
@@ -55,7 +56,13 @@
 		"branchPickerTooltip": "Chuyển nhánh cơ sở",
 		"noBranches": "Không tìm thấy nhánh nào",
 		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn",
-		"openTerminal": "Mở terminal"
+		"openTerminal": "Mở terminal",
+		"selectModel": "Chọn mô hình",
+		"modelTooltip": "Chọn mô hình AI để sử dụng cho phiên này",
+		"defaultModel": "Mô hình mặc định",
+		"loadingModels": "Đang tải...",
+		"selectMode": "Chọn chế độ",
+		"modeTooltip": "Chế độ: {{mode}}"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",
@@ -70,7 +77,9 @@
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}",
 		"expandOutput": "Mở rộng đầu ra",
 		"collapseOutput": "Thu gọn đầu ra",
-		"copyCommand": "Sao chép lệnh"
+		"copyCommand": "Sao chép lệnh",
+		"thinking": "Đang suy nghĩ",
+		"thinkingSeconds": "{{count}}s"
 	},
 	"chatInput": {
 		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",
@@ -80,9 +89,12 @@
 		"cancelTitle": "Hủy agent",
 		"finishToBranchTitle": "Hoàn tất worktree và chuẩn bị branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Hoàn tất worktree và chuẩn bị branch",
+		"createPRTitle": "Tạo pull request",
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
-		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"
+		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng",
+		"addImage": "Thêm hình ảnh",
+		"removeImage": "Xóa hình ảnh"
 	},
 	"status": {
 		"running": "đang chạy",

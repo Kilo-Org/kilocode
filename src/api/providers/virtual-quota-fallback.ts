@@ -99,12 +99,12 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 					yield chunk
 				}
 			} catch (error) {
-				// Check if this is a retryable
+				// Check if this is a retryable error (rate limit or overload)
 				if (this.isRateLimitError(error) || this.isOverloadError(error)) {
-					// Set cooldown for the current provider
-					await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+					// Set a short cooldown (10 seconds) to prevent rapid cycling
+					await this.usage.setCooldown(this.activeProfileId, 10 * 1000)
 
-					// Switch to a different provider
+					// Switch to a different provider and retry
 					await this.adjustActiveHandler("Retryable Error")
 
 					// Retry the request with the new provider
@@ -112,8 +112,8 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 					return
 				}
 
-				// For non-rate limit errors, set cooldown and rethrow
-				await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+				// For non-retryable errors, set cooldown and rethrow
+				await this.usage.setCooldown(this.activeProfileId, 10 * 1000)
 				throw error
 			}
 		} catch (error) {
@@ -130,7 +130,7 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 				id: "",
 				info: {
 					maxTokens: 1,
-					contextWindow: 1,
+					contextWindow: 1000000,
 					supportsPromptCache: false,
 				},
 			}
@@ -138,9 +138,17 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 		return this.activeHandler.getModel()
 	}
 
+	getActiveProfileNumber(): number | undefined {
+		if (!this.activeProfileId) {
+			return undefined
+		}
+		const index = this.handlerConfigs.findIndex((c) => c.profileId === this.activeProfileId)
+		return index >= 0 ? index + 1 : undefined
+	}
+
 	get contextWindow(): number {
 		if (!this.activeHandler) {
-			return 1 // Default fallback
+			return 1000000 // Default fallback
 		}
 		const model = this.activeHandler.getModel()
 		return model.info.contextWindow

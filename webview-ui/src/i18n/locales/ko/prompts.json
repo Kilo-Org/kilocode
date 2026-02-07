@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "조직 모드",
-		"description": "이 모드는 조직에서 제공하며 여기서 편집할 수 없습니다. 이 모드를 수정하려면 Kilo Code Dashboard를 방문하세요.",
+		"description": "이 모드는 조직에서 제공하며 여기서 편집할 수 없습니다. 이 모드를 수정하려면 <dashboardLink>Kilo Code Dashboard</dashboardLink>를 방문하세요.",
 		"cannotEdit": "조직 모드는 편집할 수 없습니다"
 	},
 	"tools": {

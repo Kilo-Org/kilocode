@@ -36,20 +36,24 @@ vi.mock("fs", async (importOriginal) => {
 				...actual.promises,
 				mkdir: vi.fn(),
 				readFile: vi.fn(),
+				writeFile: vi.fn(),
 				appendFile: vi.fn(),
 				rm: vi.fn(),
 				readdir: vi.fn(),
 				stat: vi.fn(),
+				unlink: vi.fn(),
 			},
 		},
 		existsSync: vi.fn(),
 		promises: {
 			mkdir: vi.fn(),
 			readFile: vi.fn(),
+			writeFile: vi.fn(),
 			appendFile: vi.fn(),
 			rm: vi.fn(),
 			readdir: vi.fn(),
 			stat: vi.fn(),
+			unlink: vi.fn(),
 		},
 	}
 })
@@ -86,7 +90,12 @@ describe("WorktreeManager", () => {
 			mockGit.checkIsRepo.mockResolvedValue(true)
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.raw.mockResolvedValue("")
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				// .git directory exists
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
@@ -103,7 +112,11 @@ describe("WorktreeManager", () => {
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.branch.mockResolvedValue({ all: ["feature/existing-branch"] })
 			mockGit.raw.mockResolvedValue("")
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
@@ -121,7 +134,11 @@ describe("WorktreeManager", () => {
 			mockGit.checkIsRepo.mockResolvedValue(true)
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.branch.mockResolvedValue({ all: [] })
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 
@@ -134,10 +151,11 @@ describe("WorktreeManager", () => {
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.raw.mockResolvedValue("")
 			vi.mocked(fs.existsSync).mockImplementation((p) => {
-				// Return true for worktree path check, false for gitignore (cross-platform)
 				const normalized = String(p).replace(/\\/g, "/")
-				return normalized.includes(".kilocode/worktrees")
+				// .git exists, worktree path exists
+				return normalized.endsWith(".git") || normalized.includes(".kilocode/worktrees")
 			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.rm).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/")
@@ -272,28 +290,225 @@ describe("WorktreeManager", () => {
 		})
 	})
 
-	describe("ensureGitignore", () => {
-		it("adds gitignore entry when not present", async () => {
+	describe("ensureGitExclude", () => {
+		it("adds exclude entry when not present", async () => {
 			vi.mocked(fs.existsSync).mockReturnValue(true)
-			vi.mocked(fs.promises.readFile).mockResolvedValue("node_modules/\n")
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("# existing excludes\n")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
 
-			await manager.ensureGitignore()
+			await manager.ensureGitExclude()
 
 			expect(fs.promises.appendFile).toHaveBeenCalledWith(
-				path.join(projectRoot, ".gitignore"),
+				path.join(projectRoot, ".git", "info", "exclude"),
 				expect.stringContaining(".kilocode/worktrees/"),
 			)
 		})
 
 		it("skips adding entry when already present", async () => {
 			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/\n")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
 
-			await manager.ensureGitignore()
+			await manager.ensureGitExclude()
 
 			expect(fs.promises.appendFile).not.toHaveBeenCalled()
+		})
+
+		it("creates info directory if it does not exist", async () => {
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				// .git exists, but info directory does not
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitExclude()
+
+			expect(fs.promises.mkdir).toHaveBeenCalledWith(
+				path.join(projectRoot, ".git", "info"),
+				expect.objectContaining({ recursive: true }),
+			)
+		})
+
+		it("resolves main .git directory when in a worktree", async () => {
+			const mainRepoGitDir = "/main/repo/.git"
+			const worktreeGitDir = `${mainRepoGitDir}/worktrees/my-worktree`
+
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			// .git is a file (worktree marker)
+			vi.mocked(fs.promises.stat).mockResolvedValueOnce({ isDirectory: () => false, isFile: () => true } as any)
+			// Return gitdir content for worktree
+			vi.mocked(fs.promises.readFile).mockResolvedValueOnce(`gitdir: ${worktreeGitDir}\n`)
+			// Return existing exclude content
+			vi.mocked(fs.promises.readFile).mockResolvedValueOnce("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitExclude()
+
+			// Should write to main repo's .git/info/exclude, not the worktree's
+			expect(fs.promises.appendFile).toHaveBeenCalledWith(
+				expect.stringContaining(path.join(mainRepoGitDir, "info", "exclude")),
+				expect.stringContaining(".kilocode/worktrees/"),
+			)
+		})
+	})
+
+	describe("writeSessionId", () => {
+		it("creates .kilocode directory and writes session ID file", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.writeFile).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("gitdir: /main/.git/worktrees/test\n")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.writeSessionId("/worktree/path", "session-123")
+
+			expect(fs.promises.mkdir).toHaveBeenCalledWith(
+				path.join("/worktree/path", ".kilocode"),
+				expect.objectContaining({ recursive: true }),
+			)
+			expect(fs.promises.writeFile).toHaveBeenCalledWith(
+				path.join("/worktree/path", ".kilocode", "session-id"),
+				"session-123",
+				"utf-8",
+			)
+		})
+
+		it("skips mkdir for .kilocode if directory already exists", async () => {
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				// .kilocode exists, but git info dir doesn't
+				return normalized.endsWith(".kilocode")
+			})
+			vi.mocked(fs.promises.writeFile).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("gitdir: /main/.git/worktrees/test\n")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+
+			await manager.writeSessionId("/worktree/path", "session-456")
+
+			// mkdir should only be called for git info dir, not for .kilocode
+			const mkdirCalls = vi.mocked(fs.promises.mkdir).mock.calls
+			const kilocodeMkdirCalls = mkdirCalls.filter(
+				(call) =>
+					String(call[0]).replace(/\\/g, "/").includes(".kilocode") &&
+					!String(call[0]).replace(/\\/g, "/").includes(".git"),
+			)
+			expect(kilocodeMkdirCalls).toHaveLength(0)
+
+			expect(fs.promises.writeFile).toHaveBeenCalledWith(
+				path.join("/worktree/path", ".kilocode", "session-id"),
+				"session-456",
+				"utf-8",
+			)
+		})
+
+		it("ensures .kilocode/ is excluded from git in the worktree", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.writeFile).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("gitdir: /main/.git/worktrees/test\n")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.writeSessionId("/worktree/path", "session-789")
+
+			// Should have appended .kilocode/ to the worktree's git exclude
+			expect(fs.promises.appendFile).toHaveBeenCalledWith(
+				expect.stringContaining("exclude"),
+				expect.stringContaining(".kilocode/"),
+			)
+		})
+	})
+
+	describe("readSessionId", () => {
+		it("returns session ID when file exists", async () => {
+			vi.mocked(fs.promises.readFile).mockResolvedValue("session-123\n")
+
+			const result = await manager.readSessionId("/worktree/path")
+
+			expect(result).toBe("session-123")
+			expect(fs.promises.readFile).toHaveBeenCalledWith(
+				path.join("/worktree/path", ".kilocode", "session-id"),
+				"utf-8",
+			)
+		})
+
+		it("returns undefined when file does not exist", async () => {
+			vi.mocked(fs.promises.readFile).mockRejectedValue(new Error("ENOENT"))
+
+			const result = await manager.readSessionId("/worktree/path")
+
+			expect(result).toBeUndefined()
+		})
+
+		it("trims whitespace from session ID", async () => {
+			vi.mocked(fs.promises.readFile).mockResolvedValue("  session-456  \n")
+
+			const result = await manager.readSessionId("/worktree/path")
+
+			expect(result).toBe("session-456")
+		})
+	})
+
+	describe("removeSessionId", () => {
+		it("removes session ID file when it exists", async () => {
+			vi.mocked(fs.promises.unlink).mockResolvedValue(undefined)
+
+			await manager.removeSessionId("/worktree/path")
+
+			expect(fs.promises.unlink).toHaveBeenCalledWith(path.join("/worktree/path", ".kilocode", "session-id"))
+		})
+
+		it("does not throw when file does not exist", async () => {
+			vi.mocked(fs.promises.unlink).mockRejectedValue(new Error("ENOENT"))
+
+			await expect(manager.removeSessionId("/worktree/path")).resolves.not.toThrow()
+		})
+	})
+
+	describe("discoverWorktrees with sessionId", () => {
+		it("includes sessionId in discovered worktree info", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.readdir).mockResolvedValue([
+				{ name: "feature-branch", isDirectory: () => true },
+			] as any)
+			vi.mocked(fs.promises.stat).mockResolvedValue({
+				isFile: () => true,
+				birthtimeMs: 1234567890,
+			} as any)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("session-abc-123")
+			mockGit.revparse.mockResolvedValue("feature-branch\n")
+			mockGit.branch.mockResolvedValue({ all: ["main"] })
+
+			const result = await manager.discoverWorktrees()
+
+			expect(result).toHaveLength(1)
+			expect(result[0].sessionId).toBe("session-abc-123")
+		})
+
+		it("returns undefined sessionId when session-id file does not exist", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.readdir).mockResolvedValue([
+				{ name: "feature-branch", isDirectory: () => true },
+			] as any)
+			vi.mocked(fs.promises.stat).mockResolvedValue({
+				isFile: () => true,
+				birthtimeMs: 1234567890,
+			} as any)
+			// First call for .git file check, second for session-id (fails)
+			vi.mocked(fs.promises.readFile).mockRejectedValue(new Error("ENOENT"))
+			mockGit.revparse.mockResolvedValue("feature-branch\n")
+			mockGit.branch.mockResolvedValue({ all: ["main"] })
+
+			const result = await manager.discoverWorktrees()
+
+			expect(result).toHaveLength(1)
+			expect(result[0].sessionId).toBeUndefined()
 		})
 	})
 })

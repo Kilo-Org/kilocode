@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Agen Pengkodean AI, Copilot, dan Pelengkapan Otomatis",
-	"extension.description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode.",
+	"extension.description": "Agen pengkodean AI Open Source yang menghasilkan kode dari bahasa alami, mengotomatisasi tugas, dan menjalankan perintah terminal. Dilengkapi dengan pelengkapan otomatis inline, otomatisasi browser, refactoring otomatis, dan mode kustom untuk perencanaan, pengkodean, dan debugging. Mendukung 500+ model AI termasuk Claude (Anthropic), Gemini, Grok, GPT, Codex dan GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -47,6 +47,9 @@
 	"settings.codeIndex.embeddingBatchSize.description": "Ukuran batch untuk operasi embedding selama pengindeksan kode. Sesuaikan ini berdasarkan batas penyedia API kamu. Default adalah 60.",
 	"settings.toolProtocol.description": "Protokol alat untuk digunakan untuk interaksi AI. XML adalah protokol default dan yang direkomendasikan. Native bersifat eksperimental dan mungkin tidak berfungsi dengan semua penyedia.",
 	"settings.debug.description": "Aktifkan mode debug untuk menampilkan tombol tambahan untuk melihat riwayat percakapan API dan pesan UI sebagai JSON yang diformat dalam file sementara.",
+	"settings.debugProxy.enabled.description": "**Aktifkan Debug Proxy** — Arahkan semua permintaan jaringan keluar lewat proxy untuk debugging MITM. Hanya aktif saat kamu berjalan dalam mode debug (F5).",
+	"settings.debugProxy.serverUrl.description": "URL proxy (mis. `http://127.0.0.1:8888`). Hanya digunakan ketika **Debug Proxy** diaktifkan.",
+	"settings.debugProxy.tlsInsecure.description": "Terima sertifikat self-signed dari proxy. **Diperlukan untuk inspeksi MITM.** ⚠️ Tidak aman — gunakan hanya untuk debugging lokal.",
 	"command.generateCommitMessage.title": "Buat Pesan Commit dengan Kilo",
 	"command.profile.title": "Profil",
 	"command.prompts.title": "Mode",

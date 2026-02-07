@@ -5,6 +5,12 @@ import { getWorkspacePath } from "../../utils/path"
 import { t } from "../../i18n"
 
 export async function openImage(dataUriOrPath: string, options?: { values?: { action?: string } }) {
+	// Validate input - must be a non-empty string
+	if (!dataUriOrPath || typeof dataUriOrPath !== "string") {
+		vscode.window.showErrorMessage(t("common:errors.invalid_data_uri"))
+		return
+	}
+
 	// Check if it's a file path (absolute or relative)
 	const isFilePath =
 		!dataUriOrPath.startsWith("data:") &&
