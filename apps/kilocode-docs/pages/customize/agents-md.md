@@ -7,6 +7,17 @@ description: "Project-level configuration with agents.md files"
 
 AGENTS.md files provide a standardized way to configure AI agent behavior across different AI coding tools. They allow you to define project-specific instructions, coding standards, and guidelines that AI agents should follow when working with your codebase.
 
+{% callout type="note" title="Memory Bank Deprecation" %}
+The Kilo Code **memory bank** feature has been deprecated in favor of AGENTS.md. 
+
+**Existing memory bank rules will continue to work.**
+
+If you'd like to migrate your memory bank content to AGENTS.md:
+
+1. Examine the contents in `.kilocode/rules/memory-bank/`
+2. Move that content into your project's `AGENTS.md` file (or ask Kilo to do it for you)
+{% /callout %}
+
 ## What is AGENTS.md?
 
 AGENTS.md is an open standard for configuring AI agent behavior in software projects. It's a simple Markdown file placed at the root of your project that contains instructions for AI coding assistants. The standard is supported by multiple AI coding tools, including Kilo Code, Cursor, and Windsurf.
@@ -40,9 +51,9 @@ my-project/
 1. `AGENTS.md` (uppercase, plural - recommended)
 2. `AGENT.md` (uppercase, singular - fallback)
 
-:::warning Case Sensitivity
+{% callout type="warning" title="Case Sensitivity" %}
 The filename must be uppercase (`AGENTS.md`), not lowercase (`agents.md`). This ensures consistency across different operating systems and tools.
-:::
+{% /callout %}
 
 ### Subdirectory AGENTS.md Files
 
@@ -131,7 +142,7 @@ AGENTS.md works alongside Kilo Code's other configuration systems:
 | -------------------------------------------------------------- | ------- | ------------------------- | ----------------------------------------- | ----------- |
 | **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints       | 1 (Highest) |
 | **[Custom Rules](/docs/customize/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints  | 2           |
-| **[AGENTS.md](/docs/customize/agents-md)**                                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
+| **[AGENTS.md](/docs/customize/agents-md)**                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
 | **[Global Custom Rules](/docs/customize/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                    | 4           |
 | **[Custom Instructions](/docs/customize/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects  | 5 (Lowest)  |
 

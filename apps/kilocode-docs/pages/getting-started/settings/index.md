@@ -7,10 +7,9 @@ description: "Configure Kilo Code settings and preferences"
 
 Kilo Code allows you to manage your configuration settings effectively through export, import, and reset options. These features are useful for backing up your setup, sharing configurations with others, or restoring default settings if needed.
 
-You can find these options at the bottom of the Kilo Code settings page, accessible via the gear icon (<i class="codicon codicon-gear"></i>) in the Kilo Code chat view.
+You can find these options at the bottom of the Kilo Code settings page, accessible via the gear icon ({% codicon name="gear" /%}) in the Kilo Code chat view.
 
-<img src="/docs/img/settings-management/settings-management.png" alt="Export, Import, and Reset buttons in Kilo Code settings" width="400" />
-*Image: Export, Import, and Reset buttons.*
+{% image src="/docs/img/settings-management/settings-management.png" alt="Export, Import, and Reset buttons in Kilo Code settings" width="800" caption="Export, Import, and Reset buttons" /%}
 
 ## Export Settings
 
@@ -59,3 +58,53 @@ Clicking the **Reset** button completely clears all Kilo Code configuration data
 - **Result:** Kilo Code returns to its initial state, as if freshly installed, with default settings and no user configurations.
 
 Use this option only if you are certain you want to remove all Kilo Code data or if instructed during troubleshooting. Consider exporting your settings first if you might want to restore them later.
+
+## Experimental Features
+
+{% callout type="info" %}
+These features are experimental and may change in future releases. They provide advanced control over Kilo Code's behavior for specific use cases.
+{% /callout %}
+
+### Concurrent File Edits
+
+When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit one file at a time.
+
+**When to disable:**
+
+- Working with less capable models that struggle with complex multi-file operations
+- You want more granular control over file modifications
+- Debugging issues with file editing behavior
+
+**Default:** Enabled
+
+### Power Steering
+
+When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This leads to stronger adherence to role definitions and custom instructions, but will use more tokens per message.
+
+**When to enable:**
+
+- Working with custom modes that have specific role definitions
+- You need stricter adherence to custom instructions
+- The model is deviating from the intended mode behavior
+
+**Trade-off:** Increased token usage per message in exchange for better mode adherence.
+
+**Default:** Disabled
+
+Learn more about [Custom Modes](/docs/customize/custom-modes) and how Power Steering can improve mode behavior.
+
+### File Read Auto-Truncate Threshold
+
+This setting controls the number of lines read from a file in one batch. To manage large files and reduce context/resource usage, adjust the `File read auto-truncate threshold` setting.
+
+**When to adjust:**
+
+- Working with very large files that consume too much context
+- Need to improve performance when reading large files
+- Want to reduce token usage for file operations
+
+**Trade-off:** Lower values can improve performance when working with very large files, but may require more read operations to access the full file content.
+
+**Default:** Set in Advanced Settings
+
+You can find this setting in the Kilo Code settings under 'Advanced Settings'.

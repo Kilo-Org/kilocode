@@ -53,6 +53,10 @@ logs
 # Nix / Direnv
 .direnv
 
+# Mise
+mise.toml
+mise.local.toml
+
 # Exclude Conport Directory (MCP server)
 context_portal/
 

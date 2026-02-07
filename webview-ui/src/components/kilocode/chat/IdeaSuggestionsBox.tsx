@@ -57,11 +57,11 @@ export const IdeaSuggestionsBox = () => {
 				{/* Header section */}
 				<div className="text-center mb-5">
 					<div className="inline-flex items-center gap-2 mb-2">
-						<Sparkles className="w-4 h-4 text-vscode-focusBorder" />
+						<Sparkles className="w-4 h-4 text-vscode-foreground" />
 						<p className="text-base font-semibold text-vscode-foreground m-0">
 							{t("ideaSuggestionsBox.newHere")}
 						</p>
-						<Sparkles className="w-4 h-4 text-vscode-focusBorder" />
+						<Sparkles className="w-4 h-4 text-vscode-foreground" />
 					</div>
 					<p className="text-sm text-vscode-descriptionForeground m-0">
 						{t("ideaSuggestionsBox.tryOneOfThese")}
@@ -81,7 +81,7 @@ export const IdeaSuggestionsBox = () => {
 									style={{
 										background: "color-mix(in srgb, var(--vscode-focusBorder) 15%, transparent)",
 									}}>
-									<Lightbulb className="w-4 h-4 text-vscode-focusBorder transition-colors duration-200 group-hover:text-vscode-button-foreground" />
+									<Lightbulb className="w-4 h-4 text-vscode-foreground transition-colors duration-200 group-hover:text-vscode-button-foreground" />
 								</div>
 								<span className="flex-1 text-vscode-foreground leading-relaxed pt-0.5">{idea}</span>
 								<ArrowRight className="w-4 h-4 text-vscode-descriptionForeground opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1" />

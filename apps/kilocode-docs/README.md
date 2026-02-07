@@ -37,3 +37,19 @@ The quickest way to deploy your own version of this boilerplate is by deploying 
 ### Deploy to Netlify
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/markdoc/next.js-starter)
+
+## Contributing
+
+When making documentation _only_ changes, use branch names prefixed with `docs/`:
+
+```bash
+git checkout -b docs/your-change-description
+```
+
+Examples:
+
+- `docs/add-mcp-tutorial`
+- `docs/fix-installation-steps`
+- `docs/update-api-reference`
+
+For full contribution guidelines, see the [Contributing Guide](https://kilo.ai/docs/contributing).

@@ -58,11 +58,12 @@ export function getTaskHistory(
 		}
 	})
 
-	const pageCount = Math.ceil(tasks.length / PAGE_SIZE)
+	const totalItems = tasks.length
+	const pageCount = Math.ceil(totalItems / PAGE_SIZE)
 	const pageIndex = Math.max(0, Math.min(request.pageIndex, pageCount - 1))
 
 	const startIndex = PAGE_SIZE * pageIndex
 	const historyItems = tasks.slice(startIndex, startIndex + PAGE_SIZE)
 
-	return { requestId: request.requestId, historyItems, pageIndex, pageCount }
+	return { requestId: request.requestId, historyItems, pageIndex, pageCount, totalItems }
 }

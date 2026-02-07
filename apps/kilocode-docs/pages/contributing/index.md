@@ -32,9 +32,13 @@ Before diving into the code, we recommend reviewing the [Architecture Overview](
 
 - Create a new branch for each feature or bugfix
 - Use descriptive branch names (e.g., `feature/new-tool-support` or `fix/browser-action-bug`)
+- **For documentation only changes**: Use the `docs/` prefix (e.g., `docs/improve-mcp-guide`)
 
 ```bash
 git checkout -b your-branch-name
+
+# For documentation changes:
+git checkout -b docs/your-change-description
 ```
 
 ### Coding Standards
