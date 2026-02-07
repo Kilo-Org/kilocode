@@ -18,50 +18,71 @@ export const CodeWithAiNav: NavSection[] = [
 		],
 	},
 	{
-		title: "Working with Agents",
+		title: "Chat & Context",
 		links: [
 			{
 				href: "/code-with-ai/agents/chat-interface",
-				children: "The Chat Interface",
+				children: "Chat Interface",
 			},
 			{
 				href: "/code-with-ai/agents/context-mentions",
 				children: "Context & Mentions",
-			},
-			{ href: "/code-with-ai/agents/using-modes", children: "Using Modes" },
-			{
-				href: "/code-with-ai/agents/orchestrator-mode",
-				children: "Orchestrator Mode",
 			},
 			{
 				href: "/code-with-ai/agents/model-selection",
 				children: "Model Selection",
 			},
 			{
+				href: "/code-with-ai/agents/auto-model",
+				children: "Auto Model",
+			},
+			{
 				href: "/code-with-ai/agents/free-and-budget-models",
 				children: "Free & Budget Models",
+			},
+			{
+				href: "/code-with-ai/agents/using-modes",
+				children: "Modes",
+				subLinks: [
+					{ href: "/code-with-ai/agents/using-modes", children: "Using Modes" },
+					{
+						href: "/code-with-ai/agents/orchestrator-mode",
+						children: "Orchestrator Mode",
+					},
+				],
 			},
 		],
 	},
 	{
-		title: "Features",
+		title: "Productivity Tools",
 		links: [
-			{ href: "/code-with-ai/features/autocomplete", children: "Autocomplete" },
-			{ href: "/code-with-ai/features/code-actions", children: "Code Actions" },
-			{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },
 			{
-				href: "/code-with-ai/features/git-commit-generation",
-				children: "Git Commit Generation",
+				href: "/code-with-ai/features/autocomplete",
+				children: "Autocomplete",
+				subLinks: [{ href: "/code-with-ai/features/autocomplete/mistral-setup", children: "Mistral Setup" }],
 			},
-			{ href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
+			{ href: "/code-with-ai/features/code-actions", children: "Code Actions" },
 			{
 				href: "/code-with-ai/features/enhance-prompt",
 				children: "Enhance Prompt",
 			},
-			{ href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
 			{
-				href: "/code-with-ai/features/task-todo-list",
-				children: "Task Todo List",
+				href: "/code-with-ai/features/git-commit-generation",
+				children: "Git Commit Generation",
+			},
+			{ href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
+			{
+				href: "/code-with-ai/features/browser-use",
+				children: "Agent Behavior",
+				subLinks: [
+					{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },
+					{ href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
+					{
+						href: "/code-with-ai/features/task-todo-list",
+						children: "Task Todo List",
+					},
+					{ href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
+				],
 			},
 		],
 	},

@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Com vols començar?",
+		"freeModels": {
+			"title": "Models gratuïts",
+			"description": "Comença a programar immediatament"
+		},
+		"premiumModels": {
+			"title": "Models premium",
+			"description": "Registra't. Els nous usuaris reben 5 $ en crèdits"
+		},
+		"byok": {
+			"title": "Porta la teva pròpia clau",
+			"description": "Avançat. Utilitza el teu propi compte o subscripció"
+		}
+	},
 	"welcome": {
 		"greeting": "Benvingut a Kilo Code!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
@@ -210,7 +225,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Nou aquí?",
 		"tryOneOfThese": "Prova una d'aquestes idees per començar:",
-		"clickToInsert": "Fes clic a qualsevol suggeriment per començar a treballar-hi immediatament",
 		"suggestionText": "<suggestionButton>Fes clic aquí</suggestionButton> per a una idea genial, després toca <sendIcon /> i mira'm fer màgia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D que giri i brilli i respongui als moviments del ratolí. Fes que l'aplicació funcioni al navegador.",

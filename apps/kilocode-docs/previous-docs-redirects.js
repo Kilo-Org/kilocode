@@ -1,7 +1,31 @@
 module.exports = [
+	{
+		source: "/docs/features/system-notifications",
+		destination: "/docs/getting-started/settings/system-notifications",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/auto-approving-actions",
+		destination: "/docs/getting-started/settings/auto-approving-actions",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/features/suggested-responses",
+		destination: "/docs/code-with-ai/agents/chat-interface#suggested-responses",
+		basePath: false,
+		permanent: true,
+	},
 	// ============================================
 	// GET STARTED
 	// ============================================
+	{
+		source: "/docs/basic-usage/byok",
+		destination: "/docs/getting-started/byok",
+		basePath: false,
+		permanent: true,
+	},
 	{
 		source: "/docs/getting-started/setting-up",
 		destination: "/docs/getting-started/setup-authentication",
@@ -69,6 +93,12 @@ module.exports = [
 	{
 		source: "/docs/advanced-usage/cloud-agent",
 		destination: "/docs/code-with-ai/platforms/cloud-agent",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/advanced-usage/slackbot",
+		destination: "/docs/code-with-ai/platforms/slack",
 		basePath: false,
 		permanent: true,
 	},
@@ -187,12 +217,6 @@ module.exports = [
 		permanent: true,
 	},
 	{
-		source: "/docs/advanced-usage/memory-bank",
-		destination: "/docs/customize/context/memory-bank",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/advanced-usage/large-projects",
 		destination: "/docs/customize/context/large-projects",
 		basePath: false,
@@ -206,14 +230,27 @@ module.exports = [
 		permanent: true,
 	},
 	{
-		source: "/docs/code-with-ai/context/memory-bank",
-		destination: "/docs/customize/context/memory-bank",
+		source: "/docs/code-with-ai/context/large-projects",
+		destination: "/docs/customize/context/large-projects",
+		basePath: false,
+		permanent: true,
+	},
+	// Removed memory bank page redirects to Agents.md
+	{
+		source: "/docs/advanced-usage/memory-bank",
+		destination: "/docs/customize/agents-md",
 		basePath: false,
 		permanent: true,
 	},
 	{
-		source: "/docs/code-with-ai/context/large-projects",
-		destination: "/docs/customize/context/large-projects",
+		source: "/docs/customize/context/memory-bank",
+		destination: "/docs/customize/agents-md",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/code-with-ai/context/memory-bank",
+		destination: "/docs/customize/agents-md",
 		basePath: false,
 		permanent: true,
 	},

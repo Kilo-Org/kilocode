@@ -32,9 +32,13 @@ Before diving into the code, we recommend reviewing the [Architecture Overview](
 
 - Create a new branch for each feature or bugfix
 - Use descriptive branch names (e.g., `feature/new-tool-support` or `fix/browser-action-bug`)
+- **For documentation only changes**: Use the `docs/` prefix (e.g., `docs/improve-mcp-guide`)
 
 ```bash
 git checkout -b your-branch-name
+
+# For documentation changes:
+git checkout -b docs/your-change-description
 ```
 
 ### Coding Standards
@@ -88,7 +92,7 @@ The [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) is a commun
 
 To contribute:
 
-1. Follow the documentation for [Custom Modes](/docs/customize/custom-modes), [Skills](/docs/customize/skills), or [MCP Servers](/docs/features/mcp/overview) to create your resource
+1. Follow the documentation for [Custom Modes](/docs/customize/custom-modes), [Skills](/docs/customize/skills), or [MCP Servers](/docs/automate/mcp/overview) to create your resource
 
 2. Test your contribution thoroughly
 
@@ -106,7 +110,7 @@ Documentation improvements are highly valued contributions:
 
     - Use clear, concise language
     - Include examples where appropriate
-    - Use absolute paths starting from `/docs/` for internal links
+    - Use absolute paths starting from `/docs/` for internal links (except within the same directory)
     - Don't include `.md` extensions in links
 
 2. Test your documentation changes by running the docs site locally:

@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "How would you like to get started?",
+		"freeModels": {
+			"title": "Free models",
+			"description": "Start coding immediately"
+		},
+		"premiumModels": {
+			"title": "Premium models",
+			"description": "Sign up. New users get $5 in credits"
+		},
+		"byok": {
+			"title": "Bring my own Key",
+			"description": "Advanced. Use your own account or subscription"
+		}
+	},
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
@@ -224,7 +239,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "New here?",
 		"tryOneOfThese": "Try one of these ideas to get started:",
-		"clickToInsert": "Click any suggestion to start working on it immediately",
 		"suggestionText": "<suggestionButton>Click here</suggestionButton> for a cool idea, then tap on <sendIcon /> and watch me do magic!",
 		"ideas": {
 			"idea1": "Make a spinning, glowing 3D sphere that responds to mouse movements. Make the app work in the browser.",

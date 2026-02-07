@@ -45,7 +45,6 @@
 | Task Todo List                      | `basic-usage/task-todo-list`                                               |
 | **Context & Indexing** (subheader)  |                                                                            |
 | Codebase Indexing                   | `features/codebase-indexing`                                               |
-| Memory Bank                         | `advanced-usage/memory-bank`                                               |
 | Large Projects                      | `advanced-usage/large-projects`                                            |
 | **Customization** (subheader)       |                                                                            |
 | Custom Modes                        | `agent-behavior/custom-modes`                                              |
@@ -163,18 +162,17 @@
 
 ## Pages to Remove from Nav / Condense
 
-| Page                                          | Recommendation                                           |
-| --------------------------------------------- | -------------------------------------------------------- |
-| `features/system-notifications`               | Fold into Settings or remove                             |
-| `features/more-features`                      | This is a red flag - break out or remove                 |
-| `features/suggested-responses`                | Fold into Chat Interface                                 |
-| `features/auto-approving-actions`             | Fold into Settings                                       |
-| `advanced-usage/auto-cleanup`                 | Fold into Settings                                       |
-| `features/model-temperature`                  | Fold into Model Selection                                |
-| `advanced-usage/rate-limits-costs`            | Fold into Adding Credits or AI Providers                 |
-| `features/footgun-prompting`                  | Remove                                                   |
-| `tips-and-tricks`                             | Could become a blog post or fold relevant bits elsewhere |
-| `features/experimental/experimental-features` | Keep but maybe as a single page, not a section           |
+| Page                                  | Recommendation                                           |
+| ------------------------------------- | -------------------------------------------------------- |
+| ☑️ `features/system-notifications`    | Fold into Settings or remove                             |
+| ❎ `features/more-features`           | Remove                                                   |
+| ☑️ `features/suggested-responses`     | Fold into Chat Interface                                 |
+| ☑️ `features/auto-approving-actions`  | Fold into Settings                                       |
+| ☑️ `advanced-usage/auto-cleanup`      | Fold into Settings                                       |
+| ❎ `features/model-temperature`       | Remove                                                   |
+| ☑️ `advanced-usage/rate-limits-costs` | Fold into Adding Credits or AI Providers                 |
+| ❎ `features/footgun-prompting`       | Remove                                                   |
+| ☑️ `tips-and-tricks`                  | Could become a blog post or fold relevant bits elsewhere |
 
 ---
 

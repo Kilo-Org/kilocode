@@ -22,9 +22,9 @@ Navigate to **Settings → Providers** and click **Add Profile** to create a new
 
 In the "New Configuration Profile" dialog, enter a name like "Mistral profile" (the name can be anything you prefer) and click **Create Profile**.
 
-:::note
+{% callout type="note" %}
 The profile name is just a label for your reference—it doesn't affect functionality. Choose any name that helps you identify this configuration.
-:::
+{% /callout %}
 
 ![Create Mistral Profile](/docs/img/mistral-setup/03-name-your-profile.png)
 
@@ -32,9 +32,9 @@ The profile name is just a label for your reference—it doesn't affect function
 
 In the **API Provider** dropdown, search for and select **Mistral**.
 
-:::note
+{% callout type="note" %}
 When creating an autocomplete profile, you don't need to select a specific model—Kilo Code will automatically use the appropriate Codestral model optimized for code completions.
-:::
+{% /callout %}
 
 ![Select Mistral Provider](/docs/img/mistral-setup/04-select-mistral-provider.png)
 
@@ -76,6 +76,6 @@ Click **Save** to apply your Mistral configuration. You're now ready to use free
 
 ## Next Steps
 
-- Learn more about [Autocomplete features](./index.md)
-- Explore [triggering options](./index.md#triggering-options) for autocomplete
-- Check out [best practices](./index.md#best-practices) for optimal results
+- Learn more about [Autocomplete features](/docs/code-with-ai/features/autocomplete)
+- Explore [triggering options](/docs/code-with-ai/features/autocomplete#triggering-options) for autocomplete
+- Check out [best practices](/docs/code-with-ai/features/autocomplete#best-practices) for optimal results

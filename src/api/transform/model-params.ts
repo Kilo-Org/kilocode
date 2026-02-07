@@ -100,7 +100,11 @@ export function getModelParams({
 	let reasoningEffort: ModelParams["reasoningEffort"] = undefined
 	let verbosity: VerbosityLevel | undefined = model.supportsVerbosity ? customVerbosity : undefined // kilocode_change
 
-	if (shouldUseReasoningBudget({ model, settings })) {
+	// kilocode_change start
+	if (model.supportsAdaptiveThinking && settings.enableReasoningEffort !== false) {
+		temperature = 1.0
+	} else if (shouldUseReasoningBudget({ model, settings })) {
+		// kilocode_change end
 		// Check if this is a Gemini 2.5 Pro model
 		const isGemini25Pro = modelId.includes("gemini-2.5-pro")
 

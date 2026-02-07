@@ -95,6 +95,33 @@ function SparkleIcon({ className }: { className?: string }) {
 	)
 }
 
+function SearchIcon({ className }: { className?: string }) {
+	return (
+		<svg
+			className={className}
+			width="20"
+			height="20"
+			viewBox="0 0 20 20"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			<path
+				d="M19 19L14.65 14.65"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+		</svg>
+	)
+}
+
 function HamburgerIcon({ isOpen }: { isOpen: boolean }) {
 	return (
 		<div className={`hamburger ${isOpen ? "open" : ""}`}>
@@ -203,6 +230,14 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 		return router.pathname.startsWith(href)
 	}
 
+	// Open DocSearch modal programmatically
+	const openDocSearch = () => {
+		const searchButton = document.querySelector(".DocSearch-Button") as HTMLButtonElement
+		if (searchButton) {
+			searchButton.click()
+		}
+	}
+
 	// Initialize DocSearch
 	useEffect(() => {
 		docsearch({
@@ -253,6 +288,13 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 				</div>
 
 				<div className="right-actions">
+					{/* Mobile search button */}
+					<button
+						className="mobile-search-btn mobile-only"
+						onClick={openDocSearch}
+						aria-label="Search documentation">
+						<SearchIcon />
+					</button>
 					<ThemeToggle />
 					<Link href="https://kilo.ai/github" className="github-link desktop-nav">
 						GitHub
@@ -425,6 +467,22 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 					gap: 0.5rem;
 				}
 
+				.mobile-search-btn {
+					display: none;
+					align-items: center;
+					justify-content: center;
+					padding: 0.5rem;
+					background: transparent;
+					border: none;
+					cursor: pointer;
+					color: var(--text-secondary);
+					transition: color 0.15s ease;
+				}
+
+				.mobile-search-btn:hover {
+					color: var(--text-color);
+				}
+
 				/* Mobile styles */
 				@media (max-width: 768px) {
 					.top-bar {
@@ -432,6 +490,14 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 					}
 
 					.mobile-menu-btn {
+						display: flex;
+					}
+
+					.mobile-search-btn {
+						display: flex;
+					}
+
+					.mobile-only {
 						display: flex;
 					}
 

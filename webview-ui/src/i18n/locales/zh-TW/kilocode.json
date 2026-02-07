@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "想要如何開始？",
+		"freeModels": {
+			"title": "免費模型",
+			"description": "立即開始撰寫程式"
+		},
+		"premiumModels": {
+			"title": "進階模型",
+			"description": "註冊。新用戶可獲得 5 美元額度"
+		},
+		"byok": {
+			"title": "使用自有金鑰",
+			"description": "進階選項。使用自有帳戶或訂閱"
+		}
+	},
 	"welcome": {
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一款免費、開放原始碼的 AI Coding Agent。",
@@ -224,7 +239,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "初來乍到嗎？",
 		"tryOneOfThese": "試試以下想法來開始使用：",
-		"clickToInsert": "按一下任何建議即可立即開始執行",
 		"suggestionText": "<suggestionButton>按一下這裡</suggestionButton>獲取酷炫想法，然後輕觸 <sendIcon /> 看我施展魔法！",
 		"ideas": {
 			"idea1": "製作一個會隨滑鼠移動而旋轉發光的 3D 球體。讓應用程式可在瀏覽器中執行。",

@@ -22,6 +22,7 @@ import {
 	X_KILOCODE_ORGANIZATIONID,
 	X_KILOCODE_PROJECTID,
 	X_KILOCODE_EDITORNAME,
+	X_KILOCODE_MODE,
 } from "../../../shared/kilocode/headers"
 import { streamSse } from "../../../services/continuedev/core/fetch/stream"
 
@@ -81,6 +82,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
@@ -96,6 +98,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
 					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
@@ -116,6 +119,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
 					[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
@@ -137,6 +141,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
@@ -154,6 +159,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
 					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
@@ -172,6 +178,7 @@ describe("KilocodeOpenrouterHandler", () => {
 
 			expect(result).toEqual({
 				headers: {
+					[X_KILOCODE_MODE]: "code",
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
@@ -229,6 +236,7 @@ describe("KilocodeOpenrouterHandler", () => {
 				// kilocode_change start
 				expect.objectContaining({
 					headers: expect.objectContaining({
+						[X_KILOCODE_MODE]: "code",
 						[X_KILOCODE_TASKID]: "test-task-id",
 						[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
 						[X_KILOCODE_ORGANIZATIONID]: "test-org-id",

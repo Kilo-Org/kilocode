@@ -30,6 +30,7 @@ export function getSupportedSlashCommands(
 		},
 		{ name: "reportbug", description: "Create a KiloCode GitHub issue" },
 		// kilocode_change start
+		{ name: "init", description: "Initialize Kilo Code for this workspace" },
 		{ name: "smol", description: "Condenses your current context window" },
 		{ name: "condense", description: "Condenses your current context window" },
 		{ name: "compact", description: "Condenses your current context window" },
@@ -58,7 +59,15 @@ export const slashCommandRegexGlobal = new RegExp(slashCommandRegex.source, "g")
 /**
  * Determines whether the slash command menu should be displayed based on text input
  */
-export function shouldShowSlashCommandsMenu(text: string, cursorPosition: number): boolean {
+// kilocode_change start: Added workflow toggles parameters
+export function shouldShowSlashCommandsMenu(
+	text: string,
+	cursorPosition: number,
+	customModes?: any[],
+	localWorkflowToggles: ClineRulesToggles = {},
+	globalWorkflowToggles: ClineRulesToggles = {},
+): boolean {
+	// kilocode_change end
 	const beforeCursor = text.slice(0, cursorPosition)
 
 	// first check if there is a slash before the cursor
@@ -82,7 +91,11 @@ export function shouldShowSlashCommandsMenu(text: string, cursorPosition: number
 		return false
 	}
 
-	return true
+	// kilocode_change start: If there are no matching commands for the current query, don't show the menu.
+	// This prevents an empty menu from capturing Enter/Tab and blocking message submission.
+	const matches = getMatchingSlashCommands(textAfterSlash, customModes, localWorkflowToggles, globalWorkflowToggles)
+	return matches.length > 0
+	// kilocode_change end
 }
 
 function enabledWorkflowToggles(workflowToggles: ClineRulesToggles): SlashCommand[] {

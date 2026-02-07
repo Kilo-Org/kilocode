@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Bagaimana Anda ingin memulai?",
+		"freeModels": {
+			"title": "Model gratis",
+			"description": "Mulai coding segera"
+		},
+		"premiumModels": {
+			"title": "Model premium",
+			"description": "Daftar. Pengguna baru mendapatkan kredit $5"
+		},
+		"byok": {
+			"title": "Gunakan kunci sendiri",
+			"description": "Lanjutan. Gunakan akun atau langganan Anda sendiri"
+		}
+	},
 	"welcome": {
 		"greeting": "Selamat datang di Kilo Code!",
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
@@ -210,7 +225,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Baru di sini?",
 		"tryOneOfThese": "Coba salah satu ide ini untuk memulai:",
-		"clickToInsert": "Klik saran apa pun untuk langsung mulai mengerjakannya",
 		"suggestionText": "<suggestionButton>Klik di sini</suggestionButton> untuk ide yang keren, lalu ketuk <sendIcon /> dan lihat saya melakukan keajaiban!",
 		"ideas": {
 			"idea1": "Buat bola 3D yang berputar dan bersinar yang merespons gerakan mouse. Buat aplikasi berfungsi di browser.",

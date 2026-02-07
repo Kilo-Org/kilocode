@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "كيف تريد البدء؟",
+		"freeModels": {
+			"title": "نماذج مجانية",
+			"description": "ابدأ البرمجة فورًا"
+		},
+		"premiumModels": {
+			"title": "نماذج متميزة",
+			"description": "سجّل. المستخدمون الجدد يحصلون على رصيد بقيمة 5 دولارات"
+		},
+		"byok": {
+			"title": "استخدم مفتاحك الخاص",
+			"description": "متقدم. استخدم حسابك أو اشتراكك الخاص"
+		}
+	},
 	"welcome": {
 		"greeting": "مرحبًا بك في Kilo Code!",
 		"introText1": "Kilo Code وكيل برمجة مدعوم بالذكاء ومفتوح المصدر ومجاني.",
@@ -219,7 +234,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "جديد هنا؟",
 		"tryOneOfThese": "جرب إحدى هذه الأفكار للبدء:",
-		"clickToInsert": "انقر على أي اقتراح لبدء العمل عليه فوراً",
 		"suggestionText": "<suggestionButton>اضغط هنا</suggestionButton> للحصول على فكرة رائعة، ثم انقر على <sendIcon /> وشاهدني أعمل السحر!",
 		"ideas": {
 			"idea1": "اصنع كرة ثلاثية الأبعاد دوارة ومتوهجة تتفاعل مع حركات الماوس. اجعل التطبيق يعمل في المتصفح.",

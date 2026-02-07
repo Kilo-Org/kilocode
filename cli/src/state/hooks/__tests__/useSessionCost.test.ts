@@ -125,7 +125,6 @@ describe("useSessionCost", () => {
 			expect(result.hasCostData).toBe(true)
 		})
 
-
 		it("should handle messages with empty text", () => {
 			const messages: ExtensionChatMessage[] = [
 				{

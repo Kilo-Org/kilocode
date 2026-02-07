@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Nasıl başlamak istersiniz?",
+		"freeModels": {
+			"title": "Ücretsiz modeller",
+			"description": "Hemen kodlamaya başlayın"
+		},
+		"premiumModels": {
+			"title": "Premium modeller",
+			"description": "Kaydolun. Yeni kullanıcılar 5 $ kredi alır"
+		},
+		"byok": {
+			"title": "Kendi anahtarınızı kullanın",
+			"description": "Gelişmiş. Kendi hesabınızı veya aboneliğinizi kullanın"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
@@ -217,7 +232,6 @@
 	"ideaSuggestionsBox": {
 		"newHere": "Burada yeni misin?",
 		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
-		"clickToInsert": "Hemen üzerinde çalışmaya başlamak için herhangi bir öneriye tıkla",
 		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
 		"ideas": {
 			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",

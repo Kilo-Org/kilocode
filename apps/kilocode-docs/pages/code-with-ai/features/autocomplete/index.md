@@ -96,6 +96,18 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 
 ## Tips
 
+{% callout type="tip" %}
+**When to use chat vs autocomplete:** Use chat for multi-file changes, refactoring, or when you need to explain intent. Use autocomplete for quick, localized edits where the context is already clear from surrounding code.
+{% /callout %}
+
+{% callout type="tip" %}
+**Steer autocomplete with comments:** Write a comment describing what you want before triggering autocomplete, or type a function signature—autocomplete will fill in the implementation.
+{% /callout %}
+
+{% callout type="tip" %}
+**Treat suggestions as drafts:** Accept autocomplete suggestions quickly, then refine. It's often faster to fix a 90% correct suggestion than to craft the perfect prompt.
+{% /callout %}
+
 - Autocomplete works best with clear, well-structured code
 - Comments above functions help autocomplete understand intent
 - Variable and function names matter - descriptive names lead to better suggestions
