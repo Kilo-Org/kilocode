@@ -98,6 +98,21 @@ export const ModelPicker = ({
 
 	const [searchValue, setSearchValue] = useState("")
 
+	// kilocode_change: Case-insensitive search with dash/space normalization
+	const normalizeForSearch = (str: string) => str.toLowerCase().replace(/[-_\s]/g, "")
+
+	const filteredPreferredIds = useMemo(() => {
+		if (!searchValue.trim()) return preferredModelIds
+		const searchNormalized = normalizeForSearch(searchValue)
+		return preferredModelIds.filter((id) => normalizeForSearch(id).includes(searchNormalized))
+	}, [preferredModelIds, searchValue])
+
+	const filteredRestIds = useMemo(() => {
+		if (!searchValue.trim()) return restModelIds
+		const searchNormalized = normalizeForSearch(searchValue)
+		return restModelIds.filter((id) => normalizeForSearch(id).includes(searchNormalized))
+	}, [restModelIds, searchValue])
+
 	const onSelect = useCallback(
 		(modelId: string) => {
 			if (!modelId) {
@@ -179,7 +194,7 @@ export const ModelPicker = ({
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-						<Command>
+						<Command shouldFilter={false}>
 							<div className="relative">
 								<CommandInput
 									ref={searchInputRef}
@@ -206,10 +221,15 @@ export const ModelPicker = ({
 										</div>
 									)}
 								</CommandEmpty>
-								{/* kilocode_change start: Section headers for recommended and all models */}
-								{preferredModelIds.length > 0 && (
-									<CommandGroup heading={t("settings:modelPicker.recommendedModels")}>
-										{preferredModelIds.map((model) => (
+								{/* kilocode_change start: Section headers for recommended and all models with case-insensitive search */}
+								{filteredPreferredIds.length > 0 && (
+									<CommandGroup
+										heading={
+											searchValue.trim()
+												? t("settings:modelPicker.matchingModels")
+												: t("settings:modelPicker.recommendedModels")
+										}>
+										{filteredPreferredIds.map((model) => (
 											<CommandItem
 												key={model}
 												value={model}
@@ -229,9 +249,9 @@ export const ModelPicker = ({
 										))}
 									</CommandGroup>
 								)}
-								{restModelIds.length > 0 && (
+								{filteredRestIds.length > 0 && (
 									<CommandGroup heading={t("settings:modelPicker.allModels")}>
-										{restModelIds.map((model) => (
+										{filteredRestIds.map((model) => (
 											<CommandItem
 												key={model}
 												value={model}

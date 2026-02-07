@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useEvent } from "react-use"
 import { Checkbox } from "vscrui"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
@@ -11,6 +11,8 @@ import {
 	type ExtensionMessage,
 	azureOpenAiDefaultApiVersion,
 	openAiModelInfoSaneDefaults,
+	moonshotModels,
+	moonshotDefaultModelId,
 } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -47,6 +49,22 @@ export const OpenAICompatible = ({
 		const headers = apiConfiguration?.openAiHeaders || {}
 		return Object.entries(headers)
 	})
+
+	const isKimiEndpoint =
+		apiConfiguration.openAiBaseUrl?.toLowerCase().includes("kimi") ||
+		apiConfiguration.openAiBaseUrl?.toLowerCase().includes("moonshot") ||
+		apiConfiguration.openAiBaseUrl?.toLowerCase().includes("api.moonshot.ai") ||
+		apiConfiguration.openAiBaseUrl?.toLowerCase().includes("api.moonshot.cn")
+
+	const modelsToUse = useMemo(() => {
+		const fetchedModels = openAiModels ?? {}
+		if (isKimiEndpoint) {
+			return { ...moonshotModels, ...fetchedModels }
+		}
+		return fetchedModels
+	}, [isKimiEndpoint, openAiModels])
+
+	const defaultModelId = isKimiEndpoint ? moonshotDefaultModelId : "gpt-4o"
 
 	const handleAddCustomHeader = useCallback(() => {
 		// Only update the local state to show the new row in the UI.
@@ -138,10 +156,11 @@ export const OpenAICompatible = ({
 				<label className="block font-medium mb-1">{t("settings:providers.apiKey")}</label>
 			</VSCodeTextField>
 			<ModelPicker
+				key={`${apiConfiguration.openAiBaseUrl}-${isKimiEndpoint}`}
 				apiConfiguration={apiConfiguration}
 				setApiConfigurationField={setApiConfigurationField}
-				defaultModelId="gpt-4o"
-				models={openAiModels}
+				defaultModelId={defaultModelId}
+				models={modelsToUse}
 				modelIdKey="openAiModelId"
 				serviceName="OpenAI"
 				serviceUrl="https://platform.openai.com"
