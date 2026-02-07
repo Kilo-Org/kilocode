@@ -31,6 +31,11 @@ describe("CodeIndexConfigManager", () => {
 			getSecret: vi.fn().mockReturnValue(undefined),
 			refreshSecrets: vi.fn().mockResolvedValue(undefined),
 			updateGlobalState: vi.fn(),
+			rawContext: {
+				workspaceState: {
+					get: vi.fn().mockReturnValue(false), // default indexingAllowed to false
+				},
+			},
 		}
 
 		configManager = new CodeIndexConfigManager(mockContextProxy)
@@ -59,31 +64,46 @@ describe("CodeIndexConfigManager", () => {
 	})
 
 	describe("isFeatureEnabled", () => {
-		it("should return false when codebaseIndexEnabled is false", async () => {
+		it("should return false when indexingAllowed is false", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
-				codebaseIndexEnabled: false,
+				codebaseIndexEnabled: true,
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(false)
 
 			// Re-create instance to load the configuration
 			configManager = new CodeIndexConfigManager(mockContextProxy)
 			expect(configManager.isFeatureEnabled).toBe(false)
 		})
 
-		it("should return true when codebaseIndexEnabled is true", async () => {
+		it("should return true when indexingAllowed is true", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
 
 			// Re-create instance to load the configuration
 			configManager = new CodeIndexConfigManager(mockContextProxy)
 			expect(configManager.isFeatureEnabled).toBe(true)
 		})
 
-		it("should default to false when codebaseIndexEnabled is not set", async () => {
+		it("should return true when indexingAllowed is true even if codebaseIndexEnabled is false", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: false,
+			})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
+
+			// Re-create instance to load the configuration
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(true)
+		})
+
+		it("should default to false when indexingAllowed is not set", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(undefined)
 
 			// Re-create instance to load the configuration
 			configManager = new CodeIndexConfigManager(mockContextProxy)
@@ -1281,6 +1301,8 @@ describe("CodeIndexConfigManager", () => {
 				codeIndexOpenAiKey: "test-openai-key",
 				codeIndexQdrantApiKey: "test-qdrant-key",
 			})
+			// kilocode_change: Set workspace indexing allowed to true
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
 
 			await configManager.loadConfiguration()
 		})
@@ -1927,6 +1949,33 @@ describe("CodeIndexConfigManager", () => {
 					expect(result.requiresRestart).toBe(true)
 				})
 			})
+		})
+	})
+
+	describe("double-click scenario", () => {
+		it("should handle rapid startIndexing calls gracefully", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: true,
+			})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			// Simulate rapid calls by returning true (as if workspaceState was updated twice)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(true)
+
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(true)
+			expect(configManager.isIndexingAllowed).toBe(true)
+		})
+
+		it("should handle undefined workspace state gracefully", async () => {
+			mockContextProxy.getGlobalState.mockReturnValue({
+				codebaseIndexEnabled: true,
+			})
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+			mockContextProxy.rawContext.workspaceState.get.mockReturnValue(undefined) // undefined instead of false
+
+			configManager = new CodeIndexConfigManager(mockContextProxy)
+			expect(configManager.isFeatureEnabled).toBe(false) // Should default to false
+			expect(configManager.isIndexingAllowed).toBe(false)
 		})
 	})
 })

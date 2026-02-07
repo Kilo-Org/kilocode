@@ -44,6 +44,12 @@ export const EmbeddingBatchSizeSlider: React.FC<EmbeddingBatchSizeSliderProps> =
 					<span className="codicon codicon-discard" />
 				</VSCodeButton>
 			</div>
+			{currentValue > 200 && (
+				<div className="flex items-start gap-2 text-xs text-vscode-descriptionForeground mt-1">
+					<span className="codicon codicon-warning text-vscode-editorWarningForeground" />
+					<span>{t("kilocode:settings.codeIndex.embeddingBatchSizeWarning")}</span>
+				</div>
+			)}
 		</div>
 	)
 }

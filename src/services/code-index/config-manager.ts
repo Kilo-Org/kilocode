@@ -35,6 +35,10 @@ export class CodeIndexConfigManager {
 	private scannerMaxBatchRetries?: number
 	// kilocode_change end
 
+	// kilocode_change start: Workspace state for per-repo indexing
+	private indexingAllowed: boolean = false
+	// kilocode_change end
+
 	// kilocode_change start: Kilo org indexing props
 	private _kiloOrgProps: {
 		organizationId: string
@@ -141,6 +145,8 @@ export class CodeIndexConfigManager {
 		// Update instance variables with configuration
 		this.codebaseIndexEnabled = codebaseIndexEnabled ?? false
 		// kilocode_change - start
+		// read workspace state for per-repo indexing control
+		this.indexingAllowed = this.contextProxy.rawContext.workspaceState.get<boolean>("indexingAllowed") ?? false
 		this.vectorStoreProvider = codebaseIndexVectorStoreProvider ?? "qdrant"
 		this.lancedbVectorStoreDirectory = codebaseIndexLancedbVectorStoreDirectory
 		// kilocode_change - end
@@ -566,9 +572,10 @@ export class CodeIndexConfigManager {
 
 	/**
 	 * Gets whether the code indexing feature is enabled
+	 * kilocode_change: Only requires workspace-specific indexingAllowed
 	 */
 	public get isFeatureEnabled(): boolean {
-		return this.codebaseIndexEnabled
+		return this.indexingAllowed
 	}
 
 	/**
@@ -576,6 +583,14 @@ export class CodeIndexConfigManager {
 	 */
 	public get isFeatureConfigured(): boolean {
 		return this.isConfigured()
+	}
+
+	/**
+	 * kilocode_change: Get workspace-level indexing permission
+	 * this controls whether indexing is allowed for the current workspace
+	 */
+	public get isIndexingAllowed(): boolean {
+		return this.indexingAllowed
 	}
 
 	/**

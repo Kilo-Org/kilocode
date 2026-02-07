@@ -134,6 +134,7 @@
 		"codeIndex": {
 			"embeddingBatchSizeLabel": "Embedding Batch Size",
 			"embeddingBatchSizeDescription": "Number of code segments to batch together for embedding generation and vector store upserts. Higher values can improve indexing speed but may increase memory usage. Lower values reduce memory usage but may slow down indexing.",
+			"embeddingBatchSizeWarning": "Higher values speed up indexing but may trigger rate limits from cloud providers like OpenAI.",
 			"scannerMaxBatchRetriesLabel": "Scanner Max Batch Retries",
 			"scannerMaxBatchRetriesDescription": "Maximum number of times to retry a failed batch during directory scanning. Higher values increase resilience to transient errors but may slow down indexing if errors persist. Lower values fail faster but may skip content on temporary issues."
 		}

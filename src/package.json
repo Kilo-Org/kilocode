@@ -587,14 +587,7 @@
 					"default": true,
 					"description": "%settings.enableSettingsSync.description%"
 				},
-				"kilo-code.codeIndex.embeddingBatchSize": {
-					"type": "number",
-					"default": 60,
-					"minimum": 1,
-					"maximum": 200,
-					"description": "%settings.codeIndex.embeddingBatchSize.description%"
-				},
-				"kilo-code.toolProtocol": {
+			"kilo-code.toolProtocol": {
 					"type": "string",
 					"enum": [
 						"xml",
