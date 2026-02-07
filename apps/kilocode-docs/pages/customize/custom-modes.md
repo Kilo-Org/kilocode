@@ -62,7 +62,9 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 
 **Exporting a Mode:**
 
-1. Navigate to the Modes view
+Modes are accessed from the Prompts tab (notebook icon), which contains the Modes section.
+
+1. Open the Prompts Tab (click the <Codicon name="notebook" /> icon in the top menu bar)
 2. Select the mode you wish to export
 3. Click the Export Mode button (download icon)
 4. Choose a location to save the `.yaml` file
@@ -70,9 +72,10 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 
 **Importing a Mode:**
 
-1. Click the Import Mode button (upload icon) in the Modes view
-2. Select the mode's YAML file
-3. Choose the import level:
+1. Open the Prompts Tab (click the <Codicon name="notebook" /> icon in the top menu bar)
+2. Click the Import Mode button (upload icon)
+3. Select the mode's YAML file
+4. Choose the import level:
     - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
     - **Global:** Available in all projects (saved to global settings)
 
