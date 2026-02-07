@@ -47,6 +47,7 @@ export const agentSessionSchema = z.object({
 	gitUrl: z.string().optional(),
 	model: z.string().optional(), // Model ID used for this session
 	mode: z.string().optional(), // Mode slug used for this session (e.g., "code", "architect")
+	yoloMode: z.boolean().optional(), // True if session was started with auto-approval enabled
 })
 
 /**
@@ -58,6 +59,7 @@ export const pendingSessionSchema = z.object({
 	startTime: z.number(),
 	parallelMode: z.boolean().optional(),
 	gitUrl: z.string().optional(),
+	yoloMode: z.boolean().optional(), // True if session will be started with auto-approval enabled
 })
 
 /**
@@ -84,6 +86,7 @@ export const startSessionMessageSchema = z.object({
 	versions: z.number().optional(), // Number of versions for multi-version mode
 	labels: z.array(z.string()).optional(), // Labels for multi-version sessions
 	images: z.array(z.string()).optional(), // Image data URLs to include with the prompt
+	yoloMode: z.boolean().optional(), // True to enable auto-approval (default: true)
 })
 
 export const agentManagerMessageSchema = z.discriminatedUnion("type", [
