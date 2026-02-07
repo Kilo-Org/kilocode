@@ -996,8 +996,13 @@
 }
 
 .am-model-selector-content {
-	max-height: 300px !important;
 	min-width: 200px !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-model-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }
 
 /* Read-only model indicator in chat input */
@@ -1060,10 +1065,13 @@
 }
 
 .am-session-mode-content {
-	max-height: 300px !important;
 	min-width: 180px !important;
-	overflow-y: auto !important;
-	overscroll-behavior: contain !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-session-mode-content > div > div:last-child {
+	max-height: 250px !important;
 }
 
 /* Mode Selector for New Agent Form */
@@ -1099,8 +1107,11 @@
 }
 
 .am-mode-selector-content {
-	max-height: 300px !important;
 	min-width: 200px !important;
-	overflow-y: auto !important;
-	overscroll-behavior: contain !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-mode-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }
