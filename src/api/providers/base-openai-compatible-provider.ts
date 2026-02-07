@@ -102,8 +102,19 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		}
 
 		// Add thinking parameter if reasoning is enabled and model supports it
-		if (this.options.enableReasoningEffort && info.supportsReasoningBinary) {
-			;(params as any).thinking = { type: "enabled" }
+		if (this.options.enableReasoningEffort) {
+			const effort = this.options.reasoningEffort || info.reasoningEffort
+			const isExplicitlyDisabled = effort === "disable"
+
+			if (info.supportsReasoningBinary && !isExplicitlyDisabled) {
+				;(params as any).thinking = { type: "enabled" }
+			}
+
+			if (info.supportsReasoningEffort && !isExplicitlyDisabled) {
+				if (effort) {
+					;(params as any).reasoning_effort = effort
+				}
+			}
 		}
 
 		try {
@@ -233,8 +244,19 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		}
 
 		// Add thinking parameter if reasoning is enabled and model supports it
-		if (this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary) {
-			;(params as any).thinking = { type: "enabled" }
+		if (this.options.enableReasoningEffort) {
+			const effort = this.options.reasoningEffort || modelInfo.reasoningEffort
+			const isExplicitlyDisabled = effort === "disable"
+
+			if (modelInfo.supportsReasoningBinary && !isExplicitlyDisabled) {
+				;(params as any).thinking = { type: "enabled" }
+			}
+
+			if (modelInfo.supportsReasoningEffort && !isExplicitlyDisabled) {
+				if (effort) {
+					;(params as any).reasoning_effort = effort
+				}
+			}
 		}
 
 		try {

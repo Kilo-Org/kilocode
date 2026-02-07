@@ -264,6 +264,9 @@ export const OpenAICompatible = ({
 									...openAiCustomModelInfo,
 									reasoningEffort: value as ReasoningEffort,
 								})
+								setApiConfigurationField("reasoningEffort", value as ReasoningEffort)
+							} else {
+								setApiConfigurationField(field, value)
 							}
 						}}
 						modelInfo={{
