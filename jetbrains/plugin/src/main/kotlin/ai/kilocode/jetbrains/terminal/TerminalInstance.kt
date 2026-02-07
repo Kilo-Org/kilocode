@@ -19,6 +19,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.LocalTerminalDirectRunner
 import org.jetbrains.plugins.terminal.ShellStartupOptions
 import org.jetbrains.plugins.terminal.ShellTerminalWidget
@@ -112,7 +114,7 @@ class TerminalInstance(
         try {
             // Register TerminalInstance as a child Disposable of the project
             Disposer.register(project, this)
-            logger.info("✅ Terminal instance registered to project Disposer: $extHostTerminalId")
+            logger.debug("Terminal instance registered to project Disposer: $extHostTerminalId")
         } catch (e: Exception) {
             logger.error("❌ Failed to register terminal instance to project Disposer: $extHostTerminalId", e)
             throw e
@@ -172,15 +174,11 @@ class TerminalInstance(
             val customRunner = createCustomRunner()
             val startupOptions = createStartupOptions()
 
-            logger.info("🚀 Calling startShellTerminalWidget...")
-
             terminalWidget = customRunner.startShellTerminalWidget(
                 this, // parent disposable
                 startupOptions,
                 false, // deferSessionStartUntilUiShown - start session immediately, must be false
             )
-
-            logger.info("✅ startShellTerminalWidget call complete, returned widget: ${terminalWidget?.javaClass?.name}")
 
             initializeWidgets()
             setupTerminalCloseListener()
@@ -197,27 +195,10 @@ class TerminalInstance(
      */
     private fun createCustomRunner(): LocalTerminalDirectRunner {
         return object : LocalTerminalDirectRunner(project) {
+            @Suppress("DEPRECATION")
             override fun createProcess(options: ShellStartupOptions): PtyProcess {
-                logger.info("🔧 Custom createProcess method called...")
-                logger.info("Startup options: $options")
-
                 val originalProcess = super.createProcess(options)
-                logger.info("✅ Original Process created: ${originalProcess.javaClass.name}")
-
                 return createProxyPtyProcess(originalProcess)
-            }
-
-            override fun createShellTerminalWidget(
-                parent: Disposable,
-                startupOptions: ShellStartupOptions,
-            ): TerminalWidget {
-                logger.info("🔧 Custom createShellTerminalWidget method called...")
-                return super.createShellTerminalWidget(parent, startupOptions)
-            }
-
-            override fun configureStartupOptions(baseOptions: ShellStartupOptions): ShellStartupOptions {
-                logger.info("🔧 Custom configureStartupOptions method called...")
-                return super.configureStartupOptions(baseOptions)
             }
         }
     }
@@ -228,12 +209,15 @@ class TerminalInstance(
     private fun createStartupOptions(): ShellStartupOptions {
         val fullShellCommand = buildShellCommand()
 
-        logger.info("🔧 Shell config: shellPath=${config.shellPath}, shellArgs=${config.shellArgs}")
-        logger.info("🔧 Full shell command: $fullShellCommand")
+        // Add extension marker to environment so WeCoderTerminalCustomizer can detect it
+        val envWithMarker = (config.env?.toMutableMap() ?: mutableMapOf()).apply {
+            put("KILOCODE_EXTENSION_TERMINAL", "true")
+        }
 
         return ShellStartupOptions.Builder()
             .workingDirectory(config.cwd ?: project.basePath)
             .shellCommand(fullShellCommand)
+            .envVariables(envWithMarker)
             .build()
     }
 
@@ -258,6 +242,299 @@ class TerminalInstance(
         terminalWidget!!.terminalTitle.change {
             userDefinedTitle = config.name ?: DEFAULT_TERMINAL_NAME
         }
+        
+        // SDK 2025.3: createProcess() is no longer called during widget creation
+        // The terminal session starts asynchronously, so TtyConnector is not immediately available
+        // We need to wait for it and then set up output capture
+        setupDelayedTtyConnectorAccess()
+    }
+    
+    /**
+     * Setup delayed access to TtyConnector
+     * In SDK 2025.3, the terminal session starts asynchronously, so we need to poll for the TtyConnector
+     */
+    private fun setupDelayedTtyConnectorAccess() {
+        // Use a coroutine to poll for the TtyConnector
+        scope.launch {
+            var attempts = 0
+            val maxAttempts = 50 // 5 seconds total (50 * 100ms)
+            
+            while (attempts < maxAttempts) {
+                try {
+                    val ttyConnector = terminalWidget?.ttyConnector
+                    if (ttyConnector != null) {
+                        logger.debug("TtyConnector obtained after $attempts attempts: ${ttyConnector.javaClass.name}")
+                        setupTtyConnectorOutputCapture(ttyConnector)
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    logger.debug("Error checking TtyConnector: ${e.message}")
+                }
+                
+                attempts++
+                delay(100) // Wait 100ms before next attempt
+            }
+            
+            logger.error("❌ TtyConnector not available after $maxAttempts attempts - output capture will not work")
+        }
+    }
+    
+    /**
+     * Setup output capture from TtyConnector
+     *
+     * In SDK 2025.3, the class hierarchy for TtyConnector is:
+     * - org.jetbrains.plugins.terminal.LocalTerminalTtyConnector
+     *   - extends com.intellij.terminal.pty.PtyProcessTtyConnector
+     *     - extends ProcessTtyConnector (where myInputStream and myReader live)
+     *
+     * This method traverses the class hierarchy to find and wrap the input stream reader.
+     */
+    private fun setupTtyConnectorOutputCapture(ttyConnector: com.jediterm.terminal.TtyConnector) {
+        logger.debug("Setting up TtyConnector output capture for terminal: $extHostTerminalId")
+        
+        try {
+            // Strategy 1: Replace the InputStreamReader (myReader) which is what TtyConnector actually uses
+            // The TtyConnector reads from myReader, not directly from myInputStream
+            val readerReplaced = replaceInputStreamReaderField(ttyConnector)
+            
+            if (readerReplaced) {
+                logger.info("✅ TtyConnector output capture configured for terminal: $extHostTerminalId")
+                return
+            }
+            
+            // Strategy 2: Try to replace the input stream field
+            val inputStream = findInputStreamField(ttyConnector)
+            
+            if (inputStream != null) {
+                val proxyStream = ProxyInputStream(inputStream, "STDOUT", createRawDataCallback())
+                val replaced = replaceInputStreamField(ttyConnector, proxyStream)
+                
+                if (replaced) {
+                    logger.info("✅ TtyConnector output capture configured via InputStream for terminal: $extHostTerminalId")
+                    return
+                }
+            }
+            
+            logger.warn("⚠️ Could not setup TtyConnector output capture for terminal: $extHostTerminalId")
+        } catch (e: Exception) {
+            logger.error("❌ Failed to setup TtyConnector output capture for terminal: $extHostTerminalId", e)
+        }
+    }
+    
+    /**
+     * Replace the InputStreamReader field in TtyConnector
+     * This is the actual reader that TtyConnector uses to read terminal output
+     */
+    private fun replaceInputStreamReaderField(ttyConnector: com.jediterm.terminal.TtyConnector): Boolean {
+        val candidateFieldNames = listOf(
+            "myReader",
+            "reader",
+            "inputReader",
+            "myInputReader"
+        )
+        
+        var searchClass: Class<*>? = ttyConnector.javaClass
+        while (searchClass != null && searchClass != Object::class.java) {
+            for (fieldName in candidateFieldNames) {
+                try {
+                    val field = searchClass.getDeclaredField(fieldName)
+                    field.isAccessible = true
+                    val value = field.get(ttyConnector)
+                    
+                    if (value is java.io.Reader) {
+                        // Get the underlying input stream from the reader if possible
+                        val originalInputStream = findInputStreamField(ttyConnector)
+                        
+                        if (originalInputStream != null) {
+                            // Create a proxy input stream
+                            val proxyStream = ProxyInputStream(originalInputStream, "STDOUT", createRawDataCallback())
+                            
+                            // Create a new InputStreamReader with the proxy stream
+                            val charset = findCharsetField(ttyConnector) ?: Charsets.UTF_8
+                            val proxyReader = java.io.InputStreamReader(proxyStream, charset)
+                            
+                            // Replace the reader field
+                            field.set(ttyConnector, proxyReader)
+                            logger.debug("Replaced InputStreamReader in field: ${searchClass.simpleName}.$fieldName")
+                            
+                            // Also replace the input stream field to be consistent
+                            replaceInputStreamField(ttyConnector, proxyStream)
+                            
+                            return true
+                        }
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Field doesn't exist in this class, continue
+                } catch (e: Exception) {
+                    logger.debug("Error accessing reader field $fieldName: ${e.message}")
+                }
+            }
+            
+            // Also scan all fields for Reader type
+            searchClass.declaredFields.forEach { field ->
+                if (java.io.Reader::class.java.isAssignableFrom(field.type)) {
+                    try {
+                        field.isAccessible = true
+                        val value = field.get(ttyConnector)
+                        if (value is java.io.Reader && value !is java.io.BufferedReader) {
+                            val originalInputStream = findInputStreamField(ttyConnector)
+                            if (originalInputStream != null) {
+                                val proxyStream = ProxyInputStream(originalInputStream, "STDOUT", createRawDataCallback())
+                                val charset = findCharsetField(ttyConnector) ?: Charsets.UTF_8
+                                val proxyReader = java.io.InputStreamReader(proxyStream, charset)
+                                
+                                field.set(ttyConnector, proxyReader)
+                                logger.debug("Replaced Reader by type scan in field: ${searchClass.simpleName}.${field.name}")
+                                
+                                replaceInputStreamField(ttyConnector, proxyStream)
+                                return true
+                            }
+                        }
+                    } catch (e: Exception) {
+                        logger.debug("Error accessing Reader field ${field.name}: ${e.message}")
+                    }
+                }
+            }
+            
+            searchClass = searchClass.superclass
+        }
+        
+        return false
+    }
+    
+    /**
+     * Find the Charset field in TtyConnector
+     */
+    private fun findCharsetField(ttyConnector: com.jediterm.terminal.TtyConnector): java.nio.charset.Charset? {
+        val candidateFieldNames = listOf("myCharset", "charset", "encoding")
+        
+        var searchClass: Class<*>? = ttyConnector.javaClass
+        while (searchClass != null && searchClass != Object::class.java) {
+            for (fieldName in candidateFieldNames) {
+                try {
+                    val field = searchClass.getDeclaredField(fieldName)
+                    field.isAccessible = true
+                    val value = field.get(ttyConnector)
+                    if (value is java.nio.charset.Charset) {
+                        return value
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Continue
+                } catch (e: Exception) {
+                    // Continue
+                }
+            }
+            searchClass = searchClass.superclass
+        }
+        
+        return null
+    }
+    
+    /**
+     * Find input stream field in TtyConnector using multiple candidate field names
+     */
+    private fun findInputStreamField(ttyConnector: com.jediterm.terminal.TtyConnector): java.io.InputStream? {
+        // List of possible field names for the input stream in different SDK versions
+        val candidateFieldNames = listOf(
+            "myInputStream",  // Original name in older SDK
+            "inputStream",
+            "myInput",
+            "input",
+            "in",
+            "myReader",
+            "reader"
+        )
+        
+        var searchClass: Class<*>? = ttyConnector.javaClass
+        while (searchClass != null && searchClass != Object::class.java) {
+            // First, try known field names
+            for (fieldName in candidateFieldNames) {
+                try {
+                    val field = searchClass.getDeclaredField(fieldName)
+                    field.isAccessible = true
+                    val value = field.get(ttyConnector)
+                    if (value is java.io.InputStream) {
+                        return value
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Field doesn't exist in this class, continue
+                } catch (e: Exception) {
+                    logger.debug("Error accessing field $fieldName: ${e.message}")
+                }
+            }
+            
+            // Also scan all fields for InputStream type
+            searchClass.declaredFields.forEach { field ->
+                if (java.io.InputStream::class.java.isAssignableFrom(field.type)) {
+                    try {
+                        field.isAccessible = true
+                        val value = field.get(ttyConnector)
+                        if (value is java.io.InputStream) {
+                            return value
+                        }
+                    } catch (e: Exception) {
+                        logger.debug("Error accessing InputStream field ${field.name}: ${e.message}")
+                    }
+                }
+            }
+            
+            searchClass = searchClass.superclass
+        }
+        
+        return null
+    }
+    
+    /**
+     * Replace input stream field in TtyConnector with our proxy stream
+     */
+    private fun replaceInputStreamField(
+        ttyConnector: com.jediterm.terminal.TtyConnector,
+        proxyStream: java.io.InputStream
+    ): Boolean {
+        // List of possible field names for the input stream
+        val candidateFieldNames = listOf(
+            "myInputStream",
+            "inputStream",
+            "myInput",
+            "input",
+            "in"
+        )
+        
+        var searchClass: Class<*>? = ttyConnector.javaClass
+        while (searchClass != null && searchClass != Object::class.java) {
+            // First, try known field names
+            for (fieldName in candidateFieldNames) {
+                try {
+                    val field = searchClass.getDeclaredField(fieldName)
+                    if (java.io.InputStream::class.java.isAssignableFrom(field.type)) {
+                        field.isAccessible = true
+                        field.set(ttyConnector, proxyStream)
+                        return true
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Field doesn't exist in this class, continue
+                } catch (e: Exception) {
+                    logger.debug("Error replacing field $fieldName: ${e.message}")
+                }
+            }
+            
+            // Also try replacing any InputStream field found by type
+            searchClass.declaredFields.forEach { field ->
+                if (java.io.InputStream::class.java.isAssignableFrom(field.type)) {
+                    try {
+                        field.isAccessible = true
+                        field.set(ttyConnector, proxyStream)
+                        return true
+                    } catch (e: Exception) {
+                        logger.debug("Error replacing InputStream field ${field.name}: ${e.message}")
+                    }
+                }
+            }
+            
+            searchClass = searchClass.superclass
+        }
+        
+        return false
     }
 
     /**
@@ -266,7 +543,7 @@ class TerminalInstance(
     private fun setupTerminalCloseListener() {
         try {
             Disposer.register(terminalWidget!!) {
-                logger.info("🔔 TerminalWidget dispose event: $extHostTerminalId")
+                logger.debug("TerminalWidget dispose event: $extHostTerminalId")
                 if (!state.isDisposed) {
                     onTerminalClosed()
                 }
@@ -280,8 +557,6 @@ class TerminalInstance(
      * Create proxy PtyProcess to intercept input/output streams
      */
     private fun createProxyPtyProcess(originalProcess: PtyProcess): PtyProcess {
-        logger.info("🔧 Creating proxy PtyProcess to intercept input/output streams...")
-
         val rawDataCallback = createRawDataCallback()
         return ProxyPtyProcess(originalProcess, rawDataCallback)
     }
@@ -292,8 +567,6 @@ class TerminalInstance(
     private fun createRawDataCallback(): ProxyPtyProcessCallback {
         return object : ProxyPtyProcessCallback {
             override fun onRawData(data: String, streamType: String) {
-                logger.debug("📥 Raw data [$streamType]: ${data.length} chars")
-
                 try {
                     sendRawDataToExtHost(data)
                     terminalShellIntegration.appendRawOutput(data)
@@ -308,13 +581,18 @@ class TerminalInstance(
      * Send raw data to ExtHost
      */
     private fun sendRawDataToExtHost(data: String) {
-        val extHostTerminalServiceProxy =
-            rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalService)
-        extHostTerminalServiceProxy.acceptTerminalProcessData(
-            id = numericId,
-            data = data,
-        )
-        logger.debug("✅ Sent raw data to exthost: ${data.length} chars (terminal: $extHostTerminalId)")
+        try {
+            val extHostTerminalServiceProxy =
+                rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalService)
+            
+            extHostTerminalServiceProxy.acceptTerminalProcessData(
+                id = numericId,
+                data = data,
+            )
+        } catch (e: Exception) {
+            logger.error("❌ Failed to send raw data to ExtHost", e)
+            throw e
+        }
     }
 
     /**
@@ -397,7 +675,7 @@ class TerminalInstance(
             val content = terminalToolWindowManager.newTab(toolWindow, terminalWidget!!)
             content.displayName = config.name ?: DEFAULT_TERMINAL_NAME
 
-            logger.info("✅ Added terminalWidget to Terminal tool window: ${content.displayName}")
+            logger.debug("Added terminalWidget to Terminal tool window: ${content.displayName}")
         } catch (e: Exception) {
             logger.error("❌ Failed to add terminalWidget to tool window", e)
         }
@@ -429,7 +707,7 @@ class TerminalInstance(
                     logger.info("✅ Command executed: $text (terminal: $extHostTerminalId)")
                 } else {
                     shell.writePlainMessage(text)
-                    logger.info("✅ Text sent: $text (terminal: $extHostTerminalId)")
+                    logger.debug("Text sent: $text (terminal: $extHostTerminalId)")
                 }
             } catch (e: Exception) {
                 logger.error("❌ Failed to send text: $extHostTerminalId", e)
@@ -442,7 +720,7 @@ class TerminalInstance(
      */
     private fun notifyTerminalOpened() {
         try {
-            logger.info("📤 Notify exthost process terminal opened: $extHostTerminalId (numericId: $numericId)")
+            logger.debug("Notify exthost process terminal opened: $extHostTerminalId (numericId: $numericId)")
 
             val shellLaunchConfigDto = config.toShellLaunchConfigDto(project.basePath)
             val extHostTerminalServiceProxy =
@@ -455,7 +733,7 @@ class TerminalInstance(
                 shellLaunchConfig = shellLaunchConfigDto,
             )
 
-            logger.info("✅ Successfully notified exthost process terminal opened: $extHostTerminalId")
+            logger.debug("Successfully notified exthost process terminal opened: $extHostTerminalId")
         } catch (e: Exception) {
             logger.error("❌ Failed to notify exthost process terminal opened: $extHostTerminalId", e)
         }
@@ -470,7 +748,7 @@ class TerminalInstance(
                 rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalShellIntegration)
 
             extHostTerminalShellIntegrationProxy.shellIntegrationChange(instanceId = numericId)
-            logger.info("✅ Notified exthost Shell integration initialized: (terminal: $extHostTerminalId)")
+            logger.debug("Notified exthost Shell integration initialized: (terminal: $extHostTerminalId)")
 
             notifyEnvironmentVariableChange(extHostTerminalShellIntegrationProxy)
         } catch (e: Exception) {
@@ -494,7 +772,7 @@ class TerminalInstance(
                     isTrusted = true,
                 )
 
-                logger.info("✅ Notified exthost environment variable change: ${env.size} variables (terminal: $extHostTerminalId)")
+                logger.debug("Notified exthost environment variable change: ${env.size} variables (terminal: $extHostTerminalId)")
             } catch (e: Exception) {
                 logger.error("❌ Failed to notify environment variable change: (terminal: $extHostTerminalId)", e)
             }
@@ -505,7 +783,7 @@ class TerminalInstance(
      * Trigger terminal close event
      */
     private fun onTerminalClosed() {
-        logger.info("🔔 Terminal closed event triggered: $extHostTerminalId (numericId: $numericId)")
+        logger.debug("Terminal closed event triggered: $extHostTerminalId (numericId: $numericId)")
 
         try {
             notifyTerminalClosed()
@@ -524,7 +802,7 @@ class TerminalInstance(
      */
     private fun notifyTerminalClosed() {
         try {
-            logger.info("📤 Notify exthost process terminal closed: $extHostTerminalId (numericId: $numericId)")
+            logger.debug("Notify exthost process terminal closed: $extHostTerminalId (numericId: $numericId)")
 
             val extHostTerminalServiceProxy =
                 rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalService)
@@ -534,7 +812,7 @@ class TerminalInstance(
                 exitReason = numericId,
             )
 
-            logger.info("✅ Successfully notified exthost process terminal closed: $extHostTerminalId")
+            logger.debug("Successfully notified exthost process terminal closed: $extHostTerminalId")
         } catch (e: Exception) {
             logger.error("❌ Failed to notify exthost process terminal closed: $extHostTerminalId", e)
         }
