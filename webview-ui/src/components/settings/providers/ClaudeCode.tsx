@@ -3,56 +3,46 @@ import React from "react"
 import { type ProviderSettings, claudeCodeDefaultModelId, claudeCodeModels } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { Button } from "@src/components/ui"
-import { vscode } from "@src/utils/vscode"
 
 import { ModelPicker } from "../ModelPicker"
-import { ClaudeCodeRateLimitDashboard } from "./ClaudeCodeRateLimitDashboard"
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 interface ClaudeCodeProps {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	simplifySettings?: boolean
-	claudeCodeIsAuthenticated?: boolean
 }
 
 export const ClaudeCode: React.FC<ClaudeCodeProps> = ({
 	apiConfiguration,
 	setApiConfigurationField,
 	simplifySettings,
-	claudeCodeIsAuthenticated = false,
 }) => {
 	const { t } = useAppTranslation()
 
 	return (
 		<div className="flex flex-col gap-4">
-			{/* Authentication Section */}
+			{/* CLI Path (optional) */}
 			<div className="flex flex-col gap-2">
-				{claudeCodeIsAuthenticated ? (
-					<div className="flex justify-end">
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => vscode.postMessage({ type: "claudeCodeSignOut" })}>
-							{t("settings:providers.claudeCode.signOutButton", {
-								defaultValue: "Sign Out",
-							})}
-						</Button>
-					</div>
-				) : (
-					<Button
-						variant="primary"
-						onClick={() => vscode.postMessage({ type: "claudeCodeSignIn" })}
-						className="w-fit">
-						{t("settings:providers.claudeCode.signInButton", {
-							defaultValue: "Sign in to Claude Code",
+				<VSCodeTextField
+					value={apiConfiguration.claudeCodePath || ""}
+					placeholder="claude"
+					onInput={(e) =>
+						setApiConfigurationField("claudeCodePath", (e.target as HTMLInputElement).value || undefined)
+					}>
+					<span className="font-medium">
+						{t("settings:providers.claudeCode.pathLabel", {
+							defaultValue: "Claude CLI Path (optional)",
 						})}
-					</Button>
-				)}
+					</span>
+				</VSCodeTextField>
+				<p className="text-xs text-vscode-descriptionForeground">
+					{t("settings:providers.claudeCode.pathDescription", {
+						defaultValue:
+							"Path to the Claude Code CLI executable. Leave empty to use 'claude' from PATH. You must be authenticated via 'claude login' in your terminal.",
+					})}
+				</p>
 			</div>
-
-			{/* Rate Limit Dashboard - only shown when authenticated */}
-			<ClaudeCodeRateLimitDashboard isAuthenticated={claudeCodeIsAuthenticated} />
 
 			{/* Model Picker */}
 			<ModelPicker

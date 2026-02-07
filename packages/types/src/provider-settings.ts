@@ -230,7 +230,9 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
 })
 
-const claudeCodeSchema = apiModelIdProviderModelSchema.extend({})
+const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
+	claudeCodePath: z.string().optional(), // Path to claude CLI executable
+})
 
 // kilocode_change start
 const glamaSchema = baseProviderSettingsSchema.extend({

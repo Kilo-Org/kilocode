@@ -27,7 +27,6 @@ import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
-import { claudeCodeOAuthManager } from "./integrations/claude-code/oauth"
 import { openAiCodexOAuthManager } from "./integrations/openai-codex/oauth"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
@@ -174,9 +173,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
-
-	// Initialize Claude Code OAuth manager for direct API access.
-	claudeCodeOAuthManager.initialize(context, (message) => outputChannel.appendLine(message))
 
 	// Initialize OpenAI Codex OAuth manager for ChatGPT subscription-based access.
 	openAiCodexOAuthManager.initialize(context, (message) => outputChannel.appendLine(message))
