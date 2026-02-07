@@ -33,7 +33,6 @@ import { PackageRegistry } from "@/bun/registry"
 import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
 import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
 
 export namespace Config {
@@ -133,12 +132,6 @@ export namespace Config {
       }
     } catch (err) {
       log.warn("failed to load kilocode rules", { error: err })
-    }
-
-    // Load Kilocode MCP servers (legacy fallback)
-    const kilocodeMcp = await McpMigrator.loadMcpConfig(Instance.directory)
-    if (Object.keys(kilocodeMcp).length > 0) {
-      result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
     }
 
     // Load Kilocode .kilocodeignore patterns (legacy fallback)
@@ -1412,7 +1405,8 @@ export namespace Config {
   }
 
   function globalConfigFile() {
-    const candidates = ["opencode.jsonc", "opencode.json", "config.json"].map((file) =>
+    // kilocode_change - prioritize config.json for ~/.config/kilo/config.json
+    const candidates = ["config.json", "opencode.jsonc", "opencode.json"].map((file) =>
       path.join(Global.Path.config, file),
     )
     for (const file of candidates) {
