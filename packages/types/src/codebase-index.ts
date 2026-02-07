@@ -41,6 +41,7 @@ export const codebaseIndexConfigSchema = z.object({
 			"vercel-ai-gateway",
 			"bedrock",
 			"openrouter",
+			"voyage",
 		])
 		.optional(),
 	// kilocode_change start
@@ -93,6 +94,7 @@ export const codebaseIndexModelsSchema = z.object({
 	"vercel-ai-gateway": z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	openrouter: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	bedrock: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
+	voyage: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 })
 
 export type CodebaseIndexModels = z.infer<typeof codebaseIndexModelsSchema>
@@ -111,6 +113,7 @@ export const codebaseIndexProviderSchema = z.object({
 	codebaseIndexMistralApiKey: z.string().optional(),
 	codebaseIndexVercelAiGatewayApiKey: z.string().optional(),
 	codebaseIndexOpenRouterApiKey: z.string().optional(),
+	codebaseIndexVoyageApiKey: z.string().optional(),
 })
 
 export type CodebaseIndexProvider = z.infer<typeof codebaseIndexProviderSchema>

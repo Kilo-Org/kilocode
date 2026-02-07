@@ -1058,6 +1058,7 @@ export interface WebviewMessage {
 			| "vercel-ai-gateway"
 			| "bedrock"
 			| "openrouter"
+			| "voyage"
 		codebaseIndexVectorStoreProvider?: "lancedb" | "qdrant" // kilocode_change
 		codebaseIndexLancedbVectorStoreDirectory?: string // kilocode_change
 		codebaseIndexEmbedderBaseUrl?: string
@@ -1082,6 +1083,7 @@ export interface WebviewMessage {
 		codebaseIndexMistralApiKey?: string
 		codebaseIndexVercelAiGatewayApiKey?: string
 		codebaseIndexOpenRouterApiKey?: string
+		codebaseIndexVoyageApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
 	// kilocode_change start: Review mode
