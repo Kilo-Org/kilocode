@@ -128,7 +128,7 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 								marginTop: "10px",
 								width: "100%",
 								display: "grid",
-								gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+								gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
 								gap: "10px",
 							}}>
 							<Button
@@ -299,8 +299,10 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 					padding: "8px",
 					background: "var(--vscode-textCodeBlock-background)",
 					cursor: isExpandable ? "pointer" : "default",
-					borderRadius: isExpanded || isExpandable ? "4px" : "4px 4px 0 0",
+					borderRadius: isExpanded ? "4px 4px 0 0" : "4px",
 					opacity: server.disabled ? 0.6 : 1,
+					minWidth: "260px",
+					border: "none",
 				}}
 				onClick={handleRowClick}>
 				{isExpandable && (
@@ -309,7 +311,7 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 						style={{ marginRight: "8px" }}
 					/>
 				)}
-				<span style={{ flex: 1 }}>
+				<span style={{ flex: 1, display: "flex", alignItems: "center" }}>
 					{server.name}
 					{server.source && (
 						<span
@@ -378,6 +380,8 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 								padding: "0 10px 10px 10px",
 								fontSize: "13px",
 								borderRadius: "0 0 4px 4px",
+								border: "none",
+								minWidth: "260px",
 							}}>
 							{/* kilocode_change start: Replace VSCodePanels with Radix UI Tabs for independent tab overflow */}
 							<Tabs defaultValue="tools" style={{ marginBottom: "10px" }}>
@@ -476,6 +480,8 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 												flexDirection: "column",
 												gap: "8px",
 												width: "100%",
+												overflowX: "auto",
+												scrollbarWidth: "thin",
 											}}>
 											{[...server.errorHistory]
 												.sort((a, b) => b.timestamp - a.timestamp)
