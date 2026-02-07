@@ -339,6 +339,30 @@ describe("ApiOptions", () => {
 		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", openAiCodexDefaultModelId, false)
 	})
 
+	it("hides kimi-for-coding from model options when Moonshot endpoint is not coding", () => {
+		renderApiOptions({
+			apiConfiguration: {
+				apiProvider: "moonshot",
+				apiModelId: "kimi-k2-thinking",
+				moonshotBaseUrl: "https://api.moonshot.ai/v1",
+			},
+		})
+
+		expect(screen.queryByRole("option", { name: "kimi-for-coding" })).not.toBeInTheDocument()
+	})
+
+	it("shows kimi-for-coding in model options when Moonshot endpoint is coding", () => {
+		renderApiOptions({
+			apiConfiguration: {
+				apiProvider: "moonshot",
+				apiModelId: "kimi-k2-thinking",
+				moonshotBaseUrl: "https://api.kimi.com/coding/v1",
+			},
+		})
+
+		expect(screen.getByRole("option", { name: "kimi-for-coding" })).toBeInTheDocument()
+	})
+
 	it("shows diff settings, temperature and rate limit controls by default", () => {
 		renderApiOptions({
 			apiConfiguration: {

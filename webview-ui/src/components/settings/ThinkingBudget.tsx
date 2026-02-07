@@ -141,6 +141,8 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	])
 
 	const enableReasoningEffort = apiConfiguration.enableReasoningEffort
+	// kilocode_change
+	const enableBinaryReasoningEffort = apiConfiguration.enableReasoningEffort ?? true
 	const customMaxOutputTokens = apiConfiguration.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
 	const customMaxThinkingTokens =
 		apiConfiguration.modelMaxThinkingTokens || DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS
@@ -179,7 +181,7 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 		return (
 			<div className="flex flex-col gap-1">
 				<Checkbox
-					checked={enableReasoningEffort}
+					checked={enableBinaryReasoningEffort}
 					onChange={(checked: boolean) =>
 						setApiConfigurationField("enableReasoningEffort", checked === true)
 					}>

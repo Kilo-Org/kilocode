@@ -5,7 +5,13 @@
 
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import { tool as createTool, jsonSchema, type ModelMessage, type TextStreamPart } from "ai"
+import {
+	tool as createTool,
+	jsonSchema,
+	type AssistantModelMessage,
+	type ModelMessage,
+	type TextStreamPart,
+} from "ai"
 import type { ApiStreamChunk } from "./stream"
 
 /**
@@ -38,6 +44,8 @@ export function convertToAiSdkMessages(messages: Anthropic.Messages.MessageParam
 			})
 		} else {
 			if (message.role === "user") {
+				// kilocode_change start
+				// Keep user text/image parts and tool results in their original order.
 				const parts: Array<
 					{ type: "text"; text: string } | { type: "image"; image: string; mimeType?: string }
 				> = []
@@ -48,10 +56,34 @@ export function convertToAiSdkMessages(messages: Anthropic.Messages.MessageParam
 					output: { type: "text"; value: string }
 				}> = []
 
+				const flushUserParts = () => {
+					if (parts.length === 0) {
+						return
+					}
+					modelMessages.push({
+						role: "user",
+						content: [...parts],
+					} as ModelMessage)
+					parts.length = 0
+				}
+
+				const flushToolResults = () => {
+					if (toolResults.length === 0) {
+						return
+					}
+					modelMessages.push({
+						role: "tool",
+						content: [...toolResults],
+					} as ModelMessage)
+					toolResults.length = 0
+				}
+
 				for (const part of message.content) {
 					if (part.type === "text") {
+						flushToolResults()
 						parts.push({ type: "text", text: part.text })
 					} else if (part.type === "image") {
+						flushToolResults()
 						// Handle both base64 and URL source types
 						const source = part.source as { type: string; media_type?: string; data?: string; url?: string }
 						if (source.type === "base64" && source.media_type && source.data) {
@@ -67,6 +99,7 @@ export function convertToAiSdkMessages(messages: Anthropic.Messages.MessageParam
 							})
 						}
 					} else if (part.type === "tool_result") {
+						flushUserParts()
 						// Convert tool results to string content
 						let content: string
 						if (typeof part.content === "string") {
@@ -92,59 +125,69 @@ export function convertToAiSdkMessages(messages: Anthropic.Messages.MessageParam
 					}
 				}
 
-				// AI SDK requires tool results in separate "tool" role messages
-				// UserContent only supports: string | Array<TextPart | ImagePart | FilePart>
-				// ToolContent (for role: "tool") supports: Array<ToolResultPart | ToolApprovalResponse>
-				if (toolResults.length > 0) {
-					modelMessages.push({
-						role: "tool",
-						content: toolResults,
-					} as ModelMessage)
-				}
-
-				// Add user message with only text/image content (no tool results)
-				if (parts.length > 0) {
-					modelMessages.push({
-						role: "user",
-						content: parts,
-					} as ModelMessage)
-				}
+				flushToolResults()
+				flushUserParts()
+				// kilocode_change end
 			} else if (message.role === "assistant") {
+				// kilocode_change start
+				// Keep assistant text and tool calls in original order.
 				const textParts: string[] = []
-				const toolCalls: Array<{
-					type: "tool-call"
-					toolCallId: string
-					toolName: string
-					input: unknown
-				}> = []
+				const content: Array<
+					| { type: "text"; text: string }
+					| { type: "tool-call"; toolCallId: string; toolName: string; input: unknown }
+				> = []
+				const reasoningParts: string[] = []
+
+				const flushText = () => {
+					if (textParts.length === 0) {
+						return
+					}
+					content.push({ type: "text", text: textParts.join("\n") })
+					textParts.length = 0
+				}
 
 				for (const part of message.content) {
 					if (part.type === "text") {
 						textParts.push(part.text)
 					} else if (part.type === "tool_use") {
-						toolCalls.push({
+						flushText()
+						const toolCall = {
 							type: "tool-call",
 							toolCallId: part.id,
 							toolName: part.name,
 							input: part.input,
-						})
+						} as const
+						content.push(toolCall)
+					} else if (
+						(part as { type?: string }).type === "reasoning" &&
+						typeof (part as { text?: unknown }).text === "string"
+					) {
+						const reasoningPart = part as { text?: unknown }
+						reasoningParts.push(reasoningPart.text as string)
 					}
 				}
 
-				const content: Array<
-					| { type: "text"; text: string }
-					| { type: "tool-call"; toolCallId: string; toolName: string; input: unknown }
-				> = []
+				flushText()
 
-				if (textParts.length > 0) {
-					content.push({ type: "text", text: textParts.join("\n") })
-				}
-				content.push(...toolCalls)
-
-				modelMessages.push({
+				const aiSdkAssistantMessage: AssistantModelMessage = {
 					role: "assistant",
 					content: content.length > 0 ? content : [{ type: "text", text: "" }],
-				} as ModelMessage)
+				}
+
+				const messageWithReasoning = message as { reasoning_content?: string }
+				const reasoningContent = messageWithReasoning.reasoning_content || reasoningParts.join("\n").trim()
+				if (reasoningContent) {
+					aiSdkAssistantMessage.providerOptions = {
+						...(aiSdkAssistantMessage.providerOptions || {}),
+						// OpenAI-compatible AI SDK models read per-message metadata from providerOptions.openaiCompatible.
+						openaiCompatible: {
+							reasoning_content: reasoningContent,
+						},
+					}
+				}
+
+				modelMessages.push(aiSdkAssistantMessage)
+				// kilocode_change end
 			}
 		}
 	}

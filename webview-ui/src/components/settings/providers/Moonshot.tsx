@@ -63,9 +63,13 @@ export const Moonshot = ({ apiConfiguration, setApiConfigurationField }: Moonsho
 				{!apiConfiguration?.moonshotApiKey && (
 					<VSCodeButtonLink
 						href={
-							apiConfiguration.moonshotBaseUrl === "https://api.moonshot.cn/v1"
-								? "https://platform.moonshot.cn/console/api-keys"
-								: "https://platform.moonshot.ai/console/api-keys"
+							// kilocode_change start
+							apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
+								? "https://www.kimi.com/code"
+								: apiConfiguration.moonshotBaseUrl === "https://api.moonshot.cn/v1"
+									? "https://platform.moonshot.cn/console/api-keys"
+									: "https://platform.moonshot.ai/console/api-keys"
+							// kilocode_change end
 						}
 						appearance="secondary">
 						{t("settings:providers.getMoonshotApiKey")}

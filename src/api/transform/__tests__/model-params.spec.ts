@@ -684,6 +684,42 @@ describe("getModelParams", () => {
 		})
 	})
 
+	// kilocode_change start
+	describe("Adaptive thinking models", () => {
+		it("should default to thinking temperature when adaptive thinking is enabled and unset", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				supportsAdaptiveThinking: true,
+				defaultTemperature: 0.6,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: {},
+				model,
+			})
+
+			expect(result.temperature).toBe(1.0)
+		})
+
+		it("should use default non-thinking temperature when adaptive thinking is explicitly disabled", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				supportsAdaptiveThinking: true,
+				defaultTemperature: 0.6,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { enableReasoningEffort: false },
+				model,
+			})
+
+			expect(result.temperature).toBe(0.6)
+		})
+	})
+	// kilocode_change end
+
 	describe("Hybrid reasoning models (supportsReasoningEffort)", () => {
 		const model: ModelInfo = {
 			...baseModel,

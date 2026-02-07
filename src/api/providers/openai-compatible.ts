@@ -13,11 +13,13 @@ import type { ModelInfo } from "@roo-code/types"
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { convertToAiSdkMessages, convertToolsForAiSdk, processAiSdkStreamPart } from "../transform/ai-sdk"
-import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
+import { ApiStream, ApiStreamChunk, ApiStreamUsageChunk } from "../transform/stream"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+
+type StreamTextProviderOptions = Parameters<typeof streamText>[0]["providerOptions"]
 
 /**
  * Configuration options for creating an OpenAI-compatible provider.
@@ -147,6 +149,27 @@ export abstract class OpenAICompatibleHandler extends BaseProvider implements Si
 		return maxTokens ?? undefined
 	}
 
+	// kilocode_change start
+	/**
+	 * Get the temperature to use for a request.
+	 * Subclasses can override this to enforce provider/model-specific behavior.
+	 */
+	protected getRequestTemperature(model: { temperature?: number }): number | undefined {
+		return model.temperature ?? this.config.temperature ?? 0
+	}
+
+	/**
+	 * Get provider-specific AI SDK options.
+	 * Subclasses can override this to pass provider-specific request fields.
+	 */
+	protected getProviderOptions(
+		_model: { id: string; info: ModelInfo },
+		_metadata?: ApiHandlerCreateMessageMetadata,
+	): StreamTextProviderOptions {
+		return undefined
+	}
+	// kilocode_change end
+
 	/**
 	 * Create a message stream using the AI SDK.
 	 */
@@ -170,22 +193,96 @@ export abstract class OpenAICompatibleHandler extends BaseProvider implements Si
 			model: languageModel,
 			system: systemPrompt,
 			messages: aiSdkMessages,
-			temperature: model.temperature ?? this.config.temperature ?? 0,
+			temperature: this.getRequestTemperature(model),
 			maxOutputTokens: this.getMaxOutputTokens(),
 			tools: aiSdkTools,
 			toolChoice: this.mapToolChoice(metadata?.tool_choice),
+			// kilocode_change
+			providerOptions: this.getProviderOptions(model, metadata),
 		}
 
 		// Use streamText for streaming responses
 		const result = streamText(requestOptions)
 
+		// kilocode_change start
+		// Moonshot/Kimi can stream tool calls as tool-input-* events without a final tool-call event.
+		// Accumulate these events and emit a complete tool_call chunk so Task can execute tools reliably.
+		const pendingToolInputs = new Map<string, { toolName: string; input: string }>()
+		const emittedToolCallIds = new Set<string>()
+
+		const emitToolCallFromPendingInput = (toolCallId: string): ApiStreamChunk | undefined => {
+			if (emittedToolCallIds.has(toolCallId)) {
+				pendingToolInputs.delete(toolCallId)
+				return undefined
+			}
+
+			const pending = pendingToolInputs.get(toolCallId)
+			pendingToolInputs.delete(toolCallId)
+
+			emittedToolCallIds.add(toolCallId)
+
+			return {
+				type: "tool_call",
+				id: toolCallId,
+				name: pending?.toolName || "unknown_tool",
+				arguments: pending?.input || "{}",
+			}
+		}
+		// kilocode_change end
+
 		// Process the full stream to get all events
 		for await (const part of result.fullStream) {
+			// kilocode_change start
+			if (part.type === "tool-input-start") {
+				const existing = pendingToolInputs.get(part.id)
+				pendingToolInputs.set(part.id, {
+					toolName: part.toolName || existing?.toolName || "unknown_tool",
+					input: existing?.input || "",
+				})
+				continue
+			}
+
+			if (part.type === "tool-input-delta") {
+				const existing = pendingToolInputs.get(part.id)
+				pendingToolInputs.set(part.id, {
+					toolName: existing?.toolName || "unknown_tool",
+					input: (existing?.input || "") + part.delta,
+				})
+				continue
+			}
+
+			if (part.type === "tool-input-end") {
+				const toolCallChunk = emitToolCallFromPendingInput(part.id)
+				if (toolCallChunk) {
+					yield toolCallChunk
+				}
+				continue
+			}
+
+			if (part.type === "tool-call") {
+				if (emittedToolCallIds.has(part.toolCallId)) {
+					continue
+				}
+				emittedToolCallIds.add(part.toolCallId)
+				pendingToolInputs.delete(part.toolCallId)
+			}
+			// kilocode_change end
+
 			// Use the processAiSdkStreamPart utility to convert stream parts
 			for (const chunk of processAiSdkStreamPart(part)) {
 				yield chunk
 			}
 		}
+
+		// kilocode_change start
+		// Flush any unfinished tool-input streams at end-of-stream.
+		for (const toolCallId of pendingToolInputs.keys()) {
+			const toolCallChunk = emitToolCallFromPendingInput(toolCallId)
+			if (toolCallChunk) {
+				yield toolCallChunk
+			}
+		}
+		// kilocode_change end
 
 		// Yield usage metrics at the end
 		const usage = await result.usage
@@ -199,12 +296,15 @@ export abstract class OpenAICompatibleHandler extends BaseProvider implements Si
 	 */
 	async completePrompt(prompt: string): Promise<string> {
 		const languageModel = this.getLanguageModel()
+		const model = this.getModel()
 
 		const { text } = await generateText({
 			model: languageModel,
 			prompt,
 			maxOutputTokens: this.getMaxOutputTokens(),
-			temperature: this.config.temperature ?? 0,
+			temperature: this.getRequestTemperature(model),
+			// kilocode_change
+			providerOptions: this.getProviderOptions(model),
 		})
 
 		return text
