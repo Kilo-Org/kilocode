@@ -37,6 +37,7 @@ import {
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
+	IntelligentHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -112,6 +113,25 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * Used by providers to determine whether to include native tool definitions.
 	 */
 	toolProtocol?: ToolProtocol
+	/**
+	 * Profile ID to use for difficulty classification in IntelligentHandler.
+	 * If not provided, defaults to using the easy handler profile.
+	 */
+	classifierProfileId?: string
+	/**
+	 * Raw user prompt from the UI input, used by IntelligentHandler for difficulty assessment.
+	 */
+	rawUserPrompt?: string
+	/**
+	 * The current user prompt for difficulty assessment in IntelligentHandler.
+	 * Only passed on initial messages to avoid redundant assessments.
+	 */
+	userPrompt?: string
+	/**
+	 * Indicates whether this is the initial message for difficulty assessment.
+	 * IntelligentHandler only assesses difficulty once per user message.
+	 */
+	isInitialMessage?: boolean
 	/**
 	 * Controls whether the model can return multiple tool calls in a single response.
 	 * When true, parallel tool calls are enabled (OpenAI's parallel_tool_calls=true).
@@ -264,6 +284,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FeatherlessHandler(options)
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
+		case "intelligent":
+			return new IntelligentHandler(options)
 		case "minimax":
 			return new MiniMaxHandler(options)
 		case "baseten":

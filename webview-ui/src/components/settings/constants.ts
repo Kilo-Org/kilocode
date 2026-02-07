@@ -65,7 +65,9 @@ export const PROVIDERS = [
 	{ value: "doubao", label: "Doubao", proxy: false },
 	// kilocode_change start
 	{ value: "inception", label: "Inception", proxy: false },
+	{ value: "gemini-cli", label: "Gemini CLI", proxy: false },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback", proxy: false },
+	{ value: "intelligent", label: "Intelligent Provider", proxy: false },
 	{ value: "synthetic", label: "Synthetic", proxy: false },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints", proxy: false },
 	{ value: "sap-ai-core", label: "SAP AI Core", proxy: false },

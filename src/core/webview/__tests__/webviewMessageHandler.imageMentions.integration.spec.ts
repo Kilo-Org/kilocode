@@ -46,9 +46,12 @@ describe("webviewMessageHandler - image mentions (integration)", () => {
 				images: [],
 			} as any)
 
-			expect(mockProvider.createTask).toHaveBeenCalledWith("Please look at @/cat.png", [
-				`data:image/png;base64,${imgBytes.toString("base64")}`,
-			])
+			expect(mockProvider.createTask).toHaveBeenCalledWith(
+				"Please look at @/cat.png",
+				[`data:image/png;base64,${imgBytes.toString("base64")}`],
+				undefined,
+				{},
+			)
 		} finally {
 			await fs.rm(tmpRoot, { recursive: true, force: true })
 		}
@@ -111,9 +114,12 @@ describe("webviewMessageHandler - image mentions (integration)", () => {
 				images: [],
 			} as any)
 
-			expect(mockProvider.createTask).toHaveBeenCalledWith("See @/animation.gif", [
-				`data:image/gif;base64,${imgBytes.toString("base64")}`,
-			])
+			expect(mockProvider.createTask).toHaveBeenCalledWith(
+				"See @/animation.gif",
+				[`data:image/gif;base64,${imgBytes.toString("base64")}`],
+				undefined,
+				{},
+			)
 		} finally {
 			await fs.rm(tmpRoot, { recursive: true, force: true })
 		}

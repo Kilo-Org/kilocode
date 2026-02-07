@@ -580,7 +580,7 @@ export const webviewMessageHandler = async (
 			// task. This essentially creates a fresh slate for the new task.
 			try {
 				const resolved = await resolveIncomingImages({ text: message.text, images: message.images })
-				await provider.createTask(resolved.text, resolved.images)
+				await provider.createTask(resolved.text, resolved.images, undefined, {})
 				// Task created successfully - notify the UI to reset
 				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 			} catch (error) {
@@ -806,9 +806,7 @@ export const webviewMessageHandler = async (
 					await provider.postStateToWebview()
 					console.log(`Batch deletion completed: ${ids.length} tasks processed`)
 				} catch (error) {
-					console.log(
-						`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`,
-					)
+					console.log(`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`)
 				}
 				// kilocode_change end
 			}

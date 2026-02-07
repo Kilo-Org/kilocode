@@ -30,6 +30,7 @@ export { XAI } from "./XAI"
 // kilocode_change start
 export { OvhCloudAiEndpoints } from "./OvhCloud"
 export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider"
+export { IntelligentProvider } from "./IntelligentProvider"
 export { Inception } from "./Inception"
 export { Synthetic } from "./Synthetic"
 export { default as SapAiCore } from "./SapAiCore"

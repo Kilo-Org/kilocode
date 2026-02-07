@@ -55,6 +55,7 @@ describe("getModelsByProvider", () => {
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
 			"vercel-ai-gateway", // different structure
+			"intelligent", // uses profiles instead of models
 		]
 
 		const providersWithoutModels = providerNames

@@ -1993,8 +1993,8 @@ export class ClineProvider
 		try {
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
-	
-				// remove task from stack if it's the current task
+
+			// remove task from stack if it's the current task
 			if (id === this.getCurrentTask()?.taskId) {
 				// Close the current task instance; delegation flows will be handled via metadata if applicable.
 				await this.removeClineFromStack()
@@ -2313,7 +2313,7 @@ export class ClineProvider
 			isBrowserSessionActive,
 		} = await this.getState()
 
-		// kilocode_change start: Get active model for virtual quota fallback UI display
+		// kilocode_change start: Get active model for virtual quota fallback and intelligent provider UI display
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
 				? {
@@ -2323,6 +2323,11 @@ export class ClineProvider
 								? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
 								: undefined,
 					}
+				: undefined
+
+		const intelligentActiveModel =
+			apiConfiguration?.apiProvider === "intelligent" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
 				: undefined
 		// kilocode_change end
 
@@ -2549,6 +2554,7 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			intelligentActiveModel, // kilocode_change: Include intelligent active model in state
 			claudeCodeIsAuthenticated: await (async () => {
 				try {
 					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")

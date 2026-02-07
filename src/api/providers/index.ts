@@ -33,6 +33,7 @@ export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { OVHcloudAIEndpointsHandler } from "./ovhcloud"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
+export { IntelligentHandler } from "./intelligent"
 export { SyntheticHandler } from "./synthetic"
 export { InceptionLabsHandler } from "./inception"
 export { SapAiCoreHandler } from "./sap-ai-core"
