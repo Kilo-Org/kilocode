@@ -10,6 +10,11 @@ import { SkillMetadata, SkillContent } from "../../shared/skills"
 import { modes, getAllModes } from "../../shared/modes"
 import { ConfigChangeNotifier } from "../config/ConfigChangeNotifier" // kilocode_change
 
+// kilocode_change start - Support multiple context directories for skills
+/** Context directories to check for project-level skills (in priority order) */
+const PROJECT_CONTEXT_DIRS = [".kilocode", ".claude"] as const
+// kilocode_change end
+
 // Re-export for convenience
 export type { SkillMetadata, SkillContent }
 
@@ -156,13 +161,18 @@ export class SkillsManager {
 			// Create unique key combining name, source, and mode for override resolution
 			const skillKey = this.getSkillKey(effectiveSkillName, source, mode)
 
-			this.skills.set(skillKey, {
-				name: effectiveSkillName,
-				description,
-				path: skillMdPath,
-				source,
-				mode, // undefined for generic skills, string for mode-specific
-			})
+			// kilocode_change start - Only add skill if not already present (first-wins for same key)
+			// This ensures .kilocode takes precedence over .claude since it's processed first
+			if (!this.skills.has(skillKey)) {
+				this.skills.set(skillKey, {
+					name: effectiveSkillName,
+					description,
+					path: skillMdPath,
+					source,
+					mode, // undefined for generic skills, string for mode-specific
+				})
+			}
+			// kilocode_change end
 		} catch (error) {
 			console.error(`Failed to load skill at ${skillDir}:`, error)
 		}
@@ -258,7 +268,6 @@ export class SkillsManager {
 		const dirs: Array<{ dir: string; source: "global" | "project"; mode?: string }> = []
 		const globalRooDir = getGlobalRooDirectory()
 		const provider = this.providerRef.deref()
-		const projectRooDir = provider?.cwd ? path.join(provider.cwd, ".kilocode") : null
 
 		// Get list of modes to check for mode-specific skills
 		const modesList = await this.getAvailableModes()
@@ -269,13 +278,18 @@ export class SkillsManager {
 			dirs.push({ dir: path.join(globalRooDir, `skills-${mode}`), source: "global", mode })
 		}
 
-		// Project directories
-		if (projectRooDir) {
-			dirs.push({ dir: path.join(projectRooDir, "skills"), source: "project" })
-			for (const mode of modesList) {
-				dirs.push({ dir: path.join(projectRooDir, `skills-${mode}`), source: "project", mode })
+		// kilocode_change start - Check multiple project context directories
+		// Project directories (check all supported context dirs in priority order)
+		if (provider?.cwd) {
+			for (const contextDir of PROJECT_CONTEXT_DIRS) {
+				const projectContextDir = path.join(provider.cwd, contextDir)
+				dirs.push({ dir: path.join(projectContextDir, "skills"), source: "project" })
+				for (const mode of modesList) {
+					dirs.push({ dir: path.join(projectContextDir, `skills-${mode}`), source: "project", mode })
+				}
 			}
 		}
+		// kilocode_change end
 
 		return dirs
 	}
@@ -313,22 +327,23 @@ export class SkillsManager {
 		const provider = this.providerRef.deref()
 		if (!provider?.cwd) return
 
-		// Watch for changes in skills directories
-		const globalSkillsDir = path.join(getGlobalRooDirectory(), "skills")
-		const projectSkillsDir = path.join(provider.cwd, ".kilocode", "skills")
-
 		// Watch global skills directory
-		this.watchDirectory(globalSkillsDir)
-
-		// Watch project skills directory
-		this.watchDirectory(projectSkillsDir)
+		this.watchDirectory(path.join(getGlobalRooDirectory(), "skills"))
 
 		// Watch mode-specific directories for all available modes
 		const modesList = await this.getAvailableModes()
 		for (const mode of modesList) {
 			this.watchDirectory(path.join(getGlobalRooDirectory(), `skills-${mode}`))
-			this.watchDirectory(path.join(provider.cwd, ".kilocode", `skills-${mode}`))
 		}
+
+		// kilocode_change start - Watch all project context directories
+		for (const contextDir of PROJECT_CONTEXT_DIRS) {
+			this.watchDirectory(path.join(provider.cwd, contextDir, "skills"))
+			for (const mode of modesList) {
+				this.watchDirectory(path.join(provider.cwd, contextDir, `skills-${mode}`))
+			}
+		}
+		// kilocode_change end
 	}
 
 	private watchDirectory(dirPath: string): void {
