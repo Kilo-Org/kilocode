@@ -8,6 +8,7 @@ import ai.kilocode.jetbrains.i18n.I18n
 import ai.kilocode.jetbrains.plugin.DebugMode
 import ai.kilocode.jetbrains.plugin.WecoderPluginService
 import ai.kilocode.jetbrains.util.ExtensionUtils
+import ai.kilocode.jetbrains.util.NodeExecutableFinder
 import ai.kilocode.jetbrains.util.NodeVersion
 import ai.kilocode.jetbrains.util.NodeVersionUtil
 import ai.kilocode.jetbrains.util.NotificationUtil
@@ -370,33 +371,14 @@ class ExtensionProcessManager : Disposable {
      * Find Node.js executable
      */
     private fun findNodeExecutable(): String? {
-        // First check built-in Node.js
-        val resourcesPath = PluginResourceUtil.getResourcePath(PLUGIN_ID, NODE_MODULES_PATH)
-        if (resourcesPath != null) {
-            val resourceDir = File(resourcesPath)
-            if (resourceDir.exists() && resourceDir.isDirectory) {
-                val nodeBin = if (SystemInfo.isWindows) {
-                    File(resourceDir, "node.exe")
-                } else {
-                    File(resourceDir, ".bin/node")
-                }
-
-                if (nodeBin.exists() && nodeBin.canExecute()) {
-                    return nodeBin.absolutePath
-                }
-            }
-        }
-
-        // Then check system path
-        return findExecutableInPath("node")
-    }
-
-    /**
-     * Find executable in system path
-     */
-    private fun findExecutableInPath(name: String): String? {
-        val nodePath = PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS("node")?.absolutePath
-        LOG.info("System Node path: $nodePath")
+        val bundledNodeModulesPath = PluginResourceUtil.getResourcePath(PLUGIN_ID, NODE_MODULES_PATH)
+        val nodePath = NodeExecutableFinder.findNodeExecutable(
+            bundledNodeModulesDir = bundledNodeModulesPath,
+            pathLookup = { binaryName ->
+                PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS(binaryName)?.absolutePath
+            },
+        )
+        LOG.info("Detected Node path: $nodePath")
         return nodePath
     }
 

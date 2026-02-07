@@ -5,8 +5,10 @@ import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.plugin.DebugMode
 import ai.kilocode.jetbrains.plugin.WecoderPlugin
 import ai.kilocode.jetbrains.plugin.WecoderPluginService
+import ai.kilocode.jetbrains.util.NodeExecutableFinder
 import ai.kilocode.jetbrains.util.NodeVersionUtil
 import ai.kilocode.jetbrains.util.PluginConstants
+import ai.kilocode.jetbrains.util.PluginResourceUtil
 import ai.kilocode.jetbrains.webview.DragDropHandler
 import ai.kilocode.jetbrains.webview.WebViewCreationCallback
 import ai.kilocode.jetbrains.webview.WebViewInstance
@@ -26,6 +28,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.util.Alarm
+import com.intellij.execution.configurations.PathEnvironmentVariableUtil
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Toolkit
@@ -89,6 +92,29 @@ class RooToolWindowFactory : ToolWindowFactory {
         // Track last status text to avoid unnecessary updates
         private var lastStatusText: String = ""
 
+        private fun resolveNodeVersionText(): String {
+            return try {
+                val nodeModulesPath = PluginResourceUtil.getResourcePath(
+                    PluginConstants.PLUGIN_ID,
+                    PluginConstants.NODE_MODULES_PATH
+                )
+                val nodePath = NodeExecutableFinder.findNodeExecutable(
+                    bundledNodeModulesDir = nodeModulesPath,
+                    pathLookup = { binaryName ->
+                        PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS(binaryName)?.absolutePath
+                    },
+                )
+
+                if (nodePath != null) {
+                    NodeVersionUtil.getNodeVersion(nodePath)?.toString() ?: "unknown"
+                } else {
+                    "not found"
+                }
+            } catch (e: Exception) {
+                "error: ${e.message}"
+            }
+        }
+
         /**
          * Get initialization state text from state machine
          */
@@ -146,23 +172,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             val initStateText = getInitStateText()
             
             // Get Node.js version
-            val nodeVersion = try {
-                val nodePath = ai.kilocode.jetbrains.util.PluginResourceUtil.getResourcePath(
-                    PluginConstants.PLUGIN_ID,
-                    PluginConstants.NODE_MODULES_PATH
-                )?.let { resourcePath ->
-                    val nodeFile = java.io.File(resourcePath, if (System.getProperty("os.name").lowercase().contains("windows")) "node.exe" else ".bin/node")
-                    if (nodeFile.exists()) nodeFile.absolutePath else null
-                } ?: com.intellij.execution.configurations.PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS("node")?.absolutePath
-                
-                if (nodePath != null) {
-                    NodeVersionUtil.getNodeVersion(nodePath)?.toString() ?: "unknown"
-                } else {
-                    "not found"
-                }
-            } catch (e: Exception) {
-                "error: ${e.message}"
-            }
+            val nodeVersion = resolveNodeVersionText()
 
             return buildString {
                 append("<html><body style='width: 400px; padding: 8px;'>")
@@ -226,23 +236,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             val initStateText = getInitStateText()
             
             // Get Node.js version
-            val nodeVersion = try {
-                val nodePath = ai.kilocode.jetbrains.util.PluginResourceUtil.getResourcePath(
-                    PluginConstants.PLUGIN_ID,
-                    PluginConstants.NODE_MODULES_PATH
-                )?.let { resourcePath ->
-                    val nodeFile = java.io.File(resourcePath, if (System.getProperty("os.name").lowercase().contains("windows")) "node.exe" else ".bin/node")
-                    if (nodeFile.exists()) nodeFile.absolutePath else null
-                } ?: com.intellij.execution.configurations.PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS("node")?.absolutePath
-                
-                if (nodePath != null) {
-                    NodeVersionUtil.getNodeVersion(nodePath)?.toString() ?: "unknown"
-                } else {
-                    "not found"
-                }
-            } catch (e: Exception) {
-                "error: ${e.message}"
-            }
+            val nodeVersion = resolveNodeVersionText()
 
             return buildString {
                 append("Kilo Code Initialization\n")
