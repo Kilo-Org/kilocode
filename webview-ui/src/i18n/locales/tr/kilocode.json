@@ -1,0 +1,415 @@
+{
+	"onboarding": {
+		"title": "Nasıl başlamak istersiniz?",
+		"freeModels": {
+			"title": "Ücretsiz modeller",
+			"description": "Hemen kodlamaya başlayın"
+		},
+		"premiumModels": {
+			"title": "Premium modeller",
+			"description": "Kaydolun. Yeni kullanıcılar 5 $ kredi alır"
+		},
+		"byok": {
+			"title": "Kendi anahtarınızı kullanın",
+			"description": "Gelişmiş. Kendi hesabınızı veya aboneliğinizi kullanın"
+		}
+	},
+	"welcome": {
+		"greeting": "Kilo Code'a hoş geldiniz!",
+		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
+		"ctaButton": "Başla",
+		"manualModeButton": "Kendi API anahtarınızı kullanın",
+		"alreadySignedUp": "Zaten kaydoldunuz mu?",
+		"loginText": "Buradan giriş yapın"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Kredi Ekle",
+		"lowBalance": "Kilo Code bakiyen düşük",
+		"switchToFreeModel": "Ücretsiz modele geç"
+	},
+	"pagination": {
+		"previous": "Önceki",
+		"next": "Sonraki",
+		"page": "Sayfa {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}} modelini kullanmak için giriş yapman gerekiyor",
+		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
+		"loginButton": "Giriş Yap"
+	},
+	"pricing": {
+		"costUnknown": "maliyet bilinmiyor",
+		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
+	},
+	"notifications": {
+		"toolRequest": "Araç isteği onay bekliyor",
+		"browserAction": "Tarayıcı eylemi onay bekliyor",
+		"command": "Komut onay bekliyor"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Sunucuları",
+			"agentBehaviour": "Ajan Davranışı",
+			"skills": "Beceriler"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Çok büyük dosya okumalarına izin ver",
+				"description": "Etkinleştirildiğinde, Kilo Code bağlam penceresini taşma olasılığı yüksek olsa bile çok büyük dosya veya MCP çıktı okumalarını gerçekleştirir (içerik boyutu bağlam penceresinin %80'inden fazla)."
+			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Gömme Toplu İşlem Boyutu",
+			"embeddingBatchSizeDescription": "Gömme üretimi ve vektör deposu güncellemeleri için birlikte toplu işleme alınacak kod segmentlerinin sayısı. Daha yüksek değerler indeksleme hızını artırabilir ancak bellek kullanımını artırabilir. Daha düşük değerler bellek kullanımını azaltır ancak indekslemeyi yavaşlatabilir.",
+			"scannerMaxBatchRetriesLabel": "Tarayıcı Maksimum Toplu İşlem Yeniden Denemeleri",
+			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir."
+		},
+		"provider": {
+			"account": "Kilo Code Hesabı",
+			"apiKey": "Kilo Code API Anahtarı",
+			"login": "Kilo Code'a giriş yap",
+			"logout": "Kilo Code'dan çıkış yap",
+			"loginForPremiumModels": "Premium modellere ve özelliklere erişmek için giriş yap",
+			"providerRouting": {
+				"title": "Sağlayıcı Yönlendirme",
+				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
+				"createOrganization": "Sağlayıcı Yönlendirmeyi yönetmek için Organizasyon oluştur",
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
+				"sorting": {
+					"default": "Varsayılan sağlayıcı sıralaması",
+					"price": "Düşük fiyatlı sağlayıcıları tercih et",
+					"throughput": "Yüksek aktarım hızlı sağlayıcıları tercih et",
+					"latency": "Düşük gecikme süreli sağlayıcıları tercih et"
+				},
+				"dataCollection": {
+					"default": "Veri politikası ayarlanmamış",
+					"allowFree": "Prompt eğitimine izin ver (sadece ücretsiz)",
+					"allow": "Prompt eğitimine izin ver",
+					"deny": "Prompt eğitimini reddet",
+					"zdr": "Sıfır veri saklama"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Bağlam penceresi",
+			"providerBreakdown": "Sağlayıcı Fiyat ve Yetenek Dökümü",
+			"averageKiloCodeCost": "Bu, Kilo Code'un bu modeli kullanarak geçtiğimiz hafta boyunca yaptığı ortalama gerçek harcamadır. Prompt önbellek kullanımı nedeniyle listelenen fiyattan daha düşük olabilir.",
+			"table": {
+				"provider": "Sağlayıcı",
+				"context": "Uç nokta bu sayıda token işleyebilir (giriş + çıkış).",
+				"inputPrice": "İstem için milyon token başına maliyet.",
+				"outputPrice": "Tamamlama için milyon token başına maliyet.",
+				"cacheReadPrice": "Önbellekten okuma için milyon token başına maliyet.",
+				"cacheWritePrice": "Önbelleğe yazma için milyon token başına maliyet."
+			}
+		},
+		"systemNotifications": {
+			"label": "Sistem bildirimlerini etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code görev tamamlama veya hatalar gibi önemli olaylar için sistem bildirimleri gönderecektir.",
+			"testButton": "Bildirimi test et",
+			"testTitle": "Kilo Code",
+			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Komut Oluşturucu Sağlayıcısı",
+				"apiConfigId": {
+					"current": "Mevcut Yapılandırmayı Kullan",
+					"label": "API Yapılandırması",
+					"description": "Terminal komutlarını oluşturmak için hangi API yapılandırmasını kullanacağınızı seçin. Varsayılan ayarlarınızı kullanmak için 'Mevcut Yapılandırmayı Kullan' olarak bırakın."
+				}
+			}
+		}
+	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır.",
+		"automatic": "Kilo karar versin",
+		"xml": "XML",
+		"json": "JSON"
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
+			"condenseConversation": "Konuşmayı Özetle"
+		},
+		"seeNewChanges": "Yeni Değişiklikleri Göster",
+		"revertNewChanges": "Yeni Değişiklikleri Geri Al",
+		"confirmRevertChanges": "Değişiklikleri Geri Almayı Onayla",
+		"cancelRevertChanges": "Değişiklikleri Geri Almayı İptal Et"
+	},
+	"newTaskPreview": {
+		"task": "Görev"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Kontrol Paneli",
+		"logOut": "Çıkış Yap",
+		"currentBalance": "MEVCUT BAKİYE",
+		"loading": "Yükleniyor...",
+		"organization": "Organizasyon",
+		"personal": "Kişisel",
+		"shop": {
+			"title": "Kredi Satın Al",
+			"popular": "Popüler",
+			"credits": "kredi",
+			"action": "Şimdi Satın Al",
+			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
+		},
+		"detailedUsage": "Detaylı Kullanım",
+		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"
+	},
+	"docs": "Belgeler",
+	"rules": {
+		"tooltip": "Ajan Davranışını Yönet ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları",
+			"mcps": "MCP'ler",
+			"modes": "Modlar",
+			"skills": "Beceriler"
+		},
+		"ariaLabel": "Kilo Code Kuralları",
+		"tabs": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları"
+		},
+		"description": {
+			"rules": "Kurallar, Kilo Code'a tüm modlarda ve tüm promptlarda uyması gereken talimatlar sağlamanıza olanak tanır. Bunlar, çalışma alanınızda veya global olarak tüm konuşmalar için bağlam ve tercihleri dahil etmenin kalıcı bir yoludur.",
+			"workflows": "İş akışları, bir konuşma için hazırlanmış bir şablondur. İş akışları, sık kullandığınız promptları tanımlamanıza olanak tanır ve bir hizmeti dağıtmak veya PR göndermek gibi tekrarlayan görevler boyunca Kilo Code'u yönlendirmek için bir dizi adım içerebilir. Bir iş akışını çağırmak için şunu yazın",
+			"workflowsInChat": "sohbette."
+		},
+		"sections": {
+			"globalRules": "Global Kurallar",
+			"workspaceRules": "Çalışma Alanı Kuralları",
+			"globalWorkflows": "Global İş Akışları",
+			"workspaceWorkflows": "Çalışma Alanı İş Akışları"
+		},
+		"validation": {
+			"invalidFileExtension": "Yalnızca .md, .txt veya uzantısız dosyalara izin verilir"
+		},
+		"placeholders": {
+			"workflowName": "iş-akışı-adı (.md, .txt veya uzantısız)",
+			"ruleName": "kural-adı (.md, .txt veya uzantısız)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Yeni iş akışı dosyası...",
+			"newRuleFile": "Yeni kural dosyası..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) Görüntüle",
+			"messageTypes": {
+				"browser_action_launch": "tarayıcı başlatma",
+				"browser_action_result": "tarayıcı işlemi sonucu",
+				"browser_action": "tarayıcı eylemi",
+				"command_output": "komut çıktısı",
+				"completion_result": "tamamlama sonucu",
+				"checkpoint_saved": "kontrol noktası kaydedildi\n(sometimes can be \"ilerleme kaydedildi\" depending on context)",
+				"condense_context": "bağlamı özetle",
+				"error": "hata mesajı",
+				"command": "komut yürütme",
+				"followup": "devam sorusu",
+				"mcp_server_response": "MCP sunucu yanıtı",
+				"text": "YZ yanıtı",
+				"reasoning": "Yapay zeka muhakemesi",
+				"tool": "araç kullanımı",
+				"unknown": "bilinmeyen mesaj türü",
+				"use_mcp_server": "MCP sunucu kullanımı",
+				"user": "kullanıcı geri bildirimi"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "İptal",
+		"send": "Gönder",
+		"restoreAndSend": "Geri Yükle ve Gönder"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Burada yeni misin?",
+		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
+		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
+		"ideas": {
+			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",
+			"idea2": "Bir Python yazılım geliştirici için portföy web sitesi oluştur",
+			"idea3": "Tarayıcıda finansal uygulama maket oluştur. Sonra çalışıp çalışmadığını test et",
+			"idea4": "Şu anda en iyi AI video üretim modellerini içeren bir dizin web sitesi oluştur",
+			"idea5": "Özel stil sayfaları dışa aktaran ve canlı önizleme gösteren CSS gradient üretici oluştur",
+			"idea6": "Fare üzerine geldiğinde dinamik içeriği güzelce ortaya çıkaran kartlar üret",
+			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
+		}
+	},
+	"ghost": {
+		"title": "Otomatik Tamamlama",
+		"settings": {
+			"codeEditorSuggestions": "Kod Editörü Önerileri",
+			"chatSuggestions": "Sohbet Önerileri",
+			"model": "Model",
+			"provider": "Sağlayıcı",
+			"enableAutoTrigger": {
+				"label": "Önerileri otomatik tetikle",
+				"description": "Yazmayı duraklattığında otomatik olarak satır içi kod önerileri göster."
+			},
+			"autoTriggerDelay": {
+				"label": "Otomatik Tetikleme Gecikmesi",
+				"description": "Yazmayı duraklattıktan sonra önerilerin görünmesi için saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Klavye kısayoluyla tetikle ({{keybinding}})",
+				"description": "İmleç konumunda kod önerisi istemek için {{keybinding}} tuşuna bas. <DocsLink>Kısayolu düzenle</DocsLink>"
+			},
+			"enableChatAutocomplete": {
+				"label": "Sohbet otomatik tamamlamayı etkinleştir",
+				"description": "Sohbet girişinde yazarken önerileri göster. Önerileri kabul etmek için Tab tuşuna bas."
+			},
+			"snooze": {
+				"label": "Önerileri ertele",
+				"description": "Belirli bir süre için önerileri geçici olarak duraklat.",
+				"button": "Ertele",
+				"unsnooze": "Ertelemeyi Kaldır",
+				"currentlySnoozed": "Öneriler şu anda ertelenmiş durumda.",
+				"duration": {
+					"1min": "1 dakika",
+					"5min": "5 dakika",
+					"15min": "15 dakika",
+					"30min": "30 dakika",
+					"1hour": "1 saat"
+				}
+			},
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": {
+				"title": "Otomatik tamamlama modeli yapılandırılmadı",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekle:",
+				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
+			},
+			"noCredits": {
+				"title": "Hesabında kredi yok",
+				"description": "Kilo Code hesabında kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabına kredi ekle.",
+				"buyCredits": "Kredi satın al →"
+			},
+			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan."
+		}
+	},
+	"virtualProvider": {
+		"title": "Sanal Kota Yedek Sağlayıcı Ayarları",
+		"description": "Her biri kendi kota limitlerine sahip profil listesi yapılandırın. Bir sağlayıcının kota limitlerine ulaşıldığında, hiçbiri kalmayana kadar listedeki bir sonraki profil kullanılacaktır.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Birincil)",
+		"moveProfileUp": "Profili yukarı taşı",
+		"moveProfileDown": "Profili aşağı taşı",
+		"removeProfile": "Profili kaldır",
+		"selectProfilePlaceholder": "Profil seç...",
+		"addProfile": "Profil ekle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir sanal olmayan sağlayıcı profilini yapılandırın.",
+		"dangerZoneTitle": "Tehlike Bölgesi",
+		"dangerZoneDescription": "Bu eylemler yıkıcıdır ve geri alınamaz.",
+		"clearUsageData": "Kullanım Verilerini Temizle",
+		"confirmClearTitle": "Emin misiniz?",
+		"confirmClearDescription": "Bu, sanal sağlayıcılar için depolanan tüm kullanım verilerini kalıcı olarak silecektir. Bu eylem geri alınamaz.",
+		"perDay": "Günlük",
+		"tokensLabel": "Jetonlar",
+		"perHour": "Saat Başına",
+		"perMinute": "Dakika Başına",
+		"requestsLabel": "İstekler"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
+		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
+	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",
+		"notAllowedForTeam": "⚠️ Organizasyonunuz {{model}} modelinin kullanımına izin vermiyor. Devam etmek için farklı bir model seçin.",
+		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
+		"continueWith": "{{model}} ile devam et",
+		"continue": "Devam et"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Bu MCP sunucuları topluluk tarafından yönetilmektedir. Kendi MCP ayarlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"modes": {
+			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"skills": {
+			"description": "Topluluktan becerilere göz atın ve keşfedin. Beceriler, belirli görevler için özel talimatlar sağlar."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"intelligentProvider": {
+		"title": "Akıllı Sağlayıcı Ayarları",
+		"description": "Farklı zorluk seviyeleri için üç profil yapılandırın. Sistem, isteğinizin karmaşıklığına göre uygun sağlayıcıyı otomatik olarak seçecektir.",
+		"easyProfileLabel": "Kolay Profil",
+		"mediumProfileLabel": "Orta Profil",
+		"hardProfileLabel": "Zor Profil",
+		"selectProfilePlaceholder": "Profil seç...",
+		"clearProfile": "Profili temizle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir akıllı olmayan sağlayıcı profilini yapılandırın.",
+		"classifierProfileLabel": "Sınıflandırıcı Profil",
+		"classifierProfileDescription": "Zorluk sınıflandırması için hangi profilin kullanılacağını belirtir. Ayarlanmadıysa, varsayılan olarak kolay profili kullanır.",
+		"easyProfileDescription": "Hızlı açıklamalar, temel özetler veya basit kod parçacıkları gibi basit istekler için kullanılır.",
+		"mediumProfileDescription": "Kod analizi, uygulama önerileri veya orta karmaşıklıktaki görevler gibi orta düzey istekler için kullanılır.",
+		"hardProfileDescription": "Mimari tasarım, karmaşık hata ayıklama veya gelişmiş problem çözme gibi karmaşık istekler için kullanılır."
+	},
+	"deviceAuth": {
+		"title": "Kilo Code'a giriş yap",
+		"step1": "Tarayıcında aşağıdaki URL'yi aç",
+		"step2": "Kodu doğrula ve bu cihazı tarayıcında yetkilendir",
+		"scanQr": "Veya bu QR kodunu telefonunla tara",
+		"openBrowser": "Tarayıcıyı Aç",
+		"copyUrl": "URL'yi Kopyala",
+		"waiting": "Yetkilendirme bekleniyor...",
+		"timeRemaining": "Kod {{time}} içinde sona erecek",
+		"success": "Başarıyla giriş yapıldı!",
+		"authenticatedAs": "{{email}} olarak kimlik doğrulandı",
+		"error": "Kimlik Doğrulama Hatası",
+		"unknownError": "Bir hata oluştu. Lütfen tekrar dene.",
+		"cancel": "İptal",
+		"retry": "Tekrar Dene",
+		"tryAgain": "Tekrar Dene",
+		"cancelled": "Kimlik Doğrulama İptal Edildi",
+		"initiating": "Kimlik doğrulama başlatılıyor..."
+	},
+	"speechToText": {
+		"startRecording": "Sesli girişi başlat",
+		"stopRecording": "Sesli girişi durdur",
+		"setupPopover": {
+			"title": "Konuşmadan Metne",
+			"openAiReason": "Ses transkripsiyonu kullanmak için API anahtarına sahip geçerli bir OpenAI sağlayıcısına ihtiyacınız var.",
+			"description": "Konuşmadan metne özelliği kullanılamıyor. Konuşmadan metne özelliği için hem FFmpeg hem de geçerli bir OpenAI sağlayıcısı yapılandırılması gerekir. <moreInfoLink>Daha fazla bilgi için buraya tıklayın</moreInfoLink>.",
+			"ffmpegMessage": "FFmpeg'i kurmama yardım et",
+			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
+		},
+		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
+		"errorState": "Hata nedeniyle kullanılamıyor",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Sistem Varsayılanı",
+			"description": "Konuşma-yazma için mikrofon cihazını seçin",
+			"noDevices": "Mikrofon cihazı bulunamadı",
+			"loading": "Mikrofon cihazları yükleniyor...",
+			"refresh": "Yenile"
+		}
+	},
+	"skills": {
+		"description": "Beceriler, belirli görevler için özel talimatlar sağlar. İsteğinle ilgili olduğunda otomatik olarak uygulanırlar.",
+		"noSkills": "Yüklü beceri yok",
+		"projectSkills": "Proje Becerileri",
+		"globalSkills": "Global Beceriler",
+		"deleteDialog": {
+			"title": "Beceriyi Sil",
+			"description": "\"{{skillName}}\" becerisini silmek istediğinden emin misin? Bu işlem geri alınamaz.",
+			"cancel": "İptal",
+			"delete": "Sil"
+		}
+	}
+}
