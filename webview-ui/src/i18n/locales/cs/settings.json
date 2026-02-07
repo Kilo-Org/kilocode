@@ -335,6 +335,8 @@
 		"apiKeyStorageNotice": "Klíče API jsou bezpečně uloženy v tajném úložišti VSCode",
 		"glamaApiKey": "Klíč API Glama",
 		"getGlamaApiKey": "Získat klíč API Glama",
+		"aihubmixApiKey": "Klíč API AIhubmix",
+		"getAihubmixApiKey": "Získat klíč API AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "Limity využití pro Codex{{planLabel}}",
 			"loading": "Načítání limitů využití...",

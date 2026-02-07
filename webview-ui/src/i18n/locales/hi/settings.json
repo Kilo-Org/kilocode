@@ -321,6 +321,8 @@
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
 		"glamaApiKey": "Glama API कुंजी",
 		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
+		"aihubmixApiKey": "AIhubmix API कुंजी",
+		"getAihubmixApiKey": "AIhubmix API कुंजी प्राप्त करें",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
 			"loading": "Loading usage limits...",

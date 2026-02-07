@@ -322,6 +322,8 @@
 		"getVercelAiGatewayApiKey": "取得 Vercel AI Gateway API 金鑰",
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
+		"aihubmixApiKey": "AIhubmix API 金鑰",
+		"getAihubmixApiKey": "取得 AIhubmix API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰會安全地儲存在 VS Code 的 Secret Storage 中",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",

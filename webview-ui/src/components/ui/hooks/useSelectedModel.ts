@@ -558,6 +558,11 @@ function getSelectedModel({
 			}
 			return { id, info }
 		}
+		case "aihubmix": {
+			const id = getValidatedModelId(apiConfiguration.aihubmixModelId, routerModels.aihubmix, defaultModelId)
+			const info = routerModels.aihubmix?.[id]
+			return { id, info }
+		}
 		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":

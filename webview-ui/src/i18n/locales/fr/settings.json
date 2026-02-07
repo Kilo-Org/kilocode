@@ -322,6 +322,8 @@
 		"apiKeyStorageNotice": "Les clés API sont stockées en toute sécurité dans le stockage sécurisé de VSCode",
 		"glamaApiKey": "Clé API Glama",
 		"getGlamaApiKey": "Obtenir la clé API Glama",
+		"aihubmixApiKey": "Clé API AIhubmix",
+		"getAihubmixApiKey": "Obtenir la clé API AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
 			"loading": "Loading usage limits...",

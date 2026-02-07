@@ -33,6 +33,7 @@ import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 import { getSyntheticModels } from "./synthetic"
 import { getSapAiCoreModels } from "./sap-ai-core"
+import { getAihubmixModels } from "./aihubmix"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -170,6 +171,12 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case "nano-gpt":
 			models = await getNanoGptModels({
 				nanoGptModelList: options.nanoGptModelList,
+				apiKey: options.apiKey,
+			})
+			break
+		case "aihubmix":
+			models = await getAihubmixModels({
+				baseUrl: options.baseUrl,
 				apiKey: options.apiKey,
 			})
 			break

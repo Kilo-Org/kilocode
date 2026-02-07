@@ -312,6 +312,8 @@
 		"getVercelAiGatewayApiKey": "Obtenir clau API de Vercel AI Gateway",
 		"glamaApiKey": "Clau API de Glama",
 		"getGlamaApiKey": "Obtenir clau API de Glama",
+		"aihubmixApiKey": "Clau API de AIhubmix",
+		"getAihubmixApiKey": "Obtenir clau API de AIhubmix",
 		"apiKeyStorageNotice": "Les claus API s'emmagatzemen de forma segura a l'Emmagatzematge Secret de VSCode",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",

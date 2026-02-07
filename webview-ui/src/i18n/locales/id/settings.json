@@ -312,6 +312,8 @@
 		"getVercelAiGatewayApiKey": "Dapatkan Vercel AI Gateway API Key",
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
+		"aihubmixApiKey": "AIhubmix API Key",
+		"getAihubmixApiKey": "Dapatkan AIhubmix API Key",
 		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",

@@ -65,6 +65,7 @@ export type RouterName =
 	| "vercel-ai-gateway"
 	| "ovhcloud"
 	| "nano-gpt"
+	| "aihubmix"
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -131,6 +132,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	"io-intelligence": "io-intelligence",
 	"vercel-ai-gateway": "vercel-ai-gateway",
 	ovhcloud: "ovhcloud",
+	aihubmix: "aihubmix",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,
@@ -184,6 +186,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	"io-intelligence": "ioIntelligenceModelId",
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	ovhcloud: "ovhCloudAiEndpointsModelId",
+	aihubmix: "aihubmixModelId",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,

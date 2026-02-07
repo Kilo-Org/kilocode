@@ -312,6 +312,8 @@
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı Al",
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
+		"aihubmixApiKey": "AIhubmix API Anahtarı",
+		"getAihubmixApiKey": "AIhubmix API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",

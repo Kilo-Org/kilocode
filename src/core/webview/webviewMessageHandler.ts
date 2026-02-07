@@ -904,6 +904,7 @@ export const webviewMessageHandler = async (
 						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
 						"nano-gpt": {}, // kilocode_change
+						aihubmix: {}, // kilocode_change
 					}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -972,6 +973,14 @@ export const webviewMessageHandler = async (
 						provider: "nano-gpt",
 						apiKey: apiConfiguration.nanoGptApiKey,
 						nanoGptModelList: apiConfiguration.nanoGptModelList,
+					},
+				},
+				{
+					key: "aihubmix",
+					options: {
+						provider: "aihubmix",
+						apiKey: apiConfiguration.aihubmixApiKey,
+						baseUrl: apiConfiguration.aihubmixBaseUrl,
 					},
 				},
 				// kilocode_change end

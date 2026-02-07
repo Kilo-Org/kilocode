@@ -317,6 +317,8 @@
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway APIキーを取得",
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
+		"aihubmixApiKey": "AIhubmix APIキー",
+		"getAihubmixApiKey": "AIhubmix APIキーを取得",
 		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",

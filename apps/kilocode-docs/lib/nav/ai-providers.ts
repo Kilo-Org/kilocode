@@ -28,6 +28,7 @@ export const AiProvidersNav: NavSection[] = [
 		title: "AI Gateways",
 		links: [
 			{ href: "/ai-providers/openrouter", children: "OpenRouter" },
+			{ href: "/ai-providers/aihubmix", children: "AIhubmix" },
 			{ href: "/ai-providers/glama", children: "Glama" },
 			{ href: "/ai-providers/requesty", children: "Requesty" },
 			{ href: "/ai-providers/unbound", children: "Unbound" },

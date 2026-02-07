@@ -37,6 +37,7 @@ import {
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
+	AihubmixHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -253,6 +254,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new OVHcloudAIEndpointsHandler(options)
 		case "sap-ai-core":
 			return new SapAiCoreHandler(options)
+		case "aihubmix":
+			return new AihubmixHandler(options)
 		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)

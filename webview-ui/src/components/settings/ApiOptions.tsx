@@ -112,6 +112,7 @@ import {
 	OvhCloudAiEndpoints,
 	Inception,
 	SapAiCore,
+	Aihubmix,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -619,6 +620,21 @@ const ApiOptions = ({
 						setApiConfigurationField={setApiConfigurationField}
 						routerModels={routerModels}
 						uriScheme={uriScheme}
+						organizationAllowList={organizationAllowList}
+						modelValidationError={modelValidationError}
+						simplifySettings={fromWelcomeView}
+					/>
+				)
+				/* kilocode_change end */
+			}
+
+			{
+				/* kilocode_change start */
+				selectedProvider === "aihubmix" && (
+					<Aihubmix
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						routerModels={routerModels}
 						organizationAllowList={organizationAllowList}
 						modelValidationError={modelValidationError}
 						simplifySettings={fromWelcomeView}

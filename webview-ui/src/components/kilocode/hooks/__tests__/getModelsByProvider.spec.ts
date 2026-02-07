@@ -42,6 +42,7 @@ describe("getModelsByProvider", () => {
 		synthetic: { "test-model": testModel },
 		inception: { "test-model": testModel },
 		roo: { "test-model": testModel },
+		aihubmix: { "test-model": testModel }, // kilocode_change
 	}
 
 	it("returns models for all providers", () => {

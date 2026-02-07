@@ -345,6 +345,8 @@
 		"apiKeyStorageNotice": "คีย์ API จะถูกเก็บไว้อย่างปลอดภัยในที่เก็บข้อมูลลับของ VSCode",
 		"glamaApiKey": "คีย์ API ของ Glama",
 		"getGlamaApiKey": "รับคีย์ API ของ Glama",
+		"aihubmixApiKey": "คีย์ API ของ AIhubmix",
+		"getAihubmixApiKey": "รับคีย์ API ของ AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "ขีดจำกัดการใช้งานสำหรับ Codex{{planLabel}}",
 			"loading": "กำลังโหลดขีดจำกัดการใช้งาน...",
