@@ -61,9 +61,15 @@ export class GhostModel {
 		}
 
 		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
-			const selectedProfile = profiles.find(
-				(x) => x?.apiProvider === provider && !(x.profileType === "autocomplete"),
+			let selectedProfile = profiles.find(
+				(x) => x.apiProvider === provider && x.modelId === model && !(x.profileType === "autocomplete"),
 			)
+			if (!selectedProfile) {
+				// If failed to find exact provider-model pair, try to use any profile with looked-up provider
+				selectedProfile = profiles.find(
+					(x) => x.apiProvider === provider && !(x.profileType === "autocomplete"),
+				)
+			}
 			if (!selectedProfile) continue
 			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
 
