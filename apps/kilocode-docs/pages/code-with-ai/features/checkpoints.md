@@ -22,7 +22,8 @@ Checkpoints let you:
 - No GitHub account or repository is required
 - No Git personal information configuration is needed
 - The shadow Git repository operates independently from your project's existing Git configuration
-  {% /callout %}
+
+{% /callout %}
 
 ## Configuration Options
 
