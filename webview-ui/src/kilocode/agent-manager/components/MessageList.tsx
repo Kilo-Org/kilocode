@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from "react"
+import React, { useEffect, useRef, useCallback, useMemo, useState } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
@@ -21,6 +21,7 @@ import { ProgressIndicator } from "./ProgressIndicator"
 import { ReasoningBlock } from "./ReasoningBlock"
 import MessageThumbnails from "./MessageThumbnails"
 import { vscode } from "../utils/vscode"
+import { StandardTooltip } from "../../../components/ui" // kilocode_change
 import {
 	MessageCircle,
 	MessageCircleQuestion,
@@ -31,6 +32,7 @@ import {
 	User,
 	Clock,
 	Loader,
+	ChevronDown,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -62,6 +64,7 @@ function extractCommandMetadata(msg: ClineMessage): { exitCode?: number; status?
  */
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
+	const { t: tChat } = useTranslation("chat") // kilocode_change
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
 	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId))
 	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId))
@@ -69,6 +72,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
+	const [isAtBottom, setIsAtBottom] = useState(true) // kilocode_change
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
@@ -99,13 +103,13 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (combinedMessages.length > 0) {
+		if (isAtBottom && combinedMessages.length > 0) {
 			virtuosoRef.current?.scrollToIndex({
 				index: combinedMessages.length - 1,
 				behavior: "smooth",
 			})
 		}
-	}, [combinedMessages.length])
+	}, [combinedMessages.length, isAtBottom])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -143,6 +147,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const allItems = useMemo(() => {
 		return [...combinedMessages, ...queue.map((q) => ({ type: "queued" as const, data: q }))]
 	}, [combinedMessages, queue])
+	const showScrollToBottom = !isAtBottom && allItems.length > 0 // kilocode_change
 
 	// Item content renderer for Virtuoso
 	const itemContent = useCallback(
@@ -202,10 +207,32 @@ export function MessageList({ sessionId }: MessageListProps) {
 				ref={virtuosoRef}
 				data={allItems}
 				itemContent={itemContent}
-				followOutput="smooth"
+				followOutput={isAtBottom ? "smooth" : false} // kilocode_change
+				atBottomStateChange={setIsAtBottom} // kilocode_change
 				increaseViewportBy={{ top: 400, bottom: 400 }}
 				className="am-messages-list"
 			/>
+			{showScrollToBottom && (
+				<div className="am-scroll-to-bottom">
+					{" "}
+					{/* kilocode_change */}
+					<StandardTooltip content={tChat("scrollToBottom")}>
+						<button
+							type="button"
+							className="am-btn am-btn-secondary am-scroll-to-bottom-btn"
+							aria-label={tChat("scrollToBottom")}
+							onClick={() => {
+								if (allItems.length === 0) return
+								virtuosoRef.current?.scrollToIndex({
+									index: allItems.length - 1,
+									behavior: "smooth",
+								})
+							}}>
+							<ChevronDown size={16} />
+						</button>
+					</StandardTooltip>
+				</div>
+			)}
 		</div>
 	)
 }

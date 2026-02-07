@@ -33,18 +33,23 @@ export const CodeWithAiNav: NavSection[] = [
 				children: "Model Selection",
 			},
 			{
+				href: "/code-with-ai/agents/auto-model",
+				children: "Auto Model",
+			},
+			{
 				href: "/code-with-ai/agents/free-and-budget-models",
 				children: "Free & Budget Models",
 			},
-		],
-	},
-	{
-		title: "Modes",
-		links: [
-			{ href: "/code-with-ai/agents/using-modes", children: "Using Modes" },
 			{
-				href: "/code-with-ai/agents/orchestrator-mode",
-				children: "Orchestrator Mode",
+				href: "/code-with-ai/agents/using-modes",
+				children: "Modes",
+				subLinks: [
+					{ href: "/code-with-ai/agents/using-modes", children: "Using Modes" },
+					{
+						href: "/code-with-ai/agents/orchestrator-mode",
+						children: "Orchestrator Mode",
+					},
+				],
 			},
 		],
 	},
@@ -66,18 +71,19 @@ export const CodeWithAiNav: NavSection[] = [
 				children: "Git Commit Generation",
 			},
 			{ href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
-		],
-	},
-	{
-		title: "Agent Behavior",
-		links: [
-			{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },
-			{ href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
 			{
-				href: "/code-with-ai/features/task-todo-list",
-				children: "Task Todo List",
+				href: "/code-with-ai/features/browser-use",
+				children: "Agent Behavior",
+				subLinks: [
+					{ href: "/code-with-ai/features/browser-use", children: "Browser Use" },
+					{ href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
+					{
+						href: "/code-with-ai/features/task-todo-list",
+						children: "Task Todo List",
+					},
+					{ href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
+				],
 			},
-			{ href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
 		],
 	},
 ]

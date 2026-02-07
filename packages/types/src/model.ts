@@ -39,7 +39,7 @@ export const reasoningEffortSettingSchema = z.enum(reasoningEffortSettingValues)
  * Verbosity
  */
 
-export const verbosityLevels = ["low", "medium", "high"] as const
+export const verbosityLevels = ["low", "medium", "high", "max"] as const // kilocode_change
 
 export const verbosityLevelsSchema = z.enum(verbosityLevels)
 
@@ -81,8 +81,9 @@ export const modelInfoSchema = z.object({
 	// or set to "in_memory", the default in‑memory cache is used.
 	promptCacheRetention: z.enum(["in_memory", "24h"]).optional(),
 	// Capability flag to indicate whether the model supports an output verbosity parameter
-	supportsVerbosity: z.boolean().optional(),
+	supportsVerbosity: z.union([z.boolean(), z.array(z.enum(verbosityLevels))]).optional(), // kilocode_change
 	supportsReasoningBudget: z.boolean().optional(),
+	supportsAdaptiveThinking: z.boolean().optional(), // kilocode_change
 	// Capability flag to indicate whether the model supports simple on/off binary reasoning
 	supportsReasoningBinary: z.boolean().optional(),
 	// Capability flag to indicate whether the model supports temperature parameter

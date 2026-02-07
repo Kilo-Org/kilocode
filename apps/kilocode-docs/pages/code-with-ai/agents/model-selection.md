@@ -49,5 +49,3 @@ Check [our provider docs](/docs/basic-usage/connecting-providers) for specific c
 ## Stay Current
 
 The AI model space moves fast. Bookmark [kilo.ai/models](https://kilo.ai/models) and check back when you're evaluating options. What's best today might not be best next month — and that's actually exciting.
-
--->
