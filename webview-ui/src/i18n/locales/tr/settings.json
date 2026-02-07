@@ -283,6 +283,8 @@
 		"description": "Sağlayıcılar ve ayarlar arasında hızlıca geçiş yapmak için farklı API yapılandırmalarını kaydedin.",
 		"makeActiveProfile": "Aktif profil yap",
 		"makeActiveTooltip": "API istekleri için bu profili etkinleştir",
+		"makeActiveProfileAllModes": "Tüm modlarda aktif profil yap",
+		"makeActiveAllModesTooltip": "Bu profili tüm modlar için etkinleştir",
 		"apiProvider": "API Sağlayıcı",
 		"apiProviderDocs": "Sağlayıcı Belgeleri",
 		"model": "Model",

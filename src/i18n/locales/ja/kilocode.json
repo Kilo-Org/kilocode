@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "設定が正常にインポートされました。"
+		"settings_imported": "設定が正常にインポートされました。",
+		"profile_applied_to_all_modes": "プロファイル「{{name}}」がすべてのモードに適用されました"
 	},
 	"userFeedback": {
 		"message_update_failed": "メッセージの更新に失敗しました",

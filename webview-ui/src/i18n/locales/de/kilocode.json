@@ -396,5 +396,8 @@
 			"cancel": "Abbrechen",
 			"delete": "Löschen"
 		}
+	},
+	"info": {
+		"profile_applied_to_all_modes": "Profil \"{{name}}\" auf alle Modi angewendet"
 	}
 }

@@ -283,6 +283,8 @@
 		"description": "Deseu diferents configuracions d'API per canviar ràpidament entre proveïdors i configuracions.",
 		"makeActiveProfile": "Fer perfil actiu",
 		"makeActiveTooltip": "Activa aquest perfil per utilitzar-lo per a sol·licituds d'API",
+		"makeActiveProfileAllModes": "Fes que el perfil sigui actiu en tots els modes",
+		"makeActiveAllModesTooltip": "Activa aquest perfil per a tots els modes",
 		"apiProvider": "Proveïdor d'API",
 		"apiProviderDocs": "Documentació del proveïdor",
 		"model": "Model",

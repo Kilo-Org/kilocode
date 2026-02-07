@@ -1,6 +1,7 @@
 {
 	"info": {
-		"settings_imported": "Nastavení byla úspěšně importována."
+		"settings_imported": "Nastavení byla úspěšně importována.",
+		"profile_applied_to_all_modes": "Profil \"{{name}}\" byl použit pro všechny režimy"
 	},
 	"userFeedback": {
 		"message_update_failed": "Aktualizace zprávy selhala",

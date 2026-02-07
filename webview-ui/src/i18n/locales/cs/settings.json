@@ -305,6 +305,8 @@
 		"description": "Uložte si různé konfigurace API pro rychlé přepínání mezi poskytovateli a nastaveními.",
 		"makeActiveProfile": "Nastavit jako aktivní profil",
 		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
+		"makeActiveProfileAllModes": "Nastavit jako aktivní profil pro všechny režimy",
+		"makeActiveAllModesTooltip": "Aktivuj tento profil pro všechny režimy",
 		"apiProvider": "Poskytovatel API",
 		"apiProviderDocs": "Dokumentace poskytovatele",
 		"model": "Model",

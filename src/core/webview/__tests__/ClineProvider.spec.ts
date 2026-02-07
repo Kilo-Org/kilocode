@@ -4029,4 +4029,42 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 		})
 	})
+
+	describe("applyProfileToAllModes", () => {
+		beforeEach(async () => {
+			await provider.resolveWebviewView(mockWebviewView)
+		})
+
+		it("applies profile to all modes and activates it", async () => {
+			const profile: ProviderSettingsEntry = {
+				name: "test-profile",
+				id: "test-id",
+				apiProvider: "anthropic",
+			}
+
+			const mockModes = [
+				{ slug: "code", name: "Code" },
+				{ slug: "architect", name: "Architect" },
+			]
+
+			;(provider as any).providerSettingsManager = {
+				listConfig: vi.fn().mockResolvedValue([profile]),
+				setModeConfig: vi.fn().mockResolvedValue(undefined),
+				activateProfile: vi.fn().mockResolvedValue(profile),
+			}
+			vi.spyOn(provider, "getModes").mockResolvedValue(mockModes)
+			vi.spyOn(provider, "getState").mockResolvedValue({
+				currentApiConfigName: "test-profile",
+				listApiConfigMeta: [profile],
+			} as any)
+			const activateSpy = vi.spyOn(provider, "activateProviderProfile").mockResolvedValue(undefined)
+
+			await provider.applyProfileToAllModes("test-profile")
+
+			expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("code", "test-id")
+			expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("architect", "test-id")
+			expect(activateSpy).toHaveBeenCalledWith({ name: "test-profile" })
+			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("info.profile_applied_to_all_modes")
+		})
+	})
 })

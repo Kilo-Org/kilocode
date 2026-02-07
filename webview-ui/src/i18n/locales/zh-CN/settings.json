@@ -283,6 +283,8 @@
 		"description": "保存多组API配置便于快速切换",
 		"makeActiveProfile": "设为活动配置",
 		"makeActiveTooltip": "激活此配置用于 API 请求",
+		"makeActiveProfileAllModes": "在所有模式下设为活动配置",
+		"makeActiveAllModesTooltip": "在所有模式下激活此配置",
 		"apiProvider": "API提供商",
 		"apiProviderDocs": "提供商文档",
 		"model": "模型",

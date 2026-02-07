@@ -288,6 +288,8 @@
 		"description": "異なるAPI設定を保存して、プロバイダーと設定をすばやく切り替えることができます。",
 		"makeActiveProfile": "アクティブプロファイルにする",
 		"makeActiveTooltip": "このプロファイルをアクティブにしてAPIリクエストに使用する",
+		"makeActiveProfileAllModes": "全モードでアクティブなプロファイルにする",
+		"makeActiveAllModesTooltip": "このプロファイルをすべてのモードで有効にする",
 		"apiProvider": "APIプロバイダー",
 		"apiProviderDocs": "プロバイダードキュメント",
 		"model": "モデル",

@@ -293,6 +293,8 @@
 		"description": "儲存不同的 API 設定以快速切換供應商和設定。",
 		"makeActiveProfile": "設為活動設定檔",
 		"makeActiveTooltip": "啟用此設定檔以用於 API 請求",
+		"makeActiveProfileAllModes": "在所有模式下設為活動設定檔",
+		"makeActiveAllModesTooltip": "在所有模式下啟用此設定檔",
 		"apiProvider": "API 供應商",
 		"apiProviderDocs": "供應商說明文件",
 		"model": "模型",
