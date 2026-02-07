@@ -19,6 +19,11 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
 					source: "/llms.txt",
 					destination: "/api/llms.txt",
 				},
+				{
+					// Rewrite /docs/sitemap.xml to the API endpoint (internal to basePath)
+					source: "/sitemap.xml",
+					destination: "/api/sitemap.xml",
+				},
 			],
 		}
 	},
