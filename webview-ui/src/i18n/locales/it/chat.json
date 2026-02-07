@@ -510,5 +510,11 @@
 		"updated": "Aggiornata la lista delle cose da fare",
 		"completed": "Completato",
 		"started": "Iniziato"
+	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code vuole recuperare contenuti da un URL",
+		"didFetch": "Kilo Code ha recuperato contenuti da un URL",
+		"wantsToSearch": "Kilo Code vuole cercare sul web",
+		"didSearch": "Kilo Code ha cercato sul web"
 	}
 }

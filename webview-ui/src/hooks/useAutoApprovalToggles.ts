@@ -12,6 +12,7 @@ export function useAutoApprovalToggles() {
 		alwaysAllowDelete, // kilocode_change
 		alwaysAllowExecute,
 		alwaysAllowBrowser,
+		alwaysAllowWeb, // kilocode_change: Auto-approve web tools
 		alwaysAllowMcp,
 		alwaysAllowModeSwitch,
 		alwaysAllowSubtasks,
@@ -25,6 +26,7 @@ export function useAutoApprovalToggles() {
 			alwaysAllowDelete, // kilocode_change
 			alwaysAllowExecute,
 			alwaysAllowBrowser,
+			alwaysAllowWeb, // kilocode_change: Auto-approve web tools
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
@@ -36,6 +38,7 @@ export function useAutoApprovalToggles() {
 			alwaysAllowDelete, // kilocode_change
 			alwaysAllowExecute,
 			alwaysAllowBrowser,
+			alwaysAllowWeb, // kilocode_change: Auto-approve web tools
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,

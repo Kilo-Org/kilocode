@@ -574,6 +574,12 @@
 		"terminal": "เทอร์มินัล",
 		"url": "วาง URL เพื่อดึงเนื้อหา"
 	},
+	"webTools": {
+		"wantsToFetch": "Kilo Code ต้องการดึงเนื้อหาจาก URL",
+		"didFetch": "Kilo Code ดึงเนื้อหาจาก URL แล้ว",
+		"wantsToSearch": "Kilo Code ต้องการค้นหาบนเว็บ",
+		"didSearch": "Kilo Code ค้นหาบนเว็บแล้ว"
+	},
 	"todo": {
 		"partial": "ทำเสร็จ {{completed}} จาก {{total}} รายการ",
 		"complete": "ทำเสร็จทั้งหมด {{total}} รายการ",

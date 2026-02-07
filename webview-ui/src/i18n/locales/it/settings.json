@@ -222,6 +222,10 @@
 			"label": "Browser",
 			"description": "Esegui automaticamente azioni del browser senza richiedere approvazione. Nota: Si applica solo quando il modello supporta l'uso del computer"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Esegui automaticamente operazioni web (recupero URL, ricerca sul web) senza richiedere approvazione"
+		},
 		"delete": {
 			"label": "Elimina",
 			"description": "Elimina automaticamente file e directory senza richiedere approvazione"

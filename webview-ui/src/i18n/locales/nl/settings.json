@@ -226,6 +226,10 @@
 			"label": "Browser",
 			"description": "Automatisch browseracties uitvoeren zonder goedkeuring. Let op: geldt alleen als het model computergebruik ondersteunt."
 		},
+		"web": {
+			"label": "Web",
+			"description": "Automatisch weboperaties uitvoeren (URL's ophalen, op het web zoeken) zonder goedkeuring"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Automatische goedkeuring van individuele MCP-tools in het MCP-serversoverzicht inschakelen (vereist zowel deze instelling als het selectievakje 'Altijd toestaan' bij de tool)"

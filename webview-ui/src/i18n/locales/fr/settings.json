@@ -223,6 +223,10 @@
 			"label": "Navigateur",
 			"description": "Effectuer automatiquement des actions du navigateur sans nécessiter d'approbation. Remarque : S'applique uniquement lorsque le modèle prend en charge l'utilisation de l'ordinateur"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Effectuer automatiquement des opérations web (récupérer des URL, rechercher sur le web) sans nécessiter d'approbation"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Activer l'approbation automatique des outils MCP individuels dans la vue des serveurs MCP (nécessite à la fois ce paramètre et la case à cocher \"Toujours autoriser\" de l'outil)"

@@ -222,6 +222,10 @@
 			"label": "Browser",
 			"description": "Browser-Aktionen automatisch ohne Genehmigung durchführen. Hinweis: Gilt nur, wenn das Modell Computer-Nutzung unterstützt"
 		},
+		"web": {
+			"label": "Web",
+			"description": "Web-Operationen (URLs abrufen, im Web suchen) automatisch ohne Genehmigung durchführen"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Automatische Genehmigung einzelner MCP-Tools in der MCP-Server-Ansicht aktivieren (erfordert sowohl diese Einstellung als auch das 'Immer erlauben'-Kontrollkästchen des Tools)"

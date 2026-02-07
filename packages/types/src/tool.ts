@@ -4,7 +4,7 @@ import { z } from "zod"
  * ToolGroup
  */
 
-export const toolGroups = ["read", "edit", "browser", "command", "mcp", "modes"] as const
+export const toolGroups = ["read", "edit", "browser", "command", "mcp", "modes", "web"] as const // kilocode_change: added "web"
 
 export const toolGroupsSchema = z.enum(toolGroups)
 
@@ -40,6 +40,8 @@ export const toolNames = [
 	"report_bug",
 	"condense",
 	"delete_file",
+	"web_fetch",
+	"web_search",
 	// kilocode_change end
 	"update_todo_list",
 	"run_slash_command",
