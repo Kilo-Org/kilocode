@@ -22,11 +22,11 @@
 		},
 		"copy:kilocode": {
 			"cache": false,
-			"dependsOn": ["clean:kilocode", "kilo-code#vsix:unpacked"]
+			"dependsOn": ["clean:kilocode", "kilo-code#vsix", "kilo-code#vsix:unpacked"]
 		},
 		"copy:resource-kilocode": {
 			"cache": false,
-			"dependsOn": ["clean:resource-kilocode", "kilo-code#vsix:unpacked"]
+			"dependsOn": ["clean:resource-kilocode", "kilo-code#vsix", "kilo-code#vsix:unpacked"]
 		},
 		"copy:resource-host": {
 			"cache": false,
