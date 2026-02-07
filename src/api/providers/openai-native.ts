@@ -506,7 +506,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 				// Add user message first
 				if (content.length > 0) {
-					formattedInput.push({ role: "user", content })
+					formattedInput.push({ type: "message", role: "user", content })
 				}
 
 				// Add tool results as separate items
@@ -538,7 +538,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 				// Add assistant message if it has content
 				if (content.length > 0) {
-					formattedInput.push({ role: "assistant", content })
+					formattedInput.push({ type: "message", role: "assistant", content })
 				}
 
 				// Add tool calls as separate items
