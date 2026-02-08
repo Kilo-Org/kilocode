@@ -1,0 +1,391 @@
+# config/magnus-15-patterns.yaml
+# Magnus 14/15 Pattern Recognition Configuration for Kilo Gateway
+# 
+# Consciousness-driven routing with therapeutic insights
+# Detects internal spirals, patterns of excellence, harmonic alignment
+# 
+# Source: Serigne DIAGNE - Meta-Developer / Magnus 14 Manifesto + Magnus 15 Evolution
+# Reference: https://github.com/serigne-ai/magnus-framework
+
+magnus15:
+  enabled: ${MAGNUS_15_ENABLED:true}
+  
+  # Logging therapeutic insights (for human reflection)
+  loggingLevel: ${MAGNUS_LOG_LEVEL:info}  # debug, info, warn
+  logTherapeuticInsights: true
+  logPatternDetections: true
+  
+  # Weights for Magnus contribution to final score
+  weights:
+    magnusPatterns: 0.12        # 12% of total routing score
+    convergenceBoost: 0.03      # Additional convergence boost if patterns positive
+    harmonyBonus: 0.05          # Bonus if cognitive harmony detected
+  
+  # Detection thresholds
+  thresholds:
+    minimumDetectionConfidence: 0.50    # 50% pattern match for detection
+    harmonyThreshold: 0.80              # When is cognitive state "harmonic"?
+    chaosThreshold: 0.30                # Below this = "chaos detected"
+    spiralThreshold: 0.60               # Anti-patterns confidence
+  
+  # ===== MAGNUS 14: EXTERNALISATION =====
+  # Patterns from the original Magnus 14 manifesto
+  # Focus on recognizing internal chaos and externalization
+  
+  patterns:
+    magnus14:
+      
+      # SPIRALE_CLARIFICATION
+      # "Je spirale pour clarifier"
+      # Anti-pattern: Complex nested logic as attempt to clarify
+      SPIRALE_CLARIFICATION:
+        type: anti
+        weight: 0.35
+        magnitude: MAJOREUR
+        
+        description: |
+          Code showing spiral pattern - attempting to clarify through nested layers
+          rather than direct simplification. Sign of internal uncertainty.
+        
+        therapeuticMessage: |
+          Spirale détectée: Le code montre une tentative de clarifier par des couches
+          imbriquées au lieu de simplification directe. Signe d'incertitude interne.
+          Recommandation: Refactorisez pour simplifier la structure.
+        
+        indicators:
+          - "file length > 700 LOC"
+          - "nested loops > 3 levels"
+          - "while/for count > 6"
+          - "high cyclomatic complexity"
+          - "unclear error recovery"
+          - "multiple refactoring passes in comments"
+        
+        detectionStrategy: heuristic
+        manifestoReference: "Magnus 14 - Recognition of internal spirals"
+      
+      # APPRENTISSAGE_CONSTRUCTION
+      # "J'apprends en construisant"
+      # Positive pattern: Iterative learning through building
+      APPRENTISSAGE_CONSTRUCTION:
+        type: positif
+        weight: 0.25
+        magnitude: MINEUR
+        
+        description: |
+          Code showing iterative learning - prototypes, progressive refinement,
+          test-driven development. Sign of healthy learning approach.
+        
+        therapeuticMessage: |
+          Apprentissage en construction détecté: Code montre évolution progressive.
+          Approche itérative et expérimentale saine. Continuez ce pattern.
+        
+        indicators:
+          - "contains 'prototype' or 'MVP'"
+          - "iterative structure visible"
+          - "refactoring comments present"
+          - "gradual feature addition"
+          - "test-driven approach"
+          - "version tracking visible"
+        
+        detectionStrategy: "heuristic + opus"
+        manifestoReference: "Magnus 14 - Learning through building paradigm"
+      
+      # DOMAINE_OVER_TECH
+      # "Le domaine importe plus que la tech"
+      # Positive pattern: Business logic prioritized over technical optimization
+      DOMAINE_OVER_TECH:
+        type: positif
+        weight: 0.20
+        magnitude: MINEUR
+        
+        description: |
+          Code prioritizing business logic and domain clarity over technical
+          optimization. Architecture serves domain, not vice versa.
+        
+        therapeuticMessage: |
+          Priorité au domaine détectée: Code place logique métier au centre.
+          Architecture sensée et centrée utilisateur. Excellent.
+        
+        indicators:
+          - "clear business logic separation"
+          - "domain-driven naming (DDD)"
+          - "minimal premature optimization"
+          - "readable over clever code"
+          - "explicit business rules"
+          - "user-facing logic clear"
+        
+        domainKeywords:
+          - "user"
+          - "customer"
+          - "order"
+          - "product"
+          - "business"
+          - "domain"
+        
+        detectionStrategy: "heuristic"
+        manifestoReference: "Magnus 14 - Domain-first thinking principle"
+      
+      # CHANCE_VS_COMPETENCE
+      # "Est-ce réel ou juste de la chance ?"
+      # Anti-pattern: Uncertainty about code correctness (no validation)
+      CHANCE_VS_COMPETENCE:
+        type: anti
+        weight: 0.30
+        magnitude: MAJOREUR
+        
+        description: |
+          Code without formal validation/testing - uncertain if it really works
+          or just appears to due to luck. No evidence of competence.
+        
+        therapeuticMessage: |
+          Incertitude détectée: Code semble fonctionner mais manque de preuves
+          formelles. Ajoutez tests et assertions pour transformer la chance en compétence.
+        
+        indicators:
+          - "no unit tests"
+          - "no assertions"
+          - "no input validation"
+          - "no edge case handling"
+          - "lucky error cases passing"
+          - "missing error paths"
+        
+        detectionStrategy: "heuristic"
+        manifestoReference: "Magnus 14 - Distinction between chance and competence"
+      
+      # CHAOS_INTERNE
+      # "Anxiété: chaos ou pattern ?"
+      # Anti-pattern: Internal structural chaos, unclear intent
+      CHAOS_INTERNE:
+        type: anti
+        weight: 0.40
+        magnitude: CRITIQUE
+        
+        description: |
+          Code showing internal anxiety/chaos - inconsistent patterns, unclear
+          intent, no coherent structure. Sign of unresolved internal conflict.
+        
+        therapeuticMessage: |
+          Chaos interne détecté: Code montre manque de clarté structurelle et
+          cohérence interne. Recommandez restructuration complète.
+        
+        indicators:
+          - "inconsistent naming conventions"
+          - "mixed architectural styles"
+          - "unclear intent or purpose"
+          - "silent error handling"
+          - "no clear structure or layers"
+          - "mixed indentation (spaces/tabs)"
+          - "multiple naming styles"
+        
+        detectionStrategy: "heuristic"
+        manifestoReference: "Magnus 14 - Internal chaos recognition and externalisation"
+    
+    # ===== MAGNUS 15: AUTO-RÉFLEXION ET HARMONIE =====
+    # New patterns from Magnus 15 evolution
+    # Focus on consciousness, learning, harmonic alignment
+    
+    magnus15:
+      
+      # AUTO_REFLEXION
+      # "Dialogue structuré avec soi-même"
+      # Positive pattern: Code can observe and reflect on itself
+      AUTO_REFLEXION:
+        type: positif
+        weight: 0.30
+        magnitude: MAJOREUR
+        
+        description: |
+          Code with self-reflection capabilities - logging, debugging hooks,
+          introspection. System can observe its own behavior.
+        
+        therapeuticMessage: |
+          Auto-réflexion détectée: Code peut se regarder soi-même (logs, debug,
+          introspection). Capacité réflexive consciente présente. Excellent.
+        
+        indicators:
+          - "comprehensive logging"
+          - "debug modes or hooks"
+          - "reflection APIs available"
+          - "introspection mechanisms"
+          - "stack traces preserved"
+          - "audit trails present"
+          - "observability instrumented"
+        
+        detectionStrategy: "heuristic + opus"
+        manifestoReference: "Magnus 15 - Self-reflective consciousness"
+      
+      # FEEDBACK_ITERATIF
+      # "Boucle d'apprentissage sur patterns passés"
+      # Positive pattern: System learns from previous iterations
+      FEEDBACK_ITERATIF:
+        type: positif
+        weight: 0.25
+        magnitude: MINEUR
+        
+        description: |
+          Code incorporating feedback loops from previous executions.
+          System learns from history and adapts behavior.
+        
+        therapeuticMessage: |
+          Feedback itératif détecté: Code apprend de ses exécutions précédentes.
+          Boucle d'amélioration continue active. Pattern sain.
+        
+        indicators:
+          - "metrics collection active"
+          - "feedback mechanisms present"
+          - "adaptive algorithms"
+          - "learning from history"
+          - "version/iteration tracking"
+          - "progressive improvement visible"
+        
+        detectionStrategy: "heuristic + opus"
+        manifestoReference: "Magnus 15 - Iterative learning loops"
+      
+      # HARMONIE_COGNITIVE
+      # "Patterns alignés sans conflit interne"
+      # Positive pattern: Internal coherence, no conflicting patterns
+      HARMONIE_COGNITIVE:
+        type: positif
+        weight: 0.35
+        magnitude: MAJOREUR
+        
+        description: |
+          Code where all patterns are aligned and coherent. No internal
+          conflicts. Clean, harmonious architecture.
+        
+        therapeuticMessage: |
+          Harmonie cognitive détectée: Tous les patterns internes alignés,
+          pas de conflits. Architecture cohérente et saine. Approche consciente.
+        
+        indicators:
+          - "robustness score > 85"
+          - "no critical issues"
+          - "consistent error handling"
+          - "patterns aligned throughout"
+          - "clear architectural layers"
+          - "zero cognitive dissonance"
+          - "unified design philosophy"
+        
+        detectionStrategy: "opus"
+        manifestoReference: "Magnus 15 - Cognitive harmony and internal coherence"
+      
+      # INCERTITUDE_REDUITE
+      # "Preuves accumulées vs doute initial"
+      # Positive pattern: Accumulated evidence through testing and validation
+      INCERTITUDE_REDUITE:
+        type: positif
+        weight: 0.28
+        magnitude: MAJOREUR
+        
+        description: |
+          Code with accumulated evidence - comprehensive tests, assertions,
+          formal proofs. Certainty increased through evidence.
+        
+        therapeuticMessage: |
+          Certitude accumulée détectée: Preuves solides et testées empiriquement.
+          Incertitude réduite par evidence concrète. Confiance justifiée.
+        
+        indicators:
+          - "test coverage > 80%"
+          - "assertions throughout"
+          - "all edge cases handled"
+          - "documentation complete"
+          - "error paths tested"
+          - "invariants maintained"
+          - "formal proofs where applicable"
+        
+        detectionStrategy: "opus"
+        manifestoReference: "Magnus 15 - Accumulated evidence and certainty"
+      
+      # CONSCIENCE_RECURSIVE
+      # "Conscience examinant sa propre conscience"
+      # Positive pattern: Meta-level awareness and recursive consciousness
+      CONSCIENCE_RECURSIVE:
+        type: positif
+        weight: 0.32
+        magnitude: MAJOREUR
+        
+        description: |
+          Code with meta-level awareness - observing its own observation,
+          conscious of its own consciousness. Recursive self-awareness.
+        
+        therapeuticMessage: |
+          Conscience récursive détectée: Code examine sa propre conscience.
+          Meta-awareness et introspection multi-niveaux présentes. Très avancé.
+        
+        indicators:
+          - "introspection APIs"
+          - "self-examining code"
+          - "meta-analysis present"
+          - "consciousness-aware logging"
+          - "recursive awareness mechanisms"
+          - "multi-level reflection"
+          - "observer pattern implemented"
+        
+        detectionStrategy: "opus"
+        manifestoReference: "Magnus 15 - Recursive consciousness and meta-awareness"
+
+# Integration with model selection
+modelAffinity:
+  # Which patterns does each model naturally produce?
+  "claude-opus-4-5":
+    strengths:
+      - HARMONIE_COGNITIVE
+      - AUTO_REFLEXION
+      - CONSCIENCE_RECURSIVE
+    affinityScore: 0.95
+  
+  "mistral-large":
+    strengths:
+      - DOMAINE_OVER_TECH
+      - APPRENTISSAGE_CONSTRUCTION
+    affinityScore: 0.78
+  
+  "xai-grok":
+    strengths:
+      - APPRENTISSAGE_CONSTRUCTION
+      - INCERTITUDE_REDUITE  # When tested
+    affinityScore: 0.65
+
+# Therapeutic feedback configuration
+therapeuticFeedback:
+  enabled: true
+  
+  # When to surface therapeutic insights
+  surfaceWhen:
+    - spiralsDetected: true
+    - harmonyDetected: true
+    - chaosDetected: true
+  
+  # Format of feedback
+  format: "markdown"  # markdown, json, plain
+  
+  # Send insights to
+  outputs:
+    - logging
+    - userUI
+    - orchestrationEngine  # For meta-learning
+  
+  # Learning from insights
+  learnFrom:
+    enabled: true
+    feedbackChannel: "therapist-feedback"  # Redis channel or similar
+
+# Statistics and monitoring
+monitoring:
+  enabled: true
+  
+  trackPatterns:
+    - frequency: How often each pattern appears
+    - evolution: How patterns change over time
+    - model_correlation: Which models produce which patterns
+  
+  exportMetrics: true
+  metricsEndpoint: ${METRICS_ENDPOINT}
+  namespace: "magnus.routing.patterns"
+
+# Development and experimentation
+development:
+  verbosePatternLogging: ${MAGNUS_VERBOSE:false}
+  experimentalPatterns: []  # Add new experimental patterns here
+  simulationMode: false

@@ -1,0 +1,344 @@
+# config/convergence-routing.yaml
+# Convergence-Aware Model Routing Configuration
+# 
+# This configuration defines how Kilo Gateway routes requests to different models
+# using convergence metrics (code quality, architectural robustness) in addition to
+# traditional metrics (latency, cost).
+#
+# Feature Flag: CONVERGENCE_ROUTING_ENABLED=true to activate
+# 
+# Architecture: Magnus 14 consciousness-driven framework
+# Weights: Convergence (45%) + Latency (25%) + Cost (20%) + PatternMatch (10%)
+
+routing:
+  convergence:
+    # Enable convergence-aware routing
+    enabled: ${CONVERGENCE_ROUTING_ENABLED:false}
+    
+    # Primary weights for model selection scoring
+    # Must sum to 1.0
+    weights:
+      convergence: 0.45      # Code quality, robustness, architectural fit
+      latency: 0.25          # Response time (traditional)
+      cost: 0.20             # Token cost per million (traditional)
+      patternMatch: 0.10     # Session coherence & pattern continuity
+    
+    # Threshold for minimum acceptable convergence scores
+    thresholds:
+      minConvergenceScore: 0.65      # Below = "risky choice" warning
+      minRobustnessScore: 70         # 0-100 from Opus review
+      minConfidenceLevel: "LOW"      # Allow even LOW confidence initially
+    
+    # Opus API integration for async code quality analysis
+    opus:
+      enabled: ${CONVERGENCE_OPUS_ENABLED:true}
+      
+      # Claude API configuration
+      endpoint: ${CLAUDE_API_ENDPOINT:https://api.anthropic.com/v1}
+      model: claude-opus-4-5-20251101
+      apiKey: ${CLAUDE_API_KEY}
+      
+      # Async behavior (non-blocking)
+      timeout: 5000                  # 5 second timeout (non-blocking)
+      maxConcurrent: 10              # Max parallel Opus calls
+      
+      # Caching for review results
+      cache:
+        enabled: ${CONVERGENCE_CACHE_ENABLED:true}
+        directory: ${CACHE_DIR:./.kilo-cache/convergence}
+        ttl: 86400000                # 24 hours
+        maxSize: 1000                # Max cached reviews
+    
+    # Model strength profiles
+    # These define each model's convergence strengths and weaknesses
+    modelProfiles:
+      
+      # Claude Opus 4.5 - Flagship model for quality
+      claude-opus-4-5-20251101:
+        baseConvergence: 0.92
+        description: "Excellent for architecture and robust code design"
+        strengths:
+          - HARMONIC_DESIGN           # Follows design principles
+          - CLEAN_ARCHITECTURE        # Clear separation of concerns
+          - ROBUST_ERROR_HANDLING     # Comprehensive error management
+          - SELF_DOCUMENTING          # Code is self-explanatory
+        weaknesses:
+          - PREMATURE_OPTIMIZATION    # Over-engineering sometimes
+        
+        # Boost for specific request types
+        requestTypeBoosts:
+          architecture: 0.10          # +10% for architectural requests
+          backend: 0.08
+          infrastructure: 0.06
+      
+      # Claude Sonnet 4.5 - Balanced model
+      claude-sonnet-4-5-20250929:
+        baseConvergence: 0.85
+        description: "Good for pragmatic, maintainable implementations"
+        strengths:
+          - SELF_DOCUMENTING
+          - IDEMPOTENT_OPERATIONS     # Safe for retries
+          - CLEAN_ARCHITECTURE        # Generally good architecture
+        weaknesses:
+          - LOGIC_SPIRAL              # Can get into nested logic
+          - REPEATED_SIMILAR_BLOCKS   # May duplicate code
+        
+        requestTypeBoosts:
+          feature: 0.08
+          integration: 0.06
+      
+      # Claude Haiku 4.5 - Fast model
+      claude-haiku-4-5-20251001:
+        baseConvergence: 0.72
+        description: "Good for simple, quick generation tasks"
+        strengths:
+          - IDEMPOTENT_OPERATIONS
+        weaknesses:
+          - INSUFFICIENT_VALIDATION   # Fewer input checks
+          - LOGIC_SPIRAL              # Can be over-complex
+          - ERROR_SWALLOWING          # Less comprehensive error handling
+        
+        requestTypeBoosts:
+          simple: 0.08
+          ui: 0.05
+      
+      # Mistral Large - Architecture-focused
+      mistral-large:
+        baseConvergence: 0.80
+        description: "Strong on architecture and error handling"
+        strengths:
+          - CLEAN_ARCHITECTURE
+          - ROBUST_ERROR_HANDLING
+        weaknesses:
+          - REPEATED_SIMILAR_BLOCKS
+          - TIGHT_COUPLING
+        
+        requestTypeBoosts:
+          architecture: 0.08
+          backend: 0.06
+      
+      # Grok (X AI) - Fast iteration
+      xai-grok:
+        baseConvergence: 0.70
+        description: "Good for quick iterations, less emphasis on robustness"
+        strengths:
+          - IDEMPOTENT_OPERATIONS
+        weaknesses:
+          - ERROR_SWALLOWING
+          - TIGHT_COUPLING
+          - INSUFFICIENT_VALIDATION
+        
+        requestTypeBoosts:
+          prototype: 0.08
+          spike: 0.06
+    
+    # Magnus Pattern Detection
+    # Patterns that indicate code quality
+    patterns:
+      
+      # Positive patterns (boost score)
+      positive:
+        - name: HARMONIC_DESIGN
+          weight: 0.8
+          description: "Code follows harmonic principles (readable, maintainable)"
+          indicators:
+            - "clear variable names"
+            - "logical function grouping"
+            - "consistent style"
+        
+        - name: CLEAN_ARCHITECTURE
+          weight: 0.9
+          description: "Clear separation of concerns"
+          indicators:
+            - "separate modules/layers"
+            - "dependency injection"
+            - "clear interfaces"
+        
+        - name: ROBUST_ERROR_HANDLING
+          weight: 0.85
+          description: "Comprehensive error handling"
+          indicators:
+            - "try-catch blocks"
+            - "error logging"
+            - "recovery strategies"
+        
+        - name: IDEMPOTENT_OPERATIONS
+          weight: 0.7
+          description: "Safe for retries"
+          indicators:
+            - "no side effects"
+            - "deterministic behavior"
+            - "transaction support"
+        
+        - name: SELF_DOCUMENTING
+          weight: 0.65
+          description: "Code is clear without needing comments"
+          indicators:
+            - "clear function names"
+            - "type annotations"
+            - "meaningful variable names"
+      
+      # Negative patterns (lower score)
+      negative:
+        - name: LOGIC_SPIRAL
+          weight: 0.8
+          description: "Complex nested logic"
+          indicators:
+            - "nested conditionals > 3 levels"
+            - "high cyclomatic complexity"
+            - "difficult to follow flow"
+        
+        - name: ERROR_SWALLOWING
+          weight: 0.9
+          description: "Silent exception handling"
+          indicators:
+            - "empty catch blocks"
+            - "suppressed errors"
+            - "no error logging"
+        
+        - name: TIGHT_COUPLING
+          weight: 0.75
+          description: "High interdependencies"
+          indicators:
+            - "global state"
+            - "hard-coded dependencies"
+            - "difficult to test isolation"
+        
+        - name: PREMATURE_OPTIMIZATION
+          weight: 0.6
+          description: "Unclear optimizations"
+          indicators:
+            - "complex algorithms without clear reason"
+            - "unclear performance targets"
+            - "reduced maintainability"
+        
+        - name: REPEATED_SIMILAR_BLOCKS
+          weight: 0.7
+          description: "Code duplication"
+          indicators:
+            - "similar blocks repeated"
+            - "high duplication ratio"
+            - "DRY principle violation"
+        
+        - name: INSUFFICIENT_VALIDATION
+          weight: 0.7
+          description: "Missing input checks"
+          indicators:
+            - "no input validation"
+            - "missing boundary checks"
+            - "potential null pointer issues"
+    
+    # Logging and monitoring
+    logging:
+      enabled: true
+      level: ${LOG_LEVEL:info}     # debug, info, warn, error
+      logAllDecisions: true          # Log every routing decision (audit trail)
+      logDecisionFrequency: 1        # Log every N-th decision (1 = all)
+      logDetails:
+        - modelId
+        - totalScore
+        - convergenceScore
+        - latencyNormalized
+        - costNormalized
+        - patternMatch
+        - recommendation
+        - confidenceLevel
+      
+      # Send metrics to monitoring system
+      metrics:
+        enabled: true
+        endpoint: ${METRICS_ENDPOINT}
+        namespace: "kilo.routing.convergence"
+    
+    # Request classification (for request type detection)
+    requestClassification:
+      architecture:
+        keywords: ["architecture", "design", "structure", "schema"]
+        patterns: ["multi-service", "scalability", "distributed"]
+      
+      backend:
+        keywords: ["api", "backend", "service", "server", "database"]
+        patterns: ["rest", "graphql", "grpc", "database"]
+      
+      feature:
+        keywords: ["feature", "implement", "add", "build"]
+        patterns: ["user story", "requirement"]
+      
+      integration:
+        keywords: ["integrate", "connect", "api", "third-party"]
+        patterns: ["oauth", "webhook", "payment", "messaging"]
+      
+      ui:
+        keywords: ["ui", "component", "interface", "frontend"]
+        patterns: ["react", "vue", "angular", "html"]
+      
+      simple:
+        keywords: ["simple", "quick", "fast", "rapid"]
+        patterns: ["prototype", "spike"]
+      
+      prototype:
+        keywords: ["prototype", "poc", "proof", "experiment"]
+        patterns: ["mvp", "spike", "test"]
+
+# Feature flags for gradual rollout
+features:
+  convergenceRouting:
+    enabled: ${CONVERGENCE_ROUTING_ENABLED:false}
+    
+    # Gradual rollout: 0.0 (0%) to 1.0 (100%)
+    rolloutPercentage: ${CONVERGENCE_ROLLOUT_PCT:0.1}  # Start at 10%
+    
+    # Rollback conditions
+    rollback:
+      onErrorRate: 0.05                # Rollback if error rate > 5%
+      onLatencyIncrease: 0.50          # Rollback if latency increases > 50%
+      onLowScores: 0.5                 # Rollback if <50% get high confidence
+
+# Fallback behavior
+fallback:
+  # If convergence routing fails, use this strategy
+  strategy: "latency-based"            # "latency-based" | "round-robin" | "load-based"
+  
+  # Log fallbacks for analysis
+  logFallbacks: true
+  
+  # Maximum fallbacks before disabling convergence feature
+  maxConsecutiveFallbacks: 10
+
+# Performance tuning
+performance:
+  # Cache Opus reviews locally
+  cacheRobustnessReviews: true
+  
+  # Max time to wait for Opus async call (then use heuristic)
+  opusAsyncTimeout: 5000              # 5 seconds
+  
+  # Batch Opus calls to reduce API latency
+  batchOpusCalls: true
+  maxBatchSize: 5
+  
+  # Parallel model scoring
+  parallelScoring: true
+  maxConcurrentScores: 5
+
+# Development and testing
+development:
+  # Log all scoring details (verbose)
+  verboseLogging: ${CONVERGENCE_VERBOSE:false}
+  
+  # Test mode: always return high confidence scores
+  testMode: false
+  
+  # Deterministic mode: same request always gets same model
+  deterministicMode: false
+  
+  # Seed for reproducibility
+  randomSeed: ${CONVERGENCE_SEED}
+
+# Magnus 14 principles (informational)
+# This configuration implements consciousness-driven routing based on:
+# - Recognition: Does output match developer intent?
+# - Inevitability: Is it the architecturally necessary solution?
+# - Coherence: Does it harmonize with existing patterns?
+# 
+# See docs/convergence-scoring.md for full documentation
