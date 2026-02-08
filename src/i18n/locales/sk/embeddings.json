@@ -1,0 +1,81 @@
+{
+	"unknownError": "Neznáma chyba",
+	"authenticationFailed": "Vytvorenie embeddings zlyhalo: Autentizácia zlyhala. Skontroluj prosím svoj API kľúč.",
+	"failedWithStatus": "Vytvorenie embeddings zlyhalo po {{attempts}} pokusoch: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Vytvorenie embeddings zlyhalo po {{attempts}} pokusoch: {{errorMessage}}",
+	"failedMaxAttempts": "Vytvorenie embeddings zlyhalo po {{attempts}} pokusoch",
+	"textExceedsTokenLimit": "Text na indexe {{index}} prekračuje maximálny limit tokenov ({{itemTokens}} > {{maxTokens}}). Preskakujem.",
+	"rateLimitRetry": "Dosiahnutý limit rýchlosti, opakovanie za {{delayMs}}ms (pokus {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Nedá sa prečítať telo chyby",
+		"requestFailed": "Požiadavka Ollama API zlyhala so stavom {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Neplatná štruktúra odpovede z Ollama API: pole \"embeddings\" nebolo nájdené alebo nie je poľom.",
+		"embeddingFailed": "Ollama embedding zlyhalo: {{message}}",
+		"serviceNotRunning": "Ollama služba nebeží na {{baseUrl}}",
+		"serviceUnavailable": "Ollama služba nie je dostupná (stav: {{status}})",
+		"modelNotFound": "Ollama model nebol nájdený: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ollama model nepodporuje embeddings: {{modelId}}",
+		"hostNotFound": "Ollama host nebol nájdený: {{baseUrl}}"
+	},
+	"openai": {
+		"invalidResponseFormat": "Neplatný formát odpovede z OpenAI"
+	},
+	"bedrock": {
+		"invalidResponseFormat": "Neplatný formát odpovede z Amazon Bedrock",
+		"invalidCredentials": "Neplatné AWS prihlasovacie údaje. Skontroluj prosím svoju konfiguráciu AWS.",
+		"accessDenied": "Prístup k službe Amazon Bedrock bol odopretý. Skontroluj prosím svoje IAM oprávnenia.",
+		"modelNotFound": "Model {{model}} nebol nájdený v Amazon Bedrock",
+		"missingConfiguration": "Chýba konfigurácia Amazon Bedrock pre vytvorenie embedderu"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Neznáma chyba pri spracovaní súboru {{filePath}}",
+		"unknownErrorDeletingPoints": "Neznáma chyba pri mazaní bodov pre {{filePath}}",
+		"failedToProcessBatchWithError": "Spracovanie dávky zlyhalo po {{maxRetries}} pokusoch: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Pripojenie k vektorovej databáze Qdrant zlyhalo. Uisti sa prosím, že Qdrant beží a je prístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}",
+		"vectorDimensionMismatch": "Aktualizácia vektorového indexu pre nový model zlyhala. Skús prosím vymazať index a začať znova. Podrobnosti: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Inicializácia úložiska vektorov LanceDB zlyhala: {{errorMessage}}",
+		"lancedbLoadFailed": "Načítanie modulu LanceDB zlyhalo: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Autentizácia zlyhala. Skontroluj prosím svoj API kľúč v nastavení.",
+		"connectionFailed": "Pripojenie k embedder službe zlyhalo. Skontroluj prosím nastavenia pripojenia a uisti sa, že služba beží.",
+		"modelNotAvailable": "Zadaný model nie je dostupný. Skontroluj prosím konfiguráciu modelu.",
+		"configurationError": "Neplatná konfigurácia embedderu. Skontroluj prosím svoje nastavenia.",
+		"serviceUnavailable": "Embedder služba nie je dostupná. Uisti sa prosím, že beží a je prístupná.",
+		"invalidEndpoint": "Neplatný API endpoint. Skontroluj prosím konfiguráciu URL.",
+		"invalidEmbedderConfig": "Neplatná konfigurácia embedderu. Skontroluj prosím svoje nastavenia.",
+		"invalidApiKey": "Neplatný API kľúč. Skontroluj prosím konfiguráciu API kľúča.",
+		"invalidBaseUrl": "Neplatná základná URL. Skontroluj prosím konfiguráciu URL.",
+		"invalidModel": "Neplatný model. Skontroluj prosím konfiguráciu modelu.",
+		"invalidResponse": "Neplatná odpoveď od embedder služby. Skontroluj prosím svoju konfiguráciu.",
+		"apiKeyRequired": "API kľúč je vyžadovaný pre tento embedder",
+		"baseUrlRequired": "Základná URL je vyžadovaná pre tento embedder"
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "Chýba konfigurácia OpenAI pre vytvorenie embedderu",
+		"ollamaConfigMissing": "Chýba konfigurácia Ollama pre vytvorenie embedderu",
+		"openAiCompatibleConfigMissing": "Chýba konfigurácia OpenAI Compatible pre vytvorenie embedderu",
+		"geminiConfigMissing": "Chýba konfigurácia Gemini pre vytvorenie embedderu",
+		"mistralConfigMissing": "Chýba konfigurácia Mistral pre vytvorenie embedderu",
+		"openRouterConfigMissing": "Chýba konfigurácia OpenRouter pre vytvorenie embedderu",
+		"vercelAiGatewayConfigMissing": "Chýba konfigurácia Vercel AI Gateway pre vytvorenie embedderu",
+		"bedrockConfigMissing": "Chýba konfigurácia Amazon Bedrock pre vytvorenie embedderu",
+		"invalidEmbedderType": "Nakonfigurovaný neplatný typ embedderu: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Nedá sa určiť rozmer vektora pre model '{{modelId}}' s poskytovateľom '{{provider}}'. Uisti sa prosím, že 'Rozmer Embeddingu' je správne nastavený v nastavení OpenAI-Compatible poskytovateľa.",
+		"vectorDimensionNotDetermined": "Nedá sa určiť rozmer vektora pre model '{{modelId}}' s poskytovateľom '{{provider}}'. Skontroluj profily modelov alebo konfiguráciu.",
+		"qdrantUrlMissing": "Chýba Qdrant URL pre vytvorenie vektorového úložiska",
+		"codeIndexingNotConfigured": "Nedá sa vytvoriť služby: Indexovanie kódu nie je správne nakonfigurované"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "Indexovanie zlyhalo: Žiadne bloky kódu neboli úspešne zaindexované. To zvyčajne naznačuje problém s konfiguráciou embedderu.",
+		"indexingFailedCritical": "Indexovanie zlyhalo: Žiadne bloky kódu neboli úspešne zaindexované napriek nájdeniu súborov na spracovanie. To naznačuje kritickú chybu embedderu.",
+		"fileWatcherStarted": "Pozorovateľ súborov bol spustený.",
+		"fileWatcherStopped": "Pozorovateľ súborov bol zastavený.",
+		"failedDuringInitialScan": "Zlyhalo počas úvodného skenovania: {{errorMessage}}",
+		"unknownError": "Neznáma chyba",
+		"indexingRequiresWorkspace": "Indexovanie vyžaduje otvorenú zložku workspace",
+		"indexingCancelled": "Indexovanie bolo zrušené"
+	}
+}

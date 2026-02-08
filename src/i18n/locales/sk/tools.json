@@ -1,0 +1,31 @@
+{
+	"readFile": {
+		"linesRange": " (riadky {{start}}-{{end}})",
+		"definitionsOnly": " (iba definície)",
+		"maxLines": " (max {{max}} riadkov)",
+		"imageTooLarge": "Súbor obrázka je príliš veľký ({{size}} MB). Maximálna povolená veľkosť je {{max}} MB.",
+		"imageWithSize": "Súbor obrázka ({{size}} KB)"
+	},
+	"toolRepetitionLimitReached": "Zdá sa, že model uviazol v slučke a opakovane sa pokúša o rovnakú akciu ({{toolName}}). To môže naznačovať problém s jeho súčasnou stratégiou. Skús úlohu preformulovať, poskytnúť konkrétnejšie pokyny alebo ho naviesť k inému prístupu.",
+	"unknownToolError": "Kilo sa pokúsil použiť neznámy nástroj: \"{{toolName}}\". Skúšam znova...",
+	"codebaseSearch": {
+		"approval": "Hľadanie '{{query}}' v kódovej základni..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "Nepodarilo sa vytvoriť novú úlohu kvôli obmedzeniam zásad."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Pre generovanie obrázkov pomocou OpenRouter modelov je vyžadovaný OpenRouter API kľúč. Nakonfiguruj ho prosím v experimentálnom nastavení Generovanie obrázkov.",
+		"failedWithStatus": "Generovanie obrázka zlyhalo: {{status}} {{statusText}}",
+		"failedWithMessage": "Generovanie obrázka zlyhalo: {{message}}",
+		"noImageGenerated": "V odpovedi nebol vygenerovaný žiadny obrázok",
+		"invalidImageData": "Neplatné dáta obrázka v odpovedi",
+		"invalidImageFormat": "Prijatý neplatný formát obrázka",
+		"unknownError": "Nastala neznáma chyba",
+		"roo": {
+			"authRequired": "Pre generovanie obrázkov je vyžadovaná autentizácia Kilo Code Cloud. Prihlás sa prosím do Kilo Code Cloud."
+		}
+	}
+}

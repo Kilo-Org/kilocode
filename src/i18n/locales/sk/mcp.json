@@ -1,0 +1,32 @@
+{
+	"errors": {
+		"invalid_settings_format": "Neplatný formát JSON nastavení MCP. Uisti sa prosím, že tvoje nastavenia zodpovedajú správnemu formátu JSON.",
+		"invalid_settings_syntax": "Neplatný formát JSON nastavení MCP. Skontroluj prosím svoj súbor nastavení na syntaktické chyby.",
+		"invalid_settings_validation": "Neplatný formát nastavení MCP: {{errorMessages}}",
+		"create_json": "Nepodarilo sa vytvoriť alebo otvoriť .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Nepodarilo sa aktualizovať servery MCP projektu",
+		"invalidJsonArgument": "Kilo Code sa pokúsil použiť {{toolName}} s neplatným argumentom JSON. Skúšam znova...",
+		"refresh_after_disable": "Nepodarilo sa obnoviť pripojenie MCP po deaktivácii",
+		"refresh_after_enable": "Nepodarilo sa obnoviť pripojenie MCP po aktivácii",
+		"disconnect_servers_partial": "Nepodarilo sa odpojiť {{count}} server(ov) MCP. Skontroluj výstup pre podrobnosti.",
+		"toolNotFound": "Nástroj '{{toolName}}' neexistuje na serveri '{{serverName}}'. Dostupné nástroje: {{availableTools}}",
+		"serverNotFound": "Server MCP '{{serverName}}' nie je nakonfigurovaný. Dostupné servery: {{availableServers}}",
+		"toolDisabled": "Nástroj '{{toolName}}' na serveri '{{serverName}}' je zakázaný. Dostupné povolené nástroje: {{availableTools}}",
+		"oauth_signin_failed": "OAuth prihlásenie zlyhalo. Skúste to prosím znova.",
+		"oauth_failed": "OAuth autentizácia zlyhala pre {{serverUrl}}: {{error}}"
+	},
+	"info": {
+		"server_restarting": "Reštartovanie servera MCP {{serverName}}...",
+		"server_connected": "Server MCP {{serverName}} pripojený",
+		"server_deleted": "Zmazaný server MCP: {{serverName}}",
+		"server_not_found": "Server \"{{serverName}}\" nebol nájdený v konfigurácii",
+		"global_servers_active": "Aktívne globálne servery MCP: {{mcpServers}}",
+		"project_servers_active": "Aktívne servery MCP projektu: {{mcpServers}}",
+		"already_refreshing": "Servery MCP sa už obnovujú.",
+		"refreshing_all": "Obnovovanie všetkých serverov MCP...",
+		"all_refreshed": "Všetky servery MCP boli obnovené.",
+		"project_config_deleted": "Konfiguračný súbor MCP projektu bol zmazaný. Všetky servery MCP projektu boli odpojené.",
+		"oauth_required": "Pre pripojenie k '{{serverUrl}}' je vyžadovaná OAuth autentizácia",
+		"oauth_success": "OAuth autentizácia pre '{{serverUrl}}' bola úspešná"
+	}
+}

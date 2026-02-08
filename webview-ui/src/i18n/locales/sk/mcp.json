@@ -1,0 +1,82 @@
+{
+	"title": "MCP Servery",
+	"done": "Hotovo",
+	"marketplace": "MCP Trhovisko",
+	"description": "<0>Model Context Protocol</0> umožňuje komunikáciu s lokálnymi MCP servermi, ktoré poskytujú ďalšie nástroje a zdroje pre rozšírenie schopností Kilo Code. Môžeš používať <1>servery vytvorené komunitou</1> alebo požiadať Kilo Code o vytvorenie nových nástrojov špecifických pre tvoj pracovný postup (napr. \"pridaj nástroj, ktorý načíta najnovšie npm docs\").",
+	"instructions": "Pokyny",
+	"enableToggle": {
+		"title": "Povoliť MCP Servery",
+		"description": "Zapni toto, aby Kilo Code mohol používať nástroje z pripojených MCP serverov. To dáva Kilo Code ďalšie schopnosti. Ak neplánuješ používať tieto dodatočné nástroje, vypni to pre zníženie nákladov na API tokeny."
+	},
+	"enableServerCreation": {
+		"title": "Povoliť vytváranie MCP Servera",
+		"description": "Zapni toto, aby ti Kilo Code mohol pomôcť vytvárať <1>nové</1> vlastné MCP servery. <0>Zisti viac o vytváraní serverov</0>",
+		"hint": "Tip: Pre zníženie nákladov na API tokeny vypni toto nastavenie, keď aktívne nežiadaš Kilo Code o vytvorenie nových MCP serverov."
+	},
+	"editGlobalMCP": "Upraviť Global MCP",
+	"editProjectMCP": "Upraviť Project MCP",
+	"refreshMCP": "Obnoviť MCP Servery",
+	"learnMoreEditingSettings": "Zisti viac o úprave súborov nastavení MCP",
+	"tool": {
+		"alwaysAllow": "Vždy povoliť",
+		"parameters": "Parametre",
+		"noDescription": "Bez popisu",
+		"togglePromptInclusion": "Prepnúť zahrnutie do promptu"
+	},
+	"tabs": {
+		"tools": "Nástroje",
+		"resources": "Zdroje",
+		"logs": "Logy",
+		"authDebug": "Ladenie Auth"
+	},
+	"emptyState": {
+		"noTools": "Nenájdené žiadne nástroje",
+		"noResources": "Nenájdené žiadne zdroje",
+		"noLogs": "Zatiaľ žiadne logy"
+	},
+	"networkTimeout": {
+		"label": "Časový limit siete",
+		"description": "Maximálna doba čakania na odpoveď zo servera",
+		"options": {
+			"15seconds": "15 sekúnd",
+			"30seconds": "30 sekúnd",
+			"1minute": "1 minúta",
+			"5minutes": "5 minút",
+			"10minutes": "10 minút",
+			"15minutes": "15 minút",
+			"30minutes": "30 minút",
+			"60minutes": "60 minút"
+		}
+	},
+	"deleteDialog": {
+		"title": "Zmazať MCP Server",
+		"description": "Si si istý, že chceš zmazať MCP server \"{{serverName}}\"? Túto akciu nie je možné vrátiť späť.",
+		"cancel": "Zrušiť",
+		"delete": "Zmazať"
+	},
+	"serverStatus": {
+		"retrying": "Opakovanie...",
+		"retryConnection": "Opakovať pripojenie",
+		"signIn": "Prihlásiť sa",
+		"signingIn": "Prihlasovanie..."
+	},
+	"execution": {
+		"running": "Beží",
+		"completed": "Dokončené",
+		"error": "Chyba"
+	},
+	"authDebug": {
+		"title": "OAuth Ladiace informácie",
+		"status": "Stav",
+		"tokenExpires": "Token vyprší",
+		"scopes": "Rozsahy",
+		"refreshInfo": "Informácie o refresh tokene",
+		"hasRefreshToken": "Má refresh token",
+		"canRefresh": "Automatické obnovenie",
+		"tokenIssuedAt": "Token vydaný",
+		"nextRefreshAt": "Ďalšie obnovenie",
+		"lastRefreshAt": "Posledné obnovenie",
+		"tokenEndpoint": "Token endpoint",
+		"clientId": "Client ID"
+	}
+}

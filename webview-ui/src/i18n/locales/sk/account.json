@@ -1,0 +1,20 @@
+{
+	"title": "Účet",
+	"profilePicture": "Profilový obrázok",
+	"logOut": "Odhlásiť sa",
+	"testApiAuthentication": "Otestovať API autentifikáciu",
+	"signIn": "Pripojiť sa ku Kilo Code Cloud",
+	"connect": "Pripojiť",
+	"cloudBenefitsTitle": "Pripojiť sa ku Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "Synchronizuj svoje prompty a telemetriu pre aktiváciu:",
+	"cloudBenefitHistory": "Online história úloh",
+	"cloudBenefitSharing": "Funkcie zdieľania a spolupráce",
+	"cloudBenefitMetrics": "Metriky využitia založené na úlohách, tokenoch a nákladoch",
+	"visitCloudWebsite": "Navštíviť Kilo Code Cloud",
+	"expandTask": "Rozbaliť úlohu",
+	"collapseTask": "Zbaliť úlohu",
+	"deleteFavoritedTaskWarning": "Toto trvalo zmaže obľúbenú úlohu. Si si istý?",
+	"cloudBenefitWalkaway": "Sleduj a ovládaj úlohy odkiaľkoľvek pomocou Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Povoliť sledovanie a interakciu s úlohami v tomto workspace pomocou Kilo Code Cloud"
+}

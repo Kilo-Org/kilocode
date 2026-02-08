@@ -1,0 +1,223 @@
+{
+	"title": "Režimy",
+	"done": "Hotovo",
+	"modes": {
+		"title": "Režimy",
+		"createNewMode": "Vytvoriť nový režim",
+		"importMode": "Importovať režim",
+		"editModesConfig": "Upraviť konfiguráciu režimov",
+		"editGlobalModes": "Upraviť Global Modes",
+		"editProjectModes": "Upraviť Project Modes (.kilocodemodes)",
+		"createModeHelpText": "Režimy sú špecializované persony, ktoré prispôsobujú správanie Kilo Code. <0>Zisti viac o Používaní režimov</0> alebo <1>Prispôsobení režimov.</1>",
+		"selectMode": "Hľadať režimy",
+		"noMatchFound": "Žiadne režimy nenájdené"
+	},
+	"apiConfiguration": {
+		"title": "Konfigurácia API",
+		"select": "Vyber, ktorú konfiguráciu API použiť pre tento režim"
+	},
+	"organizationMode": {
+		"title": "Režim organizácie",
+		"description": "Tento režim je poskytovaný tvojou organizáciou a nie je možné ho tu upravovať. Pre úpravu tohto režimu navštív <dashboardLink>Kilo Code Dashboard</dashboardLink>.",
+		"cannotEdit": "Režimy organizácie nie je možné upravovať"
+	},
+	"tools": {
+		"title": "Dostupné nástroje",
+		"builtInModesText": "Nástroje pre vstavané režimy nie je možné upravovať",
+		"editTools": "Upraviť nástroje",
+		"doneEditing": "Dokončiť úpravy",
+		"allowedFiles": "Povolené súbory:",
+		"toolNames": {
+			"read": "Čítať súbory",
+			"edit": "Upraviť súbory",
+			"browser": "Použiť prehliadač",
+			"command": "Spustiť príkazy",
+			"mcp": "Použiť MCP"
+		},
+		"noTools": "Žiadne"
+	},
+	"roleDefinition": {
+		"title": "Definícia roly",
+		"resetToDefault": "Obnoviť predvolené",
+		"description": "Definuj odbornosť a osobnosť Kilo Code pre tento režim. Tento popis formuje, ako sa Kilo Code prezentuje a ako pristupuje k úlohám."
+	},
+	"description": {
+		"title": "Krátky popis (pre ľudí)",
+		"resetToDefault": "Obnoviť na predvolený popis",
+		"description": "Stručný popis zobrazený v rozbaľovacom menu pre výber režimu."
+	},
+	"whenToUse": {
+		"title": "Kedy použiť (voliteľné)",
+		"description": "Popíš, kedy by mal byť tento režim použitý. To pomáha Orchestrátorovi vybrať správny režim pre úlohu.",
+		"resetToDefault": "Obnoviť predvolený popis 'Kedy použiť'"
+	},
+	"customInstructions": {
+		"title": "Vlastné inštrukcie pre režim (voliteľné)",
+		"resetToDefault": "Obnoviť predvolené",
+		"description": "Pridaj pokyny pre správanie špecifické pre režim {{modeName}}.",
+		"loadFromFile": "Vlastné inštrukcie špecifické pre režim {{mode}} je možné tiež načítať zo zložky <span>.kilocode/rules/</span> v tvojom pracovnom priestore (.kilocoderules-{{slug}} je zastarané a čoskoro prestane fungovať)."
+	},
+	"exportMode": {
+		"title": "Exportovať režim",
+		"description": "Exportuj tento režim s pravidlami zo zložky .kilocode/rules-{{slug}}/ skombinovanými do zdieľateľného YAML súboru. Pôvodné súbory zostanú nezmenené.",
+		"exporting": "Exportovanie..."
+	},
+	"importMode": {
+		"selectLevel": "Vyber, kam importovať tento režim:",
+		"import": "Importovať",
+		"importing": "Importovanie...",
+		"global": {
+			"label": "Globálna úroveň",
+			"description": "Dostupné naprieč všetkými projektmi. Ak exportovaný režim obsahoval súbory pravidiel, budú znovu vytvorené v globálnej zložke .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Úroveň projektu",
+			"description": "Dostupné iba v tomto pracovnom priestore. Ak exportovaný režim obsahoval súbory pravidiel, budú znovu vytvorené v zložke .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Pokročilé: Prepísať System Prompt"
+	},
+	"globalCustomInstructions": {
+		"title": "Vlastné inštrukcie pre všetky režimy",
+		"description": "Tieto inštrukcie platia pre všetky režimy. Poskytujú základnú sadu správania, ktorá môže byť rozšírená inštrukciami špecifickými pre režim nižšie. <0>Zistiť viac</0>",
+		"loadFromFile": "Inštrukcie je možné tiež načítať zo zložky <span>.kilocode/rules/</span> v tvojom pracovnom priestore (.kilocoderules je zastarané a čoskoro prestane fungovať)."
+	},
+	"systemPrompt": {
+		"preview": "Náhľad System Prompt",
+		"copy": "Kopírovať system prompt do schránky",
+		"title": "System Prompt (režim {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Podporné Prompty",
+		"resetPrompt": "Obnoviť {{promptType}} prompt na predvolený",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "Konfigurácia API",
+			"apiConfigDescription": "Môžeš vybrať konfiguráciu API, ktorá sa bude vždy používať pre vylepšovanie promptov, alebo len použiť to, čo je aktuálne vybrané",
+			"useCurrentConfig": "Použiť aktuálne vybranú konfiguráciu API",
+			"testPromptPlaceholder": "Zadaj prompt pre otestovanie vylepšenia",
+			"previewButton": "Náhľad vylepšenia promptu",
+			"testEnhancement": "Otestovať vylepšenie",
+			"includeTaskHistory": "Zahrnúť históriu úloh ako kontext",
+			"includeTaskHistoryDescription": "Keď je povolené, posledných 10 správ z aktuálnej konverzácie bude zahrnutých ako kontext pri vylepšovaní promptov, čo pomáha generovať relevantnejšie a kontextovo uvedomelé návrhy."
+		},
+		"condense": {
+			"apiConfiguration": "Konfigurácia API pre kondenzáciu kontextu",
+			"apiConfigDescription": "Vyber, ktorú konfiguráciu API použiť pre operácie kondenzácie kontextu. Ponechaj nevybrané pre použitie aktuálne aktívnej konfigurácie.",
+			"useCurrentConfig": "Použiť aktuálne vybranú konfiguráciu API"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Vylepšiť Prompt",
+				"description": "Použi vylepšenie promptu na získanie prispôsobených návrhov alebo vylepšení pre tvoje vstupy. To zaisťuje, že Kilo Code rozumie tvojmu zámeru a poskytuje najlepšie možné odpovede. Dostupné cez ikonu ✨ v chate."
+			},
+			"CONDENSE": {
+				"label": "Kondenzácia kontextu",
+				"description": "Konfiguruj, ako je kontext konverzácie kondenzovaný pre správu limitov tokenov. Tento prompt sa používa pre manuálne aj automatické operácie kondenzácie kontextu."
+			},
+			"EXPLAIN": {
+				"label": "Vysvetliť kód",
+				"description": "Získaj podrobné vysvetlenia úryvkov kódu, funkcií alebo celých súborov. Užitočné pre pochopenie zložitého kódu alebo učenie sa nových vzorov. Dostupné v akciách kódu (ikona žiarovky v editore) a kontextovej ponuke editora (pravé tlačidlo na vybranom kóde)."
+			},
+			"FIX": {
+				"label": "Opraviť problémy",
+				"description": "Získaj pomoc s identifikáciou a riešením chýb, errorov alebo problémov s kvalitou kódu. Poskytuje krok za krokom návod na opravu problémov. Dostupné v akciách kódu (ikona žiarovky v editore) a kontextovej ponuke editora (pravé tlačidlo na vybranom kóde)."
+			},
+			"IMPROVE": {
+				"label": "Vylepšiť kód",
+				"description": "Získaj návrhy na optimalizáciu kódu, lepšie postupy a architektonické vylepšenia pri zachovaní funkčnosti. Dostupné v akciách kódu (ikona žiarovky v editore) a kontextovej ponuke editora (pravé tlačidlo na vybranom kóde)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Pridať do kontextu",
+				"description": "Pridaj kontext k tvojej aktuálnej úlohe alebo konverzácii. Užitočné pre poskytnutie ďalších informácií alebo vyjasnenie. Dostupné v akciách kódu (ikona žiarovky v editore) a kontextovej ponuke editora (pravé tlačidlo na vybranom kóde)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Pridať obsah terminálu do kontextu",
+				"description": "Pridaj výstup terminálu k tvojej aktuálnej úlohe alebo konverzácii. Užitočné pre poskytnutie výstupov príkazov alebo logov. Dostupné v kontextovej ponuke terminálu (pravé tlačidlo na vybranom obsahu terminálu)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Opraviť príkaz terminálu",
+				"description": "Získaj pomoc s opravou príkazov terminálu, ktoré zlyhali alebo potrebujú vylepšenie. Dostupné v kontextovej ponuke terminálu (pravé tlačidlo na vybranom obsahu terminálu)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Vysvetliť príkaz terminálu",
+				"description": "Získaj podrobné vysvetlenia príkazov terminálu a ich výstupov. Dostupné v kontextovej ponuke terminálu (pravé tlačidlo na vybranom obsahu terminálu)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generovať príkaz terminálu",
+				"description": "Pomáha generovať príkazy terminálu na základe popisu."
+			},
+			"NEW_TASK": {
+				"label": "Začať novú úlohu",
+				"description": "Začni novú úlohu so vstupom používateľa. Dostupné v palete príkazov."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generovanie správy commitu",
+				"description": "Generuj popisné správy commitu na základe tvojich staged git zmien. Prispôsob prompt pre generovanie správ, ktoré dodržiavajú najlepšie postupy tvojho repozitára."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Pokročilé: Prepísať System Prompt",
+		"description": "<2>⚠️ Varovanie:</2> Táto pokročilá funkcia obchádza bezpečnostné opatrenia. <1>PREČÍTAJ SI TOTO PRED POUŽITÍM!</1>Prepíš predvolený system prompt vytvorením súboru v <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Vytvoriť nový režim",
+		"close": "Zatvoriť",
+		"name": {
+			"label": "Názov",
+			"placeholder": "Zadaj názov režimu"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug sa používa v URL a názvoch súborov. Mal by byť malými písmenami a obsahovať iba písmená, čísla a pomlčky."
+		},
+		"saveLocation": {
+			"label": "Umiestnenie uloženia",
+			"description": "Vyber, kam uložiť tento režim. Režimy špecifické pre projekt majú prednosť pred globálnymi.",
+			"global": {
+				"label": "Globálne",
+				"description": "Dostupné vo všetkých pracovných priestoroch"
+			},
+			"project": {
+				"label": "Špecifické pre projekt (.kilocodemodes)",
+				"description": "Dostupné iba v tomto pracovnom priestore, má prednosť pred globálnym"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definícia roly",
+			"description": "Definuj odbornosť a osobnosť Kilo Code pre tento režim."
+		},
+		"description": {
+			"label": "Krátky popis (pre ľudí)",
+			"description": "Stručný popis zobrazený v rozbaľovacom menu pre výber režimu."
+		},
+		"whenToUse": {
+			"label": "Kedy použiť (voliteľné)",
+			"description": "Popíš, kedy by mal byť tento režim použitý. To pomáha Orchestrátorovi vybrať správny režim pre úlohu."
+		},
+		"tools": {
+			"label": "Dostupné nástroje",
+			"description": "Vyber, ktoré nástroje môže tento režim používať."
+		},
+		"customInstructions": {
+			"label": "Vlastné inštrukcie (voliteľné)",
+			"description": "Pridaj pokyny pre správanie špecifické pre tento režim."
+		},
+		"buttons": {
+			"cancel": "Zrušiť",
+			"create": "Vytvoriť režim"
+		},
+		"deleteMode": "Zmazať režim"
+	},
+	"allFiles": "všetky súbory",
+	"deleteMode": {
+		"title": "Zmazať režim",
+		"message": "Naozaj chceš zmazať režim \"{{modeName}}\"?",
+		"rulesFolder": "Tento režim má zložku pravidiel v {{folderPath}}, ktorá bude tiež zmazaná.",
+		"descriptionNoRules": "Naozaj chceš zmazať tento vlastný režim?",
+		"confirm": "Zmazať",
+		"cancel": "Zrušiť"
+	}
+}

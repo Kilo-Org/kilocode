@@ -1,0 +1,565 @@
+{
+	"greeting": "Čo pre teba môže Kilo Code urobiť?",
+	"task": {
+		"title": "Úloha",
+		"seeMore": "Zobraziť viac",
+		"seeLess": "Zobraziť menej",
+		"tokens": "Tokeny:",
+		"cache": "Cache:",
+		"apiCost": "Cena API:",
+		"changes": "Zmeny",
+		"size": "Veľkosť",
+		"condenseContext": "Inteligentne zhustiť kontext",
+		"contextWindow": "Dĺžka kontextu:",
+		"closeAndStart": "Zavrieť úlohu a začať novú",
+		"export": "Exportovať históriu úlohy",
+		"share": "Zdieľať úlohu",
+		"delete": "Zmazať úlohu (Shift + Klik pre preskočenie potvrdenia)",
+		"shareWithOrganization": "Zdieľať s organizáciou",
+		"shareWithOrganizationDescription": "Prístup majú iba členovia tvojej organizácie",
+		"sharePublicly": "Zdieľať verejne",
+		"sharePubliclyDescription": "Ktokoľvek s odkazom má prístup",
+		"connectToCloud": "Pripojiť ku cloudu",
+		"connectToCloudDescription": "Prihlás sa do Kilo Code Cloud pre zdieľanie úloh",
+		"sharingDisabledByOrganization": "Zdieľanie zakázané organizáciou",
+		"shareSuccessOrganization": "Odkaz organizácie skopírovaný do schránky",
+		"shareSuccessPublic": "Verejný odkaz skopírovaný do schránky",
+		"expand": "Rozbaliť úlohu",
+		"collapse": "Zbaliť úlohu",
+		"openInCloud": "Otvoriť v cloude",
+		"openInCloudIntro": "Monitoruj a spravuj túto úlohu vzdialene",
+		"openApiHistory": "Otvoriť API históriu",
+		"openUiHistory": "Otvoriť históriu UI"
+	},
+	"history": {
+		"title": "História"
+	},
+	"unpin": "Odopnúť",
+	"pin": "Pripnúť",
+	"retry": {
+		"title": "Skúsiť znova",
+		"tooltip": "Skúsiť operáciu znova"
+	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Zastaviť aktuálnu úlohu"
+	},
+	"startNewTask": {
+		"title": "Začať novú úlohu",
+		"tooltip": "Začať novú úlohu"
+	},
+	"reportBug": {
+		"title": "Nahlásiť chybu"
+	},
+	"proceedAnyways": {
+		"title": "Napriek tomu pokračovať",
+		"tooltip": "Pokračovať počas vykonávania príkazu"
+	},
+	"save": {
+		"title": "Uložiť",
+		"tooltip": "Uložiť zmeny súboru"
+	},
+	"tokenProgress": {
+		"availableSpace": "Dostupný priestor: {{amount}} tokenov",
+		"tokensUsed": "Použité tokeny: {{used}} z {{total}}",
+		"reservedForResponse": "Rezervované pre odpoveď modelu: {{amount}} tokenov"
+	},
+	"reject": {
+		"title": "Odmietnuť",
+		"tooltip": "Odmietnuť túto akciu"
+	},
+	"completeSubtaskAndReturn": "Dokončiť podúlohu a vrátiť sa",
+	"approve": {
+		"title": "Schváliť",
+		"tooltip": "Schváliť túto akciu"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Schváliť všetko"
+		},
+		"deny": {
+			"title": "Odmietnuť všetko"
+		}
+	},
+	"runCommand": {
+		"title": "Spustiť príkaz",
+		"tooltip": "Vykonať tento príkaz"
+	},
+	"proceedWhileRunning": {
+		"title": "Pokračovať počas behu",
+		"tooltip": "Pokračovať napriek varovaniam"
+	},
+	"killCommand": {
+		"title": "Ukončiť príkaz",
+		"tooltip": "Ukončiť aktuálny príkaz"
+	},
+	"resumeTask": {
+		"title": "Pokračovať v úlohe",
+		"tooltip": "Pokračovať v aktuálnej úlohe"
+	},
+	"terminate": {
+		"title": "Ukončiť",
+		"tooltip": "Ukončiť aktuálnu úlohu"
+	},
+	"cancel": {
+		"title": "Zrušiť",
+		"tooltip": "Zrušiť aktuálnu operáciu"
+	},
+	"editMessage": {
+		"placeholder": "Upraviť tvoju správu..."
+	},
+	"searchResults": {
+		"title": "Výsledky vyhľadávania",
+		"noResults": "Neboli nájdené žiadne výsledky"
+	},
+	"scrollToBottom": "Posunúť sa na koniec chatu",
+	"about": "Generuj, refaktoruj a laď kód s pomocou AI. Pozri sa na našu <DocsLink>dokumentáciu</DocsLink>, aby si sa dozvedel viac.",
+	"docs": "Pre začiatok sa pozri na našu <DocsLink>dokumentáciu</DocsLink>",
+	"onboarding": "Tvoj zoznam úloh v tomto pracovnom priestore je prázdny.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Orchestrácia úloh",
+			"description": "Rozdeľ úlohy na menšie, zvládnuteľné časti"
+		},
+		"stickyModels": {
+			"title": "Prilepené modely",
+			"description": "Každý režim si pamätá tvoj naposledy použitý model"
+		},
+		"tools": {
+			"title": "Nástroje",
+			"description": "Umožni AI riešiť problémy prechádzaním webu, spúšťaním príkazov a ďalším"
+		},
+		"customizableModes": {
+			"title": "Prispôsobiteľné režimy",
+			"description": "Špecializované persony s vlastným správaním a priradenými modelmi"
+		},
+		"modelAgnostic": {
+			"title": "Prines si vlastný model, bez prirážky alebo záväzkov",
+			"description": "Používaj svoj vlastný kľúč poskytovateľa alebo dokonca lokálnu inferenciu — Kilo za to neúčtuje"
+		}
+	},
+	"selectMode": "Vyber režim pre interakciu",
+	"selectApiConfig": "Vyber konfiguráciu API",
+	"selectModelConfig": "Vybrať model",
+	"enhancePrompt": "Vylepšiť prompt s dodatočným kontextom",
+	"enhancePromptDescription": "Tlačidlo 'Vylepšiť prompt' pomáha zlepšiť tvoj prompt poskytnutím dodatočného kontextu, vyjasnenia alebo preformulovania. Skús sem napísať prompt a znova kliknúť na tlačidlo, aby si videl, ako to funguje.",
+	"addImages": "Pridať obrázky do správy",
+	"sendMessage": "Odoslať správu",
+	"enqueueMessage": "Pridať správu do fronty (bude odoslaná po dokončení aktuálnej úlohy)",
+	"pressToSend": "Stlač {{keyCombination}} pre odoslanie",
+	"stopTts": "Zastaviť prevod textu na reč",
+	"typeMessage": "Napíš správu...",
+	"typeTask": "Vytvor, nájdi, spýtaj sa na niečo",
+	"addContext": "@ pre pridanie kontextu, / pre prepnutie režimov",
+	"dragFiles": "drž shift pre pretiahnutie súborov",
+	"dragFilesImages": "drž shift pre pretiahnutie súborov/obrázkov",
+	"errorReadingFile": "Chyba pri čítaní súboru:",
+	"noValidImages": "Neboli spracované žiadne platné obrázky",
+	"separator": "Oddeľovač",
+	"edit": "Upraviť...",
+	"forNextMode": "pre ďalší režim",
+	"forPreviousMode": "pre predchádzajúci režim",
+	"apiRequest": {
+		"title": "API požiadavka",
+		"failed": "API požiadavka zlyhala",
+		"streaming": "API požiadavka...",
+		"cancelled": "API požiadavka zrušená",
+		"streamingFailed": "Streamovanie API zlyhalo",
+		"rateLimitWait": "Obmedzenie rýchlosti",
+		"errorTitle": "Chyba poskytovateľa {{code}}",
+		"errorMessage": {
+			"docs": "Dokumentácia",
+			"goToSettings": "Nastavenia",
+			"400": "Poskytovateľ nemohol spracovať požiadavku ako bola zadaná. Zastav úlohu a skús iný prístup.",
+			"401": "Nepodarilo sa autentifikovať u poskytovateľa. Skontroluj konfiguráciu svojho API kľúča.",
+			"402": "Zdá sa, že ti došli prostriedky/kredity na účte. Choď k svojmu poskytovateľovi a pridaj viac pre pokračovanie.",
+			"403": "Neautorizované. Tvoj API kľúč je platný, ale poskytovateľ odmietol dokončiť túto požiadavku.",
+			"429": "Príliš veľa požiadaviek. Poskytovateľ ťa obmedzuje rýchlosťou. Počkaj chvíľu pred ďalším API volaním.",
+			"500": "Chyba servera poskytovateľa. Niečo je zle na strane poskytovateľa, s tvojou požiadavkou nie je nič v neporiadku.",
+			"connection": "Chyba pripojenia. Uisti sa, že máš funkčné pripojenie k internetu.",
+			"claudeCodeNotAuthenticated": "Musíš sa prihlásiť, aby si mohol používať Claude Code. Choď do Nastavení a klikni na \"Prihlásiť sa ku Claude Code\" pre autentifikáciu.",
+			"unknown": "Neznáma API chyba, klikni na Detaily pre viac informácií."
+		}
+	},
+	"checkpoint": {
+		"initial": "Počiatočný kontrolný bod",
+		"regular": "Kontrolný bod",
+		"initializingWarning": "Stále sa inicializuje kontrolný bod... Ak to trvá príliš dlho, môžeš vypnúť kontrolné body v <settingsLink>nastavení</settingsLink> a reštartovať svoju úlohu.",
+		"menu": {
+			"viewDiff": "Zobraziť rozdiely",
+			"viewDiffFromInit": "Zobraziť všetky zmeny",
+			"viewDiffWithCurrent": "Zobraziť zmeny od tohto kontrolného bodu",
+			"restore": "Obnoviť kontrolný bod",
+			"restoreFiles": "Obnoviť súbory",
+			"restoreFilesDescription": "Obnoví súbory tvojho projektu späť na snímku vytvorenú v tomto bode.",
+			"restoreFilesAndTask": "Obnoviť súbory a úlohu",
+			"confirm": "Potvrdiť",
+			"cancel": "Zrušiť",
+			"cannotUndo": "Túto akciu nie je možné vrátiť späť.",
+			"restoreFilesAndTaskDescription": "Obnoví súbory tvojho projektu späť na snímku vytvorenú v tomto bode a zmaže všetky správy po tomto bode.",
+			"more": "Viac možností"
+		},
+		"current": "Aktuálny"
+	},
+	"contextManagement": {
+		"tokens": "tokeny",
+		"condensation": {
+			"title": "Kontext zhustený",
+			"inProgress": "Zhusťovanie kontextu...",
+			"errorHeader": "Nepodarilo sa zhustiť kontext"
+		},
+		"truncation": {
+			"title": "Kontext skrátený",
+			"inProgress": "Skracovanie kontextu...",
+			"messagesRemoved": "{{count}} správa odstránená",
+			"messagesRemoved_other": "{{count}} správy odstránené",
+			"description": "Staršie správy boli odstránené z konverzácie, aby zostala v rámci limitu kontextového okna. Toto je rýchly, ale menej kontextovo zachovávajúci prístup v porovnaní so zhusťovaním."
+		}
+	},
+	"instructions": {
+		"wantsToFetch": "Kilo Code chce načítať podrobné inštrukcie pre pomoc s aktuálnou úlohou"
+	},
+	"fileOperations": {
+		"wantsToRead": "Kilo Code chce prečítať tento súbor:",
+		"wantsToReadMultiple": "Kilo Code chce prečítať viac súborov:",
+		"wantsToReadAndXMore": "Kilo Code chce prečítať tento súbor a {{count}} ďalších:",
+		"wantsToReadOutsideWorkspace": "Kilo Code chce prečítať tento súbor mimo pracovného priestoru:",
+		"didRead": "Kilo Code prečítal tento súbor:",
+		"wantsToEdit": "Kilo Code chce upraviť tento súbor:",
+		"wantsToEditOutsideWorkspace": "Kilo Code chce upraviť tento súbor mimo pracovného priestoru:",
+		"wantsToEditProtected": "Kilo Code chce upraviť chránený konfiguračný súbor:",
+		"wantsToApplyBatchChanges": "Kilo Code chce aplikovať zmeny na viac súborov:",
+		"wantsToGenerateImage": "Kilo Code chce vygenerovať obrázok:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code chce vygenerovať obrázok mimo pracovného priestoru:",
+		"wantsToGenerateImageProtected": "Kilo Code chce vygenerovať obrázok v chránenom umiestnení:",
+		"didGenerateImage": "Kilo Code vygeneroval obrázok:",
+		"wantsToCreate": "Kilo Code chce vytvoriť nový súbor:",
+		"wantsToSearchReplace": "Kilo Code chce hľadať a nahradiť v tomto súbore:",
+		"didSearchReplace": "Kilo Code vykonal hľadanie a nahradenie v tomto súbore:",
+		"wantsToInsert": "Kilo Code chce vložiť obsah do tohto súboru:",
+		"wantsToInsertWithLineNumber": "Kilo Code chce vložiť obsah do tohto súboru na riadok {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code chce pridať obsah na koniec tohto súboru:",
+		"wantsToDelete": "Kilo Code chce zmazať tento súbor:",
+		"wantsToDeleteDirectory": "Kilo Code chce zmazať tento adresár:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Kilo Code chce zobraziť súbory najvyššej úrovne v tomto adresári:",
+		"didViewTopLevel": "Kilo Code zobrazil súbory najvyššej úrovne v tomto adresári:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code chce zobraziť súbory najvyššej úrovne v tomto adresári (mimo pracovného priestoru):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code zobrazil súbory najvyššej úrovne v tomto adresári (mimo pracovného priestoru):",
+		"wantsToViewRecursive": "Kilo Code chce rekurzívne zobraziť všetky súbory v tomto adresári:",
+		"didViewRecursive": "Kilo Code rekurzívne zobrazil všetky súbory v tomto adresári:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code chce rekurzívne zobraziť všetky súbory v tomto adresári (mimo pracovného priestoru):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code rekurzívne zobrazil všetky súbory v tomto adresári (mimo pracovného priestoru):",
+		"wantsToViewDefinitions": "Kilo Code chce zobraziť názvy definícií zdrojového kódu použité v tomto adresári:",
+		"didViewDefinitions": "Kilo Code zobrazil názvy definícií zdrojového kódu použité v tomto adresári:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code chce zobraziť názvy definícií zdrojového kódu použité v tomto adresári (mimo pracovného priestoru):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code zobrazil názvy definícií zdrojového kódu použité v tomto adresári (mimo pracovného priestoru):",
+		"wantsToSearch": "Kilo Code chce hľadať v tomto adresári <code>{{regex}}</code>:",
+		"didSearch": "Kilo Code hľadal v tomto adresári <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code chce hľadať v tomto adresári (mimo pracovného priestoru) <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code hľadal v tomto adresári (mimo pracovného priestoru) <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code chce hľadať v kódovej základni <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code chce hľadať v kódovej základni <code>{{query}}</code> v <code>{{path}}</code>:",
+		"didSearch_one": "Nájdený 1 výsledok",
+		"didSearch_other": "Nájdených {{count}} výsledkov",
+		"didSearch": "Vyhľadané {{query}}",
+		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pre otvorenie súboru)"
+	},
+	"costs": {
+		"totalWithSubtasks": "Celkové náklady (vrátane podúloh): ${{cost}}",
+		"total": "Celkové náklady: ${{cost}}",
+		"includesSubtasks": "Zahŕňa náklady na podúlohy"
+	},
+	"commandOutput": "Výstup príkazu",
+	"commandExecution": {
+		"abort": "Prerušiť",
+		"running": "Beží",
+		"exitStatus": "Ukončený so stavom {{exitCode}}",
+		"pid": "PID: {{pid}}",
+		"exited": "Ukončené ({{exitCode}})",
+		"manageCommands": "Spravovať oprávnenia príkazov",
+		"commandManagementDescription": "Spravovať oprávnenia príkazov: Klikni ✓ pre povolenie automatického spustenia, ✗ pre zamietnutie spustenia. Vzory je možné zapnúť/vypnúť alebo odstrániť zo zoznamov. <settingsLink>Zobraziť všetky nastavenia</settingsLink>",
+		"addToAllowed": "Pridať do zoznamu povolených",
+		"removeFromAllowed": "Odstrániť zo zoznamu povolených",
+		"addToDenied": "Pridať do zoznamu zamietnutých",
+		"removeFromDenied": "Odstrániť zo zoznamu zamietnutých",
+		"abortCommand": "Prerušiť vykonávanie príkazu",
+		"expandOutput": "Rozbaliť výstup",
+		"collapseOutput": "Zbaliť výstup",
+		"expandManagement": "Rozbaliť sekciu správy príkazov",
+		"collapseManagement": "Zbaliť sekciu správy príkazov"
+	},
+	"response": "Odpoveď",
+	"arguments": "Argumenty",
+	"text": {
+		"rooSaid": "Kilo povedal"
+	},
+	"feedback": {
+		"youSaid": "Povedal si"
+	},
+	"mcp": {
+		"wantsToUseTool": "Kilo Code chce použiť nástroj na MCP serveri {{serverName}}:",
+		"wantsToAccessResource": "Kilo Code chce pristupovať k prostriedku na MCP serveri {{serverName}}:"
+	},
+	"modes": {
+		"wantsToSwitch": "Kilo Code chce prepnúť do režimu {{mode}}",
+		"wantsToSwitchWithReason": "Kilo Code chce prepnúť do režimu {{mode}}, pretože: {{reason}}",
+		"didSwitch": "Kilo Code prepol do režimu {{mode}}",
+		"didSwitchWithReason": "Kilo Code prepol do režimu {{mode}}, pretože: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Kilo Code chce vytvoriť novú podúlohu v režime {{mode}}:",
+		"wantsToFinish": "Kilo Code chce dokončiť túto podúlohu",
+		"newTaskContent": "Inštrukcie podúlohy",
+		"completionContent": "Podúloha dokončená",
+		"resultContent": "Výsledky podúlohy",
+		"defaultResult": "Prosím pokračuj k ďalšej úlohe.",
+		"completionInstructions": "Podúloha dokončená! Môžeš skontrolovať výsledky a navrhnúť akékoľvek opravy alebo ďalšie kroky. Ak všetko vyzerá dobre, potvrď pre vrátenie výsledku do nadradenej úlohy."
+	},
+	"questions": {
+		"hasQuestion": "Kilo Code má otázku:"
+	},
+	"taskCompleted": "Úloha dokončená",
+	"error": "Chyba",
+	"modelResponseIncomplete": "Odpoveď modelu neúplná",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model nepoužil žiadne nástroje vo svojej odpovedi. To sa zvyčajne stáva, keď model poskytne iba text/uvažovanie bez volania požadovaných nástrojov na dokončenie úlohy.",
+		"noToolsUsedDetails": "Model poskytol text/uvažovanie, ale nevolal žiadne požadované nástroje. To zvyčajne naznačuje, že model nepochopil úlohu alebo má ťažkosti s určením, ktorý nástroj použiť. Model bol automaticky vyzvaný na opakovanie s riadnym použitím nástrojov.",
+		"noAssistantMessages": "Model neposkytol žiadny obsah odpovede. To môže naznačovať problém s API alebo výstupom modelu.",
+		"noAssistantMessagesDetails": "Jazykový model vrátil prázdnu odpoveď bez akéhokoľvek textu alebo volania nástrojov. To sa môže stať kvôli problémom s API, obmedzeniu rýchlosti alebo problémom špecifickým pre model. Model bol automaticky vyzvaný na opakovanie."
+	},
+	"errorDetails": {
+		"link": "Detaily",
+		"title": "Detaily chyby",
+		"copyToClipboard": "Kopírovať základné informácie o chybe",
+		"copied": "Skopírované!",
+		"diagnostics": "Získať podrobné informácie o chybe",
+		"proxyProvider": "Zdá sa, že používaš proxy-založeného poskytovateľa. Uisti sa, že kontroluješ jeho logy a že neprepisuje požiadavky Kilo."
+	},
+	"diffError": {
+		"title": "Úprava neúspešná"
+	},
+	"troubleMessage": "Kilo Code má ťažkosti...",
+	"powershell": {
+		"issues": "Zdá sa, že máš problémy s Windows PowerShell, prosím pozri sa na toto"
+	},
+	"autoApprove": {
+		"title": "Automatické schvaľovanie:",
+		"none": "Žiadne",
+		"description": "Automatické schvaľovanie umožňuje Kilo Code vykonávať akcie bez žiadania o povolenie. Zapni iba pre akcie, ktorým plne dôveruješ. Podrobnejšia konfigurácia je dostupná v <settingsLink>Nastaveniach</settingsLink>.",
+		"selectOptionsFirst": "Najprv vyber aspoň jednu možnosť nižšie pre povolenie automatického schvaľovania",
+		"toggleAriaLabel": "Prepnúť automatické schvaľovanie",
+		"disabledAriaLabel": "Automatické schvaľovanie zakázané - najprv vyber možnosti",
+		"tooltip": "Automaticky schváliť požiadavky na použitie nástrojov",
+		"tooltipManage": "Spravovať nastavenia automatického schvaľovania",
+		"tooltipStatus": "Automatické schvaľovanie povolené pre: {{toggles}}",
+		"all": "Všetko",
+		"selectAll": "Vybrať všetko",
+		"selectNone": "Zrušiť výber",
+		"triggerLabel_zero": "Automatické schválenie: vypnuté",
+		"triggerLabel_one": "Automatické schválenie: 1",
+		"triggerLabel_other": "Automatické schválenie: {{count}}",
+		"triggerLabelAll": "Automatické schválenie: YOLO",
+		"triggerLabelOff": "Automatické schvaľovanie vypnuté",
+		"triggerLabelOffShort": "Vypnuté"
+	},
+	"modeSelector": {
+		"title": "Režimy",
+		"marketplace": "Trhovisko režimov",
+		"settings": "Nastavenia režimov",
+		"description": "Špecializované persony ktoré prispôsobujú správanie Kilo Code.",
+		"searchPlaceholder": "Hľadať režimy...",
+		"noResults": "Neboli nájdené žiadne výsledky",
+		"organizationModes": "Režimy organizácie"
+	},
+	"announcement": {
+		"title": "🎉 Vydaný Kilo Code {{version}}",
+		"support": "Prosím podpor Kilo Code tým, že nám dáš hviezdičku na <githubLink>GitHube</githubLink>.",
+		"stealthModel": {
+			"feature": "<bold>Časovo obmedzený ZDARMA stealth model</bold> - Code Supernova: Teraz vylepšený s <bold>kontextovým oknom 1M tokenov</bold>! Všestranný agentný model pre kódovanie, ktorý podporuje obrazové vstupy, dostupný prostredníctvom Kilo Code Cloud.",
+			"note": "(Poznámka: prompty a dokončenia sú zaznamenávané tvorcom modelu a používané na vylepšenie modelu)",
+			"connectButton": "Pripojiť sa k Kilo Code Cloud",
+			"selectModel": "Vyber <code>kilo/code-supernova</code> z poskytovateľa Kilo Code Cloud v Nastaveniach pre začiatok.",
+			"goToSettingsButton": "Ísť do Nastavení"
+		},
+		"release": {
+			"heading": "Čo je nové:",
+			"skills": "Kilo teraz podporuje <skillsLink>Agent Skills</skillsLink> - znovupoužiteľné balíčky promptov, nástrojov a zdrojov pre rozšírenie schopností Kilo.",
+			"nativeToolCalling": "Natívne volanie nástrojov je teraz vyžadované pre všetky nové úlohy. <blogLink>Prečítaj si viac</blogLink> o motivácii a čo robiť, ak narazíš na problémy.",
+			"openRouterEmbeddings": "Podpora pre embedding modely OpenRouter",
+			"chutesDynamic": "Chutes teraz dynamicky načítava najnovšie modely",
+			"queuedMessagesFix": "Opravy pre stratené správy vo fronte",
+			"browserUse": "Browser Use 2.0 vylepšuje chatové prechádzanie s trvalými reláciami, jasnejšou spätnou väzbou, vyhradeným panelom prehliadača a prirodzenejšími popismi akcií",
+			"cloudPaid": "Poskytovateľ Kilo Code Cloud teraz ponúka platené modely: kúp si kredity a používaj ich ako pre cloudových agentov, tak pre inferenciu",
+			"contextRewind": "Vylepšené zhusťovanie kontextu teraz umožňuje obnoviť plný predchádzajúci kontext pri vracaní ku kontrolnému bodu",
+			"rooProvider": "Poskytovateľ Kilo Code Cloud teraz zachováva obsah uvažovania a používa natívne nástroje pre lepší výkon",
+			"openaiCodexProvider": "Pridaný poskytovateľ OpenAI - ChatGPT Plus/Pro, ktorý poskytuje predplatné založený prístup k modelom Codex bez nákladov na tokeny.",
+			"gpt52codexModel": "Pridaný nový model gpt-5.2-codex do Kilo Code Router, štandardného poskytovateľa OpenAI a ďalších.",
+			"bugFixes": "Opravené úniky pamäte spôsobujúce šedé obrazovky, problémy s podpisom myšlienok Gemini a ďalšie vylepšenia stability."
+		},
+		"cloudAgents": {
+			"heading": "Nové v cloude:",
+			"prFixer": "Predstavujeme cloudového agenta <bold>PR Fixer</bold> ako doplnok k PR Reviewer.",
+			"prFixerDescription": "PR Fixer aplikuje vysoko kvalitné zmeny na tvoje PR priamo z GitHubu. Vyvolaj ho pomocou komentára k PR a prečíta si celú históriu komentárov, aby pochopil kontext, dohody a kompromisy - a potom implementuje správnu opravu.",
+			"tryPrFixerButton": "Vyskúšať PR Fixer",
+			"specialized": "Predstavujeme <bold>Explainer</bold>, <bold>Planner</bold> a <bold>Coder</bold> - troch špecializovaných cloudových agentov pre vylepšenie tvojich pracovných postupov.",
+			"description": "Agenti spolupracujú v cloude a je možné ich spustiť z webu alebo cez Slack.",
+			"tryButton": "Vyskúšať cloudových agentov"
+		},
+		"careers": "Tiež <careersLink>naberáme!</careersLink>",
+		"socialLinks": "Pripoj sa k nám na <xLink>X</xLink>, <discordLink>Discord</discordLink> alebo <redditLink>r/KiloCode</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Premýšľam",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Kopírovať do vstupu (rovnaké ako shift + klik)",
+		"timerPrefix": "Automatické schvaľovanie povolené. Výber za {{seconds}}s…",
+		"autoSelectCountdown": "Automatický výber za {{count}}s",
+		"countdownDisplay": "{{count}}s"
+	},
+	"browser": {
+		"session": "Relácia prehliadača",
+		"rooWantsToUse": "Kilo Code chce použiť prehliadač:",
+		"consoleLogs": "Záznamy konzoly",
+		"noNewLogs": "(Žiadne nové záznamy)",
+		"screenshot": "Snímka obrazovky prehliadača",
+		"cursor": "kurzor",
+		"active": "Aktívne",
+		"navigation": {
+			"step": "Krok {{current}} z {{total}}",
+			"previous": "Predchádzajúci",
+			"next": "Ďalší"
+		},
+		"sessionStarted": "Relácia prehliadača zahájená",
+		"actions": {
+			"title": "Akcie prechádzania: ",
+			"launched": "Prehliadač spustený",
+			"launch": "Spustiť prehliadač na {{url}}",
+			"clicked": "Kliknuté na: {{coordinate}}",
+			"click": "Kliknúť ({{coordinate}})",
+			"typed": "Napísané: {{text}}",
+			"type": "Napísať \"{{text}}\"",
+			"pressed": "Stlačená klávesa: {{key}}",
+			"press": "Stlačiť {{key}}",
+			"scrolledDown": "Posunuté dole",
+			"scrollDown": "Posunúť dole",
+			"scrolledUp": "Posunuté hore",
+			"scrollUp": "Posunúť hore",
+			"hovered": "Prejdenie kurzorom na: {{coordinate}}",
+			"hover": "Prejsť kurzorom ({{coordinate}})",
+			"resized": "Zmenená veľkosť na: {{size}}",
+			"resize": "Zmeniť veľkosť na {{size}}",
+			"screenshotSaved": "Snímka obrazovky uložená",
+			"screenshot": "Uložiť snímku obrazovky do {{path}}",
+			"closed": "Prehliadač zatvorený",
+			"close": "Zatvoriť prehliadač"
+		}
+	},
+	"browserAnnouncement": {
+		"title": "🌐 Vylepšenie Prechádzania 2.0",
+		"description": "Nová aktualizácia prináša vylepšené prechádzanie s trvalými reláciami a jasnejšími popiskami akcií."
+	},
+	"browserAnnouncementDesc": "Preskúmaj vylepšené možnosti prechádzania s lepším ovládaním a spätnou väzbou.",
+	"browserSession": "Relácia prehliadača",
+	"browserActionPress": "Stlačiť klávesy",
+	"browserActionPressDesc": "Stlačiť konkrétne klávesy na klávesnici",
+	"browserActionHover": "Prejdenie kurzorom",
+	"browserActionHoverDesc": "Prejdenie kurzorom cez prvky na stránke",
+	"rooCloudAnnouncement": {
+		"title": "☁️ Kilo Code Cloud teraz aktívny!",
+		"description": "Prístup ku cloudovým agentom a pokročilým funkciám prostredníctvom Kilo Code Cloud."
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Rozbaliť blok kódu",
+			"collapse": "Zbaliť blok kódu",
+			"enable_wrap": "Zapnúť zalamovanie slov",
+			"disable_wrap": "Vypnúť zalamovanie slov",
+			"copy_code": "Kopírovať kód"
+		}
+	},
+	"systemPromptWarning": "VAROVANIE: Aktívne vlastné prepísanie systémového promptu. To môže vážne narušiť funkčnosť a spôsobiť nepredvídateľné správanie.",
+	"profileViolationWarning": "Aktuálny profil porušuje nastavenia tvojej organizácie",
+	"shellIntegration": {
+		"title": "Varovanie vykonávania príkazu",
+		"description": "Tvoj príkaz sa vykonáva bez integrácie shellu terminálu VSCode. Pre potlačenie tohto varovania môžeš vypnúť integráciu shellu v sekcii <strong>Terminal</strong> <settingsLink>nastavení Kilo Code</settingsLink> alebo vyriešiť integráciu terminálu VSCode pomocou odkazu nižšie.",
+		"troubleshooting": "Klikni tu pre dokumentáciu integrácie shellu."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Dosiahnutý limit automaticky schválených požiadaviek",
+			"description": "Kilo Code dosiahol automaticky schválený limit {{count}} API požiadaviek. Chceš resetovať počítadlo a pokračovať v úlohe?",
+			"button": "Resetovať a pokračovať"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Dosiahnutý limit automaticky schválených nákladov",
+			"description": "Kilo Code dosiahol limit automaticky schválených nákladov ${{count}}. Chceš resetovať náklady a pokračovať v úlohe?",
+			"button": "Resetovať a pokračovať"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Index pripravený",
+		"indexing": "Indexovanie {{percentage}}%",
+		"indexed": "Indexované",
+		"error": "Chyba indexu",
+		"status": "Stav indexu"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Verzia {{version}} - Klikni pre zobrazenie poznámok k vydaniu"
+	},
+	"rooCloudCTA": {
+		"title": "Kilo Code Cloud prichádza čoskoro!",
+		"description": "Spúšťaj vzdialených agentov v cloude, pristupuj k svojim úlohám odkiaľkoľvek, spolupracuj s ostatnými a mnoho ďalšieho.",
+		"joinWaitlist": "Pripoj sa na čakaciu listinu pre získanie prednostného prístupu."
+	},
+	"command": {
+		"triggerDescription": "Spustiť príkaz {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Spravovať slash príkazy",
+		"manageCommands": "Spravovať slash príkazy v nastavení",
+		"title": "Slash príkazy",
+		"description": "Vytvor vlastné slash príkazy pre rýchly prístup k často používaným promptom a pracovným postupom. <DocsLink>Dokumentácia</DocsLink>",
+		"builtInCommands": "Vstavané príkazy",
+		"globalCommands": "Globálne príkazy",
+		"workspaceCommands": "Príkazy pracovného priestoru",
+		"globalCommand": "Globálny príkaz",
+		"editCommand": "Upraviť príkaz",
+		"deleteCommand": "Zmazať príkaz",
+		"newGlobalCommandPlaceholder": "Nový globálny príkaz...",
+		"newWorkspaceCommandPlaceholder": "Nový príkaz pracovného priestoru...",
+		"deleteDialog": {
+			"title": "Zmazať príkaz",
+			"description": "Si si istý, že chceš zmazať príkaz \"{{name}}\"? Túto akciu nie je možné vrátiť späť.",
+			"cancel": "Zrušiť",
+			"confirm": "Zmazať"
+		}
+	},
+	"queuedMessages": {
+		"title": "Správy vo fronte:",
+		"clickToEdit": "Klikni pre úpravu správy"
+	},
+	"generateCommitMessage": "Vygenerovať commit správu",
+	"slashCommand": {
+		"wantsToRun": "Kilo Code chce spustiť slash príkaz:",
+		"didRun": "Kilo Code spustil slash príkaz:"
+	},
+	"contextMenu": {
+		"noResults": "Žiadne výsledky",
+		"problems": "Problémy",
+		"terminal": "Terminál",
+		"url": "Vložiť URL pre získanie obsahu"
+	},
+	"todo": {
+		"partial": "{{completed}} z {{total}} úloh hotovo",
+		"complete": "{{total}} úloh hotovo",
+		"updated": "Aktualizovaný zoznam úloh",
+		"completed": "Dokončené",
+		"started": "Zahájené"
+	}
+}

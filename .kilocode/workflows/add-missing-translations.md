@@ -13,7 +13,7 @@ For each language that is missing translations:
 
 When translating, follow these key rules:
 
-1. **Supported Languages**: ar, ca, cs, de, en, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, th, tr, uk, vi, zh-CN, zh-TW
+1. **Supported Languages**: ar, ca, cs, de, en, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, sk, th, tr, uk, vi, zh-CN, zh-TW
 2. **Voice**: Always use informal speech (e.g., "du" not "Sie" in German)
 3. **Technical Terms**: Don't translate "token", "API", "prompt" and domain-specific technical terms
 4. **Placeholders**: Keep `{{variable}}` placeholders exactly as in the English source

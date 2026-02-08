@@ -1,0 +1,171 @@
+{
+	"title": "Kilo Code Marketplace",
+	"tabs": {
+		"installed": "Nainštalované",
+		"settings": "Nastavenia",
+		"browse": "Prechádzať"
+	},
+	"done": "Hotovo",
+	"refresh": "Obnoviť",
+	"filters": {
+		"search": {
+			"placeholder": "Hľadať položky marketplace...",
+			"placeholderMcp": "Hľadať MCP...",
+			"placeholderMode": "Hľadať Modes..."
+		},
+		"type": {
+			"label": "Filtrovať podľa typu:",
+			"all": "Všetky typy",
+			"mode": "Mode",
+			"mcpServer": "MCP Server"
+		},
+		"sort": {
+			"label": "Zoradiť podľa:",
+			"name": "Názvu",
+			"author": "Autora",
+			"lastUpdated": "Posledná aktualizácia"
+		},
+		"tags": {
+			"label": "Filtrovať podľa štítkov:",
+			"clear": "Vymazať štítky",
+			"placeholder": "Píš pre vyhľadanie a výber štítkov...",
+			"noResults": "Nenájdené žiadne zodpovedajúce štítky",
+			"selected": "Zobrazené položky s akýmkoľvek z vybraných štítkov",
+			"clickToFilter": "Klikni na štítky pre filtrovanie položiek"
+		},
+		"installed": {
+			"label": "Filtrovať podľa stavu",
+			"all": "Všetky položky",
+			"installed": "Nainštalované",
+			"notInstalled": "Nenainštalované"
+		},
+		"none": "Žiadne"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCPs",
+		"marketplace": "Marketplace"
+	},
+	"type-group": {
+		"modes": "Modes",
+		"mcps": "MCP Servery"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Nenájdené žiadne položky marketplace",
+			"withFilters": "Skús upraviť svoje filtre",
+			"noSources": "Skús pridať zdroj na karte Sources",
+			"adjustFilters": "Skús upraviť svoje filtre alebo vyhľadávacie termíny",
+			"clearAllFilters": "Vymazať všetky filtre"
+		},
+		"count": "Nájdených {{count}} položiek",
+		"components": "{{count}} komponentov",
+		"matched": "{{count}} zhôd",
+		"refresh": {
+			"button": "Obnoviť",
+			"refreshing": "Obnovovanie...",
+			"mayTakeMoment": "Môže to chvíľu trvať."
+		},
+		"card": {
+			"by": "od {{author}}",
+			"from": "z {{source}}",
+			"install": "Nainštalovať",
+			"installProject": "Nainštalovať",
+			"installGlobal": "Nainštalovať (Globálne)",
+			"remove": "Odobrať",
+			"removeProject": "Odobrať",
+			"removeGlobal": "Odobrať (Globálne)",
+			"viewSource": "Zobraziť",
+			"viewOnSource": "Zobraziť na {{source}}",
+			"noWorkspaceTooltip": "Otvor pracovný priestor pre inštaláciu položiek marketplace",
+			"installed": "Nainštalované",
+			"removeProjectTooltip": "Odobrať z aktuálneho projektu",
+			"removeGlobalTooltip": "Odobrať z globálnej konfigurácie",
+			"actionsMenuLabel": "Ďalšie akcie"
+		},
+		"removeFailed": "Nepodarilo sa odobrať položku: {{error}}",
+		"unknownError": "Došlo k neznámej chybe"
+	},
+	"install": {
+		"title": "Nainštalovať {{name}}",
+		"titleMode": "Nainštalovať {{name}} Mode",
+		"titleMcp": "Nainštalovať {{name}} MCP",
+		"scope": "Rozsah inštalácie",
+		"project": "Projekt (aktuálny pracovný priestor)",
+		"global": "Globálne (všetky pracovné priestory)",
+		"method": "Metóda inštalácie",
+		"prerequisites": "Predpoklady",
+		"configuration": "Konfigurácia",
+		"configurationDescription": "Nakonfiguruj parametre potrebné pre tento MCP server",
+		"button": "Nainštalovať",
+		"successTitle": "{{name}} nainštalované",
+		"successDescription": "Inštalácia bola úspešne dokončená",
+		"installed": "Úspešne nainštalované!",
+		"failed": "Inštalácia zlyhala",
+		"whatNextMcp": "Teraz môžeš nakonfigurovať a používať tento MCP server. Klikni na ikonu MCP v postrannom paneli pre prepnutie karty.",
+		"whatNextMode": "Teraz môžeš používať tento režim. Klikni na ikonu Modes v postrannom paneli pre prepnutie karty.",
+		"done": "Hotovo",
+		"goToMcp": "Prejsť na kartu MCP",
+		"goToModes": "Prejsť na kartu Modes",
+		"moreInfoMcp": "Zobraziť dokumentáciu {{name}} MCP",
+		"validationRequired": "Prosím zadaj hodnotu pre {{paramName}}"
+	},
+	"sources": {
+		"title": "Konfigurovať zdroje Marketplace",
+		"description": "Pridaj Git repozitáre obsahujúce položky marketplace. Tieto repozitáre budú načítané pri prechádzaní marketplace.",
+		"add": {
+			"title": "Pridať nový zdroj",
+			"urlPlaceholder": "URL Git repozitára (napr. https://github.com/username/repo)",
+			"urlFormats": "Podporované formáty: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git), alebo Git protocol (git://github.com/username/repo.git)",
+			"namePlaceholder": "Zobrazovaný názov (max. 20 znakov)",
+			"button": "Pridať zdroj"
+		},
+		"current": {
+			"title": "Aktuálne zdroje",
+			"empty": "Žiadne nakonfigurované zdroje. Pridaj zdroj pre začiatok.",
+			"refresh": "Obnoviť tento zdroj",
+			"remove": "Odobrať zdroj"
+		},
+		"errors": {
+			"emptyUrl": "URL nemôže byť prázdne",
+			"invalidUrl": "Neplatný formát URL",
+			"nonVisibleChars": "URL obsahuje neviditeľné znaky okrem medzier",
+			"invalidGitUrl": "URL musí byť platné URL Git repozitára (napr. https://github.com/username/repo)",
+			"duplicateUrl": "Toto URL je už v zozname (bez ohľadu na veľkosť písmen a medzery)",
+			"nameTooLong": "Názov musí mať 20 znakov alebo menej",
+			"nonVisibleCharsName": "Názov obsahuje neviditeľné znaky okrem medzier",
+			"duplicateName": "Tento názov sa už používa (bez ohľadu na veľkosť písmen a medzery)",
+			"emojiName": "Emoji znaky môžu spôsobiť problémy so zobrazením",
+			"maxSources": "Povolené maximálne {{max}} zdrojov"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Odobrať Mode",
+			"message": "Si si istý, že chceš odobrať mode \"{{modeName}}\"?",
+			"rulesWarning": "Toto tiež odoberie všetky súvisiace súbory pravidiel pre tento mode."
+		},
+		"mcp": {
+			"title": "Odobrať MCP Server",
+			"message": "Si si istý, že chceš odobrať MCP server \"{{mcpName}}\"?"
+		},
+		"skill": {
+			"title": "Odobrať zručnosť",
+			"message": "Si si istý, že chceš odobrať zručnosť \"{{skillName}}\"?"
+		},
+		"cancel": "Zrušiť",
+		"confirm": "Odobrať"
+	},
+	"footer": {
+		"issueText": "Našiel si problém s položkou marketplace alebo máš návrhy na nové? <0>Otvor GitHub issue</0> a daj nám vedieť!"
+	},
+	"skills": {
+		"loading": "Načítanie zručností...",
+		"searchPlaceholder": "Hľadať zručnosti...",
+		"allCategories": "Všetko",
+		"resultsCount": "Nájdených {{count}} zručností",
+		"noResults": "Nenájdené žiadne zručnosti zodpovedajúce tvojim kritériám",
+		"install": "Inštalovať",
+		"installTitle": "Inštalovať zručnosť {{name}}",
+		"installing": "Inštalácia..."
+	}
+}

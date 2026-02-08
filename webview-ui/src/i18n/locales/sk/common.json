@@ -1,0 +1,152 @@
+{
+	"errorBoundary": {
+		"title": "Niečo sa pokazilo",
+		"reportText": "Pomôž nám zlepšiť sa nahlásením tejto chyby na",
+		"githubText": "našej stránke GitHub Issues",
+		"copyInstructions": "Skopíruj a vlož nasledujúcu chybovú správu ako súčasť svojho hlásenia:",
+		"errorStack": "Stack chyby:",
+		"componentStack": "Stack komponentov:"
+	},
+	"answers": {
+		"yes": "Áno",
+		"no": "Nie",
+		"cancel": "Zrušiť",
+		"remove": "Odobrať",
+		"keep": "Ponechať"
+	},
+	"number_format": {
+		"thousand_suffix": "tis",
+		"million_suffix": "mil",
+		"billion_suffix": "mld"
+	},
+	"feedback": {
+		"title": "Spätná väzba",
+		"description": "Radi by sme počuli tvoju spätnú väzbu alebo ti pomohli s akýmikoľvek problémami, s ktorými sa stretávaš",
+		"githubIssues": "Nahlásiť problém na GitHube",
+		"githubDiscussions": "Pripojiť sa k diskusiám na GitHube",
+		"discord": "Pripojiť sa k našej komunite na Discorde",
+		"customerSupport": "Zákaznícka podpora"
+	},
+	"docsLink": {
+		"label": "Dokumentácia"
+	},
+	"dismiss": "Zavrieť",
+	"dismissAndDontShowAgain": "Zavrieť a viac nezobrazovať",
+	"ui": {
+		"search_placeholder": "Hľadať...",
+		"no_results": "Neboli nájdené žiadne výsledky"
+	},
+	"mermaid": {
+		"loading": "Vytváranie diagramu mermaid...",
+		"render_error": "Nepodarilo sa vykresliť diagram",
+		"fixing_syntax": "Opravujem syntax Mermaid...",
+		"fix_syntax_button": "Opraviť syntax pomocou AI",
+		"original_code": "Pôvodný kód:",
+		"errors": {
+			"unknown_syntax": "Neznáma chyba syntaxe",
+			"fix_timeout": "Časový limit požiadavky na opravu LLM vypršal",
+			"fix_failed": "Oprava LLM zlyhala",
+			"fix_attempts": "Nepodarilo sa opraviť syntax po {{attempts}} pokusoch. Posledná chyba: {{error}}",
+			"no_fix_provided": "LLM neposkytlo žiadnu opravu",
+			"fix_request_failed": "Požiadavka na opravu zlyhala"
+		},
+		"buttons": {
+			"zoom": "Priblíženie",
+			"zoomIn": "Priblížiť",
+			"zoomOut": "Oddialiť",
+			"copy": "Kopírovať",
+			"save": "Uložiť obrázok",
+			"viewCode": "Zobraziť kód",
+			"viewDiagram": "Zobraziť diagram",
+			"close": "Zatvoriť"
+		},
+		"modal": {
+			"codeTitle": "Kód Mermaid"
+		},
+		"tabs": {
+			"diagram": "Diagram",
+			"code": "Kód"
+		},
+		"feedback": {
+			"imageCopied": "Obrázok skopírovaný do schránky",
+			"copyError": "Chyba pri kopírovaní obrázka"
+		}
+	},
+	"image": {
+		"tabs": {
+			"view": "Obrázok"
+		},
+		"noData": "Žiadne dáta obrázka"
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "Neplatný formát dáta URI",
+			"copyingImage": "Chyba pri kopírovaní obrázka: {{error}}",
+			"openingImage": "Chyba pri otváraní obrázka: {{error}}",
+			"pathNotExists": "Cesta neexistuje: {{path}}",
+			"couldNotOpen": "Nepodarilo sa otvoriť súbor: {{error}}",
+			"couldNotOpenGeneric": "Nepodarilo sa otvoriť súbor!"
+		},
+		"success": {
+			"imageDataUriCopied": "Image data URI skopírované do schránky"
+		}
+	},
+	"confirmation": {
+		"cancel": "Zrušiť",
+		"confirm": "Potvrdiť",
+		"delete": "Zmazať",
+		"deleteMessage": "Zmazať správu",
+		"deleteWarning": "Zmazaním tejto správy sa zmažú všetky nasledujúce správy v konverzácii. Chceš pokračovať?",
+		"editMessage": "Upraviť správu",
+		"editWarning": "Úpravou tejto správy sa zmažú všetky nasledujúce správy v konverzácii. Chceš pokračovať?",
+		"editQuestionWithCheckpoint": "Úprava tejto správy zmaže všetky neskoršie správy v konverzácii. Chceš tiež vrátiť všetky zmeny späť k tomuto kontrolnému bodu?",
+		"deleteQuestionWithCheckpoint": "Zmazanie tejto správy zmaže všetky neskoršie správy v konverzácii. Chceš tiež vrátiť všetky zmeny späť k tomuto kontrolnému bodu?",
+		"editOnly": "Nie, iba upraviť správu",
+		"deleteOnly": "Nie, iba zmazať správu",
+		"restoreToCheckpoint": "Áno, obnoviť kontrolný bod",
+		"dontShowAgain": "Už nezobrazovať",
+		"confirm": "Potvrdiť",
+		"cancel": "Zrušiť",
+		"proceed": "Pokračovať",
+		"title": "Potvrdenie"
+	},
+	"time_ago": {
+		"just_now": "práve teraz",
+		"seconds_ago": "pred {{count}} sekundami",
+		"minute_ago": "pred minútou",
+		"minutes_ago": "pred {{count}} minútami",
+		"hour_ago": "pred hodinou",
+		"hours_ago": "pred {{count}} hodinami",
+		"day_ago": "pred dňom",
+		"days_ago": "pred {{count}} dňami",
+		"week_ago": "pred týždňom",
+		"weeks_ago": "pred {{count}} týždňami",
+		"month_ago": "pred mesiacom",
+		"months_ago": "pred {{count}} mesiacmi",
+		"year_ago": "pred rokom",
+		"years_ago": "pred {{count}} rokmi"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "Čakalo sa {{timeout}} sekúnd na inicializáciu kontrolného bodu. Ak funkciu kontrolných bodov nepotrebuješ, vypni ju v <settingsLink>nastavení kontrolných bodov</settingsLink>.",
+		"init_checkpoint_fail_long_time": "Inicializácia kontrolného bodu trvá dlhšie ako {{timeout}} sekúnd, preto sú kontrolné body pre túto úlohu zakázané. Môžeš zakázať kontrolné body alebo predĺžiť čakaciu dobu v <settingsLink>nastavení kontrolných bodov</settingsLink>.",
+		"attempt_completion_tool_failed": "Nie je možné vykonať attempt_completion, pretože predchádzajúce volanie nástroja v tomto kole zlyhalo. Vyrieš prosím najprv zlyhanie nástroja pred pokusom o dokončenie."
+	},
+	"tasks": {
+		"delegated": "Delegované na podúlohu",
+		"delegated_to": "Delegované na úlohu {{childId}}",
+		"delegation_completed": "Podúloha dokončená, pokračuje nadradená úloha",
+		"awaiting_child": "Čaká sa na podriadenú úlohu {{childId}}"
+	},
+	"costs": {
+		"own": "Vlastné",
+		"subtasks": "Podúlohy"
+	},
+	"gemini": {
+		"sources": "Zdroje"
+	},
+	"info": {
+		"path_copied_to_clipboard": "Cesta skopírovaná do schránky"
+	},
+	"cancel": "Zrušiť",
+	"confirm": "Potvrdiť"
+}

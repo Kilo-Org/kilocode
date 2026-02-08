@@ -1,0 +1,72 @@
+{
+	"greeting": "Ahoj, som Kilo Code!",
+	"introduction": "<strong>Kilo Code je popredný autonómny agent pre kódovanie.</strong> Priprav sa na architektúru, kódovanie, ladenie a zvýšenie svojej produktivity ako nikdy predtým. Pre pokračovanie Kilo Code vyžaduje API kľúč.",
+	"notice": "Pre začiatok toto rozšírenie potrebuje poskytovateľa API.",
+	"start": "Poďme na to!",
+	"routers": {
+		"requesty": {
+			"description": "Tvoj optimalizovaný LLM router",
+			"incentive": "$1 kredit zadarmo"
+		},
+		"openrouter": {
+			"description": "Jednotné rozhranie pre LLM"
+		},
+		"roo": {
+			"description": "Najlepšie bezplatné modely na začiatok",
+			"incentive": "Vyskúšaj Kilo zadarmo"
+		}
+	},
+	"chooseProvider": "Aby mohol robiť svoje kúzla, Kilo Code potrebuje API kľúč.",
+	"landing": {
+		"greeting": "Vitaj v Kilo Code!",
+		"introduction": "S radom vstavaných a rozšíriteľných Modes ti Kilo Code umožní plánovať, navrhovať architektúru, kódovať, ladiť a zvýšiť svoju produktivitu ako nikdy predtým.",
+		"accountMention": "Pre začiatok si vytvor svoj účet Kilo Code Cloud. Získaj výkonné modely, ovládanie webu, analytiku, podporu a ďalšie.",
+		"getStarted": "Vytvoriť účet Kilo",
+		"noAccount": "alebo použiť bez účtu"
+	},
+	"providerSignup": {
+		"heading": "Vyber svojho poskytovateľa",
+		"chooseProvider": "Kilo potrebuje poskytovateľa LLM na fungovanie. Vyber jeden pre začiatok, neskôr môžeš pridať ďalšie.",
+		"rooCloudProvider": "Kilo Code Cloud Provider",
+		"rooCloudDescription": "Najjednoduchší spôsob použitia Kilo. Kurátorská zmes bezplatných a platených modelov za nízku cenu",
+		"learnMore": "dozvedieť sa viac",
+		"useAnotherProvider": "Použiť iného poskytovateľa",
+		"useAnotherProviderDescription": "Zadajte API kľúč a môžete začať.",
+		"noApiKeys": "Nechceš riešiť kľúče? Použi Kilo Code Cloud Provider.",
+		"backToRoo": "Použiť Kilo Code Cloud Provider.",
+		"goBack": "Späť",
+		"finish": "Dokončiť",
+		"getStarted": "Začať"
+	},
+	"waitingForCloud": {
+		"heading": "Presmerovávam vás do Kilo Code Cloud...",
+		"description": "Dokončite registráciu vo svojom prehliadači, potom sa sem automaticky vrátite.",
+		"noPrompt": "Ak sa nezobrazí výzva na otvorenie URL, <clickHere>kliknite sem</clickHere>.",
+		"havingTrouble": "Ak ste dokončili registráciu, ale máte problémy, <clickHere>kliknite sem</clickHere>.",
+		"pasteUrl": "Vložte spätnú URL z vášho prehliadača:",
+		"docsLink": "Nefunguje? <DocsLink>Skontroluj dokumentáciu</DocsLink>.",
+		"invalidURL": "To nevyzerá ako platná spätná URL. Skopíruj prosím to, čo ukazuje Kilo Code Cloud v tvojom prehliadači.",
+		"goBack": "Ísť späť"
+	},
+	"startRouter": "Odporúčame použiť LLM Router:",
+	"startCustom": "Alebo môžeš priniesť svoj vlastný API kľúč poskytovateľa:",
+	"rooCloudProviderHeading": "Kilo Code Cloud Provider",
+	"rooCloudProviderBody": "Najjednoduchší spôsob začiatku s kurátorskými modelmi",
+	"rooCloudProviderSignUp": "Registrovať sa do cloudu",
+	"rooCloudProviderSignUpDesc": "Vytvorte si účet pre prístup ku cloudovým modelom",
+	"rooCloudProviderAuthButtonText": "Pripojiť sa ku cloudu",
+	"rooCloudProviderPaidModelAnnouncement": "Nové platené modely teraz dostupné",
+	"rooCloudProviderPaidModelAnnouncementDesc": "Prístup k najnovším modelom s vylepšenými funkciami",
+	"rooCloudProviderExplainer": "Explainer Agent",
+	"rooCloudProviderExplainerDesc": "Špecializovaný agent pre vysvetľovanie kódu a konceptov",
+	"rooCloudProviderPlanner": "Planner Agent",
+	"rooCloudProviderPlannerDesc": "Agent pre plánovanie a architektúru projektov",
+	"rooCloudProviderCoder": "Coder Agent",
+	"rooCloudProviderCoderDesc": "Špecializovaný agent pre písanie a refaktoring kódu",
+	"telemetry": {
+		"helpImprove": "Pomôž vylepšiť Kilo Code",
+		"helpImproveMessage": "Kilo Code zbiera dáta o chybách a používaní, aby nám pomohol opraviť chyby a vylepšiť rozšírenie. Táto telemetria nezbiera kód, prompty ani osobné informácie. Môžeš to vypnúť v <settingsLink>nastavení</settingsLink>.",
+		"changeSettings": "Toto môžete neskôr zmeniť v dolnej časti <settingsLink>nastavení</settingsLink>"
+	},
+	"importSettings": "Importovať Nastavenia"
+}

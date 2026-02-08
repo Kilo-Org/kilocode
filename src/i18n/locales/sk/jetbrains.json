@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Prostredie Node.js chýba",
+			"message": "Prostredie Node.js nebolo detegované, nainštalujte prosím Node.js a skúste to znova. Odporúčaná verzia: {{minVersion}} alebo vyššia."
+		},
+		"nodejsVersionLow": {
+			"title": "Verzia Node.js je príliš nízka",
+			"message": "Aktuálna verzia Node.js ({{nodePath}}) je {{nodeVersion}}, aktualizujte prosím na {{minVersion}} alebo vyššiu pre lepšiu kompatibilitu."
+		}
+	},
+	"dialog": {
+		"cancel": "Zrušiť"
+	},
+	"ui": {
+		"initializing": "Kilo Code sa inicializuje...",
+		"systemInformation": "Informácie o systéme"
+	}
+}
