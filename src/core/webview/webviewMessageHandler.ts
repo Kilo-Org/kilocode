@@ -797,45 +797,20 @@ export const webviewMessageHandler = async (
 			break
 		case "deleteMultipleTasksWithIds": {
 			const ids = message.ids
+			const excludeFavorites = message.excludeFavorites
 
 			if (Array.isArray(ids)) {
-				// Process in batches of 20 (or another reasonable number)
-				const batchSize = 20
-				const results = []
-
-				// Only log start and end of the operation
-				console.log(`Batch deletion started: ${ids.length} tasks total`)
-
-				for (let i = 0; i < ids.length; i += batchSize) {
-					const batch = ids.slice(i, i + batchSize)
-
-					const batchPromises = batch.map(async (id) => {
-						try {
-							await provider.deleteTaskWithId(id)
-							return { id, success: true }
-						} catch (error) {
-							// Keep error logging for debugging purposes
-							console.log(
-								`Failed to delete task ${id}: ${error instanceof Error ? error.message : String(error)}`,
-							)
-							return { id, success: false }
-						}
-					})
-
-					// Process each batch in parallel but wait for completion before starting the next batch
-					const batchResults = await Promise.all(batchPromises)
-					results.push(...batchResults)
-
-					// Update the UI after each batch to show progress
+				// kilocode_change start: Use deleteMultipleTasks which handles excludeFavorites
+				try {
+					await provider.deleteMultipleTasks(ids, excludeFavorites)
 					await provider.postStateToWebview()
+					console.log(`Batch deletion completed: ${ids.length} tasks processed`)
+				} catch (error) {
+					console.log(
+						`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`,
+					)
 				}
-
-				// Log final results
-				const successCount = results.filter((r) => r.success).length
-				const failCount = results.length - successCount
-				console.log(
-					`Batch deletion completed: ${successCount}/${ids.length} tasks successful, ${failCount} tasks failed`,
-				)
+				// kilocode_change end
 			}
 			break
 		}
@@ -875,7 +850,7 @@ export const webviewMessageHandler = async (
 				customModesManager: provider.customModesManager,
 				provider: provider,
 			})
-
+			await provider.postMessageToWebview({ type: "settingsImported" })
 			break
 		}
 		case "exportSettings":

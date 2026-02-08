@@ -1,5 +1,6 @@
+import React from "react"
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, act } from "@testing-library/react"
 import { Provider, createStore } from "jotai"
 import { MessageList } from "../MessageList"
 import { sessionMessagesAtomFamily } from "../../state/atoms/messages"
@@ -31,16 +32,26 @@ vi.mock("../../../../components/ui", () => ({
 }))
 
 // Mock react-virtuoso - tracks rendered items for testing
+let lastVirtuosoProps: any // kilocode_change
+let lastScrollToIndex: ReturnType<typeof vi.fn> | null // kilocode_change
 vi.mock("react-virtuoso", () => ({
-	Virtuoso: ({ data, itemContent }: any) => (
-		<div data-testid="virtuoso-list" data-item-count={data.length}>
-			{data.map((item: any, index: number) => (
-				<div key={index} data-testid={`virtuoso-item-${index}`}>
-					{itemContent(index, item)}
-				</div>
-			))}
-		</div>
-	),
+	Virtuoso: React.forwardRef((props: any, ref: any) => {
+		lastVirtuosoProps = props
+		lastScrollToIndex = vi.fn()
+		if (ref) {
+			ref.current = { scrollToIndex: lastScrollToIndex }
+		}
+		const { data, itemContent } = props
+		return (
+			<div data-testid="virtuoso-list" data-item-count={data.length}>
+				{data.map((item: any, index: number) => (
+					<div key={index} data-testid={`virtuoso-item-${index}`}>
+						{itemContent(index, item)}
+					</div>
+				))}
+			</div>
+		)
+	}),
 }))
 
 describe("MessageList", () => {
@@ -398,6 +409,69 @@ describe("MessageList", () => {
 			expect(item0).toHaveTextContent("Regular message")
 			expect(item1).toHaveTextContent("First queued")
 			expect(item2).toHaveTextContent("Second queued")
+		})
+	})
+
+	describe("auto-scroll behavior", () => {
+		it("disables followOutput when user scrolls up and re-enables at bottom", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "First message",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(lastVirtuosoProps.followOutput).toBe("smooth")
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(false)
+			})
+
+			expect(lastVirtuosoProps.followOutput).toBe(false)
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(true)
+			})
+
+			expect(lastVirtuosoProps.followOutput).toBe("smooth")
+		})
+
+		it("shows scroll-to-bottom button when not at bottom and scrolls on click", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "First message",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.queryByLabelText("scrollToBottom")).not.toBeInTheDocument()
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(false)
+			})
+
+			const scrollButton = screen.getByLabelText("scrollToBottom")
+			fireEvent.click(scrollButton)
+
+			expect(lastScrollToIndex).toHaveBeenCalledWith({ index: 0, behavior: "smooth" })
 		})
 	})
 })

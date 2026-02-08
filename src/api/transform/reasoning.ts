@@ -18,7 +18,9 @@ export type RooReasoningParams = {
 	effort?: ReasoningEffortExtended
 }
 
-export type AnthropicReasoningParams = BetaThinkingConfigParam
+// kilocode_change start
+export type AnthropicReasoningParams = BetaThinkingConfigParam | { type: "adaptive" }
+// kilocode_change end
 
 export type OpenAiReasoningParams = { reasoning_effort: OpenAI.Chat.ChatCompletionCreateParams["reasoning_effort"] }
 
@@ -109,8 +111,16 @@ export const getAnthropicReasoning = ({
 	model,
 	reasoningBudget,
 	settings,
-}: GetModelReasoningOptions): AnthropicReasoningParams | undefined =>
-	shouldUseReasoningBudget({ model, settings }) ? { type: "enabled", budget_tokens: reasoningBudget! } : undefined
+}: GetModelReasoningOptions): AnthropicReasoningParams | undefined => {
+	// kilocode_change start
+	if (model.supportsAdaptiveThinking && settings?.enableReasoningEffort !== false) {
+		return { type: "adaptive" }
+	}
+	// kilocode_change end
+	return shouldUseReasoningBudget({ model, settings })
+		? { type: "enabled", budget_tokens: reasoningBudget! }
+		: undefined
+}
 
 export const getOpenAiReasoning = ({
 	model,

@@ -217,12 +217,6 @@ module.exports = [
 		permanent: true,
 	},
 	{
-		source: "/docs/advanced-usage/memory-bank",
-		destination: "/docs/customize/context/memory-bank",
-		basePath: false,
-		permanent: true,
-	},
-	{
 		source: "/docs/advanced-usage/large-projects",
 		destination: "/docs/customize/context/large-projects",
 		basePath: false,
@@ -236,14 +230,27 @@ module.exports = [
 		permanent: true,
 	},
 	{
-		source: "/docs/code-with-ai/context/memory-bank",
-		destination: "/docs/customize/context/memory-bank",
+		source: "/docs/code-with-ai/context/large-projects",
+		destination: "/docs/customize/context/large-projects",
+		basePath: false,
+		permanent: true,
+	},
+	// Removed memory bank page redirects to Agents.md
+	{
+		source: "/docs/advanced-usage/memory-bank",
+		destination: "/docs/customize/agents-md",
 		basePath: false,
 		permanent: true,
 	},
 	{
-		source: "/docs/code-with-ai/context/large-projects",
-		destination: "/docs/customize/context/large-projects",
+		source: "/docs/customize/context/memory-bank",
+		destination: "/docs/customize/agents-md",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/code-with-ai/context/memory-bank",
+		destination: "/docs/customize/agents-md",
 		basePath: false,
 		permanent: true,
 	},

@@ -9,9 +9,15 @@ description: Learn how to use Kilo Code effectively while minimizing or eliminat
 
 ## Completely Free Options
 
-### Grok Code Fast 1
+### Kilo Gateway Free Models
 
-This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilo.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
+From time to time, Kilo works with AI inference providers to offer free models. These are available through the Kilo Gateway. Currently, we are offering these free models:
+
+- **MiniMax M2.1 (free)** - A capable model from MiniMax with strong general-purpose performance.
+- **Z.AI: GLM 4.7 (free)** - Latest variant of the GLM family, purpose-built for agent-centric applications.
+- **MoonshotAI: Kimi K2.5 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
+- **Giga Potato (free)** - A stealth release model that is free in its evaluation period.
+- **Arcee AI: Trinity Large Preview (free)** - A preview model from Arcee AI with strong capabilities.
 
 ### OpenRouter Free Tier Models
 
@@ -96,11 +102,11 @@ When you need more capability than free models provide, these options deliver ex
 @src/components/UserProfile.tsx:45-67
 ```
 
-**Use Memory Bank effectively:**
+**Reuse context effectively:**
 
-- Store project context once in [Memory Bank](/docs/customize/context/memory-bank)
+- Keep key project notes in your repository (e.g., a AGENTS.md or docs folder)
 - Reduces need to re-explain project details
-- Saves 200-500 tokens per conversation
+- Saves tokens per conversation
 
 **Strategic file mentions:**
 
