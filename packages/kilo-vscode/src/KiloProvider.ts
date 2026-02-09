@@ -172,28 +172,38 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 		const nonce = getNonce();
 
 		return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height: 100%; margin: 0; padding: 0;">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 	<title>Kilo Code</title>
 	<style>
+		/* Reset for proper flex layout */
+		*, *::before, *::after {
+			box-sizing: border-box;
+		}
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
 		body {
-			padding: 10px;
 			color: var(--vscode-foreground);
 			font-family: var(--vscode-font-family);
 		}
-		h1 {
-			font-size: 1.5em;
-			margin: 0;
-		}
-		.container {
+		#root {
+			height: 100%;
 			display: flex;
 			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			min-height: 100px;
+		}
+		/* Container class used by App.tsx */
+		.container {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
 		}
 	</style>
 </head>

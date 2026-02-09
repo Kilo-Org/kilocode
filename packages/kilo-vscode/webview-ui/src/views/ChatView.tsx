@@ -506,13 +506,13 @@ export const ChatView: Component = () => {
   }
 
   return (
-    <div class="flex flex-col h-screen bg-[--background-base] text-[--text-base]">
+    <div class="flex flex-col h-full min-h-0 bg-[--background-base] text-[--text-base]">
       <SessionHeader />
 
       {/* Messages area */}
       <div
         ref={messagesContainerRef}
-        class="flex-1 overflow-y-auto"
+        class="flex-1 min-h-0 overflow-y-auto"
       >
         <Show
           when={!transport.isLoading()}

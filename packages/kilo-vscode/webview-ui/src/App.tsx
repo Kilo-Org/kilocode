@@ -136,7 +136,7 @@ const App: Component = () => {
   return (
     <ThemeProvider>
       <DarkModeEnforcer>
-        <div class="container" style={{ height: "100vh", overflow: "hidden" }}>
+        <div class="container">
           <Switch fallback={<DummyView title="Unknown View" />}>
             <Match when={currentView() === "chat"}>
               <TransportProvider autoInit={true}>
