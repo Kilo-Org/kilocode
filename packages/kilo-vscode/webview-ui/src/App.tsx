@@ -2,6 +2,7 @@ import { Component, createSignal, onMount, onCleanup, Switch, Match } from "soli
 import Settings, { type ConnectionState } from "./components/Settings";
 import { TransportProvider } from "./transport/TransportProvider";
 import { ChatView } from "./views/ChatView";
+import { ThemeProvider, useTheme } from "@opencode-ai/ui/theme";
 
 // Import OpenCode UI Tailwind styles
 import "@opencode-ai/ui/styles/tailwind";
@@ -49,6 +50,23 @@ const DummyView: Component<{ title: string }> = (props) => {
       <h1>{props.title}</h1>
     </div>
   );
+};
+
+/**
+ * Component that forces dark mode for the OpenCode UI theme.
+ * VSCode webviews don't reliably report prefers-color-scheme,
+ * so we explicitly set dark mode on mount.
+ */
+const DarkModeEnforcer: Component<{ children: any }> = (props) => {
+  const theme = useTheme();
+  
+  onMount(() => {
+    // Force dark color scheme for VSCode webview
+    theme.setColorScheme("dark");
+    console.log("[Kilo New] DarkModeEnforcer: Set color scheme to dark");
+  });
+  
+  return props.children;
 };
 
 const App: Component = () => {
@@ -116,32 +134,36 @@ const App: Component = () => {
   });
 
   return (
-    <div class="container" style={{ height: "100vh", overflow: "hidden" }}>
-      <Switch fallback={<DummyView title="Unknown View" />}>
-        <Match when={currentView() === "chat"}>
-          <TransportProvider autoInit={true}>
-            <ChatView />
-          </TransportProvider>
-        </Match>
-        <Match when={currentView() === "newTask"}>
-          <TransportProvider autoInit={true}>
-            <ChatView />
-          </TransportProvider>
-        </Match>
-        <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
-        </Match>
-        <Match when={currentView() === "history"}>
-          <DummyView title="History" />
-        </Match>
-        <Match when={currentView() === "profile"}>
-          <DummyView title="Profile" />
-        </Match>
-        <Match when={currentView() === "settings"}>
-          <Settings port={serverPort()} connectionState={connectionState()} />
-        </Match>
-      </Switch>
-    </div>
+    <ThemeProvider>
+      <DarkModeEnforcer>
+        <div class="container" style={{ height: "100vh", overflow: "hidden" }}>
+          <Switch fallback={<DummyView title="Unknown View" />}>
+            <Match when={currentView() === "chat"}>
+              <TransportProvider autoInit={true}>
+                <ChatView />
+              </TransportProvider>
+            </Match>
+            <Match when={currentView() === "newTask"}>
+              <TransportProvider autoInit={true}>
+                <ChatView />
+              </TransportProvider>
+            </Match>
+            <Match when={currentView() === "marketplace"}>
+              <DummyView title="Marketplace" />
+            </Match>
+            <Match when={currentView() === "history"}>
+              <DummyView title="History" />
+            </Match>
+            <Match when={currentView() === "profile"}>
+              <DummyView title="Profile" />
+            </Match>
+            <Match when={currentView() === "settings"}>
+              <Settings port={serverPort()} connectionState={connectionState()} />
+            </Match>
+          </Switch>
+        </div>
+      </DarkModeEnforcer>
+    </ThemeProvider>
   );
 };
 
