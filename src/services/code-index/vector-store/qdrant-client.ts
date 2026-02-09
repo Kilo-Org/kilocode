@@ -80,7 +80,13 @@ export class QdrantVectorStore implements IVectorStore {
 		// Generate collection name from workspace path
 		const hash = createHash("sha256").update(workspacePath).digest("hex")
 		this.vectorSize = vectorSize
-		this.collectionName = `ws-${hash.substring(0, 16)}`
+		// Include repo name for readability, sanitize for Qdrant compatibility
+		const basename = path.basename(workspacePath)
+		const sanitizedBasename = basename
+			.toLowerCase()
+			.replace(/[^a-z0-9_-]/g, "-")
+			.replace(/^-+|-+$/g, "")
+		this.collectionName = `${sanitizedBasename}-${hash.substring(0, 16)}`
 	}
 
 	/**
