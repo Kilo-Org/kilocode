@@ -16,7 +16,8 @@
 		"shareConfirmYes": "예",
 		"shareConfirmNo": "아니요",
 		"options": "옵션",
-		"configureSetupScript": "Worktree 설정 스크립트"
+		"configureSetupScript": "Worktree 설정 스크립트",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -62,7 +63,14 @@
 		"defaultModel": "기본 모델",
 		"loadingModels": "로딩 중...",
 		"selectMode": "모드 선택",
-		"modeTooltip": "모드: {{mode}}"
+		"modeTooltip": "모드: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "출력 접기",
 		"copyCommand": "명령 복사",
 		"thinking": "생각 중",
-		"thinkingSeconds": "{{count}}초"
+		"thinkingSeconds": "{{count}}초",
+		"approve": "승인",
+		"deny": "거부"
 	},
 	"chatInput": {
 		"autoMode": "에이전트가 완전 자동 모드로 실행 중 - 입력이 허용되지 않습니다",
