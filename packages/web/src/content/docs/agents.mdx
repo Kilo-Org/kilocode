@@ -27,7 +27,7 @@ Primary agents are the main assistants you interact with directly. You can cycle
 You can use the **Tab** key to switch between primary agents during a session.
 :::
 
-Kilo comes with two built-in primary agents, **Build** and **Plan**. We'll
+Kilo comes with four built-in primary agents: **Build**, **Plan**, **Debug**, and **Orchestrator**. We'll
 look at these below.
 
 ---
@@ -42,7 +42,7 @@ Kilo comes with two built-in subagents, **General** and **Explore**. We'll look 
 
 ## Built-in
 
-Kilo comes with two built-in primary agents and two built-in subagents.
+Kilo comes with four built-in primary agents and two built-in subagents.
 
 ---
 
@@ -65,6 +65,46 @@ By default, all of the following are set to `ask`:
 - `bash`: All bash commands
 
 This agent is useful when you want the LLM to analyze code, suggest changes, or create plans without making any actual modifications to your codebase.
+
+---
+
+### Use debug
+
+_Mode_: `primary`
+
+A debugging-focused agent that uses the same tools as Build but follows a systematic diagnostic methodology. It will reflect on multiple possible causes, narrow them down, add logging to validate assumptions, and ask you to confirm before applying a fix.
+
+Use this when you're troubleshooting issues, investigating errors, or diagnosing problems. You can disable it if you prefer using Build for everything:
+
+```json title="opencode.json"
+{
+  "agent": {
+    "debug": {
+      "disable": true
+    }
+  }
+}
+```
+
+---
+
+### Use orchestrator
+
+_Mode_: `primary`
+
+A coordination agent that breaks down complex tasks and delegates them to specialized subagents (`explore` and `general`) in parallel. The orchestrator has read-only access to the codebase and cannot edit files directly — all implementation work is delegated to subagents via the Task tool.
+
+Use this for complex, multi-step projects that require coordination across different areas of the codebase. You can disable it if you don't need it:
+
+```json title="opencode.json"
+{
+  "agent": {
+    "orchestrator": {
+      "disable": true
+    }
+  }
+}
+```
 
 ---
 
@@ -686,8 +726,9 @@ Here are some common use cases for different agents.
 
 - **Build agent**: Full development work with all tools enabled
 - **Plan agent**: Analysis and planning without making changes
+- **Debug agent**: Systematic debugging with diagnostic methodology — reflects on causes, adds logging, confirms before fixing
+- **Orchestrator agent**: Breaks down complex tasks and delegates to subagents in parallel
 - **Review agent**: Code review with read-only access plus documentation tools
-- **Debug agent**: Focused on investigation with bash and read tools enabled
 - **Docs agent**: Documentation writing with file operations but no system commands
 
 ---
