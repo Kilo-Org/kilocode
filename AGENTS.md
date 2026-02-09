@@ -2,10 +2,34 @@
 
 Kilo CLI is an open source AI coding agent that generates code from natural language, automates tasks, and supports 500+ AI models.
 
-- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+
+## Build and Dev
+
+- **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
+- **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
+- **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
+- **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
+- **SDK regen**: After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
+
+## Monorepo Structure
+
+Turborepo + Bun workspaces. The packages you'll work with most:
+
+| Package                    | Name                       | Purpose                                                                                    |
+| -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/opencode/`       | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
+| `packages/sdk/js/`         | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
+| `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
+| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
+| `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Internationalization / translations                                                        |
+| `packages/app/`            | `@opencode-ai/app`         | Web/TUI frontend (SolidJS + Vite)                                                          |
+| `packages/util/`           | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
+| `packages/plugin/`         | `@kilocode/plugin`         | Plugin/tool interface definitions                                                          |
+
+Other packages (`console/`, `enterprise/`, `web/`, `desktop/`, `slack/`, `infra/`) are for the hosted platform and rarely need changes during CLI work.
 
 ## Style Guide
 
