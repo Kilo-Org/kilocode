@@ -1,15 +1,16 @@
-import React, { useEffect, useRef, useCallback, useMemo } from "react"
+import React, { useEffect, useRef, useCallback, useMemo, useState } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
-import { sessionInputAtomFamily } from "../state/atoms/sessions"
+import { sessionInputAtomFamily, selectedSessionAtom } from "../state/atoms/sessions"
 import {
 	sessionMessageQueueAtomFamily,
 	sessionSendingMessageIdAtomFamily,
 	removeFromQueueAtom,
 	retryFailedMessageAtom,
 } from "../state/atoms/messageQueue"
+import { sessionMachineStateAtom, sendSessionEventAtom } from "../state/atoms/stateMachine"
 import type { QueuedMessage } from "../state/atoms/messageQueue"
 import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
 import { safeJsonParse } from "@roo/safeJsonParse"
@@ -21,6 +22,7 @@ import { ProgressIndicator } from "./ProgressIndicator"
 import { ReasoningBlock } from "./ReasoningBlock"
 import MessageThumbnails from "./MessageThumbnails"
 import { vscode } from "../utils/vscode"
+import { StandardTooltip } from "../../../components/ui" // kilocode_change
 import {
 	MessageCircle,
 	MessageCircleQuestion,
@@ -31,6 +33,9 @@ import {
 	User,
 	Clock,
 	Loader,
+	ChevronDown,
+	Check,
+	X,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -62,16 +67,55 @@ function extractCommandMetadata(msg: ClineMessage): { exitCode?: number; status?
  */
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
+	const { t: tChat } = useTranslation("chat") // kilocode_change
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
 	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId))
 	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId))
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
 	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
+	const sendSessionEvent = useSetAtom(sendSessionEventAtom)
+	const selectedSession = useAtomValue(selectedSessionAtom)
+	const machineStates = useAtomValue(sessionMachineStateAtom)
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
+	const [isAtBottom, setIsAtBottom] = useState(true) // kilocode_change
+
+	// Determine if approval buttons should be shown for the last ask message
+	const sessionState = machineStates[sessionId]
+	const isWaitingApproval = sessionState === "waiting_approval"
+	const isYoloMode = selectedSession?.yoloMode !== false
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
+
+	// Find the last approval-required ask message (tool/command) in the combined list
+	const lastApprovalAskTs = useMemo(() => {
+		if (!isWaitingApproval || isYoloMode) return null
+		for (let i = combinedMessages.length - 1; i >= 0; i--) {
+			const msg = combinedMessages[i]
+			if (msg.type === "ask" && (msg.ask === "tool" || msg.ask === "command") && !msg.partial) {
+				return msg.ts
+			}
+		}
+		return null
+	}, [combinedMessages, isWaitingApproval, isYoloMode])
+
+	// Handler for approval responses
+	const handleApprovalResponse = useCallback(
+		(approved: boolean) => {
+			vscode.postMessage({
+				type: "agentManager.respondToApproval",
+				sessionId,
+				approved,
+			})
+			// Dispatch state machine event so UI transitions back to streaming
+			sendSessionEvent({
+				sessionId,
+				event: { type: approved ? "approve_action" : "reject_action" },
+			})
+		},
+		[sessionId, sendSessionEvent],
+	)
 
 	const commandExecutionByTs = useMemo(() => {
 		const info = new Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>()
@@ -99,13 +143,13 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (combinedMessages.length > 0) {
+		if (isAtBottom && combinedMessages.length > 0) {
 			virtuosoRef.current?.scrollToIndex({
 				index: combinedMessages.length - 1,
 				behavior: "smooth",
 			})
 		}
-	}, [combinedMessages.length])
+	}, [combinedMessages.length, isAtBottom])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -143,6 +187,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const allItems = useMemo(() => {
 		return [...combinedMessages, ...queue.map((q) => ({ type: "queued" as const, data: q }))]
 	}, [combinedMessages, queue])
+	const showScrollToBottom = !isAtBottom && allItems.length > 0 // kilocode_change
 
 	// Item content renderer for Virtuoso
 	const itemContent = useCallback(
@@ -165,6 +210,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 			const msg = item as ClineMessage
 			// isLastCombinedMessage: true for the last regular message, excluding queued user messages
 			const isLastCombinedMessage = index === combinedMessages.length - 1
+			const showApproval = lastApprovalAskTs !== null && msg.ts === lastApprovalAskTs
 			return (
 				<MessageItem
 					key={msg.ts || index}
@@ -173,6 +219,8 @@ export function MessageList({ sessionId }: MessageListProps) {
 					commandExecutionByTs={commandExecutionByTs}
 					onSuggestionClick={handleSuggestionClick}
 					onCopyToInput={handleCopyToInput}
+					showApprovalButtons={showApproval}
+					onApprovalResponse={showApproval ? handleApprovalResponse : undefined}
 				/>
 			)
 		},
@@ -184,6 +232,8 @@ export function MessageList({ sessionId }: MessageListProps) {
 			sendingMessageId,
 			handleRetryMessage,
 			handleDiscardMessage,
+			lastApprovalAskTs,
+			handleApprovalResponse,
 		],
 	)
 
@@ -202,10 +252,32 @@ export function MessageList({ sessionId }: MessageListProps) {
 				ref={virtuosoRef}
 				data={allItems}
 				itemContent={itemContent}
-				followOutput="smooth"
+				followOutput={isAtBottom ? "smooth" : false} // kilocode_change
+				atBottomStateChange={setIsAtBottom} // kilocode_change
 				increaseViewportBy={{ top: 400, bottom: 400 }}
 				className="am-messages-list"
 			/>
+			{showScrollToBottom && (
+				<div className="am-scroll-to-bottom">
+					{" "}
+					{/* kilocode_change */}
+					<StandardTooltip content={tChat("scrollToBottom")}>
+						<button
+							type="button"
+							className="am-btn am-btn-secondary am-scroll-to-bottom-btn"
+							aria-label={tChat("scrollToBottom")}
+							onClick={() => {
+								if (allItems.length === 0) return
+								virtuosoRef.current?.scrollToIndex({
+									index: allItems.length - 1,
+									behavior: "smooth",
+								})
+							}}>
+							<ChevronDown size={16} />
+						</button>
+					</StandardTooltip>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -233,9 +305,19 @@ interface MessageItemProps {
 	commandExecutionByTs: Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>
 	onSuggestionClick?: (suggestion: SuggestionItem) => void
 	onCopyToInput?: (suggestion: SuggestionItem) => void
+	showApprovalButtons?: boolean
+	onApprovalResponse?: (approved: boolean) => void
 }
 
-function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick, onCopyToInput }: MessageItemProps) {
+function MessageItem({
+	message,
+	isLast,
+	commandExecutionByTs,
+	onSuggestionClick,
+	onCopyToInput,
+	showApprovalButtons,
+	onApprovalResponse,
+}: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
@@ -392,6 +474,9 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 					{extraInfo}
 				</div>
 				{content && <div className="am-message-body">{content}</div>}
+				{showApprovalButtons && onApprovalResponse && (
+					<ApprovalButtons onApprovalResponse={onApprovalResponse} />
+				)}
 				{suggestions && suggestions.length > 0 && onSuggestionClick && (
 					<FollowUpSuggestions
 						suggestions={suggestions}
@@ -400,6 +485,32 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 					/>
 				)}
 			</div>
+		</div>
+	)
+}
+
+/**
+ * Approval buttons shown for ask:tool and ask:command messages when session is in waiting_approval state.
+ */
+function ApprovalButtons({ onApprovalResponse }: { onApprovalResponse: (approved: boolean) => void }) {
+	const { t } = useTranslation("agentManager")
+
+	return (
+		<div className="am-approval-buttons">
+			<button
+				className="am-approval-btn am-approval-approve"
+				onClick={() => onApprovalResponse(true)}
+				aria-label={t("messages.approve")}>
+				<Check size={14} />
+				<span>{t("messages.approve")}</span>
+			</button>
+			<button
+				className="am-approval-btn am-approval-deny"
+				onClick={() => onApprovalResponse(false)}
+				aria-label={t("messages.deny")}>
+				<X size={14} />
+				<span>{t("messages.deny")}</span>
+			</button>
 		</div>
 	)
 }

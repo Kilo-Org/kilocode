@@ -1,11 +1,14 @@
-import { describe, it, expect, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import React from "react"
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, fireEvent, act } from "@testing-library/react"
 import { Provider, createStore } from "jotai"
 import { MessageList } from "../MessageList"
 import { sessionMessagesAtomFamily } from "../../state/atoms/messages"
-import { sessionInputAtomFamily } from "../../state/atoms/sessions"
+import { sessionInputAtomFamily, sessionsMapAtom, selectedSessionIdAtom } from "../../state/atoms/sessions"
 import { sessionMessageQueueAtomFamily } from "../../state/atoms/messageQueue"
+import { sessionMachineStateAtom } from "../../state/atoms/stateMachine"
 import type { ClineMessage } from "@roo-code/types"
+import { vscode } from "../../utils/vscode"
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -31,20 +34,34 @@ vi.mock("../../../../components/ui", () => ({
 }))
 
 // Mock react-virtuoso - tracks rendered items for testing
+let lastVirtuosoProps: any // kilocode_change
+let lastScrollToIndex: ReturnType<typeof vi.fn> | null // kilocode_change
 vi.mock("react-virtuoso", () => ({
-	Virtuoso: ({ data, itemContent }: any) => (
-		<div data-testid="virtuoso-list" data-item-count={data.length}>
-			{data.map((item: any, index: number) => (
-				<div key={index} data-testid={`virtuoso-item-${index}`}>
-					{itemContent(index, item)}
-				</div>
-			))}
-		</div>
-	),
+	Virtuoso: React.forwardRef((props: any, ref: any) => {
+		lastVirtuosoProps = props
+		lastScrollToIndex = vi.fn()
+		if (ref) {
+			ref.current = { scrollToIndex: lastScrollToIndex }
+		}
+		const { data, itemContent } = props
+		return (
+			<div data-testid="virtuoso-list" data-item-count={data.length}>
+				{data.map((item: any, index: number) => (
+					<div key={index} data-testid={`virtuoso-item-${index}`}>
+						{itemContent(index, item)}
+					</div>
+				))}
+			</div>
+		)
+	}),
 }))
 
 describe("MessageList", () => {
 	const sessionId = "test-session"
+
+	beforeEach(() => {
+		vi.mocked(vscode.postMessage).mockClear()
+	})
 
 	describe("handleCopyToInput", () => {
 		it("appends suggestion to empty input", () => {
@@ -398,6 +415,192 @@ describe("MessageList", () => {
 			expect(item0).toHaveTextContent("Regular message")
 			expect(item1).toHaveTextContent("First queued")
 			expect(item2).toHaveTextContent("Second queued")
+		})
+	})
+
+	describe("approval buttons", () => {
+		const setupApprovalTest = (opts: { yoloMode?: boolean; machineState: string; askType: "tool" | "command" }) => {
+			const store = createStore()
+			const session = {
+				sessionId,
+				label: "Test",
+				prompt: "test",
+				status: "running" as const,
+				startTime: Date.now(),
+				source: "local" as const,
+				yoloMode: opts.yoloMode,
+			}
+			store.set(sessionsMapAtom, { [sessionId]: session })
+			store.set(selectedSessionIdAtom, sessionId)
+			store.set(sessionMachineStateAtom, { [sessionId]: opts.machineState as any })
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "Starting...",
+				} as ClineMessage,
+				{
+					ts: 2,
+					type: "ask",
+					ask: opts.askType,
+					text:
+						opts.askType === "command" ? "ls -la" : JSON.stringify({ tool: "readFile", path: "/test.ts" }),
+					partial: false,
+				} as ClineMessage,
+			])
+			return store
+		}
+
+		it("shows approve/deny buttons for ask:tool when waiting_approval and non-YOLO", () => {
+			const store = setupApprovalTest({ yoloMode: false, machineState: "waiting_approval", askType: "tool" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.getByText("messages.approve")).toBeInTheDocument()
+			expect(screen.getByText("messages.deny")).toBeInTheDocument()
+		})
+
+		it("shows approve/deny buttons for ask:command when waiting_approval and non-YOLO", () => {
+			const store = setupApprovalTest({ yoloMode: false, machineState: "waiting_approval", askType: "command" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.getByText("messages.approve")).toBeInTheDocument()
+			expect(screen.getByText("messages.deny")).toBeInTheDocument()
+		})
+
+		it("does NOT show approval buttons when yoloMode is true", () => {
+			const store = setupApprovalTest({ yoloMode: true, machineState: "waiting_approval", askType: "tool" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.queryByText("messages.approve")).not.toBeInTheDocument()
+			expect(screen.queryByText("messages.deny")).not.toBeInTheDocument()
+		})
+
+		it("does NOT show approval buttons when session state is streaming (not waiting_approval)", () => {
+			const store = setupApprovalTest({ yoloMode: false, machineState: "streaming", askType: "tool" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.queryByText("messages.approve")).not.toBeInTheDocument()
+			expect(screen.queryByText("messages.deny")).not.toBeInTheDocument()
+		})
+
+		it("sends respondToApproval message when approve is clicked", () => {
+			const store = setupApprovalTest({ yoloMode: false, machineState: "waiting_approval", askType: "tool" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			fireEvent.click(screen.getByText("messages.approve"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "agentManager.respondToApproval",
+				sessionId,
+				approved: true,
+			})
+		})
+
+		it("sends respondToApproval message when deny is clicked", () => {
+			const store = setupApprovalTest({ yoloMode: false, machineState: "waiting_approval", askType: "command" })
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			fireEvent.click(screen.getByText("messages.deny"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "agentManager.respondToApproval",
+				sessionId,
+				approved: false,
+			})
+		})
+	})
+
+	describe("auto-scroll behavior", () => {
+		it("disables followOutput when user scrolls up and re-enables at bottom", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "First message",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(lastVirtuosoProps.followOutput).toBe("smooth")
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(false)
+			})
+
+			expect(lastVirtuosoProps.followOutput).toBe(false)
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(true)
+			})
+
+			expect(lastVirtuosoProps.followOutput).toBe("smooth")
+		})
+
+		it("shows scroll-to-bottom button when not at bottom and scrolls on click", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "First message",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.queryByLabelText("scrollToBottom")).not.toBeInTheDocument()
+
+			act(() => {
+				lastVirtuosoProps.atBottomStateChange(false)
+			})
+
+			const scrollButton = screen.getByLabelText("scrollToBottom")
+			fireEvent.click(scrollButton)
+
+			expect(lastScrollToIndex).toHaveBeenCalledWith({ index: 0, behavior: "smooth" })
 		})
 	})
 })

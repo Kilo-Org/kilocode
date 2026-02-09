@@ -38,8 +38,14 @@ One thing that doesn't change: context window size matters for your workflow.
 
 Check [our provider docs](/docs/basic-usage/connecting-providers) for specific context limits on each model.
 
+{% callout type="tip" %}
+**Be thoughtful about Max Tokens settings for thinking models.** Every token you allocate to output takes away from space available to store conversation history. Consider only using high `Max Tokens` / `Max Thinking Tokens` settings with modes like Architect and Debug, and keeping Code mode at 16k max tokens or less.
+{% /callout %}
+
+{% callout type="tip" %}
+**Recover from context limit errors:** If you hit the `input length and max tokens exceed context limit` error, you can recover by deleting a message, rolling back to a previous checkpoint, or switching over to a model with a long context window like Gemini for a message.
+{% /callout %}
+
 ## Stay Current
 
 The AI model space moves fast. Bookmark [kilo.ai/models](https://kilo.ai/models) and check back when you're evaluating options. What's best today might not be best next month — and that's actually exciting.
-
--->

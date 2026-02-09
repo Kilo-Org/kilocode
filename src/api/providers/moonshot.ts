@@ -1,4 +1,3 @@
-import OpenAI from "openai"
 import { moonshotModels, moonshotDefaultModelId, type ModelInfo } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -6,18 +5,25 @@ import type { ApiHandlerOptions } from "../../shared/api"
 import type { ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
-import { OpenAiHandler } from "./openai"
+import { OpenAICompatibleHandler, OpenAICompatibleConfig } from "./openai-compatible"
 
-export class MoonshotHandler extends OpenAiHandler {
+export class MoonshotHandler extends OpenAICompatibleHandler {
 	constructor(options: ApiHandlerOptions) {
-		super({
-			...options,
-			openAiApiKey: options.moonshotApiKey ?? "not-provided",
-			openAiModelId: options.apiModelId ?? moonshotDefaultModelId,
-			openAiBaseUrl: options.moonshotBaseUrl ?? "https://api.moonshot.ai/v1",
-			openAiStreamingEnabled: true,
-			includeMaxTokens: true,
-		})
+		const modelId = options.apiModelId ?? moonshotDefaultModelId
+		const modelInfo =
+			moonshotModels[modelId as keyof typeof moonshotModels] || moonshotModels[moonshotDefaultModelId]
+
+		const config: OpenAICompatibleConfig = {
+			providerName: "moonshot",
+			baseURL: options.moonshotBaseUrl ?? "https://api.moonshot.ai/v1",
+			apiKey: options.moonshotApiKey ?? "not-provided",
+			modelId,
+			modelInfo,
+			modelMaxTokens: options.modelMaxTokens ?? undefined,
+			temperature: options.modelTemperature ?? undefined,
+		}
+
+		super(options, config)
 	}
 
 	override getModel() {
@@ -27,14 +33,28 @@ export class MoonshotHandler extends OpenAiHandler {
 		return { id, info, ...params }
 	}
 
-	// Override to handle Moonshot's usage metrics, including caching.
-	protected override processUsageMetrics(usage: any): ApiStreamUsageChunk {
+	/**
+	 * Override to handle Moonshot's usage metrics, including caching.
+	 * Moonshot returns cached_tokens in a different location than standard OpenAI.
+	 */
+	protected override processUsageMetrics(usage: {
+		inputTokens?: number
+		outputTokens?: number
+		details?: {
+			cachedInputTokens?: number
+			reasoningTokens?: number
+		}
+		raw?: Record<string, unknown>
+	}): ApiStreamUsageChunk {
+		// Moonshot uses cached_tokens at the top level of raw usage data
+		const rawUsage = usage.raw as { cached_tokens?: number } | undefined
+
 		return {
 			type: "usage",
-			inputTokens: usage?.prompt_tokens || 0,
-			outputTokens: usage?.completion_tokens || 0,
+			inputTokens: usage.inputTokens || 0,
+			outputTokens: usage.outputTokens || 0,
 			cacheWriteTokens: 0,
-			cacheReadTokens: usage?.cached_tokens,
+			cacheReadTokens: rawUsage?.cached_tokens ?? usage.details?.cachedInputTokens,
 		}
 	}
 

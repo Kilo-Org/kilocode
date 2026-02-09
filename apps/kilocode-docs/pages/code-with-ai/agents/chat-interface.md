@@ -91,4 +91,51 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 
+## Suggested Responses
+
+When Kilo Code needs more information to complete a task, it uses the [`ask_followup_question`](/docs/features/tools/ask-followup-question) tool. To make responding easier and faster, Kilo Code often provides suggested answers alongside the question.
+
+{% image src="/docs/img/suggested-responses/suggested-responses.png" alt="Example of Kilo Code asking a question with suggested response buttons below it" width="800" caption="Suggested responses appear as clickable buttons below questions" /%}
+
+**How it works:**
+
+1. **Question Appears** - Kilo Code asks a question using the `ask_followup_question` tool
+2. **Suggestions Displayed** - If suggestions are provided, they appear as buttons below the question
+3. **Interaction** - You can interact with these suggestions in two ways
+
+**Interacting with suggestions:**
+
+You have two options for using suggested responses:
+
+1. **Direct Selection**:
+
+    - **Action**: Simply click the button containing the answer you want to provide
+    - **Result**: The selected answer is immediately sent back to Kilo Code as your response. This is the quickest way to reply if one of the suggestions perfectly matches your intent.
+
+2. **Edit Before Sending**:
+    - **Action**:
+        - Hold down `Shift` and click the suggestion button
+        - _Alternatively_, hover over the suggestion button and click the pencil icon ({% codicon name="edit" /%}) that appears
+    - **Result**: The text of the suggestion is copied into the chat input box. You can then modify the text as needed before pressing Enter to send your customized response. This is useful when a suggestion is close but needs minor adjustments.
+
+**Benefits:**
+
+- **Speed** - Quickly respond without typing full answers
+- **Clarity** - Suggestions often clarify the type of information Kilo Code needs
+- **Flexibility** - Edit suggestions to provide precise, customized answers when needed
+
+This feature streamlines the interaction when Kilo Code requires clarification, allowing you to guide the task effectively with minimal effort.
+
+## Tips for Better Workflow
+
+{% callout type="tip" %}
+**Move Kilo Code to the Secondary Side Bar** for a better layout. Right-click on the Kilo Code icon in the Activity Bar and select **Move To → Secondary Side Bar**. This lets you see the Explorer, Search, Source Control, etc. alongside Kilo Code.
+
+{% image src="/docs/img/move-to-secondary.png" alt="Move to Secondary Side Bar" width="600" caption="Move Kilo Code to the Secondary Side Bar for better workspace organization" /%}
+{% /callout %}
+
+{% callout type="tip" %}
+**Drag files directly into chat.** Once you have Kilo Code in a separate sidebar from the file explorer, you can drag files from the explorer into the chat window (even multiple at once). Just hold down the Shift key after you start dragging the files.
+{% /callout %}
+
 Ready to start coding? Open the chat panel and describe what you want to build!

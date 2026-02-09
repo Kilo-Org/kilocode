@@ -82,7 +82,9 @@
 			"bluebird": ">=3.7.2",
 			"glob": ">=11.1.0",
 			"@types/react": "^18.3.23",
-			"@types/react-dom": "^18.3.5"
+			"@types/react-dom": "^18.3.5",
+			"zod": "3.25.76",
+			"@sap-ai-sdk/prompt-registry>zod": "^4.0.0"
 		}
 	}
 }

@@ -104,7 +104,7 @@ export const KiloProfileSelector = ({
 						vscode.postMessage({ type: "loadApiConfigurationById", text: value })
 					}
 				}}
-				contentClassName="max-h-[300px] overflow-y-auto"
+				contentClassName="max-h-[400px] overflow-y-auto"
 				// kilocode_change start - VSC Theme
 				triggerClassName={cn(
 					"w-full text-ellipsis overflow-hidden",

@@ -641,6 +641,7 @@
 		},
 		"verbosity": {
 			"label": "Verbosity dell'output",
+			"max": "Max",
 			"high": "Alta",
 			"medium": "Media",
 			"low": "Bassa",

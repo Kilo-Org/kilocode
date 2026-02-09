@@ -1,6 +1,6 @@
-import React, { memo, useState } from "react"
+import React, { memo, useState, useEffect } from "react"
 import BottomControls from "../kilocode/BottomControls" // kilocode_change
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Filter, ListChecks, Check, X, Trash2 } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import { Virtuoso } from "react-virtuoso"
@@ -15,7 +15,6 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	StandardTooltip,
 } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
@@ -40,7 +39,6 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		showAllWorkspaces,
 		setShowAllWorkspaces,
 		// kilocode_change start
-		taskHistoryFullLength,
 		showFavoritesOnly,
 		setShowFavoritesOnly,
 		setRequestedPageIndex,
@@ -50,6 +48,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const tasks = data?.historyItems ?? []
 	const pageIndex = data?.pageIndex ?? 0
 	const pageCount = data?.pageCount ?? 1
+	const totalItems = data?.totalItems ?? 0
 	// kilocode_change end
 	const { t } = useAppTranslation()
 
@@ -57,13 +56,23 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
 	const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
 	const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState<boolean>(false)
+	const [showFilters, setShowFilters] = useState(false)
+
+	// Clear selections when switching between all/current workspace
+	useEffect(() => {
+		setSelectedTaskIds([])
+	}, [showAllWorkspaces])
+
+	// Clear selections when exiting selection mode
+	useEffect(() => {
+		if (!isSelectionMode) {
+			setSelectedTaskIds([])
+		}
+	}, [isSelectionMode])
 
 	// Toggle selection mode
 	const toggleSelectionMode = () => {
 		setIsSelectionMode(!isSelectionMode)
-		if (isSelectionMode) {
-			setSelectedTaskIds([])
-		}
 	}
 
 	// Toggle selection for a single task
@@ -91,40 +100,32 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		}
 	}
 
+	// Check if all tasks are selected
+	const isAllSelected = tasks.length > 0 && selectedTaskIds.length === tasks.length
+	// Check if some (but not all) tasks are selected
+	const isPartiallySelected = selectedTaskIds.length > 0 && selectedTaskIds.length < tasks.length
+
 	return (
 		<Tab>
 			<TabHeader className="flex flex-col gap-2">
-				<div className="flex items-center justify-between gap-2">
-					<div className="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							className="px-1.5 -ml-2"
-							onClick={onDone}
-							aria-label={t("history:done")}
-							data-testid="history-done-button">
-							<ArrowLeft />
-							<span className="sr-only">{t("history:done")}</span>
-						</Button>
-						<h3 className="text-vscode-foreground m-0">{t("history:history")}</h3>
-					</div>
-					<StandardTooltip
-						content={
-							isSelectionMode ? `${t("history:exitSelectionMode")}` : `${t("history:enterSelectionMode")}`
-						}>
-						<Button
-							variant={isSelectionMode ? "primary" : "secondary"}
-							onClick={toggleSelectionMode}
-							data-testid="toggle-selection-mode-button">
-							<span
-								className={`codicon ${isSelectionMode ? "codicon-check-all" : "codicon-checklist"} mr-1`}
-							/>
-							{isSelectionMode ? t("history:exitSelection") : t("history:selectionMode")}
-						</Button>
-					</StandardTooltip>
+				{/* Header Row - Simplified */}
+				<div className="flex items-center gap-2">
+					<Button
+						variant="ghost"
+						className="px-1.5 -ml-2"
+						onClick={onDone}
+						aria-label={t("history:done")}
+						data-testid="history-done-button">
+						<ArrowLeft className="w-5 h-5" />
+						<span className="sr-only">{t("history:done")}</span>
+					</Button>
+					<h3 className="text-vscode-foreground m-0 font-semibold">{t("history:history")}</h3>
 				</div>
-				<div className="flex flex-col gap-2">
+
+				{/* Unified Control Bar */}
+				<div className="flex items-center gap-2">
 					<VSCodeTextField
-						className="w-full"
+						className="flex-1"
 						placeholder={t("history:searchPlaceholder")}
 						value={searchQuery}
 						data-testid="history-search-input"
@@ -146,112 +147,157 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							/>
 						)}
 					</VSCodeTextField>
-					<div className="flex gap-2">
-						<Select
-							value={showAllWorkspaces ? "all" : "current"}
-							onValueChange={(value) => setShowAllWorkspaces(value === "all")}>
-							<SelectTrigger className="flex-1">
-								<SelectValue>
-									{t("history:workspace.prefix")}{" "}
-									{t(`history:workspace.${showAllWorkspaces ? "all" : "current"}`)}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="current">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-folder" />
-										{t("history:workspace.current")}
-									</div>
-								</SelectItem>
-								<SelectItem value="all">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-folder-opened" />
-										{t("history:workspace.all")}
-									</div>
-								</SelectItem>
-							</SelectContent>
-						</Select>
-						<Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-							<SelectTrigger className="flex-1">
-								<SelectValue>
-									{t("history:sort.prefix")} {t(`history:sort.${sortOption}`)}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="newest" data-testid="select-newest">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-arrow-down" />
-										{t("history:newest")}
-									</div>
-								</SelectItem>
-								<SelectItem value="oldest" data-testid="select-oldest">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-arrow-up" />
-										{t("history:oldest")}
-									</div>
-								</SelectItem>
-								<SelectItem value="mostExpensive" data-testid="select-most-expensive">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-credit-card" />
-										{t("history:mostExpensive")}
-									</div>
-								</SelectItem>
-								<SelectItem value="mostTokens" data-testid="select-most-tokens">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-symbol-numeric" />
-										{t("history:mostTokens")}
-									</div>
-								</SelectItem>
-								<SelectItem
-									value="mostRelevant"
-									disabled={!searchQuery}
-									data-testid="select-most-relevant">
-									<div className="flex items-center gap-2">
-										<span className="codicon codicon-search" />
-										{t("history:mostRelevant")}
-									</div>
-								</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
 
-					{/* kilocode_change start */}
-					<div className="flex items-center gap-2">
-						<Checkbox
-							id="show-favorites-only"
-							checked={showFavoritesOnly}
-							onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
-							variant="description"
-						/>
-						<label htmlFor="show-favorites-only" className="text-vscode-foreground cursor-pointer">
-							{t("history:showFavoritesOnly")}
-						</label>
-					</div>
-					{/* kilocode_change end */}
-					{/* Select all control in selection mode */}
-					{isSelectionMode && tasks.length > 0 && (
-						<div className="flex items-center py-1">
-							<div className="flex items-center gap-2">
-								<Checkbox
-									checked={tasks.length > 0 && selectedTaskIds.length === tasks.length}
-									onCheckedChange={(checked) => toggleSelectAll(checked === true)}
-									variant="description"
-								/>
-								<span className="text-vscode-foreground">
-									{selectedTaskIds.length === tasks.length
-										? t("history:deselectAll")
-										: t("history:selectAll")}
-								</span>
-								<span className="ml-auto text-vscode-descriptionForeground text-xs">
-									{t("history:selectedItems", {
-										selected: selectedTaskIds.length,
-										total: taskHistoryFullLength, // kilocode_change
-									})}
-								</span>
-							</div>
-						</div>
+					{/* Filters Toggle Button - Hidden in selection mode */}
+					{!isSelectionMode && (
+						<Button
+							variant={showFilters ? "primary" : "secondary"}
+							size="sm"
+							onClick={() => setShowFilters(!showFilters)}
+							data-testid="toggle-filters-button"
+							className="shrink-0">
+							<Filter className="w-4 h-4 mr-1" />
+							{t("history:filters")}
+							<span className={`ml-1 text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}>▼</span>
+						</Button>
 					)}
+
+					{/* Selection Mode Toggle Button */}
+					<Button
+						variant={isSelectionMode ? "primary" : "secondary"}
+						size="sm"
+						onClick={toggleSelectionMode}
+						data-testid="toggle-selection-mode-button"
+						className="shrink-0">
+						{isSelectionMode ? (
+							<>
+								<Check className="w-4 h-4 mr-1" />
+								{t("history:done")}
+							</>
+						) : (
+							<>
+								<ListChecks className="w-4 h-4 mr-1" />
+								{t("history:select")}
+							</>
+						)}
+					</Button>
 				</div>
+
+				{/* Collapsible Filter Panel */}
+				{showFilters && !isSelectionMode && (
+					<div className="flex flex-col gap-2 p-2 bg-vscode-editor-inactiveBackground/50 rounded border border-vscode-panel-border">
+						<div className="flex gap-2">
+							<Select
+								value={showAllWorkspaces ? "all" : "current"}
+								onValueChange={(value) => setShowAllWorkspaces(value === "all")}>
+								<SelectTrigger className="flex-1">
+									<SelectValue>
+										{t("history:workspace.prefix")}{" "}
+										{t(`history:workspace.${showAllWorkspaces ? "all" : "current"}`)}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="current">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-folder" />
+											{t("history:workspace.current")}
+										</div>
+									</SelectItem>
+									<SelectItem value="all">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-folder-opened" />
+											{t("history:workspace.all")}
+										</div>
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							<Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+								<SelectTrigger className="flex-1">
+									<SelectValue>
+										{t("history:sort.prefix")} {t(`history:sort.${sortOption}`)}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="newest" data-testid="select-newest">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-arrow-down" />
+											{t("history:newest")}
+										</div>
+									</SelectItem>
+									<SelectItem value="oldest" data-testid="select-oldest">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-arrow-up" />
+											{t("history:oldest")}
+										</div>
+									</SelectItem>
+									<SelectItem value="mostExpensive" data-testid="select-most-expensive">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-credit-card" />
+											{t("history:mostExpensive")}
+										</div>
+									</SelectItem>
+									<SelectItem value="mostTokens" data-testid="select-most-tokens">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-symbol-numeric" />
+											{t("history:mostTokens")}
+										</div>
+									</SelectItem>
+									<SelectItem
+										value="mostRelevant"
+										disabled={!searchQuery}
+										data-testid="select-most-relevant">
+										<div className="flex items-center gap-2">
+											<span className="codicon codicon-search" />
+											{t("history:mostRelevant")}
+										</div>
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Favorites Toggle - Modern chip style */}
+						<div className="flex items-center gap-2">
+							<button
+								onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+								className={`flex items-center gap-1.5 px-2 py-1 rounded text-sm transition-colors ${
+									showFavoritesOnly
+										? "bg-vscode-button-background text-vscode-button-foreground"
+										: "bg-vscode-editor-background text-vscode-foreground hover:bg-vscode-list-hoverBackground border border-vscode-panel-border"
+								}`}
+								data-testid="favorites-toggle">
+								<span className={`codicon ${showFavoritesOnly ? "codicon-star-full" : "codicon-star"}`} />
+								{t("history:favoritesOnly")}
+							</button>
+						</div>
+					</div>
+				)}
+
+				{/* Selection Toolbar - Shown only in selection mode */}
+				{isSelectionMode && tasks.length > 0 && (
+					<div className="flex items-center justify-between p-2 bg-vscode-button-background/10 rounded border border-vscode-button-background/30">
+						<div className="flex items-center gap-3">
+							<Checkbox
+								checked={isAllSelected}
+								data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
+								onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+								variant="description"
+								id="select-all-checkbox"
+							/>
+							<label htmlFor="select-all-checkbox" className="text-vscode-foreground cursor-pointer font-medium">
+								{isAllSelected ? t("history:deselectAll") : t("history:selectAll")}
+							</label>
+						</div>
+
+						<div className="flex items-center gap-3">
+							<span className="text-vscode-descriptionForeground text-sm">
+								{t("history:selectedItems", {
+									selected: selectedTaskIds.length,
+									total: totalItems,
+								})}
+							</span>
+						</div>
+					</div>
+				)}
 			</TabHeader>
 
 			<TabContent className="px-2 py-0">
@@ -285,19 +331,20 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			<div className="bg-vscode-editor-background">
 				{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
 				{isSelectionMode && selectedTaskIds.length > 0 && (
-					<div className="border-t border-vscode-panel-border p-2 flex justify-between items-center">
-						<div className="text-vscode-foreground">
-							{t("history:selectedItems", {
-								selected: selectedTaskIds.length,
-								total: taskHistoryFullLength, // kilocode_change
-							})}
+					<div className="border-t border-vscode-panel-border p-3 flex justify-between items-center bg-vscode-button-background/10">
+						<div className="flex items-center gap-2">
+							<span className="text-vscode-foreground font-medium">
+								{selectedTaskIds.length} {t("history:selected")}
+							</span>
 						</div>
 						<div className="flex gap-2">
-							<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
-								{t("history:clearSelection")}
+							<Button variant="secondary" size="sm" onClick={() => setSelectedTaskIds([])}>
+								<X className="w-4 h-4 mr-1" />
+								{t("history:clear")}
 							</Button>
-							<Button variant="primary" onClick={handleBatchDelete}>
-								{t("history:deleteSelected")}
+							<Button variant="primary" size="sm" onClick={handleBatchDelete}>
+								<Trash2 className="w-4 h-4 mr-1" />
+								{t("history:delete")}
 							</Button>
 						</div>
 					</div>

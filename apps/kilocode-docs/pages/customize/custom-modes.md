@@ -18,6 +18,10 @@ Each mode—including custom ones—features **Sticky Models**. This means Kilo 
 - **Experimentation:** Safely experiment with different prompts and configurations without affecting other modes
 - **Team Collaboration:** Share custom modes with your team to standardize workflows
 
+{% callout type="tip" %}
+**Keep custom modes on track:** Limit the types of files that they're allowed to edit using the `fileRegex` option in the `groups` configuration. This prevents modes from accidentally modifying files outside their intended scope.
+{% /callout %}
+
 {% image src="/docs/img/custom-modes/custom-modes.png" alt="Overview of custom modes interface" width="600" caption="Overview of custom modes interface" /%}
 
 _Kilo Code's interface for creating and managing custom modes._
@@ -93,6 +97,10 @@ Create a new mode called "Documentation Writer". It should only be able to read 
 ```
 
 Kilo Code will guide you through the process, prompting for necessary information and creating the mode using the preferred YAML format.
+
+{% callout type="tip" %}
+**Create modes from job postings:** If there's a real world job posting for something you want a custom mode to do, try asking Code mode to `Create a custom mode based on the job posting at @[url]`. This can help you quickly create specialized modes with realistic role definitions.
+{% /callout %}
 
 ### 2. Using the Prompts Tab
 

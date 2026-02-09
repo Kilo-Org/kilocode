@@ -632,6 +632,7 @@
 		},
 		"verbosity": {
 			"label": "出力の冗長性",
+			"max": "Max",
 			"high": "高",
 			"medium": "中",
 			"low": "低",

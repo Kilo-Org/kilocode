@@ -627,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",
+			"max": "Max",
 			"high": "Cao",
 			"medium": "Trung bình",
 			"low": "Thấp",
