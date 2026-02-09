@@ -199,6 +199,11 @@ export namespace ModelCache {
           options.kilocodeToken = auth.key
         } else if (auth.type === "oauth") {
           options.kilocodeToken = auth.access
+          // kilocode_change start - read org ID from OAuth accountId for enterprise model filtering
+          if (auth.accountId) {
+            options.kilocodeOrganizationId = auth.accountId
+          }
+          // kilocode_change end
         }
       }
 
