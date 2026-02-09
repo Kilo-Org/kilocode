@@ -2,6 +2,10 @@ import { Component, createSignal, onMount, onCleanup, Switch, Match } from "soli
 import Settings, { type ConnectionState } from "./components/Settings";
 import { TransportProvider } from "./transport/TransportProvider";
 import { ChatView } from "./views/ChatView";
+
+// Import OpenCode UI Tailwind styles
+import "@opencode-ai/ui/styles/tailwind";
+// Keep the chat-view.css for any fallback/override styles
 import "./views/chat-view.css";
 
 type ViewType = 

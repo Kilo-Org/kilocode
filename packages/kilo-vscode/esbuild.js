@@ -77,6 +77,14 @@ async function main() {
 		platform: 'browser',
 		outfile: 'dist/webview.js',
 		logLevel: 'silent',
+		loader: {
+			// Font file loaders for @opencode-ai/ui Tailwind CSS (includes KaTeX fonts)
+			'.woff': 'dataurl',
+			'.woff2': 'dataurl',
+			'.ttf': 'dataurl',
+			'.eot': 'dataurl',
+			'.svg': 'dataurl',
+		},
 		plugins: [
 			aliasPlugin,
 			solidPlugin(),
