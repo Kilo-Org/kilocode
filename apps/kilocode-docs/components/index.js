@@ -1,3 +1,4 @@
+export * from "./Breadcrumbs"
 export * from "./Callout"
 export * from "./CodeBlock"
 export * from "./Codicon"

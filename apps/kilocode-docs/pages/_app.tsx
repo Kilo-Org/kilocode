@@ -3,7 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import posthog from "posthog-js"
 
-import { CopyPageButton, SideNav, TableOfContents, TopNav } from "../components"
+import { Breadcrumbs, CopyPageButton, SideNav, TableOfContents, TopNav } from "../components"
 
 import "prismjs"
 // Import other Prism themes here
@@ -165,6 +165,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
 					<main className="main-content">
 						<div className="content-wrapper">
 							<div className="article-content flex column mt-5">
+								<Breadcrumbs />
 								<Component {...pageProps} />
 							</div>
 							<div className="right-sidebar">
