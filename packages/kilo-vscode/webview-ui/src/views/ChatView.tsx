@@ -3,6 +3,13 @@
  *
  * Uses @opencode-ai/ui components for a polished UI that matches
  * the OpenCode design system.
+ *
+ * CSS Variables used (from @opencode-ai/ui theme):
+ * - --background-base, --background-weak, --background-strong
+ * - --text-base, --text-weak, --text-strong
+ * - --border-base, --border-weak
+ * - --surface-base, --surface-raised-base, --surface-inset-base
+ * - --icon-base, --icon-interactive-base
  */
 
 import {
@@ -14,7 +21,6 @@ import {
   onMount,
   Switch,
   Match,
-  createMemo,
 } from "solid-js"
 import { useTransport } from "../transport/TransportProvider"
 import type { ChatMessage, MessagePart } from "../../../src/shared/chat-protocol"
@@ -36,7 +42,7 @@ import { Mark } from "@opencode-ai/ui/logo"
 
 const TextPart: Component<{ part: MessagePart & { type: "text" } }> = (props) => {
   return (
-    <div class="whitespace-pre-wrap text-sm leading-relaxed">
+    <div class="whitespace-pre-wrap text-sm leading-relaxed text-[--text-base]">
       {props.part.text}
     </div>
   )
@@ -60,13 +66,13 @@ const ToolPart: Component<{ part: MessagePart & { type: "tool" } }> = (props) =>
   const getStateColor = () => {
     switch (props.part.state) {
       case "completed":
-        return "text-green-500"
+        return "text-[--icon-success-base]"
       case "error":
-        return "text-red-500"
+        return "text-[--icon-critical-base]"
       case "running":
-        return "text-blue-500"
+        return "text-[--icon-interactive-base]"
       default:
-        return "text-yellow-500"
+        return "text-[--icon-warning-base]"
     }
   }
 
@@ -82,13 +88,13 @@ const ToolPart: Component<{ part: MessagePart & { type: "tool" } }> = (props) =>
       defaultOpen={false}
     >
       <Show when={props.part.input}>
-        <div class="p-3 bg-[--color-background-02] rounded text-xs font-mono overflow-x-auto">
-          <pre class="whitespace-pre-wrap">{JSON.stringify(props.part.input, null, 2)}</pre>
+        <div class="p-3 bg-[--surface-inset-base] rounded text-xs font-mono overflow-x-auto">
+          <pre class="whitespace-pre-wrap text-[--text-base]">{JSON.stringify(props.part.input, null, 2)}</pre>
         </div>
       </Show>
       <Show when={props.part.output}>
-        <div class="mt-2 p-3 bg-[--color-background-02] rounded text-xs font-mono overflow-x-auto max-h-48 overflow-y-auto">
-          <pre class="whitespace-pre-wrap">{props.part.output}</pre>
+        <div class="mt-2 p-3 bg-[--surface-inset-base] rounded text-xs font-mono overflow-x-auto max-h-48 overflow-y-auto">
+          <pre class="whitespace-pre-wrap text-[--text-base]">{props.part.output}</pre>
         </div>
       </Show>
     </BasicTool>
@@ -99,13 +105,13 @@ const ReasoningPart: Component<{ part: MessagePart & { type: "reasoning" } }> = 
   return (
     <Collapsible>
       <Collapsible.Trigger>
-        <div class="flex items-center gap-2 text-xs text-[--color-text-dimmed] cursor-pointer hover:text-[--color-text-secondary]">
+        <div class="flex items-center gap-2 text-xs text-[--text-weak] cursor-pointer hover:text-[--text-base]">
           <Icon name="brain" size="small" />
           <span>Thinking...</span>
         </div>
       </Collapsible.Trigger>
       <Collapsible.Content>
-        <div class="mt-2 pl-6 text-xs text-[--color-text-dimmed] italic whitespace-pre-wrap border-l-2 border-[--color-border]">
+        <div class="mt-2 pl-6 text-xs text-[--text-weak] italic whitespace-pre-wrap border-l-2 border-[--border-weak-base]">
           {props.part.text}
         </div>
       </Collapsible.Content>
@@ -116,6 +122,14 @@ const ReasoningPart: Component<{ part: MessagePart & { type: "reasoning" } }> = 
 // ============================================================================
 // Message Component
 // ============================================================================
+
+// Helper to format time safely
+const formatTime = (time: string | number | undefined): string => {
+  if (!time) return ""
+  const date = new Date(time)
+  if (isNaN(date.getTime())) return ""
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+}
 
 const Message: Component<{ message: ChatMessage; isLast?: boolean }> = (props) => {
   const isUser = () => props.message.role === "user"
@@ -131,23 +145,25 @@ const Message: Component<{ message: ChatMessage; isLast?: boolean }> = (props) =
       <div
         class="max-w-[85%] rounded-lg p-4"
         classList={{
-          "bg-[--color-background-03] ml-auto": isUser(),
+          "bg-[--surface-raised-base] ml-auto": isUser(),
           "bg-transparent": isAssistant(),
         }}
       >
         {/* Message header */}
         <div class="flex items-center gap-2 mb-2">
           <Show when={isAssistant()}>
-            <div class="w-5 h-5 rounded-full bg-[--color-accent] flex items-center justify-center">
-              <Mark class="w-3 h-3 text-white" />
+            <div class="w-5 h-5 rounded-full bg-[--surface-brand-base] flex items-center justify-center">
+              <Mark class="w-3 h-3 text-[--text-on-brand-base]" />
             </div>
           </Show>
-          <span class="text-xs font-medium text-[--color-text-secondary] capitalize">
+          <span class="text-xs font-medium text-[--text-base] capitalize">
             {props.message.role}
           </span>
-          <span class="text-xs text-[--color-text-dimmed]">
-            {new Date(props.message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
+          <Show when={formatTime(props.message.time)}>
+            <span class="text-xs text-[--text-weak]">
+              {formatTime(props.message.time)}
+            </span>
+          </Show>
         </div>
 
         {/* Message content */}
@@ -222,10 +238,10 @@ const PromptInput: Component<{
 
   return (
     <form class="relative" onSubmit={handleSubmit}>
-      <div class="relative bg-[--color-background-02] rounded-xl border border-[--color-border] focus-within:border-[--color-accent] transition-colors">
+      <div class="relative bg-[--surface-inset-base] rounded-xl border border-[--border-base] focus-within:border-[--border-interactive-base] transition-colors">
         <textarea
           ref={inputRef}
-          class="w-full bg-transparent text-sm text-[--color-text-primary] placeholder:text-[--color-text-dimmed] resize-none outline-none p-4 pr-24"
+          class="w-full bg-transparent text-sm text-[--text-base] placeholder:text-[--text-weak] resize-none outline-none p-4 pr-24"
           placeholder="Ask anything... (Shift+Enter for newline)"
           value={text()}
           onInput={handleInput}
@@ -260,15 +276,15 @@ const PromptInput: Component<{
       
       <div class="flex items-center justify-between mt-2 px-1">
         <div class="flex items-center gap-2">
-          <span class="text-xs text-[--color-text-dimmed]">
-            <kbd class="px-1.5 py-0.5 bg-[--color-background-03] rounded text-[10px]">Enter</kbd> to send
+          <span class="text-xs text-[--text-weak]">
+            <kbd class="px-1.5 py-0.5 bg-[--surface-raised-base] rounded text-[10px]">Enter</kbd> to send
           </span>
-          <span class="text-xs text-[--color-text-dimmed]">
-            <kbd class="px-1.5 py-0.5 bg-[--color-background-03] rounded text-[10px]">Shift+Enter</kbd> for newline
+          <span class="text-xs text-[--text-weak]">
+            <kbd class="px-1.5 py-0.5 bg-[--surface-raised-base] rounded text-[10px]">Shift+Enter</kbd> for newline
           </span>
         </div>
         <Show when={props.working}>
-          <div class="flex items-center gap-2 text-xs text-[--color-text-dimmed]">
+          <div class="flex items-center gap-2 text-xs text-[--text-weak]">
             <Spinner size="small" />
             <span>Generating...</span>
           </div>
@@ -286,14 +302,14 @@ const SessionHeader: Component = () => {
   const transport = useTransport()
 
   return (
-    <div class="flex items-center justify-between px-4 py-3 border-b border-[--color-border] bg-[--color-background-01]">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-[--border-base] bg-[--background-base]">
       <div class="flex items-center gap-3">
-        <Mark class="w-6 h-6 text-[--color-accent]" />
+        <Mark class="w-6 h-6 text-[--icon-brand-base]" />
         <div>
-          <h1 class="text-sm font-semibold text-[--color-text-primary]">Kilo Code</h1>
+          <h1 class="text-sm font-semibold text-[--text-strong]">Kilo Code</h1>
           <Show when={transport.currentSession()}>
             {(session) => (
-              <span class="text-xs text-[--color-text-dimmed]">
+              <span class="text-xs text-[--text-weak]">
                 Session: {session().id.slice(0, 8)}
               </span>
             )}
@@ -303,15 +319,15 @@ const SessionHeader: Component = () => {
       
       <div class="flex items-center gap-2">
         <Show when={transport.sessionStatus().type !== "idle"}>
-          <div class="flex items-center gap-2 px-2 py-1 rounded-full bg-[--color-background-03]">
+          <div class="flex items-center gap-2 px-2 py-1 rounded-full bg-[--surface-raised-base]">
             <div
               class="w-2 h-2 rounded-full animate-pulse"
               classList={{
-                "bg-yellow-500": transport.sessionStatus().type === "busy",
-                "bg-green-500": transport.sessionStatus().type === "idle",
+                "bg-[--icon-warning-base]": transport.sessionStatus().type === "busy",
+                "bg-[--icon-success-base]": transport.sessionStatus().type === "idle",
               }}
             />
-            <span class="text-xs text-[--color-text-secondary] capitalize">
+            <span class="text-xs text-[--text-base] capitalize">
               {transport.sessionStatus().type}
             </span>
           </div>
@@ -339,10 +355,10 @@ const PermissionPanel: Component = () => {
 
   return (
     <Show when={transport.pendingPermissions.length > 0}>
-      <div class="border-t border-[--color-border] bg-[--color-background-02] p-4">
+      <div class="border-t border-[--border-base] bg-[--surface-raised-base] p-4">
         <div class="flex items-center gap-2 mb-3">
-          <Icon name="circle-ban-sign" size="small" class="text-yellow-500" />
-          <span class="text-sm font-medium text-[--color-text-primary]">
+          <Icon name="circle-ban-sign" size="small" class="text-[--icon-warning-base]" />
+          <span class="text-sm font-medium text-[--text-strong]">
             Permission Required
           </span>
         </div>
@@ -351,14 +367,14 @@ const PermissionPanel: Component = () => {
           {(perm) => (
             <Card class="mb-3 last:mb-0">
               <div class="p-3">
-                <div class="font-medium text-sm text-[--color-text-primary] mb-2">
+                <div class="font-medium text-sm text-[--text-strong] mb-2">
                   {perm.permission}
                 </div>
                 <Show when={perm.patterns.length > 0}>
                   <div class="mb-3">
                     <For each={perm.patterns}>
                       {(pattern) => (
-                        <div class="text-xs font-mono text-[--color-text-dimmed] bg-[--color-background-03] px-2 py-1 rounded mb-1">
+                        <div class="text-xs font-mono text-[--text-weak] bg-[--surface-inset-base] px-2 py-1 rounded mb-1">
                           {pattern}
                         </div>
                       )}
@@ -405,11 +421,11 @@ const PermissionPanel: Component = () => {
 const EmptyState: Component = () => {
   return (
     <div class="flex flex-col items-center justify-center h-full text-center px-8">
-      <Mark class="w-16 h-16 text-[--color-accent] mb-6 opacity-50" />
-      <h2 class="text-lg font-semibold text-[--color-text-primary] mb-2">
+      <Mark class="w-16 h-16 text-[--icon-brand-base] mb-6 opacity-50" />
+      <h2 class="text-lg font-semibold text-[--text-strong] mb-2">
         Start a conversation
       </h2>
-      <p class="text-sm text-[--color-text-dimmed] max-w-md">
+      <p class="text-sm text-[--text-weak] max-w-md">
         Ask me anything about your code. I can help you write, debug, refactor, 
         and understand your codebase.
       </p>
@@ -434,12 +450,12 @@ const EmptyState: Component = () => {
 
 const ErrorDisplay: Component<{ error: string }> = (props) => {
   return (
-    <div class="mx-4 mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+    <div class="mx-4 mb-4 p-4 rounded-lg bg-[--surface-critical-base] border border-[--border-critical-base]">
       <div class="flex items-start gap-3">
-        <Icon name="circle-x" size="small" class="text-red-500 mt-0.5" />
+        <Icon name="circle-x" size="small" class="text-[--icon-critical-base] mt-0.5" />
         <div>
-          <div class="text-sm font-medium text-red-500 mb-1">Error</div>
-          <div class="text-sm text-[--color-text-secondary]">{props.error}</div>
+          <div class="text-sm font-medium text-[--text-on-critical-base] mb-1">Error</div>
+          <div class="text-sm text-[--text-base]">{props.error}</div>
         </div>
       </div>
     </div>
@@ -490,7 +506,7 @@ export const ChatView: Component = () => {
   }
 
   return (
-    <div class="flex flex-col h-screen bg-[--color-background-01] text-[--color-text-primary]">
+    <div class="flex flex-col h-screen bg-[--background-base] text-[--text-base]">
       <SessionHeader />
 
       {/* Messages area */}
@@ -504,7 +520,7 @@ export const ChatView: Component = () => {
             <div class="flex items-center justify-center h-full">
               <div class="flex flex-col items-center gap-3">
                 <Spinner size="large" />
-                <span class="text-sm text-[--color-text-dimmed]">Loading session...</span>
+                <span class="text-sm text-[--text-weak]">Loading session...</span>
               </div>
             </div>
           }
@@ -536,7 +552,7 @@ export const ChatView: Component = () => {
       <PermissionPanel />
 
       {/* Input area */}
-      <div class="border-t border-[--color-border] bg-[--color-background-01] p-4">
+      <div class="border-t border-[--border-base] bg-[--background-base] p-4">
         <div class="max-w-3xl mx-auto">
           <PromptInput
             onSubmit={handleSendMessage}
