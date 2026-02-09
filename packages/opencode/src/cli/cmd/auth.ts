@@ -226,7 +226,7 @@ export const AuthLoginCommand = cmd({
   describe: "log in to a provider",
   builder: (yargs) =>
     yargs.positional("url", {
-      describe: "opencode auth provider",
+      describe: "kilo auth provider", // kilocode_change
       type: "string",
     }),
   async handler(args) {

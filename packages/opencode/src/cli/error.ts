@@ -12,7 +12,7 @@ export function FormatError(input: unknown) {
     return [
       `Model not found: ${providerID}/${modelID}`,
       ...(Array.isArray(suggestions) && suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      `Try: \`opencode models\` to list available models`,
+      `Try: \`kilo models\` to list available models`, // kilocode_change
       `Or check your config (opencode.json) provider/model names`,
     ].join("\n")
   }
