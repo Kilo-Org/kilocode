@@ -58,6 +58,8 @@ export namespace Agent {
     const skillDirs = await Skill.dirs()
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
+      // kilocode_change - prompt for bash commands by default
+      bash: "ask",
       doom_loop: "ask",
       external_directory: {
         "*": "ask",
