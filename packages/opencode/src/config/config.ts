@@ -804,7 +804,7 @@ export namespace Config {
   export const Keybinds = z
     .object({
       leader: z.string().optional().default("ctrl+x").describe("Leader key for keybind combinations"),
-      app_exit: z.string().optional().default("ctrl+c,ctrl+d,<leader>q").describe("Exit the application"),
+      app_exit: z.string().optional().default("ctrl+c,ctrl+d,<leader>q").describe("Exit the application"), // kilocode_change - ctrl+c requires double-press to exit (see prompt/index.tsx)
       editor_open: z.string().optional().default("<leader>e").describe("Open external editor"),
       theme_list: z.string().optional().default("<leader>t").describe("List available themes"),
       sidebar_toggle: z.string().optional().default("<leader>b").describe("Toggle sidebar"),
@@ -823,7 +823,7 @@ export namespace Config {
       model_favorite_toggle: z.string().optional().default("ctrl+f").describe("Toggle model favorite status"),
       session_share: z.string().optional().default("none").describe("Share current session"),
       session_unshare: z.string().optional().default("none").describe("Unshare current session"),
-      session_interrupt: z.string().optional().default("escape").describe("Interrupt current session"),
+      session_interrupt: z.string().optional().default("ctrl+c,escape").describe("Interrupt current session"), // kilocode_change - added ctrl+c to interrupt
       session_compact: z.string().optional().default("<leader>c").describe("Compact the session"),
       messages_page_up: z.string().optional().default("pageup,ctrl+alt+b").describe("Scroll messages up by one page"),
       messages_page_down: z
@@ -863,7 +863,7 @@ export namespace Config {
       agent_cycle: z.string().optional().default("tab").describe("Next agent"),
       agent_cycle_reverse: z.string().optional().default("shift+tab").describe("Previous agent"),
       variant_cycle: z.string().optional().default("ctrl+t").describe("Cycle model variants"),
-      input_clear: z.string().optional().default("ctrl+c").describe("Clear input field"),
+      input_clear: z.string().optional().default("ctrl+c,ctrl+u").describe("Clear input field"), // kilocode_change - added ctrl+u (standard terminal clear-line)
       input_paste: z.string().optional().default("ctrl+v").describe("Paste from clipboard"),
       input_submit: z.string().optional().default("return").describe("Submit input"),
       input_newline: z
