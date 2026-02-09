@@ -87,7 +87,9 @@
 		"collapseOutput": "ยุบผลลัพธ์",
 		"copyCommand": "คัดลอกคำสั่ง",
 		"thinking": "กำลังคิด",
-		"thinkingSeconds": "{{count}} วินาที"
+		"thinkingSeconds": "{{count}} วินาที",
+		"approve": "อนุมัติ",
+		"deny": "ปฏิเสธ"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",

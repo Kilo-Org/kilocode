@@ -87,7 +87,9 @@
 		"collapseOutput": "Uitvoer invouwen",
 		"copyCommand": "Opdracht kopiëren",
 		"thinking": "Denkt na",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Goedkeuren",
+		"deny": "Weigeren"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

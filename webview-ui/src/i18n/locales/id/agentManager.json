@@ -87,7 +87,9 @@
 		"collapseOutput": "Ciutkan output",
 		"copyCommand": "Salin perintah",
 		"thinking": "Berpikir",
-		"thinkingSeconds": "{{count}}d"
+		"thinkingSeconds": "{{count}}d",
+		"approve": "Setujui",
+		"deny": "Tolak"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

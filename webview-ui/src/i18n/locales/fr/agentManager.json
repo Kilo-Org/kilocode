@@ -87,7 +87,9 @@
 		"collapseOutput": "Réduire la sortie",
 		"copyCommand": "Copier la commande",
 		"thinking": "Réflexion",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Approuver",
+		"deny": "Refuser"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode entièrement automatique - aucune entrée autorisée",

@@ -87,7 +87,9 @@
 		"collapseOutput": "Çıktıyı daralt",
 		"copyCommand": "Komutu kopyala",
 		"thinking": "Düşünüyor",
-		"thinkingSeconds": "{{count}}sn"
+		"thinkingSeconds": "{{count}}sn",
+		"approve": "Onayla",
+		"deny": "Reddet"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

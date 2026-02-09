@@ -89,7 +89,9 @@
 		"collapseOutput": "Zwiń wyjście",
 		"copyCommand": "Kopiuj polecenie",
 		"thinking": "Myślenie",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Zatwierdź",
+		"deny": "Odrzuć"
 	},
 	"chatInput": {
 		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",

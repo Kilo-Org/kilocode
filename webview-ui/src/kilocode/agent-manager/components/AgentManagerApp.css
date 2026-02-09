@@ -575,6 +575,45 @@
 	overflow-wrap: break-word;
 }
 
+/* Approval Buttons */
+.am-approval-buttons {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.am-approval-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 12px;
+	border-radius: 3px;
+	border: 1px solid var(--vscode-button-border, transparent);
+	font-size: calc(var(--vscode-font-size) * 0.9);
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+
+.am-approval-approve {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.am-approval-approve:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.am-approval-deny {
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	border-color: var(--vscode-input-border);
+}
+
+.am-approval-deny:hover {
+	color: var(--vscode-errorForeground);
+	border-color: var(--vscode-errorForeground);
+}
+
 /* Markdown Styles (Simplified) */
 .am-markdown-content p {
 	margin-bottom: 0.5em;

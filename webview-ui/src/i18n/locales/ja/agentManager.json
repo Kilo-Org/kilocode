@@ -87,7 +87,9 @@
 		"collapseOutput": "出力を折りたたむ",
 		"copyCommand": "コマンドをコピー",
 		"thinking": "思考中",
-		"thinkingSeconds": "{{count}}秒"
+		"thinkingSeconds": "{{count}}秒",
+		"approve": "承認",
+		"deny": "拒否"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",

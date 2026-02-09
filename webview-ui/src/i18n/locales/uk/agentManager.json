@@ -89,7 +89,9 @@
 		"collapseOutput": "Згорнути вивід",
 		"copyCommand": "Копіювати команду",
 		"thinking": "Думаю",
-		"thinkingSeconds": "{{count}}с"
+		"thinkingSeconds": "{{count}}с",
+		"approve": "Схвалити",
+		"deny": "Відхилити"
 	},
 	"chatInput": {
 		"autoMode": "Агент працює в повністю автоматичному режимі - введення заборонено",

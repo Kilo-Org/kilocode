@@ -87,7 +87,9 @@
 		"collapseOutput": "Thu gọn đầu ra",
 		"copyCommand": "Sao chép lệnh",
 		"thinking": "Đang suy nghĩ",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Chấp thuận",
+		"deny": "Từ chối"
 	},
 	"chatInput": {
 		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",

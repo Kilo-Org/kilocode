@@ -89,7 +89,9 @@
 		"collapseOutput": "Свернуть вывод",
 		"copyCommand": "Копировать команду",
 		"thinking": "Обдумывание",
-		"thinkingSeconds": "{{count}}с"
+		"thinkingSeconds": "{{count}}с",
+		"approve": "Одобрить",
+		"deny": "Отклонить"
 	},
 	"chatInput": {
 		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",

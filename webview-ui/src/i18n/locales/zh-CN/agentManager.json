@@ -87,7 +87,9 @@
 		"collapseOutput": "收起输出",
 		"copyCommand": "复制命令",
 		"thinking": "思考中",
-		"thinkingSeconds": "{{count}}秒"
+		"thinkingSeconds": "{{count}}秒",
+		"approve": "批准",
+		"deny": "拒绝"
 	},
 	"chatInput": {
 		"autoMode": "Agent 正在全自动模式下运行 - 不允许输入",

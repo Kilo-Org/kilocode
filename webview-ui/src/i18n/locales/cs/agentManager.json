@@ -88,7 +88,9 @@
 		"collapseOutput": "Sbalit výstup",
 		"copyCommand": "Kopírovat příkaz",
 		"thinking": "Přemýšlení",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Schválit",
+		"deny": "Zamítnout"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",
