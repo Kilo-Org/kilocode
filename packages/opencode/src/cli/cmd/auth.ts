@@ -172,45 +172,52 @@ export const AuthListCommand = cmd({
   aliases: ["ls"],
   describe: "list providers",
   async handler() {
-    UI.empty()
-    const authPath = path.join(Global.Path.data, "auth.json")
-    const homedir = os.homedir()
-    const displayPath = authPath.startsWith(homedir) ? authPath.replace(homedir, "~") : authPath
-    prompts.intro(`Credentials ${UI.Style.TEXT_DIM}${displayPath}`)
-    const results = Object.entries(await Auth.all())
-    const database = await ModelsDev.get()
+    // kilocode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
+    await Instance.provide({
+      directory: process.cwd(),
+      async fn() {
+        UI.empty()
+        const authPath = path.join(Global.Path.data, "auth.json")
+        const homedir = os.homedir()
+        const displayPath = authPath.startsWith(homedir) ? authPath.replace(homedir, "~") : authPath
+        prompts.intro(`Credentials ${UI.Style.TEXT_DIM}${displayPath}`)
+        const results = Object.entries(await Auth.all())
+        const database = await ModelsDev.get()
 
-    for (const [providerID, result] of results) {
-      const name = database[providerID]?.name || providerID
-      prompts.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
-    }
-
-    prompts.outro(`${results.length} credentials`)
-
-    // Environment variables section
-    const activeEnvVars: Array<{ provider: string; envVar: string }> = []
-
-    for (const [providerID, provider] of Object.entries(database)) {
-      for (const envVar of provider.env) {
-        if (process.env[envVar]) {
-          activeEnvVars.push({
-            provider: provider.name || providerID,
-            envVar,
-          })
+        for (const [providerID, result] of results) {
+          const name = database[providerID]?.name || providerID
+          prompts.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
         }
-      }
-    }
 
-    if (activeEnvVars.length > 0) {
-      UI.empty()
-      prompts.intro("Environment")
+        prompts.outro(`${results.length} credentials`)
 
-      for (const { provider, envVar } of activeEnvVars) {
-        prompts.log.info(`${provider} ${UI.Style.TEXT_DIM}${envVar}`)
-      }
+        // Environment variables section
+        const activeEnvVars: Array<{ provider: string; envVar: string }> = []
 
-      prompts.outro(`${activeEnvVars.length} environment variable` + (activeEnvVars.length === 1 ? "" : "s"))
-    }
+        for (const [providerID, provider] of Object.entries(database)) {
+          for (const envVar of provider.env) {
+            if (process.env[envVar]) {
+              activeEnvVars.push({
+                provider: provider.name || providerID,
+                envVar,
+              })
+            }
+          }
+        }
+
+        if (activeEnvVars.length > 0) {
+          UI.empty()
+          prompts.intro("Environment")
+
+          for (const { provider, envVar } of activeEnvVars) {
+            prompts.log.info(`${provider} ${UI.Style.TEXT_DIM}${envVar}`)
+          }
+
+          prompts.outro(`${activeEnvVars.length} environment variable` + (activeEnvVars.length === 1 ? "" : "s"))
+        }
+      },
+    })
+    // kilocode_change end
   },
 })
 
