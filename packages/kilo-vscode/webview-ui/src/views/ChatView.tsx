@@ -28,7 +28,6 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Spinner } from "@opencode-ai/ui/spinner"
 import { Card } from "@opencode-ai/ui/card"
 import { Collapsible } from "@opencode-ai/ui/collapsible"
-import { createAutoScroll } from "@opencode-ai/ui/hooks"
 import { Mark } from "@opencode-ai/ui/logo"
 
 // ============================================================================
@@ -455,13 +454,18 @@ export const ChatView: Component = () => {
   const transport = useTransport()
   let messagesContainerRef: HTMLDivElement | undefined
 
-  // Auto-scroll setup
-  const { scrollRef, scrollToBottom } = createAutoScroll()
+  // Simple auto-scroll to bottom
+  const scrollToBottom = () => {
+    if (messagesContainerRef) {
+      messagesContainerRef.scrollTop = messagesContainerRef.scrollHeight
+    }
+  }
 
   // Auto-scroll when messages change
   createEffect(() => {
     const _ = transport.messages.length
-    scrollToBottom()
+    // Use setTimeout to ensure DOM has updated
+    setTimeout(scrollToBottom, 0)
   })
 
   // Load session on mount
@@ -491,10 +495,7 @@ export const ChatView: Component = () => {
 
       {/* Messages area */}
       <div
-        ref={(el) => {
-          messagesContainerRef = el
-          scrollRef(el)
-        }}
+        ref={messagesContainerRef}
         class="flex-1 overflow-y-auto"
       >
         <Show
