@@ -301,7 +301,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 												/* Show current subscription info - matching backend design */
 												<div className="mb-6">
 													{/* Main subscription card */}
-													<div className="border rounded-xl p-4 bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]">
+													<div className="border rounded-xl p-4 bg-[var(--vscode-editor-background)] border-[var(--vscode-panel-border)]">
 														{/* Header with icon, tier info, status badge, and settings */}
 														<div className="flex items-start justify-between mb-4">
 															<div className="flex items-center gap-3">
@@ -359,11 +359,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																			url: getAppUrl("/profile"),
 																		})
 																	}}
-																	className={`size-9 rounded border flex items-center justify-center hover:bg-[var(--vscode-toolbar-hoverBackground)] ${
-																		isLightTheme
-																			? "border-gray-300"
-																			: "border-[var(--vscode-widget-border)]"
-																	}`}>
+																	className="size-9 rounded border flex items-center justify-center hover:bg-[var(--vscode-toolbar-hoverBackground)] border-[var(--vscode-panel-border)]">
 																	<span className="codicon codicon-settings-gear text-[var(--vscode-descriptionForeground)]"></span>
 																</button>
 															</div>
@@ -402,22 +398,19 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 															// Determine status color
 															const isOverAvailable = usageUsd > totalAvailable
 															const statusColorClass = isOverAvailable
-																? "text-red-400"
+																? isLightTheme
+																	? "text-red-600"
+																	: "text-red-400"
 																: kiloPassState.isBonusUnlocked
 																	? isLightTheme
 																		? "text-emerald-600"
 																		: "text-emerald-300"
 																	: isLightTheme
-																		? "text-amber-600"
+																		? "text-amber-500"
 																		: "text-amber-300"
 
 															return (
-																<div
-																	className={`rounded-lg border p-3 mb-3 ${
-																		isLightTheme
-																			? "bg-gray-50/50 border-gray-200"
-																			: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
-																	}`}>
+																<div className="rounded-lg border p-3 mb-3 border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)]">
 																	{/* Header: This month's usage + amount */}
 																	<div className="flex items-center justify-between mb-2 text-sm">
 																		<span className="text-[var(--vscode-descriptionForeground)]">
@@ -466,7 +459,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																				className={`absolute inset-y-0 left-0 rounded-l-full transition-all duration-300 ${
 																					isLightTheme
 																						? "bg-gradient-to-r from-amber-500 to-amber-400"
-																						: "bg-gradient-to-r from-amber-500 to-amber-300"
+																						: "bg-gradient-to-r from-amber-500 to-amber-400"
 																				}`}
 																				style={{ width: `${paidFillPct}%` }}
 																			/>
@@ -477,7 +470,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																					className={`absolute inset-y-0 rounded-r-full transition-all duration-300 ${
 																						isLightTheme
 																							? "bg-gradient-to-r from-emerald-500 to-emerald-400"
-																							: "bg-gradient-to-r from-emerald-500 to-emerald-300"
+																							: "bg-gradient-to-r from-emerald-500 to-emerald-400"
 																					}`}
 																					style={{
 																						left: `${pctOfBaseInTotal}%`,
@@ -504,7 +497,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																			<span
 																				className={`absolute -translate-x-1/2 font-mono text-xs font-semibold ${
 																					isLightTheme
-																						? "text-amber-600"
+																						? "text-amber-500"
 																						: "text-amber-300"
 																				}`}
 																				style={{
@@ -556,12 +549,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 														{/* Renewal / Active Until Row */}
 														{(kiloPassState.refillAt || kiloPassState.nextBillingAt) && (
-															<div
-																className={`rounded-lg border px-3 py-2 mb-3 ${
-																	isLightTheme
-																		? "bg-gray-50/50 border-gray-200"
-																		: "bg-[var(--vscode-editor-background)] border-[var(--vscode-widget-border)]"
-																}`}>
+															<div className="rounded-lg border px-3 py-2 mb-3 border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)]">
 																<div className="flex items-center justify-between text-sm">
 																	<div className="flex items-start gap-2">
 																		<span
@@ -611,7 +599,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																										<span
 																											className={
 																												isLightTheme
-																													? "font-mono font-semibold text-amber-600"
+																													? "font-mono font-semibold text-amber-500"
 																													: "font-mono font-semibold text-amber-300"
 																											}
 																										/>
@@ -735,7 +723,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																					<span
 																						className={
 																							isLightTheme
-																								? "text-orange-600 font-medium"
+																								? "text-orange-500 font-medium"
 																								: "text-yellow-500 font-medium"
 																						}
 																					/>
