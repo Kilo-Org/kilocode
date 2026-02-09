@@ -16,6 +16,17 @@ import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
 import { fastApplyModelSchema, ghostServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
 
+const otlpHeaderSchema = z.object({ key: z.string(), value: z.string() })
+
+export const otlpExportSettingsSchema = z.object({
+	enabled: z.boolean().optional(),
+	tracesEndpoint: z.string().optional(),
+	logsEndpoint: z.string().optional(),
+	headers: z.array(otlpHeaderSchema).optional(),
+	serviceName: z.string().optional(),
+})
+export type OtlpExportSettings = z.infer<typeof otlpExportSettingsSchema>
+
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
  * This delay is particularly important for Go and other languages where tools like goimports
@@ -228,6 +239,7 @@ export const globalSettingsSchema = z.object({
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	otlpExportSettings: otlpExportSettingsSchema.optional(), // kilocode_change
 	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),

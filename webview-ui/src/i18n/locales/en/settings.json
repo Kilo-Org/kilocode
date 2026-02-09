@@ -44,7 +44,8 @@
 		"about": "About Kilo Code",
 		"autoPurge": "Auto-Cleanup",
 		"agentBehaviour": "Agent Behaviour",
-		"ghost": "Autocomplete"
+		"ghost": "Autocomplete",
+		"otelExport": "OTLP Export"
 	},
 	"about": {
 		"bugReport": {
@@ -1201,6 +1202,36 @@
 			"input": "Input",
 			"output": "Output",
 			"cacheReads": "Cache reads"
+		}
+	},
+	"otelExport": {
+		"sectionTitle": "OTLP Telemetry Export",
+		"description": "Export telemetry data to any OpenTelemetry-compatible backend.",
+		"enable": {
+			"label": "Enable OTLP Export",
+			"description": "When enabled, task traces and event logs are exported to your configured OTLP endpoints."
+		},
+		"tracesEndpoint": {
+			"label": "Traces Endpoint",
+			"placeholder": "https://otel-collector:4318/v1/traces",
+			"description": "OTLP/HTTP endpoint for trace spans. Leave empty to skip traces."
+		},
+		"logsEndpoint": {
+			"label": "Logs Endpoint",
+			"placeholder": "https://otel-collector:4318/v1/logs",
+			"description": "OTLP/HTTP endpoint for log records. Leave empty to skip logs."
+		},
+		"serviceName": {
+			"label": "Service Name",
+			"placeholder": "kilocode-extension",
+			"description": "OpenTelemetry service name for resource identification."
+		},
+		"headers": {
+			"label": "Custom Headers",
+			"description": "Key-value headers for OTLP authentication (e.g. DD-API-KEY, x-honeycomb-team).",
+			"addButton": "Add Header",
+			"keyPlaceholder": "Header name",
+			"valuePlaceholder": "Header value"
 		}
 	}
 }

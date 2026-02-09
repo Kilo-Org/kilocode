@@ -14,7 +14,12 @@ try {
 
 import type { CloudUserInfo, AuthState } from "@roo-code/types"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
-import { TelemetryService, PostHogTelemetryClient, DebugTelemetryClient } from "@roo-code/telemetry" // kilocode_change: added DebugTelemetryClient
+import {
+	TelemetryService,
+	PostHogTelemetryClient,
+	DebugTelemetryClient,
+	OtlpTelemetryClient,
+} from "@roo-code/telemetry" // kilocode_change: added DebugTelemetryClient, OtlpTelemetryClient
 import { customToolRegistry } from "@roo-code/core"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
@@ -52,6 +57,7 @@ import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kiloco
 import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
+import { setOtlpClient } from "./services/telemetry/otlpClientHolder" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh, refreshModels } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
 import { fetchKilocodeNotificationsOnStartup } from "./core/kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
@@ -137,6 +143,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	// kilocode_change end
 
+	// kilocode_change start: Register OTLP telemetry client
+	const otlpClient = new OtlpTelemetryClient(Package.version)
+	telemetryService.register(otlpClient)
+	setOtlpClient(otlpClient)
+	// kilocode_change end
+
 	// Create logger for cloud services.
 	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
 
@@ -190,6 +202,15 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	const contextProxy = await ContextProxy.getInstance(context)
+
+	// kilocode_change start: Configure OTLP client from persisted settings
+	const otlpSettings = contextProxy.getGlobalState("otlpExportSettings")
+	if (otlpSettings?.enabled) {
+		otlpClient.configure(otlpSettings).catch((err) => {
+			outputChannel.appendLine(`[OTLP] Config failed: ${err instanceof Error ? err.message : String(err)}`)
+		})
+	}
+	// kilocode_change end
 
 	// Initialize code index managers for all workspace folders.
 	const codeIndexManagers: CodeIndexManager[] = []

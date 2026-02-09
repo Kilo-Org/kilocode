@@ -7,6 +7,7 @@ import {
 	type ModeConfig,
 	type ExperimentId,
 	GhostServiceSettings, // kilocode_change
+	OtlpExportSettings, // kilocode_change
 	openRouterDefaultModelId, // kilocode_change
 	type TodoItem,
 	type TelemetrySetting,
@@ -179,6 +180,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	markNotificationAsDismissed: (notificationId: string) => void // kilocode_change
 	ghostServiceSettings?: GhostServiceSettings // kilocode_change
 	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
+	otlpExportSettings?: OtlpExportSettings // kilocode_change
+	setOtlpExportSettings: (value: OtlpExportSettings) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
 	setAutoApprovalEnabled: (value: boolean) => void
 	customModes: ModeConfig[]
@@ -290,6 +293,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		dismissedNotificationIds: [], // kilocode_change
 		commitMessageApiConfigId: "", // kilocode_change
 		ghostServiceSettings: {}, // kilocode_change
+		otlpExportSettings: {}, // kilocode_change
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		yoloGatekeeperApiConfigId: "", // kilocode_change: Default empty string for gatekeeper API config ID
@@ -661,6 +665,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			})
 		},
 		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
+		setOtlpExportSettings: (value) => setState((prevState) => ({ ...prevState, otlpExportSettings: value })), // kilocode_change
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
 		setShowAutoApproveMenu: (value) => setState((prevState) => ({ ...prevState, showAutoApproveMenu: value })),

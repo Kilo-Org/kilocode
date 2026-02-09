@@ -31,6 +31,7 @@ import {
 	TelemetryEventName,
 	// kilocode_change start
 	ghostServiceSettingsSchema,
+	otlpExportSettingsSchema,
 	fastApplyModelSchema,
 	// kilocode_change end
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
@@ -104,6 +105,7 @@ import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocod
 import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers" // kilocode_change
 import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-core" // kilocode_change
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
+import { getOtlpClient } from "../../services/telemetry/otlpClientHolder" // kilocode_change
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
 import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager" // kilocode_change
@@ -806,9 +808,7 @@ export const webviewMessageHandler = async (
 					await provider.postStateToWebview()
 					console.log(`Batch deletion completed: ${ids.length} tasks processed`)
 				} catch (error) {
-					console.log(
-						`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`,
-					)
+					console.log(`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`)
 				}
 				// kilocode_change end
 			}
@@ -1975,6 +1975,21 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			vscode.commands.executeCommand("kilo-code.ghost.reload")
 			break
+		// kilocode_change start - otlpExportSettings
+		case "otlpExportSettings": {
+			if (!message.values) {
+				return
+			}
+			const validated = otlpExportSettingsSchema.parse(message.values)
+			await updateGlobalState("otlpExportSettings", validated)
+			const otlpClient = getOtlpClient()
+			if (otlpClient) {
+				await otlpClient.configure(validated)
+			}
+			await provider.postStateToWebview()
+			break
+		}
+		// kilocode_change end - otlpExportSettings
 		case "snoozeAutocomplete":
 			if (typeof message.value === "number" && message.value > 0) {
 				await GhostServiceManager.getInstance()?.snooze(message.value)

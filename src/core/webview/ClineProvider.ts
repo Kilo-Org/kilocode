@@ -1993,8 +1993,8 @@ export class ClineProvider
 		try {
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
-	
-				// remove task from stack if it's the current task
+
+			// remove task from stack if it's the current task
 			if (id === this.getCurrentTask()?.taskId) {
 				// Close the current task instance; delegation flows will be handled via metadata if applicable.
 				await this.removeClineFromStack()
@@ -2282,6 +2282,7 @@ export class ClineProvider
 			maxConcurrentFileReads,
 			allowVeryLargeReads, // kilocode_change
 			ghostServiceSettings, // kilocode_changes
+			otlpExportSettings, // kilocode_change
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexConfig,
@@ -2756,6 +2757,7 @@ export class ClineProvider
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
 			ghostServiceSettings: stateValues.ghostServiceSettings,
+			otlpExportSettings: stateValues.otlpExportSettings,
 			// kilocode_change end
 			// kilocode_change start - Auto-purge settings
 			autoPurgeEnabled: stateValues.autoPurgeEnabled ?? false,

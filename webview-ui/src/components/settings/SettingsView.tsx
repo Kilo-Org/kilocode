@@ -17,6 +17,7 @@ import {
 	Database,
 	SquareTerminal,
 	FlaskConical,
+	Activity, // kilocode_change
 	AlertTriangle,
 	Globe,
 	Info,
@@ -83,6 +84,7 @@ import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import deepEqual from "fast-deep-equal" // kilocode_change
 import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
+import { OtelExportSettings } from "./OtelExportSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { UISettings } from "./UISettings"
 import AgentBehaviourView from "../kilocode/settings/AgentBehaviourView" // kilocode_change - new combined view
@@ -119,6 +121,7 @@ export const sectionNames = [
 	// "mcp",  // kilocode_change - now used inside AgentBehaviourView
 	"prompts",
 	"ui",
+	"otelExport", // kilocode_change
 	"experimental",
 	"language",
 	"about",
@@ -242,6 +245,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		alwaysAllowFollowupQuestions,
 		followupAutoApproveTimeoutMs,
 		ghostServiceSettings, // kilocode_change
+		otlpExportSettings, // kilocode_change
 		// kilocode_change start - Auto-purge settings
 		autoPurgeEnabled,
 		autoPurgeDefaultRetentionDays,
@@ -403,6 +407,32 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 				return {
 					...prevState,
 					ghostServiceSettings: {
+						...currentSettings,
+						[field]: value,
+					},
+				}
+			})
+		},
+		[],
+	)
+	// kilocode_change end
+
+	// kilocode_change start - OTLP export settings
+	const setOtlpExportSettingsField = useCallback(
+		<K extends keyof NonNullable<ExtensionStateContextType["otlpExportSettings"]>>(
+			field: K,
+			value: NonNullable<ExtensionStateContextType["otlpExportSettings"]>[K],
+		) => {
+			setCachedState((prevState) => {
+				const currentSettings = prevState.otlpExportSettings || {}
+				if (currentSettings[field] === value) {
+					return prevState
+				}
+
+				setChangeDetected(true)
+				return {
+					...prevState,
+					otlpExportSettings: {
 						...currentSettings,
 						[field]: value,
 					},
@@ -625,6 +655,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
 			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
+			vscode.postMessage({ type: "otlpExportSettings", values: otlpExportSettings }) // kilocode_change
 			vscode.postMessage({ type: "morphApiKey", text: morphApiKey }) // kilocode_change
 			vscode.postMessage({ type: "fastApplyModel", text: fastApplyModel }) // kilocode_change: Fast Apply model selection
 			vscode.postMessage({ type: "fastApplyApiProvider", text: fastApplyApiProvider }) // kilocode_change: Fast Apply model api base url
@@ -771,6 +802,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "prompts", icon: MessageSquare },
 			// { id: "ui", icon: Glasses }, // kilocode_change: we have our own display section
+			{ id: "otelExport" as const, icon: Activity }, // kilocode_change
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			// { id: "mcp", icon: Server }, // kilocode_change - merged into agentBehaviour
@@ -1271,6 +1303,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
 								enterBehavior={enterBehavior ?? "send"}
 								setCachedStateField={setCachedStateField}
+							/>
+						)}
+
+						{/* OTLP Export Section */}
+						{activeTab === "otelExport" && (
+							<OtelExportSettings
+								otlpExportSettings={otlpExportSettings}
+								onOtlpExportSettingsChange={setOtlpExportSettingsField}
 							/>
 						)}
 

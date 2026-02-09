@@ -544,6 +544,7 @@ export type ExtensionState = Pick<
 	| "terminalCommandApiConfigId" // kilocode_change
 	| "dismissedNotificationIds" // kilocode_change
 	| "ghostServiceSettings" // kilocode_change
+	| "otlpExportSettings" // kilocode_change
 	| "autoPurgeEnabled" // kilocode_change
 	| "autoPurgeDefaultRetentionDays" // kilocode_change
 	| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
@@ -793,6 +794,7 @@ export interface WebviewMessage {
 		| "commitMessageApiConfigId" // kilocode_change
 		| "terminalCommandApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
+		| "otlpExportSettings" // kilocode_change
 		| "stt:start" // kilocode_change: Start STT recording
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording
