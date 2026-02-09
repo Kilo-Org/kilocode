@@ -240,12 +240,21 @@ export function Session() {
     // kilocode_change end
   })
 
+  // kilocode_change start - double ctrl+c to exit for child sessions
+  const [exitPress, setExitPress] = createSignal(0)
   useKeyboard((evt) => {
     if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
+      if (evt.ctrl && evt.name === "c") {
+        setExitPress(exitPress() + 1)
+        setTimeout(() => setExitPress(0), 1000)
+        if (exitPress() >= 2) exit()
+        return
+      }
       exit()
     }
   })
+  // kilocode_change end
 
   // Helper: Find next visible message boundary in direction
   const findNextVisibleMessage = (direction: "next" | "prev"): string | null => {
