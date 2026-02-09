@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Sim",
 		"shareConfirmNo": "Não",
 		"options": "Opções",
-		"configureSetupScript": "Script de setup do worktree"
+		"configureSetupScript": "Script de setup do worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar um novo agente",
@@ -62,7 +63,14 @@
 		"defaultModel": "Modelo padrão",
 		"loadingModels": "Carregando...",
 		"selectMode": "Selecionar modo",
-		"modeTooltip": "Modo: {{mode}}"
+		"modeTooltip": "Modo: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "Recolher saída",
 		"copyCommand": "Copiar comando",
 		"thinking": "Pensando",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Aprovar",
+		"deny": "Negar"
 	},
 	"chatInput": {
 		"autoMode": "Agente executando em modo totalmente automático - entrada não permitida",
