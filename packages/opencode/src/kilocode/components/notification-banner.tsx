@@ -6,7 +6,7 @@
  * Clicking opens the full notifications dialog.
  *
  * Layout:
- *   * Title (N new)
+ *   ● Title (N new)
  *     Message text with word wrap...
  */
 
@@ -29,10 +29,6 @@ export function NotificationBanner(props: NotificationBannerProps) {
       flexDirection="column"
       maxWidth="100%"
       backgroundColor={hover() ? theme.backgroundElement : undefined}
-      paddingTop={1}
-      paddingBottom={1}
-      paddingLeft={2}
-      paddingRight={2}
       onMouseOver={() => setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={props.onClick}
@@ -40,12 +36,12 @@ export function NotificationBanner(props: NotificationBannerProps) {
       {/* Line 1: Icon + Title + Count */}
       <box flexDirection="row" gap={1}>
         <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.info }}>
-          *
+          ●
         </text>
-        <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.text }}>
+        <text wrapMode="none" style={{ fg: hover() ? theme.primary : theme.text }}>
           {props.notification.title}
         </text>
-        <Show when={props.totalCount > 0}>
+        <Show when={props.totalCount > 1}>
           <text flexShrink={0} style={{ fg: hover() ? theme.primary : theme.textMuted }}>
             ({props.totalCount} new)
           </text>
