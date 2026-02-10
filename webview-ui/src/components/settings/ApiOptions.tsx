@@ -1,12 +1,14 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { convertHeadersToObject } from "./utils/headers"
-import { useDebounce } from "react-use"
+import { useDebounce, useEvent } from "react-use"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 // import { ExternalLinkIcon } from "@radix-ui/react-icons" // kilocode_change
 
 import {
 	type ProviderName,
 	type ProviderSettings,
+	type ModelInfo, // kilocode_change
+	type ExtensionMessage, // kilocode_change
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
@@ -208,6 +210,7 @@ const ApiOptions = ({
 
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
+	const [discoveredAnthropicModels, setDiscoveredAnthropicModels] = useState<string[]>([]) // kilocode_change
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -287,6 +290,15 @@ const ApiOptions = ({
 				vscode.postMessage({ type: "requestLmStudioModels" })
 			} else if (selectedProvider === "vscode-lm") {
 				vscode.postMessage({ type: "requestVsCodeLmModels" })
+			} else if (selectedProvider === "anthropic") {
+				vscode.postMessage({
+					type: "requestAnthropicModels",
+					values: {
+						baseUrl: apiConfiguration?.anthropicBaseUrl,
+						apiKey: apiConfiguration?.apiKey,
+						useAuthToken: apiConfiguration?.anthropicUseAuthToken ?? false,
+					},
+				})
 			} else if (
 				selectedProvider === "litellm" ||
 				selectedProvider === "deepinfra" ||
@@ -303,6 +315,9 @@ const ApiOptions = ({
 			apiConfiguration?.requestyApiKey,
 			apiConfiguration?.openAiBaseUrl,
 			apiConfiguration?.openAiApiKey,
+			apiConfiguration?.apiKey, // kilocode_change
+			apiConfiguration?.anthropicBaseUrl, // kilocode_change
+			apiConfiguration?.anthropicUseAuthToken, // kilocode_change
 			apiConfiguration?.ollamaBaseUrl,
 			apiConfiguration?.lmStudioBaseUrl,
 			apiConfiguration?.litellmBaseUrl,
@@ -314,6 +329,17 @@ const ApiOptions = ({
 			customHeaders,
 		],
 	)
+
+	// kilocode_change start
+	const onMessage = useCallback((event: MessageEvent) => {
+		const message: ExtensionMessage = event.data
+		if (message.type === "anthropicModels") {
+			setDiscoveredAnthropicModels(message.anthropicModels ?? [])
+		}
+	}, [])
+
+	useEvent("message", onMessage)
+	// kilocode_change end
 
 	useEffect(() => {
 		const apiValidationResult = validateApiConfigurationExcludingModelErrors(
@@ -358,17 +384,31 @@ const ApiOptions = ({
 		}
 
 		const filteredModels = filterModels(models, "anthropic", organizationAllowList)
-		if (!filteredModels) {
-			return {}
+		const modelMap: Record<string, ModelInfo> = { ...(filteredModels || {}) }
+		const defaultModelInfo = models[anthropicDefaultModelId]
+		const customAnthropicModelInfo: ModelInfo = {
+			...defaultModelInfo,
+			supportsReasoningBudget: true,
+			supportsVerbosity: defaultModelInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+		}
+
+		for (const discoveredModelId of discoveredAnthropicModels) {
+			if (!modelMap[discoveredModelId]) {
+				modelMap[discoveredModelId] = customAnthropicModelInfo
+			}
+		}
+
+		if (selectedModelId && !modelMap[selectedModelId]) {
+			modelMap[selectedModelId] = customAnthropicModelInfo
 		}
 
 		return Object.fromEntries(
-			Object.entries(filteredModels).filter(([modelId, modelInfo]) => {
+			Object.entries(modelMap).filter(([modelId, modelInfo]) => {
 				if (modelId === selectedModelId) return true
 				return !modelInfo.deprecated
 			}),
 		)
-	}, [organizationAllowList, selectedModelId])
+	}, [organizationAllowList, selectedModelId, discoveredAnthropicModels])
 	// kilocode_change end
 
 	const onProviderChange = useCallback(

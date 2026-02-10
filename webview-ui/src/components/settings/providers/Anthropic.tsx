@@ -79,7 +79,7 @@ export const Anthropic = ({ apiConfiguration, setApiConfigurationField }: Anthro
 							value={apiConfiguration?.anthropicBaseUrl || ""}
 							type="url"
 							onInput={handleInputChange("anthropicBaseUrl")}
-							placeholder="https://api.anthropic.com"
+							placeholder="https://anthropic-compatible.example.com/v1" // kilocode_change
 							className="w-full mt-1"
 						/>
 						<Checkbox

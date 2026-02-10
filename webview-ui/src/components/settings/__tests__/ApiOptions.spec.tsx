@@ -1,6 +1,6 @@
 // npx vitest src/components/settings/__tests__/ApiOptions.spec.tsx
 
-import { render, screen, fireEvent } from "@/utils/test-utils"
+import { render, screen, fireEvent, waitFor } from "@/utils/test-utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { type ModelInfo, type ProviderSettings, openAiModelInfoSaneDefaults } from "@roo-code/types"
@@ -10,6 +10,15 @@ import * as ExtensionStateContext from "@src/context/ExtensionStateContext"
 const { ExtensionStateContextProvider } = ExtensionStateContext
 
 import ApiOptions, { ApiOptionsProps } from "../ApiOptions"
+import { vscode } from "@src/utils/vscode" // kilocode_change
+
+// kilocode_change start
+vi.mock("@src/utils/vscode", () => ({
+	vscode: {
+		postMessage: vi.fn(),
+	},
+}))
+// kilocode_change end
 
 // Mock VSCode components
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
@@ -635,6 +644,34 @@ describe("ApiOptions", () => {
 
 			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", "MinMax-M2")
 		})
+
+		// kilocode_change start
+		it("requests discovered Anthropic models for custom endpoints", async () => {
+			vi.mocked(vscode.postMessage).mockClear()
+
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					anthropicBaseUrl: "https://anthropic-compatible.example.com/v1",
+					anthropicUseAuthToken: true,
+					apiModelId: "claude-sonnet-4-5",
+				},
+				setApiConfigurationField: vi.fn(),
+			})
+
+			await waitFor(() => {
+				expect(vscode.postMessage).toHaveBeenCalledWith({
+					type: "requestAnthropicModels",
+					values: {
+						baseUrl: "https://anthropic-compatible.example.com/v1",
+						apiKey: "test-key",
+						useAuthToken: true,
+					},
+				})
+			})
+		})
+		// kilocode_change end
 	})
 	// kilocode_change end
 
