@@ -55,6 +55,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	): ApiStream {
 		let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
 		const cacheControl: CacheControlEphemeral = { type: "ephemeral" }
+		const model = this.getModel() // kilocode_change
 		let {
 			id: modelId,
 			betas = ["fine-grained-tool-streaming-2025-05-14"],
@@ -62,7 +63,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			temperature,
 			reasoning: thinking,
 			verbosity, // kilocode_change
-		} = this.getModel()
+		} = model // kilocode_change
 
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
 		const sanitizedMessages = filterNonAnthropicBlocks(messages)
@@ -93,7 +94,6 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		// This matches OpenRouter's approach of always including tools when provided
 		// Also exclude tools when tool_choice is "none" since that means "don't use tools"
 		// IMPORTANT: Use metadata.toolProtocol if provided (task's locked protocol) for consistency
-		const model = this.getModel()
 		const toolProtocol = resolveToolProtocol(this.options, model.info, metadata?.toolProtocol)
 		const shouldIncludeNativeTools =
 			metadata?.tools &&
@@ -115,139 +115,107 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 								convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
 				}
 			: {}
+		// kilocode_change start
+		const supportsPromptCache = model.info.supportsPromptCache !== false
+		if (supportsPromptCache) {
+			/**
+			 * The latest message will be the new user message, one before
+			 * will be the assistant message from a previous request, and
+			 * the user message before that will be a previously cached user
+			 * message. So we need to mark the latest user message as
+			 * ephemeral to cache it for the next request, and mark the
+			 * second to last user message as ephemeral to let the server
+			 * know the last message to retrieve from the cache for the
+			 * current request.
+			 */
+			const userMsgIndices = sanitizedMessages.reduce(
+				(acc, msg, index) => (msg.role === "user" ? [...acc, index] : acc),
+				[] as number[],
+			)
 
-		switch (modelId) {
-			case "claude-opus-4-6": // kilocode_change
-			case "claude-sonnet-4-5":
-			case "claude-sonnet-4-20250514":
-			case "claude-opus-4-5-20251101":
-			case "claude-opus-4-1-20250805":
-			case "claude-opus-4-20250514":
-			case "claude-3-7-sonnet-20250219":
-			case "claude-3-5-sonnet-20241022":
-			case "claude-3-5-haiku-20241022":
-			case "claude-3-opus-20240229":
-			case "claude-haiku-4-5-20251001":
-			case "claude-3-haiku-20240307": {
-				/**
-				 * The latest message will be the new user message, one before
-				 * will be the assistant message from a previous request, and
-				 * the user message before that will be a previously cached user
-				 * message. So we need to mark the latest user message as
-				 * ephemeral to cache it for the next request, and mark the
-				 * second to last user message as ephemeral to let the server
-				 * know the last message to retrieve from the cache for the
-				 * current request.
-				 */
-				const userMsgIndices = sanitizedMessages.reduce(
-					(acc, msg, index) => (msg.role === "user" ? [...acc, index] : acc),
-					[] as number[],
-				)
+			const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
+			const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
 
-				const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
-				const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
-
-				try {
-					stream = await this.client.messages.create(
-						{
-							model: apiModelId, // kilocode_change
-							max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
-							temperature,
-							thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
-							// Setting cache breakpoint for system prompt so new tasks can reuse it.
-							system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
-							messages: sanitizedMessages.map((message, index) => {
-								if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
-									return {
-										...message,
-										content:
-											typeof message.content === "string"
-												? [{ type: "text", text: message.content, cache_control: cacheControl }]
-												: message.content.map((content, contentIndex) =>
-														contentIndex === message.content.length - 1
-															? { ...content, cache_control: cacheControl }
-															: content,
-													),
-									}
-								}
-								return message
-							}),
-							stream: true,
-							// kilocode_change start
-							...(verbosity
-								? {
-										output_config: {
-											effort: verbosity,
-										},
-									}
-								: {}),
-							// kilocode_change end
-							...nativeToolParams,
-						},
-						(() => {
-							// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
-							// https://github.com/anthropics/anthropic-sdk-typescript?tab=readme-ov-file#default-headers
-							// https://github.com/anthropics/anthropic-sdk-typescript/commit/c920b77fc67bd839bfeb6716ceab9d7c9bbe7393
-
-							// Then check for models that support prompt caching
-							switch (modelId) {
-								case "claude-opus-4-6": // kilocode_change
-								case "claude-sonnet-4-5":
-								case "claude-sonnet-4-20250514":
-								case "claude-opus-4-5-20251101":
-								case "claude-opus-4-1-20250805":
-								case "claude-opus-4-20250514":
-								case "claude-3-7-sonnet-20250219":
-								case "claude-3-5-sonnet-20241022":
-								case "claude-3-5-haiku-20241022":
-								case "claude-3-opus-20240229":
-								case "claude-haiku-4-5-20251001":
-								case "claude-3-haiku-20240307":
-									betas.push("prompt-caching-2024-07-31")
-									return { headers: { "anthropic-beta": betas.join(",") } }
-								default:
-									return undefined
-							}
-						})(),
-					)
-				} catch (error) {
-					TelemetryService.instance.captureException(
-						new ApiProviderError(
-							error instanceof Error ? error.message : String(error),
-							this.providerName,
-							modelId,
-							"createMessage",
-						),
-					)
-					throw error
-				}
-				break
-			}
-			default: {
-				try {
-					stream = await this.client.messages.create({
+			try {
+				stream = await this.client.messages.create(
+					{
 						model: apiModelId, // kilocode_change
 						max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 						temperature,
-						system: [{ text: systemPrompt, type: "text" }],
-						messages: sanitizedMessages,
+						thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
+						// Setting cache breakpoint for system prompt so new tasks can reuse it.
+						system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
+						messages: sanitizedMessages.map((message, index) => {
+							if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
+								return {
+									...message,
+									content:
+										typeof message.content === "string"
+											? [{ type: "text", text: message.content, cache_control: cacheControl }]
+											: message.content.map((content, contentIndex) =>
+													contentIndex === message.content.length - 1
+														? { ...content, cache_control: cacheControl }
+														: content,
+												),
+								}
+							}
+							return message
+						}),
 						stream: true,
+						// kilocode_change start
+						...(verbosity
+							? {
+									output_config: {
+										effort: verbosity,
+									},
+								}
+							: {}),
+						// kilocode_change end
 						...nativeToolParams,
-					}) // kilocode_change removed: as any
-				} catch (error) {
-					TelemetryService.instance.captureException(
-						new ApiProviderError(
-							error instanceof Error ? error.message : String(error),
-							this.providerName,
-							modelId,
-							"createMessage",
-						),
-					)
-					throw error
-				}
-				break
+					},
+					(() => {
+						// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
+						// https://github.com/anthropics/anthropic-sdk-typescript?tab=readme-ov-file#default-headers
+						// https://github.com/anthropics/anthropic-sdk-typescript/commit/c920b77fc67bd839bfeb6716ceab9d7c9bbe7393
+						const betaHeaders = Array.from(new Set([...betas, "prompt-caching-2024-07-31"]))
+						return { headers: { "anthropic-beta": betaHeaders.join(",") } }
+					})(),
+				)
+			} catch (error) {
+				TelemetryService.instance.captureException(
+					new ApiProviderError(
+						error instanceof Error ? error.message : String(error),
+						this.providerName,
+						modelId,
+						"createMessage",
+					),
+				)
+				throw error
+			}
+		} else {
+			try {
+				stream = await this.client.messages.create({
+					model: apiModelId, // kilocode_change
+					max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
+					temperature,
+					system: [{ text: systemPrompt, type: "text" }],
+					messages: sanitizedMessages,
+					stream: true,
+					...nativeToolParams,
+				}) // kilocode_change removed: as any
+			} catch (error) {
+				TelemetryService.instance.captureException(
+					new ApiProviderError(
+						error instanceof Error ? error.message : String(error),
+						this.providerName,
+						modelId,
+						"createMessage",
+					),
+				)
+				throw error
 			}
 		}
+		// kilocode_change end
 
 		let inputTokens = 0
 		let outputTokens = 0
@@ -423,12 +391,21 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	}
 
 	getModel() {
-		const modelId = this.options.apiModelId
-		let id = modelId && modelId in anthropicModels ? (modelId as AnthropicModelId) : anthropicDefaultModelId
-		let info: ModelInfo = anthropicModels[id]
+		// kilocode_change start
+		const configuredModelId = this.options.apiModelId?.trim()
+		const id = configuredModelId || anthropicDefaultModelId
+		const isKnownModelId = id in anthropicModels
+		let info: ModelInfo = isKnownModelId
+			? anthropicModels[id as AnthropicModelId]
+			: anthropicModels[anthropicDefaultModelId]
+		// kilocode_change end
 
 		// If 1M context beta is enabled for Claude Sonnet 4 or 4.5, update the model info
-		if ((id === "claude-sonnet-4-20250514" || id === "claude-sonnet-4-5") && this.options.anthropicBeta1MContext) {
+		if (
+			isKnownModelId && // kilocode_change
+			(id === "claude-sonnet-4-20250514" || id === "claude-sonnet-4-5") &&
+			this.options.anthropicBeta1MContext
+		) {
 			// Use the tier pricing for 1M context
 			const tier = info.tiers?.[0]
 			if (tier) {

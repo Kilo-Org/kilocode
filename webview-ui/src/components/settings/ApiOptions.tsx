@@ -123,7 +123,7 @@ import {
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
 import { inputEventTransform, noTransform } from "./transforms"
-// import { ModelPicker } from "./ModelPicker" // kilocode_change
+import { ModelPicker } from "./ModelPicker" // kilocode_change
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
@@ -349,6 +349,27 @@ const ApiOptions = ({
 
 		return availableModels
 	}, [selectedProvider, organizationAllowList, selectedModelId])
+
+	// kilocode_change start
+	const anthropicModelPickerModels = useMemo(() => {
+		const models = MODELS_BY_PROVIDER.anthropic
+		if (!models) {
+			return {}
+		}
+
+		const filteredModels = filterModels(models, "anthropic", organizationAllowList)
+		if (!filteredModels) {
+			return {}
+		}
+
+		return Object.fromEntries(
+			Object.entries(filteredModels).filter(([modelId, modelInfo]) => {
+				if (modelId === selectedModelId) return true
+				return !modelInfo.deprecated
+			}),
+		)
+	}, [organizationAllowList, selectedModelId])
+	// kilocode_change end
 
 	const onProviderChange = useCallback(
 		(value: ProviderName) => {
@@ -960,41 +981,62 @@ const ApiOptions = ({
 				selectedProvider !== "openai-codex" && (
 					<>
 						<div>
-							<label className="block font-medium mb-1">{t("settings:providers.model")}</label>
-							<Select
-								value={selectedModelId === "custom-arn" ? "custom-arn" : selectedModelId}
-								onValueChange={(value) => {
-									setApiConfigurationField("apiModelId", value)
+							{/* kilocode_change start */}
+							{selectedProvider === "anthropic" ? (
+								<ModelPicker
+									apiConfiguration={apiConfiguration}
+									setApiConfigurationField={setApiConfigurationField}
+									defaultModelId={anthropicDefaultModelId}
+									models={anthropicModelPickerModels}
+									modelIdKey="apiModelId"
+									serviceName="Anthropic"
+									serviceUrl="https://docs.anthropic.com/en/docs/about-claude/models"
+									organizationAllowList={organizationAllowList}
+									errorMessage={modelValidationError}
+									simplifySettings={fromWelcomeView}
+								/>
+							) : (
+								<>
+									<label className="block font-medium mb-1">{t("settings:providers.model")}</label>
+									<Select
+										value={selectedModelId === "custom-arn" ? "custom-arn" : selectedModelId}
+										onValueChange={(value) => {
+											setApiConfigurationField("apiModelId", value)
 
-									// Clear custom ARN if not using custom ARN option.
-									if (value !== "custom-arn" && selectedProvider === "bedrock") {
-										setApiConfigurationField("awsCustomArn", "")
-									}
+											// Clear custom ARN if not using custom ARN option.
+											if (value !== "custom-arn" && selectedProvider === "bedrock") {
+												setApiConfigurationField("awsCustomArn", "")
+											}
 
-									// Clear reasoning effort when switching models to allow the new model's default to take effect
-									// This is especially important for GPT-5 models which default to "medium"
-									if (selectedProvider === "openai-native") {
-										setApiConfigurationField("reasoningEffort", undefined)
-									}
-								}}>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder={t("settings:common.select")} />
-								</SelectTrigger>
-								<SelectContent>
-									{selectedProviderModels.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-									{selectedProvider === "bedrock" && (
-										<SelectItem value="custom-arn">{t("settings:labels.useCustomArn")}</SelectItem>
-									)}
-								</SelectContent>
-							</Select>
+											// Clear reasoning effort when switching models to allow the new model's default to take effect
+											// This is especially important for GPT-5 models which default to "medium"
+											if (selectedProvider === "openai-native") {
+												setApiConfigurationField("reasoningEffort", undefined)
+											}
+										}}>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder={t("settings:common.select")} />
+										</SelectTrigger>
+										<SelectContent>
+											{selectedProviderModels.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+											{selectedProvider === "bedrock" && (
+												<SelectItem value="custom-arn">
+													{t("settings:labels.useCustomArn")}
+												</SelectItem>
+											)}
+										</SelectContent>
+									</Select>
+								</>
+							)}
+							{/* kilocode_change end */}
 						</div>
 
 						{/* Show error if a deprecated model is selected */}
-						{selectedModelInfo?.deprecated && (
+						{selectedProvider !== "anthropic" && selectedModelInfo?.deprecated && (
 							<ApiErrorMessage errorMessage={t("settings:validation.modelDeprecated")} />
 						)}
 
@@ -1006,7 +1048,7 @@ const ApiOptions = ({
 						)}
 
 						{/* Only show model info if not deprecated */}
-						{!selectedModelInfo?.deprecated && (
+						{selectedProvider !== "anthropic" && !selectedModelInfo?.deprecated && (
 							<ModelInfoView
 								apiProvider={selectedProvider}
 								selectedModelId={selectedModelId}
