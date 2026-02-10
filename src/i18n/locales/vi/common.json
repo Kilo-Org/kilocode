@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã."
+		"description": "Agent lập trình AI mã nguồn mở tạo mã từ ngôn ngữ tự nhiên, tự động hóa tác vụ và chạy lệnh terminal. Tính năng bao gồm tự động hoàn thành inline, tự động hóa trình duyệt, tái cấu trúc tự động và các chế độ tùy chỉnh cho lập kế hoạch, lập trình và gỡ lỗi. Hỗ trợ hơn 500 mô hình AI bao gồm Claude (Anthropic), Gemini, Grok, GPT, Codex và GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "Đầu ra lỗi: {{output}}",
 			"processExitedWithError": "Tiến trình Claude Code thoát với mã {{exitCode}}. Đầu ra lỗi: {{output}}",
 			"stoppedWithReason": "Claude Code dừng lại vì lý do: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "Không thể tải thông tin xác thực OAuth. Vui lòng xác thực trước: {{error}}",
-			"tokenRefreshFailed": "Không thể làm mới token OAuth: {{error}}",
-			"onboardingTimeout": "Thao tác onboarding đã hết thời gian chờ sau 60 giây. Vui lòng thử lại sau.",
-			"projectDiscoveryFailed": "Không thể khám phá ID dự án. Đảm bảo bạn đã xác thực bằng 'gemini auth'.",
-			"rateLimitExceeded": "Đã vượt quá giới hạn tốc độ. Đã đạt đến giới hạn của gói miễn phí.",
-			"badRequest": "Yêu cầu không hợp lệ: {{details}}",
-			"apiError": "Lỗi API Gemini CLI: {{error}}",
-			"completionError": "Lỗi hoàn thành Gemini CLI: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"message": {
 			"no_active_task_to_delete": "Không có nhiệm vụ hoạt động để xóa tin nhắn",
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Nhà cung cấp Roo yêu cầu xác thực đám mây. Vui lòng đăng nhập vào Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ."
+			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ.",
+			"apiRequestFailed": "Yêu cầu API thất bại ({{status}})"
 		},
 		"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
 		"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
 		"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
 		"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
-		"manual_url_auth_error": "Xác thực thất bại"
+		"manual_url_auth_error": "Xác thực thất bại",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Không có nội dung terminal được chọn",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Phản hồi bị gián đoạn bởi người dùng",
-		"responseInterruptedByApiError": "Phản hồi bị gián đoạn bởi lỗi API"
+		"responseInterruptedByApiError": "Phản hồi bị gián đoạn bởi lỗi API",
+		"streamTerminatedByProvider": "Nhà cung cấp đã kết thúc yêu cầu"
 	},
 	"storage": {
 		"prompt_custom_path": "Nhập đường dẫn lưu trữ tùy chỉnh cho lịch sử hội thoại, để trống để sử dụng vị trí mặc định",
@@ -210,12 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Khóa API Groq",
-			"getGroqApiKey": "Lấy khóa API Groq",
-			"claudeCode": {
-				"pathLabel": "Đường dẫn Claude Code",
-				"description": "Đường dẫn tùy chọn đến CLI Claude Code của bạn. Mặc định là 'claude' nếu không được đặt.",
-				"placeholder": "Mặc định: claude"
-			}
+			"getGroqApiKey": "Lấy khóa API Groq"
 		}
 	},
 	"customModes": {

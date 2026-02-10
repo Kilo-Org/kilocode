@@ -14,7 +14,10 @@
 		"shareSession": "Partager la session",
 		"shareConfirmMessage": "Souhaites-tu partager publiquement un instantané de cette session ?",
 		"shareConfirmYes": "Oui",
-		"shareConfirmNo": "Non"
+		"shareConfirmNo": "Non",
+		"options": "Options",
+		"configureSetupScript": "Script de setup worktree",
+		"yoloMode": "Mode YOLO (approbation auto)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Démarrer un nouvel agent",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "Mode YOLO - les opérations d'outils sont approuvées automatiquement",
 		"starting": "Démarrage...",
 		"startAriaLabel": "Démarrer l'agent avec le prompt fourni",
-		"keyboardHint": "Appuyez sur Entrée pour démarrer, Shift+Entrée pour nouvelle ligne",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Changer de branche de base",
 		"noBranches": "Aucune branche trouvée",
 		"noMatchingBranches": "Aucune branche ne correspond à ta recherche",
-		"openTerminal": "Ouvrir le terminal"
+		"openTerminal": "Ouvrir le terminal",
+		"selectModel": "Sélectionner le modèle",
+		"modelTooltip": "Choisis quel modèle d'IA utiliser pour cette session",
+		"defaultModel": "Modèle par défaut",
+		"loadingModels": "Chargement...",
+		"selectMode": "Sélectionner le mode",
+		"modeTooltip": "Mode : {{mode}}",
+		"yoloModeToggle": "Activer/désactiver le mode YOLO",
+		"yoloModeEnabled": "Mode YOLO activé - outils approuvés automatiquement",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "En attente de la réponse de l'agent...",
@@ -70,7 +85,11 @@
 		"usingTool": "Utilisation de l'outil : **{{tool}}** {{details}}",
 		"expandOutput": "Développer la sortie",
 		"collapseOutput": "Réduire la sortie",
-		"copyCommand": "Copier la commande"
+		"copyCommand": "Copier la commande",
+		"thinking": "Réflexion",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Approuver",
+		"deny": "Refuser"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode entièrement automatique - aucune entrée autorisée",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Annuler l'agent",
 		"finishToBranchTitle": "Terminer le worktree et préparer la branch : {{branch}}",
 		"finishToBranchTitleNoBranch": "Terminer le worktree et préparer la branch",
+		"createPRTitle": "Créer une pull request",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
-		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"
+		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne",
+		"addImage": "Ajouter une image",
+		"removeImage": "Supprimer l'image"
 	},
 	"status": {
 		"running": "en cours",

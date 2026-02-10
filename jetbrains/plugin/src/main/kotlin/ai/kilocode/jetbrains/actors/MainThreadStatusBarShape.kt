@@ -21,12 +21,12 @@ interface MainThreadStatusBarShape : Disposable {
      * @param entryId Entry identifier
      * @param name Display name
      * @param text Status bar text
-     * @param tooltip Tooltip text
+     * @param tooltip Tooltip text or MarkdownString object
      * @param showProgress Show progress indicator
      * @param command Command to execute on click
      * @param backgroundColor Background color
      * @param color Text color
-     * @param accessibilityInformation Accessibility information
+     * @param accessibilityInformation Accessibility information object
      * @param priority Display priority
      * @param alignment Alignment (left/right)
      */
@@ -36,12 +36,12 @@ interface MainThreadStatusBarShape : Disposable {
         entryId: String,
         name: String,
         text: String,
-        tooltip: String?,
+        tooltip: Any?,
         showProgress: Boolean,
         command: Any?,
         backgroundColor: Any?,
         color: Any?,
-        accessibilityInformation: Boolean?,
+        accessibilityInformation: Any?,
         priority: Double?,
         alignment: Any?,
     )
@@ -75,12 +75,12 @@ class MainThreadStatusBar(
         val entryId: String,
         val name: String,
         val text: String,
-        val tooltip: String?,
+        val tooltip: Any?,
         val showProgress: Boolean,
         val command: Any?,
         val backgroundColor: Any?,
         val color: Any?,
-        val accessibilityInformation: Boolean?,
+        val accessibilityInformation: Any?,
         val priority: Double?,
         val alignment: Any?,
     )
@@ -91,12 +91,12 @@ class MainThreadStatusBar(
         entryId: String,
         name: String,
         text: String,
-        tooltip: String?,
+        tooltip: Any?,
         showProgress: Boolean,
         command: Any?,
         backgroundColor: Any?,
         color: Any?,
-        accessibilityInformation: Boolean?,
+        accessibilityInformation: Any?,
         priority: Double?,
         alignment: Any?,
     ) {
@@ -138,6 +138,17 @@ class MainThreadStatusBar(
         removeEntry(id)
     }
 
+    private fun extractTooltipText(tooltip: Any?): String? {
+        return when (tooltip) {
+            is String -> tooltip
+            is Map<*, *> -> {
+                // Handle MarkdownString object (serialized as Map)
+                tooltip["value"] as? String
+            }
+            else -> tooltip?.toString()
+        }
+    }
+
     private fun updateStatusBar(project: Project, entry: StatusBarEntry) {
         try {
             // Get the status bar for the project
@@ -147,7 +158,8 @@ class MainThreadStatusBar(
                 // In JetBrains, we can't directly manipulate the status bar like in VSCode
                 // We would need to create a custom widget or use notifications
                 // For now, we just log the update
-                logger.info("Would update status bar with: ${entry.text}")
+                val tooltipText = extractTooltipText(entry.tooltip)
+                logger.info("Would update status bar with: ${entry.text}, tooltip: $tooltipText")
 
                 // If showProgress is true, we could show a progress indicator
                 if (entry.showProgress) {

@@ -20,6 +20,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
@@ -68,6 +69,21 @@ export const bedrockModels = {
 		maxCachePoints: 1,
 		cachableFields: ["system"],
 	},
+	"amazon.nova-2-lite-v1:0": {
+		maxTokens: 65_535,
+		contextWindow: 1_000_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		inputPrice: 0.33,
+		outputPrice: 2.75,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0.0825, // 75% less than input price
+		minTokensPerCachePoint: 1,
+		maxCachePoints: 1,
+		cachableFields: ["system"],
+		description: "Amazon Nova 2 Lite - Comparable to Claude Haiku 4.5",
+	},
 	"amazon.nova-micro-v1:0": {
 		maxTokens: 5000,
 		contextWindow: 128_000,
@@ -89,6 +105,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
@@ -104,6 +121,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0,
 		outputPrice: 75.0,
 		cacheWritesPrice: 18.75,
@@ -119,6 +137,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 5.0,
 		outputPrice: 25.0,
 		cacheWritesPrice: 6.25,
@@ -134,6 +153,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0,
 		outputPrice: 75.0,
 		cacheWritesPrice: 18.75,
@@ -149,6 +169,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
@@ -163,6 +184,7 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
@@ -177,6 +199,7 @@ export const bedrockModels = {
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.8,
 		outputPrice: 4.0,
 		cacheWritesPrice: 1.0,
@@ -192,6 +215,7 @@ export const bedrockModels = {
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 1.0,
 		outputPrice: 5.0,
 		cacheWritesPrice: 1.25, // 5m cache writes
@@ -206,6 +230,7 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 	},
@@ -215,6 +240,7 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 15.0,
 		outputPrice: 75.0,
 	},
@@ -224,6 +250,7 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 	},
@@ -233,38 +260,9 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.25,
 		outputPrice: 1.25,
-	},
-	"anthropic.claude-2-1-v1:0": {
-		maxTokens: 4096,
-		contextWindow: 100_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		supportsNativeTools: true,
-		inputPrice: 8.0,
-		outputPrice: 24.0,
-		description: "Claude 2.1",
-	},
-	"anthropic.claude-2-0-v1:0": {
-		maxTokens: 4096,
-		contextWindow: 100_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		supportsNativeTools: true,
-		inputPrice: 8.0,
-		outputPrice: 24.0,
-		description: "Claude 2.0",
-	},
-	"anthropic.claude-instant-v1:0": {
-		maxTokens: 4096,
-		contextWindow: 100_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		supportsNativeTools: true,
-		inputPrice: 0.8,
-		outputPrice: 2.4,
-		description: "Claude Instant",
 	},
 	"deepseek.r1-v1:0": {
 		maxTokens: 32_768,
@@ -423,22 +421,6 @@ export const bedrockModels = {
 		outputPrice: 0.6,
 		description: "Amazon Titan Text Express",
 	},
-	"amazon.titan-text-embeddings-v1:0": {
-		maxTokens: 8192,
-		contextWindow: 8_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.1,
-		description: "Amazon Titan Text Embeddings",
-	},
-	"amazon.titan-text-embeddings-v2:0": {
-		maxTokens: 8192,
-		contextWindow: 8_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.02,
-		description: "Amazon Titan Text Embeddings V2",
-	},
 	"moonshot.kimi-k2-thinking": {
 		maxTokens: 32_000,
 		contextWindow: 262_144,
@@ -562,3 +544,31 @@ export const BEDROCK_GLOBAL_INFERENCE_MODEL_IDS = [
 	"anthropic.claude-haiku-4-5-20251001-v1:0",
 	"anthropic.claude-opus-4-5-20251101-v1:0",
 ] as const
+
+// Amazon Bedrock Service Tier types
+export type BedrockServiceTier = "STANDARD" | "FLEX" | "PRIORITY"
+
+// Models that support service tiers based on AWS documentation
+// https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
+export const BEDROCK_SERVICE_TIER_MODEL_IDS = [
+	// Amazon Nova models
+	"amazon.nova-lite-v1:0",
+	"amazon.nova-2-lite-v1:0",
+	"amazon.nova-pro-v1:0",
+	"amazon.nova-pro-latency-optimized-v1:0",
+	// DeepSeek models
+	"deepseek.r1-v1:0",
+	// Qwen models
+	"qwen.qwen3-next-80b-a3b",
+	"qwen.qwen3-coder-480b-a35b-v1:0",
+	// OpenAI GPT-OSS models
+	"openai.gpt-oss-20b-1:0",
+	"openai.gpt-oss-120b-1:0",
+] as const
+
+// Service tier pricing multipliers
+export const BEDROCK_SERVICE_TIER_PRICING = {
+	STANDARD: 1.0, // Base price
+	FLEX: 0.5, // 50% discount from standard
+	PRIORITY: 1.75, // 75% premium over standard
+} as const

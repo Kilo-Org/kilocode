@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "أداة ذكاء اصطناعي مفتوحة المصدر تساعدك في تخطيط وبناء وتعديل الأكواد."
+		"description": "وكيل برمجة بالذكاء الاصطناعي مفتوح المصدر يولّد الكود من اللغة الطبيعية، ويؤتمت المهام، وينفذ أوامر الطرفية. يتميز بالإكمال التلقائي المضمّن، وأتمتة المتصفح، وإعادة الهيكلة الآلية، وأوضاع مخصصة للتخطيط والبرمجة وتصحيح الأخطاء. يدعم أكثر من 500 نموذج ذكاء اصطناعي بما في ذلك Claude (Anthropic) و Gemini و Grok و GPT و Codex و GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "ألف",
@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك.",
 			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Kilo Code تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",
-			"tokenRefreshFailed": "فشل تحديث رمز OAuth: {{error}}",
-			"onboardingTimeout": "انتهى وقت التهيئة بعد ٦٠ ثانية. حاول مرة ثانية.",
-			"projectDiscoveryFailed": "ما قدرنا نكتشف معرف المشروع. تأكد إنك سجلت دخول بـ 'gemini auth'.",
-			"rateLimitExceeded": "تجاوزت الحد المسموح. الحد المجاني تم استهلاكه.",
-			"badRequest": "طلب غير صحيح: {{details}}",
-			"apiError": "خطأ من Gemini CLI: {{error}}",
-			"completionError": "خطأ أثناء الإكمال في Gemini CLI: {{error}}"
-		},
 		"qwenCode": {
 			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي مصادقة أول: {{error}}"
 		},
@@ -141,6 +131,24 @@
 		"roo": {
 			"authenticationRequired": "يتطلب موفر Roo المصادقة السحابية. يرجى تسجيل الدخول إلى Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "ما سجلت دخول في OpenAI Codex. سجل دخولك باستخدام OAuth الخاص بـ OpenAI Codex.",
+			"invalidRequest": "طلب غير صحيح لـ Codex API. تأكد من معاملات الإدخال.",
+			"authenticationFailed": "فشل تسجيل الدخول. سجل دخولك مرة ثانية في OpenAI Codex.",
+			"accessDenied": "الوصول ممنوع. اشتراكك في ChatGPT قد لا يشمل الوصول لـ Codex.",
+			"endpointNotFound": "نقطة نهاية Codex API غير موجودة.",
+			"rateLimitExceeded": "تجاوزت حد الطلبات. جرّب مرة ثانية لاحقاً.",
+			"serviceError": "خطأ في خدمة OpenAI Codex. جرّب مرة ثانية لاحقاً.",
+			"genericError": "خطأ في Codex API ({{status}})",
+			"noResponseBody": "خطأ Codex API: لا يوجد محتوى في الاستجابة",
+			"connectionFailed": "فشل الاتصال بـ Codex API: {{message}}",
+			"unexpectedConnectionError": "خطأ غير متوقع في الاتصال بـ Codex API",
+			"apiError": "خطأ Codex API: {{message}}",
+			"responseFailed": "فشلت الاستجابة: {{message}}",
+			"streamProcessingError": "خطأ في معالجة تدفق الاستجابة: {{message}}",
+			"unexpectedStreamError": "خطأ غير متوقع في معالجة تدفق الاستجابة",
+			"completionError": "خطأ في إكمال OpenAI Codex: {{message}}"
+		},
 		"message": {
 			"no_active_task_to_delete": "لم يتم العثور على مهمة نشطة. لا يمكن حذف الرسائل.",
 			"invalid_timestamp_for_deletion": "طابع زمني غير صحيح مقدم للحذف.",
@@ -155,8 +163,27 @@
 		"manual_url_missing_params": "الرابط يفتقد للمعاملات المطلوبة",
 		"manual_url_auth_failed": "فشل في المصادقة",
 		"manual_url_auth_error": "حدث خطأ في المصادقة",
+		"openAiCodex": {
+			"notAuthenticated": "ما أنت مسجل دخول مع OpenAI Codex. سجل دخولك باستخدام OAuth flow حق OpenAI Codex.",
+			"invalidRequest": "طلب غير صالح لـ Codex API. تحقق من معاملات الإدخال.",
+			"authenticationFailed": "فشل تسجيل الدخول. سجل دخولك مرة ثانية مع OpenAI Codex.",
+			"accessDenied": "الوصول ممنوع. ممكن اشتراكك في ChatGPT ما يشمل الوصول لـ Codex.",
+			"endpointNotFound": "نقطة نهاية Codex API غير موجودة.",
+			"rateLimitExceeded": "تجاوزت الحد المسموح. جرب مرة ثانية لاحقاً.",
+			"serviceError": "خطأ في خدمة OpenAI Codex. جرب مرة ثانية لاحقاً.",
+			"genericError": "خطأ Codex API ({{status}})",
+			"noResponseBody": "خطأ Codex API: ما فيه محتوى في الاستجابة",
+			"connectionFailed": "فشل الاتصال بـ Codex API: {{message}}",
+			"unexpectedConnectionError": "خطأ غير متوقع في الاتصال بـ Codex API",
+			"apiError": "خطأ Codex API: {{message}}",
+			"responseFailed": "فشلت الاستجابة: {{message}}",
+			"streamProcessingError": "خطأ في معالجة تدفق الاستجابة: {{message}}",
+			"unexpectedStreamError": "خطأ غير متوقع في معالجة تدفق الاستجابة",
+			"completionError": "خطأ في إكمال OpenAI Codex: {{message}}"
+		},
 		"api": {
-			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة."
+			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة.",
+			"apiRequestFailed": "فشل طلب API ({{status}})"
 		}
 	},
 	"warnings": {
@@ -251,7 +278,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "تم مقاطعة الاستجابة من قبل المستخدم",
-		"responseInterruptedByApiError": "تم مقاطعة الاستجابة بسبب خطأ في واجهة برمجة التطبيقات"
+		"responseInterruptedByApiError": "تم مقاطعة الاستجابة بسبب خطأ في واجهة برمجة التطبيقات",
+		"streamTerminatedByProvider": "المزود أنهى الطلب"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

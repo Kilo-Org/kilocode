@@ -5,12 +5,34 @@ import type { Mock } from "vitest"
 // Mock dependencies - must come before imports
 vi.mock("../../../api/providers/fetchers/modelCache")
 
+vi.mock("../../../integrations/openai-codex/oauth", () => ({
+	openAiCodexOAuthManager: {
+		getAccessToken: vi.fn(),
+		getAccountId: vi.fn(),
+	},
+}))
+
+vi.mock("../../../integrations/openai-codex/rate-limits", () => ({
+	fetchOpenAiCodexRateLimitInfo: vi.fn(),
+}))
+
+// Mock the diagnosticsHandler module
+vi.mock("../diagnosticsHandler", () => ({
+	generateErrorDiagnostics: vi.fn().mockResolvedValue({ success: true, filePath: "/tmp/diagnostics.json" }),
+}))
+
+import type { ModelRecord } from "@roo-code/types"
+
 import { webviewMessageHandler } from "../webviewMessageHandler"
 import type { ClineProvider } from "../ClineProvider"
 import { getModels } from "../../../api/providers/fetchers/modelCache"
-import type { ModelRecord } from "../../../shared/api"
+const { openAiCodexOAuthManager } = await import("../../../integrations/openai-codex/oauth")
+const { fetchOpenAiCodexRateLimitInfo } = await import("../../../integrations/openai-codex/rate-limits")
 
 const mockGetModels = getModels as Mock<typeof getModels>
+const mockGetAccessToken = vi.mocked(openAiCodexOAuthManager.getAccessToken)
+const mockGetAccountId = vi.mocked(openAiCodexOAuthManager.getAccountId)
+const mockFetchOpenAiCodexRateLimitInfo = vi.mocked(fetchOpenAiCodexRateLimitInfo)
 
 // Mock ClineProvider
 const mockClineProvider = {
@@ -41,16 +63,25 @@ const mockClineProvider = {
 
 import { t } from "../../../i18n"
 
-vi.mock("vscode", () => ({
-	window: {
-		showInformationMessage: vi.fn(),
-		showErrorMessage: vi.fn(),
-		createTextEditorDecorationType: vi.fn(() => ({ dispose: vi.fn() })), // kilocode_change
-	},
-	workspace: {
-		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
-	},
-}))
+vi.mock("vscode", () => {
+	const showInformationMessage = vi.fn()
+	const showErrorMessage = vi.fn()
+	const openTextDocument = vi.fn().mockResolvedValue({})
+	const showTextDocument = vi.fn().mockResolvedValue(undefined)
+
+	return {
+		window: {
+			showInformationMessage,
+			showErrorMessage,
+			showTextDocument,
+			createTextEditorDecorationType: vi.fn(() => ({ dispose: vi.fn() })), // kilocode_change
+		},
+		workspace: {
+			workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
+			openTextDocument,
+		},
+	}
+})
 
 vi.mock("../../../i18n", () => ({
 	t: vi.fn((key: string, args?: Record<string, any>) => {
@@ -73,14 +104,20 @@ vi.mock("../../../i18n", () => ({
 vi.mock("fs/promises", () => {
 	const mockRm = vi.fn().mockResolvedValue(undefined)
 	const mockMkdir = vi.fn().mockResolvedValue(undefined)
+	const mockReadFile = vi.fn().mockResolvedValue("[]")
+	const mockWriteFile = vi.fn().mockResolvedValue(undefined)
 
 	return {
 		default: {
 			rm: mockRm,
 			mkdir: mockMkdir,
+			readFile: mockReadFile,
+			writeFile: mockWriteFile,
 		},
 		rm: mockRm,
 		mkdir: mockMkdir,
+		readFile: mockReadFile,
+		writeFile: mockWriteFile,
 	}
 })
 
@@ -91,11 +128,21 @@ import * as path from "path"
 import * as fsUtils from "../../../utils/fs"
 import { getWorkspacePath } from "../../../utils/path"
 import { ensureSettingsDirectoryExists } from "../../../utils/globalContext"
+import { generateErrorDiagnostics } from "../diagnosticsHandler"
 import type { ModeConfig } from "@roo-code/types"
 
 vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
 vi.mock("../../../utils/globalContext")
+
+vi.mock("../../mentions/resolveImageMentions", () => ({
+	resolveImageMentions: vi.fn(async ({ text, images }: { text: string; images?: string[] }) => ({
+		text,
+		images: [...(images ?? []), "data:image/png;base64,from-mention"],
+	})),
+}))
+
+import { resolveImageMentions } from "../../mentions/resolveImageMentions"
 
 describe("webviewMessageHandler - requestLmStudioModels", () => {
 	beforeEach(() => {
@@ -136,6 +183,37 @@ describe("webviewMessageHandler - requestLmStudioModels", () => {
 			type: "lmStudioModels",
 			lmStudioModels: mockModels,
 		})
+	})
+})
+
+describe("webviewMessageHandler - image mentions", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			maxImageFileSize: 5,
+			maxTotalImageSize: 20,
+		})
+	})
+
+	it("should resolve image mentions for askResponse payloads", async () => {
+		const mockHandleWebviewAskResponse = vi.fn()
+		vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
+			cwd: "/mock/workspace",
+			rooIgnoreController: undefined,
+			handleWebviewAskResponse: mockHandleWebviewAskResponse,
+		} as any)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "askResponse",
+			askResponse: "messageResponse",
+			text: "See @/img.png",
+			images: [],
+		})
+
+		expect(vi.mocked(resolveImageMentions)).toHaveBeenCalled()
+		expect(mockHandleWebviewAskResponse).toHaveBeenCalledWith("messageResponse", "See @/img.png", [
+			"data:image/png;base64,from-mention",
+		])
 	})
 })
 
@@ -678,17 +756,54 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 	})
 })
 
+describe("webviewMessageHandler - requestOpenAiCodexRateLimits", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockGetAccessToken.mockResolvedValue(null)
+		mockGetAccountId.mockResolvedValue(null)
+	})
+
+	it("posts error when not authenticated", async () => {
+		await webviewMessageHandler(mockClineProvider, { type: "requestOpenAiCodexRateLimits" } as any)
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "openAiCodexRateLimits",
+			error: "Not authenticated with OpenAI Codex",
+		})
+	})
+
+	it("posts values when authenticated", async () => {
+		mockGetAccessToken.mockResolvedValue("token")
+		mockGetAccountId.mockResolvedValue("acct_123")
+		mockFetchOpenAiCodexRateLimitInfo.mockResolvedValue({
+			primary: { usedPercent: 10, resetsAt: 1700000000000 },
+			fetchedAt: 1700000000000,
+		})
+
+		await webviewMessageHandler(mockClineProvider, { type: "requestOpenAiCodexRateLimits" } as any)
+
+		expect(mockFetchOpenAiCodexRateLimitInfo).toHaveBeenCalledWith("token", { accountId: "acct_123" })
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "openAiCodexRateLimits",
+			values: {
+				primary: { usedPercent: 10, resetsAt: 1700000000000 },
+				fetchedAt: 1700000000000,
+			},
+		})
+	})
+})
+
 describe("webviewMessageHandler - deleteCustomMode", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		vi.mocked(getWorkspacePath).mockReturnValue("/mock/workspace")
 		vi.mocked(vscode.window.showErrorMessage).mockResolvedValue(undefined)
-		vi.mocked(ensureSettingsDirectoryExists).mockResolvedValue("/mock/global/storage/.roo")
+		vi.mocked(ensureSettingsDirectoryExists).mockResolvedValue("/mock/global/storage/.kilocode")
 	})
 
 	it("should delete a project mode and its rules folder", async () => {
 		const slug = "test-project-mode"
-		const rulesFolderPath = path.join("/mock/workspace", ".roo", `rules-${slug}`)
+		const rulesFolderPath = path.join("/mock/workspace", ".kilocode", `rules-${slug}`)
 
 		vi.mocked(mockClineProvider.customModesManager.getCustomModes).mockResolvedValue([
 			{
@@ -713,7 +828,7 @@ describe("webviewMessageHandler - deleteCustomMode", () => {
 	it("should delete a global mode and its rules folder", async () => {
 		const slug = "test-global-mode"
 		const homeDir = os.homedir()
-		const rulesFolderPath = path.join(homeDir, ".roo", `rules-${slug}`)
+		const rulesFolderPath = path.join(homeDir, ".kilocode", `rules-${slug}`)
 
 		vi.mocked(mockClineProvider.customModesManager.getCustomModes).mockResolvedValue([
 			{
@@ -759,7 +874,7 @@ describe("webviewMessageHandler - deleteCustomMode", () => {
 
 	it("should handle errors when deleting rules folder", async () => {
 		const slug = "test-mode-error"
-		const rulesFolderPath = path.join("/mock/workspace", ".roo", `rules-${slug}`)
+		const rulesFolderPath = path.join("/mock/workspace", ".kilocode", `rules-${slug}`)
 		const error = new Error("Permission denied")
 
 		vi.mocked(mockClineProvider.customModesManager.getCustomModes).mockResolvedValue([
@@ -897,5 +1012,59 @@ describe("webviewMessageHandler - mcpEnabled", () => {
 
 		expect((mockClineProvider as any).getMcpHub).toHaveBeenCalledTimes(1)
 		expect(mockClineProvider.postStateToWebview).toHaveBeenCalledTimes(1)
+	})
+})
+
+describe("webviewMessageHandler - downloadErrorDiagnostics", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+
+		// Ensure contextProxy has a globalStorageUri for the handler
+		;(mockClineProvider as any).contextProxy.globalStorageUri = { fsPath: "/mock/global/storage" }
+
+		// Provide a current task with a stable ID
+		vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
+			taskId: "test-task-id",
+		} as any)
+	})
+
+	it("calls generateErrorDiagnostics with correct parameters", async () => {
+		await webviewMessageHandler(mockClineProvider, {
+			type: "downloadErrorDiagnostics",
+			values: {
+				timestamp: "2025-01-01T00:00:00.000Z",
+				version: "1.2.3",
+				provider: "test-provider",
+				model: "test-model",
+				details: "Sample error details",
+			},
+		} as any)
+
+		// Verify generateErrorDiagnostics was called with the correct parameters
+		expect(generateErrorDiagnostics).toHaveBeenCalledTimes(1)
+		expect(generateErrorDiagnostics).toHaveBeenCalledWith({
+			taskId: "test-task-id",
+			globalStoragePath: "/mock/global/storage",
+			values: {
+				timestamp: "2025-01-01T00:00:00.000Z",
+				version: "1.2.3",
+				provider: "test-provider",
+				model: "test-model",
+				details: "Sample error details",
+			},
+			log: expect.any(Function),
+		})
+	})
+
+	it("shows error when no active task", async () => {
+		vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue(null as any)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "downloadErrorDiagnostics",
+			values: {},
+		} as any)
+
+		expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("No active task to generate diagnostics for")
+		expect(generateErrorDiagnostics).not.toHaveBeenCalled()
 	})
 })

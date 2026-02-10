@@ -1,3 +1,7 @@
 #### Description: Should suggest common variable assignments
 #### Filename: user-data.js
+// User profile data
+const userId = 12345;
+const userEmail = "john.doe@example.com";
 const userName = <<<AUTOCOMPLETE_HERE>>>
+const userAge = 28;

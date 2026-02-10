@@ -14,7 +14,10 @@
 		"shareSession": "セッションを共有",
 		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
 		"shareConfirmYes": "はい",
-		"shareConfirmNo": "いいえ"
+		"shareConfirmNo": "いいえ",
+		"options": "オプション",
+		"configureSetupScript": "Worktree セットアップスクリプト",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLOモード - ツール操作は自動承認されます",
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
-		"keyboardHint": "Enterで開始、Shift+Enterで改行",
 		"runModeLocal": "ローカル",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "クラウド",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "ベースブランチを切り替え",
 		"noBranches": "ブランチが見つかりません",
 		"noMatchingBranches": "検索に一致するブランチがありません",
-		"openTerminal": "ターミナルを開く"
+		"openTerminal": "ターミナルを開く",
+		"selectModel": "モデルを選択",
+		"modelTooltip": "このセッションで使用するAIモデルを選択",
+		"defaultModel": "デフォルトモデル",
+		"loadingModels": "読み込み中...",
+		"selectMode": "モードを選択",
+		"modeTooltip": "モード: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -70,7 +85,11 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}",
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
-		"copyCommand": "コマンドをコピー"
+		"copyCommand": "コマンドをコピー",
+		"thinking": "思考中",
+		"thinkingSeconds": "{{count}}秒",
+		"approve": "承認",
+		"deny": "拒否"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",
@@ -80,9 +99,12 @@
 		"cancelTitle": "エージェントをキャンセル",
 		"finishToBranchTitle": "Worktreeを終了してブランチを準備: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktreeを終了してブランチを準備",
+		"createPRTitle": "プルリクエストを作成",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
-		"hint": "Enterで送信、Shift+Enterで改行"
+		"hint": "Enterで送信、Shift+Enterで改行",
+		"addImage": "画像を追加",
+		"removeImage": "画像を削除"
 	},
 	"status": {
 		"running": "実行中",

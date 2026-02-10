@@ -8,6 +8,7 @@ import { getGlobalRooDirectory } from "../roo-config"
 import { directoryExists, fileExists } from "../roo-config"
 import { SkillMetadata, SkillContent } from "../../shared/skills"
 import { modes, getAllModes } from "../../shared/modes"
+import { ConfigChangeNotifier } from "../config/ConfigChangeNotifier" // kilocode_change
 
 // Re-export for convenience
 export type { SkillMetadata, SkillContent }
@@ -17,9 +18,11 @@ export class SkillsManager {
 	private providerRef: WeakRef<ClineProvider>
 	private disposables: vscode.Disposable[] = []
 	private isDisposed = false
+	private configChangeNotifier: ConfigChangeNotifier // kilocode_change
 
 	constructor(provider: ClineProvider) {
 		this.providerRef = new WeakRef(provider)
+		this.configChangeNotifier = new ConfigChangeNotifier(provider) // kilocode_change
 	}
 
 	async initialize(): Promise<void> {
@@ -41,6 +44,9 @@ export class SkillsManager {
 		for (const { dir, source, mode } of skillsDirs) {
 			await this.scanSkillsDirectory(dir, source, mode)
 		}
+
+		const currentSkills = Array.from(this.skills.values()) // kilocode_change
+		await this.configChangeNotifier.notifyIfChanged("skill", currentSkills) // kilocode_change
 	}
 
 	/**
@@ -116,12 +122,43 @@ export class SkillsManager {
 				return
 			}
 
+			// Strict spec validation (https://agentskills.io/specification)
+			// Name constraints:
+			// - 1-64 chars
+			// - lowercase letters/numbers/hyphens only
+			// - must not start/end with hyphen
+			// - must not contain consecutive hyphens
+			if (effectiveSkillName.length < 1 || effectiveSkillName.length > 64) {
+				console.error(
+					`Skill name "${effectiveSkillName}" is invalid: name must be 1-64 characters (got ${effectiveSkillName.length})`,
+				)
+				return
+			}
+			const nameFormat = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+			if (!nameFormat.test(effectiveSkillName)) {
+				console.error(
+					`Skill name "${effectiveSkillName}" is invalid: must be lowercase letters/numbers/hyphens only (no leading/trailing hyphen, no consecutive hyphens)`,
+				)
+				return
+			}
+
+			// Description constraints:
+			// - 1-1024 chars
+			// - non-empty (after trimming)
+			const description = frontmatter.description.trim()
+			if (description.length < 1 || description.length > 1024) {
+				console.error(
+					`Skill "${effectiveSkillName}" has an invalid description length: must be 1-1024 characters (got ${description.length})`,
+				)
+				return
+			}
+
 			// Create unique key combining name, source, and mode for override resolution
 			const skillKey = this.getSkillKey(effectiveSkillName, source, mode)
 
 			this.skills.set(skillKey, {
 				name: effectiveSkillName,
-				description: frontmatter.description,
+				description,
 				path: skillMdPath,
 				source,
 				mode, // undefined for generic skills, string for mode-specific
@@ -299,7 +336,11 @@ export class SkillsManager {
 			return
 		}
 
-		const pattern = new vscode.RelativePattern(dirPath, "**/SKILL.md")
+		// kilocode_change start
+		// Watch for direct children (skill directories) being added/changed/deleted
+		// When anything changes, we'll rescan and look for SKILL.md files
+		const pattern = new vscode.RelativePattern(dirPath, "*")
+		// kilocode_change end
 		const watcher = vscode.workspace.createFileSystemWatcher(pattern)
 
 		watcher.onDidChange(async (uri) => {

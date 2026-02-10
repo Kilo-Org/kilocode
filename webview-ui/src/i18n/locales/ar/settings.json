@@ -1,4 +1,5 @@
 {
+	"back": "العودة لعرض المهام",
 	"common": {
 		"save": "حفظ",
 		"done": "تم",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "حفظ التغييرات",
 		"nothingChangedTooltip": "ما صار أي تغيير",
 		"doneButtonTooltip": "تجاهل التغييرات غير المحفوظة وإغلاق اللوحة"
+	},
+	"search": {
+		"placeholder": "البحث في الإعدادات...",
+		"noResults": "لم يتم العثور على إعدادات"
 	},
 	"unsavedChangesDialog": {
 		"title": "تغييرات غير محفوظة",
@@ -37,7 +42,9 @@
 		"experimental": "تجريبي",
 		"language": "اللغة",
 		"about": "عن Kilo Code",
-		"autoPurge": "التنظيف التلقائي"
+		"autoPurge": "التنظيف التلقائي",
+		"agentBehaviour": "سلوك الوكيل",
+		"ghost": "الإكمال التلقائي"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunity": "انضم للمجتمع",
 		"joinCommunityDesc": "تواصل مع مستخدمين آخرين وشارك الأفكار",
 		"contactAndCommunity": "التواصل والمجتمع",
-		"manageSettings": "إدارة الإعدادات"
+		"manageSettings": "إدارة الإعدادات",
+		"debugMode": {
+			"label": "تفعيل وضع التصحيح",
+			"description": "فعّل وضع التصحيح لإظهار أزرار إضافية في رأس المهمة لعرض سجل محادثات API ورسائل UI كملفات JSON منسقة مؤقتة."
+		}
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
@@ -127,6 +138,7 @@
 		"openRouterProviderRoutingLabel": "توجيه مزود OpenRouter",
 		"openRouterProviderRoutingDescription": "يوجه OpenRouter الطلبات إلى أفضل المزودين المتاحين لنموذج التضمين الخاص بك. افتراضيًا، يتم موازنة التحميل للطلبات عبر أفضل المزودين لزيادة وقت التشغيل. ومع ذلك، يمكنك اختيار مزود معين لاستخدامه مع هذا النموذج.",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
+		"openaiCompatibleResponsesProvider": "متوافق مع OpenAI (Responses)",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
 		"openAiCompatibleBaseUrlLabel": "الرابط الأساسي",
@@ -308,6 +320,7 @@
 		"makeActiveProfile": "جعل الملف النشط",
 		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
 		"apiProvider": "مزود API",
+		"apiProviderDocs": "توثيق المزود",
 		"model": "النموذج",
 		"nameEmpty": "الاسم ما يصير فاضي",
 		"nameExists": "الاسم مستخدم مسبقًا",
@@ -336,6 +349,37 @@
 		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
 		"glamaApiKey": "مفتاح Glama",
 		"getGlamaApiKey": "احصل على مفتاح Glama",
+		"openAiCodexRateLimits": {
+			"title": "حدود الاستخدام لـ Codex{{planLabel}}",
+			"loading": "جاري تحميل حدود الاستخدام...",
+			"loadError": "فشل تحميل حدود الاستخدام",
+			"retry": "إعادة المحاولة",
+			"usedPercent": "{{percent}}% مستخدم",
+			"resetsIn": "يُعاد التعيين خلال {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "الآن",
+				"notAvailable": "غير متوفر"
+			},
+			"duration": {
+				"daysHours": "{{days}} يوم {{hours}} ساعة",
+				"hoursMinutes": "{{hours}} ساعة {{minutes}} دقيقة",
+				"minutes": "{{minutes}} دقيقة"
+			},
+			"window": {
+				"usage": "الاستخدام",
+				"fiveHour": "حد 5 ساعات",
+				"oneHour": "حد ساعة واحدة",
+				"daily": "الحد اليومي",
+				"weekly": "الحد الأسبوعي",
+				"days": "حد {{days}} يوم",
+				"hours": "حد {{hours}} ساعة",
+				"minutes": "حد {{minutes}} دقيقة"
+			}
+		},
 		"useCustomBaseUrl": "استخدم رابط أساسي مخصص",
 		"useReasoning": "تفعيل الـ Reasoning",
 		"useHostHeader": "استخدم ترويسة Host مخصصة",
@@ -365,6 +409,8 @@
 		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
 		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"vertex1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"basetenApiKey": "مفتاح Baseten API",
 		"getBasetenApiKey": "احصل على مفتاح Baseten API",
 		"cerebrasApiKey": "مفتاح Cerebras API",
@@ -485,6 +531,14 @@
 		"awsRegion": "منطقة AWS",
 		"awsCrossRegion": "تمكين الاستدلال عبر المناطق",
 		"awsGlobalInference": "استخدام الاستدلال العالمي (اختيار منطقة AWS الأمثل تلقائيًا)",
+		"awsServiceTier": "طبقة الخدمة",
+		"awsServiceTierStandard": "قياسية",
+		"awsServiceTierStandardDesc": "أداء وتكلفة متوازنة",
+		"awsServiceTierFlex": "مرنة (خصم 50%)",
+		"awsServiceTierFlexDesc": "تكلفة أقل، زمن استجابة أعلى للمهام غير الحرجة",
+		"awsServiceTierPriority": "أولوية (رسوم 75% إضافية)",
+		"awsServiceTierPriorityDesc": "أسرع أداء للتطبيقات الحرجة",
+		"awsServiceTierNote": "طبقات الخدمة تؤثر على التسعير والأداء. المرنة تقدم خصم 50% مع زمن استجابة أعلى، الأولوية تقدم أداء أفضل بـ 25% مع رسوم 75% إضافية.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "استخدام نقطة VPC مخصصة",
 			"vpcEndpointUrlPlaceholder": "اكتب رابط نقطة VPC (اختياري)",
@@ -619,6 +673,7 @@
 		},
 		"verbosity": {
 			"label": "مستوى التفصيل في المخرجات",
+			"max": "Max",
 			"high": "عالي",
 			"medium": "متوسط",
 			"low": "منخفض",
@@ -631,21 +686,6 @@
 			"placeholder": "الافتراضي: claude",
 			"maxTokensLabel": "أقصى توكنات المخرجات",
 			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
-		},
-		"geminiCli": {
-			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
-			"oauthPath": "مسار بيانات OAuth (اختياري)",
-			"oauthPathDescription": "إذا تركته فاضي يستخدم المسار الافتراضي (~/.gemini/oauth_creds.json).",
-			"instructions": "إذا ما سجلت دخول، شغّل",
-			"instructionsContinued": "في الطرفية أولاً.",
-			"setupLink": "دليل إعداد Gemini CLI",
-			"requirementsTitle": "متطلبات مهمة",
-			"requirement1": "ثبت أداة Gemini CLI",
-			"requirement2": "سجل دخول بـ Google",
-			"requirement3": "يعمل مع حسابات Google الشخصية فقط",
-			"requirement4": "المصادقة تتم عبر OAuth",
-			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
-			"freeAccess": "طبقة مجانية عبر OAuth"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
@@ -779,6 +819,10 @@
 		"showTimestamps": {
 			"label": "إظهار الطوابع الزمنية",
 			"description": "إظهار الطابع الزمني لكل رسالة في عرض المحادثة"
+		},
+		"showDiffStats": {
+			"label": "إظهار إحصائيات الفروقات",
+			"description": "عرض إحصائيات الأسطر المضافة/المحذوفة في رأس المهمة"
 		}
 	},
 	"ghost": {
@@ -829,6 +873,10 @@
 		"workspaceFiles": {
 			"label": "حد ملفات المشروع",
 			"description": "أقصى عدد ملفات تُدرج من المجلد الحالي."
+		},
+		"enableSubfolderRules": {
+			"label": "تمكين قواعد المجلدات الفرعية",
+			"description": "اكتشاف وتحميل ملفات .roo/rules و AGENTS.md من المجلدات الفرعية بشكل تكراري. مفيد للمشاريع الضخمة ذات القواعد الخاصة بكل حزمة."
 		},
 		"rooignore": {
 			"label": "إظهار ملفات .kilocodeignore",
@@ -1093,6 +1141,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "التحويل من الكلام إلى النص (STT)",
 			"description": "عند التفعيل، يمكن لـ Kilo Code تحويل صوتك إلى نص باستخدام نموذج Whisper من OpenAI. انقر على زر الميكروفون في المحادثة لبدء التسجيل. يتطلب تثبيت FFmpeg ومزود API OpenAI مُكوَّن."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "تفعيل الأدوات المخصصة",
+			"description": "عند التفعيل، يمكن لـ Kilo تحميل واستخدام أدوات TypeScript/JavaScript مخصصة من مجلد .kilocode/tools في مشروعك أو ~/.kilocode/tools للأدوات العامة. ملاحظة: سيتم الموافقة على هذه الأدوات تلقائياً.",
+			"toolsHeader": "الأدوات المخصصة المتاحة",
+			"noTools": "لم يتم تحميل أدوات مخصصة. أضف ملفات .ts أو .js إلى مجلد .kilocode/tools في مشروعك أو ~/.kilocode/tools للأدوات العامة.",
+			"refreshButton": "تحديث",
+			"refreshing": "جاري التحديث...",
+			"refreshSuccess": "تم تحديث الأدوات بنجاح",
+			"refreshError": "فشل تحديث الأدوات",
+			"toolParameters": "المعاملات"
 		}
 	},
 	"promptCaching": {
@@ -1134,7 +1193,9 @@
 		"searchPlaceholder": "بحث",
 		"noMatchFound": "ما فيه تطابق",
 		"useCustomModel": "استخدام مخصص: {{modelId}}",
-		"simplifiedExplanation": "يمكنك ضبط إعدادات النموذج التفصيلية لاحقًا."
+		"simplifiedExplanation": "يمكنك ضبط إعدادات النموذج التفصيلية لاحقًا.",
+		"recommendedModels": "النماذج الموصى بها",
+		"allModels": "جميع النماذج"
 	},
 	"footer": {
 		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>kilo.ai/discord</discordLink>.",

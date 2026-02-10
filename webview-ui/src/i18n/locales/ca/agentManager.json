@@ -14,7 +14,10 @@
 		"shareSession": "Compartir sessió",
 		"shareConfirmMessage": "Vols compartir públicament una instantània d'aquesta sessió?",
 		"shareConfirmYes": "Sí",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Opcions",
+		"configureSetupScript": "Script de setup del worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "Mode YOLO - les operacions d'eines s'aproven automàticament",
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
-		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Núvol",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Canvia la branca base",
 		"noBranches": "No s'han trobat branques",
 		"noMatchingBranches": "No hi ha branques que coincideixin amb la teva cerca",
-		"openTerminal": "Obrir terminal"
+		"openTerminal": "Obrir terminal",
+		"selectModel": "Selecciona model",
+		"modelTooltip": "Tria quin model d'IA utilitzar per a aquesta sessió",
+		"defaultModel": "Model per defecte",
+		"loadingModels": "Carregant...",
+		"selectMode": "Selecciona el mode",
+		"modeTooltip": "Mode: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",
@@ -70,7 +85,11 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir sortida",
 		"collapseOutput": "Replegar sortida",
-		"copyCommand": "Copiar comanda"
+		"copyCommand": "Copiar comanda",
+		"thinking": "Pensant",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Aprovar",
+		"deny": "Rebutjar"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Cancel·lar agent",
 		"finishToBranchTitle": "Finalitza worktree i prepara branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finalitza worktree i prepara branch",
+		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar missatge",
 		"resumeTitle": "Reprendre agent",
-		"hint": "Prem Enter per enviar, Shift+Enter per nova línia"
+		"hint": "Prem Enter per enviar, Shift+Enter per nova línia",
+		"addImage": "Afegir imatge",
+		"removeImage": "Eliminar imatge"
 	},
 	"status": {
 		"running": "en execució",

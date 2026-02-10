@@ -15,9 +15,6 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 // kilocode_change start
-import { fetchWithTimeout, HeadersTimeoutError } from "./kilocode/fetchWithTimeout"
-import { getApiRequestTimeout } from "./utils/timeout-config"
-
 const TOKEN_ESTIMATION_FACTOR = 4 //Industry standard technique for estimating token counts without actually implementing a parser/tokenizer
 
 function estimateOllamaTokenCount(messages: Message[]): number {
@@ -195,20 +192,19 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
-				// kilocode_change start
-				const headers = this.options.ollamaApiKey
-					? { Authorization: `Bearer ${this.options.ollamaApiKey}` }
-					: undefined
-				// kilocode_change end
-
-				const timeout = getApiRequestTimeout() // kilocode_change
-				this.client = new Ollama({
+				const clientOptions: OllamaOptions = {
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
-					// kilocode_change start
-					fetch: timeout ? fetchWithTimeout(timeout, headers) : undefined,
-					headers: headers,
-					// kilocode_change end
-				})
+					// Note: The ollama npm package handles timeouts internally
+				}
+
+				// Add API key if provided (for Ollama cloud or authenticated instances)
+				if (this.options.ollamaApiKey) {
+					clientOptions.headers = {
+						Authorization: `Bearer ${this.options.ollamaApiKey}`,
+					}
+				}
+
+				this.client = new Ollama(clientOptions)
 			} catch (error: any) {
 				throw new Error(`Error creating Ollama client: ${error.message}`)
 			}
@@ -306,6 +302,8 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			let totalOutputTokens = 0
 			// Track tool calls across chunks (Ollama may send complete tool_calls in final chunk)
 			let toolCallIndex = 0
+			// Track tool call IDs for emitting end events
+			const toolCallIds: string[] = []
 
 			try {
 				for await (const chunk of stream) {
@@ -321,6 +319,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 						for (const toolCall of chunk.message.tool_calls) {
 							// Generate a unique ID for this tool call
 							const toolCallId = `ollama-tool-${toolCallIndex}`
+							toolCallIds.push(toolCallId)
 							yield {
 								type: "tool_call_partial",
 								index: toolCallIndex,
@@ -348,6 +347,13 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 					yield chunk
 				}
 
+				for (const toolCallId of toolCallIds) {
+					yield {
+						type: "tool_call_end",
+						id: toolCallId,
+					}
+				}
+
 				// Yield usage information if available
 				if (totalInputTokens > 0 || totalOutputTokens > 0) {
 					yield {
@@ -364,12 +370,6 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			// Enhance error reporting
 			const statusCode = error.status || error.statusCode
 			const errorMessage = error.message || "Unknown error"
-
-			// kilocode_change start
-			if (error.cause instanceof HeadersTimeoutError) {
-				throw new Error("Headers timeout", { cause: error })
-			}
-			// kilocode_change end
 
 			if (error.code === "ECONNREFUSED") {
 				throw new Error(

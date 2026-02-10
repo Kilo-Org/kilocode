@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Text } from "ink"
-import { parse, setOptions } from "marked"
-import TerminalRenderer, { type TerminalRendererOptions } from "marked-terminal"
+import { Marked, type MarkedExtension } from "marked"
+import { markedTerminal, type TerminalRendererOptions } from "marked-terminal"
 import chalk, { type ChalkInstance } from "chalk"
 import type { Theme } from "../../types/theme.js"
 
@@ -322,13 +322,13 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...
 				}
 			: options
 
-		// Configure marked to use the terminal renderer
-		setOptions({
-			renderer: new TerminalRenderer(rendererOptions),
-		})
+		// Create a new Marked instance with the terminal renderer
+		// Note: @types/marked-terminal is outdated and incorrectly types markedTerminal()
+		// as returning TerminalRenderer, but it actually returns a MarkedExtension
+		const marked = new Marked(markedTerminal(rendererOptions) as unknown as MarkedExtension)
 
 		// Parse markdown on the displayed text (efficient - only once per update)
-		const rendered = parse(textToDisplay) as string
+		const rendered = marked.parse(textToDisplay) as string
 		return <Text>{rendered.trim()}</Text>
 	} catch {
 		// Fallback to plain text if markdown parsing fails

@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Jak chceš začít?",
+		"freeModels": {
+			"title": "Bezplatné modely",
+			"description": "Začni programovat ihned"
+		},
+		"premiumModels": {
+			"title": "Prémiové modely",
+			"description": "Zaregistruj se. Noví uživatelé získají kredit 5 $"
+		},
+		"byok": {
+			"title": "Použij vlastní klíč",
+			"description": "Pokročilé. Použij svůj vlastní účet nebo předplatné"
+		}
+	},
 	"welcome": {
 		"greeting": "Vítej v Kilo Code!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
-		"introText2": "Funguje s nejnovějšími AI modely jako Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 a více než 450 dalšími.",
+		"introText2": "Funguje s nejnovějšími AI modely jako Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 a více než 450 dalšími.",
 		"introText3": "Vytvoř si bezplatný účet a získej $20 bonusových kreditů při prvním dobití.",
 		"ctaButton": "Začít",
 		"manualModeButton": "Použij vlastní API key",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký",
-		"newOrganization": "Používáš Kilo pro práci?"
+		"switchToFreeModel": "Přepnout na bezplatný model"
 	},
 	"pagination": {
 		"previous": "Předchozí",
@@ -26,6 +41,11 @@
 		"continueWith": "Pokračovat s {{model}}",
 		"continue": "Pokračovat"
 	},
+	"unauthorizedError": {
+		"title": "Musíš se přihlásit, abys mohl použít model {{modelId}}",
+		"message": "Přihlaš se nebo si vytvoř účet pro přístup k více než 500 modelům, použij kredity za pořizovací cenu nebo přines svůj vlastní klíč.",
+		"loginButton": "Přihlásit se"
+	},
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
@@ -38,14 +58,16 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP servery"
+			"mcp": "MCP servery",
+			"agentBehaviour": "Chování agenta",
+			"skills": "Dovednosti"
 		},
 		"provider": {
 			"account": "Účet Kilo Code",
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
 			"logout": "Odhlásit se z Kilo Code",
-			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
+			"loginForPremiumModels": "Přihlas se pro přístup k prémiovým modelům a funkcím",
 			"providerRouting": {
 				"title": "Směrování poskytovatelů",
 				"managedByOrganization": "Spravovat směrování poskytovatelů na úrovni organizace",
@@ -142,7 +164,14 @@
 	},
 	"docs": "Dokumentace",
 	"rules": {
-		"tooltip": "Spravovat Kilo Code Rules a Workflows",
+		"tooltip": "Spravovat chování agenta ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Pravidla",
+			"workflows": "Pracovní postupy",
+			"mcps": "MCP",
+			"modes": "Režimy",
+			"skills": "Dovednosti"
+		},
 		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Pravidla",
@@ -202,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nový tady?",
+		"tryOneOfThese": "Zkus jeden z těchto nápadů pro začátek:",
 		"suggestionText": "<suggestionButton>Klikni sem</suggestionButton> pro skvělý nápad, pak klikni na <sendIcon /> a sleduj mě, jak dělám zázraky!",
 		"ideas": {
 			"idea1": "Vytvoř rotující, zářící 3D kouli, která reaguje na pohyby myši. Udělej aplikaci funkční v prohlížeči.",
@@ -223,39 +253,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Spouštěče",
-			"keybindingDescription": "Funkce Autocomplete lze spustit pomocí příkazů. Můžeš nakonfigurovat <DocsLink>Klávesové Zkratky zde</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Povolit Autocomplete",
-				"description": "Když je povoleno, Kilo Code automaticky spustí Autocomplete, když přestaneš psát. To může být užitečné pro rychlé opravy a návrhy."
+				"label": "Automatické spouštění návrhů",
+				"description": "Automaticky zobrazovat návrhy kódu při pozastavení psaní."
 			},
 			"autoTriggerDelay": {
 				"label": "Zpoždění Automatického Spuštění",
-				"description": "Zpoždění v sekundách před tím, než Kilo Code spustí Autocomplete poté, co přestaneš psát. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Rychlý úkol ({{keybinding}})",
-				"description": "Potřebuješ jen rychlou změnu? Vyber nějaký kód (nebo ne!) a stiskni Cmd+I. Popiš svůj cíl v jednoduché češtině (\"vytvoř React komponentu s těmito props\", \"přidej zpracování chyb do této funkce\"), a získej několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"description": "Zpoždění v sekundách před zobrazením návrhů po pozastavení psaní. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Ruční dokončování ({{keybinding}})",
-				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"label": "Spustit klávesovou zkratkou ({{keybinding}})",
+				"description": "Stiskni {{keybinding}} pro vyžádání návrhu kódu na pozici kurzoru. <DocsLink>Upravit zkratku</DocsLink>"
 			},
 			"keybindingNotFound": "nenalezeno",
-			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel",
 			"enableChatAutocomplete": {
-				"label": "Automatické doplňování při psaní zpráv",
-				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+				"label": "Povolit automatické dokončování v chatu",
+				"description": "Zobrazovat návrhy při psaní v chatovém vstupu. Stiskni Tab pro přijetí návrhů."
 			},
 			"snooze": {
-				"label": "Pozastavit Autocomplete",
-				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"label": "Pozastavit návrhy",
+				"description": "Dočasně pozastavit návrhy na určitou dobu.",
 				"button": "Pozastavit",
 				"unsnooze": "Obnovit",
-				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"currentlySnoozed": "Návrhy jsou momentálně pozastaveny.",
 				"duration": {
 					"1min": "1 minuta",
 					"5min": "5 minut",
@@ -263,7 +286,19 @@
 					"30min": "30 minut",
 					"1hour": "1 hodina"
 				}
-			}
+			},
+			"noModelConfigured": {
+				"title": "Není nakonfigurován žádný model pro automatické dokončování",
+				"description": "Pro povolení automatického dokončování přidejte profil s jedním z těchto podporovaných poskytovatelů:",
+				"learnMore": "Zjistěte více o nastavení automatického dokončování →"
+			},
+			"noCredits": {
+				"title": "Na vašem účtu nejsou žádné kredity",
+				"description": "Váš účet Kilo Code nemá žádné kredity. Pro použití automatického dokončování prosím přidejte kredity na svůj účet.",
+				"buyCredits": "Koupit kredity →"
+			},
+			"codeEditorSuggestions": "Návrhy v editoru kódu",
+			"chatSuggestions": "Návrhy v chatu"
 		}
 	},
 	"virtualProvider": {
@@ -302,6 +337,9 @@
 		},
 		"modes": {
 			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
+		},
+		"skills": {
+			"description": "Procházejte a objevujte dovednosti od komunity. Dovednosti poskytují specializované instrukce pro konkrétní úkoly."
 		}
 	},
 	"modes": {
@@ -329,8 +367,34 @@
 	"speechToText": {
 		"startRecording": "Spustit hlasový vstup",
 		"stopRecording": "Zastavit hlasový vstup",
-		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
-		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
-		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
+		"setupPopover": {
+			"title": "Převod řeči na text",
+			"openAiReason": "Pro použití hlasové transkripce potřebujete platného poskytovatele OpenAI s API klíčem.",
+			"description": "Převod řeči na text není k dispozici. Převod řeči na text vyžaduje jak FFmpeg, tak platně nakonfigurovaného poskytovatele OpenAI. <moreInfoLink>Klikněte sem pro více informací</moreInfoLink>.",
+			"ffmpegReason": "Potřebujete nainstalovaný FFmpeg. <ffmpegLink>Klikněte zde</ffmpegLink>, aby vám Kilo pomohlo s instalací FFmpeg.",
+			"ffmpegMessage": "Pomozte mi nainstalovat FFmpeg"
+		},
+		"misconfiguredState": "Nedostupné kvůli konfiguraci",
+		"errorState": "Nedostupné kvůli chybě",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Vyberte mikrofonní zařízení pro převod řeči na text",
+			"defaultOption": "Výchozí nastavení systému",
+			"loading": "Načítání mikrofonních zařízení...",
+			"refresh": "Obnovit",
+			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
+	},
+	"skills": {
+		"description": "Dovednosti poskytují specializované instrukce pro konkrétní úkoly. Jsou automaticky aplikovány, když jsou relevantní pro tvůj požadavek.",
+		"noSkills": "Žádné dovednosti nainstalovány",
+		"projectSkills": "Dovednosti projektu",
+		"globalSkills": "Globální dovednosti",
+		"deleteDialog": {
+			"title": "Smazat dovednost",
+			"description": "Opravdu chceš smazat dovednost \"{{skillName}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"delete": "Smazat"
+		}
 	}
 }

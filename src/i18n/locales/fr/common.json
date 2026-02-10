@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Assistant de codage d'IA Open Source pour la planification, la création et la correction de code."
+		"description": "Agent de programmation IA open source qui génère du code à partir du langage naturel, automatise les tâches et exécute des commandes terminal. Comprend l'autocomplétion en ligne, l'automatisation du navigateur, le refactoring automatisé et des modes personnalisés pour la planification, le codage et le débogage. Compatible avec plus de 500 modèles d'IA, dont Claude (Anthropic), Gemini, Grok, GPT, Codex et GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "Sortie d'erreur : {{output}}",
 			"processExitedWithError": "Le processus Claude Code s'est terminé avec le code {{exitCode}}. Sortie d'erreur : {{output}}",
 			"stoppedWithReason": "Claude Code s'est arrêté pour la raison : {{reason}}",
-			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan.",
-			"notFound": "Exécutable Claude Code '{{claudePath}}' introuvable.\n\nVeuillez installer Claude Code CLI :\n1. Visitez {{installationUrl}} pour télécharger Claude Code\n2. Suivez les instructions d'installation pour votre système d'exploitation\n3. Assurez-vous que la commande 'claude' est disponible dans votre PATH\n4. Alternativement, configurez un chemin personnalisé dans les paramètres Kilo Code sous 'Chemin de Claude Code'\n\nErreur originale : {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}",
-			"tokenRefreshFailed": "Échec du renouvellement du token OAuth : {{error}}",
-			"onboardingTimeout": "L'opération d'intégration a expiré après 60 secondes. Veuillez réessayer plus tard.",
-			"projectDiscoveryFailed": "Impossible de découvrir l'ID du projet. Assurez-vous d'être authentifié avec 'gemini auth'.",
-			"rateLimitExceeded": "Limite de débit dépassée. Les limites du niveau gratuit ont été atteintes.",
-			"badRequest": "Requête incorrecte : {{details}}",
-			"apiError": "Erreur API Gemini CLI : {{error}}",
-			"completionError": "Erreur de complétion Gemini CLI : {{error}}"
+			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan."
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}"
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Le fournisseur Roo nécessite une authentification cloud. Veuillez vous connecter à Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "La clé API contient des caractères invalides."
+			"invalidKeyInvalidChars": "La clé API contient des caractères invalides.",
+			"apiRequestFailed": "La requête API a échoué ({{status}})"
 		},
 		"manual_url_empty": "Veuillez entrer une URL de callback valide",
 		"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
 		"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
 		"manual_url_auth_failed": "Authentification par URL manuelle échouée",
-		"manual_url_auth_error": "Échec de l'authentification"
+		"manual_url_auth_error": "Échec de l'authentification",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Réponse interrompue par l'utilisateur",
-		"responseInterruptedByApiError": "Réponse interrompue par une erreur d'API"
+		"responseInterruptedByApiError": "Réponse interrompue par une erreur d'API",
+		"streamTerminatedByProvider": "Le fournisseur a terminé la demande"
 	},
 	"storage": {
 		"prompt_custom_path": "Entrez le chemin de stockage personnalisé pour l'historique des conversations, laissez vide pour utiliser l'emplacement par défaut",
@@ -210,12 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Clé API Groq",
-			"getGroqApiKey": "Obtenir la clé API Groq",
-			"claudeCode": {
-				"pathLabel": "Chemin de Claude Code",
-				"description": "Chemin optionnel vers votre CLI Claude Code. Par défaut 'claude' si non défini.",
-				"placeholder": "Par défaut : claude"
-			}
+			"getGroqApiKey": "Obtenir la clé API Groq"
 		}
 	},
 	"customModes": {

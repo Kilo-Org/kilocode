@@ -26,7 +26,8 @@
 	"tabs": {
 		"tools": "Інструменти",
 		"resources": "Ресурси",
-		"logs": "Логи"
+		"logs": "Логи",
+		"authDebug": "Налагодження автентифікації"
 	},
 	"emptyState": {
 		"noTools": "Інструменти не знайдено",
@@ -55,7 +56,23 @@
 	},
 	"serverStatus": {
 		"retrying": "Повторна спроба...",
-		"retryConnection": "Повторити підключення"
+		"retryConnection": "Повторити підключення",
+		"signIn": "Увійти",
+		"signingIn": "Вхід..."
+	},
+	"authDebug": {
+		"title": "Налагоджувальна інформація OAuth",
+		"status": "Статус",
+		"tokenExpires": "Термін дії токена",
+		"scopes": "Області доступу",
+		"refreshInfo": "Інформація про токен оновлення",
+		"hasRefreshToken": "Є токен оновлення",
+		"canRefresh": "Автоматичне оновлення",
+		"tokenIssuedAt": "Токен видано",
+		"nextRefreshAt": "Наступне оновлення",
+		"lastRefreshAt": "Останнє оновлення",
+		"tokenEndpoint": "Ендпоінт токена",
+		"clientId": "Client ID"
 	},
 	"execution": {
 		"running": "Виконується",

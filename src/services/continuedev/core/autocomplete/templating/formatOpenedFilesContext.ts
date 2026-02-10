@@ -1,5 +1,5 @@
 import { countTokens, pruneStringFromBottom } from "../../llm/countTokens"
-import { AutocompleteCodeSnippet, AutocompleteSnippet, AutocompleteSnippetType } from "../snippets/types"
+import { AutocompleteCodeSnippet, AutocompleteSnippet, AutocompleteSnippetType } from "../types"
 import { HelperVars } from "../util/HelperVars"
 
 let logMin: number

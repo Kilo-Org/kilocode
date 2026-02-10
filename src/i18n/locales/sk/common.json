@@ -1,0 +1,285 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "Open source AI agent pre kódovanie, ktorý generuje kód z prirodzeného jazyka, automatizuje úlohy a spúšťa príkazy v termináli. Ponúka inline automatické doplňovanie, automatizáciu prehliadača, automatický refaktoring a vlastné režimy pre plánovanie, kódovanie a ladenie. Podporuje viac ako 500 AI modelov vrátane Claude (Anthropic), Gemini, Grok, GPT, Codex a GLM."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Spätná väzba",
+		"description": "Radi by sme počuli tvoju spätnú väzbu alebo ti pomohli s akýmikoľvek problémami, ktoré zažívaš.",
+		"githubIssues": "Nahlásiť problém na GitHube",
+		"githubDiscussions": "Pripojiť sa k diskusiám na GitHube",
+		"discord": "Pripoj sa k našej Discord komunite",
+		"customerSupport": "Zákaznícka podpora"
+	},
+	"welcome": "Vitaj, {{name}}! Máš {{count}} oznámení.",
+	"items": {
+		"zero": "Žiadne položky",
+		"one": "Jedna položka",
+		"other": "{{count}} položiek"
+	},
+	"confirmation": {
+		"reset_state": "Si si istý, že chceš resetovať všetok stav a tajné úložisko v rozšírení? Toto sa nedá vrátiť späť.",
+		"delete_config_profile": "Si si istý, že chceš zmazať tento konfiguračný profil?",
+		"delete_custom_mode_with_rules": "Si si istý, že chceš zmazať tento {{scope}} režim?\n\nToto tiež zmaže súvisiacu zložku pravidiel na:\n{{rulesFolderPath}}",
+		"delete_message": "Čo by si chcel zmazať?",
+		"edit_warning": "Úprava tejto správy zmaže všetky nasledujúce správy v konverzácii. Chceš pokračovať?",
+		"delete_just_this_message": "Iba túto správu",
+		"delete_this_and_subsequent": "Túto a všetky nasledujúce správy",
+		"proceed": "Pokračovať"
+	},
+	"errors": {
+		"invalid_data_uri": "Neplatný formát dát URI",
+		"error_copying_image": "Chyba pri kopírovaní obrázka: {{errorMessage}}",
+		"error_opening_image": "Chyba pri otváraní obrázka: {{error}}",
+		"error_saving_image": "Chyba pri ukladaní obrázka: {{errorMessage}}",
+		"could_not_open_file": "Nedá sa otvoriť súbor: {{errorMessage}}",
+		"could_not_open_file_generic": "Nedá sa otvoriť súbor!",
+		"checkpoint_timeout": "Vypršal časový limit pri pokuse o obnovenie checkpointu.",
+		"checkpoint_failed": "Obnovenie checkpointu zlyhalo.",
+		"git_not_installed": "Git je vyžadovaný pre funkciu checkpointov. Prosím nainštaluj Git pre aktiváciu checkpointov.",
+		"checkpoint_no_first": "Žiadny prvý checkpoint na porovnanie.",
+		"checkpoint_no_previous": "Žiadny predchádzajúci checkpoint na porovnanie.",
+		"checkpoint_no_changes": "Neboli nájdené žiadne zmeny.",
+		"checkpoint_diff_with_next": "Zmeny porovnané s ďalším checkpointom",
+		"checkpoint_diff_since_first": "Zmeny od prvého checkpointu",
+		"checkpoint_diff_to_current": "Zmeny k aktuálnemu workspace",
+		"nested_git_repos_warning": "Varovanie: Nájdené vnorené git repozitáre v týchto cestách. To môže spôsobiť neočakávané správanie s kontrolnými bodmi: {{paths}}",
+		"no_workspace": "Najprv prosím otvor priečinok projektu",
+		"attempt_completion_tool_failed": "Nie je možné vykonať attempt_completion, pretože predchádzajúce volanie nástroja v tomto kole zlyhalo. Vyrieš prosím najprv zlyhanie nástroja pred pokusom o dokončenie.",
+		"update_support_prompt": "Aktualizácia support promptu zlyhala",
+		"reset_support_prompt": "Reset support promptu zlyhal",
+		"enhance_prompt": "Vylepšenie promptu zlyhalo",
+		"get_system_prompt": "Získanie system promptu zlyhalo",
+		"search_commits": "Vyhľadávanie commitov zlyhalo",
+		"save_api_config": "Uloženie konfigurácie api zlyhalo",
+		"create_api_config": "Vytvorenie konfigurácie api zlyhalo",
+		"rename_api_config": "Premenovanie konfigurácie api zlyhalo",
+		"load_api_config": "Načítanie konfigurácie api zlyhalo",
+		"delete_api_config": "Zmazanie konfigurácie api zlyhalo",
+		"list_api_config": "Získanie zoznamu konfigurácie api zlyhalo",
+		"update_server_timeout": "Aktualizácia server timeout zlyhala",
+		"hmr_not_running": "Lokálny vývojový server nebeží, HMR nebude fungovať. Prosím spusť 'npm run dev' pred spustením rozšírenia pre aktiváciu HMR.",
+		"retrieve_current_mode": "Chyba: nepodarilo sa získať aktuálny režim zo stavu.",
+		"failed_delete_repo": "Zmazanie súvisiaceho shadow repository alebo vetvy zlyhalo: {{error}}",
+		"failed_remove_directory": "Odstránenie adresára úlohy zlyhalo: {{error}}",
+		"custom_storage_path_unusable": "Vlastná cesta úložiska \"{{path}}\" je nepoužiteľná, bude použitá predvolená cesta",
+		"cannot_access_path": "Nedá sa pristupovať k ceste {{path}}: {{error}}",
+		"settings_import_failed": "Import nastavení zlyhal: {{error}}.",
+		"mistake_limit_guidance": "To môže naznačovať zlyhanie v uvažovaní modelu alebo neschopnosť správne používať nástroj. Skús jednu z nasledujúcich možností:\n\n• Použi chytrejší model alebo jednoducho iný model (každý model má svoje slabiny)\n• Zníž množstvo kontextu (zjednoduš prompt pre LLM)\n• Poskytni ďalšie inštrukcie, ktoré pomôžu LLM (napr. \"Skús rozdeliť úlohu na menšie kroky\")",
+		"violated_organization_allowlist": "Spustenie úlohy zlyhalo: aktuálny profil porušuje nastavenia tvojej organizácie",
+		"condense_failed": "Zhusťovanie kontextu zlyhalo",
+		"condense_not_enough_messages": "Nedostatok správ pre zhustenie kontextu {{prevContextTokens}} tokenov. Je vyžadované aspoň {{minimumMessageCount}} správ, ale k dispozícii je iba {{messageCount}}.",
+		"condensed_recently": "Kontext bol nedávno zhustený; preskakujem tento pokus",
+		"condense_handler_invalid": "API handler pre zhusťovanie kontextu je neplatný",
+		"condense_context_grew": "Veľkosť kontextu sa zväčšila z {{prevContextTokens}} na {{newContextTokens}} počas zhusťovania; preskakujem tento pokus",
+		"url_timeout": "Načítanie webovej stránky trvalo príliš dlho (vypršal časový limit). Môže to byť spôsobené pomalým pripojením, náročnou webovou stránkou alebo dočasnou nedostupnosťou webu. Môžeš to skúsiť neskôr alebo skontrolovať, či je URL správna.",
+		"url_not_found": "Webová adresa nebola nájdená. Skontroluj prosím, či je URL správna, a skús to znova.",
+		"no_internet": "Žiadne internetové pripojenie. Skontroluj prosím svoje sieťové pripojenie a skús to znova.",
+		"url_forbidden": "Prístup k tejto webovej stránke je zakázaný. Web môže blokovať automatizovaný prístup alebo vyžadovať autentizáciu.",
+		"url_page_not_found": "Stránka nebola nájdená. Skontroluj prosím, či je URL správna.",
+		"url_request_aborted": "Požiadavka na načítanie URL bola prerušená. Môže sa to stať, ak stránka blokuje automatický prístup, vyžaduje autentifikáciu alebo je problém so sieťou. Skúste to znova alebo skontrolujte, či je URL dostupná v bežnom prehliadači.",
+		"url_fetch_failed": "Načítanie obsahu URL zlyhalo: {{error}}",
+		"url_fetch_error_with_url": "Chyba pri načítaní obsahu pre {{url}}: {{error}}",
+		"command_timeout": "Spustenie príkazu vypršalo po {{seconds}} sekundách",
+		"share_task_failed": "Zdieľanie úlohy zlyhalo. Skús to prosím znova.",
+		"share_no_active_task": "Žiadna aktívna úloha na zdieľanie",
+		"share_auth_required": "Je vyžadovaná autentizácia. Prosím prihlás sa pre zdieľanie úloh.",
+		"share_not_enabled": "Zdieľanie úloh nie je pre túto organizáciu povolené.",
+		"share_task_not_found": "Úloha nebola nájdená alebo bol prístup odopretý.",
+		"mode_import_failed": "Import režimu zlyhal: {{error}}",
+		"delete_rules_folder_failed": "Zmazanie zložky pravidiel zlyhalo: {{rulesFolderPath}}. Chyba: {{error}}",
+		"command_not_found": "Príkaz '{{name}}' nebol nájdený",
+		"open_command_file": "Nepodarilo sa otvoriť súbor príkazu",
+		"delete_command": "Nepodarilo sa zmazať príkaz",
+		"no_workspace_for_project_command": "Pre projektový príkaz nebola nájdená žiadna zložka workspace",
+		"command_already_exists": "Príkaz \"{{commandName}}\" už existuje",
+		"create_command_failed": "Nepodarilo sa vytvoriť príkaz",
+		"command_template_content": "---\ndescription: \"Stručný popis toho, čo tento príkaz robí\"\n---\n\nToto je nový slash príkaz. Upravte tento súbor pre prispôsobenie správania príkazu.",
+		"claudeCode": {
+			"processExited": "Proces Claude Code skončil s kódom {{exitCode}}.",
+			"errorOutput": "Chybový výstup: {{output}}",
+			"processExitedWithError": "Proces Claude Code skončil s kódom {{exitCode}}. Chybový výstup: {{output}}",
+			"stoppedWithReason": "Claude Code sa zastavil s dôvodom: {{reason}}",
+			"apiKeyModelPlanMismatch": "API kľúče a plány predplatného umožňujú rôzne modely. Uisti sa, že vybraný model je zahrnutý v tvojom pláne.",
+			"notFound": "Spustiteľný súbor Claude Code '{{claudePath}}' nebol nájdený.\n\nNainštalujte prosím Claude Code CLI:\n1. Navštívte {{installationUrl}} pre stiahnutie Claude Code\n2. Postupujte podľa pokynov pre inštaláciu pre váš operačný systém\n3. Uistite sa, že príkaz 'claude' je dostupný v PATH\n4. Alternatívne nakonfigurujte vlastnú cestu v nastavení Kilo Code pod 'Cesta Claude Code'\n\nPôvodná chyba: {{originalError}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Nepodarilo sa načítať OAuth prihlasovacie údaje. Najprv sa prosím autentizujte: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Chyba generovania kontextového prúdu Gemini: {{error}}",
+			"generate_complete_prompt": "Chyba dokončenia Gemini: {{error}}",
+			"sources": "Zdroje:",
+			"thinking_complete_no_output": "(Myslenie dokončené, ale nebol vygenerovaný žiadny výstup.)",
+			"thinking_complete_truncated": "(Myslenie dokončené, ale výstup bol skrátený kvôli limitu tokenov.)",
+			"thinking_complete_safety": "(Myslenie dokončené, ale výstup bol zablokovaný kvôli bezpečnostným nastaveniam.)",
+			"thinking_complete_recitation": "(Myslenie dokončené, ale výstup bol zablokovaný kvôli kontrole recitácie.)"
+		},
+		"cerebras": {
+			"authenticationFailed": "Autentifikácia Cerebras API zlyhala. Skontrolujte prosím, že váš API kľúč je platný a nevypršal.",
+			"accessForbidden": "Prístup k Cerebras API je zakázaný. Váš API kľúč možno nemá prístup k požadovanému modelu alebo funkcii.",
+			"rateLimitExceeded": "Prekročený limit rýchlosti Cerebras API. Počkajte prosím pred ďalšou požiadavkou.",
+			"serverError": "Chyba servera Cerebras API ({{status}}). Skúste to prosím neskôr.",
+			"genericError": "Chyba Cerebras API ({{status}}): {{message}}",
+			"noResponseBody": "Chyba Cerebras API: Žiadne telo odpovede",
+			"completionError": "Chyba dokončenia Cerebras: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Poskytovateľ Kilo vyžaduje cloudovú autentizáciu. Prosím prihlás sa do Kilo Code Cloud."
+		},
+		"openAiCodex": {
+			"notAuthenticated": "Nie si autentizovaný s OpenAI Codex. Prosím prihlás sa pomocou OpenAI Codex OAuth.",
+			"invalidRequest": "Neplatná požiadavka na Codex API. Skontroluj prosím svoje vstupné parametre.",
+			"authenticationFailed": "Autentizácia zlyhala. Prosím autentizuj sa znova s OpenAI Codex.",
+			"accessDenied": "Prístup odopretý. Tvoje predplatné ChatGPT možno nezahŕňa prístup k Codex.",
+			"endpointNotFound": "Koncový bod Codex API nebol nájdený.",
+			"rateLimitExceeded": "Prekročený limit rýchlosti. Skús to prosím neskôr.",
+			"serviceError": "Chyba služby OpenAI Codex. Skús to prosím neskôr.",
+			"genericError": "Chyba Codex API ({{status}})",
+			"noResponseBody": "Chyba Codex API: Žiadne telo odpovede",
+			"connectionFailed": "Nepodarilo sa pripojiť k Codex API: {{message}}",
+			"unexpectedConnectionError": "Neočakávaná chyba pri pripájaní k Codex API",
+			"apiError": "Chyba Codex API: {{message}}",
+			"responseFailed": "Odpoveď zlyhala: {{message}}",
+			"streamProcessingError": "Chyba pri spracovaní odpovedného prúdu: {{message}}",
+			"unexpectedStreamError": "Neočakávaná chyba pri spracovaní odpovedného prúdu",
+			"completionError": "Chyba dokončenia OpenAI Codex: {{message}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "Nebola nájdená aktívna úloha. Nedá sa zmazať správy.",
+			"invalid_timestamp_for_deletion": "Pre zmazanie bol poskytnutý neplatný časový údaj.",
+			"cannot_delete_missing_timestamp": "Nedá sa zmazať správu: chýba časový údaj.",
+			"cannot_delete_invalid_timestamp": "Nedá sa zmazať správu: časový údaj je neplatný.",
+			"message_not_found": "Správa nebola nájdená.",
+			"error_deleting_message": "Chyba pri mazaní správy.",
+			"error_editing_message": "Chyba pri úprave správy."
+		},
+		"manual_url_empty": "URL nemôže byť prázdne",
+		"manual_url_no_query": "URL musí obsahovať parametre dopytu",
+		"manual_url_missing_params": "URL chýbajú požadované parametre",
+		"manual_url_auth_failed": "Overenie sa nepodarilo",
+		"manual_url_auth_error": "Došlo k chybe overenia",
+		"api": {
+			"invalidKeyInvalidChars": "API kľúč obsahuje neplatné znaky.",
+			"apiRequestFailed": "API požiadavka zlyhala ({{status}})"
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "Nie je vybraný žiadny obsah terminálu",
+		"missing_task_files": "Súbory tejto úlohy chýbajú. Chceš ju odstrániť zo zoznamu úloh?",
+		"auto_import_failed": "Automatický import nastavení Kilo Code zlyhal: {{error}}"
+	},
+	"info": {
+		"no_changes": "Neboli nájdené žiadne zmeny.",
+		"path_copied_to_clipboard": "Cesta skopírovaná do schránky",
+		"clipboard_copy": "System prompt bol úspešne skopírovaný do schránky",
+		"history_cleanup": "Vyčistených {{count}} úloh s chýbajúcimi súbormi z histórie.",
+		"custom_storage_path_set": "Nastavená vlastná cesta úložiska: {{path}}",
+		"default_storage_path": "Návrat k použitiu predvolenej cesty úložiska",
+		"settings_imported": "Nastavenia boli úspešne importované.",
+		"auto_import_success": "Nastavenia Kilo Code boli automaticky importované zo súboru {{filename}}",
+		"share_link_copied": "Odkaz na zdieľanie skopírovaný do schránky",
+		"organization_share_link_copied": "Odkaz na zdieľanie organizácie skopírovaný do schránky!",
+		"public_share_link_copied": "Verejný odkaz na zdieľanie skopírovaný do schránky!",
+		"session_share_link_copied_with_url": "Relácia zdieľaná! Odkaz skopírovaný do schránky: {{url}}",
+		"image_copied_to_clipboard": "Image data URI skopírované do schránky",
+		"image_saved": "Obrázok uložený do {{path}}",
+		"mode_exported": "Režim '{{mode}}' bol úspešne exportovaný",
+		"mode_imported": "Režim bol úspešne importovaný"
+	},
+	"answers": {
+		"yes": "Áno",
+		"no": "Nie",
+		"cancel": "Zrušiť",
+		"remove": "Odstrániť",
+		"keep": "Ponechať"
+	},
+	"buttons": {
+		"save": "Uložiť",
+		"edit": "Upraviť",
+		"learn_more": "Zistiť viac"
+	},
+	"tasks": {
+		"canceled": "Chyba úlohy: Bola zastavená a zrušená používateľom.",
+		"deleted": "Zlyhanie úlohy: Bola zastavená a zmazaná používateľom.",
+		"incomplete": "Úloha #{{taskNumber}} (Neúplná)",
+		"no_messages": "Úloha #{{taskNumber}} (Žiadne správy)"
+	},
+	"storage": {
+		"prompt_custom_path": "Zadaj vlastnú cestu úložiska histórie konverzácií, ponechaj prázdne pre použitie predvoleného umiestnenia",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Prosím zadaj absolútnu cestu (napr. D:\\KiloCodeStorage alebo /home/user/storage)",
+		"enter_valid_path": "Prosím zadaj platnú cestu"
+	},
+	"input": {
+		"task_prompt": "Čo by mal Kilo Code urobiť?",
+		"task_placeholder": "Vytvoriť, nájsť, opýtať sa na niečo"
+	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Neplatný YAML v súbore .kilocodemodes na riadku {{line}}. Skontroluj prosím:\n• Správne odsadenie (použi medzery, nie tabulátory)\n• Zodpovedajúce úvodzovky a zátvorky\n• Platnú YAML syntax",
+			"schemaValidationError": "Neplatný formát vlastných režimov v .kilocodemodes:\n{{issues}}",
+			"invalidFormat": "Neplatný formát vlastných režimov. Uisti sa prosím, že tvoje nastavenia dodržujú správny YAML formát.",
+			"updateFailed": "Nepodarilo sa aktualizovať vlastný režim: {{error}}",
+			"deleteFailed": "Nepodarilo sa zmazať vlastný režim: {{error}}",
+			"resetFailed": "Nepodarilo sa resetovať vlastné režimy: {{error}}",
+			"modeNotFound": "Chyba zápisu: Režim nebol nájdený",
+			"noWorkspaceForProject": "Pre projektovo špecifický režim nebola nájdená žiadna zložka workspace",
+			"rulesCleanupFailed": "Režim bol úspešne zmazaný, ale nepodarilo sa zmazať zložku pravidiel v {{rulesFolderPath}}. Možno ju budete musieť zmazať ručne."
+		},
+		"scope": {
+			"project": "projekt",
+			"global": "globálny"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Režim bol úspešne odstránený, ale nepodarilo sa zmazať zložku pravidiel v {{rulesFolderPath}}. Možno ju budete musieť zmazať ručne."
+		}
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Tvoja organizácia vyžaduje autentizáciu Kilo Code Cloud. Prosím prihlás sa pre pokračovanie.",
+			"organization_mismatch": "Musíš byť autentizovaný s účtom Kilo Code Cloud tvojej organizácie.",
+			"verification_failed": "Nedá sa overiť autentizáciu organizácie."
+		},
+		"info": {
+			"organization_requires_auth": "Tvoja organizácia vyžaduje autentizáciu."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Zmazať vlastný režim",
+			"description": "Si si istý, že chceš zmazať tento {{scope}} režim? Toto tiež zmaže súvisiacu zložku pravidiel na: {{rulesFolderPath}}",
+			"descriptionNoRules": "Si si istý, že chceš zmazať tento vlastný režim?",
+			"confirm": "Zmazať"
+		}
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Odpoveď prerušená používateľom",
+		"responseInterruptedByApiError": "Odpoveď prerušená chybou API",
+		"streamTerminatedByProvider": "Poskytovateľ ukončil požiadavku"
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Zabrániť dokončeniu úlohy, keď sú v zozname úloh neúplné položky"
+		}
+	},
+	"docsLink": {
+		"label": "Dokumentácia",
+		"url": "https://kilo.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Chyba",
+		"reportText": "Prosím nahláste túto chybu, aby sme mohli aplikáciu vylepšiť.",
+		"githubText": "Nahlásiť na GitHub",
+		"copyInstructions": "Skopírujte podrobnosti chyby nižšie:",
+		"errorStack": "Zásobník chýb",
+		"componentStack": "Zásobník komponentov"
+	}
+}

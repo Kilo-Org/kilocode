@@ -14,7 +14,10 @@
 		"shareSession": "Bagikan sesi",
 		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
 		"shareConfirmYes": "Ya",
-		"shareConfirmNo": "Tidak"
+		"shareConfirmNo": "Tidak",
+		"options": "Opsi",
+		"configureSetupScript": "Skrip setup worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "Mode YOLO - operasi alat disetujui secara otomatis",
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
-		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
 		"runModeLocal": "Lokal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Ganti cabang dasar",
 		"noBranches": "Tidak ada cabang ditemukan",
 		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu",
-		"openTerminal": "Buka terminal"
+		"openTerminal": "Buka terminal",
+		"selectModel": "Pilih model",
+		"modelTooltip": "Pilih model AI mana yang akan digunakan untuk sesi ini",
+		"defaultModel": "Model default",
+		"loadingModels": "Memuat...",
+		"selectMode": "Pilih mode",
+		"modeTooltip": "Mode: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",
@@ -70,7 +85,11 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
-		"copyCommand": "Salin perintah"
+		"copyCommand": "Salin perintah",
+		"thinking": "Berpikir",
+		"thinkingSeconds": "{{count}}d",
+		"approve": "Setujui",
+		"deny": "Tolak"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Batalkan agen",
 		"finishToBranchTitle": "Selesaikan worktree dan siapkan branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Selesaikan worktree dan siapkan branch",
+		"createPRTitle": "Buat pull request",
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
-		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"
+		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru",
+		"addImage": "Tambah gambar",
+		"removeImage": "Hapus gambar"
 	},
 	"status": {
 		"running": "berjalan",

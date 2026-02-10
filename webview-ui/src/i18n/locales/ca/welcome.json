@@ -5,11 +5,11 @@
 	"start": "Som-hi!",
 	"routers": {
 		"requesty": {
-			"description": "El teu router LLM optimitzat",
-			"incentive": "$1 de crèdit gratuït"
+			"description": "El teu encaminador LLM optimitzat",
+			"incentive": "Crèdit gratuït de $1"
 		},
 		"openrouter": {
-			"description": "Una interfície unificada per a LLMs"
+			"description": "Una interfície unificada per als LLM"
 		},
 		"roo": {
 			"description": "Els millors models gratuïts per començar",
@@ -17,29 +17,41 @@
 		}
 	},
 	"chooseProvider": "Per fer la seva màgia, Kilo Code necessita una clau API.",
+	"landing": {
+		"greeting": "Benvingut a Kilo Code!",
+		"introduction": "Amb una gamma de Modes integrats i ampliables, Kilo Code et permet planificar, arquitectar, codificar, depurar i augmentar la teva productivitat com mai abans.",
+		"accountMention": "Per començar, crea el teu compte Kilo Code Cloud. Obtén models potents, control web, analítica, suport i molt més.",
+		"getStarted": "Crea compte Kilo",
+		"noAccount": "o utilitza sense compte"
+	},
 	"providerSignup": {
-		"rooCloudProvider": "Proveïdor Roo Code Cloud",
-		"rooCloudDescription": "La manera més senzilla d'utilitzar Roo. Una combinació seleccionada de models gratuïts i de pagament a un cost baix",
-		"learnMore": "més informació",
-		"useAnotherProvider": "Utilitza un altre proveïdor",
-		"useAnotherProviderDescription": "Introdueix una clau API i comença.",
-		"noApiKeys": "No vols haver de tractar amb claus? Opta pel Proveïdor Roo Code Cloud.",
-		"getStarted": "Començar"
+		"heading": "Tria el teu proveïdor",
+		"chooseProvider": "Roo necessita un proveïdor de LLM per funcionar. Tria-ne un per començar, pots afegir-ne més tard.",
+		"rooCloudProvider": "Proveïdor de Roo Code Cloud",
+		"rooCloudDescription": "La manera més fàcil de començar és amb el Proveïdor Roo Code Cloud: una mescla acurada de models gratuïts i de pagament a baix cost.",
+		"learnMore": "Més informació",
+		"useAnotherProvider": "Proveïdor de tercers",
+		"useAnotherProviderDescription": "Entra una clau API i comença.",
+		"noApiKeys": "No vols tractar amb claus API i comptes separats?",
+		"backToRoo": "Tria el Proveïdor Roo Code Cloud.",
+		"goBack": "Enrere",
+		"finish": "Finalitza"
 	},
 	"waitingForCloud": {
-		"heading": "Et portem a Roo Code Cloud...",
-		"description": "Completa el registre al navegador i tornaràs aquí automàticament.",
-		"noPrompt": "Si no se t'avisa per obrir una URL, <clickHere>feu clic aquí</clickHere>.",
-		"havingTrouble": "Si has completat el registre però tens problemes, <clickHere>feu clic aquí</clickHere>.",
-		"pasteUrl": "Enganxa la URL de resposta del teu navegador:",
-		"invalidURL": "No sembla una URL de resposta vàlida. Copia el que Roo Code Cloud mostra al teu navegador.",
+		"heading": "Connexió a Roo Code Cloud...",
+		"description": "Et portarem al teu navegador per registrar-te a Roo Code Cloud. Després et portarem aquí per acabar.",
+		"noPrompt": "Si no se't demana que obris una URL, <clickHere>fes clic aquí</clickHere>.",
+		"havingTrouble": "Si has acabat de registrar-te però tens problemes, <clickHere>fes clic aquí</clickHere>.",
+		"pasteUrl": "Enganxa l'URL de devolució de trucada des del teu navegador:",
+		"docsLink": "No funciona? <DocsLink>Consulta la documentació</DocsLink>.",
+		"invalidURL": "Això no sembla una URL de devolució de trucada vàlida. Si us plau, copia el que Roo Code Cloud està mostrant al teu navegador.",
 		"goBack": "Enrere"
 	},
-	"startRouter": "Recomanem utilitzar un router LLM:",
-	"startCustom": "O pots utilitzar la teva pròpia clau API:",
+	"startRouter": "Recomanem utilitzar un encaminador LLM:",
+	"startCustom": "O pots portar la teva pròpia clau API:",
 	"telemetry": {
 		"helpImprove": "Ajuda a millorar Kilo Code",
 		"helpImproveMessage": "Kilo Code recull dades d'errors i ús per ajudar-nos a corregir errors i millorar l'extensió. Aquesta telemetria no recull codi, prompts o informació personal. Pots desactivar això a la <settingsLink>configuració</settingsLink>."
 	},
-	"importSettings": "Importar configuració"
+	"importSettings": "Importa la configuració"
 }

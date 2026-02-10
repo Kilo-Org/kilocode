@@ -1,5 +1,5 @@
 import { IDE } from "../../../"
-import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/snippets/types"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/types"
 import { isSecurityConcern } from "../../../indexing/ignore"
 import { LRUCache } from "lru-cache"
 import * as vscode from "vscode"

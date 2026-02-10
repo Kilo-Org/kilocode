@@ -37,9 +37,11 @@ import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { MicrophoneButton } from "./MicrophoneButton" // kilocode_change: STT microphone button
 import { VolumeVisualizer } from "./VolumeVisualizer" // kilocode_change: STT volume level visual
 import { VoiceRecordingCursor } from "./VoiceRecordingCursor" // kilocode_change: STT recording cursor
+import { STTSetupPopover } from "./STTSetupPopover" // kilocode_change: STT setup help popover
+import { useSTT } from "@/hooks/useSTT" // kilocode_change: STT hook
+import { useSTTStatus } from "@/hooks/useSTTStatus" // kilocode_change: STT status management hook
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
-import { useSTT } from "@/hooks/useSTT" // kilocode_change: STT hook
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -163,9 +165,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			ghostServiceSettings, // kilocode_change
 			language, // User's VSCode display language
 			experiments, // kilocode_change: For speechToText experiment flag
-			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		} = useExtensionState()
 
+		// kilocode_change start: Manage STT status and error state with auto-clearing
+		const {
+			status: speechToTextStatus,
+			error: sttError,
+			setError: setSttError,
+			handleStatusChange,
+		} = useSTTStatus()
+		// kilocode_change end: Manage STT status and error state with auto-clearing
 		// kilocode_change start - autocomplete profile type system
 		// Filter out autocomplete profiles - only show chat profiles in the chat interface
 		const listApiConfigMeta = useMemo(() => {
@@ -343,6 +352,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			},
 			onError: (error) => {
 				console.error("STT error:", error)
+				setSttError(error)
+				setSttSetupPopoverOpen(true) // kilocode_change: Auto-show popover on error
 				recordingStartStateRef.current = null
 			},
 		})
@@ -411,15 +422,19 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [intendedCursorPosition, setIntendedCursorPosition] = useState<number | null>(null)
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
-		// const [isFocused, setIsFocused] = useState(false) // kilocode_change - not needed
+		const [isFocused, setIsFocused] = useState(false)
 		// kilocode_change start: FIM autocomplete ghost text
 		const {
 			ghostText,
 			handleKeyDown: handleGhostTextKeyDown,
 			handleInputChange: handleGhostTextInputChange,
+			handleFocus: handleGhostTextFocus,
+			handleBlur: handleGhostTextBlur,
+			handleSelect: handleGhostTextSelect,
+			clearGhostText,
 		} = useChatGhostText({
 			textAreaRef,
-			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? true,
+			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
 		})
 		// kilocode_change end: FIM autocomplete ghost text
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
@@ -445,7 +460,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [selectedType, searchQuery])
 
 		const handleEnhancePrompt = useCallback(() => {
-			const trimmedInput = inputValue.trim()
+			const trimmedInput = inputValue?.trim() ?? ""
 
 			if (trimmedInput) {
 				setIsEnhancingPrompt(true)
@@ -480,13 +495,24 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setImageWarning(null)
 		}, [setImageWarning])
 
+		// kilocode_change start: Popover state for STT setup help
+		const [sttSetupPopoverOpen, setSttSetupPopoverOpen] = useState(false)
+
 		const handleMicrophoneClick = useCallback(() => {
+			// If STT is unavailable, open setup popover instead of starting recording
+			if (sttError || !speechToTextStatus?.available) {
+				setSttSetupPopoverOpen(true)
+				return
+			}
+
 			if (isRecording) {
 				stopSTT()
 			} else {
+				setSttError(null) // Clear any previous error when starting new recording
 				startSTT(language || "en") // Pass user's language from extension state
 			}
-		}, [isRecording, startSTT, stopSTT, language])
+		}, [sttError, speechToTextStatus?.available, isRecording, stopSTT, setSttError, startSTT, language])
+		// kilocode_change end: Popover state for STT setup help
 
 		// kilocode_change start: Auto-clear images when model changes to non-image-supporting
 		const prevShouldDisableImages = useRef<boolean>(shouldDisableImages)
@@ -779,6 +805,28 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 				}
 
+				// kilocode_change start: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// If the cursor is within the first token of a leading /command, Tab should not fall through to other handlers.
+				// - If the slash command menu is open, Tab is handled above (completion)
+				// - If the slash command menu is closed, Tab should do nothing (must not mutate text, e.g. inserting '@')
+				if (event.key === "Tab") {
+					const textAreaValue = textAreaRef.current?.value ?? inputValue
+					const selectionStart = textAreaRef.current?.selectionStart ?? cursorPosition
+
+					if (/^\s*\//.test(textAreaValue)) {
+						const slashIndex = textAreaValue.search(/\//)
+						const spaceIndex = textAreaValue.indexOf(" ", slashIndex)
+						const tokenEndIndex = spaceIndex === -1 ? textAreaValue.length : spaceIndex
+
+						const cursorInFirstToken = selectionStart >= slashIndex && selectionStart <= tokenEndIndex
+						if (cursorInFirstToken) {
+							event.preventDefault()
+							return
+						}
+					}
+				}
+				// kilocode_change end: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+
 				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
 				if (handleGhostTextKeyDown(event)) {
 					return // Event was handled by ghost text hook, stop here
@@ -916,7 +964,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setCursorPosition(newCursorPosition)
 
 				let showMenu = shouldShowContextMenu(newValue, newCursorPosition) // kilocode_change start: Slash command menu logic
-				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(newValue, newCursorPosition)
+				// kilocode_change start: Pass workflow toggles to slash command menu
+				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(
+					newValue,
+					newCursorPosition,
+					customModes,
+					localWorkflows,
+					globalWorkflows,
+				)
+				// kilocode_change end
 
 				// we do not allow both menus to be shown at the same time
 				// the slash commands menu has precedence bc its a narrower component
@@ -990,6 +1046,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
+				// kilocode_change start: workflow toggles dependencies
+				customModes,
+				localWorkflows,
+				globalWorkflows,
+				// kilocode_change end
 				setInputValue,
 				setSearchRequestId,
 				setFileSearchResults,
@@ -1012,8 +1073,18 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowSlashCommandsMenu(false)
 			} // kilocode_change
 
-			// setIsFocused(false) // kilocode_change - not needed
+			setIsFocused(false)
 		}, [isMouseDownOnMenu])
+
+		// kilocode_change start: FIM autocomplete - track focus for ghost text
+		useEffect(() => {
+			if (isFocused) {
+				handleGhostTextFocus()
+			} else {
+				handleGhostTextBlur()
+			}
+		}, [isFocused, handleGhostTextFocus, handleGhostTextBlur])
+		// kilocode_change end: FIM autocomplete
 
 		const handlePaste = useCallback(
 			async (e: React.ClipboardEvent) => {
@@ -1025,6 +1096,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const urlRegex = /^\S+:\/\/\S+$/
 				if (urlRegex.test(pastedText.trim())) {
 					e.preventDefault()
+					clearGhostText() // kilocode_change: Clear ghost text on paste of URL as well
 					const trimmedUrl = pastedText.trim()
 					const newValue =
 						inputValue.slice(0, cursorPosition) + trimmedUrl + " " + inputValue.slice(cursorPosition)
@@ -1109,6 +1181,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				t,
 				selectedImages.length,
 				showImageWarning, // kilocode_change
+				clearGhostText, // kilocode_change: Clear ghost text on paste
 			],
 		)
 
@@ -1207,7 +1280,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			if (textAreaRef.current) {
 				setCursorPosition(textAreaRef.current.selectionStart)
 			}
-		}, [])
+			handleGhostTextSelect() // kilocode_change: Clear ghost text if cursor moved away from end
+		}, [handleGhostTextSelect])
 
 		const handleKeyUp = useCallback(
 			(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1259,7 +1333,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						const newCursorPosition = cursorPosition + totalLength
 						setCursorPosition(newCursorPosition)
 						setIntendedCursorPosition(newCursorPosition)
-	
+
 						// kilocode_change start: Show feedback when files are added
 						if (lines.length === 1) {
 							showContextFeedback("success", "kilocode:contextFeedback.fileAddedToContext")
@@ -1270,7 +1344,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						}
 						// kilocode_change end: Show feedback when files are added
 					}
-	
+
 					return
 				}
 
@@ -1343,6 +1417,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				t,
 				selectedImages.length, // kilocode_change - added selectedImages.length
 				showImageWarning, // kilocode_change - added showImageWarning
+				showContextFeedback, // kilocode_change
 			],
 		)
 
@@ -1558,7 +1633,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							updateHighlights()
 						}
 					}}
-					// onFocus={() => setIsFocused(true)} // kilocode_change - not needed
+					onFocus={() => setIsFocused(true)}
 					onKeyDown={(e) => {
 						// Handle ESC to cancel in edit mode
 						if (isEditMode && e.key === "Escape" && !e.nativeEvent?.isComposing) {
@@ -1741,20 +1816,21 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 					{/* kilocode_change start: Show microphone button only if experiment enabled */}
 					{experiments?.speechToText && (
-						<MicrophoneButton
-							isRecording={isRecording}
-							onClick={handleMicrophoneClick}
-							disabled={!speechToTextStatus?.available}
-							tooltipContent={
-								!speechToTextStatus?.available && speechToTextStatus
-									? speechToTextStatus.reason === "openaiKeyMissing"
-										? t("kilocode:speechToText.unavailableOpenAiKeyMissing")
-										: speechToTextStatus.reason === "ffmpegNotInstalled"
-											? t("kilocode:speechToText.unavailableFfmpegNotInstalled")
-											: t("kilocode:speechToText.unavailableBoth")
-									: undefined
-							}
-						/>
+						<STTSetupPopover
+							speechToTextStatus={speechToTextStatus}
+							open={sttSetupPopoverOpen}
+							onOpenChange={setSttSetupPopoverOpen}
+							setInputValue={setInputValue}
+							onSend={onSend}
+							error={sttError}>
+							<MicrophoneButton
+								isRecording={isRecording}
+								onClick={handleMicrophoneClick}
+								disabled={!speechToTextStatus?.available}
+								hasError={!!sttError}
+								onStatusChange={handleStatusChange}
+							/>
+						</STTSetupPopover>
 					)}
 					{/* kilocode_change end */}
 

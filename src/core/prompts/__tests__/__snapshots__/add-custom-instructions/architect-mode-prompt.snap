@@ -497,7 +497,7 @@ Mode-specific Instructions:
 
 6. Include Mermaid diagrams if they help clarify complex workflows or system architecture. Please avoid using double quotes ("") and parentheses () inside square brackets ([]) in Mermaid diagrams, as this can cause parsing errors.
 
-7. Use the switch_mode tool to request that the user switch to another mode to implement the solution.
+7. Use the switch_mode tool to request switching to another mode when you need to edit non-markdown files (like source code files: .ts, .js, .py, .java, etc.) or execute commands. You CAN directly create and edit markdown files (.md) without switching modes.
 
 **IMPORTANT: Focus on creating clear, actionable todo lists rather than lengthy markdown documents. Use the todo list as your primary planning tool to track and organize the work that needs to be done.**
 

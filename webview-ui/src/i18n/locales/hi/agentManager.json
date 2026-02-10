@@ -14,7 +14,10 @@
 		"shareSession": "सत्र साझा करें",
 		"shareConfirmMessage": "क्या आप इस सत्र का एक स्नैपशॉट सार्वजनिक रूप से साझा करना चाहेंगे?",
 		"shareConfirmYes": "हाँ",
-		"shareConfirmNo": "नहीं"
+		"shareConfirmNo": "नहीं",
+		"options": "विकल्प",
+		"configureSetupScript": "Worktree सेटअप स्क्रिप्ट",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLO मोड - टूल ऑपरेशन स्वचालित रूप से स्वीकृत हैं",
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
-		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
 		"runModeLocal": "स्थानीय",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "क्लाउड",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "बेस ब्रांच बदलें",
 		"noBranches": "कोई ब्रांच नहीं मिली",
 		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं",
-		"openTerminal": "टर्मिनल खोलें"
+		"openTerminal": "टर्मिनल खोलें",
+		"selectModel": "मॉडल चुनें",
+		"modelTooltip": "इस सत्र के लिए कौन सा AI मॉडल उपयोग करना है चुनें",
+		"defaultModel": "डिफ़ॉल्ट मॉडल",
+		"loadingModels": "लोड हो रहा है...",
+		"selectMode": "मोड चुनें",
+		"modeTooltip": "मोड: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
@@ -70,7 +85,11 @@
 		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}",
 		"expandOutput": "आउटपुट विस्तार करें",
 		"collapseOutput": "आउटपुट संक्षिप्त करें",
-		"copyCommand": "कमांड कॉपी करें"
+		"copyCommand": "कमांड कॉपी करें",
+		"thinking": "विचार कर रहा है",
+		"thinkingSeconds": "{{count}} सेकंड",
+		"approve": "स्वीकार करें",
+		"deny": "अस्वीकार करें"
 	},
 	"chatInput": {
 		"autoMode": "एजेंट पूर्ण-स्वचालित मोड में चल रहा है - इनपुट की अनुमति नहीं है",
@@ -80,9 +99,12 @@
 		"cancelTitle": "एजेंट रद्द करें",
 		"finishToBranchTitle": "Worktree समाप्त करें और branch तैयार करें: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree समाप्त करें और branch तैयार करें",
+		"createPRTitle": "Pull request बनाएं",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
-		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"
+		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter",
+		"addImage": "छवि जोड़ें",
+		"removeImage": "छवि हटाएं"
 	},
 	"status": {
 		"running": "चल रहा है",

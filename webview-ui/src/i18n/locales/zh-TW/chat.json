@@ -9,13 +9,14 @@
 		"tokens": "Token",
 		"cache": "快取",
 		"apiCost": "API 費用",
+		"changes": "變更",
 		"size": "大小",
 		"condenseContext": "智慧壓縮內容",
 		"contextWindow": "上下文長度",
 		"closeAndStart": "關閉現有工作並開始新工作",
 		"export": "匯出工作記錄",
 		"share": "分享工作",
-		"delete": "刪除工作 (按住 Shift 並點選可跳過確認)",
+		"delete": "刪除工作（按住 Shift 並點選可跳過確認）",
 		"shareWithOrganization": "與組織分享",
 		"shareWithOrganizationDescription": "僅組織成員可存取",
 		"sharePublicly": "公開分享",
@@ -26,7 +27,7 @@
 		"shareSuccessOrganization": "組織連結已複製到剪貼簿",
 		"shareSuccessPublic": "公開連結已複製到剪貼簿",
 		"openInCloud": "在 Roo Code Cloud 中開啟工作",
-		"openInCloudIntro": "從任何地方繼續監控或與 Roo 互動。掃描、點擊或複製以開啟。",
+		"openInCloudIntro": "從任何地方繼續監控或與 Roo 互動。掃描、點選或複製即可開啟。",
 		"openApiHistory": "開啟 API 歷史紀錄",
 		"openUiHistory": "開啟 UI 歷史紀錄"
 	},
@@ -61,12 +62,12 @@
 	},
 	"reject": {
 		"title": "拒絕",
-		"tooltip": "拒絕此操作"
+		"tooltip": "阻止此操作執行"
 	},
 	"completeSubtaskAndReturn": "完成子任務並返回",
 	"approve": {
 		"title": "核准",
-		"tooltip": "核准此操作"
+		"tooltip": "允許執行此操作"
 	},
 	"read-batch": {
 		"approve": {
@@ -77,7 +78,7 @@
 		}
 	},
 	"runCommand": {
-		"title": "執行",
+		"title": "執行命令",
 		"tooltip": "執行此命令"
 	},
 	"proceedWhileRunning": {
@@ -100,21 +101,26 @@
 		"title": "取消",
 		"tooltip": "取消目前操作"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "停止目前的工作"
+	},
+	"enqueueMessage": "將訊息加入佇列（會在目前工作完成後傳送）",
 	"editMessage": {
-		"placeholder": "編輯您的訊息..."
+		"placeholder": "編輯訊息..."
 	},
 	"scrollToBottom": "捲動至聊天室底部",
 	"about": "透過 AI 輔助生成、重構和除錯程式碼。查看我們的 <DocsLink>說明文件</DocsLink> 以了解更多。",
-	"docs": "請參閱我們的<DocsLink>說明文件</DocsLink>以了解詳細資訊。",
-	"onboarding": "此工作區的工作清單是空的。",
+	"docs": "請參閱 <DocsLink>說明文件</DocsLink> 開始使用。",
+	"onboarding": "想要做什麼呢？",
 	"rooTips": {
 		"customizableModes": {
-			"title": "可自訂模式",
+			"title": "可自訂模式，專注任務不偏離",
 			"description": "專注於任務並交付成果的專業角色。"
 		},
 		"modelAgnostic": {
-			"title": "自備模型",
-			"description": "使用您自己的提供商金鑰，甚至可以執行本地推斷 — 無需加價，無鎖定，無限制"
+			"title": "自備模型，無加價無鎖定",
+			"description": "使用自己的供應商金鑰，甚至可執行本機推論 - Roo 不額外收費"
 		}
 	},
 	"selectMode": "選擇互動模式",
@@ -127,19 +133,19 @@
 		"settings": "模式設定",
 		"description": "專門量身打造 Kilo Code 行為的角色。",
 		"searchPlaceholder": "搜尋模式...",
-		"noResults": "沒有找到結果",
+		"noResults": "找不到結果",
 		"organizationModes": "組織模式"
 	},
-	"enhancePromptDescription": "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善您的提示詞。請試著在這裡輸入提示詞，然後再次點選按鈕，以了解其運作方式。",
+	"enhancePromptDescription": "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 	"addImages": "新增圖片到訊息中",
 	"sendMessage": "傳送訊息",
 	"pressToSend": "按 {{keyCombination}} 傳送",
 	"stopTts": "停止文字轉語音",
 	"typeMessage": "輸入訊息...",
-	"typeTask": "在這裡輸入您的工作...",
+	"typeTask": "在這裡輸入工作...",
 	"addContext": "輸入 @ 新增內容，/ 執行命令",
 	"dragFiles": "按住 Shift 鍵拖曳檔案",
-	"dragFilesImages": "按住 Shift 鍵拖曳檔案/圖片",
+	"dragFilesImages": "按住 Shift 鍵拖曳檔案／圖片",
 	"errorReadingFile": "讀取檔案時發生錯誤",
 	"noValidImages": "未處理到任何有效圖片",
 	"separator": "分隔符號",
@@ -152,25 +158,27 @@
 		"streaming": "正在處理 API 請求...",
 		"cancelled": "API 請求已取消",
 		"streamingFailed": "API 串流處理失敗",
-		"errorTitle": "API 錯誤 {{code}}",
+		"rateLimitWait": "速率限制",
+		"errorTitle": "供應商錯誤 {{code}}",
 		"errorMessage": {
-			"docs": "文件",
-			"400": "提供商無法按照此方式處理請求。請停止工作並嘗試其他方法。",
-			"401": "無法向提供商進行身份驗證。請檢查您的 API 金鑰設定。",
-			"402": "您的帳戶資金/額度似乎已用盡。請前往提供商增加額度以繼續。",
-			"403": "無權存取。您的 API 金鑰有效，但提供商拒絕完成此請求。",
-			"429": "請求次數過多。提供商已對您的請求進行速率限制。請在下一次 API 呼叫前稍候。",
-			"500": "提供商伺服器錯誤。提供商端發生問題，您的請求沒有問題。",
-			"unknown": "未知 API 錯誤。請聯絡 Kilo 支援。",
-			"connection": "連線錯誤。請確保您有可用的網際網路連線。"
+			"docs": "說明文件",
+			"goToSettings": "設定",
+			"400": "供應商無法按照此方式處理請求。請停止工作並嘗試其他方法。",
+			"401": "無法向供應商進行身份驗證。請檢查您的 API 金鑰設定。",
+			"402": "您的帳戶資金／額度似乎已用盡。請前往供應商增加額度以繼續。",
+			"403": "無權存取。您的 API 金鑰有效，但供應商拒絕完成此請求。",
+			"429": "請求次數過多。供應商已對您的請求進行速率限制。請在下一次 API 呼叫前稍候。",
+			"500": "供應商伺服器錯誤。伺服器端發生問題，您的請求沒有問題。",
+			"connection": "連線錯誤。請確保您有可用的網際網路連線。",
+			"unknown": "未知 API 錯誤。點選詳細內容以了解更多資訊。",
+			"claudeCodeNotAuthenticated": "您需要登入才能使用 Claude Code。前往設定並點選「登入 Claude Code」以進行驗證。"
 		}
 	},
 	"checkpoint": {
 		"regular": "檢查點",
-		"initializingWarning": "正在初始化檢查點... 如果耗時過長，您可以在<settingsLink>設定</settingsLink>中停用檢查點並重新啟動工作。",
+		"initializingWarning": "正在初始化檢查點... 如果耗時過長，您可以在 <settingsLink>設定</settingsLink> 中停用檢查點並重新啟動工作。",
 		"menu": {
 			"viewDiff": "檢視差異",
-			"more": "更多選項",
 			"viewDiffFromInit": "檢視所有變更",
 			"viewDiffWithCurrent": "檢視自此檢查點以來的變更",
 			"restore": "還原檢查點",
@@ -180,7 +188,8 @@
 			"confirm": "確認",
 			"cancel": "取消",
 			"cannotUndo": "此操作無法復原。",
-			"restoreFilesAndTaskDescription": "將您的專案檔案還原到此時的快照，並刪除此點之後的所有訊息。"
+			"restoreFilesAndTaskDescription": "將您的專案檔案還原到此時的快照，並刪除此點之後的所有訊息。",
+			"more": "更多選項"
 		},
 		"current": "目前"
 	},
@@ -248,15 +257,15 @@
 		"wantsToSearchWithPath": "Kilo Code 想要在 <code>{{path}}</code> 中搜尋程式碼庫 <code>{{query}}</code>",
 		"didSearch_one": "找到 1 個結果",
 		"didSearch_other": "找到 {{count}} 個結果",
-		"resultTooltip": "相似度評分：{{score}} (點選開啟檔案)"
+		"resultTooltip": "相似度評分：{{score}}（點選以開啟檔案）"
 	},
 	"commandOutput": "命令輸出",
 	"commandExecution": {
-		"running": "正在執行",
 		"abort": "中止",
+		"running": "執行中",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "已結束，狀態碼 {{exitCode}}",
-		"manageCommands": "管理命令權限",
+		"manageCommands": "自動核准的命令",
 		"commandManagementDescription": "管理命令權限：點選 ✓ 允許自動執行，點選 ✗ 拒絕執行。規則可以開啟/關閉或從清單中移除。<settingsLink>檢視所有設定</settingsLink>",
 		"addToAllowed": "新增至允許清單",
 		"removeFromAllowed": "從允許清單中移除",
@@ -287,67 +296,85 @@
 		"didSwitchWithReason": "Kilo Code 已切換至 {{mode}} 模式，原因：{{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code 想要在 {{mode}} 模式下建立新的子工作",
-		"wantsToFinish": "Kilo Code 想要完成此子工作",
-		"newTaskContent": "子工作指示",
-		"completionContent": "子工作已完成",
-		"resultContent": "子工作結果",
+		"wantsToCreate": "Kilo Code 想要在 {{mode}} 模式下建立新的子任務",
+		"wantsToFinish": "Kilo Code 想要完成此子任務",
+		"newTaskContent": "子任務指示",
+		"completionContent": "子任務已完成",
+		"resultContent": "子任務結果",
 		"defaultResult": "請繼續下一個工作。",
-		"completionInstructions": "子工作已完成！您可以檢閱結果並提出修正或後續步驟。如果一切順利，請確認以將結果回傳給主任務。"
+		"completionInstructions": "子任務已完成！您可以檢閱結果並提出修正或後續步驟。如果一切順利，請確認以將結果回傳給主任務。"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code 有一個問題"
 	},
 	"taskCompleted": "工作完成",
 	"error": "錯誤",
+	"modelResponseIncomplete": "模型回應不完整",
+	"modelResponseErrors": {
+		"noToolsUsed": "模型在回應中未使用任何工具。這通常發生在模型僅提供文字／推理而未呼叫完成工作所需的工具時。",
+		"noToolsUsedDetails": "模型提供了文字／推理，但未呼叫任何必需的工具。這通常表示模型誤解了工作，或在確定使用哪個工具時遇到困難。系統已自動提示模型使用正確的工具重試。",
+		"noAssistantMessages": "模型未提供任何回應內容。這可能表示 API 或模型輸出存在問題。",
+		"noAssistantMessagesDetails": "語言模型回傳了一個沒有任何文字或工具呼叫的空回應。這可能是由於 API 問題、速率限制或模型特定問題所導致。系統已自動提示模型重試。"
+	},
 	"errorDetails": {
-		"title": "錯誤詳情",
-		"copyToClipboard": "複製到剪貼簿",
-		"copied": "已複製！"
+		"link": "詳細內容",
+		"title": "錯誤詳細資訊",
+		"copyToClipboard": "複製基本錯誤資訊",
+		"copied": "已複製！",
+		"diagnostics": "取得詳細錯誤資訊"
 	},
 	"diffError": {
 		"title": "編輯失敗"
 	},
-	"troubleMessage": "Kilo Code 遇到問題...",
+	"troubleMessage": "Roo 遇到問題...",
+	"errorDetails": {
+		"link": "詳情",
+		"title": "錯誤詳細資訊",
+		"copyToClipboard": "複製到剪貼簿",
+		"copied": "已複製！",
+		"diagnostics": "取得詳細錯誤資訊",
+		"proxyProvider": "看起來你在使用基於代理的提供商。請檢查日誌並確保它不會重寫 Roo 的請求。"
+	},
 	"powershell": {
-		"issues": "您似乎遇到了 Windows PowerShell 的問題，請參閱此說明文件"
+		"issues": "似乎遇到 Windows PowerShell 問題，請參閱此說明文件"
 	},
 	"autoApprove": {
-		"tooltipManage": "管理自動批准設定",
-		"tooltipStatus": "自動批准已啟用：{{toggles}}",
-		"title": "自動批准",
-		"toggle": "切換自動批准",
+		"tooltipManage": "管理自動核准設定",
+		"tooltipStatus": "自動核准已啟用：{{toggles}}",
+		"title": "自動核准",
+		"toggle": "切換自動核准狀態",
 		"all": "全部",
 		"none": "無",
-		"description": "無需請求權限即可執行這些操作。僅對您完全信任的操作啟用此功能。",
-		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動批准",
-		"toggleAriaLabel": "切換自動批准",
-		"disabledAriaLabel": "自動批准已禁用 - 請先選擇選項",
-		"triggerLabelOff": "自動批准已關閉",
+		"description": "無需請求權限即可執行這些操作。僅對完全信任的操作啟用此功能。",
+		"selectOptionsFirst": "請先選取下方至少一個選項以啟用自動核准",
+		"toggleAriaLabel": "切換自動核准狀態",
+		"disabledAriaLabel": "自動核准已停用，請先選擇選項",
+		"triggerLabelOff": "自動核准已關閉",
 		"triggerLabelOffShort": "關閉",
 		"triggerLabel_zero": "0 個自動核准",
 		"triggerLabel_one": "1 個自動核准",
 		"triggerLabel_other": "{{count}} 個自動核准",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} 已發布",
-		"support": "請在 <githubLink>GitHub</githubLink> 上為我們按星支持 Roo Code。",
+		"support": "請在 <githubLink>GitHub</githubLink> 上給 Roo Code 星星支持我們。",
 		"stealthModel": {
-			"feature": "<bold>限時免費隱形模型</bold> - Code Supernova：現已升級為 <bold>1M Token 上下文視窗</bold>！一個支援圖像輸入的多功能代理程式編程模型，透過 Roo Code Cloud 提供。",
-			"note": "(注意：提示和完成會被模型創建者記錄並用於改進模型)",
-			"connectButton": "連接到 Roo Code Cloud",
-			"selectModel": "在設定中從 Roo Code Cloud 提供商選擇 <code>roo/code-supernova</code> 開始使用。",
+			"feature": "<bold>限時免費隱形模型</bold> - Code Supernova：現已升級為 <bold>1M Token 上下文視窗</bold>！一個支援影像輸入的多功能代理程式設計模型，透過 Roo Code Cloud 提供。",
+			"note": "（注意：提示詞和回應會被模型建立者記錄並用於改進模型）",
+			"connectButton": "連線到 Roo Code Cloud",
+			"selectModel": "在設定中從 Roo Code Cloud 供應商選擇 <code>roo/code-supernova</code> 開始使用。",
 			"goToSettingsButton": "前往設定"
 		},
 		"release": {
-			"heading": "最新功能：",
-			"contextRewind": "改進的上下文壓縮現在允許您在回到存檔點時恢復完整的先前上下文",
-			"rooProvider": "Roo Code Cloud 提供商現在保留推理內容，並預設使用原生工具以獲得更佳效能"
+			"heading": "新增功能：",
+			"openaiCodexProvider": "新增 OpenAI - ChatGPT Plus/Pro 提供商，提供基於訂閱的 Codex 模型存取，無須按 Token 計費。",
+			"gpt52codexModel": "新的 gpt-5.2-codex 模型已新增至 Roo Code Router、標準 OpenAI 提供商等。",
+			"bugFixes": "修復導致灰屏的記憶體洩漏、Gemini 思考簽名問題以及其他穩定性改進。"
 		},
 		"cloudAgents": {
 			"heading": "雲端的新功能：",
-			"specialized": "推出 <bold>Explainer</bold>、<bold>Planner</bold> 和 <bold>Coder</bold> - 三個專業雲端代理來增強你的工作流程。",
+			"specialized": "推出 <bold>Explainer</bold>、<bold>Planner</bold> 和 <bold>Coder</bold>，三個專業雲端代理用來強化工作流程。",
 			"description": "代理在雲端協同工作，可從網頁或透過 Slack 觸發。",
 			"tryButton": "試用雲端代理"
 		},
@@ -359,18 +386,24 @@
 		"seconds": "{{count}} 秒"
 	},
 	"followUpSuggest": {
-		"copyToInput": "複製到輸入框 (或按住 Shift 並點選)",
-		"timerPrefix": "自動批准已啟用。{{seconds}}秒後選擇中…"
+		"copyToInput": "複製到輸入框（或按住 Shift 並點選）",
+		"timerPrefix": "自動核准已啟用。{{seconds}} 秒後自動選取..."
+	},
+	"costs": {
+		"totalWithSubtasks": "總成本（包括子任務）: ${{cost}}",
+		"total": "總成本：${{cost}}",
+		"includesSubtasks": "包括子任務成本"
 	},
 	"browser": {
-		"session": "瀏覽器會話",
+		"session": "瀏覽器工作階段",
+		"active": "活動中",
 		"rooWantsToUse": "Kilo Code 想要使用瀏覽器",
 		"consoleLogs": "主控台記錄",
 		"noNewLogs": "（沒有新記錄）",
 		"screenshot": "瀏覽器螢幕擷圖",
 		"cursor": "游標",
 		"navigation": {
-			"step": "步驟 {{current}} / {{total}}",
+			"step": "步驟 {{current}}／{{total}}",
 			"previous": "上一步",
 			"next": "下一步"
 		},
@@ -379,9 +412,9 @@
 			"title": "瀏覽器動作：",
 			"launched": "瀏覽器已啟動",
 			"launch": "在 {{url}} 啟動瀏覽器",
-			"clicked": "點選位置: {{coordinate}}",
+			"clicked": "點選位置：{{coordinate}}",
 			"click": "點選 ({{coordinate}})",
-			"typed": "輸入: {{text}}",
+			"typed": "輸入：{{text}}",
 			"type": "輸入「{{text}}」",
 			"pressed": "已按下 {{key}}",
 			"press": "按下 {{key}}",
@@ -389,9 +422,9 @@
 			"scrollDown": "向下捲動",
 			"scrolledUp": "已向上捲動",
 			"scrollUp": "向上捲動",
-			"hovered": "懸停位置: {{coordinate}}",
-			"hover": "懸停 ({{coordinate}})",
-			"resized": "大小已變更: {{size}}",
+			"hovered": "滑鼠停留位置：{{coordinate}}",
+			"hover": "滑鼠停留 ({{coordinate}})",
+			"resized": "大小已變更：{{size}}",
 			"resize": "調整大小為 {{size}}",
 			"screenshotSaved": "螢幕擷圖已儲存",
 			"screenshot": "將螢幕擷圖儲存至 {{path}}",
@@ -408,7 +441,7 @@
 			"copy_code": "複製程式碼"
 		}
 	},
-	"systemPromptWarning": "警告：自訂系統提示詞覆蓋已啟用。這可能嚴重破壞功能並導致不可預測的行為。",
+	"systemPromptWarning": "警告：自訂系統提示詞覆寫已啟用。這可能嚴重破壞功能並導致不可預測的行為。",
 	"profileViolationWarning": "目前設定檔與您的組織設定不相容",
 	"shellIntegration": {
 		"title": "命令執行警告",
@@ -465,24 +498,24 @@
 			"confirm": "刪除"
 		}
 	},
-	"contextMenu": {
-		"noResults": "沒有結果",
-		"problems": "問題",
-		"terminal": "終端機",
-		"url": "貼上 URL 以擷取內容"
+	"slashCommand": {
+		"wantsToRun": "Kilo Code 想要執行斜線指令",
+		"didRun": "Kilo Code 執行了斜線指令"
 	},
 	"queuedMessages": {
 		"title": "佇列中的訊息",
 		"clickToEdit": "點選以編輯訊息"
 	},
-	"slashCommand": {
-		"wantsToRun": "Kilo Code 想要執行斜線指令",
-		"didRun": "Kilo Code 執行了斜線指令"
+	"contextMenu": {
+		"noResults": "找不到結果",
+		"problems": "問題",
+		"terminal": "終端機",
+		"url": "貼上 URL 以擷取內容"
 	},
 	"todo": {
-		"partial": "已完成 {{completed}} / {{total}} 個待辦事項",
+		"partial": "已完成 {{completed}}／{{total}} 個待辦事項",
 		"complete": "已完成 {{total}} 個待辦事項",
-		"updated": "已更新待辦事項列表",
+		"updated": "已更新待辦事項清單",
 		"completed": "已完成",
 		"started": "已開始"
 	}

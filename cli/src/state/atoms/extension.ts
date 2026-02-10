@@ -224,6 +224,10 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		// Auto-complete orphaned partial ask messages (CLI-only workaround for extension bug)
 		reconciledMessages = autoCompleteOrphanedPartialAsks(reconciledMessages)
 
+		// Auto-complete orphaned partial tool messages (CLI-only workaround for extension bug)
+		// This fixes the issue where list_files and search_files show "Total: 0 items"
+		reconciledMessages = autoCompleteOrphanedPartialTools(reconciledMessages)
+
 		set(chatMessagesAtom, reconciledMessages)
 
 		// Update version map for all reconciled messages
@@ -329,13 +333,36 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 	const currentVersion = versionMap.get(existingMessage.ts) || 0
 	const newVersion = getMessageContentLength(updatedMessage)
 
+	// Detect content changes that may not affect length (e.g. numeric JSON fields like costs)
+	const contentChanged =
+		existingMessage.text !== updatedMessage.text ||
+		existingMessage.say !== updatedMessage.say ||
+		existingMessage.ask !== updatedMessage.ask ||
+		existingMessage.isAnswered !== updatedMessage.isAnswered ||
+		existingMessage.metadata !== updatedMessage.metadata
+
 	// Always update if:
-	// 1. Message is partial (streaming update)
+	// 1. Message is partial (streaming update) - BUT NOT if existing message is already complete
 	// 2. New version has more content
-	// 3. Partial flag changed (partial=true -> partial=false transition)
+	// 3. Partial flag changed from partial=true -> partial=false (completion)
+	// 4. Content changed but length stayed the same (e.g. cost updated from 0.0010 -> 0.0020)
 	const partialFlagChanged = existingMessage.partial !== updatedMessage.partial
 
-	if (updatedMessage.partial || newVersion > currentVersion || partialFlagChanged) {
+	// BUG FIX: Don't allow stale partial updates to overwrite completed messages
+	// This prevents context drops when delayed IPC messages arrive after a message has completed
+	const isStalePartialUpdate = existingMessage.partial === false && updatedMessage.partial === true
+
+	// Skip stale partial updates that would revert a completed message back to partial
+	if (isStalePartialUpdate && newVersion <= currentVersion) {
+		return
+	}
+
+	if (
+		(updatedMessage.partial && !isStalePartialUpdate) ||
+		newVersion > currentVersion ||
+		partialFlagChanged ||
+		(contentChanged && newVersion === currentVersion)
+	) {
 		const newMessages = [...messages]
 		newMessages[messageIndex] = updatedMessage
 		set(updateChatMessagesAtom, newMessages)
@@ -525,6 +552,64 @@ function autoCompleteOrphanedPartialAsks(messages: ExtensionChatMessage[]): Exte
 
 		// If there's a subsequent message, this partial ask is orphaned - mark it complete
 		if (hasSubsequentMessage) {
+			result[i] = { ...msg, partial: false }
+		}
+	}
+
+	return result
+}
+
+/**
+ * Auto-complete orphaned partial tool messages (CLI-only workaround)
+ *
+ * This handles the case where tool messages (ask type with ask="tool") can get stuck
+ * with partial=true when the complete message update is missed or arrives out of order.
+ *
+ * Detection logic (mark as complete if ANY of these conditions are true):
+ * 1. If a tool message has partial=true AND there's a subsequent message
+ *    → The tool has completed but the complete message was missed
+ * 2. If a tool message has partial=true AND has non-empty text content
+ *    → The tool has content but the partial flag wasn't cleared
+ *
+ * This ensures tool messages don't get stuck in partial state indefinitely,
+ * which would cause them to be filtered out by hidePartialMessages and show
+ * "Total: 0 items" or "Found: 0 matches" in the CLI.
+ */
+function autoCompleteOrphanedPartialTools(messages: ExtensionChatMessage[]): ExtensionChatMessage[] {
+	const result = [...messages]
+
+	for (let i = 0; i < result.length; i++) {
+		const msg = result[i]
+
+		// Only process partial tool messages (ask type with ask="tool")
+		if (!msg || msg.type !== "ask" || msg.ask !== "tool" || !msg.partial) {
+			continue
+		}
+
+		// Condition 1: Check if there's a subsequent message
+		let hasSubsequentMessage = false
+		for (let j = i + 1; j < result.length; j++) {
+			const nextMsg = result[j]
+			if (!nextMsg) continue
+
+			// Found a subsequent message
+			hasSubsequentMessage = true
+			break
+		}
+
+		// Condition 2: Check if the tool message has non-empty content
+		// Tool messages store their content as JSON in the 'text' field with a 'content' property
+		let hasContent = false
+		try {
+			const parsed = JSON.parse(msg.text || "{}")
+			hasContent = parsed.content && parsed.content.trim().length > 0
+		} catch {
+			// If parsing fails, fall back to checking text directly
+			hasContent = Boolean(msg.text && msg.text.trim().length > 0)
+		}
+
+		// If either condition is true, mark the partial tool as complete
+		if (hasSubsequentMessage || hasContent) {
 			result[i] = { ...msg, partial: false }
 		}
 	}

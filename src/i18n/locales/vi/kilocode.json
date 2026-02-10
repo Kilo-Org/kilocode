@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Phản hồi của mô hình kết thúc bất ngờ (không có tin nhắn trợ lý). Điều này có thể là dấu hiệu của giới hạn tốc độ.",
 		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}",
 		"maxCompletionTokens": "Đã đạt đến số lượng token hoàn thành tối đa.",
+		"contentFilter": "Yêu cầu đã bị chặn bởi bộ lọc nội dung.",
 		"disableApplyDiff": "Nếu lỗi này tiếp tục xảy ra, vui lòng tắt Chỉnh sửa Thông qua Diffs trong Cài đặt Nâng cao.",
 		"disableEditFile": "Nếu lỗi này tiếp tục xảy ra, vui lòng tắt tính năng thử nghiệm Fast Apply."
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (đã tắt)",
-				"tokenError": "Phải đặt token hợp lệ để sử dụng Autocomplete",
+				"noCredits": "**Không có tín dụng trong tài khoản của bạn**\n\nTài khoản Kilo Code của bạn không có tín dụng. Để sử dụng tự động hoàn thành, vui lòng thêm tín dụng vào tài khoản của bạn.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Chưa cấu hình mô hình tự động hoàn thành**\n\nĐể bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau: {{providers}}.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"provider": "Nhà cung cấp:",
 				"model": "Mô hình:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Phiên bản Kilocode CLI của bạn đã cũ và không hỗ trợ Agent Manager. Vui lòng cập nhật lên phiên bản mới nhất.",
-			"cliNotFound": "Không tìm thấy Kilocode CLI. Vui lòng cài đặt để sử dụng Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI chưa được cấu hình. Chạy 'kilocode auth' để đăng nhập hoặc 'kilocode config' để cấu hình.",
 			"sessionFailed": "Không thể khởi động phiên agent",
 			"sessionFailedWithMessage": "Không thể khởi động phiên agent: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Khóa API OpenAI của bạn không hợp lệ hoặc không có quyền truy cập vào Realtime API. Vui lòng kiểm tra khóa API và thử lại.",
+			"unknown": "Kết nối thất bại. Vui lòng kiểm tra cấu hình của bạn và thử lại."
+		}
+	},
+	"configDiscovery": {
+		"added": "Mã Kilo: Đã thêm {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Mã Kilo: Đã xóa {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

@@ -9,10 +9,14 @@ import { useHotkeys } from "../../state/hooks/useHotkeys.js"
 import { useTheme } from "../../state/hooks/useTheme.js"
 import { HotkeyBadge } from "./HotkeyBadge.js"
 import { ThinkingAnimation } from "./ThinkingAnimation.js"
-import { useAtomValue } from "jotai"
-import { isStreamingAtom } from "../../state/atoms/ui.js"
+import { useAtomValue, useSetAtom } from "jotai"
+import { isStreamingAtom, isCancellingAtom, isProcessingAtom } from "../../state/atoms/ui.js"
 import { hasResumeTaskAtom } from "../../state/atoms/extension.js"
-import { exitPromptVisibleAtom } from "../../state/atoms/keyboard.js"
+import { exitPromptVisibleAtom, pendingImagePastesAtom, pendingTextPastesAtom } from "../../state/atoms/keyboard.js"
+import { useEffect } from "react"
+
+/** Safety timeout to auto-reset cancelling state if extension doesn't respond */
+const CANCELLING_SAFETY_TIMEOUT_MS = 10_000
 
 export interface StatusIndicatorProps {
 	/** Whether the indicator is disabled */
@@ -34,9 +38,34 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const theme = useTheme()
 	const { hotkeys, shouldShow } = useHotkeys()
 	const isStreaming = useAtomValue(isStreamingAtom)
+	const isProcessing = useAtomValue(isProcessingAtom)
+	const isCancelling = useAtomValue(isCancellingAtom)
+	const setIsCancelling = useSetAtom(isCancellingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const exitPromptVisible = useAtomValue(exitPromptVisibleAtom)
-	const exitModifierKey = process.platform === "darwin" ? "Cmd" : "Ctrl"
+	const pendingImagePastes = useAtomValue(pendingImagePastesAtom)
+	const pendingTextPastes = useAtomValue(pendingTextPastesAtom)
+	const isPastingImage = pendingImagePastes > 0
+	const isPastingText = pendingTextPastes > 0
+	const exitModifierKey = "Ctrl" // Ctrl+C is the universal terminal interrupt signal on all platforms
+
+	// Reset cancelling state when streaming stops
+	useEffect(() => {
+		if (!isStreaming && isCancelling) {
+			setIsCancelling(false)
+		}
+	}, [isStreaming, isCancelling, setIsCancelling])
+
+	// Safety timeout to prevent getting stuck if extension doesn't respond
+	useEffect(() => {
+		if (!isCancelling) {
+			return
+		}
+		const timeout = setTimeout(() => {
+			setIsCancelling(false)
+		}, CANCELLING_SAFETY_TIMEOUT_MS)
+		return () => clearTimeout(timeout)
+	}, [isCancelling, setIsCancelling])
 
 	// Don't render if no hotkeys to show or disabled
 	if (!shouldShow || disabled) {
@@ -51,8 +80,17 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 					<Text color={theme.semantic.warning}>Press {exitModifierKey}+C again to exit.</Text>
 				) : (
 					<>
-						{isStreaming && <ThinkingAnimation />}
-						{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
+						{isPastingImage && <ThinkingAnimation text="Pasting image..." />}
+						{isPastingText && !isPastingImage && <ThinkingAnimation text="Pasting text..." />}
+						{isCancelling && !isPastingImage && !isPastingText && (
+							<ThinkingAnimation text="Cancelling..." />
+						)}
+						{(isStreaming || isProcessing) && !isCancelling && !isPastingImage && !isPastingText && (
+							<ThinkingAnimation />
+						)}
+						{hasResumeTask && !isPastingImage && !isPastingText && (
+							<Text color={theme.ui.text.dimmed}>Task ready to resume</Text>
+						)}
 					</>
 				)}
 			</Box>

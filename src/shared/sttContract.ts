@@ -2,6 +2,15 @@
 // Speech-to-Text (STT) event protocol
 
 /**
+ * Microphone device information
+ */
+export interface MicrophoneDevice {
+	id: string // FFmpeg device identifier (e.g., "0" or "audio=Microphone")
+	name: string // Human-readable name (e.g., "Built-in Microphone")
+	platform: string // Platform where discovered (e.g., "darwin", "linux", "win32")
+}
+
+/**
  * Commands: WebView → Extension
  */
 export interface STTStartCommand {
@@ -17,7 +26,26 @@ export interface STTCancelCommand {
 	type: "stt:cancel"
 }
 
-export type STTCommand = STTStartCommand | STTStopCommand | STTCancelCommand
+export interface STTListDevicesCommand {
+	type: "stt:listDevices"
+}
+
+export interface STTSelectDeviceCommand {
+	type: "stt:selectDevice"
+	device: MicrophoneDevice | null // null means use system default
+}
+
+export interface STTCheckAvailabilityCommand {
+	type: "stt:checkAvailability"
+}
+
+export type STTCommand =
+	| STTStartCommand
+	| STTStopCommand
+	| STTCancelCommand
+	| STTListDevicesCommand
+	| STTSelectDeviceCommand
+	| STTCheckAvailabilityCommand
 
 /**
  * Events: Extension → WebView
@@ -56,11 +84,36 @@ export interface STTStoppedEvent {
 	error?: string // Error message (when reason === "error")
 }
 
-export type STTEvent = STTStartedEvent | STTTranscriptEvent | STTVolumeEvent | STTStoppedEvent
+export interface STTDevicesEvent {
+	type: "stt:devices"
+	devices: MicrophoneDevice[]
+}
+
+export interface STTDeviceSelectedEvent {
+	type: "stt:deviceSelected"
+	device: MicrophoneDevice | null
+}
+
+export interface STTStatusResponseEvent {
+	type: "stt:statusResponse"
+	speechToTextStatus: {
+		available: boolean
+		reason?: "openaiKeyMissing" | "ffmpegNotInstalled"
+	}
+}
+
+export type STTEvent =
+	| STTStartedEvent
+	| STTTranscriptEvent
+	| STTVolumeEvent
+	| STTStoppedEvent
+	| STTDevicesEvent
+	| STTDeviceSelectedEvent
+	| STTStatusResponseEvent
 
 /**
  * Type guard for routing in message handlers
  */
 export function isSTTCommand(msg: { type: string }): msg is STTCommand {
-	return msg.type === "stt:start" || msg.type === "stt:stop" || msg.type === "stt:cancel"
+	return msg.type.startsWith("stt:")
 }

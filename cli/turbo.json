@@ -20,7 +20,7 @@
 			"cache": false,
 			"outputs": ["dist/**"],
 			"inputs": ["src/**"],
-			"dependsOn": ["copy:kilocode"]
+			"dependsOn": ["^build", "copy:kilocode"]
 		},
 		"start": {
 			"cache": false,

@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Помічник з кодування AI з відкритим кодом для планування, створення та виправлення коду."
+		"description": "AI-агент для програмування з відкритим кодом, який генерує код з природної мови, автоматизує завдання та виконує команди терміналу. Включає вбудоване автодоповнення, автоматизацію браузера, автоматичний рефакторинг та користувацькі режими для планування, програмування та налагодження. Підтримує понад 500 AI-моделей, включаючи Claude (Anthropic), Gemini, Grok, GPT, Codex та GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -107,16 +107,6 @@
 		"command_already_exists": "Команда \"{{commandName}}\" вже існує",
 		"create_command_failed": "Не вдалося створити команду",
 		"command_template_content": "---\ndescription: \"Короткий опис того, що робить ця команда\"\n---\n\nЦе нова slash команда. Відредагуйте цей файл, щоб налаштувати поведінку команди.",
-		"geminiCli": {
-			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}",
-			"tokenRefreshFailed": "Не вдалося оновити OAuth token: {{error}}",
-			"onboardingTimeout": "Операція onboarding перевищила час очікування після 60 секунд. Будь ласка, спробуй пізніше.",
-			"projectDiscoveryFailed": "Не вдалося знайти ID проекту. Переконайся, що ти автентифікований за допомогою 'gemini auth'.",
-			"rateLimitExceeded": "Перевищено ліміт швидкості. Досягнуто обмежень безкоштовного рівня.",
-			"badRequest": "Неправильний запит: {{details}}",
-			"apiError": "Помилка Gemini CLI API: {{error}}",
-			"completionError": "Помилка завершення Gemini CLI: {{error}}"
-		},
 		"gemini": {
 			"generate_stream": "Помилка генерації контекстного потоку Gemini: {{error}}",
 			"generate_complete_prompt": "Помилка завершення Gemini: {{error}}",
@@ -156,7 +146,26 @@
 		"manual_url_auth_failed": "Автентифікація не вдалася",
 		"manual_url_auth_error": "Сталася помилка автентифікації",
 		"api": {
-			"invalidKeyInvalidChars": "API ключ містить недопустимі символи."
+			"invalidKeyInvalidChars": "API ключ містить недопустимі символи.",
+			"apiRequestFailed": "API запит не вдався ({{status}})"
+		},
+		"openAiCodex": {
+			"notAuthenticated": "Не автентифіковано з OpenAI Codex. Будь ласка, увійди, використовуючи OAuth потік OpenAI Codex.",
+			"invalidRequest": "Недійсний запит до Codex API. Будь ласка, перевір вхідні параметри.",
+			"authenticationFailed": "Автентифікація не вдалася. Будь ласка, пройди автентифікацію з OpenAI Codex знову.",
+			"accessDenied": "Доступ заборонено. Твоя підписка ChatGPT може не включати доступ до Codex.",
+			"endpointNotFound": "Кінцеву точку Codex API не знайдено.",
+			"rateLimitExceeded": "Перевищено ліміт запитів. Будь ласка, спробуй пізніше.",
+			"serviceError": "Помилка сервісу OpenAI Codex. Будь ласка, спробуй пізніше.",
+			"genericError": "Помилка Codex API ({{status}})",
+			"noResponseBody": "Помилка Codex API: Немає тіла відповіді",
+			"connectionFailed": "Не вдалося підключитися до Codex API: {{message}}",
+			"unexpectedConnectionError": "Неочікувана помилка підключення до Codex API",
+			"apiError": "Помилка Codex API: {{message}}",
+			"responseFailed": "Відповідь не вдалася: {{message}}",
+			"streamProcessingError": "Помилка обробки потоку відповіді: {{message}}",
+			"unexpectedStreamError": "Неочікувана помилка обробки потоку відповіді",
+			"completionError": "Помилка завершення OpenAI Codex: {{message}}"
 		}
 	},
 	"warnings": {
@@ -251,7 +260,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Відповідь перервана користувачем",
-		"responseInterruptedByApiError": "Відповідь перервана помилкою API"
+		"responseInterruptedByApiError": "Відповідь перервана помилкою API",
+		"streamTerminatedByProvider": "Провайдер завершив запит"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

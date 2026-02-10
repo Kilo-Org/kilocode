@@ -199,6 +199,7 @@ export const providerCommand: Command = {
 			name: "provider-id",
 			description: "Provider ID (for select)",
 			required: false,
+			provider: providerAutocompleteProvider,
 			conditionalProviders: [
 				{
 					condition: (context) => {

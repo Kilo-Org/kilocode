@@ -1,4 +1,5 @@
 import { postprocessCompletion } from "../../continuedev/core/autocomplete/postprocessing/index.js"
+import { applyLanguageFilter } from "./language-filters"
 
 export type AutocompleteSuggestion = {
 	suggestion: string
@@ -15,6 +16,11 @@ export function suggestionConsideredDuplication(params: AutocompleteSuggestion):
 	// repeats the last complete line in the prefix, or the last suggested line repeats
 	// the first line in the suffix. Those are still considered duplication.
 	if (DuplicatesFromEdgeLines(params)) {
+		return true
+	}
+
+	// Check if the suggestion contains repetitive phrases that continue from the prefix
+	if (containsRepetitivePhraseFromPrefix(params)) {
 		return true
 	}
 
@@ -59,6 +65,43 @@ function DuplicatesFromEdgeLines(params: AutocompleteSuggestion): boolean {
 }
 
 /**
+ * Detects when a suggestion's tail is repeating itself - a common LLM failure mode.
+ * For example: "the beginning. We are going to start from the beginning. We are going to start from the beginning..."
+ * The suggestion gets stuck in a loop repeating the same phrase.
+ */
+function containsRepetitivePhraseFromPrefix(params: AutocompleteSuggestion): boolean {
+	const suggestion = params.suggestion
+	const phraseLength = 30 // Phrase length to check for repetition
+	const minRepetitions = 3 // Minimum number of repetitions to consider it repetitive
+
+	// Only check suggestions that are long enough to contain repetition
+	if (suggestion.length < phraseLength * minRepetitions) {
+		return false
+	}
+
+	// Strip non-word characters from the right before selecting the tail
+	// This handles cases like "...the beginning..." where trailing punctuation would break detection
+	const strippedSuggestion = suggestion.replace(/\W+$/, "")
+
+	if (strippedSuggestion.length < phraseLength) {
+		return false
+	}
+
+	// Extract a phrase from the end of the stripped suggestion
+	const phrase = strippedSuggestion.slice(-phraseLength)
+
+	// Count how many times this phrase appears in the original suggestion
+	let count = 0
+	let pos = 0
+	while ((pos = suggestion.indexOf(phrase, pos)) !== -1) {
+		count++
+		pos += phrase.length
+	}
+
+	return count >= minRepetitions
+}
+
+/**
  * Normalizes partial-line suggestions by expanding them to the full current line:
  * (prefix line tail) + (suggestion first line) + (suffix line head).
  *
@@ -93,11 +136,13 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
  * @param params.prefix - The text before the cursor position
  * @param params.suffix - The text after the cursor position
  * @param params.model - The model string (e.g., "codestral", "qwen3", etc.)
+ * @param params.languageId - Optional language ID for language-specific filtering
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */
 export function postprocessGhostSuggestion(
 	params: AutocompleteSuggestion & {
 		model: string
+		languageId?: string
 	},
 ): string | undefined {
 	// First, run through the continuedev postprocessing pipeline
@@ -112,9 +157,19 @@ export function postprocessGhostSuggestion(
 		return undefined
 	}
 
+	// Apply language-specific filtering if languageId is provided
+	const languageFilteredSuggestion = params.languageId
+		? applyLanguageFilter({
+				suggestion: processedSuggestion,
+				prefix: params.prefix,
+				suffix: params.suffix,
+				languageId: params.languageId,
+			})
+		: processedSuggestion
+
 	if (
 		suggestionConsideredDuplication({
-			suggestion: processedSuggestion,
+			suggestion: languageFilteredSuggestion,
 			prefix: params.prefix,
 			suffix: params.suffix,
 		})
@@ -122,5 +177,5 @@ export function postprocessGhostSuggestion(
 		return undefined
 	}
 
-	return processedSuggestion
+	return languageFilteredSuggestion
 }

@@ -129,7 +129,7 @@ describe.skip("ApiOptions Provider Filtering", () => {
 		;(MODELS_BY_PROVIDER as any).emptyProvider = {}
 
 		// Add the empty provider to PROVIDERS
-		PROVIDERS.push({ value: "emptyProvider", label: "Empty Provider" })
+		PROVIDERS.push({ value: "emptyProvider", label: "Empty Provider", proxy: false })
 
 		renderWithProviders()
 
@@ -237,7 +237,7 @@ describe.skip("ApiOptions Provider Filtering", () => {
 		// Add an empty static provider to test
 		;(MODELS_BY_PROVIDER as any).testEmptyProvider = {}
 		// Add the provider to the PROVIDERS list
-		PROVIDERS.push({ value: "testEmptyProvider", label: "Test Empty Provider" })
+		PROVIDERS.push({ value: "testEmptyProvider", label: "Test Empty Provider", proxy: false })
 
 		// Create a mock organization allow list that allows the provider but no models
 		const allowList: OrganizationAllowList = {

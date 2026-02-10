@@ -14,7 +14,10 @@
 		"shareSession": "Oturumu paylaş",
 		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
 		"shareConfirmYes": "Evet",
-		"shareConfirmNo": "Hayır"
+		"shareConfirmNo": "Hayır",
+		"options": "Seçenekler",
+		"configureSetupScript": "Worktree kurulum betiği",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLO modu - araç işlemleri otomatik olarak onaylanır",
 		"starting": "Başlatılıyor...",
 		"startAriaLabel": "Verilen istemle ajanı başlat",
-		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter",
 		"runModeLocal": "Yerel",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Bulut",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Temel dalı değiştir",
 		"noBranches": "Dal bulunamadı",
 		"noMatchingBranches": "Aramanla eşleşen dal yok",
-		"openTerminal": "Terminali aç"
+		"openTerminal": "Terminali aç",
+		"selectModel": "Model seç",
+		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
+		"defaultModel": "Varsayılan model",
+		"loadingModels": "Yükleniyor...",
+		"selectMode": "Mod seç",
+		"modeTooltip": "Mod: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",
@@ -70,7 +85,11 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"thinking": "Düşünüyor",
+		"thinkingSeconds": "{{count}}sn",
+		"approve": "Onayla",
+		"deny": "Reddet"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Ajanı iptal et",
 		"finishToBranchTitle": "Worktree'yi bitir ve branch hazırla: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree'yi bitir ve branch hazırla",
+		"createPRTitle": "Pull request oluştur",
 		"sendTitle": "Mesaj gönder",
 		"resumeTitle": "Ajanı devam ettir",
-		"hint": "Göndermek için Enter, yeni satır için Shift+Enter"
+		"hint": "Göndermek için Enter, yeni satır için Shift+Enter",
+		"addImage": "Resim ekle",
+		"removeImage": "Resmi kaldır"
 	},
 	"status": {
 		"running": "çalışıyor",

@@ -5,7 +5,7 @@ import { Node as SyntaxNode } from "web-tree-sitter"
 import { IDE, Position } from "../../.."
 import { localPathOrUriToPath } from "../../../util/pathToUri"
 import { getFullLanguageName, getQueryForFile } from "../../../util/treeSitter"
-import { AutocompleteSnippetType, AutocompleteStaticSnippet } from "../../snippets/types"
+import { AutocompleteSnippetType, AutocompleteStaticSnippet } from "../../types"
 import { getAst } from "../../util/ast"
 import { HelperVars } from "../../util/HelperVars"
 import {

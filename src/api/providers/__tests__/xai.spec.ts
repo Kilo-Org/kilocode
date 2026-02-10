@@ -1,5 +1,15 @@
 // npx vitest api/providers/__tests__/xai.spec.ts
 
+// Mock TelemetryService - must come before other imports
+const mockCaptureException = vitest.hoisted(() => vitest.fn())
+vitest.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: mockCaptureException,
+		},
+	},
+}))
+
 const mockCreate = vitest.fn()
 
 vitest.mock("openai", () => {
@@ -25,6 +35,7 @@ describe("XAIHandler", () => {
 		// Reset all mocks
 		vi.clearAllMocks()
 		mockCreate.mockClear()
+		mockCaptureException.mockClear()
 
 		// Create handler with mock
 		handler = new XAIHandler({})
@@ -299,7 +310,7 @@ describe("XAIHandler", () => {
 			},
 		]
 
-		it("should include tools in request when model supports native tools and tools are provided", async () => {
+		it("should include tools in request when model supports native tools and tools are provided (native is default)", async () => {
 			const handlerWithTools = new XAIHandler({ apiModelId: "grok-3" })
 
 			mockCreate.mockImplementationOnce(() => {
@@ -315,7 +326,6 @@ describe("XAIHandler", () => {
 			const messageGenerator = handlerWithTools.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 			await messageGenerator.next()
 
@@ -350,7 +360,6 @@ describe("XAIHandler", () => {
 			const messageGenerator = handlerWithTools.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				tool_choice: "auto",
 			})
 			await messageGenerator.next()
@@ -443,7 +452,6 @@ describe("XAIHandler", () => {
 			const stream = handlerWithTools.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 
 			const chunks = []
@@ -484,7 +492,6 @@ describe("XAIHandler", () => {
 			const messageGenerator = handlerWithTools.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 				parallelToolCalls: true,
 			})
 			await messageGenerator.next()
@@ -551,7 +558,6 @@ describe("XAIHandler", () => {
 			const stream = handlerWithTools.createMessage("test prompt", [], {
 				taskId: "test-task-id",
 				tools: testTools,
-				toolProtocol: "native",
 			})
 
 			const chunks = []

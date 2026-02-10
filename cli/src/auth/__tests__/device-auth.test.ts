@@ -72,7 +72,7 @@ describe("Device Auth Flow", () => {
 			userEmail: "test@example.com",
 		}
 
-		global.fetch = vi.fn((url: string) => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(((url: string) => {
 			if (url.includes("/api/device-auth/codes") && !url.match(/\/codes\/[^/]+$/)) {
 				return Promise.resolve({
 					ok: true,
@@ -87,7 +87,7 @@ describe("Device Auth Flow", () => {
 				} as Response)
 			}
 			return Promise.reject(new Error("Unexpected URL"))
-		}) as unknown as typeof fetch
+		}) as unknown as typeof fetch)
 
 		// Mock poll to immediately return success
 		vi.mocked(poll).mockResolvedValueOnce(mockPollResponse)
@@ -103,23 +103,19 @@ describe("Device Auth Flow", () => {
 	})
 
 	it("should handle initiation failure", async () => {
-		global.fetch = vi.fn(() =>
-			Promise.resolve({
-				ok: false,
-				status: 500,
-			} as Response),
-		) as unknown as typeof fetch
+		vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			ok: false,
+			status: 500,
+		} as Response)
 
 		await expect(authenticateWithDeviceAuth()).rejects.toThrow("Failed to start authentication")
 	})
 
 	it("should handle rate limiting", async () => {
-		global.fetch = vi.fn(() =>
-			Promise.resolve({
-				ok: false,
-				status: 429,
-			} as Response),
-		) as unknown as typeof fetch
+		vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			ok: false,
+			status: 429,
+		} as Response)
 
 		await expect(authenticateWithDeviceAuth()).rejects.toThrow(
 			"Too many pending authorization requests. Please try again later.",
@@ -133,7 +129,7 @@ describe("Device Auth Flow", () => {
 			expiresIn: 600,
 		}
 
-		global.fetch = vi.fn((url: string) => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(((url: string) => {
 			if (url.includes("/api/device-auth/codes") && !url.match(/\/codes\/[^/]+$/)) {
 				return Promise.resolve({
 					ok: true,
@@ -148,7 +144,7 @@ describe("Device Auth Flow", () => {
 				} as Response)
 			}
 			return Promise.reject(new Error("Unexpected URL"))
-		}) as unknown as typeof fetch
+		}) as unknown as typeof fetch)
 
 		// Mock poll to immediately return the error
 		vi.mocked(poll).mockRejectedValueOnce(new Error("Authorization denied by user"))
@@ -163,7 +159,7 @@ describe("Device Auth Flow", () => {
 			expiresIn: 600,
 		}
 
-		global.fetch = vi.fn((url: string) => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(((url: string) => {
 			if (url.includes("/api/device-auth/codes") && !url.match(/\/codes\/[^/]+$/)) {
 				return Promise.resolve({
 					ok: true,
@@ -178,7 +174,7 @@ describe("Device Auth Flow", () => {
 				} as Response)
 			}
 			return Promise.reject(new Error("Unexpected URL"))
-		}) as unknown as typeof fetch
+		}) as unknown as typeof fetch)
 
 		// Mock poll to immediately return the error
 		vi.mocked(poll).mockRejectedValueOnce(new Error("Authorization code expired"))

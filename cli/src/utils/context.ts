@@ -3,9 +3,8 @@
  */
 
 import type { ExtensionChatMessage, ProviderSettings } from "../types/messages.js"
-import type { RouterModels } from "../constants/providers/models.js"
 import type { ProviderConfig } from "../config/types.js"
-import { getCurrentModelId, getModelsByProvider } from "../constants/providers/models.js"
+import { type RouterModels, getCurrentModelId, getModelsByProvider } from "../constants/providers/models.js"
 import { logs } from "../services/logs.js"
 
 // Default max tokens reserved for model output (matches Anthropic's default)
@@ -80,6 +79,14 @@ function getContextTokensFromMessages(messages: ExtensionChatMessage[]): number 
 			try {
 				const parsedText = JSON.parse(message.text)
 				const { tokensIn, tokensOut, cacheWrites, cacheReads, apiProtocol } = parsedText
+
+				// Skip placeholder messages that only have apiProtocol but no token data
+				// These are sent at the start of API requests before the response is received
+				const hasValidTokenData = typeof tokensIn === "number" || typeof tokensOut === "number"
+				if (!hasValidTokenData) {
+					// This is a placeholder message, continue searching backwards
+					continue
+				}
 
 				// Calculate context tokens based on API protocol (matches getApiMetrics logic)
 				if (apiProtocol === "anthropic") {

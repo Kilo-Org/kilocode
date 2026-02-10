@@ -4,10 +4,10 @@ import type { KilocodeProfileData } from "../../auth/types.js"
 
 // Mock fetch globally
 const mockFetch = vi.fn()
-global.fetch = mockFetch as typeof fetch
 
 describe("getKilocodeProfile", () => {
 	beforeEach(() => {
+		vi.spyOn(globalThis, "fetch").mockImplementation((...args: unknown[]) => mockFetch(...(args as never[])))
 		vi.clearAllMocks()
 	})
 

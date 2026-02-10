@@ -1,11 +1,13 @@
 // kilocode_change - new file: STT message handlers (replaces speechMessageHandlers.ts)
 import type { ClineProvider } from "./ClineProvider"
-import type { STTCommand, STTSegment } from "../../shared/sttContract"
+import type { STTCommand, STTSegment as ContractSTTSegment, MicrophoneDevice } from "../../shared/sttContract"
 import { STTService } from "../../services/stt"
 import { STTEventEmitter } from "../../services/stt/types"
 import { getOpenAiApiKey } from "../../services/stt/utils/getOpenAiCredentials"
 import { VisibleCodeTracker } from "../../services/ghost/context/VisibleCodeTracker"
 import { extractCodeGlossary, formatGlossaryAsPrompt } from "../../services/stt/context/codeGlossaryExtractor"
+import { listMicrophoneDevices } from "../../services/stt/FFmpegDeviceEnumerator"
+import { checkSpeechToTextAvailable } from "./speechToTextCheck"
 
 /**
  * Map of ClineProvider -> STTService
@@ -28,12 +30,20 @@ function getService(clineProvider: ClineProvider): STTService {
 				})
 			},
 
-			onTranscript: (segments: STTSegment[], isFinal: boolean) => {
+			onTranscript: (segments: ContractSTTSegment[], isFinal: boolean) => {
 				const sessionId = service?.getSessionId() || ""
+				// packages/types expects STTSegment with timing fields. The internal STT service
+				// doesn't currently provide timings, so we populate safe defaults.
+				const segmentsForWebview = segments.map((s) => ({
+					text: s.text,
+					start: 0,
+					end: 0,
+					isFinal,
+				})) satisfies import("@roo-code/types").STTSegment[]
 				clineProvider.postMessageToWebview({
 					type: "stt:transcript",
 					sessionId,
-					segments,
+					segments: segmentsForWebview,
 					isFinal,
 				})
 			},
@@ -63,7 +73,11 @@ function getService(clineProvider: ClineProvider): STTService {
 		const currentTask = clineProvider.getCurrentTask()
 		const codeGlossary = new VisibleCodeGlossary(clineProvider.cwd, currentTask?.rooIgnoreController ?? null)
 
-		service = new STTService(emitter, clineProvider.providerSettingsManager, codeGlossary)
+		const globalSettings = clineProvider.contextProxy.getValues()
+		const selectedDevice = globalSettings.selectedMicrophoneDevice
+		const deviceId = selectedDevice?.id
+
+		service = new STTService(emitter, clineProvider.providerSettingsManager, codeGlossary, deviceId)
 		servicesByProviderRef.set(clineProvider, service)
 	}
 
@@ -91,7 +105,20 @@ export async function handleSTTStart(clineProvider: ClineProvider, language?: st
 		// Service generates its own prompt from the code glossary
 		await service.start({ apiKey }, language)
 	} catch (error) {
-		console.error("Failed to start STT service:", error)
+		console.error("🎙️ [sttHandlers] ❌ Failed to start STT service:", error)
+
+		// The service.start() catch block should have already called onStopped,
+		// but as a defensive measure, ensure frontend is notified if sessionId is still available
+		const sessionId = service.getSessionId()
+		if (sessionId) {
+			const errorMessage = error instanceof Error ? error.message : "Failed to start STT service"
+			clineProvider.postMessageToWebview({
+				type: "stt:stopped",
+				sessionId,
+				reason: "error",
+				error: errorMessage,
+			})
+		}
 	}
 }
 
@@ -112,6 +139,49 @@ export async function handleSTTCancel(clineProvider: ClineProvider): Promise<voi
 }
 
 /**
+ * Handle stt:listDevices command
+ */
+export async function handleSTTListDevices(clineProvider: ClineProvider): Promise<void> {
+	try {
+		const devices = await listMicrophoneDevices()
+		clineProvider.postMessageToWebview({ type: "stt:devices", devices })
+	} catch (error) {
+		console.error("🎙️ [sttHandlers] ❌ Failed to list devices:", error)
+		clineProvider.postMessageToWebview({ type: "stt:devices", devices: [] })
+	}
+}
+
+/**
+ * Handle stt:selectDevice command
+ */
+export async function handleSTTSelectDevice(
+	clineProvider: ClineProvider,
+	device: MicrophoneDevice | null,
+): Promise<void> {
+	try {
+		await clineProvider.contextProxy.setValue("selectedMicrophoneDevice", device)
+		const service = servicesByProviderRef.get(clineProvider)
+		await service?.setMicrophoneDevice(device)
+
+		clineProvider.postMessageToWebview({ type: "stt:deviceSelected", device })
+		await clineProvider.postStateToWebview()
+	} catch (error) {
+		console.error("🎙️ [sttHandlers] ❌ Failed to select device:", error)
+		clineProvider.postMessageToWebview({ type: "stt:deviceSelected", device: null })
+	}
+}
+
+/**
+ * Handle stt:checkAvailability command
+ */
+export async function handleSTTCheckAvailability(clineProvider: ClineProvider): Promise<void> {
+	clineProvider.postMessageToWebview({
+		type: "stt:statusResponse",
+		speechToTextStatus: await checkSpeechToTextAvailable(clineProvider.providerSettingsManager),
+	})
+}
+
+/**
  * Unified handler for all STT commands
  */
 export async function handleSTTCommand(clineProvider: ClineProvider, command: STTCommand): Promise<void> {
@@ -124,6 +194,15 @@ export async function handleSTTCommand(clineProvider: ClineProvider, command: ST
 			break
 		case "stt:cancel":
 			await handleSTTCancel(clineProvider)
+			break
+		case "stt:listDevices":
+			await handleSTTListDevices(clineProvider)
+			break
+		case "stt:selectDevice":
+			await handleSTTSelectDevice(clineProvider, command.device)
+			break
+		case "stt:checkAvailability":
+			await handleSTTCheckAvailability(clineProvider)
 			break
 	}
 }

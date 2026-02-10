@@ -15,6 +15,7 @@
 		"noAssistantMessages": "모델의 응답이 예상치 못하게 종료되었습니다 (어시스턴트 메시지 없음). 이는 요청 제한의 징후일 수 있습니다.",
 		"notLoggedInError": "요청을 완료할 수 없습니다. 선택한 공급자와 연결되어 로그인했는지 확인하세요.\n\n{{error}}",
 		"maxCompletionTokens": "최대 완료 토큰 수에 도달했습니다.",
+		"contentFilter": "요청이 콘텐츠 필터에 의해 차단되었습니다.",
 		"disableApplyDiff": "이 오류가 계속 발생하면 고급 설정에서 차이점을 통한 편집을 비활성화하세요.",
 		"disableEditFile": "이 오류가 계속 발생하면 빠른 적용 실험 기능을 비활성화하세요."
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (비활성화됨)",
-				"tokenError": "Autocomplete를 사용하려면 유효한 토큰을 설정해야 합니다",
+				"noCredits": "**계정에 크레딧이 없습니다**\n\nKilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가해 주세요.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**자동완성 모델이 구성되지 않았습니다**\n\n자동완성을 활성화하려면 다음 지원되는 제공업체 중 하나로 프로필을 추가하세요: {{providers}}.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "세션 총 비용:",
 				"provider": "제공업체:",
 				"model": "모델:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Kilocode CLI 버전이 오래되어 Agent Manager를 지원하지 않습니다. 최신 버전으로 업데이트하세요.",
-			"cliNotFound": "Kilocode CLI를 찾을 수 없습니다. Agent Manager를 사용하려면 설치하세요.",
 			"cliMisconfigured": "Kilocode CLI가 구성되지 않았습니다. 'kilocode auth'를 실행하여 로그인하거나 'kilocode config'로 구성하세요.",
 			"sessionFailed": "에이전트 세션 시작 실패",
 			"sessionFailedWithMessage": "에이전트 세션 시작 실패: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Kilocode CLI를 설치하기 위해 npm install을 실행합니다. 완료되면 이 터미널을 닫고 Agent Manager를 다시 시작해 보세요.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "OpenAI API 키가 유효하지 않거나 Realtime API에 대한 액세스 권한이 없습니다. API 키를 확인하고 다시 시도해 주세요.",
+			"unknown": "연결에 실패했습니다. 설정을 확인한 후 다시 시도해 주세요."
+		}
+	},
+	"configDiscovery": {
+		"added": "킬로 코드: {{source}} {{configType}}: {{name}}{{modeStr}} 추가됨",
+		"removed": "Kilo 코드: 제거됨 {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

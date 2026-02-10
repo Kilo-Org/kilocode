@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Bộ nhớ đệm",
 		"apiCost": "Chi phí API",
+		"changes": "Thay đổi",
 		"size": "Kích thước",
 		"contextWindow": "Chiều dài bối cảnh",
 		"closeAndStart": "Đóng nhiệm vụ và bắt đầu nhiệm vụ mới",
@@ -88,10 +89,15 @@
 		"title": "Kết thúc",
 		"tooltip": "Kết thúc nhiệm vụ hiện tại"
 	},
+	"stop": {
+		"title": "Dừng",
+		"tooltip": "Dừng nhiệm vụ hiện tại"
+	},
 	"cancel": {
 		"title": "Hủy",
 		"tooltip": "Hủy thao tác hiện tại"
 	},
+	"enqueueMessage": "Thêm tin nhắn vào hàng đợi (sẽ gửi sau khi nhiệm vụ hiện tại hoàn tất)",
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
 	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Xem <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
 	"docs": "Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
@@ -146,17 +152,20 @@
 		"streaming": "Yêu cầu API...",
 		"cancelled": "Yêu cầu API đã hủy",
 		"streamingFailed": "Streaming API thất bại",
-		"errorTitle": "Lỗi API {{code}}",
+		"rateLimitWait": "Giới hạn tốc độ",
+		"errorTitle": "Lỗi nhà cung cấp {{code}}",
 		"errorMessage": {
 			"docs": "Tài liệu",
+			"goToSettings": "Cài đặt",
 			"400": "Nhà cung cấp không thể xử lý yêu cầu theo cách này. Hãy dừng nhiệm vụ và thử một cách tiếp cận khác.",
 			"401": "Không thể xác thực với nhà cung cấp. Vui lòng kiểm tra cấu hình khóa API của bạn.",
 			"402": "Có vẻ như bạn đã hết tiền/tín dụng trong tài khoản. Hãy truy cập nhà cung cấp và thêm tiền để tiếp tục.",
 			"403": "Truy cập bị từ chối. Khóa API của bạn hợp lệ, nhưng nhà cung cấp từ chối hoàn thành yêu cầu này.",
 			"429": "Quá nhiều yêu cầu. Nhà cung cấp đang giới hạn tốc độ yêu cầu của bạn. Vui lòng chờ một chút trước khi gọi API tiếp theo.",
 			"500": "Lỗi máy chủ của nhà cung cấp. Có sự cố ở phía nhà cung cấp, không có gì sai với yêu cầu của bạn.",
-			"unknown": "Lỗi API không xác định. Vui lòng liên hệ hỗ trợ Kilo.",
-			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động."
+			"unknown": "Lỗi API không xác định, nhấp vào Chi tiết để biết thêm thông tin.",
+			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động.",
+			"claudeCodeNotAuthenticated": "Bạn cần đăng nhập để sử dụng Claude Code. Vào Cài đặt và nhấp vào \"Đăng nhập vào Claude Code\" để xác thực."
 		}
 	},
 	"checkpoint": {
@@ -271,10 +280,20 @@
 		"hasQuestion": "Kilo Code có một câu hỏi"
 	},
 	"taskCompleted": "Nhiệm vụ hoàn thành",
+	"modelResponseIncomplete": "Phản hồi của mô hình không đầy đủ",
+	"modelResponseErrors": {
+		"noToolsUsed": "Mô hình đã không sử dụng bất kỳ công cụ nào trong phản hồi của mình. Điều này thường xảy ra khi mô hình chỉ cung cấp văn bản/lý luận mà không gọi các công cụ cần thiết để hoàn thành tác vụ.",
+		"noToolsUsedDetails": "Mô hình đã cung cấp văn bản/lý luận nhưng không gọi bất kỳ công cụ bắt buộc nào. Điều này thường cho thấy mô hình đã hiểu sai tác vụ hoặc đang gặp khó khăn trong việc xác định công cụ nào sẽ sử dụng. Mô hình đã được tự động nhắc thử lại với việc sử dụng công cụ phù hợp.",
+		"noAssistantMessages": "Mô hình không cung cấp bất kỳ nội dung phản hồi nào. Điều này có thể cho thấy có vấn đề với API hoặc đầu ra của mô hình.",
+		"noAssistantMessagesDetails": "Mô hình ngôn ngữ đã trả về một phản hồi trống mà không có văn bản hoặc lệnh gọi công cụ nào. Điều này có thể xảy ra do vấn đề API, giới hạn tốc độ hoặc các vấn đề cụ thể của mô hình. Mô hình đã được tự động nhắc thử lại."
+	},
 	"errorDetails": {
+		"link": "Chi tiết",
 		"title": "Chi tiết lỗi",
 		"copyToClipboard": "Sao chép vào clipboard",
-		"copied": "Đã sao chép!"
+		"copied": "Đã sao chép!",
+		"diagnostics": "Nhận thông tin lỗi chi tiết",
+		"proxyProvider": "Có vẻ bạn đang sử dụng nhà cung cấp dựa trên proxy. Hãy chắc chắn kiểm tra các nhật ký của nó và đảm bảo nó không viết lại các yêu cầu của Roo."
 	},
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
@@ -295,7 +314,7 @@
 		"triggerLabel_zero": "0 được tự động phê duyệt",
 		"triggerLabel_one": "1 được tự động phê duyệt",
 		"triggerLabel_other": "{{count}} được tự động phê duyệt",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Đang suy nghĩ",
@@ -331,9 +350,10 @@
 			"goToSettingsButton": "Đi tới Cài đặt"
 		},
 		"release": {
-			"heading": "Mới trong phiên bản này:",
-			"contextRewind": "Nén ngữ cảnh được cải thiện hiện cho phép bạn khôi phục bối cảnh trước đó đầy đủ khi cuộn lại đến một điểm kiểm tra",
-			"rooProvider": "Nhà cung cấp Roo Code Cloud hiện giữ lại nội dung lý luận và sử dụng các công cụ gốc theo mặc định để có hiệu suất tốt hơn"
+			"heading": "Tính năng mới:",
+			"openaiCodexProvider": "Đã thêm nhà cung cấp OpenAI - ChatGPT Plus/Pro cung cấp quyền truy cập dựa trên đăng ký vào các mô hình Codex mà không có chi phí trên mỗi token.",
+			"gpt52codexModel": "Mô hình gpt-5.2-codex mới được thêm vào Roo Code Router, nhà cung cấp OpenAI tiêu chuẩn và nhiều hơn nữa.",
+			"bugFixes": "Đã sửa các rò rỉ bộ nhớ gây ra màn hình xám, các vấn đề về chữ ký suy nghĩ Gemini và các cải thiện ổn định khác."
 		},
 		"cloudAgents": {
 			"heading": "Mới trên Cloud:",
@@ -344,8 +364,14 @@
 		"careers": "Ngoài ra, <careersLink>chúng tôi đang tuyển dụng!</careersLink>",
 		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Tổng chi phí (bao gồm các tác vụ phụ): ${{cost}}",
+		"total": "Tổng chi phí: ${{cost}}",
+		"includesSubtasks": "Bao gồm chi phí của các tác vụ phụ"
+	},
 	"browser": {
 		"session": "Phiên trình duyệt",
+		"active": "Đang hoạt động",
 		"rooWantsToUse": "Kilo Code muốn sử dụng trình duyệt",
 		"consoleLogs": "Nhật ký bảng điều khiển",
 		"noNewLogs": "(Không có nhật ký mới)",

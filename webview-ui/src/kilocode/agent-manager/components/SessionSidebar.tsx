@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useRef, useEffect } from "react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
@@ -11,7 +11,7 @@ import {
 import { sessionMachineUiStateAtom } from "../state/atoms/stateMachine"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import { Plus, Loader2, RefreshCw, GitBranch, Folder, Share2 } from "lucide-react"
+import { Plus, Loader2, RefreshCw, GitBranch, Folder, Share2, MoreVertical, FileCode, Zap } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
@@ -21,6 +21,28 @@ export function SessionSidebar() {
 	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
 	const setIsRefreshing = useSetAtom(isRefreshingRemoteSessionsAtom)
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
+	const [showOptionsMenu, setShowOptionsMenu] = useState(false)
+	const menuRef = useRef<HTMLDivElement>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null)
+
+	// Close menu when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				menuRef.current &&
+				buttonRef.current &&
+				!menuRef.current.contains(event.target as Node) &&
+				!buttonRef.current.contains(event.target as Node)
+			) {
+				setShowOptionsMenu(false)
+			}
+		}
+
+		if (showOptionsMenu) {
+			document.addEventListener("mousedown", handleClickOutside)
+			return () => document.removeEventListener("mousedown", handleClickOutside)
+		}
+	}, [showOptionsMenu])
 
 	const handleNewSession = () => {
 		setSelectedId(null)
@@ -37,12 +59,36 @@ export function SessionSidebar() {
 		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 
+	const handleConfigureSetupScript = () => {
+		setShowOptionsMenu(false)
+		vscode.postMessage({ type: "agentManager.configureSetupScript" })
+	}
+
 	const isNewAgentSelected = selectedId === null && !pendingSession
 
 	return (
 		<div className="am-sidebar">
 			<div className="am-sidebar-header">
 				<span>{t("sidebar.title")}</span>
+				<div className="am-options-menu-container">
+					<button
+						ref={buttonRef}
+						className="am-icon-btn"
+						onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+						title={t("sidebar.options")}
+						aria-expanded={showOptionsMenu}
+						aria-haspopup="menu">
+						<MoreVertical size={14} />
+					</button>
+					{showOptionsMenu && (
+						<div ref={menuRef} className="am-options-dropdown" role="menu">
+							<button className="am-options-item" onClick={handleConfigureSetupScript} role="menuitem">
+								<FileCode size={14} />
+								<span>{t("sidebar.configureSetupScript")}</span>
+							</button>
+						</div>
+					)}
+				</div>
 			</div>
 
 			<div
@@ -197,6 +243,11 @@ function SessionItem({
 					{!isWorktree && (
 						<span className="am-workspace-indicator" title={t("sidebar.local")}>
 							<Folder size={10} />
+						</span>
+					)}
+					{session.yoloMode && (
+						<span className="am-yolo-indicator" title={t("sidebar.yoloMode")}>
+							<Zap size={10} />
 						</span>
 					)}
 				</div>

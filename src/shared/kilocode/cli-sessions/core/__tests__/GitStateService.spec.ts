@@ -137,7 +137,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -153,11 +154,147 @@ describe("GitStateService", () => {
 			})
 		})
 
+		it("falls back to origin when tracking remote points to non-existent remote", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "origin",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch
+					.mockResolvedValueOnce("nonexistent") // config (remote doesn't exist in list)
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
+		})
+
+		it("uses branch tracking remote when configured", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "origin",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch
+					.mockResolvedValueOnce("upstream") // config branch.feature-branch.remote
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/upstream/repo.git")
+		})
+
+		it("falls back to origin when branch tracking remote not found", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "origin",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
+		})
+
+		it("uses first remote when origin does not exist and no tracking remote", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "fork",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/upstream/repo.git")
+		})
+
 		it("handles missing remote URL", async () => {
 			const mockGit = {
 				getRemotes: vi.fn().mockResolvedValue([]),
 				revparse: vi.fn().mockResolvedValue("abc123def"),
-				raw: vi.fn().mockResolvedValueOnce("").mockResolvedValueOnce("refs/heads/main"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
@@ -176,14 +313,19 @@ describe("GitStateService", () => {
 					},
 				]),
 				revparse: vi.fn().mockResolvedValue("abc123def"),
-				raw: vi.fn().mockResolvedValueOnce("").mockRejectedValueOnce(new Error("not a symbolic ref")), // symbolic-ref fails
+				raw: vi
+					.fn()
+					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails (detached HEAD)
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
 
 			const result = await service.getGitState()
 
+			expect(result).not.toBeNull()
 			expect(result?.branch).toBeUndefined()
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
 		})
 
 		it("includes untracked files in patch", async () => {
@@ -197,7 +339,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
 					.mockResolvedValueOnce("file1.txt\nfile2.txt") // ls-files
 					.mockResolvedValueOnce(undefined) // add
 					.mockResolvedValueOnce(undefined), // reset
@@ -221,7 +364,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
 					.mockResolvedValueOnce("file1.txt") // ls-files
 					.mockResolvedValueOnce(undefined) // add
 					.mockResolvedValueOnce(undefined), // reset
@@ -245,7 +389,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
 					.mockResolvedValueOnce("") // ls-files
 					.mockResolvedValueOnce("abc123def ") // rev-list --parents (first commit)
 					.mockResolvedValueOnce("4b825dc642cb6eb9a060e54bf8d69288fbee4904"), // hash-object empty tree
@@ -272,7 +417,11 @@ describe("GitStateService", () => {
 					},
 				]),
 				revparse: vi.fn().mockResolvedValue("abc123def"),
-				raw: vi.fn().mockResolvedValueOnce("").mockResolvedValueOnce("refs/heads/main"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue(largePatch),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
@@ -301,7 +450,11 @@ describe("GitStateService", () => {
 					},
 				]),
 				revparse: vi.fn().mockResolvedValue("abc123def"),
-				raw: vi.fn().mockResolvedValueOnce("").mockResolvedValueOnce("refs/heads/main"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockResolvedValueOnce("origin") // config branch.main.remote
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue(largePatch),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
@@ -338,7 +491,11 @@ describe("GitStateService", () => {
 			const mockGit = {
 				getRemotes: vi.fn().mockResolvedValue([]),
 				revparse: vi.fn().mockResolvedValue("abc123"),
-				raw: vi.fn().mockResolvedValueOnce("").mockResolvedValueOnce("refs/heads/main"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff"),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
@@ -354,7 +511,11 @@ describe("GitStateService", () => {
 			const mockGit = {
 				getRemotes: vi.fn().mockResolvedValue([]),
 				revparse: vi.fn().mockResolvedValue("abc123"),
-				raw: vi.fn().mockResolvedValueOnce("").mockResolvedValueOnce("refs/heads/main"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
+					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff"),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)

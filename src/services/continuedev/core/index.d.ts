@@ -85,55 +85,6 @@ export interface ILLM extends Omit<LLMOptions, RequiredLLMOptions>, Required<Pic
 	supportsFim(): boolean
 }
 
-// Narrowed interface for autocomplete and NextEdit consumers
-export interface IAutocompleteNextEditLLM {
-	// Core identification
-	readonly providerName: string
-	readonly underlyingProviderName: string
-	model: string
-	title?: string
-
-	// API configuration
-	apiKey?: string
-	apiBase?: string
-
-	// Capabilities and options
-	capabilities?: ModelCapability
-	contextLength: number
-	completionOptions: CompletionOptions
-	autocompleteOptions?: Partial<TabAutocompleteOptions>
-	promptTemplates?: Partial<Record<keyof PromptTemplates, PromptTemplate>>
-	useLegacyCompletionsEndpoint?: boolean
-
-	// State
-	lastRequestId?: string
-
-	// Required methods for autocomplete
-	streamComplete(
-		prompt: string,
-		signal: AbortSignal,
-		options?: LLMFullCompletionOptions,
-	): AsyncGenerator<string, PromptLog>
-
-	streamFim(
-		prefix: string,
-		suffix: string,
-		signal: AbortSignal,
-		options?: LLMFullCompletionOptions,
-	): AsyncGenerator<string, PromptLog>
-
-	supportsFim(): boolean
-
-	// Required methods for NextEdit
-	chat(messages: ChatMessage[], signal: AbortSignal, options?: LLMFullCompletionOptions): Promise<ChatMessage>
-
-	// Required for token counting
-	countTokens(text: string): number
-
-	// Required for reranking (NextEdit editable region calculation)
-	rerank(query: string, chunks: Chunk[]): Promise<number[]>
-}
-
 export type ContextProviderType = "normal" | "query" | "submenu"
 export type ContextIndexingType = "chunk" | "embeddings" | "fullTextSearch" | "codeSnippets"
 
@@ -520,7 +471,6 @@ export interface BaseCompletionOptions {
 export interface ModelCapability {
 	uploadImage?: boolean
 	tools?: boolean
-	nextEdit?: boolean
 }
 
 export interface JSONEmbedOptions {
@@ -578,16 +528,6 @@ export interface RangeInFileWithContents {
 		end: { line: number; character: number }
 	}
 	contents: string
-}
-
-export interface RangeInFileWithNextEditInfo {
-	filepath: string
-	range: Range
-	fileContents: string
-	editText: string
-	afterCursorPos: Position
-	beforeCursorPos: Position
-	workspaceDir: string
 }
 
 /**

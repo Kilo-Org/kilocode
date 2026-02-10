@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import * as fs from "fs/promises"
 import * as path from "path"
-import { loadConfig, setConfigPaths, resetConfigPaths } from "../persistence.js"
 import type { CLIConfig } from "../types.js"
+
+type PersistenceModule = typeof import("../persistence.js")
+let loadConfig: PersistenceModule["loadConfig"]
+let setConfigPaths: PersistenceModule["setConfigPaths"]
+let resetConfigPaths: PersistenceModule["resetConfigPaths"]
 
 // Mock the validation module
 vi.mock("../validation.js", () => ({
@@ -14,6 +18,12 @@ describe("Provider Merging", () => {
 	const testFile = path.join(testDir, "config.json")
 
 	beforeEach(async () => {
+		// Some other test files mock `../persistence.js`; ensure we always test the real implementation here.
+		const persistence = await vi.importActual<PersistenceModule>("../persistence.js")
+		loadConfig = persistence.loadConfig
+		setConfigPaths = persistence.setConfigPaths
+		resetConfigPaths = persistence.resetConfigPaths
+
 		await fs.mkdir(testDir, { recursive: true })
 		setConfigPaths(testDir, testFile)
 	})

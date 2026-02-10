@@ -185,6 +185,140 @@ describe("context utilities", () => {
 			expect(result.maxTokens).toBe(200000)
 		})
 
+		it("should skip placeholder api_req_started messages without token data", () => {
+			const apiConfig: ProviderSettings = {
+				apiProvider: "openrouter",
+				openRouterModelId: "anthropic/claude-sonnet-4.5",
+			}
+
+			const routerModels: Partial<RouterModels> = {
+				openrouter: {
+					"anthropic/claude-sonnet-4.5": {
+						contextWindow: 200000,
+						supportsPromptCache: true,
+						maxTokens: 8192,
+					},
+				},
+			}
+
+			// Simulate the real scenario: a placeholder message (only apiProtocol) followed by
+			// the actual message with token data, then another placeholder at the end
+			const messages: ExtensionChatMessage[] = [
+				{
+					ts: Date.now(),
+					type: "say",
+					say: "api_req_started",
+					text: JSON.stringify({
+						tokensIn: 1000,
+						tokensOut: 500,
+						apiProtocol: "openai",
+					}),
+				},
+				{
+					ts: Date.now() + 1,
+					type: "say",
+					say: "api_req_started",
+					// Placeholder message - only has apiProtocol, no token data
+					text: JSON.stringify({
+						apiProtocol: "openai",
+					}),
+				},
+			]
+
+			const result = calculateContextUsage(messages, apiConfig, routerModels as RouterModels)
+			// Should skip the placeholder and use the previous message's tokens
+			expect(result.tokensUsed).toBe(1500)
+			expect(result.maxTokens).toBe(200000)
+		})
+
+		it("should handle multiple placeholder messages and find valid token data", () => {
+			const apiConfig: ProviderSettings = {
+				apiProvider: "openrouter",
+				openRouterModelId: "anthropic/claude-sonnet-4.5",
+			}
+
+			const routerModels: Partial<RouterModels> = {
+				openrouter: {
+					"anthropic/claude-sonnet-4.5": {
+						contextWindow: 200000,
+						supportsPromptCache: true,
+						maxTokens: 8192,
+					},
+				},
+			}
+
+			const messages: ExtensionChatMessage[] = [
+				{
+					ts: Date.now(),
+					type: "say",
+					say: "api_req_started",
+					text: JSON.stringify({
+						tokensIn: 5000,
+						tokensOut: 2000,
+						cacheWrites: 100,
+						cacheReads: 200,
+						apiProtocol: "anthropic",
+					}),
+				},
+				{
+					ts: Date.now() + 1,
+					type: "say",
+					say: "api_req_started",
+					// First placeholder
+					text: JSON.stringify({
+						apiProtocol: "anthropic",
+					}),
+				},
+				{
+					ts: Date.now() + 2,
+					type: "say",
+					say: "api_req_started",
+					// Second placeholder
+					text: JSON.stringify({
+						apiProtocol: "anthropic",
+					}),
+				},
+			]
+
+			const result = calculateContextUsage(messages, apiConfig, routerModels as RouterModels)
+			// Should skip both placeholders and use the first message's tokens
+			// For Anthropic: tokensIn + tokensOut + cacheWrites + cacheReads
+			expect(result.tokensUsed).toBe(7300)
+		})
+
+		it("should return zero when all api_req_started messages are placeholders", () => {
+			const apiConfig: ProviderSettings = {
+				apiProvider: "openrouter",
+				openRouterModelId: "anthropic/claude-sonnet-4.5",
+			}
+
+			const routerModels: Partial<RouterModels> = {
+				openrouter: {
+					"anthropic/claude-sonnet-4.5": {
+						contextWindow: 200000,
+						supportsPromptCache: true,
+						maxTokens: 8192,
+					},
+				},
+			}
+
+			const messages: ExtensionChatMessage[] = [
+				{
+					ts: Date.now(),
+					type: "say",
+					say: "api_req_started",
+					// Only placeholder messages
+					text: JSON.stringify({
+						apiProtocol: "openai",
+					}),
+				},
+			]
+
+			const result = calculateContextUsage(messages, apiConfig, routerModels as RouterModels)
+			// Should return 0 since no valid token data found
+			expect(result.tokensUsed).toBe(0)
+		})
+
 		it("should return zero tokens when no api_req_started messages exist", () => {
 			const messages: ExtensionChatMessage[] = [
 				{

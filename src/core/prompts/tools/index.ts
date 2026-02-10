@@ -1,15 +1,17 @@
 import type { ToolName, ModeConfig } from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
+import { Mode, getModeConfig, getGroupName } from "../../../shared/modes"
+
+import { isToolAllowedForMode } from "../../tools/validateToolUse"
+
 import { McpHub } from "../../../services/mcp/McpHub"
-import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
+import { CodeIndexManager } from "../../../services/code-index/manager"
 
 import { ToolArgs } from "./types"
 import { getExecuteCommandDescription } from "./execute-command"
 import { getReadFileDescription } from "./read-file"
-import { getSimpleReadFileDescription } from "./simple-read-file"
 import { getFetchInstructionsDescription } from "./fetch-instructions"
-import { shouldUseSingleFileRead } from "@roo-code/types"
 import { getWriteToFileDescription } from "./write-to-file"
 import { getSearchFilesDescription } from "./search-files"
 import { getListFilesDescription } from "./list-files"
@@ -25,7 +27,6 @@ import { getUpdateTodoListDescription } from "./update-todo-list"
 import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
 import { getDeleteFileDescription } from "./delete-file" // kilocode_change
-import { CodeIndexManager } from "../../../services/code-index/manager"
 
 // kilocode_change start: Morph fast apply
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
@@ -37,14 +38,7 @@ import { ManagedIndexer } from "../../../services/code-index/managed/ManagedInde
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
 	execute_command: (args) => getExecuteCommandDescription(args),
-	read_file: (args) => {
-		// Check if the current model should use the simplified read_file tool
-		const modelId = args.settings?.modelId
-		if (modelId && shouldUseSingleFileRead(modelId)) {
-			return getSimpleReadFileDescription(args)
-		}
-		return getReadFileDescription(args)
-	},
+	read_file: (args) => getReadFileDescription(args),
 	fetch_instructions: (args) => getFetchInstructionsDescription(args.settings?.enableMcpServerCreation),
 	write_to_file: (args) => getWriteToFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
@@ -57,7 +51,9 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	codebase_search: (args) => getCodebaseSearchDescription(args),
 	switch_mode: () => getSwitchModeDescription(),
 	new_task: (args) => getNewTaskDescription(args),
-	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
+	// kilocode_change start: Fast Apply
+	fast_edit_file: () => getEditFileDescription(),
+	// kilocode_change end
 	delete_file: (args) => getDeleteFileDescription(args), // kilocode_change
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
@@ -125,6 +121,14 @@ export function getToolDescriptionsForMode(
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
+	// kilocode_change start
+	// Conditionally exclude ask_followup_question in yolo mode
+	// This prevents the agent from asking itself questions and auto-answering them
+	if (clineProviderState?.yoloMode) {
+		tools.delete("ask_followup_question")
+	}
+	// kilocode_change end
+
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	// kilocode_change start
 	const isCodebaseSearchAvailable =
@@ -138,13 +142,13 @@ export function getToolDescriptionsForMode(
 	}
 	// kilocode_change end
 
-	// kilocode_change start: Morph fast apply
+	// kilocode_change start: Fast Apply
 	if (isFastApplyAvailable(clineProviderState)) {
 		// When Morph is enabled, disable traditional editing tools
 		const traditionalEditingTools = ["apply_diff", "write_to_file"]
 		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	} else {
-		tools.delete("edit_file")
+		tools.delete("fast_edit_file")
 	}
 	// kilocode_change end
 
@@ -185,7 +189,6 @@ export function getToolDescriptionsForMode(
 export {
 	getExecuteCommandDescription,
 	getReadFileDescription,
-	getSimpleReadFileDescription,
 	getFetchInstructionsDescription,
 	getWriteToFileDescription,
 	getSearchFilesDescription,

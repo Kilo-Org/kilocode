@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Bagaimana Anda ingin memulai?",
+		"freeModels": {
+			"title": "Model gratis",
+			"description": "Mulai coding segera"
+		},
+		"premiumModels": {
+			"title": "Model premium",
+			"description": "Daftar. Pengguna baru mendapatkan kredit $5"
+		},
+		"byok": {
+			"title": "Gunakan kunci sendiri",
+			"description": "Lanjutan. Gunakan akun atau langganan Anda sendiri"
+		}
+	},
 	"welcome": {
 		"greeting": "Selamat datang di Kilo Code!",
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
-		"introText2": "Bekerja dengan model AI terbaru seperti Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, dan lebih dari 450 model lainnya.",
+		"introText2": "Bekerja dengan model AI terbaru seperti Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, dan lebih dari 450 model lainnya.",
 		"introText3": "Buat akun gratis dan dapatkan $20 kredit bonus saat top-up pertama kali.",
 		"ctaButton": "Mulai",
 		"manualModeButton": "Gunakan API key sendiri",
@@ -12,12 +27,17 @@
 	"lowCreditWarning": {
 		"addCredit": "Tambah Kredit",
 		"lowBalance": "Saldo Kilo Code kamu rendah",
-		"newOrganization": "Menggunakan Kilo untuk pekerjaan?"
+		"switchToFreeModel": "Beralih ke Model Gratis"
 	},
 	"pagination": {
 		"previous": "Sebelumnya",
 		"next": "Selanjutnya",
 		"page": "Halaman {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Kamu perlu masuk untuk menggunakan model {{modelId}}",
+		"message": "Masuk atau buat akun untuk mengakses lebih dari 500 model, gunakan kredit dengan harga biaya, atau bawa kunci milikmu sendiri.",
+		"loginButton": "Masuk"
 	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
@@ -31,14 +51,16 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "Server MCP"
+			"mcp": "Server MCP",
+			"agentBehaviour": "Perilaku Agen",
+			"skills": "Skill"
 		},
 		"provider": {
 			"account": "Akun Kilo Code",
 			"apiKey": "API Key Kilo Code",
 			"login": "Masuk ke Kilo Code",
 			"logout": "Keluar dari Kilo Code",
-			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
+			"loginForPremiumModels": "Masuk untuk mengakses model dan fitur premium",
 			"providerRouting": {
 				"title": "Perutean Penyedia",
 				"managedByOrganization": "Kelola Perutean Penyedia Tingkat Organisasi",
@@ -135,7 +157,14 @@
 	},
 	"docs": "Dokumentasi",
 	"rules": {
-		"tooltip": "Kelola Aturan & Alur Kerja Kilo Code",
+		"tooltip": "Kelola Perilaku Agen ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Aturan",
+			"workflows": "Alur Kerja",
+			"mcps": "MCPs",
+			"modes": "Mode",
+			"skills": "Skill"
+		},
 		"ariaLabel": "Aturan Kilo Code",
 		"tabs": {
 			"rules": "Aturan",
@@ -195,6 +224,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Baru di sini?",
+		"tryOneOfThese": "Coba salah satu ide ini untuk memulai:",
 		"suggestionText": "<suggestionButton>Klik di sini</suggestionButton> untuk ide yang keren, lalu ketuk <sendIcon /> dan lihat saya melakukan keajaiban!",
 		"ideas": {
 			"idea1": "Buat bola 3D yang berputar dan bersinar yang merespons gerakan mouse. Buat aplikasi berfungsi di browser.",
@@ -209,39 +239,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Pemicu",
-			"keybindingDescription": "Fitur Autocomplete dapat dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>Pintasan Keyboard di sini</DocsLink>.",
+			"codeEditorSuggestions": "Saran Editor Kode",
+			"chatSuggestions": "Saran Chat",
+			"model": "Model",
+			"provider": "Penyedia",
 			"enableAutoTrigger": {
-				"label": "Aktifkan Autocomplete",
-				"description": "Ketika diaktifkan, Kilo Code akan secara otomatis memicu Autocomplete saat Anda berhenti mengetik. Ini dapat berguna untuk perbaikan cepat dan saran."
+				"label": "Picu Saran Otomatis",
+				"description": "Secara otomatis menampilkan saran kode inline saat kamu berhenti mengetik."
 			},
 			"autoTriggerDelay": {
 				"label": "Penundaan Pemicu Otomatis",
-				"description": "Penundaan dalam detik sebelum Kilo Code memicu Autocomplete setelah Anda berhenti mengetik. Penundaan yang lebih pendek berarti saran yang lebih cepat, tetapi mungkin lebih intensif sumber daya."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tugas Cepat ({{keybinding}})",
-				"description": "Hanya perlu perubahan cepat? Pilih beberapa kode (atau tidak!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa Indonesia sederhana (\"buat komponen React dengan props ini\", \"tambahkan penanganan error ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"
+				"description": "Penundaan dalam detik sebelum saran muncul setelah kamu berhenti mengetik. Penundaan yang lebih pendek berarti saran lebih cepat, tetapi mungkin lebih intensif sumber daya."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Pelengkapan Otomatis Manual ({{keybinding}})",
-				"description": "Perlu perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan langsung, menjaga Anda tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
+				"label": "Picu dengan Pintasan Keyboard ({{keybinding}})",
+				"description": "Tekan {{keybinding}} untuk meminta saran kode di posisi kursor kamu. <DocsLink>Edit pintasan</DocsLink>"
 			},
-			"keybindingNotFound": "tidak ditemukan",
-			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
-			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
-			"model": "Model",
-			"provider": "Penyedia",
 			"enableChatAutocomplete": {
-				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
-				"label": "Pelengkapan Otomatis Input Obrolan"
+				"label": "Aktifkan Autocomplete Chat",
+				"description": "Tampilkan saran saat kamu mengetik di input chat. Tekan Tab untuk menerima saran."
 			},
 			"snooze": {
-				"label": "Tunda Autocomplete",
-				"description": "Jeda sementara saran autocomplete untuk durasi tertentu.",
+				"label": "Tunda Saran",
+				"description": "Jeda saran sementara untuk durasi tertentu.",
 				"button": "Tunda",
 				"unsnooze": "Aktifkan Kembali",
-				"currentlySnoozed": "Autocomplete sedang ditunda.",
+				"currentlySnoozed": "Saran saat ini ditunda.",
 				"duration": {
 					"1min": "1 menit",
 					"5min": "5 menit",
@@ -249,7 +272,19 @@
 					"30min": "30 menit",
 					"1hour": "1 jam"
 				}
-			}
+			},
+			"keybindingNotFound": "tidak ditemukan",
+			"noModelConfigured": {
+				"title": "Tidak ada model autocomplete yang dikonfigurasi",
+				"description": "Untuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini:",
+				"learnMore": "Pelajari lebih lanjut tentang pengaturan autocomplete →"
+			},
+			"noCredits": {
+				"title": "Tidak ada kredit di akun kamu",
+				"description": "Akun Kilo Code kamu tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun kamu.",
+				"buyCredits": "Beli kredit →"
+			},
+			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete."
 		}
 	},
 	"virtualProvider": {
@@ -302,6 +337,9 @@
 		},
 		"modes": {
 			"description": "Mode-mode ini tersedia dari komunitas. Klik <1>di sini</1> untuk mengedit mode kustom Anda sendiri."
+		},
+		"skills": {
+			"description": "Jelajahi dan temukan skill dari komunitas. Skill menyediakan instruksi khusus untuk tugas-tugas tertentu."
 		}
 	},
 	"modes": {
@@ -327,10 +365,36 @@
 		"initiating": "Memulai autentikasi..."
 	},
 	"speechToText": {
-		"startRecording": "Mulai masukan suara",
+		"startRecording": "Mulai input suara",
 		"stopRecording": "Hentikan input suara",
-		"unavailableOpenAiKeyMissing": "Ucapan-ke-teks tidak tersedia. Ini memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
-		"unavailableFfmpegNotInstalled": "Ucapan-ke-teks tidak tersedia. Pasang FFmpeg untuk menggunakan transkripsi suara.",
-		"unavailableBoth": "Ucapan-ke-teks tidak tersedia. Fitur ini memerlukan penyedia OpenAI yang valid dan FFmpeg harus terpasang."
+		"setupPopover": {
+			"title": "Ucapan-ke-Teks",
+			"description": "Speech-to-text tidak tersedia. Speech-to-text memerlukan FFmpeg dan penyedia OpenAI yang valid untuk dikonfigurasi. <moreInfoLink>Klik di sini untuk informasi lebih lanjut</moreInfoLink>.",
+			"openAiReason": "Anda memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
+			"ffmpegReason": "Anda perlu menginstal FFmpeg. <ffmpegLink>Klik di sini</ffmpegLink> agar Kilo membantu Anda menginstal FFmpeg.",
+			"ffmpegMessage": "Bantu saya menginstal FFmpeg"
+		},
+		"misconfiguredState": "Tidak tersedia karena konfigurasi",
+		"errorState": "Tidak tersedia karena terjadi kesalahan",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Default Sistem",
+			"description": "Pilih perangkat mikrofon untuk pengenalan suara-ke-teks",
+			"noDevices": "Tidak ada perangkat mikrofon yang ditemukan",
+			"loading": "Memuat perangkat mikrofon...",
+			"refresh": "Segarkan"
+		}
+	},
+	"skills": {
+		"description": "Skill menyediakan instruksi khusus untuk tugas-tugas tertentu. Skill diterapkan secara otomatis saat relevan dengan permintaan kamu.",
+		"noSkills": "Tidak ada skill yang terinstal",
+		"projectSkills": "Skill Proyek",
+		"globalSkills": "Skill Global",
+		"deleteDialog": {
+			"title": "Hapus Skill",
+			"description": "Apakah kamu yakin ingin menghapus skill \"{{skillName}}\"? Tindakan ini tidak dapat dibatalkan.",
+			"cancel": "Batal",
+			"delete": "Hapus"
+		}
 	}
 }

@@ -2,6 +2,7 @@ import { EventEmitter } from "events"
 import WebSocket from "ws"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { getOpenAiApiKey, getOpenAiBaseUrl } from "./utils/getOpenAiCredentials"
+import { t } from "../../i18n"
 
 /**
  * Configuration for OpenAI Whisper transcription via Realtime API
@@ -193,24 +194,32 @@ export class OpenAIWhisperClient extends EventEmitter {
 			await new Promise<void>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					reject(new Error("WebSocket connection timeout"))
-				}, 10000)
+				}, 5000)
 
 				const onOpen = () => {
 					clearTimeout(timeout)
-					this.ws!.off("open", onOpen)
-					this.ws!.off("error", onError)
+					this.ws?.off("open", onOpen)
+					this.ws?.off("error", onError)
 					resolve()
 				}
 
 				const onError = (error: Error) => {
 					clearTimeout(timeout)
-					this.ws!.off("open", onOpen)
-					this.ws!.off("error", onError)
-					reject(new Error(`WebSocket connection failed: ${error.message}`))
+					this.ws?.off("open", onOpen)
+					this.ws?.off("error", onError)
+					if (error.message.includes("401")) {
+						reject(new Error(t("kilocode:speechToText.errors.invalidApiKey")))
+					} else {
+						reject(new Error(t("kilocode:speechToText.errors.unknown")))
+					}
 				}
 
-				this.ws!.once("open", onOpen)
-				this.ws!.once("error", onError)
+				if (this.ws) {
+					this.ws.once("open", onOpen)
+					this.ws.once("error", onError)
+				} else {
+					reject(new Error("WebSocket not initialized"))
+				}
 			})
 
 			this.isConnecting = false
@@ -218,6 +227,10 @@ export class OpenAIWhisperClient extends EventEmitter {
 			this.emit("connected")
 		} catch (error) {
 			this.isConnecting = false
+			try {
+				this.ws?.removeAllListeners()
+				this.ws?.close()
+			} catch (_cleanupError) {}
 			this.ws = null
 			throw error
 		}
@@ -494,10 +507,8 @@ export class OpenAIWhisperClient extends EventEmitter {
 		}
 
 		// Close WebSocket
-		if (this.ws) {
-			this.ws.close(1000, "Client disconnect")
-			this.ws = null
-		}
+		this.ws?.close(1000, "Client disconnect")
+		this.ws = null
 
 		this.sessionConfigured = false
 		this.pendingAudioChunks = []

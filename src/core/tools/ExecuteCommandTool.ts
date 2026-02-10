@@ -116,6 +116,9 @@ export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 				provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 				await task.say("shell_integration_warning")
 
+				// Invalidate pending ask from first execution to prevent race condition
+				task.supersedePendingAsk()
+
 				if (error instanceof ShellIntegrationError) {
 					const [rejected, result] = await executeCommandInTerminal(task, {
 						...options,

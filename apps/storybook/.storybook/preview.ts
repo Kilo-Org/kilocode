@@ -1,6 +1,7 @@
 import type { Preview } from "@storybook/react-vite"
 
 import { withExtensionState } from "../src/decorators/withExtensionState"
+import { withPostMessageMock } from "../src/decorators/withPostMessageMock"
 import { withQueryClient } from "../src/decorators/withQueryClient"
 import { withTheme } from "../src/decorators/withTheme"
 import { withI18n } from "../src/decorators/withI18n"
@@ -49,6 +50,7 @@ const preview: Preview = {
 		withI18n,
 		withQueryClient,
 		withExtensionState,
+		withPostMessageMock,
 		withTheme,
 		withTooltipProvider,
 		withFixedContainment,

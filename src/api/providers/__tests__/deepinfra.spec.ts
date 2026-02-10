@@ -26,6 +26,7 @@ vitest.mock("../fetchers/modelCache", () => ({
 	getModels: vitest.fn().mockResolvedValue({
 		[deepInfraDefaultModelId]: deepInfraDefaultModelInfo,
 	}),
+	getModelsFromCache: vitest.fn().mockReturnValue(undefined),
 }))
 
 import OpenAI from "openai"

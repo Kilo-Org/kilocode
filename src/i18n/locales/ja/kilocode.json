@@ -15,6 +15,7 @@
 		"noAssistantMessages": "モデルの応答が予期せず終了しました（アシスタントメッセージなし）。これは制限に達している兆候である可能性があります。",
 		"notLoggedInError": "リクエストを完了できません。選択したプロバイダーに接続してログインしていることを確認してください。\n\n{{error}}",
 		"maxCompletionTokens": "完了トークンの最大数に達しました。",
+		"contentFilter": "リクエストがコンテンツフィルターによってブロックされました。",
 		"disableApplyDiff": "このエラーが繰り返し発生する場合は、詳細設定で「差分による編集」を無効にしてください。",
 		"disableEditFile": "このエラーが繰り返し発生する場合は、実験的機能「高速適用」を無効にしてください。"
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（無効）",
-				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
+				"noCredits": "**アカウントにクレジットがありません**\n\nKilo Code アカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "セッション合計コスト:",
 				"provider": "プロバイダー:",
 				"model": "モデル:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Kilocode CLIのバージョンが古く、Agent Managerをサポートしていません。最新バージョンに更新してください。",
-			"cliNotFound": "Kilocode CLIが見つかりません。Agent Managerを使用するにはインストールしてください。",
 			"cliMisconfigured": "Kilocode CLIが設定されていません。'kilocode auth'でサインインするか、'kilocode config'で設定してください。",
 			"sessionFailed": "エージェントセッションの開始に失敗しました",
 			"sessionFailedWithMessage": "エージェントセッションの開始に失敗しました: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Kilocode CLIをインストールするためにnpm installを実行しています。完了したら、このターミナルを閉じてAgent Managerを再度起動してみてください。",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "OpenAI APIキーが無効であるか、Realtime APIへのアクセス権限がありません。APIキーを確認して再度お試しください。",
+			"unknown": "接続に失敗しました。設定を確認してもう一度お試しください。"
+		}
+	},
+	"configDiscovery": {
+		"added": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を追加しました。",
+		"removed": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を削除しました"
 	}
 }

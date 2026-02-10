@@ -1,30 +1,20 @@
-import type { ModeConfig } from "./messages.js"
+/**
+ * CLI Types
+ *
+ * Re-exports types from @kilocode/core-schemas for runtime validation
+ * and backward compatibility with existing code.
+ */
 
-export interface WelcomeMessageOptions {
-	// Clear viewport before showing the message
-	clearScreen?: boolean
-	// Display options
-	showInstructions?: boolean
-	// Content customization
-	instructions?: string[] // Custom instruction lines
-	// Parallel mode branch name
-	worktreeBranch?: string | undefined
-	// Workspace directory
-	workspace?: string | undefined
-}
+import type { ModeConfig } from "@roo-code/types"
 
-export interface CliMessage {
-	id: string
-	type: "user" | "assistant" | "system" | "error" | "welcome" | "empty" | "requestCheckpointRestoreApproval"
-	content: string
-	ts: number
-	partial?: boolean | undefined
-	metadata?: {
-		welcomeOptions?: WelcomeMessageOptions | undefined
-	}
-	payload?: unknown
-}
+// Re-export schemas from core-schemas
+export { welcomeMessageOptionsSchema, cliMessageSchema, cliOptionsSchema } from "@kilocode/core-schemas"
 
+// Re-export schema-inferred types for simpler cases
+export type { WelcomeMessageOptions, CliMessage } from "@kilocode/core-schemas"
+
+// CLIOptions interface with proper typing for ModeConfig
+// (The schema uses z.unknown() but we want proper types at compile time)
 export interface CLIOptions {
 	mode?: string
 	workspace?: string
@@ -43,4 +33,8 @@ export interface CLIOptions {
 	session?: string
 	fork?: string
 	noSplash?: boolean
+	appendSystemPrompt?: string
+	appendSystemPromptFile?: string
+	attachments?: string[] | undefined
+	onTaskCompleted?: string
 }

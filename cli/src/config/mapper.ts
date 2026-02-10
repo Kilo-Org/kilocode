@@ -1,6 +1,7 @@
 import type { CLIConfig, ProviderConfig } from "./types.js"
 import type { ExtensionState, ProviderSettings, ProviderSettingsEntry } from "../types/messages.js"
 import { logs } from "../services/logs.js"
+import { DEFAULT_MAX_CONCURRENT_FILE_READS } from "@kilocode/core-schemas"
 
 export function mapConfigToExtensionState(
 	config: CLIConfig,
@@ -69,6 +70,8 @@ export function mapConfigToExtensionState(
 			alwaysAllowFollowupQuestions: autoApprovalEnabled && (autoApproval?.question?.enabled ?? false),
 			followupAutoApproveTimeoutMs: (autoApproval?.question?.timeout ?? 60) * 1000,
 			alwaysAllowUpdateTodoList: autoApprovalEnabled && (autoApproval?.todo?.enabled ?? false),
+			// Context management settings
+			maxConcurrentFileReads: config.maxConcurrentFileReads ?? DEFAULT_MAX_CONCURRENT_FILE_READS,
 		}
 	} catch (error) {
 		logs.error("Failed to map config to extension state", "ConfigMapper", { error })
@@ -76,7 +79,7 @@ export function mapConfigToExtensionState(
 	}
 }
 
-function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettings {
+export function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettings {
 	const config: ProviderSettings = {
 		apiProvider: provider.provider,
 	}
@@ -99,6 +102,7 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "anthropic":
 			return provider.apiModelId || ""
 		case "openai-native":
+		case "openai-codex":
 			return provider.apiModelId || ""
 		case "openrouter":
 			return provider.openRouterModelId || ""
@@ -107,6 +111,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "lmstudio":
 			return provider.lmStudioModelId || ""
 		case "openai":
+			return provider.openAiModelId || ""
+		case "openai-responses":
 			return provider.openAiModelId || ""
 		case "glama":
 			return provider.glamaModelId || ""
@@ -129,7 +135,6 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 		case "bedrock":
 		case "vertex":
 		case "gemini":
-		case "gemini-cli":
 		case "mistral":
 		case "moonshot":
 		case "minimax":
@@ -157,8 +162,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 			return ""
 		case "huggingface":
 			return provider.huggingFaceModelId || ""
-		case "human-relay":
 		case "fake-ai":
+		case "human-relay":
 			return ""
 	}
 }

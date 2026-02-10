@@ -44,14 +44,22 @@ import {
 	ScrollArea,
 } from "@/components/ui"
 
+// Tool group type (same as in runs.tsx)
+type ToolGroup = {
+	id: string
+	name: string
+	icon: string
+	tools: string[]
+}
+
 type RunProps = {
 	run: EvalsRun
 	taskMetrics: EvalsTaskMetrics | null
 	toolColumns: ToolName[]
-	consolidatedToolColumns: string[]
+	toolGroups: ToolGroup[]
 }
 
-export function Run({ run, taskMetrics, toolColumns, consolidatedToolColumns }: RunProps) {
+export function Run({ run, taskMetrics, toolColumns, toolGroups }: RunProps) {
 	const router = useRouter()
 	const [deleteRunId, setDeleteRunId] = useState<number>()
 	const [showSettings, setShowSettings] = useState(false)
@@ -143,6 +151,62 @@ export function Run({ run, taskMetrics, toolColumns, consolidatedToolColumns }: 
 		[router, run.id],
 	)
 
+	// Helper to render a tool group cell
+	const renderToolGroupCell = (group: ToolGroup) => {
+		if (!taskMetrics?.toolUsage) {
+			return <span className="text-muted-foreground">-</span>
+		}
+
+		let totalAttempts = 0
+		let totalFailures = 0
+		const breakdown: Array<{ tool: string; attempts: number; rate: string }> = []
+
+		for (const toolName of group.tools) {
+			const usage = taskMetrics.toolUsage[toolName as ToolName]
+			if (usage) {
+				totalAttempts += usage.attempts
+				totalFailures += usage.failures
+				const rate =
+					usage.attempts > 0
+						? `${Math.round(((usage.attempts - usage.failures) / usage.attempts) * 100)}%`
+						: "0%"
+				breakdown.push({ tool: toolName, attempts: usage.attempts, rate })
+			}
+		}
+
+		if (totalAttempts === 0) {
+			return <span className="text-muted-foreground">-</span>
+		}
+
+		const successRate = ((totalAttempts - totalFailures) / totalAttempts) * 100
+		const rateColor =
+			successRate === 100 ? "text-muted-foreground" : successRate >= 80 ? "text-yellow-500" : "text-red-500"
+
+		return (
+			<Tooltip>
+				<TooltipTrigger>
+					<div className="flex flex-col items-center">
+						<span className="font-medium">{totalAttempts}</span>
+						<span className={rateColor}>{Math.round(successRate)}%</span>
+					</div>
+				</TooltipTrigger>
+				<TooltipContent>
+					<div className="text-xs">
+						<div className="font-semibold mb-1">{group.name}</div>
+						{breakdown.map(({ tool, attempts, rate }) => (
+							<div key={tool} className="flex justify-between gap-4">
+								<span>{tool}:</span>
+								<span>
+									{attempts} ({rate})
+								</span>
+							</div>
+						))}
+					</div>
+				</TooltipContent>
+			</Tooltip>
+		)
+	}
+
 	return (
 		<>
 			<TableRow className="cursor-pointer hover:bg-muted/50" onClick={handleRowClick}>
@@ -170,68 +234,12 @@ export function Run({ run, taskMetrics, toolColumns, consolidatedToolColumns }: 
 						</div>
 					)}
 				</TableCell>
-				{consolidatedToolColumns.length > 0 && (
-					<TableCell className="text-xs text-center">
-						{taskMetrics?.toolUsage ? (
-							(() => {
-								// Calculate aggregated stats for consolidated tools
-								let totalAttempts = 0
-								let totalFailures = 0
-								const breakdown: Array<{ tool: string; attempts: number; rate: string }> = []
-
-								for (const toolName of consolidatedToolColumns) {
-									const usage = taskMetrics.toolUsage[toolName as ToolName]
-									if (usage) {
-										totalAttempts += usage.attempts
-										totalFailures += usage.failures
-										const rate =
-											usage.attempts > 0
-												? `${Math.round(((usage.attempts - usage.failures) / usage.attempts) * 100)}%`
-												: "0%"
-										breakdown.push({ tool: toolName, attempts: usage.attempts, rate })
-									}
-								}
-
-								const consolidatedRate =
-									totalAttempts > 0 ? ((totalAttempts - totalFailures) / totalAttempts) * 100 : 100
-								const rateColor =
-									consolidatedRate === 100
-										? "text-muted-foreground"
-										: consolidatedRate >= 80
-											? "text-yellow-500"
-											: "text-red-500"
-
-								return totalAttempts > 0 ? (
-									<Tooltip>
-										<TooltipTrigger>
-											<div className="flex flex-col items-center">
-												<span className="font-medium">{totalAttempts}</span>
-												<span className={rateColor}>{Math.round(consolidatedRate)}%</span>
-											</div>
-										</TooltipTrigger>
-										<TooltipContent>
-											<div className="text-xs">
-												<div className="font-semibold mb-1">Consolidated Tools:</div>
-												{breakdown.map(({ tool, attempts, rate }) => (
-													<div key={tool} className="flex justify-between gap-4">
-														<span>{tool}:</span>
-														<span>
-															{attempts} ({rate})
-														</span>
-													</div>
-												))}
-											</div>
-										</TooltipContent>
-									</Tooltip>
-								) : (
-									<span className="text-muted-foreground">-</span>
-								)
-							})()
-						) : (
-							<span className="text-muted-foreground">-</span>
-						)}
+				{/* Tool Group Columns */}
+				{toolGroups.map((group) => (
+					<TableCell key={group.id} className="text-xs text-center">
+						{renderToolGroupCell(group)}
 					</TableCell>
-				)}
+				))}
 				{toolColumns.map((toolName) => {
 					const usage = taskMetrics?.toolUsage?.[toolName]
 					const successRate =

@@ -11,6 +11,7 @@ import {
 	LLMRetrievalResult,
 	PendingRequest,
 	AutocompleteContext,
+	LastSuggestionInfo,
 } from "../types"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
@@ -60,24 +61,37 @@ const LATENCY_SAMPLE_SIZE = 10
 export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
- * Find a matching suggestion from the history based on current prefix and suffix
+ * Result from findMatchingSuggestion including the original suggestion for telemetry tracking
+ */
+export interface MatchingSuggestionWithFillIn extends MatchingSuggestionResult {
+	/** The original FillInAtCursorSuggestion for telemetry tracking */
+	fillInAtCursor: FillInAtCursorSuggestion
+}
+
+/**
+ * Find a matching suggestion from the history based on current prefix and suffix.
+ *
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
  * @param suggestionsHistory - Array of previous suggestions (most recent last)
- * @returns The matching suggestion with match type, or null if no match found
+ * @returns The matching suggestion with match type and the original FillInAtCursorSuggestion, or null if no match found
  */
 export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
 	suggestionsHistory: FillInAtCursorSuggestion[],
-): MatchingSuggestionResult | null {
+): MatchingSuggestionWithFillIn | null {
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return { text: fillInAtCursor.text, matchType: "exact" }
+			return {
+				text: fillInAtCursor.text,
+				matchType: "exact",
+				fillInAtCursor,
+			}
 		}
 
 		// If no exact match, but suggestion is available, check for partial typing
@@ -93,7 +107,11 @@ export function findMatchingSuggestion(
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
 				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return { text: fillInAtCursor.text.substring(typedContent.length), matchType: "partial_typing" }
+				return {
+					text: fillInAtCursor.text.substring(typedContent.length),
+					matchType: "partial_typing",
+					fillInAtCursor,
+				}
 			}
 		}
 
@@ -109,7 +127,11 @@ export function findMatchingSuggestion(
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
 			// Return the deleted portion plus the original suggestion text
-			return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion" }
+			return {
+				text: deletedContent + fillInAtCursor.text,
+				matchType: "backward_deletion",
+				fillInAtCursor,
+			}
 		}
 	}
 
@@ -126,14 +148,19 @@ export function findMatchingSuggestion(
  * @returns A new result with potentially truncated text, or null if input was null
  */
 export function applyFirstLineOnly(
-	result: MatchingSuggestionResult | null,
+	result: MatchingSuggestionWithFillIn | null,
 	prefix: string,
-): MatchingSuggestionResult | null {
+): MatchingSuggestionWithFillIn | null {
 	if (result === null || result.text === "") {
 		return result
 	}
 	if (shouldShowOnlyFirstLine(prefix, result.text)) {
-		return { text: getFirstLine(result.text), matchType: result.matchType }
+		const firstLineText = getFirstLine(result.text)
+		return {
+			text: firstLineText,
+			matchType: result.matchType,
+			fillInAtCursor: result.fillInAtCursor,
+		}
 	}
 	return result
 }
@@ -190,6 +217,11 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
 	const lastNewlineIndex = prefix.lastIndexOf("\n")
 	const currentLinePrefix = prefix.slice(lastNewlineIndex + 1)
 
+	// if the first line contains no word characters, show the whole block
+	if (!currentLinePrefix.match(/\w/)) {
+		return false
+	}
+
 	// If the current line prefix contains non-whitespace, only show the first line
 	if (currentLinePrefix.trim().length > 0) {
 		return true
@@ -241,6 +273,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
 	private latencyHistory: number[] = []
 	private telemetry: AutocompleteTelemetry | null
+	/** Information about the last suggestion shown to the user */
+	private lastSuggestion: LastSuggestionInfo | null = null
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -277,7 +311,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
 
 		this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () =>
-			this.telemetry?.captureAcceptSuggestion(),
+			this.telemetry?.captureAcceptSuggestion(this.lastSuggestion?.length),
 		)
 	}
 
@@ -336,6 +370,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		suffix: string,
 		model: GhostModel,
 		telemetryContext: AutocompleteContext,
+		languageId?: string,
 	): FillInAtCursorSuggestion {
 		if (!suggestionText) {
 			this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
@@ -347,6 +382,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			prefix,
 			suffix,
 			model: model.getModelName() || "",
+			languageId,
 		})
 
 		if (processedText) {
@@ -396,6 +432,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			clearTimeout(this.debounceTimer)
 			this.debounceTimer = null
 		}
+		this.telemetry?.dispose()
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 		void this.disposeIgnoreController()
@@ -482,9 +519,16 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			)
 
 			if (matchingResult !== null) {
+				this.lastSuggestion = {
+					...telemetryContext,
+					length: matchingResult.text.length,
+				}
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
+				this.telemetry?.startVisibilityTracking(matchingResult.fillInAtCursor, "cache", telemetryContext)
 				return stringToInlineCompletions(matchingResult.text, position)
 			}
+
+			this.telemetry?.cancelVisibilityTracking() // No suggestion to show - cancel any pending visibility tracking
 
 			// Only skip new LLM requests during mid-word typing or at end of statement
 			// Cache lookups above are still allowed
@@ -504,7 +548,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				prefix,
 			)
 			if (cachedResult) {
+				this.lastSuggestion = {
+					...telemetryContext,
+					length: cachedResult.text.length,
+				}
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
+				this.telemetry?.startVisibilityTracking(cachedResult.fillInAtCursor, "llm", telemetryContext)
+			} else {
+				this.telemetry?.cancelVisibilityTracking() // No suggestion to show - cancel any pending visibility tracking
 			}
 
 			return stringToInlineCompletions(cachedResult?.text ?? "", position)
@@ -632,9 +683,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		try {
-			// Curry processSuggestion with prefix, suffix, model, and telemetry context
+			// Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
 			const curriedProcessSuggestion = (text: string) =>
-				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext)
+				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
 
 			const result =
 				prompt.strategy === "fim"

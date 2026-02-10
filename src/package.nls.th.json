@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
-	"extension.description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด",
+	"extension.displayName": "Kilo Code: เอเจนต์เขียนโค้ด AI, Copilot และการเติมข้อความอัตโนมัติ",
+	"extension.description": "เอเจนต์เขียนโค้ด AI แบบ Open Source ที่สร้างโค้ดจากภาษาธรรมชาติ ทำงานอัตโนมัติ และรันคำสั่ง Terminal มีฟีเจอร์เติมข้อความอัตโนมัติแบบ inline, ระบบอัตโนมัติของเบราว์เซอร์, การ refactor อัตโนมัติ และโหมดที่กำหนดเองสำหรับการวางแผน เขียนโค้ด และดีบัก รองรับโมเดล AI มากกว่า 500 รุ่น รวมถึง Claude (Anthropic), Gemini, Grok, GPT, Codex และ GLM",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -45,7 +45,7 @@
 	"settings.autoImportSettingsPath.description": "เส้นทางไปยังไฟล์กำหนดค่า Kilo Code ที่จะนำเข้าโดยอัตโนมัติเมื่อเริ่มต้นส่วนขยาย รองรับเส้นทางแบบสัมบูรณ์และเส้นทางที่สัมพันธ์กับไดเรกทอรีหลัก (เช่น '~/Documents/kilo-code-settings.json') เว้นว่างไว้เพื่อปิดใช้งานการนำเข้าอัตโนมัติ",
 	"settings.enableSettingsSync.description": "เปิดใช้งานการซิงโครไนซ์การตั้งค่า Kilo Code ข้ามอุปกรณ์ผ่าน VS Code Settings Sync เมื่อเปิดใช้งาน การกำหนดค่า API โหมดที่กำหนดเอง และการตั้งค่าต่างๆ ของคุณจะซิงโครไนซ์โดยอัตโนมัติเมื่อคุณเข้าสู่ระบบ VS Code Settings Sync",
 	"settings.maximumIndexedFilesForFileSearch.description": "จำนวนไฟล์สูงสุดที่จะสร้างดัชนีสำหรับฟีเจอร์ค้นหาไฟล์ @ ค่าที่สูงขึ้นให้ผลลัพธ์การค้นหาที่ดีขึ้นในโปรเจกต์ขนาดใหญ่ แต่อาจใช้หน่วยความจำมากขึ้น ค่าเริ่มต้น: 10,000",
-	"settings.useAgentRules.description": "เปิดใช้งานการโหลดไฟล์ AGENTS.md สำหรับกฎเฉพาะตัวแทน (ดู https://agent-rules.org/)",
+	"settings.useAgentRules.description": "เปิดใช้งานการโหลดไฟล์ AGENTS.md สำหรับกฎเฉพาะตัวแทน (ดู https://agents.md/)",
 	"settings.apiRequestTimeout.description": "เวลาสูงสุดเป็นวินาทีที่จะรอการตอบสนอง API (0 = ไม่มีการหมดเวลา, 1-86400 วินาที, ค่าเริ่มต้น: 600 วินาที) แนะนำค่าที่สูงขึ้นสำหรับผู้ให้บริการในเครื่องเช่น LM Studio และ Ollama ที่อาจต้องการเวลาในการประมวลผลมากขึ้น",
 	"settings.newTaskRequireTodos.description": "ต้องการพารามิเตอร์ todos เมื่อสร้างงานใหม่ด้วยเครื่องมือ new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "ขนาดแบตช์สำหรับการดำเนินการฝังตัวระหว่างการสร้างดัชนีโค้ด ปรับค่านี้ตามขีดจำกัดของผู้ให้บริการ API ของคุณ ค่าเริ่มต้นคือ 60",
@@ -58,5 +58,8 @@
 	"ghost.commands.applyCurrentSuggestion": "ใช้ข้อเสนอแนะการแก้ไขปัจจุบัน",
 	"ghost.commands.applyAllSuggestions": "ใช้ข้อเสนอแนะการแก้ไขทั้งหมด",
 	"ghost.commands.goToNextSuggestion": "ไปยังข้อเสนอแนะถัดไป",
-	"ghost.commands.goToPreviousSuggestion": "ไปยังข้อเสนอแนะก่อนหน้า"
+	"ghost.commands.goToPreviousSuggestion": "ไปยังข้อเสนอแนะก่อนหน้า",
+	"settings.debugProxy.enabled.description": "**เปิดใช้งาน Debug Proxy** — จัดเส้นทางคำขอเครือข่ายขาออกทั้งหมดผ่าน proxy สำหรับการดีบัก MITM ใช้งานได้เฉพาะเมื่อทำงานในโหมดดีบัก (F5) เท่านั้น",
+	"settings.debugProxy.serverUrl.description": "URL ของ Proxy (เช่น `http://127.0.0.1:8888`) ใช้เฉพาะเมื่อเปิดใช้งาน **Debug Proxy**",
+	"settings.debugProxy.tlsInsecure.description": "ยอมรับใบรับรองที่ลงชื่อด้วยตนเองจาก proxy **จำเป็นสำหรับการตรวจสอบ MITM** ⚠️ ไม่ปลอดภัย — ใช้เฉพาะสำหรับการดีบักในเครื่องเท่านั้น"
 }

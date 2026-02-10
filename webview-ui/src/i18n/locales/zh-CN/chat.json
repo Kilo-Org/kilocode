@@ -9,6 +9,7 @@
 		"tokens": "Token 用量",
 		"cache": "缓存",
 		"apiCost": "API 费用",
+		"changes": "变更",
 		"size": "大小",
 		"contextWindow": "上下文长度",
 		"closeAndStart": "关闭任务并开始新任务",
@@ -92,6 +93,11 @@
 		"title": "取消",
 		"tooltip": "取消当前操作"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "停止当前任务"
+	},
+	"enqueueMessage": "将消息加入队列（当前任务完成后发送）",
 	"scrollToBottom": "滚动到聊天底部",
 	"about": "通过 AI 辅助生成、重构和调试代码。查看我们的 <DocsLink>文档</DocsLink> 了解更多。",
 	"docs": "查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
@@ -146,17 +152,20 @@
 		"streaming": "API请求...",
 		"cancelled": "API请求已取消",
 		"streamingFailed": "API流式传输失败",
-		"errorTitle": "API 错误 {{code}}",
+		"rateLimitWait": "请求频率限制",
+		"errorTitle": "提供商错误 {{code}}",
 		"errorMessage": {
 			"docs": "文档",
+			"goToSettings": "设置",
 			"400": "提供商无法按此方式处理请求。请停止任务并尝试不同方法。",
 			"401": "无法向提供商进行身份验证。请检查您的 API 密钥配置。",
 			"402": "您的账户余额/积分似乎已用尽。请前往提供商处充值以继续。",
 			"403": "无权限。您的 API 密钥有效，但提供商拒绝完成此请求。",
 			"429": "请求过于频繁。提供商已对您的请求进行速率限制。请在下一次 API 调用前稍候。",
 			"500": "提供商服务器错误。提供商端出现问题，您的请求无问题。",
-			"unknown": "未知 API 错误。请联系 Kilo 支持。",
-			"connection": "连接错误。确保您有可用的互联网连接。"
+			"unknown": "未知 API 错误,点击详情了解更多信息。",
+			"connection": "连接错误。确保您有可用的互联网连接。",
+			"claudeCodeNotAuthenticated": "你需要登录才能使用 Claude Code。前往设置并点击「登录到 Claude Code」进行身份验证。"
 		}
 	},
 	"checkpoint": {
@@ -271,10 +280,20 @@
 		"hasQuestion": "Kilo Code有一个问题"
 	},
 	"taskCompleted": "任务完成",
+	"modelResponseIncomplete": "模型响应不完整",
+	"modelResponseErrors": {
+		"noToolsUsed": "模型在响应中未使用任何工具。这通常发生在模型仅提供文本/推理而未调用完成任务所需的工具时。",
+		"noToolsUsedDetails": "模型提供了文本/推理，但未调用任何必需的工具。这通常表明模型误解了任务，或在确定使用哪个工具时遇到困难。系统已自动提示模型使用正确的工具重试。",
+		"noAssistantMessages": "模型未提供任何响应内容。这可能表示 API 或模型输出存在问题。",
+		"noAssistantMessagesDetails": "语言模型返回了一个没有任何文本或工具调用的空响应。这可能是由于 API 问题、速率限制或模型特定问题所导致。系统已自动提示模型重试。"
+	},
 	"errorDetails": {
+		"link": "详情",
 		"title": "错误详情",
 		"copyToClipboard": "复制到剪贴板",
-		"copied": "已复制!"
+		"copied": "已复制!",
+		"diagnostics": "获取详细错误信息",
+		"proxyProvider": "看起来你在使用基于代理的提供商。请检查日志并确保它不会重写 Roo 的请求。"
 	},
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
@@ -295,7 +314,7 @@
 		"triggerLabel_zero": "0 个自动批准",
 		"triggerLabel_one": "1 个自动批准",
 		"triggerLabel_other": "{{count}} 个自动批准",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -331,9 +350,10 @@
 			"goToSettingsButton": "前往设置"
 		},
 		"release": {
-			"heading": "最新功能：",
-			"contextRewind": "改进的上下文压缩现在允许您在回到存档点时恢复完整的之前上下文",
-			"rooProvider": "Roo Code Cloud 提供商现在保留推理内容，并默认使用原生工具以获得更好的性能"
+			"heading": "新增功能：",
+			"openaiCodexProvider": "添加了 OpenAI - ChatGPT Plus/Pro 提供商，提供基于订阅的 Codex 模型访问，无需按 Token 收费。",
+			"gpt52codexModel": "新的 gpt-5.2-codex 模型已添加到 Roo Code Router、标准 OpenAI 提供商等。",
+			"bugFixes": "修复了导致灰屏的内存泄漏、Gemini 思考签名问题以及其他稳定性改进。"
 		},
 		"cloudAgents": {
 			"heading": "云端新功能：",
@@ -344,8 +364,14 @@
 		"careers": "此外，<careersLink>我们正在招聘！</careersLink>",
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/KiloCode</redditLink> 上关注我们 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "总成本（包括子任务）: ${{cost}}",
+		"total": "总成本: ${{cost}}",
+		"includesSubtasks": "包括子任务成本"
+	},
 	"browser": {
 		"session": "浏览器会话",
+		"active": "活动中",
 		"rooWantsToUse": "Kilo Code想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",

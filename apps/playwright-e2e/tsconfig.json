@@ -22,7 +22,8 @@
 		"playwright.globalSetup.ts",
 		"types/**/*",
 		"helpers/**/*",
-		"scripts/theme-extraction-script.test.ts"
+		"scripts/theme-extraction-script.test.ts",
+		"../../src/shared/string-extensions.d.ts"
 	],
 	"exclude": ["node_modules", "test-results", "tests/**/__tests__/**/*"]
 }

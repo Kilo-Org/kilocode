@@ -26,7 +26,8 @@
 	"tabs": {
 		"tools": "الأدوات",
 		"resources": "الموارد",
-		"logs": "السجلات"
+		"logs": "السجلات",
+		"authDebug": "تصحيح المصادقة"
 	},
 	"emptyState": {
 		"noTools": "ما فيه أدوات",
@@ -55,11 +56,27 @@
 	},
 	"serverStatus": {
 		"retrying": "جاري المحاولة من جديد...",
-		"retryConnection": "إعادة محاولة الاتصال"
+		"retryConnection": "إعادة محاولة الاتصال",
+		"signIn": "تسجيل الدخول",
+		"signingIn": "جاري تسجيل الدخول..."
 	},
 	"execution": {
 		"running": "قيد التشغيل",
 		"completed": "اكتمل",
 		"error": "خطأ"
+	},
+	"authDebug": {
+		"title": "معلومات تصحيح OAuth",
+		"status": "الحالة",
+		"tokenExpires": "انتهاء صلاحية Token",
+		"scopes": "الصلاحيات",
+		"refreshInfo": "معلومات Refresh Token",
+		"hasRefreshToken": "يوجد Refresh Token",
+		"canRefresh": "يمكن التحديث التلقائي",
+		"tokenIssuedAt": "وقت إصدار Token",
+		"nextRefreshAt": "موعد التحديث القادم",
+		"lastRefreshAt": "آخر تحديث",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	}
 }

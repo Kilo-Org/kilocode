@@ -14,7 +14,10 @@
 		"shareSession": "세션 공유",
 		"shareConfirmMessage": "이 세션의 스냅샷을 공개적으로 공유하시겠습니까?",
 		"shareConfirmYes": "예",
-		"shareConfirmNo": "아니요"
+		"shareConfirmNo": "아니요",
+		"options": "옵션",
+		"configureSetupScript": "Worktree 설정 스크립트",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLO 모드 - 도구 작업이 자동 승인됩니다",
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
-		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈",
 		"runModeLocal": "로컬",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "클라우드",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "기본 브랜치 변경",
 		"noBranches": "브랜치를 찾을 수 없습니다",
 		"noMatchingBranches": "검색과 일치하는 브랜치가 없습니다",
-		"openTerminal": "터미널 열기"
+		"openTerminal": "터미널 열기",
+		"selectModel": "모델 선택",
+		"modelTooltip": "이 세션에 사용할 AI 모델 선택",
+		"defaultModel": "기본 모델",
+		"loadingModels": "로딩 중...",
+		"selectMode": "모드 선택",
+		"modeTooltip": "모드: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",
@@ -70,7 +85,11 @@
 		"usingTool": "도구 사용 중: **{{tool}}** {{details}}",
 		"expandOutput": "출력 펼치기",
 		"collapseOutput": "출력 접기",
-		"copyCommand": "명령 복사"
+		"copyCommand": "명령 복사",
+		"thinking": "생각 중",
+		"thinkingSeconds": "{{count}}초",
+		"approve": "승인",
+		"deny": "거부"
 	},
 	"chatInput": {
 		"autoMode": "에이전트가 완전 자동 모드로 실행 중 - 입력이 허용되지 않습니다",
@@ -80,9 +99,12 @@
 		"cancelTitle": "에이전트 취소",
 		"finishToBranchTitle": "Worktree 완료 및 브랜치 준비: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree 완료 및 브랜치 준비",
+		"createPRTitle": "Pull request 생성",
 		"sendTitle": "메시지 보내기",
 		"resumeTitle": "에이전트 재개",
-		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈"
+		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈",
+		"addImage": "이미지 추가",
+		"removeImage": "이미지 제거"
 	},
 	"status": {
 		"running": "실행 중",

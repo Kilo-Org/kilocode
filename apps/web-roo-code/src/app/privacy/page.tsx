@@ -283,7 +283,8 @@ export default function Privacy() {
 						</li>
 						<li>
 							<strong>Delete your Cloud account</strong> at any time from{" "}
-							<strong>Security Settings</strong> inside Roo Code Cloud.
+							<strong>Security Settings</strong> inside Roo Code Cloud (User Menu &rarr; My Settings
+							&rarr; Open Profile).
 						</li>
 						<li>
 							<strong>Marketing communications:</strong> You can unsubscribe from marketing and

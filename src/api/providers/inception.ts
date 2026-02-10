@@ -5,15 +5,77 @@ import { ApiHandlerOptions } from "../../shared/api"
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import { RouterProvider } from "./router-provider"
 
-import { inceptionDefaultModelId, inceptionDefaultModelInfo } from "@roo-code/types"
+import { inceptionDefaultModelId, inceptionDefaultModelInfo, ProviderSettings } from "@roo-code/types"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelParams } from "../transform/model-params"
 import Anthropic from "@anthropic-ai/sdk"
-import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
+import { ApiStream, ApiStreamToolCallChunk, ApiStreamUsageChunk } from "../transform/stream"
 import OpenAI from "openai"
 import { convertToOpenAiMessages } from "../transform/openai-format"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+
+function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionCreateParams>(
+	params: T,
+	options: ProviderSettings,
+	metadata?: ApiHandlerCreateMessageMetadata,
+): T {
+	// When toolStyle is "native" and allowedTools exist, add them to params
+	// But respect metadata.toolProtocol if explicitly set to "xml"
+	// Only set these if they haven't already been set (avoid overwriting)
+	if (
+		resolveToolProtocol(options) === "native" &&
+		metadata?.tools &&
+		metadata?.toolProtocol !== "xml" &&
+		!params.tools
+	) {
+		params.tools = metadata.tools
+		//optimally we'd have tool_choice as 'required', but many providers, especially
+		// those using SGlang dont properly handle that setting and barf with a 400.
+		params.tool_choice = "auto" as const
+		params.parallel_tool_calls = false
+	}
+
+	return params
+}
+
+class ToolCallAccumulator {
+	private accumulator = new Map<number, { id: string; name: string; arguments: string }>();
+
+	*processChunk(chunk: OpenAI.Chat.Completions.ChatCompletionChunk | undefined): Generator<ApiStreamToolCallChunk> {
+		const choice = chunk?.choices?.[0]
+		const delta = choice?.delta
+		if (delta && "tool_calls" in delta && Array.isArray(delta.tool_calls)) {
+			for (const toolCall of delta.tool_calls) {
+				const index = toolCall.index
+				const existing = this.accumulator.get(index)
+
+				if (existing) {
+					if (toolCall.function?.arguments) {
+						existing.arguments += toolCall.function.arguments
+					}
+				} else {
+					this.accumulator.set(index, {
+						id: toolCall.id || "",
+						name: toolCall.function?.name || "",
+						arguments: toolCall.function?.arguments || "",
+					})
+				}
+			}
+		}
+		if (choice?.finish_reason === "tool_calls") {
+			for (const toolCall of this.accumulator.values()) {
+				yield {
+					type: "tool_call",
+					id: toolCall.id,
+					name: toolCall.name,
+					arguments: toolCall.arguments,
+				}
+			}
+			this.accumulator.clear()
+		}
+	}
+}
 
 export class InceptionLabsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {

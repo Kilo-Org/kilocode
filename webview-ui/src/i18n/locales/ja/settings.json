@@ -1,4 +1,5 @@
 {
+	"back": "タスク ビューに戻る",
 	"common": {
 		"save": "保存",
 		"done": "完了",
@@ -7,6 +8,10 @@
 		"select": "選択",
 		"add": "ヘッダーを追加",
 		"remove": "削除"
+	},
+	"search": {
+		"placeholder": "設定を検索...",
+		"noResults": "設定が見つかりません"
 	},
 	"header": {
 		"title": "設定",
@@ -38,6 +43,7 @@
 		"language": "言語",
 		"about": "Kilo Codeについて",
 		"autoPurge": "自動クリーンアップ",
+		"agentBehaviour": "エージェントの動作",
 		"ghost": "Ghost"
 	},
 	"about": {
@@ -58,7 +64,11 @@
 		},
 		"community": "ヒントが欲しいですか、または他のKilo Codeユーザーと交流したいですか？<redditLink>reddit.com/r/kilocode</redditLink>または<discordLink>kilo.ai/discord</discordLink>に参加してください",
 		"contactAndCommunity": "お問い合わせとコミュニティ",
-		"manageSettings": "設定を管理"
+		"manageSettings": "設定を管理",
+		"debugMode": {
+			"label": "デバッグモードを有効にする",
+			"description": "デバッグモードを有効にすると、タスクヘッダーにAPI会話履歴とUIメッセージをフォーマットされたJSONとして一時ファイルで表示するための追加ボタンが表示されます。"
+		}
 	},
 	"slashCommands": {
 		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
@@ -95,6 +105,7 @@
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
 		"openaiCompatibleProvider": "OpenAI互換",
+		"openaiCompatibleResponsesProvider": "OpenAI互換 (Responses)",
 		"openAiKeyLabel": "OpenAI APIキー",
 		"openAiKeyPlaceholder": "OpenAI APIキーを入力してください",
 		"openAiCompatibleBaseUrlLabel": "ベースURL",
@@ -278,6 +289,7 @@
 		"makeActiveProfile": "アクティブプロファイルにする",
 		"makeActiveTooltip": "このプロファイルをアクティブにしてAPIリクエストに使用する",
 		"apiProvider": "APIプロバイダー",
+		"apiProviderDocs": "プロバイダードキュメント",
 		"model": "モデル",
 		"nameEmpty": "名前を空にすることはできません",
 		"nameExists": "この名前のプロファイルは既に存在します",
@@ -306,10 +318,40 @@
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
 		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
-		"useLegacyFormat": "レガシーOpenAI API形式を使用",
 		"customHeaders": "カスタムヘッダー",
 		"headerName": "ヘッダー名",
 		"headerValue": "ヘッダー値",
@@ -325,7 +367,6 @@
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"getRequestyBaseUrl": "ベースURL",
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
-		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
@@ -335,6 +376,8 @@
 		"anthropicAzureDeploymentPlaceholder": "デプロイメント名を入力...",
 		"awsBedrock1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
+		"vertex1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
+		"vertex1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
 		"basetenApiKey": "Baseten APIキー",
 		"getBasetenApiKey": "Baseten APIキーを取得",
 		"cerebrasApiKey": "Cerebras APIキー",
@@ -443,6 +486,14 @@
 		"awsRegion": "AWSリージョン",
 		"awsCrossRegion": "クロスリージョン推論を使用",
 		"awsGlobalInference": "グローバル推論を使用する（最適なAWSリージョンを自動選択）",
+		"awsServiceTier": "サービスティア",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "バランスの取れたパフォーマンスとコスト",
+		"awsServiceTierFlex": "Flex（50%割引）",
+		"awsServiceTierFlexDesc": "低コスト、非クリティカルなタスクのレイテンシが高い",
+		"awsServiceTierPriority": "Priority（75%プレミアム）",
+		"awsServiceTierPriorityDesc": "ミッションクリティカルなアプリケーション向けの最速パフォーマンス",
+		"awsServiceTierNote": "サービスティアは価格とパフォーマンスに影響します。Flexは50%割引でレイテンシが高く、Priorityは25%優れたパフォーマンスで75%のプレミアムです。",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "カスタムVPCエンドポイントを使用",
 			"vpcEndpointUrlPlaceholder": "VPCエンドポイントURLを入力（任意）",
@@ -581,6 +632,7 @@
 		},
 		"verbosity": {
 			"label": "出力の冗長性",
+			"max": "Max",
 			"high": "高",
 			"medium": "中",
 			"low": "低",
@@ -593,21 +645,6 @@
 			"placeholder": "デフォルト：claude",
 			"maxTokensLabel": "最大出力トークン",
 			"maxTokensDescription": "Claude Codeレスポンスの最大出力トークン数。デフォルトは8000です。"
-		},
-		"geminiCli": {
-			"description": "このプロバイダーはGemini CLIツールからのOAuth認証を使用し、APIキーは必要ありません。",
-			"oauthPath": "OAuth認証情報パス（オプション）",
-			"oauthPathDescription": "OAuth認証情報ファイルへのパス。デフォルトの場所（~/.gemini/oauth_creds.json）を使用する場合は空のままにしてください。",
-			"instructions": "まだ認証していない場合は、まず",
-			"instructionsContinued": "をターミナルで実行してください。",
-			"setupLink": "Gemini CLI セットアップ手順",
-			"requirementsTitle": "重要な要件",
-			"requirement1": "まず、Gemini CLIツールをインストールする必要があります",
-			"requirement2": "次に、ターミナルでgeminiを実行し、Googleでログインすることを確認してください",
-			"requirement3": "個人のGoogleアカウントでのみ動作します（Google Workspaceアカウントは不可）",
-			"requirement4": "APIキーは使用しません - 認証はOAuthで処理されます",
-			"requirement5": "Gemini CLIツールが最初にインストールされ、認証されている必要があります",
-			"freeAccess": "OAuth認証による無料アクセス"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth認証情報パス（オプション）",
@@ -799,6 +836,10 @@
 		"maxGitStatusFiles": {
 			"label": "Gitステータス最大ファイル数",
 			"description": "gitステータスコンテキストに含めるファイルエントリの最大数。無効にするには0に設定します。ブランチ情報とコミットは、> 0の場合に常に表示されます。"
+		},
+		"enableSubfolderRules": {
+			"label": "サブフォルダルールを有効化",
+			"description": "サブディレクトリから.roo/rulesとAGENTS.mdファイルを再帰的に検出してロードします。パッケージごとのルールを持つモノレポに便利です。"
 		}
 	},
 	"terminal": {
@@ -988,6 +1029,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "音声認識 (STT)",
 			"description": "有効にすると、Kilo CodeはOpenAIのWhisperモデルを使用して音声をテキストに変換できます。録音を開始するには、チャット内のマイクボタンをクリックしてください。FFmpegのインストールと、設定済みのOpenAI APIプロバイダーが必要です。"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "カスタムツールを有効化",
+			"description": "有効にすると、Kiloはプロジェクトの .kilocode/tools ディレクトリまたはグローバルツール用の ~/.kilocode/tools からカスタム TypeScript/JavaScript ツールを読み込んで使用できます。注意：これらのツールは自動的に承認されます。",
+			"toolsHeader": "利用可能なカスタムツール",
+			"noTools": "カスタムツールが読み込まれていません。プロジェクトの .kilocode/tools ディレクトリまたはグローバルツール用の ~/.kilocode/tools に .ts または .js ファイルを追加してください。",
+			"refreshButton": "更新",
+			"refreshing": "更新中...",
+			"refreshSuccess": "ツールが正常に更新されました",
+			"refreshError": "ツールの更新に失敗しました",
+			"toolParameters": "パラメーター"
 		}
 	},
 	"promptCaching": {
@@ -1027,7 +1079,9 @@
 		"searchPlaceholder": "検索",
 		"noMatchFound": "一致するものが見つかりません",
 		"useCustomModel": "カスタムを使用: {{modelId}}",
-		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。"
+		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。",
+		"recommendedModels": "おすすめのモデル",
+		"allModels": "すべてのモデル"
 	},
 	"footer": {
 		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilo.ai/discord</discordLink>に参加してください",
@@ -1116,6 +1170,10 @@
 		"showTimestamps": {
 			"label": "タイムスタンプを表示",
 			"description": "チャット表示で各メッセージにタイムスタンプを表示する"
+		},
+		"showDiffStats": {
+			"label": "差分統計を表示",
+			"description": "タスクヘッダーに追加/削除された行の統計を表示"
 		}
 	},
 	"ghost": {

@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Відповідь моделі завершилася несподівано (без повідомлень асистента). Це може бути ознакою обмеження швидкості запитів.",
 		"notLoggedInError": "Не вдалося виконати запит, переконайтеся, що ви підключені та увійшли до системи з вибраним постачальником.\n\n{{error}}",
 		"maxCompletionTokens": "Досягнуто максимальної кількості токенів завершення.",
+		"contentFilter": "Запит було заблоковано фільтром вмісту.",
 		"disableApplyDiff": "Якщо ця помилка продовжує повторюватися, будь ласка, вимкни Редагування через Різниці в Розширених Налаштуваннях.",
 		"disableEditFile": "Якщо ця помилка продовжує повторюватися, будь ласка, вимкни експериментальну функцію Швидкого Застосування."
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (вимкнено)",
-				"tokenError": "Для використання Autocomplete потрібно встановити дійсний токен",
+				"noCredits": "**На вашому рахунку немає кредитів**\n\nНа вашому рахунку Kilo Code немає кредитів. Щоб використовувати автодоповнення, будь ласка, поповніть рахунок.\n\n[Відкрити Налаштування](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Модель автодоповнення не налаштована**\n\nЩоб увімкнути автодоповнення, додайте профіль з одним із підтримуваних провайдерів: {{providers}}.\n\n[Відкрити Налаштування](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Загальна вартість сесії:",
 				"provider": "Провайдер:",
 				"model": "Модель:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Твоя версія Kilocode CLI застаріла і не підтримує Agent Manager. Будь ласка, оновись до останньої версії.",
-			"cliNotFound": "Kilocode CLI не знайдено. Будь ласка, встанови його для використання Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI не налаштовано. Виконай 'kilocode auth' для входу або 'kilocode config' для налаштування.",
 			"sessionFailed": "Не вдалося запустити сесію агента",
 			"sessionFailedWithMessage": "Не вдалося запустити сесію агента: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Виконання npm install для встановлення Kilocode CLI. Після завершення можеш закрити цей термінал і спробувати запустити Agent Manager знову.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Ваш API ключ OpenAI недійсний або не має доступу до Realtime API. Будь ласка, перевірте ваш API ключ і спробуйте знову.",
+			"unknown": "Підключення не вдалося. Будь ласка, перевірте налаштування та спробуйте ще раз."
+		}
+	},
+	"configDiscovery": {
+		"removed": "Код одиниці: Видалено {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Код Кіло: Додано {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

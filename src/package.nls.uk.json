@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
-	"extension.description": "Помічник з кодування AI з відкритим кодом для планування, створення та виправлення коду.",
+	"extension.displayName": "Kilo Code: AI-агент для кодування, Copilot та автозаповнення",
+	"extension.description": "AI-агент для кодування з відкритим кодом, який генерує код з природної мови, автоматизує завдання та виконує команди терміналу. Включає вбудоване автодоповнення, автоматизацію браузера, автоматичний рефакторинг та користувацькі режими для планування, кодування та налагодження. Підтримує понад 500 AI-моделей, включаючи Claude (Anthropic), Gemini, Grok, GPT, Codex та GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Увімкнути синхронізацію налаштувань Kilo Code між пристроями через VS Code Settings Sync. Після увімкнення ваші конфігурації API, власні режими та налаштування автоматично синхронізуватимуться при вході до VS Code Settings Sync.",
 	"settings.autoImportSettingsPath.description": "Шлях до файлу конфігурації Kilo Code для автоматичного імпорту під час запуску розширення. Підтримує абсолютні шляхи та шляхи відносно домашнього каталогу (наприклад, '~/Documents/kilo-code-settings.json'). Залиште порожнім, щоб вимкнути автоматичний імпорт.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Максимальна кількість файлів для індексації для функції пошуку файлів @. Вищі значення забезпечують кращі результати пошуку у великих проектах, але можуть використовувати більше пам'яті. За замовчуванням: 10,000.",
-	"settings.useAgentRules.description": "Увімкнути завантаження файлів AGENTS.md для правил, специфічних для агента (див. https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Увімкнути завантаження файлів AGENTS.md для правил, специфічних для агента (див. https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Максимальний час у секундах очікування відповідей API (0 = без тайм-ауту, 1-86400с, за замовчуванням: 600с). Вищі значення рекомендуються для локальних провайдерів, таких як LM Studio та Ollama, яким може знадобитися більше часу для обробки.",
 	"settings.newTaskRequireTodos.description": "Вимагати параметр todos при створенні нових завдань за допомогою інструменту new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Розмір пакету для операцій вбудовування під час індексації коду. Налаштуйте це відповідно до лімітів вашого провайдера API. За замовчуванням 60.",
@@ -58,5 +58,8 @@
 	"ghost.commands.applyCurrentSuggestion": "Застосувати Поточну Пропозицію Редагування",
 	"ghost.commands.applyAllSuggestions": "Застосувати Всі Пропозиції Редагування",
 	"ghost.commands.goToNextSuggestion": "Перейти до Наступної Пропозиції",
-	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції"
+	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції",
+	"settings.debugProxy.enabled.description": "**Увімкнути Debug Proxy** — Направляти всі вихідні мережеві запити через proxy для налагодження MITM. Активний лише під час роботи в режимі налагодження (F5).",
+	"settings.debugProxy.serverUrl.description": "URL Proxy (наприклад, `http://127.0.0.1:8888`). Використовується лише коли **Debug Proxy** увімкнено.",
+	"settings.debugProxy.tlsInsecure.description": "Приймати самопідписані сертифікати від proxy. **Необхідно для інспекції MITM.** ⚠️ Небезпечно — використовуй лише для локального налагодження."
 }

@@ -53,6 +53,10 @@ logs
 # Nix / Direnv
 .direnv
 
+# Mise
+mise.toml
+mise.local.toml
+
 # Exclude Conport Directory (MCP server)
 context_portal/
 
@@ -71,3 +75,5 @@ qdrant_storage/
 .secrets
 # Architect plans
 ./plans/
+
+roo-cli-*.tar.gz*

@@ -1,4 +1,5 @@
 {
+	"back": "टास्क व्यू पर वापस जाओ",
 	"common": {
 		"save": "सहेजें",
 		"done": "पूर्ण",
@@ -7,6 +8,10 @@
 		"select": "चुनें",
 		"add": "हेडर जोड़ें",
 		"remove": "हटाएं"
+	},
+	"search": {
+		"placeholder": "सेटिंग्स खोजें...",
+		"noResults": "कोई सेटिंग नहीं मिली"
 	},
 	"header": {
 		"title": "सेटिंग्स",
@@ -37,7 +42,9 @@
 		"experimental": "प्रायोगिक",
 		"language": "भाषा",
 		"about": "परिचय",
-		"autoPurge": "स्वचालित सफाई"
+		"autoPurge": "स्वचालित सफाई",
+		"agentBehaviour": "एजेंट व्यवहार",
+		"ghost": "ऑटोकम्पलीट"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "सुझाव चाहिए या बस अन्य Kilo Code उपयोगकर्ताओं के साथ घूमना चाहते हैं? <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल हों",
 		"contactAndCommunity": "संपर्क और समुदाय",
-		"manageSettings": "सेटिंग्स प्रबंधित करें"
+		"manageSettings": "सेटिंग्स प्रबंधित करें",
+		"debugMode": {
+			"label": "डिबग मोड सक्षम करें",
+			"description": "टास्क हेडर में अतिरिक्त बटन दिखाने के लिए डिबग मोड सक्षम करें जो API वार्तालाप इतिहास और UI संदेशों को अस्थायी फ़ाइलों में सुंदर JSON के रूप में देखने की अनुमति देते हैं।"
+		}
 	},
 	"slashCommands": {
 		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>"
@@ -94,6 +105,7 @@
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
 		"openaiCompatibleProvider": "OpenAI संगत",
+		"openaiCompatibleResponsesProvider": "OpenAI संगत (Responses)",
 		"openAiKeyLabel": "OpenAI API कुंजी",
 		"openAiKeyPlaceholder": "अपना OpenAI API कुंजी दर्ज करें",
 		"openAiCompatibleBaseUrlLabel": "आधार URL",
@@ -214,11 +226,6 @@
 			"label": "ब्राउज़र",
 			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ब्राउज़र क्रियाएँ करें — नोट: केवल तभी लागू होता है जब मॉडल कंप्यूटर उपयोग का समर्थन करता है"
 		},
-		"retry": {
-			"label": "पुनः प्रयास",
-			"description": "जब सर्वर त्रुटि प्रतिक्रिया देता है तो स्वचालित रूप से विफल API अनुरोधों को पुनः प्रयास करें",
-			"delayLabel": "अनुरोध को पुनः प्रयास करने से पहले विलंब"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "MCP सर्वर व्यू में व्यक्तिगत MCP टूल्स के स्वतः अनुमोदन को सक्षम करें (इस सेटिंग और टूल के \"हमेशा अनुमति दें\" चेकबॉक्स दोनों की आवश्यकता है)"
@@ -277,6 +284,7 @@
 		"makeActiveProfile": "सक्रिय प्रोफ़ाइल बनाएं",
 		"makeActiveTooltip": "API अनुरोधों के लिए इस प्रोफ़ाइल को सक्रिय करें",
 		"apiProvider": "API प्रदाता",
+		"apiProviderDocs": "प्रदाता डॉक्स",
 		"model": "मॉडल",
 		"nameEmpty": "नाम खाली नहीं हो सकता",
 		"nameExists": "इस नाम वाला प्रोफ़ाइल पहले से मौजूद है",
@@ -313,10 +321,40 @@
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
 		"glamaApiKey": "Glama API कुंजी",
 		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"useReasoning": "तर्क सक्षम करें",
 		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
-		"useLegacyFormat": "पुराने OpenAI API प्रारूप का उपयोग करें",
 		"customHeaders": "कस्टम हेडर्स",
 		"headerName": "हेडर नाम",
 		"headerValue": "हेडर मूल्य",
@@ -332,7 +370,6 @@
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"getRequestyBaseUrl": "बेस URL",
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
-		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
 		"anthropicApiKey": "Anthropic API कुंजी",
 		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
@@ -342,6 +379,8 @@
 		"anthropicAzureDeploymentPlaceholder": "डिप्लॉयमेंट नाम दर्ज करें...",
 		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"vertex1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"vertex1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"basetenApiKey": "Baseten API कुंजी",
 		"getBasetenApiKey": "Baseten API कुंजी प्राप्त करें",
 		"cerebrasApiKey": "Cerebras API कुंजी",
@@ -442,6 +481,14 @@
 		"awsRegion": "AWS क्षेत्र",
 		"awsCrossRegion": "क्रॉस-क्षेत्र अनुमान का उपयोग करें",
 		"awsGlobalInference": "वैश्विक अनुमान का उपयोग करें (स्वचालित रूप से श्रेष्ठ AWS क्षेत्र चुनें)",
+		"awsServiceTier": "सेवा स्तर",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "संतुलित प्रदर्शन और लागत",
+		"awsServiceTierFlex": "Flex (50% छूट)",
+		"awsServiceTierFlexDesc": "कम लागत, गैर-महत्वपूर्ण कार्यों के लिए उच्च विलंबता",
+		"awsServiceTierPriority": "Priority (75% प्रीमियम)",
+		"awsServiceTierPriorityDesc": "मिशन-क्रिटिकल एप्लिकेशन के लिए सबसे तेज़ प्रदर्शन",
+		"awsServiceTierNote": "सेवा स्तर मूल्य निर्धारण और प्रदर्शन को प्रभावित करते हैं। Flex 50% छूट के साथ उच्च विलंबता प्रदान करता है, Priority 75% प्रीमियम के साथ 25% बेहतर प्रदर्शन प्रदान करता है।",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "कस्टम VPC एंडपॉइंट का उपयोग करें",
 			"vpcEndpointUrlPlaceholder": "VPC एंडपॉइंट URL दर्ज करें (वैकल्पिक)",
@@ -580,6 +627,7 @@
 		},
 		"verbosity": {
 			"label": "आउटपुट वर्बोसिटी",
+			"max": "Max",
 			"high": "उच्च",
 			"medium": "मध्यम",
 			"low": "कम",
@@ -592,21 +640,6 @@
 			"placeholder": "डिफ़ॉल्ट: claude",
 			"maxTokensLabel": "अधिकतम आउटपुट टोकन",
 			"maxTokensDescription": "Claude Code प्रतिक्रियाओं के लिए आउटपुट टोकन की अधिकतम संख्या। डिफ़ॉल्ट 8000 है।"
-		},
-		"geminiCli": {
-			"description": "यह प्रदाता Gemini CLI टूल से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
-			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
-			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.gemini/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
-			"instructions": "यदि आपने अभी तक प्रमाणीकरण नहीं किया है, तो कृपया पहले",
-			"instructionsContinued": "को अपने टर्मिनल में चलाएं।",
-			"setupLink": "Gemini CLI सेटअप निर्देश",
-			"requirementsTitle": "महत्वपूर्ण आवश्यकताएं",
-			"requirement1": "पहले, आपको Gemini CLI टूल इंस्टॉल करना होगा",
-			"requirement2": "फिर, अपने टर्मिनल में gemini चलाएं और सुनिश्चित करें कि आप Google से लॉग इन करें",
-			"requirement3": "केवल व्यक्तिगत Google खातों के साथ काम करता है (Google Workspace खाते नहीं)",
-			"requirement4": "API कुंजियों का उपयोग नहीं करता - प्रमाणीकरण OAuth के माध्यम से संभाला जाता है",
-			"requirement5": "Gemini CLI टूल को पहले इंस्टॉल और प्रमाणित करने की आवश्यकता है",
-			"freeAccess": "OAuth प्रमाणीकरण के माध्यम से मुफ्त पहुंच"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
@@ -798,6 +831,10 @@
 		"maxGitStatusFiles": {
 			"label": "गिट स्थिति अधिकतम फ़ाइलें",
 			"description": "गिट स्थिति संदर्भ में शामिल करने के लिए फ़ाइल प्रविष्टियों की अधिकतम संख्या। अक्षम करने के लिए 0 पर सेट करें। शाखा जानकारी और कमिट हमेशा दिखाए जाते हैं जब > 0 होता है।"
+		},
+		"enableSubfolderRules": {
+			"label": "सबफ़ोल्डर नियम सक्षम करें",
+			"description": "उपनिर्देशिकाओं से .roo/rules और AGENTS.md फ़ाइलों को पुनरावर्ती रूप से खोजें और लोड करें। प्रति-पैकेज नियमों वाले मोनोरेपो के लिए उपयोगी।"
 		}
 	},
 	"terminal": {
@@ -987,6 +1024,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "वाक्-से-पाठ (STT)",
 			"description": "जब सक्षम किया जाता है, तो Kilo Code OpenAI के Whisper मॉडल का उपयोग करके आपकी आवाज़ को टेक्स्ट में बदल सकता है। रिकॉर्डिंग शुरू करने के लिए चैट में माइक्रोफ़ोन बटन पर क्लिक करें। इसके लिए FFmpeg इंस्टॉल होना और एक कॉन्फ़िगर किया गया OpenAI API प्रोवाइडर होना आवश्यक है।"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "कस्टम टूल सक्षम करें",
+			"description": "सक्षम होने पर, Kilo आपके प्रोजेक्ट की .kilocode/tools निर्देशिका या वैश्विक टूल के लिए ~/.kilocode/tools से कस्टम TypeScript/JavaScript टूल लोड और उपयोग कर सकता है। नोट: ये टूल स्वचालित रूप से स्वत:-अनुमोदित होंगे।",
+			"toolsHeader": "उपलब्ध कस्टम टूल",
+			"noTools": "कोई कस्टम टूल लोड नहीं हुआ। अपने प्रोजेक्ट की .kilocode/tools निर्देशिका या वैश्विक टूल के लिए ~/.kilocode/tools में .ts या .js फ़ाइलें जोड़ें।",
+			"refreshButton": "रिफ्रेश करें",
+			"refreshing": "रिफ्रेश हो रहा है...",
+			"refreshSuccess": "टूल सफलतापूर्वक रिफ्रेश हुए",
+			"refreshError": "टूल रिफ्रेश करने में विफल",
+			"toolParameters": "पैरामीटर"
 		}
 	},
 	"promptCaching": {
@@ -1026,7 +1074,9 @@
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
-		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।",
+		"recommendedModels": "अनुशंसित मॉडल",
+		"allModels": "सभी मॉडल"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",
@@ -1115,6 +1165,10 @@
 		"showTimestamps": {
 			"label": "टाइमस्टैम्प दिखाएं",
 			"description": "चैट दृश्य में प्रत्येक संदेश के लिए टाइमस्टैम्प दिखाएं"
+		},
+		"showDiffStats": {
+			"label": "डिफ आँकड़े दिखाएं",
+			"description": "कार्य हेडर में जोड़ी/हटाई गई पंक्तियों के आँकड़े प्रदर्शित करें"
 		}
 	},
 	"ghost": {

@@ -1,9 +1,7 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.ipc.proxy.logger
 
+import ai.kilocode.jetbrains.monitoring.ScopeRegistry
+import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocolLogger
 import ai.kilocode.jetbrains.ipc.proxy.RequestInitiator
 import com.intellij.openapi.Disposable

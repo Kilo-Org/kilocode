@@ -14,7 +14,10 @@
 		"shareSession": "Sitzung teilen",
 		"shareConfirmMessage": "Möchtest du einen Schnappschuss dieser Sitzung öffentlich teilen?",
 		"shareConfirmYes": "Ja",
-		"shareConfirmNo": "Nein"
+		"shareConfirmNo": "Nein",
+		"options": "Optionen",
+		"configureSetupScript": "Worktree-Setup-Skript",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Einen neuen Agenten starten",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLO-Modus - Tool-Operationen werden automatisch genehmigt",
 		"starting": "Wird gestartet...",
 		"startAriaLabel": "Agent mit angegebenem Prompt starten",
-		"keyboardHint": "Enter zum Starten, Shift+Enter für neue Zeile",
 		"runModeLocal": "Lokal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Basis-Branch wechseln",
 		"noBranches": "Keine Branches gefunden",
 		"noMatchingBranches": "Keine Branches entsprechen deiner Suche",
-		"openTerminal": "Terminal öffnen"
+		"openTerminal": "Terminal öffnen",
+		"selectModel": "Modell auswählen",
+		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
+		"defaultModel": "Standard-Modell",
+		"loadingModels": "Wird geladen...",
+		"selectMode": "Modus auswählen",
+		"modeTooltip": "Modus: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",
@@ -70,7 +85,11 @@
 		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}",
 		"expandOutput": "Ausgabe erweitern",
 		"collapseOutput": "Ausgabe einklappen",
-		"copyCommand": "Befehl kopieren"
+		"copyCommand": "Befehl kopieren",
+		"thinking": "Denke nach",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Genehmigen",
+		"deny": "Ablehnen"
 	},
 	"chatInput": {
 		"autoMode": "Agent läuft im Vollautomatik-Modus - keine Eingabe möglich",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Agent abbrechen",
 		"finishToBranchTitle": "Worktree beenden und Branch vorbereiten: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree beenden und Branch vorbereiten",
+		"createPRTitle": "Pull Request erstellen",
 		"sendTitle": "Nachricht senden",
 		"resumeTitle": "Agent fortsetzen",
-		"hint": "Enter zum Senden, Shift+Enter für neue Zeile"
+		"hint": "Enter zum Senden, Shift+Enter für neue Zeile",
+		"addImage": "Bild hinzufügen",
+		"removeImage": "Bild entfernen"
 	},
 	"status": {
 		"running": "läuft",

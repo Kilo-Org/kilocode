@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।"
+		"description": "ओपन सोर्स AI कोडिंग एजेंट जो प्राकृतिक भाषा से कोड जनरेट करता है, कार्यों को स्वचालित करता है, और टर्मिनल कमांड चलाता है। इनलाइन ऑटोकम्प्लीट, ब्राउज़र ऑटोमेशन, स्वचालित रीफैक्टरिंग, और प्लानिंग, कोडिंग और डिबगिंग के लिए कस्टम मोड शामिल हैं। Claude (Anthropic), Gemini, Grok, GPT, Codex और GLM सहित 500+ AI मॉडल का समर्थन करता है।"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "त्रुटि आउटपुट: {{output}}",
 			"processExitedWithError": "Claude Code प्रक्रिया कोड {{exitCode}} के साथ समाप्त हुई। त्रुटि आउटपुट: {{output}}",
 			"stoppedWithReason": "Claude Code इस कारण से रुका: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}",
-			"tokenRefreshFailed": "OAuth टोकन रीफ्रेश करने में विफल: {{error}}",
-			"onboardingTimeout": "ऑनबोर्डिंग ऑपरेशन 60 सेकंड बाद टाइमआउट हो गया। कृपया बाद में पुनः प्रयास करें।",
-			"projectDiscoveryFailed": "प्रोजेक्ट ID खोजने में असमर्थ। सुनिश्चित करें कि आप 'gemini auth' के साथ प्रमाणित हैं।",
-			"rateLimitExceeded": "दर सीमा पार हो गई। मुफ्त टियर की सीमा पहुंच गई है।",
-			"badRequest": "गलत अनुरोध: {{details}}",
-			"apiError": "Gemini CLI API त्रुटि: {{error}}",
-			"completionError": "Gemini CLI पूर्णता त्रुटि: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}"
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Roo प्रदाता को क्लाउड प्रमाणीकरण की आवश्यकता है। कृपया Roo Code Cloud में साइन इन करें।"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API कुंजी में अमान्य वर्ण हैं।"
+			"invalidKeyInvalidChars": "API कुंजी में अमान्य वर्ण हैं।",
+			"apiRequestFailed": "API अनुरोध विफल ({{status}})"
 		},
 		"manual_url_empty": "कृपया एक वैध callback URL दर्ज करें",
 		"manual_url_no_query": "अवैध callback URL: क्वेरी पैरामीटर गुम हैं",
 		"manual_url_missing_params": "अवैध callback URL: आवश्यक पैरामीटर गुम हैं (code और state)",
 		"manual_url_auth_failed": "मैनुअल URL प्रमाणीकरण असफल",
-		"manual_url_auth_error": "प्रमाणीकरण असफल"
+		"manual_url_auth_error": "प्रमाणीकरण असफल",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "कोई टर्मिनल सामग्री चयनित नहीं",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "उपयोगकर्ता द्वारा प्रतिक्रिया बाधित",
-		"responseInterruptedByApiError": "API त्रुटि द्वारा प्रतिक्रिया बाधित"
+		"responseInterruptedByApiError": "API त्रुटि द्वारा प्रतिक्रिया बाधित",
+		"streamTerminatedByProvider": "प्रदाता ने अनुरोध समाप्त किया"
 	},
 	"storage": {
 		"prompt_custom_path": "वार्तालाप इतिहास के लिए कस्टम स्टोरेज पाथ दर्ज करें, डिफ़ॉल्ट स्थान का उपयोग करने के लिए खाली छोड़ दें",
@@ -210,11 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "ग्रोक एपीआई कुंजी",
-			"getGroqApiKey": "ग्रोक एपीआई कुंजी प्राप्त करें",
-			"claudeCode": {
-				"pathLabel": "क्लाउड कोड पाथ",
-				"description": "आपके क्लाउड कोड CLI का वैकल्पिक पाथ। सेट न होने पर डिफ़ॉल्ट रूप से 'claude'।"
-			}
+			"getGroqApiKey": "ग्रोक एपीआई कुंजी प्राप्त करें"
 		}
 	},
 	"customModes": {

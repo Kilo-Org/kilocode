@@ -1,12 +1,14 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-import { getAppUrl } from "@roo-code/types" // kilocode_change
+import { getApiUrl } from "@roo-code/types" // kilocode_change
 import {
 	type MarketplaceItem,
 	type MarketplaceItemType,
+	type SkillMarketplaceItem, // kilocode_change
 	modeMarketplaceItemSchema,
 	mcpMarketplaceItemSchema,
+	skillsMarketplaceCatalogSchema, // kilocode_change
 } from "@roo-code/types"
 //import { getRooCodeApiUrl } from "@roo-code/cloud" kilocode_change: use our own api
 
@@ -29,15 +31,15 @@ export class RemoteConfigLoader {
 	// }
 
 	async loadAllItems(hideMarketplaceMcps = false): Promise<MarketplaceItem[]> {
-		const items: MarketplaceItem[] = []
-
 		const modesPromise = this.fetchModes()
 		const mcpsPromise = hideMarketplaceMcps ? Promise.resolve([]) : this.fetchMcps()
+		// kilocode_change start - add skills
+		const skillsPromise = this.fetchSkills()
 
-		const [modes, mcps] = await Promise.all([modesPromise, mcpsPromise])
+		const [modes, mcps, skills] = await Promise.all([modesPromise, mcpsPromise, skillsPromise])
 
-		items.push(...modes, ...mcps)
-		return items
+		return [...modes, ...mcps, ...skills]
+		//kilocode change end
 	}
 
 	private async fetchModes(): Promise<MarketplaceItem[]> {
@@ -48,7 +50,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getAppUrl("/api/marketplace/modes") // kilocode_change
+		const url = getApiUrl("/api/marketplace/modes") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
@@ -71,7 +73,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getAppUrl("/api/marketplace/mcps") // kilocode_change
+		const url = getApiUrl("/api/marketplace/mcps") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
@@ -85,6 +87,48 @@ export class RemoteConfigLoader {
 		this.setCache(cacheKey, items)
 		return items
 	}
+
+	// kilocode_change start - fetch skills from marketplace API and transform to MarketplaceItem
+	private async fetchSkills(): Promise<MarketplaceItem[]> {
+		const cacheKey = "skills"
+		const cached = this.getFromCache(cacheKey)
+
+		if (cached) {
+			return cached
+		}
+
+		// Convert kebab-case to Title Case (e.g., "my-skill" -> "My Skill")
+		const kebabToTitleCase = (str: string): string =>
+			str
+				.split("-")
+				.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+				.join(" ")
+
+		const url = getApiUrl("/api/marketplace/skills")
+		const data = await this.fetchWithRetry<string>(url)
+
+		const yamlData = yaml.parse(data)
+		const validated = skillsMarketplaceCatalogSchema.parse(yamlData)
+
+		// Transform raw skills to MarketplaceItem format
+		const items: MarketplaceItem[] = validated.items.map(
+			(rawSkill): SkillMarketplaceItem => ({
+				type: "skill" as const,
+				id: rawSkill.id,
+				name: rawSkill.id, // Use id as name (UI derives display name from id)
+				description: rawSkill.description,
+				category: rawSkill.category,
+				githubUrl: rawSkill.githubUrl,
+				content: rawSkill.content,
+				displayName: kebabToTitleCase(rawSkill.id),
+				displayCategory: kebabToTitleCase(rawSkill.category),
+			}),
+		)
+
+		this.setCache(cacheKey, items)
+		return items
+	}
+	// kilocode_change end
 
 	private async fetchWithRetry<T>(url: string, maxRetries = 3): Promise<T> {
 		let lastError: Error

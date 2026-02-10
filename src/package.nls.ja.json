@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AIエージェント",
-	"extension.description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。",
+	"extension.displayName": "Kilo Code: AIコーディングエージェント、Copilot、および自動補完",
+	"extension.description": "自然言語からコードを生成し、タスクを自動化し、ターミナルコマンドを実行するオープンソース AI コーディングエージェント。インライン自動補完、ブラウザ自動化、自動リファクタリング、計画・コーディング・デバッグ用のカスタムモードを搭載。Claude (Anthropic)、Gemini、Grok、GPT、Codex、GLM を含む 500 以上の AI モデルをサポート。",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.sidebar.name": "Kilo Code",
@@ -53,10 +53,13 @@
 	"settings.enableSettingsSync.description": "VS Code Settings Sync を介してデバイス間で Kilo Code の設定を同期できるようにします。有効にすると、VS Code Settings Sync にサインインした際に、API 設定、カスタムモード、および環境設定が自動的に同期されます。",
 	"settings.autoImportSettingsPath.description": "拡張機能の起動時に自動的にインポートするKilo Code設定ファイルへのパス。絶対パスとホームディレクトリからの相対パスをサポートします（例：'~/Documents/kilo-code-settings.json'）。自動インポートを無効にするには、空のままにします。",
 	"settings.maximumIndexedFilesForFileSearch.description": "@ファイル検索機能のためにインデックス化するファイルの最大数。大きな値は大規模プロジェクトでより良い検索結果を提供しますが、より多くのメモリを使用する可能性があります。デフォルト: 10,000。",
-	"settings.useAgentRules.description": "エージェント固有のルールのためにAGENTS.mdファイルの読み込みを有効にします（参照：https://agent-rules.org/）",
+	"settings.useAgentRules.description": "エージェント固有のルールのためにAGENTS.mdファイルの読み込みを有効にします（参照：https://agents.md/）",
 	"settings.apiRequestTimeout.description": "API応答を待機する最大時間（秒）（0 = タイムアウトなし、1-86400秒、デフォルト: 600秒）。LM StudioやOllamaのような、より多くの処理時間を必要とする可能性のあるローカルプロバイダーには、より高い値が推奨されます。",
 	"settings.newTaskRequireTodos.description": "new_taskツールで新しいタスクを作成する際にtodosパラメータを必須にする",
 	"settings.codeIndex.embeddingBatchSize.description": "コードインデックス作成中のエンベディング操作のバッチサイズ。APIプロバイダーの制限に基づいてこれを調整してください。デフォルトは60です。",
-	"settings.debug.description": "デバッグモードを有効にして、API会話履歴とUIメッセージをフォーマットされたJSONとして一時ファイルで表示するための追加ボタンを表示します。",
-	"settings.toolProtocol.description": "AIとの相互作用に使用するツールプロトコル。XMLがデフォルトで推奨されるプロトコルです。ネイティブは実験的で、すべてのプロバイダーで動作しない可能性があります。"
+	"settings.debugProxy.enabled.description": "**Debug Proxy を有効化** — すべての送信ネットワーク要求を MITM デバッグのためにプロキシ経由でルーティングします。デバッグモード (F5) で実行しているときだけ有効です。",
+	"settings.debugProxy.serverUrl.description": "プロキシ URL（例: `http://127.0.0.1:8888`）。**Debug Proxy** が有効なときにだけ使用されます。",
+	"settings.debugProxy.tlsInsecure.description": "プロキシからの自己署名証明書を許可します。**MITM インスペクションに必須です。** ⚠️ 危険な設定なので、ローカルでのデバッグにだけ使用してください。",
+	"settings.toolProtocol.description": "AIとの相互作用に使用するツールプロトコル。XMLがデフォルトで推奨されるプロトコルです。ネイティブは実験的で、すべてのプロバイダーで動作しない可能性があります。",
+	"settings.debug.description": "デバッグモードを有効にすると、API会話履歴とUI メッセージをきれいに整形された JSON として一時ファイルで表示する追加ボタンが表示されます。"
 }

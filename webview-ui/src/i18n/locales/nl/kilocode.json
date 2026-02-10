@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Hoe wil je beginnen?",
+		"freeModels": {
+			"title": "Gratis modellen",
+			"description": "Begin direct met coderen"
+		},
+		"premiumModels": {
+			"title": "Premium modellen",
+			"description": "Meld je aan. Nieuwe gebruikers ontvangen $5 tegoed"
+		},
+		"byok": {
+			"title": "Gebruik je eigen sleutel",
+			"description": "Geavanceerd. Gebruik je eigen account of abonnement"
+		}
+	},
 	"welcome": {
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
-		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
+		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, en meer dan 450 andere.",
 		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
 		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
@@ -11,8 +26,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
-		"lowBalance": "Uw Kilo Code-saldo is laag",
-		"newOrganization": "Gebruik je Kilo voor werk?"
+		"lowBalance": "Je Kilo Code-saldo is laag",
+		"switchToFreeModel": "Schakel over naar een gratis model"
 	},
 	"pagination": {
 		"previous": "Vorige",
@@ -26,6 +41,11 @@
 		"continueWith": "Doorgaan met {{model}}",
 		"continue": "Doorgaan"
 	},
+	"unauthorizedError": {
+		"title": "Je moet inloggen om het {{modelId}} model te gebruiken",
+		"message": "Log in of maak een account aan om toegang te krijgen tot meer dan 500 modellen, gebruik credits tegen kostprijs of breng je eigen sleutel mee.",
+		"loginButton": "Inloggen"
+	},
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
@@ -38,19 +58,20 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP-servers"
+			"mcp": "MCP-servers",
+			"agentBehaviour": "Agentgedrag",
+			"skills": "Skills"
 		},
 		"provider": {
 			"account": "Kilo Code Account",
 			"apiKey": "Kilo Code API-sleutel",
 			"login": "Inloggen bij Kilo Code",
 			"logout": "Uitloggen bij Kilo Code",
-			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
+			"loginForPremiumModels": "Log in voor toegang tot premium modellen en functies",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",
 				"createOrganization": "Maak organisatie aan om Provider Routing te beheren",
-				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 				"sorting": {
 					"default": "Standaard provider sortering",
 					"price": "Voorkeur voor providers met lagere prijs",
@@ -149,7 +170,14 @@
 	},
 	"docs": "Documentatie",
 	"rules": {
-		"tooltip": "Beheer Kilo Code Regels & Workflows",
+		"tooltip": "Agentgedrag beheren ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Regels",
+			"workflows": "Workflows",
+			"mcps": "MCP's",
+			"modes": "Modi",
+			"skills": "Skills"
+		},
 		"ariaLabel": "Kilo Code Regels",
 		"tabs": {
 			"rules": "Regels",
@@ -209,6 +237,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nieuw hier?",
+		"tryOneOfThese": "Probeer een van deze ideeën om te beginnen:",
 		"suggestionText": "<suggestionButton>Klik hier</suggestionButton> voor een cool idee, tik dan op <sendIcon /> en kijk hoe ik magie doe!",
 		"ideas": {
 			"idea1": "Maak een draaiende, gloeiende 3D-bol die reageert op muisbewegingen. Laat de app in de browser werken.",
@@ -223,39 +252,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Triggers",
-			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
+			"codeEditorSuggestions": "Code Editor Suggesties",
+			"chatSuggestions": "Chat Suggesties",
+			"model": "Model",
+			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Pauze om te Voltooien",
-				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
+				"label": "Automatisch Suggesties Activeren",
+				"description": "Toon automatisch inline code-suggesties wanneer je pauzeert met typen."
 			},
 			"autoTriggerDelay": {
 				"label": "Automatische Activeringsvertraging",
-				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Snelle Taak ({{keybinding}})",
-				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Sneltoets bewerken</DocsLink>"
+				"description": "De vertraging in seconden voordat suggesties verschijnen nadat je stopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
-				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
+				"label": "Activeren met Sneltoets ({{keybinding}})",
+				"description": "Druk op {{keybinding}} om een codesuggestie op te vragen op je cursorpositie. <DocsLink>Sneltoets bewerken</DocsLink>"
 			},
-			"keybindingNotFound": "niet gevonden",
-			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
-			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren.",
-			"model": "Model",
-			"provider": "Provider",
 			"enableChatAutocomplete": {
-				"label": "Chatinvoer Automatisch Aanvullen",
-				"description": "Wanneer ingeschakeld, zal Kilo Code suggesties voor aanvullingen geven terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
+				"label": "Chat Autocomplete Inschakelen",
+				"description": "Toon aanvullingen terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
 			},
 			"snooze": {
-				"label": "Autocomplete Snoozen",
-				"description": "Pauzeer autocomplete-suggesties tijdelijk voor een opgegeven duur.",
+				"label": "Suggesties Snoozen",
+				"description": "Pauzeer suggesties tijdelijk voor een opgegeven duur.",
 				"button": "Snoozen",
 				"unsnooze": "Snooze opheffen",
-				"currentlySnoozed": "Autocomplete is momenteel gesnoozed.",
+				"currentlySnoozed": "Suggesties zijn momenteel gesnoozed.",
 				"duration": {
 					"1min": "1 minuut",
 					"5min": "5 minuten",
@@ -263,7 +285,19 @@
 					"30min": "30 minuten",
 					"1hour": "1 uur"
 				}
-			}
+			},
+			"noModelConfigured": {
+				"title": "Geen autocomplete-model geconfigureerd",
+				"description": "Om autocomplete in te schakelen, voeg een profiel toe met een van deze ondersteunde providers:",
+				"learnMore": "Meer informatie over autocomplete-configuratie →"
+			},
+			"noCredits": {
+				"title": "Geen tegoed op je account",
+				"description": "Je Kilo Code-account heeft geen tegoed. Om autocomplete te gebruiken, voeg tegoed toe aan je account.",
+				"buyCredits": "Tegoed kopen →"
+			},
+			"keybindingNotFound": "niet gevonden",
+			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren."
 		}
 	},
 	"virtualProvider": {
@@ -302,6 +336,9 @@
 		},
 		"modes": {
 			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
+		},
+		"skills": {
+			"description": "Blader door en ontdek skills van de gemeenschap. Skills bieden gespecialiseerde instructies voor specifieke taken."
 		}
 	},
 	"modes": {
@@ -328,9 +365,35 @@
 	},
 	"speechToText": {
 		"startRecording": "Start spraakinvoer",
-		"stopRecording": "Stop spraakinvoer",
-		"unavailableOpenAiKeyMissing": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI provider met een API-sleutel om spraaktranscriptie te gebruiken.",
-		"unavailableBoth": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI-provider en FFmpeg moet geïnstalleerd zijn.",
-		"unavailableFfmpegNotInstalled": "Spraak-naar-tekst is niet beschikbaar. Installeer FFmpeg om spraaktranscriptie te gebruiken."
+		"stopRecording": "Stop spraakherkenning",
+		"setupPopover": {
+			"title": "Spraak-naar-Tekst",
+			"description": "Spraak-naar-tekst is niet beschikbaar. Spraak-naar-tekst vereist zowel FFmpeg als een geldige OpenAI-provider die is geconfigureerd. <moreInfoLink>Klik hier voor meer informatie</moreInfoLink>.",
+			"openAiReason": "Je hebt een geldige OpenAI-provider met een API-sleutel nodig om spraaktranscriptie te gebruiken.",
+			"ffmpegMessage": "Help me FFmpeg te installeren",
+			"ffmpegReason": "Je hebt FFmpeg nodig. <ffmpegLink>Klik hier</ffmpegLink> om Kilo te laten helpen met het installeren van FFmpeg."
+		},
+		"misconfiguredState": "Niet beschikbaar vanwege configuratie",
+		"errorState": "Niet beschikbaar vanwege een fout",
+		"microphone": {
+			"label": "Microfoon",
+			"defaultOption": "Systeemstandaard",
+			"description": "Selecteer het microfoonapparaat voor spraak-naar-tekst",
+			"loading": "Microfoonapparaten laden...",
+			"noDevices": "Geen microfoonapparaten gevonden",
+			"refresh": "Vernieuwen"
+		}
+	},
+	"skills": {
+		"description": "Skills bieden gespecialiseerde instructies voor specifieke taken. Ze worden automatisch toegepast wanneer ze relevant zijn voor je verzoek.",
+		"noSkills": "Geen skills geïnstalleerd",
+		"projectSkills": "Project Skills",
+		"globalSkills": "Globale Skills",
+		"deleteDialog": {
+			"title": "Skill Verwijderen",
+			"description": "Weet je zeker dat je de skill \"{{skillName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+			"cancel": "Annuleren",
+			"delete": "Verwijderen"
+		}
 	}
 }

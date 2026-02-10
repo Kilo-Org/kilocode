@@ -1,33 +1,49 @@
 import { useMemo } from "react"
 import type { ModelInfo } from "@roo-code/types"
 
-export const usePreferredModels = (models: Record<string, ModelInfo> | null) => {
-	return useMemo(() => {
-		if (!models) return []
+// Result containing preferred and rest model IDs
+export interface GroupedModelIds {
+	preferredModelIds: string[]
+	restModelIds: string[]
+}
 
-		const preferredModelIds = []
-		const restModelIds = []
-		// first add the preferred models
-		for (const [key, model] of Object.entries(models)) {
-			if (Number.isInteger(model.preferredIndex)) {
-				preferredModelIds.push(key)
-			}
+// Extracts and groups model IDs into preferred and rest categories
+export const getGroupedModelIds = (models: Record<string, ModelInfo> | null): GroupedModelIds => {
+	if (!models) {
+		return { preferredModelIds: [], restModelIds: [] }
+	}
+
+	const preferredModelIds: string[] = []
+	const restModelIds: string[] = []
+
+	// First add the preferred models
+	for (const [key, model] of Object.entries(models)) {
+		if (Number.isInteger(model.preferredIndex)) {
+			preferredModelIds.push(key)
 		}
+	}
 
-		preferredModelIds.sort((a, b) => {
-			const modelA = models[a]
-			const modelB = models[b]
-			return (modelA.preferredIndex ?? 0) - (modelB.preferredIndex ?? 0)
-		})
+	preferredModelIds.sort((a, b) => {
+		const modelA = models[a]
+		const modelB = models[b]
+		return (modelA.preferredIndex ?? 0) - (modelB.preferredIndex ?? 0)
+	})
 
-		// then add the rest
-		for (const [key] of Object.entries(models)) {
-			if (!preferredModelIds.includes(key)) {
-				restModelIds.push(key)
-			}
+	// Then add the rest
+	for (const [key] of Object.entries(models)) {
+		if (!preferredModelIds.includes(key)) {
+			restModelIds.push(key)
 		}
-		restModelIds.sort((a, b) => a.localeCompare(b))
+	}
+	restModelIds.sort((a, b) => a.localeCompare(b))
 
-		return [...preferredModelIds, ...restModelIds]
-	}, [models])
+	return {
+		preferredModelIds,
+		restModelIds,
+	}
+}
+
+// Hook to get grouped model IDs with section metadata for sectioned dropdowns
+export const useGroupedModelIds = (models: Record<string, ModelInfo> | null): GroupedModelIds => {
+	return useMemo(() => getGroupedModelIds(models), [models])
 }

@@ -14,7 +14,10 @@
 		"shareSession": "مشاركة الجلسة",
 		"shareConfirmMessage": "هل ترغب في مشاركة لقطة من هذه الجلسة علنًا؟",
 		"shareConfirmYes": "نعم",
-		"shareConfirmNo": "لا"
+		"shareConfirmNo": "لا",
+		"options": "خيارات",
+		"configureSetupScript": "سكريبت إعداد Worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "وضع YOLO - تتم الموافقة على عمليات الأدوات تلقائيًا",
 		"starting": "جاري البدء...",
 		"startAriaLabel": "بدء الوكيل بالأمر المقدم",
-		"keyboardHint": "اضغط Enter للبدء، Shift+Enter لسطر جديد",
 		"runModeLocal": "محلي",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "سحابي",
@@ -59,7 +61,20 @@
 		"branchPickerTooltip": "تبديل الفرع الأساسي",
 		"noBranches": "لم يتم العثور على فروع",
 		"noMatchingBranches": "لا توجد فروع تطابق بحثك",
-		"openTerminal": "فتح الطرفية"
+		"openTerminal": "فتح الطرفية",
+		"selectModel": "اختر النموذج",
+		"modelTooltip": "اختر نموذج الذكاء الاصطناعي لهذه الجلسة",
+		"defaultModel": "النموذج الافتراضي",
+		"loadingModels": "جاري التحميل...",
+		"selectMode": "اختر الوضع",
+		"modeTooltip": "الوضع: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",
@@ -74,7 +89,11 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
 		"expandOutput": "توسيع المخرجات",
 		"collapseOutput": "طي المخرجات",
-		"copyCommand": "نسخ الأمر"
+		"copyCommand": "نسخ الأمر",
+		"thinking": "يفكّر",
+		"thinkingSeconds": "{{count}}ث",
+		"approve": "موافقة",
+		"deny": "رفض"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",
@@ -84,9 +103,12 @@
 		"cancelTitle": "إلغاء الوكيل",
 		"finishToBranchTitle": "إنهاء worktree والتحضير للـ branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "إنهاء worktree والتحضير للـ branch",
+		"createPRTitle": "إنشاء طلب سحب",
 		"sendTitle": "إرسال الرسالة",
 		"resumeTitle": "استئناف الوكيل",
-		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد"
+		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد",
+		"addImage": "إضافة صورة",
+		"removeImage": "إزالة الصورة"
 	},
 	"status": {
 		"running": "قيد التشغيل",

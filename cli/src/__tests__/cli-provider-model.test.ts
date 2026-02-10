@@ -20,13 +20,18 @@ describe("Provider and Model CLI Options", () => {
 			expect(field).toBe("openAiModelId")
 		})
 
+		it("should return correct model field for openai-responses provider", () => {
+			const field = getModelIdKey("openai-responses")
+			expect(field).toBe("openAiModelId")
+		})
+
 		it("should return correct model field for openai-native provider", () => {
 			const field = getModelIdKey("openai-native")
 			expect(field).toBe("apiModelId")
 		})
 
-		it("should return apiModelId as default for unknown providers", () => {
-			const field = getModelIdKey("human-relay")
+		it("should return apiModelId as default for providers without specific model fields", () => {
+			const field = getModelIdKey("fake-ai")
 			expect(field).toBe("apiModelId")
 		})
 	})
@@ -41,7 +46,7 @@ describe("Provider and Model CLI Options", () => {
 		it("should return null for providers without router support", () => {
 			expect(getModelFieldForProvider("anthropic")).toBeNull()
 			expect(getModelFieldForProvider("openai")).toBeNull()
-			expect(getModelFieldForProvider("human-relay")).toBeNull()
+			expect(getModelFieldForProvider("fake-ai")).toBeNull()
 		})
 	})
 
@@ -176,6 +181,7 @@ describe("Provider and Model CLI Options", () => {
 				{ name: "kilocode", expectedField: "kilocodeModel" },
 				{ name: "anthropic", expectedField: "apiModelId" },
 				{ name: "openai", expectedField: "openAiModelId" },
+				{ name: "openai-responses", expectedField: "openAiModelId" },
 				{ name: "openai-native", expectedField: "apiModelId" },
 				{ name: "openrouter", expectedField: "openRouterModelId" },
 				{ name: "ollama", expectedField: "ollamaModelId" },

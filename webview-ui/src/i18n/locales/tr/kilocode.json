@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Nasıl başlamak istersiniz?",
+		"freeModels": {
+			"title": "Ücretsiz modeller",
+			"description": "Hemen kodlamaya başlayın"
+		},
+		"premiumModels": {
+			"title": "Premium modeller",
+			"description": "Kaydolun. Yeni kullanıcılar 5 $ kredi alır"
+		},
+		"byok": {
+			"title": "Kendi anahtarınızı kullanın",
+			"description": "Gelişmiş. Kendi hesabınızı veya aboneliğinizi kullanın"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 ve 450+ diğer en yeni AI modelleri ile çalışır.",
 		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
@@ -11,13 +26,18 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
-		"lowBalance": "Kilo Code bakiyeniz düşük",
-		"newOrganization": "İş için mi kullanıyorsun?"
+		"lowBalance": "Kilo Code bakiyen düşük",
+		"switchToFreeModel": "Ücretsiz modele geç"
 	},
 	"pagination": {
 		"previous": "Önceki",
 		"next": "Sonraki",
 		"page": "Sayfa {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}} modelini kullanmak için giriş yapman gerekiyor",
+		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
+		"loginButton": "Giriş Yap"
 	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
@@ -31,7 +51,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP Sunucuları"
+			"mcp": "MCP Sunucuları",
+			"agentBehaviour": "Ajan Davranışı",
+			"skills": "Beceriler"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -50,7 +72,7 @@
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
 			"logout": "Kilo Code'dan çıkış yap",
-			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
+			"loginForPremiumModels": "Premium modellere ve özelliklere erişmek için giriş yap",
 			"providerRouting": {
 				"title": "Sağlayıcı Yönlendirme",
 				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
@@ -142,7 +164,14 @@
 	},
 	"docs": "Belgeler",
 	"rules": {
-		"tooltip": "Kilo Code Kuralları ve İş Akışlarını Yönet",
+		"tooltip": "Ajan Davranışını Yönet ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları",
+			"mcps": "MCP'ler",
+			"modes": "Modlar",
+			"skills": "Beceriler"
+		},
 		"ariaLabel": "Kilo Code Kuralları",
 		"tabs": {
 			"rules": "Kurallar",
@@ -202,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Burada yeni misin?",
+		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
 		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
 		"ideas": {
 			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",
@@ -214,41 +244,34 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "Otomatik Tamamlama",
 		"settings": {
-			"triggers": "Tetikleyiciler",
-			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
+			"codeEditorSuggestions": "Kod Editörü Önerileri",
+			"chatSuggestions": "Sohbet Önerileri",
+			"model": "Model",
+			"provider": "Sağlayıcı",
 			"enableAutoTrigger": {
-				"label": "Autocomplete'i Etkinleştir",
-				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
+				"label": "Önerileri otomatik tetikle",
+				"description": "Yazmayı duraklattığında otomatik olarak satır içi kod önerileri göster."
 			},
 			"autoTriggerDelay": {
 				"label": "Otomatik Tetikleme Gecikmesi",
-				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Görev ({{keybinding}})",
-				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
+				"description": "Yazmayı duraklattıktan sonra önerilerin görünmesi için saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
+				"label": "Klavye kısayoluyla tetikle ({{keybinding}})",
+				"description": "İmleç konumunda kod önerisi istemek için {{keybinding}} tuşuna bas. <DocsLink>Kısayolu düzenle</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı",
-			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
-			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
-			"model": "Model",
-			"provider": "Sağlayıcı",
 			"enableChatAutocomplete": {
-				"label": "Sohbet Girişi Otomatik Tamamlama",
-				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+				"label": "Sohbet otomatik tamamlamayı etkinleştir",
+				"description": "Sohbet girişinde yazarken önerileri göster. Önerileri kabul etmek için Tab tuşuna bas."
 			},
 			"snooze": {
-				"label": "Otomatik Tamamlamayı Ertele",
-				"description": "Otomatik tamamlama önerilerini belirli bir süre için geçici olarak duraklat.",
+				"label": "Önerileri ertele",
+				"description": "Belirli bir süre için önerileri geçici olarak duraklat.",
 				"button": "Ertele",
 				"unsnooze": "Ertelemeyi Kaldır",
-				"currentlySnoozed": "Otomatik tamamlama şu anda ertelenmiş durumda.",
+				"currentlySnoozed": "Öneriler şu anda ertelenmiş durumda.",
 				"duration": {
 					"1min": "1 dakika",
 					"5min": "5 dakika",
@@ -256,7 +279,19 @@
 					"30min": "30 dakika",
 					"1hour": "1 saat"
 				}
-			}
+			},
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": {
+				"title": "Otomatik tamamlama modeli yapılandırılmadı",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekle:",
+				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
+			},
+			"noCredits": {
+				"title": "Hesabında kredi yok",
+				"description": "Kilo Code hesabında kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabına kredi ekle.",
+				"buyCredits": "Kredi satın al →"
+			},
+			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan."
 		}
 	},
 	"virtualProvider": {
@@ -302,6 +337,9 @@
 		},
 		"modes": {
 			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"skills": {
+			"description": "Topluluktan becerilere göz atın ve keşfedin. Beceriler, belirli görevler için özel talimatlar sağlar."
 		}
 	},
 	"modes": {
@@ -329,8 +367,34 @@
 	"speechToText": {
 		"startRecording": "Sesli girişi başlat",
 		"stopRecording": "Sesli girişi durdur",
-		"unavailableOpenAiKeyMissing": "Konuşmadan metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanabilmek için API anahtarına sahip geçerli bir OpenAI sağlayıcısı gerekiyor.",
-		"unavailableFfmpegNotInstalled": "Konuşmayı metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanmak için FFmpeg'i yükleyin.",
-		"unavailableBoth": "Konuşmadan metne dönüştürme özelliği kullanılamıyor. Geçerli bir OpenAI sağlayıcısı gerektirir ve FFmpeg yüklü olmalıdır."
+		"setupPopover": {
+			"title": "Konuşmadan Metne",
+			"openAiReason": "Ses transkripsiyonu kullanmak için API anahtarına sahip geçerli bir OpenAI sağlayıcısına ihtiyacınız var.",
+			"description": "Konuşmadan metne özelliği kullanılamıyor. Konuşmadan metne özelliği için hem FFmpeg hem de geçerli bir OpenAI sağlayıcısı yapılandırılması gerekir. <moreInfoLink>Daha fazla bilgi için buraya tıklayın</moreInfoLink>.",
+			"ffmpegMessage": "FFmpeg'i kurmama yardım et",
+			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
+		},
+		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
+		"errorState": "Hata nedeniyle kullanılamıyor",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Sistem Varsayılanı",
+			"description": "Konuşma-yazma için mikrofon cihazını seçin",
+			"noDevices": "Mikrofon cihazı bulunamadı",
+			"loading": "Mikrofon cihazları yükleniyor...",
+			"refresh": "Yenile"
+		}
+	},
+	"skills": {
+		"description": "Beceriler, belirli görevler için özel talimatlar sağlar. İsteğinle ilgili olduğunda otomatik olarak uygulanırlar.",
+		"noSkills": "Yüklü beceri yok",
+		"projectSkills": "Proje Becerileri",
+		"globalSkills": "Global Beceriler",
+		"deleteDialog": {
+			"title": "Beceriyi Sil",
+			"description": "\"{{skillName}}\" becerisini silmek istediğinden emin misin? Bu işlem geri alınamaz.",
+			"cancel": "İptal",
+			"delete": "Sil"
+		}
 	}
 }

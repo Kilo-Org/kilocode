@@ -15,6 +15,7 @@
 		"noAssistantMessages": "Respons model berakhir secara tidak terduga (tidak ada pesan asisten). Ini mungkin merupakan tanda pembatasan laju.",
 		"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan Anda terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}",
 		"maxCompletionTokens": "Jumlah maksimum token penyelesaian telah tercapai.",
+		"contentFilter": "Permintaan diblokir oleh filter konten.",
 		"disableApplyDiff": "Jika kesalahan ini terus terjadi, silakan nonaktifkan Editing Through Diffs di Pengaturan Lanjutan.",
 		"disableEditFile": "Jika kesalahan ini terus terjadi, silakan nonaktifkan fitur eksperimental Fast Apply."
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
-				"tokenError": "Token yang valid harus diatur untuk menggunakan Autocomplete",
+				"noCredits": "**Tidak ada kredit di akun kamu**\n\nAkun Kilo Code kamu tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun kamu.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Tidak ada model autocomplete yang dikonfigurasi**\n\nUntuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini: {{providers}}.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Total biaya sesi:",
 				"provider": "Penyedia:",
 				"model": "Model:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "Versi Kilocode CLI kamu sudah usang dan tidak mendukung Agent Manager. Harap perbarui ke versi terbaru.",
-			"cliNotFound": "Kilocode CLI tidak ditemukan. Harap instal untuk menggunakan Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI belum dikonfigurasi. Jalankan 'kilocode auth' untuk masuk atau 'kilocode config' untuk mengonfigurasi.",
 			"sessionFailed": "Gagal memulai sesi agen",
 			"sessionFailedWithMessage": "Gagal memulai sesi agen: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Menjalankan npm install untuk menginstal Kilocode CLI. Setelah selesai, kamu dapat menutup terminal ini dan mencoba memulai Agent Manager lagi.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Kunci API OpenAI Anda tidak valid atau tidak memiliki akses ke Realtime API. Silakan periksa kunci API Anda dan coba lagi.",
+			"unknown": "Koneksi gagal. Silakan periksa konfigurasi Anda dan coba lagi."
+		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Kode: Ditambahkan {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Kode: Dihapus {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

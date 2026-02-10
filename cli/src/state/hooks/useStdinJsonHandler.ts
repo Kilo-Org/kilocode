@@ -6,8 +6,11 @@
 import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
-import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { sendAskResponseAtom, sendTaskAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { setModeAtom } from "../atoms/config.js"
 import { logs } from "../../services/logs.js"
+import { convertImagesToDataUrls } from "../../media/image-utils.js"
+import { outputJsonIoMessage } from "../../ui/utils/jsonOutput.js"
 
 export interface StdinMessage {
 	type: string
@@ -15,43 +18,90 @@ export interface StdinMessage {
 	text?: string
 	images?: string[]
 	approved?: boolean
+	mode?: string
+	previousMode?: string
 }
 
 export interface StdinMessageHandlers {
 	sendAskResponse: (params: { response: "messageResponse"; text?: string; images?: string[] }) => Promise<void>
+	sendTask: (params: { text: string; images?: string[] }) => Promise<void>
 	cancelTask: () => Promise<void>
 	respondToTool: (params: {
 		response: "yesButtonClicked" | "noButtonClicked"
 		text?: string
 		images?: string[]
 	}) => Promise<void>
+	setMode: (mode: string) => Promise<void>
 }
 
 /**
  * Handles a parsed stdin message by calling the appropriate handler.
  * Exported for testing purposes.
+ *
+ * Images can be provided as either:
+ * - Data URLs (e.g., "data:image/png;base64,...")
+ * - File paths (e.g., "/tmp/image.png" or "./screenshot.png")
+ *
+ * File paths are automatically converted to data URLs before being sent.
  */
 export async function handleStdinMessage(
 	message: StdinMessage,
 	handlers: StdinMessageHandlers,
 ): Promise<{ handled: boolean; error?: string }> {
 	switch (message.type) {
-		case "askResponse":
+		case "newTask": {
+			// Start a new task with prompt and optional images
+			// This allows the Agent Manager to send the initial prompt via stdin
+			// instead of CLI args, enabling images to be included with the first message
+			// Images are converted from file paths to data URLs if needed
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonIoMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
+			await handlers.sendTask({
+				text: message.text || "",
+				...(result.images.length > 0 && { images: result.images }),
+			})
+			return { handled: true }
+		}
+
+		case "askResponse": {
 			// Handle ask response (user message, approval response, etc.)
+			// Images are converted from file paths to data URLs if needed
+			const result = await convertImagesToDataUrls(message.images)
+
+			// Notify if some images failed to load
+			if (result.errors.length > 0) {
+				outputJsonIoMessage({
+					type: "image_load_error",
+					errors: result.errors,
+					message: `Failed to load ${result.errors.length} image(s): ${result.errors.map((e) => e.path).join(", ")}`,
+				})
+			}
+
+			const images = result.images.length > 0 ? result.images : undefined
 			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
 				await handlers.respondToTool({
 					response: message.askResponse,
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			} else {
 				await handlers.sendAskResponse({
 					response: (message.askResponse as "messageResponse") ?? "messageResponse",
 					...(message.text !== undefined && { text: message.text }),
-					...(message.images !== undefined && { images: message.images }),
+					...(images && { images }),
 				})
 			}
 			return { handled: true }
+		}
 
 		case "cancelTask":
 			await handlers.cancelTask()
@@ -73,6 +123,19 @@ export async function handleStdinMessage(
 			}
 			return { handled: true }
 
+		case "setMode": {
+			// Handle mode change from Agent Manager
+			if (!message.mode) {
+				return { handled: false, error: "setMode message requires mode field" }
+			}
+			const previousMode = message.previousMode
+			await handlers.setMode(message.mode)
+			// Output mode change confirmation for Agent Manager (JSON-IO protocol)
+			// This allows the Agent Manager to update its session state
+			outputJsonIoMessage({ type: "modeChanged", mode: message.mode, previousMode })
+			return { handled: true }
+		}
+
 		default:
 			return { handled: false, error: `Unknown message type: ${message.type}` }
 	}
@@ -80,8 +143,10 @@ export async function handleStdinMessage(
 
 export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
+	const sendTask = useSetAtom(sendTaskAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
+	const setMode = useSetAtom(setModeAtom)
 
 	useEffect(() => {
 		if (!enabled) {
@@ -99,11 +164,17 @@ export function useStdinJsonHandler(enabled: boolean) {
 			sendAskResponse: async (params) => {
 				await sendAskResponse(params)
 			},
+			sendTask: async (params) => {
+				await sendTask(params)
+			},
 			cancelTask: async () => {
 				await cancelTask()
 			},
 			respondToTool: async (params) => {
 				await respondToTool(params)
+			},
+			setMode: async (mode) => {
+				await setMode(mode)
 			},
 		}
 
@@ -142,5 +213,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 		return () => {
 			rl.close()
 		}
-	}, [enabled, sendAskResponse, cancelTask, respondToTool])
+	}, [enabled, sendAskResponse, sendTask, cancelTask, respondToTool, setMode])
 }

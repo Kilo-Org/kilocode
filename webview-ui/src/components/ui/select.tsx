@@ -22,6 +22,7 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<t
 		<SelectPrimitive.Trigger
 			data-slot="select-trigger"
 			className={cn(
+				// kilocode_change: avoid pill rounding on selects (match VS Code input styling)
 				"data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive flex h-7 w-fit items-center justify-between gap-2 rounded-xs px-3 py-2 whitespace-nowrap transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
 				"border border-vscode-dropdown-border aria-expanded:border-vscode-focusBorder focus-visible:border-vscode-focusBorder",
 				"bg-vscode-dropdown-background hover:bg-transparent",

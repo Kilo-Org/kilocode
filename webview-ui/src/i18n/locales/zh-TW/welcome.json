@@ -5,38 +5,50 @@
 	"start": "讓我們開始吧！",
 	"routers": {
 		"requesty": {
-			"description": "您的最佳化 LLM 路由器",
+			"description": "為您最佳化的 LLM 路由器",
 			"incentive": "$1 免費額度"
 		},
 		"openrouter": {
-			"description": "LLM 的統一介面"
+			"description": "LLM 統一介面"
 		},
 		"roo": {
-			"description": "最優秀的免費模型助你開始",
+			"description": "開始使用的最佳免費模型",
 			"incentive": "免費試用 Roo"
 		}
 	},
 	"chooseProvider": "Kilo Code 需要 API 金鑰才能發揮魔力。",
+	"landing": {
+		"greeting": "歡迎使用 Roo Code！",
+		"introduction": "Roo Code 提供一系列內建和可擴充的模式，讓您以前所未有的方式規劃專案、設計架構、編寫程式碼、除錯並提升工作效率。",
+		"accountMention": "開始使用，建立您的 Roo Code Cloud 帳戶。取得強大的模型、網路控制、分析、支援等功能。",
+		"getStarted": "建立 Roo 帳戶",
+		"noAccount": "或不使用帳戶"
+	},
 	"providerSignup": {
-		"rooCloudProvider": "Roo Code Cloud 提供者",
-		"rooCloudDescription": "使用 Roo 最簡單的方式。低成本精選的免費和付費模型組合",
+		"heading": "選擇供應商",
+		"chooseProvider": "Roo 需要 LLM 供應商才能運作。選擇一個以開始使用，您可以稍後新增更多。",
+		"rooCloudProvider": "Roo Code Router",
+		"rooCloudDescription": "開始使用最簡單的方式是使用 Roo Code Router：精選的免費和付費模型組合，價格低廉。",
 		"learnMore": "了解更多",
-		"useAnotherProvider": "使用其他提供者",
-		"useAnotherProviderDescription": "輸入 API 金鑰即可開始。",
-		"noApiKeys": "不想處理金鑰？選擇 Roo Code Cloud 提供者吧。",
-		"getStarted": "開始使用"
+		"useAnotherProvider": "第三方供應商",
+		"useAnotherProviderDescription": "輸入 API 金鑰並開始使用。",
+		"noApiKeys": "不想處理 API 金鑰和個別帳戶嗎？",
+		"backToRoo": "選擇 Roo Code Router。",
+		"goBack": "返回",
+		"finish": "完成"
 	},
 	"waitingForCloud": {
-		"heading": "正在帶您前往 Roo Code Cloud...",
-		"description": "在瀏覽器中完成註冊，您將自動返回此處。",
-		"noPrompt": "如果您未被提示開啟 URL，<clickHere>請點擊此處</clickHere>。",
-		"havingTrouble": "如果您已完成註冊但遇到問題，<clickHere>請點擊此處</clickHere>。",
-		"pasteUrl": "從瀏覽器貼上回呼 URL：",
-		"invalidURL": "這看起來不像是有效的回呼 URL。請複製 Roo Code Cloud 在您的瀏覽器中顯示的內容。",
+		"heading": "正在登入 Roo Code Cloud...",
+		"description": "我們會帶您前往瀏覽器註冊 Roo Code Cloud。然後我們會帶您回來完成設定。",
+		"noPrompt": "如果沒有提示您開啟 URL，<clickHere>點選這裡</clickHere>。",
+		"havingTrouble": "如果您已完成註冊但遇到問題，<clickHere>點選這裡</clickHere>。",
+		"pasteUrl": "貼上瀏覽器中顯示的回呼 URL：",
+		"docsLink": "無法正常運作？<DocsLink>查看說明文件</DocsLink>。",
+		"invalidURL": "這看起來不像有效的回呼 URL。請複製 Roo Code Cloud 在您瀏覽器中顯示的內容。",
 		"goBack": "返回"
 	},
 	"startRouter": "我們建議使用 LLM 路由器：",
-	"startCustom": "或者您可以使用自己的 API 金鑰：",
+	"startCustom": "或自行提供供應商 API 金鑰：",
 	"telemetry": {
 		"helpImprove": "協助改進 Kilo Code",
 		"helpImproveMessage": "Kilo Code 收集錯誤和使用資料以協助我們修復錯誤並改善擴充功能。此遙測不會收集程式碼、提示詞或個人資訊。您可以在<settingsLink>設定</settingsLink>中關閉此功能。"

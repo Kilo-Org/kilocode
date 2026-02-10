@@ -8,6 +8,7 @@ import {
 	INITIAL_RETRY_DELAY_MS as INITIAL_DELAY_MS,
 } from "../constants"
 import { getDefaultModelId } from "../../../shared/embeddingModels"
+import { Package } from "../../../shared/package"
 import { t } from "../../../i18n"
 import { withValidationErrorHandling, formatEmbeddingError, HttpError } from "../shared/validation-helpers"
 import { TelemetryEventName } from "@roo-code/types"
@@ -40,6 +41,7 @@ export class BedrockEmbedder implements IEmbedder {
 		const credentials = this.profile ? fromIni({ profile: this.profile }) : fromEnv()
 
 		this.bedrockClient = new BedrockRuntimeClient({
+			userAgentAppId: `RooCode#${Package.version}`,
 			region: this.region,
 			credentials,
 		})

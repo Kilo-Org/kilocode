@@ -43,8 +43,6 @@ import {
 	rooDefaultModelId,
 	claudeCodeModels,
 	claudeCodeDefaultModelId,
-	geminiCliModels,
-	geminiCliDefaultModelId,
 	minimaxModels,
 	minimaxDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
@@ -66,6 +64,7 @@ export type RouterName =
 	| "deepinfra"
 	| "vercel-ai-gateway"
 	| "ovhcloud"
+	| "nano-gpt"
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -78,7 +77,7 @@ export interface ModelInfo {
 	supportsComputerUse?: boolean
 	supportsPromptCache: boolean
 	promptCacheRetention?: "in_memory" | "24h"
-	supportsVerbosity?: boolean
+	supportsVerbosity?: boolean | ("low" | "medium" | "high" | "max")[] // kilocode_change
 	supportsReasoningBudget?: boolean
 	supportsReasoningBinary?: boolean
 	supportsTemperature?: boolean
@@ -125,7 +124,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	lmstudio: "lmstudio",
 	litellm: "litellm",
 	glama: "glama",
-	"nano-gpt": null,
+	"nano-gpt": "nano-gpt",
 	unbound: "unbound",
 	requesty: "requesty",
 	deepinfra: "deepinfra",
@@ -137,17 +136,19 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	bedrock: null,
 	vertex: null,
 	openai: null,
+	"openai-responses": null,
 	"vscode-lm": null,
 	gemini: null,
 	"openai-native": null,
+	"openai-codex": null,
 	mistral: null,
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
 	minimax: null,
 	"qwen-code": null,
-	"human-relay": null,
 	"fake-ai": null,
+	"human-relay": null,
 	xai: null,
 	groq: null,
 	chutes: null,
@@ -158,7 +159,6 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	featherless: null,
 	roo: null,
 	"claude-code": null,
-	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
 	inception: null,
@@ -189,17 +189,19 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	bedrock: null,
 	vertex: null,
 	openai: null,
+	"openai-responses": null,
 	"vscode-lm": "vsCodeLmModelSelector",
 	gemini: null,
 	"openai-native": null,
+	"openai-codex": null,
 	mistral: null,
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
 	minimax: null,
 	"qwen-code": null,
-	"human-relay": null,
 	"fake-ai": null,
+	"human-relay": null,
 	xai: null,
 	groq: null,
 	chutes: null,
@@ -210,7 +212,6 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	featherless: null,
 	roo: null,
 	"claude-code": null,
-	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
 	inception: "inceptionLabsModelId",
@@ -281,7 +282,6 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	minimax: "MiniMax-M2",
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
-	"gemini-cli": geminiCliDefaultModelId,
 	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
 }
 
@@ -413,13 +413,8 @@ export function getModelsByProvider(params: {
 				models: claudeCodeModels as ModelRecord,
 				defaultModel: claudeCodeDefaultModelId,
 			}
-		case "gemini-cli":
-			return {
-				models: geminiCliModels as ModelRecord,
-				defaultModel: geminiCliDefaultModelId,
-			}
 		default:
-			// For providers without static models (e.g., vscode-lm, human-relay, fake-ai, virtual-quota-fallback)
+			// For providers without static models (e.g., vscode-lm, fake-ai, virtual-quota-fallback)
 			return {
 				models: {},
 				defaultModel: DEFAULT_MODEL_IDS[provider] || "",
@@ -445,6 +440,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "litellmModelId"
 		case "openai":
 			return "openAiModelId"
+		case "openai-responses":
+			return "openAiModelId"
 		case "ollama":
 			return "ollamaModelId"
 		case "lmstudio":
@@ -461,6 +458,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "vercelAiGatewayModelId"
 		case "ovhcloud":
 			return "ovhCloudAiEndpointsModelId"
+		case "nano-gpt":
+			return "nanoGptModelId"
 		default:
 			return "apiModelId"
 	}

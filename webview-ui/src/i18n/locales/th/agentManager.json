@@ -14,7 +14,10 @@
 		"shareSession": "แชร์เซสชัน",
 		"shareConfirmMessage": "คุณต้องการแชร์สแนปช็อตของเซสชันนี้แบบสาธารณะหรือไม่?",
 		"shareConfirmYes": "ใช่",
-		"shareConfirmNo": "ไม่"
+		"shareConfirmNo": "ไม่",
+		"options": "ตัวเลือก",
+		"configureSetupScript": "สคริปต์ตั้งค่า Worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "โหมด YOLO - การดำเนินการของเครื่องมือได้รับการอนุมัติอัตโนมัติ",
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
-		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
 		"runModeLocal": "ภายในเครื่อง",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "คลาวด์",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
 		"noBranches": "ไม่พบสาขา",
 		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
-		"openTerminal": "เปิดเทอร์มินัล"
+		"openTerminal": "เปิดเทอร์มินัล",
+		"selectModel": "เลือกโมเดล",
+		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
+		"defaultModel": "โมเดลเริ่มต้น",
+		"loadingModels": "กำลังโหลด...",
+		"selectMode": "เลือกโหมด",
+		"modeTooltip": "โหมด: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -70,7 +85,11 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
-		"copyCommand": "คัดลอกคำสั่ง"
+		"copyCommand": "คัดลอกคำสั่ง",
+		"thinking": "กำลังคิด",
+		"thinkingSeconds": "{{count}} วินาที",
+		"approve": "อนุมัติ",
+		"deny": "ปฏิเสธ"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",
@@ -80,9 +99,12 @@
 		"cancelTitle": "ยกเลิกเอเจนต์",
 		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
+		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
-		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"
+		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่",
+		"addImage": "เพิ่มรูปภาพ",
+		"removeImage": "ลบรูปภาพ"
 	},
 	"status": {
 		"running": "กำลังทำงาน",

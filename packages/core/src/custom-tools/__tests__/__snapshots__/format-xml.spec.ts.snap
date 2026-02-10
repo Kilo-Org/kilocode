@@ -1,0 +1,129 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`XML Protocol snapshots > should generate correct XML description for all fixtures combined 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## simple
+Description: Simple tool
+Parameters:
+- value: (required) The input value (type: string)
+Usage:
+<simple>
+<value>value value here</value>
+</simple>
+
+## cached
+Description: Cached tool
+Parameters:
+Usage:
+<cached>
+</cached>
+
+## legacy
+Description: Legacy tool using args
+Parameters:
+- input: (required) The input string (type: string)
+Usage:
+<legacy>
+<input>input value here</input>
+</legacy>
+
+## multi_toolA
+Description: Tool A
+Parameters:
+Usage:
+<multi_toolA>
+</multi_toolA>
+
+## multi_toolB
+Description: Tool B
+Parameters:
+Usage:
+<multi_toolB>
+</multi_toolB>
+
+## mixed_validTool
+Description: Valid
+Parameters:
+Usage:
+<mixed_validTool>
+</mixed_validTool>"
+`;
+
+exports[`XML Protocol snapshots > should generate correct XML description for cached tool 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## cached
+Description: Cached tool
+Parameters:
+Usage:
+<cached>
+</cached>"
+`;
+
+exports[`XML Protocol snapshots > should generate correct XML description for legacy tool (using args) 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## legacy
+Description: Legacy tool using args
+Parameters:
+- input: (required) The input string (type: string)
+Usage:
+<legacy>
+<input>input value here</input>
+</legacy>"
+`;
+
+exports[`XML Protocol snapshots > should generate correct XML description for mixed export tool 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## mixed_validTool
+Description: Valid
+Parameters:
+Usage:
+<mixed_validTool>
+</mixed_validTool>"
+`;
+
+exports[`XML Protocol snapshots > should generate correct XML description for multi export tools 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## multi_toolA
+Description: Tool A
+Parameters:
+Usage:
+<multi_toolA>
+</multi_toolA>
+
+## multi_toolB
+Description: Tool B
+Parameters:
+Usage:
+<multi_toolB>
+</multi_toolB>"
+`;
+
+exports[`XML Protocol snapshots > should generate correct XML description for simple tool 1`] = `
+"# Custom Tools
+
+The following custom tools are available for this mode. Use them in the same way as built-in tools.
+
+## simple
+Description: Simple tool
+Parameters:
+- value: (required) The input value (type: string)
+Usage:
+<simple>
+<value>value value here</value>
+</simple>"
+`;

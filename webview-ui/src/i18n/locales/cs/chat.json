@@ -7,6 +7,7 @@
 		"tokens": "Tokeny:",
 		"cache": "Cache:",
 		"apiCost": "Cena API:",
+		"changes": "Změny",
 		"size": "Velikost",
 		"condenseContext": "Inteligentně zhustit kontext",
 		"contextWindow": "Délka kontextu:",
@@ -38,6 +39,10 @@
 	"retry": {
 		"title": "Zkusit znovu",
 		"tooltip": "Zkusit operaci znovu"
+	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Zastavit aktuální úkol"
 	},
 	"startNewTask": {
 		"title": "Začít nový úkol",
@@ -140,6 +145,7 @@
 	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
 	"addImages": "Přidat obrázky do zprávy",
 	"sendMessage": "Odeslat zprávu",
+	"enqueueMessage": "Přidat zprávu do fronty (bude odeslána po dokončení aktuálního úkolu)",
 	"pressToSend": "Stiskni {{keyCombination}} pro odeslání",
 	"stopTts": "Zastavit převod textu na řeč",
 	"typeMessage": "Napiš zprávu...",
@@ -159,9 +165,11 @@
 		"streaming": "API požadavek...",
 		"cancelled": "API požadavek zrušen",
 		"streamingFailed": "Streamování API selhalo",
-		"errorTitle": "API Chyba {{code}}",
+		"rateLimitWait": "Omezení rychlosti",
+		"errorTitle": "Chyba poskytovatele {{code}}",
 		"errorMessage": {
 			"docs": "Dokumentace",
+			"goToSettings": "Nastavení",
 			"400": "Poskytovatel nemohl zpracovat požadavek jak byl zadán. Zastav úkol a zkus jiný přístup.",
 			"401": "Nepodařilo se autentizovat u poskytovatele. Zkontroluj konfiguraci svého API klíče.",
 			"402": "Zdá se, že ti došly prostředky/kredity na účtu. Jdi ke svému poskytovateli a přidej více pro pokračování.",
@@ -169,7 +177,8 @@
 			"429": "Příliš mnoho požadavků. Poskytovatel tě omezuje rychlostí. Počkej chvíli před dalším API voláním.",
 			"500": "Chyba serveru poskytovatele. Něco je špatně na straně poskytovatele, s tvým požadavkem není nic v nepořádku.",
 			"connection": "Chyba připojení. Ujisti se, že máš funkční připojení k internetu.",
-			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Kilo."
+			"claudeCodeNotAuthenticated": "Musíš se přihlásit, abys mohl používat Claude Code. Jdi do Nastavení a klikni na \"Přihlásit se ke Claude Code\" pro autentizaci.",
+			"unknown": "Neznámá API chyba, klikni na Detaily pro více informací."
 		}
 	},
 	"checkpoint": {
@@ -258,6 +267,11 @@
 		"didSearch_other": "Nalezeno {{count}} výsledků",
 		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pro otevření souboru)"
 	},
+	"costs": {
+		"totalWithSubtasks": "Celkové náklady (včetně podúkolů): ${{cost}}",
+		"total": "Celkové náklady: ${{cost}}",
+		"includesSubtasks": "Zahrnuje náklady na podúkoly"
+	},
 	"commandOutput": "Výstup příkazu",
 	"commandExecution": {
 		"abort": "Přerušit",
@@ -309,10 +323,20 @@
 	},
 	"taskCompleted": "Úkol dokončen",
 	"error": "Chyba",
+	"modelResponseIncomplete": "Odpověď modelu neúplná",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model nepoužil žádné nástroje ve své odpovědi. To se obvykle stává, když model poskytne pouze text/uvažování bez volání požadovaných nástrojů k dokončení úkolu.",
+		"noToolsUsedDetails": "Model poskytl text/uvažování, ale nevolal žádné požadované nástroje. To obvykle naznačuje, že model nepochopil úkol nebo má potíže s určením, který nástroj použít. Model byl automaticky vyzván k opakování s řádným použitím nástrojů.",
+		"noAssistantMessages": "Model neposkytl žádný obsah odpovědi. To může naznačovat problém s API nebo výstupem modelu.",
+		"noAssistantMessagesDetails": "Jazykový model vrátil prázdnou odpověď bez jakéhokoli textu nebo volání nástrojů. To se může stát kvůli problémům s API, omezení rychlosti nebo problémům specifickým pro model. Model byl automaticky vyzván k opakování."
+	},
 	"errorDetails": {
+		"link": "Detaily",
 		"title": "Detaily chyby",
-		"copyToClipboard": "Kopírovat do schránky",
-		"copied": "Zkopírováno!"
+		"copyToClipboard": "Kopírovat základní informace o chybě",
+		"copied": "Zkopírováno!",
+		"diagnostics": "Získat podrobné informace o chybě",
+		"proxyProvider": "Zdá se, že používáš proxy-založeného poskytovatele. Ujisti se, že kontroluješ jeho logy a že nepřepisuje požadavky Roo."
 	},
 	"diffError": {
 		"title": "Úprava neúspěšná"
@@ -359,14 +383,19 @@
 			"goToSettingsButton": "Jít do Nastavení"
 		},
 		"release": {
-			"heading": "Nové v rozšíření:",
+			"heading": "Co je nového:",
+			"skills": "Roo nyní podporuje <skillsLink>Agent Skills</skillsLink> - znovupoužitelné balíčky promptů, nástrojů a zdrojů pro rozšíření schopností Roo.",
+			"nativeToolCalling": "Nativní volání nástrojů je nyní vyžadováno pro všechny nové úkoly. <blogLink>Přečti si více</blogLink> o motivaci a co dělat, pokud narazíš na problémy.",
 			"openRouterEmbeddings": "Podpora pro embedding modely OpenRouter",
 			"chutesDynamic": "Chutes nyní dynamicky načítá nejnovější modely",
 			"queuedMessagesFix": "Opravy pro ztracené zprávy ve frontě",
 			"browserUse": "Browser Use 2.0 vylepšuje chatové procházení s trvalými relacemi, jasnější zpětnou vazbou, vyhrazeným panelem prohlížeče a přirozenějšími popisy akcí",
 			"cloudPaid": "Poskytovatel Roo Code Cloud nyní nabízí placené modely: kup si kredity a používej je jak pro cloudové agenty, tak pro inferenci",
 			"contextRewind": "Vylepšené zhušťování kontextu nyní umožňuje obnovit plný předchozí kontext při vracení ke kontrolnímu bodu",
-			"rooProvider": "Poskytovatel Roo Code Cloud nyní zachovává obsah uvažování a používá nativní nástroje pro lepší výkon"
+			"rooProvider": "Poskytovatel Roo Code Cloud nyní zachovává obsah uvažování a používá nativní nástroje pro lepší výkon",
+			"openaiCodexProvider": "Přidán poskytovatel OpenAI - ChatGPT Plus/Pro, který poskytuje předplatné založený přístup k modelům Codex bez nákladů na tokeny.",
+			"gpt52codexModel": "Přidán nový model gpt-5.2-codex do Roo Code Router, standardního poskytovatele OpenAI a dalších.",
+			"bugFixes": "Opraveny úniky paměti způsobující šedé obrazovky, problémy s podpisem myšlenek Gemini a další vylepšení stability."
 		},
 		"cloudAgents": {
 			"heading": "Nové v cloudu:",
@@ -397,6 +426,7 @@
 		"noNewLogs": "(Žádné nové záznamy)",
 		"screenshot": "Snímek obrazovky prohlížeče",
 		"cursor": "kurzor",
+		"active": "Aktivní",
 		"navigation": {
 			"step": "Krok {{current}} z {{total}}",
 			"previous": "Předchozí",

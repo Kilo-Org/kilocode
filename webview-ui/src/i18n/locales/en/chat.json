@@ -9,6 +9,7 @@
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "API Cost",
+		"changes": "Changes",
 		"size": "Size",
 		"condenseContext": "Intelligently condense context",
 		"contextWindow": "Context Length",
@@ -60,13 +61,13 @@
 		"reservedForResponse": "Reserved for model response: {{amount}} tokens"
 	},
 	"reject": {
-		"title": "Reject",
-		"tooltip": "Reject this action"
+		"title": "Deny",
+		"tooltip": "Prevent this action from occurring"
 	},
 	"completeSubtaskAndReturn": "Complete Subtask and Return",
 	"approve": {
 		"title": "Approve",
-		"tooltip": "Approve this action"
+		"tooltip": "Allow this action to happen"
 	},
 	"read-batch": {
 		"approve": {
@@ -81,25 +82,30 @@
 		"tooltip": "Execute this command"
 	},
 	"proceedWhileRunning": {
-		"title": "Proceed While Running",
-		"tooltip": "Continue despite warnings"
+		"title": "Continue While Running",
+		"tooltip": "Keep going despite warnings"
 	},
 	"killCommand": {
 		"title": "Kill Command",
 		"tooltip": "Kill the current command"
 	},
 	"resumeTask": {
-		"title": "Resume Task",
-		"tooltip": "Continue the current task"
+		"title": "Continue",
+		"tooltip": "Resume the current task"
 	},
 	"terminate": {
-		"title": "Terminate",
-		"tooltip": "End the current task"
+		"title": "New task",
+		"tooltip": "Start a new task"
 	},
 	"cancel": {
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Stop the current task"
+	},
+	"enqueueMessage": "Add message to queue (will be sent after current task completes)",
 	"editMessage": {
 		"placeholder": "Edit your message..."
 	},
@@ -152,9 +158,11 @@
 		"streaming": "API Request...",
 		"cancelled": "API Request Cancelled",
 		"streamingFailed": "API Streaming Failed",
-		"errorTitle": "API Error {{code}}",
+		"rateLimitWait": "Rate limiting",
+		"errorTitle": "Provider Error {{code}}",
 		"errorMessage": {
 			"docs": "Docs",
+			"goToSettings": "Settings",
 			"400": "The provider couldn't process the request as made. Stop the task and try a different approach.",
 			"401": "Couldn't authenticate with provider. Please check your API key configuration.",
 			"402": "You seem to have run out of funds/credits in your account. Go to your provider and add more to continue.",
@@ -162,7 +170,8 @@
 			"429": "Too many requests. You're being rate-limited by the provider. Please wait a bit before your next API call.",
 			"500": "Provider server error. Something is wrong on the provider side, there's nothing wrong with your request.",
 			"connection": "Connection error. Make sure you have a working internet connection.",
-			"unknown": "Unknown API error. Please contact Kilo support."
+			"claudeCodeNotAuthenticated": "You need to sign in to use Claude Code. Go to Settings and click \"Sign in to Claude Code\" to authenticate.",
+			"unknown": "Unknown API error, click Details for more information."
 		}
 	},
 	"checkpoint": {
@@ -297,10 +306,20 @@
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
+	"modelResponseIncomplete": "Model Response Incomplete",
+	"modelResponseErrors": {
+		"noToolsUsed": "The model failed to use any tools in its response. This typically happens when the model provides only text/reasoning without calling the required tools to complete the task.",
+		"noToolsUsedDetails": "The model provided text/reasoning but did not call any of the required tools. This usually indicates the model misunderstood the task or is having difficulty determining which tool to use. The model has been automatically prompted to retry with proper tool usage.",
+		"noAssistantMessages": "The model did not provide any response content. This may indicate an issue with the API or the model's output.",
+		"noAssistantMessagesDetails": "The language model returned an empty response without any text or tool calls. This can happen due to API issues, rate limiting, or model-specific problems. The model has been automatically prompted to retry."
+	},
 	"errorDetails": {
+		"link": "Details",
 		"title": "Error Details",
-		"copyToClipboard": "Copy to Clipboard",
-		"copied": "Copied!"
+		"copyToClipboard": "Copy basic error info",
+		"copied": "Copied!",
+		"diagnostics": "Get detailed error info",
+		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting Roo's requests."
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
@@ -324,7 +343,7 @@
 		"triggerLabel_zero": "0 auto-approve",
 		"triggerLabel_one": "1 auto-approved",
 		"triggerLabel_other": "{{count}} auto-approved",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
 		"title": "Roo Code {{version}} Released",
@@ -338,8 +357,9 @@
 		},
 		"release": {
 			"heading": "What's New:",
-			"contextRewind": "Improved context condensing now lets you restore the full previous context when rewinding to a checkpoint",
-			"rooProvider": "Roo Code Cloud provider now preserves reasoning content and defaults to native tools for better performance"
+			"openaiCodexProvider": "Added OpenAI - ChatGPT Plus/Pro Provider that gives subscription-based access to Codex models without per-token costs.",
+			"gpt52codexModel": "Added the new gpt-5.2-codex model to Roo Code Router, the standard OpenAI provider, and more.",
+			"bugFixes": "Fixed memory leaks causing gray screens, Gemini thought signature issues, and more stability improvements."
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
@@ -358,8 +378,14 @@
 		"copyToInput": "Copy to input (same as shift + click)",
 		"timerPrefix": "Auto-approve enabled. Selecting in {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Cost (including subtasks): ${{cost}}",
+		"total": "Total Cost: ${{cost}}",
+		"includesSubtasks": "Includes subtask costs"
+	},
 	"browser": {
 		"session": "Browser Session",
+		"active": "Active",
 		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",

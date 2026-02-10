@@ -412,6 +412,7 @@ export const sessionCommand: Command = {
 			name: "argument",
 			description: "Argument for the subcommand",
 			required: false,
+			provider: sessionIdAutocompleteProvider,
 			conditionalProviders: [
 				{
 					condition: (context) => {

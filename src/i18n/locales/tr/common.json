@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı."
+		"description": "Doğal dilden kod üreten, görevleri otomatikleştiren ve terminal komutlarını çalıştıran açık kaynaklı AI kodlama ajanı. Satır içi otomatik tamamlama, tarayıcı otomasyonu, otomatik yeniden düzenleme ve planlama, kodlama ve hata ayıklama için özel modlar içerir. Claude (Anthropic), Gemini, Grok, GPT, Codex ve GLM dahil 500'den fazla AI modelini destekler."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "Hata çıktısı: {{output}}",
 			"processExitedWithError": "Claude Code işlemi {{exitCode}} koduyla çıktı. Hata çıktısı: {{output}}",
 			"stoppedWithReason": "Claude Code şu nedenle durdu: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}",
-			"tokenRefreshFailed": "OAuth token yenilenemedi: {{error}}",
-			"onboardingTimeout": "Onboarding işlemi 60 saniye sonra zaman aşımına uğradı. Lütfen daha sonra tekrar deneyin.",
-			"projectDiscoveryFailed": "Proje ID'si keşfedilemedi. 'gemini auth' ile kimlik doğrulaması yaptığınızdan emin olun.",
-			"rateLimitExceeded": "Hız sınırı aşıldı. Ücretsiz seviye sınırlarına ulaşıldı.",
-			"badRequest": "Geçersiz istek: {{details}}",
-			"apiError": "Gemini CLI API hatası: {{error}}",
-			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}"
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Roo sağlayıcısı bulut kimlik doğrulaması gerektirir. Lütfen Roo Code Cloud'a giriş yapın."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API anahtarı geçersiz karakterler içeriyor."
+			"invalidKeyInvalidChars": "API anahtarı geçersiz karakterler içeriyor.",
+			"apiRequestFailed": "API isteği başarısız oldu ({{status}})"
 		},
 		"manual_url_empty": "Lütfen geçerli bir callback URL'si girin",
 		"manual_url_no_query": "Geçersiz callback URL'si: sorgu parametreleri eksik",
 		"manual_url_missing_params": "Geçersiz callback URL'si: gerekli parametreler eksik (code ve state)",
 		"manual_url_auth_failed": "Manuel URL kimlik doğrulama başarısız",
-		"manual_url_auth_error": "Kimlik doğrulama başarısız"
+		"manual_url_auth_error": "Kimlik doğrulama başarısız",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Yanıt kullanıcı tarafından kesildi",
-		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi"
+		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi",
+		"streamTerminatedByProvider": "Sağlayıcı isteği sonlandırdı"
 	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",
@@ -210,12 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API Anahtarı",
-			"getGroqApiKey": "Groq API Anahtarı Al",
-			"claudeCode": {
-				"pathLabel": "Claude Code Yolu",
-				"description": "Claude Code CLI'nizin isteğe bağlı yolu. Ayarlanmazsa varsayılan olarak 'claude' olur.",
-				"placeholder": "Varsayılan: claude"
-			}
+			"getGroqApiKey": "Groq API Anahtarı Al"
 		}
 	},
 	"customModes": {

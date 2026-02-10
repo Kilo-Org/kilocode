@@ -1,7 +1,3 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.ipc.proxy
 
 import ai.kilocode.jetbrains.ipc.IMessagePassingProtocol
@@ -20,6 +16,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.lang.reflect.Proxy
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.CoroutineContext
@@ -129,6 +127,7 @@ class RPCProtocol(
      * Coroutine scope
      */
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val rpcSemaphore = Semaphore(100) // Max 100 concurrent RPC calls
 
     /**
      * URI replacer
@@ -650,18 +649,21 @@ class RPCProtocol(
 
             // Start coroutine
             promise = coroutineScope.async(context) {
-                // Add cancellation token
-                val argsList = args.toMutableList()
-                // Note: should add a CancellationToken object here
-                // But in Kotlin, we can use coroutine's cancel mechanism
-                invokeHandler(rpcId, method, argsList)
+                rpcSemaphore.withPermit {
+                    // Add cancellation token
+                    val argsList = args.toMutableList()
+                    // Note: should add a CancellationToken object here
+                    // But in Kotlin, we can use coroutine's cancel mechanism
+                    invokeHandler(rpcId, method, argsList)
+                }
             }
-
             cancel = { job.cancel() }
         } else {
             // Cannot be cancelled
             promise = coroutineScope.async {
-                invokeHandler(rpcId, method, args)
+                rpcSemaphore.withPermit {
+                    invokeHandler(rpcId, method, args)
+                }
             }
             cancel = noop
         }

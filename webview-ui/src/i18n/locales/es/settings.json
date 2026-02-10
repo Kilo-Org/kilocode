@@ -1,4 +1,5 @@
 {
+	"back": "Volver a la vista de tareas",
 	"common": {
 		"save": "Guardar",
 		"done": "Hecho",
@@ -7,6 +8,10 @@
 		"select": "Seleccionar",
 		"add": "Añadir encabezado",
 		"remove": "Eliminar"
+	},
+	"search": {
+		"placeholder": "Buscar configuración...",
+		"noResults": "No se encontró ninguna configuración"
 	},
 	"header": {
 		"title": "Configuración",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Acerca de Kilo Code",
-		"autoPurge": "Auto-limpieza"
+		"autoPurge": "Auto-limpieza",
+		"agentBehaviour": "Comportamiento del agente",
+		"ghost": "Autocompletado"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "¿Quieres consejos o simplemente pasar el rato con otros usuarios de Kilo Code? Únete a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contacto y Comunidad",
-		"manageSettings": "Gestionar Configuración"
+		"manageSettings": "Gestionar Configuración",
+		"debugMode": {
+			"label": "Activar modo de depuración",
+			"description": "Activa el modo de depuración para mostrar botones adicionales en el encabezado de la tarea que permitan ver el historial de conversación de la API y los mensajes de la UI como JSON formateado en archivos temporales."
+		}
 	},
 	"slashCommands": {
 		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>"
@@ -99,6 +110,7 @@
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
 		"openaiCompatibleProvider": "Compatible con OpenAI",
+		"openaiCompatibleResponsesProvider": "Compatible con OpenAI (Responses)",
 		"openAiKeyLabel": "Clave API de OpenAI",
 		"openAiKeyPlaceholder": "Introduce tu clave API de OpenAI",
 		"openAiCompatibleBaseUrlLabel": "URL base",
@@ -214,11 +226,6 @@
 			"label": "Navegador",
 			"description": "Realizar acciones del navegador automáticamente sin requerir aprobación. Nota: Solo se aplica cuando el modelo admite el uso del ordenador"
 		},
-		"retry": {
-			"label": "Reintentar",
-			"description": "Reintentar automáticamente solicitudes de API fallidas cuando el servidor devuelve una respuesta de error",
-			"delayLabel": "Retraso antes de reintentar la solicitud"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Habilitar la aprobación automática de herramientas MCP individuales en la vista de Servidores MCP (requiere tanto esta configuración como la casilla \"Permitir siempre\" de la herramienta)"
@@ -277,6 +284,7 @@
 		"makeActiveProfile": "Hacer perfil activo",
 		"makeActiveTooltip": "Activa este perfil para usarlo en solicitudes de API",
 		"apiProvider": "Proveedor de API",
+		"apiProviderDocs": "Documentación del Proveedor",
 		"model": "Modelo",
 		"nameEmpty": "El nombre no puede estar vacío",
 		"nameExists": "Ya existe un perfil con este nombre",
@@ -314,10 +322,40 @@
 		"apiKeyStorageNotice": "Las claves API se almacenan de forma segura en el Almacenamiento Secreto de VSCode",
 		"glamaApiKey": "Clave API de Glama",
 		"getGlamaApiKey": "Obtener clave API de Glama",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Usar URL base personalizada",
 		"useReasoning": "Habilitar razonamiento",
 		"useHostHeader": "Usar encabezado Host personalizado",
-		"useLegacyFormat": "Usar formato API de OpenAI heredado",
 		"customHeaders": "Encabezados personalizados",
 		"headerName": "Nombre del encabezado",
 		"headerValue": "Valor del encabezado",
@@ -333,7 +371,6 @@
 		"getRequestyApiKey": "Obtener clave API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
-		"openRouterTransformsText": "Comprimir prompts y cadenas de mensajes al tamaño del contexto (<a>Transformaciones de OpenRouter</a>)",
 		"anthropicApiKey": "Clave API de Anthropic",
 		"getAnthropicApiKey": "Obtener clave API de Anthropic",
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
@@ -343,6 +380,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Introduce el nombre del despliegue...",
 		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"vertex1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"basetenApiKey": "Clave API de Baseten",
 		"getBasetenApiKey": "Obtener clave API de Baseten",
 		"cerebrasApiKey": "Clave API de Cerebras",
@@ -425,6 +464,14 @@
 		"awsRegion": "Región de AWS",
 		"awsCrossRegion": "Usar inferencia entre regiones",
 		"awsGlobalInference": "Usar inferencia global (selección automática de la región óptima de AWS)",
+		"awsServiceTier": "Nivel de servicio",
+		"awsServiceTierStandard": "Estándar",
+		"awsServiceTierStandardDesc": "Rendimiento y costo equilibrados",
+		"awsServiceTierFlex": "Flexible (50% de descuento)",
+		"awsServiceTierFlexDesc": "Menor costo, mayor latencia para tareas no críticas",
+		"awsServiceTierPriority": "Prioridad (75% de prima)",
+		"awsServiceTierPriorityDesc": "Rendimiento más rápido para aplicaciones críticas",
+		"awsServiceTierNote": "Los niveles de servicio afectan los precios y rendimiento. Flexible ofrece 50% de descuento con mayor latencia, Prioridad ofrece 25% mejor rendimiento con 75% de prima.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usar punto de conexión VPC personalizado",
 			"vpcEndpointUrlPlaceholder": "Ingrese URL del punto de conexión VPC (opcional)",
@@ -563,6 +610,7 @@
 		},
 		"verbosity": {
 			"label": "Verbosidad de la salida",
+			"max": "Max",
 			"high": "Alta",
 			"medium": "Media",
 			"low": "Baja",
@@ -575,21 +623,6 @@
 			"placeholder": "Por defecto: claude",
 			"maxTokensLabel": "Tokens máximos de salida",
 			"maxTokensDescription": "Número máximo de tokens de salida para las respuestas de Claude Code. El valor predeterminado es 8000."
-		},
-		"geminiCli": {
-			"description": "Este proveedor usa autenticación OAuth de la herramienta Gemini CLI y no requiere claves API.",
-			"oauthPath": "Ruta de Credenciales OAuth (opcional)",
-			"oauthPathDescription": "Ruta al archivo de credenciales OAuth. Deja vacío para usar la ubicación predeterminada (~/.gemini/oauth_creds.json).",
-			"instructions": "Si aún no te has autenticado, por favor ejecuta",
-			"instructionsContinued": "en tu terminal primero.",
-			"setupLink": "Instrucciones de Configuración de Gemini CLI",
-			"requirementsTitle": "Requisitos Importantes",
-			"requirement1": "Primero, necesitas instalar la herramienta Gemini CLI",
-			"requirement2": "Luego, ejecuta gemini en tu terminal y asegúrate de iniciar sesión con Google",
-			"requirement3": "Solo funciona con cuentas personales de Google (no cuentas de Google Workspace)",
-			"requirement4": "No usa claves API - la autenticación se maneja vía OAuth",
-			"requirement5": "Requiere que la herramienta Gemini CLI esté instalada y autenticada primero",
-			"freeAccess": "Acceso gratuito vía autenticación OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Ruta de Credenciales OAuth (opcional)",
@@ -797,6 +830,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status máx. archivos",
 			"description": "Número máximo de entradas de archivo para incluir en el contexto de estado de git. Establézcalo en 0 para deshabilitar. La información de la rama y los commits siempre se muestran cuando es > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Activar reglas de subcarpetas",
+			"description": "Descubrir y cargar recursivamente archivos .roo/rules y AGENTS.md desde subdirectorios. Útil para monorepos con reglas por paquete."
 		}
 	},
 	"terminal": {
@@ -986,6 +1023,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Voz a Texto (STT)",
 			"description": "Cuando esté habilitado, Kilo Code puede transcribir tu voz a texto usando el modelo Whisper de OpenAI. Haz clic en el botón del micrófono en el chat para comenzar a grabar. Requiere que FFmpeg esté instalado y un proveedor de API de OpenAI configurado."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Habilitar herramientas personalizadas",
+			"description": "Cuando está habilitado, Kilo puede cargar y usar herramientas TypeScript/JavaScript personalizadas desde el directorio .kilocode/tools de tu proyecto o ~/.kilocode/tools para herramientas globales. Nota: estas herramientas se aprobarán automáticamente.",
+			"toolsHeader": "Herramientas personalizadas disponibles",
+			"noTools": "No hay herramientas personalizadas cargadas. Añade archivos .ts o .js al directorio .kilocode/tools de tu proyecto o ~/.kilocode/tools para herramientas globales.",
+			"refreshButton": "Actualizar",
+			"refreshing": "Actualizando...",
+			"refreshSuccess": "Herramientas actualizadas correctamente",
+			"refreshError": "Error al actualizar las herramientas",
+			"toolParameters": "Parámetros"
 		}
 	},
 	"promptCaching": {
@@ -1025,7 +1073,9 @@
 		"searchPlaceholder": "Buscar",
 		"noMatchFound": "No se encontraron coincidencias",
 		"useCustomModel": "Usar personalizado: {{modelId}}",
-		"simplifiedExplanation": "Puedes ajustar la configuración detallada del modelo más tarde."
+		"simplifiedExplanation": "Puedes ajustar la configuración detallada del modelo más tarde.",
+		"recommendedModels": "Modelos recomendados",
+		"allModels": "Todos los modelos"
 	},
 	"footer": {
 		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirse a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
@@ -1114,6 +1164,10 @@
 		"showTimestamps": {
 			"label": "Mostrar marcas de tiempo",
 			"description": "Mostrar la marca de tiempo para cada mensaje en la vista del chat"
+		},
+		"showDiffStats": {
+			"label": "Mostrar estadísticas de diff",
+			"description": "Mostrar estadísticas de líneas añadidas/eliminadas en el encabezado de la tarea"
 		}
 	},
 	"ghost": {

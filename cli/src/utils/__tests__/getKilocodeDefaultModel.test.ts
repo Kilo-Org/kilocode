@@ -14,10 +14,10 @@ vi.mock("../../services/logs.js", () => ({
 
 // Mock fetch globally
 const mockFetch = vi.fn()
-global.fetch = mockFetch as typeof fetch
 
 describe("getKilocodeDefaultModel", () => {
 	beforeEach(() => {
+		vi.spyOn(globalThis, "fetch").mockImplementation((...args: unknown[]) => mockFetch(...(args as never[])))
 		vi.clearAllMocks()
 	})
 

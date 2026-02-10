@@ -9,10 +9,10 @@ import {
 	moonshotModels,
 	// kilocode_change start
 	// geminiModels,
-	geminiCliModels,
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
+	openAiCodexModels,
 	qwenCodeModels,
 	vertexModels,
 	xaiModels,
@@ -37,10 +37,10 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	moonshot: moonshotModels,
 	// kilocode_change start
 	// gemini: geminiModels,
-	"gemini-cli": geminiCliModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
+	"openai-codex": openAiCodexModels,
 	"qwen-code": qwenCodeModels,
 	vertex: vertexModels,
 	xai: xaiModels,
@@ -56,53 +56,52 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 }
 
 export const PROVIDERS = [
-	{ value: "openrouter", label: "OpenRouter" },
-	{ value: "deepinfra", label: "DeepInfra" },
-	{ value: "anthropic", label: "Anthropic" },
-	{ value: "claude-code", label: "Claude Code" },
-	{ value: "cerebras", label: "Cerebras" },
-	{ value: "gemini", label: "Google Gemini" },
-	{ value: "doubao", label: "Doubao" },
+	{ value: "openrouter", label: "OpenRouter", proxy: false },
+	{ value: "deepinfra", label: "DeepInfra", proxy: false },
+	{ value: "anthropic", label: "Anthropic", proxy: false },
+	{ value: "claude-code", label: "Claude Code", proxy: false },
+	{ value: "cerebras", label: "Cerebras", proxy: false },
+	{ value: "gemini", label: "Google Gemini", proxy: false },
+	{ value: "doubao", label: "Doubao", proxy: false },
 	// kilocode_change start
-	{ value: "inception", label: "Inception" },
-	{ value: "gemini-cli", label: "Gemini CLI" },
-	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
-	{ value: "synthetic", label: "Synthetic" },
-	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
-	{ value: "sap-ai-core", label: "SAP AI Core" },
+	{ value: "inception", label: "Inception", proxy: false },
+	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback", proxy: false },
+	{ value: "synthetic", label: "Synthetic", proxy: false },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints", proxy: false },
+	{ value: "sap-ai-core", label: "SAP AI Core", proxy: false },
 	// kilocode_change end
-	{ value: "deepseek", label: "DeepSeek" },
-	{ value: "moonshot", label: "Moonshot" },
-	{ value: "openai-native", label: "OpenAI" },
-	{ value: "openai", label: "OpenAI Compatible" },
-	{ value: "qwen-code", label: "Qwen Code" },
-	{ value: "vertex", label: "GCP Vertex AI" },
-	{ value: "bedrock", label: "Amazon Bedrock" },
-	{ value: "glama", label: "Glama" }, // kilocode_change
-	{ value: "nano-gpt", label: "Nano-GPT" }, //kilocode_change
-	{ value: "vscode-lm", label: "VS Code LM API" },
-	{ value: "mistral", label: "Mistral" },
-	{ value: "lmstudio", label: "LM Studio" },
-	{ value: "ollama", label: "Ollama" },
-	{ value: "unbound", label: "Unbound" },
-	{ value: "requesty", label: "Requesty" },
-	{ value: "human-relay", label: "Human Relay" },
-	{ value: "xai", label: "xAI (Grok)" },
-	{ value: "groq", label: "Groq" },
-	{ value: "huggingface", label: "Hugging Face" },
-	{ value: "chutes", label: "Chutes AI" },
-	{ value: "litellm", label: "LiteLLM" },
-	{ value: "sambanova", label: "SambaNova" },
-	{ value: "zai", label: "Z.ai" },
-	{ value: "fireworks", label: "Fireworks AI" },
-	{ value: "featherless", label: "Featherless AI" },
-	{ value: "io-intelligence", label: "IO Intelligence" },
-	// kilocode_change start
-	// { value: "roo", label: "Roo Code Cloud" },
-	// kilocode_change end
-	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
-	{ value: "minimax", label: "MiniMax" },
-	{ value: "baseten", label: "Baseten" },
+	{ value: "deepseek", label: "DeepSeek", proxy: false },
+	{ value: "moonshot", label: "Moonshot", proxy: false },
+	{ value: "openai-native", label: "OpenAI", proxy: false },
+	{ value: "openai-codex", label: "OpenAI - ChatGPT Plus/Pro", proxy: false },
+	{ value: "openai", label: "OpenAI Compatible", proxy: true },
+	{ value: "openai-responses", label: "OpenAI Compatible (Responses)", proxy: true }, // kilocode_change
+	{ value: "qwen-code", label: "Qwen Code", proxy: false },
+	{ value: "vertex", label: "GCP Vertex AI", proxy: false },
+	{ value: "bedrock", label: "Amazon Bedrock", proxy: false },
+	{ value: "glama", label: "Glama", proxy: false }, // kilocode_change
+	{ value: "nano-gpt", label: "Nano-GPT", proxy: false }, //kilocode_change
+	{ value: "vscode-lm", label: "VS Code LM API", proxy: false },
+	{ value: "mistral", label: "Mistral", proxy: false },
+	{ value: "lmstudio", label: "LM Studio", proxy: true },
+	{ value: "ollama", label: "Ollama", proxy: true },
+	{ value: "unbound", label: "Unbound", proxy: false },
+	{ value: "requesty", label: "Requesty", proxy: false },
+	{ value: "human-relay", label: "Human Relay", proxy: false },
+	{ value: "xai", label: "xAI (Grok)", proxy: false },
+	{ value: "groq", label: "Groq", proxy: false },
+	{ value: "huggingface", label: "Hugging Face", proxy: false },
+	{ value: "chutes", label: "Chutes AI", proxy: false },
+	{ value: "litellm", label: "LiteLLM", proxy: true },
+	{ value: "sambanova", label: "SambaNova", proxy: false },
+	{ value: "zai", label: "Z.ai", proxy: false },
+	{ value: "fireworks", label: "Fireworks AI", proxy: false },
+	{ value: "featherless", label: "Featherless AI", proxy: false },
+	{ value: "io-intelligence", label: "IO Intelligence", proxy: false },
+	// { value: "roo", label: "Roo Code Router", proxy: false }, // kilocode_change
+	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway", proxy: false },
+	{ value: "minimax", label: "MiniMax", proxy: false },
+	{ value: "baseten", label: "Baseten", proxy: false },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
-PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway", proxy: false }) // kilocode_change

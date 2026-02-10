@@ -15,6 +15,7 @@
 		"noAssistantMessages": "La resposta del model ha acabat de forma inesperada (cap missatge de l'assistent). Això pot ser un signe de limitació de freqüència.",
 		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}",
 		"maxCompletionTokens": "S'ha arribat al nombre màxim de tokens de compleció.",
+		"contentFilter": "La sol·licitud ha estat bloquejada pel filtre de contingut.",
 		"disableApplyDiff": "Si aquest error continua apareixent, desactiva l'Edició Mitjançant Diferències a la Configuració Avançada.",
 		"disableEditFile": "Si aquest error continua apareixent, desactiva la funció experimental d'Aplicació Ràpida."
 	},
@@ -104,7 +105,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desactivat)",
-				"tokenError": "S'ha d'establir un token vàlid per utilitzar Autocomplete",
+				"noCredits": "**No tens crèdits al teu compte**\n\nEl teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**No s'ha configurat cap model d'autocompletat**\n\nPer habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles: {{providers}}.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Cost total de la sessió:",
 				"provider": "Proveïdor:",
 				"model": "Model:",
@@ -176,7 +178,6 @@
 	"agentManager": {
 		"errors": {
 			"cliOutdated": "La teva versió de Kilocode CLI està desactualitzada i no és compatible amb el Gestor d'Agents. Si us plau, actualitza a la versió més recent.",
-			"cliNotFound": "No s'ha trobat Kilocode CLI. Si us plau, instal·la'l per utilitzar el Gestor d'Agents.",
 			"cliMisconfigured": "Kilocode CLI no està configurat. Executa 'kilocode auth' per iniciar sessió o 'kilocode config' per configurar.",
 			"sessionFailed": "Error en iniciar la sessió de l'agent",
 			"sessionFailedWithMessage": "Error en iniciar la sessió de l'agent: {{message}}"
@@ -197,5 +198,15 @@
 			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "La vostra clau de l'API d'OpenAI no és vàlida o no té accés a l'API en temps real. Si us plau, comproveu la vostra clau de l'API i torneu-ho a provar.",
+			"unknown": "Ha fallat la connexió. Comproveu la configuració i torneu-ho a provar."
+		}
+	},
+	"configDiscovery": {
+		"removed": "Kilo Codi: Eliminat {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Codi Kilo: Afegit {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

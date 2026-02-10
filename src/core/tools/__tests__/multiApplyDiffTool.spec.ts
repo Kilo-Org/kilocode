@@ -1,4 +1,5 @@
 import { applyDiffTool } from "../MultiApplyDiffTool"
+import { applyDiffTool as applyDiffToolClass } from "../ApplyDiffTool"
 import { EXPERIMENT_IDS } from "../../../shared/experiments"
 import * as fs from "fs/promises"
 import * as fileUtils from "../../../utils/fs"
@@ -9,8 +10,12 @@ vi.mock("fs/promises")
 vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
 vi.mock("../../../utils/xml")
-vi.mock("../applyDiffTool", () => ({
-	applyDiffToolLegacy: vi.fn(),
+
+// Mock the ApplyDiffTool class-based tool that MultiApplyDiffTool delegates to for native protocol
+vi.mock("../ApplyDiffTool", () => ({
+	applyDiffTool: {
+		handle: vi.fn().mockResolvedValue(undefined),
+	},
 }))
 
 // Mock TelemetryService
@@ -116,8 +121,8 @@ describe("multiApplyDiffTool", () => {
 		;(pathUtils.getReadablePath as any).mockImplementation((cwd: string, path: string) => path)
 	})
 
-	describe("Early content validation", () => {
-		it("should filter out non-string content at parse time", async () => {
+	describe("Native protocol delegation", () => {
+		it("should delegate to applyDiffToolClass.handle for XML args format", async () => {
 			mockBlock = {
 				params: {
 					args: `<file>
@@ -130,22 +135,6 @@ describe("multiApplyDiffTool", () => {
 				partial: false,
 			}
 
-			// Mock parseXml to return mixed content types
-			const parseXml = await import("../../../utils/xml")
-			;(parseXml.parseXml as any).mockReturnValue({
-				file: {
-					path: "test.ts",
-					diff: [
-						{ content: "<<<<<<< SEARCH\ntest\n=======\nreplaced\n>>>>>>> REPLACE" },
-						{ content: null },
-						{ content: undefined },
-						{ content: 42 },
-						{ content: "" }, // Empty string should also be filtered
-						{ content: "<<<<<<< SEARCH\nmore\n=======\nchanges\n>>>>>>> REPLACE" },
-					],
-				},
-			})
-
 			await applyDiffTool(
 				mockCline,
 				mockBlock,
@@ -155,23 +144,26 @@ describe("multiApplyDiffTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should complete without error and only process valid string content
-			expect(mockPushToolResult).toHaveBeenCalled()
-			expect(mockHandleError).not.toHaveBeenCalled()
-
-			// Verify that only valid diffs were processed
-			const resultCall = mockPushToolResult.mock.calls[0][0]
-			// Should not include the single block notice since we have 2 valid blocks
-			expect(resultCall).not.toContain("Making multiple related changes")
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
+			expect(applyDiffToolClass.handle).toHaveBeenCalledWith(
+				mockCline,
+				mockBlock,
+				expect.objectContaining({
+					askApproval: mockAskApproval,
+					handleError: mockHandleError,
+					pushToolResult: mockPushToolResult,
+					removeClosingTag: mockRemoveClosingTag,
+					toolProtocol: "native",
+				}),
+			)
 		})
-	})
 
-	describe("SEARCH block counting with non-string content", () => {
-		it("should handle diffItem.content being undefined", async () => {
+		it("should delegate to applyDiffToolClass.handle for legacy path/diff params", async () => {
 			mockBlock = {
 				params: {
 					path: "test.ts",
-					diff: undefined, // This will result in undefined content
+					diff: "<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE",
 				},
 				partial: false,
 			}
@@ -185,12 +177,44 @@ describe("multiApplyDiffTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should complete without throwing an error
-			expect(mockPushToolResult).toHaveBeenCalled()
-			expect(mockHandleError).not.toHaveBeenCalled()
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
+			expect(applyDiffToolClass.handle).toHaveBeenCalledWith(
+				mockCline,
+				mockBlock,
+				expect.objectContaining({
+					askApproval: mockAskApproval,
+					handleError: mockHandleError,
+					pushToolResult: mockPushToolResult,
+					removeClosingTag: mockRemoveClosingTag,
+					toolProtocol: "native",
+				}),
+			)
 		})
 
-		it("should handle diffItem.content being null", async () => {
+		it("should handle undefined diff content by delegating to class-based tool", async () => {
+			mockBlock = {
+				params: {
+					path: "test.ts",
+					diff: undefined,
+				},
+				partial: false,
+			}
+
+			await applyDiffTool(
+				mockCline,
+				mockBlock,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Should delegate to the class-based tool (which will handle the error)
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
+		})
+
+		it("should handle null diff content by delegating to class-based tool", async () => {
 			mockBlock = {
 				params: {
 					args: `<file>
@@ -203,17 +227,6 @@ describe("multiApplyDiffTool", () => {
 				partial: false,
 			}
 
-			// Mock parseXml to return null content
-			const parseXml = await import("../../../utils/xml")
-			;(parseXml.parseXml as any).mockReturnValue({
-				file: {
-					path: "test.ts",
-					diff: {
-						content: null,
-					},
-				},
-			})
-
 			await applyDiffTool(
 				mockCline,
 				mockBlock,
@@ -223,50 +236,11 @@ describe("multiApplyDiffTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should complete without throwing an error
-			expect(mockPushToolResult).toHaveBeenCalled()
-			expect(mockHandleError).not.toHaveBeenCalled()
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
 		})
 
-		it("should handle diffItem.content being a number", async () => {
-			mockBlock = {
-				params: {
-					args: `<file>
-						<path>test.ts</path>
-						<diff>
-							<content>123</content>
-						</diff>
-					</file>`,
-				},
-				partial: false,
-			}
-
-			// Mock parseXml to return number content
-			const parseXml = await import("../../../utils/xml")
-			;(parseXml.parseXml as any).mockReturnValue({
-				file: {
-					path: "test.ts",
-					diff: {
-						content: 123, // Number instead of string
-					},
-				},
-			})
-
-			await applyDiffTool(
-				mockCline,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
-
-			// Should complete without throwing an error
-			expect(mockPushToolResult).toHaveBeenCalled()
-			expect(mockHandleError).not.toHaveBeenCalled()
-		})
-
-		it("should correctly count SEARCH blocks when content is a valid string", async () => {
+		it("should delegate multiple SEARCH blocks to class-based tool", async () => {
 			const diffContent = `<<<<<<< SEARCH
 old content
 =======
@@ -296,14 +270,11 @@ another new content
 				mockRemoveClosingTag,
 			)
 
-			// Should complete successfully
-			expect(mockPushToolResult).toHaveBeenCalled()
-			const resultCall = mockPushToolResult.mock.calls[0][0]
-			// Should not include the single block notice since we have 2 blocks
-			expect(resultCall).not.toContain("Making multiple related changes")
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
 		})
 
-		it("should show single block notice when only one SEARCH block exists", async () => {
+		it("should delegate single SEARCH block to class-based tool", async () => {
 			const diffContent = `<<<<<<< SEARCH
 old content
 =======
@@ -327,16 +298,13 @@ new content
 				mockRemoveClosingTag,
 			)
 
-			// Should complete successfully
-			expect(mockPushToolResult).toHaveBeenCalled()
-			const resultCall = mockPushToolResult.mock.calls[0][0]
-			// Should include the single block notice
-			expect(resultCall).toContain("Making multiple related changes")
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
 		})
 	})
 
 	describe("Edge cases for diff content", () => {
-		it("should handle empty diff array", async () => {
+		it("should handle empty diff by delegating to class-based tool", async () => {
 			mockBlock = {
 				params: {
 					args: `<file>
@@ -347,14 +315,6 @@ new content
 				partial: false,
 			}
 
-			const parseXml = await import("../../../utils/xml")
-			;(parseXml.parseXml as any).mockReturnValue({
-				file: {
-					path: "test.ts",
-					diff: [],
-				},
-			})
-
 			await applyDiffTool(
 				mockCline,
 				mockBlock,
@@ -364,12 +324,12 @@ new content
 				mockRemoveClosingTag,
 			)
 
-			// Should complete without error
-			expect(mockPushToolResult).toHaveBeenCalled()
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
 			expect(mockHandleError).not.toHaveBeenCalled()
 		})
 
-		it("should handle mixed content types in diff array", async () => {
+		it("should handle mixed content types by delegating to class-based tool", async () => {
 			mockBlock = {
 				params: {
 					args: `<file>
@@ -382,20 +342,6 @@ new content
 				partial: false,
 			}
 
-			const parseXml = await import("../../../utils/xml")
-			;(parseXml.parseXml as any).mockReturnValue({
-				file: {
-					path: "test.ts",
-					diff: [
-						{ content: "<<<<<<< SEARCH\ntest\n=======\nreplaced\n>>>>>>> REPLACE" },
-						{ content: null },
-						{ content: undefined },
-						{ content: 42 },
-						{ content: "<<<<<<< SEARCH\nmore\n=======\nchanges\n>>>>>>> REPLACE" },
-					],
-				},
-			})
-
 			await applyDiffTool(
 				mockCline,
 				mockBlock,
@@ -405,8 +351,8 @@ new content
 				mockRemoveClosingTag,
 			)
 
-			// Should complete without error and count only valid string SEARCH blocks
-			expect(mockPushToolResult).toHaveBeenCalled()
+			// Should delegate to the class-based tool
+			expect(applyDiffToolClass.handle).toHaveBeenCalled()
 			expect(mockHandleError).not.toHaveBeenCalled()
 		})
 	})

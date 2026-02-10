@@ -22,7 +22,6 @@ export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
 
-	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
 	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
 
 	AUTOCOMPLETE_SUGGESTION_REQUESTED = "Autocomplete Suggestion Requested",
@@ -32,10 +31,12 @@ export enum TelemetryEventName {
 	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
 	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
 	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+	AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN = "Autocomplete Unique Suggestion Shown",
 
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
+	BLOCKED_BY_CONTENT_FILTER_ERROR = "Blocked By Content Filter Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	MEMORY_WARNING_SHOWN = "Memory Warning Shown",
@@ -220,7 +221,6 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 		type: z.enum([
 			// kilocode_change start
 			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED, // kilocode_change
@@ -229,6 +229,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
@@ -420,17 +421,76 @@ export function getErrorStatusCode(error: unknown): number | undefined {
 }
 
 /**
- * Extracts the most descriptive error message from an OpenAI SDK error.
+ * Extracts a message from a JSON payload embedded in an error string.
+ * Handles cases like "503 {"error":{"message":"actual error message"}}"
+ * or just '{"error":{"message":"actual error message"}}'
+ *
+ * @param message - The message string that may contain JSON
+ * @returns The extracted message from the JSON payload, or undefined if not found
+ */
+export function extractMessageFromJsonPayload(message: string): string | undefined {
+	// Find the first occurrence of '{' which may indicate JSON content
+	const jsonStartIndex = message.indexOf("{")
+	if (jsonStartIndex === -1) {
+		return undefined
+	}
+
+	const potentialJson = message.slice(jsonStartIndex)
+
+	try {
+		const parsed = JSON.parse(potentialJson)
+
+		// Handle structure: {"error":{"message":"..."}} or {"error":{"code":"","message":"..."}}
+		if (parsed?.error?.message && typeof parsed.error.message === "string") {
+			return parsed.error.message
+		}
+
+		// Handle structure: {"message":"..."}
+		if (parsed?.message && typeof parsed.message === "string") {
+			return parsed.message
+		}
+	} catch {
+		// JSON parsing failed - not valid JSON
+	}
+
+	return undefined
+}
+
+/**
+ * Extracts the most descriptive error message from an error object.
  * Prioritizes nested metadata (upstream provider errors) over the standard message.
+ * Also handles JSON payloads embedded in error messages.
  * @param error - The error to extract message from
- * @returns The best available error message, or undefined if not an OpenAI SDK error
+ * @returns The best available error message, or undefined if not extractable
  */
 export function getErrorMessage(error: unknown): string | undefined {
+	let message: string | undefined
+
 	if (isOpenAISdkError(error)) {
 		// Prioritize nested metadata which may contain upstream provider details
-		return error.error?.metadata?.raw || error.error?.message || error.message
+		message = error.error?.metadata?.raw || error.error?.message || error.message
+	} else if (error instanceof Error) {
+		// Handle standard Error objects (including ApiProviderError)
+		message = error.message
+	} else if (typeof error === "object" && error !== null && "message" in error) {
+		// Handle plain objects with a message property
+		const msgValue = (error as { message: unknown }).message
+		if (typeof msgValue === "string") {
+			message = msgValue
+		}
 	}
-	return undefined
+
+	if (!message) {
+		return undefined
+	}
+
+	// If the message contains JSON, try to extract the message from it
+	const extractedMessage = extractMessageFromJsonPayload(message)
+	if (extractedMessage) {
+		return extractedMessage
+	}
+
+	return message
 }
 
 /**
@@ -499,5 +559,59 @@ export function extractApiProviderErrorProperties(error: ApiProviderError): Reco
 		modelId: error.modelId,
 		operation: error.operation,
 		...(error.errorCode !== undefined && { errorCode: error.errorCode }),
+	}
+}
+
+/**
+ * Reason why the consecutive mistake limit was reached.
+ */
+export type ConsecutiveMistakeReason = "no_tools_used" | "tool_repetition" | "unknown"
+
+/**
+ * Error class for "Roo is having trouble" consecutive mistake scenarios.
+ * Triggered when the task reaches the configured consecutive mistake limit.
+ * Used for structured exception tracking via PostHog.
+ */
+export class ConsecutiveMistakeError extends Error {
+	constructor(
+		message: string,
+		public readonly taskId: string,
+		public readonly consecutiveMistakeCount: number,
+		public readonly consecutiveMistakeLimit: number,
+		public readonly reason: ConsecutiveMistakeReason = "unknown",
+		public readonly provider?: string,
+		public readonly modelId?: string,
+	) {
+		super(message)
+		this.name = "ConsecutiveMistakeError"
+	}
+}
+
+/**
+ * Type guard to check if an error is a ConsecutiveMistakeError.
+ * Used by telemetry to automatically extract structured properties.
+ */
+export function isConsecutiveMistakeError(error: unknown): error is ConsecutiveMistakeError {
+	return (
+		error instanceof Error &&
+		error.name === "ConsecutiveMistakeError" &&
+		"taskId" in error &&
+		"consecutiveMistakeCount" in error &&
+		"consecutiveMistakeLimit" in error
+	)
+}
+
+/**
+ * Extracts properties from a ConsecutiveMistakeError for telemetry.
+ * Returns the structured properties that can be merged with additionalProperties.
+ */
+export function extractConsecutiveMistakeErrorProperties(error: ConsecutiveMistakeError): Record<string, unknown> {
+	return {
+		taskId: error.taskId,
+		consecutiveMistakeCount: error.consecutiveMistakeCount,
+		consecutiveMistakeLimit: error.consecutiveMistakeLimit,
+		reason: error.reason,
+		...(error.provider !== undefined && { provider: error.provider }),
+		...(error.modelId !== undefined && { modelId: error.modelId }),
 	}
 }

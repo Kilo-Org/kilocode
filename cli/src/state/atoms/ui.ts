@@ -17,6 +17,7 @@ import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 import { commitCompletionTimeout } from "../../parallel/parallel.js"
+import { logs } from "../../services/logs.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -134,6 +135,65 @@ export const isStreamingAtom = atom<boolean>((get) => {
 	return false
 })
 
+/**
+ * Atom to track when a cancellation is in progress
+ * This provides immediate feedback when user presses ESC to cancel
+ * The extension is the source of truth for streaming state, but this atom
+ * allows the CLI to show "Cancelling..." immediately without waiting for
+ * the extension to process the cancellation request
+ */
+export const isCancellingAtom = atom<boolean>(false)
+
+/**
+ * Derived atom to check if the task is actively processing but not streaming.
+ * This fills the gap when isStreamingAtom returns false but the task is still running.
+ *
+ * Returns true when:
+ * - The last message is `checkpoint_saved` (task just saved a checkpoint, will continue)
+ * - OR the last message is `api_req_started` with a cost (API call finished, task will continue)
+ *
+ * This is more precise than checking for "any non-completion message" because it only
+ * triggers for specific messages that indicate the task is actively processing.
+ */
+export const isProcessingAtom = atom<boolean>((get) => {
+	const messages = get(chatMessagesAtom)
+
+	if (messages.length === 0) {
+		return false
+	}
+
+	const lastMessage = messages[messages.length - 1]
+	if (!lastMessage) {
+		return false
+	}
+
+	// If streaming, let isStreamingAtom handle it
+	const isStreaming = get(isStreamingAtom)
+	if (isStreaming) {
+		return false
+	}
+
+	// After checkpoint_saved, the task is still running
+	if (lastMessage.say === "checkpoint_saved") {
+		return true
+	}
+
+	// After api_req_started with cost (finished API call), the task is processing the response
+	if (lastMessage.say === "api_req_started" && lastMessage.text) {
+		try {
+			const apiReqInfo = JSON.parse(lastMessage.text)
+			// If there's a cost, the API call has finished and the task is processing
+			if (apiReqInfo.cost !== undefined && apiReqInfo.cost > 0) {
+				return true
+			}
+		} catch (error) {
+			logs.debug("Failed to parse api_req_started message in isProcessingAtom", "UIAtoms", { error })
+		}
+	}
+
+	return false
+})
+
 // ============================================================================
 // Input Mode System
 // ============================================================================
@@ -230,6 +290,23 @@ export const followupSuggestionsAtom = atom<FollowupSuggestion[]>([])
 export const showFollowupSuggestionsAtom = atom<boolean>(false)
 
 /**
+ * Derived atom that hides followup suggestions when slash-command autocomplete or file-mention autocomplete is active.
+ * This prevents the followup menu (and its selection index) from intercepting "/" commands.
+ */
+export const followupSuggestionsMenuVisibleAtom = atom<boolean>((get) => {
+	if (!get(showFollowupSuggestionsAtom)) return false
+	if (get(followupSuggestionsAtom).length === 0) return false
+
+	// If the user starts a "/" command, show command autocomplete instead of followups.
+	if (get(showAutocompleteAtom)) return false
+
+	// If file-mention autocomplete is active, it should take precedence as well.
+	if (get(fileMentionSuggestionsAtom).length > 0) return false
+
+	return true
+})
+
+/**
  * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
  * This atom is kept for backward compatibility but will be removed in a future version.
  * Note: The new selectedIndexAtom starts at 0, but followup mode logic handles -1 for "no selection"
@@ -301,6 +378,7 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 		"use_mcp_server",
 		"payment_required_prompt",
 		"checkpoint_restore",
+		"api_req_failed", // Rate limit/quota exhaustion errors - enables auto-retry
 	]
 
 	const lastMessage = messages[messages.length - 1]
@@ -453,6 +531,56 @@ export const clearFileMentionAtom = atom(null, (get, set) => {
 	set(fileMentionSuggestionsAtom, [])
 	set(fileMentionContextAtom, null)
 })
+
+/**
+ * Action atom to update all suggestion state atomically
+ * This ensures that selectedIndex is set after all suggestions are updated
+ */
+export const updateAllSuggestionsAtom = atom(
+	null,
+	(
+		get,
+		set,
+		params: {
+			commandSuggestions?: CommandSuggestion[]
+			argumentSuggestions?: ArgumentSuggestion[]
+			fileMentionSuggestions?: FileMentionSuggestion[]
+			fileMentionContext?: FileMentionContext | null
+		},
+	) => {
+		const { commandSuggestions, argumentSuggestions, fileMentionSuggestions, fileMentionContext } = params
+
+		// Set all suggestion arrays first
+		if (commandSuggestions !== undefined) {
+			set(suggestionsAtom, commandSuggestions)
+		}
+		if (argumentSuggestions !== undefined) {
+			set(argumentSuggestionsAtom, argumentSuggestions)
+		}
+		if (fileMentionSuggestions !== undefined) {
+			set(fileMentionSuggestionsAtom, fileMentionSuggestions)
+		}
+		if (fileMentionContext !== undefined) {
+			set(fileMentionContextAtom, fileMentionContext)
+		}
+
+		// Determine which suggestions are active and set selectedIndex accordingly
+		let activeSuggestions: (CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion)[] = []
+		if (fileMentionSuggestions && fileMentionSuggestions.length > 0) {
+			activeSuggestions = fileMentionSuggestions
+		} else if (commandSuggestions && commandSuggestions.length > 0) {
+			activeSuggestions = commandSuggestions
+		} else if (argumentSuggestions && argumentSuggestions.length > 0) {
+			activeSuggestions = argumentSuggestions
+		}
+
+		if (activeSuggestions.length > 0) {
+			set(selectedIndexAtom, 0)
+		} else {
+			set(selectedIndexAtom, -1)
+		}
+	},
+)
 
 /**
  * Action atom to select the next suggestion

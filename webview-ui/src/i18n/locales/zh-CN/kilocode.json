@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "你想如何开始？",
+		"freeModels": {
+			"title": "免费模型",
+			"description": "立即开始编程"
+		},
+		"premiumModels": {
+			"title": "高级模型",
+			"description": "注册。新用户可获得 5 美元额度"
+		},
+		"byok": {
+			"title": "使用自己的密钥",
+			"description": "高级选项。使用你自己的账户或订阅"
+		}
+	},
 	"welcome": {
 		"greeting": "欢迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
-		"introText2": "它适用于最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多个其他模型。",
+		"introText2": "它适用于最新的 AI 模型，如 Claude Opus 4.5、Gemini 3 Pro、GPT-5.2 以及 450 多个其他模型。",
 		"introText3": "创建免费账户，首次充值即可获得 20 美元奖励额度。",
 		"ctaButton": "开始使用",
 		"manualModeButton": "使用你自己的 API 密钥",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
 		"lowBalance": "你的 Kilo Code 余额不足",
-		"newOrganization": "在工作中使用 Kilo？"
+		"switchToFreeModel": "切换到免费模型"
 	},
 	"pagination": {
 		"previous": "上一页",
@@ -26,6 +41,11 @@
 		"continueWith": "继续使用 {{model}}",
 		"continue": "继续"
 	},
+	"unauthorizedError": {
+		"title": "你需要登录才能使用 {{modelId}} 模型",
+		"message": "登录或创建账号即可访问 500+ 模型,按成本价使用额度,或使用自己的 API 密钥。",
+		"loginButton": "登录"
+	},
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
@@ -38,7 +58,9 @@
 	},
 	"settings": {
 		"sections": {
-			"mcp": "MCP 服务器"
+			"mcp": "MCP 服务器",
+			"agentBehaviour": "代理行为",
+			"skills": "技能"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -58,7 +80,7 @@
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
 			"logout": "退出 Kilo Code",
-			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
+			"loginForPremiumModels": "登录以访问高级模型和功能",
 			"providerRouting": {
 				"title": "提供商路由",
 				"managedByOrganization": "管理组织级提供商路由",
@@ -149,7 +171,14 @@
 	},
 	"docs": "文档",
 	"rules": {
-		"tooltip": "管理 Kilo Code 规则和工作流",
+		"tooltip": "管理智能体行为（{{types}}）",
+		"agentBehaviourTypes": {
+			"rules": "规则",
+			"workflows": "工作流",
+			"mcps": "MCP",
+			"modes": "模式",
+			"skills": "技能"
+		},
 		"ariaLabel": "Kilo Code 规则",
 		"tabs": {
 			"rules": "规则",
@@ -209,6 +238,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "新用户？",
+		"tryOneOfThese": "试试这些想法开始使用：",
 		"suggestionText": "<suggestionButton>点击这里</suggestionButton>获取有趣的想法，然后点击 <sendIcon /> 看我施展魔法！",
 		"ideas": {
 			"idea1": "创建一个旋转发光的 3D 球体，能够响应鼠标移动。让应用在浏览器中运行。",
@@ -223,7 +253,8 @@
 	"ghost": {
 		"title": "自动补全",
 		"settings": {
-			"triggers": "触发器",
+			"codeEditorSuggestions": "代码编辑器建议",
+			"chatSuggestions": "聊天建议",
 			"keybindingDescription": "自动补全功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
 			"enableAutoTrigger": {
 				"label": "启用自动补全",
@@ -233,16 +264,11 @@
 				"label": "自动触发延迟",
 				"description": "你停止输入后 Kilo Code 触发自动补全前的秒数延迟。延迟越短建议获取速度越快，但可能更消耗资源。"
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速任务 ({{keybinding}})",
-				"description": "只需要快速更改？选择一些代码（或不选！）然后按 Cmd+I。用简单的中文描述你的目标（\"用这些 props 创建 React 组件\"，\"给这个函数添加错误处理\"），在编辑器中直接获得多个即用建议。<DocsLink>查看快捷键</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手动自动补全（{{keybinding}}）",
 				"description": "需要快速修复、补全或重构？Kilo 将使用周围上下文提供即时改进，保持你的工作流。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"keybindingNotFound": "未找到",
-			"noModelConfigured": "未找到合适的自动补全模型。请在 API 设置中配置提供商。",
 			"configureAutocompleteProfile": "前往配置文件并配置自动补全类型的配置文件即可使用任意模型。",
 			"model": "模型",
 			"provider": "提供商",
@@ -263,6 +289,16 @@
 					"30min": "30 分钟",
 					"1hour": "1 小时"
 				}
+			},
+			"noModelConfigured": {
+				"title": "未配置自动补全模型",
+				"description": "要启用自动补全，请添加一个使用以下支持的提供商的配置文件：",
+				"learnMore": "了解更多关于自动补全设置 →"
+			},
+			"noCredits": {
+				"title": "您的账户没有额度",
+				"description": "您的 Kilo Code 账户没有额度。要使用自动补全，请为您的账户充值。",
+				"buyCredits": "购买额度 →"
 			}
 		}
 	},
@@ -302,6 +338,9 @@
 		},
 		"modes": {
 			"description": "这些模式来自社区。点击<1>此处</1>编辑您自己的自定义模式。"
+		},
+		"skills": {
+			"description": "浏览和发现来自社区的技能。技能为特定任务提供专业指导。"
 		}
 	},
 	"modes": {
@@ -329,8 +368,34 @@
 	"speechToText": {
 		"startRecording": "开始语音输入",
 		"stopRecording": "停止语音输入",
-		"unavailableOpenAiKeyMissing": "语音转文字功能不可用。使用语音转录需要有效的OpenAI提供商及其API密钥。",
-		"unavailableFfmpegNotInstalled": "语音转文字功能不可用。请安装FFmpeg以使用语音转录功能。",
-		"unavailableBoth": "语音转文字功能不可用。它需要有效的OpenAI提供商，且必须安装FFmpeg。"
+		"setupPopover": {
+			"title": "语音转文字",
+			"openAiReason": "您需要一个有效的 OpenAI 提供商和 API 密钥才能使用语音转录功能。",
+			"description": "语音转文字功能不可用。语音转文字需要同时配置 FFmpeg 和有效的 OpenAI 提供商。<moreInfoLink>点击此处了解更多信息</moreInfoLink>。",
+			"ffmpegReason": "您需要安装 FFmpeg。<ffmpegLink>点击这里</ffmpegLink>让 Kilo 帮助您安装 FFmpeg。",
+			"ffmpegMessage": "帮我安装 FFmpeg"
+		},
+		"misconfiguredState": "因配置问题而不可用",
+		"errorState": "因错误而不可用",
+		"microphone": {
+			"label": "麦克风",
+			"defaultOption": "系统默认",
+			"description": "选择用于语音转文字的麦克风设备",
+			"loading": "正在加载麦克风设备...",
+			"noDevices": "未找到麦克风设备",
+			"refresh": "刷新"
+		}
+	},
+	"skills": {
+		"description": "技能为特定任务提供专业指导。当与你的请求相关时，它们会自动应用。",
+		"noSkills": "未安装技能",
+		"projectSkills": "项目技能",
+		"globalSkills": "全局技能",
+		"deleteDialog": {
+			"title": "删除技能",
+			"description": "确定要删除技能 \"{{skillName}}\" 吗？此操作不可逆。",
+			"cancel": "取消",
+			"delete": "删除"
+		}
 	}
 }

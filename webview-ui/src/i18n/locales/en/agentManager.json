@@ -14,7 +14,10 @@
 		"shareSession": "Share session",
 		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
 		"shareConfirmYes": "Yes",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"options": "Options",
+		"configureSetupScript": "Worktree Setup Script",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -27,7 +30,6 @@
 		"refreshButtonTitle": "Refresh messages",
 		"starting": "Starting...",
 		"startAriaLabel": "Start agent with provided prompt",
-		"keyboardHint": "Press Enter to start, Shift+Enter for new line",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "Switch base branch",
 		"noBranches": "No branches found",
 		"noMatchingBranches": "No branches match your search",
-		"openTerminal": "Open terminal"
+		"openTerminal": "Open terminal",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading...",
+		"selectMode": "Select mode",
+		"modeTooltip": "Mode: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -70,7 +85,11 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"copyCommand": "Copy command"
+		"copyCommand": "Copy command",
+		"thinking": "Thinking",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Approve",
+		"deny": "Deny"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",
@@ -80,9 +99,12 @@
 		"cancelTitle": "Cancel agent",
 		"finishToBranchTitle": "Finish worktree and prepare branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finish worktree and prepare branch",
+		"createPRTitle": "Create pull request",
 		"sendTitle": "Send message",
 		"resumeTitle": "Resume agent",
-		"hint": "Press Enter to send, Shift+Enter for new line"
+		"hint": "Press Enter to send, Shift+Enter for new line. Paste images with Ctrl/Cmd+V",
+		"addImage": "Add image",
+		"removeImage": "Remove image"
 	},
 	"status": {
 		"running": "running",

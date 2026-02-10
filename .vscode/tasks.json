@@ -34,10 +34,10 @@
 				"--exec",
 				"pnpm install"
 			],
-			"group": "none",
+			"group": "build",
 			"isBackground": true,
 			"presentation": {
-				"group": "none",
+				"group": "watch:core",
 				"reveal": "always"
 			},
 			"problemMatcher": {
@@ -66,7 +66,7 @@
 			},
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},
@@ -89,7 +89,7 @@
 			},
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},
@@ -98,11 +98,11 @@
 			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:tsc",
-			"group": "none",
+			"group": "build",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {
-				"group": "none",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},

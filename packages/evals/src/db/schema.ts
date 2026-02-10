@@ -6,6 +6,12 @@ import type { RooCodeSettings, ToolName, ToolUsage } from "@roo-code/types"
 import type { ExerciseLanguage } from "../exercises/index.js"
 
 /**
+ * ExecutionMethod
+ */
+
+export type ExecutionMethod = "vscode" | "cli"
+
+/**
  * runs
  */
 
@@ -24,6 +30,7 @@ export const runs = pgTable("runs", {
 	jobToken: text(),
 	pid: integer(),
 	socketPath: text("socket_path").notNull(),
+	executionMethod: text("execution_method").default("vscode").notNull().$type<ExecutionMethod>(),
 	concurrency: integer().default(2).notNull(),
 	timeout: integer().default(5).notNull(),
 	passed: integer().default(0).notNull(),

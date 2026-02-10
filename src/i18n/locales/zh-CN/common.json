@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "用于规划、构建和修复代码的开源 AI 编码助手。"
+		"description": "开源 AI 编码代理，可从自然语言生成代码、自动化任务并运行终端命令。具有内联自动补全、浏览器自动化、自动重构以及用于规划、编码和调试的自定义模式。支持 500 多种 AI 模型，包括 Claude (Anthropic)、Gemini、Grok、GPT、Codex 和 GLM。"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -104,18 +104,7 @@
 			"errorOutput": "错误输出：{{output}}",
 			"processExitedWithError": "Claude Code 进程退出，退出码：{{exitCode}}。错误输出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}",
-			"tokenRefreshFailed": "刷新 OAuth Token 失败：{{error}}",
-			"onboardingTimeout": "入门操作在 60 秒后超时。请稍后重试。",
-			"projectDiscoveryFailed": "无法发现项目 ID。请确保已使用 'gemini auth' 进行身份验证。",
-			"rateLimitExceeded": "API 请求频率限制已超出。免费层级限制已达到。",
-			"badRequest": "请求错误：{{details}}",
-			"apiError": "Gemini CLI API 错误：{{error}}",
-			"completionError": "Gemini CLI 补全错误：{{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"message": {
 			"no_active_task_to_delete": "没有可删除消息的活跃任务",
@@ -151,13 +140,32 @@
 			"authenticationRequired": "Roo 提供商需要云认证。请登录 Roo Code Cloud。"
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API 密钥包含无效字符。"
+			"invalidKeyInvalidChars": "API 密钥包含无效字符.",
+			"apiRequestFailed": "API 请求失败 ({{status}})"
 		},
 		"manual_url_empty": "请输入有效的回调 URL",
 		"manual_url_no_query": "无效的回调 URL：缺少查询参数",
 		"manual_url_missing_params": "无效的回调 URL：缺少必需参数（code 和 state）",
 		"manual_url_auth_failed": "手动 URL 身份验证失败",
-		"manual_url_auth_error": "身份验证失败"
+		"manual_url_auth_error": "身份验证失败",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "没有选择终端内容",
@@ -200,7 +208,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "响应被用户中断",
-		"responseInterruptedByApiError": "响应被 API 错误中断"
+		"responseInterruptedByApiError": "响应被 API 错误中断",
+		"streamTerminatedByProvider": "提供方终止了请求"
 	},
 	"storage": {
 		"prompt_custom_path": "输入自定义会话历史存储路径，留空以使用默认位置",
@@ -215,12 +224,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API 密钥",
-			"getGroqApiKey": "获取 Groq API 密钥",
-			"claudeCode": {
-				"pathLabel": "Claude Code 路径",
-				"description": "Claude Code CLI 的可选路径。如果未设置，默认为 'claude'。",
-				"placeholder": "默认: claude"
-			}
+			"getGroqApiKey": "获取 Groq API 密钥"
 		}
 	},
 	"customModes": {

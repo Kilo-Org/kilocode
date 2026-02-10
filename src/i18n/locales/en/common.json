@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Open Source AI coding assistant for planning, building, and fixing code."
+		"description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "Error output: {{output}}",
 			"processExitedWithError": "Claude Code process exited with code {{exitCode}}. Error output: {{output}}",
 			"stoppedWithReason": "Claude Code stopped with reason: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}",
-			"tokenRefreshFailed": "Failed to refresh OAuth token: {{error}}",
-			"onboardingTimeout": "Onboarding operation timed out after 60 seconds. Please try again later.",
-			"projectDiscoveryFailed": "Could not discover project ID. Make sure you're authenticated with 'gemini auth'.",
-			"rateLimitExceeded": "Rate limit exceeded. Free tier limits have been reached.",
-			"badRequest": "Bad request: {{details}}",
-			"apiError": "Gemini CLI API error: {{error}}",
-			"completionError": "Gemini CLI completion error: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}"
@@ -145,8 +134,27 @@
 		"roo": {
 			"authenticationRequired": "Roo provider requires cloud authentication. Please sign in to Roo Code Cloud."
 		},
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		},
 		"api": {
-			"invalidKeyInvalidChars": "API key contains invalid characters."
+			"invalidKeyInvalidChars": "API key contains invalid characters.",
+			"apiRequestFailed": "API request failed ({{status}})"
 		},
 		"manual_url_empty": "Please enter a valid callback URL",
 		"manual_url_no_query": "Invalid callback URL: missing query parameters",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Response interrupted by user",
-		"responseInterruptedByApiError": "Response interrupted by API error"
+		"responseInterruptedByApiError": "Response interrupted by API error",
+		"streamTerminatedByProvider": "Provider ended the request"
 	},
 	"storage": {
 		"prompt_custom_path": "Enter custom conversation history storage path, leave empty to use default location",

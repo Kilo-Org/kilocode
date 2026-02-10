@@ -14,7 +14,10 @@
 		"shareSession": "分享工作階段",
 		"shareConfirmMessage": "是否要公開分享此工作階段的快照？",
 		"shareConfirmYes": "是",
-		"shareConfirmNo": "否"
+		"shareConfirmNo": "否",
+		"options": "選項",
+		"configureSetupScript": "Worktree 設定腳本",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "啟動新代理",
@@ -28,7 +31,6 @@
 		"autoModeWarning": "YOLO 模式 - 工具操作自動批准",
 		"starting": "正在啟動...",
 		"startAriaLabel": "使用提供的提示啟動代理",
-		"keyboardHint": "按 Enter 啟動，Shift+Enter 換行",
 		"runModeLocal": "本機",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "雲端",
@@ -55,7 +57,20 @@
 		"branchPickerTooltip": "切換基礎 Branch",
 		"noBranches": "找不到 Branch",
 		"noMatchingBranches": "沒有符合的 Branch",
-		"openTerminal": "開啟終端機"
+		"openTerminal": "開啟終端機",
+		"selectModel": "選擇模型",
+		"modelTooltip": "選擇此工作階段使用的 AI 模型",
+		"defaultModel": "預設模型",
+		"loadingModels": "載入中...",
+		"selectMode": "選擇模式",
+		"modeTooltip": "模式：{{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "等待代理回應...",
@@ -70,7 +85,11 @@
 		"usingTool": "正在使用工具：**{{tool}}** {{details}}",
 		"expandOutput": "展開輸出",
 		"collapseOutput": "收合輸出",
-		"copyCommand": "複製指令"
+		"copyCommand": "複製指令",
+		"thinking": "思考中",
+		"thinkingSeconds": "{{count}} 秒",
+		"approve": "核准",
+		"deny": "拒絕"
 	},
 	"chatInput": {
 		"autoMode": "Agent 正在全自動模式下執行 - 不允許輸入",
@@ -80,9 +99,12 @@
 		"cancelTitle": "取消代理",
 		"finishToBranchTitle": "完成 Worktree 並準備分支：{{branch}}",
 		"finishToBranchTitleNoBranch": "完成 Worktree 並準備分支",
+		"createPRTitle": "建立 Pull Request",
 		"sendTitle": "傳送訊息",
 		"resumeTitle": "繼續代理",
-		"hint": "按 Enter 傳送，Shift+Enter 換行"
+		"hint": "按 Enter 傳送，Shift+Enter 換行",
+		"addImage": "新增圖片",
+		"removeImage": "移除圖片"
 	},
 	"status": {
 		"running": "執行中",

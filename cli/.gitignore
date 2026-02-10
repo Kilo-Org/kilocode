@@ -4,3 +4,6 @@ node_modules
 # Integration test temp files
 integration-tests/**/*.log
 **/kilocode-cli-tests/
+
+# Unit test temp files
+test-temp/

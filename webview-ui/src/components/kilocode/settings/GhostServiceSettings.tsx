@@ -1,16 +1,23 @@
 //kilocode_change - new file
-import { HTMLAttributes, useCallback, useEffect, useState } from "react"
+import { HTMLAttributes, useCallback, useEffect, useMemo, useState } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
 import { Bot, Zap, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
-import { EXTREME_SNOOZE_VALUES_ENABLED, GhostServiceSettings, MODEL_SELECTION_ENABLED } from "@roo-code/types"
+import { SearchableSetting } from "../../settings/SearchableSetting"
+import {
+	AUTOCOMPLETE_PROVIDER_MODELS,
+	EXTREME_SNOOZE_VALUES_ENABLED,
+	GhostServiceSettings,
+	MODEL_SELECTION_ENABLED,
+} from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { VSCodeCheckbox, VSCodeButton, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
 import { useExtensionState } from "../../../context/ExtensionStateContext"
+import { PROVIDERS } from "../../settings/constants"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -19,6 +26,10 @@ type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 		value: NonNullable<GhostServiceSettings>[K],
 	) => void
 }
+
+// Get the list of supported provider keys from AUTOCOMPLETE_PROVIDER_MODELS
+const SUPPORTED_AUTOCOMPLETE_PROVIDER_KEYS = Array.from(AUTOCOMPLETE_PROVIDER_MODELS.keys())
+const GHOST_SERVICE_KEYBINDING_COMMAND_IDS = ["kilo-code.ghost.generateSuggestions"]
 
 export const GhostServiceSettingsView = ({
 	ghostServiceSettings,
@@ -30,15 +41,23 @@ export const GhostServiceSettingsView = ({
 	const { kiloCodeWrapperProperties } = useExtensionState()
 	const {
 		enableAutoTrigger,
-		enableQuickInlineTaskKeybinding,
 		enableSmartInlineTaskKeybinding,
 		enableChatAutocomplete,
 		provider,
 		model,
+		hasKilocodeProfileWithNoBalance,
 	} = ghostServiceSettings || {}
-	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
+	const keybindings = useKeybindings(GHOST_SERVICE_KEYBINDING_COMMAND_IDS)
 	const [snoozeDuration, setSnoozeDuration] = useState<number>(300)
 	const [currentTime, setCurrentTime] = useState<number>(Date.now())
+
+	// Get friendly display names for supported autocomplete providers
+	const supportedProviderNames = useMemo(() => {
+		return SUPPORTED_AUTOCOMPLETE_PROVIDER_KEYS.map((key) => {
+			const provider = PROVIDERS.find((p) => p.value === key)
+			return provider?.label ?? key
+		})
+	}, [])
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -54,13 +73,6 @@ export const GhostServiceSettingsView = ({
 	const onEnableAutoTriggerChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableAutoTrigger", e.target.checked)
-		},
-		[onGhostServiceSettingsChange],
-	)
-
-	const onEnableQuickInlineTaskKeybindingChange = useCallback(
-		(e: any) => {
-			onGhostServiceSettingsChange("enableQuickInlineTaskKeybinding", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -105,127 +117,124 @@ export const GhostServiceSettingsView = ({
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">
 							<Zap className="w-4" />
-							<div>{t("kilocode:ghost.settings.triggers")}</div>
+							<div>{t("kilocode:ghost.settings.codeEditorSuggestions")}</div>
 						</div>
 					</div>
 
-					<div className="flex flex-col gap-1">
+					<SearchableSetting
+						settingId="ghost-enable-auto-trigger"
+						section="ghost"
+						label={t("kilocode:ghost.settings.enableAutoTrigger.label")}
+						className="flex flex-col gap-1">
 						<VSCodeCheckbox checked={enableAutoTrigger || false} onChange={onEnableAutoTriggerChange}>
 							<span className="font-medium">{t("kilocode:ghost.settings.enableAutoTrigger.label")}</span>
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							<Trans i18nKey="kilocode:ghost.settings.enableAutoTrigger.description" />
+							{t("kilocode:ghost.settings.enableAutoTrigger.description")}
 						</div>
+					</SearchableSetting>
 
-						{enableAutoTrigger && (
-							<div className="flex flex-col gap-2 mt-2 ml-6">
-								<div className="flex items-center gap-2">
-									<Clock className="w-4" />
-									<span className="font-medium">{t("kilocode:ghost.settings.snooze.label")}</span>
-								</div>
-								{isSnoozed ? (
-									<div className="flex items-center gap-2">
-										<span className="text-vscode-descriptionForeground text-sm">
-											{t("kilocode:ghost.settings.snooze.currentlySnoozed")}
-										</span>
-										<VSCodeButton appearance="secondary" onClick={handleUnsnooze}>
-											{t("kilocode:ghost.settings.snooze.unsnooze")}
-										</VSCodeButton>
-									</div>
-								) : (
-									<div className="flex items-center gap-2">
-										<VSCodeDropdown
-											value={snoozeDuration.toString()}
-											onChange={(e: any) => setSnoozeDuration(Number(e.target.value))}>
-											{EXTREME_SNOOZE_VALUES_ENABLED && (
-												<VSCodeOption value="60">
-													{t("kilocode:ghost.settings.snooze.duration.1min")}
-												</VSCodeOption>
-											)}
-											<VSCodeOption value="300">
-												{t("kilocode:ghost.settings.snooze.duration.5min")}
-											</VSCodeOption>
-											<VSCodeOption value="900">
-												{t("kilocode:ghost.settings.snooze.duration.15min")}
-											</VSCodeOption>
-											<VSCodeOption value="1800">
-												{t("kilocode:ghost.settings.snooze.duration.30min")}
-											</VSCodeOption>
-											<VSCodeOption value="3600">
-												{t("kilocode:ghost.settings.snooze.duration.1hour")}
-											</VSCodeOption>
-										</VSCodeDropdown>
-										<VSCodeButton appearance="secondary" onClick={handleSnooze}>
-											{t("kilocode:ghost.settings.snooze.button")}
-										</VSCodeButton>
-									</div>
-								)}
-								<div className="text-vscode-descriptionForeground text-sm">
-									{t("kilocode:ghost.settings.snooze.description")}
-								</div>
+					{enableAutoTrigger && (
+						<SearchableSetting
+							settingId="ghost-snooze"
+							section="ghost"
+							label={t("kilocode:ghost.settings.snooze.label")}
+							className="flex flex-col gap-2 mt-2 ml-6">
+							<div className="flex items-center gap-2">
+								<Clock className="w-4" />
+								<span className="font-medium">{t("kilocode:ghost.settings.snooze.label")}</span>
 							</div>
-						)}
-					</div>
+							{isSnoozed ? (
+								<div className="flex items-center gap-2">
+									<span className="text-vscode-descriptionForeground text-sm">
+										{t("kilocode:ghost.settings.snooze.currentlySnoozed")}
+									</span>
+									<VSCodeButton appearance="secondary" onClick={handleUnsnooze}>
+										{t("kilocode:ghost.settings.snooze.unsnooze")}
+									</VSCodeButton>
+								</div>
+							) : (
+								<div className="flex items-center gap-2">
+									<VSCodeDropdown
+										value={snoozeDuration.toString()}
+										onChange={(e: any) => setSnoozeDuration(Number(e.target.value))}>
+										{EXTREME_SNOOZE_VALUES_ENABLED && (
+											<VSCodeOption value="60">
+												{t("kilocode:ghost.settings.snooze.duration.1min")}
+											</VSCodeOption>
+										)}
+										<VSCodeOption value="300">
+											{t("kilocode:ghost.settings.snooze.duration.5min")}
+										</VSCodeOption>
+										<VSCodeOption value="900">
+											{t("kilocode:ghost.settings.snooze.duration.15min")}
+										</VSCodeOption>
+										<VSCodeOption value="1800">
+											{t("kilocode:ghost.settings.snooze.duration.30min")}
+										</VSCodeOption>
+										<VSCodeOption value="3600">
+											{t("kilocode:ghost.settings.snooze.duration.1hour")}
+										</VSCodeOption>
+									</VSCodeDropdown>
+									<VSCodeButton appearance="secondary" onClick={handleSnooze}>
+										{t("kilocode:ghost.settings.snooze.button")}
+									</VSCodeButton>
+								</div>
+							)}
+							<div className="text-vscode-descriptionForeground text-sm">
+								{t("kilocode:ghost.settings.snooze.description")}
+							</div>
+						</SearchableSetting>
+					)}
 
 					{!kiloCodeWrapperProperties?.kiloCodeWrapped && (
-						<>
-							<div className="flex flex-col gap-1">
-								<VSCodeCheckbox
-									checked={enableQuickInlineTaskKeybinding || false}
-									onChange={onEnableQuickInlineTaskKeybindingChange}>
-									<span className="font-medium">
-										{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
-											keybinding: keybindings["kilo-code.addToContextAndFocus"],
-										})}
-									</span>
-								</VSCodeCheckbox>
-								<div className="text-vscode-descriptionForeground text-sm mt-1">
-									<Trans
-										i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
-										components={{
-											DocsLink: (
-												<a
-													href="#"
-													onClick={() =>
-														openGlobalKeybindings("kilo-code.addToContextAndFocus")
-													}
-													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-											),
-										}}
-									/>
-								</div>
+						<SearchableSetting
+							settingId="ghost-smart-inline-task-keybinding"
+							section="ghost"
+							label={t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
+								keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
+							})}
+							className="flex flex-col gap-1">
+							<VSCodeCheckbox
+								checked={enableSmartInlineTaskKeybinding || false}
+								onChange={onEnableSmartInlineTaskKeybindingChange}>
+								<span className="font-medium">
+									{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
+										keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
+									})}
+								</span>
+							</VSCodeCheckbox>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								<Trans
+									i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
+									values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
+									components={{
+										DocsLink: (
+											<a
+												href="#"
+												onClick={() =>
+													openGlobalKeybindings("kilo-code.ghost.generateSuggestions")
+												}
+												className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
+										),
+									}}
+								/>
 							</div>
-							<div className="flex flex-col gap-1">
-								<VSCodeCheckbox
-									checked={enableSmartInlineTaskKeybinding || false}
-									onChange={onEnableSmartInlineTaskKeybindingChange}>
-									<span className="font-medium">
-										{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
-											keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
-										})}
-									</span>
-								</VSCodeCheckbox>
-								<div className="text-vscode-descriptionForeground text-sm mt-1">
-									<Trans
-										i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
-										values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
-										components={{
-											DocsLink: (
-												<a
-													href="#"
-													onClick={() =>
-														openGlobalKeybindings("kilo-code.ghost.generateSuggestions")
-													}
-													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-											),
-										}}
-									/>
-								</div>
-							</div>
-						</>
+						</SearchableSetting>
 					)}
 
 					<div className="flex flex-col gap-1">
+						<div className="flex items-center gap-2 font-bold">
+							<Bot className="w-4" />
+							<div>{t("kilocode:ghost.settings.chatSuggestions")}</div>
+						</div>
+					</div>
+
+					<SearchableSetting
+						settingId="ghost-chat-autocomplete"
+						section="ghost"
+						label={t("kilocode:ghost.settings.enableChatAutocomplete.label")}
+						className="flex flex-col gap-1">
 						<VSCodeCheckbox
 							checked={enableChatAutocomplete || false}
 							onChange={onEnableChatAutocompleteChange}>
@@ -236,16 +245,20 @@ export const GhostServiceSettingsView = ({
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans i18nKey="kilocode:ghost.settings.enableChatAutocomplete.description" />
 						</div>
-					</div>
+					</SearchableSetting>
 
-					<div className="flex flex-col gap-1">
-						<div className="flex items-center gap-2 font-bold">
-							<Bot className="w-4" />
-							<div>{t("kilocode:ghost.settings.model")}</div>
+					<SearchableSetting
+						settingId="ghost-autocomplete-model"
+						section="ghost"
+						label={t("kilocode:ghost.settings.model")}
+						className="flex flex-col gap-2">
+						<div className="flex flex-col gap-1">
+							<div className="flex items-center gap-2 font-bold">
+								<Bot className="w-4" />
+								<div>{t("kilocode:ghost.settings.model")}</div>
+							</div>
 						</div>
-					</div>
 
-					<div className="flex flex-col gap-2">
 						<div className="text-sm">
 							{provider && model ? (
 								<>
@@ -258,9 +271,42 @@ export const GhostServiceSettingsView = ({
 										{model}
 									</div>
 								</>
+							) : hasKilocodeProfileWithNoBalance ? (
+								<div className="flex flex-col gap-2">
+									<div className="text-vscode-errorForeground font-medium">
+										{t("kilocode:ghost.settings.noCredits.title")}
+									</div>
+									<div className="text-vscode-descriptionForeground">
+										{t("kilocode:ghost.settings.noCredits.description")}
+									</div>
+									<div className="text-vscode-descriptionForeground">
+										<a
+											href="https://kilo.ai/credits"
+											className="text-vscode-textLink-foreground hover:underline">
+											{t("kilocode:ghost.settings.noCredits.buyCredits")}
+										</a>
+									</div>
+								</div>
 							) : (
-								<div className="text-vscode-errorForeground">
-									{t("kilocode:ghost.settings.noModelConfigured")}
+								<div className="flex flex-col gap-2">
+									<div className="text-vscode-errorForeground font-medium">
+										{t("kilocode:ghost.settings.noModelConfigured.title")}
+									</div>
+									<div className="text-vscode-descriptionForeground">
+										{t("kilocode:ghost.settings.noModelConfigured.description")}
+									</div>
+									<ul className="text-vscode-descriptionForeground list-disc list-inside ml-2">
+										{supportedProviderNames.map((name) => (
+											<li key={name}>{name}</li>
+										))}
+									</ul>
+									<div className="text-vscode-descriptionForeground">
+										<a
+											href="https://kilo.ai/docs/basic-usage/autocomplete"
+											className="text-vscode-textLink-foreground hover:underline">
+											{t("kilocode:ghost.settings.noModelConfigured.learnMore")}
+										</a>
+									</div>
 								</div>
 							)}
 							{MODEL_SELECTION_ENABLED && (
@@ -269,7 +315,7 @@ export const GhostServiceSettingsView = ({
 								</div>
 							)}
 						</div>
-					</div>
+					</SearchableSetting>
 				</div>
 			</Section>
 		</div>

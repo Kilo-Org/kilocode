@@ -9,7 +9,6 @@ import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
@@ -73,14 +72,16 @@ export class GhostServiceManager {
 		await this.model.reload(this.cline.providerSettingsManager)
 
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
-			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
-		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
-		// JetBrains users can manually enable it if they want to test the feature
+		// Auto-enable autocomplete by default
 		if (this.settings.enableAutoTrigger == undefined) {
-			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
-			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
+			this.settings.enableAutoTrigger = true
+		}
+
+		// Auto-enable chat autocomplete by default
+		if (this.settings.enableChatAutocomplete == undefined) {
+			this.settings.enableChatAutocomplete = true
 		}
 
 		await this.updateGlobalContext()
@@ -91,6 +92,7 @@ export class GhostServiceManager {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
 			model: this.getCurrentModelName(),
+			hasKilocodeProfileWithNoBalance: this.model.hasKilocodeProfileWithNoBalance,
 		}
 		await ContextProxy.instance.setValues({ ghostServiceSettings: settingsWithModelInfo })
 		await this.cline.postStateToWebview()
@@ -122,7 +124,6 @@ export class GhostServiceManager {
 				...settings,
 				enableAutoTrigger: false,
 				enableSmartInlineTaskKeybinding: false,
-				enableQuickInlineTaskKeybinding: false,
 			},
 		})
 
@@ -284,11 +285,6 @@ export class GhostServiceManager {
 	private async updateGlobalContext() {
 		await vscode.commands.executeCommand(
 			"setContext",
-			"kilocode.ghost.enableQuickInlineTaskKeybinding",
-			this.settings?.enableQuickInlineTaskKeybinding || false,
-		)
-		await vscode.commands.executeCommand(
-			"setContext",
 			"kilocode.ghost.enableSmartInlineTaskKeybinding",
 			this.settings?.enableSmartInlineTaskKeybinding || false,
 		)
@@ -299,7 +295,6 @@ export class GhostServiceManager {
 			enabled: false,
 			model: "loading...",
 			provider: "loading...",
-			hasValidToken: false,
 			totalSessionCost: 0,
 			completionCount: 0,
 			sessionStartTime: this.sessionStartTime,
@@ -320,8 +315,10 @@ export class GhostServiceManager {
 		return this.model.getProviderDisplayName()
 	}
 
-	private hasValidApiToken(): boolean {
-		return this.model.loaded && this.model.hasValidCredentials()
+	private hasNoUsableProvider(): boolean {
+		// We have no usable provider if the model is loaded but has no valid credentials
+		// and it's not because of a kilocode profile with no balance (that's a different error)
+		return this.model.loaded && !this.model.hasValidCredentials() && !this.model.hasKilocodeProfileWithNoBalance
 	}
 
 	private updateCostTracking(cost: number, inputTokens: number, outputTokens: number): void {
@@ -341,7 +338,8 @@ export class GhostServiceManager {
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
 			profileName: this.model.profileName,
-			hasValidToken: this.hasValidApiToken(),
+			hasKilocodeProfileWithNoBalance: this.model.hasKilocodeProfileWithNoBalance,
+			hasNoUsableProvider: this.hasNoUsableProvider(),
 			totalSessionCost: this.sessionCost,
 			completionCount: this.completionCount,
 			sessionStartTime: this.sessionStartTime,

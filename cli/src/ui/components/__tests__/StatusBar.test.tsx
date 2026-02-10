@@ -16,6 +16,14 @@ vi.mock("jotai")
 
 vi.mock("../../../state/hooks/useGitInfo.js")
 vi.mock("../../../state/hooks/useContextUsage.js")
+vi.mock("../../../state/hooks/useSessionCost.js", () => ({
+	useSessionCost: vi.fn(() => ({
+		totalCost: 0,
+		requestCount: 0,
+		hasCostData: false,
+	})),
+	formatSessionCost: vi.fn((cost: number) => `$${cost.toFixed(2)}`),
+}))
 vi.mock("../../../utils/git.js", () => ({
 	isGitWorktree: vi.fn(),
 }))
@@ -226,7 +234,7 @@ describe("StatusBar", () => {
 			process.cwd = originalCwd
 		})
 
-		it("should render project name with git worktree suffix in parallel mode", async () => {
+		it("should render project name with git worktree indicator in parallel mode", async () => {
 			// Mock isGitWorktree to return true immediately
 			isGitWorktreeMock.mockResolvedValue(true)
 
@@ -267,7 +275,7 @@ describe("StatusBar", () => {
 			await vi.waitFor(
 				() => {
 					const frame = lastFrame()
-					expect(frame).toContain("kilocode (git worktree)")
+					expect(frame).toContain("kilocode ⎇")
 				},
 				{ timeout: 1000, interval: 50 },
 			)

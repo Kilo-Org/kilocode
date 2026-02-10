@@ -7,9 +7,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom, yoloModeAtom } from "../state/atoms/ui.js"
-import { setCIModeAtom } from "../state/atoms/ci.js"
+import { processImagePaths } from "../media/images.js"
+import { setCIModeAtom, ciCompletionDetectedAtom, ciCompletionIgnoreBeforeTimestampAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
-import { taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
+import { lastChatMessageAtom, taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
 import { useTaskState } from "../state/hooks/useTaskState.js"
 import { isParallelModeAtom } from "../state/atoms/index.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
@@ -19,6 +20,7 @@ import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { StatusIndicator } from "./components/StatusIndicator.js"
 import { initializeCommands } from "../commands/index.js"
+import { initializeCustomCommands } from "../commands/custom.js"
 import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
 import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
@@ -37,8 +39,10 @@ import { notificationsAtom } from "../state/atoms/notifications.js"
 import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
+import { useWebviewMessage } from "../state/hooks/useWebviewMessage.js"
+import { isResumeAskMessage, shouldWaitForResumeAsk } from "./utils/resumePrompt.js"
 
-// Initialize commands on module load
+// Initialize built-in commands on module load
 initializeCommands()
 
 interface UIAppProps {
@@ -59,12 +63,16 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const setCIMode = useSetAtom(setCIModeAtom)
 	const setYoloMode = useSetAtom(yoloModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
+	const setTaskResumedViaSession = useSetAtom(taskResumedViaContinueOrSessionAtom)
+	const setCiCompletionDetected = useSetAtom(ciCompletionDetectedAtom)
+	const setCiCompletionIgnoreBeforeTimestamp = useSetAtom(ciCompletionIgnoreBeforeTimestampAtom)
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
 	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
+	const lastChatMessage = useAtomValue(lastChatMessageAtom)
 	const { hasActiveTask } = useTaskState()
 	const exitRequestCounter = useAtomValue(exitRequestCounterAtom)
 
@@ -73,6 +81,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const { sendUserMessage, isSending: isSendingMessage } = useMessageHandler({
 		...(options.ci !== undefined && { ciMode: options.ci }),
 	})
+
+	// Get sendMessage for sending initial prompt with attachments
+	const { sendMessage, sendAskResponse } = useWebviewMessage()
 
 	// Followup handler hook for automatic suggestion population
 	useFollowupHandler()
@@ -138,11 +149,14 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.parallel, setIsParallelMode])
 
-	// Initialize workspace path for shell commands
+	// Initialize workspace path for shell commands and load custom commands
 	useEffect(() => {
+		const workspace = options.workspace || process.cwd()
 		if (options.workspace) {
 			setWorkspacePath(options.workspace)
 		}
+		// Load custom commands from ~/.kilocode/commands/ and .kilocode/commands/
+		void initializeCustomCommands(workspace)
 	}, [options.workspace, setWorkspacePath])
 
 	// Handle CI mode exit
@@ -159,10 +173,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {
 		if (options.prompt && !promptExecutedRef.current && configValidation.valid) {
-			// If a session was restored, wait for the task messages to be loaded
-			// This prevents creating a new task instead of continuing the restored one
-			if (taskResumedViaSession && !hasActiveTask) {
-				logs.debug("Waiting for restored session messages to load", "UI")
+			// If a session was restored, wait for the resume ask to arrive
+			// This ensures the prompt answers the resume ask instead of sending too early.
+			if (shouldWaitForResumeAsk(taskResumedViaSession, hasActiveTask, lastChatMessage)) {
+				logs.debug("Waiting for resume ask before executing prompt", "UI")
 				return
 			}
 
@@ -172,22 +186,88 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			if (trimmedPrompt) {
 				logs.debug("Executing initial prompt", "UI", { prompt: trimmedPrompt })
 
-				// Determine if it's a command or regular message
+				// Clear the session restoration flag after prompt execution starts
+				if (taskResumedViaSession) {
+					logs.debug("Resetting session restoration flags after prompt execution", "UI")
+					setCiCompletionIgnoreBeforeTimestamp(lastChatMessage?.ts ?? Date.now())
+					setTaskResumedViaSession(false)
+					setCiCompletionDetected(false)
+				}
+
+				// Commands are always executed, regardless of resume ask state
+				// This ensures /exit, /clear, etc. work correctly even when resuming a session
 				if (isCommandInput(trimmedPrompt)) {
 					executeCommand(trimmedPrompt, onExit)
 				} else {
-					sendUserMessage(trimmedPrompt)
+					const shouldAnswerResumeAsk = taskResumedViaSession && isResumeAskMessage(lastChatMessage)
+
+					// Check if there are CLI attachments to load
+					if (options.attachments && options.attachments.length > 0) {
+						// Async IIFE to load attachments and send message
+						;(async () => {
+							logs.debug("Loading CLI attachments", "UI", { count: options.attachments!.length })
+							const result = await processImagePaths(options.attachments!)
+
+							// Check for any errors - if any attachment fails, abort the task
+							if (result.errors.length > 0) {
+								const errorMsg = result.errors
+									.map((e) => `Failed to load attachment "${e.path}": ${e.error}`)
+									.join("\n")
+								logs.error("Attachment loading failed, aborting task", "UI", { error: errorMsg })
+								const now = Date.now()
+								addMessage({
+									id: `attach-err-${now}-${Math.random()}`,
+									type: "error",
+									content: errorMsg,
+									ts: now,
+								})
+								// Exit in CI mode since we cannot proceed
+								if (options.ci) {
+									setTimeout(() => onExit(), 500)
+								}
+								return
+							}
+
+							logs.debug("Sending prompt with attachments", "UI", {
+								textLength: trimmedPrompt.length,
+								imageCount: result.images.length,
+							})
+							// Respond to resume ask if present, otherwise start a new task
+							if (shouldAnswerResumeAsk) {
+								await sendAskResponse({
+									response: "messageResponse",
+									text: trimmedPrompt,
+									images: result.images,
+								})
+							} else {
+								await sendMessage({ type: "newTask", text: trimmedPrompt, images: result.images })
+							}
+						})()
+					} else if (shouldAnswerResumeAsk) {
+						void sendAskResponse({ response: "messageResponse", text: trimmedPrompt })
+					} else {
+						sendUserMessage(trimmedPrompt)
+					}
 				}
 			}
 		}
 	}, [
 		options.prompt,
+		options.attachments,
+		options.ci,
 		taskResumedViaSession,
 		hasActiveTask,
 		configValidation.valid,
 		executeCommand,
 		sendUserMessage,
+		sendMessage,
+		sendAskResponse,
+		addMessage,
 		onExit,
+		lastChatMessage,
+		setCiCompletionIgnoreBeforeTimestamp,
+		setTaskResumedViaSession,
+		setCiCompletionDetected,
 	])
 
 	// Simplified submit handler that delegates to appropriate hook
@@ -251,27 +331,18 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	])
 
 	useEffect(() => {
-		if (!options.noSplash) {
-			return
-		}
-
 		const checkVersion = async () => {
 			setVersionStatus(await getAutoUpdateStatus())
 		}
 
-		if (!autoUpdatedCheckedRef.current && !options.ci) {
+		if (!autoUpdatedCheckedRef.current && !options.ci && process.env.KILO_EPHEMERAL_MODE !== "true") {
 			autoUpdatedCheckedRef.current = true
 			checkVersion()
 		}
-	}, [])
+	}, [options.ci])
 
 	// Show update or notification messages
 	useEffect(() => {
-		// Skip if noSplash option is enabled
-		if (options.noSplash) {
-			return
-		}
-
 		if (!versionStatus) return
 
 		if (versionStatus.isOutdated) {
@@ -280,7 +351,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Only show notification if there's no pending update
 			addMessage(generateNotificationMessage(notifications[0]))
 		}
-	}, [notifications, versionStatus, options.noSplash])
+	}, [notifications, versionStatus, addMessage])
 
 	// Fetch task history on mount if not in CI mode
 	const taskHistoryFetchedRef = useRef(false)

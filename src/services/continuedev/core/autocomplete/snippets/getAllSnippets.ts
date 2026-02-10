@@ -11,7 +11,7 @@ import {
 	AutocompleteDiffSnippet,
 	AutocompleteSnippetType,
 	AutocompleteStaticSnippet,
-} from "./types"
+} from "../types"
 
 const IDE_SNIPPETS_ENABLED = false // ideSnippets is not used, so it's temporarily disabled
 

@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import type OpenAI from "openai"
 import type { ModeConfig, ModelInfo } from "@roo-code/types"
-import { filterNativeToolsForMode, filterMcpToolsForMode, applyModelToolCustomization } from "../filter-tools-for-mode"
+import {
+	filterNativeToolsForMode,
+	filterMcpToolsForMode,
+	applyModelToolCustomization,
+	resolveToolAlias,
+} from "../filter-tools-for-mode"
+import { getToolDescriptionsForMode } from "../index"
 import * as toolsModule from "../../../../shared/tools"
 
 // kilocode_change start
@@ -424,6 +430,52 @@ describe("filterNativeToolsForMode", () => {
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("run_slash_command")
 	})
+
+	// kilocode_change start
+	it("should exclude ask_followup_question when yoloMode is enabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			{ yoloMode: true } as any, // state with yoloMode enabled
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).not.toContain("ask_followup_question")
+		// Other always-available tools should still be present
+		expect(toolNames).toContain("attempt_completion")
+	})
+
+	it("should include ask_followup_question when yoloMode is disabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			{ yoloMode: false } as any, // state with yoloMode disabled
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).toContain("ask_followup_question")
+	})
+	// kilocode_change end
 })
 
 describe("filterMcpToolsForMode", () => {
@@ -734,6 +786,14 @@ describe("filterMcpToolsForMode", () => {
 					parameters: {},
 				},
 			},
+			{
+				type: "function",
+				function: {
+					name: "edit_file",
+					description: "Edit file",
+					parameters: {},
+				},
+			},
 		]
 
 		it("should exclude tools when model specifies excludedTools", () => {
@@ -835,7 +895,7 @@ describe("filterMcpToolsForMode", () => {
 			expect(toolNames).not.toContain("apply_diff") // Excluded
 		})
 
-		it("should rename tools to alias names when model includes aliases", () => {
+		it("should honor included aliases while respecting exclusions", () => {
 			const codeMode: ModeConfig = {
 				slug: "code",
 				name: "Code",
@@ -846,6 +906,7 @@ describe("filterMcpToolsForMode", () => {
 			const modelInfo: ModelInfo = {
 				contextWindow: 100000,
 				supportsPromptCache: false,
+				excludedTools: ["apply_diff"],
 				includedTools: ["edit_file", "write_file"],
 			}
 
@@ -860,5 +921,94 @@ describe("filterMcpToolsForMode", () => {
 			expect(toolNames).not.toContain("apply_diff")
 			expect(toolNames).not.toContain("write_to_file")
 		})
+	})
+})
+
+// kilocode_change start
+describe("getToolDescriptionsForMode", () => {
+	it("should exclude ask_followup_question when yoloMode is enabled", () => {
+		const result = getToolDescriptionsForMode(
+			"code",
+			"/test",
+			false,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ yoloMode: true } as any, // clineProviderState with yoloMode enabled
+		)
+		expect(result).not.toContain("ask_followup_question")
+	})
+
+	it("should include ask_followup_question when yoloMode is disabled", () => {
+		const result = getToolDescriptionsForMode(
+			"code",
+			"/test",
+			false,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ yoloMode: false } as any, // clineProviderState with yoloMode disabled
+		)
+		expect(result).toContain("ask_followup_question")
+	})
+})
+// kilocode_change end
+describe("resolveToolAlias", () => {
+	it("should resolve known alias to canonical name", () => {
+		// write_file is an alias for write_to_file (defined in TOOL_ALIASES)
+		expect(resolveToolAlias("write_file")).toBe("write_to_file")
+	})
+
+	it("should return canonical name unchanged", () => {
+		expect(resolveToolAlias("write_to_file")).toBe("write_to_file")
+		expect(resolveToolAlias("read_file")).toBe("read_file")
+		expect(resolveToolAlias("apply_diff")).toBe("apply_diff")
+	})
+
+	it("should return unknown tool names unchanged", () => {
+		expect(resolveToolAlias("unknown_tool")).toBe("unknown_tool")
+		expect(resolveToolAlias("custom_tool_xyz")).toBe("custom_tool_xyz")
+	})
+
+	it("should ensure allowedFunctionNames are consistent with functionDeclarations", () => {
+		// This test documents the fix for the Gemini allowedFunctionNames issue.
+		// When tools are renamed via aliasRenames, the alias names must be resolved
+		// back to canonical names for allowedFunctionNames to match functionDeclarations.
+		//
+		// Example scenario:
+		// - Model specifies includedTools: ["write_file"] (an alias)
+		// - filterNativeToolsForMode returns tool with name "write_file"
+		// - But allTools (functionDeclarations) contains "write_to_file" (canonical)
+		// - If allowedFunctionNames contains "write_file", Gemini will error
+		// - Resolving aliases ensures consistency: resolveToolAlias("write_file") -> "write_to_file"
+
+		const aliasToolName = "write_file"
+		const canonicalToolName = "write_to_file"
+
+		// Simulate extracting name from a filtered tool that was renamed to alias
+		const extractedName = aliasToolName
+
+		// Before the fix: allowedFunctionNames would contain alias name
+		// This would cause Gemini to error because "write_file" doesn't exist in functionDeclarations
+
+		// After the fix: we resolve to canonical name
+		const resolvedName = resolveToolAlias(extractedName)
+
+		// The resolved name matches what's in functionDeclarations (canonical names)
+		expect(resolvedName).toBe(canonicalToolName)
 	})
 })

@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Een compleet ontwikkelteam van AI-agenten in je editor."
+		"description": "Open source AI-coderingsagent die code genereert uit natuurlijke taal, taken automatiseert en terminalopdrachten uitvoert. Met inline autocomplete, browserautomatisering, geautomatiseerde refactoring en aangepaste modi voor planning, codering en debugging. Ondersteunt meer dan 500 AI-modellen, waaronder Claude (Anthropic), Gemini, Grok, GPT, Codex en GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,18 +99,7 @@
 			"errorOutput": "Foutuitvoer: {{output}}",
 			"processExitedWithError": "Claude Code proces beëindigd met code {{exitCode}}. Foutuitvoer: {{output}}",
 			"stoppedWithReason": "Claude Code gestopt om reden: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
-		},
-		"geminiCli": {
-			"oauthLoadFailed": "Kan OAuth-referenties niet laden. Authenticeer eerst: {{error}}",
-			"tokenRefreshFailed": "Kan OAuth-token niet vernieuwen: {{error}}",
-			"onboardingTimeout": "Onboarding-operatie is na 60 seconden verlopen. Probeer het later opnieuw.",
-			"projectDiscoveryFailed": "Kan project-ID niet ontdekken. Zorg ervoor dat je geauthenticeerd bent met 'gemini auth'.",
-			"rateLimitExceeded": "Snelheidslimiet overschreden. Gratis tier limieten zijn bereikt.",
-			"badRequest": "Ongeldig verzoek: {{details}}",
-			"apiError": "Gemini CLI API-fout: {{error}}",
-			"completionError": "Gemini CLI voltooiingsfout: {{error}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Kan OAuth-referenties niet laden. Authenticeer eerst: {{error}}"
@@ -146,13 +135,32 @@
 			"authenticationRequired": "Roo provider vereist cloud authenticatie. Log in bij Roo Code Cloud."
 		},
 		"api": {
-			"invalidKeyInvalidChars": "API-sleutel bevat ongeldige karakters."
+			"invalidKeyInvalidChars": "API-sleutel bevat ongeldige karakters.",
+			"apiRequestFailed": "API-verzoek mislukt ({{status}})"
 		},
 		"manual_url_empty": "Voer een geldige callback-URL in",
 		"manual_url_no_query": "Ongeldige callback-URL: query-parameters ontbreken",
 		"manual_url_missing_params": "Ongeldige callback-URL: vereiste parameters ontbreken (code en state)",
 		"manual_url_auth_failed": "Handmatige URL-authenticatie mislukt",
-		"manual_url_auth_error": "Authenticatie mislukt"
+		"manual_url_auth_error": "Authenticatie mislukt",
+		"openAiCodex": {
+			"notAuthenticated": "Not authenticated with OpenAI Codex. Please sign in using the OpenAI Codex OAuth flow.",
+			"invalidRequest": "Invalid request to Codex API. Please check your input parameters.",
+			"authenticationFailed": "Authentication failed. Please re-authenticate with OpenAI Codex.",
+			"accessDenied": "Access denied. Your ChatGPT subscription may not include Codex access.",
+			"endpointNotFound": "Codex API endpoint not found.",
+			"rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+			"serviceError": "OpenAI Codex service error. Please try again later.",
+			"genericError": "Codex API error ({{status}})",
+			"noResponseBody": "Codex API error: No response body",
+			"connectionFailed": "Failed to connect to Codex API: {{message}}",
+			"unexpectedConnectionError": "Unexpected error connecting to Codex API",
+			"apiError": "Codex API error: {{message}}",
+			"responseFailed": "Response failed: {{message}}",
+			"streamProcessingError": "Error processing response stream: {{message}}",
+			"unexpectedStreamError": "Unexpected error processing response stream",
+			"completionError": "OpenAI Codex completion error: {{message}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",
@@ -195,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "Reactie onderbroken door gebruiker",
-		"responseInterruptedByApiError": "Reactie onderbroken door API-fout"
+		"responseInterruptedByApiError": "Reactie onderbroken door API-fout",
+		"streamTerminatedByProvider": "Provider heeft het verzoek beëindigd"
 	},
 	"storage": {
 		"prompt_custom_path": "Voer een aangepast opslagpad voor gespreksgeschiedenis in, laat leeg voor standaardlocatie",
@@ -210,12 +219,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API-sleutel",
-			"getGroqApiKey": "Groq API-sleutel ophalen",
-			"claudeCode": {
-				"pathLabel": "Claude Code Pad",
-				"description": "Optioneel pad naar je Claude Code CLI. Standaard 'claude' indien niet ingesteld.",
-				"placeholder": "Standaard: claude"
-			}
+			"getGroqApiKey": "Groq API-sleutel ophalen"
 		}
 	},
 	"customModes": {

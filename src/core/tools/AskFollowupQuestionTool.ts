@@ -1,8 +1,9 @@
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { parseXml } from "../../utils/xml"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface Suggestion {
 	text: string
@@ -68,6 +69,19 @@ export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
 		const { handleError, pushToolResult, toolProtocol } = callbacks
 
 		try {
+			// kilocode_change start
+			// Check if yolo mode is enabled - if so, don't ask questions
+			const state = await task.providerRef.deref()?.getState()
+			if (state?.yoloMode) {
+				pushToolResult(
+					formatResponse.toolResult(
+						"<error>This tool is not available in yolo mode. Do not ask questions - make your best judgment and proceed with the task.</error>",
+					),
+				)
+				return
+			}
+			// kilocode_change end
+
 			if (!question) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("ask_followup_question")
@@ -92,6 +106,14 @@ export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"ask_followup_question">): Promise<void> {
+		// kilocode_change start
+		// Don't show the question in yolo mode - the tool will be rejected in execute()
+		const state = await task.providerRef.deref()?.getState()
+		if (state?.yoloMode) {
+			return
+		}
+		// kilocode_change end
+
 		// Get question from params (for XML protocol) or nativeArgs (for native protocol)
 		const question: string | undefined = block.params.question ?? block.nativeArgs?.question
 

@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด"
+		"description": "เอเจนต์เขียนโค้ด AI แบบ Open Source ที่สร้างโค้ดจากภาษาธรรมชาติ ทำงานอัตโนมัติ และรันคำสั่งเทอร์มินัล มีฟีเจอร์เติมคำอัตโนมัติแบบ inline การทำงานอัตโนมัติของเบราว์เซอร์ การ refactor อัตโนมัติ และโหมดที่กำหนดเองสำหรับการวางแผน เขียนโค้ด และดีบัก รองรับโมเดล AI มากกว่า 500 รุ่น รวมถึง Claude (Anthropic), Gemini, Grok, GPT, Codex และ GLM"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -107,16 +107,6 @@
 			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ",
 			"notFound": "ไม่พบไฟล์ปฏิบัติการ Claude Code '{{claudePath}}'\n\nกรุณาติดตั้ง Claude Code CLI:\n1. เยี่ยมชม {{installationUrl}} เพื่อดาวน์โหลด Claude Code\n2. ทำตามคำแนะนำการติดตั้งสำหรับระบบปฏิบัติการของคุณ\n3. ตรวจสอบให้แน่ใจว่าคำสั่ง 'claude' พร้อมใช้งานใน PATH\n4. หรือกำหนดค่าเส้นทางแบบกำหนดเองในการตั้งค่า Kilo Code ภายใต้ 'เส้นทาง Claude Code'\n\nข้อผิดพลาดเดิม: {{originalError}}"
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}",
-			"tokenRefreshFailed": "ล้มเหลวในการรีเฟรช OAuth token: {{error}}",
-			"onboardingTimeout": "การดำเนินการ onboarding หมดเวลาหลังจาก 60 วินาที กรุณาลองอีกครั้งในภายหลัง",
-			"projectDiscoveryFailed": "ไม่สามารถค้นหา project ID ตรวจสอบให้แน่ใจว่าคุณยืนยันตัวตนด้วย 'gemini auth'",
-			"rateLimitExceeded": "เกินขีดจำกัดอัตรา ถึงขีดจำกัดของระดับฟรีแล้ว",
-			"badRequest": "คำขอไม่ถูกต้อง: {{details}}",
-			"apiError": "ข้อผิดพลาด Gemini CLI API: {{error}}",
-			"completionError": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini CLI: {{error}}"
-		},
 		"gemini": {
 			"generate_stream": "ข้อผิดพลาดในการสร้างสตรีมบริบท Gemini: {{error}}",
 			"generate_complete_prompt": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini: {{error}}",
@@ -156,7 +146,26 @@
 		"manual_url_auth_failed": "การยืนยันตัวตนล้มเหลว",
 		"manual_url_auth_error": "เกิดข้อผิดพลาดในการยืนยันตัวตน",
 		"api": {
-			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง"
+			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง",
+			"apiRequestFailed": "คำขอ API ล้มเหลว ({{status}})"
+		},
+		"openAiCodex": {
+			"notAuthenticated": "ยังไม่ได้ยืนยันตัวตนกับ OpenAI Codex กรุณาลงชื่อเข้าใช้โดยใช้ OAuth flow ของ OpenAI Codex",
+			"invalidRequest": "คำขอไปยัง Codex API ไม่ถูกต้อง กรุณาตรวจสอบพารามิเตอร์ที่ป้อน",
+			"authenticationFailed": "การยืนยันตัวตนล้มเหลว กรุณายืนยันตัวตนใหม่กับ OpenAI Codex",
+			"accessDenied": "การเข้าถึงถูกปฏิเสธ บัญชี ChatGPT ของคุณอาจไม่รวมการเข้าถึง Codex",
+			"endpointNotFound": "ไม่พบ endpoint ของ Codex API",
+			"rateLimitExceeded": "เกินขีดจำกัดอัตรา กรุณาลองอีกครั้งในภายหลัง",
+			"serviceError": "ข้อผิดพลาดบริการ OpenAI Codex กรุณาลองอีกครั้งในภายหลัง",
+			"genericError": "ข้อผิดพลาด Codex API ({{status}})",
+			"noResponseBody": "ข้อผิดพลาด Codex API: ไม่มีเนื้อหาการตอบกลับ",
+			"connectionFailed": "ล้มเหลวในการเชื่อมต่อกับ Codex API: {{message}}",
+			"unexpectedConnectionError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการเชื่อมต่อกับ Codex API",
+			"apiError": "ข้อผิดพลาด Codex API: {{message}}",
+			"responseFailed": "การตอบสนองล้มเหลว: {{message}}",
+			"streamProcessingError": "เกิดข้อผิดพลาดในการประมวลผลสตรีมการตอบสนอง: {{message}}",
+			"unexpectedStreamError": "เกิดข้อผิดพลาดที่ไม่คาดคิดในการประมวลผลสตรีมการตอบสนอง",
+			"completionError": "ข้อผิดพลาดการเติมเต็ม OpenAI Codex: {{message}}"
 		}
 	},
 	"warnings": {
@@ -251,7 +260,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "การตอบสนองถูกหยุดโดยผู้ใช้",
-		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API"
+		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API",
+		"streamTerminatedByProvider": "ผู้ให้บริการยุติคำขอ"
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {

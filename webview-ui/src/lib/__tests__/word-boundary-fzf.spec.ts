@@ -1,4 +1,4 @@
-//kilocode_change new file
+// kilocode_change - new file
 import { describe, it, expect } from "vitest"
 import { Fzf } from "../word-boundary-fzf"
 
@@ -102,6 +102,14 @@ describe("Fzf - Word Boundary Matching", () => {
 			const items = [{ id: 1, name: "hello.world" }]
 			const fzf = new Fzf(items, { selector: (item) => item.name })
 			const results = fzf.find("wor")
+
+			expect(results).toHaveLength(1)
+		})
+
+		it("should recognize parentheses as word separators", () => {
+			const items = [{ id: 1, name: "xAI: Grok Code Fast 1 (free)" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+			const results = fzf.find("free")
 
 			expect(results).toHaveLength(1)
 		})
@@ -465,6 +473,49 @@ describe("Fzf - Word Boundary Matching", () => {
 
 			// Should match "foo-bar" with "foob" (foo + b from bar)
 			expect(results).toHaveLength(1)
+		})
+	})
+
+	describe("camelCase and PascalCase support", () => {
+		it("should recognize camelCase as word boundary", () => {
+			const items = [{ name: "gitRebase" }, { name: "newFile" }, { name: "httpRequest" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gr")
+			// Should match "gitRebase" (gr at word boundary)
+			expect(results).toHaveLength(1)
+			expect(results[0].item.name).toBe("gitRebase")
+		})
+
+		it("should match PascalCase acronyms", () => {
+			const items = [{ name: "NewFileCreation" }, { name: "HttpRequest" }, { name: "APIClient" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("NFC")
+			// Should match "NewFileCreation" (N + F + C)
+			expect(results.length).toBeGreaterThan(0)
+			expect(results.some((r) => r.item.name === "NewFileCreation")).toBe(true)
+		})
+
+		it("should handle mixed case scenarios", () => {
+			const items = [{ name: "gitRebase" }, { name: "newFile" }, { name: "GitRebase" }, { name: "NewFile" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("GitR")
+			// Should match both gitRebase and GitRebase
+			expect(results.length).toBeGreaterThanOrEqual(2)
+			expect(results.some((r) => r.item.name === "gitRebase")).toBe(true)
+			expect(results.some((r) => r.item.name === "GitRebase")).toBe(true)
+		})
+
+		it("should split camelCase at uppercase transitions", () => {
+			const items = [{ name: "parseMarkdownContent" }, { name: "renderHtmlTemplate" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("pmc")
+			// Should match "parseMarkdownContent" (P + M + C)
+			expect(results.length).toBeGreaterThan(0)
+			expect(results.some((r) => r.item.name === "parseMarkdownContent")).toBe(true)
 		})
 	})
 

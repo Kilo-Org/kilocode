@@ -1,7 +1,6 @@
 import { Fzf } from "fzf"
-import { HistoryItem } from "@roo-code/types"
+import { HistoryItem, TaskHistoryRequestPayload, TaskHistoryResponsePayload } from "@roo-code/types"
 import { highlightFzfMatch } from "../../../webview-ui/src/utils/highlight" // weird hack, but apparently it works
-import { TaskHistoryRequestPayload, TaskHistoryResponsePayload } from "../WebviewMessage"
 
 const PAGE_SIZE = 10
 
@@ -59,11 +58,12 @@ export function getTaskHistory(
 		}
 	})
 
-	const pageCount = Math.ceil(tasks.length / PAGE_SIZE)
+	const totalItems = tasks.length
+	const pageCount = Math.ceil(totalItems / PAGE_SIZE)
 	const pageIndex = Math.max(0, Math.min(request.pageIndex, pageCount - 1))
 
 	const startIndex = PAGE_SIZE * pageIndex
 	const historyItems = tasks.slice(startIndex, startIndex + PAGE_SIZE)
 
-	return { requestId: request.requestId, historyItems, pageIndex, pageCount }
+	return { requestId: request.requestId, historyItems, pageIndex, pageCount, totalItems }
 }
