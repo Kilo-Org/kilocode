@@ -70,7 +70,7 @@ export namespace LLM {
     system.push(
       [
         // kilocode_change start - soul defines core identity and personality
-        SystemPrompt.soul(),
+        ...(isCodex ? [] : [SystemPrompt.soul()]),
         // kilocode_change end
         // use agent prompt otherwise provider prompt
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
@@ -117,7 +117,9 @@ export namespace LLM {
       mergeDeep(variant),
     )
     if (isCodex) {
-      options.instructions = SystemPrompt.instructions()
+      // kilocode_change start - prepend soul to codex instructions
+      options.instructions = SystemPrompt.soul() + "\n" + SystemPrompt.instructions()
+      // kilocode_change end
     }
 
     const params = await Plugin.trigger(
