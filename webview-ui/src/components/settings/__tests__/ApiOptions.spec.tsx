@@ -13,12 +13,22 @@ import ApiOptions, { ApiOptionsProps } from "../ApiOptions"
 
 // Mock VSCode components
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
-	VSCodeTextField: ({ children, value, onBlur }: any) => (
+	// kilocode_change start
+	VSCodeTextField: ({ children, value, onBlur, onInput, ...props }: any) => (
 		<div>
 			{children}
-			<input type="text" value={value} onChange={onBlur} />
+			<input
+				type="text"
+				value={value}
+				onChange={(event) => {
+					onInput?.(event)
+					onBlur?.(event)
+				}}
+				{...props}
+			/>
 		</div>
 	),
+	// kilocode_change end
 	VSCodeLink: ({ children, href }: any) => <a href={href}>{children}</a>,
 	VSCodeRadio: ({ value, checked }: any) => <input type="radio" value={value} checked={checked} />,
 	VSCodeRadioGroup: ({ children }: any) => <div>{children}</div>,
@@ -86,16 +96,17 @@ vi.mock("@/components/ui", () => ({
 	Command: ({ children }: any) => <div className="command-mock">{children}</div>,
 	CommandEmpty: ({ children }: any) => <div className="command-empty-mock">{children}</div>,
 	CommandGroup: ({ children }: any) => <div className="command-group-mock">{children}</div>,
-	CommandInput: ({ value, onValueChange, placeholder, className, _ref }: any) => (
+	CommandInput: ({ value, onValueChange, placeholder, className, _ref, ...props }: any) => (
 		<input
 			value={value}
 			onChange={(e) => onValueChange && onValueChange(e.target.value)}
 			placeholder={placeholder}
 			className={className}
+			{...props}
 		/>
 	),
-	CommandItem: ({ children, value, onSelect }: any) => (
-		<div className="command-item-mock" onClick={() => onSelect && onSelect(value)}>
+	CommandItem: ({ children, value, onSelect, ...props }: any) => (
+		<div className="command-item-mock" onClick={() => onSelect && onSelect(value)} {...props}>
 			{children}
 		</div>
 	),
@@ -604,6 +615,25 @@ describe("ApiOptions", () => {
 			fireEvent.click(checkbox)
 
 			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("anthropicDeploymentName", "")
+		})
+
+		it("allows setting a custom Anthropic-compatible model id from the model picker", () => {
+			const mockSetApiConfigurationField = vi.fn()
+			const initialConfig: ProviderSettings = {
+				apiProvider: "anthropic",
+				apiModelId: "claude-sonnet-4-5",
+			}
+
+			renderApiOptions({
+				apiConfiguration: initialConfig,
+				setApiConfigurationField: mockSetApiConfigurationField,
+			})
+
+			const modelInput = screen.getByTestId("model-input")
+			fireEvent.change(modelInput, { target: { value: "MinMax-M2" } })
+			fireEvent.click(screen.getByTestId("use-custom-model"))
+
+			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", "MinMax-M2")
 		})
 	})
 	// kilocode_change end

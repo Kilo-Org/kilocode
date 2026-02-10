@@ -213,6 +213,32 @@ describe("AnthropicHandler", () => {
 			const lastCall = mockCreate.mock.calls[mockCreate.mock.calls.length - 1]?.[0]
 			expect(lastCall?.model).toBe("custom-deployment-model")
 		})
+
+		it("passes through custom Anthropic-compatible model IDs for streaming calls", async () => {
+			const handlerWithCustomModel = new AnthropicHandler({
+				...mockOptions,
+				apiModelId: "MinMax-M2",
+			})
+
+			const stream = handlerWithCustomModel.createMessage(systemPrompt, [
+				{
+					role: "user",
+					content: [{ type: "text" as const, text: "Message" }],
+				},
+			])
+
+			// Consume the stream to trigger the API call
+			for await (const _chunk of stream) {
+				// no-op
+			}
+
+			expect(mockCreate).toHaveBeenCalled()
+			const lastCall = mockCreate.mock.calls[mockCreate.mock.calls.length - 1]?.[0]
+			const requestOptions = mockCreate.mock.calls[mockCreate.mock.calls.length - 1]?.[1]
+
+			expect(lastCall?.model).toBe("MinMax-M2")
+			expect(requestOptions?.headers?.["anthropic-beta"]).toContain("prompt-caching-2024-07-31")
+		})
 		// kilocode_change end
 	})
 
@@ -344,6 +370,20 @@ describe("AnthropicHandler", () => {
 			expect(model.info.inputPrice).toBe(6.0)
 			expect(model.info.outputPrice).toBe(22.5)
 		})
+
+		// kilocode_change start
+		it("should preserve a custom model ID when it is not in the static Anthropic model list", () => {
+			const handlerWithCustomModel = new AnthropicHandler({
+				...mockOptions,
+				apiModelId: "MinMax-M2",
+			})
+
+			const model = handlerWithCustomModel.getModel()
+
+			expect(model.id).toBe("MinMax-M2")
+			expect(model.info).toBeDefined()
+		})
+		// kilocode_change end
 	})
 
 	describe("reasoning block filtering", () => {
