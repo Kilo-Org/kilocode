@@ -16,10 +16,12 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+  private devReloadWatcher: vscode.FileSystemWatcher | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
+    private readonly extensionMode: vscode.ExtensionMode = vscode.ExtensionMode.Production,
   ) {}
 
   /**
@@ -105,6 +107,11 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(webviewView.webview)
 
+    // In development, watch for webview dist changes and auto-reload
+    if (this.extensionMode === vscode.ExtensionMode.Development) {
+      this.setupDevReload(webviewView.webview)
+    }
+
     // Initialize connection to CLI backend
     this.initializeConnection()
   }
@@ -127,7 +134,35 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(panel.webview)
 
+    // In development, watch for webview dist changes and auto-reload
+    if (this.extensionMode === vscode.ExtensionMode.Development) {
+      this.setupDevReload(panel.webview)
+    }
+
     this.initializeConnection()
+  }
+
+  /**
+   * Watch for changes to the webview dist files and auto-reload the webview.
+   * Only active in development mode so changes during `pnpm watch` are
+   * reflected without manually reloading the extension host window.
+   */
+  private setupDevReload(webview: vscode.Webview): void {
+    this.devReloadWatcher?.dispose()
+
+    const pattern = new vscode.RelativePattern(vscode.Uri.joinPath(this.extensionUri, "dist"), "webview.*")
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern)
+
+    const reload = () => {
+      console.log("[Kilo New] KiloProvider: 🔄 Dev reload — webview dist changed, reloading HTML")
+      webview.html = ""
+      webview.html = this._getHtmlForWebview(webview)
+    }
+
+    watcher.onDidChange(reload)
+    watcher.onDidCreate(reload)
+
+    this.devReloadWatcher = watcher
   }
 
   /**
@@ -766,6 +801,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css"))
 
     const nonce = getNonce()
+    // Cache-bust so the browser inside the webview doesn't serve stale bundles
+    // after a rebuild (especially useful during development with watch mode).
+    const bust = Date.now()
 
     // CSP allows:
     // - default-src 'none': Block everything by default
@@ -784,36 +822,36 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="Content-Security-Policy" content="${csp}">
-	<title>Kilo Code</title>
-	<link rel="stylesheet" href="${styleUri}">
-	<style>
-		html, body {
-			margin: 0;
-			padding: 0;
-			height: 100%;
-			overflow: hidden;
-		}
-		body {
-			color: var(--vscode-foreground);
-			font-family: var(--vscode-font-family);
-		}
-		#root {
-			height: 100%;
-		}
-		.container {
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			height: 100vh;
-		}
-	</style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta http-equiv="Content-Security-Policy" content="${csp}">
+ <title>Kilo Code</title>
+ <link rel="stylesheet" href="${styleUri}?v=${bust}">
+ <style>
+  html, body {
+  	margin: 0;
+  	padding: 0;
+  	height: 100%;
+  	overflow: hidden;
+  }
+  body {
+  	color: var(--vscode-foreground);
+  	font-family: var(--vscode-font-family);
+  }
+  #root {
+  	height: 100%;
+  }
+  .container {
+  	height: 100%;
+  	display: flex;
+  	flex-direction: column;
+  	height: 100vh;
+  }
+ </style>
 </head>
 <body>
-	<div id="root"></div>
-	<script nonce="${nonce}" src="${scriptUri}"></script>
+ <div id="root"></div>
+ <script nonce="${nonce}" src="${scriptUri}?v=${bust}"></script>
 </body>
 </html>`
   }
@@ -826,6 +864,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.webviewMessageDisposable?.dispose()
+    this.devReloadWatcher?.dispose()
     this.trackedSessionIds.clear()
   }
 }

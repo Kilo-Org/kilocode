@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
   const connectionService = new KiloConnectionService(context)
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context.extensionMode)
 
   // Register the webview view provider for the sidebar
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KiloProvider.viewType, provider))
@@ -77,7 +77,7 @@ async function openKiloInNewTab(context: vscode.ExtensionContext, connectionServ
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService)
+  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context.extensionMode)
   tabProvider.resolveWebviewPanel(panel)
 
   // Wait for the new panel to become active before locking the editor group.
