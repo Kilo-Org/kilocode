@@ -34,6 +34,7 @@ import {
 	cerebrasDefaultModelId,
 	chutesDefaultModelId,
 	basetenDefaultModelId,
+	corethinkDefaultModelId,
 	bedrockDefaultModelId,
 	vertexDefaultModelId,
 	sambaNovaDefaultModelId,
@@ -77,6 +78,7 @@ import {
 import {
 	Anthropic,
 	Baseten,
+	Corethink,
 	Bedrock,
 	Cerebras,
 	Chutes,
@@ -433,6 +435,7 @@ const ApiOptions = ({
 				groq: { field: "apiModelId", default: groqDefaultModelId },
 				chutes: { field: "apiModelId", default: chutesDefaultModelId },
 				baseten: { field: "apiModelId", default: basetenDefaultModelId },
+				corethink: { field: "apiModelId", default: corethinkDefaultModelId },
 				bedrock: { field: "apiModelId", default: bedrockDefaultModelId },
 				vertex: { field: "apiModelId", default: vertexDefaultModelId },
 				sambanova: { field: "apiModelId", default: sambaNovaDefaultModelId },
@@ -720,6 +723,14 @@ const ApiOptions = ({
 
 			{selectedProvider === "baseten" && (
 				<Baseten
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					simplifySettings={fromWelcomeView}
+				/>
+			)}
+
+			{selectedProvider === "corethink" && (
+				<Corethink
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
 					simplifySettings={fromWelcomeView}

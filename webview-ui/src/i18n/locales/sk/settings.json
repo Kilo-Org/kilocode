@@ -407,6 +407,8 @@
 		"basetenApiKey": "Kľúč API Baseten",
 		"basetenApiKeyPlaceholder": "Zadajte svoj kľúč API Baseten",
 		"getBasetenApiKey": "Získať kľúč API Baseten",
+		"corethinkApiKey": "Kľúč API Corethink",
+		"getCorethinkApiKey": "Získať kľúč API Corethink",
 		"cerebrasApiKey": "Kľúč API Cerebras",
 		"getCerebrasApiKey": "Získať kľúč API Cerebras",
 		"chutesApiKey": "Kľúč API Chutes",

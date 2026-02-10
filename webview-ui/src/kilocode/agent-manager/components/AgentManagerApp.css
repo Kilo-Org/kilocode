@@ -195,8 +195,8 @@
 }
 
 .am-session-item.am-selected {
-	background: var(--vscode-list-activeSelectionBackground);
-	color: var(--vscode-list-activeSelectionForeground);
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
 }
 
 .am-session-item:focus {
@@ -302,7 +302,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	background: var(--vscode-editor-background);
+	background: var(--vscode-sideBar-background);
 }
 
 .am-header-info {
@@ -314,6 +314,7 @@
 .am-header-title {
 	font-size: 18px;
 	font-weight: 600;
+	color: var(--vscode-titleBar-activeForeground);
 	margin-bottom: 4px;
 	white-space: nowrap;
 	overflow: hidden;
@@ -477,6 +478,8 @@
 	display: flex;
 	flex-direction: column;
 	position: relative; /* kilocode_change */
+	background: var(--vscode-sideBar-background);
+	color: var(--vscode-sideBar-foreground);
 }
 
 .am-messages-list {
@@ -739,7 +742,7 @@
 /* Chat Input Styles */
 .am-chat-input-container {
 	padding: 12px 20px 20px 20px;
-	background: var(--vscode-editor-background);
+	background: var(--vscode-sideBar-background);
 }
 
 .am-chat-input-hint {
@@ -1136,8 +1139,13 @@
 }
 
 .am-model-selector-content {
-	max-height: 300px !important;
 	min-width: 200px !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-model-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }
 
 /* Read-only model indicator in chat input */
@@ -1200,10 +1208,13 @@
 }
 
 .am-session-mode-content {
-	max-height: 300px !important;
 	min-width: 180px !important;
-	overflow-y: auto !important;
-	overscroll-behavior: contain !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-session-mode-content > div > div:last-child {
+	max-height: 250px !important;
 }
 
 /* Mode Selector for New Agent Form */
@@ -1239,8 +1250,11 @@
 }
 
 .am-mode-selector-content {
-	max-height: 300px !important;
 	min-width: 200px !important;
-	overflow-y: auto !important;
-	overscroll-behavior: contain !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-mode-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }

@@ -7,15 +7,7 @@ import { Virtuoso } from "react-virtuoso"
 
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import {
-	Button,
-	Checkbox,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui"
+import { Button, Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
 import { Tab, TabContent, TabHeader } from "../common/Tab"
@@ -158,7 +150,9 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							className="shrink-0">
 							<Filter className="w-4 h-4 mr-1" />
 							{t("history:filters")}
-							<span className={`ml-1 text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}>▼</span>
+							<span className={`ml-1 text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}>
+								▼
+							</span>
 						</Button>
 					)}
 
@@ -265,7 +259,9 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 										: "bg-vscode-editor-background text-vscode-foreground hover:bg-vscode-list-hoverBackground border border-vscode-panel-border"
 								}`}
 								data-testid="favorites-toggle">
-								<span className={`codicon ${showFavoritesOnly ? "codicon-star-full" : "codicon-star"}`} />
+								<span
+									className={`codicon ${showFavoritesOnly ? "codicon-star-full" : "codicon-star"}`}
+								/>
 								{t("history:favoritesOnly")}
 							</button>
 						</div>
@@ -278,12 +274,16 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						<div className="flex items-center gap-3">
 							<Checkbox
 								checked={isAllSelected}
-								data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
+								data-state={
+									isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"
+								}
 								onCheckedChange={(checked) => toggleSelectAll(checked === true)}
 								variant="description"
 								id="select-all-checkbox"
 							/>
-							<label htmlFor="select-all-checkbox" className="text-vscode-foreground cursor-pointer font-medium">
+							<label
+								htmlFor="select-all-checkbox"
+								className="text-vscode-foreground cursor-pointer font-medium">
 								{isAllSelected ? t("history:deselectAll") : t("history:selectAll")}
 							</label>
 						</div>
