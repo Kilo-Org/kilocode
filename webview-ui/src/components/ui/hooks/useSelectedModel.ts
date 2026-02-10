@@ -565,7 +565,18 @@ function getSelectedModel({
 		default: {
 			provider satisfies "anthropic" | "fake-ai" | "human-relay" | "kilocode"
 			const id = apiConfiguration.apiModelId ?? defaultModelId
-			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
+			// kilocode_change start
+			const knownInfo = anthropicModels[id as keyof typeof anthropicModels]
+			const defaultInfo: ModelInfo = anthropicModels[defaultModelId as keyof typeof anthropicModels]
+			const baseInfo =
+				provider === "anthropic" && !knownInfo
+					? {
+							...defaultInfo,
+							supportsReasoningBudget: true,
+							supportsVerbosity: defaultInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+						}
+					: knownInfo
+			// kilocode_change end
 
 			// Apply 1M context beta tier pricing for Claude Sonnet 4
 			if (

@@ -43,6 +43,38 @@ const createWrapper = () => {
 }
 
 describe("useSelectedModel", () => {
+	// kilocode_change start
+	describe("Anthropic custom model capabilities", () => {
+		it("provides reasoning and verbosity capability defaults for unknown Anthropic-compatible model IDs", () => {
+			mockUseRouterModels.mockReturnValue({
+				data: undefined,
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(
+				() =>
+					useSelectedModel({
+						apiProvider: "anthropic",
+						apiModelId: "MinMax-M2",
+					}),
+				{ wrapper },
+			)
+
+			expect(result.current.id).toBe("MinMax-M2")
+			expect(result.current.info?.supportsReasoningBudget).toBe(true)
+			expect(result.current.info?.supportsVerbosity).toBeTruthy()
+		})
+	})
+	// kilocode_change end
+
 	describe("OpenRouter provider merging", () => {
 		it("should merge base model info with specific provider info when both exist", () => {
 			const baseModelInfo: ModelInfo = {
