@@ -1573,7 +1573,7 @@ describe("ProviderTransform.variants", () => {
 
   // kilocode_change start
   describe("@kilocode/kilo-gateway", () => {
-    test("claude models return OPENAI_EFFORTS with reasoning", () => {
+    test("claude models return anthropic efforts with reasoning (max instead of xhigh)", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
@@ -1584,15 +1584,15 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "max"])
       expect(result.none).toEqual({ reasoning: { effort: "none" } })
       expect(result.low).toEqual({ reasoning: { effort: "low" } })
       expect(result.medium).toEqual({ reasoning: { effort: "medium" } })
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
-      expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
+      expect(result.max).toEqual({ reasoning: { effort: "xhigh" } })
     })
 
-    test("anthropic models in api.id return OPENAI_EFFORTS with reasoning", () => {
+    test("anthropic models in api.id return anthropic efforts with reasoning (max instead of xhigh)", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-opus-4",
         providerID: "kilo",
@@ -1603,8 +1603,9 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "max"])
       expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.max).toEqual({ reasoning: { effort: "xhigh" } })
     })
 
     test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {

@@ -471,14 +471,18 @@ export namespace ProviderTransform {
           }
         }
         // Claude/Anthropic models support reasoning via effort levels through OpenRouter API
-        // OpenRouter maps effort to budget_tokens percentages (xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%)
+        // OpenRouter maps effort to budget_tokens percentages (max=95%, high=80%, medium=50%, low=20%, minimal=10%)
+        // kilocode_change - use "max" instead of "xhigh" for Anthropic models (matches native Anthropic naming)
         if (
           model.id.includes("claude") ||
           model.id.includes("anthropic") ||
           model.api.id.includes("claude") ||
           model.api.id.includes("anthropic")
         ) {
-          return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+          const ANTHROPIC_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "max"]
+          return Object.fromEntries(
+            ANTHROPIC_EFFORTS.map((effort) => [effort, { reasoning: { effort: effort === "max" ? "xhigh" : effort } }]),
+          )
         }
         // GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
