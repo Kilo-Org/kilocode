@@ -217,7 +217,14 @@
 				"upToBoost": "สูงสุด <highlight>{{percent}}%</highlight> เครดิต Boost",
 				"firstMonthBoost": "เดือนแรก: <highlight>+{{percent}}%</highlight> เครดิต Boost"
 			},
-			"subscriptionNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต Boost จะปลดล็อกหลังจากใช้เครดิต Pass หนึ่งเดือนและหมดอายุเมื่อสิ้นรอบเดือน"
+			"subscriptionNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต Boost จะปลดล็อกหลังจากใช้เครดิต Pass หนึ่งเดือนและหมดอายุเมื่อสิ้นรอบเดือน",
+			"legend": {
+				"paid": "ชำระแล้ว",
+				"freeBonus": "โบนัสฟรี"
+			},
+			"activeUntilLabel": "Pass ใช้งานได้ถึง",
+			"renewsWithCredits": "ต่ออายุใน {{days}} วัน: เพิ่ม <paid>${{paid}}</paid> ชำระแล้ว + <bonus>${{bonus}}</bonus> เครดิตโบนัสฟรี",
+			"creditsExplanation": "เครดิตชำระแล้วที่ไม่ได้ใช้จะไม่มีวันหมดอายุและยกยอดทุกเดือน เครดิตโบนัสฟรีจะได้รับหลังจากใช้เครดิตชำระแล้วของเดือน เครดิตโบนัสฟรีที่ไม่ได้ใช้จะไม่ยกยอดและจะหมดอายุใน {{expiryDate}}"
 		},
 		"detailedUsage": "การใช้งานโดยละเอียด",
 		"createOrganization": "สร้างองค์กรเพื่อติดตามการใช้งานโดยละเอียด"

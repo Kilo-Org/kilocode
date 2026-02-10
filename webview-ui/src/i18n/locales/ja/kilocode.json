@@ -217,7 +217,14 @@
 				"upToBoost": "最大<highlight>{{percent}}%</highlight>の Boost クレジット",
 				"firstMonthBoost": "初月: <highlight>+{{percent}}%</highlight> Boost クレジット"
 			},
-			"subscriptionNote": "Pass クレジットは期限切れになりません。Boost クレジットは1ヶ月分の Pass クレジットを消費した後に解除され、各月間サイクルの終わりに期限切れになります。"
+			"subscriptionNote": "Pass クレジットは期限切れになりません。Boost クレジットは1ヶ月分の Pass クレジットを消費した後に解除され、各月間サイクルの終わりに期限切れになります。",
+			"legend": {
+				"paid": "有料",
+				"freeBonus": "無料ボーナス"
+			},
+			"activeUntilLabel": "パス有効期限",
+			"renewsWithCredits": "{{days}}日後に更新: <paid>${{paid}}</paid> 有料 + <bonus>${{bonus}}</bonus> 無料ボーナスクレジットを追加",
+			"creditsExplanation": "未使用の有料クレジットは期限切れにならず、毎月繰り越されます。無料ボーナスクレジットは月の有料クレジットを使用した後に獲得されます。未使用の無料ボーナスクレジットは繰り越されず、{{expiryDate}}に期限切れになります。"
 		},
 		"detailedUsage": "詳細な使用状況",
 		"createOrganization": "詳細な使用状況を追跡する組織を作成"

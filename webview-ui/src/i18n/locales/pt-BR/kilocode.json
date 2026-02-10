@@ -210,7 +210,14 @@
 				"upToBoost": "Até <highlight>{{percent}}%</highlight> de créditos Boost",
 				"firstMonthBoost": "Primeiro mês: <highlight>+{{percent}}%</highlight> de créditos Boost"
 			},
-			"subscriptionNote": "Créditos Pass nunca expiram. Créditos Boost são desbloqueados após consumir um mês de créditos Pass e expiram no final de cada ciclo mensal."
+			"subscriptionNote": "Créditos Pass nunca expiram. Créditos Boost são desbloqueados após consumir um mês de créditos Pass e expiram no final de cada ciclo mensal.",
+			"legend": {
+				"paid": "Pago",
+				"freeBonus": "Bônus gratuito"
+			},
+			"activeUntilLabel": "Pass ativo até",
+			"renewsWithCredits": "Renova em {{days}} dias: adiciona <paid>${{paid}}</paid> pago + <bonus>${{bonus}}</bonus> créditos bônus gratuitos",
+			"creditsExplanation": "Créditos pagos não utilizados nunca expiram e são transferidos todo mês. Créditos bônus gratuitos são obtidos após usar os créditos pagos do mês. Créditos bônus gratuitos não utilizados não são transferidos e expirarão em {{expiryDate}}."
 		},
 		"detailedUsage": "Uso detalhado",
 		"createOrganization": "Criar organização para rastrear uso detalhado"

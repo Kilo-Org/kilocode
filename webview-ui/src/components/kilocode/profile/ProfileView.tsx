@@ -114,17 +114,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 		{
 			name: "Starter",
 			price: 19,
-			boostBonus: 9.5,
 		},
 		{
 			name: "Pro",
 			price: 49,
-			boostBonus: 24.5,
 		},
 		{
 			name: "Expert",
 			price: 199,
-			boostBonus: 99.5,
 		},
 	]
 
@@ -542,8 +539,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 														{/* Renewal / Active Until Row */}
 														{(kiloPassState.refillAt || kiloPassState.nextBillingAt) && (
-															<div className="rounded-lg border px-3 py-2 mb-3 border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)]">
-																<div className="flex items-center justify-between text-sm">
+															<div className="rounded-lg border px-4 py-3 mb-3 border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)]">
+																<div className="flex items-center justify-between gap-4 text-sm">
 																	<div className="flex items-start gap-2">
 																		<span
 																			className={`codicon codicon-calendar mt-0.5 ${
@@ -614,11 +611,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 																			)}
 																		</div>
 																	</div>
-																	<span className="text-[var(--vscode-descriptionForeground)]">
+																	<span className="shrink-0 text-[var(--vscode-descriptionForeground)]">
 																		{new Date(
 																			kiloPassState.refillAt ||
 																				kiloPassState.nextBillingAt!,
-																		).toLocaleDateString("en-US", {
+																		).toLocaleDateString(undefined, {
 																			month: "short",
 																			day: "numeric",
 																			year: "numeric",
@@ -628,23 +625,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 															</div>
 														)}
 
-														{/* Bottom clarification text */}
-														<div className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
-															<Trans
-																i18nKey="kilocode:profile.kiloPass.creditsExplanation"
-																values={{
-																	expiryDate: kiloPassState.refillAt
-																		? new Date(
-																				kiloPassState.refillAt,
-																			).toLocaleDateString("en-US", {
-																				month: "short",
-																				day: "numeric",
-																				year: "numeric",
-																			})
-																		: "",
-																}}
-															/>
-														</div>
+														{/* Bottom clarification text - only for monthly cadence (matching cloud behavior) */}
+														{kiloPassState.cadence === "monthly" && (
+															<div className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
+																<Trans
+																	i18nKey="kilocode:profile.kiloPass.creditsExplanation"
+																	values={{
+																		expiryDate: kiloPassState.refillAt
+																			? new Date(
+																					kiloPassState.refillAt,
+																				).toLocaleDateString(undefined, {
+																					month: "short",
+																					day: "numeric",
+																					year: "numeric",
+																				})
+																			: "",
+																	}}
+																/>
+															</div>
+														)}
 													</div>
 												</div>
 											) : (
@@ -670,7 +669,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 														/>
 													</div>
 
-													<div className="grid grid-cols-1 min-[300px]:grid-cols-3 gap-3 mb-4">
+													<div className="grid grid-cols-1 min-[600px]:grid-cols-3 gap-3 mb-4">
 														{subscriptionPlans.map((plan) => (
 															<div
 																key={plan.name}

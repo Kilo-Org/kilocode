@@ -210,7 +210,14 @@
 				"upToBoost": "Až <highlight>{{percent}}%</highlight> Boost kreditů",
 				"firstMonthBoost": "První měsíc: <highlight>+{{percent}}%</highlight> Boost kreditů"
 			},
-			"subscriptionNote": "Pass kredity nikdy nevyprší. Boost kredity se odemknou po spotřebování měsíce Pass kreditů a vyprší na konci každého měsíčního cyklu."
+			"subscriptionNote": "Pass kredity nikdy nevyprší. Boost kredity se odemknou po spotřebování měsíce Pass kreditů a vyprší na konci každého měsíčního cyklu.",
+			"legend": {
+				"paid": "Placené",
+				"freeBonus": "Bezplatný bonus"
+			},
+			"activeUntilLabel": "Pass aktivní do",
+			"renewsWithCredits": "Obnoví se za {{days}} dní: přidá <paid>${{paid}}</paid> placených + <bonus>${{bonus}}</bonus> bezplatných bonusových kreditů",
+			"creditsExplanation": "Nevyužité placené kredity nikdy nevyprší a převádějí se každý měsíc. Bezplatné bonusové kredity se získají po využití placených kreditů za měsíc. Nevyužité bezplatné bonusové kredity se nepřevádějí a vyprší {{expiryDate}}."
 		},
 		"detailedUsage": "Podrobné využití",
 		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"

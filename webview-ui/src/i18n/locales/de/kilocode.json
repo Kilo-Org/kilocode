@@ -210,7 +210,14 @@
 			"subscriptionNote": "Pass-Credits verfallen nie. Boost-Credits werden nach Verbrauch eines Monats Pass-Credits freigeschaltet und verfallen am Ende jedes Monatszyklus.",
 			"refills": "Wird in {{days}} Tagen aufgefüllt",
 			"passActiveUntil": "Pass aktiv bis",
-			"creditsNote": "Pass-Credits laufen nie ab. Ungenutzte Boost-Credits verfallen bei der Auffüllung."
+			"creditsNote": "Pass-Credits laufen nie ab. Ungenutzte Boost-Credits verfallen bei der Auffüllung.",
+			"legend": {
+				"paid": "Bezahlt",
+				"freeBonus": "Gratis-Bonus"
+			},
+			"activeUntilLabel": "Pass aktiv bis",
+			"renewsWithCredits": "Erneuert sich in {{days}} Tagen: fügt <paid>${{paid}}</paid> bezahlt + <bonus>${{bonus}}</bonus> kostenlose Bonus-Credits hinzu",
+			"creditsExplanation": "Ungenutzte bezahlte Credits verfallen nie und werden jeden Monat übertragen. Kostenlose Bonus-Credits werden nach Verbrauch der bezahlten Credits des Monats freigeschaltet. Ungenutzte kostenlose Bonus-Credits werden nicht übertragen und verfallen am {{expiryDate}}."
 		},
 		"detailedUsage": "Detaillierte Nutzung",
 		"createOrganization": "Organisation erstellen, um detaillierte Nutzung zu verfolgen"

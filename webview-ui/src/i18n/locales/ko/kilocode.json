@@ -217,7 +217,14 @@
 				"upToBoost": "최대 <highlight>{{percent}}%</highlight> Boost 크레딧",
 				"firstMonthBoost": "첫 달: <highlight>+{{percent}}%</highlight> Boost 크레딧"
 			},
-			"subscriptionNote": "Pass 크레딧은 만료되지 않습니다. Boost 크레딧은 한 달간의 Pass 크레딧을 소비한 후 잠금 해제되며 각 월간 주기 종료 시 만료됩니다."
+			"subscriptionNote": "Pass 크레딧은 만료되지 않습니다. Boost 크레딧은 한 달간의 Pass 크레딧을 소비한 후 잠금 해제되며 각 월간 주기 종료 시 만료됩니다.",
+			"legend": {
+				"paid": "유료",
+				"freeBonus": "무료 보너스"
+			},
+			"activeUntilLabel": "패스 유효기간",
+			"renewsWithCredits": "{{days}}일 후 갱신: <paid>${{paid}}</paid> 유료 + <bonus>${{bonus}}</bonus> 무료 보너스 크레딧 추가",
+			"creditsExplanation": "미사용 유료 크레딧은 만료되지 않으며 매월 이월됩니다. 무료 보너스 크레딧은 해당 월의 유료 크레딧을 사용한 후 획득됩니다. 미사용 무료 보너스 크레딧은 이월되지 않으며 {{expiryDate}}에 만료됩니다."
 		},
 		"detailedUsage": "상세 사용량",
 		"createOrganization": "상세 사용량 추적을 위한 조직 생성"

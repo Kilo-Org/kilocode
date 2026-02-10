@@ -217,7 +217,14 @@
 			"subscriptionNote": "Les crédits Pass n'expirent jamais. Les crédits Boost se débloquent après avoir consommé un mois de crédits Pass et expirent à la fin de chaque cycle mensuel.",
 			"refills": "Rechargement dans {{days}} jours",
 			"passActiveUntil": "Pass actif jusqu'au",
-			"creditsNote": "Les crédits du Pass n'expirent jamais. Les crédits boost non utilisés expirent lors du rechargement."
+			"creditsNote": "Les crédits du Pass n'expirent jamais. Les crédits boost non utilisés expirent lors du rechargement.",
+			"legend": {
+				"paid": "Payé",
+				"freeBonus": "Bonus gratuit"
+			},
+			"activeUntilLabel": "Pass actif jusqu'au",
+			"renewsWithCredits": "Se renouvelle dans {{days}} jours : ajoute <paid>${{paid}}</paid> payé + <bonus>${{bonus}}</bonus> crédits bonus gratuits",
+			"creditsExplanation": "Les crédits payés non utilisés n'expirent jamais et sont reportés chaque mois. Les crédits bonus gratuits sont obtenus après avoir utilisé les crédits payés du mois. Les crédits bonus gratuits non utilisés ne sont pas reportés et expireront le {{expiryDate}}."
 		},
 		"detailedUsage": "Utilisation détaillée",
 		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"

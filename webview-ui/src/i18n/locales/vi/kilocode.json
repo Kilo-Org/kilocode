@@ -210,7 +210,14 @@
 				"upToBoost": "Tới <highlight>{{percent}}%</highlight> tín dụng Boost",
 				"firstMonthBoost": "Tháng đầu: <highlight>+{{percent}}%</highlight> tín dụng Boost"
 			},
-			"subscriptionNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng Boost được mở khóa sau khi tiêu thụ một tháng tín dụng Pass và hết hạn vào cuối mỗi chu kỳ hàng tháng."
+			"subscriptionNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng Boost được mở khóa sau khi tiêu thụ một tháng tín dụng Pass và hết hạn vào cuối mỗi chu kỳ hàng tháng.",
+			"legend": {
+				"paid": "Đã thanh toán",
+				"freeBonus": "Thưởng miễn phí"
+			},
+			"activeUntilLabel": "Pass hoạt động đến",
+			"renewsWithCredits": "Gia hạn trong {{days}} ngày: thêm <paid>${{paid}}</paid> đã thanh toán + <bonus>${{bonus}}</bonus> tín dụng thưởng miễn phí",
+			"creditsExplanation": "Tín dụng đã thanh toán chưa sử dụng không bao giờ hết hạn và được chuyển sang mỗi tháng. Tín dụng thưởng miễn phí được nhận sau khi sử dụng tín dụng đã thanh toán của tháng. Tín dụng thưởng miễn phí chưa sử dụng không được chuyển sang và sẽ hết hạn vào {{expiryDate}}."
 		},
 		"detailedUsage": "Sử dụng chi tiết",
 		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"

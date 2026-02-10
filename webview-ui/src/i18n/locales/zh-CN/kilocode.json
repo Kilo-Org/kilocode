@@ -217,7 +217,14 @@
 				"upToBoost": "最高 <highlight>{{percent}}%</highlight> Boost 额度",
 				"firstMonthBoost": "首月：<highlight>+{{percent}}%</highlight> Boost 额度"
 			},
-			"subscriptionNote": "Pass 额度永不过期。Boost 额度在消耗一个月 Pass 额度后解锁，并在每个月度周期结束时过期。"
+			"subscriptionNote": "Pass 额度永不过期。Boost 额度在消耗一个月 Pass 额度后解锁，并在每个月度周期结束时过期。",
+			"legend": {
+				"paid": "已付费",
+				"freeBonus": "免费奖励"
+			},
+			"activeUntilLabel": "Pass 有效期至",
+			"renewsWithCredits": "{{days}} 天后续订：添加 <paid>${{paid}}</paid> 付费 + <bonus>${{bonus}}</bonus> 免费奖励额度",
+			"creditsExplanation": "未使用的付费额度永不过期，每月自动结转。免费奖励额度在使用完当月付费额度后获得。未使用的免费奖励额度不会结转，将于 {{expiryDate}} 过期。"
 		},
 		"detailedUsage": "详细使用情况",
 		"createOrganization": "创建组织以跟踪详细使用情况"

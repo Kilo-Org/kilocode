@@ -210,7 +210,14 @@
 				"upToBoost": "<highlight>{{percent}}%</highlight>'e kadar Boost kredisi",
 				"firstMonthBoost": "İlk ay: <highlight>+{{percent}}%</highlight> Boost kredisi"
 			},
-			"subscriptionNote": "Pass kredileri asla sona ermez. Boost kredileri bir aylık Pass kredisi tüketildikten sonra açılır ve her aylık döngünün sonunda sona erer."
+			"subscriptionNote": "Pass kredileri asla sona ermez. Boost kredileri bir aylık Pass kredisi tüketildikten sonra açılır ve her aylık döngünün sonunda sona erer.",
+			"legend": {
+				"paid": "Ücretli",
+				"freeBonus": "Ücretsiz bonus"
+			},
+			"activeUntilLabel": "Pass aktif bitiş",
+			"renewsWithCredits": "{{days}} gün içinde yenilenir: <paid>${{paid}}</paid> ücretli + <bonus>${{bonus}}</bonus> ücretsiz bonus kredi ekler",
+			"creditsExplanation": "Kullanılmayan ücretli krediler asla sona ermez ve her ay aktarılır. Ücretsiz bonus krediler ayın ücretli kredileri kullanıldıktan sonra kazanılır. Kullanılmayan ücretsiz bonus krediler aktarılmaz ve {{expiryDate}} tarihinde sona erer."
 		},
 		"detailedUsage": "Detaylı Kullanım",
 		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"

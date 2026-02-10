@@ -159,6 +159,66 @@
 			"action": "Kúpiť teraz",
 			"viewAll": "Zobraziť všetky cenové možnosti"
 		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Predplať si predvídateľné náklady na AI s rastúcimi bonusovými kreditmi",
+			"recommended": "Odporúčané",
+			"perMonth": "/mesiac",
+			"action": "Predplatiť",
+			"learnMore": "Viac o Kilo Pass",
+			"yourSubscription": "Tvoj Kilo Pass",
+			"status": {
+				"active": "Aktívne",
+				"canceled": "Zrušené",
+				"past_due": "Po splatnosti",
+				"trialing": "Skúšobné",
+				"paused": "Pozastavené",
+				"cancelling": "Ruší sa"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Mesačné",
+				"yearly": "Ročné"
+			},
+			"nextBilling": "Ďalšia platba: {{date}}",
+			"activeUntil": "Aktívne do: {{date}}",
+			"streak": "{{count}} mesiac v rade",
+			"streakPlural": "{{count}} mesiacov v rade",
+			"bonusCredits": "+${{amount}} bonus dňa {{date}}",
+			"manage": "Spravovať predplatné",
+			"boost": {
+				"mode": "Boost režim",
+				"unlocked": "Boost odomknutý!",
+				"unlockProgress": "${{amount}} na odomknutie Boost",
+				"monthlyUsage": "Mesačné využitie",
+				"nextBoost": "Ďalší Boost",
+				"boostAmount": "+${{amount}}",
+				"useToUnlock": "Použi <amount>${{amount}}</amount> na odomknutie Boost"
+			},
+			"refills": "Doplní sa za {{days}} dní",
+			"passActiveUntil": "Pass aktívny do",
+			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší pri doplnení.",
+			"promo": "Odomkni <boost>Boost Mode</boost> pre až 50% kreditov zadarmo.",
+			"plans": {
+				"monthly": "Mesačne",
+				"perMonth": "/mesiac",
+				"includesCredits": "Zahŕňa <highlight>${{price}}/mesiac</highlight> Pass kreditov",
+				"upToBoost": "Až <highlight>{{percent}}%</highlight> Boost kreditov",
+				"firstMonthBoost": "Prvý mesiac: <highlight>+{{percent}}%</highlight> Boost kreditov"
+			},
+			"subscriptionNote": "Pass kredity nikdy nevyprší. Boost kredity sa odomknú po spotrebovaní mesiaca Pass kreditov a vyprší na konci každého mesačného cyklu.",
+			"legend": {
+				"paid": "Platené",
+				"freeBonus": "Bezplatný bonus"
+			},
+			"activeUntilLabel": "Pass aktívny do",
+			"renewsWithCredits": "Obnoví sa za {{days}} dní: pridá <paid>${{paid}}</paid> platených + <bonus>${{bonus}}</bonus> bezplatných bonusových kreditov",
+			"creditsExplanation": "Nevyužité platené kredity nikdy nevyprší a prenášajú sa každý mesiac. Bezplatné bonusové kredity sa získajú po využití platených kreditov za mesiac. Nevyužité bezplatné bonusové kredity sa neprenášajú a vyprší {{expiryDate}}."
+		},
 		"detailedUsage": "Podrobné využitie",
 		"createOrganization": "Vytvoriť organizáciu pre sledovanie podrobného využitia"
 	},

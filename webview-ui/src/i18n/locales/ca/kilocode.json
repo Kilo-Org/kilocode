@@ -190,7 +190,14 @@
 				"upToBoost": "Fins a <highlight>{{percent}}%</highlight> de crèdits Boost",
 				"firstMonthBoost": "Primer mes: <highlight>+{{percent}}%</highlight> de crèdits Boost"
 			},
-			"subscriptionNote": "Els crèdits Pass no caduquen mai. Els crèdits Boost es desbloquegen després de consumir un mes de crèdits Pass i caduquen al final de cada cicle mensual."
+			"subscriptionNote": "Els crèdits Pass no caduquen mai. Els crèdits Boost es desbloquegen després de consumir un mes de crèdits Pass i caduquen al final de cada cicle mensual.",
+			"legend": {
+				"paid": "Pagat",
+				"freeBonus": "Bonus gratuït"
+			},
+			"activeUntilLabel": "Pass actiu fins",
+			"renewsWithCredits": "Es renova en {{days}} dies: afegeix <paid>${{paid}}</paid> pagat + <bonus>${{bonus}}</bonus> crèdits bonus gratuïts",
+			"creditsExplanation": "Els crèdits pagats no utilitzats no caduquen mai i es transfereixen cada mes. Els crèdits bonus gratuïts es guanyen després d'utilitzar els crèdits pagats del mes. Els crèdits bonus gratuïts no utilitzats no es transfereixen i caducaran el {{expiryDate}}."
 		},
 		"detailedUsage": "Ús detallat",
 		"createOrganization": "Crear organització per fer seguiment de l'ús detallat"

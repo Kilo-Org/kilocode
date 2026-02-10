@@ -180,7 +180,7 @@
 				"past_due": "Past Due",
 				"trialing": "Trial",
 				"paused": "Paused",
-				"cancelling": "Cancellation scheduled"
+				"cancelling": "Cancelling"
 			},
 			"tiers": {
 				"tier_19": "Starter",
@@ -224,8 +224,10 @@
 			},
 			"activeUntilLabel": "Pass active until",
 			"renewsWithCredits": "Renews in {{days}} days: adds <paid>${{paid}}</paid> paid + <bonus>${{bonus}}</bonus> free bonus credits",
-			"creditsExplanation": "Paid credits never expire. Unused free bonus credits expire on {{expiryDate}}."
-		}
+			"creditsExplanation": "Unused paid credits never expire and roll over every month. Free bonus credits are earned after using the month's paid credits. Unused free bonus credits do not roll over and will expire on {{expiryDate}}."
+		},
+		"detailedUsage": "Detailed Usage",
+		"createOrganization": "Create an Organization to Track Detailed Usage"
 	},
 	"docs": "Docs",
 	"rules": {

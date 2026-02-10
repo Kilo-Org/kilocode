@@ -212,7 +212,14 @@
 				"upToBoost": "حتى <highlight>{{percent}}٪</highlight> رصيد Boost",
 				"firstMonthBoost": "الشهر الأول: <highlight>+{{percent}}٪</highlight> رصيد Boost"
 			},
-			"subscriptionNote": "رصيد Pass لا ينتهي أبداً. رصيد Boost يُفتح بعد استهلاك شهر من رصيد Pass وينتهي في نهاية كل دورة شهرية."
+			"subscriptionNote": "رصيد Pass لا ينتهي أبداً. رصيد Boost يُفتح بعد استهلاك شهر من رصيد Pass وينتهي في نهاية كل دورة شهرية.",
+			"legend": {
+				"paid": "مدفوع",
+				"freeBonus": "مكافأة مجانية"
+			},
+			"activeUntilLabel": "الباقة نشطة حتى",
+			"renewsWithCredits": "يتجدد خلال {{days}} يوم: يضيف <paid>${{paid}}</paid> مدفوع + <bonus>${{bonus}}</bonus> رصيد مكافأة مجاني",
+			"creditsExplanation": "الرصيد المدفوع غير المستخدم لا ينتهي أبداً ويُرحّل كل شهر. رصيد المكافأة المجاني يُكتسب بعد استخدام الرصيد المدفوع للشهر. رصيد المكافأة المجاني غير المستخدم لا يُرحّل وينتهي في {{expiryDate}}."
 		},
 		"detailedUsage": "الاستخدام التفصيلي",
 		"createOrganization": "إنشاء مؤسسة لتتبع الاستخدام التفصيلي"

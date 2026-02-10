@@ -203,7 +203,14 @@
 				"upToBoost": "Hingga <highlight>{{percent}}%</highlight> kredit Boost",
 				"firstMonthBoost": "Bulan pertama: <highlight>+{{percent}}%</highlight> kredit Boost"
 			},
-			"subscriptionNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit Boost terbuka setelah menggunakan satu bulan kredit Pass dan kedaluwarsa di akhir setiap siklus bulanan."
+			"subscriptionNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit Boost terbuka setelah menggunakan satu bulan kredit Pass dan kedaluwarsa di akhir setiap siklus bulanan.",
+			"legend": {
+				"paid": "Berbayar",
+				"freeBonus": "Bonus Gratis"
+			},
+			"activeUntilLabel": "Pass aktif sampai",
+			"renewsWithCredits": "Diperbarui dalam {{days}} hari: menambahkan <paid>${{paid}}</paid> berbayar + <bonus>${{bonus}}</bonus> kredit bonus gratis",
+			"creditsExplanation": "Kredit berbayar yang tidak digunakan tidak pernah kedaluwarsa dan dialihkan setiap bulan. Kredit bonus gratis diperoleh setelah menggunakan kredit berbayar bulan tersebut. Kredit bonus gratis yang tidak digunakan tidak dialihkan dan akan kedaluwarsa pada {{expiryDate}}."
 		},
 		"detailedUsage": "Penggunaan Terperinci",
 		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"

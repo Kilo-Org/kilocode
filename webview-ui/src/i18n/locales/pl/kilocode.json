@@ -210,7 +210,14 @@
 				"upToBoost": "Do <highlight>{{percent}}%</highlight> kredytów Boost",
 				"firstMonthBoost": "Pierwszy miesiąc: <highlight>+{{percent}}%</highlight> kredytów Boost"
 			},
-			"subscriptionNote": "Kredyty Pass nigdy nie wygasają. Kredyty Boost odblokowują się po zużyciu miesiąca kredytów Pass i wygasają na koniec każdego cyklu miesięcznego."
+			"subscriptionNote": "Kredyty Pass nigdy nie wygasają. Kredyty Boost odblokowują się po zużyciu miesiąca kredytów Pass i wygasają na koniec każdego cyklu miesięcznego.",
+			"legend": {
+				"paid": "Płatne",
+				"freeBonus": "Darmowy bonus"
+			},
+			"activeUntilLabel": "Pass aktywny do",
+			"renewsWithCredits": "Odnawia się za {{days}} dni: dodaje <paid>${{paid}}</paid> płatnych + <bonus>${{bonus}}</bonus> darmowych kredytów bonusowych",
+			"creditsExplanation": "Niewykorzystane płatne kredyty nigdy nie wygasają i są przenoszone co miesiąc. Darmowe kredyty bonusowe są zdobywane po wykorzystaniu płatnych kredytów za dany miesiąc. Niewykorzystane darmowe kredyty bonusowe nie są przenoszone i wygasną {{expiryDate}}."
 		},
 		"detailedUsage": "Szczegółowe użycie",
 		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"
