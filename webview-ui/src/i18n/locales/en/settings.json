@@ -387,6 +387,8 @@
 		"anthropic1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
 		"anthropicUseAzureDeployment": "Use Azure deployment name",
 		"anthropicAzureDeploymentPlaceholder": "Enter deployment name...",
+		"customAnthropicAdaptiveThinking": "Use adaptive thinking for custom model IDs",
+		"customAnthropicAdaptiveThinkingDescription": "If enabled, Kilo Code sends thinking.type=\"adaptive\" for custom Anthropic-compatible model IDs. Disable this if your endpoint rejects adaptive thinking.",
 		"awsBedrock1MContextBetaLabel": "Enable 1M context window (Beta)",
 		"awsBedrock1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
 		"vertex1MContextBetaLabel": "Enable 1M context window (Beta)",

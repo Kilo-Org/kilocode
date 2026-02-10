@@ -574,6 +574,7 @@ function getSelectedModel({
 							...defaultInfo,
 							supportsReasoningBudget: true,
 							supportsVerbosity: defaultInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+							supportsAdaptiveThinking: apiConfiguration.anthropicCustomAdaptiveThinking === true,
 						}
 					: knownInfo
 			// kilocode_change end

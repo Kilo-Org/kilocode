@@ -2,6 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce, useEvent } from "react-use"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { Checkbox } from "vscrui" // kilocode_change
 // import { ExternalLinkIcon } from "@radix-ui/react-icons" // kilocode_change
 
 import {
@@ -18,6 +19,7 @@ import {
 	openAiNativeDefaultModelId,
 	openAiCodexDefaultModelId,
 	anthropicDefaultModelId,
+	anthropicModels, // kilocode_change
 	doubaoDefaultModelId,
 	claudeCodeDefaultModelId,
 	qwenCodeDefaultModelId,
@@ -390,6 +392,7 @@ const ApiOptions = ({
 			...defaultModelInfo,
 			supportsReasoningBudget: true,
 			supportsVerbosity: defaultModelInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+			supportsAdaptiveThinking: apiConfiguration.anthropicCustomAdaptiveThinking === true,
 		}
 
 		for (const discoveredModelId of discoveredAnthropicModels) {
@@ -408,7 +411,33 @@ const ApiOptions = ({
 				return !modelInfo.deprecated
 			}),
 		)
-	}, [organizationAllowList, selectedModelId, discoveredAnthropicModels])
+	}, [organizationAllowList, selectedModelId, discoveredAnthropicModels, apiConfiguration.anthropicCustomAdaptiveThinking])
+	// kilocode_change end
+
+	// kilocode_change start
+	const isCustomAnthropicModel = useMemo(
+		() => selectedProvider === "anthropic" && !!selectedModelId && !(selectedModelId in anthropicModels),
+		[selectedProvider, selectedModelId],
+	)
+	// kilocode_change end
+
+	// kilocode_change start
+	// Keep custom adaptive setting in sync with the master reasoning toggle.
+	// If reasoning is explicitly disabled, adaptive must be off as well.
+	useEffect(() => {
+		if (
+			isCustomAnthropicModel &&
+			apiConfiguration.enableReasoningEffort === false &&
+			apiConfiguration.anthropicCustomAdaptiveThinking
+		) {
+			setApiConfigurationField("anthropicCustomAdaptiveThinking", false, false)
+		}
+	}, [
+		isCustomAnthropicModel,
+		apiConfiguration.enableReasoningEffort,
+		apiConfiguration.anthropicCustomAdaptiveThinking,
+		setApiConfigurationField,
+	])
 	// kilocode_change end
 
 	const onProviderChange = useCallback(
@@ -1099,6 +1128,31 @@ const ApiOptions = ({
 						)}
 					</>
 				)}
+
+			{!fromWelcomeView && (
+				// kilocode_change start
+				<>
+					{isCustomAnthropicModel && (
+						<div className="flex flex-col gap-1">
+							<Checkbox
+								checked={apiConfiguration.anthropicCustomAdaptiveThinking ?? false}
+								onChange={(checked: boolean) => {
+									setApiConfigurationField("anthropicCustomAdaptiveThinking", checked === true)
+									if (checked) {
+										setApiConfigurationField("enableReasoningEffort", true, false)
+									}
+								}}
+								data-testid="custom-anthropic-adaptive-thinking-checkbox">
+								{t("settings:providers.customAnthropicAdaptiveThinking")}
+							</Checkbox>
+							<div className="text-xs text-vscode-descriptionForeground">
+								{t("settings:providers.customAnthropicAdaptiveThinkingDescription")}
+							</div>
+						</div>
+					)}
+				</>
+				// kilocode_change end
+			)}
 
 			{!fromWelcomeView && (
 				<ThinkingBudget
