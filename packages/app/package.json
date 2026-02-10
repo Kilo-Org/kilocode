@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
+    "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@opencode-ai/util": "workspace:*",
@@ -54,7 +55,7 @@
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "catalog:",
     "fuzzysort": "catalog:",
-    "ghostty-web": "0.3.0",
+    "ghostty-web": "0.4.0",
     "luxon": "catalog:",
     "marked": "catalog:",
     "marked-shiki": "catalog:",
@@ -66,5 +67,6 @@
     "virtua": "catalog:",
     "zod": "catalog:",
     "@kilocode/kilo-i18n": "workspace:*"
-  }
+  },
+  "peerDependencies": {}
 }

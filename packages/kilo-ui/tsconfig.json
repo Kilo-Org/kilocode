@@ -1,0 +1,17 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true
+  },
+  "include": ["src/**/*"]
+}

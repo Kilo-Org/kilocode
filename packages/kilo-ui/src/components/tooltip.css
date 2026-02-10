@@ -1,0 +1,10 @@
+/* kilocode_change - new file */
+/* Kilo Tooltip overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="tooltip"] {
+  border-radius: 0;
+  font-size: 13px;
+  line-height: normal;
+  font-weight: 400;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+}

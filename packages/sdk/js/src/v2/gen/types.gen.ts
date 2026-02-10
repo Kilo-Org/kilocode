@@ -1313,6 +1313,10 @@ export type KeybindsConfig = {
    * Toggle news on home screen
    */
   news_toggle?: string
+  /**
+   * Toggle thinking blocks visibility
+   */
+  display_thinking?: string
 }
 
 /**

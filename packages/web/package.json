@@ -34,8 +34,9 @@
     "toolbeam-docs-theme": "0.4.8"
   },
   "devDependencies": {
-    "@kilocode/cli": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
-  }
+    "typescript": "catalog:",
+    "@kilocode/cli": "workspace:*"
+  },
+  "peerDependencies": {}
 }

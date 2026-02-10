@@ -1,0 +1,6 @@
+/* kilocode_change - new file */
+/* Kilo Toast overrides – harmonized with @vscode/webview-ui-toolkit */
+
+[data-component="toast"] {
+  border-radius: 2px;
+}

@@ -1,0 +1,26 @@
+/* kilocode_change - new file */
+/* Kilo Input / TextField overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="input"] {
+  &[data-variant="normal"] [data-slot="input-wrapper"] {
+    border-radius: 2px;
+
+    &:focus-within:not(:has([data-readonly])) {
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+  }
+
+  &[data-variant="normal"] [data-slot="input-input"] {
+    height: 26px;
+    padding: 0 9px;
+    font-size: 13px;
+    line-height: normal;
+    font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  }
+
+  &[data-variant="normal"] textarea[data-slot="input-input"] {
+    height: auto;
+    min-height: 26px;
+    padding: 9px;
+  }
+}

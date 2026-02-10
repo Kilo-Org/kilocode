@@ -1,0 +1,6 @@
+/* kilocode_change - new file */
+/* Kilo Accordion overrides */
+
+[data-component="accordion"] {
+  font-size: 13px;
+}

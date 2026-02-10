@@ -1,0 +1,7 @@
+/* kilocode_change - new file */
+/* Kilo Code overrides */
+
+[data-component="code"] {
+  font-family: var(--vscode-editor-font-family, Menlo, Monaco, "Courier New", monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
+}

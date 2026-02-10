@@ -29,5 +29,6 @@
   "dependencies": {},
   "publishConfig": {
     "directory": "dist"
-  }
+  },
+  "peerDependencies": {}
 }

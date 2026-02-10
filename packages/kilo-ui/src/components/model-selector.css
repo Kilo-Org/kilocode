@@ -1,0 +1,88 @@
+/* kilocode_change - new file */
+/* Kilo Model Selector Popover overrides – styled to match legacy SelectDropdown look */
+
+/* ModelSelectorPopover content panel */
+[data-component="model-selector-popover"] {
+  border-radius: 2px;
+  border: 1px solid var(--border-base);
+  background-color: var(--surface-raised-stronger-non-alpha);
+  padding: 0;
+  width: 288px;
+  height: 320px;
+
+  /* List inside the popover */
+  [data-component="list"] {
+    padding: 0;
+    gap: 0;
+
+    /* Search area */
+    [data-slot="list-search-wrapper"] {
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--border-weak-base);
+    }
+
+    [data-slot="list-search"] {
+      padding: 8px;
+      border-radius: 0;
+      background: transparent;
+      gap: 8px;
+
+      [data-slot="list-search-container"] {
+        gap: 6px;
+      }
+    }
+
+    /* Scroll container */
+    [data-slot="list-scroll"] {
+      gap: 0;
+    }
+
+    /* Group headers */
+    [data-slot="list-header"] {
+      padding: 6px 12px 4px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-weak);
+      background: var(--surface-raised-stronger-non-alpha);
+
+      &::after {
+        display: none;
+      }
+    }
+
+    /* Last group remove extra bottom padding */
+    [data-slot="list-group"]:last-child {
+      padding-bottom: 4px;
+    }
+
+    /* List items */
+    [data-slot="list-item"] {
+      padding: 4px 12px;
+      font-size: 13px;
+      line-height: 20px;
+      border-radius: 0;
+
+      &[data-active="true"] {
+        border-radius: 0;
+        background-color: var(--surface-interactive-base);
+        color: var(--text-on-interactive-base, var(--text-strong));
+      }
+
+      &[data-selected="true"] {
+        background-color: var(--surface-interactive-base);
+        color: var(--text-on-interactive-base, var(--text-strong));
+      }
+    }
+
+    /* Empty state */
+    [data-slot="list-empty-state"] {
+      padding: 16px 12px;
+
+      [data-slot="list-message"] {
+        font-size: 13px;
+      }
+    }
+  }
+}

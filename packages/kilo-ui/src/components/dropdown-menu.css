@@ -1,0 +1,35 @@
+/* kilocode_change - new file */
+/* Kilo Dropdown Menu overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="dropdown-menu-content"],
+[data-component="dropdown-menu-sub-content"] {
+  border-radius: 2px;
+  border: 1px solid var(--border-base);
+
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"] {
+    border-radius: 0;
+    padding: 0 2px 1px;
+    font-size: 13px;
+    line-height: normal;
+    cursor: pointer;
+
+    &[data-highlighted] {
+      background-color: var(--surface-interactive-base);
+      color: var(--text-on-interactive-base, var(--text-strong));
+    }
+
+    /* kilocode_change start - preserve disabled state behavior from upstream */
+    &[data-disabled] {
+      cursor: default;
+      pointer-events: none;
+    }
+    /* kilocode_change end */
+  }
+
+  [data-slot="dropdown-menu-separator"] {
+    margin: 4px -4px;
+  }
+}

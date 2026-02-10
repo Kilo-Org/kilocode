@@ -1,0 +1,32 @@
+/* kilocode_change - new file */
+/* Kilo Tabs overrides – sized to match @vscode/webview-ui-toolkit panels */
+
+[data-component="tabs"] {
+  font-size: 13px;
+  line-height: normal;
+
+  [data-slot="tabs-list"] {
+    column-gap: 32px;
+  }
+
+  /* Pill variant: closest to legacy tab style */
+  &[data-variant="pill"] [data-slot="tabs-list"] {
+    background: var(--input-base);
+    border-radius: 2px;
+    padding: 4px;
+  }
+
+  &[data-variant="pill"] [data-slot="tabs-trigger"] {
+    padding: 4px 0;
+    border-radius: 0;
+    font-size: 13px;
+  }
+
+  /* Default/alt variant adjustments */
+  [data-slot="tabs-trigger"] {
+    height: 28px;
+    padding: 4px 0;
+    font-size: 13px;
+    line-height: normal;
+  }
+}

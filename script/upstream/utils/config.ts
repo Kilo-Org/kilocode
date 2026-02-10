@@ -90,6 +90,7 @@ export const defaultConfig: MergeConfig = {
     // Translated README files (Kilo doesn't have these)
     "README.ar.md",
     "README.br.md",
+    "README.bs.md",
     "README.da.md",
     "README.de.md",
     "README.es.md",

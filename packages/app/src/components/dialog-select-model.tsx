@@ -185,6 +185,7 @@ export function ModelSelectorPopover<T extends ValidComponent = "div">(props: {
       </Kobalte.Trigger>
       <Kobalte.Portal>
         <Kobalte.Content
+          data-component="model-selector-popover" // kilocode_change
           ref={(el) => setStore("content", el)}
           class="w-72 h-80 flex flex-col p-2 rounded-md border border-border-base bg-surface-raised-stronger-non-alpha shadow-md z-50 outline-none overflow-hidden"
           onEscapeKeyDown={(event) => {

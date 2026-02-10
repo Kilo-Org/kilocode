@@ -1,0 +1,66 @@
+/* kilocode_change - new file */
+/*
+ * Kilo UI Global Overrides
+ *
+ * Global design tokens, scrollbar styling, and VS Code extension overrides
+ * that are not component-specific.
+ */
+
+/* ===== Global design tokens ===== */
+
+:root {
+  --font-size-small: 11px;
+  --font-size-base: 13px;
+  --font-size-large: 16px;
+
+  /* Tight border radius (~2px) */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+/* ===== Scrollbar styling ===== */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ===== VS Code extension: inherit native styling ===== */
+
+html[data-theme="kilo-vscode"] {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--vscode-scrollbarSlider-activeBackground);
+  }
+}

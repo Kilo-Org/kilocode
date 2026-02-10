@@ -1,0 +1,63 @@
+/* kilocode_change - new file */
+/* Kilo Button overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="button"] {
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: 13px;
+  line-height: normal;
+  border-radius: 2px;
+  cursor: pointer;
+
+  &:active:not([data-disabled]) {
+    opacity: 0.8;
+  }
+
+  &[data-variant="primary"] {
+    background-color: var(--surface-interactive-base);
+    color: var(--text-on-interactive-base, white);
+    border-color: transparent;
+    box-shadow: none;
+    font-weight: 500;
+
+    &:hover:not([data-disabled]) {
+      background-color: var(--surface-interactive-hover);
+    }
+  }
+
+  /* Full-width variant for "Start New Task" style buttons */
+  &[data-full-width="true"] {
+    width: 100%;
+  }
+
+  &[data-variant="secondary"] {
+    box-shadow: none;
+    border: 1px solid var(--border-weak-base);
+  }
+
+  &[data-variant="ghost"] {
+    background: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+  }
+
+  &[data-size="normal"] {
+    height: 26px;
+    padding: 4px 11px;
+    font-size: 13px;
+  }
+
+  &[data-size="large"] {
+    height: 30px;
+    padding: 6px 11px;
+    font-size: 13px;
+  }
+
+  &[data-size="small"] {
+    height: 22px;
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,28 @@
+/* kilocode_change - new file */
+/* Kilo Context Menu overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="context-menu-content"],
+[data-component="context-menu-sub-content"] {
+  border-radius: 2px;
+  border: 1px solid var(--border-base);
+
+  [data-slot="context-menu-item"],
+  [data-slot="context-menu-checkbox-item"],
+  [data-slot="context-menu-radio-item"],
+  [data-slot="context-menu-sub-trigger"] {
+    border-radius: 0;
+    padding: 0 2px 1px;
+    font-size: 13px;
+    line-height: normal;
+    cursor: pointer;
+
+    &[data-highlighted] {
+      background-color: var(--surface-interactive-base);
+      color: var(--text-on-interactive-base, var(--text-strong));
+    }
+  }
+
+  [data-slot="context-menu-separator"] {
+    margin: 4px -4px;
+  }
+}

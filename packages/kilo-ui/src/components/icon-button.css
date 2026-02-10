@@ -1,0 +1,14 @@
+/* kilocode_change - new file */
+/* Kilo Icon Button overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="icon-button"] {
+  cursor: pointer;
+  background: transparent;
+  border-radius: 5px;
+  padding: 3px;
+  border: none;
+
+  &:active:not([data-disabled]) {
+    opacity: 0.8;
+  }
+}

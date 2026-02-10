@@ -533,7 +533,7 @@ export const GithubRunCommand = cmd({
           await Session.share(session.id)
           return session.id.slice(-8)
         })()
-        console.log("opencode session", session.id)
+        console.log("kilo session", session.id) // kilocode_change
 
         // Handle event types:
         // REPO_EVENTS (schedule, workflow_dispatch): no issue/PR context, output to logs/PR only

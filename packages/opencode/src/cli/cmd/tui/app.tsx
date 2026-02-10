@@ -666,7 +666,7 @@ function App() {
     toast.show({
       variant: "info",
       title: "Update Available",
-      message: `OpenCode v${evt.properties.version} is available. Run 'opencode upgrade' to update manually.`,
+      message: `Kilo v${evt.properties.version} is available. Run 'kilo upgrade' to update manually.`, // kilocode_change
       duration: 10000,
     })
   })

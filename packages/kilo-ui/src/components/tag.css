@@ -1,0 +1,24 @@
+/* kilocode_change - new file */
+/* Kilo Tag (maps to legacy Badge) overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="tag"],
+[data-component="badge"] {
+  border-radius: 2px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+
+  &[data-variant="neutral"] {
+    background-color: var(--surface-raised-base);
+    color: var(--text-base);
+  }
+
+  &[data-variant="member"] {
+    background-color: var(--surface-inset-base);
+    color: var(--text-weak);
+    letter-spacing: 0.5px;
+  }
+}

@@ -7,6 +7,7 @@ import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
 import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
+import { Auth } from "../auth" // kilocode_change
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 
 // Try to import bundled snapshot (generated at build time)
@@ -124,7 +125,11 @@ export namespace ModelsDev {
     if (!providers["kilo"]) {
       const config = await Config.get()
       const kiloOptions = config.provider?.kilo?.options
-      const kiloOrgId = kiloOptions?.kilocodeOrganizationId
+      // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
+      const kiloAuth = await Auth.get("kilo")
+      const kiloOrgId =
+        kiloOptions?.kilocodeOrganizationId ?? (kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined)
+      // kilocode_change end
       const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
       const kiloFetchOptions = {
         ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),

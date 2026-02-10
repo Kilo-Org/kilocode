@@ -83,3 +83,33 @@ export interface ServerConfig {
   baseUrl: string
   password: string
 }
+
+// Provider OAuth types
+export interface ProviderAuthAuthorization {
+  url: string
+  method: "auto" | "code"
+  instructions: string
+}
+
+// Profile types from kilo-gateway
+export interface KilocodeOrganization {
+  id: string
+  name: string
+  role: string
+}
+
+export interface KilocodeProfile {
+  email: string
+  name?: string
+  organizations?: KilocodeOrganization[]
+}
+
+export interface KilocodeBalance {
+  balance: number
+}
+
+export interface ProfileData {
+  profile: KilocodeProfile
+  balance: KilocodeBalance | null
+  currentOrgId: string | null
+}

@@ -1,0 +1,23 @@
+/* kilocode_change - new file */
+/* Kilo Dialog overrides – harmonized with @vscode/webview-ui-toolkit */
+
+[data-component="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+[data-component="dialog"] {
+  [data-slot="dialog-content"] {
+    border-radius: 2px;
+    max-width: 512px;
+    background-color: var(--background-base);
+    border: 1px solid var(--border-weak-base);
+  }
+
+  [data-slot="dialog-header"] {
+    font-size: 14px;
+  }
+
+  [data-slot="dialog-title"] {
+    font-weight: 600;
+  }
+}

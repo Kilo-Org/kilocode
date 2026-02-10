@@ -172,6 +172,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey))
+  const view = createMemo(() => layout.view(sessionKey))
 
   const commentInReview = (path: string) => {
     const sessionID = params.id
@@ -190,12 +191,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     const wantsReview = item.commentOrigin === "review" || (item.commentOrigin !== "file" && commentInReview(item.path))
     if (wantsReview) {
+      if (!view().reviewPanel.opened()) view().reviewPanel.open()
       layout.fileTree.open()
       layout.fileTree.setTab("changes")
       requestAnimationFrame(() => comments.setFocus(focus))
       return
     }
 
+    if (!view().reviewPanel.opened()) view().reviewPanel.open()
     layout.fileTree.open()
     layout.fileTree.setTab("all")
     const tab = files.tab(item.path)
@@ -1220,7 +1223,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           })
           return undefined
         })
-      if (session) navigate(`/${base64Encode(sessionDirectory)}/session/${session.id}`)
+      if (session) {
+        layout.handoff.setTabs(base64Encode(sessionDirectory), session.id)
+        navigate(`/${base64Encode(sessionDirectory)}/session/${session.id}`)
+      }
     }
     if (!session) return
 
@@ -1725,6 +1731,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
       </Show>
       <form
+        data-component="prompt-input-form" // kilocode_change
         onSubmit={handleSubmit}
         classList={{
           "group/prompt-input": true,
@@ -1793,7 +1800,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           type="button"
                           icon="close-small"
                           variant="ghost"
-                          class="ml-auto size-3.5 opacity-0 group-hover:opacity-100 transition-all"
+                          class="ml-auto size-3.5 text-text-weak hover:text-text-strong transition-all"
                           onClick={(e) => {
                             e.stopPropagation()
                             if (item.commentID) comments.remove(item.path, item.commentID)
@@ -1852,7 +1859,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </For>
           </div>
         </Show>
-        <div class="relative max-h-[240px] overflow-y-auto" ref={(el) => (scrollRef = el)}>
+        <div
+          data-slot="prompt-input-scroll" // kilocode_change
+          class="relative max-h-[240px] overflow-y-auto"
+          ref={(el) => (scrollRef = el)}
+        >
           <div
             data-component="prompt-input"
             ref={(el) => {
@@ -1885,7 +1896,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }}
           />
           <Show when={!prompt.dirty()}>
-            <div class="absolute top-0 inset-x-0 p-3 pr-12 text-14-regular text-text-weak pointer-events-none whitespace-nowrap truncate">
+            <div
+              data-slot="prompt-input-placeholder" // kilocode_change
+              class="absolute top-0 inset-x-0 p-3 pr-12 text-14-regular text-text-weak pointer-events-none whitespace-nowrap truncate"
+            >
               {store.mode === "shell"
                 ? language.t("prompt.placeholder.shell")
                 : commentCount() > 1
@@ -1896,7 +1910,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </div>
           </Show>
         </div>
-        <div class="relative p-3 flex items-center justify-between gap-2">
+        <div
+          data-slot="prompt-input-toolbar" // kilocode_change
+          class="relative p-3 flex items-center justify-between gap-2"
+        >
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <Switch>
               <Match when={store.mode === "shell"}>

@@ -172,7 +172,9 @@ function AutoMethod(props: AutoMethodProps) {
         <text attributes={TextAttributes.BOLD} fg={theme.text}>
           {props.title}
         </text>
-        <text fg={theme.textMuted}>esc</text>
+        <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+          esc
+        </text>
       </box>
       <box gap={1}>
         <Link href={props.authorization.url} fg={theme.primary} />
@@ -247,12 +249,14 @@ function ApiMethod(props: ApiMethodProps) {
       description={
         props.providerID === "opencode" ? (
           <box gap={1}>
+            {/* kilocode_change start */}
             <text fg={theme.textMuted}>
-              OpenCode Zen gives you access to all the best coding models at the cheapest prices with a single API key.
+              Kilo Gateway gives you access to all the best coding models at the cheapest prices with a single API key.
             </text>
             <text fg={theme.text}>
-              Go to <span style={{ fg: theme.primary }}>https://opencode.ai/zen</span> to get a key
+              Go to <span style={{ fg: theme.primary }}>https://kilo.ai/gateway</span> to get a key
             </text>
+            {/* kilocode_change end */}
           </box>
         ) : undefined
       }

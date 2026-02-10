@@ -1,0 +1,39 @@
+/* kilocode_change - new file */
+/* Wraps upstream tailwind styles and adds Kilo overrides */
+@import "@opencode-ai/ui/styles/tailwind";
+
+/* Global design tokens, scrollbar, VS Code extension overrides */
+@import "../globals.css";
+
+/* Per-component Kilo overrides */
+@import "../../components/accordion.css";
+@import "../../components/auto-approve-bar.css";
+@import "../../components/button.css";
+@import "../../components/card.css";
+@import "../../components/chat-input.css";
+@import "../../components/checkbox.css";
+@import "../../components/code.css";
+@import "../../components/context-menu.css";
+@import "../../components/dialog.css";
+@import "../../components/dropdown-menu.css";
+@import "../../components/icon-button.css";
+@import "../../components/inline-input.css";
+@import "../../components/list.css";
+@import "../../components/message-row.css";
+@import "../../components/model-info-card.css";
+@import "../../components/model-selector.css";
+@import "../../components/popover.css";
+@import "../../components/prompt-input.css";
+@import "../../components/select.css";
+@import "../../components/settings-sidebar.css";
+@import "../../components/status-indicator.css";
+@import "../../components/switch.css";
+@import "../../components/tabs.css";
+@import "../../components/tag.css";
+@import "../../components/task-header.css";
+@import "../../components/text-field.css";
+@import "../../components/toast.css";
+@import "../../components/tooltip.css";
+
+/* VS Code variable bridge */
+@import "../vscode-bridge.css";

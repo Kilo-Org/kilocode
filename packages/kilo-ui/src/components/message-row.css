@@ -1,0 +1,36 @@
+/* kilocode_change - new file */
+/* Kilo Message Row overrides */
+
+[data-component="message-row"] {
+  padding: 12px 16px;
+
+  [data-slot="message-header"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  [data-slot="message-author"] {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-strong);
+  }
+
+  [data-slot="message-timestamp"] {
+    color: var(--text-weak);
+    font-size: 11px;
+  }
+
+  [data-slot="message-cost"] {
+    color: var(--text-weak);
+    font-size: 11px;
+    margin-left: auto;
+  }
+
+  [data-slot="message-content"] {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-base);
+  }
+}

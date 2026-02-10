@@ -1,0 +1,12 @@
+/* kilocode_change - new file */
+/* Kilo Popover overrides */
+
+[data-component="popover-content"] {
+  border-radius: 2px;
+  border: 1px solid var(--border-base);
+  overflow: hidden;
+
+  [data-slot="popover-body"] {
+    padding: 0;
+  }
+}

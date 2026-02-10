@@ -1,0 +1,31 @@
+/* kilocode_change - new file */
+/* Kilo Auto-approve Bar overrides */
+
+[data-component="auto-approve-bar"] {
+  background-color: var(--surface-raised-base);
+  padding: 8px 12px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  [data-slot="auto-approve-checkbox"] {
+    margin-right: 8px;
+  }
+
+  [data-slot="auto-approve-label"] {
+    font-size: 13px;
+    color: var(--text-base);
+    flex: 1;
+  }
+
+  [data-slot="auto-approve-expand"] {
+    cursor: pointer;
+    padding: 4px;
+
+    &:hover {
+      background-color: var(--surface-interactive-weak);
+      border-radius: 2px;
+    }
+  }
+}

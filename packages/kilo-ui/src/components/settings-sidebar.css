@@ -1,0 +1,33 @@
+/* kilocode_change - new file */
+/* Kilo Settings Sidebar overrides */
+
+[data-component="settings-sidebar"] {
+  background-color: var(--background-weak);
+  width: 60px;
+  border-right: 1px solid var(--border-weak-base);
+
+  [data-slot="settings-nav-item"] {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0;
+
+    &:hover {
+      background-color: var(--surface-interactive-weak);
+    }
+
+    &[data-active="true"] {
+      background-color: var(--surface-interactive-base);
+      border-left: 2px solid var(--border-focus);
+    }
+  }
+
+  [data-slot="settings-nav-icon"] {
+    width: 24px;
+    height: 24px;
+    color: var(--icon-base);
+  }
+}

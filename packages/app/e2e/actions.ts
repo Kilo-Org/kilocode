@@ -21,7 +21,12 @@ import {
 import type { createSdk } from "./utils"
 
 export async function defocus(page: Page) {
-  await page.mouse.click(5, 5)
+  await page
+    .evaluate(() => {
+      const el = document.activeElement
+      if (el instanceof HTMLElement) el.blur()
+    })
+    .catch(() => undefined)
 }
 
 export async function openPalette(page: Page) {
@@ -68,14 +73,50 @@ export async function toggleSidebar(page: Page) {
 
 export async function openSidebar(page: Page) {
   if (!(await isSidebarClosed(page))) return
+
+  const button = page.getByRole("button", { name: /toggle sidebar/i }).first()
+  const visible = await button
+    .isVisible()
+    .then((x) => x)
+    .catch(() => false)
+
+  if (visible) await button.click()
+  if (!visible) await toggleSidebar(page)
+
+  const main = page.locator("main")
+  const opened = await expect(main)
+    .not.toHaveClass(/xl:border-l/, { timeout: 1500 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (opened) return
+
   await toggleSidebar(page)
-  await expect(page.locator("main")).not.toHaveClass(/xl:border-l/)
+  await expect(main).not.toHaveClass(/xl:border-l/)
 }
 
 export async function closeSidebar(page: Page) {
   if (await isSidebarClosed(page)) return
+
+  const button = page.getByRole("button", { name: /toggle sidebar/i }).first()
+  const visible = await button
+    .isVisible()
+    .then((x) => x)
+    .catch(() => false)
+
+  if (visible) await button.click()
+  if (!visible) await toggleSidebar(page)
+
+  const main = page.locator("main")
+  const closed = await expect(main)
+    .toHaveClass(/xl:border-l/, { timeout: 1500 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (closed) return
+
   await toggleSidebar(page)
-  await expect(page.locator("main")).toHaveClass(/xl:border-l/)
+  await expect(main).toHaveClass(/xl:border-l/)
 }
 
 export async function openSettings(page: Page) {
@@ -182,13 +223,31 @@ export async function hoverSessionItem(page: Page, sessionID: string) {
 }
 
 export async function openSessionMoreMenu(page: Page, sessionID: string) {
-  const sessionEl = await hoverSessionItem(page, sessionID)
+  await expect(page).toHaveURL(new RegExp(`/session/${sessionID}(?:[/?#]|$)`))
 
-  const menuTrigger = sessionEl.locator(dropdownMenuTriggerSelector).first()
+  const scroller = page.locator(".session-scroller").first()
+  await expect(scroller).toBeVisible()
+  await expect(scroller.getByRole("heading", { level: 1 }).first()).toBeVisible({ timeout: 30_000 })
+
+  const menu = page
+    .locator(dropdownMenuContentSelector)
+    .filter({ has: page.getByRole("menuitem", { name: /rename/i }) })
+    .filter({ has: page.getByRole("menuitem", { name: /archive/i }) })
+    .filter({ has: page.getByRole("menuitem", { name: /delete/i }) })
+    .first()
+
+  const opened = await menu
+    .isVisible()
+    .then((x) => x)
+    .catch(() => false)
+
+  if (opened) return menu
+
+  const menuTrigger = scroller.getByRole("button", { name: /more options/i }).first()
   await expect(menuTrigger).toBeVisible()
+  await page.waitForTimeout(100) // kilocode_change - wait before menu trigger click
   await menuTrigger.click()
 
-  const menu = page.locator(dropdownMenuContentSelector).first()
   await expect(menu).toBeVisible()
   return menu
 }
@@ -196,6 +255,8 @@ export async function openSessionMoreMenu(page: Page, sessionID: string) {
 export async function clickMenuItem(menu: Locator, itemName: string | RegExp, options?: { force?: boolean }) {
   const item = menu.getByRole("menuitem").filter({ hasText: itemName }).first()
   await expect(item).toBeVisible()
+  await item.waitFor({ state: "visible", timeout: 5000 }) // kilocode_change - wait for menu item to be visible in case of animation
+  await menu.page().waitForTimeout(100) // kilocode_change - wait for menu animation
   await item.click({ force: options?.force })
 }
 
@@ -342,6 +403,7 @@ export async function setWorkspacesEnabled(page: Page, projectSlug: string, enab
 
   const toggle = page.locator(projectWorkspacesToggleSelector(projectSlug)).first()
   await expect(toggle).toBeVisible()
+  await page.waitForTimeout(100) // kilocode_change - wait before toggle click
   await toggle.click({ force: true })
 
   const expected = enabled ? "New workspace" : "New session"
@@ -352,9 +414,11 @@ export async function openWorkspaceMenu(page: Page, workspaceSlug: string) {
   const item = page.locator(workspaceItemSelector(workspaceSlug)).first()
   await expect(item).toBeVisible()
   await item.hover()
+  await page.waitForTimeout(200) // kilocode_change - wait for hover state
 
   const trigger = page.locator(workspaceMenuTriggerSelector(workspaceSlug)).first()
   await expect(trigger).toBeVisible()
+  await page.waitForTimeout(100) // kilocode_change - wait before trigger click
   await trigger.click({ force: true })
 
   const menu = page.locator(dropdownMenuContentSelector).first()

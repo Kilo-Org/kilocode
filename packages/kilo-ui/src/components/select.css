@@ -1,0 +1,98 @@
+/* kilocode_change - new file */
+/* Kilo Select overrides – styled to match legacy SelectDropdown look */
+
+/* Select trigger (renders as a Button, override the button sizing) */
+[data-component="select"] [data-slot="select-select-trigger"] {
+  height: auto !important;
+  min-height: 22px;
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: normal;
+  padding: 1px 6px !important;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  opacity: 0.9;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 150ms;
+  color: var(--text-base, var(--vscode-foreground));
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--border-focus);
+  }
+
+  &[data-expanded] {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  [data-slot="select-select-trigger-value"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  [data-slot="select-select-trigger-icon"] {
+    width: 12px;
+    height: 12px;
+    opacity: 0.8;
+    flex-shrink: 0;
+  }
+}
+
+/* Select dropdown content */
+[data-component="select-content"] {
+  border-radius: 2px;
+  border: 1px solid var(--border-base);
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--surface-raised-stronger-non-alpha);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+
+  [data-slot="select-select-content-list"] {
+    max-height: 328px;
+    padding: 4px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Section headers */
+  [data-slot="select-section"] {
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-weak);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  [data-slot="select-select-item"] {
+    border-radius: 0;
+    padding: 4px 12px;
+    font-size: 13px;
+    line-height: 20px;
+    cursor: pointer;
+    gap: 8px;
+
+    &[data-highlighted] {
+      background-color: var(--surface-interactive-base);
+      color: var(--text-on-interactive-base, var(--text-strong));
+    }
+
+    [data-slot="select-select-item-indicator"] {
+      margin-left: auto;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}

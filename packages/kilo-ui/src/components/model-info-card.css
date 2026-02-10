@@ -1,0 +1,58 @@
+/* kilocode_change - new file */
+/* Kilo Model Info Card overrides – harmonized with @vscode/webview-ui-toolkit */
+
+[data-component="model-info-card"] {
+  border: 1px solid var(--border-weak-base);
+  border-radius: 2px;
+  padding: 12px;
+  background-color: var(--surface-raised-base);
+
+  [data-slot="model-info-description"] {
+    font-size: 13px;
+    line-height: normal;
+    color: var(--text-base);
+    margin-bottom: 12px;
+  }
+
+  [data-slot="model-info-features"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  [data-slot="model-info-feature"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+
+    &::before {
+      content: "\2713";
+      color: var(--icon-success-base);
+    }
+  }
+
+  [data-slot="model-info-specs"] {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-weak);
+    margin-bottom: 12px;
+  }
+
+  [data-slot="model-info-pricing"] {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+[data-component="pricing-badge"] {
+  background-color: var(--surface-inset-base);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-base);
+}

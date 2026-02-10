@@ -1,0 +1,8 @@
+/* kilocode_change - new file */
+/* Kilo Switch overrides */
+
+[data-component="switch"] {
+  [data-slot="switch-label"] {
+    font-size: 13px;
+  }
+}

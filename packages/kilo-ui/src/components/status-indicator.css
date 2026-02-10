@@ -1,0 +1,27 @@
+/* kilocode_change - new file */
+/* Kilo Status Indicators overrides */
+
+[data-component="status-indicator"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+
+  &[data-status="completed"] {
+    color: var(--icon-success-base);
+
+    &::before {
+      content: "\2713";
+      font-weight: bold;
+    }
+  }
+
+  &[data-status="checkpoint"] {
+    color: var(--text-weak);
+    font-size: 11px;
+
+    &::before {
+      content: "\2691";
+    }
+  }
+}

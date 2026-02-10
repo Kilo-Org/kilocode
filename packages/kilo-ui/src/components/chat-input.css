@@ -1,0 +1,28 @@
+/* kilocode_change - new file */
+/* Kilo Chat Input (Textarea with blue border) overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="chat-input"],
+[data-component="textarea"][data-variant="chat"] {
+  [data-slot="input-wrapper"] {
+    border: 1px solid var(--border-focus);
+    border-radius: 2px;
+    background-color: var(--input-base);
+
+    &:focus-within {
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+  }
+
+  [data-slot="input-input"] {
+    min-height: 80px;
+    padding: 9px;
+    font-size: 13px;
+    line-height: normal;
+  }
+
+  [data-slot="input-helper-text"] {
+    color: var(--text-weak);
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+}

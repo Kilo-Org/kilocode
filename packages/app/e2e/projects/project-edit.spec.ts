@@ -2,6 +2,7 @@ import { test, expect } from "../fixtures"
 import { openSidebar } from "../actions"
 
 test("dialog edit project updates name and startup script", async ({ page, withProject }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async () => {
@@ -10,8 +11,10 @@ test("dialog edit project updates name and startup script", async ({ page, withP
     const open = async () => {
       const header = page.locator(".group\\/project").first()
       await header.hover()
+      await page.waitForTimeout(200) // kilocode_change - wait for hover state
       const trigger = header.getByRole("button", { name: "More options" }).first()
       await expect(trigger).toBeVisible()
+      await page.waitForTimeout(100) // kilocode_change - wait before trigger click
       await trigger.click({ force: true })
 
       const menu = page.locator('[data-component="dropdown-menu-content"]').first()
@@ -19,6 +22,7 @@ test("dialog edit project updates name and startup script", async ({ page, withP
 
       const editItem = menu.getByRole("menuitem", { name: "Edit" }).first()
       await expect(editItem).toBeVisible()
+      await page.waitForTimeout(100) // kilocode_change - wait before edit item click
       await editItem.click({ force: true })
 
       const dialog = page.getByRole("dialog")

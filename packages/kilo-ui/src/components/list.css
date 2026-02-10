@@ -1,0 +1,59 @@
+/* kilocode_change - new file */
+/* Kilo List overrides – styled to match legacy SelectDropdown items */
+
+[data-component="list"] {
+  /* Reduce gap between search and scroll */
+  gap: 8px;
+
+  /* Search area */
+  [data-slot="list-search"] {
+    padding: 6px 8px;
+    border-radius: 2px;
+
+    [data-slot="list-search-container"] {
+      gap: 6px;
+
+      [data-slot="list-search-input"] {
+        font-size: 13px;
+      }
+    }
+  }
+
+  /* Group headers */
+  [data-slot="list-header"] {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  /* List items – VS Code style */
+  [data-slot="list-item"] {
+    padding: 4px 8px;
+    font-size: 13px;
+    line-height: 20px;
+    cursor: pointer;
+
+    &[data-active="true"] {
+      border-radius: 0;
+      background-color: var(--surface-interactive-base);
+      color: var(--text-on-interactive-base, var(--text-strong));
+    }
+
+    &[data-selected="true"] {
+      background-color: var(--surface-interactive-base);
+      color: var(--text-on-interactive-base, var(--text-strong));
+    }
+
+    &:active {
+      background-color: var(--surface-interactive-base);
+    }
+  }
+
+  /* Empty state */
+  [data-slot="list-empty-state"] {
+    padding: 16px 12px;
+
+    [data-slot="list-message"] {
+      font-size: 13px;
+    }
+  }
+}

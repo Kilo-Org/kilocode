@@ -1,0 +1,29 @@
+/* kilocode_change - new file */
+/* Kilo Checkbox overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="checkbox"] {
+  margin: 4px 0;
+
+  [data-slot="checkbox-checkbox-control"] {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border-color: var(--text-weak);
+  }
+
+  &[data-checked] [data-slot="checkbox-checkbox-control"] {
+    background-color: var(--text-base);
+    border-color: var(--text-base);
+  }
+
+  &[data-checked] [data-slot="checkbox-checkbox-indicator"] {
+    color: var(--background-base);
+  }
+
+  [data-slot="checkbox-checkbox-label"] {
+    font-size: 13px;
+    line-height: normal;
+    padding-inline-start: 10px;
+    margin-inline-end: 10px;
+  }
+}

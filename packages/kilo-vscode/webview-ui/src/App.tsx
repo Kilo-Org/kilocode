@@ -1,7 +1,8 @@
 import { Component, createSignal, Switch, Match, onMount, onCleanup } from "solid-js"
 import Settings from "./components/Settings"
+import ProfileView from "./components/ProfileView"
 import { VSCodeProvider } from "./context/vscode"
-import { ServerProvider } from "./context/server"
+import { ServerProvider, useServer } from "./context/server"
 import { SessionProvider, useSession } from "./context/session"
 import { ChatView } from "./components/chat"
 import SessionList from "./components/history/SessionList"
@@ -31,6 +32,7 @@ const DummyView: Component<{ title: string }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const session = useSession()
+  const server = useServer()
 
   // Handle action messages from extension for view switching
   // This is handled at the VSCode context level, but we need to expose it here
@@ -90,7 +92,11 @@ const AppContent: Component = () => {
           <SessionList onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "profile"}>
-          <DummyView title="Profile" />
+          <ProfileView
+            profileData={server.profileData()}
+            deviceAuth={server.deviceAuth()}
+            onLogin={server.startLogin}
+          />
         </Match>
         <Match when={currentView() === "settings"}>
           <Settings onBack={() => setCurrentView("newTask")} />

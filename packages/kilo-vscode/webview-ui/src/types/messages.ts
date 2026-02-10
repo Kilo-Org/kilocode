@@ -104,6 +104,33 @@ export interface ServerInfo {
   version?: string
 }
 
+// Device auth flow status
+export type DeviceAuthStatus = "idle" | "initiating" | "pending" | "success" | "error" | "cancelled"
+
+// Device auth state
+export interface DeviceAuthState {
+  status: DeviceAuthStatus
+  code?: string
+  verificationUrl?: string
+  expiresIn?: number
+  error?: string
+}
+
+// Profile types from kilo-gateway
+export interface KilocodeBalance {
+  balance: number
+}
+
+export interface ProfileData {
+  profile: {
+    email: string
+    name?: string
+    organizations?: Array<{ id: string; name: string; role: string }>
+  }
+  balance: KilocodeBalance | null
+  currentOrgId: string | null
+}
+
 // ============================================
 // Messages FROM extension TO webview
 // ============================================
@@ -176,6 +203,31 @@ export interface ActionMessage {
   action: string
 }
 
+export interface ProfileDataMessage {
+  type: "profileData"
+  data: ProfileData | null
+}
+
+export interface DeviceAuthStartedMessage {
+  type: "deviceAuthStarted"
+  code?: string
+  verificationUrl: string
+  expiresIn: number
+}
+
+export interface DeviceAuthCompleteMessage {
+  type: "deviceAuthComplete"
+}
+
+export interface DeviceAuthFailedMessage {
+  type: "deviceAuthFailed"
+  error: string
+}
+
+export interface DeviceAuthCancelledMessage {
+  type: "deviceAuthCancelled"
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -189,6 +241,11 @@ export type ExtensionMessage =
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | ActionMessage
+  | ProfileDataMessage
+  | DeviceAuthStartedMessage
+  | DeviceAuthCompleteMessage
+  | DeviceAuthFailedMessage
+  | DeviceAuthCancelledMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -225,6 +282,31 @@ export interface LoadSessionsRequest {
   type: "loadSessions"
 }
 
+export interface LoginRequest {
+  type: "login"
+}
+
+export interface LogoutRequest {
+  type: "logout"
+}
+
+export interface RefreshProfileRequest {
+  type: "refreshProfile"
+}
+
+export interface OpenExternalRequest {
+  type: "openExternal"
+  url: string
+}
+
+export interface CancelLoginRequest {
+  type: "cancelLogin"
+}
+
+export interface WebviewReadyRequest {
+  type: "webviewReady"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -232,6 +314,12 @@ export type WebviewMessage =
   | CreateSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | LoginRequest
+  | LogoutRequest
+  | RefreshProfileRequest
+  | OpenExternalRequest
+  | CancelLoginRequest
+  | WebviewReadyRequest
 
 // ============================================
 // VS Code API type

@@ -1,4 +1,11 @@
-import type { ServerConfig, SessionInfo, MessageInfo, MessagePart } from "./types"
+import type {
+  ServerConfig,
+  SessionInfo,
+  MessageInfo,
+  MessagePart,
+  ProfileData,
+  ProviderAuthAuthorization,
+} from "./types"
 
 /**
  * HTTP Client for communicating with the CLI backend server.
@@ -142,5 +149,54 @@ export class HttpClient {
   ): Promise<boolean> {
     await this.request<void>("POST", `/session/${sessionId}/permissions/${permissionId}`, { response }, { directory })
     return true
+  }
+
+  // ============================================
+  // Profile Methods
+  // ============================================
+
+  /**
+   * Get the current user's profile from the kilo-gateway.
+   * Returns null if not logged in or if the request fails.
+   */
+  async getProfile(): Promise<ProfileData | null> {
+    try {
+      return await this.request<ProfileData>("GET", "/kilo/profile")
+    } catch {
+      return null
+    }
+  }
+
+  // ============================================
+  // Auth Methods
+  // ============================================
+
+  /**
+   * Remove authentication credentials for a provider.
+   * Used for logout when called with "kilo".
+   */
+  async removeAuth(providerId: string): Promise<boolean> {
+    return this.request<boolean>("DELETE", `/auth/${providerId}`)
+  }
+
+  /**
+   * Initiate OAuth authorization for a provider.
+   * Returns the authorization URL and instructions.
+   */
+  async oauthAuthorize(providerId: string, method: number, directory: string): Promise<ProviderAuthAuthorization> {
+    return this.request<ProviderAuthAuthorization>(
+      "POST",
+      `/provider/${providerId}/oauth/authorize`,
+      { method },
+      { directory },
+    )
+  }
+
+  /**
+   * Complete OAuth callback for a provider.
+   * For "auto" method providers (like kilo), this blocks until polling completes.
+   */
+  async oauthCallback(providerId: string, method: number, directory: string): Promise<boolean> {
+    return this.request<boolean>("POST", `/provider/${providerId}/oauth/callback`, { method }, { directory })
   }
 }

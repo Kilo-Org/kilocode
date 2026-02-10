@@ -1,0 +1,91 @@
+/* kilocode_change - new file */
+/* Kilo Prompt Input overrides – styled to match legacy ChatTextArea look */
+
+/* Form wrapper: VS Code native input look instead of pill shape */
+[data-component="prompt-input-form"] {
+  border-radius: 2px;
+  background-color: var(--input-base, var(--vscode-input-background, #3c3c3c));
+  border: 1px solid var(--border-weak-base, var(--vscode-input-border, #3c3c3c));
+  box-shadow: none;
+
+  &:focus-within {
+    border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+    box-shadow: none;
+  }
+}
+
+/* Scroll container: VS Code text-area min height and max height */
+[data-component="prompt-input-form"] [data-slot="prompt-input-scroll"] {
+  max-height: 200px;
+  min-height: 90px;
+}
+
+/* Editable content div: VS Code text-field sizing and typography */
+[data-component="prompt-input-form"] [data-component="prompt-input"] {
+  padding: 6px 8px;
+  padding-right: 36px;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: var(--vscode-editor-line-height, normal);
+  color: var(--text-strong, var(--vscode-input-foreground, #cccccc));
+}
+
+/* Placeholder text: match editable div padding */
+[data-component="prompt-input-form"] [data-slot="prompt-input-placeholder"] {
+  padding: 6px 8px;
+  padding-right: 36px;
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: var(--vscode-editor-line-height, normal);
+}
+
+/* Bottom toolbar: tighter padding to match legacy control bar */
+[data-component="prompt-input-form"] [data-slot="prompt-input-toolbar"] {
+  padding: 4px 8px;
+}
+
+/*
+ * Buttons inside the prompt toolbar:
+ * Override the global button.css sizing to match legacy compact style.
+ * The model selector trigger & variant cycle buttons use Button variant="ghost"
+ * and need to look like the legacy `SelectDropdown` triggers.
+ */
+[data-component="prompt-input-form"] [data-slot="prompt-input-toolbar"] [data-component="button"] {
+  height: auto !important;
+  min-height: 22px;
+  padding: 1px 6px !important;
+  font-size: 12px;
+  line-height: normal;
+  border-radius: 3px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  opacity: 0.9;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 150ms;
+  color: var(--text-base, var(--vscode-foreground));
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--border-focus);
+  }
+}
+
+/* Icon buttons in toolbar (attach file, submit) keep their own styling */
+[data-component="prompt-input-form"] [data-slot="prompt-input-toolbar"] [data-component="icon-button"] {
+  height: auto;
+  border: none;
+  background: transparent;
+  opacity: 0.85;
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.03);
+  }
+}

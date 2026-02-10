@@ -1,0 +1,303 @@
+/*
+ * VS Code Bridge CSS
+ *
+ * Maps @opencode-ai/ui semantic design tokens to VS Code's --vscode-* CSS variables.
+ * This file is used by the kilo-vscode theme to make the UI adapt to whatever
+ * VS Code theme the user has active. The DesktopTheme JSON provides fallback
+ * values; this CSS overrides them at runtime when --vscode-* vars are present.
+ *
+ * Scoped to html[data-theme="kilo-vscode"] so it only applies when the
+ * kilo-vscode theme is selected.
+ */
+
+html[data-theme="kilo-vscode"] {
+  /* ===== Backgrounds ===== */
+  --background-base: var(--vscode-editor-background);
+  --background-weak: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --background-strong: var(--vscode-editor-background);
+  --background-stronger: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+
+  /* ===== Surfaces ===== */
+  --surface-base: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --base: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --surface-base-hover: var(--vscode-list-hoverBackground);
+  --surface-base-active: var(--vscode-list-activeSelectionBackground);
+  --base2: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --base3: var(--vscode-sideBar-background, var(--vscode-editor-background));
+
+  --surface-inset-base: var(--vscode-editor-background);
+  --surface-inset-base-hover: var(--vscode-list-hoverBackground);
+  --surface-inset-strong: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  --surface-inset-strong-hover: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+
+  --surface-raised-base: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+  --surface-raised-base-hover: var(--vscode-list-hoverBackground);
+  --surface-raised-base-active: var(--vscode-list-activeSelectionBackground);
+  --surface-raised-strong: var(--vscode-editorWidget-background);
+  --surface-raised-strong-hover: var(--vscode-editorStickyScrollHover-background);
+  --surface-raised-stronger: var(--vscode-editorWidget-background);
+  --surface-raised-stronger-hover: var(--vscode-editorStickyScrollHover-background);
+  --surface-raised-stronger-non-alpha: var(--vscode-editorWidget-background);
+
+  --surface-float-base: var(--vscode-editorWidget-background, var(--vscode-menu-background));
+  --surface-float-base-hover: var(--vscode-editorHoverWidget-statusBarBackground, var(--vscode-menu-background));
+
+  --surface-weak: var(--vscode-list-hoverBackground);
+  --surface-weaker: var(--vscode-editor-inactiveSelectionBackground);
+  --surface-strong: var(--vscode-editorWidget-background);
+
+  --surface-brand-base: var(--vscode-button-background);
+  --surface-brand-hover: var(--vscode-button-hoverBackground);
+
+  --surface-interactive-base: var(--vscode-list-activeSelectionBackground);
+  --surface-interactive-hover: var(--vscode-list-hoverBackground);
+  --surface-interactive-weak: var(--vscode-list-inactiveSelectionBackground);
+  --surface-interactive-weak-hover: var(--vscode-list-hoverBackground);
+
+  --surface-success-base: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --surface-success-weak: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --surface-success-strong: var(--vscode-charts-green);
+
+  --surface-warning-base: var(--vscode-editorMarkerNavigationWarning-headerBackground);
+  --surface-warning-weak: var(--vscode-editorMarkerNavigationWarning-headerBackground);
+  --surface-warning-strong: var(--vscode-charts-yellow);
+
+  --surface-critical-base: var(--vscode-editorMarkerNavigationError-headerBackground);
+  --surface-critical-weak: var(--vscode-editorMarkerNavigationError-headerBackground);
+  --surface-critical-strong: var(--vscode-charts-red);
+
+  --surface-info-base: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --surface-info-weak: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --surface-info-strong: var(--vscode-charts-blue);
+
+  /* Diff surfaces */
+  --surface-diff-unchanged-base: var(--vscode-editor-background);
+  --surface-diff-skip-base: var(--vscode-diffEditor-unchangedCodeBackground);
+  --surface-diff-add-base: var(--vscode-diffEditor-insertedLineBackground);
+  --surface-diff-add-weak: var(--vscode-diffEditor-insertedTextBackground);
+  --surface-diff-add-weaker: var(--vscode-diffEditor-insertedLineBackground);
+  --surface-diff-delete-base: var(--vscode-diffEditor-removedLineBackground);
+  --surface-diff-delete-weak: var(--vscode-diffEditor-removedTextBackground);
+  --surface-diff-delete-weaker: var(--vscode-diffEditor-removedLineBackground);
+
+  /* ===== Inputs ===== */
+  --input-base: var(--vscode-input-background);
+  --input-hover: var(--vscode-input-background);
+  --input-active: var(--vscode-input-background);
+  --input-selected: var(--vscode-list-activeSelectionBackground);
+  --input-focus: var(--vscode-input-background);
+  --input-disabled: var(--vscode-input-background);
+
+  /* ===== Text ===== */
+  --text-base: var(--vscode-foreground);
+  --text-weak: var(--vscode-descriptionForeground);
+  --text-weaker: var(--vscode-disabledForeground);
+  --text-strong: var(--vscode-editor-foreground);
+
+  --text-invert-base: var(--vscode-editor-foreground);
+  --text-invert-weak: var(--vscode-descriptionForeground);
+  --text-invert-weaker: var(--vscode-disabledForeground);
+  --text-invert-strong: var(--vscode-editor-foreground);
+
+  --text-interactive-base: var(--vscode-textLink-foreground);
+
+  --text-on-brand-base: var(--vscode-button-foreground);
+  --text-on-brand-weak: var(--vscode-button-foreground);
+  --text-on-brand-weaker: var(--vscode-button-foreground);
+  --text-on-brand-strong: var(--vscode-button-foreground);
+
+  --text-on-interactive-base: var(--vscode-list-activeSelectionForeground);
+  --text-on-interactive-weak: var(--vscode-list-activeSelectionForeground);
+
+  --text-on-success-base: var(--vscode-charts-green);
+  --text-on-success-weak: var(--vscode-charts-green);
+  --text-on-success-strong: var(--vscode-charts-green);
+  --text-on-critical-base: var(--vscode-charts-red);
+  --text-on-critical-weak: var(--vscode-charts-red);
+  --text-on-critical-strong: var(--vscode-charts-red);
+  --text-on-warning-base: var(--vscode-charts-yellow);
+  --text-on-warning-weak: var(--vscode-charts-yellow);
+  --text-on-warning-strong: var(--vscode-charts-yellow);
+  --text-on-info-base: var(--vscode-charts-blue);
+  --text-on-info-weak: var(--vscode-charts-blue);
+  --text-on-info-strong: var(--vscode-charts-blue);
+
+  --text-diff-add-base: var(--vscode-gitDecoration-addedResourceForeground);
+  --text-diff-add-strong: var(--vscode-gitDecoration-addedResourceForeground);
+  --text-diff-delete-base: var(--vscode-gitDecoration-deletedResourceForeground);
+  --text-diff-delete-strong: var(--vscode-gitDecoration-deletedResourceForeground);
+
+  /* ===== Buttons ===== */
+  --button-secondary-base: var(--vscode-button-secondaryBackground);
+  --button-secondary-hover: var(--vscode-button-secondaryHoverBackground);
+  --button-ghost-hover: var(--vscode-toolbar-hoverBackground);
+  --button-ghost-hover2: var(--vscode-toolbar-activeBackground);
+
+  /* ===== Borders ===== */
+  --border-base: var(--vscode-panel-border, var(--vscode-widget-border));
+  --border-hover: var(--vscode-panel-border, var(--vscode-widget-border));
+  --border-active: var(--vscode-focusBorder);
+  --border-selected: var(--vscode-focusBorder);
+  --border-disabled: var(--vscode-panel-border, var(--vscode-widget-border));
+  --border-focus: var(--vscode-focusBorder);
+
+  --border-weak-base: var(--vscode-editorGroup-border, var(--vscode-panel-border));
+  --border-weak-hover: var(--vscode-panel-border);
+  --border-weak-active: var(--vscode-focusBorder);
+  --border-weak-selected: var(--vscode-focusBorder);
+  --border-weak-disabled: var(--vscode-editorGroup-border);
+  --border-weak-focus: var(--vscode-focusBorder);
+
+  --border-strong-base: var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  --border-strong-hover: var(--vscode-editorWidget-border);
+  --border-strong-active: var(--vscode-focusBorder);
+  --border-strong-selected: var(--vscode-focusBorder);
+  --border-strong-disabled: var(--vscode-panel-border);
+  --border-strong-focus: var(--vscode-focusBorder);
+
+  --border-weaker-base: var(--vscode-editorGroup-border, var(--vscode-panel-border));
+  --border-weaker-hover: var(--vscode-panel-border);
+  --border-weaker-active: var(--vscode-panel-border);
+  --border-weaker-selected: var(--vscode-focusBorder);
+  --border-weaker-disabled: var(--vscode-editorGroup-border);
+  --border-weaker-focus: var(--vscode-focusBorder);
+
+  --border-interactive-base: var(--vscode-focusBorder);
+  --border-interactive-hover: var(--vscode-focusBorder);
+  --border-interactive-active: var(--vscode-focusBorder);
+  --border-interactive-selected: var(--vscode-focusBorder);
+  --border-interactive-disabled: var(--vscode-panel-border);
+  --border-interactive-focus: var(--vscode-focusBorder);
+
+  --border-success-base: var(--vscode-charts-green);
+  --border-success-hover: var(--vscode-charts-green);
+  --border-success-selected: var(--vscode-charts-green);
+  --border-warning-base: var(--vscode-charts-yellow);
+  --border-warning-hover: var(--vscode-charts-yellow);
+  --border-warning-selected: var(--vscode-charts-yellow);
+  --border-critical-base: var(--vscode-charts-red);
+  --border-critical-hover: var(--vscode-charts-red);
+  --border-critical-selected: var(--vscode-charts-red);
+  --border-info-base: var(--vscode-charts-blue);
+  --border-info-hover: var(--vscode-charts-blue);
+  --border-info-selected: var(--vscode-charts-blue);
+
+  /* ===== Icons ===== */
+  --icon-base: var(--vscode-icon-foreground);
+  --icon-hover: var(--vscode-editor-foreground);
+  --icon-active: var(--vscode-editor-foreground);
+  --icon-selected: var(--vscode-editor-foreground);
+  --icon-disabled: var(--vscode-disabledForeground);
+  --icon-focus: var(--vscode-editor-foreground);
+  --icon-invert-base: var(--vscode-editor-background);
+
+  --icon-weak-base: var(--vscode-foreground);
+  --icon-weak-hover: var(--vscode-editor-foreground);
+  --icon-weak-active: var(--vscode-editor-foreground);
+  --icon-weak-selected: var(--vscode-editor-foreground);
+  --icon-weak-disabled: var(--vscode-disabledForeground);
+  --icon-weak-focus: var(--vscode-editor-foreground);
+
+  --icon-strong-base: var(--vscode-editor-foreground);
+  --icon-strong-hover: var(--vscode-editor-foreground);
+  --icon-strong-active: var(--vscode-editor-foreground);
+  --icon-strong-selected: var(--vscode-editor-foreground);
+  --icon-strong-disabled: var(--vscode-disabledForeground);
+  --icon-strong-focus: var(--vscode-editor-foreground);
+
+  --icon-brand-base: var(--vscode-editor-foreground);
+  --icon-interactive-base: var(--vscode-textLink-foreground);
+  --icon-success-base: var(--vscode-charts-green);
+  --icon-success-hover: var(--vscode-charts-green);
+  --icon-success-active: var(--vscode-charts-green);
+  --icon-warning-base: var(--vscode-charts-yellow);
+  --icon-warning-hover: var(--vscode-charts-yellow);
+  --icon-warning-active: var(--vscode-charts-yellow);
+  --icon-critical-base: var(--vscode-charts-red);
+  --icon-critical-hover: var(--vscode-charts-red);
+  --icon-critical-active: var(--vscode-charts-red);
+  --icon-info-base: var(--vscode-charts-blue);
+  --icon-info-hover: var(--vscode-charts-blue);
+  --icon-info-active: var(--vscode-charts-blue);
+
+  --icon-on-brand-base: var(--vscode-button-foreground);
+  --icon-on-brand-hover: var(--vscode-button-foreground);
+  --icon-on-brand-selected: var(--vscode-button-foreground);
+  --icon-on-interactive-base: var(--vscode-list-activeSelectionForeground);
+
+  --icon-on-success-base: var(--vscode-charts-green);
+  --icon-on-success-hover: var(--vscode-charts-green);
+  --icon-on-success-selected: var(--vscode-charts-green);
+  --icon-on-warning-base: var(--vscode-charts-yellow);
+  --icon-on-warning-hover: var(--vscode-charts-yellow);
+  --icon-on-warning-selected: var(--vscode-charts-yellow);
+  --icon-on-critical-base: var(--vscode-charts-red);
+  --icon-on-critical-hover: var(--vscode-charts-red);
+  --icon-on-critical-selected: var(--vscode-charts-red);
+  --icon-on-info-base: var(--vscode-charts-blue);
+  --icon-on-info-hover: var(--vscode-charts-blue);
+  --icon-on-info-selected: var(--vscode-charts-blue);
+
+  --icon-diff-add-base: var(--vscode-gitDecoration-addedResourceForeground);
+  --icon-diff-add-hover: var(--vscode-gitDecoration-addedResourceForeground);
+  --icon-diff-add-active: var(--vscode-gitDecoration-addedResourceForeground);
+  --icon-diff-delete-base: var(--vscode-gitDecoration-deletedResourceForeground);
+  --icon-diff-delete-hover: var(--vscode-gitDecoration-deletedResourceForeground);
+  --icon-diff-modified-base: var(--vscode-gitDecoration-modifiedResourceForeground);
+
+  --icon-agent-plan-base: var(--vscode-charts-purple, var(--vscode-charts-blue));
+  --icon-agent-docs-base: var(--vscode-charts-yellow);
+  --icon-agent-ask-base: var(--vscode-charts-blue);
+  --icon-agent-build-base: var(--vscode-charts-blue);
+
+  /* ===== Syntax highlighting ===== */
+  --syntax-comment: var(--vscode-descriptionForeground);
+  --syntax-regexp: var(--vscode-foreground);
+  --syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-foreground));
+  --syntax-keyword: var(--vscode-textLink-foreground);
+  --syntax-primitive: var(--vscode-debugTokenExpression-number);
+  --syntax-operator: var(--vscode-foreground);
+  --syntax-variable: var(--vscode-editor-foreground);
+  --syntax-property: var(--vscode-debugTokenExpression-name);
+  --syntax-type: var(--vscode-debugTokenExpression-type);
+  --syntax-constant: var(--vscode-charts-blue);
+  --syntax-punctuation: var(--vscode-foreground);
+  --syntax-object: var(--vscode-editor-foreground);
+  --syntax-success: var(--vscode-charts-green);
+  --syntax-warning: var(--vscode-charts-yellow);
+  --syntax-critical: var(--vscode-charts-red);
+  --syntax-info: var(--vscode-charts-blue);
+  --syntax-diff-add: var(--vscode-gitDecoration-addedResourceForeground);
+  --syntax-diff-delete: var(--vscode-gitDecoration-deletedResourceForeground);
+  --syntax-diff-unknown: var(--vscode-charts-red);
+
+  /* ===== Markdown ===== */
+  --markdown-heading: var(--vscode-textLink-foreground);
+  --markdown-text: var(--vscode-editor-foreground);
+  --markdown-link: var(--vscode-textLink-foreground);
+  --markdown-link-text: var(--vscode-textLink-foreground);
+  --markdown-code: var(--vscode-charts-green);
+  --markdown-block-quote: var(--vscode-descriptionForeground);
+  --markdown-emph: var(--vscode-descriptionForeground);
+  --markdown-strong: var(--vscode-editor-foreground);
+  --markdown-horizontal-rule: var(--vscode-panel-border);
+  --markdown-list-item: var(--vscode-textLink-foreground);
+  --markdown-list-enumeration: var(--vscode-textLink-foreground);
+  --markdown-image: var(--vscode-textLink-foreground);
+  --markdown-image-text: var(--vscode-textLink-foreground);
+  --markdown-code-block: var(--vscode-editor-foreground);
+
+  /* ===== Avatars ===== */
+  --avatar-background-pink: var(--vscode-editorMarkerNavigationError-headerBackground);
+  --avatar-background-mint: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --avatar-background-orange: var(--vscode-editorMarkerNavigationWarning-headerBackground);
+  --avatar-background-purple: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --avatar-background-cyan: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --avatar-background-lime: var(--vscode-editorMarkerNavigationInfo-headerBackground);
+  --avatar-text-pink: var(--vscode-charts-red);
+  --avatar-text-mint: var(--vscode-charts-green);
+  --avatar-text-orange: var(--vscode-charts-orange);
+  --avatar-text-purple: var(--vscode-charts-purple, var(--vscode-charts-blue));
+  --avatar-text-cyan: var(--vscode-charts-blue);
+  --avatar-text-lime: var(--vscode-charts-green);
+}

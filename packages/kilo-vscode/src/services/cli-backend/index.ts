@@ -11,6 +11,10 @@ export type {
   SSEEvent,
   TodoItem,
   ServerConfig,
+  KilocodeOrganization,
+  KilocodeProfile,
+  KilocodeBalance,
+  ProfileData,
 } from "./types"
 
 export { ServerManager } from "./server-manager"
