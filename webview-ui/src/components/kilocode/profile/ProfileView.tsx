@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react"
+import React, { useEffect } from "react"
 import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import {
@@ -20,6 +20,7 @@ import KiloCodeAuth from "../common/KiloCodeAuth"
 import { OrganizationSelector } from "../common/OrganizationSelector"
 import { getAppUrl, TelemetryEventName } from "@roo-code/types"
 import { telemetryClient } from "@/utils/TelemetryClient"
+import { useIsLightTheme } from "../hooks/useIsLightTheme"
 
 interface ProfileViewProps {
 	onDone: () => void
@@ -29,12 +30,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 	const { apiConfiguration, currentApiConfigName, uriScheme, uiKind } = useExtensionState()
 	const { t } = useAppTranslation()
 
-	// Detect VS Code light theme (VS Code uses vscode-light/vscode-dark classes on body)
-	const isLightTheme = useMemo(() => {
-		if (typeof document === "undefined") return false
-		const cls = document.body.className
-		return /\bvscode-light\b|\bvscode-high-contrast-light\b/i.test(cls)
-	}, [])
+	const isLightTheme = useIsLightTheme()
 	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
 	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
@@ -119,19 +115,16 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 			name: "Starter",
 			price: 19,
 			boostBonus: 9.5,
-			recommended: false,
 		},
 		{
 			name: "Pro",
 			price: 49,
 			boostBonus: 24.5,
-			recommended: true,
 		},
 		{
 			name: "Expert",
 			price: 199,
 			boostBonus: 99.5,
-			recommended: false,
 		},
 	]
 
@@ -681,19 +674,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 														{subscriptionPlans.map((plan) => (
 															<div
 																key={plan.name}
-																className={`relative border rounded-lg p-3 bg-[var(--vscode-editor-background)] transition-all hover:shadow-md ${
-																	plan.recommended
-																		? "border-[var(--vscode-button-background)] ring-1 ring-[var(--vscode-button-background)]"
-																		: "border-[var(--vscode-input-border)]"
-																}`}>
-																{plan.recommended && (
-																	<div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-																		<span className="bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] text-xs px-2 py-0.5 rounded-full font-medium">
-																			{t("kilocode:profile.kiloPass.recommended")}
-																		</span>
-																	</div>
-																)}
-
+																className="relative border rounded-lg p-3 bg-[var(--vscode-editor-background)] transition-all hover:shadow-md border-[var(--vscode-input-border)]">
 																{/* Header: Plan name + Monthly */}
 																<div className="flex justify-between items-center mb-2">
 																	<span className="font-semibold text-[var(--vscode-foreground)]">
@@ -769,9 +750,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 																{/* Button */}
 																<VSCodeButton
-																	appearance={
-																		plan.recommended ? "primary" : "secondary"
-																	}
+																	appearance="primary"
 																	className="w-full"
 																	onClick={handleGetKiloPass}>
 																	{t("kilocode:profile.kiloPass.action")}

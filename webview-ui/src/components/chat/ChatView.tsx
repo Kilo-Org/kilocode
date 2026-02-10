@@ -37,6 +37,7 @@ import { OrganizationSelector } from "../kilocode/common/OrganizationSelector"
 
 import TelemetryBanner from "../common/TelemetryBanner"
 import HistoryPreview from "../history/HistoryPreview"
+import { useIsLightTheme } from "../kilocode/hooks/useIsLightTheme"
 import Announcement from "./Announcement"
 import BrowserActionRow from "./BrowserActionRow"
 import BrowserSessionStatusRow from "./BrowserSessionStatusRow"
@@ -76,9 +77,7 @@ const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 // kilocode_change start: KiloLogo component
 const KiloLogo = () => {
 	const iconsBaseUri = (window as any).ICONS_BASE_URI || ""
-	const isLightTheme =
-		document.body.classList.contains("vscode-light") ||
-		document.body.classList.contains("vscode-high-contrast-light")
+	const isLightTheme = useIsLightTheme()
 	const iconFile = isLightTheme ? "kilo-light.svg" : "kilo-dark.svg"
 	return (
 		<div className="flex items-center justify-center" style={{ width: "56px", height: "56px", margin: "0 auto" }}>

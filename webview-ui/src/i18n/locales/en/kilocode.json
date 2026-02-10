@@ -206,18 +206,18 @@
 				"nextBoost": "Next Boost",
 				"boostAmount": "+${{amount}}"
 			},
-			"promo": "Unlock <boost>Boost Mode</boost> for up to 50% free credits.",
+			"promo": "Unlock <boost>bonus credits</boost> up to 50% of your paid credits.",
 			"plans": {
 				"monthly": "Monthly",
 				"perMonth": "/month",
-				"includesCredits": "Includes <highlight>${{price}}/month</highlight> pass credits",
-				"upToBoost": "Up to <highlight>{{percent}}%</highlight> boost credits",
-				"firstMonthBoost": "First month: <highlight>+{{percent}}%</highlight> boost credits"
+				"includesCredits": "Includes <highlight>${{price}}/month</highlight> paid credits",
+				"upToBoost": "Up to <highlight>{{percent}}%</highlight> free bonus credits",
+				"firstMonthBoost": "First month: <highlight>+{{percent}}%</highlight> free bonus credits"
 			},
-			"subscriptionNote": "Pass credits never expire. Boost credits unlock after consuming a month of pass credits and expire at the end of each monthly cycle.",
+			"subscriptionNote": "Paid credits never expire. Free bonus credits unlock after consuming a month of paid credits and expire at the end of each monthly cycle.",
 			"refills": "Refills in {{days}} days",
 			"passActiveUntil": "Pass active until",
-			"creditsNote": "Pass credits never expire. Unused boost credits expire on refill.",
+			"creditsNote": "Paid credits never expire. Unused free bonus credits expire on refill.",
 			"legend": {
 				"paid": "Paid",
 				"freeBonus": "Free Bonus"

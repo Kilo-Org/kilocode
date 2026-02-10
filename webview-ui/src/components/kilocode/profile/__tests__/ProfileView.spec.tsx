@@ -144,6 +144,53 @@ describe("ProfileView", () => {
 			expect(screen.queryByText("kilocode:profile.kiloPass.title")).not.toBeInTheDocument()
 			expect(screen.queryByText("kilocode:profile.kiloPass.yourSubscription")).not.toBeInTheDocument()
 		})
+
+		test("switches highlighted Kilo Pass colors when VS Code theme class changes", async () => {
+			document.body.className = "vscode-light"
+			const view = renderProfileView()
+
+			simulateProfileDataResponse({
+				user: { name: "Test User", email: "test@example.com" },
+				organizations: [],
+			})
+			simulateBalanceDataResponse(10.0)
+			simulateKiloPassStateResponse({
+				stripeSubscriptionId: "sub_test",
+				tier: "tier_49",
+				cadence: "monthly",
+				status: "active",
+				cancelAtPeriodEnd: false,
+				currentStreakMonths: 2,
+				nextYearlyIssueAt: null,
+				nextBonusCreditsUsd: 12.5,
+				nextBillingAt: "2026-03-01T00:00:00.000Z",
+				currentPeriodBaseCreditsUsd: 49,
+				currentPeriodUsageUsd: 15,
+				currentPeriodBonusCreditsUsd: 4,
+				isBonusUnlocked: true,
+				refillAt: null,
+			})
+
+			await waitFor(() => {
+				expect(screen.getByText("kilocode:profile.kiloPass.title")).toBeInTheDocument()
+			})
+
+			await waitFor(() => {
+				const icon = view.container.querySelector(".codicon-credit-card")
+				expect(icon).toHaveClass("text-amber-600")
+			})
+			expect(view.container.querySelector(".codicon-credit-card")).not.toHaveClass("text-amber-300")
+
+			act(() => {
+				document.body.className = "vscode-dark"
+			})
+
+			await waitFor(() => {
+				const icon = view.container.querySelector(".codicon-credit-card")
+				expect(icon).toHaveClass("text-amber-300")
+			})
+			expect(view.container.querySelector(".codicon-credit-card")).not.toHaveClass("text-amber-600")
+		})
 	})
 
 	describe("Top-up credit packages", () => {
