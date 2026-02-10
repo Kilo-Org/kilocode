@@ -1,7 +1,8 @@
 // npx vitest run src/api/providers/__tests__/anthropic.spec.ts
 
-import { AnthropicHandler } from "../anthropic"
+import { AnthropicHandler, getAnthropicModels, getAnthropicSdkBaseUrl } from "../anthropic"
 import { ApiHandlerOptions } from "../../../shared/api"
+import axios from "axios"
 
 // Mock TelemetryService
 vitest.mock("@roo-code/telemetry", () => ({
@@ -71,10 +72,19 @@ vitest.mock("@anthropic-ai/sdk", () => {
 	}
 })
 
+// kilocode_change start
+vitest.mock("axios", () => ({
+	default: {
+		get: vitest.fn(),
+	},
+}))
+// kilocode_change end
+
 // Import after mock
 import { Anthropic } from "@anthropic-ai/sdk"
 
 const mockAnthropicConstructor = vitest.mocked(Anthropic)
+const mockAxiosGet = vitest.mocked(axios.get) // kilocode_change
 
 describe("AnthropicHandler", () => {
 	let handler: AnthropicHandler
@@ -112,6 +122,18 @@ describe("AnthropicHandler", () => {
 			})
 			expect(handlerWithCustomUrl).toBeInstanceOf(AnthropicHandler)
 		})
+
+		// kilocode_change start
+		it("normalizes custom base URL ending in /v1 to avoid duplicate /v1 path segments", () => {
+			const handlerWithVersionedBaseUrl = new AnthropicHandler({
+				...mockOptions,
+				anthropicBaseUrl: "https://anthropic-compatible.example.com/v1",
+			})
+			expect(handlerWithVersionedBaseUrl).toBeInstanceOf(AnthropicHandler)
+			expect(mockAnthropicConstructor).toHaveBeenCalledTimes(1)
+			expect(mockAnthropicConstructor.mock.calls[0]![0]!.baseURL).toBe("https://anthropic-compatible.example.com")
+		})
+		// kilocode_change end
 
 		it("use apiKey for passing token if anthropicUseAuthToken is not set", () => {
 			const handlerWithCustomUrl = new AnthropicHandler({
@@ -241,6 +263,53 @@ describe("AnthropicHandler", () => {
 		})
 		// kilocode_change end
 	})
+
+	// kilocode_change start
+	describe("getAnthropicSdkBaseUrl", () => {
+		it("strips trailing /v1 from custom base URLs", () => {
+			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com/v1")).toBe("https://anthropic-compatible.example.com")
+			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com")).toBe("https://anthropic-compatible.example.com")
+		})
+	})
+
+	describe("getAnthropicModels", () => {
+		beforeEach(() => {
+			mockAxiosGet.mockReset()
+		})
+
+		it("returns discovered model IDs from a custom Anthropics-compatible endpoint", async () => {
+			mockAxiosGet.mockResolvedValueOnce({
+				data: {
+					data: [{ id: "claude-sonnet-4-5-20250929" }, { id: "MinMax-M2" }],
+				},
+			})
+
+			const models = await getAnthropicModels("https://anthropic-compatible.example.com/v1", "test-key", false)
+
+			expect(models).toEqual(["claude-sonnet-4-5-20250929", "MinMax-M2"])
+			expect(mockAxiosGet).toHaveBeenCalledWith("https://anthropic-compatible.example.com/v1/models", {
+				headers: {
+					"anthropic-version": "2023-06-01",
+					"x-api-key": "test-key",
+				},
+			})
+		})
+
+		it("uses Authorization bearer token when useAuthToken is enabled", async () => {
+			mockAxiosGet.mockResolvedValueOnce({ data: { data: [{ id: "claude-opus-4-6" }] } })
+
+			const models = await getAnthropicModels("https://anthropic-compatible.example.com", "token-value", true)
+
+			expect(models).toEqual(["claude-opus-4-6"])
+			expect(mockAxiosGet).toHaveBeenCalledWith("https://anthropic-compatible.example.com/v1/models", {
+				headers: {
+					"anthropic-version": "2023-06-01",
+					Authorization: "Bearer token-value",
+				},
+			})
+		})
+	})
+	// kilocode_change end
 
 	describe("completePrompt", () => {
 		it("should complete prompt successfully", async () => {

@@ -4,6 +4,9 @@ import type { Mock } from "vitest"
 
 // Mock dependencies - must come before imports
 vi.mock("../../../api/providers/fetchers/modelCache")
+vi.mock("../../../api/providers/anthropic", () => ({
+	getAnthropicModels: vi.fn(),
+}))
 
 vi.mock("../../../integrations/openai-codex/oauth", () => ({
 	openAiCodexOAuthManager: {
@@ -26,10 +29,12 @@ import type { ModelRecord } from "@roo-code/types"
 import { webviewMessageHandler } from "../webviewMessageHandler"
 import type { ClineProvider } from "../ClineProvider"
 import { getModels } from "../../../api/providers/fetchers/modelCache"
+import { getAnthropicModels } from "../../../api/providers/anthropic"
 const { openAiCodexOAuthManager } = await import("../../../integrations/openai-codex/oauth")
 const { fetchOpenAiCodexRateLimitInfo } = await import("../../../integrations/openai-codex/rate-limits")
 
 const mockGetModels = getModels as Mock<typeof getModels>
+const mockGetAnthropicModels = getAnthropicModels as Mock<typeof getAnthropicModels>
 const mockGetAccessToken = vi.mocked(openAiCodexOAuthManager.getAccessToken)
 const mockGetAccountId = vi.mocked(openAiCodexOAuthManager.getAccountId)
 const mockFetchOpenAiCodexRateLimitInfo = vi.mocked(fetchOpenAiCodexRateLimitInfo)
@@ -755,6 +760,33 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		})
 	})
 })
+
+// kilocode_change start
+describe("webviewMessageHandler - requestAnthropicModels", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it("fetches anthropic-compatible models and posts them to the webview", async () => {
+		mockGetAnthropicModels.mockResolvedValue(["claude-sonnet-4-5-20250929", "MinMax-M2"])
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "requestAnthropicModels",
+			values: {
+				baseUrl: "https://anthropic-compatible.example.com/v1",
+				apiKey: "test-key",
+				useAuthToken: true,
+			},
+		} as any)
+
+		expect(mockGetAnthropicModels).toHaveBeenCalledWith("https://anthropic-compatible.example.com/v1", "test-key", true)
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "anthropicModels",
+			anthropicModels: ["claude-sonnet-4-5-20250929", "MinMax-M2"],
+		})
+	})
+})
+// kilocode_change end
 
 describe("webviewMessageHandler - requestOpenAiCodexRateLimits", () => {
 	beforeEach(() => {

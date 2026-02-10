@@ -150,6 +150,7 @@ export interface ExtensionMessage {
 		| "listApiConfig"
 		| "routerModels"
 		| "openAiModels"
+		| "anthropicModels" // kilocode_change
 		| "ollamaModels"
 		| "lmStudioModels"
 		| "vsCodeLmModels"
@@ -303,6 +304,7 @@ export interface ExtensionMessage {
 	clineMessage?: ClineMessage
 	routerModels?: RouterModels
 	openAiModels?: string[]
+	anthropicModels?: string[] // kilocode_change
 	ollamaModels?: ModelRecord
 	lmStudioModels?: ModelRecord
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
@@ -733,6 +735,7 @@ export interface WebviewMessage {
 		| "flushRouterModels"
 		| "requestRouterModels"
 		| "requestOpenAiModels"
+		| "requestAnthropicModels" // kilocode_change
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
 		| "requestRooModels"

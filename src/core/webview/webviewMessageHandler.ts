@@ -72,6 +72,7 @@ import { singleCompletionHandler } from "../../utils/single-completion-handler" 
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettingsWithFeedback } from "../config/importExport"
 import { getOpenAiModels } from "../../api/providers/openai"
+import { getAnthropicModels } from "../../api/providers/anthropic" // kilocode_change
 import { getVsCodeLmModels } from "../../api/providers/vscode-lm"
 import { openMention } from "../mentions"
 import { resolveImageMentions } from "../mentions/resolveImageMentions"
@@ -806,9 +807,7 @@ export const webviewMessageHandler = async (
 					await provider.postStateToWebview()
 					console.log(`Batch deletion completed: ${ids.length} tasks processed`)
 				} catch (error) {
-					console.log(
-						`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`,
-					)
+					console.log(`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`)
 				}
 				// kilocode_change end
 			}
@@ -1200,6 +1199,18 @@ export const webviewMessageHandler = async (
 			}
 
 			break
+		// kilocode_change start
+		case "requestAnthropicModels": {
+			const anthropicModels = await getAnthropicModels(
+				message?.values?.baseUrl,
+				message?.values?.apiKey,
+				message?.values?.useAuthToken === true,
+			)
+
+			provider.postMessageToWebview({ type: "anthropicModels", anthropicModels })
+			break
+		}
+		// kilocode_change end
 		case "requestVsCodeLmModels":
 			const vsCodeLmModels = await getVsCodeLmModels()
 			// TODO: Cache like we do for OpenRouter, etc?

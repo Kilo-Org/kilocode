@@ -1,7 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import { CacheControlEphemeral } from "@anthropic-ai/sdk/resources"
-import OpenAI from "openai"
+import axios from "axios"
 
 import {
 	type ModelInfo,
@@ -43,7 +43,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			this.options.anthropicBaseUrl && this.options.anthropicUseAuthToken ? "authToken" : "apiKey"
 
 		this.client = new Anthropic({
-			baseURL: this.options.anthropicBaseUrl || undefined,
+			baseURL: getAnthropicSdkBaseUrl(this.options.anthropicBaseUrl), // kilocode_change
 			[apiKeyFieldName]: this.options.apiKey,
 		})
 	}
@@ -395,9 +395,15 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		const configuredModelId = this.options.apiModelId?.trim()
 		const id = configuredModelId || anthropicDefaultModelId
 		const isKnownModelId = id in anthropicModels
+		const defaultInfo: ModelInfo = anthropicModels[anthropicDefaultModelId]
 		let info: ModelInfo = isKnownModelId
 			? anthropicModels[id as AnthropicModelId]
-			: anthropicModels[anthropicDefaultModelId]
+			: {
+					...defaultInfo,
+					// Allow advanced controls for Anthropic-compatible custom models.
+					supportsReasoningBudget: true,
+					supportsVerbosity: defaultInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+				}
 		// kilocode_change end
 
 		// If 1M context beta is enabled for Claude Sonnet 4 or 4.5, update the model info
@@ -498,3 +504,70 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	}
 	// kilocode_change end
 }
+
+// kilocode_change start
+const ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com"
+
+function normalizeAnthropicBaseUrl(baseUrl?: string): string | undefined {
+	if (!baseUrl) {
+		return undefined
+	}
+
+	const trimmedBaseUrl = baseUrl.trim()
+	if (!trimmedBaseUrl || !URL.canParse(trimmedBaseUrl)) {
+		return undefined
+	}
+
+	const parsedUrl = new URL(trimmedBaseUrl)
+	parsedUrl.pathname = parsedUrl.pathname.replace(/\/+$/, "")
+
+	const normalized = parsedUrl.toString().replace(/\/$/, "")
+	return normalized || undefined
+}
+
+function stripAnthropicVersionPath(baseUrl: string): string {
+	const parsedUrl = new URL(baseUrl)
+	if (parsedUrl.pathname.toLowerCase().endsWith("/v1")) {
+		parsedUrl.pathname = parsedUrl.pathname.slice(0, -3)
+	}
+
+	const normalized = parsedUrl.toString().replace(/\/$/, "")
+	return normalized || ANTHROPIC_DEFAULT_BASE_URL
+}
+
+export function getAnthropicSdkBaseUrl(baseUrl?: string): string | undefined {
+	const normalizedBaseUrl = normalizeAnthropicBaseUrl(baseUrl)
+	if (!normalizedBaseUrl) {
+		return undefined
+	}
+
+	return stripAnthropicVersionPath(normalizedBaseUrl)
+}
+
+export async function getAnthropicModels(baseUrl?: string, apiKey?: string, useAuthToken?: boolean) {
+	try {
+		if (!apiKey) {
+			return []
+		}
+
+		const normalizedBaseUrl = normalizeAnthropicBaseUrl(baseUrl) || ANTHROPIC_DEFAULT_BASE_URL
+		const baseUrlWithoutVersion = stripAnthropicVersionPath(normalizedBaseUrl)
+
+		const headers: Record<string, string> = {
+			"anthropic-version": "2023-06-01",
+		}
+
+		if (useAuthToken) {
+			headers["Authorization"] = `Bearer ${apiKey}`
+		} else {
+			headers["x-api-key"] = apiKey
+		}
+
+		const response = await axios.get(`${baseUrlWithoutVersion}/v1/models`, { headers })
+		const modelsArray = response.data?.data?.map((model: any) => model.id) || []
+		return [...new Set<string>(modelsArray)]
+	} catch {
+		return []
+	}
+}
+// kilocode_change end
