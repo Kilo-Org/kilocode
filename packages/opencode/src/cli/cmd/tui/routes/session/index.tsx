@@ -246,6 +246,7 @@ export function Session() {
     if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
       if (evt.ctrl && evt.name === "c") {
+        evt.preventDefault()
         setExitPress(exitPress() + 1)
         setTimeout(() => setExitPress(0), 1000)
         if (exitPress() >= 2) exit()

@@ -861,6 +861,7 @@ export function Prompt(props: PromptProps) {
                     }
                     // kilocode_change end
                     await exit()
+                    // Don't preventDefault - let textarea potentially handle the event
                     e.preventDefault()
                     return
                   }
