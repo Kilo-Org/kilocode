@@ -61,7 +61,7 @@ interface SessionContextValue {
   permissions: Accessor<PermissionRequest[]>
 
   // Actions
-  sendMessage: (text: string) => void
+  sendMessage: (text: string, providerID?: string, modelID?: string) => void
   abort: () => void
   respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
   createSession: () => void
@@ -249,7 +249,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // Actions
-  function sendMessage(text: string) {
+  function sendMessage(text: string, providerID?: string, modelID?: string) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
       return
@@ -260,6 +260,8 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "sendMessage",
       text,
       sessionID: currentSessionID(),
+      providerID,
+      modelID,
     })
   }
 

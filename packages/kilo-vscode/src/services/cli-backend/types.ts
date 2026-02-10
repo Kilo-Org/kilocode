@@ -78,6 +78,40 @@ export interface TodoItem {
   status: "pending" | "in_progress" | "completed"
 }
 
+// ============================================
+// Provider catalog
+// ============================================
+
+export interface ProviderModel {
+  id: string
+  name: string
+  inputPrice?: number
+  outputPrice?: number
+  contextLength?: number
+  releaseDate?: string
+  latest?: boolean
+}
+
+export interface Provider {
+  id: string
+  name: string
+  models: Record<string, ProviderModel>
+}
+
+export interface ProviderListResponse {
+  /** providerID -> provider */
+  all: Record<string, Provider>
+  /** array of connected providerIDs */
+  connected: string[]
+  /** providerID -> default modelID */
+  default: Record<string, string>
+}
+
+export interface ModelSelection {
+  providerID: string
+  modelID: string
+}
+
 // Server connection config
 export interface ServerConfig {
   baseUrl: string

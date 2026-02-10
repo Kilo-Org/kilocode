@@ -132,6 +132,31 @@ export interface ProfileData {
 }
 
 // ============================================
+// Provider catalog (for model selector)
+// ============================================
+
+export interface ProviderModel {
+  id: string
+  name: string
+  inputPrice?: number
+  outputPrice?: number
+  contextLength?: number
+  releaseDate?: string
+  latest?: boolean
+}
+
+export interface Provider {
+  id: string
+  name: string
+  models: Record<string, ProviderModel>
+}
+
+export interface ModelSelection {
+  providerID: string
+  modelID: string
+}
+
+// ============================================
 // Messages FROM extension TO webview
 // ============================================
 
@@ -228,6 +253,13 @@ export interface DeviceAuthCancelledMessage {
   type: "deviceAuthCancelled"
 }
 
+export interface ProvidersLoadedMessage {
+  type: "providersLoaded"
+  providers: Record<string, Provider>
+  connected: string[]
+  defaults: Record<string, string>
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -246,6 +278,7 @@ export type ExtensionMessage =
   | DeviceAuthCompleteMessage
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
+  | ProvidersLoadedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -255,6 +288,8 @@ export interface SendMessageRequest {
   type: "sendMessage"
   text: string
   sessionID?: string
+  providerID?: string
+  modelID?: string
 }
 
 export interface AbortRequest {
@@ -307,6 +342,10 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+export interface RequestProvidersRequest {
+  type: "requestProviders"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -320,6 +359,7 @@ export type WebviewMessage =
   | OpenExternalRequest
   | CancelLoginRequest
   | WebviewReadyRequest
+  | RequestProvidersRequest
 
 // ============================================
 // VS Code API type

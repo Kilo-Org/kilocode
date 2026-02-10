@@ -368,6 +368,35 @@
 
 .prompt-input-hint {
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* ============================================
+   Model Selector (minimal)
+   ============================================ */
+
+.model-selector {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.model-selector-select {
+  height: 22px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-input-border);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  max-width: 160px;
+}
+
+.model-selector-empty {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
 }

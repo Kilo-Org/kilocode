@@ -6,12 +6,15 @@
 import { Component, createSignal, Show } from "solid-js"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import type { ModelSelection } from "../../types/messages"
+import { ModelSelector } from "./ModelSelector"
 
 export const PromptInput: Component = () => {
   const session = useSession()
   const server = useServer()
 
   const [text, setText] = createSignal("")
+  const [selection, setSelection] = createSignal<ModelSelection | null>(null)
   let textareaRef: HTMLTextAreaElement | undefined
 
   const isBusy = () => session.status() === "busy"
@@ -43,7 +46,8 @@ export const PromptInput: Component = () => {
     const message = text().trim()
     if (!message || isBusy() || isDisabled()) return
 
-    session.sendMessage(message)
+    const sel = selection()
+    session.sendMessage(message, sel?.providerID, sel?.modelID)
     setText("")
 
     // Reset textarea height
@@ -89,6 +93,7 @@ export const PromptInput: Component = () => {
         </div>
       </div>
       <div class="prompt-input-hint">
+        <ModelSelector selection={selection} setSelection={setSelection} />
         <Show when={!isDisabled()}>
           <span>Press Enter to send, Shift+Enter for new line</span>
         </Show>

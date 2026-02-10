@@ -1,5 +1,11 @@
 import * as vscode from "vscode"
-import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionService } from "./services/cli-backend"
+import {
+  type HttpClient,
+  type SessionInfo,
+  type SSEEvent,
+  type KiloConnectionService,
+  type ProviderListResponse,
+} from "./services/cli-backend"
 
 export class KiloProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -142,7 +148,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
           await this.syncWebviewState("webviewReady")
           break
         case "sendMessage":
-          await this.handleSendMessage(message.text, message.sessionID)
+          await this.handleSendMessage(message.text, message.sessionID, message.providerID, message.modelID)
           break
         case "abort":
           await this.handleAbort(message.sessionID)
@@ -176,6 +182,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
           if (message.url) {
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
+          break
+        case "requestProviders":
+          await this.fetchAndSendProviders()
           break
       }
     })
@@ -248,6 +257,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 
       this.postMessage({ type: "connectionState", state: this.connectionState })
       await this.syncWebviewState("initializeConnection")
+
+      await this.fetchAndSendProviders()
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Failed to initialize connection:", error)
@@ -382,7 +393,12 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   /**
    * Handle sending a message from the webview.
    */
-  private async handleSendMessage(text: string, sessionID?: string): Promise<void> {
+  private async handleSendMessage(
+    text: string,
+    sessionID?: string,
+    providerID?: string,
+    modelID?: string,
+  ): Promise<void> {
     if (!this.httpClient) {
       this.postMessage({
         type: "error",
@@ -411,13 +427,45 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       }
 
       // Send message with text part
-      await this.httpClient.sendMessage(targetSessionID, [{ type: "text", text }], workspaceDir)
+      await this.httpClient.sendMessage(targetSessionID, [{ type: "text", text }], workspaceDir, {
+        providerID,
+        modelID,
+      })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
       this.postMessage({
         type: "error",
         message: error instanceof Error ? error.message : "Failed to send message",
       })
+    }
+  }
+
+  private normalizeProviders(response: ProviderListResponse): ProviderListResponse["all"] {
+    const normalized: ProviderListResponse["all"] = {}
+    for (const provider of Object.values(response.all)) {
+      normalized[provider.id] = provider
+    }
+    return normalized
+  }
+
+  private async fetchAndSendProviders(): Promise<void> {
+    const client = this.httpClient
+    if (!client) {
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const response = await client.listProviders(workspaceDir)
+
+      this.postMessage({
+        type: "providersLoaded",
+        providers: this.normalizeProviders(response),
+        connected: response.connected,
+        defaults: response.default,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
     }
   }
 

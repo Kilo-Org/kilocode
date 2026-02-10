@@ -5,6 +5,7 @@ import type {
   MessagePart,
   ProfileData,
   ProviderAuthAuthorization,
+  ProviderListResponse,
 } from "./types"
 
 /**
@@ -33,7 +34,12 @@ export class HttpClient {
   /**
    * Make an HTTP request to the CLI backend server.
    */
-  private async request<T>(method: string, path: string, body?: unknown, options?: { directory?: string }): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    options?: { directory?: string; allowEmpty?: boolean },
+  ): Promise<T> {
     const url = `${this.baseUrl}${path}`
 
     const headers: Record<string, string> = {
@@ -62,7 +68,16 @@ export class HttpClient {
       throw new Error(`HTTP ${response.status}: ${errorMessage}`)
     }
 
-    return response.json() as Promise<T>
+    if (!options?.allowEmpty) {
+      return response.json() as Promise<T>
+    }
+
+    const text = await response.text()
+    if (text.trim().length === 0) {
+      return undefined as T
+    }
+
+    return JSON.parse(text) as T
   }
 
   // ============================================
@@ -91,6 +106,14 @@ export class HttpClient {
   }
 
   // ============================================
+  // Provider Methods
+  // ============================================
+
+  async listProviders(directory: string): Promise<ProviderListResponse> {
+    return this.request<ProviderListResponse>("GET", "/provider", undefined, { directory })
+  }
+
+  // ============================================
   // Messaging Methods
   // ============================================
 
@@ -101,13 +124,14 @@ export class HttpClient {
     sessionId: string,
     parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>,
     directory: string,
-  ): Promise<{ info: MessageInfo; parts: MessagePart[] }> {
-    return this.request<{ info: MessageInfo; parts: MessagePart[] }>(
-      "POST",
-      `/session/${sessionId}/message`,
-      { parts },
-      { directory },
-    )
+    options?: { providerID?: string; modelID?: string },
+  ): Promise<void> {
+    const body: Record<string, unknown> = { parts }
+    if (options?.providerID && options?.modelID) {
+      body.model = { providerID: options.providerID, modelID: options.modelID }
+    }
+
+    await this.request<void>("POST", `/session/${sessionId}/message`, body, { directory, allowEmpty: true })
   }
 
   /**
@@ -130,7 +154,7 @@ export class HttpClient {
    * Abort the current operation in a session.
    */
   async abortSession(sessionId: string, directory: string): Promise<boolean> {
-    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory })
+    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory, allowEmpty: true })
     return true
   }
 
@@ -147,7 +171,12 @@ export class HttpClient {
     response: "once" | "always" | "reject",
     directory: string,
   ): Promise<boolean> {
-    await this.request<void>("POST", `/session/${sessionId}/permissions/${permissionId}`, { response }, { directory })
+    await this.request<void>(
+      "POST",
+      `/session/${sessionId}/permissions/${permissionId}`,
+      { response },
+      { directory, allowEmpty: true },
+    )
     return true
   }
 
