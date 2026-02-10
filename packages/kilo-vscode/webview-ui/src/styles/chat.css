@@ -550,3 +550,154 @@
   color: var(--vscode-descriptionForeground);
   margin-top: 2px;
 }
+
+/* ============================================
+   Model Selector
+   ============================================ */
+
+.model-selector {
+  position: relative;
+}
+
+.model-selector-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--vscode-font-family);
+  max-width: 220px;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.model-selector-trigger:hover:not(:disabled) {
+  color: var(--vscode-foreground);
+  border-color: var(--vscode-input-border);
+}
+
+.model-selector-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-selector-trigger-chevron {
+  flex-shrink: 0;
+}
+
+.model-selector-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  width: 300px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.model-selector-search-wrapper {
+  padding: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.model-selector-search {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.model-selector-search:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.model-selector-search::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.model-selector-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.model-selector-empty {
+  padding: 12px 16px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  text-align: center;
+}
+
+.model-selector-group-label {
+  padding: 6px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vscode-descriptionForeground);
+  user-select: none;
+}
+
+.model-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  user-select: none;
+}
+
+.model-selector-item:hover,
+.model-selector-item.active {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.model-selector-item.selected {
+  color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+  font-weight: 600;
+}
+
+.model-selector-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.model-selector-tag {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

@@ -56,7 +56,6 @@ export const VSCodeProvider: ParentComponent = (props) => {
 
   const value: VSCodeContextValue = {
     postMessage: (message: WebviewMessage) => {
-      console.log("[Kilo New] Sending message to extension:", message.type)
       api.postMessage(message)
     },
     onMessage: (handler: (message: ExtensionMessage) => void) => {

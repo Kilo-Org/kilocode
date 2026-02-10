@@ -16,7 +16,7 @@
       "activitybar": [
         {
           "id": "kilo-code-sidebar",
-          "title": "Kilo Code",
+          "title": "Kilo Code (NEW)",
           "icon": "$(code)"
         }
       ]
@@ -26,7 +26,7 @@
         {
           "type": "webview",
           "id": "kilo-code.new.sidebarView",
-          "name": "Kilo Code"
+          "name": "Kilo Code (NEW)"
         }
       ]
     },
@@ -60,6 +60,14 @@
         "command": "kilo-code.new.settingsButtonClicked",
         "title": "Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "kilo-code.new.openInTab",
+        "title": "Kilo Code (NEW)",
+        "icon": {
+          "light": "assets/icons/kilo-light.svg",
+          "dark": "assets/icons/kilo-dark.svg"
+        }
       }
     ],
     "menus": {
@@ -94,7 +102,29 @@
           "group": "navigation@5",
           "when": "view == kilo-code.new.sidebarView"
         }
+      ],
+      "editor/title": [
+        {
+          "command": "kilo-code.new.openInTab",
+          "group": "navigation",
+          "when": "true"
+        }
       ]
+    },
+    "configuration": {
+      "title": "Kilo Code",
+      "properties": {
+        "kilo-code.new.model.providerID": {
+          "type": "string",
+          "default": "kilo",
+          "description": "Default model provider ID for new sessions"
+        },
+        "kilo-code.new.model.modelID": {
+          "type": "string",
+          "default": "kilo/auto",
+          "description": "Default model ID for new sessions"
+        }
+      }
     }
   },
   "scripts": {

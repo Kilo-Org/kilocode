@@ -5,6 +5,7 @@ import type {
   MessagePart,
   ProfileData,
   ProviderAuthAuthorization,
+  ProviderListResponse,
 } from "./types"
 
 /**
@@ -33,7 +34,12 @@ export class HttpClient {
   /**
    * Make an HTTP request to the CLI backend server.
    */
-  private async request<T>(method: string, path: string, body?: unknown, options?: { directory?: string }): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    options?: { directory?: string; allowEmpty?: boolean },
+  ): Promise<T> {
     const url = `${this.baseUrl}${path}`
 
     const headers: Record<string, string> = {
@@ -51,18 +57,57 @@ export class HttpClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
+    // Read the raw response first so we can produce useful errors when JSON is empty/truncated.
+    const rawText = await response.text()
+
+    // Non-2xx: try to extract an error message from JSON, otherwise fall back to raw text.
     if (!response.ok) {
-      let errorMessage: string
-      try {
-        const errorJson = (await response.json()) as { error?: string; message?: string }
-        errorMessage = errorJson.error || errorJson.message || response.statusText
-      } catch {
-        errorMessage = response.statusText
+      let errorMessage = response.statusText
+      if (rawText.trim().length > 0) {
+        try {
+          const errorJson = JSON.parse(rawText) as { error?: string; message?: string }
+          errorMessage = errorJson.error || errorJson.message || errorMessage
+        } catch {
+          errorMessage = rawText
+        }
       }
+
+      console.error("[Kilo New] HTTP: ❌ Request failed", {
+        method,
+        path,
+        status: response.status,
+        errorMessage,
+      })
+
       throw new Error(`HTTP ${response.status}: ${errorMessage}`)
     }
 
-    return response.json() as Promise<T>
+    // 2xx but empty body: return undefined (cast to T). Some endpoints like
+    // POST /session/{id}/message can return 200 with no body; results arrive via SSE.
+    if (rawText.trim().length === 0) {
+      if (options?.allowEmpty) {
+        return undefined as T
+      }
+
+      console.error("[Kilo New] HTTP: ❌ Empty response body", {
+        method,
+        path,
+        status: response.status,
+      })
+      throw new Error(`HTTP ${response.status}: Empty response body`)
+    }
+
+    try {
+      return JSON.parse(rawText) as T
+    } catch (error) {
+      console.error("[Kilo New] HTTP: ❌ Invalid JSON response", {
+        method,
+        path,
+        status: response.status,
+        rawSnippet: rawText.slice(0, 400),
+      })
+      throw error
+    }
   }
 
   // ============================================
@@ -91,6 +136,17 @@ export class HttpClient {
   }
 
   // ============================================
+  // Provider Methods
+  // ============================================
+
+  /**
+   * List all providers with their models, connection status, and defaults.
+   */
+  async listProviders(directory: string): Promise<ProviderListResponse> {
+    return this.request<ProviderListResponse>("GET", "/provider", undefined, { directory })
+  }
+
+  // ============================================
   // Messaging Methods
   // ============================================
 
@@ -101,13 +157,15 @@ export class HttpClient {
     sessionId: string,
     parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>,
     directory: string,
-  ): Promise<{ info: MessageInfo; parts: MessagePart[] }> {
-    return this.request<{ info: MessageInfo; parts: MessagePart[] }>(
-      "POST",
-      `/session/${sessionId}/message`,
-      { parts },
-      { directory },
-    )
+    options?: { providerID?: string; modelID?: string },
+  ): Promise<void> {
+    const body: Record<string, unknown> = { parts }
+    if (options?.providerID && options?.modelID) {
+      // Backend expects model selection as a nested object: { model: { providerID, modelID } }
+      body.model = { providerID: options.providerID, modelID: options.modelID }
+    }
+
+    await this.request<void>("POST", `/session/${sessionId}/message`, body, { directory, allowEmpty: true })
   }
 
   /**
@@ -130,7 +188,7 @@ export class HttpClient {
    * Abort the current operation in a session.
    */
   async abortSession(sessionId: string, directory: string): Promise<boolean> {
-    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory })
+    await this.request<void>("POST", `/session/${sessionId}/abort`, {}, { directory, allowEmpty: true })
     return true
   }
 
@@ -147,7 +205,12 @@ export class HttpClient {
     response: "once" | "always" | "reject",
     directory: string,
   ): Promise<boolean> {
-    await this.request<void>("POST", `/session/${sessionId}/permissions/${permissionId}`, { response }, { directory })
+    await this.request<void>(
+      "POST",
+      `/session/${sessionId}/permissions/${permissionId}`,
+      { response },
+      { directory, allowEmpty: true },
+    )
     return true
   }
 

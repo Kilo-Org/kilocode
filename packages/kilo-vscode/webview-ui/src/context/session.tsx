@@ -1,6 +1,7 @@
 /**
  * Session context
- * Manages session state, messages, and handles SSE events from the extension
+ * Manages session state, messages, and handles SSE events from the extension.
+ * Also owns per-session model selection (provider context is catalog-only).
  */
 
 import {
@@ -8,6 +9,7 @@ import {
   useContext,
   createSignal,
   createMemo,
+  createEffect,
   onMount,
   onCleanup,
   ParentComponent,
@@ -17,6 +19,7 @@ import {
 import { createStore, produce } from "solid-js/store"
 import { useVSCode } from "./vscode"
 import { useServer } from "./server"
+import { useProvider } from "./provider"
 import type {
   SessionInfo,
   Message,
@@ -25,6 +28,7 @@ import type {
   SessionStatus,
   PermissionRequest,
   TodoItem,
+  ModelSelection,
   ExtensionMessage,
 } from "../types/messages"
 
@@ -34,6 +38,7 @@ interface SessionStore {
   messages: Record<string, Message[]> // sessionID -> messages
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
+  modelSelections: Record<string, ModelSelection> // sessionID -> model
 }
 
 interface SessionContextValue {
@@ -60,8 +65,12 @@ interface SessionContextValue {
   // Pending permission requests
   permissions: Accessor<PermissionRequest[]>
 
+  // Model selection (per-session)
+  selected: Accessor<ModelSelection | null>
+  selectModel: (providerID: string, modelID: string) => void
+
   // Actions
-  sendMessage: (text: string) => void
+  sendMessage: (text: string, providerID?: string, modelID?: string) => void
   abort: () => void
   respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
   createSession: () => void
@@ -74,6 +83,7 @@ const SessionContext = createContext<SessionContextValue>()
 export const SessionProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const server = useServer()
+  const provider = useProvider()
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
@@ -84,13 +94,60 @@ export const SessionProvider: ParentComponent = (props) => {
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
 
-  // Store for sessions, messages, parts, todos
+  // Pending model selection for before a session exists
+  const [pendingModelSelection, setPendingModelSelection] = createSignal<ModelSelection | null>(null)
+  const [pendingWasUserSet, setPendingWasUserSet] = createSignal(false)
+
+  // Store for sessions, messages, parts, todos, modelSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
     messages: {},
     parts: {},
     todos: {},
+    modelSelections: {},
   })
+
+  // Keep pending selection in sync with provider default until the user
+  // explicitly changes it (or a session exists).
+  createEffect(() => {
+    const def = provider.defaultSelection()
+    if (currentSessionID()) {
+      return
+    }
+
+    if (pendingWasUserSet()) {
+      return
+    }
+
+    setPendingModelSelection(def)
+  })
+
+  // If we have no pending yet, initialize it from provider default.
+  createEffect(() => {
+    if (!pendingModelSelection()) {
+      setPendingModelSelection(provider.defaultSelection())
+    }
+  })
+
+  // Per-session model selection
+  const selected = createMemo<ModelSelection | null>(() => {
+    const sessionID = currentSessionID()
+    if (sessionID) {
+      return store.modelSelections[sessionID] ?? provider.defaultSelection()
+    }
+    return pendingModelSelection()
+  })
+
+  function selectModel(providerID: string, modelID: string) {
+    const selection: ModelSelection = { providerID, modelID }
+    const id = currentSessionID()
+    if (id) {
+      setStore("modelSelections", id, selection)
+    } else {
+      setPendingWasUserSet(true)
+      setPendingModelSelection(selection)
+    }
+  }
 
   // Handle messages from extension
   onMount(() => {
@@ -135,16 +192,25 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo) {
-    console.log("[Kilo New] Session created:", session.id)
     batch(() => {
       setStore("sessions", session.id, session)
       setStore("messages", session.id, [])
+
+      // If there's a pending model selection, assign it to this new session.
+      // Guard against duplicate sessionCreated events (HTTP response + SSE)
+      // which would overwrite the user's selection with the effect-restored default.
+      const pending = pendingModelSelection()
+      if (pending && !store.modelSelections[session.id]) {
+        setStore("modelSelections", session.id, pending)
+        setPendingModelSelection(null)
+        setPendingWasUserSet(false)
+      }
+
       setCurrentSessionID(session.id)
     })
   }
 
   function handleMessagesLoaded(sessionID: string, messages: Message[]) {
-    console.log("[Kilo New] Messages loaded for session:", sessionID, messages.length)
     setStore("messages", sessionID, messages)
 
     // Also extract parts from messages
@@ -156,8 +222,6 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleMessageCreated(message: Message) {
-    console.log("[Kilo New] Message created/updated:", message.id, message.role)
-
     setStore("messages", message.sessionID, (msgs = []) => {
       // Check if message already exists (update case)
       const existingIndex = msgs.findIndex((m) => m.id === message.id)
@@ -190,8 +254,6 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    console.log("[Kilo New] Part updated:", effectiveMessageID, part.id, part.type)
-
     setStore(
       "parts",
       produce((parts) => {
@@ -223,24 +285,20 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionStatus(sessionID: string, newStatus: SessionStatus) {
-    console.log("[Kilo New] Session status:", sessionID, newStatus)
     if (sessionID === currentSessionID()) {
       setStatus(newStatus)
     }
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
-    console.log("[Kilo New] Permission request:", permission.toolName)
     setPermissions((prev) => [...prev, permission])
   }
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
-    console.log("[Kilo New] Todos updated:", sessionID, items.length)
     setStore("todos", sessionID, items)
   }
 
   function handleSessionsLoaded(loaded: SessionInfo[]) {
-    console.log("[Kilo New] Sessions loaded:", loaded.length)
     batch(() => {
       for (const s of loaded) {
         setStore("sessions", s.id, s)
@@ -249,17 +307,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // Actions
-  function sendMessage(text: string) {
+  function sendMessage(text: string, providerID?: string, modelID?: string) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
       return
     }
 
-    console.log("[Kilo New] Sending message:", text.substring(0, 50))
     vscode.postMessage({
       type: "sendMessage",
       text,
       sessionID: currentSessionID(),
+      providerID,
+      modelID,
     })
   }
 
@@ -270,7 +329,6 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    console.log("[Kilo New] Aborting session:", sessionID)
     vscode.postMessage({
       type: "abort",
       sessionID,
@@ -282,7 +340,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
 
-    console.log("[Kilo New] Permission response:", permissionId, response, "sessionID:", sessionID)
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
@@ -300,7 +357,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    console.log("[Kilo New] Creating new session")
+    // Reset pending selection to default for the new session
+    setPendingModelSelection(provider.defaultSelection())
+    setPendingWasUserSet(false)
     vscode.postMessage({ type: "createSession" })
   }
 
@@ -309,7 +368,6 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot load sessions: not connected")
       return
     }
-    console.log("[Kilo New] Loading sessions")
     vscode.postMessage({ type: "loadSessions" })
   }
 
@@ -318,7 +376,6 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot select session: not connected")
       return
     }
-    console.log("[Kilo New] Selecting session:", id)
     setCurrentSessionID(id)
     setStatus("idle")
     vscode.postMessage({ type: "loadMessages", sessionID: id })
@@ -358,6 +415,8 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     todos,
     permissions,
+    selected,
+    selectModel,
     sendMessage,
     abort,
     respondToPermission,

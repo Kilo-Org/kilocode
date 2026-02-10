@@ -122,6 +122,7 @@ export function Prompt(props: PromptProps) {
     mode: "normal" | "shell"
     extmarkToPartIndex: Map<number, number>
     interrupt: number
+    exitPress: number // kilocode_change - track double ctrl+c to exit
     placeholder: number
   }>({
     placeholder: Math.floor(Math.random() * PLACEHOLDERS.length),
@@ -132,6 +133,7 @@ export function Prompt(props: PromptProps) {
     mode: "normal",
     extmarkToPartIndex: new Map(),
     interrupt: 0,
+    exitPress: 0, // kilocode_change
   })
 
   // Initialize agent/model/variant from last user message when session changes
@@ -843,6 +845,21 @@ export function Prompt(props: PromptProps) {
                 }
                 if (keybind.match("app_exit", e)) {
                   if (store.prompt.input === "") {
+                    // kilocode_change start - double ctrl+c to exit, single ctrl+d exits immediately
+                    if (e.ctrl && e.name === "c") {
+                      setStore("exitPress", store.exitPress + 1)
+                      setTimeout(() => {
+                        setStore("exitPress", 0)
+                      }, 1000)
+                      if (store.exitPress >= 2) {
+                        await exit()
+                        e.preventDefault()
+                        return
+                      }
+                      e.preventDefault()
+                      return
+                    }
+                    // kilocode_change end
                     await exit()
                     // Don't preventDefault - let textarea potentially handle the event
                     e.preventDefault()
@@ -1103,6 +1120,13 @@ export function Prompt(props: PromptProps) {
           </Show>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
+              {/* kilocode_change start - show "ctrl+c again to exit" hint */}
+              <Show when={store.exitPress > 0}>
+                <text fg={theme.primary}>
+                  ctrl+c <span style={{ fg: theme.primary }}>again to exit</span>
+                </text>
+              </Show>
+              {/* kilocode_change end */}
               <Switch>
                 <Match when={store.mode === "normal"}>
                   <Show when={local.model.variant.list().length > 0}>

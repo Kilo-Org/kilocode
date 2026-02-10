@@ -3,6 +3,7 @@ import Settings from "./components/Settings"
 import ProfileView from "./components/ProfileView"
 import { VSCodeProvider } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
+import { ProviderProvider } from "./context/provider"
 import { SessionProvider, useSession } from "./context/session"
 import { ChatView } from "./components/chat"
 import SessionList from "./components/history/SessionList"
@@ -111,9 +112,11 @@ const App: Component = () => {
   return (
     <VSCodeProvider>
       <ServerProvider>
-        <SessionProvider>
-          <AppContent />
-        </SessionProvider>
+        <ProviderProvider>
+          <SessionProvider>
+            <AppContent />
+          </SessionProvider>
+        </ProviderProvider>
       </ServerProvider>
     </VSCodeProvider>
   )
