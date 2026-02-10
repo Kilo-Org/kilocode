@@ -117,6 +117,21 @@ describe("ThinkingBudget", () => {
 		expect(screen.getAllByTestId("slider")).toHaveLength(2)
 	})
 
+	it("should hide max thinking slider and show hint when adaptive thinking is active", () => {
+		render(
+			<ThinkingBudget
+				{...defaultProps}
+				apiConfiguration={{ enableReasoningEffort: true }}
+				modelInfo={{ ...mockModelInfo, supportsAdaptiveThinking: true }}
+			/>,
+		)
+
+		expect(screen.getAllByTestId("slider")).toHaveLength(1)
+		expect(screen.queryByTestId("reasoning-budget")).not.toBeInTheDocument()
+		expect(screen.getByTestId("adaptive-thinking-budget-hint")).toBeInTheDocument()
+		expect(screen.getByText("settings:thinkingBudget.adaptiveThinkingBudgetHint")).toBeInTheDocument()
+	})
+
 	it("should update modelMaxThinkingTokens", () => {
 		const setApiConfigurationField = vi.fn()
 

@@ -144,6 +144,9 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	const customMaxOutputTokens = apiConfiguration.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
 	const customMaxThinkingTokens =
 		apiConfiguration.modelMaxThinkingTokens || DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS
+	// kilocode_change start
+	const isAdaptiveThinkingActive = !!modelInfo?.supportsAdaptiveThinking && enableReasoningEffort !== false
+	// kilocode_change end
 
 	// Dynamically expand or shrink the max thinking budget based on the custom
 	// max output tokens so that there's always a 20% buffer.
@@ -222,19 +225,31 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 							<div className="w-12 text-sm text-center">{customMaxOutputTokens}</div>
 						</div>
 					</div>
-					<div className="flex flex-col gap-1">
-						<div className="font-medium">{t("settings:thinkingBudget.maxThinkingTokens")}</div>
-						<div className="flex items-center gap-1" data-testid="reasoning-budget">
-							<Slider
-								min={minThinkingTokens}
-								max={modelMaxThinkingTokens}
-								step={minThinkingTokens === 128 ? 128 : 1024}
-								value={[customMaxThinkingTokens]}
-								onValueChange={([value]) => setApiConfigurationField("modelMaxThinkingTokens", value)}
-							/>
-							<div className="w-12 text-sm text-center">{customMaxThinkingTokens}</div>
+					{/* kilocode_change start */}
+					{isAdaptiveThinkingActive ? (
+						<div
+							className="text-xs text-vscode-descriptionForeground"
+							data-testid="adaptive-thinking-budget-hint">
+							{t("settings:thinkingBudget.adaptiveThinkingBudgetHint")}
 						</div>
-					</div>
+					) : (
+						<div className="flex flex-col gap-1">
+							<div className="font-medium">{t("settings:thinkingBudget.maxThinkingTokens")}</div>
+							<div className="flex items-center gap-1" data-testid="reasoning-budget">
+								<Slider
+									min={minThinkingTokens}
+									max={modelMaxThinkingTokens}
+									step={minThinkingTokens === 128 ? 128 : 1024}
+									value={[customMaxThinkingTokens]}
+									onValueChange={([value]) =>
+										setApiConfigurationField("modelMaxThinkingTokens", value)
+									}
+								/>
+								<div className="w-12 text-sm text-center">{customMaxThinkingTokens}</div>
+							</div>
+						</div>
+					)}
+					{/* kilocode_change end */}
 				</>
 			)}
 		</>

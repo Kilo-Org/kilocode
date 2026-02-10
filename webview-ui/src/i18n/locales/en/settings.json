@@ -1131,7 +1131,8 @@
 	},
 	"thinkingBudget": {
 		"maxTokens": "Max Tokens",
-		"maxThinkingTokens": "Max Thinking Tokens"
+		"maxThinkingTokens": "Max Thinking Tokens",
+		"adaptiveThinkingBudgetHint": "Adaptive thinking is enabled for this model. Max Thinking Tokens is ignored in adaptive mode."
 	},
 	"validation": {
 		"apiKey": "You must provide a valid API key.",
