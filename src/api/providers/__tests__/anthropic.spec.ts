@@ -267,8 +267,12 @@ describe("AnthropicHandler", () => {
 	// kilocode_change start
 	describe("getAnthropicSdkBaseUrl", () => {
 		it("strips trailing /v1 from custom base URLs", () => {
-			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com/v1")).toBe("https://anthropic-compatible.example.com")
-			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com")).toBe("https://anthropic-compatible.example.com")
+			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com/v1")).toBe(
+				"https://anthropic-compatible.example.com",
+			)
+			expect(getAnthropicSdkBaseUrl("https://anthropic-compatible.example.com")).toBe(
+				"https://anthropic-compatible.example.com",
+			)
 		})
 	})
 
@@ -451,6 +455,20 @@ describe("AnthropicHandler", () => {
 
 			expect(model.id).toBe("MinMax-M2")
 			expect(model.info).toBeDefined()
+		})
+
+		it("enables adaptive thinking capability for custom model IDs when explicitly toggled", () => {
+			const handlerWithCustomModel = new AnthropicHandler({
+				...mockOptions,
+				apiModelId: "ac/op-46",
+				anthropicCustomAdaptiveThinking: true,
+			})
+
+			const model = handlerWithCustomModel.getModel()
+
+			expect(model.id).toBe("ac/op-46")
+			expect(model.info.supportsAdaptiveThinking).toBe(true)
+			expect(model.reasoning).toEqual({ type: "adaptive" })
 		})
 		// kilocode_change end
 	})

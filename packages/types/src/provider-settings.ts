@@ -227,6 +227,7 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	anthropicBaseUrl: z.string().optional(),
 	anthropicUseAuthToken: z.boolean().optional(),
 	anthropicDeploymentName: z.string().optional(), // kilocode_change
+	anthropicCustomAdaptiveThinking: z.boolean().optional(), // kilocode_change
 	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
 })
 

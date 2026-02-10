@@ -403,6 +403,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 					// Allow advanced controls for Anthropic-compatible custom models.
 					supportsReasoningBudget: true,
 					supportsVerbosity: defaultInfo.supportsVerbosity || ["low", "medium", "high", "max"],
+					supportsAdaptiveThinking: this.options.anthropicCustomAdaptiveThinking === true,
 				}
 		// kilocode_change end
 
