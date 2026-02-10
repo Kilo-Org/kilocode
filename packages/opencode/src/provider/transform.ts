@@ -471,8 +471,8 @@ export namespace ProviderTransform {
           }
         }
         // Claude/Anthropic models support reasoning via effort levels through OpenRouter API
-        // OpenRouter maps effort to budget_tokens percentages (max=95%, high=80%, medium=50%, low=20%, minimal=10%)
-        // kilocode_change - use "max" instead of "xhigh" for Anthropic models (matches native Anthropic naming)
+        // OpenRouter uses OpenAI-style effort names: xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%
+        // kilocode_change - expose "max" (Anthropic naming) to users, mapped to "xhigh" (OpenRouter naming) on the wire
         if (
           model.id.includes("claude") ||
           model.id.includes("anthropic") ||
