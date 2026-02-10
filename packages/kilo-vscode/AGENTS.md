@@ -13,6 +13,7 @@ pnpm compile          # Type-check + lint + build
 pnpm watch            # Watch mode (esbuild + tsc)
 pnpm test             # Run tests (requires pretest compilation)
 pnpm lint             # ESLint on src/
+pnpm run format       # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
 
 Single test: `pnpm test -- --grep "test name"`
@@ -46,3 +47,7 @@ Follow monorepo root AGENTS.md style guide:
 - Single-word variable names when possible
 - Avoid `try`/`catch`, avoid `any` type
 - ESLint enforces: curly braces, strict equality, semicolons, camelCase/PascalCase imports
+
+## Committing
+
+- Before committing, always run `pnpm run format` so commits don't accidentally include formatting/styling-only diffs.

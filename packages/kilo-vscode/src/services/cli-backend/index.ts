@@ -24,3 +24,6 @@ export { HttpClient } from "./http-client"
 
 export { SSEClient } from "./sse-client"
 export type { SSEEventHandler, SSEErrorHandler, SSEStateHandler } from "./sse-client"
+
+export { KiloConnectionService } from "./connection-service"
+export type { ConnectionState } from "./connection-service"
