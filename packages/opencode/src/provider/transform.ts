@@ -482,6 +482,12 @@ export namespace ProviderTransform {
         }
         // GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
+        // kilocode_change - Codex models use object-based reasoning format for OpenRouter
+        // OpenRouter expects { reasoning: { effort: "high" } } format
+        // See: https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request#request.body.reasoning
+        if (model.id.includes("codex")) {
+          return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+        }
         return Object.fromEntries(
           OPENAI_EFFORTS.map((effort) => [
             effort,

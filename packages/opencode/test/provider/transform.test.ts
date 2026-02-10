@@ -1669,6 +1669,23 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoning: { effort: "low" } })
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
+
+    test("codex models return OPENAI_EFFORTS with object-based reasoning format", () => {
+      const model = createMockModel({
+        id: "kilo/openai/gpt-5.2-codex",
+        providerID: "kilo",
+        api: {
+          id: "openai/gpt-5.2-codex",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+      expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
+    })
   })
   // kilocode_change end
 
