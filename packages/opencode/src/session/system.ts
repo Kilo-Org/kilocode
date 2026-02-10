@@ -8,12 +8,21 @@ import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 
 import PROMPT_CODEX from "./prompt/codex_header.txt"
+// kilocode_change start
+import SOUL from "../kilocode/soul.txt"
+// kilocode_change end
 import type { Provider } from "@/provider/provider"
 
 export namespace SystemPrompt {
   export function instructions() {
     return PROMPT_CODEX.trim()
   }
+
+  // kilocode_change start
+  export function soul() {
+    return SOUL.trim()
+  }
+  // kilocode_change end
 
   export function provider(model: Provider.Model) {
     if (model.api.id.includes("gpt-5")) return [PROMPT_CODEX]
