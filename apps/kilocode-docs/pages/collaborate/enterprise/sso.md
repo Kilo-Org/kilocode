@@ -5,7 +5,11 @@ description: "Configure Single Sign-On for your organization"
 
 # SSO
 
-Kilo Enterprise lets your organization securely manage access using **Single Sign-On (SSO)**. With SSO enabled, team members can sign in to Kilo using your company’s existing identity provider, such as Okta, Github, Google Workspace, etc.
+Kilo Enterprise lets your organization securely manage access using **Single Sign-On (SSO)**. With SSO enabled, team members can sign in to Kilo using your company's existing identity provider, such as Okta, Github, Google Workspace, etc.
+
+{% callout type="warning" %}
+**IDP-initiated logins are not currently supported.** Users must navigate to the [Kilo Web App](https://app.kilo.ai) to log in. Logging in directly from your identity provider's dashboard is not supported at this time.
+{% /callout %}
 
 ## Why Enable SSO?
 

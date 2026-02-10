@@ -16,7 +16,8 @@
 		"shareConfirmYes": "نعم",
 		"shareConfirmNo": "لا",
 		"options": "خيارات",
-		"configureSetupScript": "سكريبت إعداد Worktree"
+		"configureSetupScript": "سكريبت إعداد Worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -66,7 +67,14 @@
 		"defaultModel": "النموذج الافتراضي",
 		"loadingModels": "جاري التحميل...",
 		"selectMode": "اختر الوضع",
-		"modeTooltip": "الوضع: {{mode}}"
+		"modeTooltip": "الوضع: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",
@@ -83,7 +91,9 @@
 		"collapseOutput": "طي المخرجات",
 		"copyCommand": "نسخ الأمر",
 		"thinking": "يفكّر",
-		"thinkingSeconds": "{{count}}ث"
+		"thinkingSeconds": "{{count}}ث",
+		"approve": "موافقة",
+		"deny": "رفض"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",
