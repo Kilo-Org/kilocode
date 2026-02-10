@@ -28,6 +28,7 @@ Replace the hand-built UI components in the kilo-vscode webview with components 
 The webview is a Solid.js SPA bundled by esbuild into a single IIFE file ([`dist/webview.js`](../esbuild.js:54)) plus a CSS sidecar ([`dist/webview.css`](../esbuild.js:54)). The HTML shell is generated at runtime by [`KiloProvider._getHtmlForWebview()`](../src/KiloProvider.ts:688).
 
 **Provider hierarchy** (in [`App.tsx`](../webview-ui/src/App.tsx:110)):
+
 ```
 VSCodeProvider → ServerProvider → SessionProvider → AppContent
 ```
@@ -36,23 +37,23 @@ VSCodeProvider → ServerProvider → SessionProvider → AppContent
 
 ### What is hand-built vs what could use kilo-ui
 
-| Area | Current | kilo-ui available? |
-|------|---------|-------------------|
-| Buttons (send, abort, login, etc.) | Raw `<button>` + inline styles | Yes — `Button`, `IconButton` |
-| Cards (profile, balance, device auth) | Raw `<div>` + inline styles | Yes — `Card` |
-| Permission dialog | Custom overlay div + CSS | Yes — `Dialog` |
-| Settings tabs | Custom signal-based tab nav (~80 lines inline styles) | Yes — `Tabs` |
-| Session list | Custom `<div>` items + CSS | Yes — `List` |
-| Tool call expand/collapse | Custom toggle buttons | Yes — `Collapsible`, `Accordion` |
-| Loading indicators | Emoji (`⏳`, `⚙️`) | Yes — `Spinner` |
-| Code blocks | Raw `<pre>` tags | Yes — `Code` (with shiki) |
-| Markdown rendering | **Not implemented** (plain text) | Yes — `Markdown` |
-| Diff display | **Not implemented** | Yes — `Diff`, `DiffChanges` |
-| Tooltips | **Not implemented** | Yes — `Tooltip` |
-| Toast notifications | **Not implemented** | Yes — `Toast` |
-| Icons | `lucide-solid` in Settings; emoji elsewhere | Yes — `Icon` |
-| Theming | Raw `--vscode-*` CSS vars | Yes — `ThemeProvider` + `kilo-vscode` theme |
-| Settings form controls | **Not implemented** (14 stub tabs) | Yes — `Select`, `Switch`, `Checkbox`, `TextField` |
+| Area                                  | Current                                               | kilo-ui available?                                |
+| ------------------------------------- | ----------------------------------------------------- | ------------------------------------------------- |
+| Buttons (send, abort, login, etc.)    | Raw `<button>` + inline styles                        | Yes — `Button`, `IconButton`                      |
+| Cards (profile, balance, device auth) | Raw `<div>` + inline styles                           | Yes — `Card`                                      |
+| Permission dialog                     | Custom overlay div + CSS                              | Yes — `Dialog`                                    |
+| Settings tabs                         | Custom signal-based tab nav (~80 lines inline styles) | Yes — `Tabs`                                      |
+| Session list                          | Custom `<div>` items + CSS                            | Yes — `List`                                      |
+| Tool call expand/collapse             | Custom toggle buttons                                 | Yes — `Collapsible`, `Accordion`                  |
+| Loading indicators                    | Emoji (`⏳`, `⚙️`)                                    | Yes — `Spinner`                                   |
+| Code blocks                           | Raw `<pre>` tags                                      | Yes — `Code` (with shiki)                         |
+| Markdown rendering                    | **Not implemented** (plain text)                      | Yes — `Markdown`                                  |
+| Diff display                          | **Not implemented**                                   | Yes — `Diff`, `DiffChanges`                       |
+| Tooltips                              | **Not implemented**                                   | Yes — `Tooltip`                                   |
+| Toast notifications                   | **Not implemented**                                   | Yes — `Toast`                                     |
+| Icons                                 | `lucide-solid` in Settings; emoji elsewhere           | Yes — `Icon`                                      |
+| Theming                               | Raw `--vscode-*` CSS vars                             | Yes — `ThemeProvider` + `kilo-vscode` theme       |
+| Settings form controls                | **Not implemented** (14 stub tabs)                    | Yes — `Select`, `Switch`, `Checkbox`, `TextField` |
 
 ---
 
@@ -86,7 +87,7 @@ ThemeProvider → I18nProvider → DialogProvider → [existing providers] → A
 The `<html>` element needs `data-theme="kilo-vscode"` to activate the VS Code bridge CSS:
 
 ```html
-<html lang="en" data-theme="kilo-vscode">
+<html lang="en" data-theme="kilo-vscode"></html>
 ```
 
 ---
@@ -152,7 +153,7 @@ const csp = [
   "default-src 'none'",
   `style-src 'unsafe-inline' ${webview.cspSource}`,
   `script-src 'nonce-${nonce}'`,
-  `font-src ${webview.cspSource}`,                    // ← NEW: allow loading bundled fonts
+  `font-src ${webview.cspSource}`, // ← NEW: allow loading bundled fonts
   "connect-src http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*",
   `img-src ${webview.cspSource} data: https:`,
 ].join("; ")
@@ -161,7 +162,7 @@ const csp = [
 Also update the HTML template (line 709) to include the theme data attribute:
 
 ```html
-<html lang="en" data-theme="kilo-vscode">
+<html lang="en" data-theme="kilo-vscode"></html>
 ```
 
 ### 4.4 TypeScript config changes
@@ -189,9 +190,11 @@ The webview [`tsconfig.json`](../webview-ui/tsconfig.json) already has `moduleRe
 4. **Add `data-theme="kilo-vscode"`** to the `<html>` tag in the HTML template ([`KiloProvider.ts`](../src/KiloProvider.ts:709))
 
 5. **Import kilo-ui styles** in [`index.tsx`](../webview-ui/src/index.tsx):
+
    ```tsx
    import "@kilocode/kilo-ui/styles"
    ```
+
    This imports the non-Tailwind variant which includes:
    - Upstream `@opencode-ai/ui` base styles
    - kilo-ui global overrides (font sizes, border radii)
@@ -199,6 +202,7 @@ The webview [`tsconfig.json`](../webview-ui/tsconfig.json) already has `moduleRe
    - [`vscode-bridge.css`](../../../kilo-ui/src/styles/vscode-bridge.css) (maps `--vscode-*` → design tokens)
 
 6. **Set up provider hierarchy** in [`App.tsx`](../webview-ui/src/App.tsx:110):
+
    ```tsx
    import { ThemeProvider } from "@kilocode/kilo-ui/theme"
    import { I18nProvider } from "@kilocode/kilo-ui/context"
@@ -226,6 +230,7 @@ The webview [`tsconfig.json`](../webview-ui/tsconfig.json) already has `moduleRe
 7. **Verify**: Build compiles (`bun run compile`), webview loads in VS Code, existing UI renders unchanged. The kilo-ui styles should coexist with the existing [`chat.css`](../webview-ui/src/styles/chat.css) without conflicts.
 
 #### Acceptance criteria
+
 - `dist/webview.js` and `dist/webview.css` build without errors
 - Webview loads and all existing views (chat, history, profile, settings) render correctly
 - No CSP violations in the webview developer console
@@ -240,6 +245,7 @@ The webview [`tsconfig.json`](../webview-ui/tsconfig.json) already has `moduleRe
 #### 1.1 Replace buttons with `Button` / `IconButton`
 
 **Files to modify**:
+
 - [`PromptInput.tsx`](../webview-ui/src/components/chat/PromptInput.tsx) — send and abort buttons
 - [`PermissionDialog.tsx`](../webview-ui/src/components/chat/PermissionDialog.tsx) — reject, once, always buttons
 - [`ProfileView.tsx`](../webview-ui/src/components/ProfileView.tsx) — login, logout, refresh buttons
@@ -247,12 +253,14 @@ The webview [`tsconfig.json`](../webview-ui/tsconfig.json) already has `moduleRe
 - [`Settings.tsx`](../webview-ui/src/components/Settings.tsx) — back button
 
 **Import pattern**:
+
 ```tsx
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 ```
 
 **Usage example** (replacing a raw button in PermissionDialog):
+
 ```tsx
 // Before
 <button class="permission-btn permission-btn-once" onClick={...}>Allow Once</button>
@@ -264,10 +272,12 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 #### 1.2 Replace loading indicators with `Spinner`
 
 **Files to modify**:
+
 - [`Message.tsx`](../webview-ui/src/components/chat/Message.tsx:38) — tool status emoji (`⏳`, `⚙️`)
 - [`ChatView.tsx`](../webview-ui/src/components/chat/ChatView.tsx) — any loading states
 
 **Import**:
+
 ```tsx
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 ```
@@ -277,6 +287,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 **File**: [`PermissionDialog.tsx`](../webview-ui/src/components/chat/PermissionDialog.tsx)
 
 The current implementation is a custom overlay `<div>` with CSS. Replace with:
+
 ```tsx
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 
@@ -293,10 +304,12 @@ import { Dialog } from "@kilocode/kilo-ui/dialog"
 #### 1.4 Replace cards with `Card`
 
 **Files to modify**:
+
 - [`ProfileView.tsx`](../webview-ui/src/components/ProfileView.tsx) — profile card, balance card
 - [`DeviceAuthCard.tsx`](../webview-ui/src/components/DeviceAuthCard.tsx) — auth flow card
 
 **Import**:
+
 ```tsx
 import { Card } from "@kilocode/kilo-ui/card"
 ```
@@ -311,7 +324,7 @@ import { Settings as SettingsIcon } from "lucide-solid"
 
 // After
 import { Icon } from "@kilocode/kilo-ui/icon"
-<Icon name="sliders" />
+;<Icon name="sliders" />
 ```
 
 ##### Prerequisite: Add 6 missing icons to kilo-ui
@@ -327,27 +340,28 @@ Before migrating, the following icons must be added to the `icons` map in [`ui/s
 
 ##### Migration mapping
 
-| Settings Tab | lucide-solid | kilo-ui `name` | Notes |
-|---|---|---|---|
-| Back button | `ArrowLeft` | `arrow-left` | Exact match |
-| Providers | `Plug` | `providers` | Semantic match |
-| Terminal | `SquareTerminal` | `console` | Good match |
-| Prompts | `MessageSquare` | `speech-bubble` | Good match |
-| Checkpoints | `GitBranch` | `branch` | Good match |
-| Browser | `SquareMousePointer` | `window-cursor` | Approximate — review visually |
-| About | `Info` | `help` | Approximate — `?` vs `i` icon |
-| Context | `Database` | `server` | Approximate — review visually |
-| Auto-Approve | `CheckCheck` | `checklist` | Approximate — review visually |
-| Display | `Monitor` | `monitor` | **New icon needed** |
-| Autocomplete | `Bot` | `bot` | **New icon needed** |
-| Notifications | `Bell` | `bell` | **New icon needed** |
-| Agent Behaviour | `Users2` | `users` | **New icon needed** |
-| Experimental | `FlaskConical` | `flask` | **New icon needed** |
-| Language | `Globe` | `globe` | **New icon needed** |
+| Settings Tab    | lucide-solid         | kilo-ui `name`  | Notes                         |
+| --------------- | -------------------- | --------------- | ----------------------------- |
+| Back button     | `ArrowLeft`          | `arrow-left`    | Exact match                   |
+| Providers       | `Plug`               | `providers`     | Semantic match                |
+| Terminal        | `SquareTerminal`     | `console`       | Good match                    |
+| Prompts         | `MessageSquare`      | `speech-bubble` | Good match                    |
+| Checkpoints     | `GitBranch`          | `branch`        | Good match                    |
+| Browser         | `SquareMousePointer` | `window-cursor` | Approximate — review visually |
+| About           | `Info`               | `help`          | Approximate — `?` vs `i` icon |
+| Context         | `Database`           | `server`        | Approximate — review visually |
+| Auto-Approve    | `CheckCheck`         | `checklist`     | Approximate — review visually |
+| Display         | `Monitor`            | `monitor`       | **New icon needed**           |
+| Autocomplete    | `Bot`                | `bot`           | **New icon needed**           |
+| Notifications   | `Bell`               | `bell`          | **New icon needed**           |
+| Agent Behaviour | `Users2`             | `users`         | **New icon needed**           |
+| Experimental    | `FlaskConical`       | `flask`         | **New icon needed**           |
+| Language        | `Globe`              | `globe`         | **New icon needed**           |
 
 Once all lucide icons are replaced and the 6 new icons are added to kilo-ui, remove `lucide-solid` from `package.json` dependencies.
 
 #### Acceptance criteria
+
 - 6 missing icons (`monitor`, `bot`, `bell`, `users`, `flask`, `globe`) added to [`ui/src/components/icon.tsx`](../../../ui/src/components/icon.tsx)
 - All 15 lucide-solid icons in `Settings.tsx` replaced with kilo-ui `Icon` component
 - All buttons use `Button` or `IconButton` with appropriate variants
@@ -368,10 +382,11 @@ Once all lucide icons are replaced and the 6 new icons are added to kilo-ui, rem
 **File**: [`Settings.tsx`](../webview-ui/src/components/Settings.tsx)
 
 Replace the custom signal-based tab navigation (~80 lines of inline styles) with:
+
 ```tsx
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 
-<Tabs orientation="vertical" variant="settings" defaultValue="providers">
+;<Tabs orientation="vertical" variant="settings" defaultValue="providers">
   <Tabs.List>
     <Tabs.SectionTitle>Configuration</Tabs.SectionTitle>
     <Tabs.Trigger value="providers">
@@ -392,6 +407,7 @@ import { Tabs } from "@kilocode/kilo-ui/tabs"
 **Files**: All 14 settings tab components in [`settings/`](../webview-ui/src/components/settings/)
 
 Use kilo-ui form components:
+
 ```tsx
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
@@ -400,6 +416,7 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 ```
 
 **Usage patterns** (following the desktop app's [`settings-general.tsx`](../../../app/src/components/settings-general.tsx)):
+
 ```tsx
 // Toggle setting
 <Switch
@@ -422,12 +439,14 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 #### 2.3 Replace collapsible sections with `Accordion`/`Collapsible`
 
 If settings tabs use expandable sections:
+
 ```tsx
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 ```
 
 #### Acceptance criteria
+
 - Settings shell uses `Tabs` with vertical orientation
 - At least 3 settings tabs are functional with real form controls
 - Form controls (Select, Switch, Checkbox, TextField) work correctly
@@ -451,11 +470,9 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 
 // Inside the provider hierarchy:
-<MarkedProvider>
+;<MarkedProvider>
   <DiffComponentProvider component={Diff}>
-    <CodeComponentProvider component={Code}>
-      {/* ... existing providers ... */}
-    </CodeComponentProvider>
+    <CodeComponentProvider component={Code}>{/* ... existing providers ... */}</CodeComponentProvider>
   </DiffComponentProvider>
 </MarkedProvider>
 ```
@@ -465,6 +482,7 @@ import { Code } from "@kilocode/kilo-ui/code"
 **File**: [`Message.tsx`](../webview-ui/src/components/chat/Message.tsx:15) — `TextPartView`
 
 Currently renders assistant text as plain text. Replace with:
+
 ```tsx
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 
@@ -486,10 +504,11 @@ This brings: rendered headings, lists, links, inline code, code blocks with synt
 **File**: [`Message.tsx`](../webview-ui/src/components/chat/Message.tsx:38) — `ToolPartView` (tool input/output display)
 
 Replace raw `<pre>` tags with:
+
 ```tsx
 import { Code } from "@kilocode/kilo-ui/code"
 
-<Code language="json" content={toolOutput} />
+;<Code language="json" content={toolOutput} />
 ```
 
 #### 3.4 Adopt chat-specific components
@@ -497,6 +516,7 @@ import { Code } from "@kilocode/kilo-ui/code"
 **File**: [`Message.tsx`](../webview-ui/src/components/chat/Message.tsx)
 
 Consider adopting kilo-ui's higher-level chat components:
+
 ```tsx
 import { MessagePart } from "@kilocode/kilo-ui/message-part"
 import { SessionTurn } from "@kilocode/kilo-ui/session-turn"
@@ -510,11 +530,7 @@ These components handle the rendering of message parts (text, tool calls, reason
 ```tsx
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 
-<DataProvider
-  data={adaptedSessionData}
-  directory={workspaceDir}
-  onPermissionRespond={handlePermission}
->
+;<DataProvider data={adaptedSessionData} directory={workspaceDir} onPermissionRespond={handlePermission}>
   {/* chat content */}
 </DataProvider>
 ```
@@ -534,13 +550,14 @@ Use when displaying file modifications from tool calls.
 ```tsx
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 
-<Collapsible>
+;<Collapsible>
   <Collapsible.Trigger>Thinking...</Collapsible.Trigger>
   <Collapsible.Content>{reasoningText}</Collapsible.Content>
 </Collapsible>
 ```
 
 #### Acceptance criteria
+
 - Assistant messages render markdown (headings, lists, code blocks, links)
 - Code blocks have syntax highlighting
 - Tool call displays use `BasicTool` or `Collapsible` with `Code`
@@ -558,7 +575,7 @@ import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 ```tsx
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 
-<Tooltip content="Send message">
+;<Tooltip content="Send message">
   <IconButton onClick={send}>
     <Icon name="send" />
   </IconButton>
@@ -582,7 +599,7 @@ Use for: session list item actions (rename, delete), message actions (copy, retr
 import { Toast, showToast, toaster } from "@kilocode/kilo-ui/toast"
 
 // Add Toast container to App.tsx
-<Toast />
+;<Toast />
 
 // Use imperatively
 showToast({
@@ -599,10 +616,11 @@ Use for: connection status changes, error notifications, copy confirmations.
 **File**: [`SessionList.tsx`](../webview-ui/src/components/history/SessionList.tsx)
 
 Replace custom list with kilo-ui `List` for keyboard navigation and accessibility:
+
 ```tsx
 import { List } from "@kilocode/kilo-ui/list"
 
-<List items={sessions()} onSelect={(session) => onSelectSession(session.id)}>
+;<List items={sessions()} onSelect={(session) => onSelectSession(session.id)}>
   {(session) => (
     <List.Item>
       <span>{session.title}</span>
@@ -621,6 +639,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 Use for: model selector, provider info cards.
 
 #### Acceptance criteria
+
 - Tooltips on all interactive elements
 - Context menu on session list items
 - Toast notifications for key user actions
@@ -631,31 +650,31 @@ Use for: model selector, provider info cards.
 
 ## 6. Component Migration Reference Table
 
-| Current Component | File | kilo-ui Replacement | Import Path |
-|---|---|---|---|
-| Raw `<button>` elements | Multiple files | `Button` | `@kilocode/kilo-ui/button` |
-| SVG icon buttons | `PromptInput.tsx` | `IconButton` | `@kilocode/kilo-ui/icon-button` |
-| Emoji spinners (`⏳`, `⚙️`) | `Message.tsx` | `Spinner` | `@kilocode/kilo-ui/spinner` |
-| Custom overlay dialog | `PermissionDialog.tsx` | `Dialog` | `@kilocode/kilo-ui/dialog` |
-| Inline-styled cards | `ProfileView.tsx`, `DeviceAuthCard.tsx` | `Card` | `@kilocode/kilo-ui/card` |
-| Custom tab navigation | `Settings.tsx` | `Tabs` | `@kilocode/kilo-ui/tabs` |
-| Custom list items | `SessionList.tsx` | `List` | `@kilocode/kilo-ui/list` |
-| Custom toggle expand/collapse | `Message.tsx` | `Collapsible` | `@kilocode/kilo-ui/collapsible` |
-| Lucide icons | `Settings.tsx` | `Icon` | `@kilocode/kilo-ui/icon` |
-| Plain text messages | `Message.tsx` | `Markdown` | `@kilocode/kilo-ui/markdown` |
-| Raw `<pre>` code blocks | `Message.tsx` | `Code` | `@kilocode/kilo-ui/code` |
-| Custom message parts | `Message.tsx` | `MessagePart` | `@kilocode/kilo-ui/message-part` |
-| Custom tool display | `Message.tsx` | `BasicTool` | `@kilocode/kilo-ui/basic-tool` |
-| *(not implemented)* | — | `Tooltip` | `@kilocode/kilo-ui/tooltip` |
-| *(not implemented)* | — | `Toast` | `@kilocode/kilo-ui/toast` |
-| *(not implemented)* | — | `DropdownMenu` | `@kilocode/kilo-ui/dropdown-menu` |
-| *(not implemented)* | — | `ContextMenu` | `@kilocode/kilo-ui/context-menu` |
-| *(not implemented)* | — | `Select` | `@kilocode/kilo-ui/select` |
-| *(not implemented)* | — | `Switch` | `@kilocode/kilo-ui/switch` |
-| *(not implemented)* | — | `Checkbox` | `@kilocode/kilo-ui/checkbox` |
-| *(not implemented)* | — | `TextField` | `@kilocode/kilo-ui/text-field` |
-| *(not implemented)* | — | `DiffChanges` | `@kilocode/kilo-ui/diff-changes` |
-| *(not implemented)* | — | `Popover` | `@kilocode/kilo-ui/popover` |
+| Current Component             | File                                    | kilo-ui Replacement | Import Path                       |
+| ----------------------------- | --------------------------------------- | ------------------- | --------------------------------- |
+| Raw `<button>` elements       | Multiple files                          | `Button`            | `@kilocode/kilo-ui/button`        |
+| SVG icon buttons              | `PromptInput.tsx`                       | `IconButton`        | `@kilocode/kilo-ui/icon-button`   |
+| Emoji spinners (`⏳`, `⚙️`)   | `Message.tsx`                           | `Spinner`           | `@kilocode/kilo-ui/spinner`       |
+| Custom overlay dialog         | `PermissionDialog.tsx`                  | `Dialog`            | `@kilocode/kilo-ui/dialog`        |
+| Inline-styled cards           | `ProfileView.tsx`, `DeviceAuthCard.tsx` | `Card`              | `@kilocode/kilo-ui/card`          |
+| Custom tab navigation         | `Settings.tsx`                          | `Tabs`              | `@kilocode/kilo-ui/tabs`          |
+| Custom list items             | `SessionList.tsx`                       | `List`              | `@kilocode/kilo-ui/list`          |
+| Custom toggle expand/collapse | `Message.tsx`                           | `Collapsible`       | `@kilocode/kilo-ui/collapsible`   |
+| Lucide icons                  | `Settings.tsx`                          | `Icon`              | `@kilocode/kilo-ui/icon`          |
+| Plain text messages           | `Message.tsx`                           | `Markdown`          | `@kilocode/kilo-ui/markdown`      |
+| Raw `<pre>` code blocks       | `Message.tsx`                           | `Code`              | `@kilocode/kilo-ui/code`          |
+| Custom message parts          | `Message.tsx`                           | `MessagePart`       | `@kilocode/kilo-ui/message-part`  |
+| Custom tool display           | `Message.tsx`                           | `BasicTool`         | `@kilocode/kilo-ui/basic-tool`    |
+| _(not implemented)_           | —                                       | `Tooltip`           | `@kilocode/kilo-ui/tooltip`       |
+| _(not implemented)_           | —                                       | `Toast`             | `@kilocode/kilo-ui/toast`         |
+| _(not implemented)_           | —                                       | `DropdownMenu`      | `@kilocode/kilo-ui/dropdown-menu` |
+| _(not implemented)_           | —                                       | `ContextMenu`       | `@kilocode/kilo-ui/context-menu`  |
+| _(not implemented)_           | —                                       | `Select`            | `@kilocode/kilo-ui/select`        |
+| _(not implemented)_           | —                                       | `Switch`            | `@kilocode/kilo-ui/switch`        |
+| _(not implemented)_           | —                                       | `Checkbox`          | `@kilocode/kilo-ui/checkbox`      |
+| _(not implemented)_           | —                                       | `TextField`         | `@kilocode/kilo-ui/text-field`    |
+| _(not implemented)_           | —                                       | `DiffChanges`       | `@kilocode/kilo-ui/diff-changes`  |
+| _(not implemented)_           | —                                       | `Popover`           | `@kilocode/kilo-ui/popover`       |
 
 ---
 
@@ -666,6 +685,7 @@ Use for: model selector, provider info cards.
 **Risk**: kilo-ui brings `@kobalte/core`, `shiki`, `marked`, `katex`, `dompurify`, `luxon`, `morphdom`, `virtua`, and other transitive dependencies. The webview JS bundle could grow significantly.
 
 **Mitigation**:
+
 - kilo-ui uses deep subpath imports — only imported components and their dependencies are bundled (tree-shaking via esbuild).
 - Defer heavy dependencies: `shiki`, `marked`, `katex` are only pulled in when `Markdown`/`Code` components are used (Phase 3). Phases 0–2 should have modest bundle growth.
 - Monitor bundle size at each phase. esbuild's `metafile` option can generate a bundle analysis.
@@ -676,6 +696,7 @@ Use for: model selector, provider info cards.
 **Risk**: Some kilo-ui components may use Tailwind utility classes in their JSX. The non-Tailwind CSS entry point (`@kilocode/kilo-ui/styles`) does not process Tailwind utilities.
 
 **Mitigation**:
+
 - Analysis shows only 2 of ~45 upstream `@opencode-ai/ui` component files use Tailwind classes directly (`code.tsx` and `session-turn.tsx`). Most components use `[data-component]` CSS selectors.
 - Start with the non-Tailwind path. If specific components render incorrectly, add targeted CSS overrides or consider adding a Tailwind build step later.
 - If Tailwind is eventually needed, use the `@tailwindcss/cli` as a pre-build step rather than integrating into esbuild.
@@ -685,6 +706,7 @@ Use for: model selector, provider info cards.
 **Risk**: The existing [`chat.css`](../webview-ui/src/styles/chat.css) (552 lines) may conflict with kilo-ui's component styles, causing visual glitches.
 
 **Mitigation**:
+
 - kilo-ui uses `[data-component]` attribute selectors which are unlikely to collide with the class-based selectors in `chat.css`.
 - Migrate incrementally: when a component is replaced, remove its corresponding CSS rules from `chat.css`.
 - Keep `chat.css` as a shrinking file — each phase removes sections until it can be deleted entirely.
@@ -694,15 +716,17 @@ Use for: model selector, provider info cards.
 **Risk**: `@opencode-ai/ui` is under active development. API changes could break kilo-ui and transitively break kilo-vscode.
 
 **Mitigation**:
+
 - kilo-ui acts as a facade — it can absorb upstream API changes by overriding re-exports with custom implementations.
 - Pin workspace dependency versions during active development.
-- The `kilo-ui` package comment explicitly states: *"All component imports can be individually overridden by replacing the re-export with a custom implementation."*
+- The `kilo-ui` package comment explicitly states: _"All component imports can be individually overridden by replacing the re-export with a custom implementation."_
 
 ### 7.5 esbuild CSS @import resolution
 
 **Risk**: esbuild may not resolve `@import "@opencode-ai/ui/styles"` in CSS files via package.json exports maps.
 
 **Mitigation**:
+
 - Test the CSS package resolve plugin described in [4.2](#42-esbuildjs-changes).
 - **Fallback**: Create a local CSS file that imports the resolved file paths directly:
   ```css
@@ -716,6 +740,7 @@ Use for: model selector, provider info cards.
 **Risk**: kilo-ui's `WorkerPoolProvider` and shiki's web worker usage may not work in VS Code webviews, which have restrictions on worker script loading.
 
 **Mitigation**:
+
 - Do not set up `WorkerPoolProvider` initially. Syntax highlighting via shiki can run on the main thread (slower but functional).
 - If worker support is needed later, bundle the worker script separately and load it via `webview.asWebviewUri()`.
 
@@ -724,6 +749,7 @@ Use for: model selector, provider info cards.
 **Risk**: kilo-ui's `ThemeProvider` persists theme ID and color scheme to `localStorage`. VS Code webviews have `localStorage` but it may be cleared when the webview is disposed.
 
 **Mitigation**:
+
 - For the VS Code extension, the theme is always `kilo-vscode` and the color scheme follows VS Code's theme. The `ThemeProvider` persistence is a no-op in practice.
 - If needed, override persistence by passing `defaultTheme="kilo-vscode"` and not exposing theme switching UI.
 
@@ -748,15 +774,15 @@ Each phase has specific acceptance criteria (listed above). The general verifica
 
 ### Specific test scenarios
 
-| Scenario | What to verify |
-|----------|---------------|
-| Fresh webview load | Styles load, no FOUC, providers initialize |
-| Send a message | Button works, message appears, streaming works |
-| Permission dialog | Dialog opens, buttons work, dialog closes |
-| Settings navigation | Tabs switch, form controls work |
-| Session history | List renders, selection works, navigation back to chat |
-| Login flow | Device auth card renders, QR code displays, success/error states |
-| Theme switching | Change VS Code theme → webview updates automatically |
-| Sidebar ↔ tab | Both webview hosts render identically |
-| Markdown content | Headers, lists, code blocks, links render correctly |
-| Long conversations | Auto-scroll works, performance is acceptable |
+| Scenario            | What to verify                                                   |
+| ------------------- | ---------------------------------------------------------------- |
+| Fresh webview load  | Styles load, no FOUC, providers initialize                       |
+| Send a message      | Button works, message appears, streaming works                   |
+| Permission dialog   | Dialog opens, buttons work, dialog closes                        |
+| Settings navigation | Tabs switch, form controls work                                  |
+| Session history     | List renders, selection works, navigation back to chat           |
+| Login flow          | Device auth card renders, QR code displays, success/error states |
+| Theme switching     | Change VS Code theme → webview updates automatically             |
+| Sidebar ↔ tab       | Both webview hosts render identically                            |
+| Markdown content    | Headers, lists, code blocks, links render correctly              |
+| Long conversations  | Auto-scroll works, performance is acceptable                     |

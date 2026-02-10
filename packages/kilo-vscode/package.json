@@ -134,6 +134,7 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "pnpm run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "watch:vite": "vite --config webview-ui/vite.config.ts",
     "package": "pnpm run prepare:cli-binary && pnpm run check-types && pnpm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
@@ -159,7 +160,9 @@
     "prettier": "^3.8.1",
     "qrcode": "^1.5.4",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.54.0",
+    "vite": "^7.3.1",
+    "vite-plugin-solid": "^2.11.10"
   },
   "dependencies": {
     "eventsource": "^2.0.2",
