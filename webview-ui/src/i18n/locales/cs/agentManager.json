@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Ano",
 		"shareConfirmNo": "Ne",
 		"options": "Možnosti",
-		"configureSetupScript": "Setup skript worktree"
+		"configureSetupScript": "Setup skript worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -63,7 +64,14 @@
 		"defaultModel": "Výchozí model",
 		"loadingModels": "Načítání...",
 		"selectMode": "Vybrat režim",
-		"modeTooltip": "Režim: {{mode}}"
+		"modeTooltip": "Režim: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
@@ -80,7 +88,9 @@
 		"collapseOutput": "Sbalit výstup",
 		"copyCommand": "Kopírovat příkaz",
 		"thinking": "Přemýšlení",
-		"thinkingSeconds": "{{count}}s"
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Schválit",
+		"deny": "Zamítnout"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",
