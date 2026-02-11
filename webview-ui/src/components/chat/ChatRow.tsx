@@ -89,6 +89,82 @@ import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumer
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
 // kilocode_change end
 
+/** Human-readable labels for tools shown in subagent progress. Keys match backend tool_name. */
+const SUBAGENT_TOOL_DISPLAY_NAMES: Record<string, string> = {
+	read_file: "Read File",
+	write_to_file: "Write File",
+	apply_diff: "Apply Diff",
+	search_files: "Search Files",
+	search_and_replace: "Search And Replace",
+	delete_file: "Delete File",
+	search_replace: "Search Replace",
+	edit_file: "Edit File",
+	fast_edit_file: "Fast Edit",
+	list_files: "List Files",
+	codebase_search: "Codebase Search",
+	execute_command: "Run Command",
+	run_slash_command: "Slash Command",
+	ask_followup_question: "Ask Question",
+	attempt_completion: "Complete",
+	update_todo_list: "Update Todos",
+	switch_mode: "Switch Mode",
+	new_task: "New Task",
+	new_rule: "New Rule",
+	report_bug: "Report Bug",
+	condense: "Condense",
+	generate_image: "Generate Image",
+	use_mcp_tool: "MCP Tool",
+	access_mcp_resource: "MCP Resource",
+	browser_action: "Browser",
+	fetch_instructions: "Fetch Instructions",
+	apply_patch: "Apply Patch",
+	mcp_tool: "MCP Tool",
+	subagent: "Subagent",
+}
+
+interface ParsedSubagentTask {
+	toolLabel: string
+	purpose: string | null
+	isGeneric: boolean
+}
+
+/**
+ * Parses backend progress strings like "[read_file for 15 files]" or "Thinking..." into
+ * tool label and purpose for highlighted display.
+ */
+function parseSubagentCurrentTask(raw: string): ParsedSubagentTask {
+	const s = raw.trim()
+	if (!s) return { toolLabel: "", purpose: "...", isGeneric: true }
+
+	// Generic status (no brackets) – show as-is
+	if (!s.startsWith("[")) {
+		return { toolLabel: "", purpose: s.endsWith("...") ? s : s + "...", isGeneric: true }
+	}
+
+	// Strip brackets and parse "[tool_name for purpose]"
+	const inner = s.slice(1, s.endsWith("]") ? s.length - 1 : s.length).trim()
+	const forIndex = inner.indexOf(" for ")
+	if (forIndex === -1) {
+		// Tool only, no purpose
+		const toolKey = inner.replace(/\s+/g, "_").toLowerCase()
+		const toolLabel =
+			SUBAGENT_TOOL_DISPLAY_NAMES[toolKey] ?? inner.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+		return { toolLabel, purpose: null, isGeneric: false }
+	}
+
+	const toolPart = inner.slice(0, forIndex).trim()
+	const purposePart = inner.slice(forIndex + 5).trim()
+	const toolKey = toolPart.replace(/\s+/g, "_").toLowerCase()
+	const toolLabel =
+		SUBAGENT_TOOL_DISPLAY_NAMES[toolKey] ?? toolPart.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+	// Strip surrounding quotes from purpose (e.g. 'src/index.ts' -> src/index.ts)
+	let purpose = purposePart
+	if ((purpose.startsWith("'") && purpose.endsWith("'")) || (purpose.startsWith('"') && purpose.endsWith('"'))) {
+		purpose = purpose.slice(1, -1)
+	}
+	return { toolLabel, purpose: purpose || null, isGeneric: false }
+}
+
 // Helper function to get previous todos before a specific message
 function getPreviousTodos(messages: ClineMessage[], currentMessageTs: number): any[] {
 	// Find the previous updateTodoList message before the current one
@@ -1659,6 +1735,77 @@ export const ChatRowContent = ({
 											</ToolUseBlockHeader>
 										</ToolUseBlock>
 									</div>
+								</>
+							)
+						}
+						case "subagentRunning": {
+							const desc = sayTool.description ?? ""
+							const currentTask = sayTool.currentTask
+							const parsed = currentTask ? parseSubagentCurrentTask(currentTask) : null
+							return (
+								<div>
+									<div style={headerStyle}>
+										{message.progressStatus?.icon && (
+											<span
+												className={`codicon codicon-${message.progressStatus.icon}`}
+												style={{ marginRight: "6px", color: "var(--vscode-foreground)" }}
+											/>
+										)}
+										<span>{t("chat:subagents.runningLabel", { description: desc })}</span>
+									</div>
+									{parsed && (
+										<div className="pl-6 mt-1.5 text-sm text-vscode-descriptionForeground">
+											{parsed.toolLabel ? (
+												parsed.purpose ? (
+													<>
+														{parsed.toolLabel}: {parsed.purpose}
+														{!parsed.purpose.endsWith("...") && "..."}
+													</>
+												) : (
+													<>{parsed.toolLabel}...</>
+												)
+											) : (
+												<>
+													{parsed.purpose?.endsWith("...")
+														? parsed.purpose
+														: `${parsed.purpose ?? ""}...`}
+												</>
+											)}
+										</div>
+									)}
+								</div>
+							)
+						}
+						case "subagentCompleted": {
+							const hasError = !!sayTool.error
+							return (
+								<>
+									<div style={headerStyle}>
+										<span
+											className={`codicon codicon-${hasError ? "error" : "check-all"}`}
+											style={{
+												marginRight: "6px",
+												color: hasError
+													? "var(--vscode-errorForeground)"
+													: "var(--vscode-foreground)",
+											}}
+										/>
+										<span>{t("chat:subagents.completedLabel")}</span>
+										{sayTool.description && (
+											<span
+												style={{
+													color: "var(--vscode-descriptionForeground)",
+													marginLeft: "8px",
+												}}>
+												{sayTool.description}
+											</span>
+										)}
+									</div>
+									{(sayTool.result || sayTool.error) && (
+										<div className="pl-6 mt-2 text-vscode-descriptionForeground whitespace-pre-wrap">
+											{hasError ? sayTool.error : sayTool.result}
+										</div>
+									)}
 								</>
 							)
 						}

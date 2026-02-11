@@ -170,6 +170,56 @@ describe("NativeToolCallParser", () => {
 				}
 			})
 		})
+
+		describe("subagent tool", () => {
+			it("should parse description, prompt, and subagent_type into nativeArgs", () => {
+				const toolCall = {
+					id: "toolu_subagent_1",
+					name: "subagent" as const,
+					arguments: JSON.stringify({
+						description: "Explore codebase",
+						prompt: "List all exports from src/index.ts",
+						subagent_type: "explore",
+					}),
+				}
+
+				const result = NativeToolCallParser.parseToolCall(toolCall)
+
+				expect(result).not.toBeNull()
+				expect(result?.type).toBe("tool_use")
+				if (result?.type === "tool_use") {
+					expect(result.nativeArgs).toBeDefined()
+					const nativeArgs = result.nativeArgs as {
+						description: string
+						prompt: string
+						subagent_type: "general" | "explore"
+					}
+					expect(nativeArgs.description).toBe("Explore codebase")
+					expect(nativeArgs.prompt).toBe("List all exports from src/index.ts")
+					expect(nativeArgs.subagent_type).toBe("explore")
+				}
+			})
+
+			it("should parse general subagent_type", () => {
+				const toolCall = {
+					id: "toolu_subagent_2",
+					name: "subagent" as const,
+					arguments: JSON.stringify({
+						description: "Fix bug",
+						prompt: "Fix the null check in utils.ts",
+						subagent_type: "general",
+					}),
+				}
+
+				const result = NativeToolCallParser.parseToolCall(toolCall)
+
+				expect(result).not.toBeNull()
+				if (result?.type === "tool_use" && result.nativeArgs) {
+					const nativeArgs = result.nativeArgs as { subagent_type: string }
+					expect(nativeArgs.subagent_type).toBe("general")
+				}
+			})
+		})
 	})
 
 	describe("processStreamingChunk", () => {

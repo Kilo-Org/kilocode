@@ -869,6 +869,21 @@ export class NativeToolCallParser {
 					break
 				// kilocode_change end
 
+				case "subagent":
+					if (
+						args.description !== undefined &&
+						args.prompt !== undefined &&
+						args.subagent_type !== undefined &&
+						(args.subagent_type === "general" || args.subagent_type === "explore")
+					) {
+						nativeArgs = {
+							description: args.description,
+							prompt: args.prompt,
+							subagent_type: args.subagent_type,
+						} as NativeArgsFor<TName>
+					}
+					break
+
 				default:
 					if (customToolRegistry.has(resolvedName)) {
 						nativeArgs = args as NativeArgsFor<TName>

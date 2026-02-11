@@ -167,6 +167,11 @@ export function getToolDescriptionsForMode(
 		tools.delete("run_slash_command")
 	}
 
+	// Conditionally exclude subagent if experiment is not enabled
+	if (!experiments?.subagent) {
+		tools.delete("subagent")
+	}
+
 	// Map tool descriptions for allowed tools
 	const descriptions = Array.from(tools).map((toolName) => {
 		const descriptionFn = toolDescriptionMap[toolName]

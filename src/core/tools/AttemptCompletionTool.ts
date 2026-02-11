@@ -124,6 +124,14 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			TelemetryService.instance.captureTaskCompleted(task.taskId)
 			task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
 
+			if (task.backgroundCompletionResolve) {
+				task.subagentProgressCallback = undefined
+				task.backgroundCompletionResolve(result)
+				task.backgroundCompletionResolve = undefined
+				task.abortTask()
+				return
+			}
+
 			// Check for subtask using parentTaskId (metadata-driven delegation)
 			if (task.parentTaskId) {
 				// Check if this subtask has already completed and returned to parent

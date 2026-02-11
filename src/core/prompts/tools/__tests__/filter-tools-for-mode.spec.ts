@@ -431,6 +431,70 @@ describe("filterNativeToolsForMode", () => {
 		expect(toolNames).not.toContain("run_slash_command")
 	})
 
+	it("should exclude subagent when experiment is not enabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const mockSubagentTool: OpenAI.Chat.ChatCompletionTool = {
+			type: "function",
+			function: {
+				name: "subagent",
+				description: "Run subagent",
+				parameters: {},
+			},
+		}
+
+		const toolsWithSubagent = [...mockNativeTools, mockSubagentTool]
+
+		const filtered = filterNativeToolsForMode(
+			toolsWithSubagent,
+			"code",
+			[codeMode],
+			{ subagent: false },
+			undefined,
+			{},
+			undefined,
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).not.toContain("subagent")
+	})
+
+	it("should include subagent when experiment is enabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const mockSubagentTool: OpenAI.Chat.ChatCompletionTool = {
+			type: "function",
+			function: {
+				name: "subagent",
+				description: "Run subagent",
+				parameters: {},
+			},
+		}
+
+		const toolsWithSubagent = [...mockNativeTools, mockSubagentTool]
+
+		const filtered = filterNativeToolsForMode(
+			toolsWithSubagent,
+			"code",
+			[codeMode],
+			{ subagent: true },
+			undefined,
+			{},
+			undefined,
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).toContain("subagent")
+	})
+
 	// kilocode_change start
 	it("should exclude ask_followup_question when yoloMode is enabled", () => {
 		const codeMode: ModeConfig = {

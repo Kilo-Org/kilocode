@@ -62,6 +62,7 @@ import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
+import { SUBAGENT_CANCELLED_MESSAGE, type RunSubagentInBackgroundParams } from "../../shared/subagent"
 import { ProfileValidator } from "../../shared/ProfileValidator"
 
 import { Terminal } from "../../integrations/terminal/Terminal"
@@ -3276,6 +3277,22 @@ export class ClineProvider
 			return
 		}
 
+		// If the current task has a running subagent, cancel only the subagent and return the cancellation result to the parent.
+		const subagentChild = task.activeSubagentChild
+		if (subagentChild) {
+			task.activeSubagentChild = undefined
+			subagentChild.subagentProgressCallback = undefined
+			if (subagentChild.backgroundCompletionResolve) {
+				subagentChild.backgroundCompletionResolve(SUBAGENT_CANCELLED_MESSAGE)
+				subagentChild.backgroundCompletionResolve = undefined
+			}
+			subagentChild.abandoned = true
+			subagentChild.cancelCurrentRequest()
+			subagentChild.abortTask()
+			this.log(`[cancelTask] cancelled subagent ${subagentChild.taskId}.${subagentChild.instanceId}`)
+			return
+		}
+
 		console.log(`[cancelTask] cancelling task ${task.taskId}.${task.instanceId}`)
 
 		const { historyItem, uiMessagesFilePath } = await this.getTaskWithId(task.taskId)
@@ -4019,6 +4036,96 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		}
 
 		return child
+	}
+
+	/**
+	 * Runs a subagent in the background. Parent stays current; child runs until attempt_completion.
+	 * Resolves with the completion result string, or rejects on error.
+	 */
+	public async runSubagentInBackground(params: RunSubagentInBackgroundParams): Promise<string> {
+		const { parentTaskId, prompt, subagentType, onProgress } = params
+		const parent = this.getCurrentTask()
+		if (!parent) {
+			throw new Error("[runSubagentInBackground] No current task")
+		}
+		if (parent.taskId !== parentTaskId) {
+			throw new Error(
+				`[runSubagentInBackground] Parent mismatch: expected ${parentTaskId}, current ${parent.taskId}`,
+			)
+		}
+
+		const {
+			apiConfiguration,
+			organizationAllowList,
+			diffEnabled: enableDiff,
+			enableCheckpoints,
+			checkpointTimeout,
+			fuzzyMatchThreshold,
+			experiments,
+			cloudUserInfo,
+			remoteControlEnabled,
+		} = await this.getState()
+
+		if (!ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList)) {
+			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))
+		}
+
+		const child = new Task({
+			provider: this,
+			context: this.context,
+			apiConfiguration,
+			enableDiff,
+			enableCheckpoints,
+			checkpointTimeout,
+			fuzzyMatchThreshold,
+			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
+			task: prompt,
+			images: undefined,
+			experiments,
+			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
+			parentTask: parent,
+			taskNumber: this.clineStack.length + 1,
+			onCreated: this.taskCreationCallback,
+			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, remoteControlEnabled),
+			startTask: false,
+			subagentType,
+			initialStatus: "active",
+		})
+		if (onProgress) {
+			child.subagentProgressCallback = onProgress
+		}
+
+		parent.activeSubagentChild = child
+
+		return new Promise<string>((resolve, reject) => {
+			let settled = false
+			child.backgroundCompletionResolve = (result: string) => {
+				if (!settled) {
+					settled = true
+					parent.activeSubagentChild = undefined
+					resolve(result)
+				}
+			}
+			child
+				.runBackgroundSubagentLoop(prompt)
+				.then(() => {
+					if (!settled) {
+						settled = true
+						parent.activeSubagentChild = undefined
+						reject(new Error("Subagent ended without attempt_completion"))
+					}
+				})
+				.catch((err) => {
+					if (!settled) {
+						settled = true
+						parent.activeSubagentChild = undefined
+						reject(err)
+					}
+				})
+				.finally(() => {
+					parent.activeSubagentChild = undefined
+				})
+		})
 	}
 
 	/**

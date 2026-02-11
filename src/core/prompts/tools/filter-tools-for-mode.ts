@@ -318,6 +318,10 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("run_slash_command")
 	}
 
+	if (!experiments?.subagent) {
+		allowedToolNames.delete("subagent")
+	}
+
 	// Conditionally exclude browser_action if disabled in settings
 	if (
 		settings?.browserToolEnabled === false ||
@@ -416,6 +420,9 @@ export function isToolAllowedInMode(
 		}
 		if (toolName === "run_slash_command") {
 			return experiments?.runSlashCommand === true
+		}
+		if (toolName === "subagent") {
+			return experiments?.subagent === true
 		}
 		return true
 	}

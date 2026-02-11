@@ -81,6 +81,7 @@ export const toolParamNames = [
 	"end_line",
 	"todos",
 	"prompt",
+	"subagent_type",
 	"image",
 	"files", // Native protocol parameter for read_file
 	"operations", // search_and_replace parameter for multiple operations
@@ -126,6 +127,7 @@ export type NativeToolArgs = {
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	subagent: { description: string; prompt: string; subagent_type: "general" | "explore" }
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -250,6 +252,11 @@ export interface NewTaskToolUse extends ToolUse<"new_task"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos">>
 }
 
+export interface SubagentToolUse extends ToolUse<"subagent"> {
+	name: "subagent"
+	params: Partial<Pick<Record<ToolParamName, string>, "description" | "prompt" | "subagent_type">>
+}
+
 export interface RunSlashCommandToolUse extends ToolUse<"run_slash_command"> {
 	name: "run_slash_command"
 	params: Partial<Pick<Record<ToolParamName, string>, "command" | "args">>
@@ -309,6 +316,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
 	custom_tool: "use custom tools",
+	subagent: "launch autonomous subagent",
 } as const
 
 // Define available tool groups.
@@ -340,7 +348,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["use_mcp_tool", "access_mcp_resource"],
 	},
 	modes: {
-		tools: ["switch_mode", "new_task"],
+		tools: ["switch_mode", "new_task", "subagent"],
 		alwaysAvailable: true,
 	},
 }
@@ -351,6 +359,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"attempt_completion",
 	"switch_mode",
 	"new_task",
+	"subagent",
 	"report_bug",
 	"condense", // kilocode_Change
 	"update_todo_list",

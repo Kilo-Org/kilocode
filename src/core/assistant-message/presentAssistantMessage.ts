@@ -34,6 +34,7 @@ import { askFollowupQuestionTool } from "../tools/AskFollowupQuestionTool"
 import { switchModeTool } from "../tools/SwitchModeTool"
 import { attemptCompletionTool, AttemptCompletionCallbacks } from "../tools/AttemptCompletionTool"
 import { newTaskTool } from "../tools/NewTaskTool"
+import { subagentTool } from "../tools/SubagentTool"
 import { updateTodoListTool } from "../tools/UpdateTodoListTool"
 import { runSlashCommandTool } from "../tools/RunSlashCommandTool"
 import { generateImageTool } from "../tools/GenerateImageTool"
@@ -377,6 +378,7 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
+			cline.subagentProgressCallback?.("Thinking...")
 			await cline.say("text", content, undefined, block.partial)
 			break
 		}
@@ -486,6 +488,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
 					// kilocode_change start
+					case "subagent":
+						return `[${block.name}: ${block.params.description ?? "(no description)"}]`
 					case "new_rule":
 						return `[${block.name} for '${block.params.path}']`
 					case "report_bug":
@@ -936,6 +940,7 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			await checkpointSaveAndMark(cline) // kilocode_change: moved out of switch
+			cline.subagentProgressCallback?.(toolDescription())
 			switch (block.name) {
 				case "write_to_file":
 					// await checkpointSaveAndMark(cline) // kilocode_change
@@ -1154,6 +1159,16 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "new_task":
 					await newTaskTool.handle(cline, block as ToolUse<"new_task">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+						toolCallId: block.id,
+					})
+					break
+				case "subagent":
+					await subagentTool.handle(cline, block as ToolUse<"subagent">, {
 						askApproval,
 						handleError,
 						pushToolResult,

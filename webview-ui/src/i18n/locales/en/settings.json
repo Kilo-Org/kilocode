@@ -1073,6 +1073,10 @@
 			"refreshSuccess": "Tools refreshed successfully",
 			"refreshError": "Failed to refresh tools",
 			"toolParameters": "Parameters"
+		},
+		"SUBAGENT": {
+			"name": "Subagent tool",
+			"description": "When enabled, the model can run background subagents to offload research or sub-tasks. The subagent's result is returned to the main task. Use \"explore\" for read-only sub-tasks or \"general\" when the sub-task may edit files or run commands."
 		}
 	},
 	"promptCaching": {

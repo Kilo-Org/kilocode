@@ -73,6 +73,7 @@ import { t } from "../../i18n"
 import { getApiMetrics, hasTokenUsageChanged, hasToolUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
+import { SUBAGENT_TOOL_NAMES, type SubagentRunningPayload } from "../../shared/subagent"
 import { DiffStrategy, type ToolUse, type ToolParamName, toolParamNames } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
@@ -185,6 +186,10 @@ export interface TaskOptions extends CreateTaskOptions {
 	workspacePath?: string
 	/** Initial status for the task's history item (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
+	/** When set, this task runs as a background subagent; "explore" = read-only tools */
+	subagentType?: "general" | "explore"
+	/** When false, task is not persisted to task history (e.g. subagents). Defaults to false when subagentType is set, true otherwise. */
+	needUpdateHistory?: boolean
 }
 
 type UserContent = Array<Anthropic.ContentBlockParam> // kilocode_change
@@ -471,6 +476,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// MessageManager for high-level message operations (lazy initialized)
 	private _messageManager?: MessageManager
 
+	/** When set, attempt_completion will resolve this and abort instead of normal flow */
+	public backgroundCompletionResolve?: (result: string) => void
+	/** When set, tool building is restricted to read-only for "explore" */
+	public subagentType?: "general" | "explore"
+	/** When set, child reports current step (e.g. tool description) for parent to show in subagentRunning row */
+	public subagentProgressCallback?: (currentTask: string) => void
+	/** When false, saveClineMessages does not call updateTaskHistory (e.g. subagents). */
+	private readonly needUpdateHistory: boolean
+
+	/** When this task is the parent of a running subagent, holds the child task until it completes or is cancelled. */
+	public activeSubagentChild?: Task
+
 	constructor({
 		context, // kilocode_change
 		provider,
@@ -493,9 +510,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		initialTodos,
 		workspacePath,
 		initialStatus,
+		subagentType,
+		needUpdateHistory,
 	}: TaskOptions) {
 		super()
 		this.context = context // kilocode_change
+		this.subagentType = subagentType
+		this.needUpdateHistory = needUpdateHistory ?? subagentType === undefined
 
 		if (startTask && !task && !images && !historyItem) {
 			throw new Error("Either historyItem or task/images must be provided")
@@ -1280,6 +1301,32 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// kilocode_change end
 	}
 
+	/**
+	 * Updates the last "subagentRunning" say message with currentTask so the UI can show it in real time.
+	 * No-op if no such message exists.
+	 */
+	public reportSubagentProgress(currentTask: string): void {
+		const idx = findLastIndex(this.clineMessages, (m) => {
+			if (m.type !== "say" || m.say !== "tool" || !m.text) return false
+			try {
+				const parsed = JSON.parse(m.text) as { tool?: string }
+				return parsed.tool === SUBAGENT_TOOL_NAMES.running
+			} catch {
+				return false
+			}
+		})
+		if (idx === -1) return
+		const msg = this.clineMessages[idx]
+		try {
+			const payload = JSON.parse(msg.text!) as SubagentRunningPayload
+			payload.currentTask = currentTask
+			msg.text = JSON.stringify(payload)
+			void this.updateClineMessage(msg)
+		} catch {
+			// ignore malformed message
+		}
+	}
+
 	private async saveClineMessages() {
 		try {
 			await saveTaskMessages({
@@ -1332,7 +1379,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// - Final state is emitted when updates stop (trailing: true)
 			this.debouncedEmitTokenUsage(tokenUsage, this.toolUsage)
 
-			await this.providerRef.deref()?.updateTaskHistory(historyItem)
+			if (this.needUpdateHistory) {
+				await this.providerRef.deref()?.updateTaskHistory(historyItem)
+			}
 		} catch (error) {
 			console.error("Failed to save messages:", error)
 		}
@@ -1908,6 +1957,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						text,
 						images,
 						partial,
+						progressStatus,
 						contextCondense,
 						contextTruncation,
 					})
@@ -1951,6 +2001,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						say: type,
 						text,
 						images,
+						progressStatus,
 						contextCondense,
 						metadata: options.metadata, // kilocode_csouhange
 						contextTruncation,
@@ -1976,6 +2027,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				text,
 				images,
 				checkpoint,
+				progressStatus,
 				contextCondense,
 				metadata: options.metadata, // kilocode_change
 				contextTruncation,
@@ -2056,6 +2108,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// Swallow loop rejection when the task was intentionally abandoned/aborted
 			// during delegation or user cancellation to prevent unhandled rejections.
 			if (this.abandoned === true || this.abortReason === "user_cancelled") {
+				return
+			}
+			throw error
+		})
+	}
+
+	/**
+	 * Starts the task loop with the given prompt. Used for background subagents.
+	 * Call only when task was created with startTask: false and subagentType set.
+	 */
+	public async runBackgroundSubagentLoop(initialPrompt: string): Promise<void> {
+		this.clineMessages = []
+		this.apiConversationHistory = []
+		const typeInstructions =
+			this.subagentType === "explore"
+				? "You are running as an **explore** subagent (read-only). Use only read, search, and list tools; do not edit files or run commands. Gather the requested information and put your findings and summary in your completion; that will be returned to the parent task.\n\n"
+				: "You are running as a **general** subagent with full tool access. You may read, edit files, and run commands as needed. Put your findings and final result in your completion; that summary will be returned to the parent task.\n\n"
+		const taskContent = `${typeInstructions}${initialPrompt}`
+		await this.say("text", taskContent)
+		this.isInitialized = true
+		await this.initiateTaskLoop([{ type: "text", text: `<task>\n${taskContent}\n</task>` }]).catch((error) => {
+			if (this.abandoned === true || this.backgroundCompletionResolve === undefined) {
 				return
 			}
 			throw error
@@ -4561,6 +4635,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				modelInfo,
 				diffEnabled: this.diffEnabled,
 				includeAllToolsWithRestrictions: supportsAllowedFunctionNames,
+				subagentType: this.subagentType,
 			})
 			allTools = toolsResult.tools
 			allowedFunctionNames = toolsResult.allowedFunctionNames

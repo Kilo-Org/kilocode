@@ -13,6 +13,7 @@ import listFiles from "./list_files"
 import newTask from "./new_task"
 import { createReadFileTool, type ReadFileToolOptions } from "./read_file"
 import runSlashCommand from "./run_slash_command"
+import subagent from "./subagent"
 import searchAndReplace from "./search_and_replace"
 import searchReplace from "./search_replace"
 import edit_file from "./edit_file"
@@ -76,6 +77,7 @@ export function getNativeTools(options: NativeToolsOptions = {}): OpenAI.Chat.Ch
 		generateImage,
 		listFiles,
 		newTask,
+		subagent,
 		createReadFileTool(readFileOptions),
 		runSlashCommand,
 		searchAndReplace,

@@ -301,6 +301,10 @@
 		"defaultResult": "Please continue to the next task.",
 		"completionInstructions": "Subtask completed! You can review the results and suggest any corrections or next steps. If everything looks good, confirm to return the result to the parent task."
 	},
+	"subagents": {
+		"runningLabel": "Running subagent: {{description}}",
+		"completedLabel": "Subagent completed"
+	},
 	"questions": {
 		"hasQuestion": "Kilo Code has a question"
 	},

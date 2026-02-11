@@ -349,3 +349,133 @@ describe("flushPendingToolResultsToHistory", () => {
 		expect((task.apiConversationHistory[0] as any).ts).toBeLessThanOrEqual(afterTs)
 	})
 })
+
+describe("reportSubagentProgress", () => {
+	let mockProvider: any
+	let mockApiConfig: ProviderSettings
+	let mockExtensionContext: vscode.ExtensionContext
+
+	beforeEach(() => {
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([])
+		}
+		const storageUri = { fsPath: path.join(os.tmpdir(), "test-storage-reportSubtask") }
+		mockExtensionContext = {
+			globalState: {
+				get: vi.fn().mockImplementation((_key: keyof GlobalState) => undefined),
+				update: vi.fn().mockImplementation((_k, _v) => Promise.resolve()),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			globalStorageUri: storageUri,
+			workspaceState: {
+				get: vi.fn().mockImplementation((_k) => undefined),
+				update: vi.fn().mockImplementation((_k, _v) => Promise.resolve()),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			secrets: {
+				get: vi.fn().mockResolvedValue(undefined),
+				store: vi.fn().mockResolvedValue(undefined),
+				delete: vi.fn().mockResolvedValue(undefined),
+			},
+			extensionUri: { fsPath: "/mock/extension" },
+			extension: { packageJSON: { version: "1.0.0" } },
+		} as unknown as vscode.ExtensionContext
+		const mockOutputChannel = {
+			name: "test",
+			appendLine: vi.fn(),
+			append: vi.fn(),
+			clear: vi.fn(),
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+			replace: vi.fn(),
+		}
+		mockProvider = new ClineProvider(
+			mockExtensionContext,
+			mockOutputChannel,
+			"sidebar",
+			new ContextProxy(mockExtensionContext),
+		) as any
+		mockApiConfig = {
+			apiProvider: "anthropic",
+			apiModelId: "claude-3-5-sonnet-20241022",
+			apiKey: "test-key",
+		}
+		mockProvider.postMessageToWebview = vi.fn().mockResolvedValue(undefined)
+		mockProvider.postStateToWebview = vi.fn().mockResolvedValue(undefined)
+		mockProvider.updateTaskHistory = vi.fn().mockResolvedValue(undefined)
+	})
+
+	it("updates last subagentRunning message with currentTask and calls postMessageToWebview", () => {
+		const task = new Task({
+			context: mockExtensionContext,
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "parent task",
+			startTask: false,
+		})
+		const ts = 12345
+		task.clineMessages = [
+			{
+				type: "say",
+				say: "tool",
+				text: JSON.stringify({ tool: "subagentRunning", description: "Explore codebase" }),
+				ts,
+			},
+		]
+
+		task.reportSubagentProgress("Read file for src/index.ts")
+
+		const updated = JSON.parse(task.clineMessages[0].text!)
+		expect(updated.currentTask).toBe("Read file for src/index.ts")
+		expect(mockProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "messageUpdated",
+			clineMessage: task.clineMessages[0],
+		})
+	})
+
+	it("does nothing when no subagentRunning message exists", () => {
+		const task = new Task({
+			context: mockExtensionContext,
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "parent task",
+			startTask: false,
+		})
+		task.clineMessages = [{ type: "say", say: "tool", text: JSON.stringify({ tool: "runSlashCommand" }), ts: 1 }]
+
+		task.reportSubagentProgress("Step one")
+
+		expect(mockProvider.postMessageToWebview).not.toHaveBeenCalled()
+		expect(task.clineMessages[0].text).not.toContain("currentTask")
+	})
+
+	it("updates the last subagentRunning when multiple tool messages exist", () => {
+		const task = new Task({
+			context: mockExtensionContext,
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "parent task",
+			startTask: false,
+		})
+		task.clineMessages = [
+			{ type: "say", say: "tool", text: JSON.stringify({ tool: "readFile" }), ts: 1 },
+			{
+				type: "say",
+				say: "tool",
+				text: JSON.stringify({ tool: "subagentRunning", description: "Sub" }),
+				ts: 2,
+			},
+		]
+
+		task.reportSubagentProgress("Attempt completion...")
+
+		const lastToolMsg = task.clineMessages[1]
+		const parsed = JSON.parse(lastToolMsg.text!)
+		expect(parsed.currentTask).toBe("Attempt completion...")
+		expect(mockProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "messageUpdated",
+			clineMessage: lastToolMsg,
+		})
+	})
+})
