@@ -24,6 +24,7 @@ export type AutoApprovalState =
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
 	| "alwaysAllowFollowupQuestions"
+	| "alwaysApproveResubmit" // kilocode_change
 
 // Some of these actions have additional settings associated with them.
 export type AutoApprovalStateOptions =

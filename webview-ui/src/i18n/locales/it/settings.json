@@ -232,8 +232,9 @@
 		},
 		"retry": {
 			"label": "Riprova",
-			"description": "Riprova automaticamente le richieste API fallite quando il server restituisce una risposta di errore",
-			"delayLabel": "Ritardo prima di riprovare la richiesta"
+			"description": "Riprova automaticamente le richieste quando il modello non fornisce una risposta o quando viene raggiunto un limite di frequenza.",
+			"delayLabel": "Ritardo di base tra i tentativi (secondi)",
+			"retriesLabel": "Numero massimo di tentativi automatici per le richieste API"
 		},
 		"mcp": {
 			"label": "MCP",

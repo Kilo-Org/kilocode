@@ -230,6 +230,12 @@
 			"label": "Przeglądarka",
 			"description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"
 		},
+		"retry": {
+			"label": "Ponów",
+			"description": "Automatycznie ponawiaj żądania, gdy model nie dostarczy odpowiedzi lub gdy zostanie osiągnięty limit szybkości.",
+			"delayLabel": "Podstawowe opóźnienie między próbami (sekundy)",
+			"retriesLabel": "Maksymalna liczba automatycznych powtórzeń dla żądań API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Włącz automatyczne zatwierdzanie poszczególnych narzędzi MCP w widoku Serwerów MCP (wymaga zarówno tego ustawienia, jak i pola wyboru \"Zawsze zezwalaj\" narzędzia)"

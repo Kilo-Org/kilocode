@@ -230,6 +230,12 @@
 			"label": "Browser",
 			"description": "Secara otomatis melakukan aksi browser tanpa memerlukan persetujuan. Catatan: Hanya berlaku ketika model mendukung computer use"
 		},
+		"retry": {
+			"label": "Coba Lagi",
+			"description": "Secara otomatis mencoba kembali permintaan saat model gagal memberikan respons atau saat batas laju tercapai.",
+			"delayLabel": "Penundaan dasar antar percobaan ulang (detik)",
+			"retriesLabel": "Maksimum percobaan ulang otomatis untuk permintaan API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Aktifkan auto-approval tool MCP individual di tampilan Server MCP (memerlukan pengaturan ini dan checkbox \"Selalu izinkan\" tool tersebut)"

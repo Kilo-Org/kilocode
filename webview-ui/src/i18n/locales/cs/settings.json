@@ -244,8 +244,9 @@
 		},
 		"retry": {
 			"label": "Zkusit znovu",
-			"description": "Automaticky opakovat neúspěšné požadavky API, když server vrátí chybovou odpověď",
-			"delayLabel": "Zpoždění před opakováním požadavku"
+			"description": "Automaticky opakovat požadavky, když model neposkytne odpověď nebo když je dosaženo limitu sazeb.",
+			"delayLabel": "Základní zpoždění mezi pokusy (sekundy)",
+			"retriesLabel": "Maximální počet automatických opakování pro požadavky API"
 		},
 		"mcp": {
 			"label": "MCP",

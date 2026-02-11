@@ -2251,6 +2251,7 @@ export class ClineProvider
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId, // kilocode_change
+			requestRetryMax, // kilocode_change
 			autoApprovalEnabled,
 			customModes,
 			experiments,
@@ -2291,6 +2292,7 @@ export class ClineProvider
 			dismissedNotificationIds, // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel, // kilocode_change: Fast Apply model selection
+			alwaysApproveResubmit, // kilocode_change
 			fastApplyApiProvider, // kilocode_change: Fast Apply model api base url
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
@@ -2380,6 +2382,7 @@ export class ClineProvider
 			alwaysAllowMcp: alwaysAllowMcp ?? false,
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
+			alwaysApproveResubmit: alwaysApproveResubmit ?? true, // kilocode_change
 			isBrowserSessionActive,
 			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
@@ -2527,6 +2530,8 @@ export class ClineProvider
 			includeCurrentTime: includeCurrentTime ?? true,
 			includeCurrentCost: includeCurrentCost ?? true,
 			maxGitStatusFiles: maxGitStatusFiles ?? 0,
+			requestDelaySeconds: requestDelaySeconds ?? 10, // kilocode_change
+			requestRetryMax: requestRetryMax ?? 0, // kilocode_change
 			taskSyncEnabled,
 			remoteControlEnabled,
 			imageGenerationProvider,
@@ -2703,6 +2708,9 @@ export class ClineProvider
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
+			alwaysApproveResubmit: stateValues.alwaysApproveResubmit ?? true, // kilocode_change
+			requestDelaySeconds: stateValues.requestDelaySeconds ?? 10, // kilocode_change
+			requestRetryMax: stateValues.requestRetryMax ?? 0, // kilocode_change
 			isBrowserSessionActive,
 			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,

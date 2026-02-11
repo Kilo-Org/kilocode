@@ -230,6 +230,12 @@
 			"label": "Browser",
 			"description": "Automatisch browseracties uitvoeren zonder goedkeuring. Let op: geldt alleen als het model computergebruik ondersteunt."
 		},
+		"retry": {
+			"label": "Opnieuw proberen",
+			"description": "Aanvragen automatisch opnieuw proberen wanneer het model geen antwoord geeft of wanneer een snelheidslimiet is bereikt.",
+			"delayLabel": "Basisvertraging tussen pogingen (seconden)",
+			"retriesLabel": "Maximaal aantal automatische herpogingen voor API-aanvragen"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Automatische goedkeuring van individuele MCP-tools in het MCP-serversoverzicht inschakelen (vereist zowel deze instelling als het selectievakje 'Altijd toestaan' bij de tool)"

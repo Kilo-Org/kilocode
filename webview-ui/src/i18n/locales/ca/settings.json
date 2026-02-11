@@ -226,6 +226,12 @@
 			"label": "Navegador",
 			"description": "Realitzar accions del navegador automàticament sense requerir aprovació. Nota: Només s'aplica quan el model admet l'ús de l'ordinador"
 		},
+		"retry": {
+			"label": "Reintentar",
+			"description": "Torna a provar automàticament les sol·licituds quan el model no proporciona una resposta o quan s'assoleix un límit de taxa.",
+			"delayLabel": "Retard base entre reintents (segons)",
+			"retriesLabel": "Nombre màxim de reintents automàtics per a sol·licituds d'API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Habilitar l'aprovació automàtica d'eines MCP individuals a la vista de Servidors MCP (requereix tant aquesta configuració com la casella \"Permetre sempre\" de l'eina)"

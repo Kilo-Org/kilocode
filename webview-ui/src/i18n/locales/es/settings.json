@@ -230,6 +230,12 @@
 			"label": "Navegador",
 			"description": "Realizar acciones del navegador automáticamente sin requerir aprobación. Nota: Solo se aplica cuando el modelo admite el uso del ordenador"
 		},
+		"retry": {
+			"label": "Reintentar",
+			"description": "Reintentar automáticamente las solicitudes cuando el modelo no proporciona una respuesta o cuando se alcanza un límite de tasa.",
+			"delayLabel": "Retraso base entre reintentos (segundos)",
+			"retriesLabel": "Máximo de reintentos automáticos para solicitudes de API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Habilitar la aprobación automática de herramientas MCP individuales en la vista de Servidores MCP (requiere tanto esta configuración como la casilla \"Permitir siempre\" de la herramienta)"

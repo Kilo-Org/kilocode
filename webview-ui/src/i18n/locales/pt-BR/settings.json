@@ -230,6 +230,12 @@
 			"label": "Navegador",
 			"description": "Realizar ações do navegador automaticamente sem exigir aprovação. Nota: Aplica-se apenas quando o modelo suporta uso do computador"
 		},
+		"retry": {
+			"label": "Repetir",
+			"description": "Repetir solicitações automaticamente quando o modelo falha em fornecer uma resposta ou quando um limite de taxa é atingido.",
+			"delayLabel": "Atraso base entre repetições (segundos)",
+			"retriesLabel": "Máximo de repetições automáticas para solicitações de API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Ativar aprovação automática de ferramentas MCP individuais na visualização de Servidores MCP (requer tanto esta configuração quanto a caixa de seleção \"Permitir sempre\" da ferramenta)"

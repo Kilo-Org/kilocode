@@ -722,6 +722,12 @@ export const webviewMessageHandler = async (
 						if (!value) {
 							continue
 						}
+					} else if (
+						key === "alwaysApproveResubmit" ||
+						key === "requestRetryMax" ||
+						key === "requestDelaySeconds"
+					) {
+						newValue = value
 					}
 
 					await provider.contextProxy.setValue(key as keyof RooCodeSettings, newValue)

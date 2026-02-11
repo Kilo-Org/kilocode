@@ -230,6 +230,12 @@
 			"label": "Trình duyệt",
 			"description": "Tự động thực hiện các hành động trình duyệt mà không cần phê duyệt. Lưu ý: Chỉ áp dụng khi mô hình hỗ trợ sử dụng máy tính"
 		},
+		"retry": {
+			"label": "Thử lại",
+			"description": "Tự động thử lại các yêu cầu khi mô hình không cung cấp phản hồi hoặc khi đạt đến giới hạn tốc độ.",
+			"delayLabel": "Độ trễ cơ bản giữa các lần thử lại (giây)",
+			"retriesLabel": "Số lần tự động thử lại tối đa cho các yêu cầu API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Bật tự động phê duyệt các công cụ MCP riêng lẻ trong chế độ xem Máy chủ MCP (yêu cầu cả cài đặt này và hộp kiểm \"Luôn cho phép\" của công cụ)"

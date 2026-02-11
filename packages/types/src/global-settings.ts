@@ -83,7 +83,9 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowDelete: z.boolean().optional(), // kilocode_change
 	writeDelayMs: z.number().min(0).optional(),
 	alwaysAllowBrowser: z.boolean().optional(),
+	alwaysApproveResubmit: z.boolean().optional(), // kilocode_change
 	requestDelaySeconds: z.number().optional(),
+	requestRetryMax: z.number().optional(), // kilocode_change
 	alwaysAllowMcp: z.boolean().optional(),
 	alwaysAllowModeSwitch: z.boolean().optional(),
 	alwaysAllowSubtasks: z.boolean().optional(),
@@ -370,7 +372,9 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowDelete: true, // kilocode_change
 	writeDelayMs: 1000,
 	alwaysAllowBrowser: true,
+	alwaysApproveResubmit: true, // kilocode_change
 	requestDelaySeconds: 10,
+	requestRetryMax: 0, // kilocode_change
 	alwaysAllowMcp: true,
 	alwaysAllowModeSwitch: true,
 	alwaysAllowSubtasks: true,

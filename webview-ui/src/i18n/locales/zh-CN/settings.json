@@ -230,6 +230,12 @@
 			"label": "浏览器",
 			"description": "自动执行浏览器操作而无需批准 — 注意：仅当模型支持计算机功能调用时适用"
 		},
+		"retry": {
+			"label": "重试",
+			"description": "当模型未能提供响应或达到速率限制时，自动重试请求。",
+			"delayLabel": "重试之间的基础延迟（秒）",
+			"retriesLabel": "API 请求的最大自动重试次数"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "允许自动调用MCP服务而无需批准"

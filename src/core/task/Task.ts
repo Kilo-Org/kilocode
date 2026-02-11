@@ -162,7 +162,6 @@ import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
 import { deduplicateToolUseBlocks } from "./deduplicateToolUseBlocks"
 
-const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
 const FORCED_CONTEXT_REDUCTION_PERCENT = 75 // Keep 75% of context (remove 25%) on context window errors
 const MAX_CONTEXT_WINDOW_RETRIES = 3 // Maximum retries for context window errors
@@ -3595,9 +3594,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								`[Task#${this.taskId}.${this.instanceId}] Stream failed, will retry: ${streamingFailedMessage}`,
 							)
 
-							// Apply exponential backoff similar to first-chunk errors when auto-resubmit is enabled
+							// Apply backoff similar to first-chunk errors when auto-resubmit is enabled
 							const stateForBackoff = await this.providerRef.deref()?.getState()
-							if (stateForBackoff?.autoApprovalEnabled) {
+							const retryMax = stateForBackoff?.requestRetryMax ?? 0
+							if (
+								stateForBackoff?.autoApprovalEnabled &&
+								stateForBackoff?.alwaysApproveResubmit && // kilocode_change
+								(retryMax === 0 || (currentItem.retryAttempt ?? 0) < retryMax)
+							) {
 								await this.backoffAndAnnounce(currentItem.retryAttempt ?? 0, error)
 
 								// Check if task was aborted during the backoff
@@ -3925,7 +3929,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// Check if we should auto-retry or prompt the user
 					// Reuse the state variable from above
-					if (state?.autoApprovalEnabled) {
+					const retryMax = state?.requestRetryMax ?? 0
+					if (
+						state?.autoApprovalEnabled &&
+						state?.alwaysApproveResubmit && // kilocode_change
+						(retryMax === 0 || (currentItem.retryAttempt ?? 0) < retryMax)
+					) {
 						// Auto-retry with backoff - don't persist failure message when retrying
 						await this.backoffAndAnnounce(
 							currentItem.retryAttempt ?? 0,
@@ -4801,8 +4810,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 			// kilocode_change end
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
-			if (autoApprovalEnabled) {
-				// Apply shared exponential backoff and countdown UX
+			const retryMax = state?.requestRetryMax ?? 0 // kilocode_change
+			if (autoApprovalEnabled && state?.alwaysApproveResubmit && (retryMax === 0 || retryAttempt < retryMax)) {
+				// Apply shared backoff and countdown UX
 				await this.backoffAndAnnounce(retryAttempt, error)
 
 				// CRITICAL: Check if task was aborted during the backoff countdown
@@ -4866,16 +4876,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// kilocode_change end
 	}
 
-	// Shared exponential backoff for retries (first-chunk and mid-stream)
+	// Shared backoff for retries (first-chunk and mid-stream)
 	private async backoffAndAnnounce(retryAttempt: number, error: any): Promise<void> {
 		try {
 			const state = await this.providerRef.deref()?.getState()
-			const baseDelay = state?.requestDelaySeconds || 5
-
-			let exponentialDelay = Math.min(
-				Math.ceil(baseDelay * Math.pow(2, retryAttempt)),
-				MAX_EXPONENTIAL_BACKOFF_SECONDS,
-			)
+			let requestDelaySeconds = state?.requestDelaySeconds ?? 10
 
 			// Respect provider rate limit window
 			let rateLimitDelay = 0
@@ -4892,11 +4897,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				)
 				const match = retryInfo?.retryDelay?.match?.(/^(\d+)s$/)
 				if (match) {
-					exponentialDelay = Number(match[1]) + 1
+					requestDelaySeconds = Number(match[1]) + 1
 				}
 			}
 
-			const finalDelay = Math.max(exponentialDelay, rateLimitDelay)
+			const finalDelay = Math.max(requestDelaySeconds, rateLimitDelay)
 			if (finalDelay <= 0) {
 				return
 			}

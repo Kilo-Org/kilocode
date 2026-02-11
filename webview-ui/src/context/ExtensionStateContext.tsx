@@ -46,6 +46,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setShowDiffStats: (value: boolean) => void // kilocode_change
 	hideCostBelowThreshold?: number // kilocode_change
 	setHideCostBelowThreshold: (value: number) => void // kilocode_change
+	requestRetryMax?: number // kilocode_change
+	setRequestRetryMax: (value: number) => void // kilocode_change
 	hoveringTaskTimeline?: boolean // kilocode_change
 	setHoveringTaskTimeline: (value: boolean) => void // kilocode_change
 	systemNotificationsEnabled?: boolean // kilocode_change
@@ -124,6 +126,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setAlwaysAllowMcp: (value: boolean) => void
 	setAlwaysAllowModeSwitch: (value: boolean) => void
 	setAlwaysAllowSubtasks: (value: boolean) => void
+	alwaysApproveResubmit: boolean // kilocode_change
+	setAlwaysApproveResubmit: (value: boolean) => void // kilocode_change
 	setBrowserToolEnabled: (value: boolean) => void
 	setShowRooIgnoredFiles: (value: boolean) => void
 	setShowAutoApproveMenu: (value: boolean) => void // kilocode_change
@@ -133,6 +137,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setDeniedCommands: (value: string[]) => void
 	setAllowedMaxRequests: (value: number | undefined) => void
 	setAllowedMaxCost: (value: number | undefined) => void
+	setRequestDelaySeconds: (value: number) => void // kilocode_change
 	setSoundEnabled: (value: boolean) => void
 	setSoundVolume: (value: number) => void
 	terminalShellIntegrationTimeout?: number
@@ -280,7 +285,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowWrite: true, // kilocode_change
 		alwaysAllowReadOnly: true, // kilocode_change
 		alwaysAllowDelete: false, // kilocode_change
-		requestDelaySeconds: 5,
+		alwaysApproveResubmit: true, // kilocode_change
+		requestDelaySeconds: 10,
+		requestRetryMax: 0, // kilocode_change
 		currentApiConfigName: "default",
 		listApiConfigMeta: [],
 		mode: defaultModeSlug,
@@ -393,6 +400,11 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [prevCloudIsAuthenticated, setPrevCloudIsAuthenticated] = useState(false)
 	const [includeCurrentTime, setIncludeCurrentTime] = useState(true)
 	const [includeCurrentCost, setIncludeCurrentCost] = useState(true)
+	// kilocode_change start
+	const [alwaysApproveResubmit, setAlwaysApproveResubmit] = useState(true)
+	const [requestDelaySeconds, setRequestDelaySeconds] = useState(10)
+	const [requestRetryMax, setRequestRetryMax] = useState(0)
+	// kilocode_change end
 
 	const setListApiConfigMeta = useCallback(
 		(value: ProviderSettingsEntry[]) => setState((prevState) => ({ ...prevState, listApiConfigMeta: value })),
@@ -438,6 +450,17 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					if ((newState as any).includeCurrentCost !== undefined) {
 						setIncludeCurrentCost((newState as any).includeCurrentCost)
 					}
+					// kilocode_change start
+					if (newState.alwaysApproveResubmit !== undefined) {
+						setAlwaysApproveResubmit(newState.alwaysApproveResubmit)
+					}
+					if (newState.requestDelaySeconds !== undefined) {
+						setRequestDelaySeconds(newState.requestDelaySeconds)
+					}
+					if (newState.requestRetryMax !== undefined) {
+						setRequestRetryMax(newState.requestRetryMax)
+					}
+					// kilocode_change end
 					// Handle marketplace data if present in state message
 					if (newState.marketplaceItems !== undefined) {
 						setMarketplaceItems(newState.marketplaceItems)
@@ -609,6 +632,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setAlwaysAllowMcp: (value) => setState((prevState) => ({ ...prevState, alwaysAllowMcp: value })),
 		setAlwaysAllowModeSwitch: (value) => setState((prevState) => ({ ...prevState, alwaysAllowModeSwitch: value })),
 		setAlwaysAllowSubtasks: (value) => setState((prevState) => ({ ...prevState, alwaysAllowSubtasks: value })),
+		alwaysApproveResubmit, // kilocode_change
+		setAlwaysApproveResubmit, // kilocode_change
 		setAlwaysAllowFollowupQuestions,
 		setFollowupAutoApproveTimeoutMs: (value) =>
 			setState((prevState) => ({ ...prevState, followupAutoApproveTimeoutMs: value })),
@@ -617,6 +642,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setDeniedCommands: (value) => setState((prevState) => ({ ...prevState, deniedCommands: value })),
 		setAllowedMaxRequests: (value) => setState((prevState) => ({ ...prevState, allowedMaxRequests: value })),
 		setAllowedMaxCost: (value) => setState((prevState) => ({ ...prevState, allowedMaxCost: value })),
+		requestDelaySeconds, // kilocode_change
+		setRequestDelaySeconds, // kilocode_change
 		setSoundEnabled: (value) => setState((prevState) => ({ ...prevState, soundEnabled: value })),
 		setSoundVolume: (value) => setState((prevState) => ({ ...prevState, soundVolume: value })),
 		setTtsEnabled: (value) => setState((prevState) => ({ ...prevState, ttsEnabled: value })),
@@ -669,6 +696,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setSendMessageOnEnter: (value) => setState((prevState) => ({ ...prevState, sendMessageOnEnter: value })), // kilocode_change
 		setHideCostBelowThreshold: (value) =>
 			setState((prevState) => ({ ...prevState, hideCostBelowThreshold: value })),
+		requestRetryMax, // kilocode_change
+		setRequestRetryMax, // kilocode_change
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 		setShowTimestamps: (value) => setState((prevState) => ({ ...prevState, showTimestamps: value })),
 		setShowDiffStats: (value) => setState((prevState) => ({ ...prevState, showDiffStats: value })), // kilocode_change

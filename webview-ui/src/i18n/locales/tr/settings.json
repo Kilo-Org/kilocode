@@ -230,6 +230,12 @@
 			"label": "Tarayıcı",
 			"description": "Onay gerektirmeden otomatik olarak tarayıcı eylemleri gerçekleştir. Not: Yalnızca model bilgisayar kullanımını desteklediğinde geçerlidir"
 		},
+		"retry": {
+			"label": "Yeniden Dene",
+			"description": "Model yanıt vermediğinde veya bir hız sınırına ulaşıldığında istekleri otomatik olarak yeniden deneyin.",
+			"delayLabel": "Yeniden denemeler arasındaki temel gecikme (saniye)",
+			"retriesLabel": "API istekleri için maksimum otomatik yeniden deneme sayısı"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "MCP Sunucuları görünümünde bireysel MCP araçlarının otomatik onayını etkinleştir (hem bu ayar hem de aracın \"Her zaman izin ver\" onay kutusu gerekir)"

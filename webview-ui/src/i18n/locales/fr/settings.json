@@ -227,6 +227,12 @@
 			"label": "Navigateur",
 			"description": "Effectuer automatiquement des actions du navigateur sans nécessiter d'approbation. Remarque : S'applique uniquement lorsque le modèle prend en charge l'utilisation de l'ordinateur"
 		},
+		"retry": {
+			"label": "Réessayer",
+			"description": "Réessayer automatiquement les requêtes lorsque le modèle ne fournit pas de réponse ou lorsqu'une limite de débit est atteinte.",
+			"delayLabel": "Délai de base entre les tentatives (secondes)",
+			"retriesLabel": "Nombre maximal de tentatives automatiques pour les requêtes API"
+		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Activer l'approbation automatique des outils MCP individuels dans la vue des serveurs MCP (nécessite à la fois ce paramètre et la case à cocher \"Toujours autoriser\" de l'outil)"
