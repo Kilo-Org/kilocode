@@ -95,7 +95,6 @@ describe("ProfileView", () => {
 			nextYearlyIssueAt: string | null
 			nextBonusCreditsUsd: number | null
 			nextBillingAt: string | null
-			// Boost mode fields (matching backend's kilo-pass-router.ts KiloPassSubscriptionStateSchema)
 			currentPeriodBaseCreditsUsd: number
 			currentPeriodUsageUsd: number
 			currentPeriodBonusCreditsUsd: number | null
