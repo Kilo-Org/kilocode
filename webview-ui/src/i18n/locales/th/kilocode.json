@@ -209,7 +209,7 @@
 			"refills": "เติมใน {{days}} วัน",
 			"passActiveUntil": "Pass ใช้งานได้ถึง",
 			"creditsNote": "เครดิต Pass ไม่มีวันหมดอายุ เครดิต boost ที่ไม่ได้ใช้จะหมดอายุเมื่อเติม",
-			"promo": "ปลดล็อก <boost>โหมด Boost</boost> รับเครดิตฟรีสูงสุด 50%",
+			"promo": "ปลดล็อก <bonus>โหมด Boost</bonus> รับเครดิตฟรีสูงสุด 50%",
 			"plans": {
 				"monthly": "รายเดือน",
 				"perMonth": "/เดือน",

@@ -209,7 +209,7 @@
 			"refills": "{{days}}일 후 충전됨",
 			"passActiveUntil": "패스 유효기간",
 			"creditsNote": "패스 크레딧은 만료되지 않습니다. 사용하지 않은 부스트 크레딧은 충전 시 만료됩니다.",
-			"promo": "<boost>Boost 모드</boost>를 잠금 해제하여 최대 50% 무료 크레딧을 받으세요.",
+			"promo": "<bonus>Boost 모드</bonus>를 잠금 해제하여 최대 50% 무료 크레딧을 받으세요.",
 			"plans": {
 				"monthly": "월간",
 				"perMonth": "/월",

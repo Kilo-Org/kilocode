@@ -202,7 +202,7 @@
 			"refills": "Recarrega em {{days}} dias",
 			"passActiveUntil": "Pass ativo até",
 			"creditsNote": "Créditos do Pass nunca expiram. Créditos boost não utilizados expiram na recarga.",
-			"promo": "Desbloqueie <boost>Modo Boost</boost> para até 50% de créditos grátis.",
+			"promo": "Desbloqueie <bonus>Modo Boost</bonus> para até 50% de créditos grátis.",
 			"plans": {
 				"monthly": "Mensal",
 				"perMonth": "/mês",

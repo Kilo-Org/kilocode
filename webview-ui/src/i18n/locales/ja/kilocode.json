@@ -209,7 +209,7 @@
 			"refills": "{{days}}日後に補充",
 			"passActiveUntil": "パス有効期限",
 			"creditsNote": "パスクレジットは期限切れになりません。未使用のブーストクレジットは補充時に期限切れになります。",
-			"promo": "<boost>Boost モード</boost>を解除して最大50%の無料クレジットを獲得。",
+			"promo": "<bonus>Boost モード</bonus>を解除して最大50%の無料クレジットを獲得。",
 			"plans": {
 				"monthly": "月額",
 				"perMonth": "/月",

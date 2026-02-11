@@ -195,7 +195,7 @@
 			"refills": "Diisi ulang dalam {{days}} hari",
 			"passActiveUntil": "Pass aktif sampai",
 			"creditsNote": "Kredit Pass tidak pernah kedaluwarsa. Kredit boost yang tidak digunakan kedaluwarsa saat pengisian ulang.",
-			"promo": "Buka <boost>Mode Boost</boost> untuk hingga 50% kredit gratis.",
+			"promo": "Buka <bonus>Mode Boost</bonus> untuk hingga 50% kredit gratis.",
 			"plans": {
 				"monthly": "Bulanan",
 				"perMonth": "/bulan",

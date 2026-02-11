@@ -202,7 +202,7 @@
 			"refills": "Si ricarica tra {{days}} giorni",
 			"passActiveUntil": "Pass attivo fino a",
 			"creditsNote": "I crediti del Pass non scadono mai. I crediti boost non utilizzati scadono alla ricarica.",
-			"promo": "Sblocca <boost>Modalità Boost</boost> per fino al 50% di crediti gratuiti.",
+			"promo": "Sblocca <bonus>Modalità Boost</bonus> per fino al 50% di crediti gratuiti.",
 			"plans": {
 				"monthly": "Mensile",
 				"perMonth": "/mese",

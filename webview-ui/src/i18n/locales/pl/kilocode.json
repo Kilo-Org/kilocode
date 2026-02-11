@@ -202,7 +202,7 @@
 			"refills": "Odnowienie za {{days}} dni",
 			"passActiveUntil": "Pass aktywny do",
 			"creditsNote": "Kredyty Pass nigdy nie wygasają. Niewykorzystane kredyty boost wygasają przy odnowieniu.",
-			"promo": "Odblokuj <boost>Tryb Boost</boost> i uzyskaj do 50% darmowych kredytów.",
+			"promo": "Odblokuj <bonus>Tryb Boost</bonus> i uzyskaj do 50% darmowych kredytów.",
 			"plans": {
 				"monthly": "Miesięcznie",
 				"perMonth": "/miesiąc",

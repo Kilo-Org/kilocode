@@ -202,7 +202,7 @@
 			"refills": "Doplní se za {{days}} dní",
 			"passActiveUntil": "Pass aktivní do",
 			"creditsNote": "Kredity Pass nikdy nevyprší. Nevyužité boost kredity vyprší při doplnění.",
-			"promo": "Odemkni <boost>Boost Mode</boost> pro až 50% kreditů zdarma.",
+			"promo": "Odemkni <bonus>Boost Mode</bonus> pro až 50% kreditů zdarma.",
 			"plans": {
 				"monthly": "Měsíčně",
 				"perMonth": "/měsíc",

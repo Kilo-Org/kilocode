@@ -182,7 +182,7 @@
 			"refills": "Es recarrega en {{days}} dies",
 			"passActiveUntil": "Pass actiu fins",
 			"creditsNote": "Els crèdits del Pass no caduquen mai. Els crèdits de boost no utilitzats caduquen en la recàrrega.",
-			"promo": "Desbloqueja <boost>Mode Boost</boost> per fins a un 50% de crèdits gratuïts.",
+			"promo": "Desbloqueja <bonus>Mode Boost</bonus> per fins a un 50% de crèdits gratuïts.",
 			"plans": {
 				"monthly": "Mensual",
 				"perMonth": "/mes",

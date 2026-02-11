@@ -206,7 +206,7 @@
 				"nextBoost": "Next Boost",
 				"boostAmount": "+${{amount}}"
 			},
-			"promo": "Unlock <boost>bonus credits</boost> up to 50% of your paid credits.",
+			"promo": "Unlock <bonus>bonus credits</bonus> up to 50% of your paid credits.",
 			"plans": {
 				"monthly": "Monthly",
 				"perMonth": "/month",

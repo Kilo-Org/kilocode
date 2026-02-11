@@ -202,7 +202,7 @@
 			"refills": "Nạp lại trong {{days}} ngày",
 			"passActiveUntil": "Pass hoạt động đến",
 			"creditsNote": "Tín dụng Pass không bao giờ hết hạn. Tín dụng boost chưa sử dụng hết hạn khi nạp lại.",
-			"promo": "Mở khóa <boost>Chế độ Boost</boost> để nhận tới 50% tín dụng miễn phí.",
+			"promo": "Mở khóa <bonus>Chế độ Boost</bonus> để nhận tới 50% tín dụng miễn phí.",
 			"plans": {
 				"monthly": "Hàng tháng",
 				"perMonth": "/tháng",

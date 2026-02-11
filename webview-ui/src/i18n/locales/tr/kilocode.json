@@ -202,7 +202,7 @@
 			"refills": "{{days}} gün içinde yenilenir",
 			"passActiveUntil": "Pass aktif bitiş",
 			"creditsNote": "Pass kredileri hiçbir zaman sona ermez. Kullanılmayan boost kredileri yenilemede sona erer.",
-			"promo": "%50'ye kadar ücretsiz kredi için <boost>Boost Modu</boost>'nu aç.",
+			"promo": "%50'ye kadar ücretsiz kredi için <bonus>Boost Modu</bonus>'nu aç.",
 			"plans": {
 				"monthly": "Aylık",
 				"perMonth": "/ay",

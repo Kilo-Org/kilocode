@@ -199,7 +199,7 @@
 				"nextBoost": "Nächster Boost",
 				"boostAmount": "+${{amount}}"
 			},
-			"promo": "Schalte <boost>Boost-Modus</boost> für bis zu 50% kostenlose Credits frei.",
+			"promo": "Schalte <bonus>Boost-Modus</bonus> für bis zu 50% kostenlose Credits frei.",
 			"plans": {
 				"monthly": "Monatlich",
 				"perMonth": "/Monat",

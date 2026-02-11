@@ -206,7 +206,7 @@
 				"nextBoost": "Prochain Boost",
 				"boostAmount": "+{{amount}} $"
 			},
-			"promo": "Débloque <boost>Mode Boost</boost> pour jusqu'à 50% de crédits gratuits.",
+			"promo": "Débloque <bonus>Mode Boost</bonus> pour jusqu'à 50% de crédits gratuits.",
 			"plans": {
 				"monthly": "Mensuel",
 				"perMonth": "/mois",

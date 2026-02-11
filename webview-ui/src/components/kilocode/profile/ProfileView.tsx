@@ -659,12 +659,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 														<Trans
 															i18nKey="kilocode:profile.kiloPass.promo"
 															components={{
-																boost: (
+																bonus: (
 																	<span
 																		className={
 																			isLightTheme
-																				? "text-teal-600 font-medium"
-																				: "text-emerald-400 font-medium"
+																				? "text-emerald-600 font-medium"
+																				: "text-emerald-300 font-medium"
 																		}
 																	/>
 																),

@@ -209,7 +209,7 @@
 			"refills": "{{days}} 天后补充",
 			"passActiveUntil": "Pass 有效期至",
 			"creditsNote": "Pass 额度永不过期。未使用的 Boost 额度在补充时过期。",
-			"promo": "解锁 <boost>Boost 模式</boost>，获得最高 50% 免费额度。",
+			"promo": "解锁 <bonus>Boost 模式</bonus>，获得最高 50% 免费额度。",
 			"plans": {
 				"monthly": "月付",
 				"perMonth": "/月",

@@ -208,7 +208,7 @@
 			"refills": "Wordt aangevuld over {{days}} dagen",
 			"passActiveUntil": "Pass actief tot",
 			"creditsNote": "Pass-tegoed verloopt nooit. Ongebruikt boost-tegoed verloopt bij aanvulling.",
-			"promo": "Ontgrendel <boost>Boost Mode</boost> voor tot 50% gratis credits.",
+			"promo": "Ontgrendel <bonus>Boost Mode</bonus> voor tot 50% gratis credits.",
 			"plans": {
 				"monthly": "Maandelijks",
 				"perMonth": "/maand",
