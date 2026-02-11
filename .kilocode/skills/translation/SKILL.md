@@ -13,7 +13,7 @@ For the translation workflow, use the `/add-missing-translations` command or see
 
 # 1. SUPPORTED LANGUAGES AND LOCATION
 
-- Localize all strings into the following locale files: ar, ca, cs, de, en, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, th, tr, uk, vi, zh-CN, zh-TW
+- Localize all strings into the following locale files: ar, ca, cs, de, en, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, sk, th, tr, uk, vi, zh-CN, zh-TW
 - The VSCode extension has two main areas that require localization:
     - Core Extension: src/i18n/locales/, src/package.nls.json, src/package.nls.<locale>.json (extension backend)
     - WebView UI: webview-ui/src/i18n/locales/ (user interface)

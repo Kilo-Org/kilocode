@@ -5,6 +5,7 @@ export interface CreateSessionOptions {
 	parallelMode?: boolean
 	model?: string
 	mode?: string
+	yoloMode?: boolean
 }
 
 const MAX_SESSIONS = 10
@@ -38,6 +39,7 @@ export class AgentRegistry {
 			startTime: Date.now(),
 			parallelMode: options?.parallelMode,
 			gitUrl: options?.gitUrl,
+			yoloMode: options?.yoloMode,
 		}
 		return this._pendingSession
 	}
@@ -72,6 +74,7 @@ export class AgentRegistry {
 			gitUrl: options?.gitUrl,
 			model: options?.model,
 			mode: options?.mode ?? DEFAULT_MODE_SLUG,
+			yoloMode: options?.yoloMode,
 		}
 
 		this.sessions.set(sessionId, session)
@@ -158,6 +161,18 @@ export class AgentRegistry {
 			return undefined
 		}
 		session.mode = mode
+		return session
+	}
+
+	/**
+	 * Update the label for a session (inline rename).
+	 */
+	public updateSessionLabel(sessionId: string, label: string): AgentSession | undefined {
+		const session = this.sessions.get(sessionId)
+		if (!session) {
+			return undefined
+		}
+		session.label = label
 		return session
 	}
 

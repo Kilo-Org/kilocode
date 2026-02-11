@@ -9,6 +9,7 @@ import {
 	cerebrasModels,
 	deepSeekModels,
 	moonshotModels,
+	moonshotDefaultModelId,
 	minimaxModels,
 	geminiModels,
 	geminiDefaultModelId,
@@ -37,6 +38,7 @@ import {
 	featherlessModels,
 	ioIntelligenceModels,
 	basetenModels,
+	corethinkModels,
 	qwenCodeModels,
 	litellmDefaultModelInfo,
 	lMStudioDefaultModelInfo,
@@ -259,6 +261,11 @@ function getSelectedModel({
 			const info = basetenModels[id as keyof typeof basetenModels]
 			return { id, info }
 		}
+		case "corethink": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = corethinkModels[id as keyof typeof corethinkModels]
+			return { id, info }
+		}
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
@@ -307,7 +314,17 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "moonshot": {
-			const id = apiConfiguration.apiModelId ?? defaultModelId
+			// kilocode_change start
+			const configuredId = apiConfiguration.apiModelId ?? defaultModelId
+			const isKimiCodingEndpoint = apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
+			const firstNonCodingMoonshotModelId =
+				Object.keys(moonshotModels).find((modelId) => modelId !== "kimi-for-coding") ?? moonshotDefaultModelId
+			const id = isKimiCodingEndpoint
+				? "kimi-for-coding"
+				: configuredId === "kimi-for-coding"
+					? firstNonCodingMoonshotModelId
+					: configuredId
+			// kilocode_change end
 			const info = moonshotModels[id as keyof typeof moonshotModels]
 			return { id, info }
 		}

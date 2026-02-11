@@ -375,6 +375,8 @@
 		"vertex1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
 		"basetenApiKey": "Klucz API Baseten",
 		"getBasetenApiKey": "Uzyskaj klucz API Baseten",
+		"corethinkApiKey": "Klucz API Corethink",
+		"getCorethinkApiKey": "Uzyskaj klucz API Corethink",
 		"cerebrasApiKey": "Klucz API Cerebras",
 		"getCerebrasApiKey": "Pobierz klucz API Cerebras",
 		"chutesApiKey": "Klucz API Chutes",

@@ -1,5 +1,58 @@
 # kilo-code
 
+## 5.6.0
+
+### Minor Changes
+
+- [#5040](https://github.com/Kilo-Org/kilocode/pull/5040) [`abe3047`](https://github.com/Kilo-Org/kilocode/commit/abe30473feffb84e885fc8abd5595033fe8b5431) Thanks [@luthraansh](https://github.com/luthraansh)! - Added Corethink as a new AI provider
+
+### Patch Changes
+
+- [#5749](https://github.com/Kilo-Org/kilocode/pull/5749) [`b2fa0a9`](https://github.com/Kilo-Org/kilocode/commit/b2fa0a9b239a396feee39d14eb60eafb088c0ed4) Thanks [@skaldamramra](https://github.com/skaldamramra)! - Add Slovak (sk) language translation for Kilo Code extension and UI
+
+- [#5681](https://github.com/Kilo-Org/kilocode/pull/5681) [`b5ef707`](https://github.com/Kilo-Org/kilocode/commit/b5ef70717068a791da5c3b3068eadb8e189ff484) Thanks [@Drilmo](https://github.com/Drilmo)! - fix(agent-manager): Fix double scrollbar in mode selector dropdowns
+
+- [#5722](https://github.com/Kilo-Org/kilocode/pull/5722) [`f7cf4fd`](https://github.com/Kilo-Org/kilocode/commit/f7cf4fd5002b697f1e41e744b01f096e57666acf) Thanks [@Neonsy](https://github.com/Neonsy)! - Improve Chutes Kimi reliability by preventing terminated-stream retry loops and handling tool/reasoning chunks more safely.
+
+- [#5747](https://github.com/Kilo-Org/kilocode/pull/5747) [`95be119`](https://github.com/Kilo-Org/kilocode/commit/95be1193449184869e49d44b7fe9f09e1620b3ce) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Fix JetBrains build failure by adding missing vsix dependency for build pipeline
+
+- [#5733](https://github.com/Kilo-Org/kilocode/pull/5733) [`1b5c4f4`](https://github.com/Kilo-Org/kilocode/commit/1b5c4f4fab28f03b81a9bdf3cd789b1425108765) Thanks [@krisztian-gajdar](https://github.com/krisztian-gajdar)! - Show loading spinner immediately when opening review scope dialog while scope information is being computed, improving perceived performance for repositories with many changes
+
+- [#5699](https://github.com/Kilo-Org/kilocode/pull/5699) [`e560e47`](https://github.com/Kilo-Org/kilocode/commit/e560e47e39f605f78a6d18fdbfc0dd680ceb5557) Thanks [@Patel230](https://github.com/Patel230)! - Fix unreadable text and poor contrast issues in Agent Manager
+
+- [#5722](https://github.com/Kilo-Org/kilocode/pull/5722) [`a834092`](https://github.com/Kilo-Org/kilocode/commit/a8340925c72e9ee0494e1bffd47dbc1aaddc1c8e) Thanks [@Neonsy](https://github.com/Neonsy)! - Fixed Moonshot Kimi tool-calling and thinking-mode behavior for `kimi-k2.5` and `kimi-for-coding`.
+
+- [#4749](https://github.com/Kilo-Org/kilocode/pull/4749) [`ed70dad`](https://github.com/Kilo-Org/kilocode/commit/ed70dad320a80160dc793bf34f52b87d995285ff) Thanks [@lgrgic](https://github.com/lgrgic)! - Fix 'Delete' toggle button in Auto Approve settings
+
+- [#5756](https://github.com/Kilo-Org/kilocode/pull/5756) [`5d9d4d1`](https://github.com/Kilo-Org/kilocode/commit/5d9d4d1c4a6236fccf7082ea9e8d83d95bbd207a) Thanks [@bernaferrari](https://github.com/bernaferrari)! - Remove duplicate "Kilo Code Marketplace" title in toolbar (thanks @bernaferrari!)
+
+- [#3807](https://github.com/Kilo-Org/kilocode/pull/3807) [`e37717e`](https://github.com/Kilo-Org/kilocode/commit/e37717ee2fad8efb53bea92752dd9ea25f79bbed) Thanks [@davidraedev](https://github.com/davidraedev)! - Hook embedding timeout into settings for ollama
+
+## 5.5.0
+
+### Minor Changes
+
+- [#4890](https://github.com/Kilo-Org/kilocode/pull/4890) [`535e3d1`](https://github.com/Kilo-Org/kilocode/commit/535e3d1751255487b4a0217fbae6e7b357b85a56) Thanks [@Drilmo](https://github.com/Drilmo)! - feat(agent-manager): add YOLO mode toggle and session rename
+
+    **New Features:**
+
+    - Add YOLO mode toggle button in new agent form to enable/disable auto-approval of tools
+    - Add YOLO mode indicator (⚡) in session header and sidebar for sessions running in YOLO mode
+    - Add inline session rename - click on session title to edit
+
+    **Technical Details:**
+
+    - `yoloMode` maps to `autoApprove` config in agent-runtime
+    - Added translations for all 22 supported locales
+
+### Patch Changes
+
+- [#5744](https://github.com/Kilo-Org/kilocode/pull/5744) [`870cdd5`](https://github.com/Kilo-Org/kilocode/commit/870cdd57e7b096caca536ca0aa0da393a68eb730) Thanks [@fstanis](https://github.com/fstanis)! - Fix Opus 4.6 model name
+
+- [#5767](https://github.com/Kilo-Org/kilocode/pull/5767) [`57daae1`](https://github.com/Kilo-Org/kilocode/commit/57daae1c3765bd1c37ee5791cb465edc7bd9a861) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Update Discord link in docs footer to use kilo.ai/discord
+
+- [#5758](https://github.com/Kilo-Org/kilocode/pull/5758) [`25f0043`](https://github.com/Kilo-Org/kilocode/commit/25f0043f66248cb12c1c353c9cd9935a0d2d9d60) Thanks [@markijbema](https://github.com/markijbema)! - Minor improvement of auto-execute commands with input redirection
+
 ## 5.4.1
 
 ### Patch Changes

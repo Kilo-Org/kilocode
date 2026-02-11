@@ -195,6 +195,12 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "corethink":
+			// Skipping this check until Corethink API key is required
+			// if (!apiConfiguration.corethinkApiKey) {
+			// 	return i18next.t("settings:validation.apiKey")
+			// }
+			break
 	}
 
 	return undefined

@@ -16,7 +16,8 @@
 		"shareConfirmYes": "是",
 		"shareConfirmNo": "否",
 		"options": "选项",
-		"configureSetupScript": "Worktree 设置脚本"
+		"configureSetupScript": "Worktree 设置脚本",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -62,7 +63,14 @@
 		"defaultModel": "默认模型",
 		"loadingModels": "加载中...",
 		"selectMode": "选择模式",
-		"modeTooltip": "模式：{{mode}}"
+		"modeTooltip": "模式：{{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "等待代理响应...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "收起输出",
 		"copyCommand": "复制命令",
 		"thinking": "思考中",
-		"thinkingSeconds": "{{count}}秒"
+		"thinkingSeconds": "{{count}}秒",
+		"approve": "批准",
+		"deny": "拒绝"
 	},
 	"chatInput": {
 		"autoMode": "Agent 正在全自动模式下运行 - 不允许输入",

@@ -27,17 +27,9 @@ Find the Kilo Code icon ({% kilo-code-icon /%}) in VS Code's Primary Side Bar. C
 
 **Good requests:**
 
-```
-create a new file named utils.py and add a function called add that takes two numbers as arguments and returns their sum
-```
-
-```
-in the file @src/components/Button.tsx, change the color of the button to blue
-```
-
-```
-find all instances of the variable oldValue in @/src/App.js and replace them with newValue
-```
+- `create a new file named utils.py and add a function called add that takes two numbers as arguments and returns their sum`
+- `in the file @src/components/Button.tsx, change the color of the button to blue`
+- `find all instances of the variable oldValue in @/src/App.js and replace them with newValue`
 
 **What makes requests work:**
 
