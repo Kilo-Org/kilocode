@@ -11,7 +11,7 @@
 import * as vscode from "vscode"
 
 import { toRelativePath } from "../../../utils/path"
-import { isSecurityConcern } from "../../continuedev/core/indexing/ignore"
+import { isSecurityConcern } from "../continuedev/core/indexing/ignore"
 import type { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 
 import { VisibleCodeContext, VisibleEditorInfo, VisibleRange, DiffInfo } from "../types"

@@ -1,14 +1,14 @@
 import * as vscode from "vscode"
-import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/types"
+import type { AutocompleteCodeSnippet } from "../ghost/continuedev/core/autocomplete/types"
 import type {
 	Position,
 	Range,
 	RangeInFile,
 	TabAutocompleteOptions as CoreTabAutocompleteOptions,
-} from "../continuedev/core"
+} from "../ghost/continuedev/core"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
-import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
-import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { ContextRetrievalService } from "../ghost/continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../ghost/continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { AutocompleteModel } from "./AutocompleteModel"
 
 export interface ResponseMetaData {

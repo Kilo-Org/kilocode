@@ -147,6 +147,12 @@ export const getGeminiReasoning = ({
 		return { thinkingBudget: reasoningBudget!, includeThoughts: true }
 	}
 
+	// kilocode_change start
+	if (!model.supportsReasoningEffort) {
+		return undefined
+	}
+	// kilocode_change end
+
 	// For effort-based Gemini models, rely directly on the selected effort value.
 	// We intentionally ignore enableReasoningEffort here so that explicitly chosen
 	// efforts in the UI (e.g. "High" for gemini-3-pro-preview) always translate

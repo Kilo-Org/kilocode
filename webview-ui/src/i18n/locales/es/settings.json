@@ -368,6 +368,8 @@
 			"success": "¡Lista de modelos actualizada correctamente!",
 			"error": "Error al actualizar la lista de modelos. Por favor, inténtalo de nuevo."
 		},
+		"getZenmuxApiKey": "Obtener clave API de Zenmux",
+		"zenmuxTransformsText": "Usar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtener clave API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
@@ -384,6 +386,8 @@
 		"vertex1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"basetenApiKey": "Clave API de Baseten",
 		"getBasetenApiKey": "Obtener clave API de Baseten",
+		"corethinkApiKey": "Clave API de Corethink",
+		"getCorethinkApiKey": "Obtener clave API de Corethink",
 		"cerebrasApiKey": "Clave API de Cerebras",
 		"getCerebrasApiKey": "Obtener clave API de Cerebras",
 		"chutesApiKey": "Clave API de Chutes",

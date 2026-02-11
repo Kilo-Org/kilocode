@@ -397,6 +397,8 @@
 			"success": "Список моделей успішно оновлено!",
 			"error": "Не вдалося оновити список моделей. Спробуйте ще раз."
 		},
+		"getZenmuxApiKey": "Отримати ключ API Zenmux",
+		"zenmuxTransformsText": "Використовувати Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Отримати ключ API Requesty",
 		"getRequestyBaseUrl": "Базовий URL",
 		"requestyUseCustomBaseUrl": "Використовувати власний базовий URL",
@@ -414,6 +416,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Введіть ім'я розгортання...",
 		"basetenApiKey": "Ключ API Baseten",
 		"getBasetenApiKey": "Отримати ключ API Baseten",
+		"corethinkApiKey": "Ключ API Corethink",
+		"getCorethinkApiKey": "Отримати ключ API Corethink",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",

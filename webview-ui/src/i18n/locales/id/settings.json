@@ -359,6 +359,8 @@
 			"success": "Daftar model berhasil direfresh!",
 			"error": "Gagal merefresh daftar model. Silakan coba lagi."
 		},
+		"getZenmuxApiKey": "Dapatkan Zenmux API Key",
+		"zenmuxTransformsText": "Gunakan Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Gunakan URL dasar khusus",
@@ -375,6 +377,8 @@
 		"vertex1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
 		"basetenApiKey": "Baseten API Key",
 		"getBasetenApiKey": "Dapatkan Baseten API Key",
+		"corethinkApiKey": "Corethink API Key",
+		"getCorethinkApiKey": "Dapatkan Corethink API Key",
 		"cerebrasApiKey": "Cerebras API Key",
 		"getCerebrasApiKey": "Dapatkan Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",

@@ -25,6 +25,7 @@ export { OpenAiCompatibleResponsesHandler } from "./openai-responses" // kilocod
 export { OpenAICompatibleHandler } from "./openai-compatible"
 export type { OpenAICompatibleConfig } from "./openai-compatible"
 export { OpenRouterHandler } from "./openrouter"
+export { ZenMuxHandler } from "./zenmux" // kilocode_change
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"
@@ -47,3 +48,4 @@ export { VercelAiGatewayHandler } from "./vercel-ai-gateway"
 export { DeepInfraHandler } from "./deepinfra"
 export { MiniMaxHandler } from "./minimax"
 export { BasetenHandler } from "./baseten"
+export { CorethinkHandler } from "./corethink"

@@ -392,6 +392,8 @@
 			"success": "รีเฟรชรายการโมเดลสำเร็จ!",
 			"error": "ไม่สามารถรีเฟรชรายการโมเดลได้ โปรดลองอีกครั้ง"
 		},
+		"getZenmuxApiKey": "รับ Zenmux API Key",
+		"zenmuxTransformsText": "ใช้ Zenmux Middle Out Transform",
 		"getRequestyApiKey": "รับคีย์ API ของ Requesty",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "ใช้ Base URL ที่กำหนดเอง",
@@ -407,6 +409,8 @@
 		"awsBedrock1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"basetenApiKey": "คีย์ API ของ Baseten",
 		"getBasetenApiKey": "รับคีย์ API ของ Baseten",
+		"corethinkApiKey": "คีย์ API ของ Corethink",
+		"getCorethinkApiKey": "รับคีย์ API ของ Corethink",
 		"cerebrasApiKey": "คีย์ API ของ Cerebras",
 		"getCerebrasApiKey": "รับคีย์ API ของ Cerebras",
 		"chutesApiKey": "คีย์ API ของ Chutes",

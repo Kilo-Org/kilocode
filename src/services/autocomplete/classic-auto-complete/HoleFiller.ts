@@ -6,7 +6,7 @@ import {
 	ChatCompletionResult,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
-import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
+import { formatSnippets } from "../../ghost/continuedev/core/autocomplete/templating/formatting"
 import { AutocompleteModel } from "../AutocompleteModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 

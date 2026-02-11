@@ -364,6 +364,8 @@
 			"success": "モデルリストが正常に更新されました！",
 			"error": "モデルリストの更新に失敗しました。もう一度お試しください。"
 		},
+		"getZenmuxApiKey": "Zenmux APIキーを取得",
+		"zenmuxTransformsText": "Zenmux Middle Out Transformを使用",
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"getRequestyBaseUrl": "ベースURL",
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
@@ -380,6 +382,8 @@
 		"vertex1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
 		"basetenApiKey": "Baseten APIキー",
 		"getBasetenApiKey": "Baseten APIキーを取得",
+		"corethinkApiKey": "Corethink APIキー",
+		"getCorethinkApiKey": "Corethink APIキーを取得",
 		"cerebrasApiKey": "Cerebras APIキー",
 		"getCerebrasApiKey": "Cerebras APIキーを取得",
 		"chutesApiKey": "Chutes APIキー",

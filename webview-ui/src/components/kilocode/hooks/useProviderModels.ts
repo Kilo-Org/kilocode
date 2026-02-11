@@ -5,6 +5,8 @@ import {
 	anthropicModels,
 	basetenModels,
 	basetenDefaultModelId,
+	corethinkModels,
+	corethinkDefaultModelId,
 	bedrockDefaultModelId,
 	bedrockModels,
 	deepSeekDefaultModelId,
@@ -59,6 +61,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiModels,
 	mainlandZAiDefaultModelId,
+	zenmuxDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -317,6 +320,12 @@ export const getModelsByProvider = ({
 				defaultModel: basetenDefaultModelId,
 			}
 		}
+		case "corethink": {
+			return {
+				models: corethinkModels,
+				defaultModel: corethinkDefaultModelId,
+			}
+		}
 		case "zai": {
 			if (options.isChina) {
 				return {
@@ -328,6 +337,12 @@ export const getModelsByProvider = ({
 					models: internationalZAiModels,
 					defaultModel: internationalZAiDefaultModelId,
 				}
+			}
+		}
+		case "zenmux": {
+			return {
+				models: routerModels.zenmux,
+				defaultModel: zenmuxDefaultModelId,
 			}
 		}
 		default:

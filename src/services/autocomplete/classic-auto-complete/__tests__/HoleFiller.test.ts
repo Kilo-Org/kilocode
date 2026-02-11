@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { HoleFiller, parseAutocompleteResponse } from "../HoleFiller"
 import { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import crypto from "crypto"
-import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/types"
+import { AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
 
 // Mock the getProcessedSnippets module
 vi.mock("../getProcessedSnippets", () => ({

@@ -10,7 +10,7 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-vi.mock("../../../../services/continuedev/core/indexing/ignore", () => ({
+vi.mock("../../../../services/ghost/continuedev/core/indexing/ignore", () => ({
 	isSecurityConcern: vi.fn((filePath: string) => {
 		return filePath.includes(".env") || filePath.includes("credentials")
 	}),
