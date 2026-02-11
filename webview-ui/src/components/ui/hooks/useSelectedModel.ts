@@ -558,6 +558,11 @@ function getSelectedModel({
 			}
 			return { id, info }
 		}
+		case "asksage": {
+			const id = getValidatedModelId(apiConfiguration.askSageModelId, routerModels.asksage, defaultModelId)
+			const info = routerModels.asksage?.[id]
+			return { id, info }
+		}
 		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
