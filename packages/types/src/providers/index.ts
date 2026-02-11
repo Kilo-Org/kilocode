@@ -30,6 +30,7 @@ export * from "./openai-codex.js"
 export * from "./openai-codex-rate-limits.js"
 export * from "./openrouter.js"
 export * from "./qwen-code.js"
+export * from "./asksage.js"
 export * from "./requesty.js"
 export * from "./roo.js"
 export * from "./sambanova.js"
@@ -62,6 +63,7 @@ import { moonshotDefaultModelId } from "./moonshot.js"
 import { openAiCodexDefaultModelId } from "./openai-codex.js"
 import { openRouterDefaultModelId } from "./openrouter.js"
 import { qwenCodeDefaultModelId } from "./qwen-code.js"
+import { askSageDefaultModelId } from "./asksage.js"
 import { requestyDefaultModelId } from "./requesty.js"
 import { rooDefaultModelId } from "./roo.js"
 import { sambaNovaDefaultModelId } from "./sambanova.js"
@@ -89,6 +91,8 @@ export function getProviderDefaultModelId(
 	switch (provider) {
 		case "openrouter":
 			return openRouterDefaultModelId
+		case "asksage":
+			return askSageDefaultModelId
 		case "requesty":
 			return requestyDefaultModelId
 		// kilocode_change start

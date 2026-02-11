@@ -137,6 +137,14 @@ export const unboundProviderSchema = baseProviderSchema.extend({
 	unboundApiKey: z.string().optional(),
 })
 
+// AskSage provider
+export const askSageProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("asksage"),
+	askSageModelId: z.string().optional(),
+	askSageBaseUrl: z.string().optional(),
+	askSageApiKey: z.string().optional(),
+})
+
 // Requesty provider
 export const requestyProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("requesty"),
@@ -413,6 +421,7 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 	liteLLMProviderSchema,
 	deepInfraProviderSchema,
 	unboundProviderSchema,
+	askSageProviderSchema,
 	requestyProviderSchema,
 	vercelAiGatewayProviderSchema,
 	ioIntelligenceProviderSchema,
@@ -459,6 +468,7 @@ export type GlamaProviderConfig = z.infer<typeof glamaProviderSchema>
 export type LiteLLMProviderConfig = z.infer<typeof liteLLMProviderSchema>
 export type DeepInfraProviderConfig = z.infer<typeof deepInfraProviderSchema>
 export type UnboundProviderConfig = z.infer<typeof unboundProviderSchema>
+export type AskSageProviderConfig = z.infer<typeof askSageProviderSchema>
 export type RequestyProviderConfig = z.infer<typeof requestyProviderSchema>
 export type VercelAiGatewayProviderConfig = z.infer<typeof vercelAiGatewayProviderSchema>
 export type IOIntelligenceProviderConfig = z.infer<typeof ioIntelligenceProviderSchema>

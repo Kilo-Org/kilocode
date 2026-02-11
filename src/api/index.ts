@@ -24,6 +24,7 @@ import {
 	MistralHandler,
 	VsCodeLmHandler,
 	UnboundHandler,
+	AskSageHandler,
 	RequestyHandler,
 	HumanRelayHandler,
 	FakeAIHandler,
@@ -218,6 +219,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new MistralHandler(options)
 		case "unbound":
 			return new UnboundHandler(options)
+		case "asksage":
+			return new AskSageHandler(options)
 		case "requesty":
 			return new RequestyHandler(options)
 		case "human-relay":

@@ -18,6 +18,7 @@ import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
 import { getVercelAiGatewayModels } from "./vercel-ai-gateway"
+import { getAskSageModels } from "./asksage"
 import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama" // kilocode_change
 import { getUnboundModels } from "./unbound"
@@ -84,6 +85,9 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 				headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : undefined,
 			})
 			// kilocode_change end
+			break
+		case "asksage":
+			models = await getAskSageModels(options.baseUrl, options.apiKey)
 			break
 		case "requesty":
 			// Requesty models endpoint requires an API key for per-user custom policies.

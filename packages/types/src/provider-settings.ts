@@ -59,6 +59,7 @@ export const dynamicProviders = [
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
+	"asksage",
 	"requesty",
 	"unbound",
 	"glama", // kilocode_change
@@ -409,6 +410,12 @@ const unboundSchema = baseProviderSettingsSchema.extend({
 	unboundModelId: z.string().optional(),
 })
 
+const askSageSchema = baseProviderSettingsSchema.extend({
+	askSageBaseUrl: z.string().optional(),
+	askSageApiKey: z.string().optional(),
+	askSageModelId: z.string().optional(),
+})
+
 const requestySchema = baseProviderSettingsSchema.extend({
 	requestyBaseUrl: z.string().optional(),
 	requestyApiKey: z.string().optional(),
@@ -583,6 +590,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	moonshotSchema.merge(z.object({ apiProvider: z.literal("moonshot") })),
 	minimaxSchema.merge(z.object({ apiProvider: z.literal("minimax") })),
 	unboundSchema.merge(z.object({ apiProvider: z.literal("unbound") })),
+	askSageSchema.merge(z.object({ apiProvider: z.literal("asksage") })),
 	requestySchema.merge(z.object({ apiProvider: z.literal("requesty") })),
 	humanRelaySchema.merge(z.object({ apiProvider: z.literal("human-relay") })),
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
@@ -642,6 +650,7 @@ export const providerSettingsSchema = z.object({
 	...moonshotSchema.shape,
 	...minimaxSchema.shape,
 	...unboundSchema.shape,
+	...askSageSchema.shape,
 	...requestySchema.shape,
 	...humanRelaySchema.shape,
 	...fakeAiSchema.shape,
@@ -691,6 +700,7 @@ export const modelIdKeys = [
 	"lmStudioModelId",
 	"lmStudioDraftModelId",
 	"unboundModelId",
+	"askSageModelId",
 	"requestyModelId",
 	"litellmModelId",
 	"huggingFaceModelId",
@@ -741,6 +751,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	doubao: "apiModelId",
 	"qwen-code": "apiModelId",
 	unbound: "unboundModelId",
+	asksage: "askSageModelId",
 	requesty: "requestyModelId",
 	xai: "apiModelId",
 	// kilocode_change start
@@ -911,6 +922,7 @@ export const MODELS_BY_PROVIDER: Record<
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
+	asksage: { id: "asksage", label: "AskSage", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
 	"sap-ai-core": { id: "sap-ai-core", label: "SAP AI Core", models: [] }, // kilocode_change

@@ -187,6 +187,7 @@ const dynamicProviderExtras = {
 	kilocode: {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
 	deepinfra: {} as { apiKey?: string; baseUrl?: string },
 	"io-intelligence": {} as { apiKey?: string }, // kilocode_change: parameters optional
+	asksage: {} as { apiKey?: string; baseUrl?: string },
 	requesty: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
 	// kilocode_change start

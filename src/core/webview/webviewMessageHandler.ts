@@ -806,9 +806,7 @@ export const webviewMessageHandler = async (
 					await provider.postStateToWebview()
 					console.log(`Batch deletion completed: ${ids.length} tasks processed`)
 				} catch (error) {
-					console.log(
-						`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`,
-					)
+					console.log(`Batch deletion failed: ${error instanceof Error ? error.message : String(error)}`)
 				}
 				// kilocode_change end
 			}
@@ -894,6 +892,7 @@ export const webviewMessageHandler = async (
 						litellm: {},
 						deepinfra: {},
 						"io-intelligence": {},
+						asksage: {},
 						requesty: {},
 						unbound: {},
 						glama: {}, // kilocode_change
