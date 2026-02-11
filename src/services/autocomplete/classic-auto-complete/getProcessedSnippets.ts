@@ -7,7 +7,7 @@ import { getAllSnippetsWithoutRace } from "../../continuedev/core/autocomplete/s
 import { getDefinitionsFromLsp } from "../../continuedev/core/vscode-test-harness/src/autocomplete/lsp"
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameters"
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
 
@@ -56,7 +56,7 @@ async function filterSnippetsByAccess(
 			return true
 		})
 	} catch (error) {
-		console.error("[GhostContextProvider] Error filtering snippets by access:", error)
+		console.error("[AutocompleteContextProvider] Error filtering snippets by access:", error)
 		// On error, be conservative and filter out file-based snippets
 		return snippets.filter((snippet) => {
 			return !hasFilepath(snippet) || !snippet.filepath
@@ -68,7 +68,7 @@ export async function getProcessedSnippets(
 	autocompleteInput: AutocompleteInput,
 	filepath: string,
 	contextService: ContextRetrievalService,
-	model: GhostModel,
+	model: AutocompleteModel,
 	ide: VsCodeIde,
 	ignoreController?: Promise<RooIgnoreController>,
 ): Promise<{

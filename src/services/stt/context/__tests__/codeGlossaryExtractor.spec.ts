@@ -2,7 +2,7 @@
 // Run: cd $WORKSPACE_ROOT/src && npx vitest run services/stt/context/__tests__/codeGlossaryExtractor.spec.ts
 
 import { extractCodeGlossary, formatGlossaryAsPrompt } from "../codeGlossaryExtractor"
-import type { VisibleCodeContext } from "../../../ghost/types"
+import type { VisibleCodeContext } from "../../../autocomplete/types"
 
 describe("extractCodeGlossary", () => {
 	it("always includes core Kilocode terms", () => {

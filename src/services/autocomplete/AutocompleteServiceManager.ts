@@ -1,28 +1,28 @@
 import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
-import { GhostModel } from "./GhostModel"
-import { GhostStatusBar } from "./GhostStatusBar"
-import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
-import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
+import { AutocompleteModel } from "./AutocompleteModel"
+import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
+import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
+import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
+import { AutocompleteServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
-export class GhostServiceManager {
-	private static _instance: GhostServiceManager | null = null
+export class AutocompleteServiceManager {
+	private static _instance: AutocompleteServiceManager | null = null
 
-	private readonly model: GhostModel
+	private readonly model: AutocompleteModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
-	private settings: GhostServiceSettings | null = null
+	private settings: AutocompleteServiceSettings | null = null
 
 	private taskId: string | null = null
 
 	// Status bar integration
-	private statusBar: GhostStatusBar | null = null
+	private statusBar: AutocompleteStatusBar | null = null
 	private sessionCost: number = 0
 	private completionCount: number = 0
 	private sessionStartTime: number = Date.now()
@@ -30,25 +30,27 @@ export class GhostServiceManager {
 	private snoozeTimer: NodeJS.Timeout | null = null
 
 	// VSCode Providers
-	public readonly codeActionProvider: GhostCodeActionProvider
-	public readonly inlineCompletionProvider: GhostInlineCompletionProvider
+	public readonly codeActionProvider: AutocompleteCodeActionProvider
+	public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
-		if (GhostServiceManager._instance) {
-			throw new Error("GhostServiceManager is a singleton. Use GhostServiceManager.getInstance() instead.")
+		if (AutocompleteServiceManager._instance) {
+			throw new Error(
+				"AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
+			)
 		}
 
 		this.context = context
 		this.cline = cline
-		GhostServiceManager._instance = this
+		AutocompleteServiceManager._instance = this
 
 		// Register Internal Components
-		this.model = new GhostModel()
+		this.model = new AutocompleteModel()
 
 		// Register the providers
-		this.codeActionProvider = new GhostCodeActionProvider()
-		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
+		this.codeActionProvider = new AutocompleteCodeActionProvider()
+		this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
@@ -61,10 +63,10 @@ export class GhostServiceManager {
 	}
 
 	/**
-	 * Get the singleton instance of GhostServiceManager
+	 * Get the singleton instance of AutocompleteServiceManager
 	 */
-	public static getInstance(): GhostServiceManager | null {
-		return GhostServiceManager._instance
+	public static getInstance(): AutocompleteServiceManager | null {
+		return AutocompleteServiceManager._instance
 	}
 
 	public async load() {
@@ -285,13 +287,13 @@ export class GhostServiceManager {
 	private async updateGlobalContext() {
 		await vscode.commands.executeCommand(
 			"setContext",
-			"kilocode.ghost.enableSmartInlineTaskKeybinding",
+			"kilocode.autocomplete.enableSmartInlineTaskKeybinding",
 			this.settings?.enableSmartInlineTaskKeybinding || false,
 		)
 	}
 
 	private initializeStatusBar() {
-		this.statusBar = new GhostStatusBar({
+		this.statusBar = new AutocompleteStatusBar({
 			enabled: false,
 			model: "loading...",
 			provider: "loading...",
@@ -347,20 +349,20 @@ export class GhostServiceManager {
 	}
 
 	public async showIncompatibilityExtensionPopup() {
-		const message = t("kilocode:ghost.incompatibilityExtensionPopup.message")
-		const disableCopilot = t("kilocode:ghost.incompatibilityExtensionPopup.disableCopilot")
-		const disableInlineAssist = t("kilocode:ghost.incompatibilityExtensionPopup.disableInlineAssist")
+		const message = t("kilocode:autocomplete.incompatibilityExtensionPopup.message")
+		const disableCopilot = t("kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot")
+		const disableInlineAssist = t("kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist")
 		const response = await vscode.window.showErrorMessage(message, disableCopilot, disableInlineAssist)
 
 		if (response === disableCopilot) {
 			await vscode.commands.executeCommand<any>("github.copilot.completions.disable")
 		} else if (response === disableInlineAssist) {
-			await vscode.commands.executeCommand<any>("kilo-code.ghost.disable")
+			await vscode.commands.executeCommand<any>("kilo-code.autocomplete.disable")
 		}
 	}
 
 	/**
-	 * Dispose of all resources used by the GhostServiceManager
+	 * Dispose of all resources used by the AutocompleteServiceManager
 	 */
 	public dispose(): void {
 		this.statusBar?.dispose()
@@ -380,7 +382,7 @@ export class GhostServiceManager {
 		this.inlineCompletionProvider.dispose()
 
 		// Clear singleton instance
-		GhostServiceManager._instance = null
+		AutocompleteServiceManager._instance = null
 	}
 
 	/**
@@ -388,6 +390,6 @@ export class GhostServiceManager {
 	 * @internal
 	 */
 	public static _resetInstance(): void {
-		GhostServiceManager._instance = null
+		AutocompleteServiceManager._instance = null
 	}
 }

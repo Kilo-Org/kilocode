@@ -1,47 +1,47 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
-import { GhostServiceManager } from "./GhostServiceManager"
+import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { registerGhostJetbrainsBridge } from "./GhostJetbrainsBridge"
+import { registerAutocompleteJetbrainsBridge } from "./AutocompleteJetbrainsBridge"
 
-export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
-	const ghost = new GhostServiceManager(context, cline)
-	context.subscriptions.push(ghost)
+export const registerAutocompleteProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
+	const autocomplete = new AutocompleteServiceManager(context, cline)
+	context.subscriptions.push(autocomplete)
 
 	// Register JetBrains Bridge if applicable
-	registerGhostJetbrainsBridge(context, cline, ghost)
+	registerAutocompleteJetbrainsBridge(context, cline, autocomplete)
 
-	// Register GhostServiceManager Commands
+	// Register AutocompleteServiceManager Commands
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.reload", async () => {
-			await ghost.load()
+		vscode.commands.registerCommand("kilo-code.autocomplete.reload", async () => {
+			await autocomplete.load()
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.codeActionQuickFix", async () => {
+		vscode.commands.registerCommand("kilo-code.autocomplete.codeActionQuickFix", async () => {
 			return
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.generateSuggestions", async () => {
-			ghost.codeSuggestion()
+		vscode.commands.registerCommand("kilo-code.autocomplete.generateSuggestions", async () => {
+			autocomplete.codeSuggestion()
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.showIncompatibilityExtensionPopup", async () => {
-			await ghost.showIncompatibilityExtensionPopup()
+		vscode.commands.registerCommand("kilo-code.autocomplete.showIncompatibilityExtensionPopup", async () => {
+			await autocomplete.showIncompatibilityExtensionPopup()
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.disable", async () => {
-			await ghost.disable()
+		vscode.commands.registerCommand("kilo-code.autocomplete.disable", async () => {
+			await autocomplete.disable()
 		}),
 	)
 
-	// Register GhostServiceManager Code Actions
+	// Register AutocompleteServiceManager Code Actions
 	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider("*", ghost.codeActionProvider, {
-			providedCodeActionKinds: Object.values(ghost.codeActionProvider.providedCodeActionKinds),
+		vscode.languages.registerCodeActionsProvider("*", autocomplete.codeActionProvider, {
+			providedCodeActionKinds: Object.values(autocomplete.codeActionProvider.providedCodeActionKinds),
 		}),
 	)
 }

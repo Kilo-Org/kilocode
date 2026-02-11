@@ -44,7 +44,7 @@
 		"about": "Kilo Code 정보",
 		"autoPurge": "자동 정리",
 		"agentBehaviour": "에이전트 동작",
-		"ghost": "자동 완성"
+		"autocomplete": "자동 완성"
 	},
 	"about": {
 		"bugReport": {
@@ -1171,7 +1171,7 @@
 			"description": "작업 헤더에 추가/삭제된 줄 통계 표시"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "자동 완성 시 거터 애니메이션 표시",
 			"description": "자동 완성이 실행 중일 때 편집기 거터에 애니메이션 표시기 표시",

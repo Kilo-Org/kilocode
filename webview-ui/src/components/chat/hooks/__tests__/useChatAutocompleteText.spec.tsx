@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react"
 import { vi } from "vitest"
-import { useChatGhostText } from "../useChatGhostText"
+import { useChatAutocompleteText } from "../useChatAutocompleteText"
 import { vscode } from "@/utils/vscode"
 
 // Mock vscode
@@ -18,7 +18,7 @@ vi.mock("@roo/id", () => ({
 
 // Helper to simulate the full flow: focus -> input change -> completion result
 function simulateCompletionFlow(
-	result: ReturnType<typeof useChatGhostText>,
+	result: ReturnType<typeof useChatAutocompleteText>,
 	mockTextArea: HTMLTextAreaElement,
 	text: string,
 	ghostText: string,
@@ -58,7 +58,7 @@ function simulateCompletionFlow(
 	})
 }
 
-describe("useChatGhostText", () => {
+describe("useChatAutocompleteText", () => {
 	let mockTextArea: HTMLTextAreaElement
 	let textAreaRef: React.RefObject<HTMLTextAreaElement>
 
@@ -82,7 +82,7 @@ describe("useChatGhostText", () => {
 	describe("Tab key acceptance", () => {
 		it("should accept full ghost text on Tab key", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -114,7 +114,7 @@ describe("useChatGhostText", () => {
 	describe("Right Arrow key - word-by-word acceptance", () => {
 		it("should accept next word when cursor is at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -150,7 +150,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -191,7 +191,7 @@ describe("useChatGhostText", () => {
 
 		it("should NOT accept word when cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -228,7 +228,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -260,7 +260,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -290,7 +290,7 @@ describe("useChatGhostText", () => {
 	describe("Escape key", () => {
 		it("should clear ghost text on Escape", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -322,7 +322,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -356,7 +356,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -390,7 +390,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -414,7 +414,7 @@ describe("useChatGhostText", () => {
 	describe("clearGhostText", () => {
 		it("should clear ghost text when called", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -437,7 +437,7 @@ describe("useChatGhostText", () => {
 	describe("Focus and blur behavior", () => {
 		it("should clear ghost text on blur and restore on focus", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -466,7 +466,7 @@ describe("useChatGhostText", () => {
 
 		it("should not restore ghost text if text changed while unfocused", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -503,7 +503,7 @@ describe("useChatGhostText", () => {
 			vi.mocked(vscode.postMessage).mockClear()
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -534,7 +534,7 @@ describe("useChatGhostText", () => {
 
 		it("should discard completion result if text changed", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -582,7 +582,7 @@ describe("useChatGhostText", () => {
 
 		it("should discard completion result if cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -630,7 +630,7 @@ describe("useChatGhostText", () => {
 
 		it("should clear ghost text when cursor moves away from end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -657,7 +657,7 @@ describe("useChatGhostText", () => {
 
 		it("should not clear ghost text when cursor is still at end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -684,7 +684,7 @@ describe("useChatGhostText", () => {
 
 		it("should clear ghost text when there is a selection via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -711,7 +711,7 @@ describe("useChatGhostText", () => {
 
 		it("should restore ghost text when cursor returns to end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -746,7 +746,7 @@ describe("useChatGhostText", () => {
 
 		it("should not restore ghost text when cursor returns to end if text changed", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -785,7 +785,7 @@ describe("useChatGhostText", () => {
 			vi.mocked(vscode.postMessage).mockClear()
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -824,7 +824,7 @@ describe("useChatGhostText", () => {
 
 		it("should not restore ghost text on focus if cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -859,7 +859,7 @@ describe("useChatGhostText", () => {
 			const nullRef = { current: null } as React.RefObject<HTMLTextAreaElement>
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef: nullRef,
 					enableChatAutocomplete: true,
 				}),
@@ -875,7 +875,7 @@ describe("useChatGhostText", () => {
 
 		it("should handle rapid focus/blur/focus cycles correctly", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),

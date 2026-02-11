@@ -23,7 +23,7 @@ interface UseChatGhostTextReturn {
  * Hook for managing FIM autocomplete ghost text in the chat text area.
  * Handles completion requests, ghost text display, and Tab/Escape/ArrowRight interactions.
  */
-export function useChatGhostText({
+export function useChatAutocompleteText({
 	textAreaRef,
 	enableChatAutocomplete = true,
 }: UseChatGhostTextOptions): UseChatGhostTextReturn {

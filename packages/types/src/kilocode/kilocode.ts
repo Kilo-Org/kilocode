@@ -18,7 +18,7 @@ export const ghostServiceSettingsSchema = z
 	})
 	.optional()
 
-export type GhostServiceSettings = z.infer<typeof ghostServiceSettingsSchema>
+export type AutocompleteServiceSettings = z.infer<typeof ghostServiceSettingsSchema>
 
 /**
  * Map of provider names to their default autocomplete models.

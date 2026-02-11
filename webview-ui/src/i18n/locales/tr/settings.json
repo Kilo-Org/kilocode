@@ -42,7 +42,7 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"autoPurge": "Otomatik Temizlik",
 		"agentBehaviour": "Ajan Davranışı"
 	},
@@ -1171,7 +1171,7 @@
 			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
 			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",

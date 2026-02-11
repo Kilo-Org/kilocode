@@ -128,7 +128,7 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
 }
 
 /**
- * Postprocesses a Ghost autocomplete suggestion using the continuedev postprocessing pipeline
+ * Postprocesses an autocomplete suggestion using the continuedev postprocessing pipeline
  * and applies some of our own duplicate checks.
  *
  * @param params - Object containing suggestion parameters
@@ -139,7 +139,7 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
  * @param params.languageId - Optional language ID for language-specific filtering
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */
-export function postprocessGhostSuggestion(
+export function postprocessAutocompleteSuggestion(
 	params: AutocompleteSuggestion & {
 		model: string
 		languageId?: string

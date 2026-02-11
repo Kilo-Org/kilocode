@@ -21,7 +21,7 @@ import {
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { escapeHtml } from "@/utils/highlight" // kilocode_change - FIM autocomplete
-import { useChatGhostText } from "./hooks/useChatGhostText" // kilocode_change: FIM autocomplete
+import { useChatAutocompleteText } from "./hooks/useChatAutocompleteText" // kilocode_change: FIM autocomplete
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui"
 
 import Thumbnails from "../common/Thumbnails"
@@ -423,7 +423,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			handleBlur: handleGhostTextBlur,
 			handleSelect: handleGhostTextSelect,
 			clearGhostText,
-		} = useChatGhostText({
+		} = useChatAutocompleteText({
 			textAreaRef,
 			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
 		})
@@ -783,7 +783,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 				}
 
-				// kilocode_change start: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// kilocode_change start: Prevent Tab from triggering autocomplete/FIM/mention handling while typing a slash command
 				// If the cursor is within the first token of a leading /command, Tab should not fall through to other handlers.
 				// - If the slash command menu is open, Tab is handled above (completion)
 				// - If the slash command menu is closed, Tab should do nothing (must not mutate text, e.g. inserting '@')
@@ -803,7 +803,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						}
 					}
 				}
-				// kilocode_change end: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// kilocode_change end: Prevent Tab from triggering autocomplete/FIM/mention handling while typing a slash command
 
 				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
 				if (handleGhostTextKeyDown(event)) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { HoleFiller, parseGhostResponse } from "../HoleFiller"
-import { AutocompleteInput, GhostContextProvider } from "../../types"
+import { HoleFiller, parseAutocompleteResponse } from "../HoleFiller"
+import { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import crypto from "crypto"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/types"
 
@@ -41,7 +41,7 @@ describe("HoleFiller", () => {
 		vi.clearAllMocks()
 
 		// Create a minimal mock context provider for basic tests
-		const mockContextProvider: GhostContextProvider = {
+		const mockContextProvider: AutocompleteContextProvider = {
 			contextService: {
 				initializeForFile: vi.fn().mockResolvedValue(undefined),
 			} as any,
@@ -104,7 +104,7 @@ Return the COMPLETION tags`
 				workspaceDirs: ["file:///workspace"],
 			})
 
-			const mockContextProvider: GhostContextProvider = {
+			const mockContextProvider: AutocompleteContextProvider = {
 				contextService: {
 					initializeForFile: vi.fn().mockResolvedValue(undefined),
 				} as any,
@@ -133,14 +133,14 @@ Return the COMPLETION tags`
 		})
 	})
 
-	describe("parseGhostResponse", () => {
+	describe("parseAutocompleteResponse", () => {
 		const prefix = "function test() {\n  "
 		const suffix = "\n}"
 
 		describe("Response parsing with COMPLETION tags", () => {
 			it("should extract content between COMPLETION tags", () => {
 				const response = "<COMPLETION>return 42</COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("return 42")
 				expect(result.prefix).toBe(prefix)
@@ -149,7 +149,7 @@ Return the COMPLETION tags`
 
 			it("should handle multiline content in COMPLETION tags", () => {
 				const response = "<COMPLETION>const x = 1;\nconst y = 2;\nreturn x + y;</COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("const x = 1;\nconst y = 2;\nreturn x + y;")
 				expect(result.prefix).toBe(prefix)
@@ -158,7 +158,7 @@ Return the COMPLETION tags`
 
 			it("should handle incomplete COMPLETION tag (streaming)", () => {
 				const response = "<COMPLETION>return 42"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				// Incomplete tags should return empty string
 				expect(result.text).toBe("")
@@ -168,7 +168,7 @@ Return the COMPLETION tags`
 
 			it("should remove any accidental tag remnants", () => {
 				const response = "<COMPLETION>return 42<COMPLETION></COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("return 42")
 				expect(result.prefix).toBe(prefix)
@@ -177,7 +177,7 @@ Return the COMPLETION tags`
 
 			it("should handle case-insensitive tags", () => {
 				const response = "<completion>return 42</completion>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("return 42")
 				expect(result.prefix).toBe(prefix)
@@ -188,7 +188,7 @@ Return the COMPLETION tags`
 		describe("Response parsing without COMPLETION tags (no suggestions)", () => {
 			it("should return empty string when no tags present", () => {
 				const response = "return 42"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -197,7 +197,7 @@ Return the COMPLETION tags`
 
 			it("should return empty string for multiline response without tags", () => {
 				const response = "const x = 1;\nconst y = 2;\nreturn x + y;"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -206,7 +206,7 @@ Return the COMPLETION tags`
 
 			it("should return empty string for markdown code blocks without tags", () => {
 				const response = "```typescript\nreturn 42\n```"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -217,7 +217,7 @@ Return the COMPLETION tags`
 		describe("Edge cases", () => {
 			it("should handle empty response", () => {
 				const response = ""
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -226,7 +226,7 @@ Return the COMPLETION tags`
 
 			it("should return empty string for whitespace-only response without tags", () => {
 				const response = "   \n\t  "
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -238,7 +238,7 @@ Return the COMPLETION tags`
 				const customSuffix = ";"
 				const response = '<COMPLETION>"Hello, World!"</COMPLETION>'
 
-				const result = parseGhostResponse(response, customPrefix, customSuffix)
+				const result = parseAutocompleteResponse(response, customPrefix, customSuffix)
 
 				expect(result.text).toBe('"Hello, World!"')
 				expect(result.prefix).toBe(customPrefix)
@@ -247,7 +247,7 @@ Return the COMPLETION tags`
 
 			it("should handle empty COMPLETION tags", () => {
 				const response = "<COMPLETION></COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("")
 				expect(result.prefix).toBe(prefix)
@@ -256,7 +256,7 @@ Return the COMPLETION tags`
 
 			it("should handle whitespace-only content in COMPLETION tags", () => {
 				const response = "<COMPLETION>   </COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("   ")
 				expect(result.prefix).toBe(prefix)
@@ -265,7 +265,7 @@ Return the COMPLETION tags`
 
 			it("should handle response with extra text before COMPLETION tag", () => {
 				const response = "Here is the code:\n<COMPLETION>return 42</COMPLETION>"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("return 42")
 				expect(result.prefix).toBe(prefix)
@@ -274,7 +274,7 @@ Return the COMPLETION tags`
 
 			it("should handle response with extra text after COMPLETION tag", () => {
 				const response = "<COMPLETION>return 42</COMPLETION>\nThat's the code!"
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 
 				expect(result.text).toBe("return 42")
 				expect(result.prefix).toBe(prefix)
@@ -288,7 +288,7 @@ Return the COMPLETION tags`
 				const response = `<COMPLETION>${largeContent}</COMPLETION>`
 
 				const startTime = performance.now()
-				const result = parseGhostResponse(response, prefix, suffix)
+				const result = parseAutocompleteResponse(response, prefix, suffix)
 				const endTime = performance.now()
 
 				expect(endTime - startTime).toBeLessThan(100)

@@ -1,11 +1,11 @@
 import * as vscode from "vscode"
 import {
 	extractPrefixSuffix,
-	GhostSuggestionContext,
+	AutocompleteSuggestionContext,
 	contextToAutocompleteInput,
-	GhostContextProvider,
+	AutocompleteContextProvider,
 	FillInAtCursorSuggestion,
-	GhostPrompt,
+	AutocompletePrompt,
 	MatchingSuggestionResult,
 	CostTrackingCallback,
 	LLMRetrievalResult,
@@ -15,13 +15,13 @@ import {
 } from "../types"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
-import type { GhostServiceSettings } from "@roo-code/types"
-import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
+import type { AutocompleteServiceSettings } from "@roo-code/types"
+import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
@@ -58,7 +58,7 @@ const MAX_DEBOUNCE_DELAY_MS = 1000
  */
 const LATENCY_SAMPLE_SIZE = 10
 
-export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
+export type { CostTrackingCallback, AutocompletePrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
  * Result from findMatchingSuggestion including the original suggestion for telemetry tracking
@@ -169,7 +169,7 @@ export function applyFirstLineOnly(
  * Command ID for tracking inline completion acceptance.
  * This command is executed after the user accepts an inline completion.
  */
-export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.ghost.inline-completion.accepted"
+export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
 
 /**
  * Counts the number of lines in a text string.
@@ -255,15 +255,15 @@ export function stringToInlineCompletions(text: string, position: vscode.Positio
 	return [item]
 }
 
-export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
+export class AutocompleteInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	public suggestionsHistory: FillInAtCursorSuggestion[] = []
 	/** Tracks all pending/in-flight requests */
 	private pendingRequests: PendingRequest[] = []
 	public holeFiller: HoleFiller // publicly exposed for Jetbrains autocomplete code
 	public fimPromptBuilder: FimPromptBuilder // publicly exposed for Jetbrains autocomplete code
-	private model: GhostModel
+	private model: AutocompleteModel
 	private costTrackingCallback: CostTrackingCallback
-	private getSettings: () => GhostServiceSettings | null
+	private getSettings: () => AutocompleteServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
@@ -278,9 +278,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	constructor(
 		context: vscode.ExtensionContext,
-		model: GhostModel,
+		model: AutocompleteModel,
 		costTrackingCallback: CostTrackingCallback,
-		getSettings: () => GhostServiceSettings | null,
+		getSettings: () => AutocompleteServiceSettings | null,
 		cline: ClineProvider,
 		telemetry: AutocompleteTelemetry | null = null,
 	) {
@@ -298,7 +298,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		const ide = new VsCodeIde(context)
 		const contextService = new ContextRetrievalService(ide)
-		const contextProvider: GhostContextProvider = {
+		const contextProvider: AutocompleteContextProvider = {
 			ide,
 			contextService,
 			model,
@@ -339,12 +339,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	public async getPrompt(
 		document: vscode.TextDocument,
 		position: vscode.Position,
-	): Promise<{ prompt: GhostPrompt; prefix: string; suffix: string }> {
+	): Promise<{ prompt: AutocompletePrompt; prefix: string; suffix: string }> {
 		// Build complete context with all tracking data
 		const recentlyVisitedRanges = this.recentlyVisitedRangesService.getSnippets()
 		const recentlyEditedRanges = await this.recentlyEditedTracker.getRecentlyEditedRanges()
 
-		const context: GhostSuggestionContext = {
+		const context: AutocompleteSuggestionContext = {
 			document,
 			range: new vscode.Range(position, position),
 			recentlyVisitedRanges,
@@ -368,7 +368,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		suggestionText: string,
 		prefix: string,
 		suffix: string,
-		model: GhostModel,
+		model: AutocompleteModel,
 		telemetryContext: AutocompleteContext,
 		languageId?: string,
 	): FillInAtCursorSuggestion {
@@ -377,7 +377,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return { text: "", prefix, suffix }
 		}
 
-		const processedText = postprocessGhostSuggestion({
+		const processedText = postprocessAutocompleteSuggestion({
 			suggestion: suggestionText,
 			prefix,
 			suffix,
@@ -504,7 +504,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 						return []
 					}
 				} catch (error) {
-					console.error("[GhostInlineCompletionProvider] Error checking file access:", error)
+					console.error("[AutocompleteInlineCompletionProvider] Error checking file access:", error)
 					// On error, assume file is ignored
 					return []
 				}
@@ -562,7 +562,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		} catch (error) {
 			// only big catch at the top of the call-chain, if anything goes wrong at a lower level
 			// do not catch, just let the error cascade
-			console.error("[GhostInlineCompletionProvider] Error providing inline completion:", error)
+			console.error("[AutocompleteInlineCompletionProvider] Error providing inline completion:", error)
 			return []
 		}
 	}
@@ -609,7 +609,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 * - If a pending request covers the current prefix/suffix, reuse it instead of starting a new one
 	 */
 	private debouncedFetchAndCacheSuggestion(
-		prompt: GhostPrompt,
+		prompt: AutocompletePrompt,
 		prefix: string,
 		suffix: string,
 		languageId: string,
@@ -660,7 +660,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	public async fetchAndCacheSuggestion(
-		prompt: GhostPrompt,
+		prompt: AutocompletePrompt,
 		prefix: string,
 		suffix: string,
 		languageId: string,
@@ -676,7 +676,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		// Defense-in-depth: credentials may become invalid between the provider gate and the actual
-		// debounced execution (e.g., profile reload calling GhostModel.cleanup()).
+		// debounced execution (e.g., profile reload calling AutocompleteModel.cleanup()).
 		// In that case, do not attempt an LLM call at all.
 		if (!this.model || !this.model.hasValidCredentials()) {
 			return

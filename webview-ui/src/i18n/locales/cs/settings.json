@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Automatické čištění",
 		"agentBehaviour": "Chování agenta",
-		"ghost": "Automatické dokončování"
+		"autocomplete": "Automatické dokončování"
 	},
 	"about": {
 		"bugReport": {
@@ -812,7 +812,7 @@
 			"description": "Zobrazit statistiky přidaných/odebraných řádků v záhlaví úkolu"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Zobrazit animaci v okraji při automatickém dokončování",
 			"description": "Zobrazit animovaný indikátor v okraji editoru, když běží automatické dokončování",

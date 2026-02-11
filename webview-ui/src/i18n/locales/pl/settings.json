@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Auto-czyszczenie",
 		"agentBehaviour": "Zachowanie agenta",
-		"ghost": "Autouzupełnianie"
+		"autocomplete": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -1171,7 +1171,7 @@
 			"description": "Wyświetl statystyki dodanych/usuniętych linii w nagłówku zadania"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Pokaż animację marginesu podczas autouzupełniania",
 			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",

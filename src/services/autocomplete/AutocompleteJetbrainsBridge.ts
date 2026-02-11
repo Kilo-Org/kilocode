@@ -1,11 +1,11 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
 import { z } from "zod"
-import { GhostServiceManager } from "./GhostServiceManager"
+import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { languageForFilepath } from "../continuedev/core/autocomplete/constants/AutocompleteLanguageInfo"
-import { GhostContextProvider } from "./types"
+import { AutocompleteContextProvider } from "./types"
 import { FimPromptBuilder } from "./classic-auto-complete/FillInTheMiddle"
 import { HoleFiller } from "./classic-auto-complete/HoleFiller"
 import { MockTextDocument } from "../mocking/MockTextDocument"
@@ -53,11 +53,11 @@ interface CompletionResult {
 	error: string | null
 }
 
-export class GhostJetbrainsBridge {
-	private ghost: GhostServiceManager
+export class AutocompleteJetbrainsBridge {
+	private autocompleteManager: AutocompleteServiceManager
 
-	constructor(ghost: GhostServiceManager) {
-		this.ghost = ghost
+	constructor(autocompleteManager: AutocompleteServiceManager) {
+		this.autocompleteManager = autocompleteManager
 	}
 
 	private determineLanguage(langId: string, uri: string): string {
@@ -161,9 +161,9 @@ export class GhostJetbrainsBridge {
 	 * Create a mock context provider that prevents workspace file access.
 	 * This is used for JetBrains bridge to ensure only the provided document content is used.
 	 */
-	private createMockContextProvider(normalizedContent: string): GhostContextProvider {
+	private createMockContextProvider(normalizedContent: string): AutocompleteContextProvider {
 		// Access the model through the inline completion provider which has access to it
-		const provider = this.ghost.inlineCompletionProvider as any
+		const provider = this.autocompleteManager.inlineCompletionProvider as any
 		const model = provider.model
 
 		return {
@@ -180,7 +180,7 @@ export class GhostJetbrainsBridge {
 			},
 			model,
 			ignoreController: undefined,
-		} as unknown as GhostContextProvider
+		} as unknown as AutocompleteContextProvider
 	}
 
 	/**
@@ -236,28 +236,31 @@ export class GhostJetbrainsBridge {
 			const mockContextProvider = this.createMockContextProvider(normalizedContent)
 
 			// Save original builders
-			const originalFimBuilder = this.ghost.inlineCompletionProvider.fimPromptBuilder
-			const originalHoleFiller = this.ghost.inlineCompletionProvider.holeFiller
+			const originalFimBuilder = this.autocompleteManager.inlineCompletionProvider.fimPromptBuilder
+			const originalHoleFiller = this.autocompleteManager.inlineCompletionProvider.holeFiller
 
 			try {
 				// Temporarily replace builders with ones using mock context
-				this.ghost.inlineCompletionProvider.fimPromptBuilder = new FimPromptBuilder(mockContextProvider)
-				this.ghost.inlineCompletionProvider.holeFiller = new HoleFiller(mockContextProvider)
+				this.autocompleteManager.inlineCompletionProvider.fimPromptBuilder = new FimPromptBuilder(
+					mockContextProvider,
+				)
+				this.autocompleteManager.inlineCompletionProvider.holeFiller = new HoleFiller(mockContextProvider)
 
 				// Get completions from the provider (will use mock builders internally)
-				const completions = await this.ghost.inlineCompletionProvider.provideInlineCompletionItems(
-					mockDocument,
-					vscodePosition,
-					context,
-					tokenSource.token,
-				)
+				const completions =
+					await this.autocompleteManager.inlineCompletionProvider.provideInlineCompletionItems(
+						mockDocument,
+						vscodePosition,
+						context,
+						tokenSource.token,
+					)
 
 				// Serialize and return the result
 				return this.serializeCompletionResult(completions, params.requestId)
 			} finally {
 				// Always restore original builders
-				this.ghost.inlineCompletionProvider.fimPromptBuilder = originalFimBuilder
-				this.ghost.inlineCompletionProvider.holeFiller = originalHoleFiller
+				this.autocompleteManager.inlineCompletionProvider.fimPromptBuilder = originalFimBuilder
+				this.autocompleteManager.inlineCompletionProvider.holeFiller = originalHoleFiller
 				tokenSource.dispose()
 			}
 		} catch (error) {
@@ -270,10 +273,10 @@ export class GhostJetbrainsBridge {
 	}
 }
 
-export const registerGhostJetbrainsBridge = (
+export const registerAutocompleteJetbrainsBridge = (
 	context: vscode.ExtensionContext,
 	_cline: ClineProvider,
-	ghost: GhostServiceManager,
+	autocompleteManager: AutocompleteServiceManager,
 ) => {
 	// Check if we are running inside JetBrains IDE
 	const { kiloCodeWrapped, kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
@@ -282,7 +285,7 @@ export const registerGhostJetbrainsBridge = (
 	}
 
 	// Initialize the JetBrains Bridge
-	const bridge = new GhostJetbrainsBridge(ghost)
+	const bridge = new AutocompleteJetbrainsBridge(autocompleteManager)
 
 	// Register JetBrains inline completion command
 	context.subscriptions.push(

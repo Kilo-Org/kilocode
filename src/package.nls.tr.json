@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Debug Proxy'yi etkinleştir** — Tüm giden ağ isteklerini MITM hata ayıklaması için bir proxy üzerinden yönlendir. Yalnızca debug modunda (F5) çalıştırırken aktiftir.",
 	"settings.debugProxy.serverUrl.description": "Proxy URL'si (ör. `http://127.0.0.1:8888`). Yalnızca **Debug Proxy** etkin olduğunda kullanılır.",
 	"settings.debugProxy.tlsInsecure.description": "Proxy'den gelen self-signed sertifikaları kabul et. **MITM incelemesi için gerekli.** ⚠️ Güvensiz — yalnızca lokal debugging için kullan.",
-	"ghost.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
-	"ghost.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
-	"ghost.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",
-	"ghost.commands.displaySuggestions": "Düzenleme Önerilerini Göster",
-	"ghost.commands.cancelSuggestions": "Düzenleme Önerilerini İptal Et",
-	"ghost.commands.applyCurrentSuggestion": "Mevcut Düzenleme Önerisini Uygula",
-	"ghost.commands.applyAllSuggestions": "Tüm Düzenleme Önerilerini Uygula",
-	"ghost.commands.goToNextSuggestion": "Sonraki Öneriye Git",
-	"ghost.commands.goToPreviousSuggestion": "Önceki Öneriye Git"
+	"autocomplete.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
+	"autocomplete.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",
+	"autocomplete.commands.displaySuggestions": "Düzenleme Önerilerini Göster",
+	"autocomplete.commands.cancelSuggestions": "Düzenleme Önerilerini İptal Et",
+	"autocomplete.commands.applyCurrentSuggestion": "Mevcut Düzenleme Önerisini Uygula",
+	"autocomplete.commands.applyAllSuggestions": "Tüm Düzenleme Önerilerini Uygula",
+	"autocomplete.commands.goToNextSuggestion": "Sonraki Öneriye Git",
+	"autocomplete.commands.goToPreviousSuggestion": "Önceki Öneriye Git"
 }

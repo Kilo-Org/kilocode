@@ -44,7 +44,7 @@
 		"about": "Tentang Kilo Code",
 		"autoPurge": "Pembersihan Otomatis",
 		"agentBehaviour": "Perilaku Agent",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -1192,7 +1192,7 @@
 			"description": "Tampilkan statistik baris ditambahkan/dihapus di header tugas"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Tampilkan animasi gutter saat autocomplete",
 			"description": "Tampilkan indikator animasi di gutter editor saat autocompletion sedang berjalan",

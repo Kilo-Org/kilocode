@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { AUTOCOMPLETE_PROVIDER_MODELS } from "../utils/kilocode-utils"
 import * as apiIndex from "../../../api"
 import { TelemetryService } from "../../../../packages/telemetry/src/TelemetryService"
 
-describe("GhostModel", () => {
+describe("AutocompleteModel", () => {
 	let mockProviderSettingsManager: ProviderSettingsManager
 
 	beforeEach(() => {
@@ -32,7 +32,7 @@ describe("GhostModel", () => {
 				mistralApiKey: "test-key",
 			} as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			expect(mockProviderSettingsManager.getProfile).toHaveBeenCalledWith({ id: "1" })
@@ -53,7 +53,7 @@ describe("GhostModel", () => {
 				mistralApiKey: "test-key",
 			} as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			expect(mockProviderSettingsManager.getProfile).toHaveBeenCalledWith({ id: "2" })
@@ -74,7 +74,7 @@ describe("GhostModel", () => {
 				mistralApiKey: "test-key",
 			} as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			expect(mockProviderSettingsManager.getProfile).toHaveBeenCalledWith({ id: "2" })
@@ -83,7 +83,7 @@ describe("GhostModel", () => {
 		it("handles empty profile list", async () => {
 			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue([])
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			expect(mockProviderSettingsManager.getProfile).not.toHaveBeenCalled()
@@ -103,7 +103,7 @@ describe("GhostModel", () => {
 				mistralApiKey: "test-key",
 			} as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			expect(result).toBe(true)
@@ -185,7 +185,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			// Should have tried both providers but used openrouter (since kilocode balance is 0)
@@ -243,7 +243,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			// Should have used kilocode provider (first one with positive balance)
@@ -302,7 +302,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			// Should skip kilocode (no token) and use openrouter
@@ -337,7 +337,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			// Should not find a usable provider
@@ -390,7 +390,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			const result = await model.reload(mockProviderSettingsManager)
 
 			// Should find a usable provider
@@ -427,7 +427,7 @@ describe("GhostModel", () => {
 				} as any
 			})
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 			expect(model.hasKilocodeProfileWithNoBalance).toBe(true)
 
@@ -469,7 +469,7 @@ describe("GhostModel", () => {
 
 	describe("getProviderDisplayName", () => {
 		it("returns undefined when no provider is loaded", () => {
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			expect(model.getProviderDisplayName()).toBeUndefined()
 		})
 
@@ -494,7 +494,7 @@ describe("GhostModel", () => {
 			}
 			vi.spyOn(apiIndex, "buildApiHandler").mockReturnValue(mockApiHandler as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			const providerName = model.getProviderDisplayName()
@@ -508,12 +508,12 @@ describe("GhostModel", () => {
 
 		describe("profile information", () => {
 			it("returns null for profile name when no profile is loaded", () => {
-				const model = new GhostModel()
+				const model = new AutocompleteModel()
 				expect(model.profileName).toBeNull()
 			})
 
 			it("returns null for profile type when no profile is loaded", () => {
-				const model = new GhostModel()
+				const model = new AutocompleteModel()
 				expect(model.profileType).toBeNull()
 			})
 
@@ -537,7 +537,7 @@ describe("GhostModel", () => {
 					mistralApiKey: "test-key",
 				} as any)
 
-				const model = new GhostModel()
+				const model = new AutocompleteModel()
 				await model.reload(mockProviderSettingsManager)
 
 				expect(model.profileName).toBe("My Autocomplete Profile")
@@ -558,7 +558,7 @@ describe("GhostModel", () => {
 					mistralApiKey: "test-key",
 				} as any)
 
-				const model = new GhostModel()
+				const model = new AutocompleteModel()
 				await model.reload(mockProviderSettingsManager)
 
 				expect(model.profileType).toBe("autocomplete")
@@ -579,7 +579,7 @@ describe("GhostModel", () => {
 					mistralApiKey: "test-key",
 				} as any)
 
-				const model = new GhostModel()
+				const model = new AutocompleteModel()
 				await model.reload(mockProviderSettingsManager)
 
 				expect(model.profileName).toBe("My Profile")
@@ -642,7 +642,7 @@ describe("GhostModel", () => {
 			}
 			vi.spyOn(apiIndex, "buildApiHandler").mockReturnValue(mockApiHandler as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			// The model should use the custom model from the profile
@@ -682,7 +682,7 @@ describe("GhostModel", () => {
 			}
 			vi.spyOn(apiIndex, "buildApiHandler").mockReturnValue(mockApiHandler as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			// The model should be overridden with the default autocomplete model
@@ -721,7 +721,7 @@ describe("GhostModel", () => {
 			}
 			vi.spyOn(apiIndex, "buildApiHandler").mockReturnValue(mockApiHandler as any)
 
-			const model = new GhostModel()
+			const model = new AutocompleteModel()
 			await model.reload(mockProviderSettingsManager)
 
 			// The model should be overridden with the default autocomplete model

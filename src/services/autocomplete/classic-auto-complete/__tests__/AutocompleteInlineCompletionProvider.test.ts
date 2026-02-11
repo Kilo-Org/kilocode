@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import {
-	GhostInlineCompletionProvider,
+	AutocompleteInlineCompletionProvider,
 	findMatchingSuggestion,
 	applyFirstLineOnly,
 	stringToInlineCompletions,
@@ -8,12 +8,12 @@ import {
 	getFirstLine,
 	countLines,
 	CostTrackingCallback,
-} from "../GhostInlineCompletionProvider"
+} from "../AutocompleteInlineCompletionProvider"
 import { FillInAtCursorSuggestion } from "../../types"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
-import { GhostModel } from "../../GhostModel"
+import { AutocompleteModel } from "../../AutocompleteModel"
 import { AutocompleteTelemetry } from "../AutocompleteTelemetry"
-import * as GhostContextProviderModule from "../getProcessedSnippets"
+import * as AutocompleteContextProviderModule from "../getProcessedSnippets"
 
 // Mock RooIgnoreController to prevent vscode.RelativePattern errors
 vi.mock("../../../../core/ignore/RooIgnoreController", () => {
@@ -759,13 +759,13 @@ describe("stringToInlineCompletions", () => {
 	})
 })
 
-describe("GhostInlineCompletionProvider", () => {
-	let provider: GhostInlineCompletionProvider
+describe("AutocompleteInlineCompletionProvider", () => {
+	let provider: AutocompleteInlineCompletionProvider
 	let mockDocument: vscode.TextDocument
 	let mockPosition: vscode.Position
 	let mockContext: vscode.InlineCompletionContext
 	let mockToken: vscode.CancellationToken
-	let mockModel: GhostModel
+	let mockModel: AutocompleteModel
 	let mockCostTrackingCallback: CostTrackingCallback
 	let mockSettings: { enableAutoTrigger: boolean } | null
 	let mockExtensionContext: vscode.ExtensionContext
@@ -831,7 +831,7 @@ describe("GhostInlineCompletionProvider", () => {
 			languageModelAccessInformation: {} as any,
 		} as unknown as vscode.ExtensionContext
 
-		vi.spyOn(GhostContextProviderModule, "getProcessedSnippets").mockResolvedValue({
+		vi.spyOn(AutocompleteContextProviderModule, "getProcessedSnippets").mockResolvedValue({
 			filepathUri: "file:///test.ts",
 			helper: {
 				filepath: "file:///test.ts",
@@ -856,12 +856,12 @@ describe("GhostInlineCompletionProvider", () => {
 			getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
 			hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
-		} as unknown as GhostModel
+		} as unknown as AutocompleteModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 		mockClineProvider = { cwd: "/test/workspace" }
 		mockTelemetry = new AutocompleteTelemetry()
 
-		provider = new GhostInlineCompletionProvider(
+		provider = new AutocompleteInlineCompletionProvider(
 			mockExtensionContext,
 			mockModel,
 			mockCostTrackingCallback,
@@ -924,7 +924,7 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
 			// Command is attached to track acceptance telemetry
 			expect(result[0].command).toEqual({
-				command: "kilocode.ghost.inline-completion.accepted",
+				command: "kilocode.autocomplete.inline-completion.accepted",
 				title: "Autocomplete Accepted",
 			})
 		})
@@ -2419,7 +2419,7 @@ describe("GhostInlineCompletionProvider", () => {
 			let acceptCallback: (() => void) | undefined
 			const originalMock = vi.mocked(vscode.commands.registerCommand)
 			originalMock.mockImplementation((cmd, callback) => {
-				if (cmd === "kilocode.ghost.inline-completion.accepted") {
+				if (cmd === "kilocode.autocomplete.inline-completion.accepted") {
 					acceptCallback = callback as () => void
 				}
 				return { dispose: vi.fn() }
@@ -2430,7 +2430,7 @@ describe("GhostInlineCompletionProvider", () => {
 			vi.spyOn(testTelemetry, "captureAcceptSuggestion")
 
 			// Create new provider to capture the command
-			const testProvider = new GhostInlineCompletionProvider(
+			const testProvider = new AutocompleteInlineCompletionProvider(
 				mockExtensionContext,
 				mockModel,
 				mockCostTrackingCallback,
@@ -2473,7 +2473,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 		it("should work without telemetry when null is passed", async () => {
 			// Create provider without telemetry
-			const testProvider = new GhostInlineCompletionProvider(
+			const testProvider = new AutocompleteInlineCompletionProvider(
 				mockExtensionContext,
 				mockModel,
 				mockCostTrackingCallback,

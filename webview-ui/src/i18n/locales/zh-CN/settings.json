@@ -44,7 +44,7 @@
 		"about": "关于 Kilo Code",
 		"autoPurge": "自动清理",
 		"agentBehaviour": "智能体行为",
-		"ghost": "自动补全"
+		"autocomplete": "自动补全"
 	},
 	"about": {
 		"bugReport": {
@@ -1175,7 +1175,7 @@
 			"description": "在任务标题中显示添加/删除的行数统计"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "自动完成时显示边栏动画",
 			"description": "自动完成运行时在编辑器边栏显示动画指示器",

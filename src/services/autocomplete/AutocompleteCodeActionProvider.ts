@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 
-export class GhostCodeActionProvider implements vscode.CodeActionProvider {
+export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider {
 	public readonly providedCodeActionKinds = {
 		quickfix: vscode.CodeActionKind.QuickFix,
 	}
@@ -13,11 +13,11 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		_token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
 		const action = new vscode.CodeAction(
-			t("kilocode:ghost.codeAction.title"),
+			t("kilocode:autocomplete.codeAction.title"),
 			this.providedCodeActionKinds["quickfix"],
 		)
 		action.command = {
-			command: "kilo-code.ghost.generateSuggestions",
+			command: "kilo-code.autocomplete.generateSuggestions",
 			title: "",
 			arguments: [document.uri, range],
 		}

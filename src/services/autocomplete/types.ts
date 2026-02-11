@@ -9,7 +9,7 @@ import type {
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
-import { GhostModel } from "./GhostModel"
+import { AutocompleteModel } from "./AutocompleteModel"
 
 export interface ResponseMetaData {
 	cost: number
@@ -19,21 +19,21 @@ export interface ResponseMetaData {
 	cacheReadTokens: number
 }
 
-export interface GhostSuggestionContext {
+export interface AutocompleteSuggestionContext {
 	document: vscode.TextDocument
 	range?: vscode.Range | vscode.Selection
 	recentlyVisitedRanges?: AutocompleteCodeSnippet[]
 	recentlyEditedRanges?: RecentlyEditedRange[]
 }
 
-export interface GhostTabAutocompleteExtensions {
+export interface AutocompleteTabExtensions {
 	template?: string
 	useOtherFiles?: boolean
 	recentlyEditedSimilarityThreshold?: number
 	maxSnippetTokens?: number
 }
 
-export type TabAutocompleteOptions = Partial<CoreTabAutocompleteOptions> & GhostTabAutocompleteExtensions
+export type TabAutocompleteOptions = Partial<CoreTabAutocompleteOptions> & AutocompleteTabExtensions
 
 export interface RecentlyEditedRange extends RangeInFile {
 	timestamp: number
@@ -115,23 +115,23 @@ export interface FimCompletionResult extends ResponseMetaData {
 	suggestion: FillInAtCursorSuggestion
 }
 
-export interface FimGhostPrompt {
+export interface FimAutocompletePrompt {
 	strategy: "fim"
 	autocompleteInput: AutocompleteInput
 	formattedPrefix: string
 	prunedSuffix: string
 }
 
-export interface HoleFillerGhostPrompt {
+export interface HoleFillerAutocompletePrompt {
 	strategy: "hole_filler"
 	autocompleteInput: AutocompleteInput
 	systemPrompt: string
 	userPrompt: string
 }
 
-export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
+export type AutocompletePrompt = FimAutocompletePrompt | HoleFillerAutocompletePrompt
 
-export interface GhostStatusBarStateProps {
+export interface AutocompleteStatusBarStateProps {
 	enabled?: boolean
 	snoozed?: boolean
 	model?: string
@@ -264,7 +264,7 @@ export function extractPrefixSuffix(
 	}
 }
 
-export function contextToAutocompleteInput(context: GhostSuggestionContext): AutocompleteInput {
+export function contextToAutocompleteInput(context: AutocompleteSuggestionContext): AutocompleteInput {
 	const position = context.range?.start ?? context.document.positionAt(0)
 	const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 
@@ -284,9 +284,9 @@ export function contextToAutocompleteInput(context: GhostSuggestionContext): Aut
 	}
 }
 
-export interface GhostContextProvider {
+export interface AutocompleteContextProvider {
 	contextService: ContextRetrievalService
 	ide: VsCodeIde
-	model: GhostModel
+	model: AutocompleteModel
 	ignoreController?: Promise<RooIgnoreController>
 }
