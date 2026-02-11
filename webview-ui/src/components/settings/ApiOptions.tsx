@@ -327,11 +327,24 @@ const ApiOptions = ({
 		if (!models) return []
 
 		const filteredModels = filterModels(models, selectedProvider, organizationAllowList)
+		// kilocode_change start
+		const modelsAllowedByEndpoint =
+			selectedProvider === "moonshot" && filteredModels
+				? Object.fromEntries(
+						Object.entries(filteredModels).filter(
+							([modelId]) =>
+								apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
+									? modelId === "kimi-for-coding"
+									: modelId !== "kimi-for-coding",
+						),
+					)
+				: filteredModels
+		// kilocode_change end
 
 		// Include the currently selected model even if deprecated (so users can see what they have selected)
 		// But filter out other deprecated models from being newly selectable
-		const availableModels = filteredModels
-			? Object.entries(filteredModels)
+		const availableModels = modelsAllowedByEndpoint
+			? Object.entries(modelsAllowedByEndpoint)
 					.filter(([modelId, modelInfo]) => {
 						// Always include the currently selected model
 						if (modelId === selectedModelId) return true
@@ -345,7 +358,7 @@ const ApiOptions = ({
 			: []
 
 		return availableModels
-	}, [selectedProvider, organizationAllowList, selectedModelId])
+	}, [selectedProvider, organizationAllowList, selectedModelId, apiConfiguration.moonshotBaseUrl])
 
 	const onProviderChange = useCallback(
 		(value: ProviderName) => {

@@ -158,6 +158,9 @@ const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
 const FORCED_CONTEXT_REDUCTION_PERCENT = 75 // Keep 75% of context (remove 25%) on context window errors
 const MAX_CONTEXT_WINDOW_RETRIES = 3 // Maximum retries for context window errors
+// kilocode_change start
+const MAX_CHUTES_TERMINATED_RETRY_ATTEMPTS = 2 // Allow up to 2 retries (3 total attempts) before failing fast
+// kilocode_change end
 
 export interface TaskOptions extends CreateTaskOptions {
 	context: vscode.ExtensionContext // kilocode_change
@@ -3553,6 +3556,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 						// Clean up partial state
 						await abortStream(cancelReason, streamingFailedMessage)
+						// kilocode_change start
+						// Bound retries for repeated Chutes "terminated" stream failures
+						// to prevent indefinite thinking/retry loops.
+						const retryAttempt = currentItem.retryAttempt ?? 0
+						if (this.hasExceededChutesTerminatedRetryLimit(error, retryAttempt)) {
+							console.error(
+								`[Task#${this.taskId}.${this.instanceId}] Chutes stream terminated repeatedly. Stopping retries after attempt ${retryAttempt}.`,
+							)
+							throw error
+						}
+						// kilocode_change end
 
 						if (this.abort) {
 							// User cancelled - abort the entire task
@@ -4279,6 +4293,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	// kilocode_change start
+	private isChutesTerminatedError(error: unknown): boolean {
+		if (this.apiConfiguration?.apiProvider !== "chutes") {
+			return false
+		}
+
+		const message =
+			error instanceof Error ? error.message : typeof error === "string" ? error : JSON.stringify(error)
+		return /\bterminated\b/i.test(message || "")
+	}
+
+	private hasExceededChutesTerminatedRetryLimit(error: unknown, retryAttempt: number): boolean {
+		return this.isChutesTerminatedError(error) && retryAttempt >= MAX_CHUTES_TERMINATED_RETRY_ATTEMPTS
+	}
+	// kilocode_change end
+
 	public async *attemptApiRequest(
 		retryAttempt: number = 0,
 		options: { skipProviderRateLimit?: boolean } = {},
@@ -4652,6 +4682,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					throw error // Rethrow to signal failure upwards
 				}
 				return
+			}
+			// kilocode_change end
+			// kilocode_change start
+			// Chutes can occasionally terminate streams abruptly; avoid recursive
+			// first-chunk auto-retries here and delegate retry policy to the
+			// outer request loop, which applies a bounded retry cap.
+			if (this.isChutesTerminatedError(error)) {
+				throw error
 			}
 			// kilocode_change end
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.

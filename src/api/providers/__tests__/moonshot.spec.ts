@@ -117,6 +117,31 @@ describe("MoonshotHandler", () => {
 			expect(model).toHaveProperty("temperature")
 			expect(model).toHaveProperty("maxTokens")
 		})
+
+		// kilocode_change start
+		it("should expose native tools for kimi-k2.5", () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-k2.5",
+			})
+			const model = strictHandler.getModel()
+			const strictModelInfo = model.info as { supportsNativeTools?: boolean; defaultToolProtocol?: string }
+
+			expect(strictModelInfo.supportsNativeTools).toBe(true)
+			expect(strictModelInfo.defaultToolProtocol).toBe("native")
+			expect(model.info.supportsImages).toBe(true)
+		})
+
+		it("should expose image capability for kimi-for-coding", () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-for-coding",
+			})
+			const model = strictHandler.getModel()
+
+			expect(model.info.supportsImages).toBe(true)
+		})
+		// kilocode_change end
 	})
 
 	describe("createMessage", () => {
@@ -221,6 +246,187 @@ describe("MoonshotHandler", () => {
 			expect(usageChunks[0].cacheWriteTokens).toBe(0)
 			expect(usageChunks[0].cacheReadTokens).toBe(2)
 		})
+
+		// kilocode_change start
+		it("should include prompt_cache_key for moonshot requests when taskId is provided", async () => {
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Test response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 1,
+					outputTokens: 1,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			for await (const _chunk of handler.createMessage(systemPrompt, messages, { taskId: "task-cache-1" })) {
+				// Drain stream
+			}
+
+			expect(mockStreamText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					providerOptions: {
+						moonshot: {
+							prompt_cache_key: "task-cache-1",
+						},
+					},
+				}),
+			)
+		})
+
+		it("should enforce strict thinking temperature/provider options for kimi-k2.5 by default", async () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-k2.5",
+				modelTemperature: 0.1,
+			})
+
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Test response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 1,
+					outputTokens: 1,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages)) {
+				// Drain stream
+			}
+
+			expect(mockStreamText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 1.0,
+					providerOptions: {
+						moonshot: {
+							thinking: { type: "enabled" },
+						},
+					},
+				}),
+			)
+		})
+
+		it("should include prompt_cache_key alongside strict thinking controls when taskId is provided", async () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-for-coding",
+			})
+
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Test response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 1,
+					outputTokens: 1,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages, { taskId: "task-cache-2" })) {
+				// Drain stream
+			}
+
+			expect(mockStreamText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 1.0,
+					providerOptions: {
+						moonshot: {
+							prompt_cache_key: "task-cache-2",
+							thinking: { type: "enabled" },
+						},
+					},
+				}),
+			)
+		})
+
+		it("should enforce strict thinking temperature/provider options for kimi-for-coding by default", async () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-for-coding",
+				modelTemperature: 0.1,
+			})
+
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Test response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 1,
+					outputTokens: 1,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages)) {
+				// Drain stream
+			}
+
+			expect(mockStreamText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 1.0,
+					providerOptions: {
+						moonshot: {
+							thinking: { type: "enabled" },
+						},
+					},
+				}),
+			)
+		})
+
+		it("should enforce strict non-thinking temperature/provider options when reasoning is disabled", async () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-for-coding",
+				enableReasoningEffort: false,
+				modelTemperature: 1.9,
+			})
+
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Test response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 1,
+					outputTokens: 1,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages)) {
+				// Drain stream
+			}
+
+			expect(mockStreamText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 0.6,
+					providerOptions: {
+						moonshot: {
+							thinking: { type: "disabled" },
+						},
+					},
+				}),
+			)
+		})
+		// kilocode_change end
 	})
 
 	describe("completePrompt", () => {
@@ -238,6 +444,34 @@ describe("MoonshotHandler", () => {
 				}),
 			)
 		})
+
+		// kilocode_change start
+		it("should enforce strict thinking controls for completePrompt on strict Kimi models", async () => {
+			const strictHandler = new MoonshotHandler({
+				...mockOptions,
+				apiModelId: "kimi-k2.5",
+				enableReasoningEffort: false,
+				modelTemperature: 1.8,
+			})
+
+			mockGenerateText.mockResolvedValue({
+				text: "Test completion",
+			})
+
+			await strictHandler.completePrompt("Test prompt")
+
+			expect(mockGenerateText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 0.6,
+					providerOptions: {
+						moonshot: {
+							thinking: { type: "disabled" },
+						},
+					},
+				}),
+			)
+		})
+		// kilocode_change end
 	})
 
 	describe("processUsageMetrics", () => {
@@ -404,19 +638,13 @@ describe("MoonshotHandler", () => {
 				chunks.push(chunk)
 			}
 
-			const toolCallStartChunks = chunks.filter((c) => c.type === "tool_call_start")
-			const toolCallDeltaChunks = chunks.filter((c) => c.type === "tool_call_delta")
-			const toolCallEndChunks = chunks.filter((c) => c.type === "tool_call_end")
-
-			expect(toolCallStartChunks.length).toBe(1)
-			expect(toolCallStartChunks[0].id).toBe("tool-call-1")
-			expect(toolCallStartChunks[0].name).toBe("read_file")
-
-			expect(toolCallDeltaChunks.length).toBe(1)
-			expect(toolCallDeltaChunks[0].delta).toBe('{"path":"test.ts"}')
-
-			expect(toolCallEndChunks.length).toBe(1)
-			expect(toolCallEndChunks[0].id).toBe("tool-call-1")
+			// kilocode_change start
+			const toolCallChunks = chunks.filter((c) => c.type === "tool_call")
+			expect(toolCallChunks.length).toBe(1)
+			expect(toolCallChunks[0].id).toBe("tool-call-1")
+			expect(toolCallChunks[0].name).toBe("read_file")
+			expect(toolCallChunks[0].arguments).toBe('{"path":"test.ts"}')
+			// kilocode_change end
 		})
 
 		it("should handle complete tool calls", async () => {
@@ -470,5 +698,63 @@ describe("MoonshotHandler", () => {
 			expect(toolCallChunks[0].name).toBe("read_file")
 			expect(toolCallChunks[0].arguments).toBe('{"path":"test.ts"}')
 		})
+
+		// kilocode_change start
+		it("should flush pending tool-input stream as tool_call when tool-input-end is missing", async () => {
+			async function* mockFullStream() {
+				yield {
+					type: "tool-input-start",
+					id: "tool-call-2",
+					toolName: "read_file",
+				}
+				yield {
+					type: "tool-input-delta",
+					id: "tool-call-2",
+					delta: '{"path":"missing-end.ts"}',
+				}
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve({
+					inputTokens: 10,
+					outputTokens: 5,
+					details: {},
+					raw: {},
+				}),
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages, {
+				taskId: "test-task",
+				tools: [
+					{
+						type: "function",
+						function: {
+							name: "read_file",
+							description: "Read a file",
+							parameters: {
+								type: "object",
+								properties: { path: { type: "string" } },
+								required: ["path"],
+							},
+						},
+					},
+				],
+			})
+
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const toolCallChunks = chunks.filter((c) => c.type === "tool_call")
+			expect(toolCallChunks).toHaveLength(1)
+			expect(toolCallChunks[0]).toMatchObject({
+				id: "tool-call-2",
+				name: "read_file",
+				arguments: '{"path":"missing-end.ts"}',
+			})
+		})
+		// kilocode_change end
 	})
 })

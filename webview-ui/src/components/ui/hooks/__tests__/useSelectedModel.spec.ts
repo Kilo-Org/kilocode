@@ -11,6 +11,7 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	litellmDefaultModelInfo,
 	openAiModelInfoSaneDefaults,
+	moonshotModels,
 } from "@roo-code/types"
 
 import { useSelectedModel } from "../useSelectedModel"
@@ -421,6 +422,50 @@ describe("useSelectedModel", () => {
 			expect(result.current.provider).toBe("anthropic")
 			expect(result.current.id).toBe("claude-sonnet-4-5")
 			expect(result.current.info).toBeUndefined()
+		})
+	})
+
+	describe("moonshot endpoint restrictions", () => {
+		it("falls back to default Moonshot model when kimi-for-coding is used on non-coding endpoint", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "moonshot",
+				apiModelId: "kimi-for-coding",
+				moonshotBaseUrl: "https://api.moonshot.ai/v1",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			const firstNonCodingMoonshotModelId = Object.keys(moonshotModels).find((id) => id !== "kimi-for-coding")
+			expect(result.current.id).toBe(firstNonCodingMoonshotModelId)
+		})
+
+		// kilocode_change start
+		it("forces kimi-for-coding when Moonshot coding endpoint is selected with a non-coding model", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "moonshot",
+				apiModelId: "kimi-k2-thinking",
+				moonshotBaseUrl: "https://api.kimi.com/coding/v1",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("kimi-for-coding")
+		})
+		// kilocode_change end
+
+		it("keeps kimi-for-coding when Moonshot coding endpoint is selected", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "moonshot",
+				apiModelId: "kimi-for-coding",
+				moonshotBaseUrl: "https://api.kimi.com/coding/v1",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("kimi-for-coding")
 		})
 	})
 
