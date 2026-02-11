@@ -52,6 +52,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"sap-ai-core": "SAP AI Core",
 	intelligent: "Intelligent Provider",
 	baseten: "BaseTen",
+	corethink: "Corethink"
 }
 
 /**

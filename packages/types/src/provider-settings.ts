@@ -6,6 +6,7 @@ import { profileTypeSchema } from "./profile-type.js" // kilocode_change
 import {
 	anthropicModels,
 	basetenModels,
+	corethinkModels,
 	bedrockModels,
 	cerebrasModels,
 	claudeCodeModels,
@@ -139,6 +140,7 @@ export const providerNames = [
 	"anthropic",
 	"bedrock",
 	"baseten",
+	"corethink",
 	"cerebras",
 	"claude-code",
 	"doubao",
@@ -566,6 +568,10 @@ const basetenSchema = apiModelIdProviderModelSchema.extend({
 	basetenApiKey: z.string().optional(),
 })
 
+const corethinkSchema = apiModelIdProviderModelSchema.extend({
+	corethinkApiKey: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -607,6 +613,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	basetenSchema.merge(z.object({ apiProvider: z.literal("baseten") })),
+	corethinkSchema.merge(z.object({ apiProvider: z.literal("corethink") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
@@ -661,6 +668,7 @@ export const providerSettingsSchema = z.object({
 	...xaiSchema.shape,
 	...groqSchema.shape,
 	...basetenSchema.shape,
+	...corethinkSchema.shape,
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
@@ -765,6 +773,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	// kilocode_change end
 	groq: "apiModelId",
 	baseten: "apiModelId",
+	corethink: "apiModelId",
 	chutes: "apiModelId",
 	litellm: "litellmModelId",
 	huggingface: "huggingFaceModelId",
@@ -918,6 +927,7 @@ export const MODELS_BY_PROVIDER: Record<
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Z.ai", models: Object.keys(internationalZAiModels) },
 	baseten: { id: "baseten", label: "Baseten", models: Object.keys(basetenModels) },
+	corethink: { id: "corethink", label: "Corethink", models: Object.keys(corethinkModels) },
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] }, // kilocode_change

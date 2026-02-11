@@ -1084,6 +1084,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"sap-ai-core": "gpt-4o",
 	intelligent: "intelligent",
 	baseten: "zai-org/GLM-4.6",
+	corethink: "corethink"
 }
 
 /**

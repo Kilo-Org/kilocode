@@ -166,6 +166,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	"sap-ai-core": null,
 	intelligent: null,
 	baseten: null,
+	corethink: null
 }
 
 /**
@@ -220,6 +221,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	"sap-ai-core": "sapAiCoreModelId",
 	intelligent: null,
 	baseten: null,
+	corethink: null
 }
 
 /**

@@ -53,4 +53,5 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	intelligent: [], // Has array validation for profiles
 	minimax: ["minimaxBaseUrl", "minimaxApiKey", "apiModelId"],
 	baseten: ["basetenApiKey", "apiModelId"],
+	corethink: ["corethinkApiKey", "corethinkModelId"]
 }

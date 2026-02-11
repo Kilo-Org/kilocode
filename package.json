@@ -83,6 +83,9 @@
 			"glob": ">=11.1.0",
 			"@types/react": "^18.3.23",
 			"@types/react-dom": "^18.3.5",
+			"qs": "^6.14.1",
+			"body-parser": "^2.2.2",
+			"preact": "^10.28.2",
 			"zod": "3.25.76",
 			"@sap-ai-sdk/prompt-registry>zod": "^4.0.0"
 		}

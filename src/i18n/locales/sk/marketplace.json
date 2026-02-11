@@ -1,0 +1,69 @@
+{
+	"type-group": {
+		"modes": "Režimy",
+		"mcps": "MCP servery",
+		"match": "zhoda"
+	},
+	"item-card": {
+		"type-mode": "Režim",
+		"type-mcp": "MCP server",
+		"type-other": "Iné",
+		"by-author": "od {{author}}",
+		"authors-profile": "Profil autora",
+		"remove-tag-filter": "Odstrániť filter štítku: {{tag}}",
+		"filter-by-tag": "Filtrovať podľa štítku: {{tag}}",
+		"component-details": "Podrobnosti komponentu",
+		"view": "Zobraziť",
+		"source": "Zdroj"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "Hľadať na trhovisku..."
+		},
+		"type": {
+			"label": "Typ",
+			"all": "Všetky typy",
+			"mode": "Režim",
+			"mcpServer": "MCP server"
+		},
+		"sort": {
+			"label": "Zoradiť podľa",
+			"name": "Názvu",
+			"lastUpdated": "Posledná aktualizácia"
+		},
+		"tags": {
+			"label": "Štítky",
+			"clear": "Vymazať štítky",
+			"placeholder": "Hľadať štítky...",
+			"noResults": "Žiadne štítky nenájdené.",
+			"selected": "Zobrazené položky s akýmkoľvek z vybraných štítkov"
+		},
+		"installed": {
+			"label": "Filtrovať podľa stavu",
+			"all": "Všetky položky",
+			"installed": "Nainštalované",
+			"notInstalled": "Nenainštalované"
+		},
+		"title": "Trhovisko"
+	},
+	"done": "Hotovo",
+	"tabs": {
+		"installed": "Nainštalované",
+		"browse": "Prechádzať",
+		"settings": "Nastavenia"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Neboli nájdené žiadne položky trhoviska.",
+			"emptyHint": "Skús upraviť svoje filtre alebo vyhľadávacie termíny"
+		}
+	},
+	"installation": {
+		"installing": "Inštalácia položky: \"{{itemName}}\"",
+		"installSuccess": "\"{{itemName}}\" úspešne nainštalované",
+		"installError": "Inštalácia \"{{itemName}}\" zlyhala: {{errorMessage}}",
+		"removing": "Odstraňovanie položky: \"{{itemName}}\"",
+		"removeSuccess": "\"{{itemName}}\" úspešne odstránené",
+		"removeError": "Odstránenie \"{{itemName}}\" zlyhalo: {{errorMessage}}"
+	}
+}

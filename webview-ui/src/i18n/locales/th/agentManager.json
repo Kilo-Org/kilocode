@@ -16,7 +16,8 @@
 		"shareConfirmYes": "ใช่",
 		"shareConfirmNo": "ไม่",
 		"options": "ตัวเลือก",
-		"configureSetupScript": "สคริปต์ตั้งค่า Worktree"
+		"configureSetupScript": "สคริปต์ตั้งค่า Worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -62,7 +63,14 @@
 		"defaultModel": "โมเดลเริ่มต้น",
 		"loadingModels": "กำลังโหลด...",
 		"selectMode": "เลือกโหมด",
-		"modeTooltip": "โหมด: {{mode}}"
+		"modeTooltip": "โหมด: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "ยุบผลลัพธ์",
 		"copyCommand": "คัดลอกคำสั่ง",
 		"thinking": "กำลังคิด",
-		"thinkingSeconds": "{{count}} วินาที"
+		"thinkingSeconds": "{{count}} วินาที",
+		"approve": "อนุมัติ",
+		"deny": "ปฏิเสธ"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",
