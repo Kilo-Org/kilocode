@@ -1,4 +1,4 @@
-import { trace, context, SpanStatusCode, type Span, type Tracer } from "@opentelemetry/api"
+import { trace, SpanStatusCode, type Span, type Tracer } from "@opentelemetry/api"
 import { BasicTracerProvider, BatchSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto"
 import { LoggerProvider, BatchLogRecordProcessor } from "@opentelemetry/sdk-logs"
