@@ -20,7 +20,7 @@ import { ContextRetrievalService } from "../../continuedev/core/autocomplete/con
 import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
-import type { GhostServiceSettings } from "@roo-code/types"
+import type { AutocompleteServiceSettings } from "@roo-code/types"
 import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
@@ -263,7 +263,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 	public fimPromptBuilder: FimPromptBuilder // publicly exposed for Jetbrains autocomplete code
 	private model: AutocompleteModel
 	private costTrackingCallback: CostTrackingCallback
-	private getSettings: () => GhostServiceSettings | null
+	private getSettings: () => AutocompleteServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
@@ -280,7 +280,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 		context: vscode.ExtensionContext,
 		model: AutocompleteModel,
 		costTrackingCallback: CostTrackingCallback,
-		getSettings: () => GhostServiceSettings | null,
+		getSettings: () => AutocompleteServiceSettings | null,
 		cline: ClineProvider,
 		telemetry: AutocompleteTelemetry | null = null,
 	) {
