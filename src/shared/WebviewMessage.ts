@@ -7,11 +7,13 @@ export type {
 	UserOrganizationWithApiKey,
 	ProfileDataResponsePayload,
 	BalanceDataResponsePayload,
+	// kilocode_change start
 	KiloPassStateResponsePayload,
 	KiloPassSubscriptionState,
 	KiloPassTier,
 	KiloPassCadence,
 	KiloPassSubscriptionStatus,
+	// kilocode_change end
 	SeeNewChangesPayload,
 	TaskHistoryRequestPayload,
 	TaskHistoryResponsePayload,
