@@ -248,6 +248,18 @@
 			"description": "設定された時間が経過すると、フォローアップ質問の最初の提案回答を自動的に選択します",
 			"timeoutLabel": "最初の回答を自動選択するまでの待機時間"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "チャットモードで自律型エージェントのループ機能を有効にするRalphボタンを表示します",
+			"loopLimit": {
+				"label": "ループ制限",
+				"description": "Ralphがタスクを自動的に再開する最大回数。無制限のループにするには0に設定してください。"
+			},
+			"completionDelimiter": {
+				"label": "完了デリミタ",
+				"description": "完了結果にこのテキストが含まれている場合、Ralphはループを停止します。"
+			}
+		},
 		"execute": {
 			"label": "実行",
 			"description": "承認なしで自動的に許可されたターミナルコマンドを実行",

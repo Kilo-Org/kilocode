@@ -165,6 +165,7 @@ const MAX_CHUTES_TERMINATED_RETRY_ATTEMPTS = 2 // Allow up to 2 retries (3 total
 export interface TaskOptions extends CreateTaskOptions {
 	context: vscode.ExtensionContext // kilocode_change
 	provider: ClineProvider
+	ralphLoopCount?: number // kilocode_change
 	apiConfiguration: ProviderSettings
 	enableDiff?: boolean
 	enableCheckpoints?: boolean
@@ -493,6 +494,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		initialTodos,
 		workspacePath,
 		initialStatus,
+		ralphLoopCount, // kilocode_change
 	}: TaskOptions) {
 		super()
 		this.context = context // kilocode_change
@@ -524,6 +526,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.metadata = {
 			task: historyItem ? historyItem.task : task,
 			images: historyItem ? [] : images,
+			ralphLoopCount: ralphLoopCount ?? 0, // kilocode_change
 		}
 
 		// Normal use-case is usually retry similar history task with new workspace.
@@ -2656,6 +2659,82 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	// kilocode_change start
+	/**
+	 * Handles the Ralph mode restart logic.
+	 * If Ralph mode is enabled and within limits, restarts the task.
+	 *
+	 * @param result Optional completion result to check for delimiter
+	 * @returns true if task was restarted, false otherwise
+	 */
+	public async handleRalphRestart(result?: string): Promise<boolean> {
+		const provider = this.providerRef.deref()
+		const state = await provider?.getState()
+		if (provider && state?.alwaysAllowRalph && state?.ralphEnabled) {
+			const delimiter = state.ralphCompletionDelimiter
+
+			// Check delimiter if configured and result is provided
+			if (result !== undefined && delimiter && delimiter.trim() !== "") {
+				if (result.indexOf(delimiter) !== -1) {
+					return false
+				}
+
+				const assistantMessages = this.apiConversationHistory.filter((m) => m.role === "assistant").slice(-5)
+
+				for (const m of assistantMessages) {
+					const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
+					if (content.indexOf(delimiter) !== -1) {
+						return false
+					}
+				}
+			}
+
+			const loopLimit = state.ralphLoopLimit ?? 5
+			const currentLoopCount = this.metadata.ralphLoopCount ?? 0
+
+			if (loopLimit <= 0 || currentLoopCount + 1 < loopLimit) {
+				const firstPrompt = this.metadata.task
+				const images = this.metadata.images
+
+				setTimeout(async () => {
+					try {
+						await provider.createTask(firstPrompt, images, undefined, {
+							ralphLoopCount: currentLoopCount + 1,
+						})
+						await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
+					} catch (error) {
+						console.error("[Task] Failed to restart task in Ralph mode:", error)
+					}
+				}, 1000)
+
+				await this.abortTask()
+				return true
+			}
+		}
+		return false
+	}
+
+	/**
+	 * Handles the case where the mistake limit has been reached.
+	 * If Ralph mode is enabled and within limits, restarts the task.
+	 * Otherwise, asks the user for guidance.
+	 *
+	 * @param guidance Optional guidance text to show the user
+	 * @returns Object containing the user's response if Ralph restart didn't happen
+	 */
+	public async handleMistakeLimitReached(
+		guidance: string = t("common:errors.mistake_limit_guidance"),
+	): Promise<{ response: ClineAskResponse; text?: string; images?: string[] } | undefined> {
+		const restarted = await this.handleRalphRestart()
+		if (restarted) {
+			await this.say("error", "Mistake limit reached. Ralph mode is restarting the task...")
+			return undefined
+		}
+
+		return await this.ask("mistake_limit_reached", guidance)
+	}
+	// kilocode_change end
+
 	public async recursivelyMakeClineRequests(
 		userContent: Anthropic.Messages.ContentBlockParam[],
 		includeFileDetails: boolean = false,
@@ -2697,10 +2776,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					),
 				)
 
-				const { response, text, images } = await this.ask(
-					"mistake_limit_reached",
-					t("common:errors.mistake_limit_guidance"),
-				)
+				const result = await this.handleMistakeLimitReached()
+
+				if (!result) {
+					return true
+				}
+
+				const { response, text, images } = result
 
 				if (response === "messageResponse") {
 					currentUserContent.push(

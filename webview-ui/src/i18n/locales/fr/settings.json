@@ -244,6 +244,18 @@
 			"description": "Sélectionner automatiquement la première réponse suggérée pour les questions de suivi après le délai configuré",
 			"timeoutLabel": "Temps d'attente avant la sélection automatique de la première réponse"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Afficher le bouton Ralph en mode chat pour activer la capacité de boucle de l'agent autonome",
+			"loopLimit": {
+				"label": "Limite de boucles",
+				"description": "Nombre maximum de fois que Ralph redémarrera automatiquement la tâche. Réglez sur 0 choisis pour des boucles illimitées."
+			},
+			"completionDelimiter": {
+				"label": "Délimiteur d'achèvement",
+				"description": "Si ce texte est trouvé dans le résultat final, Ralph arrêtera de boucler."
+			}
+		},
 		"execute": {
 			"label": "Exécuter",
 			"description": "Exécuter automatiquement les commandes de terminal autorisées sans nécessiter d'approbation",

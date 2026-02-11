@@ -243,6 +243,18 @@
 			"description": "在配置的超时时间后自动选择后续问题的第一个建议答案",
 			"timeoutLabel": "自动选择第一个答案前的等待时间"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "在聊天模式下显示 Ralph 按钮，启用自主代理循环能力",
+			"loopLimit": {
+				"label": "循环限制",
+				"description": "Ralph 自动重启任务的最大次数。设置为 0 表示无限循环。"
+			},
+			"completionDelimiter": {
+				"label": "完成分隔符",
+				"description": "如果在完成结果中找到此文本，Ralph 将停止循环。"
+			}
+		},
 		"execute": {
 			"label": "执行",
 			"description": "自动执行白名单中的命令而无需批准",

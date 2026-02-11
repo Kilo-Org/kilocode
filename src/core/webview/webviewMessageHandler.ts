@@ -2007,6 +2007,20 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		// kilocode_change end
+    // kilocode_change start
+		case "ralphEnabled":
+			await updateGlobalState("ralphEnabled", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		case "ralphLoopLimit":
+			await updateGlobalState("ralphLoopLimit", message.value ?? 5)
+			await provider.postStateToWebview()
+			break
+		case "ralphCompletionDelimiter":
+			await updateGlobalState("ralphCompletionDelimiter", message.text !== undefined ? message.text : "<ralph>COMPLETED</ralph>")
+			await provider.postStateToWebview()
+			break
+    // kilocode_change end
 		case "enhancePrompt":
 			if (message.text) {
 				try {

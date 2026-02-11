@@ -2,6 +2,7 @@ import type { GlobalSettings } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { cn } from "@/lib/utils"
+import { Infinity } from "lucide-react" // kilocode_change
 import { Button, StandardTooltip } from "@/components/ui"
 
 type AutoApproveToggles = Pick<
@@ -14,6 +15,7 @@ type AutoApproveToggles = Pick<
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
+	| "alwaysAllowRalph" // kilocode_change
 	| "alwaysAllowFollowupQuestions"
 >
 
@@ -93,6 +95,15 @@ export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveCo
 		icon: "question",
 		testId: "always-allow-followup-questions-toggle",
 	},
+	// kilocode_change start
+	alwaysAllowRalph: {
+		key: "alwaysAllowRalph",
+		labelKey: "settings:autoApprove.ralph.label",
+		descriptionKey: "settings:autoApprove.ralph.description",
+		icon: "infinity",
+		testId: "always-allow-ralph-toggle",
+	},
+	// kilocode_change end
 }
 
 type AutoApproveToggleProps = AutoApproveToggles & {
@@ -113,7 +124,11 @@ export const AutoApproveToggle = ({ onToggle, ...props }: AutoApproveToggleProps
 						aria-pressed={!!props[key]}
 						data-testid={testId}
 						className={cn("gap-1.5 text-xs whitespace-nowrap", !props[key] && "opacity-50")}>
-						<span className={`codicon codicon-${icon} text-sm`} />
+						{icon === "infinity" ? (
+							<Infinity className="size-3.5" />
+						) : (
+							<span className={`codicon codicon-${icon} text-sm`} />
+						)}
 						<span>{t(labelKey)}</span>
 					</Button>
 				</StandardTooltip>

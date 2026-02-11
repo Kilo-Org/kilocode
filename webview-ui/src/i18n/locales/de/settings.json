@@ -239,6 +239,18 @@
 			"description": "Automatisch die erste vorgeschlagene Antwort für Folgefragen nach der konfigurierten Zeitüberschreitung auswählen",
 			"timeoutLabel": "Wartezeit vor der automatischen Auswahl der ersten Antwort"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Zeige Ralph-Button im Chat-Modus, der die autonome Agenten-Schleifen-Fähigkeit aktiviert",
+			"loopLimit": {
+				"label": "Schleifenlimit",
+				"description": "Maximale Anzahl der Male, die Ralph die Aufgabe automatisch neu startet. Auf 0 setzen für unbegrenzte Schleifen."
+			},
+			"completionDelimiter": {
+				"label": "Abschluss-Trennzeichen",
+				"description": "Wenn dieser Text im Abschlussergebnis gefunden wird, stoppt Ralph die Schleife."
+			}
+		},
 		"execute": {
 			"label": "Ausführen",
 			"description": "Erlaubte Terminal-Befehle automatisch ohne Genehmigung ausführen",

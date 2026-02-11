@@ -243,6 +243,18 @@
 			"description": "Selecteer automatisch het eerste voorgestelde antwoord voor vervolgvragen na de geconfigureerde time-out",
 			"timeoutLabel": "Wachttijd voordat het eerste antwoord automatisch wordt geselecteerd"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Toon de Ralph-knop in de chatmodus die de autonome agent-loop-mogelijkheid activeert",
+			"loopLimit": {
+				"label": "Loop-limiet",
+				"description": "Maximaal aantal keren dat Ralph de taak automatisch herstart. Stel in op 0 voor onbeperkte loops."
+			},
+			"completionDelimiter": {
+				"label": "Voltooiingsscheidingsteken",
+				"description": "Als deze tekst wordt gevonden in het voltooiingsresultaat, stopt Ralph met loopen."
+			}
+		},
 		"execute": {
 			"label": "Uitvoeren",
 			"description": "Automatisch toegestane terminalcommando's uitvoeren zonder goedkeuring",

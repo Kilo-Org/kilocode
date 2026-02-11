@@ -247,6 +247,18 @@
 			"description": "在設定的逾時時間過後，自動選擇後續問題的第一個建議答案",
 			"timeoutLabel": "自動選擇第一個答案前的等待時間"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "在聊天模式下顯示 Ralph 按鈕，啟用自主代理循環能力",
+			"loopLimit": {
+				"label": "循環限制",
+				"description": "Ralph 自動重啟任務的最大次數。設置為 0 表示無限循環。"
+			},
+			"completionDelimiter": {
+				"label": "完成分隔符",
+				"description": "如果在完成結果中找到此文本，Ralph 將停止循環。"
+			}
+		},
 		"execute": {
 			"label": "執行命令",
 			"description": "無需核准即可自動執行允許的終端機命令",

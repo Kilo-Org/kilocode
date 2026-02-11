@@ -1,5 +1,5 @@
 import { HTMLAttributes, useState } from "react"
-import { X } from "lucide-react"
+import { X, Infinity } from "lucide-react"
 import { Trans } from "react-i18next"
 import { Package } from "@roo/package"
 
@@ -30,6 +30,9 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowModeSwitch?: boolean
 	alwaysAllowSubtasks?: boolean
 	alwaysAllowExecute?: boolean
+	alwaysAllowRalph?: boolean // kilocode_change
+	ralphLoopLimit?: number // kilocode_change
+	ralphCompletionDelimiter?: string // kilocode_change
 	alwaysAllowFollowupQuestions?: boolean
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
@@ -51,6 +54,9 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowModeSwitch"
 		| "alwaysAllowSubtasks"
 		| "alwaysAllowExecute"
+		| "alwaysAllowRalph" // kilocode_change
+		| "ralphLoopLimit" // kilocode_change
+		| "ralphCompletionDelimiter" // kilocode_change
 		| "alwaysAllowFollowupQuestions"
 		| "followupAutoApproveTimeoutMs"
 		| "allowedCommands"
@@ -75,6 +81,9 @@ export const AutoApproveSettings = ({
 	alwaysAllowModeSwitch,
 	alwaysAllowSubtasks,
 	alwaysAllowExecute,
+	alwaysAllowRalph, // kilocode_change
+	ralphLoopLimit, // kilocode_change
+	ralphCompletionDelimiter, // kilocode_change
 	alwaysAllowFollowupQuestions,
 	followupAutoApproveTimeoutMs = 60000,
 	allowedCommands,
@@ -200,6 +209,7 @@ export const AutoApproveSettings = ({
 						alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 						alwaysAllowSubtasks={alwaysAllowSubtasks}
 						alwaysAllowExecute={alwaysAllowExecute}
+						alwaysAllowRalph={alwaysAllowRalph} // kilocode_change
 						alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
 						onToggle={(key, value) => setCachedStateField(key, value)}
 					/>
@@ -435,6 +445,53 @@ export const AutoApproveSettings = ({
 						</div>
 					</div>
 				)}
+
+        {/* kilocode_change start */}
+				{alwaysAllowRalph && (
+					<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background mt-4">
+						<div className="flex items-center gap-4 font-bold">
+							<Infinity className="w-4 h-4" />
+							<div>{t("settings:autoApprove.ralph.label")}</div>
+						</div>
+						<div className="flex flex-row gap-4 items-start mt-2">
+							<div className="flex-1">
+								<label className="block font-medium mb-1">
+									{t("settings:autoApprove.ralph.loopLimit.label")}
+								</label>
+								<div className="flex items-center gap-2">
+									<Slider
+										min={0}
+										max={100}
+										step={1}
+										value={[ralphLoopLimit ?? 5]}
+										onValueChange={([value]) => setCachedStateField("ralphLoopLimit", value)}
+									/>
+									<span className="w-12 text-center font-bold">
+										{ralphLoopLimit === 0 ? "∞" : ralphLoopLimit}
+									</span>
+								</div>
+								<div className="text-vscode-descriptionForeground text-sm mt-1">
+									{t("settings:autoApprove.ralph.loopLimit.description")}
+								</div>
+							</div>
+							<div className="flex-1">
+								<label className="block font-medium mb-1">
+									{t("settings:autoApprove.ralph.completionDelimiter.label")}
+								</label>
+								<Input
+									value={ralphCompletionDelimiter ?? ""}
+									onChange={(e: any) => setCachedStateField("ralphCompletionDelimiter", e.target.value)}
+									placeholder="e.g., <ralph>COMPLETED</ralph>"
+									className="w-full"
+								/>
+								<div className="text-vscode-descriptionForeground text-sm mt-1">
+									{t("settings:autoApprove.ralph.completionDelimiter.description")}
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
+        {/* kilocode_change end */}
 			</Section>
 
 			{/* kilocode_change start */}

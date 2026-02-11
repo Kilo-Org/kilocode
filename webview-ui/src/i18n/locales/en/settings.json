@@ -251,6 +251,18 @@
 			"description": "Automatically select the first suggested answer for follow-up questions after the configured timeout",
 			"timeoutLabel": "Time to wait before auto-selecting the first answer"
 		},
+		"ralph": {
+			"label": "Ralph",
+			"description": "Show Ralph button in chat mode that enable autonomous agent loop ability",
+			"loopLimit": {
+				"label": "Loop Limit",
+				"description": "Maximum number of times Ralph will automatically restart the task. Set to 0 for unlimited loops."
+			},
+			"completionDelimiter": {
+				"label": "Completion Delimiter",
+				"description": "If this text is found in the completion result, Ralph will stop looping."
+			}
+		},
 		"execute": {
 			"label": "Execute",
 			"description": "Automatically execute allowed terminal commands without requiring approval",

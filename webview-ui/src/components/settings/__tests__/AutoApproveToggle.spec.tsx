@@ -20,6 +20,7 @@ describe("AutoApproveToggle", () => {
 		alwaysAllowReadOnly: true,
 		alwaysAllowWrite: false,
 		alwaysAllowDelete: false, // kilocode_change
+    alwaysAllowRalph: false, // kilocode_change
 		alwaysAllowBrowser: false,
 		alwaysAllowMcp: false,
 		alwaysAllowModeSwitch: true,

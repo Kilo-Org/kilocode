@@ -245,6 +245,10 @@ export const globalSettingsSchema = z.object({
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
 	appendSystemPrompt: z.string().optional(), // kilocode_change: Custom text to append to system prompt (CLI only)
+	alwaysAllowRalph: z.boolean().optional(), // kilocode_change
+	ralphEnabled: z.boolean().optional(), // kilocode_change
+	ralphLoopLimit: z.number().int().min(0).optional(), // kilocode_change
+	ralphCompletionDelimiter: z.string().optional(), // kilocode_change
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>
@@ -370,6 +374,9 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowModeSwitch: true,
 	alwaysAllowSubtasks: true,
 	alwaysAllowExecute: true,
+	alwaysAllowRalph: false, // kilocode_change
+	ralphLoopLimit: 5, // kilocode_change
+	ralphCompletionDelimiter: "<ralph>COMPLETED</ralph>", // kilocode_change
 	alwaysAllowFollowupQuestions: true,
 	followupAutoApproveTimeoutMs: 0,
 	allowedCommands: ["*"],
