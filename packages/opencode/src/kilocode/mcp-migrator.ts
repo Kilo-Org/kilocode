@@ -10,11 +10,21 @@ export namespace McpMigrator {
 
   // Kilocode MCP server structure
   export interface KilocodeMcpServer {
-    command: string
+    command?: string
     args?: string[]
     env?: Record<string, string>
     disabled?: boolean
     alwaysAllow?: string[]
+    // Remote server fields
+    type?: string
+    url?: string
+    headers?: Record<string, string>
+  }
+
+  const REMOTE_TYPES = new Set(["streamable-http", "sse"])
+
+  function isRemote(server: KilocodeMcpServer): boolean {
+    return !!server.url || REMOTE_TYPES.has(server.type ?? "")
   }
 
   export interface KilocodeMcpSettings {
@@ -38,10 +48,18 @@ export namespace McpMigrator {
     // Skip disabled servers
     if (server.disabled) return null
 
-    // Build command array: [command, ...args]
-    const command = [server.command, ...(server.args ?? [])]
+    // Remote servers (streamable-http, sse, or any config with a url)
+    if (isRemote(server)) {
+      const mcpConfig: Config.Mcp = {
+        type: "remote",
+        url: server.url!,
+        ...(server.headers && Object.keys(server.headers).length > 0 && { headers: server.headers }),
+      }
+      return mcpConfig
+    }
 
-    // Build the MCP config object
+    // Local/stdio servers
+    const command = [server.command!, ...(server.args ?? [])]
     const mcpConfig: Config.Mcp = {
       type: "local",
       command,
