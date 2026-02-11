@@ -457,6 +457,25 @@ export namespace SessionPrompt {
         )
         assistantMessage.finish = "tool-calls"
         assistantMessage.time.completed = Date.now()
+        // kilocode_change start - propagate child session costs to parent
+        const childSessionID = result?.metadata?.sessionId as string | undefined
+        if (childSessionID) {
+          let childCost = 0
+          let childTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+          for await (const childMsg of MessageV2.stream(childSessionID)) {
+            if (childMsg.info.role === "assistant") {
+              childCost += childMsg.info.cost
+              childTokens.input += childMsg.info.tokens.input
+              childTokens.output += childMsg.info.tokens.output
+              childTokens.reasoning += childMsg.info.tokens.reasoning
+              childTokens.cache.read += childMsg.info.tokens.cache.read
+              childTokens.cache.write += childMsg.info.tokens.cache.write
+            }
+          }
+          assistantMessage.cost = childCost
+          assistantMessage.tokens = childTokens
+        }
+        // kilocode_change end
         await Session.updateMessage(assistantMessage)
         if (result && part.state.status === "running") {
           await Session.updatePart({
