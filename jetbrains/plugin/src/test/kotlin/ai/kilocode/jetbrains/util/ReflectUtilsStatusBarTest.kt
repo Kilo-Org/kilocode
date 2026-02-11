@@ -107,10 +107,10 @@ class ReflectUtilsStatusBarTest {
 
         val args = listOf(
             1.0,                    // id
-            "ghost-extension",      // extensionId
-            "ghost-status",         // entryId
-            "Ghost Status",         // name
-            "Ghost (5)",            // text
+            "autocomplete-extension",      // extensionId
+            "autocomplete-status",         // entryId
+            "Autocomplete Status",         // name
+            "Autocomplete (5)",            // text
             markdownTooltip,        // tooltip - MarkdownString object
             false,                  // showProgress
             null,                   // command

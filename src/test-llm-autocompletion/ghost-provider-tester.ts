@@ -1,28 +1,28 @@
 import { LLMClient } from "./llm-client.js"
-import { extractPrefixSuffix } from "../services/ghost/types.js"
+import { extractPrefixSuffix } from "../services/autocomplete/types.js"
 import { createContext } from "./utils.js"
 import {
-	createTestGhostModel,
+	createTestAutocompleteModel,
 	createMockContextProvider,
 	modelSupportsFim,
 	createProviderForTesting,
 } from "./mock-context-provider.js"
 import {
-	GhostInlineCompletionProvider,
+	AutocompleteInlineCompletionProvider,
 	findMatchingSuggestion,
-} from "../services/ghost/classic-auto-complete/GhostInlineCompletionProvider.js"
-import { GhostModel } from "../services/ghost/GhostModel.js"
+} from "../services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.js"
+import { AutocompleteModel } from "../services/autocomplete/AutocompleteModel.js"
 import type { ContextFile } from "./test-cases.js"
 
-export class GhostProviderTester {
+export class AutocompleteProviderTester {
 	private llmClient: LLMClient
 	private modelId: string
-	private ghostModel: GhostModel
+	private autocompleteModel: AutocompleteModel
 
 	constructor() {
 		this.modelId = process.env.LLM_MODEL || "mistralai/codestral-2508"
 		this.llmClient = new LLMClient()
-		this.ghostModel = createTestGhostModel(this.llmClient, this.modelId)
+		this.autocompleteModel = createTestAutocompleteModel(this.llmClient, this.modelId)
 	}
 
 	async getCompletion(
@@ -40,7 +40,7 @@ export class GhostProviderTester {
 			prefix,
 			suffix,
 			context.document.fileName,
-			this.ghostModel,
+			this.autocompleteModel,
 			contextFiles,
 		)
 
@@ -68,7 +68,7 @@ export class GhostProviderTester {
 
 	getName(): string {
 		const supportsFim = modelSupportsFim(this.modelId)
-		return supportsFim ? "ghost-provider-fim" : "ghost-provider-holefiller"
+		return supportsFim ? "autocomplete-provider-fim" : "autocomplete-provider-holefiller"
 	}
 
 	dispose(): void {

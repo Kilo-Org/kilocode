@@ -543,7 +543,7 @@ export type ExtensionState = Pick<
 	| "commitMessageApiConfigId" // kilocode_change
 	| "terminalCommandApiConfigId" // kilocode_change
 	| "dismissedNotificationIds" // kilocode_change
-	| "ghostServiceSettings" // kilocode_change
+	| "ghostServiceSettings" // kilocode_change - storage key preserved
 	| "autoPurgeEnabled" // kilocode_change
 	| "autoPurgeDefaultRetentionDays" // kilocode_change
 	| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
@@ -792,7 +792,7 @@ export interface WebviewMessage {
 		| "enhancementApiConfigId"
 		| "commitMessageApiConfigId" // kilocode_change
 		| "terminalCommandApiConfigId" // kilocode_change
-		| "ghostServiceSettings" // kilocode_change
+		| "ghostServiceSettings" // kilocode_change - storage key preserved
 		| "stt:start" // kilocode_change: Start STT recording
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording

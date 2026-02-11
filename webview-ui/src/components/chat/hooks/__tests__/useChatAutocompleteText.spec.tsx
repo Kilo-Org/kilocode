@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react"
 import { vi } from "vitest"
-import { useChatGhostText } from "../useChatGhostText"
+import { useChatAutocompleteText } from "../useChatAutocompleteText"
 import { vscode } from "@/utils/vscode"
 
 // Mock vscode
@@ -18,10 +18,10 @@ vi.mock("@roo/id", () => ({
 
 // Helper to simulate the full flow: focus -> input change -> completion result
 function simulateCompletionFlow(
-	result: ReturnType<typeof useChatGhostText>,
+	result: ReturnType<typeof useChatAutocompleteText>,
 	mockTextArea: HTMLTextAreaElement,
 	text: string,
-	ghostText: string,
+	autocompleteText: string,
 ) {
 	// First, focus the textarea
 	act(() => {
@@ -50,7 +50,7 @@ function simulateCompletionFlow(
 		const messageEvent = new MessageEvent("message", {
 			data: {
 				type: "chatCompletionResult",
-				text: ghostText,
+				text: autocompleteText,
 				requestId: MOCK_REQUEST_ID,
 			},
 		})
@@ -58,7 +58,7 @@ function simulateCompletionFlow(
 	})
 }
 
-describe("useChatGhostText", () => {
+describe("useChatAutocompleteText", () => {
 	let mockTextArea: HTMLTextAreaElement
 	let textAreaRef: React.RefObject<HTMLTextAreaElement>
 
@@ -80,9 +80,9 @@ describe("useChatGhostText", () => {
 	})
 
 	describe("Tab key acceptance", () => {
-		it("should accept full ghost text on Tab key", () => {
+		it("should accept full autocomplete text on Tab key", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -91,8 +91,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow: focus -> input -> completion result
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion text")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion text")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion text")
 
 			// Simulate Tab key press
 			const tabEvent = {
@@ -107,14 +107,14 @@ describe("useChatGhostText", () => {
 
 			expect(tabEvent.preventDefault).toHaveBeenCalled()
 			expect(document.execCommand).toHaveBeenCalledWith("insertText", false, " completion text")
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 	})
 
 	describe("Right Arrow key - word-by-word acceptance", () => {
 		it("should accept next word when cursor is at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -123,8 +123,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " this is more text")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" this is more text")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" this is more text")
 
 			// Simulate Right Arrow key press
 			const arrowEvent = {
@@ -141,7 +141,7 @@ describe("useChatGhostText", () => {
 
 			expect(arrowEvent.preventDefault).toHaveBeenCalled()
 			expect(document.execCommand).toHaveBeenCalledWith("insertText", false, " this ")
-			expect(result.current.ghostText).toBe("is more text")
+			expect(result.current.autocompleteText).toBe("is more text")
 		})
 
 		it("should handle multiple word acceptances", () => {
@@ -150,7 +150,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -159,8 +159,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Start", " word1 word2 word3")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" word1 word2 word3")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" word1 word2 word3")
 
 			const arrowEvent = {
 				key: "ArrowRight",
@@ -174,24 +174,24 @@ describe("useChatGhostText", () => {
 			act(() => {
 				result.current.handleKeyDown(arrowEvent)
 			})
-			expect(result.current.ghostText).toBe("word2 word3")
+			expect(result.current.autocompleteText).toBe("word2 word3")
 
 			// Second word
 			act(() => {
 				result.current.handleKeyDown(arrowEvent)
 			})
-			expect(result.current.ghostText).toBe("word3")
+			expect(result.current.autocompleteText).toBe("word3")
 
 			// Third word
 			act(() => {
 				result.current.handleKeyDown(arrowEvent)
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should NOT accept word when cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -200,8 +200,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " more text")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" more text")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" more text")
 
 			// Move cursor to middle
 			mockTextArea.selectionStart = 5
@@ -219,7 +219,7 @@ describe("useChatGhostText", () => {
 
 			expect(handled).toBe(false)
 			expect(arrowEvent.preventDefault).not.toHaveBeenCalled()
-			expect(result.current.ghostText).toBe(" more text") // Ghost text unchanged
+			expect(result.current.autocompleteText).toBe(" more text") // Autocomplete text unchanged
 		})
 
 		it("should NOT accept word with Shift modifier", () => {
@@ -228,7 +228,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -237,8 +237,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Test1", " text")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" text")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" text")
 
 			const arrowEvent = {
 				key: "ArrowRight",
@@ -260,7 +260,7 @@ describe("useChatGhostText", () => {
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -269,8 +269,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Test2", " text")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" text")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" text")
 
 			const arrowEvent = {
 				key: "ArrowRight",
@@ -288,9 +288,9 @@ describe("useChatGhostText", () => {
 	})
 
 	describe("Escape key", () => {
-		it("should clear ghost text on Escape", () => {
+		it("should clear autocomplete text on Escape", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -299,8 +299,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " world")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" world")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" world")
 
 			// Simulate Escape key
 			const escapeEvent = {
@@ -311,28 +311,28 @@ describe("useChatGhostText", () => {
 				result.current.handleKeyDown(escapeEvent)
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 	})
 
 	describe("Edge cases", () => {
-		it("should handle ghost text with only whitespace", () => {
+		it("should handle autocomplete text with only whitespace", () => {
 			mockTextArea.value = "Test3"
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
 			)
 
-			// Simulate the full flow with whitespace-only ghost text
+			// Simulate the full flow with whitespace-only autocomplete text
 			simulateCompletionFlow(result.current, mockTextArea, "Test3", "   ")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe("   ")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe("   ")
 
 			const arrowEvent = {
 				key: "ArrowRight",
@@ -347,26 +347,26 @@ describe("useChatGhostText", () => {
 			})
 
 			expect(document.execCommand).toHaveBeenCalledWith("insertText", false, "   ")
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
-		it("should handle single word ghost text", () => {
+		it("should handle single word autocomplete text", () => {
 			mockTextArea.value = "Test4"
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
 			)
 
-			// Simulate the full flow with single word ghost text
+			// Simulate the full flow with single word autocomplete text
 			simulateCompletionFlow(result.current, mockTextArea, "Test4", "word")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe("word")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe("word")
 
 			const arrowEvent = {
 				key: "ArrowRight",
@@ -381,16 +381,16 @@ describe("useChatGhostText", () => {
 			})
 
 			expect(document.execCommand).toHaveBeenCalledWith("insertText", false, "word")
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
-		it("should handle empty ghost text gracefully", () => {
+		it("should handle empty autocomplete text gracefully", () => {
 			mockTextArea.value = "Test5"
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -411,10 +411,10 @@ describe("useChatGhostText", () => {
 		})
 	})
 
-	describe("clearGhostText", () => {
-		it("should clear ghost text when called", () => {
+	describe("clearAutocompleteText", () => {
+		it("should clear autocomplete text when called", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -423,21 +423,21 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			act(() => {
-				result.current.clearGhostText()
+				result.current.clearAutocompleteText()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 	})
 
 	describe("Focus and blur behavior", () => {
-		it("should clear ghost text on blur and restore on focus", () => {
+		it("should clear autocomplete text on blur and restore on focus", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -446,27 +446,27 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Blur the textarea
 			act(() => {
 				result.current.handleBlur()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
-			// Focus the textarea again - ghost text should be restored
+			// Focus the textarea again - autocomplete text should be restored
 			act(() => {
 				result.current.handleFocus()
 			})
 
-			expect(result.current.ghostText).toBe(" completion")
+			expect(result.current.autocompleteText).toBe(" completion")
 		})
 
-		it("should not restore ghost text if text changed while unfocused", () => {
+		it("should not restore autocomplete text if text changed while unfocused", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -475,27 +475,27 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Blur the textarea
 			act(() => {
 				result.current.handleBlur()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			// Change the text while unfocused (simulating external change)
 			mockTextArea.value = "Different text"
 			mockTextArea.selectionStart = 14
 			mockTextArea.selectionEnd = 14
 
-			// Focus the textarea again - ghost text should NOT be restored
+			// Focus the textarea again - autocomplete text should NOT be restored
 			act(() => {
 				result.current.handleFocus()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should not request completion when not focused", () => {
@@ -503,7 +503,7 @@ describe("useChatGhostText", () => {
 			vi.mocked(vscode.postMessage).mockClear()
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -528,13 +528,13 @@ describe("useChatGhostText", () => {
 				expect.objectContaining({ type: "requestChatCompletion" }),
 			)
 
-			// Ghost text should remain empty
-			expect(result.current.ghostText).toBe("")
+			// Autocomplete text should remain empty
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should discard completion result if text changed", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -576,13 +576,13 @@ describe("useChatGhostText", () => {
 				window.dispatchEvent(messageEvent)
 			})
 
-			// Ghost text should not be set because the text changed (prefix mismatch)
-			expect(result.current.ghostText).toBe("")
+			// Autocomplete text should not be set because the text changed (prefix mismatch)
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should discard completion result if cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -624,13 +624,13 @@ describe("useChatGhostText", () => {
 				window.dispatchEvent(messageEvent)
 			})
 
-			// Ghost text should not be set because cursor is not at end
-			expect(result.current.ghostText).toBe("")
+			// Autocomplete text should not be set because cursor is not at end
+			expect(result.current.autocompleteText).toBe("")
 		})
 
-		it("should clear ghost text when cursor moves away from end via handleSelect", () => {
+		it("should clear autocomplete text when cursor moves away from end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -639,8 +639,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Move cursor to middle (simulating user clicking or using arrow keys)
 			mockTextArea.selectionStart = 5
@@ -651,13 +651,13 @@ describe("useChatGhostText", () => {
 				result.current.handleSelect()
 			})
 
-			// Ghost text should be cleared because cursor is no longer at end
-			expect(result.current.ghostText).toBe("")
+			// Autocomplete text should be cleared because cursor is no longer at end
+			expect(result.current.autocompleteText).toBe("")
 		})
 
-		it("should not clear ghost text when cursor is still at end via handleSelect", () => {
+		it("should not clear autocomplete text when cursor is still at end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -666,8 +666,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Cursor is still at end
 			mockTextArea.selectionStart = 11
@@ -678,13 +678,13 @@ describe("useChatGhostText", () => {
 				result.current.handleSelect()
 			})
 
-			// Ghost text should still be there
-			expect(result.current.ghostText).toBe(" completion")
+			// Autocomplete text should still be there
+			expect(result.current.autocompleteText).toBe(" completion")
 		})
 
-		it("should clear ghost text when there is a selection via handleSelect", () => {
+		it("should clear autocomplete text when there is a selection via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -693,8 +693,8 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Create a selection (not just cursor position)
 			mockTextArea.selectionStart = 5
@@ -705,13 +705,13 @@ describe("useChatGhostText", () => {
 				result.current.handleSelect()
 			})
 
-			// Ghost text should be cleared because there's a selection
-			expect(result.current.ghostText).toBe("")
+			// Autocomplete text should be cleared because there's a selection
+			expect(result.current.autocompleteText).toBe("")
 		})
 
-		it("should restore ghost text when cursor returns to end via handleSelect", () => {
+		it("should restore autocomplete text when cursor returns to end via handleSelect", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -720,33 +720,33 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Move cursor to middle
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
-			// Call handleSelect - ghost text should be cleared
+			// Call handleSelect - autocomplete text should be cleared
 			act(() => {
 				result.current.handleSelect()
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			// Move cursor back to end
 			mockTextArea.selectionStart = 11
 			mockTextArea.selectionEnd = 11
 
-			// Call handleSelect again - ghost text should be restored
+			// Call handleSelect again - autocomplete text should be restored
 			act(() => {
 				result.current.handleSelect()
 			})
-			expect(result.current.ghostText).toBe(" completion")
+			expect(result.current.autocompleteText).toBe(" completion")
 		})
 
-		it("should not restore ghost text when cursor returns to end if text changed", () => {
+		it("should not restore autocomplete text when cursor returns to end if text changed", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -755,29 +755,29 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Move cursor to middle
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
-			// Call handleSelect - ghost text should be cleared
+			// Call handleSelect - autocomplete text should be cleared
 			act(() => {
 				result.current.handleSelect()
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			// Change the text
 			mockTextArea.value = "Different text"
 			mockTextArea.selectionStart = 14
 			mockTextArea.selectionEnd = 14
 
-			// Call handleSelect again - ghost text should NOT be restored because text changed
+			// Call handleSelect again - autocomplete text should NOT be restored because text changed
 			act(() => {
 				result.current.handleSelect()
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should cancel pending completion requests on blur", () => {
@@ -785,7 +785,7 @@ describe("useChatGhostText", () => {
 			vi.mocked(vscode.postMessage).mockClear()
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -822,9 +822,9 @@ describe("useChatGhostText", () => {
 			)
 		})
 
-		it("should not restore ghost text on focus if cursor is not at end", () => {
+		it("should not restore autocomplete text on focus if cursor is not at end", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -833,33 +833,33 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Blur the textarea
 			act(() => {
 				result.current.handleBlur()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			// Move cursor to middle while unfocused
 			mockTextArea.selectionStart = 5
 			mockTextArea.selectionEnd = 5
 
-			// Focus the textarea again - ghost text should NOT be restored because cursor is not at end
+			// Focus the textarea again - autocomplete text should NOT be restored because cursor is not at end
 			act(() => {
 				result.current.handleFocus()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should handle null textAreaRef gracefully in handleSelect", () => {
 			const nullRef = { current: null } as React.RefObject<HTMLTextAreaElement>
 
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef: nullRef,
 					enableChatAutocomplete: true,
 				}),
@@ -870,12 +870,12 @@ describe("useChatGhostText", () => {
 				result.current.handleSelect()
 			})
 
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 		})
 
 		it("should handle rapid focus/blur/focus cycles correctly", () => {
 			const { result } = renderHook(() =>
-				useChatGhostText({
+				useChatAutocompleteText({
 					textAreaRef,
 					enableChatAutocomplete: true,
 				}),
@@ -884,29 +884,29 @@ describe("useChatGhostText", () => {
 			// Simulate the full flow
 			simulateCompletionFlow(result.current, mockTextArea, "Hello world", " completion")
 
-			// Verify ghost text is set
-			expect(result.current.ghostText).toBe(" completion")
+			// Verify autocomplete text is set
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			// Rapid blur/focus/blur/focus
 			act(() => {
 				result.current.handleBlur()
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			act(() => {
 				result.current.handleFocus()
 			})
-			expect(result.current.ghostText).toBe(" completion")
+			expect(result.current.autocompleteText).toBe(" completion")
 
 			act(() => {
 				result.current.handleBlur()
 			})
-			expect(result.current.ghostText).toBe("")
+			expect(result.current.autocompleteText).toBe("")
 
 			act(() => {
 				result.current.handleFocus()
 			})
-			expect(result.current.ghostText).toBe(" completion")
+			expect(result.current.autocompleteText).toBe(" completion")
 		})
 	})
 })

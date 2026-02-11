@@ -23,7 +23,7 @@ const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label 
 	string
 >
 
-export class GhostModel {
+export class AutocompleteModel {
 	private apiHandler: ApiHandler | null = null
 	public profileName: string | null = null
 	public profileType: string | null = null
@@ -85,7 +85,7 @@ export class GhostModel {
 		return false
 
 		type ProfileWithIdAndName = Awaited<ReturnType<typeof providerSettingsManager.getProfile>>
-		async function useProfile(self: GhostModel, profile: ProfileWithIdAndName, provider: ProviderName) {
+		async function useProfile(self: AutocompleteModel, profile: ProfileWithIdAndName, provider: ProviderName) {
 			self.profileName = profile.name || null
 			self.profileType = profile.profileType || null
 			self.currentProvider = provider

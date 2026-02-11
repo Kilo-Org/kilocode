@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-export const ghostServiceSettingsSchema = z
+export const autocompleteServiceSettingsSchema = z
 	.object({
 		enableAutoTrigger: z.boolean().optional(),
 		enableSmartInlineTaskKeybinding: z.boolean().optional(),
@@ -18,7 +18,17 @@ export const ghostServiceSettingsSchema = z
 	})
 	.optional()
 
-export type GhostServiceSettings = z.infer<typeof ghostServiceSettingsSchema>
+export type AutocompleteServiceSettings = z.infer<typeof autocompleteServiceSettingsSchema>
+
+/**
+ * @deprecated Use `autocompleteServiceSettingsSchema` instead. Kept for backward compatibility.
+ */
+export const ghostServiceSettingsSchema = autocompleteServiceSettingsSchema
+
+/**
+ * @deprecated Use `AutocompleteServiceSettings` instead. Kept for backward compatibility.
+ */
+export type GhostServiceSettings = AutocompleteServiceSettings
 
 /**
  * Map of provider names to their default autocomplete models.

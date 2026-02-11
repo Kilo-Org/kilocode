@@ -44,7 +44,7 @@
 		"about": "Giới thiệu",
 		"autoPurge": "Tự động dọn dẹp",
 		"agentBehaviour": "Hành Vi Agent",
-		"ghost": "Tự Động Hoàn Thành"
+		"autocomplete": "Tự Động Hoàn Thành"
 	},
 	"about": {
 		"bugReport": {
@@ -1171,7 +1171,7 @@
 			"description": "Hiển thị thống kê số dòng thêm/xóa trong tiêu đề tác vụ"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
 			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",

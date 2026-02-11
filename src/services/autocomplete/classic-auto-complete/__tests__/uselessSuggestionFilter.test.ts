@@ -1,8 +1,8 @@
-import { postprocessGhostSuggestion, suggestionConsideredDuplication } from "../uselessSuggestionFilter"
+import { postprocessAutocompleteSuggestion, suggestionConsideredDuplication } from "../uselessSuggestionFilter"
 
-describe("postprocessGhostSuggestion", () => {
+describe("postprocessAutocompleteSuggestion", () => {
 	it("filters suggestions that are considered duplication (prefix/suffix match)", () => {
-		const result = postprocessGhostSuggestion({
+		const result = postprocessAutocompleteSuggestion({
 			suggestion: "hello",
 			prefix: "hello",
 			suffix: "",
@@ -15,14 +15,14 @@ describe("postprocessGhostSuggestion", () => {
 	it("filters suggestions that rewrite the line above (continuedev postprocessCompletion behavior)", () => {
 		const prefix = "function test() {\n  return true\n  "
 		const suggestion = "return true"
-		const result = postprocessGhostSuggestion({ suggestion, prefix, suffix: "", model: "" })
+		const result = postprocessAutocompleteSuggestion({ suggestion, prefix, suffix: "", model: "" })
 		expect(result).toBeUndefined()
 	})
 
 	describe("model-specific postprocessing", () => {
 		it("removes markdown code fences", () => {
 			const suggestion = "```javascript\nconst x = 1\n```"
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion,
 				prefix: "",
 				suffix: "",
@@ -33,7 +33,7 @@ describe("postprocessGhostSuggestion", () => {
 
 		it("handles Codestral-specific quirks", () => {
 			// Codestral sometimes adds extra leading space
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion: " test",
 				prefix: "const x = ",
 				suffix: "\n",
@@ -43,7 +43,7 @@ describe("postprocessGhostSuggestion", () => {
 		})
 
 		it("handles Mercury/Granite prefix duplication", () => {
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion: "const x = 42",
 				prefix: "const x = ",
 				suffix: "",
@@ -53,7 +53,7 @@ describe("postprocessGhostSuggestion", () => {
 		})
 
 		it("handles Gemini/Gemma file separator", () => {
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion: "const x = 1<|file_separator|>",
 				prefix: "",
 				suffix: "",
@@ -66,7 +66,7 @@ describe("postprocessGhostSuggestion", () => {
 	describe("extreme repetition filtering", () => {
 		it("filters extreme repetition", () => {
 			const repetitive = "test\ntest\ntest\ntest\ntest\ntest\ntest\ntest\ntest\n"
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion: repetitive,
 				prefix: "",
 				suffix: "",
@@ -77,7 +77,7 @@ describe("postprocessGhostSuggestion", () => {
 
 		it("allows normal repetition", () => {
 			const normal = "test1\ntest2\ntest3\ntest4\n"
-			const result = postprocessGhostSuggestion({
+			const result = postprocessAutocompleteSuggestion({
 				suggestion: normal,
 				prefix: "",
 				suffix: "",

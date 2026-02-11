@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { GhostServiceSettingsView } from "../GhostServiceSettings"
-import { GhostServiceSettings } from "@roo-code/types"
+import { AutocompleteServiceSettingsView } from "../AutocompleteServiceSettings"
+import { AutocompleteServiceSettings } from "@roo-code/types"
 import React from "react"
 import { SearchIndexProvider } from "@/components/settings/useSettingsSearch"
 
@@ -46,7 +46,7 @@ vi.mock("@/utils/vscode", () => ({
 // Mock useKeybindings hook
 vi.mock("@/hooks/useKeybindings", () => ({
 	useKeybindings: () => ({
-		"kilo-code.ghost.generateSuggestions": "Cmd+Shift+G",
+		"kilo-code.autocomplete.generateSuggestions": "Cmd+Shift+G",
 	}),
 }))
 
@@ -103,7 +103,7 @@ vi.mock("../../settings/Section", () => ({
 	Section: ({ children }: any) => <div>{children}</div>,
 }))
 
-const defaultGhostServiceSettings: GhostServiceSettings = {
+const defaultAutocompleteServiceSettings: AutocompleteServiceSettings = {
 	enableAutoTrigger: false,
 	enableSmartInlineTaskKeybinding: false,
 	enableChatAutocomplete: false,
@@ -113,23 +113,23 @@ const defaultGhostServiceSettings: GhostServiceSettings = {
 
 const renderComponent = (props = {}) => {
 	const defaultProps = {
-		ghostServiceSettings: defaultGhostServiceSettings,
-		onGhostServiceSettingsChange: vi.fn(),
+		ghostServiceSettings: defaultAutocompleteServiceSettings,
+		onAutocompleteServiceSettingsChange: vi.fn(),
 		...props,
 	}
 
-	return render(<GhostServiceSettingsView {...defaultProps} />)
+	return render(<AutocompleteServiceSettingsView {...defaultProps} />)
 }
 
 const renderComponentWithSearch = (
-	props: Partial<React.ComponentProps<typeof GhostServiceSettingsView>> & { registerSetting?: any } = {},
+	props: Partial<React.ComponentProps<typeof AutocompleteServiceSettingsView>> & { registerSetting?: any } = {},
 ) => {
 	const registerSetting = props.registerSetting ?? vi.fn()
 	const { registerSetting: _omit, ...rest } = props
 
 	const defaultProps = {
-		ghostServiceSettings: defaultGhostServiceSettings,
-		onGhostServiceSettingsChange: vi.fn(),
+		ghostServiceSettings: defaultAutocompleteServiceSettings,
+		onAutocompleteServiceSettingsChange: vi.fn(),
 		...rest,
 	}
 
@@ -137,13 +137,13 @@ const renderComponentWithSearch = (
 		registerSetting,
 		...render(
 			<SearchIndexProvider value={{ registerSetting }}>
-				<GhostServiceSettingsView {...(defaultProps as any)} />
+				<AutocompleteServiceSettingsView {...(defaultProps as any)} />
 			</SearchIndexProvider>,
 		),
 	}
 }
 
-describe("GhostServiceSettingsView", () => {
+describe("AutocompleteServiceSettingsView", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		vi.useFakeTimers()
@@ -163,7 +163,7 @@ describe("GhostServiceSettingsView", () => {
 
 		const { registerSetting } = renderComponentWithSearch({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				enableAutoTrigger: false,
 				enableChatAutocomplete: false,
 				enableSmartInlineTaskKeybinding: false,
@@ -172,14 +172,14 @@ describe("GhostServiceSettingsView", () => {
 
 		await waitFor(() => {
 			const ids = registerSetting.mock.calls.map(([arg]: any[]) => arg.settingId)
-			expect(ids).toContain("ghost-enable-auto-trigger")
-			expect(ids).toContain("ghost-smart-inline-task-keybinding")
-			expect(ids).toContain("ghost-chat-autocomplete")
-			expect(ids).toContain("ghost-autocomplete-model")
+			expect(ids).toContain("autocomplete-enable-auto-trigger")
+			expect(ids).toContain("autocomplete-smart-inline-task-keybinding")
+			expect(ids).toContain("autocomplete-chat-autocomplete")
+			expect(ids).toContain("autocomplete-model")
 		})
 
 		// Snooze setting should not be registered unless enableAutoTrigger is enabled
-		const snoozeCalls = registerSetting.mock.calls.filter(([arg]: any[]) => arg.settingId === "ghost-snooze")
+		const snoozeCalls = registerSetting.mock.calls.filter(([arg]: any[]) => arg.settingId === "autocomplete-snooze")
 		expect(snoozeCalls).toHaveLength(0)
 	})
 
@@ -189,7 +189,7 @@ describe("GhostServiceSettingsView", () => {
 
 		const { registerSetting } = renderComponentWithSearch({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				enableAutoTrigger: true,
 				snoozeUntil: undefined,
 			},
@@ -197,7 +197,7 @@ describe("GhostServiceSettingsView", () => {
 
 		await waitFor(() => {
 			const ids = registerSetting.mock.calls.map(([arg]: any[]) => arg.settingId)
-			expect(ids).toContain("ghost-snooze")
+			expect(ids).toContain("autocomplete-snooze")
 		})
 	})
 
@@ -216,46 +216,46 @@ describe("GhostServiceSettingsView", () => {
 		renderComponent()
 
 		// Check that trigger settings are visible
-		expect(screen.getByText(/kilocode:ghost.settings.codeEditorSuggestions/)).toBeInTheDocument()
-		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.codeEditorSuggestions/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.enableAutoTrigger.label/)).toBeInTheDocument()
 	})
 
 	it("toggles auto trigger checkbox correctly", () => {
-		const onGhostServiceSettingsChange = vi.fn()
-		renderComponent({ onGhostServiceSettingsChange })
+		const onAutocompleteServiceSettingsChange = vi.fn()
+		renderComponent({ onAutocompleteServiceSettingsChange })
 
-		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/).closest("label")
+		const checkboxLabel = screen.getByText(/kilocode:autocomplete.settings.enableAutoTrigger.label/).closest("label")
 		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
 		fireEvent.click(checkbox)
 
-		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableAutoTrigger", true)
+		expect(onAutocompleteServiceSettingsChange).toHaveBeenCalledWith("enableAutoTrigger", true)
 	})
 
 	it("toggles smart inline task keybinding checkbox correctly", () => {
-		const onGhostServiceSettingsChange = vi.fn()
-		renderComponent({ onGhostServiceSettingsChange })
+		const onAutocompleteServiceSettingsChange = vi.fn()
+		renderComponent({ onAutocompleteServiceSettingsChange })
 
 		const checkboxLabel = screen
-			.getByText(/kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label/)
+			.getByText(/kilocode:autocomplete.settings.enableSmartInlineTaskKeybinding.label/)
 			.closest("label")
 		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
 		fireEvent.click(checkbox)
 
-		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableSmartInlineTaskKeybinding", true)
+		expect(onAutocompleteServiceSettingsChange).toHaveBeenCalledWith("enableSmartInlineTaskKeybinding", true)
 	})
 
 	it("toggles chat autocomplete checkbox correctly", () => {
-		const onGhostServiceSettingsChange = vi.fn()
-		renderComponent({ onGhostServiceSettingsChange })
+		const onAutocompleteServiceSettingsChange = vi.fn()
+		renderComponent({ onAutocompleteServiceSettingsChange })
 
-		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableChatAutocomplete.label/).closest("label")
+		const checkboxLabel = screen.getByText(/kilocode:autocomplete.settings.enableChatAutocomplete.label/).closest("label")
 		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
 		fireEvent.click(checkbox)
 
-		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableChatAutocomplete", true)
+		expect(onAutocompleteServiceSettingsChange).toHaveBeenCalledWith("enableChatAutocomplete", true)
 	})
 
 	it("renders Trans components with proper structure", () => {
@@ -271,73 +271,73 @@ describe("GhostServiceSettingsView", () => {
 	it("displays provider and model information when available", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: "openrouter",
 				model: "openai/gpt-4o-mini",
 			},
 		})
 
-		expect(screen.getByText(/kilocode:ghost.settings.provider/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.provider/)).toBeInTheDocument()
 		expect(screen.getByText(/openrouter/)).toBeInTheDocument()
-		expect(screen.getAllByText(/kilocode:ghost.settings.model/).length).toBeGreaterThan(0)
+		expect(screen.getAllByText(/kilocode:autocomplete.settings.model/).length).toBeGreaterThan(0)
 		expect(screen.getByText(/openai\/gpt-4o-mini/)).toBeInTheDocument()
 	})
 
 	it("displays error message when provider and model are not configured", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: undefined,
 				model: undefined,
 			},
 		})
 
-		expect(screen.getByText(/kilocode:ghost.settings.noModelConfigured.title/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noModelConfigured.title/)).toBeInTheDocument()
 	})
 
 	it("displays error message when only provider is missing", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: undefined,
 				model: "openai/gpt-4o-mini",
 			},
 		})
 
-		expect(screen.getByText(/kilocode:ghost.settings.noModelConfigured.title/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noModelConfigured.title/)).toBeInTheDocument()
 	})
 
 	it("displays error message when only model is missing", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: "openrouter",
 				model: undefined,
 			},
 		})
 
-		expect(screen.getByText(/kilocode:ghost.settings.noModelConfigured.title/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noModelConfigured.title/)).toBeInTheDocument()
 	})
 
 	it("displays no credits message when kilocode profile exists but has no balance", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: undefined,
 				model: undefined,
 				hasKilocodeProfileWithNoBalance: true,
 			},
 		})
 
-		expect(screen.getByText(/kilocode:ghost.settings.noCredits.title/)).toBeInTheDocument()
-		expect(screen.getByText(/kilocode:ghost.settings.noCredits.description/)).toBeInTheDocument()
-		expect(screen.getByText(/kilocode:ghost.settings.noCredits.buyCredits/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noCredits.title/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noCredits.description/)).toBeInTheDocument()
+		expect(screen.getByText(/kilocode:autocomplete.settings.noCredits.buyCredits/)).toBeInTheDocument()
 	})
 
 	it("displays provider and model info even when hasKilocodeProfileWithNoBalance is true but model is configured", () => {
 		renderComponent({
 			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
+				...defaultAutocompleteServiceSettings,
 				provider: "openrouter",
 				model: "openai/gpt-4o-mini",
 				hasKilocodeProfileWithNoBalance: true,
@@ -347,7 +347,7 @@ describe("GhostServiceSettingsView", () => {
 		// Should show provider/model info, not the no credits message
 		expect(screen.getByText(/openrouter/)).toBeInTheDocument()
 		expect(screen.getByText(/openai\/gpt-4o-mini/)).toBeInTheDocument()
-		expect(screen.queryByText(/kilocode:ghost.settings.noCredits.title/)).not.toBeInTheDocument()
+		expect(screen.queryByText(/kilocode:autocomplete.settings.noCredits.title/)).not.toBeInTheDocument()
 	})
 
 	describe("snooze status refresh", () => {
@@ -359,18 +359,18 @@ describe("GhostServiceSettingsView", () => {
 			const snoozeUntil = now + 15_000
 
 			const { rerender } = render(
-				<GhostServiceSettingsView
+				<AutocompleteServiceSettingsView
 					ghostServiceSettings={{
-						...defaultGhostServiceSettings,
+						...defaultAutocompleteServiceSettings,
 						enableAutoTrigger: true,
 						snoozeUntil,
 					}}
-					onGhostServiceSettingsChange={vi.fn()}
+					onAutocompleteServiceSettingsChange={vi.fn()}
 				/>,
 			)
 
 			// Initially should show snoozed state
-			expect(screen.getByText(/kilocode:ghost.settings.snooze.currentlySnoozed/)).toBeInTheDocument()
+			expect(screen.getByText(/kilocode:autocomplete.settings.snooze.currentlySnoozed/)).toBeInTheDocument()
 
 			// Advance time past the snooze expiration and past the 30 second refresh interval
 			act(() => {
@@ -379,28 +379,28 @@ describe("GhostServiceSettingsView", () => {
 
 			// Force a rerender to pick up the state change from the interval
 			rerender(
-				<GhostServiceSettingsView
+				<AutocompleteServiceSettingsView
 					ghostServiceSettings={{
-						...defaultGhostServiceSettings,
+						...defaultAutocompleteServiceSettings,
 						enableAutoTrigger: true,
 						snoozeUntil,
 					}}
-					onGhostServiceSettingsChange={vi.fn()}
+					onAutocompleteServiceSettingsChange={vi.fn()}
 				/>,
 			)
 
 			// Now should show the snooze button (not snoozed state)
-			expect(screen.getByText(/kilocode:ghost.settings.snooze.button/)).toBeInTheDocument()
-			expect(screen.queryByText(/kilocode:ghost.settings.snooze.currentlySnoozed/)).not.toBeInTheDocument()
+			expect(screen.getByText(/kilocode:autocomplete.settings.snooze.button/)).toBeInTheDocument()
+			expect(screen.queryByText(/kilocode:autocomplete.settings.snooze.currentlySnoozed/)).not.toBeInTheDocument()
 		})
 
 		it("cleans up interval on unmount", () => {
 			const clearIntervalSpy = vi.spyOn(global, "clearInterval")
 
 			const { unmount } = render(
-				<GhostServiceSettingsView
-					ghostServiceSettings={defaultGhostServiceSettings}
-					onGhostServiceSettingsChange={vi.fn()}
+				<AutocompleteServiceSettingsView
+					ghostServiceSettings={defaultAutocompleteServiceSettings}
+					onAutocompleteServiceSettingsChange={vi.fn()}
 				/>,
 			)
 

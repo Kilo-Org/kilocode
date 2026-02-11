@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { getProcessedSnippets } from "../getProcessedSnippets"
-import { AutocompleteInput, GhostContextProvider } from "../../types"
+import { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/types"
-import { GhostModel } from "../../GhostModel"
+import { AutocompleteModel } from "../../AutocompleteModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
 import crypto from "crypto"
 import { ContextRetrievalService } from "../../../continuedev/core/autocomplete/context/ContextRetrievalService"
@@ -83,9 +83,9 @@ function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInp
 	}
 }
 
-describe("GhostContextProvider", () => {
-	let contextProvider: GhostContextProvider
-	let mockModel: GhostModel
+describe("AutocompleteContextProvider", () => {
+	let contextProvider: AutocompleteContextProvider
+	let mockModel: AutocompleteModel
 	let mockIgnoreController: Promise<RooIgnoreController> | undefined
 
 	beforeEach(() => {

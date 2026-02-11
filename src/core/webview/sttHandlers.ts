@@ -4,7 +4,7 @@ import type { STTCommand, STTSegment as ContractSTTSegment, MicrophoneDevice } f
 import { STTService } from "../../services/stt"
 import { STTEventEmitter } from "../../services/stt/types"
 import { getOpenAiApiKey } from "../../services/stt/utils/getOpenAiCredentials"
-import { VisibleCodeTracker } from "../../services/ghost/context/VisibleCodeTracker"
+import { VisibleCodeTracker } from "../../services/autocomplete/context/VisibleCodeTracker"
 import { extractCodeGlossary, formatGlossaryAsPrompt } from "../../services/stt/context/codeGlossaryExtractor"
 import { listMicrophoneDevices } from "../../services/stt/FFmpegDeviceEnumerator"
 import { checkSpeechToTextAvailable } from "./speechToTextCheck"

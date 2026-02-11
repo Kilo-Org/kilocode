@@ -1,6 +1,6 @@
 import { ChatTextAreaAutocomplete } from "../ChatTextAreaAutocomplete"
 import { ProviderSettingsManager } from "../../../../core/config/ProviderSettingsManager"
-import { GhostModel } from "../../GhostModel"
+import { AutocompleteModel } from "../../AutocompleteModel"
 import { ApiStreamChunk } from "../../../../api/transform/stream"
 
 describe("ChatTextAreaAutocomplete", () => {
@@ -15,7 +15,7 @@ describe("ChatTextAreaAutocomplete", () => {
 	describe("getCompletion", () => {
 		it("should work with non-FIM models using chat-based completion", async () => {
 			// Setup: Model without FIM support (like Mistral)
-			const mockModel = new GhostModel()
+			const mockModel = new AutocompleteModel()
 			mockModel.loaded = true
 
 			vi.spyOn(mockModel, "hasValidCredentials").mockReturnValue(true)
@@ -58,7 +58,7 @@ describe("ChatTextAreaAutocomplete", () => {
 		})
 
 		it("should filter empty content", () => {
-			// Empty content is filtered by postprocessGhostSuggestion
+			// Empty content is filtered by postprocessAutocompleteSuggestion
 			expect(autocomplete.cleanSuggestion("", "")).toBe("")
 		})
 

@@ -1,22 +1,22 @@
 import {
 	AutocompleteInput,
-	GhostContextProvider,
-	HoleFillerGhostPrompt,
+	AutocompleteContextProvider,
+	HoleFillerAutocompletePrompt,
 	FillInAtCursorSuggestion,
 	ChatCompletionResult,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 
-export type { HoleFillerGhostPrompt, FillInAtCursorSuggestion, ChatCompletionResult }
+export type { HoleFillerAutocompletePrompt, FillInAtCursorSuggestion, ChatCompletionResult }
 
 /**
  * Parse the response - only handles responses with <COMPLETION> tags
  * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
  */
-export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+export function parseAutocompleteResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
 	let fimText: string = ""
 
 	// Match content strictly between <COMPLETION> and </COMPLETION> tags
@@ -38,9 +38,9 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 }
 
 export class HoleFiller {
-	constructor(private contextProvider: GhostContextProvider) {}
+	constructor(private contextProvider: AutocompleteContextProvider) {}
 
-	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
+	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerAutocompletePrompt> {
 		return {
 			strategy: "hole_filler",
 			systemPrompt: this.getSystemInstructions(),
@@ -179,8 +179,8 @@ Return the COMPLETION tags`
 	 * Execute chat-based completion using the model
 	 */
 	async getFromChat(
-		model: GhostModel,
-		prompt: HoleFillerGhostPrompt,
+		model: AutocompleteModel,
+		prompt: HoleFillerAutocompletePrompt,
 		processSuggestion: (text: string) => FillInAtCursorSuggestion,
 	): Promise<ChatCompletionResult> {
 		const { systemPrompt, userPrompt } = prompt

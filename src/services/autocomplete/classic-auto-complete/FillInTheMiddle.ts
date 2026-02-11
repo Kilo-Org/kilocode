@@ -1,23 +1,23 @@
 import {
 	AutocompleteInput,
-	GhostContextProvider,
-	FimGhostPrompt,
+	AutocompleteContextProvider,
+	FimAutocompletePrompt,
 	FimCompletionResult,
 	FillInAtCursorSuggestion,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 
-export type { FimGhostPrompt, FimCompletionResult }
+export type { FimAutocompletePrompt, FimCompletionResult }
 
 export class FimPromptBuilder {
-	constructor(private contextProvider: GhostContextProvider) {}
+	constructor(private contextProvider: AutocompleteContextProvider) {}
 
 	/**
 	 * Build complete FIM prompt with all necessary data
 	 */
-	async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimGhostPrompt> {
+	async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimAutocompletePrompt> {
 		const { filepathUri, helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
@@ -58,8 +58,8 @@ export class FimPromptBuilder {
 	 * Execute FIM-based completion using the model
 	 */
 	async getFromFIM(
-		model: GhostModel,
-		prompt: FimGhostPrompt,
+		model: AutocompleteModel,
+		prompt: FimAutocompletePrompt,
 		processSuggestion: (text: string) => FillInAtCursorSuggestion,
 	): Promise<FimCompletionResult> {
 		const { formattedPrefix, prunedSuffix, autocompleteInput } = prompt

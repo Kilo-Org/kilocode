@@ -1,18 +1,18 @@
 import * as vscode from "vscode"
-import { GhostModel } from "../GhostModel"
+import { AutocompleteModel } from "../AutocompleteModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { AutocompleteContext, VisibleCodeContext } from "../types"
 import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
-import { postprocessGhostSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
+import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 
 export class ChatTextAreaAutocomplete {
-	private model: GhostModel
+	private model: AutocompleteModel
 	private providerSettingsManager: ProviderSettingsManager
 	private telemetry: AutocompleteTelemetry
 
 	constructor(providerSettingsManager: ProviderSettingsManager) {
-		this.model = new GhostModel()
+		this.model = new AutocompleteModel()
 		this.providerSettingsManager = providerSettingsManager
 		this.telemetry = new AutocompleteTelemetry("chat-textarea")
 	}
@@ -160,7 +160,7 @@ TASK: Complete the user's message naturally.
 	}
 
 	public cleanSuggestion(suggestion: string, userText: string): string {
-		let cleaned = postprocessGhostSuggestion({
+		let cleaned = postprocessAutocompleteSuggestion({
 			suggestion: removePrefixOverlap(suggestion, userText),
 			prefix: userText,
 			suffix: "", // Chat textarea has no suffix

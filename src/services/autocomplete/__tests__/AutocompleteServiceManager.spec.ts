@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import * as vscode from "vscode"
-import { GhostServiceManager } from "../GhostServiceManager"
+import { AutocompleteServiceManager } from "../AutocompleteServiceManager"
 
 vi.mock("vscode", () => {
 	class Position {
@@ -61,8 +61,8 @@ vi.mock("vscode", () => {
 	}
 })
 
-vi.mock("../GhostModel", () => {
-	class GhostModel {
+vi.mock("../AutocompleteModel", () => {
+	class AutocompleteModel {
 		public loaded = false
 		public profileName = "test-profile"
 
@@ -83,31 +83,31 @@ vi.mock("../GhostModel", () => {
 		}
 	}
 
-	return { GhostModel }
+	return { AutocompleteModel }
 })
 
-vi.mock("../GhostStatusBar", () => {
-	class GhostStatusBar {
+vi.mock("../AutocompleteStatusBar", () => {
+	class AutocompleteStatusBar {
 		public update = vi.fn()
 		public dispose = vi.fn()
 		constructor(_args: any) {}
 	}
-	return { GhostStatusBar }
+	return { AutocompleteStatusBar }
 })
 
-vi.mock("../GhostCodeActionProvider", () => {
-	class GhostCodeActionProvider {}
-	return { GhostCodeActionProvider }
+vi.mock("../AutocompleteCodeActionProvider", () => {
+	class AutocompleteCodeActionProvider {}
+	return { AutocompleteCodeActionProvider }
 })
 
-vi.mock("../classic-auto-complete/GhostInlineCompletionProvider", () => {
-	class GhostInlineCompletionProvider {
+vi.mock("../classic-auto-complete/AutocompleteInlineCompletionProvider", () => {
+	class AutocompleteInlineCompletionProvider {
 		public provideInlineCompletionItems_Internal = vi.fn()
 		public dispose = vi.fn()
 
 		constructor(..._args: any[]) {}
 	}
-	return { GhostInlineCompletionProvider }
+	return { AutocompleteInlineCompletionProvider }
 })
 
 vi.mock("../classic-auto-complete/AutocompleteTelemetry", () => {
@@ -153,7 +153,7 @@ type TestCline = {
 	postStateToWebview: () => Promise<void>
 }
 
-async function createManager(): Promise<GhostServiceManager> {
+async function createManager(): Promise<AutocompleteServiceManager> {
 	const { __setState } = (await import("../../../core/config/ContextProxy")) as any
 
 	__setState({
@@ -169,14 +169,14 @@ async function createManager(): Promise<GhostServiceManager> {
 		postStateToWebview: vi.fn().mockResolvedValue(undefined),
 	}
 
-	const manager = new GhostServiceManager(context, cline as any)
+	const manager = new AutocompleteServiceManager(context, cline as any)
 
 	await manager.load()
 
 	return manager
 }
 
-describe("GhostServiceManager (less mocked logic)", () => {
+describe("AutocompleteServiceManager (less mocked logic)", () => {
 	beforeEach(async () => {
 		vi.clearAllMocks()
 
@@ -186,7 +186,7 @@ describe("GhostServiceManager (less mocked logic)", () => {
 		vi.mocked(vscode.languages.registerInlineCompletionItemProvider).mockReset()
 
 		// Reset singleton instance before each test
-		GhostServiceManager._resetInstance()
+		AutocompleteServiceManager._resetInstance()
 	})
 
 	afterEach(() => {

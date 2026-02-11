@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 /**
- * Mock implementation of the key VSCode workspace APIs needed for testing GhostWorkspaceEdit
+ * Mock implementation of the key VSCode workspace APIs needed for testing AutocompleteWorkspaceEdit
  */
 export class MockWorkspace {
 	private documents = new Map<string, MockTextDocument>()

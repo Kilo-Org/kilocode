@@ -44,7 +44,7 @@
 		"about": "Informazioni su Kilo Code",
 		"autoPurge": "Auto-pulizia",
 		"agentBehaviour": "Comportamento agente",
-		"ghost": "Ghost"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -1176,7 +1176,7 @@
 			"description": "Visualizza le statistiche delle righe aggiunte/rimosse nell'intestazione dell'attività"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostra animazione gutter durante l'autocompletamento",
 			"description": "Visualizza indicatore animato nel gutter dell'editor quando l'autocompletamento è in esecuzione",

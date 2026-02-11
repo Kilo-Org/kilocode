@@ -30,7 +30,7 @@ import {
 	type EditQueuedMessagePayload,
 	TelemetryEventName,
 	// kilocode_change start
-	ghostServiceSettingsSchema,
+	autocompleteServiceSettingsSchema,
 	fastApplyModelSchema,
 	// kilocode_change end
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
@@ -90,9 +90,9 @@ import {
 	fetchKilocodeNotificationsHandler,
 	deviceAuthMessageHandler,
 } from "../kilocode/webview/webviewMessageHandlerUtils"
-import { GhostServiceManager } from "../../services/ghost/GhostServiceManager"
-import { handleChatCompletionRequest } from "../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
-import { handleChatCompletionAccepted } from "../../services/ghost/chat-autocomplete/handleChatCompletionAccepted"
+import { AutocompleteServiceManager } from "../../services/autocomplete/AutocompleteServiceManager"
+import { handleChatCompletionRequest } from "../../services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
+import { handleChatCompletionAccepted } from "../../services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 // kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
@@ -1964,22 +1964,22 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		// kilocode_change end - terminalCommandApiConfigId
-		// kilocode_change start - ghostServiceSettings
+		// kilocode_change start - ghostServiceSettings (storage key preserved)
 		case "ghostServiceSettings":
 			if (!message.values) {
 				return
 			}
-			// Validate ghostServiceSettings structure
-			const ghostServiceSettings = ghostServiceSettingsSchema.parse(message.values)
-			await updateGlobalState("ghostServiceSettings", ghostServiceSettings)
+			// Validate autocompleteServiceSettings structure (storage key preserved as ghostServiceSettings)
+			const autocompleteServiceSettings = autocompleteServiceSettingsSchema.parse(message.values)
+			await updateGlobalState("ghostServiceSettings", autocompleteServiceSettings)
 			await provider.postStateToWebview()
-			vscode.commands.executeCommand("kilo-code.ghost.reload")
+			vscode.commands.executeCommand("kilo-code.autocomplete.reload")
 			break
 		case "snoozeAutocomplete":
 			if (typeof message.value === "number" && message.value > 0) {
-				await GhostServiceManager.getInstance()?.snooze(message.value)
+				await AutocompleteServiceManager.getInstance()?.snooze(message.value)
 			} else {
-				await GhostServiceManager.getInstance()?.unsnooze()
+				await AutocompleteServiceManager.getInstance()?.unsnooze()
 			}
 			break
 		// kilocode_change end
@@ -2223,7 +2223,7 @@ export const webviewMessageHandler = async (
 					await provider.providerSettingsManager.saveConfig(message.text, message.apiConfiguration)
 					const listApiConfig = await provider.providerSettingsManager.listConfig()
 					await updateGlobalState("listApiConfigMeta", listApiConfig)
-					vscode.commands.executeCommand("kilo-code.ghost.reload") // kilocode_change: Reload ghost model when API provider settings change
+					vscode.commands.executeCommand("kilo-code.autocomplete.reload") // kilocode_change: Reload autocomplete model when API provider settings change
 				} catch (error) {
 					provider.log(
 						`Error save api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2286,7 +2286,7 @@ export const webviewMessageHandler = async (
 				const currentApiConfigName = getGlobalState("currentApiConfigName") || "default"
 				const isActiveProfile = message.text === currentApiConfigName
 				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
-				vscode.commands.executeCommand("kilo-code.ghost.reload")
+				vscode.commands.executeCommand("kilo-code.autocomplete.reload")
 				// kilocode_change end
 
 				// Ensure state is posted to webview after profile update to reflect organization mode changes
@@ -2294,8 +2294,8 @@ export const webviewMessageHandler = async (
 					await provider.postStateToWebview()
 				}
 
-				// kilocode_change: Reload ghost model when API provider settings change
-				vscode.commands.executeCommand("kilo-code.ghost.reload")
+				// kilocode_change: Reload autocomplete model when API provider settings change
+				vscode.commands.executeCommand("kilo-code.autocomplete.reload")
 			}
 			// kilocode_change end: check for kilocodeToken change to remove organizationId and fetch organization modes
 			break
@@ -2321,8 +2321,8 @@ export const webviewMessageHandler = async (
 					// currently activated provider profile.
 					await provider.activateProviderProfile({ name: newName })
 
-					// kilocode_change: Reload ghost model when API provider settings change
-					vscode.commands.executeCommand("kilo-code.ghost.reload")
+				// kilocode_change: Reload autocomplete model when API provider settings change
+				vscode.commands.executeCommand("kilo-code.autocomplete.reload")
 				} catch (error) {
 					provider.log(
 						`Error rename api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2398,8 +2398,8 @@ export const webviewMessageHandler = async (
 					await provider.providerSettingsManager.deleteConfig(oldName)
 					await provider.activateProviderProfile({ name: newName })
 
-					// kilocode_change: Reload ghost model when API provider settings change
-					vscode.commands.executeCommand("kilo-code.ghost.reload")
+				// kilocode_change: Reload autocomplete model when API provider settings change
+				vscode.commands.executeCommand("kilo-code.autocomplete.reload")
 				} catch (error) {
 					provider.log(
 						`Error delete api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,

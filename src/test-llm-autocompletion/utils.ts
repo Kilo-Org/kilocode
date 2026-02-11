@@ -1,4 +1,4 @@
-import { GhostSuggestionContext } from "../services/ghost/types.js"
+import { AutocompleteSuggestionContext } from "../services/autocomplete/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import * as vscode from "vscode"
 import { CURSOR_MARKER } from "./test-cases.js"
@@ -47,10 +47,10 @@ export function getLanguageIdFromExtension(extension: string): string {
 }
 
 /**
- * Converts test input to GhostSuggestionContext
+ * Converts test input to AutocompleteSuggestionContext
  * Extracts cursor position from CURSOR_MARKER in the code
  */
-export function createContext(code: string, testCaseName: string): GhostSuggestionContext {
+export function createContext(code: string, testCaseName: string): AutocompleteSuggestionContext {
 	const lines = code.split("\n")
 	let cursorLine = 0
 	let cursorCharacter = 0
