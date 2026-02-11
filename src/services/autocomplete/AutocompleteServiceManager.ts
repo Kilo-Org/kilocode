@@ -5,7 +5,7 @@ import { AutocompleteModel } from "./AutocompleteModel"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
-import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
+import { AutocompleteServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
@@ -17,7 +17,7 @@ export class AutocompleteServiceManager {
 	private readonly model: AutocompleteModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
-	private settings: GhostServiceSettings | null = null
+	private settings: AutocompleteServiceSettings | null = null
 
 	private taskId: string | null = null
 

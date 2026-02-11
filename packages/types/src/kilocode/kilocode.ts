@@ -21,16 +21,6 @@ export const autocompleteServiceSettingsSchema = z
 export type AutocompleteServiceSettings = z.infer<typeof autocompleteServiceSettingsSchema>
 
 /**
- * @deprecated Use `autocompleteServiceSettingsSchema` instead. Kept for backward compatibility.
- */
-export const ghostServiceSettingsSchema = autocompleteServiceSettingsSchema
-
-/**
- * @deprecated Use `AutocompleteServiceSettings` instead. Kept for backward compatibility.
- */
-export type GhostServiceSettings = AutocompleteServiceSettings
-
-/**
  * Map of provider names to their default autocomplete models.
  * These are the providers that support autocomplete functionality.
  */
