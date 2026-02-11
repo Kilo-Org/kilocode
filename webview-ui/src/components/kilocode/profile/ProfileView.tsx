@@ -40,6 +40,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 	const organizationId = apiConfiguration?.kilocodeOrganizationId
 
 	useEffect(() => {
+		setIsLoadingUser(true)
+		setIsLoadingBalance(true)
+		setIsLoadingKiloPass(true)
 		vscode.postMessage({ type: "fetchProfileDataRequest" })
 		vscode.postMessage({ type: "fetchBalanceDataRequest" })
 		vscode.postMessage({ type: "fetchKiloPassStateRequest" })

@@ -2951,9 +2951,15 @@ export const webviewMessageHandler = async (
 				const subscriptionData =
 					response.data?.result?.data?.json ?? response.data?.result?.data ?? response.data
 
+				// Validate the response has the expected shape before sending to webview
+				const normalizedData =
+					subscriptionData && typeof subscriptionData === "object" && "subscription" in subscriptionData
+						? subscriptionData
+						: { subscription: null }
+
 				provider.postMessageToWebview({
 					type: "kiloPassStateResponse",
-					payload: { success: true, data: subscriptionData },
+					payload: { success: true, data: normalizedData },
 				})
 			} catch (error: any) {
 				const errorMessage =
