@@ -1145,7 +1145,6 @@ export type KiloPassSubscriptionStatus =
 	| "unpaid"
 
 export interface KiloPassSubscriptionState {
-	stripeSubscriptionId: string
 	tier: KiloPassTier
 	cadence: KiloPassCadence
 	status: KiloPassSubscriptionStatus

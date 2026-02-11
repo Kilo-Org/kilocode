@@ -86,7 +86,6 @@ describe("ProfileView", () => {
 
 	function simulateKiloPassStateResponse(
 		subscription: {
-			stripeSubscriptionId: string
 			tier: "tier_19" | "tier_49" | "tier_199"
 			cadence: "monthly" | "yearly"
 			status: string
@@ -154,7 +153,6 @@ describe("ProfileView", () => {
 			})
 			simulateBalanceDataResponse(10.0)
 			simulateKiloPassStateResponse({
-				stripeSubscriptionId: "sub_test",
 				tier: "tier_49",
 				cadence: "monthly",
 				status: "active",
