@@ -16,6 +16,10 @@ import { SessionCompaction } from "./compaction"
 import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 
+// kilocode_change - pattern to detect thinking blocks sent as text by OpenRouter/Kilo Gateway
+// Matches both "_Thinking:" (italic markdown) and "Thinking:" (plain text)
+const THINKING_PATTERN = /^_?Thinking:_?\s*/i
+
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
   const log = Log.create({ service: "session.processor" })
@@ -305,22 +309,41 @@ export namespace SessionProcessor {
                 case "text-end":
                   if (currentText) {
                     currentText.text = currentText.text.trimEnd()
-                    const textOutput = await Plugin.trigger(
-                      "experimental.text.complete",
-                      {
-                        sessionID: input.sessionID,
-                        messageID: input.assistantMessage.id,
-                        partID: currentText.id,
-                      },
-                      { text: currentText.text },
-                    )
-                    currentText.text = textOutput.text
-                    currentText.time = {
-                      start: Date.now(),
-                      end: Date.now(),
+                    // kilocode_change - detect thinking blocks sent as text by OpenRouter/Kilo Gateway
+                    // and convert them to reasoning parts so they get hidden after completion
+                    const thinkingMatch = currentText.text.match(THINKING_PATTERN)
+                    if (thinkingMatch) {
+                      const reasoningPart: MessageV2.ReasoningPart = {
+                        id: currentText.id,
+                        messageID: currentText.messageID,
+                        sessionID: currentText.sessionID,
+                        type: "reasoning",
+                        text: currentText.text.slice(thinkingMatch[0].length),
+                        time: {
+                          start: currentText.time?.start ?? Date.now(),
+                          end: Date.now(),
+                        },
+                        metadata: currentText.metadata,
+                      }
+                      await Session.updatePart(reasoningPart)
+                    } else {
+                      const textOutput = await Plugin.trigger(
+                        "experimental.text.complete",
+                        {
+                          sessionID: input.sessionID,
+                          messageID: input.assistantMessage.id,
+                          partID: currentText.id,
+                        },
+                        { text: currentText.text },
+                      )
+                      currentText.text = textOutput.text
+                      currentText.time = {
+                        start: Date.now(),
+                        end: Date.now(),
+                      }
+                      if (value.providerMetadata) currentText.metadata = value.providerMetadata
+                      await Session.updatePart(currentText)
                     }
-                    if (value.providerMetadata) currentText.metadata = value.providerMetadata
-                    await Session.updatePart(currentText)
                   }
                   currentText = undefined
                   break
