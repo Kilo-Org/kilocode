@@ -73,7 +73,7 @@ import { t } from "../../i18n"
 import { getApiMetrics, hasTokenUsageChanged, hasToolUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
-import { SUBAGENT_TOOL_NAMES, type SubagentRunningPayload } from "../../shared/subagent"
+import { SUBAGENT_TOOL_NAMES, type SubagentRunningPayload, type SubagentStructuredResult } from "../../shared/subagent"
 import { DiffStrategy, type ToolUse, type ToolParamName, toolParamNames } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
@@ -477,7 +477,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private _messageManager?: MessageManager
 
 	/** When set, attempt_completion will resolve this and abort instead of normal flow */
-	public backgroundCompletionResolve?: (result: string) => void
+	public backgroundCompletionResolve?: (result: string | SubagentStructuredResult) => void
 	/** When set, tool building is restricted to read-only for "explore" */
 	public subagentType?: "general" | "explore"
 	/** When set, child reports current step (e.g. tool description) for parent to show in subagentRunning row */

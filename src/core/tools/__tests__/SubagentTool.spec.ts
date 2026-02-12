@@ -1,3 +1,8 @@
+import {
+	SUBAGENT_CANCELLED_MODEL_MESSAGE,
+	SUBAGENT_CANCELLED_STRUCTURED_RESULT,
+	type SubagentStructuredResult,
+} from "../../../shared/subagent"
 import { subagentTool } from "../SubagentTool"
 import type { ToolUse } from "../../../shared/tools"
 
@@ -9,7 +14,13 @@ vi.mock("../../prompts/responses", () => ({
 }))
 
 const mockRunSubagentInBackground =
-	vi.fn<(p: { parentTaskId: string; prompt: string; subagentType: "general" | "explore" }) => Promise<string>>()
+	vi.fn<
+		(p: {
+			parentTaskId: string
+			prompt: string
+			subagentType: "general" | "explore"
+		}) => Promise<string | SubagentStructuredResult>
+	>()
 const mockSay = vi.fn()
 const mockPushToolResult = vi.fn()
 const mockHandleError = vi.fn()
@@ -96,6 +107,38 @@ describe("SubagentTool", () => {
 			)
 			expect(mockSay).toHaveBeenCalled()
 			expect(mockPushToolResult).toHaveBeenCalledWith("Subagent completed successfully.")
+		})
+
+		it("sends completed payload with resultCode/messageKey and pushes model message when result is structured (cancelled)", async () => {
+			mockRunSubagentInBackground.mockResolvedValue(SUBAGENT_CANCELLED_STRUCTURED_RESULT)
+
+			await subagentTool.execute(
+				{ description: "Do X", prompt: "Do it", subagent_type: "general" },
+				mockTask as any,
+				{
+					askApproval: vi.fn(),
+					handleError: mockHandleError,
+					pushToolResult: mockPushToolResult,
+					removeClosingTag: vi.fn(),
+					toolProtocol: "native",
+				},
+			)
+
+			const sayCalls = mockSay.mock.calls
+			const completedCall = sayCalls.find((c) => {
+				try {
+					const payload = JSON.parse(c[1])
+					return payload.tool === "subagentCompleted"
+				} catch {
+					return false
+				}
+			})
+			expect(completedCall).toBeDefined()
+			const payload = JSON.parse(completedCall![1])
+			expect(payload.resultCode).toBe("CANCELLED")
+			expect(payload.messageKey).toBe("chat:subagents.cancelledByUser")
+			expect(payload.result).toBe(SUBAGENT_CANCELLED_MODEL_MESSAGE)
+			expect(mockPushToolResult).toHaveBeenCalledWith(SUBAGENT_CANCELLED_MODEL_MESSAGE)
 		})
 
 		it("pushes error when description is missing", async () => {

@@ -1314,6 +1314,9 @@ export interface ClineSayTool {
 	currentTask?: string
 	result?: string
 	error?: string
+	/** When set (e.g. CANCELLED), webview shows t(messageKey) instead of result/error. */
+	resultCode?: string
+	messageKey?: string
 	// kilocode_change start
 	fastApplyResult?: {
 		description?: string

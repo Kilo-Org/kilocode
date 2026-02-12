@@ -1,8 +1,12 @@
 import {
+	SUBAGENT_CANCELLED_MODEL_MESSAGE,
+	SUBAGENT_RESULT_CODE_CANCELLED,
+	SUBAGENT_STATUS_STARTING,
 	SUBAGENT_TOOL_NAMES,
 	type RunSubagentInBackgroundParams,
 	type SubagentCompletedPayload,
 	type SubagentRunningPayload,
+	type SubagentStructuredResult,
 	isSubagentRunner,
 } from "../../shared/subagent"
 import type { ToolUse } from "../../shared/tools"
@@ -59,13 +63,10 @@ export class SubagentTool extends BaseTool<"subagent"> {
 		const runningPayload: SubagentRunningPayload = {
 			tool: SUBAGENT_TOOL_NAMES.running,
 			description,
-			currentTask: "Starting...",
+			currentTask: SUBAGENT_STATUS_STARTING,
 		}
 		const runningText = JSON.stringify(runningPayload)
-		const progressStatus = {
-			icon: "sync~spin",
-			text: `Running subagent: ${description}`,
-		}
+		const progressStatus = { icon: "sync~spin" }
 
 		await task.say("tool", runningText, undefined, true, undefined, progressStatus, {
 			isNonInteractive: true,
@@ -80,16 +81,33 @@ export class SubagentTool extends BaseTool<"subagent"> {
 			}
 			const result = await provider.runSubagentInBackground(runParams)
 
-			const completedPayload: SubagentCompletedPayload = {
-				tool: SUBAGENT_TOOL_NAMES.completed,
-				description,
-				result,
+			const isStructured = (r: string | SubagentStructuredResult): r is SubagentStructuredResult =>
+				typeof r === "object" && r !== null && "code" in r && "messageKey" in r
+
+			let completedPayload: SubagentCompletedPayload
+			let toolResult: string
+			if (isStructured(result)) {
+				completedPayload = {
+					tool: SUBAGENT_TOOL_NAMES.completed,
+					description,
+					result: SUBAGENT_CANCELLED_MODEL_MESSAGE,
+					resultCode: result.code,
+					messageKey: result.messageKey,
+				}
+				toolResult = SUBAGENT_CANCELLED_MODEL_MESSAGE
+			} else {
+				completedPayload = {
+					tool: SUBAGENT_TOOL_NAMES.completed,
+					description,
+					result,
+				}
+				toolResult = result
 			}
 			const completedText = JSON.stringify(completedPayload)
 			await task.say("tool", completedText, undefined, false, undefined, undefined, {
 				isNonInteractive: true,
 			})
-			pushToolResult(formatResponse.toolResult(result))
+			pushToolResult(formatResponse.toolResult(toolResult))
 		} catch (error) {
 			const errMessage = error instanceof Error ? error.message : String(error)
 			const errorPayload: SubagentCompletedPayload = {

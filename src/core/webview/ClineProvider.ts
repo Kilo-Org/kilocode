@@ -62,7 +62,11 @@ import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
-import { SUBAGENT_CANCELLED_MESSAGE, type RunSubagentInBackgroundParams } from "../../shared/subagent"
+import {
+	SUBAGENT_CANCELLED_STRUCTURED_RESULT,
+	type RunSubagentInBackgroundParams,
+	type SubagentStructuredResult,
+} from "../../shared/subagent"
 import { ProfileValidator } from "../../shared/ProfileValidator"
 
 import { Terminal } from "../../integrations/terminal/Terminal"
@@ -3283,7 +3287,7 @@ export class ClineProvider
 			task.activeSubagentChild = undefined
 			subagentChild.subagentProgressCallback = undefined
 			if (subagentChild.backgroundCompletionResolve) {
-				subagentChild.backgroundCompletionResolve(SUBAGENT_CANCELLED_MESSAGE)
+				subagentChild.backgroundCompletionResolve(SUBAGENT_CANCELLED_STRUCTURED_RESULT)
 				subagentChild.backgroundCompletionResolve = undefined
 			}
 			subagentChild.abandoned = true
@@ -4042,7 +4046,9 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 	 * Runs a subagent in the background. Parent stays current; child runs until attempt_completion.
 	 * Resolves with the completion result string, or rejects on error.
 	 */
-	public async runSubagentInBackground(params: RunSubagentInBackgroundParams): Promise<string> {
+	public async runSubagentInBackground(
+		params: RunSubagentInBackgroundParams,
+	): Promise<string | SubagentStructuredResult> {
 		const { parentTaskId, prompt, subagentType, onProgress } = params
 		const parent = this.getCurrentTask()
 		if (!parent) {
@@ -4097,9 +4103,9 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 
 		parent.activeSubagentChild = child
 
-		return new Promise<string>((resolve, reject) => {
+		return new Promise<string | SubagentStructuredResult>((resolve, reject) => {
 			let settled = false
-			child.backgroundCompletionResolve = (result: string) => {
+			child.backgroundCompletionResolve = (result: string | SubagentStructuredResult) => {
 				if (!settled) {
 					settled = true
 					parent.activeSubagentChild = undefined

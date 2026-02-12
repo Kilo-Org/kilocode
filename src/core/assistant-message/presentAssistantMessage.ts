@@ -8,6 +8,7 @@ import { customToolRegistry } from "@roo-code/core"
 
 import { t } from "../../i18n"
 
+import { SUBAGENT_STATUS_THINKING } from "../../shared/subagent"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse, ToolUse, McpToolUse } from "../../shared/tools"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
@@ -378,7 +379,7 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
-			cline.subagentProgressCallback?.("Thinking...")
+			cline.subagentProgressCallback?.(SUBAGENT_STATUS_THINKING)
 			await cline.say("text", content, undefined, block.partial)
 			break
 		}

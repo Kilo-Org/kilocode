@@ -303,7 +303,41 @@
 	},
 	"subagents": {
 		"runningLabel": "Running subagent: {{description}}",
-		"completedLabel": "Subagent completed"
+		"completedLabel": "Subagent completed",
+		"cancelledByUser": "Subagent was cancelled by the user.",
+		"starting": "Starting...",
+		"thinking": "Thinking...",
+		"toolDisplayNames": {
+			"read_file": "Read File",
+			"write_to_file": "Write File",
+			"apply_diff": "Apply Diff",
+			"search_files": "Search Files",
+			"search_and_replace": "Search And Replace",
+			"delete_file": "Delete File",
+			"search_replace": "Search Replace",
+			"edit_file": "Edit File",
+			"fast_edit_file": "Fast Edit",
+			"list_files": "List Files",
+			"codebase_search": "Codebase Search",
+			"execute_command": "Run Command",
+			"run_slash_command": "Slash Command",
+			"ask_followup_question": "Ask Question",
+			"attempt_completion": "Complete",
+			"update_todo_list": "Update Todos",
+			"switch_mode": "Switch Mode",
+			"new_task": "New Task",
+			"new_rule": "New Rule",
+			"report_bug": "Report Bug",
+			"condense": "Condense",
+			"generate_image": "Generate Image",
+			"use_mcp_tool": "MCP Tool",
+			"access_mcp_resource": "MCP Resource",
+			"browser_action": "Browser",
+			"fetch_instructions": "Fetch Instructions",
+			"apply_patch": "Apply Patch",
+			"mcp_tool": "MCP Tool",
+			"subagent": "Subagent"
+		}
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code has a question"

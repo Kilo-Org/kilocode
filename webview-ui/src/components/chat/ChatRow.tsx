@@ -13,6 +13,9 @@ import type {
 	ClineSayTool,
 } from "@roo-code/types"
 
+/** i18n keys backend sends as currentTask; we pass to t() for display. */
+const SUBAGENT_STATUS_KEYS = ["chat:subagents.starting", "chat:subagents.thinking"] as const
+
 import { Mode } from "@roo/modes"
 
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
@@ -89,39 +92,6 @@ import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumer
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
 // kilocode_change end
 
-/** Human-readable labels for tools shown in subagent progress. Keys match backend tool_name. */
-const SUBAGENT_TOOL_DISPLAY_NAMES: Record<string, string> = {
-	read_file: "Read File",
-	write_to_file: "Write File",
-	apply_diff: "Apply Diff",
-	search_files: "Search Files",
-	search_and_replace: "Search And Replace",
-	delete_file: "Delete File",
-	search_replace: "Search Replace",
-	edit_file: "Edit File",
-	fast_edit_file: "Fast Edit",
-	list_files: "List Files",
-	codebase_search: "Codebase Search",
-	execute_command: "Run Command",
-	run_slash_command: "Slash Command",
-	ask_followup_question: "Ask Question",
-	attempt_completion: "Complete",
-	update_todo_list: "Update Todos",
-	switch_mode: "Switch Mode",
-	new_task: "New Task",
-	new_rule: "New Rule",
-	report_bug: "Report Bug",
-	condense: "Condense",
-	generate_image: "Generate Image",
-	use_mcp_tool: "MCP Tool",
-	access_mcp_resource: "MCP Resource",
-	browser_action: "Browser",
-	fetch_instructions: "Fetch Instructions",
-	apply_patch: "Apply Patch",
-	mcp_tool: "MCP Tool",
-	subagent: "Subagent",
-}
-
 interface ParsedSubagentTask {
 	toolLabel: string
 	purpose: string | null
@@ -130,11 +100,13 @@ interface ParsedSubagentTask {
 
 /**
  * Parses backend progress strings like "[read_file for 15 files]" or "Thinking..." into
- * tool label and purpose for highlighted display.
+ * tool label and purpose for highlighted display. getToolLabel(key) returns the localized tool name.
  */
-function parseSubagentCurrentTask(raw: string): ParsedSubagentTask {
+function parseSubagentCurrentTask(raw: string, getToolLabel: (toolKey: string) => string): ParsedSubagentTask {
 	const s = raw.trim()
 	if (!s) return { toolLabel: "", purpose: "...", isGeneric: true }
+
+	const fallbackFormat = (str: string) => str.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 	// Generic status (no brackets) – show as-is
 	if (!s.startsWith("[")) {
@@ -145,19 +117,15 @@ function parseSubagentCurrentTask(raw: string): ParsedSubagentTask {
 	const inner = s.slice(1, s.endsWith("]") ? s.length - 1 : s.length).trim()
 	const forIndex = inner.indexOf(" for ")
 	if (forIndex === -1) {
-		// Tool only, no purpose
 		const toolKey = inner.replace(/\s+/g, "_").toLowerCase()
-		const toolLabel =
-			SUBAGENT_TOOL_DISPLAY_NAMES[toolKey] ?? inner.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+		const toolLabel = getToolLabel(toolKey) || fallbackFormat(inner)
 		return { toolLabel, purpose: null, isGeneric: false }
 	}
 
 	const toolPart = inner.slice(0, forIndex).trim()
 	const purposePart = inner.slice(forIndex + 5).trim()
 	const toolKey = toolPart.replace(/\s+/g, "_").toLowerCase()
-	const toolLabel =
-		SUBAGENT_TOOL_DISPLAY_NAMES[toolKey] ?? toolPart.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-	// Strip surrounding quotes from purpose (e.g. 'src/index.ts' -> src/index.ts)
+	const toolLabel = getToolLabel(toolKey) || fallbackFormat(toolPart)
 	let purpose = purposePart
 	if ((purpose.startsWith("'") && purpose.endsWith("'")) || (purpose.startsWith('"') && purpose.endsWith('"'))) {
 		purpose = purpose.slice(1, -1)
@@ -1741,7 +1709,17 @@ export const ChatRowContent = ({
 						case "subagentRunning": {
 							const desc = sayTool.description ?? ""
 							const currentTask = sayTool.currentTask
-							const parsed = currentTask ? parseSubagentCurrentTask(currentTask) : null
+							const getToolLabel = (key: string) =>
+								t("chat:subagents.toolDisplayNames." + key, {
+									defaultValue: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+								})
+							const parsed = currentTask ? parseSubagentCurrentTask(currentTask, getToolLabel) : null
+							const purposeKey = parsed?.purpose?.replace(/\.\.\.$/, "")
+							const displayPurpose =
+								purposeKey &&
+								SUBAGENT_STATUS_KEYS.includes(purposeKey as (typeof SUBAGENT_STATUS_KEYS)[number])
+									? t(purposeKey)
+									: parsed?.purpose
 							return (
 								<div>
 									<div style={headerStyle}>
@@ -1756,19 +1734,19 @@ export const ChatRowContent = ({
 									{parsed && (
 										<div className="pl-6 mt-1.5 text-sm text-vscode-descriptionForeground">
 											{parsed.toolLabel ? (
-												parsed.purpose ? (
+												displayPurpose ? (
 													<>
-														{parsed.toolLabel}: {parsed.purpose}
-														{!parsed.purpose.endsWith("...") && "..."}
+														{parsed.toolLabel}: {displayPurpose}
+														{!parsed.purpose?.endsWith("...") && "..."}
 													</>
 												) : (
 													<>{parsed.toolLabel}...</>
 												)
 											) : (
 												<>
-													{parsed.purpose?.endsWith("...")
-														? parsed.purpose
-														: `${parsed.purpose ?? ""}...`}
+													{displayPurpose?.endsWith("...")
+														? displayPurpose
+														: `${displayPurpose ?? ""}...`}
 												</>
 											)}
 										</div>
@@ -1801,9 +1779,15 @@ export const ChatRowContent = ({
 											</span>
 										)}
 									</div>
-									{(sayTool.result || sayTool.error) && (
+									{(sayTool.result ||
+										sayTool.error ||
+										(sayTool.resultCode && sayTool.messageKey)) && (
 										<div className="pl-6 mt-2 text-vscode-descriptionForeground whitespace-pre-wrap">
-											{hasError ? sayTool.error : sayTool.result}
+											{sayTool.resultCode === "CANCELLED" && sayTool.messageKey
+												? t(sayTool.messageKey)
+												: hasError
+													? sayTool.error
+													: sayTool.result}
 										</div>
 									)}
 								</>

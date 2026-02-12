@@ -9,8 +9,24 @@ export const SUBAGENT_TOOL_NAMES = {
 	completed: "subagentCompleted",
 } as const
 
-/** Message returned as subagent result when the user cancels the subagent. */
-export const SUBAGENT_CANCELLED_MESSAGE = "Subagent was cancelled by the user."
+/** i18n keys sent as currentTask; webview uses t(key) to show locale. */
+export const SUBAGENT_STATUS_STARTING = "chat:subagents.starting"
+export const SUBAGENT_STATUS_THINKING = "chat:subagents.thinking"
+
+/** Structured result codes for subagent completion; webview uses messageKey with t() for display. */
+export const SUBAGENT_RESULT_CODE_CANCELLED = "CANCELLED" as const
+export const SUBAGENT_CANCELLED_MESSAGE_KEY = "chat:subagents.cancelledByUser" as const
+
+/** Sent when the user cancels the subagent. Extension passes this to backgroundCompletionResolve. */
+export const SUBAGENT_CANCELLED_STRUCTURED_RESULT = {
+	code: SUBAGENT_RESULT_CODE_CANCELLED,
+	messageKey: SUBAGENT_CANCELLED_MESSAGE_KEY,
+} as const
+
+/** English message shown to the model when subagent is cancelled (tool result). */
+export const SUBAGENT_CANCELLED_MODEL_MESSAGE = "Subagent was cancelled by the user."
+
+export type SubagentStructuredResult = typeof SUBAGENT_CANCELLED_STRUCTURED_RESULT
 
 /** Payload for the "subagentRunning" tool message (progress updates). */
 export interface SubagentRunningPayload {
@@ -25,6 +41,9 @@ export interface SubagentCompletedPayload {
 	description?: string
 	result?: string
 	error?: string
+	/** When set, webview shows t(messageKey) instead of result/error. */
+	resultCode?: string
+	messageKey?: string
 }
 
 export type SubagentType = "general" | "explore"
@@ -39,7 +58,7 @@ export interface RunSubagentInBackgroundParams {
 
 /** Provider interface for running a subagent. Allows SubagentTool to call without type assertion. */
 export interface SubagentRunner {
-	runSubagentInBackground(params: RunSubagentInBackgroundParams): Promise<string>
+	runSubagentInBackground(params: RunSubagentInBackgroundParams): Promise<string | SubagentStructuredResult>
 }
 
 export function isSubagentRunner(provider: unknown): provider is SubagentRunner {
