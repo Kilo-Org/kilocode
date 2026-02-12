@@ -1036,6 +1036,10 @@
 			"refreshSuccess": "Eines actualitzades correctament",
 			"refreshError": "Error en actualitzar les eines",
 			"toolParameters": "Paràmetres"
+		},
+		"SUBAGENT": {
+			"name": "Eina subagent",
+			"description": "Quan s'activa, el model pot executar subagents en segon pla per delegar recerca o subtasques. El resultat del subagent es retorna a la tasca principal. Usa \"explore\" per subtasques només de lectura o \"general\" quan la subtasca pugui editar fitxers o executar ordres."
 		}
 	},
 	"promptCaching": {

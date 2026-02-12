@@ -1036,6 +1036,10 @@
 			"refreshSuccess": "Herramientas actualizadas correctamente",
 			"refreshError": "Error al actualizar las herramientas",
 			"toolParameters": "Parámetros"
+		},
+		"SUBAGENT": {
+			"name": "Herramienta de subagente",
+			"description": "Cuando está activado, el modelo puede ejecutar subagentes en segundo plano para delegar investigación o subtareas. El resultado del subagente se devuelve a la tarea principal. Usa \"explore\" para subtareas de solo lectura o \"general\" cuando la subtarea pueda editar archivos o ejecutar comandos."
 		}
 	},
 	"promptCaching": {

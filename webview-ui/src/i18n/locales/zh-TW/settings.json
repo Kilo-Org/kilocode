@@ -1047,6 +1047,10 @@
 			"refreshSuccess": "工具重新整理成功",
 			"refreshError": "工具重新整理失敗",
 			"toolParameters": "參數"
+		},
+		"SUBAGENT": {
+			"name": "子代理工具",
+			"description": "啟用後，模型可在背景執行子代理以分擔研究或子任務。子代理的結果會回傳至主任務。僅讀子任務請使用「explore」，當子任務可能編輯檔案或執行指令時請使用「general」。"
 		}
 	},
 	"promptCaching": {

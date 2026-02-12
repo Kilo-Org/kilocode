@@ -1042,6 +1042,10 @@
 			"refreshSuccess": "Strumenti aggiornati con successo",
 			"refreshError": "Aggiornamento strumenti non riuscito",
 			"toolParameters": "Parametri"
+		},
+		"SUBAGENT": {
+			"name": "Strumento subagente",
+			"description": "Quando abilitato, il modello può eseguire subagent in background per delegare ricerche o sottoattività. Il risultato del subagente viene restituito all'attività principale. Usa \"explore\" per sottoattività di sola lettura o \"general\" quando la sottoattività può modificare file o eseguire comandi."
 		}
 	},
 	"promptCaching": {

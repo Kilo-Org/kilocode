@@ -1036,6 +1036,10 @@
 			"refreshSuccess": "Outils actualisés avec succès",
 			"refreshError": "Échec de l'actualisation des outils",
 			"toolParameters": "Paramètres"
+		},
+		"SUBAGENT": {
+			"name": "Outil sous-agent",
+			"description": "Quand activé, le modèle peut lancer des sous-agents en arrière-plan pour déléguer la recherche ou des sous-tâches. Le résultat du sous-agent est renvoyé à la tâche principale. Utilisez \"explore\" pour les sous-tâches en lecture seule ou \"general\" lorsque la sous-tâche peut modifier des fichiers ou exécuter des commandes."
 		}
 	},
 	"promptCaching": {

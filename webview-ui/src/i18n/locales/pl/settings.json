@@ -1037,6 +1037,10 @@
 			"refreshSuccess": "Narzędzia odświeżone pomyślnie",
 			"refreshError": "Nie udało się odświeżyć narzędzi",
 			"toolParameters": "Parametry"
+		},
+		"SUBAGENT": {
+			"name": "Narzędzie subagenta",
+			"description": "Gdy włączone, model może uruchamiać subagentów w tle w celu delegowania badań lub podzadań. Wynik subagenta jest zwracany do zadania głównego. Użyj \"explore\" dla podzadań tylko do odczytu lub \"general\", gdy podzadanie może edytować pliki lub uruchamiać polecenia."
 		}
 	},
 	"promptCaching": {

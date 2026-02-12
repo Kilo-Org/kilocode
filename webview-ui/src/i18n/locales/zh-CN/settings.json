@@ -1041,6 +1041,10 @@
 			"refreshSuccess": "工具刷新成功",
 			"refreshError": "工具刷新失败",
 			"toolParameters": "参数"
+		},
+		"SUBAGENT": {
+			"name": "子代理工具",
+			"description": "启用后，模型可以在后台运行子代理以分担研究或子任务。子代理的结果会返回给主任务。对只读子任务使用「explore」，当子任务可能编辑文件或运行命令时使用「general」。"
 		}
 	},
 	"promptCaching": {

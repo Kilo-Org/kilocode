@@ -1037,6 +1037,10 @@
 			"refreshSuccess": "Ferramentas atualizadas com sucesso",
 			"refreshError": "Falha ao atualizar ferramentas",
 			"toolParameters": "Parâmetros"
+		},
+		"SUBAGENT": {
+			"name": "Ferramenta de subagente",
+			"description": "Quando ativado, o modelo pode executar subagentes em segundo plano para delegar pesquisa ou sub-tarefas. O resultado do subagente é retornado à tarefa principal. Use \"explore\" para sub-tarefas somente leitura ou \"general\" quando a sub-tarefa pode editar arquivos ou executar comandos."
 		}
 	},
 	"promptCaching": {

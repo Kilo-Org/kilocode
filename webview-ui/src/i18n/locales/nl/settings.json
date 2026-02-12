@@ -1037,6 +1037,10 @@
 			"refreshSuccess": "Tools succesvol vernieuwd",
 			"refreshError": "Kan tools niet vernieuwen",
 			"toolParameters": "Parameters"
+		},
+		"SUBAGENT": {
+			"name": "Subagent-tool",
+			"description": "Wanneer ingeschakeld, kan het model subagenten op de achtergrond uitvoeren om onderzoek of sub taken te delegeren. Het resultaat van de subagent wordt teruggegeven aan de hoofdtaak. Gebruik \"explore\" voor alleen-lezen sub taken of \"general\" wanneer de sub taak bestanden kan bewerken of opdrachten kan uitvoeren."
 		}
 	},
 	"promptCaching": {

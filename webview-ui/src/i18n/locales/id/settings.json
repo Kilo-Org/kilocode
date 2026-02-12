@@ -1058,6 +1058,10 @@
 			"refreshSuccess": "Tool berhasil direfresh",
 			"refreshError": "Gagal merefresh tool",
 			"toolParameters": "Parameter"
+		},
+		"SUBAGENT": {
+			"name": "Alat subagen",
+			"description": "Saat diaktifkan, model dapat menjalankan subagen di latar belakang untuk mendelegasikan riset atau sub-tugas. Hasil subagen dikembalikan ke tugas utama. Gunakan \"explore\" untuk sub-tugas hanya baca atau \"general\" ketika sub-tugas dapat mengedit file atau menjalankan perintah."
 		}
 	},
 	"promptCaching": {

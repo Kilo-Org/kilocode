@@ -1131,6 +1131,10 @@
 			"refreshSuccess": "Nástroje úspěšně obnoveny",
 			"refreshError": "Nepodařilo se obnovit nástroje",
 			"toolParameters": "Parametry"
+		},
+		"SUBAGENT": {
+			"name": "Nástroj subagenta",
+			"description": "Když je zapnuto, model může spouštět subagenty na pozadí pro výzkum nebo dílčí úkoly. Výsledek subagenta se vrátí do hlavního úkolu. Použij \"explore\" pro úkoly pouze pro čtení nebo \"general\", když dílčí úkol může upravovat soubory nebo spouštět příkazy."
 		}
 	},
 	"promptCaching": {

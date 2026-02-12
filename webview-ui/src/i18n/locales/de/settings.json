@@ -1032,6 +1032,10 @@
 			"refreshSuccess": "Tools erfolgreich aktualisiert",
 			"refreshError": "Aktualisierung der Tools fehlgeschlagen",
 			"toolParameters": "Parameter"
+		},
+		"SUBAGENT": {
+			"name": "Subagent-Tool",
+			"description": "Wenn aktiviert, kann das Modell Hintergrund-Subagenten für Recherche oder Teilaufgaben ausführen. Das Ergebnis des Subagenten wird an die Hauptaufgabe zurückgegeben. Verwende \"explore\" für schreibgeschützte Teilaufgaben oder \"general\", wenn die Teilaufgabe Dateien bearbeiten oder Befehle ausführen kann."
 		}
 	},
 	"promptCaching": {

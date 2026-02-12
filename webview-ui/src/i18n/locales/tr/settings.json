@@ -1037,6 +1037,10 @@
 			"refreshSuccess": "Araçlar başarıyla yenilendi",
 			"refreshError": "Araçlar yenilenemedi",
 			"toolParameters": "Parametreler"
+		},
+		"SUBAGENT": {
+			"name": "Alt ajan aracı",
+			"description": "Etkinleştirildiğinde, model araştırma veya alt görevleri devretmek için arka planda alt ajanlar çalıştırabilir. Alt ajanın sonucu ana göreve döndürülür. Yalnızca okuma alt görevleri için \"explore\" veya alt görev dosya düzenleyebildiğinde veya komut çalıştırabildiğinde \"general\" kullanın."
 		}
 	},
 	"promptCaching": {

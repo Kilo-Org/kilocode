@@ -1037,6 +1037,10 @@
 			"refreshSuccess": "Làm mới công cụ thành công",
 			"refreshError": "Không thể làm mới công cụ",
 			"toolParameters": "Thông số"
+		},
+		"SUBAGENT": {
+			"name": "Công cụ tác nhân phụ",
+			"description": "Khi bật, mô hình có thể chạy tác nhân phụ trong nền để ủy thác nghiên cứu hoặc nhiệm vụ phụ. Kết quả của tác nhân phụ được trả về nhiệm vụ chính. Dùng \"explore\" cho nhiệm vụ phụ chỉ đọc hoặc \"general\" khi nhiệm vụ phụ có thể chỉnh sửa tệp hoặc chạy lệnh."
 		}
 	},
 	"promptCaching": {
