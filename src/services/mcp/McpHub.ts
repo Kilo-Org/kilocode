@@ -593,6 +593,19 @@ export class McpHub {
 	}
 
 	/**
+	 * Attempts to schedule a reconnect only if the disconnect was not intentional.
+	 * This prevents auto-reconnect from firing when we programmatically close connections.
+	 * @param serverName The name of the server
+	 * @param source The server source (global or project)
+	 */
+	private scheduleReconnectIfNotIntentional(serverName: string, source: "global" | "project"): void {
+		const intentionalKey = `${source}-${serverName}`
+		if (!this.intentionalDisconnects.has(intentionalKey)) {
+			this.scheduleReconnect(serverName, source)
+		}
+	}
+
+	/**
 	 * Cancels any scheduled reconnect for a server.
 	 * @param serverName The name of the server
 	 * @param source The server source (global or project)
@@ -1215,10 +1228,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -1228,10 +1238,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 
 				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
@@ -1292,10 +1299,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -1305,10 +1309,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 			} else if (configInjected.type === "sse") {
 				// SSE connection
@@ -1360,10 +1361,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 
 				transport.onclose = async () => {
@@ -1373,10 +1371,7 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
-					const intentionalKey = `${source}-${name}`
-					if (!this.intentionalDisconnects.has(intentionalKey)) {
-						this.scheduleReconnect(name, source)
-					}
+					this.scheduleReconnectIfNotIntentional(name, source)
 				}
 			} else {
 				// Should not happen if validateServerConfig is correct
