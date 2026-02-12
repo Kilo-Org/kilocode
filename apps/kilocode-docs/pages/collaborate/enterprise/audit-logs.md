@@ -16,7 +16,7 @@ Only **Owners** can view and filter through logs.
 Go to **Enterprise Dashboard → Audit Logs** to view a searchable history of all organization events.
 Use filters to narrow down results by action, user, or date range.
 
-<img width="900" height="551" alt="Audit-log-dashboard" src="https://github.com/user-attachments/assets/41fcf43f-4a47-4f47-a3d9-02d20a6427a6" />
+{% image width="900" height="551" alt="Audit-log-dashboard" src="https://github.com/user-attachments/assets/41fcf43f-4a47-4f47-a3d9-02d20a6427a6" /%}
 
 ## Filters
 

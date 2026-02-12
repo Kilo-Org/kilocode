@@ -23,7 +23,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
     - Note: We recommend starting with your GitHub account rather than a personal Google account, but we can change it later.
 3. Click **Organizations** in the left sidebar and then **Create New Organization**
 
-<img src="/docs/img/teams/create-team.png" alt="Create new organization button" width="600" />
+{% image src="/docs/img/teams/create-team.png" alt="Create new organization button" width="600" /%}
 
 ### Step 2: Subscribe to Teams or Enterprise
 
@@ -31,7 +31,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
 2. Select your initial seat count and tier (Teams or Enterprise)
 3. Complete checkout process
 
-<img src="/docs/img/teams/subscribe.png" alt="Create your organization and subscribe" width="600" />
+{% image src="/docs/img/teams/subscribe.png" alt="Create your organization and subscribe" width="600" /%}
 
 ### Step 3: Invite Your Team
 
@@ -43,7 +43,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
     - **Admin** - Team management without billing
     - **Member** - Standard usage access
 
-<img src="/docs/img/teams/invite-member.png" alt="Invite your team members" width="600" />
+{% image src="/docs/img/teams/invite-member.png" alt="Invite your team members" width="600" /%}
 
 ### Step 4: Team Members Install Extension
 
@@ -61,7 +61,7 @@ Team members receive invitation emails with these steps:
 - **Transparent billing** - see exactly what each request costs
 - **Team analytics** - understand usage patterns and optimization opportunities
 
-<img src="/docs/img/teams/usage-details.png" alt="Team usage details page" width="600" />
+{% image src="/docs/img/teams/usage-details.png" alt="Team usage details page" width="600" /%}
 
 ## First Steps for Your Team
 
