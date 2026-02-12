@@ -16,7 +16,7 @@ function getDisplayPath(skill: SkillMetadata): string {
 	const skillsDir = skill.mode ? `skills-${skill.mode}` : "skills"
 
 	if (skill.source === "project") {
-		return `.kilocode/${skillsDir}/${skill.name}/SKILL.md`
+		return path.join('.kilocode', skillsDir, skill.name, 'SKILL.md')
 	}
 
 	// For global skills, use the actual home directory path instead of ~
