@@ -2,16 +2,16 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest"
 import {
-	ghostServiceSettingsSchema,
+	autocompleteServiceSettingsSchema,
 	getAppUrl,
 	getApiUrl,
 	getKiloUrlFromToken,
 	getExtensionConfigUrl,
 } from "../kilocode/kilocode.js"
 
-describe("ghostServiceSettingsSchema", () => {
+describe("autocompleteServiceSettingsSchema", () => {
 	it("should accept all boolean settings", () => {
-		const result = ghostServiceSettingsSchema.safeParse({
+		const result = autocompleteServiceSettingsSchema.safeParse({
 			enableAutoTrigger: true,
 			enableQuickInlineTaskKeybinding: false,
 			enableSmartInlineTaskKeybinding: true,
@@ -20,7 +20,7 @@ describe("ghostServiceSettingsSchema", () => {
 	})
 
 	it("should accept combined settings", () => {
-		const result = ghostServiceSettingsSchema.safeParse({
+		const result = autocompleteServiceSettingsSchema.safeParse({
 			enableAutoTrigger: true,
 			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
@@ -29,7 +29,7 @@ describe("ghostServiceSettingsSchema", () => {
 	})
 
 	it("should be optional", () => {
-		const result = ghostServiceSettingsSchema.safeParse({
+		const result = autocompleteServiceSettingsSchema.safeParse({
 			enableAutoTrigger: true,
 		})
 		expect(result.success).toBe(true)

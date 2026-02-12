@@ -14,7 +14,7 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { fastApplyModelSchema, ghostServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
+import { fastApplyModelSchema, autocompleteServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -227,7 +227,7 @@ export const globalSettingsSchema = z.object({
 	dismissedNotificationIds: z.string().array().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
-	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	ghostServiceSettings: autocompleteServiceSettingsSchema, // kilocode_change
 	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),

@@ -102,6 +102,8 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 			geminiApiKey: apiConfiguration?.geminiApiKey,
 			googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 			syntheticApiKey: apiConfiguration?.syntheticApiKey,
+			zenmuxBaseUrl: apiConfiguration?.zenmuxBaseUrl,
+			zenmuxApiKey: apiConfiguration?.zenmuxApiKey,
 		},
 		// kilocode_change end
 		{
@@ -335,7 +337,8 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "zai": {
-			const isChina = apiConfiguration.zaiApiLine === "china_coding"
+			// kilocode_change - china_api uses mainland model catalog too.
+			const isChina = apiConfiguration.zaiApiLine === "china_coding" || apiConfiguration.zaiApiLine === "china_api"
 			const models = isChina ? mainlandZAiModels : internationalZAiModels
 			const defaultModelId = getProviderDefaultModelId(provider, { isChina })
 			const id = apiConfiguration.apiModelId ?? defaultModelId
@@ -572,6 +575,11 @@ function getSelectedModel({
 				supportsPromptCache: true,
 				description: "GPT-5: The best model for coding and agentic tasks across domains",
 			}
+			return { id, info }
+		}
+		case "zenmux": {
+			const id = getValidatedModelId(apiConfiguration.zenmuxModelId, routerModels.zenmux, defaultModelId)
+			const info = routerModels.zenmux?.[id]
 			return { id, info }
 		}
 		// kilocode_change end

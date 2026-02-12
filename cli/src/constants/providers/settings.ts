@@ -91,6 +91,25 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter base URL (or leave empty for default)...",
 		isOptional: true,
 	},
+
+	// kilocode_change start - ZenMux fields
+	zenmuxApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter ZenMux API key...",
+	},
+	zenmuxModelId: {
+		label: "Model",
+		type: "text",
+		placeholder: "Enter model name...",
+	},
+	zenmuxBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
+	// kilocode_change end
 	openRouterProviderDataCollection: {
 		label: "Provider Data Collection",
 		type: "select",
@@ -791,6 +810,13 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("openRouterBaseUrl", config, "Default"),
 			]
 
+		case "zenmux": // kilocode_change
+			return [
+				createFieldConfig("zenmuxApiKey", config),
+				createFieldConfig("zenmuxModelId", config, "openai/gpt-5"),
+				createFieldConfig("zenmuxBaseUrl", config, "Default"),
+			]
+
 		case "openai-native":
 			return [
 				createFieldConfig("openAiNativeApiKey", config),
@@ -1043,6 +1069,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"openai-codex": "gpt-4o",
 	"openai-responses": "gpt-4o",
 	openrouter: "anthropic/claude-3-5-sonnet",
+	zenmux: "openai/gpt-5", // kilocode_change
 	bedrock: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 	gemini: "gemini-1.5-pro-latest",
 	vertex: "claude-3-5-sonnet@20241022",

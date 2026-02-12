@@ -574,6 +574,7 @@ export type ExtensionState = Pick<
 	clineMessages: ClineMessage[]
 	currentTaskItem?: HistoryItem
 	currentTaskTodos?: TodoItem[] // Initial todos for the current task
+	currentTaskCumulativeCost?: number // kilocode_change: cumulative cost including deleted messages
 	apiConfiguration: ProviderSettings
 	uriScheme?: string
 	uiKind?: string // kilocode_change

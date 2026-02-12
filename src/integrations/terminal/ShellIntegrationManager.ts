@@ -36,6 +36,10 @@ export class ShellIntegrationManager {
 
 				const zshrcContent = `
 	source "${shellIntegrationPath}"
+	# Disable history expansion (!) to prevent commands with ! from failing
+	# Fixes issue where commands like --collectCoverageFrom="!pattern" would fail
+	# with "event not found" error
+	setopt NO_BANG_HIST
 	ZDOTDIR=\${ROO_ZDOTDIR:-$HOME}
 	unset ROO_ZDOTDIR
 	[ -f "$ZDOTDIR/.zshenv" ] && source "$ZDOTDIR/.zshenv"

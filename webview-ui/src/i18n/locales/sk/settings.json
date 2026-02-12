@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Automatické čistenie",
 		"agentBehaviour": "Správanie agenta",
-		"ghost": "Automatické dokončovanie"
+		"autocomplete": "Automatické dokončovanie"
 	},
 	"about": {
 		"bugReport": {
@@ -394,6 +394,8 @@
 		"getRequestyApiKey": "Získať kľúč API Requesty",
 		"getRequestyBaseUrl": "Základná URL",
 		"requestyUseCustomBaseUrl": "Použiť vlastnú základnú URL",
+		"getZenmuxApiKey": "Získať kľúč API Zenmux",
+		"zenmuxTransformsText": "Použiť Zenmux Middle Out Transform",
 		"openRouterTransformsText": "Komprimovať prompty a reťazce správ na veľkosť kontextu (<a>Transformácie OpenRouter</a>)",
 		"anthropicApiKey": "Kľúč API Anthropic",
 		"getAnthropicApiKey": "Získať kľúč API Anthropic",
@@ -823,7 +825,7 @@
 			"description": "Zobraziť štatistiky pridaných/odobraných riadkov v záhlaví úlohy"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Zobraziť animáciu v okraji pri automatickom dokončovaní",
 			"description": "Zobraziť animovaný indikátor v okraji editora, keď beží automatické dokončovanie",

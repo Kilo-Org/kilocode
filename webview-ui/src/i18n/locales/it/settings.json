@@ -44,7 +44,7 @@
 		"about": "Informazioni su Kilo Code",
 		"autoPurge": "Auto-pulizia",
 		"agentBehaviour": "Comportamento agente",
-		"ghost": "Ghost"
+		"autocomplete": "Ghost"
 	},
 	"about": {
 		"bugReport": {
@@ -373,6 +373,8 @@
 			"success": "Elenco dei modelli aggiornato con successo!",
 			"error": "Impossibile aggiornare l'elenco dei modelli. Riprova."
 		},
+		"getZenmuxApiKey": "Ottieni chiave API Zenmux",
+		"zenmuxTransformsText": "Usa Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Ottieni chiave API Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilizza URL di base personalizzato",
@@ -1178,7 +1180,7 @@
 			"description": "Visualizza le statistiche delle righe aggiunte/rimosse nell'intestazione dell'attività"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostra animazione gutter durante l'autocompletamento",
 			"description": "Visualizza indicatore animato nel gutter dell'editor quando l'autocompletamento è in esecuzione",

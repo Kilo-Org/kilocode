@@ -61,6 +61,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiModels,
 	mainlandZAiDefaultModelId,
+	zenmuxDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -338,6 +339,12 @@ export const getModelsByProvider = ({
 				}
 			}
 		}
+		case "zenmux": {
+			return {
+				models: routerModels.zenmux,
+				defaultModel: zenmuxDefaultModelId,
+			}
+		}
 		default:
 			return {
 				models: {},
@@ -350,7 +357,12 @@ export const getOptionsForProvider = (provider: ProviderName, apiConfiguration?:
 	switch (provider) {
 		case "zai":
 			// Determine which Z.AI model set to use based on the API line configuration
-			return { isChina: apiConfiguration?.zaiApiLine === "china_coding" }
+			// kilocode_change start
+			return {
+				isChina:
+					apiConfiguration?.zaiApiLine === "china_coding" || apiConfiguration?.zaiApiLine === "china_api",
+			}
+			// kilocode_change end
 		default:
 			return {}
 	}

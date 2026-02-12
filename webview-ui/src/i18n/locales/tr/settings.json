@@ -42,7 +42,7 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"autoPurge": "Otomatik Temizlik",
 		"agentBehaviour": "Ajan Davranışı"
 	},
@@ -359,6 +359,8 @@
 			"success": "Model listesi başarıyla yenilendi!",
 			"error": "Model listesi yenilenemedi. Lütfen tekrar deneyin."
 		},
+		"getZenmuxApiKey": "Zenmux API Anahtarı Al",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform'u Kullan",
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"getRequestyBaseUrl": "Temel URL",
 		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
@@ -1173,7 +1175,7 @@
 			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
 			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",

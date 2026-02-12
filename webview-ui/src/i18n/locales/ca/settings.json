@@ -44,7 +44,7 @@
 		"about": "Sobre Kilo Code",
 		"autoPurge": "Auto-neteja",
 		"agentBehaviour": "Comportament de l'agent",
-		"ghost": "Autocompletat"
+		"autocomplete": "Autocompletat"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Llista de models actualitzada correctament!",
 			"error": "No s'ha pogut actualitzar la llista de models. Si us plau, torneu-ho a provar."
 		},
+		"getZenmuxApiKey": "Obtenir clau API de Zenmux",
+		"zenmuxTransformsText": "Utilitzar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtenir clau API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
@@ -1172,7 +1174,7 @@
 			"description": "Mostra les estadístiques de línies afegides/eliminades a la capçalera de la tasca"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostra l'animació al marge quan s'autocompleta",
 			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",

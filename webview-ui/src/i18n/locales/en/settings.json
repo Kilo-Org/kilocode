@@ -44,7 +44,7 @@
 		"about": "About Kilo Code",
 		"autoPurge": "Auto-Cleanup",
 		"agentBehaviour": "Agent Behaviour",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -377,6 +377,8 @@
 			"success": "Models list refreshed successfully!",
 			"error": "Failed to refresh models list. Please try again."
 		},
+		"getZenmuxApiKey": "Get Zenmux API Key",
+		"zenmuxTransformsText": "Use Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Create new Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Use custom base URL",
@@ -764,7 +766,7 @@
 			"description": "Display lines added/removed statistics in the task header"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Show gutter animation when autocompleting",
 			"description": "Display animated indicator in the editor gutter when autocompletion is running",

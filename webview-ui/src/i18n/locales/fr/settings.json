@@ -44,7 +44,7 @@
 		"about": "À propos de Kilo Code",
 		"autoPurge": "Auto-nettoyage",
 		"agentBehaviour": "Comportement de l'agent",
-		"ghost": "Autocomplétion"
+		"autocomplete": "Autocomplétion"
 	},
 	"about": {
 		"bugReport": {
@@ -368,6 +368,8 @@
 			"success": "Liste des modèles actualisée avec succès !",
 			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer."
 		},
+		"getZenmuxApiKey": "Obtenir la clé API Zenmux",
+		"zenmuxTransformsText": "Utiliser Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"getRequestyBaseUrl": "URL de base",
 		"requestyUseCustomBaseUrl": "Utiliser une URL de base personnalisée",
@@ -1172,7 +1174,7 @@
 			"description": "Afficher les statistiques de lignes ajoutées/supprimées dans l'en-tête de la tâche"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Afficher l'animation dans la gouttière lors de l'autocomplétion",
 			"description": "Affiche un indicateur animé dans la gouttière de l'éditeur lorsque l'autocomplétion est en cours",

@@ -106,6 +106,8 @@ export function getModelIdForProvider(provider: ProviderConfig): string {
 			return provider.apiModelId || ""
 		case "openrouter":
 			return provider.openRouterModelId || ""
+		case "zenmux":
+			return provider.zenmuxModelId || ""
 		case "ollama":
 			return provider.ollamaModelId || ""
 		case "lmstudio":

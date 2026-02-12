@@ -46,6 +46,7 @@ import {
 	minimaxModels,
 	minimaxDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
+	zenmuxDefaultModelId,
 } from "@roo-code/types"
 
 /**
@@ -64,6 +65,7 @@ export type RouterName =
 	| "deepinfra"
 	| "vercel-ai-gateway"
 	| "ovhcloud"
+	| "zenmux"
 	| "nano-gpt"
 
 /**
@@ -120,6 +122,7 @@ export type RouterModels = Record<RouterName, ModelRecord>
 export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = {
 	kilocode: "kilocode",
 	openrouter: "openrouter",
+	zenmux: "zenmux", // kilocode_change
 	ollama: "ollama",
 	lmstudio: "lmstudio",
 	litellm: "litellm",
@@ -165,7 +168,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	synthetic: null,
 	"sap-ai-core": null,
 	baseten: null,
-	corethink: null
+	corethink: null,
 }
 
 /**
@@ -174,6 +177,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	kilocode: "kilocodeModel",
 	openrouter: "openRouterModelId",
+	zenmux: "zenmuxModelId", // kilocode_change
 	ollama: "ollamaModelId",
 	lmstudio: "lmStudioModelId",
 	litellm: "litellmModelId",
@@ -219,7 +223,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	synthetic: null,
 	"sap-ai-core": "sapAiCoreModelId",
 	baseten: null,
-	corethink: null
+	corethink: null,
 }
 
 /**
@@ -285,6 +289,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
 	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
+	zenmux: zenmuxDefaultModelId,
 }
 
 /**
@@ -460,6 +465,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "vercelAiGatewayModelId"
 		case "ovhcloud":
 			return "ovhCloudAiEndpointsModelId"
+		case "zenmux":
+			return "zenmuxModelId"
 		case "nano-gpt":
 			return "nanoGptModelId"
 		default:

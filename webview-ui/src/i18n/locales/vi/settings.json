@@ -44,7 +44,7 @@
 		"about": "Giới thiệu",
 		"autoPurge": "Tự động dọn dẹp",
 		"agentBehaviour": "Hành Vi Agent",
-		"ghost": "Tự Động Hoàn Thành"
+		"autocomplete": "Tự Động Hoàn Thành"
 	},
 	"about": {
 		"bugReport": {
@@ -367,6 +367,8 @@
 			"success": "Danh sách mô hình đã được làm mới thành công!",
 			"error": "Không thể làm mới danh sách mô hình. Vui lòng thử lại."
 		},
+		"getZenmuxApiKey": "Lấy khóa API Zenmux",
+		"zenmuxTransformsText": "Sử dụng Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"getRequestyBaseUrl": "URL cơ sở",
 		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
@@ -1173,7 +1175,7 @@
 			"description": "Hiển thị thống kê số dòng thêm/xóa trong tiêu đề tác vụ"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
 			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",

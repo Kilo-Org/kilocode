@@ -33,7 +33,7 @@
 		"browser": "เบราว์เซอร์",
 		"checkpoints": "จุดตรวจสอบ",
 		"display": "การแสดงผล",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"notifications": "การแจ้งเตือน",
 		"contextManagement": "บริบท",
 		"terminal": "เทอร์มินัล",
@@ -392,6 +392,8 @@
 			"success": "รีเฟรชรายการโมเดลสำเร็จ!",
 			"error": "ไม่สามารถรีเฟรชรายการโมเดลได้ โปรดลองอีกครั้ง"
 		},
+		"getZenmuxApiKey": "รับ Zenmux API Key",
+		"zenmuxTransformsText": "ใช้ Zenmux Middle Out Transform",
 		"getRequestyApiKey": "รับคีย์ API ของ Requesty",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "ใช้ Base URL ที่กำหนดเอง",
@@ -813,7 +815,7 @@
 			"description": "แสดงสถิติบรรทัดที่เพิ่ม/ลบในส่วนหัวของงาน"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "แสดงภาพเคลื่อนไหวขอบเมื่อทำการเติมอัตโนมัติ",
 			"description": "แสดงตัวบ่งชี้แบบเคลื่อนไหวในขอบตัวแก้ไขเมื่อกำลังทำการเติมอัตโนมัติ",

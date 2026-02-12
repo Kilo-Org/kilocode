@@ -44,7 +44,7 @@
 		"about": "Kilo Code 정보",
 		"autoPurge": "자동 정리",
 		"agentBehaviour": "에이전트 동작",
-		"ghost": "자동 완성"
+		"autocomplete": "자동 완성"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "모델 목록이 성공적으로 새로고침되었습니다!",
 			"error": "모델 목록 새로고침에 실패했습니다. 다시 시도해 주세요."
 		},
+		"getZenmuxApiKey": "Zenmux API 키 받기",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform 사용",
 		"getRequestyApiKey": "Requesty API 키 받기",
 		"getRequestyBaseUrl": "기본 URL",
 		"requestyUseCustomBaseUrl": "사용자 정의 기본 URL 사용",
@@ -1173,7 +1175,7 @@
 			"description": "작업 헤더에 추가/삭제된 줄 통계 표시"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "자동 완성 시 거터 애니메이션 표시",
 			"description": "자동 완성이 실행 중일 때 편집기 거터에 애니메이션 표시기 표시",

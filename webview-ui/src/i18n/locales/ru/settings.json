@@ -44,7 +44,7 @@
 		"about": "О Kilo Code",
 		"autoPurge": "Авто-очистка",
 		"agentBehaviour": "Поведение агента",
-		"ghost": "Автодополнение"
+		"autocomplete": "Автодополнение"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Список моделей успешно обновлен!",
 			"error": "Не удалось обновить список моделей. Пожалуйста, попробуйте снова."
 		},
+		"getZenmuxApiKey": "Получить Zenmux API-ключ",
+		"zenmuxTransformsText": "Использовать Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
@@ -1173,7 +1175,7 @@
 			"description": "Отображать статистику добавленных/удалённых строк в заголовке задачи"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Показывать анимацию на полях при автозаполнении",
 			"description": "Отображать анимированный индикатор на полях редактора во время работы автозаполнения",

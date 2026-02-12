@@ -10,6 +10,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	"openai-native": ["openAiNativeApiKey", "apiModelId"],
 	"openai-codex": ["apiModelId"],
 	openrouter: ["openRouterApiKey", "openRouterModelId"],
+	zenmux: ["zenmuxApiKey", "zenmuxModelId"], // kilocode_change
 	ollama: ["ollamaBaseUrl", "ollamaModelId"],
 	lmstudio: ["lmStudioBaseUrl", "lmStudioModelId"],
 	bedrock: ["awsRegion", "apiModelId"], // Auth fields handled in handleSpecialValidations (supports API key, profile, or direct credentials)

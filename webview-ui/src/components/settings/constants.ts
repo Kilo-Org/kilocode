@@ -66,6 +66,7 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini", proxy: false },
 	{ value: "doubao", label: "Doubao", proxy: false },
 	// kilocode_change start
+	{ value: "zenmux", label: "ZenMux" },
 	{ value: "inception", label: "Inception", proxy: false },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback", proxy: false },
 	{ value: "synthetic", label: "Synthetic", proxy: false },

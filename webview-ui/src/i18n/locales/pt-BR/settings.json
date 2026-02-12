@@ -44,7 +44,7 @@
 		"about": "Sobre",
 		"autoPurge": "Auto-limpeza",
 		"agentBehaviour": "Comportamento do Agente",
-		"ghost": "Autocompletar"
+		"autocomplete": "Autocompletar"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Lista de modelos atualizada com sucesso!",
 			"error": "Falha ao atualizar a lista de modelos. Por favor, tente novamente."
 		},
+		"getZenmuxApiKey": "Obter chave de API Zenmux",
+		"zenmuxTransformsText": "Usar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obter chave de API Requesty",
 		"getRequestyBaseUrl": "URL Base",
 		"requestyUseCustomBaseUrl": "Usar URL base personalizada",
@@ -1173,7 +1175,7 @@
 			"description": "Exibir estatísticas de linhas adicionadas/removidas no cabeçalho da tarefa"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostrar animação na lateral ao autocompletar",
 			"description": "Exibir indicador animado na lateral do editor quando o autocompletar está em execução",

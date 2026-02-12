@@ -44,7 +44,7 @@
 		"about": "Over Kilo Code",
 		"autoPurge": "Auto-opruimen",
 		"agentBehaviour": "Agentgedrag",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Modellenlijst succesvol vernieuwd!",
 			"error": "Kan modellenlijst niet vernieuwen. Probeer het opnieuw."
 		},
+		"getZenmuxApiKey": "Zenmux API-sleutel ophalen",
+		"zenmuxTransformsText": "Gebruik Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Requesty API-sleutel ophalen",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Gebruik aangepaste basis-URL",
@@ -1173,7 +1175,7 @@
 			"description": "Toon statistieken van toegevoegde/verwijderde regels in de taakkop"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Goot animatie tonen bij automatisch aanvullen",
 			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",

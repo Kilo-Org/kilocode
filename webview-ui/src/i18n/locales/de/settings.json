@@ -44,7 +44,7 @@
 		"about": "Über Kilo Code",
 		"autoPurge": "Auto-Bereinigung",
 		"agentBehaviour": "Agentenverhalten",
-		"ghost": "Autovervollständigung"
+		"autocomplete": "Autovervollständigung"
 	},
 	"about": {
 		"bugReport": {
@@ -370,6 +370,8 @@
 			"success": "Modellliste erfolgreich aktualisiert!",
 			"error": "Fehler beim Aktualisieren der Modellliste. Bitte versuche es erneut."
 		},
+		"getZenmuxApiKey": "Zenmux API-Schlüssel erhalten",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform verwenden",
 		"getRequestyApiKey": "Requesty API-Schlüssel erhalten",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
@@ -1168,7 +1170,7 @@
 			"description": "Statistiken zu hinzugefügten/entfernten Zeilen im Aufgaben-Header anzeigen"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Randanimation bei Autovervollständigung anzeigen",
 			"description": "Zeigt eine animierte Anzeige im Editor-Rand an, wenn die Autovervollständigung läuft",

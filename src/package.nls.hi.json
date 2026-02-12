@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Debug Proxy सक्षम करो** — सभी आउटबाउंड network requests को MITM debugging के लिए proxy के ज़रिए route करो। सिर्फ तब active रहेगा जब तुम debug mode (F5) में चला रहे हो।",
 	"settings.debugProxy.serverUrl.description": "Proxy URL (जैसे `http://127.0.0.1:8888`)। सिर्फ तब इस्तेमाल होती है जब **Debug Proxy** enabled हो।",
 	"settings.debugProxy.tlsInsecure.description": "Proxy से आने वाले self-signed certificates accept करो। **MITM inspection के लिए ज़रूरी।** ⚠️ Insecure — सिर्फ local debugging के लिए इस्तेमाल करो।",
-	"ghost.input.title": "पुष्टि के लिए 'Enter' दबाएं या रद्द करने के लिए 'Escape' दबाएं",
-	"ghost.input.placeholder": "वर्णन करें कि आप क्या करना चाहते हैं...",
-	"ghost.commands.generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",
-	"ghost.commands.displaySuggestions": "सुझाए गए संपादन दिखाएं",
-	"ghost.commands.cancelSuggestions": "सुझाए गए संपादन रद्द करें",
-	"ghost.commands.applyCurrentSuggestion": "वर्तमान सुझाया गया संपादन लागू करें",
-	"ghost.commands.applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
-	"ghost.commands.goToNextSuggestion": "अगले सुझाव पर जाएं",
-	"ghost.commands.goToPreviousSuggestion": "पिछले सुझाव पर जाएं"
+	"autocomplete.input.title": "पुष्टि के लिए 'Enter' दबाएं या रद्द करने के लिए 'Escape' दबाएं",
+	"autocomplete.input.placeholder": "वर्णन करें कि आप क्या करना चाहते हैं...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",
+	"autocomplete.commands.displaySuggestions": "सुझाए गए संपादन दिखाएं",
+	"autocomplete.commands.cancelSuggestions": "सुझाए गए संपादन रद्द करें",
+	"autocomplete.commands.applyCurrentSuggestion": "वर्तमान सुझाया गया संपादन लागू करें",
+	"autocomplete.commands.applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
+	"autocomplete.commands.goToNextSuggestion": "अगले सुझाव पर जाएं",
+	"autocomplete.commands.goToPreviousSuggestion": "पिछले सुझाव पर जाएं"
 }

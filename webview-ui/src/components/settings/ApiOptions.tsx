@@ -9,6 +9,7 @@ import {
 	type ProviderSettings,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
+	zenmuxDefaultModelId, // kilocode_change
 	requestyDefaultModelId,
 	glamaDefaultModelId, // kilocode_change
 	unboundDefaultModelId,
@@ -100,6 +101,7 @@ import {
 	OpenAICompatible,
 	OpenAICodex,
 	OpenRouter,
+	ZenMux, // kilocode_change
 	QwenCode,
 	Requesty,
 	Roo,
@@ -233,6 +235,8 @@ const ApiOptions = ({
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
 		syntheticApiKey: apiConfiguration?.syntheticApiKey,
+		zenmuxBaseUrl: apiConfiguration?.zenmuxBaseUrl,
+		zenmuxApiKey: apiConfiguration?.zenmuxApiKey,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -422,6 +426,7 @@ const ApiOptions = ({
 			> = {
 				deepinfra: { field: "deepInfraModelId", default: deepInfraDefaultModelId },
 				openrouter: { field: "openRouterModelId", default: openRouterDefaultModelId },
+				zenmux: { field: "zenmuxModelId", default: zenmuxDefaultModelId },
 				glama: { field: "glamaModelId", default: glamaDefaultModelId }, // kilocode_change
 				unbound: { field: "unboundModelId", default: unboundDefaultModelId },
 				requesty: { field: "requestyModelId", default: requestyDefaultModelId },
@@ -450,7 +455,8 @@ const ApiOptions = ({
 				zai: {
 					field: "apiModelId",
 					default:
-						apiConfiguration.zaiApiLine === "china_coding"
+						// kilocode_change - china_api uses mainland model catalog too.
+						apiConfiguration.zaiApiLine === "china_coding" || apiConfiguration.zaiApiLine === "china_api"
 							? mainlandZAiDefaultModelId
 							: internationalZAiDefaultModelId,
 				},
@@ -608,6 +614,21 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "zenmux" && (
+				<ZenMux
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					selectedModelId={selectedModelId}
+					uriScheme={uriScheme}
+					simplifySettings={fromWelcomeView}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "requesty" && (
 				<Requesty

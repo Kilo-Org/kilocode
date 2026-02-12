@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Auto-czyszczenie",
 		"agentBehaviour": "Zachowanie agenta",
-		"ghost": "Autouzupełnianie"
+		"autocomplete": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Lista modeli została pomyślnie odświeżona!",
 			"error": "Nie udało się odświeżyć listy modeli. Spróbuj ponownie."
 		},
+		"getZenmuxApiKey": "Uzyskaj klucz API Zenmux",
+		"zenmuxTransformsText": "Użyj Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
 		"getRequestyBaseUrl": "Bazowy URL",
 		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
@@ -1173,7 +1175,7 @@
 			"description": "Wyświetl statystyki dodanych/usuniętych linii w nagłówku zadania"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Pokaż animację marginesu podczas autouzupełniania",
 			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",

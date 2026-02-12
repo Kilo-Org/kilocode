@@ -44,7 +44,7 @@
 		"about": "عن Kilo Code",
 		"autoPurge": "التنظيف التلقائي",
 		"agentBehaviour": "سلوك الوكيل",
-		"ghost": "الإكمال التلقائي"
+		"autocomplete": "الإكمال التلقائي"
 	},
 	"about": {
 		"bugReport": {
@@ -396,6 +396,8 @@
 			"success": "تم التحديث!",
 			"error": "فشل التحديث. جرّب مرة ثانية."
 		},
+		"getZenmuxApiKey": "احصل على مفتاح Zenmux API",
+		"zenmuxTransformsText": "استخدام Zenmux Middle Out Transform",
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
 		"getRequestyBaseUrl": "رابط الأساس",
 		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
@@ -827,7 +829,7 @@
 			"description": "عرض إحصائيات الأسطر المضافة/المحذوفة في رأس المهمة"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "إظهار الحركة في الهامش عند الإكمال التلقائي",
 			"description": "عرض مؤشر متحرك في هامش المحرر عند تشغيل الإكمال التلقائي",

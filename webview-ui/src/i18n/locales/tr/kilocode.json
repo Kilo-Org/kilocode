@@ -243,7 +243,7 @@
 			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Otomatik Tamamlama",
 		"settings": {
 			"codeEditorSuggestions": "Kod Editörü Önerileri",

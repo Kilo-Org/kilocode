@@ -11,6 +11,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"openai-codex": "OpenAI - ChatGPT Plus/Pro",
 	"openai-responses": "OpenAI Compatible (Responses)",
 	openrouter: "OpenRouter",
+	zenmux: "ZenMux",
 	bedrock: "Amazon Bedrock",
 	gemini: "Google Gemini",
 	vertex: "GCP Vertex AI",
