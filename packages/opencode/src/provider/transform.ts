@@ -261,86 +261,16 @@ export namespace ProviderTransform {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
 
-    // kilocode_change - identify OpenRouter/Kilo Gateway for thinking block stripping
-    const isOpenRouterOrKilo =
-      model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway"
-
-    // kilocode_change - strip thinking/reasoning blocks for OpenRouter/Kilo Gateway
-    // Anthropic's API requires thinking blocks to be EXACTLY unchanged, but our storage
-    // reconstructs them which counts as modification. Stripping them is safe because
-    // the reasoning was already shown to the user and doesn't need to be sent back.
-    if (isOpenRouterOrKilo) {
-      // Helper to strip reasoning-related data from provider options/metadata
-      const stripReasoningData = (opts: Record<string, any> | undefined) => {
-        if (!opts) return undefined // Return undefined instead of empty object to clean up
-        const result = { ...opts }
-        // Strip from openrouter namespace
-        if (result.openrouter) {
-          result.openrouter = { ...result.openrouter }
-          delete result.openrouter.reasoning_details
-          delete result.openrouter.reasoning
-          delete result.openrouter.thinking
-        }
-        // Strip from kilo namespace
-        if (result.kilo) {
-          result.kilo = { ...result.kilo }
-          delete result.kilo.reasoning_details
-          delete result.kilo.reasoning
-          delete result.kilo.thinking
-        }
-        // Strip from anthropic namespace
-        if (result.anthropic) {
-          result.anthropic = { ...result.anthropic }
-          delete result.anthropic.thinking
-          delete result.anthropic.reasoning
-        }
-        return result
-      }
-
-      msgs = msgs.flatMap((msg): ModelMessage[] => {
-        // Handle string content (just strip metadata)
-        if (!Array.isArray(msg.content)) {
-          const result = { ...msg, providerOptions: stripReasoningData(msg.providerOptions) }
-          if ("experimental_providerMetadata" in msg) {
-            ;(result as any).experimental_providerMetadata = stripReasoningData(
-              (msg as any).experimental_providerMetadata,
-            )
-          }
-          return [result]
-        }
-        // Filter out reasoning parts from content and strip metadata from remaining parts
-        const filtered = msg.content
-          .filter(
-            (part: any) => part.type !== "thinking" && part.type !== "redacted_thinking" && part.type !== "reasoning",
-          )
-          .map((part: any) => ({
-            ...part,
-            providerOptions: stripReasoningData(part.providerOptions),
-            providerMetadata: stripReasoningData(part.providerMetadata),
-            experimental_providerMetadata: stripReasoningData(part.experimental_providerMetadata),
-          }))
-
-        // Providers may reject empty array content; drop empty messages.
-        if (filtered.length === 0) return []
-
-        // Also strip from message-level options/metadata
-        const result = { ...msg, content: filtered, providerOptions: stripReasoningData(msg.providerOptions) }
-        if ("experimental_providerMetadata" in msg) {
-          ;(result as any).experimental_providerMetadata = stripReasoningData(
-            (msg as any).experimental_providerMetadata,
-          )
-        }
-        return [result as ModelMessage]
-      })
-    }
-
+    // kilocode_change - enable prompt caching for Anthropic, OpenRouter, and Kilo Gateway
     if (
       model.providerID === "anthropic" ||
       model.api.id.includes("anthropic") ||
       model.api.id.includes("claude") ||
       model.id.includes("anthropic") ||
       model.id.includes("claude") ||
-      model.api.npm === "@ai-sdk/anthropic"
+      model.api.npm === "@ai-sdk/anthropic" ||
+      model.api.npm === "@openrouter/ai-sdk-provider" ||
+      model.api.npm === "@kilocode/kilo-gateway"
     ) {
       msgs = applyCaching(msgs, model.providerID)
     }
@@ -771,16 +701,6 @@ export namespace ProviderTransform {
       }
       if (input.model.api.id.includes("gemini-3")) {
         result["reasoning"] = { effort: "high" }
-      }
-      // kilocode_change - enable reasoning for Claude models via Kilo Gateway
-      if (
-        input.model.api.npm === "@kilocode/kilo-gateway" &&
-        (input.model.id.includes("claude") ||
-          input.model.id.includes("anthropic") ||
-          input.model.api.id.includes("claude") ||
-          input.model.api.id.includes("anthropic"))
-      ) {
-        result["reasoning"] = { effort: "medium" }
       }
     }
 

@@ -80,7 +80,12 @@ export namespace SessionProcessor {
                   if (value.id in reasoningMap) {
                     const part = reasoningMap[value.id]
                     part.text += value.text
-                    if (value.providerMetadata) part.metadata = value.providerMetadata
+                    // kilocode_change - don't store delta-level providerMetadata
+                    // The OpenRouter SDK sends per-chunk reasoning_details in each delta's
+                    // providerMetadata, containing only that chunk's partial text (no signature).
+                    // Overwriting on every delta leaves corrupt metadata (truncated text, missing
+                    // signature) which causes 4x duplication and signature validation failures
+                    // when sent back to the API. Only reasoning-end metadata is reliable.
                     if (part.text) await Session.updatePart({ part, delta: value.text })
                   }
                   break

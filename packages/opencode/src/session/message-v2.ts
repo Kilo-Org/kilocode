@@ -623,13 +623,22 @@ export namespace MessageV2 {
                 ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
               })
           }
+          // kilocode_change start
+          // Don't pass providerMetadata on reasoning parts when reconstructing messages.
+          // The OpenRouter SDK's providerMetadata on reasoning-delta events contains only
+          // that chunk's reasoning_details (partial text, no signature), not the accumulated
+          // details. Passing this corrupt metadata back causes the OpenRouter SDK to send
+          // duplicated and corrupt reasoning_details in the API request, which fails
+          // Anthropic's signature validation. The OpenRouter SDK reconstructs
+          // reasoning_details from the reasoning text field alone, so omitting metadata
+          // is safe and correct.
           if (part.type === "reasoning") {
             assistantMessage.parts.push({
               type: "reasoning",
               text: part.text,
-              ...(differentModel ? {} : { providerMetadata: part.metadata }),
             })
           }
+          // kilocode_change end
         }
         if (assistantMessage.parts.length > 0) {
           result.push(assistantMessage)
