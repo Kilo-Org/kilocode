@@ -47,6 +47,7 @@ import { McpOAuthService, OAuthTokens } from "./oauth"
 // Discriminated union for connection states
 export type ConnectedMcpConnection = {
 	type: "connected"
+	rawConfig: string // kilocode_change: pre-injection validated config for accurate deep-equal comparison
 	server: McpServer
 	client: Client
 	transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
@@ -54,6 +55,7 @@ export type ConnectedMcpConnection = {
 
 export type DisconnectedMcpConnection = {
 	type: "disconnected"
+	rawConfig: string // kilocode_change: pre-injection validated config for accurate deep-equal comparison
 	server: McpServer
 	client: null
 	transport: null
@@ -187,6 +189,9 @@ export class McpHub {
 	private sanitizedNameRegistry: Map<string, string> = new Map()
 	// kilocode_change start - MCP OAuth Authorization
 	private oauthService?: McpOAuthService
+	// kilocode_change end
+	// kilocode_change start - Intentional disconnect guard for auto-reconnect
+	private intentionalDisconnects: Set<string> = new Set()
 	// kilocode_change end
 	// kilocode_change start - Auto-reconnect on disconnect
 	private reconnectAttempts: Map<string, number> = new Map()
@@ -747,6 +752,11 @@ export class McpHub {
 		// Set new timer
 		const timer = setTimeout(async () => {
 			this.configChangeDebounceTimers.delete(key)
+			// kilocode_change: Re-check flag inside callback - it may have been set
+			// after the initial check but before the debounce timer fires
+			if (this.isProgrammaticUpdate) {
+				return
+			}
 			await this.handleConfigFileChange(filePath, source)
 		}, 500) // 500ms debounce
 
@@ -1088,6 +1098,7 @@ export class McpHub {
 	): DisconnectedMcpConnection {
 		return {
 			type: "disconnected",
+			rawConfig: JSON.stringify(config), // kilocode_change: store pre-injection config
 			server: {
 				name,
 				config: JSON.stringify(config),
@@ -1203,8 +1214,11 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on error
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 
 				transport.onclose = async () => {
@@ -1213,8 +1227,11 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on close
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 
 				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
@@ -1274,8 +1291,11 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on error
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 
 				transport.onclose = async () => {
@@ -1284,8 +1304,11 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on close
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 			} else if (configInjected.type === "sse") {
 				// SSE connection
@@ -1336,8 +1359,11 @@ export class McpHub {
 						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on error
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on error (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 
 				transport.onclose = async () => {
@@ -1346,8 +1372,11 @@ export class McpHub {
 						connection.server.status = "disconnected"
 					}
 					await this.notifyWebviewOfServerChanges()
-					// kilocode_change - Schedule auto-reconnect on close
-					this.scheduleReconnect(name, source)
+					// kilocode_change - Schedule auto-reconnect on close (skip if intentional disconnect)
+					const intentionalKey = `${source}-${name}`
+					if (!this.intentionalDisconnects.has(intentionalKey)) {
+						this.scheduleReconnect(name, source)
+					}
 				}
 			} else {
 				// Should not happen if validateServerConfig is correct
@@ -1396,6 +1425,7 @@ export class McpHub {
 			// Create a connected connection
 			const connection: ConnectedMcpConnection = {
 				type: "connected",
+				rawConfig: JSON.stringify(config), // kilocode_change: store pre-injection config for accurate comparison
 				server: {
 					name,
 					config: JSON.stringify(configInjected),
@@ -1420,6 +1450,9 @@ export class McpHub {
 			connection.server.instructions = client.getInstructions()
 			// kilocode_change - Reset reconnect attempts on successful connection
 			this.resetReconnectAttempts(name, source)
+			// kilocode_change - Clear intentional disconnect flag on successful connection
+			const intentionalKey = `${source}-${name}`
+			this.intentionalDisconnects.delete(intentionalKey)
 
 			this.kiloNotificationService.connect(name, connection.client)
 
@@ -1692,6 +1725,10 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
+					// kilocode_change: Mark as intentional disconnect to prevent onclose from scheduling auto-reconnect
+					const connSource = connection.server.source || "global"
+					const intentionalKey = `${connSource}-${name}`
+					this.intentionalDisconnects.add(intentionalKey)
 					// kilocode_change start
 					// Fire-and-forget: don't await close() calls as they can block
 					// waiting for the subprocess to exit. The MCP SDK's transport.close()
@@ -1774,7 +1811,8 @@ export class McpHub {
 				} catch (error) {
 					this.showErrorMessage(`Failed to connect to new MCP server ${name}`, error)
 				}
-			} else if (!deepEqual(JSON.parse(currentConnection.server.config), config)) {
+			} else if (!deepEqual(JSON.parse(currentConnection.rawConfig), validatedConfig)) {
+				// kilocode_change: compare raw (pre-injection) configs
 				// Existing server with changed config
 				try {
 					// Only setup file watcher for enabled servers
@@ -2589,6 +2627,7 @@ export class McpHub {
 		}
 		this.reconnectTimers.clear()
 		this.reconnectAttempts.clear()
+		this.intentionalDisconnects.clear()
 		// kilocode_change end
 
 		this.removeAllFileWatchers()
