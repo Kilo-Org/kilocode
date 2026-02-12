@@ -4,7 +4,6 @@ import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
-import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
@@ -33,6 +32,7 @@ export namespace Command {
       // https://zod.dev/v4/changelog?id=zfunction
       template: z.promise(z.string()).or(z.string()),
       subtask: z.boolean().optional(),
+      hidden: z.boolean().optional(), // kilocode_change
       hints: z.array(z.string()),
     })
     .meta({
@@ -61,6 +61,8 @@ export namespace Command {
     // kilocode_change end
   } as const
 
+  // kilocode_change start - split static commands from dynamic (MCP/Skill) to avoid blocking
+  // Static commands (builtin + user config) resolve quickly via Config.get()
   const state = Instance.state(async () => {
     const cfg = await Config.get()
 
@@ -74,19 +76,16 @@ export namespace Command {
         },
         hints: hints(PROMPT_INITIALIZE),
       },
-      // kilocode_change start
-      // [Default.REVIEW]: {
-      //   name: Default.REVIEW,
-      //   description: "review changes [commit|branch|pr], defaults to uncommitted",
-      //   get template() {
-      //     return PROMPT_REVIEW.replace("${path}", Instance.worktree)
-      //   },
-      //   subtask: true,
-      //   hints: hints(PROMPT_REVIEW),
-      // },
+      [Default.REVIEW]: {
+        name: Default.REVIEW,
+        description: "review code changes",
+        agent: "review",
+        source: "command",
+        template: "Start a code review",
+        hints: [],
+      },
       [Default.LOCAL_REVIEW]: localReviewCommand(),
       [Default.LOCAL_REVIEW_UNCOMMITTED]: localReviewUncommittedCommand(),
-      // kilocode_change end
     }
 
     for (const [name, command] of Object.entries(cfg.command ?? {})) {
@@ -103,7 +102,21 @@ export namespace Command {
         hints: hints(command.template),
       }
     }
-    for (const [name, prompt] of Object.entries(await MCP.prompts())) {
+
+    return result
+  })
+
+  // Dynamic commands (MCP prompts + Skills) may be slow to load
+  let resolved = false
+  const dynamic = Instance.state(async () => {
+    const result: Record<string, Info> = {}
+
+    const [prompts, skills] = await Promise.all([
+      MCP.prompts().catch(() => ({}) as Record<string, never>),
+      Skill.all().catch(() => [] as Awaited<ReturnType<typeof Skill.all>>),
+    ])
+
+    for (const [name, prompt] of Object.entries(prompts)) {
       result[name] = {
         name,
         source: "mcp",
@@ -131,8 +144,7 @@ export namespace Command {
     }
 
     // Add skills as invokable commands
-    for (const skill of await Skill.all()) {
-      // Skip if a command with this name already exists
+    for (const skill of skills) {
       if (result[skill.name]) continue
       result[skill.name] = {
         name: skill.name,
@@ -145,14 +157,31 @@ export namespace Command {
       }
     }
 
+    resolved = true
     return result
   })
+  // kilocode_change end
 
+  // kilocode_change start - get/list merge static + dynamic commands
   export async function get(name: string) {
-    return state().then((x) => x[name])
+    const s = await state()
+    if (s[name]) return s[name]
+    const d = await dynamic()
+    return d[name]
   }
 
   export async function list() {
-    return state().then((x) => Object.values(x))
+    const s = await state()
+    const d = await dynamic()
+    return Object.values({ ...d, ...s })
   }
+
+  // Return static commands immediately, plus any dynamic commands that have already resolved.
+  // This avoids blocking the API response on slow MCP/Skill loading.
+  export async function listReady() {
+    const s = await state()
+    const d = resolved ? await dynamic() : {}
+    return Object.values({ ...d, ...s })
+  }
+  // kilocode_change end
 }

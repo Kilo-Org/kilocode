@@ -574,33 +574,43 @@ export function Prompt(props: PromptProps) {
     } else if (
       inputText.startsWith("/") &&
       iife(() => {
-        const firstLine = inputText.split("\n")[0]
-        const command = firstLine.split(" ")[0].slice(1)
-        return sync.data.command.some((x) => x.name === command)
+        const name = inputText.split("\n")[0].split(" ")[0].slice(1)
+        return sync.data.command.some((x) => x.name === name)
       })
     ) {
       // Parse command from first line, preserve multi-line content in arguments
       const firstLineEnd = inputText.indexOf("\n")
       const firstLine = firstLineEnd === -1 ? inputText : inputText.slice(0, firstLineEnd)
-      const [command, ...firstLineArgs] = firstLine.split(" ")
+      const [raw, ...firstLineArgs] = firstLine.split(" ")
       const restOfInput = firstLineEnd === -1 ? "" : inputText.slice(firstLineEnd + 1)
       const args = firstLineArgs.join(" ") + (restOfInput ? "\n" + restOfInput : "")
+      const commandName = raw.slice(1)
+      const matched = sync.data.command.find((x) => x.name === commandName)! // kilocode_change
 
-      sdk.client.session.command({
-        sessionID,
-        command: command.slice(1),
-        arguments: args,
-        agent: local.agent.current().name,
-        model: `${selectedModel.providerID}/${selectedModel.modelID}`,
-        messageID,
-        variant,
-        parts: nonTextParts
-          .filter((x) => x.type === "file")
-          .map((x) => ({
-            id: Identifier.ascending("part"),
-            ...x,
-          })),
-      })
+      // kilocode_change start - switch agent if command specifies one
+      const previous = local.agent.current().name
+      if (matched.agent) local.agent.set(matched.agent)
+      // kilocode_change end
+
+      sdk.client.session
+        .command({
+          sessionID,
+          command: commandName,
+          arguments: args,
+          agent: matched.agent ?? local.agent.current().name, // kilocode_change - use command's agent if specified
+          model: `${selectedModel.providerID}/${selectedModel.modelID}`,
+          messageID,
+          variant,
+          parts: nonTextParts
+            .filter((x) => x.type === "file")
+            .map((x) => ({
+              id: Identifier.ascending("part"),
+              ...x,
+            })),
+        })
+        .catch(() => {
+          if (matched.agent) local.agent.set(previous) // kilocode_change - restore agent on error
+        })
     } else {
       sdk.client.session
         .prompt({

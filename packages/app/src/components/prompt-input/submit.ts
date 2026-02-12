@@ -260,13 +260,17 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       const commandName = cmdName.slice(1)
       const customCommand = sync.data.command.find((c) => c.name === commandName)
       if (customCommand) {
+        // kilocode_change start - switch agent if command specifies one
+        const previous = agent
+        if (customCommand.agent) local.agent.set(customCommand.agent)
+        // kilocode_change end
         clearInput()
         client.session
           .command({
             sessionID: session.id,
             command: commandName,
             arguments: args.join(" "),
-            agent,
+            agent: customCommand.agent ?? agent, // kilocode_change - use command's agent if specified
             model: `${model.providerID}/${model.modelID}`,
             variant,
             parts: images.map((attachment) => ({
@@ -278,6 +282,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
             })),
           })
           .catch((err) => {
+            if (customCommand.agent) local.agent.set(previous) // kilocode_change - restore agent on error
             showToast({
               title: language.t("prompt.toast.commandSendFailed.title"),
               description: errorMessage(err),

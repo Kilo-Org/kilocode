@@ -9,6 +9,7 @@ export function localReviewUncommittedCommand(): Command.Info {
   return {
     name: "local-review-uncommitted",
     description: "local review (uncommitted changes)",
+    hidden: true,
     get template() {
       return Review.buildReviewPromptUncommitted()
     },
@@ -23,6 +24,7 @@ export function localReviewCommand(): Command.Info {
   return {
     name: "local-review",
     description: "local review (current branch)",
+    hidden: true,
     get template() {
       return Review.buildReviewPromptBranch()
     },

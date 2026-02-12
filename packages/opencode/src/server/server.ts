@@ -355,8 +355,8 @@ export namespace Server {
             },
           }),
           async (c) => {
-            const commands = await Command.list()
-            return c.json(commands)
+            const commands = await Command.listReady() // kilocode_change - use listReady to avoid blocking on MCP/Skill
+            return c.json(commands.filter((cmd) => !cmd.hidden)) // kilocode_change - hide internal commands
           },
         )
         .post(
