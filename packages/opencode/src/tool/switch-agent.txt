@@ -1,0 +1,15 @@
+Request to switch to a different agent.
+
+Available agents:
+{agents}
+
+When to switch:
+- Switch to **code** when files need to be created, edited, or deleted - any implementation work
+- Switch to **plan** when research, architecture, or planning is needed before implementation
+- Switch to **debug** when systematically diagnosing issues, reproducing bugs, or tracing failures
+- You have completed your part of the work and another agent should continue
+
+Do NOT call this tool:
+- If the task can be completed with your current agent
+- To switch to your own agent (you're already using it)
+- To delegate subtasks (use the task tool for that instead)

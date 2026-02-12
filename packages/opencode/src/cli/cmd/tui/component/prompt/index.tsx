@@ -1,5 +1,5 @@
 import { BoxRenderable, TextareaRenderable, MouseEvent, PasteEvent, t, dim, fg } from "@opentui/core"
-import { createEffect, createMemo, type JSX, onMount, createSignal, onCleanup, Show, Switch, Match } from "solid-js"
+import { createEffect, createMemo, type JSX, on, onMount, createSignal, onCleanup, Show, Switch, Match } from "solid-js"
 import "opentui-spinner/solid"
 import { useLocal } from "@tui/context/local"
 import { useTheme } from "@tui/context/theme"
@@ -156,6 +156,22 @@ export function Prompt(props: PromptProps) {
       }
     }
   })
+
+  // kilocode_change start - sync agent when model switches mid-turn via switch_agent tool
+  createEffect(
+    on(
+      () => lastUserMessage()?.id,
+      () => {
+        const msg = lastUserMessage()
+        if (!msg) return
+        const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
+        if (msg.agent && isPrimaryAgent) {
+          local.agent.set(msg.agent)
+        }
+      },
+    ),
+  )
+  // kilocode_change end
 
   command.register(() => {
     return [

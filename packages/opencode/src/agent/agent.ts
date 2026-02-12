@@ -65,6 +65,7 @@ export namespace Agent {
         ...Object.fromEntries(skillDirs.map((dir) => [path.join(dir, "*"), "allow"])),
       },
       question: "deny",
+      switch_agent: "deny", // kilocode_change
       plan_enter: "deny",
       plan_exit: "deny",
       // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
@@ -88,6 +89,7 @@ export namespace Agent {
           defaults,
           PermissionNext.fromConfig({
             question: "allow",
+            switch_agent: "ask", // kilocode_change
             plan_enter: "allow",
           }),
           user,
@@ -103,6 +105,7 @@ export namespace Agent {
           defaults,
           PermissionNext.fromConfig({
             question: "allow",
+            switch_agent: "ask", // kilocode_change
             plan_exit: "allow",
             external_directory: {
               [path.join(Global.Path.data, "plans", "*")]: "allow",
@@ -128,6 +131,7 @@ export namespace Agent {
           defaults,
           PermissionNext.fromConfig({
             question: "allow",
+            switch_agent: "ask", // kilocode_change
             plan_enter: "allow",
           }),
           user,
@@ -150,6 +154,7 @@ export namespace Agent {
             list: "allow",
             bash: "allow",
             question: "allow",
+            switch_agent: "ask", // kilocode_change
             task: "allow",
             todoread: "allow",
             todowrite: "allow",
