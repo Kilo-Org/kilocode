@@ -373,9 +373,9 @@ Once all lucide icons are replaced and the 6 new icons are added to kilo-ui, rem
 
 ---
 
-### Phase 2: Settings UI overhaul
+### Phase 2: Settings shell migration
 
-**Goal**: Build out the settings UI using kilo-ui form components. The 14 settings tabs are currently stubs — this phase makes them functional.
+**Goal**: Replace the hand-built settings tab navigation with kilo-ui `Tabs`. The actual settings tab _content_ (form controls, backend wiring) is **out of scope** for this plan — that work belongs to the settings implementation effort, not the kilo-ui integration.
 
 #### 2.1 Replace settings tabs with `Tabs`
 
@@ -401,55 +401,15 @@ import { Tabs } from "@kilocode/kilo-ui/tabs"
 </Tabs>
 ```
 
-#### 2.2 Implement settings form elements
+#### Note on form components
 
-**Files**: All 14 settings tab components in [`settings/`](../webview-ui/src/components/settings/)
-
-Use kilo-ui form components:
-
-```tsx
-import { Select } from "@kilocode/kilo-ui/select"
-import { Switch } from "@kilocode/kilo-ui/switch"
-import { Checkbox } from "@kilocode/kilo-ui/checkbox"
-import { TextField } from "@kilocode/kilo-ui/text-field"
-```
-
-**Usage patterns** (following the desktop app's [`settings-general.tsx`](../../../app/src/components/settings-general.tsx)):
-
-```tsx
-// Toggle setting
-<Switch
-  checked={setting.enabled()}
-  onChange={(checked) => updateSetting("enabled", checked)}
-/>
-
-// Dropdown setting
-<Select
-  options={options()}
-  current={currentOption()}
-  value={(o) => o.value}
-  label={(o) => o.label}
-  onSelect={(o) => updateSetting("value", o.value)}
-  variant="secondary"
-  size="small"
-/>
-```
-
-#### 2.3 Replace collapsible sections with `Accordion`/`Collapsible`
-
-If settings tabs use expandable sections:
-
-```tsx
-import { Accordion } from "@kilocode/kilo-ui/accordion"
-import { Collapsible } from "@kilocode/kilo-ui/collapsible"
-```
+When settings tabs are eventually implemented, they should use kilo-ui form components (`Select`, `Switch`, `Checkbox`, `TextField`) following the desktop app's patterns. See the desktop app's [`settings-general.tsx`](../../../app/src/components/settings-general.tsx) for reference. The `LanguageTab` already demonstrates this pattern with `Select`.
 
 #### Acceptance criteria
 
-- Settings shell uses `Tabs` with vertical orientation
-- At least 3 settings tabs are functional with real form controls
-- Form controls (Select, Switch, Checkbox, TextField) work correctly
-- Settings changes persist via extension message passing
+- Settings shell uses `Tabs` with vertical orientation and `variant="settings"`
+- Icons use kilo-ui `Icon` component
+- Tab switching works correctly
 
 ---
 
@@ -785,18 +745,23 @@ Each phase has specific acceptance criteria (listed above). The general verifica
 
 ## 9. Progress Tracker
 
-| Phase                        | Status        | Date       | Notes                                                                                                                                                                                                                                                                                |
-| ---------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Phase 0: Foundation          | ✅ Complete   | 2026-02-10 | Build system, CSP, providers, styles wired up. `I18nProvider` locale corrected to accessor. Font loaders (`.woff`, `.woff2`, `.ttf`) added to esbuild.                                                                                                                               |
-| Phase 1.1: Buttons           | ✅ Complete   | 2026-02-10 | All buttons in PromptInput, PermissionDialog, ProfileView, DeviceAuthCard, Settings replaced with `Button`. `IconButton` not used — requires named `icon` prop incompatible with inline SVGs. Settings tab sidebar buttons left as native `<button>` (complex active state styling). |
-| Phase 1.2: Spinners          | ✅ Complete   | 2026-02-10 | Emoji loading indicators (`⏳`, `⚙️`) in Message.tsx and DeviceAuthCard.tsx replaced with `Spinner`. Status icons (`✓`, `✕`) kept as-is.                                                                                                                                             |
-| Phase 1.3: Permission Dialog | ✅ Complete   | 2026-02-11 | Custom overlay replaced with `Dialog` via `useDialog()` hook + `BasicTool` for collapsible header + `data-component="permission-prompt"` for actions. Removed 7 custom CSS classes. Direct `@kobalte/core` dep removed to avoid dual-package context mismatch.                       |
-| Phase 1.4: Cards             | ✅ Complete   | 2026-02-11 | Inline-styled card divs in ProfileView (profile + balance) and DeviceAuthCard (5 state cards) replaced with `Card` component. Removed `cardStyle` constant.                                                                                                                          |
-| Phase 1.5: Icons             | ✅ Complete   | 2026-02-11 | All 15 lucide-solid icons replaced with kilo-ui `Icon`. `lucide-solid` dep removed. Many icons use approximate matches (see deviation #7).                                                                                                                                           |
-| Phase 2: Settings UI         | ✅ Complete   | 2026-02-11 | Settings shell uses kilo-ui `Tabs` with vertical orientation and `variant="settings"`. ~80 lines of inline styles removed. Tab content (stubs) unchanged. Back button in header kept with minimal CSS.                                                                               |
-| Phase 3: Chat UI             | ✅ Complete   | 2026-02-11 | MarkedProvider added. Assistant text renders as Markdown. Tool calls use BasicTool. Reasoning uses Collapsible. Removed ~150 lines of tool/reasoning CSS. Code/Diff providers deferred (not needed yet).                                                                             |
-| Phase 4.5: Popover           | ✅ Complete   | 2026-02-11 | ModelSelector and ModeSwitcher replaced with kilo-ui `Popover`. Removed ~85 lines of custom CSS (positioning, click-outside, z-index). Popover handles dismiss, positioning, and animations via Kobalte.                                                                             |
-| Phase 4: Advanced (rest)     | ⬚ Not started | —          | Tooltips, DropdownMenu, ContextMenu, Toast, List still pending.                                                                                                                                                                                                                      |
+| Phase                        | Status        | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------- | ------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0: Foundation          | ✅ Complete   | 2026-02-10 | Build system, CSP, providers, styles wired up. `I18nProvider` locale corrected to accessor. Font loaders (`.woff`, `.woff2`, `.ttf`) added to esbuild. `solidDedupePlugin` added to force single solid-js copy across monorepo.                                                                                                                                                                                                                          |
+| Phase 1.1: Buttons           | ✅ Complete   | 2026-02-10 | All buttons in PromptInput, PermissionDialog, ProfileView, DeviceAuthCard, Settings replaced with `Button`. `IconButton` not used — requires named `icon` prop incompatible with inline SVGs. Settings tab sidebar buttons left as native `<button>` (complex active state styling).                                                                                                                                                                     |
+| Phase 1.2: Spinners          | ✅ Complete   | 2026-02-10 | Emoji loading indicators (`⏳`, `⚙️`) in Message.tsx and DeviceAuthCard.tsx replaced with `Spinner`. Status icons (`✓`, `✕`) kept as-is.                                                                                                                                                                                                                                                                                                                 |
+| Phase 1.3: Permission Dialog | ✅ Complete   | 2026-02-11 | Custom overlay replaced with `Dialog` via `useDialog()` hook + `BasicTool` for collapsible header + `data-component="permission-prompt"` for actions. Removed 7 custom CSS classes. Direct `@kobalte/core` dep removed to avoid dual-package context mismatch.                                                                                                                                                                                           |
+| Phase 1.4: Cards             | ✅ Complete   | 2026-02-11 | Inline-styled card divs in ProfileView (profile + balance) and DeviceAuthCard (5 state cards) replaced with `Card` component. Removed `cardStyle` constant.                                                                                                                                                                                                                                                                                              |
+| Phase 1.5: Icons             | ✅ Complete   | 2026-02-11 | All 15 lucide-solid icons replaced with kilo-ui `Icon`. `lucide-solid` dep removed. Many icons use approximate matches (see deviation #7).                                                                                                                                                                                                                                                                                                               |
+| Phase 2: Settings shell      | ✅ Complete   | 2026-02-11 | Settings shell uses kilo-ui `Tabs` (vertical, `variant="settings"`). ~80 lines of inline styles removed. Icons use `Icon` component. Settings tab _content_ (form controls, backend wiring) is out of scope for this plan. `LanguageTab` demonstrates `Select` usage as reference.                                                                                                                                                                       |
+| Phase 3: Chat UI             | ✅ Complete   | 2026-02-11 | Surpassed original plan: `Message.tsx` now uses kilo-ui's higher-level `Message` component (from `@kilocode/kilo-ui/message-part`) which internally handles Markdown, tool calls (BasicTool), reasoning (Collapsible), and more. `DataProvider` bridge in `App.tsx` adapts session store to SDK format. `MarkedProvider` active. `DiffComponentProvider` and `CodeComponentProvider` deferred (not needed while `Message` handles rendering internally). |
+| Phase 4.5: Popover           | ✅ Complete   | 2026-02-11 | ModelSelector and ModeSwitcher replaced with kilo-ui `Popover`. Removed ~85 lines of custom CSS (positioning, click-outside, z-index). Popover handles dismiss, positioning, and animations via Kobalte.                                                                                                                                                                                                                                                 |
+| I18n system                  | ✅ Complete   | 2026-02-11 | **Beyond original plan.** Full `LanguageProvider` context with 16 locales, 3-layer dictionary merging (app + ui + kilo-i18n), locale resolution (user override → VS Code → browser → "en"), template parameter interpolation. `@kilocode/kilo-i18n` added as dependency.                                                                                                                                                                                 |
+| Phase 4.1: Tooltips          | ✅ Complete   | 2026-02-11 | Added `Tooltip` to send/abort buttons (PromptInput), settings back button, and profile refresh button. Uses `value` prop (not `content`) with i18n keys.                                                                                                                                                                                                                                                                                                 |
+| Phase 4.3: Toast             | ✅ Complete   | 2026-02-11 | `Toast.Region` added to `App.tsx`. `showToast()` used for copy confirmations in `DeviceAuthCard`. Removed `copied` signal state in favor of toast feedback.                                                                                                                                                                                                                                                                                              |
+| Phase 4.4: List              | ✅ Complete   | 2026-02-11 | `SessionList` replaced custom `<div>`-based list with kilo-ui `List` component. Gains keyboard navigation (arrow keys + Enter), fuzzy search on session titles, and `[data-component="list"]` styling. Removed ~55 lines of custom session-list CSS.                                                                                                                                                                                                     |
+| CSS cleanup                  | ✅ Complete   | 2026-02-11 | Removed 91 lines: unused `.prompt-send-button`/`.prompt-abort-button` classes (replaced by kilo-ui `Button`), and `.session-item`/`.session-list-empty` classes (replaced by kilo-ui `List`). `chat.css` now at ~306 lines.                                                                                                                                                                                                                              |
+| Phase 4.2: Menus             | ⬚ Not started | —          | DropdownMenu + ContextMenu for session list actions (rename, delete) and message actions (copy, retry). Depends on backend supporting these operations.                                                                                                                                                                                                                                                                                                  |
 
 ### Deviations from plan
 
@@ -807,3 +772,8 @@ Each phase has specific acceptance criteria (listed above). The general verifica
 5. **Settings tab sidebar buttons**: Left as native `<button>` elements because they have complex active/hover state styling that would need significant rework to use `Button`.
 6. **Permission dialog vs inline prompt**: The desktop app renders permissions inline in the prompt dock area (replacing the input). The vscode webview keeps a `Dialog` wrapper because the layout differs. The inner content uses the same `BasicTool` + `data-component="permission-prompt"` pattern as the app. The args are shown as raw JSON rather than `perm.patterns` because the vscode permission data shape differs from the app's SDK format.
 7. **Icon mapping uses approximate matches**: kilo-ui only has 38 icons. The plan's mapping assumed icons like `providers`, `console`, `branch`, `server`, `help` exist — they don't. Current mapping uses best-available alternatives (e.g. `cloud-upload` for Providers, `chevron-right` for Terminal). These should be replaced with proper icons once they're added to the UI library.
+8. **`solidDedupePlugin` added to esbuild**: Not in the original plan. Needed to force all `solid-js` imports (from kilo-ui and the webview) to resolve to the same copy, otherwise SolidJS contexts can't see each other across packages in the monorepo.
+9. **`DataProvider` bridge**: The plan mentioned `DataProvider` as a possibility in Phase 3.4, but the actual implementation builds it as a mandatory bridge in `App.tsx` (`DataBridge` component) that adapts the session store format to what kilo-ui's `Message` component expects.
+10. **Higher-level `Message` component**: Instead of individually adopting `Markdown`, `Code`, `BasicTool`, and `Collapsible` as the plan described in Phase 3.1–3.6, the implementation jumped to using kilo-ui's composite `Message` component directly. This is simpler but means the extension is more tightly coupled to kilo-ui's rendering pipeline.
+11. **Full i18n system**: The plan's Phase 0 had a trivial `I18nProvider value={{ locale: () => "en", t: (key) => key }}`. The actual implementation is a full multi-locale system with 16 languages, dictionary merging, and the `@kilocode/kilo-i18n` package — this was built as an unplanned but necessary feature.
+12. **`chat.css` reduced to ~306 lines** (from 552 in the plan's baseline): Permission dialog CSS (~7 classes), tool/reasoning CSS (~150 lines), popover CSS (~85 lines), session-list CSS (~55 lines), and unused button classes (~35 lines) removed. Settings tab inline styles (~80 lines) eliminated. Remaining CSS covers layout (chat-view, prompt-input, model-selector popover internals, mode-switcher popover internals, permission-details pre formatting).

@@ -14,7 +14,11 @@ struct DisplayConfig {
 }
 
 fn dir() -> Option<PathBuf> {
-    Some(dirs::data_dir()?.join("ai.kilo.desktop"))
+    Some(dirs::data_dir()?.join(if cfg!(debug_assertions) {
+        "ai.kilo.desktop.dev"
+    } else {
+        "ai.kilo.desktop"
+    }))
 }
 
 fn path() -> Option<PathBuf> {
@@ -22,10 +26,12 @@ fn path() -> Option<PathBuf> {
 }
 
 pub fn read_wayland() -> Option<bool> {
-    let path = path()?;
-    let raw = std::fs::read_to_string(path).ok()?;
-    let config = serde_json::from_str::<DisplayConfig>(&raw).ok()?;
-    config.wayland
+    let raw = std::fs::read_to_string(path()?).ok()?;
+    let root = serde_json::from_str::<serde_json::Value>(&raw)
+        .ok()?
+        .get(LINUX_DISPLAY_CONFIG_KEY)
+        .cloned()?;
+    serde_json::from_value::<DisplayConfig>(root).ok()?.wayland
 }
 
 pub fn write_wayland(app: &AppHandle, value: bool) -> Result<(), String> {

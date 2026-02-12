@@ -20,6 +20,9 @@ test("returns default native agents when no config", async () => {
       const names = agents.map((a) => a.name)
       expect(names).toContain("code") // kilocode_change
       expect(names).toContain("plan")
+      expect(names).toContain("debug") // kilocode_change
+      expect(names).toContain("orchestrator") // kilocode_change
+      expect(names).toContain("ask") // kilocode_change
       expect(names).toContain("general")
       expect(names).toContain("explore")
       expect(names).toContain("compaction")
@@ -41,6 +44,37 @@ test("code agent has correct default properties", async () => {
       expect(code?.native).toBe(true)
       expect(evalPerm(code, "edit")).toBe("allow")
       expect(evalPerm(code, "bash")).toBe("allow")
+    },
+  })
+})
+// kilocode_change end
+
+// kilocode_change start - ask agent tests
+test("ask agent has correct default properties", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await Agent.get("ask")
+      expect(ask).toBeDefined()
+      expect(ask?.mode).toBe("primary")
+      expect(ask?.native).toBe(true)
+      // ask agent should allow read-only tools
+      expect(evalPerm(ask, "read")).toBe("allow")
+      expect(evalPerm(ask, "grep")).toBe("allow")
+      expect(evalPerm(ask, "glob")).toBe("allow")
+      expect(evalPerm(ask, "webfetch")).toBe("allow")
+      expect(evalPerm(ask, "websearch")).toBe("allow")
+      expect(evalPerm(ask, "codesearch")).toBe("allow")
+      // ask agent should deny edit and bash
+      expect(evalPerm(ask, "edit")).toBe("deny")
+      expect(evalPerm(ask, "bash")).toBe("deny")
+      expect(evalPerm(ask, "task")).toBe("deny")
+      // ask agent should gate .env files
+      expect(PermissionNext.evaluate("read", ".env", ask!.permission).action).toBe("ask")
+      expect(PermissionNext.evaluate("read", "config.env.local", ask!.permission).action).toBe("ask")
+      expect(PermissionNext.evaluate("read", ".env.example", ask!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("read", "src/index.ts", ask!.permission).action).toBe("allow")
     },
   })
 })
@@ -708,17 +742,20 @@ test("defaultAgent throws when all primary agents are disabled", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        // kilocode_change start - renamed from "build" to "code"
+        // kilocode_change start - disable all primary agents
         code: { disable: true },
-        // kilocode_change end
         plan: { disable: true },
+        debug: { disable: true },
+        orchestrator: { disable: true },
+        ask: { disable: true },
+        // kilocode_change end
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - code and plan are disabled, no primary-capable agents remain
+      // kilocode_change - all primary agents are disabled
       await expect(Agent.defaultAgent()).rejects.toThrow("no primary visible agent found")
     },
   })

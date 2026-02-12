@@ -30,7 +30,7 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 | `packages/util/`           | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
 | `packages/plugin/`         | `@kilocode/plugin`         | Plugin/tool interface definitions                                                          |
 
-Other packages (`console/`, `enterprise/`, `web/`, `desktop/`, `slack/`, `infra/`) are for the hosted platform and rarely need changes during CLI work.
+Other packages (`desktop/`, `containers/`, `extensions/`) are for desktop app, Docker containers, and editor extensions.
 
 ## Style Guide
 

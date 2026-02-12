@@ -5,14 +5,17 @@
 
 import { Component, createSignal, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useLanguage } from "../../context/language"
 import { ModelSelector } from "./ModelSelector"
 import { ModeSwitcher } from "./ModeSwitcher"
 
 export const PromptInput: Component = () => {
   const session = useSession()
   const server = useServer()
+  const language = useLanguage()
 
   const [text, setText] = createSignal("")
   let textareaRef: HTMLTextAreaElement | undefined
@@ -66,7 +69,9 @@ export const PromptInput: Component = () => {
         <textarea
           ref={textareaRef}
           class="prompt-input"
-          placeholder={isDisabled() ? "Connecting to server..." : "Type a message..."}
+          placeholder={
+            isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
+          }
           value={text()}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
@@ -77,24 +82,28 @@ export const PromptInput: Component = () => {
           <Show
             when={isBusy()}
             fallback={
-              <Button
-                variant="primary"
-                size="small"
-                onClick={handleSend}
-                disabled={!canSend()}
-                aria-label="Send message"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                </svg>
-              </Button>
+              <Tooltip value={language.t("prompt.action.send")} placement="top">
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleSend}
+                  disabled={!canSend()}
+                  aria-label={language.t("prompt.action.send")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
+                  </svg>
+                </Button>
+              </Tooltip>
             }
           >
-            <Button variant="ghost" size="small" onClick={handleAbort} aria-label="Stop generation">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <rect x="3" y="3" width="10" height="10" rx="1" />
-              </svg>
-            </Button>
+            <Tooltip value={language.t("prompt.action.stop")} placement="top">
+              <Button variant="ghost" size="small" onClick={handleAbort} aria-label={language.t("prompt.action.stop")}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <rect x="3" y="3" width="10" height="10" rx="1" />
+                </svg>
+              </Button>
+            </Tooltip>
           </Show>
         </div>
       </div>
@@ -102,7 +111,7 @@ export const PromptInput: Component = () => {
         <ModeSwitcher />
         <ModelSelector />
         <Show when={!isDisabled()}>
-          <span>Press Enter to send, Shift+Enter for new line</span>
+          <span>{language.t("prompt.hint.sendShortcut")}</span>
         </Show>
       </div>
     </div>

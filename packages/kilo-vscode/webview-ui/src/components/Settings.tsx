@@ -2,6 +2,7 @@ import { Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../context/language"
 import ProvidersTab from "./settings/ProvidersTab"
 import AgentBehaviourTab from "./settings/AgentBehaviourTab"
@@ -39,128 +40,130 @@ const Settings: Component<SettingsProps> = (props) => {
           gap: "8px",
         }}
       >
-        <Button variant="ghost" size="small" onClick={() => props.onBack?.()} title="Done">
-          <Icon name="arrow-left" />
-        </Button>
+        <Tooltip value={language.t("common.goBack")} placement="bottom">
+          <Button variant="ghost" size="small" onClick={() => props.onBack?.()}>
+            <Icon name="arrow-left" />
+          </Button>
+        </Tooltip>
         <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
       </div>
 
       {/* Settings tabs */}
       <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
         <Tabs.List>
-          <Tabs.SectionTitle>Configuration</Tabs.SectionTitle>
+          <Tabs.SectionTitle>{language.t("settings.section.configuration")}</Tabs.SectionTitle>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
-            Providers
+            {language.t("settings.providers.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="agentBehaviour">
             <Icon name="brain" />
-            Agent Behaviour
+            {language.t("settings.agentBehaviour.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="autoApprove">
             <Icon name="checklist" />
-            Auto-Approve
+            {language.t("settings.autoApprove.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="browser">
             <Icon name="window-cursor" />
-            Browser
+            {language.t("settings.browser.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="checkpoints">
             <Icon name="branch" />
-            Checkpoints
+            {language.t("settings.checkpoints.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="display">
             <Icon name="eye" />
-            Display
+            {language.t("settings.display.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="autocomplete">
             <Icon name="code-lines" />
-            Autocomplete
+            {language.t("settings.autocomplete.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="notifications">
             <Icon name="circle-check" />
-            Notifications
+            {language.t("settings.notifications.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="context">
             <Icon name="server" />
-            Context
+            {language.t("settings.context.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="terminal">
             <Icon name="console" />
-            Terminal
+            {language.t("settings.terminal.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="prompts">
             <Icon name="comment" />
-            Prompts
+            {language.t("settings.prompts.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
-            Experimental
+            {language.t("settings.experimental.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="language">
             <Icon name="speech-bubble" />
-            Language
+            {language.t("settings.language.title")}
           </Tabs.Trigger>
           <Tabs.Trigger value="aboutKiloCode">
             <Icon name="help" />
-            About Kilo Code
+            {language.t("settings.aboutKiloCode.title")}
           </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="providers">
-          <h3>Providers</h3>
+          <h3>{language.t("settings.providers.title")}</h3>
           <ProvidersTab />
         </Tabs.Content>
         <Tabs.Content value="agentBehaviour">
-          <h3>Agent Behaviour</h3>
+          <h3>{language.t("settings.agentBehaviour.title")}</h3>
           <AgentBehaviourTab />
         </Tabs.Content>
         <Tabs.Content value="autoApprove">
-          <h3>Auto-Approve</h3>
+          <h3>{language.t("settings.autoApprove.title")}</h3>
           <AutoApproveTab />
         </Tabs.Content>
         <Tabs.Content value="browser">
-          <h3>Browser</h3>
+          <h3>{language.t("settings.browser.title")}</h3>
           <BrowserTab />
         </Tabs.Content>
         <Tabs.Content value="checkpoints">
-          <h3>Checkpoints</h3>
+          <h3>{language.t("settings.checkpoints.title")}</h3>
           <CheckpointsTab />
         </Tabs.Content>
         <Tabs.Content value="display">
-          <h3>Display</h3>
+          <h3>{language.t("settings.display.title")}</h3>
           <DisplayTab />
         </Tabs.Content>
         <Tabs.Content value="autocomplete">
-          <h3>Autocomplete</h3>
+          <h3>{language.t("settings.autocomplete.title")}</h3>
           <AutocompleteTab />
         </Tabs.Content>
         <Tabs.Content value="notifications">
-          <h3>Notifications</h3>
+          <h3>{language.t("settings.notifications.title")}</h3>
           <NotificationsTab />
         </Tabs.Content>
         <Tabs.Content value="context">
-          <h3>Context</h3>
+          <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
         <Tabs.Content value="terminal">
-          <h3>Terminal</h3>
+          <h3>{language.t("settings.terminal.title")}</h3>
           <TerminalTab />
         </Tabs.Content>
         <Tabs.Content value="prompts">
-          <h3>Prompts</h3>
+          <h3>{language.t("settings.prompts.title")}</h3>
           <PromptsTab />
         </Tabs.Content>
         <Tabs.Content value="experimental">
-          <h3>Experimental</h3>
+          <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
         </Tabs.Content>
         <Tabs.Content value="language">
-          <h3>Language</h3>
+          <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />
         </Tabs.Content>
         <Tabs.Content value="aboutKiloCode">
-          <h3>About Kilo Code</h3>
+          <h3>{language.t("settings.aboutKiloCode.title")}</h3>
           <AboutKiloCodeTab port={server.serverInfo()?.port ?? null} connectionState={server.connectionState()} />
         </Tabs.Content>
       </Tabs>

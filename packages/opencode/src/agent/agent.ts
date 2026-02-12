@@ -12,6 +12,7 @@ import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_ASK from "./prompt/ask.txt"
 import PROMPT_ORCHESTRATOR from "./prompt/orchestrator.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
@@ -121,7 +122,7 @@ export namespace Agent {
         mode: "primary",
         native: true,
       },
-      // kilocode_change start - add debug and orchestrator agents
+      // kilocode_change start - add debug, orchestrator, and ask agents
       debug: {
         name: "debug",
         description: "Diagnose and fix software issues with systematic debugging methodology.",
@@ -158,6 +159,37 @@ export namespace Agent {
             task: "allow",
             todoread: "allow",
             todowrite: "allow",
+            webfetch: "allow",
+            websearch: "allow",
+            codesearch: "allow",
+            external_directory: {
+              [Truncate.GLOB]: "allow",
+            },
+          }),
+          user,
+        ),
+        mode: "primary",
+        native: true,
+      },
+      ask: {
+        name: "ask",
+        description: "Get answers and explanations without making changes to the codebase.",
+        prompt: PROMPT_ASK,
+        options: {},
+        permission: PermissionNext.merge(
+          defaults,
+          PermissionNext.fromConfig({
+            "*": "deny",
+            read: {
+              "*": "allow",
+              "*.env": "ask",
+              "*.env.*": "ask",
+              "*.env.example": "allow",
+            },
+            grep: "allow",
+            glob: "allow",
+            list: "allow",
+            question: "allow",
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",

@@ -1,4 +1,5 @@
 import { Component } from "solid-js"
+import { useLanguage } from "../../context/language"
 import type { ConnectionState } from "../../types/messages"
 
 export interface AboutKiloCodeTabProps {
@@ -7,6 +8,8 @@ export interface AboutKiloCodeTabProps {
 }
 
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
+  const language = useLanguage()
+
   const getStatusColor = () => {
     switch (props.connectionState) {
       case "connected":
@@ -23,13 +26,13 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const getStatusText = () => {
     switch (props.connectionState) {
       case "connected":
-        return "Connected"
+        return language.t("settings.aboutKiloCode.status.connected")
       case "connecting":
-        return "Connecting..."
+        return language.t("settings.aboutKiloCode.status.connecting")
       case "disconnected":
-        return "Disconnected"
+        return language.t("settings.aboutKiloCode.status.disconnected")
       case "error":
-        return "Error"
+        return language.t("settings.aboutKiloCode.status.error")
     }
   }
 
@@ -53,7 +56,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             color: "var(--vscode-foreground)",
           }}
         >
-          CLI Server
+          {language.t("settings.aboutKiloCode.cliServer")}
         </h4>
 
         {/* Connection Status */}
@@ -71,7 +74,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
               width: "100px",
             }}
           >
-            Status:
+            {language.t("settings.aboutKiloCode.status.label")}
           </span>
           <div
             style={{
@@ -114,7 +117,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
               width: "100px",
             }}
           >
-            Port:
+            {language.t("settings.aboutKiloCode.port.label")}
           </span>
           <span
             style={{
@@ -145,7 +148,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             color: "var(--vscode-foreground)",
           }}
         >
-          Version Information
+          {language.t("settings.aboutKiloCode.versionInfo")}
         </h4>
         <p
           style={{
@@ -154,7 +157,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             margin: 0,
           }}
         >
-          Kilo Code Extension
+          {language.t("settings.aboutKiloCode.extensionName")}
         </p>
       </div>
     </div>

@@ -128,42 +128,6 @@
   gap: 4px;
 }
 
-.prompt-send-button,
-.prompt-abort-button {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.prompt-send-button {
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-}
-
-.prompt-send-button:hover:not(:disabled) {
-  background: var(--vscode-button-hoverBackground);
-}
-
-.prompt-send-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.prompt-abort-button {
-  background: var(--vscode-errorForeground);
-  color: var(--vscode-button-foreground);
-}
-
-.prompt-abort-button:hover {
-  opacity: 0.9;
-}
-
 .prompt-input-hint {
   margin-top: 4px;
   font-size: 11px;
@@ -185,61 +149,6 @@
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-/* ============================================
-   Session List
-   ============================================ */
-
-.session-list {
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  height: 100%;
-}
-
-.session-list-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 200px;
-  color: var(--vscode-descriptionForeground);
-  text-align: center;
-  padding: 20px;
-}
-
-.session-list-empty p {
-  margin: 0;
-}
-
-.session-item {
-  padding: 10px 14px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--vscode-panel-border);
-}
-
-.session-item:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.session-item-active {
-  background: var(--vscode-list-activeSelectionBackground);
-  color: var(--vscode-list-activeSelectionForeground);
-}
-
-.session-item-title {
-  font-size: 13px;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.session-item-date {
-  font-size: 11px;
-  color: var(--vscode-descriptionForeground);
-  margin-top: 2px;
 }
 
 /* ============================================

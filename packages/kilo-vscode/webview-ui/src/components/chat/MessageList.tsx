@@ -5,10 +5,12 @@
 
 import { Component, For, Show, createSignal, createEffect, onCleanup } from "solid-js"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 import { Message } from "./Message"
 
 export const MessageList: Component = () => {
   const session = useSession()
+  const language = useLanguage()
 
   let containerRef: HTMLDivElement | undefined
   const [isAtBottom, setIsAtBottom] = createSignal(true)
@@ -64,14 +66,18 @@ export const MessageList: Component = () => {
       <div ref={containerRef} class="message-list" role="log" aria-live="polite">
         <Show when={isEmpty()}>
           <div class="message-list-empty">
-            <p>Start a conversation by typing a message below.</p>
+            <p>{language.t("session.messages.empty")}</p>
           </div>
         </Show>
         <For each={messages()}>{(message) => <Message message={message} />}</For>
       </div>
 
       <Show when={showScrollButton()}>
-        <button class="scroll-to-bottom-button" onClick={scrollToBottom} aria-label="Scroll to bottom">
+        <button
+          class="scroll-to-bottom-button"
+          onClick={scrollToBottom}
+          aria-label={language.t("session.messages.scrollToBottom")}
+        >
           ↓
         </button>
       </Show>

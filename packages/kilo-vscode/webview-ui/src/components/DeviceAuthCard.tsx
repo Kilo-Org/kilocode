@@ -2,7 +2,9 @@ import { Component, Show, Switch, Match, createSignal, createEffect, onCleanup }
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../context/vscode"
+import { useLanguage } from "../context/language"
 import { generateQRCode } from "../utils/qrcode"
 import type { DeviceAuthStatus } from "../types/messages"
 
@@ -24,9 +26,9 @@ const formatTime = (seconds: number): string => {
 
 const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
   const vscode = useVSCode()
+  const language = useLanguage()
   const [timeRemaining, setTimeRemaining] = createSignal(props.expiresIn ?? 900)
   const [qrDataUrl, setQrDataUrl] = createSignal("")
-  const [copied, setCopied] = createSignal(false)
 
   // Countdown timer
   createEffect(() => {
@@ -51,16 +53,14 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
   const handleCopyUrl = () => {
     if (props.verificationUrl) {
       navigator.clipboard.writeText(props.verificationUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      showToast({ variant: "success", title: language.t("deviceAuth.toast.urlCopied") })
     }
   }
 
   const handleCopyCode = () => {
     if (props.code) {
       navigator.clipboard.writeText(props.code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      showToast({ variant: "success", title: language.t("deviceAuth.toast.codeCopied") })
     }
   }
 
@@ -77,7 +77,9 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
         <Card>
           <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
             <Spinner style={{ width: "14px", height: "14px" }} />
-            <span style={{ "font-size": "13px", color: "var(--vscode-descriptionForeground)" }}>Starting login...</span>
+            <span style={{ "font-size": "13px", color: "var(--vscode-descriptionForeground)" }}>
+              {language.t("deviceAuth.status.initiating")}
+            </span>
           </div>
         </Card>
       </Match>
@@ -94,7 +96,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
               "text-align": "center",
             }}
           >
-            Sign in to Kilo Code
+            {language.t("deviceAuth.title")}
           </h3>
 
           {/* Step 1: URL */}
@@ -109,7 +111,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 "letter-spacing": "0.5px",
               }}
             >
-              Step 1: Open this URL
+              {language.t("deviceAuth.step1")}
             </p>
             <div
               style={{
@@ -134,11 +136,16 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
               >
                 {props.verificationUrl}
               </div>
-              <Button variant="secondary" size="small" onClick={handleCopyUrl} title="Copy URL">
-                {copied() ? "✓" : "📋"}
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleCopyUrl}
+                title={language.t("deviceAuth.action.copyUrl")}
+              >
+                📋
               </Button>
               <Button variant="secondary" size="small" onClick={handleOpenBrowser}>
-                Open Browser
+                {language.t("deviceAuth.action.openBrowser")}
               </Button>
             </div>
           </div>
@@ -154,7 +161,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
             >
               <img
                 src={qrDataUrl()}
-                alt="QR Code"
+                alt={language.t("deviceAuth.qrCode.alt")}
                 style={{
                   width: "160px",
                   height: "160px",
@@ -177,7 +184,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                   "letter-spacing": "0.5px",
                 }}
               >
-                Step 2: Enter this code
+                {language.t("deviceAuth.step2")}
               </p>
               <div
                 onClick={handleCopyCode}
@@ -189,7 +196,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                   "text-align": "center",
                   cursor: "pointer",
                 }}
-                title="Click to copy"
+                title={language.t("deviceAuth.action.clickToCopy")}
               >
                 <span
                   style={{
@@ -209,7 +216,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                     margin: "4px 0 0 0",
                   }}
                 >
-                  Click to copy
+                  {language.t("deviceAuth.action.clickToCopy")}
                 </p>
               </div>
             </div>
@@ -232,13 +239,13 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 color: "var(--vscode-descriptionForeground)",
               }}
             >
-              Waiting for authorization... ({formatTime(timeRemaining())})
+              {language.t("deviceAuth.status.waiting")} ({formatTime(timeRemaining())})
             </span>
           </div>
 
           {/* Cancel button */}
           <Button variant="ghost" onClick={props.onCancel} style={{ width: "100%" }}>
-            Cancel
+            {language.t("common.cancel")}
           </Button>
         </Card>
       </Match>
@@ -256,7 +263,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 margin: "8px 0 0 0",
               }}
             >
-              Login successful!
+              {language.t("deviceAuth.status.success")}
             </p>
           </div>
         </Card>
@@ -274,10 +281,10 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 margin: "8px 0 12px 0",
               }}
             >
-              {props.error || "Login failed"}
+              {props.error || language.t("deviceAuth.status.failed")}
             </p>
             <Button variant="primary" onClick={props.onRetry}>
-              Retry
+              {language.t("common.retry")}
             </Button>
           </div>
         </Card>
@@ -294,10 +301,10 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 margin: "0 0 12px 0",
               }}
             >
-              Login cancelled
+              {language.t("deviceAuth.status.cancelled")}
             </p>
             <Button variant="primary" onClick={props.onRetry}>
-              Try Again
+              {language.t("deviceAuth.action.tryAgain")}
             </Button>
           </div>
         </Card>

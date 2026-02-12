@@ -326,9 +326,20 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         }
       }
 
-      // 6. Handle workspaces.catalog for root package.json
-      const ourWorkspaces = ourPkg.workspaces as { catalog?: Record<string, string> } | undefined
-      const theirWorkspaces = pkg.workspaces as { catalog?: Record<string, string> } | undefined
+      // 6. Handle workspaces for root package.json
+      // Kilo has removed hosted platform packages (console/*, slack, etc.)
+      // so we need to preserve Kilo's workspace configuration instead of taking upstream's
+      const ourWorkspaces = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
+      const theirWorkspaces = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
+
+      if (relativePath === "package.json" && ourWorkspaces?.packages) {
+        // Root package.json - preserve Kilo's workspace packages list
+        pkg.workspaces = pkg.workspaces || {}
+        pkg.workspaces.packages = ourWorkspaces.packages
+        changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
+      }
+
+      // Merge catalog with "newest wins" strategy
       if (ourWorkspaces?.catalog || theirWorkspaces?.catalog) {
         pkg.workspaces = pkg.workspaces || {}
         pkg.workspaces.catalog = mergeWithNewestVersions(
@@ -516,9 +527,24 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           }
         }
 
-        // 6. Handle workspaces.catalog for root package.json
-        const kiloWorkspaces = kiloPkg.workspaces as { catalog?: Record<string, string> } | undefined
-        const upstreamWorkspaces = pkg.workspaces as { catalog?: Record<string, string> } | undefined
+        // 6. Handle workspaces for root package.json
+        // Kilo has removed hosted platform packages (console/*, slack, etc.)
+        // so we need to preserve Kilo's workspace configuration instead of taking upstream's
+        const kiloWorkspaces = kiloPkg.workspaces as
+          | { packages?: string[]; catalog?: Record<string, string> }
+          | undefined
+        const upstreamWorkspaces = pkg.workspaces as
+          | { packages?: string[]; catalog?: Record<string, string> }
+          | undefined
+
+        if (path === "package.json" && kiloWorkspaces?.packages) {
+          // Root package.json - preserve Kilo's workspace packages list
+          pkg.workspaces = pkg.workspaces || {}
+          pkg.workspaces.packages = kiloWorkspaces.packages
+          changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
+        }
+
+        // Merge catalog with "newest wins" strategy
         if (kiloWorkspaces?.catalog || upstreamWorkspaces?.catalog) {
           pkg.workspaces = pkg.workspaces || {}
           pkg.workspaces.catalog = mergeWithNewestVersions(

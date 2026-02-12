@@ -113,27 +113,36 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
               organizations={profile.organizations!}
               currentOrgId={currentOrgId}
               onSelect={async (orgId) => {
-                // Switch to team immediately using server endpoint
-                await sdk.client.kilo.organization.set({
-                  organizationId: orgId,
-                })
+                try {
+                  // Switch to team immediately using server endpoint
+                  await sdk.client.kilo.organization.set({
+                    organizationId: orgId,
+                  })
 
-                // Refresh provider state to reload models with new organization context
-                await sdk.client.instance.dispose()
-                await sync.bootstrap()
+                  // Refresh provider state to reload models with new organization context
+                  await sdk.client.instance.dispose()
+                  await sync.bootstrap()
 
-                // Show success toast
-                const teamName = orgId
-                  ? profile.organizations!.find((o: Organization) => o.id === orgId)?.name
-                  : "Personal"
+                  // Show success toast
+                  const teamName = orgId
+                    ? profile.organizations!.find((o: Organization) => o.id === orgId)?.name
+                    : "Personal"
 
-                toast.show({
-                  message: `Switched to: ${teamName}`,
-                  variant: "success",
-                })
+                  toast.show({
+                    message: `Switched to: ${teamName}`,
+                    variant: "success",
+                  })
 
-                // Close dialog
-                dialog.clear()
+                  // Close dialog
+                  dialog.clear()
+                } catch (error) {
+                  if (error instanceof DOMException && error.name === "AbortError") return
+                  toast.show({
+                    message: "Failed to switch team",
+                    variant: "error",
+                  })
+                  dialog.clear()
+                }
               }}
             />
           ))

@@ -100,6 +100,8 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
         dialog.replace(() => <props.DialogModel providerID={props.providerID} />)
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+
       // Error fetching profile - fallback to personal account
       console.warn("Failed to fetch Kilo profile, using personal account:", error)
       setStatus("error")
@@ -112,8 +114,13 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
       // Small delay to show the warning, then proceed
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      await sdk.client.instance.dispose()
-      await sync.bootstrap()
+      try {
+        await sdk.client.instance.dispose()
+        await sync.bootstrap()
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return
+        console.warn("Failed to reset state during fallback:", e)
+      }
       dialog.replace(() => <props.DialogModel providerID={props.providerID} />)
     }
   })

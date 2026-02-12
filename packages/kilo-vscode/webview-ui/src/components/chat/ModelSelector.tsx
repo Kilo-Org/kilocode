@@ -9,6 +9,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useProvider, EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 
 interface ModelGroup {
   providerName: string
@@ -28,6 +29,7 @@ function providerSortKey(providerID: string): number {
 export const ModelSelector: Component = () => {
   const { connected, models, findModel } = useProvider()
   const session = useSession()
+  const language = useLanguage()
   const selectedModel = () => findModel(session.selected())
 
   const [open, setOpen] = createSignal(false)
@@ -157,7 +159,7 @@ export const ModelSelector: Component = () => {
     if (raw?.providerID && raw?.modelID) {
       return raw.providerID === KILO_GATEWAY_ID ? raw.modelID : `${raw.providerID} / ${raw.modelID}`
     }
-    return hasProviders() ? "Select model" : "No providers"
+    return hasProviders() ? language.t("dialog.model.select.title") : language.t("dialog.model.noProviders")
   }
 
   return (
@@ -188,7 +190,7 @@ export const ModelSelector: Component = () => {
             ref={searchRef}
             class="model-selector-search"
             type="text"
-            placeholder="Search models..."
+            placeholder={language.t("dialog.model.search.placeholder")}
             value={search()}
             onInput={(e) => setSearch(e.currentTarget.value)}
           />
@@ -196,7 +198,7 @@ export const ModelSelector: Component = () => {
 
         <div class="model-selector-list" role="listbox" ref={listRef}>
           <Show when={flatFiltered().length === 0}>
-            <div class="model-selector-empty">No models found</div>
+            <div class="model-selector-empty">{language.t("dialog.model.empty")}</div>
           </Show>
 
           <For each={groups()}>
@@ -214,7 +216,7 @@ export const ModelSelector: Component = () => {
                     >
                       <span class="model-selector-item-name">{model.name}</span>
                       <Show when={isFree(model)}>
-                        <span class="model-selector-tag">free</span>
+                        <span class="model-selector-tag">{language.t("model.tag.free")}</span>
                       </Show>
                     </div>
                   )}

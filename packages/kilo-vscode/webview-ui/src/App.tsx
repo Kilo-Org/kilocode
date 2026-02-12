@@ -3,6 +3,7 @@ import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/Settings"
 import ProfileView from "./components/ProfileView"
 import { VSCodeProvider } from "./context/vscode"
@@ -176,6 +177,7 @@ const App: Component = () => {
             </LanguageBridge>
           </ServerProvider>
         </VSCodeProvider>
+        <Toast.Region />
       </DialogProvider>
     </ThemeProvider>
   )

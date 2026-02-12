@@ -1,21 +1,23 @@
 import { Component, createSignal, For } from "solid-js"
+import { useLanguage } from "../../context/language"
 
 type SubtabId = "modes" | "mcpServers" | "rules" | "workflows" | "skills"
 
 interface SubtabConfig {
   id: SubtabId
-  label: string
+  labelKey: string
 }
 
 const subtabs: SubtabConfig[] = [
-  { id: "modes", label: "Modes" },
-  { id: "mcpServers", label: "MCP Servers" },
-  { id: "rules", label: "Rules" },
-  { id: "workflows", label: "Workflows" },
-  { id: "skills", label: "Skills" },
+  { id: "modes", labelKey: "settings.agentBehaviour.subtab.modes" },
+  { id: "mcpServers", labelKey: "settings.agentBehaviour.subtab.mcpServers" },
+  { id: "rules", labelKey: "settings.agentBehaviour.subtab.rules" },
+  { id: "workflows", labelKey: "settings.agentBehaviour.subtab.workflows" },
+  { id: "skills", labelKey: "settings.agentBehaviour.subtab.skills" },
 ]
 
 const AgentBehaviourTab: Component = () => {
+  const language = useLanguage()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("modes")
 
   const renderSubtabContent = () => {
@@ -83,7 +85,7 @@ const AgentBehaviourTab: Component = () => {
                 }
               }}
             >
-              {subtab.label}
+              {language.t(subtab.labelKey)}
             </button>
           )}
         </For>

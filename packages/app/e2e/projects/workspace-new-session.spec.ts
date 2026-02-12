@@ -92,7 +92,6 @@ async function sessionDirectory(directory: string, sessionID: string) {
 
 test("new sessions from sidebar workspace actions stay in selected workspace", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
-
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async ({ directory, slug: root }) => {
