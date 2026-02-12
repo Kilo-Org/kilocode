@@ -235,7 +235,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 	// TODO: Fix underlying issue - dialog appears even when no user changes have been made
 	// This happens because some component is triggering setCachedStateField during initialization
 	// without properly marking it as a non-user action
-	it.skip("should not show unsaved changes when settings are automatically initialized", async () => {
+	it("should not show unsaved changes when settings are automatically initialized", async () => {
 		const onDone = vi.fn()
 
 		render(
@@ -269,7 +269,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 	})
 
 	// TODO: Fix underlying issue - see above
-	it.skip("should not trigger unsaved changes for automatic model initialization", async () => {
+	it("should not trigger unsaved changes for automatic model initialization", async () => {
 		const onDone = vi.fn()
 
 		// Mock ApiOptions to simulate ModelPicker initialization
@@ -368,7 +368,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 	})
 
 	// TODO: Fix underlying issue - see above
-	it.skip("should handle initialization from undefined to value without triggering unsaved changes", async () => {
+	it("should handle initialization from undefined to value without triggering unsaved changes", async () => {
 		const onDone = vi.fn()
 
 		// Start with undefined apiModelId
@@ -412,7 +412,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 	})
 
 	// TODO: Fix underlying issue - see above
-	it.skip("should handle initialization from null to value without triggering unsaved changes", async () => {
+	it("should handle initialization from null to value without triggering unsaved changes", async () => {
 		const onDone = vi.fn()
 
 		// Start with null apiModelId
@@ -456,7 +456,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 	})
 
 	// TODO: Fix underlying issue - see above
-	it.skip("should not trigger changes when ApiOptions syncs model IDs during mount", async () => {
+	it("should not trigger changes when ApiOptions syncs model IDs during mount", async () => {
 		const onDone = vi.fn()
 
 		// This specifically tests the bug we fixed where ApiOptions' useEffect

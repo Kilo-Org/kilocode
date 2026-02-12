@@ -375,18 +375,25 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	})
 	// kilocode_change end
 
-	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback((field, value) => {
-		setCachedState((prevState) => {
-			// kilocode_change start
-			if (deepEqual(prevState[field], value)) {
-				return prevState
-			}
-			// kilocode_change end
+	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback(
+		(field, value, isInternal = false) => {
+			setCachedState((prevState) => {
+				// kilocode_change start
+				if (deepEqual(prevState[field], value)) {
+					return prevState
+				}
+				// kilocode_change end
 
-			setChangeDetected(true)
-			return { ...prevState, [field]: value }
-		})
-	}, [])
+				// Only set isChangeDetected for non-internal updates
+				// This prevents false positives during component initialization
+				if (!isInternal) {
+					setChangeDetected(true)
+				}
+				return { ...prevState, [field]: value }
+			})
+		},
+		[],
+	)
 
 	// kilocode_change start
 	const setAutocompleteServiceSettingsField = useCallback(
