@@ -65,6 +65,7 @@ export class CodeIndexServiceFactory {
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
 				ollamaModelId: config.modelId,
+				ollamaNumCtx: config.modelDimension, // kilocode_change
 			})
 		} else if (provider === "openai-compatible") {
 			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
