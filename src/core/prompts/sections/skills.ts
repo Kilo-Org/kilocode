@@ -24,7 +24,7 @@ function getDisplayPath(skill: SkillMetadata): string {
 	// on all platforms, especially Windows where ~ is not automatically expanded
 	const homeDir = os.homedir()
 	const basePath = path.join(homeDir, ".kilocode")
-	return `${basePath}/${skillsDir}/${skill.name}/SKILL.md`
+	return path.join(basePath, skillsDir, skill.name, 'SKILL.md')
 }
 
 /**
