@@ -1,0 +1,46 @@
+// kilocode_change - new file
+// ko runtime translations for autocomplete
+
+export const dict = {
+	"kilocode:autocomplete.statusBar.enabled": "$(kilo-logo) Autocomplete",
+	"kilocode:autocomplete.statusBar.snoozed": "일시 중지됨",
+	"kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
+	"kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
+	"kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (비활성화됨)",
+	"kilocode:autocomplete.statusBar.tooltip.noCredits":
+		"**계정에 크레딧이 없습니다**\n\nKilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가해 주세요.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
+	"kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
+		"**자동완성 모델이 구성되지 않았습니다**\n\n자동완성을 활성화하려면 다음 지원되는 제공업체 중 하나로 프로필을 추가하세요: {{providers}}.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
+	"kilocode:autocomplete.statusBar.tooltip.sessionTotal": "세션 총 비용:",
+	"kilocode:autocomplete.statusBar.tooltip.provider": "제공업체:",
+	"kilocode:autocomplete.statusBar.tooltip.model": "모델:",
+	"kilocode:autocomplete.statusBar.tooltip.profile": "프로필: ",
+	"kilocode:autocomplete.statusBar.tooltip.defaultProfile": "기본값",
+	"kilocode:autocomplete.statusBar.tooltip.completionSummary":
+		"{{startTime}}부터 {{endTime}}까지 {{count}}회 완성을 수행했으며, 총 비용은 {{cost}}입니다.",
+	"kilocode:autocomplete.statusBar.tooltip.providerInfo": "자동완성은 {{provider}}를 통해 {{model}}에서 제공됩니다.",
+	"kilocode:autocomplete.statusBar.cost.zero": "$0.00",
+	"kilocode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
+	"kilocode:autocomplete.toggleMessage": "Kilo Code Autocomplete {{status}}",
+	"kilocode:autocomplete.progress.title": "Kilo Code",
+	"kilocode:autocomplete.progress.analyzing": "코드 분석 중...",
+	"kilocode:autocomplete.progress.generating": "제안된 편집 생성 중...",
+	"kilocode:autocomplete.progress.processing": "제안된 편집 처리 중...",
+	"kilocode:autocomplete.progress.showing": "제안된 편집 표시 중...",
+	"kilocode:autocomplete.input.title": "Kilo Code: 빠른 작업",
+	"kilocode:autocomplete.input.placeholder": "예: '이 함수를 더 효율적으로 리팩토링해줘'",
+	"kilocode:autocomplete.commands.generateSuggestions": "Kilo Code: 제안된 편집 생성",
+	"kilocode:autocomplete.commands.displaySuggestions": "제안된 편집 표시",
+	"kilocode:autocomplete.commands.cancelSuggestions": "제안된 편집 취소",
+	"kilocode:autocomplete.commands.applyCurrentSuggestion": "현재 제안된 편집 적용",
+	"kilocode:autocomplete.commands.applyAllSuggestions": "모든 제안된 편집 적용",
+	"kilocode:autocomplete.commands.category": "Kilo Code",
+	"kilocode:autocomplete.codeAction.title": "Kilo Code: 제안된 편집",
+	"kilocode:autocomplete.chatParticipant.fullName": "Kilo Code Agent",
+	"kilocode:autocomplete.chatParticipant.name": "Agent",
+	"kilocode:autocomplete.chatParticipant.description": "빠른 작업과 제안된 편집으로 도움을 드릴 수 있습니다.",
+	"kilocode:autocomplete.incompatibilityExtensionPopup.message":
+		"Kilo Code Autocomplete가 GitHub Copilot과의 충돌로 인해 차단되고 있습니다. 이를 해결하려면 Copilot의 인라인 제안을 비활성화해야 합니다.",
+	"kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot 비활성화",
+	"kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocomplete 비활성화",
+}
