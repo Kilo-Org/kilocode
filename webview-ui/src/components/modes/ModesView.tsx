@@ -1568,14 +1568,13 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 									}}>
 									{t("prompts:createModeDialog.roleDefinition.description")}
 								</div>
-								<VSCodeTextArea
-									resize="vertical"
+								<textarea
 									value={newModeRoleDefinition}
 									onChange={(e) => {
-										setNewModeRoleDefinition((e.target as HTMLTextAreaElement).value)
+										setNewModeRoleDefinition(e.target.value)
 									}}
 									rows={4}
-									className="w-full"
+									className="w-full resize-y bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded p-2 font-[var(--vscode-font-family)] text-[13px]"
 								/>
 								{roleDefinitionError && (
 									<div className="text-xs text-vscode-errorForeground mt-1">
@@ -1589,10 +1588,11 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
 									{t("prompts:createModeDialog.description.description")}
 								</div>
-								<VSCodeTextField
+								<Input
+									type="text"
 									value={newModeDescription}
 									onChange={(e) => {
-										setNewModeDescription((e.target as HTMLInputElement).value)
+										setNewModeDescription(e.target.value)
 									}}
 									className="w-full"
 								/>
@@ -1606,14 +1606,13 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
 									{t("prompts:createModeDialog.whenToUse.description")}
 								</div>
-								<VSCodeTextArea
-									resize="vertical"
+								<textarea
 									value={newModeWhenToUse}
 									onChange={(e) => {
-										setNewModeWhenToUse((e.target as HTMLTextAreaElement).value)
+										setNewModeWhenToUse(e.target.value)
 									}}
 									rows={3}
-									className="w-full"
+									className="w-full resize-y bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded p-2 font-[var(--vscode-font-family)] text-[13px]"
 								/>
 							</div>
 							<div className="mb-4">
@@ -1653,14 +1652,13 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
 									{t("prompts:createModeDialog.customInstructions.description")}
 								</div>
-								<VSCodeTextArea
-									resize="vertical"
+								<textarea
 									value={newModeCustomInstructions}
 									onChange={(e) => {
-										setNewModeCustomInstructions((e.target as HTMLTextAreaElement).value)
+										setNewModeCustomInstructions(e.target.value)
 									}}
 									rows={4}
-									className="w-full"
+									className="w-full resize-y bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded p-2 font-[var(--vscode-font-family)] text-[13px]"
 								/>
 							</div>
 						</div>

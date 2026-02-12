@@ -175,7 +175,13 @@ const App = () => {
 
 				// Handle switchTab action with tab parameter
 				if (message.action === "switchTab" && message.tab) {
-					const targetTab = message.tab as Tab
+					let targetTab = message.tab as Tab
+					// kilocode_change start - Redirect "modes" tab to settings with modes section
+					if (targetTab === "modes") {
+						targetTab = "settings"
+						setCurrentSection("modes")
+					}
+					// kilocode_change end
 					// kilocode_change start - Handle auth tab with returnTo and profileName parameters
 					if (targetTab === "auth") {
 						if (message.values?.returnTo) {
