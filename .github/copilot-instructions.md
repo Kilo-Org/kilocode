@@ -65,5 +65,5 @@ If you're creating a completely new file that doesn't exist in Roo, add this com
 - all the following folders are kilocode-specific and need no marking with comments:
     - jetbrains/
     - cli/
-    - src/services/ghost/
+    - src/services/autocomplete/
     - src/services/continuedev/

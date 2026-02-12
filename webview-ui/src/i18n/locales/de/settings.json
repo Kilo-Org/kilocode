@@ -44,7 +44,7 @@
 		"about": "Über Kilo Code",
 		"autoPurge": "Auto-Bereinigung",
 		"agentBehaviour": "Agentenverhalten",
-		"ghost": "Autovervollständigung"
+		"autocomplete": "Autovervollständigung"
 	},
 	"about": {
 		"bugReport": {
@@ -370,6 +370,8 @@
 			"success": "Modellliste erfolgreich aktualisiert!",
 			"error": "Fehler beim Aktualisieren der Modellliste. Bitte versuche es erneut."
 		},
+		"getZenmuxApiKey": "Zenmux API-Schlüssel erhalten",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform verwenden",
 		"getRequestyApiKey": "Requesty API-Schlüssel erhalten",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
@@ -386,6 +388,8 @@
 		"vertex1MContextBetaDescription": "Erweitert das Kontextfenster für Claude Sonnet 4 auf 1 Million Token",
 		"basetenApiKey": "Baseten API-Schlüssel",
 		"getBasetenApiKey": "Baseten API-Schlüssel erhalten",
+		"corethinkApiKey": "Corethink API-Schlüssel",
+		"getCorethinkApiKey": "Corethink API-Schlüssel erhalten",
 		"cerebrasApiKey": "Cerebras API-Schlüssel",
 		"getCerebrasApiKey": "Cerebras API-Schlüssel erhalten",
 		"chutesApiKey": "Chutes API-Schlüssel",
@@ -1166,7 +1170,7 @@
 			"description": "Statistiken zu hinzugefügten/entfernten Zeilen im Aufgaben-Header anzeigen"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Randanimation bei Autovervollständigung anzeigen",
 			"description": "Zeigt eine animierte Anzeige im Editor-Rand an, wenn die Autovervollständigung läuft",

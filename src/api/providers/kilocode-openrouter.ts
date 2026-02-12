@@ -16,12 +16,13 @@ import {
 	X_KILOCODE_MODE,
 	X_KILOCODE_TESTER,
 	X_KILOCODE_EDITORNAME,
+	X_KILOCODE_MACHINEID,
 } from "../../shared/kilocode/headers"
-import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
-import { streamSse } from "../../services/continuedev/core/fetch/stream"
+import { streamSse } from "../../services/autocomplete/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
 import type { FimHandler } from "./kilocode/FimHandler"
+import * as vscode from "vscode"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -58,6 +59,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
 		const headers: Record<string, string> = {
 			[X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
+		}
+
+		if (vscode?.env?.isTelemetryEnabled && vscode.env.machineId) {
+			headers[X_KILOCODE_MACHINEID] = vscode.env.machineId
 		}
 
 		if (metadata?.mode) {

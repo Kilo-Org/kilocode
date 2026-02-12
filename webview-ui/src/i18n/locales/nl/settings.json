@@ -44,7 +44,7 @@
 		"about": "Over Kilo Code",
 		"autoPurge": "Auto-opruimen",
 		"agentBehaviour": "Agentgedrag",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -359,6 +359,8 @@
 			"success": "Modellenlijst succesvol vernieuwd!",
 			"error": "Kan modellenlijst niet vernieuwen. Probeer het opnieuw."
 		},
+		"getZenmuxApiKey": "Zenmux API-sleutel ophalen",
+		"zenmuxTransformsText": "Gebruik Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Requesty API-sleutel ophalen",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Gebruik aangepaste basis-URL",
@@ -375,6 +377,8 @@
 		"vertex1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-sleutel",
 		"getBasetenApiKey": "Baseten API-sleutel verkrijgen",
+		"corethinkApiKey": "Corethink API-sleutel",
+		"getCorethinkApiKey": "Corethink API-sleutel ophalen",
 		"cerebrasApiKey": "Cerebras API-sleutel",
 		"getCerebrasApiKey": "Cerebras API-sleutel verkrijgen",
 		"chutesApiKey": "Chutes API-sleutel",
@@ -1171,7 +1175,7 @@
 			"description": "Toon statistieken van toegevoegde/verwijderde regels in de taakkop"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Goot animatie tonen bij automatisch aanvullen",
 			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",

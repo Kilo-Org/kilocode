@@ -117,4 +117,11 @@ describe("getOptionsForProvider", () => {
 		const result = getOptionsForProvider("zai", { zaiApiLine: "china_coding" })
 		expect(result).toEqual({ isChina: true })
 	})
+
+	// kilocode_change start
+	it("returns isChina: true for zai provider with china_api apiConfiguration", () => {
+		const result = getOptionsForProvider("zai", { zaiApiLine: "china_api" })
+		expect(result).toEqual({ isChina: true })
+	})
+	// kilocode_change end
 })

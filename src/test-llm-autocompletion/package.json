@@ -1,7 +1,7 @@
 {
 	"name": "llm-autocompletion-tests",
 	"version": "1.0.0",
-	"description": "Standalone test suite for GhostInlineCompletionProvider with real LLM calls",
+	"description": "Standalone test suite for AutocompleteInlineCompletionProvider with real LLM calls",
 	"type": "module",
 	"scripts": {
 		"test": "tsx runner.ts",

@@ -44,7 +44,7 @@
 		"about": "關於 Kilo Code",
 		"autoPurge": "自動清理",
 		"agentBehaviour": "Agent 行為",
-		"ghost": "自動補全"
+		"autocomplete": "自動補全"
 	},
 	"about": {
 		"bugReport": {
@@ -369,6 +369,8 @@
 			"success": "模型列表重新整理成功！",
 			"error": "重新整理模型列表失敗。請再試一次。"
 		},
+		"getZenmuxApiKey": "取得 Zenmux API 金鑰",
+		"zenmuxTransformsText": "使用 Zenmux Middle Out Transform",
 		"getRequestyApiKey": "取得 Requesty API 金鑰",
 		"getRequestyBaseUrl": "基礎 URL",
 		"requestyUseCustomBaseUrl": "使用自訂基礎 URL",
@@ -385,6 +387,8 @@
 		"vertex1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
 		"basetenApiKey": "Baseten API 金鑰",
 		"getBasetenApiKey": "取得 Baseten API 金鑰",
+		"corethinkApiKey": "Corethink API 金鑰",
+		"getCorethinkApiKey": "取得 Corethink API 金鑰",
 		"cerebrasApiKey": "Cerebras API 金鑰",
 		"getCerebrasApiKey": "取得 Cerebras API 金鑰",
 		"chutesApiKey": "Chutes API 金鑰",
@@ -1181,7 +1185,7 @@
 			"description": "在任務標題中顯示新增/刪除的行數統計"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "自動完成時顯示編輯器邊欄動畫",
 			"description": "在自動完成執行時於編輯器邊欄顯示動畫指示",

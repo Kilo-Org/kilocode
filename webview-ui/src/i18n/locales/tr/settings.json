@@ -42,7 +42,7 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"autoPurge": "Otomatik Temizlik",
 		"agentBehaviour": "Ajan Davranışı"
 	},
@@ -359,6 +359,8 @@
 			"success": "Model listesi başarıyla yenilendi!",
 			"error": "Model listesi yenilenemedi. Lütfen tekrar deneyin."
 		},
+		"getZenmuxApiKey": "Zenmux API Anahtarı Al",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform'u Kullan",
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"getRequestyBaseUrl": "Temel URL",
 		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
@@ -375,6 +377,8 @@
 		"vertex1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
 		"basetenApiKey": "Baseten API Anahtarı",
 		"getBasetenApiKey": "Baseten API Anahtarı Al",
+		"corethinkApiKey": "Corethink API Anahtarı",
+		"getCorethinkApiKey": "Corethink API Anahtarı Al",
 		"cerebrasApiKey": "Cerebras API Anahtarı",
 		"getCerebrasApiKey": "Cerebras API Anahtarını Al",
 		"chutesApiKey": "Chutes API Anahtarı",
@@ -1171,7 +1175,7 @@
 			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
 			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",

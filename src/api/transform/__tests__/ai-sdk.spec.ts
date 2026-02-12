@@ -284,6 +284,139 @@ describe("AI SDK conversion utilities", () => {
 			})
 		})
 
+		// kilocode_change start
+		it("preserves assistant text/tool-call/text ordering", () => {
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "Before tool call" },
+						{
+							type: "tool_use",
+							id: "call_789",
+							name: "read_file",
+							input: { path: "before.ts" },
+						},
+						{ type: "text", text: "After tool call" },
+					],
+				},
+			]
+
+			const result = convertToAiSdkMessages(messages)
+
+			expect(result).toHaveLength(1)
+			expect(result[0]).toEqual({
+				role: "assistant",
+				content: [
+					{ type: "text", text: "Before tool call" },
+					{
+						type: "tool-call",
+						toolCallId: "call_789",
+						toolName: "read_file",
+						input: { path: "before.ts" },
+					},
+					{ type: "text", text: "After tool call" },
+				],
+			})
+		})
+
+		it("preserves user text before tool results", () => {
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "assistant",
+					content: [
+						{
+							type: "tool_use",
+							id: "call_999",
+							name: "read_file",
+							input: { path: "ordered.ts" },
+						},
+					],
+				},
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "Context before tool result" },
+						{
+							type: "tool_result",
+							tool_use_id: "call_999",
+							content: "ordered-result",
+						},
+					],
+				},
+			]
+
+			const result = convertToAiSdkMessages(messages)
+
+			expect(result).toHaveLength(3)
+			expect(result[0]).toEqual({
+				role: "assistant",
+				content: [
+					{
+						type: "tool-call",
+						toolCallId: "call_999",
+						toolName: "read_file",
+						input: { path: "ordered.ts" },
+					},
+				],
+			})
+			expect(result[1]).toEqual({
+				role: "user",
+				content: [{ type: "text", text: "Context before tool result" }],
+			})
+			expect(result[2]).toEqual({
+				role: "tool",
+				content: [
+					{
+						type: "tool-result",
+						toolCallId: "call_999",
+						toolName: "read_file",
+						output: { type: "text", value: "ordered-result" },
+					},
+				],
+			})
+		})
+
+		it("preserves assistant reasoning blocks via openaiCompatible metadata", () => {
+			const messages = [
+				{
+					role: "assistant",
+					content: [
+						{ type: "reasoning", text: "Step 1 reasoning" },
+						{ type: "text", text: "I will call a tool" },
+						{
+							type: "tool_use",
+							id: "call_reasoning",
+							name: "read_file",
+							input: { path: "reasoning.ts" },
+						},
+					],
+				},
+			] as Anthropic.Messages.MessageParam[]
+
+			const result = convertToAiSdkMessages(messages as any)
+
+			expect(result).toHaveLength(1)
+			expect(result[0]).toMatchObject({
+				role: "assistant",
+				content: [
+					{ type: "text", text: "I will call a tool" },
+					{
+						type: "tool-call",
+						toolCallId: "call_reasoning",
+						toolName: "read_file",
+						input: { path: "reasoning.ts" },
+					},
+				],
+				providerOptions: {
+					openaiCompatible: {
+						reasoning_content: "Step 1 reasoning",
+					},
+				},
+			})
+		})
+		// kilocode_change end
+
 		it("handles empty assistant content", () => {
 			const messages: Anthropic.Messages.MessageParam[] = [
 				{

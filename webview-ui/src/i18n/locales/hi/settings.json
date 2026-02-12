@@ -44,7 +44,7 @@
 		"about": "परिचय",
 		"autoPurge": "स्वचालित सफाई",
 		"agentBehaviour": "एजेंट व्यवहार",
-		"ghost": "ऑटोकम्पलीट"
+		"autocomplete": "ऑटोकम्पलीट"
 	},
 	"about": {
 		"bugReport": {
@@ -367,6 +367,8 @@
 			"success": "मॉडल सूची सफलतापूर्वक अपडेट की गई!",
 			"error": "मॉडल सूची अपडेट करने में विफल। कृपया पुनः प्रयास करें।"
 		},
+		"getZenmuxApiKey": "Zenmux API कुंजी प्राप्त करें",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform का उपयोग करें",
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"getRequestyBaseUrl": "बेस URL",
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
@@ -383,6 +385,8 @@
 		"vertex1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"basetenApiKey": "Baseten API कुंजी",
 		"getBasetenApiKey": "Baseten API कुंजी प्राप्त करें",
+		"corethinkApiKey": "Corethink API कुंजी",
+		"getCorethinkApiKey": "Corethink API कुंजी प्राप्त करें",
 		"cerebrasApiKey": "Cerebras API कुंजी",
 		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
 		"chutesApiKey": "Chutes API कुंजी",
@@ -1171,7 +1175,7 @@
 			"description": "कार्य हेडर में जोड़ी/हटाई गई पंक्तियों के आँकड़े प्रदर्शित करें"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "स्वत:पूर्ण करते समय गटर एनिमेशन दिखाएँ",
 			"description": "स्वत:पूर्णता चल रही हो तो संपादक गटर में एनिमेटेड संकेतक प्रदर्शित करें",

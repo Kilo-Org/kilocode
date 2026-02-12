@@ -120,7 +120,7 @@ export const getModelMaxOutputTokens = ({
 	modelId: string
 	model: ModelInfo
 	settings?: ProviderSettings
-	format?: "anthropic" | "openai" | "gemini" | "openrouter"
+	format?: "anthropic" | "openai" | "gemini" | "openrouter" | "zenmux"
 }): number | undefined => {
 	if (shouldUseReasoningBudget({ model, settings })) {
 		return settings?.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
@@ -129,7 +129,8 @@ export const getModelMaxOutputTokens = ({
 	const isAnthropicContext =
 		modelId.includes("claude") ||
 		format === "anthropic" ||
-		(format === "openrouter" && modelId.startsWith("anthropic/"))
+		(format === "openrouter" && modelId.startsWith("anthropic/")) ||
+		(format === "zenmux" && modelId.startsWith("anthropic/"))
 
 	// For "Hybrid" reasoning models, discard the model's actual maxTokens for Anthropic contexts
 	/* kilocode_change: don't limit Anthropic model output, no idea why this was done before
@@ -181,6 +182,7 @@ type CommonFetchParams = {
 const dynamicProviderExtras = {
 	gemini: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	zenmux: {} as { apiKey?: string; baseUrl?: string },
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	litellm: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change: parameters optional

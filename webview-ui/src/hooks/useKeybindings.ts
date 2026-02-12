@@ -24,7 +24,7 @@ export function useKeybindings(commandIds: string[]): Record<string, string> {
 	// Apply fallback for missing keybindings
 	const keybindingsWithFallback = useMemo(() => {
 		const result: Record<string, string> = {}
-		const fallbackText = t("kilocode:ghost.settings.keybindingNotFound")
+		const fallbackText = t("kilocode:autocomplete.settings.keybindingNotFound")
 		for (const commandId of commandIds) {
 			result[commandId] = keybindings[commandId] || fallbackText
 		}

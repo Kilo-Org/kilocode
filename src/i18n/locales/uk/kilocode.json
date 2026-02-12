@@ -97,7 +97,7 @@
 			"generateButtonTooltip": "Генерує повідомлення коміту за допомогою штучного інтелекту для аналізу змін у вашому коді"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "призупинено",

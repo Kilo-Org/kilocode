@@ -44,7 +44,7 @@
 		"about": "Acerca de Kilo Code",
 		"autoPurge": "Auto-limpieza",
 		"agentBehaviour": "Comportamiento del agente",
-		"ghost": "Autocompletado"
+		"autocomplete": "Autocompletado"
 	},
 	"about": {
 		"bugReport": {
@@ -368,6 +368,8 @@
 			"success": "¡Lista de modelos actualizada correctamente!",
 			"error": "Error al actualizar la lista de modelos. Por favor, inténtalo de nuevo."
 		},
+		"getZenmuxApiKey": "Obtener clave API de Zenmux",
+		"zenmuxTransformsText": "Usar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtener clave API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
@@ -384,6 +386,8 @@
 		"vertex1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"basetenApiKey": "Clave API de Baseten",
 		"getBasetenApiKey": "Obtener clave API de Baseten",
+		"corethinkApiKey": "Clave API de Corethink",
+		"getCorethinkApiKey": "Obtener clave API de Corethink",
 		"cerebrasApiKey": "Clave API de Cerebras",
 		"getCerebrasApiKey": "Obtener clave API de Cerebras",
 		"chutesApiKey": "Clave API de Chutes",
@@ -1170,7 +1174,7 @@
 			"description": "Mostrar estadísticas de líneas añadidas/eliminadas en el encabezado de la tarea"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostrar animación en el margen al autocompletar",
 			"description": "Muestra un indicador animado en el margen del editor cuando se ejecuta el autocompletado",
