@@ -529,7 +529,7 @@ export const BEDROCK_REGIONS = [
 
 export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
 	"anthropic.claude-sonnet-4-20250514-v1:0",
-	"anthropic.	-20250929-v1:0",
+	"anthropic.claude-sonnet-4-5-20250929-v1:0",
 ] as const
 
 // Amazon Bedrock models that support Global Inference profiles

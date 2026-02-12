@@ -1336,8 +1336,8 @@ export const webviewMessageHandler = async (
 					if (result) {
 						provider.postMessageToWebview({
 							type: "bedrockInferenceProfileResolved",
-							modelId: result.modelId,
-							modelArn: result.modelArn,
+							bedrockInferenceModelId: result.modelId,
+							bedrockInferenceModelArn: result.modelArn,
 						})
 					} else {
 						provider.postMessageToWebview({

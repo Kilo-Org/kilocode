@@ -74,7 +74,7 @@ check_java() {
         return 1
     fi
     
-    JAVA_VERSION=21
+    JAVA_VERSION=$(java -version 2>&1 | head -n1 | cut -d'"' -f2 | cut -d'.' -f1)
     if [[ "$JAVA_VERSION" != "21" ]]; then
         print_error "Java version is $JAVA_VERSION, but Java 21 is required"
         echo "  Current Java: $(java -version 2>&1 | head -n1)"

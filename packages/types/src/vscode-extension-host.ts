@@ -358,8 +358,8 @@ export interface ExtensionMessage {
 		subtitle?: string
 		message: string
 	} // kilocode_change
-	modelId?: string // kilocode_change: Resolved model ID from inference profile
-	modelArn?: string // kilocode_change: Resolved model ARN from inference profile
+	bedrockInferenceModelId?: string // kilocode_change: Resolved model ID from inference profile
+	bedrockInferenceModelArn?: string // kilocode_change: Resolved model ARN from inference profile
 	url?: string // kilocode_change
 	keybindings?: Record<string, string> // kilocode_change
 	setting?: string
