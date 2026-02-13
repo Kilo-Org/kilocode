@@ -99,7 +99,7 @@
 		"@storybook/react-vite": "^8.6.15",
 		"@storybook/testing-library": "^0.2.2",
 		"@testing-library/jest-dom": "^6.6.3",
-		"@testing-library/react": "^16.2.0",
+		"@testing-library/react": "^16.3.2",
 		"@testing-library/user-event": "^14.6.1",
 		"@types/diff": "^5.2.1",
 		"@types/jest": "^29.0.0",
