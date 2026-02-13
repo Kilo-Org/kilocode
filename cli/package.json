@@ -89,7 +89,7 @@
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.2.4",
 		"mammoth": "^1.11.0",
-		"marked": "^15.0.0",
+		"marked": "^17.0.2",
 		"marked-terminal": "^7.3.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
