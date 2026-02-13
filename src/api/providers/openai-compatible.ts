@@ -18,6 +18,7 @@ import { ApiStream, ApiStreamChunk, ApiStreamUsageChunk } from "../transform/str
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import { handleProviderError } from "./utils/error-handler" // kilocode_change
 
 type StreamTextProviderOptions = Parameters<typeof streamText>[0]["providerOptions"]
 
@@ -230,65 +231,75 @@ export abstract class OpenAICompatibleHandler extends BaseProvider implements Si
 		}
 		// kilocode_change end
 
-		// Process the full stream to get all events
-		for await (const part of result.fullStream) {
-			// kilocode_change start
-			if (part.type === "tool-input-start") {
-				const existing = pendingToolInputs.get(part.id)
-				pendingToolInputs.set(part.id, {
-					toolName: part.toolName || existing?.toolName || "unknown_tool",
-					input: existing?.input || "",
-				})
-				continue
+		// kilocode_change start
+		try {
+			// Process the full stream to get all events
+			for await (const part of result.fullStream) {
+				// AI SDK error stream parts are terminal and should be surfaced as provider errors.
+				if (part.type === "error") {
+					const streamError =
+						(part as { error?: unknown }).error ??
+						new Error(String((part as { message?: unknown }).message ?? "Unknown stream error"))
+					throw streamError
+				}
+
+				if (part.type === "tool-input-start") {
+					const existing = pendingToolInputs.get(part.id)
+					pendingToolInputs.set(part.id, {
+						toolName: part.toolName || existing?.toolName || "unknown_tool",
+						input: existing?.input || "",
+					})
+					continue
+				}
+
+				if (part.type === "tool-input-delta") {
+					const existing = pendingToolInputs.get(part.id)
+					pendingToolInputs.set(part.id, {
+						toolName: existing?.toolName || "unknown_tool",
+						input: (existing?.input || "") + part.delta,
+					})
+					continue
+				}
+
+				if (part.type === "tool-input-end") {
+					const toolCallChunk = emitToolCallFromPendingInput(part.id)
+					if (toolCallChunk) {
+						yield toolCallChunk
+					}
+					continue
+				}
+
+				if (part.type === "tool-call") {
+					if (emittedToolCallIds.has(part.toolCallId)) {
+						continue
+					}
+					emittedToolCallIds.add(part.toolCallId)
+					pendingToolInputs.delete(part.toolCallId)
+				}
+
+				// Use the processAiSdkStreamPart utility to convert stream parts
+				for (const chunk of processAiSdkStreamPart(part)) {
+					yield chunk
+				}
 			}
 
-			if (part.type === "tool-input-delta") {
-				const existing = pendingToolInputs.get(part.id)
-				pendingToolInputs.set(part.id, {
-					toolName: existing?.toolName || "unknown_tool",
-					input: (existing?.input || "") + part.delta,
-				})
-				continue
-			}
-
-			if (part.type === "tool-input-end") {
-				const toolCallChunk = emitToolCallFromPendingInput(part.id)
+			// Flush any unfinished tool-input streams at end-of-stream.
+			for (const toolCallId of pendingToolInputs.keys()) {
+				const toolCallChunk = emitToolCallFromPendingInput(toolCallId)
 				if (toolCallChunk) {
 					yield toolCallChunk
 				}
-				continue
 			}
 
-			if (part.type === "tool-call") {
-				if (emittedToolCallIds.has(part.toolCallId)) {
-					continue
-				}
-				emittedToolCallIds.add(part.toolCallId)
-				pendingToolInputs.delete(part.toolCallId)
+			// Yield usage metrics at the end
+			const usage = await result.usage
+			if (usage) {
+				yield this.processUsageMetrics(usage)
 			}
-			// kilocode_change end
-
-			// Use the processAiSdkStreamPart utility to convert stream parts
-			for (const chunk of processAiSdkStreamPart(part)) {
-				yield chunk
-			}
-		}
-
-		// kilocode_change start
-		// Flush any unfinished tool-input streams at end-of-stream.
-		for (const toolCallId of pendingToolInputs.keys()) {
-			const toolCallChunk = emitToolCallFromPendingInput(toolCallId)
-			if (toolCallChunk) {
-				yield toolCallChunk
-			}
+		} catch (error) {
+			throw handleProviderError(error, this.config.providerName, { messagePrefix: "streaming" })
 		}
 		// kilocode_change end
-
-		// Yield usage metrics at the end
-		const usage = await result.usage
-		if (usage) {
-			yield this.processUsageMetrics(usage)
-		}
 	}
 
 	/**

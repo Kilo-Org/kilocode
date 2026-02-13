@@ -46,6 +46,18 @@ describe("handleProviderError", () => {
 			expect(result).toBeInstanceOf(Error)
 			expect((result as any).status).toBeUndefined()
 		})
+
+		// kilocode_change start
+		it("should preserve status code from Error with statusCode field", () => {
+			const error = new Error("No output generated. Check the stream for errors.") as any
+			error.statusCode = 429
+
+			const result = handleProviderError(error, providerName, { messagePrefix: "streaming" })
+
+			expect(result).toBeInstanceOf(Error)
+			expect((result as any).status).toBe(429)
+		})
+		// kilocode_change end
 	})
 
 	describe("errorDetails preservation", () => {
@@ -184,6 +196,34 @@ describe("handleProviderError", () => {
 			expect(result).toBeInstanceOf(Error)
 			expect(result.message).toBe("TestProvider completion error: Connection timeout")
 		})
+
+		// kilocode_change start
+		it("should extract message and details from responseBody payload", () => {
+			const error = new Error("No output generated. Check the stream for errors.") as any
+			error.statusCode = 421
+			error.responseBody = {
+				error: {
+					message: "Insufficient credits",
+					details: [{ reason: "payment_required" }],
+				},
+			}
+
+			const result = handleProviderError(error, providerName, { messagePrefix: "streaming" })
+
+			expect(result.message).toBe("TestProvider streaming error: Insufficient credits")
+			expect((result as any).status).toBe(421)
+			expect((result as any).errorDetails).toEqual([{ reason: "payment_required" }])
+		})
+
+		it("should fall back to AWS metadata status code when status fields are missing", () => {
+			const error = new Error("Service unavailable") as any
+			error.$metadata = { httpStatusCode: 503 }
+
+			const result = handleProviderError(error, providerName)
+
+			expect((result as any).status).toBe(503)
+		})
+		// kilocode_change end
 	})
 
 	describe("real-world error scenarios", () => {

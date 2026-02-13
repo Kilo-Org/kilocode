@@ -248,6 +248,73 @@ describe("MoonshotHandler", () => {
 		})
 
 		// kilocode_change start
+		it("should throw normalized stream errors from fullStream error parts", async () => {
+			const streamError = Object.assign(new Error("No output generated. Check the stream for errors."), {
+				statusCode: 429,
+				responseBody: {
+					error: {
+						message: "No credits available",
+						details: [{ reason: "quota_exceeded" }],
+					},
+				},
+			})
+
+			async function* mockFullStream() {
+				yield { type: "error", error: streamError }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.resolve(undefined),
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+
+			await expect(stream.next()).rejects.toMatchObject({
+				message: "moonshot streaming error: No credits available",
+				status: 429,
+				errorDetails: [{ reason: "quota_exceeded" }],
+			})
+		})
+
+		it("should surface nested provider errors when usage rejects with a generic message", async () => {
+			const usageError = Object.assign(new Error("No output generated. Check the stream for errors."), {
+				statusCode: 421,
+				responseBody: {
+					error: {
+						message: "Balance exhausted",
+						details: [{ reason: "payment_required" }],
+					},
+				},
+			})
+
+			async function* mockFullStream() {
+				yield { type: "text-delta", text: "Partial response" }
+			}
+
+			mockStreamText.mockReturnValue({
+				fullStream: mockFullStream(),
+				usage: Promise.reject(usageError),
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+
+			await expect(
+				(async () => {
+					for await (const chunk of stream) {
+						chunks.push(chunk)
+					}
+				})(),
+			).rejects.toMatchObject({
+				message: "moonshot streaming error: Balance exhausted",
+				status: 421,
+				errorDetails: [{ reason: "payment_required" }],
+			})
+
+			expect(chunks).toEqual([{ type: "text", text: "Partial response" }])
+		})
+
 		it("should include prompt_cache_key for moonshot requests when taskId is provided", async () => {
 			async function* mockFullStream() {
 				yield { type: "text-delta", text: "Test response" }
