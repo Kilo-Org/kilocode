@@ -221,7 +221,12 @@
 		},
 		"cancelling": "جارٍ الإلغاء...",
 		"cancelIndexingButton": "إلغاء الفهرسة",
-		"optional": "اختياري"
+		"optional": "اختياري",
+		"activateIndexButton": "تفعيل الفهرس",
+		"deactivateIndexButton": "إلغاء تفعيل الفهرس",
+		"activatingIndex": "جارٍ التفعيل",
+		"deactivatingIndex": "جارٍ إلغاء التفعيل",
+		"openWorkspaceFirst": "افتح مجلد مساحة عمل لتفعيل الفهرسة"
 	},
 	"autoApproval": {
 		"title": "الموافقة التلقائية",

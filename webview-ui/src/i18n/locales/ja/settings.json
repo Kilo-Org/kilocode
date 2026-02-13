@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "コードベースインデックスをクエリする際に返される検索結果の最大数。値を高くするとより多くのコンテキストが提供されますが、関連性の低い結果が含まれる可能性があります。",
 		"resetToDefault": "デフォルトにリセット",
 		"cancelling": "キャンセル中...",
-		"cancelIndexingButton": "インデックス作成をキャンセル"
+		"cancelIndexingButton": "インデックス作成をキャンセル",
+		"activateIndexButton": "インデックスを有効化",
+		"deactivateIndexButton": "インデックスを無効化",
+		"activatingIndex": "有効化中",
+		"deactivatingIndex": "無効化中",
+		"openWorkspaceFirst": "インデックス作成を有効にするにはワークスペースフォルダーを開いてください"
 	},
 	"autoApprove": {
 		"toggleShortcut": "<SettingsLink>IDEの環境設定</SettingsLink>で、この設定のグローバルショートカットを設定できます。",
@@ -635,10 +640,9 @@
 			"none": "なし",
 			"minimal": "最小 (最速)",
 			"high": "高",
-			"xhigh": "非常に高い",
+			"xhigh": "極高",
 			"medium": "中",
-			"low": "低",
-			"xhigh": "極高"
+			"low": "低"
 		},
 		"verbosity": {
 			"label": "出力の冗長性",

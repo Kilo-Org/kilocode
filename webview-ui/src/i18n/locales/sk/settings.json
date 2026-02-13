@@ -215,7 +215,12 @@
 		},
 		"optional": "voliteľné",
 		"cancelling": "Prebieha rušenie...",
-		"cancelIndexingButton": "Zrušiť indexovanie"
+		"cancelIndexingButton": "Zrušiť indexovanie",
+		"activateIndexButton": "Aktivovať index",
+		"deactivateIndexButton": "Deaktivovať index",
+		"activatingIndex": "Aktivuje sa",
+		"deactivatingIndex": "Deaktivuje sa",
+		"openWorkspaceFirst": "Na aktiváciu indexovania otvor priečinok pracovného priestoru"
 	},
 	"autoApproval": {
 		"title": "Automatické schválenie",

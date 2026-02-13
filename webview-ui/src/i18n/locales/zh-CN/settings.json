@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "查询代码库索引时返回的最大搜索结果数。较高的值提供更多上下文，但可能包含相关性较低的结果。",
 		"resetToDefault": "恢复默认值",
 		"cancelling": "正在取消...",
-		"cancelIndexingButton": "取消索引"
+		"cancelIndexingButton": "取消索引",
+		"activateIndexButton": "激活索引",
+		"deactivateIndexButton": "停用索引",
+		"activatingIndex": "正在激活",
+		"deactivatingIndex": "正在停用",
+		"openWorkspaceFirst": "请先打开工作区文件夹以激活索引"
 	},
 	"autoApprove": {
 		"toggleShortcut": "您可以<SettingsLink>在 IDE 首选项中</SettingsLink>为此设置配置全局快捷方式。",
@@ -630,10 +635,9 @@
 			"none": "无",
 			"minimal": "最小 (最快)",
 			"high": "高",
-			"xhigh": "超高",
+			"xhigh": "极高",
 			"medium": "中",
-			"low": "低",
-			"xhigh": "极高"
+			"low": "低"
 		},
 		"verbosity": {
 			"label": "输出详细程度",

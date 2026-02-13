@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "Jumlah maksimum hasil pencarian yang dikembalikan saat melakukan query indeks basis kode. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi mungkin menyertakan hasil yang kurang relevan.",
 		"resetToDefault": "Reset ke default",
 		"cancelling": "Membatalkan...",
-		"cancelIndexingButton": "Batalkan pengindeksan"
+		"cancelIndexingButton": "Batalkan pengindeksan",
+		"activateIndexButton": "Aktifkan Indeks",
+		"deactivateIndexButton": "Nonaktifkan Indeks",
+		"activatingIndex": "Mengaktifkan",
+		"deactivatingIndex": "Menonaktifkan",
+		"openWorkspaceFirst": "Buka folder workspace untuk mengaktifkan pengindeksan"
 	},
 	"autoApprove": {
 		"toggleShortcut": "Anda dapat mengonfigurasi pintasan global untuk pengaturan ini <SettingsLink>di preferensi IDE Anda</SettingsLink>.",
@@ -630,10 +635,9 @@
 			"none": "Tidak Ada",
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
-			"xhigh": "Sangat tinggi",
+			"xhigh": "Ekstra Tinggi",
 			"medium": "Sedang",
-			"low": "Rendah",
-			"xhigh": "Ekstra Tinggi"
+			"low": "Rendah"
 		},
 		"verbosity": {
 			"label": "Verbositas Output",

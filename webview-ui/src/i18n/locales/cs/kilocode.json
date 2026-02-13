@@ -128,7 +128,8 @@
 			"embeddingBatchSizeLabel": "Velikost dávky embeddingu",
 			"embeddingBatchSizeDescription": "Počet segmentů kódu, které se seskupí pro generování embeddingů a vektové upserty. Vyšší hodnoty mohou zlepšit rychlost indexování, ale mohou zvýšit spotřebu paměti. Nižší hodnoty snižují spotřebu paměti, ale mohou zpomalit indexování.",
 			"scannerMaxBatchRetriesLabel": "Maximální počet opakování dávky skeneru",
-			"scannerMaxBatchRetriesDescription": "Maximální počet pokusů o opakování neúspěšné dávky během skenování adresářů. Vyšší hodnoty zvyšují odolnost vůči přechodným chybám, ale mohou zpomalit indexování, pokud chyby přetrvávají. Nižší hodnoty selhávají rychleji, ale mohou při dočasných problémech přeskočit obsah."
+			"scannerMaxBatchRetriesDescription": "Maximální počet pokusů o opakování neúspěšné dávky během skenování adresářů. Vyšší hodnoty zvyšují odolnost vůči přechodným chybám, ale mohou zpomalit indexování, pokud chyby přetrvávají. Nižší hodnoty selhávají rychleji, ale mohou při dočasných problémech přeskočit obsah.",
+			"embeddingBatchSizeWarning": "Vyšší hodnoty zrychlují indexaci, ale mohou vyvolat limity požadavků u cloudových poskytovatelů, jako je OpenAI."
 		}
 	},
 	"chat": {

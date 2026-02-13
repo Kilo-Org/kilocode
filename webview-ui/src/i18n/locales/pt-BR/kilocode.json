@@ -128,7 +128,8 @@
 			"embeddingBatchSizeLabel": "Tamanho do Lote de Embedding",
 			"embeddingBatchSizeDescription": "Número de segmentos de código a serem agrupados em lote para geração de embeddings e inserções no armazenamento vetorial. Valores mais altos podem melhorar a velocidade de indexação, mas podem aumentar o uso de memória. Valores mais baixos reduzem o uso de memória, mas podem tornar a indexação mais lenta.",
 			"scannerMaxBatchRetriesLabel": "Máximo de Tentativas de Lote do Scanner",
-			"scannerMaxBatchRetriesDescription": "Número máximo de vezes para tentar novamente um lote com falha durante a varredura de diretórios. Valores mais altos aumentam a resiliência a erros temporários, mas podem tornar a indexação mais lenta se os erros persistirem. Valores mais baixos falham mais rapidamente, mas podem pular conteúdo em problemas temporários."
+			"scannerMaxBatchRetriesDescription": "Número máximo de vezes para tentar novamente um lote com falha durante a varredura de diretórios. Valores mais altos aumentam a resiliência a erros temporários, mas podem tornar a indexação mais lenta se os erros persistirem. Valores mais baixos falham mais rapidamente, mas podem pular conteúdo em problemas temporários.",
+			"embeddingBatchSizeWarning": "Valores mais altos aceleram a indexação, mas podem acionar limites de taxa de provedores de nuvem como a OpenAI."
 		}
 	},
 	"chat": {

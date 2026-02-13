@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "Nombre maximum de résultats de recherche à retourner lors de l'interrogation de l'index de code. Des valeurs plus élevées fournissent plus de contexte mais peuvent inclure des résultats moins pertinents.",
 		"resetToDefault": "Réinitialiser par défaut",
 		"cancelling": "Annulation...",
-		"cancelIndexingButton": "Annuler l'indexation"
+		"cancelIndexingButton": "Annuler l'indexation",
+		"activateIndexButton": "Activer l'index",
+		"deactivateIndexButton": "Désactiver l'index",
+		"activatingIndex": "Activation",
+		"deactivatingIndex": "Désactivation",
+		"openWorkspaceFirst": "Ouvre un dossier d'espace de travail pour activer l'indexation"
 	},
 	"autoApprove": {
 		"toggleShortcut": "Vous pouvez configurer un raccourci global pour ce paramètre <SettingsLink>dans les préférences de votre IDE</SettingsLink>.",
@@ -615,8 +620,7 @@
 			"high": "Élevé",
 			"xhigh": "Très élevé",
 			"medium": "Moyen",
-			"low": "Faible",
-			"xhigh": "Très élevé"
+			"low": "Faible"
 		},
 		"verbosity": {
 			"label": "Verbosité de la sortie",

@@ -221,7 +221,12 @@
 			"bedrockProfileRequired": "จำเป็นต้องมี AWS profile"
 		},
 		"cancelling": "กำลังยกเลิก...",
-		"cancelIndexingButton": "ยกเลิกการจัดทำดัชนี"
+		"cancelIndexingButton": "ยกเลิกการจัดทำดัชนี",
+		"activateIndexButton": "เปิดใช้งานดัชนี",
+		"deactivateIndexButton": "ปิดใช้งานดัชนี",
+		"activatingIndex": "กำลังเปิดใช้งาน",
+		"deactivatingIndex": "กำลังปิดใช้งาน",
+		"openWorkspaceFirst": "เปิดโฟลเดอร์เวิร์กสเปซเพื่อเปิดใช้งานการทำดัชนี"
 	},
 	"autoApprove": {
 		"description": "อนุญาตให้ Kilo Code ดำเนินการโดยอัตโนมัติโดยไม่ต้องขออนุมัติ เปิดใช้งานการตั้งค่าเหล่านี้เฉพาะเมื่อคุณเชื่อถือ AI อย่างเต็มที่และเข้าใจความเสี่ยงด้านความปลอดภัยที่เกี่ยวข้อง",
@@ -438,8 +443,8 @@
 		"minimaxApiKey": "คีย์ API ของ MiniMax",
 		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
 		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
-		"zaiApiKey": "คีย์ API ของ Z AI",
-		"getZaiApiKey": "รับคีย์ API ของ Z AI",
+		"zaiApiKey": "คีย์ API ของ Z.AI",
+		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
 		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
 		"geminiApiKey": "คีย์ API ของ Gemini",
@@ -572,8 +577,6 @@
 			"personalized": "โมเดลส่วนตัว",
 			"subscription": "โมเดลตามการสมัครสมาชิก"
 		},
-		"zaiApiKey": "คีย์ API ของ Z.AI",
-		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"customModel": {

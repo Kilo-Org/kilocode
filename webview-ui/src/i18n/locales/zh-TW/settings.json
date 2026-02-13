@@ -203,7 +203,12 @@
 		"searchMaxResultsDescription": "查詢程式碼庫索引時傳回的最大搜尋結果數。較高的值提供更多上下文，但可能包含相關性較低的結果。",
 		"resetToDefault": "重設為預設值",
 		"cancelling": "正在取消...",
-		"cancelIndexingButton": "取消索引"
+		"cancelIndexingButton": "取消索引",
+		"activateIndexButton": "啟用索引",
+		"deactivateIndexButton": "停用索引",
+		"activatingIndex": "啟用中",
+		"deactivatingIndex": "停用中",
+		"openWorkspaceFirst": "請先開啟工作區資料夾以啟用索引"
 	},
 	"autoApprove": {
 		"toggleShortcut": "您可以在 <SettingsLink>IDE 偏好設定</SettingsLink> 中為此設定設定全域快捷鍵。",
@@ -616,7 +621,6 @@
 			"low": "低",
 			"medium": "中",
 			"high": "高",
-			"xhigh": "超高",
 			"xhigh": "超高"
 		},
 		"verbosity": {

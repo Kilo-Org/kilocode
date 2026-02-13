@@ -121,7 +121,8 @@
 			"embeddingBatchSizeLabel": "Rozmiar Partii Embeddingów",
 			"embeddingBatchSizeDescription": "Liczba segmentów kodu grupowanych razem do generowania embeddingów i aktualizacji magazynu wektorów. Wyższe wartości mogą przyspieszyć indeksowanie, ale mogą zwiększyć zużycie pamięci. Niższe wartości zmniejszają zużycie pamięci, ale mogą spowolnić indeksowanie.",
 			"scannerMaxBatchRetriesLabel": "Maksymalna Liczba Ponowień Partii Skanera",
-			"scannerMaxBatchRetriesDescription": "Maksymalna liczba ponowień nieudanej partii podczas skanowania katalogów. Wyższe wartości zwiększają odporność na przejściowe błędy, ale mogą spowolnić indeksowanie, jeśli błędy się utrzymują. Niższe wartości kończą się szybciej niepowodzeniem, ale mogą pominąć zawartość przy tymczasowych problemach."
+			"scannerMaxBatchRetriesDescription": "Maksymalna liczba ponowień nieudanej partii podczas skanowania katalogów. Wyższe wartości zwiększają odporność na przejściowe błędy, ale mogą spowolnić indeksowanie, jeśli błędy się utrzymują. Niższe wartości kończą się szybciej niepowodzeniem, ale mogą pominąć zawartość przy tymczasowych problemach.",
+			"embeddingBatchSizeWarning": "Wyższe wartości przyspieszają indeksowanie, ale mogą powodować limity szybkości u dostawców chmurowych, takich jak OpenAI."
 		}
 	},
 	"toolCallStyle": {

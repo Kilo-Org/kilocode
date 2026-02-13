@@ -65,7 +65,8 @@
 			"embeddingBatchSizeLabel": "Gömme Toplu İşlem Boyutu",
 			"embeddingBatchSizeDescription": "Gömme üretimi ve vektör deposu güncellemeleri için birlikte toplu işleme alınacak kod segmentlerinin sayısı. Daha yüksek değerler indeksleme hızını artırabilir ancak bellek kullanımını artırabilir. Daha düşük değerler bellek kullanımını azaltır ancak indekslemeyi yavaşlatabilir.",
 			"scannerMaxBatchRetriesLabel": "Tarayıcı Maksimum Toplu İşlem Yeniden Denemeleri",
-			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir."
+			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir.",
+			"embeddingBatchSizeWarning": "Daha yüksek değerler dizinlemeyi hızlandırır, ancak OpenAI gibi bulut sağlayıcılarında hız sınırlarını tetikleyebilir."
 		},
 		"provider": {
 			"account": "Kilo Code Hesabı",

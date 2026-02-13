@@ -128,7 +128,8 @@
 			"embeddingBatchSizeLabel": "Embedding-Stapelgröße",
 			"embeddingBatchSizeDescription": "Anzahl der Code-Segmente, die für die Embedding-Generierung und Vektorspeicher-Upserts zusammengefasst werden. Höhere Werte können die Indizierungsgeschwindigkeit verbessern, aber den Speicherverbrauch erhöhen. Niedrigere Werte reduzieren den Speicherverbrauch, können aber die Indizierung verlangsamen.",
 			"scannerMaxBatchRetriesLabel": "Scanner Max. Stapel-Wiederholungen",
-			"scannerMaxBatchRetriesDescription": "Maximale Anzahl von Wiederholungsversuchen für einen fehlgeschlagenen Stapel während des Verzeichnis-Scans. Höhere Werte erhöhen die Widerstandsfähigkeit gegen vorübergehende Fehler, können aber die Indizierung verlangsamen, wenn Fehler bestehen bleiben. Niedrigere Werte schlagen schneller fehl, können aber Inhalte bei temporären Problemen überspringen."
+			"scannerMaxBatchRetriesDescription": "Maximale Anzahl von Wiederholungsversuchen für einen fehlgeschlagenen Stapel während des Verzeichnis-Scans. Höhere Werte erhöhen die Widerstandsfähigkeit gegen vorübergehende Fehler, können aber die Indizierung verlangsamen, wenn Fehler bestehen bleiben. Niedrigere Werte schlagen schneller fehl, können aber Inhalte bei temporären Problemen überspringen.",
+			"embeddingBatchSizeWarning": "Höhere Werte beschleunigen die Indizierung, können aber Rate-Limits von Cloud-Anbietern wie OpenAI auslösen."
 		}
 	},
 	"chat": {

@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "Kod tabanı dizinini sorgularken döndürülecek maksimum arama sonucu sayısı. Daha yüksek değerler daha fazla bağlam sağlar ancak daha az alakalı sonuçlar içerebilir.",
 		"resetToDefault": "Varsayılana sıfırla",
 		"cancelling": "İptal ediliyor...",
-		"cancelIndexingButton": "İndekslemeyi iptal et"
+		"cancelIndexingButton": "İndekslemeyi iptal et",
+		"activateIndexButton": "Dizini etkinleştir",
+		"deactivateIndexButton": "Dizini devre dışı bırak",
+		"activatingIndex": "Etkinleştiriliyor",
+		"deactivatingIndex": "Devre dışı bırakılıyor",
+		"openWorkspaceFirst": "Dizinlemeyi etkinleştirmek için bir çalışma alanı klasörü aç"
 	},
 	"autoApprove": {
 		"toggleShortcut": "<SettingsLink>IDE tercihlerinizde</SettingsLink> bu ayar için genel bir kısayol yapılandırabilirsiniz.",
@@ -604,10 +609,9 @@
 			"none": "Yok",
 			"minimal": "Minimal (en hızlı)",
 			"high": "Yüksek",
-			"xhigh": "Çok yüksek",
+			"xhigh": "Ekstra Yüksek",
 			"medium": "Orta",
-			"low": "Düşük",
-			"xhigh": "Ekstra Yüksek"
+			"low": "Düşük"
 		},
 		"verbosity": {
 			"label": "Çıktı Ayrıntı Düzeyi",

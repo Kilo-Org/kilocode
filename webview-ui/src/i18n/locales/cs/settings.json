@@ -207,7 +207,12 @@
 		},
 		"optional": "volitelné",
 		"cancelling": "Probíhá rušení...",
-		"cancelIndexingButton": "Zrušit indexování"
+		"cancelIndexingButton": "Zrušit indexování",
+		"activateIndexButton": "Aktivovat index",
+		"deactivateIndexButton": "Deaktivovat index",
+		"activatingIndex": "Aktivuje se",
+		"deactivatingIndex": "Deaktivuje se",
+		"openWorkspaceFirst": "Pro aktivaci indexace otevři složku pracovního prostoru"
 	},
 	"autoApproval": {
 		"title": "Automatické schválení",

@@ -135,7 +135,8 @@
 			"embeddingBatchSizeLabel": "Embedding 批次大小",
 			"embeddingBatchSizeDescription": "批次處理以產生 Embedding 與更新向量儲存區的程式碼片段數量。較高的值可改善索引速度，但可能會增加記憶體使用量；較低的值可減少記憶體使用量，但可能會減慢索引速度。",
 			"scannerMaxBatchRetriesLabel": "掃描器最大批次重試次數",
-			"scannerMaxBatchRetriesDescription": "目錄掃描期間重試失敗批次的最大次數。較高的值可增加對暫時性錯誤的恢復能力，但如果錯誤持續存在，可能會減慢索引速度；較低的值會較快放棄，但可能會因暫時性問題而略過內容。"
+			"scannerMaxBatchRetriesDescription": "目錄掃描期間重試失敗批次的最大次數。較高的值可增加對暫時性錯誤的恢復能力，但如果錯誤持續存在，可能會減慢索引速度；較低的值會較快放棄，但可能會因暫時性問題而略過內容。",
+			"embeddingBatchSizeWarning": "較高的數值可加快索引速度，但可能觸發 OpenAI 等雲端供應商的速率限制。"
 		}
 	},
 	"chat": {

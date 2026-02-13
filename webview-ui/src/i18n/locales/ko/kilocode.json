@@ -128,7 +128,8 @@
 			"embeddingBatchSizeLabel": "임베딩 배치 크기",
 			"embeddingBatchSizeDescription": "임베딩 생성 및 벡터 저장소 업데이트를 위해 함께 배치할 코드 세그먼트 수입니다. 값이 높을수록 인덱싱 속도가 향상될 수 있지만 메모리 사용량이 증가할 수 있습니다. 값이 낮을수록 메모리 사용량은 줄어들지만 인덱싱 속도가 느려질 수 있습니다.",
 			"scannerMaxBatchRetriesLabel": "스캐너 최대 배치 재시도",
-			"scannerMaxBatchRetriesDescription": "디렉터리 스캔 중 실패한 배치를 재시도하는 최대 횟수입니다. 값이 높을수록 일시적인 오류에 대한 복원력이 증가하지만 오류가 지속될 경우 인덱싱이 느려질 수 있습니다. 값이 낮을수록 빠르게 실패하지만 일시적인 문제로 인해 콘텐츠를 건너뛸 수 있습니다."
+			"scannerMaxBatchRetriesDescription": "디렉터리 스캔 중 실패한 배치를 재시도하는 최대 횟수입니다. 값이 높을수록 일시적인 오류에 대한 복원력이 증가하지만 오류가 지속될 경우 인덱싱이 느려질 수 있습니다. 값이 낮을수록 빠르게 실패하지만 일시적인 문제로 인해 콘텐츠를 건너뛸 수 있습니다.",
+			"embeddingBatchSizeWarning": "값을 높이면 인덱싱 속도는 빨라지지만 OpenAI 같은 클라우드 제공자의 속도 제한에 걸릴 수 있습니다."
 		}
 	},
 	"toolCallStyle": {

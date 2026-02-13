@@ -193,7 +193,12 @@
 		"searchMaxResultsDescription": "코드베이스 인덱스를 쿼리할 때 반환할 최대 검색 결과 수입니다. 값이 높을수록 더 많은 컨텍스트를 제공하지만 관련성이 낮은 결과가 포함될 수 있습니다.",
 		"resetToDefault": "기본값으로 재설정",
 		"cancelling": "취소 중...",
-		"cancelIndexingButton": "인덱싱 취소"
+		"cancelIndexingButton": "인덱싱 취소",
+		"activateIndexButton": "인덱스 활성화",
+		"deactivateIndexButton": "인덱스 비활성화",
+		"activatingIndex": "활성화 중",
+		"deactivatingIndex": "비활성화 중",
+		"openWorkspaceFirst": "인덱싱을 활성화하려면 워크스페이스 폴더를 열어 주세요"
 	},
 	"autoApprove": {
 		"toggleShortcut": "<SettingsLink>IDE 환경 설정</SettingsLink>에서 이 설정에 대한 전역 바로 가기를 구성할 수 있습니다.",
@@ -632,8 +637,7 @@
 			"high": "높음",
 			"xhigh": "매우 높음",
 			"medium": "중간",
-			"low": "낮음",
-			"xhigh": "매우 높음"
+			"low": "낮음"
 		},
 		"verbosity": {
 			"label": "출력 상세도",

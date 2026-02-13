@@ -72,7 +72,8 @@
 			"embeddingBatchSizeLabel": "Kích Thước Lô Embedding",
 			"embeddingBatchSizeDescription": "Số lượng đoạn mã được nhóm lại với nhau để tạo embedding và cập nhật vector store. Giá trị cao hơn có thể cải thiện tốc độ lập chỉ mục nhưng có thể tăng mức sử dụng bộ nhớ. Giá trị thấp hơn giảm sử dụng bộ nhớ nhưng có thể làm chậm quá trình lập chỉ mục.",
 			"scannerMaxBatchRetriesLabel": "Số Lần Thử Lại Tối Đa Của Lô Quét",
-			"scannerMaxBatchRetriesDescription": "Số lần tối đa thử lại một lô thất bại trong quá trình quét thư mục. Giá trị cao hơn tăng khả năng phục hồi trước các lỗi tạm thời nhưng có thể làm chậm lập chỉ mục nếu lỗi vẫn tồn tại. Giá trị thấp hơn thất bại nhanh hơn nhưng có thể bỏ qua nội dung khi gặp vấn đề tạm thời."
+			"scannerMaxBatchRetriesDescription": "Số lần tối đa thử lại một lô thất bại trong quá trình quét thư mục. Giá trị cao hơn tăng khả năng phục hồi trước các lỗi tạm thời nhưng có thể làm chậm lập chỉ mục nếu lỗi vẫn tồn tại. Giá trị thấp hơn thất bại nhanh hơn nhưng có thể bỏ qua nội dung khi gặp vấn đề tạm thời.",
+			"embeddingBatchSizeWarning": "Giá trị cao hơn giúp tăng tốc lập chỉ mục nhưng có thể kích hoạt giới hạn tốc độ từ các nhà cung cấp đám mây như OpenAI."
 		},
 		"provider": {
 			"account": "Tài khoản Kilo Code",

@@ -118,7 +118,8 @@
 			"embeddingBatchSizeLabel": "Embedding 批次大小",
 			"embeddingBatchSizeDescription": "用于 Embedding 生成和向量存储更新的代码片段批次大小。较大的值可以提高索引速度，但可能增加内存使用量。较小的值可以减少内存使用量，但可能降低索引速度。",
 			"scannerMaxBatchRetriesLabel": "扫描器最大批次重试次数",
-			"scannerMaxBatchRetriesDescription": "目录扫描期间重试失败批次的最大次数。较大的值可以提高对临时错误的容错能力，但如果错误持续存在可能会降低索引速度。较小的值会更快失败，但可能在临时问题时跳过内容。"
+			"scannerMaxBatchRetriesDescription": "目录扫描期间重试失败批次的最大次数。较大的值可以提高对临时错误的容错能力，但如果错误持续存在可能会降低索引速度。较小的值会更快失败，但可能在临时问题时跳过内容。",
+			"embeddingBatchSizeWarning": "更高的值会加快索引速度，但可能触发 OpenAI 等云服务提供商的速率限制。"
 		},
 		"terminal": {
 			"commandGenerator": {
