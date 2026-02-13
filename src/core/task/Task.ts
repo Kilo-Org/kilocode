@@ -4246,6 +4246,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private async handleContextWindowExceededError(): Promise<void> {
 		const state = await this.providerRef.deref()?.getState()
 		const { profileThresholds = {} } = state ?? {}
+		// kilocode_change start
+		const { profileCondenseOverrides = {} } = state ?? {}
+		// kilocode_change end
 
 		const { contextTokens } = this.getTokenUsage()
 		// kilocode_change start: Initialize virtual quota fallback handler
@@ -4292,6 +4295,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			systemPrompt: await this.getSystemPrompt(),
 			taskId: this.taskId,
 			profileThresholds,
+			// kilocode_change
+			profileCondenseOverrides,
 			currentProfileId,
 			useNativeTools,
 		})
@@ -4402,6 +4407,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			autoCondenseContext = true,
 			autoCondenseContextPercent = 100,
 			profileThresholds = {},
+			// kilocode_change start
+			profileCondenseOverrides = {},
+			// kilocode_change end
 		} = state ?? {}
 
 		// Get condensing configuration for automatic triggers.
@@ -4487,6 +4495,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				autoCondenseContext,
 				autoCondenseContextPercent,
 				profileThresholds,
+				// kilocode_change
+				profileCondenseOverrides,
 				currentProfileId,
 				lastMessageTokens,
 			})
@@ -4513,6 +4523,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				customCondensingPrompt,
 				condensingApiHandler,
 				profileThresholds,
+				// kilocode_change
+				profileCondenseOverrides,
 				currentProfileId,
 				useNativeTools,
 			})

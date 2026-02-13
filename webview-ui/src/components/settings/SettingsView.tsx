@@ -39,9 +39,11 @@ import {
 	type ExperimentId,
 	type TelemetrySetting,
 	type ProfileType, // kilocode_change - autocomplete profile type system
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 	ImageGenerationProvider,
 } from "@roo-code/types"
+import { getModelMaxOutputTokens } from "@roo/api"
 
 import { vscode } from "@src/utils/vscode"
 import { cn } from "@src/lib/utils"
@@ -90,6 +92,7 @@ import AgentBehaviourView from "../kilocode/settings/AgentBehaviourView" // kilo
 // import McpView from "../mcp/McpView" // kilocode_change: own view
 import { SettingsSearch } from "./SettingsSearch"
 import { useSearchIndexRegistry, SearchIndexProvider } from "./useSettingsSearch"
+import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
@@ -98,6 +101,9 @@ export const settingsTabTrigger =
 	"whitespace-nowrap overflow-hidden min-w-0 h-12 px-4 py-3 box-border flex items-center border-l-2 border-transparent text-vscode-foreground opacity-70 hover:bg-vscode-list-hoverBackground data-[compact=true]:w-12 data-[compact=true]:p-4 cursor-pointer" // kilocode_change add cursor-pointer
 export const settingsTabTriggerActive =
 	"opacity-100 border-vscode-focusBorder bg-vscode-list-activeSelectionBackground hover:bg-vscode-list-activeSelectionBackground cursor-default" // kilocode_change add hover:bg-* and cursor-default
+
+// kilocode_change
+const CONDENSE_TOKEN_BUFFER_PERCENTAGE = 0.1
 
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
@@ -239,6 +245,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 		customSupportPrompts,
 		profileThresholds,
+		// kilocode_change
+		profileCondenseOverrides,
 		systemNotificationsEnabled, // kilocode_change
 		alwaysAllowFollowupQuestions,
 		followupAutoApproveTimeoutMs,
@@ -267,6 +275,36 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
+	// kilocode_change start
+	const currentProfileMeta = useMemo(
+		() => (listApiConfigMeta ?? []).find((profile) => profile.name === editingApiConfigName),
+		[listApiConfigMeta, editingApiConfigName],
+	)
+	const currentCondenseProfileId = currentProfileMeta?.id ?? "default"
+	const currentCondenseProfileName = editingApiConfigName || currentApiConfigName || "default"
+	const { id: condenseModelId, info: condenseModelInfo } = useSelectedModel(apiConfiguration)
+
+	const condenseReservedTokens = useMemo(() => {
+		if (!condenseModelInfo) {
+			return ANTHROPIC_DEFAULT_MAX_TOKENS
+		}
+		return (
+			getModelMaxOutputTokens({
+				modelId: condenseModelId,
+				model: condenseModelInfo,
+				settings: apiConfiguration,
+			}) ?? ANTHROPIC_DEFAULT_MAX_TOKENS
+		)
+	}, [condenseModelId, condenseModelInfo, apiConfiguration])
+
+	const condenseEffectiveBudgetTokens = useMemo(() => {
+		const contextWindow = condenseModelInfo?.contextWindow ?? 0
+		return Math.max(
+			0,
+			Math.floor(contextWindow * (1 - CONDENSE_TOKEN_BUFFER_PERCENTAGE) - condenseReservedTokens),
+		)
+	}, [condenseModelInfo?.contextWindow, condenseReservedTokens])
+	// kilocode_change end
 
 	useEffect(() => {
 		// Update only when currentApiConfigName is changed.
@@ -600,7 +638,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 					includeCurrentTime: includeCurrentTime ?? true,
 					includeCurrentCost: includeCurrentCost ?? true,
 					maxGitStatusFiles: maxGitStatusFiles ?? 0,
-					profileThresholds,
+					// kilocode_change
+					profileCondenseOverrides,
 					imageGenerationProvider,
 					openRouterImageApiKey,
 					openRouterImageGenerationSelectedModel,
@@ -1209,7 +1248,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							<ContextManagementSettings
 								autoCondenseContext={autoCondenseContext}
 								autoCondenseContextPercent={autoCondenseContextPercent}
-								listApiConfigMeta={listApiConfigMeta ?? []}
 								maxOpenTabsContext={maxOpenTabsContext}
 								maxWorkspaceFiles={maxWorkspaceFiles ?? 200}
 								showRooIgnoredFiles={showRooIgnoredFiles}
@@ -1219,7 +1257,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								maxTotalImageSize={maxTotalImageSize}
 								maxConcurrentFileReads={maxConcurrentFileReads}
 								allowVeryLargeReads={allowVeryLargeReads /* kilocode_change */}
-								profileThresholds={profileThresholds}
+								// kilocode_change start
+								profileCondenseOverrides={profileCondenseOverrides}
+								currentProfileName={currentCondenseProfileName}
+								currentProfileId={currentCondenseProfileId}
+								condenseEffectiveBudgetTokens={condenseEffectiveBudgetTokens}
+								// kilocode_change end
 								includeDiagnosticMessages={includeDiagnosticMessages}
 								maxDiagnosticMessages={maxDiagnosticMessages}
 								writeDelayMs={writeDelayMs}

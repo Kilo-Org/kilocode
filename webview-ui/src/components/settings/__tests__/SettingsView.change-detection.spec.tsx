@@ -200,6 +200,7 @@ describe("SettingsView - Change Detection Fix", () => {
 		customCondensingPrompt: "",
 		customSupportPrompts: {},
 		profileThresholds: {},
+		profileCondenseOverrides: {},
 		alwaysAllowFollowupQuestions: false,
 		followupAutoApproveTimeoutMs: undefined,
 		includeDiagnosticMessages: false,

@@ -255,6 +255,7 @@ describe("mergeExtensionState", () => {
 			sharingEnabled: false,
 			publicSharingEnabled: false,
 			profileThresholds: {},
+			profileCondenseOverrides: {},
 			hasOpenedModeSelector: false, // Add the new required property
 			maxImageFileSize: 5,
 			maxTotalImageSize: 20,

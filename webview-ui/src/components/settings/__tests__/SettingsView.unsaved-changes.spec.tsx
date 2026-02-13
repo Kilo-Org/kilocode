@@ -206,6 +206,7 @@ describe("SettingsView - Unsaved Changes Detection", () => {
 		customCondensingPrompt: "",
 		customSupportPrompts: {},
 		profileThresholds: {},
+		profileCondenseOverrides: {},
 		alwaysAllowFollowupQuestions: false,
 		followupAutoApproveTimeoutMs: undefined,
 		includeDiagnosticMessages: false,

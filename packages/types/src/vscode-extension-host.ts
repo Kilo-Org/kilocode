@@ -556,6 +556,9 @@ export type ExtensionState = Pick<
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
+	// kilocode_change start
+	| "profileCondenseOverrides"
+	// kilocode_change end
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
@@ -640,6 +643,12 @@ export type ExtensionState = Pick<
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
+	// kilocode_change start
+	profileCondenseOverrides?: Record<
+		string,
+		{ enabled: boolean; mode: "percent" | "tokens"; percent: number; tokens: number }
+	>
+	// kilocode_change end
 	hasOpenedModeSelector: boolean
 	hasCompletedOnboarding?: boolean // kilocode_change: Track if user has completed onboarding flow
 	openRouterImageApiKey?: string

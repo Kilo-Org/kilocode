@@ -620,6 +620,7 @@ describe("ClineProvider", () => {
 			sharingEnabled: false,
 			publicSharingEnabled: false,
 			profileThresholds: {},
+			profileCondenseOverrides: {},
 			hasOpenedModeSelector: false,
 			diagnosticsEnabled: true,
 			openRouterImageApiKey: undefined,
@@ -808,6 +809,34 @@ describe("ClineProvider", () => {
 		expect(state).toHaveProperty("diffEnabled")
 		expect(state).toHaveProperty("writeDelayMs")
 	})
+
+	// kilocode_change start
+	test("getState includes profileCondenseOverrides default", async () => {
+		const state = await provider.getState()
+
+		expect(state.profileCondenseOverrides).toEqual({})
+	})
+
+	test("handles profileCondenseOverrides updates through updateSettings", async () => {
+		await provider.resolveWebviewView(mockWebviewView)
+		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
+
+		const overrides = {
+			"test-profile-id": {
+				enabled: true,
+				mode: "tokens" as const,
+				percent: 75,
+				tokens: 25000,
+			},
+		}
+
+		await messageHandler({ type: "updateSettings", updatedSettings: { profileCondenseOverrides: overrides } })
+
+		expect(updateGlobalStateSpy).toHaveBeenCalledWith("profileCondenseOverrides", overrides)
+		expect(mockContext.globalState.update).toHaveBeenCalledWith("profileCondenseOverrides", overrides)
+		expect((await provider.getState()).profileCondenseOverrides).toEqual(overrides)
+	})
+	// kilocode_change end
 
 	test("language is set to VSCode language", async () => {
 		// Mock VSCode language as Spanish

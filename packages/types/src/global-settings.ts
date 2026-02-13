@@ -53,6 +53,17 @@ export const DEFAULT_CHECKPOINT_TIMEOUT_SECONDS = 15
  * GlobalSettings
  */
 
+// kilocode_change start
+export const profileCondenseOverrideModeSchema = z.enum(["percent", "tokens"])
+export const profileCondenseOverrideSchema = z.object({
+	enabled: z.boolean(),
+	mode: profileCondenseOverrideModeSchema,
+	percent: z.number(),
+	tokens: z.number(),
+})
+export type ProfileCondenseOverride = z.infer<typeof profileCondenseOverrideSchema>
+// kilocode_change end
+
 export const globalSettingsSchema = z.object({
 	currentApiConfigName: z.string().optional(),
 	listApiConfigMeta: z.array(providerSettingsEntrySchema).optional(),
@@ -244,6 +255,9 @@ export const globalSettingsSchema = z.object({
 	 */
 	enterBehavior: z.enum(["send", "newline"]).optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
+	// kilocode_change start
+	profileCondenseOverrides: z.record(z.string(), profileCondenseOverrideSchema).optional(),
+	// kilocode_change end
 	hasOpenedModeSelector: z.boolean().optional(),
 	hasCompletedOnboarding: z.boolean().optional(), // kilocode_change: Track if user has completed onboarding flow
 	lastModeExportPath: z.string().optional(),

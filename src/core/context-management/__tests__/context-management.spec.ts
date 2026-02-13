@@ -1062,6 +1062,130 @@ describe("Context Management", () => {
 		})
 	})
 
+	// kilocode_change start
+	describe("profile condense overrides", () => {
+		const contextWindow = 100000
+		const maxTokens = 30000
+		const baseOptions = {
+			contextWindow,
+			maxTokens,
+			autoCondenseContext: true,
+			autoCondenseContextPercent: 70,
+			profileThresholds: {},
+			currentProfileId: "profile-1",
+		}
+
+		it("keeps global-only trigger behavior when profile override is disabled", () => {
+			const withoutOverrides = willManageContext({
+				...baseOptions,
+				totalTokens: 69999,
+				lastMessageTokens: 1,
+			})
+
+			const withDisabledOverride = willManageContext({
+				...baseOptions,
+				totalTokens: 69999,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: false,
+						mode: "tokens",
+						percent: 80,
+						tokens: 1000,
+					},
+				},
+			})
+
+			expect(withDisabledOverride).toBe(withoutOverrides)
+			expect(withoutOverrides).toBe(true)
+		})
+
+		it("triggers at exact token threshold in profile token mode", () => {
+			const shouldNotTrigger = willManageContext({
+				...baseOptions,
+				totalTokens: 44998,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: true,
+						mode: "tokens",
+						percent: 80,
+						tokens: 45000,
+					},
+				},
+			})
+			const shouldTrigger = willManageContext({
+				...baseOptions,
+				totalTokens: 44999,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: true,
+						mode: "tokens",
+						percent: 80,
+						tokens: 45000,
+					},
+				},
+			})
+
+			expect(shouldNotTrigger).toBe(false)
+			expect(shouldTrigger).toBe(true)
+		})
+
+		it("converts profile percent mode using effective budget", () => {
+			// effective budget = 100000 * 0.9 - 30000 = 60000
+			// 50% of effective budget = 30000
+			const shouldNotTrigger = willManageContext({
+				...baseOptions,
+				totalTokens: 29998,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: true,
+						mode: "percent",
+						percent: 50,
+						tokens: 45000,
+					},
+				},
+			})
+			const shouldTrigger = willManageContext({
+				...baseOptions,
+				totalTokens: 29999,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: true,
+						mode: "percent",
+						percent: 50,
+						tokens: 45000,
+					},
+				},
+			})
+
+			expect(shouldNotTrigger).toBe(false)
+			expect(shouldTrigger).toBe(true)
+		})
+
+		it("always triggers on hard overflow regardless of override mode/value", () => {
+			const shouldTrigger = willManageContext({
+				...baseOptions,
+				totalTokens: 60000,
+				lastMessageTokens: 1,
+				profileCondenseOverrides: {
+					"profile-1": {
+						enabled: true,
+						mode: "tokens",
+						percent: 5,
+						tokens: 1,
+					},
+				},
+			})
+
+			expect(shouldTrigger).toBe(true)
+		})
+	})
+	// kilocode_change end
+
 	/**
 	 * Tests for the getMaxTokens function (private but tested through manageContext)
 	 */

@@ -24,6 +24,99 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
  */
 export const TOKEN_BUFFER_PERCENTAGE = 0.1
 
+// kilocode_change start
+export type ProfileCondenseOverride = {
+	enabled: boolean
+	mode: "percent" | "tokens"
+	percent: number
+	tokens: number
+}
+
+type CondenseTriggerResolution = {
+	reservedTokens: number
+	allowedTokens: number
+	effectiveBudget: number
+	mode: "global_percent" | "profile_percent" | "profile_tokens"
+	thresholdPercent?: number
+	thresholdTokens?: number
+}
+
+type ResolveCondenseTriggerOptions = {
+	contextWindow: number
+	maxTokens?: number | null
+	autoCondenseContextPercent: number
+	profileThresholds: Record<string, number>
+	profileCondenseOverrides?: Record<string, ProfileCondenseOverride>
+	currentProfileId: string
+}
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+const resolveCondenseTrigger = ({
+	contextWindow,
+	maxTokens,
+	autoCondenseContextPercent,
+	profileThresholds,
+	profileCondenseOverrides = {},
+	currentProfileId,
+}: ResolveCondenseTriggerOptions): CondenseTriggerResolution => {
+	const reservedTokens = maxTokens || ANTHROPIC_DEFAULT_MAX_TOKENS
+	const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
+	const effectiveBudget = Math.max(0, Math.floor(allowedTokens))
+
+	const profileOverride = profileCondenseOverrides[currentProfileId]
+	if (profileOverride?.enabled) {
+		if (profileOverride.mode === "tokens") {
+			const tokenThreshold = clampNumber(
+				Math.floor(profileOverride.tokens),
+				1,
+				Math.max(1, Math.floor(effectiveBudget)),
+			)
+			return {
+				reservedTokens,
+				allowedTokens,
+				effectiveBudget,
+				mode: "profile_tokens",
+				thresholdTokens: tokenThreshold,
+			}
+		}
+
+		const percentThreshold = clampNumber(
+			Math.floor(profileOverride.percent),
+			MIN_CONDENSE_THRESHOLD,
+			MAX_CONDENSE_THRESHOLD,
+		)
+		const thresholdTokens = Math.max(1, Math.floor((percentThreshold / 100) * Math.max(1, effectiveBudget)))
+		return {
+			reservedTokens,
+			allowedTokens,
+			effectiveBudget,
+			mode: "profile_percent",
+			thresholdPercent: percentThreshold,
+			thresholdTokens,
+		}
+	}
+
+	let effectiveThreshold = autoCondenseContextPercent
+	const profileThreshold = profileThresholds[currentProfileId]
+	if (profileThreshold !== undefined) {
+		if (profileThreshold === -1) {
+			effectiveThreshold = autoCondenseContextPercent
+		} else if (profileThreshold >= MIN_CONDENSE_THRESHOLD && profileThreshold <= MAX_CONDENSE_THRESHOLD) {
+			effectiveThreshold = profileThreshold
+		}
+	}
+
+	return {
+		reservedTokens,
+		allowedTokens,
+		effectiveBudget,
+		mode: "global_percent",
+		thresholdPercent: effectiveThreshold,
+	}
+}
+// kilocode_change end
+
 /**
  * Counts tokens for user content using the provider's token counting implementation.
  *
@@ -144,6 +237,8 @@ export type WillManageContextOptions = {
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
 	profileThresholds: Record<string, number>
+	// kilocode_change
+	profileCondenseOverrides?: Record<string, ProfileCondenseOverride>
 	currentProfileId: string
 	lastMessageTokens: number
 }
@@ -164,35 +259,39 @@ export function willManageContext({
 	autoCondenseContext,
 	autoCondenseContextPercent,
 	profileThresholds,
+	// kilocode_change
+	profileCondenseOverrides = {},
 	currentProfileId,
 	lastMessageTokens,
 }: WillManageContextOptions): boolean {
+	// kilocode_change start
+	const trigger = resolveCondenseTrigger({
+		contextWindow,
+		maxTokens,
+		autoCondenseContextPercent,
+		profileThresholds,
+		profileCondenseOverrides,
+		currentProfileId,
+	})
+	// kilocode_change end
+
 	if (!autoCondenseContext) {
 		// When auto-condense is disabled, only truncation can occur
-		const reservedTokens = maxTokens || ANTHROPIC_DEFAULT_MAX_TOKENS
 		const prevContextTokens = totalTokens + lastMessageTokens
-		const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
-		return prevContextTokens > allowedTokens
+		return prevContextTokens > trigger.allowedTokens
 	}
 
-	const reservedTokens = maxTokens || ANTHROPIC_DEFAULT_MAX_TOKENS
 	const prevContextTokens = totalTokens + lastMessageTokens
-	const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
-
-	// Determine the effective threshold to use
-	let effectiveThreshold = autoCondenseContextPercent
-	const profileThreshold = profileThresholds[currentProfileId]
-	if (profileThreshold !== undefined) {
-		if (profileThreshold === -1) {
-			effectiveThreshold = autoCondenseContextPercent
-		} else if (profileThreshold >= MIN_CONDENSE_THRESHOLD && profileThreshold <= MAX_CONDENSE_THRESHOLD) {
-			effectiveThreshold = profileThreshold
-		}
-		// Invalid values fall back to global setting (effectiveThreshold already set)
+	if (prevContextTokens > trigger.allowedTokens) {
+		return true
 	}
 
-	const contextPercent = (100 * prevContextTokens) / contextWindow
-	return contextPercent >= effectiveThreshold || prevContextTokens > allowedTokens
+	if (trigger.mode === "global_percent") {
+		const contextPercent = (100 * prevContextTokens) / contextWindow
+		return contextPercent >= (trigger.thresholdPercent ?? autoCondenseContextPercent)
+	}
+
+	return prevContextTokens >= (trigger.thresholdTokens ?? 1)
 }
 
 /**
@@ -218,6 +317,8 @@ export type ContextManagementOptions = {
 	customCondensingPrompt?: string
 	condensingApiHandler?: ApiHandler
 	profileThresholds: Record<string, number>
+	// kilocode_change
+	profileCondenseOverrides?: Record<string, ProfileCondenseOverride>
 	currentProfileId: string
 	useNativeTools?: boolean
 }
@@ -248,14 +349,13 @@ export async function manageContext({
 	customCondensingPrompt,
 	condensingApiHandler,
 	profileThresholds,
+	// kilocode_change
+	profileCondenseOverrides = {},
 	currentProfileId,
 	useNativeTools,
 }: ContextManagementOptions): Promise<ContextManagementResult> {
 	let error: string | undefined
 	let cost = 0
-	// Calculate the maximum tokens reserved for response
-	const reservedTokens = maxTokens || ANTHROPIC_DEFAULT_MAX_TOKENS
-
 	// Estimate tokens for the last message (which is always a user message)
 	const lastMessage = messages[messages.length - 1]
 	const lastMessageContent = lastMessage.content
@@ -266,33 +366,31 @@ export async function manageContext({
 	// Calculate total effective tokens (totalTokens never includes the last message)
 	const prevContextTokens = totalTokens + lastMessageTokens
 
-	// Calculate available tokens for conversation history
-	// Truncate if we're within TOKEN_BUFFER_PERCENTAGE of the context window
-	const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
-
-	// Determine the effective threshold to use
-	let effectiveThreshold = autoCondenseContextPercent
-	const profileThreshold = profileThresholds[currentProfileId]
-	if (profileThreshold !== undefined) {
-		if (profileThreshold === -1) {
-			// Special case: -1 means inherit from global setting
-			effectiveThreshold = autoCondenseContextPercent
-		} else if (profileThreshold >= MIN_CONDENSE_THRESHOLD && profileThreshold <= MAX_CONDENSE_THRESHOLD) {
-			// Valid custom threshold
-			effectiveThreshold = profileThreshold
-		} else {
-			// Invalid threshold value, fall back to global setting
-			console.warn(
-				`Invalid profile threshold ${profileThreshold} for profile "${currentProfileId}". Using global default of ${autoCondenseContextPercent}%`,
-			)
-			effectiveThreshold = autoCondenseContextPercent
-		}
-	}
-	// If no specific threshold is found for the profile, fall back to global setting
+	// kilocode_change start
+	const trigger = resolveCondenseTrigger({
+		contextWindow,
+		maxTokens,
+		autoCondenseContextPercent,
+		profileThresholds,
+		profileCondenseOverrides,
+		currentProfileId,
+	})
+	// kilocode_change end
 
 	if (autoCondenseContext) {
-		const contextPercent = (100 * prevContextTokens) / contextWindow
-		if (contextPercent >= effectiveThreshold || prevContextTokens > allowedTokens) {
+		// kilocode_change start
+		let shouldCondense = prevContextTokens > trigger.allowedTokens
+		if (!shouldCondense) {
+			if (trigger.mode === "global_percent") {
+				const contextPercent = (100 * prevContextTokens) / contextWindow
+				shouldCondense = contextPercent >= (trigger.thresholdPercent ?? autoCondenseContextPercent)
+			} else {
+				shouldCondense = prevContextTokens >= (trigger.thresholdTokens ?? 1)
+			}
+		}
+		// kilocode_change end
+
+		if (shouldCondense) {
 			// Attempt to intelligently condense the context
 			const result = await summarizeConversation(
 				messages,
@@ -315,7 +413,7 @@ export async function manageContext({
 	}
 
 	// Fall back to sliding window truncation if needed
-	if (prevContextTokens > allowedTokens) {
+	if (prevContextTokens > trigger.allowedTokens) {
 		const truncationResult = truncateConversation(messages, 0.5, taskId)
 
 		// Calculate new context tokens after truncation by counting non-truncated messages

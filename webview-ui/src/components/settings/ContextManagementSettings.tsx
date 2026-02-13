@@ -11,12 +11,21 @@ import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { SearchableSetting } from "./SearchableSetting"
-import { vscode } from "@/utils/vscode"
+
+// kilocode_change start
+type ProfileCondenseOverrideValue = {
+	enabled: boolean
+	mode: "percent" | "tokens"
+	percent: number
+	tokens: number
+}
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+// kilocode_change end
 
 type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
-	listApiConfigMeta: any[]
 	maxOpenTabsContext: number
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
@@ -26,7 +35,12 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxTotalImageSize?: number
 	maxConcurrentFileReads?: number
 	allowVeryLargeReads?: boolean // kilocode_change
-	profileThresholds?: Record<string, number>
+	// kilocode_change start
+	profileCondenseOverrides?: Record<string, ProfileCondenseOverrideValue>
+	currentProfileName: string
+	currentProfileId: string
+	condenseEffectiveBudgetTokens: number
+	// kilocode_change end
 	includeDiagnosticMessages?: boolean
 	maxDiagnosticMessages?: number
 	writeDelayMs: number
@@ -45,7 +59,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxTotalImageSize"
 		| "maxConcurrentFileReads"
 		| "allowVeryLargeReads" // kilocode_change
-		| "profileThresholds"
+		// kilocode_change
+		| "profileCondenseOverrides"
 		| "includeDiagnosticMessages"
 		| "maxDiagnosticMessages"
 		| "writeDelayMs"
@@ -58,7 +73,6 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 export const ContextManagementSettings = ({
 	autoCondenseContext,
 	autoCondenseContextPercent,
-	listApiConfigMeta,
 	maxOpenTabsContext,
 	maxWorkspaceFiles,
 	showRooIgnoredFiles,
@@ -69,7 +83,12 @@ export const ContextManagementSettings = ({
 	maxTotalImageSize,
 	maxConcurrentFileReads,
 	allowVeryLargeReads, // kilocode_change
-	profileThresholds = {},
+	// kilocode_change start
+	profileCondenseOverrides = {},
+	currentProfileName,
+	currentProfileId,
+	condenseEffectiveBudgetTokens,
+	// kilocode_change end
 	includeDiagnosticMessages,
 	maxDiagnosticMessages,
 	writeDelayMs,
@@ -80,34 +99,62 @@ export const ContextManagementSettings = ({
 	...props
 }: ContextManagementSettingsProps) => {
 	const { t } = useAppTranslation()
-	const [selectedThresholdProfile, setSelectedThresholdProfile] = React.useState<string>("default")
+	// kilocode_change start
+	const [tokenClampNotice, setTokenClampNotice] = React.useState<string | null>(null)
+	const hardLimitTokens = Math.max(1, Math.floor(condenseEffectiveBudgetTokens || 0))
 
-	// Helper function to get the current threshold value based on selected profile
-	const getCurrentThresholdValue = () => {
-		if (selectedThresholdProfile === "default") {
-			return autoCondenseContextPercent
+	const defaultProfileOverride = React.useMemo<ProfileCondenseOverrideValue>(() => {
+		const safePercent = clampNumber(autoCondenseContextPercent, 5, 100)
+		return {
+			enabled: false,
+			mode: "percent",
+			percent: safePercent,
+			tokens: Math.max(1, Math.floor((safePercent / 100) * hardLimitTokens)),
 		}
-		const profileThreshold = profileThresholds[selectedThresholdProfile]
-		if (profileThreshold === undefined || profileThreshold === -1) {
-			return autoCondenseContextPercent // Use default if profile not configured or set to -1
+	}, [autoCondenseContextPercent, hardLimitTokens])
+
+	const normalizeOverride = React.useCallback(
+		(override?: Partial<ProfileCondenseOverrideValue>): ProfileCondenseOverrideValue => ({
+			enabled: override?.enabled ?? defaultProfileOverride.enabled,
+			mode: override?.mode === "tokens" ? "tokens" : "percent",
+			percent: clampNumber(Math.floor(override?.percent ?? defaultProfileOverride.percent), 5, 100),
+			tokens: clampNumber(Math.floor(override?.tokens ?? defaultProfileOverride.tokens), 1, hardLimitTokens),
+		}),
+		[defaultProfileOverride, hardLimitTokens],
+	)
+
+	const currentProfileOverride = normalizeOverride(profileCondenseOverrides[currentProfileId])
+
+	const updateCurrentProfileOverride = (updates: Partial<ProfileCondenseOverrideValue>) => {
+		const nextOverrides = {
+			...profileCondenseOverrides,
+			[currentProfileId]: normalizeOverride({ ...currentProfileOverride, ...updates }),
 		}
-		return profileThreshold
+		setCachedStateField("profileCondenseOverrides", nextOverrides)
 	}
 
-	// Helper function to handle threshold changes
-	const handleThresholdChange = (value: number) => {
-		if (selectedThresholdProfile === "default") {
-			setCachedStateField("autoCondenseContextPercent", value)
-		} else {
-			const newThresholds = {
-				...profileThresholds,
-				[selectedThresholdProfile]: value,
-			}
+	const profilePercentTokenEquivalent = Math.max(
+		1,
+		Math.floor((currentProfileOverride.percent / 100) * Math.max(1, hardLimitTokens)),
+	)
 
-			setCachedStateField("profileThresholds", newThresholds)
-			vscode.postMessage({ type: "updateSettings", updatedSettings: { profileThresholds: newThresholds } })
+	React.useEffect(() => {
+		const existingOverride = profileCondenseOverrides[currentProfileId]
+		if (!existingOverride || !existingOverride.enabled || existingOverride.mode !== "tokens") {
+			return
 		}
-	}
+
+		const clampedTokens = clampNumber(Math.floor(existingOverride.tokens), 1, hardLimitTokens)
+		if (clampedTokens !== existingOverride.tokens) {
+			updateCurrentProfileOverride({ tokens: clampedTokens })
+			setTokenClampNotice(
+				t("settings:contextManagement.condensingThreshold.profileTokenClamped", {
+					tokens: clampedTokens,
+				}),
+			)
+		}
+	}, [currentProfileId, hardLimitTokens, profileCondenseOverrides, t]) // eslint-disable-line react-hooks/exhaustive-deps
+	// kilocode_change end
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
 			<SectionHeader description={t("settings:contextManagement.description")}>
@@ -492,70 +539,123 @@ export const ContextManagementSettings = ({
 							<div>{t("settings:contextManagement.condensingThreshold.label")}</div>
 						</div>
 						<div>
-							<Select
-								value={selectedThresholdProfile || "default"}
-								onValueChange={(value) => {
-									setSelectedThresholdProfile(value)
-								}}
-								data-testid="threshold-profile-select">
-								<SelectTrigger className="w-full">
-									<SelectValue
-										placeholder={
-											t("settings:contextManagement.condensingThreshold.selectProfile") ||
-											"Select profile for threshold"
-										}
-									/>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="default">
-										{t("settings:contextManagement.condensingThreshold.defaultProfile") ||
-											"Default (applies to all unconfigured profiles)"}
-									</SelectItem>
-									{(listApiConfigMeta || []).map((config) => {
-										const profileThreshold = profileThresholds[config.id]
-										const thresholdDisplay =
-											profileThreshold !== undefined
-												? profileThreshold === -1
-													? ` ${t(
-															"settings:contextManagement.condensingThreshold.usesGlobal",
-															{
-																threshold: autoCondenseContextPercent,
-															},
-														)}`
-													: ` (${profileThreshold}%)`
-												: ""
-										return (
-											<SelectItem key={config.id} value={config.id}>
-												{config.name}
-												{thresholdDisplay}
-											</SelectItem>
-										)
-									})}
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Threshold Slider */}
-						<div>
 							<div className="flex items-center gap-2">
 								<Slider
 									min={10}
 									max={100}
 									step={1}
-									value={[getCurrentThresholdValue()]}
-									onValueChange={([value]) => handleThresholdChange(value)}
+									value={[autoCondenseContextPercent]}
+									onValueChange={([value]) => setCachedStateField("autoCondenseContextPercent", value)}
 									data-testid="condense-threshold-slider"
 								/>
-								<span className="w-20">{getCurrentThresholdValue()}%</span>
+								<span className="w-20">{autoCondenseContextPercent}%</span>
 							</div>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
-								{selectedThresholdProfile === "default"
-									? t("settings:contextManagement.condensingThreshold.defaultDescription", {
-											threshold: autoCondenseContextPercent,
-										})
-									: t("settings:contextManagement.condensingThreshold.profileDescription")}
+								{t("settings:contextManagement.condensingThreshold.defaultDescription", {
+									threshold: autoCondenseContextPercent,
+								})}
 							</div>
 						</div>
+						{/* kilocode_change start */}
+						<div className="rounded border border-vscode-input-border p-3 flex flex-col gap-3">
+							<VSCodeCheckbox
+								checked={currentProfileOverride.enabled}
+								onChange={(e: any) => {
+									setTokenClampNotice(null)
+									updateCurrentProfileOverride({ enabled: e.target.checked })
+								}}
+								data-testid="condense-current-profile-override-checkbox">
+								<span className="font-medium">
+									{t("settings:contextManagement.condensingThreshold.profileOverrideLabel")}
+								</span>
+							</VSCodeCheckbox>
+							<div className="text-vscode-descriptionForeground text-sm">
+								{t("settings:contextManagement.condensingThreshold.currentProfileLabel", {
+									profile: currentProfileName,
+								})}
+							</div>
+							<div className="text-vscode-descriptionForeground text-sm">
+								{t("settings:contextManagement.condensingThreshold.hardLimitLabel", {
+									tokens: hardLimitTokens.toLocaleString(),
+								})}
+							</div>
+							<Select
+								value={currentProfileOverride.mode}
+								onValueChange={(value) => {
+									setTokenClampNotice(null)
+									updateCurrentProfileOverride({ mode: value as "percent" | "tokens" })
+								}}
+								disabled={!currentProfileOverride.enabled}
+								data-testid="condense-threshold-mode-select">
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="percent">
+										{t("settings:contextManagement.condensingThreshold.mode.percent")}
+									</SelectItem>
+									<SelectItem value="tokens">
+										{t("settings:contextManagement.condensingThreshold.mode.tokens")}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							{currentProfileOverride.mode === "percent" ? (
+								<div>
+									<div className="flex items-center gap-2">
+										<Slider
+											min={5}
+											max={100}
+											step={1}
+											value={[currentProfileOverride.percent]}
+											onValueChange={([value]) => {
+												setTokenClampNotice(null)
+												updateCurrentProfileOverride({ percent: value })
+											}}
+											disabled={!currentProfileOverride.enabled}
+											data-testid="condense-profile-percent-slider"
+										/>
+										<span className="w-20">{currentProfileOverride.percent}%</span>
+									</div>
+									<div className="text-vscode-descriptionForeground text-sm mt-1">
+										{t("settings:contextManagement.condensingThreshold.percentEquivalent", {
+											tokens: profilePercentTokenEquivalent.toLocaleString(),
+										})}
+									</div>
+								</div>
+							) : (
+								<div className="flex items-center gap-3">
+									<Input
+										type="number"
+										pattern="[0-9]*"
+										min={1}
+										max={Math.max(1, hardLimitTokens)}
+										value={currentProfileOverride.tokens}
+										onChange={(e) => {
+											const parsed = parseInt(e.target.value, 10)
+											if (Number.isNaN(parsed)) {
+												return
+											}
+											setTokenClampNotice(null)
+											updateCurrentProfileOverride({ tokens: parsed })
+										}}
+										disabled={!currentProfileOverride.enabled}
+										onClick={(e) => e.currentTarget.select()}
+										data-testid="condense-profile-token-input"
+										className="w-32 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+									/>
+									<span>{t("settings:contextManagement.condensingThreshold.tokensUnit")}</span>
+								</div>
+							)}
+							{tokenClampNotice && (
+								<div className="text-vscode-descriptionForeground text-sm" data-testid="condense-token-clamp-notice">
+									{tokenClampNotice}
+								</div>
+							)}
+						</div>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:contextManagement.condensingThreshold.profileDescription")}
+						</div>
+						{/* kilocode_change end */}
 					</div>
 				)}
 			</Section>

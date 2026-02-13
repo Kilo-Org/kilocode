@@ -111,7 +111,17 @@ export interface ExtensionStateContextType extends ExtensionState {
 	marketplaceItems?: any[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	profileThresholds: Record<string, number>
+	// kilocode_change start
+	profileCondenseOverrides: Record<
+		string,
+		{ enabled: boolean; mode: "percent" | "tokens"; percent: number; tokens: number }
+	>
+	// kilocode_change end
 	setProfileThresholds: (value: Record<string, number>) => void
+	// kilocode_change
+	setProfileCondenseOverrides: (
+		value: Record<string, { enabled: boolean; mode: "percent" | "tokens"; percent: number; tokens: number }>,
+	) => void
 	setApiConfiguration: (config: ProviderSettings) => void
 	setCustomInstructions: (value?: string) => void
 	setAlwaysAllowReadOnly: (value: boolean) => void
@@ -335,6 +345,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		autoCondenseContext: true,
 		autoCondenseContextPercent: 100,
 		profileThresholds: {},
+		// kilocode_change
+		profileCondenseOverrides: {},
 		codebaseIndexConfig: {
 			codebaseIndexEnabled: true,
 			codebaseIndexQdrantUrl: "http://localhost:6333",
@@ -588,6 +600,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		marketplaceItems,
 		marketplaceInstalledMetadata,
 		profileThresholds: state.profileThresholds ?? {},
+		// kilocode_change
+		profileCondenseOverrides: state.profileCondenseOverrides ?? {},
 		alwaysAllowFollowupQuestions,
 		followupAutoApproveTimeoutMs,
 		remoteControlEnabled: state.remoteControlEnabled ?? false,
@@ -725,6 +739,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setYoloGatekeeperApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, yoloGatekeeperApiConfigId: value })), // kilocode_change: AI gatekeeper for YOLO mode
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),
+		// kilocode_change
+		setProfileCondenseOverrides: (value) =>
+			setState((prevState) => ({ ...prevState, profileCondenseOverrides: value })),
 		// kilocode_change start
 		setSystemNotificationsEnabled: (value) =>
 			setState((prevState) => ({ ...prevState, systemNotificationsEnabled: value })),
