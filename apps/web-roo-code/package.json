@@ -39,7 +39,7 @@
 		"tailwind-merge": "^3.3.0",
 		"tailwindcss-animate": "^1.0.7",
 		"tldts": "^6.1.86",
-		"zod": "^3.25.61"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@roo-code/config-eslint": "workspace:^",

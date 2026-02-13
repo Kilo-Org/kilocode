@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@roo-code/types": "workspace:^",
 		"posthog-node": "^5.0.0",
-		"zod": "^3.25.61"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@roo-code/config-eslint": "workspace:^",
