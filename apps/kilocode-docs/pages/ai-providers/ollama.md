@@ -8,10 +8,8 @@ Kilo Code supports running models locally using Ollama. This provides privacy, o
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 
-{#
-{% image src="/docs/img/providers/ollama-devstral-snake.png" alt="Vibe coding a Snake game using devstral" width="500" /%}
-#}
-_Vibe coding a Snake game using devstral_
+<!-- <image src="/docs/img/providers/ollama-devstral-snake.png" alt="Vibe coding a Snake game using devstral" width="500" />
+*Vibe coding a Snake game using devstral* -->
 
 ## Managing Expectations
 

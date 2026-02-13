@@ -77,9 +77,7 @@ With the Kilo Code provider, if you sign up with Google you can also connect oth
 3. Under "Link a New account" select the type of account to link
 4. Complete the OAuth authorization, and you'll see your connected accounts!
 
-{#
-{% image src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" /%}
-#}
+<!-- <img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" /> -->
 
 ## Tips and Notes
 
