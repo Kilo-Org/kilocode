@@ -1483,7 +1483,7 @@ describe("ProviderTransform.variants", () => {
 
   // kilocode_change start
   describe("@kilocode/kilo-gateway", () => {
-    test("claude models return empty variants (reasoning disabled)", () => {
+    test("claude models return reasoning effort variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
@@ -1494,10 +1494,12 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual([])
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "max"])
+      expect(result["max"]).toEqual({ reasoning: { effort: "xhigh" } })
+      expect(result["high"]).toEqual({ reasoning: { effort: "high" } })
     })
 
-    test("anthropic models in api.id return empty variants (reasoning disabled)", () => {
+    test("anthropic models in api.id return reasoning effort variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-opus-4",
         providerID: "kilo",
@@ -1508,7 +1510,7 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual([])
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "max"])
     })
 
     test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
@@ -2116,7 +2118,7 @@ describe("ProviderTransform.variants", () => {
 // kilocode_change start
 describe("ProviderTransform.smallOptions", () => {
   describe("@kilocode/kilo-gateway", () => {
-    test("claude models return reasoningEffort minimal", () => {
+    test("claude models return reasoning effort minimal", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
@@ -2127,7 +2129,7 @@ describe("ProviderTransform.smallOptions", () => {
         },
       })
       const result = ProviderTransform.smallOptions(model)
-      expect(result).toEqual({ reasoningEffort: "minimal" })
+      expect(result).toEqual({ reasoning: { effort: "minimal" } })
     })
 
     test("non-claude models use reasoningEffort format", () => {

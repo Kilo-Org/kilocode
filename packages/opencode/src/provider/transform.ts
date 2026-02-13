@@ -82,7 +82,7 @@ export namespace ProviderTransform {
     ) {
       return msgs.map((msg) => {
         if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
-          msg.content = msg.content.map((part) => {
+          msg.content = (msg.content as any[]).map((part: any) => {
             if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
               return {
                 ...part,
@@ -106,7 +106,7 @@ export namespace ProviderTransform {
         const nextMsg = msgs[i + 1]
 
         if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
-          msg.content = msg.content.map((part) => {
+          msg.content = (msg.content as any[]).map((part: any) => {
             if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
               // Mistral requires alphanumeric tool call IDs with exactly 9 characters
               const normalizedId = part.toolCallId
@@ -208,7 +208,7 @@ export namespace ProviderTransform {
       if (shouldUseContentOptions) {
         const lastContent = msg.content[msg.content.length - 1]
         if (lastContent && typeof lastContent === "object") {
-          lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
+          ;(lastContent as any).providerOptions = mergeDeep((lastContent as any).providerOptions ?? {}, providerOptions)
           continue
         }
       }
@@ -362,7 +362,7 @@ export namespace ProviderTransform {
         return {
           ...msg,
           providerOptions: remap(msg.providerOptions),
-          content: msg.content.map((part) => ({ ...part, providerOptions: remap(part.providerOptions) })),
+          content: msg.content.map((part: any) => ({ ...part, providerOptions: remap(part.providerOptions) })),
         } as typeof msg
       })
     }
@@ -471,15 +471,19 @@ export namespace ProviderTransform {
             },
           }
         }
-        // kilocode_change - Claude models via Kilo Gateway: no reasoning variants
-        // (reasoning is broken due to OpenRouter SDK duplicating reasoning_details)
+        // kilocode_change - Claude/Anthropic models support reasoning via effort levels through OpenRouter API
+        // OpenRouter uses OpenAI-style effort names: xhigh=95%, high=80%, medium=50%, low=20%, minimal=10%
+        // kilocode_change - expose "max" (Anthropic naming) to users, mapped to "xhigh" (OpenRouter naming) on the wire
         if (
           model.id.includes("claude") ||
           model.id.includes("anthropic") ||
           model.api.id.includes("claude") ||
           model.api.id.includes("anthropic")
         ) {
-          return {}
+          const ANTHROPIC_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "max"]
+          return Object.fromEntries(
+            ANTHROPIC_EFFORTS.map((effort) => [effort, { reasoning: { effort: effort === "max" ? "xhigh" : effort } }]),
+          )
         }
         // GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
@@ -877,9 +881,18 @@ export namespace ProviderTransform {
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
     if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change - add Kilo Gateway support
+      // kilocode_change - add Kilo Gateway support with model-specific handling
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
+      }
+      // Claude models need reasoning.effort format (OpenRouter API)
+      if (
+        model.id.includes("claude") ||
+        model.id.includes("anthropic") ||
+        model.api.id.includes("claude") ||
+        model.api.id.includes("anthropic")
+      ) {
+        return { reasoning: { effort: "minimal" } }
       }
       // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }

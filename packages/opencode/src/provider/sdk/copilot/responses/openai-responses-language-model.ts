@@ -792,7 +792,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
 
     const self = this
 
-    let finishReason: LanguageModelV2FinishReason = "unknown"
+    let finishReason: LanguageModelV2FinishReason = "other"
     const usage: LanguageModelV2Usage = {
       inputTokens: undefined,
       outputTokens: undefined,

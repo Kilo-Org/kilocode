@@ -12,6 +12,6 @@ export function mapOpenAICompatibleFinishReason(finishReason: string | null | un
     case "tool_calls":
       return "tool-calls"
     default:
-      return "unknown"
+      return "other"
   }
 }

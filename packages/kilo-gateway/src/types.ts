@@ -1,6 +1,6 @@
 // kilocode_change - Kilo Gateway types
 import type { Provider as SDK } from "ai"
-import type { LanguageModelV2 } from "@openrouter/ai-sdk-provider"
+import type { LanguageModel } from "ai"
 
 // ============================================================================
 // Authentication Types
@@ -139,7 +139,7 @@ export interface CustomLoaderResult {
   /**
    * Custom function to get a model instance
    */
-  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModelV2>
+  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModel>
 
   /**
    * Options to merge with provider configuration
@@ -160,5 +160,5 @@ export interface ProviderInfo {
   models: Record<string, any>
 }
 
-// Re-export LanguageModelV2 for convenience
-export type { LanguageModelV2 }
+// Re-export LanguageModel for convenience
+export type { LanguageModel }
