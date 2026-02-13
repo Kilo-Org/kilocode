@@ -27,6 +27,9 @@ interface OpenAIEmbeddingResponse {
 	}
 }
 
+// kilocode_change
+const OPENAI_COMPATIBLE_DUMMY_API_KEY = "EMPTY"
+
 /**
  * OpenAI Compatible implementation of the embedder interface with batching and rate limiting.
  * This embedder allows using any OpenAI-compatible API endpoint by specifying a custom baseURL.
@@ -57,22 +60,21 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 	 * @param modelId Optional model identifier (defaults to "text-embedding-3-small")
 	 * @param maxItemTokens Optional maximum tokens per item (defaults to MAX_ITEM_TOKENS)
 	 */
-	constructor(baseUrl: string, apiKey: string, modelId?: string, maxItemTokens?: number) {
+	constructor(baseUrl: string, apiKey: string | undefined, modelId?: string, maxItemTokens?: number) {
 		if (!baseUrl) {
 			throw new Error(t("embeddings:validation.baseUrlRequired"))
 		}
-		if (!apiKey) {
-			throw new Error(t("embeddings:validation.apiKeyRequired"))
-		}
 
 		this.baseUrl = baseUrl
-		this.apiKey = apiKey
+		// kilocode_change
+		this.apiKey = (apiKey ?? "").trim()
+		const sdkApiKey = this.apiKey || OPENAI_COMPATIBLE_DUMMY_API_KEY
 
 		// Wrap OpenAI client creation to handle invalid API key characters
 		try {
 			this.embeddingsClient = new OpenAI({
 				baseURL: baseUrl,
-				apiKey: apiKey,
+				apiKey: sdkApiKey,
 			})
 		} catch (error) {
 			// Use the error handler to transform ByteString conversion errors
@@ -204,15 +206,20 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 		batchTexts: string[],
 		model: string,
 	): Promise<OpenAIEmbeddingResponse> {
+		// kilocode_change start
+		const authToken = this.apiKey || OPENAI_COMPATIBLE_DUMMY_API_KEY
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			// Send a placeholder token when API key is empty so OpenAI-compatible servers that
+			// expect auth headers still accept the request path.
+			"api-key": authToken,
+			Authorization: `Bearer ${authToken}`,
+		}
+		// kilocode_change end
+
 		const response = await fetch(url, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				// Azure OpenAI uses 'api-key' header, while OpenAI uses 'Authorization'
-				// We'll try 'api-key' first for Azure compatibility
-				"api-key": this.apiKey,
-				Authorization: `Bearer ${this.apiKey}`,
-			},
+			headers,
 			body: JSON.stringify({
 				input: batchTexts,
 				model: model,

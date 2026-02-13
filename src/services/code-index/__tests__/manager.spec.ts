@@ -294,6 +294,32 @@ describe("CodeIndexManager - handleSettingsChange regression", () => {
 		})
 	})
 
+	describe("initialize regression", () => {
+		it("should recreate services when manager is partially initialized", async () => {
+			// kilocode_change start - regression for stale _serviceFactory without orchestrator/search service
+			const mockConfigManager = {
+				loadConfiguration: vi.fn().mockResolvedValue({ requiresRestart: false }),
+				isFeatureConfigured: true,
+				isFeatureEnabled: true,
+			}
+			;(manager as any)._configManager = mockConfigManager
+			;(manager as any)._cacheManager = {
+				initialize: vi.fn(),
+				clearCacheFile: vi.fn(),
+			}
+			;(manager as any)._serviceFactory = {}
+			;(manager as any)._orchestrator = undefined
+			;(manager as any)._searchService = undefined
+
+			const recreateServicesSpy = vi.spyOn(manager as any, "_recreateServices").mockResolvedValue(undefined)
+
+			await manager.initialize({} as any)
+
+			expect(recreateServicesSpy).toHaveBeenCalled()
+			// kilocode_change end
+		})
+	})
+
 	describe("embedder validation integration", () => {
 		let mockServiceFactoryInstance: any
 		let mockStateManager: any

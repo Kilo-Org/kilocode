@@ -239,7 +239,8 @@ describe("CodeIndexServiceFactory", () => {
 			expect(() => factory.createEmbedder()).toThrow("serviceFactory.openAiCompatibleConfigMissing")
 		})
 
-		it("should throw error when OpenAI Compatible API key is missing", () => {
+		// kilocode_change start
+		it("should pass empty API key when OpenAI Compatible API key is missing", () => {
 			// Arrange
 			const testConfig = {
 				embedderProvider: "openai-compatible",
@@ -251,9 +252,17 @@ describe("CodeIndexServiceFactory", () => {
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
 
-			// Act & Assert
-			expect(() => factory.createEmbedder()).toThrow("serviceFactory.openAiCompatibleConfigMissing")
+			// Act
+			factory.createEmbedder()
+
+			// Assert
+			expect(MockedOpenAICompatibleEmbedder).toHaveBeenCalledWith(
+				"https://api.example.com/v1",
+				"",
+				"text-embedding-3-large",
+			)
 		})
+		// kilocode_change end
 
 		it("should throw error when OpenAI Compatible options are missing", () => {
 			// Arrange

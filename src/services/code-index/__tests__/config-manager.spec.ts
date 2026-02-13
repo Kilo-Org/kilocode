@@ -179,6 +179,39 @@ describe("CodeIndexConfigManager", () => {
 			})
 		})
 
+		// kilocode_change start
+		it("should load OpenAI Compatible configuration with empty API key", async () => {
+			const mockGlobalState = {
+				codebaseIndexEnabled: true,
+				codebaseIndexQdrantUrl: "http://qdrant.local",
+				codebaseIndexEmbedderProvider: "openai-compatible",
+				codebaseIndexEmbedderBaseUrl: "",
+				codebaseIndexEmbedderModelId: "text-embedding-3-large",
+				codebaseIndexOpenAiCompatibleBaseUrl: "https://api.example.com/v1",
+			}
+			mockContextProxy.getGlobalState.mockImplementation((key: string) => {
+				if (key === "codebaseIndexConfig") return mockGlobalState
+				return undefined
+			})
+
+			setupSecretMocks({
+				codeIndexQdrantApiKey: "test-qdrant-key",
+				codebaseIndexOpenAiCompatibleApiKey: "",
+			})
+
+			const result = await configManager.loadConfiguration()
+
+			expect(result.currentConfig).toMatchObject({
+				isConfigured: true,
+				embedderProvider: "openai-compatible",
+				openAiCompatibleOptions: {
+					baseUrl: "https://api.example.com/v1",
+					apiKey: "",
+				},
+			})
+		})
+		// kilocode_change end
+
 		it("should load OpenAI Compatible configuration with modelDimension from globalState", async () => {
 			const mockGlobalState = {
 				codebaseIndexEnabled: true,
@@ -580,6 +613,66 @@ describe("CodeIndexConfigManager", () => {
 				const result = await configManager.loadConfiguration()
 				expect(result.requiresRestart).toBe(true)
 			})
+
+			// kilocode_change start
+			it("should require restart when OpenAI Compatible API key changes from value to empty", async () => {
+				mockContextProxy.getGlobalState.mockImplementation((key: string) => {
+					if (key === "codebaseIndexConfig") {
+						return {
+							codebaseIndexEnabled: true,
+							codebaseIndexQdrantUrl: "http://qdrant.local",
+							codebaseIndexEmbedderProvider: "openai-compatible",
+							codebaseIndexEmbedderModelId: "text-embedding-3-small",
+							codebaseIndexOpenAiCompatibleBaseUrl: "https://api.example.com/v1",
+						}
+					}
+					return undefined
+				})
+				setupSecretMocks({
+					codebaseIndexOpenAiCompatibleApiKey: "old-api-key",
+					codeIndexQdrantApiKey: "test-key",
+				})
+
+				await configManager.loadConfiguration()
+
+				setupSecretMocks({
+					codebaseIndexOpenAiCompatibleApiKey: "",
+					codeIndexQdrantApiKey: "test-key",
+				})
+
+				const result = await configManager.loadConfiguration()
+				expect(result.requiresRestart).toBe(true)
+			})
+
+			it("should require restart when OpenAI Compatible API key changes from empty to value", async () => {
+				mockContextProxy.getGlobalState.mockImplementation((key: string) => {
+					if (key === "codebaseIndexConfig") {
+						return {
+							codebaseIndexEnabled: true,
+							codebaseIndexQdrantUrl: "http://qdrant.local",
+							codebaseIndexEmbedderProvider: "openai-compatible",
+							codebaseIndexEmbedderModelId: "text-embedding-3-small",
+							codebaseIndexOpenAiCompatibleBaseUrl: "https://api.example.com/v1",
+						}
+					}
+					return undefined
+				})
+				setupSecretMocks({
+					codebaseIndexOpenAiCompatibleApiKey: "",
+					codeIndexQdrantApiKey: "test-key",
+				})
+
+				await configManager.loadConfiguration()
+
+				setupSecretMocks({
+					codebaseIndexOpenAiCompatibleApiKey: "new-api-key",
+					codeIndexQdrantApiKey: "test-key",
+				})
+
+				const result = await configManager.loadConfiguration()
+				expect(result.requiresRestart).toBe(true)
+			})
+			// kilocode_change end
 
 			it("should handle OpenAI Compatible modelDimension changes", async () => {
 				// Initial state with modelDimension
@@ -1198,16 +1291,17 @@ describe("CodeIndexConfigManager", () => {
 			expect(configManager.isFeatureConfigured).toBe(false)
 		})
 
-		it("should return false when OpenAI Compatible API key is missing", async () => {
+		// kilocode_change start
+		it("should return true when OpenAI Compatible API key is missing", async () => {
 			mockContextProxy.getGlobalState.mockImplementation((key: string) => {
 				if (key === "codebaseIndexConfig") {
 					return {
 						codebaseIndexEnabled: true,
 						codebaseIndexQdrantUrl: "http://qdrant.local",
 						codebaseIndexEmbedderProvider: "openai-compatible",
+						codebaseIndexOpenAiCompatibleBaseUrl: "https://api.example.com/v1",
 					}
 				}
-				if (key === "codebaseIndexOpenAiCompatibleBaseUrl") return "https://api.example.com/v1"
 				return undefined
 			})
 			setupSecretMocks({
@@ -1215,8 +1309,9 @@ describe("CodeIndexConfigManager", () => {
 			})
 
 			await configManager.loadConfiguration()
-			expect(configManager.isFeatureConfigured).toBe(false)
+			expect(configManager.isFeatureConfigured).toBe(true)
 		})
+		// kilocode_change end
 
 		it("should validate Gemini configuration correctly", async () => {
 			mockContextProxy.getGlobalState.mockImplementation((key: string) => {

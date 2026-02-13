@@ -101,7 +101,9 @@ interface LocalCodeIndexSettings {
 }
 
 // Validation schema for codebase index settings
-const createValidationSchema = (provider: EmbedderProvider, t: any) => {
+// kilocode_change start
+export const createValidationSchema = (provider: EmbedderProvider, t: any) => {
+// kilocode_change end
 	const baseSchema = z.object({
 		codebaseIndexEnabled: z.boolean(),
 		codebaseIndexQdrantUrl: z
@@ -134,19 +136,19 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 			})
 
 		case "openai-compatible":
+			// kilocode_change start
 			return baseSchema.extend({
 				codebaseIndexOpenAiCompatibleBaseUrl: z
 					.string()
 					.min(1, t("settings:codeIndex.validation.baseUrlRequired"))
 					.url(t("settings:codeIndex.validation.invalidBaseUrl")),
-				codebaseIndexOpenAiCompatibleApiKey: z
-					.string()
-					.min(1, t("settings:codeIndex.validation.apiKeyRequired")),
+				codebaseIndexOpenAiCompatibleApiKey: z.string().optional(),
 				codebaseIndexEmbedderModelId: z.string().min(1, t("settings:codeIndex.validation.modelIdRequired")),
 				codebaseIndexEmbedderModelDimension: z
 					.number()
 					.min(1, t("settings:codeIndex.validation.modelDimensionRequired")),
 			})
+			// kilocode_change end
 
 		case "gemini":
 			return baseSchema.extend({

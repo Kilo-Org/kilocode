@@ -20,7 +20,7 @@ export class CodeIndexConfigManager {
 	private modelDimension?: number
 	private openAiOptions?: ApiHandlerOptions
 	private ollamaOptions?: ApiHandlerOptions
-	private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+	private openAiCompatibleOptions?: { baseUrl: string; apiKey?: string } // kilocode_change
 	private geminiOptions?: { apiKey: string }
 	private mistralOptions?: { apiKey: string }
 	private vercelAiGatewayOptions?: { apiKey: string }
@@ -202,13 +202,14 @@ export class CodeIndexConfigManager {
 			ollamaBaseUrl: codebaseIndexEmbedderBaseUrl,
 		}
 
-		this.openAiCompatibleOptions =
-			openAiCompatibleBaseUrl && openAiCompatibleApiKey
-				? {
-						baseUrl: openAiCompatibleBaseUrl,
-						apiKey: openAiCompatibleApiKey,
-					}
-				: undefined
+		// kilocode_change start
+		this.openAiCompatibleOptions = openAiCompatibleBaseUrl
+			? {
+					baseUrl: openAiCompatibleBaseUrl,
+					apiKey: openAiCompatibleApiKey,
+				}
+			: undefined
+		// kilocode_change end
 
 		this.geminiOptions = geminiApiKey ? { apiKey: geminiApiKey } : undefined
 		this.mistralOptions = mistralApiKey ? { apiKey: mistralApiKey } : undefined
@@ -235,7 +236,7 @@ export class CodeIndexConfigManager {
 			modelDimension?: number
 			openAiOptions?: ApiHandlerOptions
 			ollamaOptions?: ApiHandlerOptions
-			openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+			openAiCompatibleOptions?: { baseUrl: string; apiKey?: string } // kilocode_change
 			geminiOptions?: { apiKey: string }
 			mistralOptions?: { apiKey: string }
 			vercelAiGatewayOptions?: { apiKey: string }
@@ -327,9 +328,9 @@ export class CodeIndexConfigManager {
 			return !!(ollamaBaseUrl && qdrantUrl)
 		} else if (this.embedderProvider === "openai-compatible") {
 			const baseUrl = this.openAiCompatibleOptions?.baseUrl
-			const apiKey = this.openAiCompatibleOptions?.apiKey
 			const qdrantUrl = this.qdrantUrl
-			const isConfigured = !!(baseUrl && apiKey && qdrantUrl)
+			// kilocode_change
+			const isConfigured = !!(baseUrl && qdrantUrl)
 			return isConfigured
 		} else if (this.embedderProvider === "gemini") {
 			const apiKey = this.geminiOptions?.apiKey

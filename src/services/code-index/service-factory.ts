@@ -69,14 +69,16 @@ export class CodeIndexServiceFactory {
 				ollamaNumCtx: config.modelDimension, // kilocode_change
 			})
 		} else if (provider === "openai-compatible") {
-			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
+			// kilocode_change start
+			if (!config.openAiCompatibleOptions?.baseUrl) {
 				throw new Error(t("embeddings:serviceFactory.openAiCompatibleConfigMissing"))
 			}
 			return new OpenAICompatibleEmbedder(
 				config.openAiCompatibleOptions.baseUrl,
-				config.openAiCompatibleOptions.apiKey,
+				config.openAiCompatibleOptions.apiKey ?? "",
 				config.modelId,
 			)
+			// kilocode_change end
 		} else if (provider === "gemini") {
 			if (!config.geminiOptions?.apiKey) {
 				throw new Error(t("embeddings:serviceFactory.geminiConfigMissing"))

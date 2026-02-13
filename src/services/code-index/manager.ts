@@ -145,7 +145,9 @@ export class CodeIndexManager {
 		}
 
 		// 4. Determine if Core Services Need Recreation
-		const needsServiceRecreation = !this._serviceFactory || requiresRestart
+		// kilocode_change start - guard against partial initialization after failed recreation
+		const needsServiceRecreation = requiresRestart || !this.isInitialized || !this._serviceFactory
+		// kilocode_change end
 
 		if (needsServiceRecreation) {
 			// kilocode_change start: add additional logging
@@ -341,11 +343,13 @@ export class CodeIndexManager {
 		this._searchService = undefined
 
 		// (Re)Initialize service factory
-		this._serviceFactory = new CodeIndexServiceFactory(
+		// kilocode_change start - only commit serviceFactory after successful recreation
+		const serviceFactory = new CodeIndexServiceFactory(
 			this._configManager!,
 			this.workspacePath,
 			this._cacheManager!,
 		)
+		// kilocode_change end
 
 		const ignoreInstance = ignore()
 		const workspacePath = this.workspacePath
@@ -376,7 +380,7 @@ export class CodeIndexManager {
 		await rooIgnoreController.initialize()
 
 		// (Re)Create shared service instances
-		const { embedder, vectorStore, scanner, fileWatcher } = this._serviceFactory.createServices(
+		const { embedder, vectorStore, scanner, fileWatcher } = serviceFactory.createServices(
 			this.context,
 			this._cacheManager!,
 			ignoreInstance,
@@ -392,7 +396,7 @@ export class CodeIndexManager {
 			const shouldValidate = embedder && embedder.embedderInfo.name === config.embedderProvider
 
 			if (shouldValidate) {
-				const validationResult = await this._serviceFactory.validateEmbedder(embedder)
+				const validationResult = await serviceFactory.validateEmbedder(embedder)
 				if (!validationResult.valid) {
 					const errorMessage = validationResult.error || "Embedder configuration validation failed"
 					this._stateManager.setSystemState("Error", errorMessage)
@@ -421,6 +425,10 @@ export class CodeIndexManager {
 			embedder,
 			vectorStore,
 		)
+		// kilocode_change end
+
+		// kilocode_change start - assign only after all required services are ready
+		this._serviceFactory = serviceFactory
 		// kilocode_change end
 
 		// Clear any error state after successful recwreation

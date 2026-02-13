@@ -3485,24 +3485,21 @@ export const webviewMessageHandler = async (
 					// Wait a bit more to ensure everything is ready
 					await new Promise((resolve) => setTimeout(resolve, 200))
 
-					// Auto-start indexing if now enabled and configured
-					if (currentCodeIndexManager.isFeatureEnabled && currentCodeIndexManager.isFeatureConfigured) {
-						if (!currentCodeIndexManager.isInitialized) {
-							try {
-								await currentCodeIndexManager.initialize(provider.contextProxy)
-								provider.log(`Code index manager initialized after settings save`)
-							} catch (error) {
-								provider.log(
-									`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
-								)
-								// Send error status to webview
-								await provider.postMessageToWebview({
-									type: "indexingStatusUpdate",
-									values: currentCodeIndexManager.getCurrentStatus(),
-								})
-							}
-						}
+					// kilocode_change start - always initialize once after save so feature/config flags are fresh
+					try {
+						await currentCodeIndexManager.initialize(provider.contextProxy)
+						provider.log(`Code index manager initialized after settings save`)
+					} catch (error) {
+						provider.log(
+							`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+						)
+						// Send error status to webview
+						await provider.postMessageToWebview({
+							type: "indexingStatusUpdate",
+							values: currentCodeIndexManager.getCurrentStatus(),
+						})
 					}
+					// kilocode_change end
 				} else {
 					// No workspace open - send error status
 					provider.log("Cannot save code index settings: No workspace folder open")
@@ -3611,26 +3608,33 @@ export const webviewMessageHandler = async (
 					provider.log("Cannot start indexing: No workspace folder open")
 					return
 				}
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
-					// Mimic extension startup behavior: initialize first, which will
-					// check if Qdrant container is active and reuse existing collection
-					await manager.initialize(provider.contextProxy)
+				// kilocode_change start - always initialize before reading feature/config status
+				await manager.initialize(provider.contextProxy)
 
-					// Only call startIndexing if we're in a state that requires it
-					// (e.g., Standby or Error). If already Indexed or Indexing, the
-					// initialize() call above will have already started the watcher.
-					const currentState = manager.state
-					if (currentState === "Standby" || currentState === "Error") {
-						// startIndexing now handles error recovery internally
-						manager.startIndexing()
+				if (!manager.isFeatureEnabled || !manager.isFeatureConfigured) {
+					await provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: manager.getCurrentStatus(),
+					})
+					provider.log("Cannot start indexing: Code indexing is not enabled or fully configured")
+					return
+				}
+				// kilocode_change end
 
-						// If startIndexing recovered from error, we need to reinitialize
-						if (!manager.isInitialized) {
-							await manager.initialize(provider.contextProxy)
-							// Try starting again after initialization
-							if (manager.state === "Standby" || manager.state === "Error") {
-								manager.startIndexing()
-							}
+				// Only call startIndexing if we're in a state that requires it
+				// (e.g., Standby or Error). If already Indexed or Indexing, the
+				// initialize() call above will have already started the watcher.
+				const currentState = manager.state
+				if (currentState === "Standby" || currentState === "Error") {
+					// startIndexing now handles error recovery internally
+					manager.startIndexing()
+
+					// If startIndexing recovered from error, we need to reinitialize
+					if (!manager.isInitialized) {
+						await manager.initialize(provider.contextProxy)
+						// Try starting again after initialization
+						if (manager.isInitialized && (manager.state === "Standby" || manager.state === "Error")) {
+							manager.startIndexing()
 						}
 					}
 				}
