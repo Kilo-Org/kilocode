@@ -743,7 +743,7 @@
 		"semver-compare": "^1.0.0",
 		"serialize-error": "^12.0.0",
 		"shell-quote": "^1.8.2",
-		"shiki": "^3.6.0",
+		"shiki": "^3.22.0",
 		"simple-git": "^3.27.0",
 		"socket.io-client": "^4.8.1",
 		"sound-play": "^1.1.0",
