@@ -149,7 +149,7 @@
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/fs-extra": "^11.0.4",
 		"@types/marked-terminal": "^6.1.1",
-		"@types/node": "~25.0.3",
+		"@types/node": "~25.2.3",
 		"@types/react": "^19.2.7",
 		"@types/semver": "^7.7.1",
 		"cpy-cli": "^6.0.0",
