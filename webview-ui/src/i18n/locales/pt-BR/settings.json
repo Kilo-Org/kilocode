@@ -821,6 +821,16 @@
 			"defaultProfile": "Padrão Global (todos os perfis)",
 			"defaultDescription": "Quando o contexto atingir essa porcentagem, será automaticamente condensado para todos os perfis, a menos que tenham configurações personalizadas",
 			"profileDescription": "Limite personalizado apenas para este perfil (substitui o padrão global)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Este perfil herda o limite padrão global ({{threshold}}%)",
 			"usesGlobal": "(usa global {{threshold}}%)"
 		},

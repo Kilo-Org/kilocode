@@ -920,6 +920,16 @@
 			"defaultProfile": "ค่าเริ่มต้นสากล (ทุกโปรไฟล์)",
 			"defaultDescription": "เมื่อบริบทถึงเปอร์เซ็นต์นี้ จะถูกย่อโดยอัตโนมัติสำหรับทุกโปรไฟล์ เว้นแต่จะมีการตั้งค่าที่กำหนดเอง",
 			"profileDescription": "เกณฑ์ที่กำหนดเองสำหรับโปรไฟล์นี้เท่านั้น (แทนที่ค่าเริ่มต้นสากล)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "โปรไฟล์นี้สืบทอดเกณฑ์เริ่มต้นสากล ({{threshold}}%)",
 			"usesGlobal": "(ใช้ค่าสากล {{threshold}}%)"
 		},

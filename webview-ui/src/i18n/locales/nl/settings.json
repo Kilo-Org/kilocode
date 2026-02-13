@@ -831,6 +831,16 @@
 			"defaultProfile": "Globale standaard (alle profielen)",
 			"defaultDescription": "Wanneer de context dit percentage bereikt, wordt het automatisch gecomprimeerd voor alle profielen tenzij ze aangepaste instellingen hebben",
 			"profileDescription": "Aangepaste drempelwaarde alleen voor dit profiel (overschrijft globale standaard)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Dit profiel erft de globale standaard drempelwaarde ({{threshold}}%)",
 			"usesGlobal": "(gebruikt globaal {{threshold}}%)"
 		},

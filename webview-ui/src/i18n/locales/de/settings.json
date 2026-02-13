@@ -820,6 +820,16 @@
 			"defaultProfile": "Globaler Standard (alle Profile)",
 			"defaultDescription": "Wenn der Kontext diesen Prozentsatz erreicht, wird er automatisch für alle Profile komprimiert, es sei denn, sie haben benutzerdefinierte Einstellungen",
 			"profileDescription": "Benutzerdefinierter Schwellenwert nur für dieses Profil (überschreibt globalen Standard)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Dieses Profil erbt den globalen Standard-Schwellenwert ({{threshold}}%)",
 			"usesGlobal": "(verwendet global {{threshold}}%)"
 		},

@@ -922,6 +922,16 @@
 			"defaultProfile": "افتراضي عام",
 			"defaultDescription": "إذا وصل السياق للنسبة يختصر (لكل الملفات).",
 			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
 			"usesGlobal": "(يستخدم {{threshold}}% عام)"
 		},

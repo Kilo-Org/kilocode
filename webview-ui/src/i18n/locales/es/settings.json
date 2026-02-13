@@ -830,6 +830,16 @@
 			"defaultProfile": "Predeterminado global (todos los perfiles)",
 			"defaultDescription": "Cuando el contexto alcance este porcentaje, se condensará automáticamente para todos los perfiles a menos que tengan configuraciones personalizadas",
 			"profileDescription": "Umbral personalizado solo para este perfil (anula el predeterminado global)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Este perfil hereda el umbral predeterminado global ({{threshold}}%)",
 			"usesGlobal": "(usa global {{threshold}}%)"
 		},

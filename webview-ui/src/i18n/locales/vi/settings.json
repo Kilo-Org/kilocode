@@ -821,6 +821,16 @@
 			"defaultProfile": "Mặc định toàn cục (tất cả hồ sơ)",
 			"defaultDescription": "Khi ngữ cảnh đạt đến tỷ lệ phần trăm này, nó sẽ được tự động nén cho tất cả hồ sơ trừ khi chúng có cài đặt tùy chỉnh",
 			"profileDescription": "Ngưỡng tùy chỉnh chỉ cho hồ sơ này (ghi đè mặc định toàn cục)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Hồ sơ này kế thừa ngưỡng mặc định toàn cục ({{threshold}}%)",
 			"usesGlobal": "(sử dụng toàn cục {{threshold}}%)"
 		},

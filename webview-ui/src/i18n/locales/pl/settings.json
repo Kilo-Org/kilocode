@@ -821,6 +821,16 @@
 			"defaultProfile": "Globalny domyślny (wszystkie profile)",
 			"defaultDescription": "Gdy kontekst osiągnie ten procent, zostanie automatycznie skondensowany dla wszystkich profili, chyba że mają niestandardowe ustawienia",
 			"profileDescription": "Niestandardowy próg tylko dla tego profilu (zastępuje globalny domyślny)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Ten profil dziedziczy globalny domyślny próg ({{threshold}}%)",
 			"usesGlobal": "(używa globalnego {{threshold}}%)"
 		},

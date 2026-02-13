@@ -826,6 +826,16 @@
 			"defaultProfile": "グローバルデフォルト（全プロファイル）",
 			"defaultDescription": "コンテキストがこの割合に達すると、カスタム設定がない限り、すべてのプロファイルで自動的に圧縮されます",
 			"profileDescription": "このプロファイルのみのカスタムしきい値（グローバルデフォルトを上書き）",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "このプロファイルはグローバルデフォルトしきい値を継承します（{{threshold}}%）",
 			"usesGlobal": "（グローバル {{threshold}}% を使用）"
 		},

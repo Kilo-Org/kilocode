@@ -821,6 +821,16 @@
 			"defaultProfile": "Глобальный по умолчанию (все профили)",
 			"defaultDescription": "Когда контекст достигнет этого процента, он будет автоматически сжат для всех профилей, если у них нет пользовательских настроек",
 			"profileDescription": "Пользовательский порог только для этого профиля (переопределяет глобальный по умолчанию)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Этот профиль наследует глобальный порог по умолчанию ({{threshold}}%)",
 			"usesGlobal": "(использует глобальный {{threshold}}%)"
 		},

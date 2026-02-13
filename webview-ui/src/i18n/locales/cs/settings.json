@@ -913,6 +913,16 @@
 			"defaultProfile": "Globální výchozí (všechny profily)",
 			"defaultDescription": "Když kontext dosáhne tohoto procenta, bude automaticky zhuštěn pro všechny profily, pokud nemají vlastní nastavení",
 			"profileDescription": "Vlastní prahová hodnota pouze pro tento profil (přepisuje globální výchozí)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Tento profil dědí globální výchozí prahovou hodnotu ({{threshold}}%)",
 			"usesGlobal": "(používá globální {{threshold}}%)"
 		},

@@ -841,6 +841,16 @@
 			"defaultProfile": "全域預設（所有設定檔）",
 			"defaultDescription": "當上下文達到此百分比時，除非有自訂設定，所有設定檔都會自動壓縮。",
 			"profileDescription": "僅此設定檔的自訂閾值（覆寫全域預設）",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "此設定檔沿用全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
 		},

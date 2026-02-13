@@ -799,6 +799,16 @@
 			"defaultProfile": "Default Global (semua profil)",
 			"defaultDescription": "Ketika konteks mencapai persentase ini, akan secara otomatis dikondensasi untuk semua profil kecuali mereka memiliki pengaturan kustom",
 			"profileDescription": "Ambang batas kustom untuk profil ini saja (menimpa default global)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "Profil ini mewarisi ambang batas default global ({{threshold}}%)",
 			"usesGlobal": "(menggunakan global {{threshold}}%)"
 		},

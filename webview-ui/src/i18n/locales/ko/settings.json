@@ -821,6 +821,16 @@
 			"defaultProfile": "글로벌 기본값 (모든 프로필)",
 			"defaultDescription": "컨텍스트가 이 비율에 도달하면 사용자 정의 설정이 없는 한 모든 프로필에 대해 자동으로 압축됩니다",
 			"profileDescription": "이 프로필만을 위한 사용자 정의 임계값 (글로벌 기본값 재정의)",
+			"profileOverrideLabel": "Override for this profile",
+			"currentProfileLabel": "Current profile: {{profile}}",
+			"hardLimitLabel": "Hard limit for this model: {{tokens}} tokens",
+			"mode": {
+				"percent": "% of hard limit",
+				"tokens": "Fixed token limit"
+			},
+			"percentEquivalent": "Equivalent trigger: {{tokens}} tokens",
+			"tokensUnit": "tokens",
+			"profileTokenClamped": "Token threshold was reduced to {{tokens}} to fit this model's hard limit.",
 			"inheritDescription": "이 프로필은 글로벌 기본 임계값을 상속합니다 ({{threshold}}%)",
 			"usesGlobal": "(글로벌 {{threshold}}% 사용)"
 		},

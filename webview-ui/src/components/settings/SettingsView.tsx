@@ -244,7 +244,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		customCondensingPrompt,
 		yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 		customSupportPrompts,
-		profileThresholds,
 		// kilocode_change
 		profileCondenseOverrides,
 		systemNotificationsEnabled, // kilocode_change
