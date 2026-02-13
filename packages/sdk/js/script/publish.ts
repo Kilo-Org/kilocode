@@ -16,6 +16,8 @@ for (const [key, value] of Object.entries(pkg.exports)) {
   }
 }
 await Bun.write("package.json", JSON.stringify(pkg, null, 2))
+await Bun.write("dist/package.json", JSON.stringify(pkg, null, 2))
 await $`bun pm pack`
 await $`npm publish *.tgz --tag ${Script.channel} --access public --provenance` // kilocode_change
 await Bun.write("package.json", JSON.stringify(original, null, 2))
+await $`rm -f dist/package.json`.nothrow()
