@@ -164,8 +164,13 @@ Review your code locally before pushing — catch issues early without waiting f
 
 Configuration is managed through:
 
-- `/connect` command for provider setup (interactive)
-- Config files directly at `~/.config/kilo/config.json`
+## Slash Commands
+
+The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
+
+{% callout type="tip" %}
+**Confused about /newtask vs /smol in the IDE?** See the [Using Modes](/docs/code-with-ai/agents/using-modes#understanding-newtask-vs-smol) documentation for details.
+{% /callout %}
 - `kilo auth` for credential management
 
 ## Permissions
