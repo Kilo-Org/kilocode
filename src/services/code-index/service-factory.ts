@@ -20,6 +20,7 @@ import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { BedrockEmbedder } from "./embedders/bedrock"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
+import { VoyageEmbedder } from "./embedders/voyage" // kilocode_change
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -65,6 +66,7 @@ export class CodeIndexServiceFactory {
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
 				ollamaModelId: config.modelId,
+				ollamaNumCtx: config.modelDimension, // kilocode_change
 			})
 		} else if (provider === "openai-compatible") {
 			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
@@ -106,7 +108,14 @@ export class CodeIndexServiceFactory {
 				undefined, // maxItemTokens
 				config.openRouterOptions.specificProvider,
 			)
+			// kilocode_change start
+		} else if (provider === "voyage") {
+			if (!config.voyageOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.voyageConfigMissing"))
+			}
+			return new VoyageEmbedder(config.voyageOptions.apiKey, config.modelId)
 		}
+		// kilocode_change end
 
 		throw new Error(
 			t("embeddings:serviceFactory.invalidEmbedderType", { embedderProvider: config.embedderProvider }),

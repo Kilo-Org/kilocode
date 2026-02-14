@@ -97,7 +97,7 @@
 			"generateButton": "Buat Pesan Commit"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "dijeda",

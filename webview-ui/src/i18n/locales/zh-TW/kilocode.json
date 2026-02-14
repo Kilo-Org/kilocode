@@ -257,7 +257,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "程式碼編輯器建議",

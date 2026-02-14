@@ -1,0 +1,7 @@
+{
+	"errors": {
+		"cloud_auth_required": "Pre pokračovanie je potrebná cloudová autentifikácia. Prosím, prihláste sa.",
+		"organization_mismatch": "Váš účet nie je súčasťou požadovanej organizácie. Kontaktujte prosím svojho administrátora.",
+		"verification_failed": "Overenie MDM zlyhalo. Skúste to prosím znova alebo kontaktujte podporu."
+	}
+}

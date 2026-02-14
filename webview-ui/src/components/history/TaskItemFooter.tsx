@@ -1,6 +1,7 @@
 import React from "react"
 import type { HistoryItem } from "@roo-code/types"
 import { formatTimeAgo } from "@/utils/format"
+import { formatCost } from "@/utils/costFormatting"
 import { CopyButton } from "./CopyButton"
 import { ExportButton } from "./ExportButton"
 import { DeleteButton } from "./DeleteButton"
@@ -27,7 +28,7 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({ item, variant, isSelect
 				{/* Cost */}
 				{!!item.totalCost && (
 					<span className="flex items-center" data-testid="cost-footer-compact">
-						{"$" + item.totalCost.toFixed(2)}
+						$${formatCost(item.totalCost)}
 					</span>
 				)}
 			</div>

@@ -103,7 +103,7 @@ When both generic rules and mode-specific rules exist, the mode-specific rules a
 
 ### Using the UI Interface
 
-<img src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Kilo Code" width="400" />
+{% image src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Kilo Code" width="400" /%}
 
 The easiest way to create and manage rules is through the built-in UI:
 
@@ -158,7 +158,7 @@ Files in the list contain sensitive data, they MUST NOT be read
 
 This rule prevents the AI from reading or accessing sensitive files, even if explicitly requested to do so.
 
-<img src="/docs/img/custom-rules/custom-rules.png" alt="Kilo Code ignores request to read sensitive file" width="600" />
+{% image src="/docs/img/custom-rules/custom-rules.png" alt="Kilo Code ignores request to read sensitive file" width="600" /%}
 
 ## Use Cases
 

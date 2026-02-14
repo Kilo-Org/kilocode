@@ -153,6 +153,39 @@ describe("ChutesHandler", () => {
 		])
 	})
 
+	// kilocode_change start
+	it("should handle non-DeepSeek reasoning field", async () => {
+		mockCreate.mockImplementationOnce(async () => ({
+			[Symbol.asyncIterator]: async function* () {
+				yield {
+					choices: [
+						{
+							delta: { reasoning: "Thinking through it..." },
+							index: 0,
+						},
+					],
+					usage: null,
+				}
+			},
+		}))
+
+		const systemPrompt = "You are a helpful assistant."
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hi" }]
+		mockFetchModel.mockResolvedValueOnce({
+			id: "some-other-model",
+			info: { maxTokens: 1024, temperature: 0.7 },
+		})
+
+		const stream = handler.createMessage(systemPrompt, messages)
+		const chunks = []
+		for await (const chunk of stream) {
+			chunks.push(chunk)
+		}
+
+		expect(chunks).toEqual([{ type: "reasoning", text: "Thinking through it..." }])
+	})
+	// kilocode_change end
+
 	it("should return default model when no model is specified", async () => {
 		const model = await handler.fetchModel()
 		expect(model.id).toBe(chutesDefaultModelId)
@@ -275,6 +308,131 @@ describe("ChutesHandler", () => {
 		})
 	})
 
+	// kilocode_change start
+	it("createMessage should yield tool_call_end on finish_reason tool_calls", async () => {
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vi
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [
+									{
+										delta: {
+											tool_calls: [
+												{
+													index: 0,
+													id: "call_finish",
+													function: { name: "test_tool", arguments: '{"arg":"value"}' },
+												},
+											],
+										},
+										finish_reason: null,
+									},
+								],
+							},
+						})
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [
+									{
+										delta: {},
+										finish_reason: "tool_calls",
+									},
+								],
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [])
+		const chunks = []
+		for await (const chunk of stream) {
+			chunks.push(chunk)
+		}
+
+		expect(chunks).toEqual([
+			{
+				type: "tool_call_partial",
+				index: 0,
+				id: "call_finish",
+				name: "test_tool",
+				arguments: '{"arg":"value"}',
+			},
+			{
+				type: "tool_call_end",
+				id: "call_finish",
+			},
+		])
+	})
+
+	it("createMessage should synthesize tool call ids when provider omits them", async () => {
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vi
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [
+									{
+										delta: {
+											tool_calls: [
+												{
+													index: 0,
+													function: { name: "test_tool", arguments: '{"arg":"value"}' },
+												},
+											],
+										},
+										finish_reason: null,
+									},
+								],
+							},
+						})
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [
+									{
+										delta: {},
+										finish_reason: "tool_calls",
+									},
+								],
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [])
+		const chunks = []
+		for await (const chunk of stream) {
+			chunks.push(chunk)
+		}
+
+		expect(chunks).toEqual([
+			{
+				type: "tool_call_partial",
+				index: 0,
+				id: "chutes_tool_call_0",
+				name: "test_tool",
+				arguments: '{"arg":"value"}',
+			},
+			{
+				type: "tool_call_end",
+				id: "chutes_tool_call_0",
+			},
+		])
+	})
+	// kilocode_change end
+
 	it("createMessage should pass tools and tool_choice to API", async () => {
 		const tools = [
 			{
@@ -307,6 +465,9 @@ describe("ChutesHandler", () => {
 				tools,
 				tool_choice,
 			}),
+			expect.objectContaining({
+				timeout: expect.any(Number),
+			}),
 		)
 	})
 
@@ -326,11 +487,29 @@ describe("ChutesHandler", () => {
 			apiModelId: testModelId,
 			chutesApiKey: "test-chutes-api-key",
 		})
-		// Note: getModel() returns fallback default without calling fetchModel
-		// Since we haven't called fetchModel, it returns the default chutesDefaultModelId
-		// which is DeepSeek-R1-0528, therefore temperature will be DEEP_SEEK_DEFAULT_TEMPERATURE
+		;(handlerWithModel as any).models = {
+			[testModelId]: {
+				...chutesDefaultModelInfo,
+				temperature: 0.7,
+			},
+		}
 		const model = handlerWithModel.getModel()
-		// The default model is DeepSeek-R1, so it returns DEEP_SEEK_DEFAULT_TEMPERATURE
-		expect(model.info.temperature).toBe(DEEP_SEEK_DEFAULT_TEMPERATURE)
+		expect(model.id).toBe(testModelId)
+		expect(model.info.temperature).toBe(0.5)
 	})
+
+	// kilocode_change start
+	it("should preserve explicit Chutes model id when it is unavailable in cached model list", () => {
+		const unsupportedModelId = "moonshotai/Kimi-K2.5-TEE"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: unsupportedModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+
+		const model = handlerWithModel.getModel()
+
+		expect(model.id).toBe(unsupportedModelId)
+		expect(model.info.temperature).toBe(0.5)
+	})
+	// kilocode_change end
 })

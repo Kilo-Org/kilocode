@@ -111,7 +111,15 @@ describe("TaskHeader", () => {
 
 	it("should display cost when totalCost is greater than 0", () => {
 		renderTaskHeader()
-		expect(screen.getByText("$0.05")).toBeInTheDocument()
+		// formatCost(0.05) returns "0.0500" (4 decimal places since 0.05 is not > 0.05)
+		// The `$` and formatted number are separate text nodes, so match on the leaf element's
+		// combined textContent (avoids matching parent containers and causing "multiple elements").
+		const costEl = screen.getByText((_content, element) => {
+			if (!element) return false
+			if (element.children.length > 0) return false
+			return (element.textContent ?? "").replace(/\s+/g, "") === "$0.0500"
+		})
+		expect(costEl).toBeInTheDocument()
 	})
 
 	it("should not display cost when totalCost is 0", () => {

@@ -15,6 +15,18 @@ const terminalContent = {
 			<span className="terminal-prompt">$</span> npm install -g @kilocode/cli
 		</>
 	),
+	gateway: (
+		<>
+			<span className="terminal-comment"># Call Kilo Gateway with a quick curl script</span>
+			{"\n"}
+			<span className="terminal-prompt">$</span> export KILO_API_KEY="YOUR_API_KEY"
+			{"\n"}
+			<span className="terminal-prompt">$</span> curl https://api.kilo.ai/api/gateway/chat/completions \{"\n"}
+			-H "Authorization: Bearer $KILO_API_KEY" \{"\n"}
+			-H "Content-Type: application/json" \{"\n"}
+			{`  -d '{"model":"anthropic/claude-sonnet-4.5","messages":[{"role":"user","content":"Say hi from Kilo Gateway"}]}'`}
+		</>
+	),
 	firstTask: (
 		<>
 			<span className="terminal-comment"># Start a new task with Kilo Code</span>
@@ -142,6 +154,24 @@ const categories = [
 		],
 	},
 	{
+		title: "Kilo Gateway",
+		description:
+			"A unified API to access hundreds of AI models through a single endpoint with streaming, BYOK, and usage tracking.",
+		href: "/gateway",
+		icon: (
+			<svg className="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+				<path d="M3 12h18" strokeLinecap="round" strokeLinejoin="round" />
+				<path d="M12 3v18" strokeLinecap="round" strokeLinejoin="round" />
+				<circle cx="12" cy="12" r="4" strokeLinecap="round" strokeLinejoin="round" />
+			</svg>
+		),
+		links: [
+			{ title: "Quickstart", href: "/gateway/quickstart" },
+			{ title: "Models & Providers", href: "/gateway/models-and-providers" },
+			{ title: "API Reference", href: "/gateway/api-reference" },
+		],
+	},
+	{
 		title: "Contributing",
 		description: "Help improve Kilo Code and learn about its architecture",
 		href: "/contributing",
@@ -163,7 +193,7 @@ const categories = [
 ]
 
 export default function HomePage() {
-	const [activeTab, setActiveTab] = useState<"installation" | "firstTask" | "customRules">("installation")
+	const [activeTab, setActiveTab] = useState<"installation" | "firstTask" | "customRules" | "gateway">("installation")
 
 	return (
 		<div className="homepage">
@@ -281,6 +311,11 @@ export default function HomePage() {
 							onClick={() => setActiveTab("customRules")}>
 							Custom Rules
 						</button>
+						<button
+							className={`terminal-tab ${activeTab === "gateway" ? "active" : ""}`}
+							onClick={() => setActiveTab("gateway")}>
+							Kilo Gateway
+						</button>
 					</div>
 					<div className="terminal-window">
 						<div className="terminal-header">
@@ -307,7 +342,7 @@ export default function HomePage() {
 						<span className="footer-icon">💬</span>
 						<div>
 							<strong>Need help?</strong>
-							<Link href="https://discord.gg/kilocode" className="footer-link">
+							<Link href="https://kilo.ai/discord" className="footer-link">
 								Join our Discord
 							</Link>
 						</div>

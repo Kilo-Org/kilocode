@@ -20,7 +20,7 @@ import { handleProviderError } from "./utils/error-handler"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants" // kilocode_change
-import { streamSse } from "../../services/continuedev/core/fetch/stream" // kilocode_change
+import { streamSse } from "../../services/autocomplete/continuedev/core/fetch/stream" // kilocode_change
 import type { CompletionUsage } from "./openrouter" // kilocode_change
 import type { FimHandler } from "./kilocode/FimHandler" // kilocode_change
 

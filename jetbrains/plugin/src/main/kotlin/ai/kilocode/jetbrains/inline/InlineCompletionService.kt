@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Service responsible for getting inline completions via RPC communication
- * with the VSCode extension's Ghost service. Encapsulates all RPC logic,
+ * with the VSCode extension's Autocomplete service. Encapsulates all RPC logic,
  * error handling, and result processing for inline completion generation.
  */
 class InlineCompletionService {

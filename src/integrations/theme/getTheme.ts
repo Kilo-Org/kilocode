@@ -72,7 +72,6 @@ export async function getTheme() {
 			const includeTheme = parseThemeString(includeThemeString)
 			parsed = mergeJson(parsed, includeTheme)
 		}
-
 		const converted = convertTheme(parsed)
 
 		converted.base = (

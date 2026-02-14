@@ -82,6 +82,7 @@ vi.mock("../../task/Task", () => ({
 		emit: vi.fn(),
 		parentTask: options.parentTask,
 		updateApiConfiguration: vi.fn(),
+		getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 	})),
 }))
 
@@ -359,6 +360,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -812,6 +814,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -879,6 +882,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -931,6 +935,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -966,6 +971,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -1022,6 +1028,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -1069,6 +1076,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			const task2 = {
@@ -1079,6 +1087,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			const task3 = {
@@ -1089,6 +1098,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add tasks to provider stack
@@ -1231,6 +1241,7 @@ describe("ClineProvider - Sticky Mode", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}))
 
 			// Add all tasks to provider

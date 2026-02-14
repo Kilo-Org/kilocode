@@ -97,7 +97,7 @@
 			"generateButtonTooltip": "Genereert commit-berichten met behulp van AI om je codewijzigingen te analyseren"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "gepauzeerd",
