@@ -244,11 +244,23 @@ export namespace PermissionNext {
     for (const tool of tools) {
       const permission = EDIT_TOOLS.includes(tool) ? "edit" : tool
 
-      const rule = ruleset.findLast((r) => Wildcard.match(permission, r.permission))
-      if (!rule) continue
-      if (rule.pattern === "*" && rule.action === "deny") result.add(tool)
+      // kilocode_change start - find last wildcard rule, then check for specific-pattern allows after it
+      const idx = findLastIndex(ruleset, (r) => Wildcard.match(permission, r.permission) && r.pattern === "*")
+      if (idx === -1) continue
+      const rule = ruleset[idx]
+      if (rule.action !== "deny") continue
+      const override = ruleset.slice(idx + 1).some((r) => Wildcard.match(permission, r.permission) && r.action === "allow")
+      if (!override) result.add(tool)
+      // kilocode_change end
     }
     return result
+  }
+
+  function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (predicate(arr[i])) return i
+    }
+    return -1
   }
 
   /** User rejected without message - halts execution */

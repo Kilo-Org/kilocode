@@ -455,6 +455,46 @@ test("disabled - specific allow overrides wildcard deny", () => {
   expect(result.has("read")).toBe(true)
 })
 
+// kilocode_change start - test for ask mode tool filtering with specific-pattern deny rules
+test("disabled - specific deny pattern after wildcard deny does not re-enable tool", () => {
+  // Simulates ask mode with .kilocodeignore rules: agent has "*": "deny",
+  // then .kilocodeignore adds specific-pattern deny rules for edit.
+  // The edit/write tools should still be disabled.
+  const result = PermissionNext.disabled(
+    ["edit", "write", "bash", "read"],
+    [
+      // defaults
+      { permission: "*", pattern: "*", action: "allow" },
+      // ask agent config
+      { permission: "*", pattern: "*", action: "deny" },
+      { permission: "read", pattern: "*", action: "allow" },
+      { permission: "grep", pattern: "*", action: "allow" },
+      // .kilocodeignore rules (specific-pattern denies for edit)
+      { permission: "edit", pattern: "*.log", action: "deny" },
+      { permission: "edit", pattern: "node_modules/*", action: "deny" },
+    ],
+  )
+  expect(result.has("edit")).toBe(true)
+  expect(result.has("write")).toBe(true)
+  expect(result.has("bash")).toBe(true)
+  expect(result.has("read")).toBe(false)
+})
+
+test("disabled - specific allow pattern after wildcard deny keeps tool enabled", () => {
+  // If there's a specific-pattern allow after a wildcard deny,
+  // the tool should NOT be disabled (some usage is allowed)
+  const result = PermissionNext.disabled(
+    ["edit", "write"],
+    [
+      { permission: "*", pattern: "*", action: "deny" },
+      { permission: "edit", pattern: "*.md", action: "allow" },
+    ],
+  )
+  expect(result.has("edit")).toBe(false)
+  expect(result.has("write")).toBe(false)
+})
+// kilocode_change end
+
 // ask tests
 
 test("ask - resolves immediately when action is allow", async () => {
