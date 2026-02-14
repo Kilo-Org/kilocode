@@ -14,7 +14,11 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { fastApplyModelSchema, autocompleteServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
+import {
+	fastApplyModelSchema,
+	autocompleteServiceSettingsSchema,
+	fastApplyApiProviderSchema,
+} from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -310,6 +314,7 @@ export const SECRET_STATE_KEYS = [
 	"vercelAiGatewayApiKey",
 	"sapAiCoreServiceKey", // kilocode_change
 	"basetenApiKey",
+	"codebaseIndexVoyageApiKey", // kilocode_change
 	"corethinkApiKey",
 ] as const
 

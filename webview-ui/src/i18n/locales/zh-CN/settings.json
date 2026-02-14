@@ -109,6 +109,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API 密钥",
+		"voyageApiKeyPlaceholder": "输入你的 Voyage AI API 密钥",
 		"openaiCompatibleProvider": "OpenAI 兼容",
 		"openaiCompatibleResponsesProvider": "OpenAI 兼容 (Responses)",
 		"openAiKeyLabel": "OpenAI API 密钥",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0",
-			"openRouterApiKeyRequired": "OpenRouter API 密钥是必需的"
+			"openRouterApiKeyRequired": "OpenRouter API 密钥是必需的",
+			"voyageApiKeyRequired": "Voyage AI API 密钥是必需的"
 		},
 		"optional": "可选",
 		"advancedConfigLabel": "高级配置",
@@ -374,6 +378,8 @@
 		"requestyUseCustomBaseUrl": "使用自定义基础 URL",
 		"anthropicApiKey": "Anthropic API 密钥",
 		"getAnthropicApiKey": "获取 Anthropic API 密钥",
+		"apertisApiKey": "Apertis API 密钥",
+		"getApertisApiKey": "获取 Apertis API 密钥",
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
 		"anthropic1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"anthropic1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",

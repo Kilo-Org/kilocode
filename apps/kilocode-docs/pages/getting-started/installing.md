@@ -45,6 +45,43 @@ Get started with Kilo Code by installing it on your preferred platform. Choose y
 {% /tab %}
 {% /tabs %}
 
+## Pre-Release Extension
+
+{% callout type="info" %}
+We're rebuilding Kilo Code from the ground up on the new [Kilo CLI](https://github.com/Kilo-Org/kilo). The pre-release extension is available for users who want to try the latest architecture and provide feedback, and don't mind some missing features and rough edges.
+{% /callout %}
+
+The pre-release extension is a complete rebuild featuring:
+
+- A new Solid.js-based UI
+- Deep integration with the Kilo CLI backend
+- Improved session management and model switching
+
+### Current Status
+
+This is an early pre-release. Core features like chat, markdown rendering, authentication, and model/mode switching are working. Some features from the stable extension are still being implemented.
+
+For the full feature status, see the [feature parity tracking document](https://github.com/Kilo-Org/kilo/blob/main/packages/kilo-vscode/docs/opencode-migration-plan.md).
+
+### Installing the Pre-Release
+
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+3. Search for "Kilo Code"
+4. Click the dropdown arrow next to **Install** and select **Install Pre-Release Version**
+
+### Switching Back to Stable
+
+If you need to return to the stable version:
+
+1. Open Extensions in VS Code
+2. Find Kilo Code
+3. Click the dropdown and select **Switch to Release Version**
+
+### Feedback and Issues
+
+Report issues or provide feedback in the [Kilo-Org/kilo repository](https://github.com/Kilo-Org/kilo/issues).
+
 ## Manual Installations
 
 ### Open VSX Registry

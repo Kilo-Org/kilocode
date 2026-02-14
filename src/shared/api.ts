@@ -208,6 +208,7 @@ const dynamicProviderExtras = {
 		sapAiCoreResourceGroup?: string
 		sapAiCoreUseOrchestration?: boolean
 	},
+	apertis: {} as { apiKey?: string; baseUrl?: string },
 	// kilocode_change end
 } as const satisfies Record<RouterName, object>
 

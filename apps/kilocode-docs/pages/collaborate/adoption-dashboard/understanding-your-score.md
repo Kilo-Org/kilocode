@@ -17,7 +17,7 @@ Your total score is calculated from three weighted dimensions:
 
 This dimension measures the regularity of AI tool usage across your team, normalized per-user and blended across the organization.
 
-<img src="/docs/img/ai-adoption/frequency.png" alt="Frequency view of the AI Adoption Dashboard" width="600" />
+<!-- <img src="/docs/img/ai-adoption/frequency.png" alt="Frequency view of the AI Adoption Dashboard" width="600" /> -->
 
 **Signals measured:**
 
@@ -34,7 +34,7 @@ This dimension measures the regularity of AI tool usage across your team, normal
 
 This dimension captures trust and dependency—whether AI is a side tool or an integral part of how your team ships code.
 
-<img src="/docs/img/ai-adoption/depth.png" alt="Depth view of the AI Adoption Dashboard" width="600" />
+<!-- <img src="/docs/img/ai-adoption/depth.png" alt="Depth view of the AI Adoption Dashboard" width="600" /> -->
 
 **Signals measured:**
 
@@ -52,7 +52,7 @@ This dimension captures trust and dependency—whether AI is a side tool or an i
 
 This dimension captures reach and rollout—how many team members are using AI and how consistently throughout the week.
 
-<img src="/docs/img/ai-adoption/coverage.png" alt="Coverage view of the AI Adoption Dashboard" width="600" />
+<!-- <img src="/docs/img/ai-adoption/coverage.png" alt="Coverage view of the AI Adoption Dashboard" width="600" /> -->
 
 **Signals measured:**
 

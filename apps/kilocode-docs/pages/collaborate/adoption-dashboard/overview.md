@@ -7,7 +7,7 @@ description: "AI Adoption Dashboard overview"
 
 The AI Adoption Dashboard helps engineering leaders understand how deeply and consistently their teams are using AI across development workflows. It provides a single **AI Adoption Score** (0–100) that quantifies organizational AI maturity, plus detailed breakdowns by dimension.
 
-<img src="/docs/img/ai-adoption/adoption-dashboard.png" alt="Monthly view of the AI Adoption Dashboard"  />
+<!-- <img src="/docs/img/ai-adoption/adoption-dashboard.png" alt="Monthly view of the AI Adoption Dashboard"  /> -->
 
 ## Who Is It For?
 
@@ -33,7 +33,7 @@ The dashboard prominently displays your current AI Adoption Score as a percentag
 
 ### Timeline Visualization
 
-<img src="/docs/img/ai-adoption/stacked-chart.png" alt="Monthly view of the AI Adoption Dashboard" width="300"  />
+<!-- <img src="/docs/img/ai-adoption/stacked-chart.png" alt="Monthly view of the AI Adoption Dashboard" width="300"  /> -->
 
 A stacked bar chart shows your daily adoption scores over time. The chart uses three colors representing the score's dimensions:
 
