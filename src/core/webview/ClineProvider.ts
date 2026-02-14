@@ -1994,15 +1994,6 @@ export class ClineProvider
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
 
-			// kilocode_change start
-			// Check if task is favorited
-			const history = this.getGlobalState("taskHistory") ?? []
-			const task = history.find((item) => item.id === id)
-			if (task?.isFavorited) {
-				throw new Error("Cannot delete a favorited task. Please unfavorite it first.")
-			}
-			// kilocode_change end
-
 			// remove task from stack if it's the current task
 			if (id === this.getCurrentTask()?.taskId) {
 				// Close the current task instance; delegation flows will be handled via metadata if applicable.
@@ -2406,6 +2397,7 @@ export class ClineProvider
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
+			currentTaskCumulativeCost: this.getCurrentTask()?.getCumulativeTotalCost(), // kilocode_change
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
 			taskHistoryFullLength: taskHistory.length, // kilocode_change
 			taskHistoryVersion: this.kiloCodeTaskHistoryVersion, // kilocode_change
@@ -3400,6 +3392,13 @@ export class ClineProvider
 				return
 			}
 
+			// Phase 1: Show dialog immediately with loading state
+			await this.postMessageToWebview({
+				type: "askReviewScope",
+				reviewScopeInfo: undefined,
+			})
+
+			// Phase 2: Compute scope info and hydrate
 			const { ReviewService } = await import("../../services/review")
 			const reviewService = new ReviewService({ cwd })
 			const scopeInfo = await reviewService.getScopeInfo()
@@ -3880,15 +3879,18 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 	}
 
 	// Modify batch delete to respect favorites
-	async deleteMultipleTasks(taskIds: string[]) {
+	async deleteMultipleTasks(taskIds: string[], excludeFavorites?: boolean) {
 		const history = this.getGlobalState("taskHistory") ?? []
-		const favoritedTaskIds = taskIds.filter((id) => history.find((item) => item.id === id)?.isFavorited)
 
-		if (favoritedTaskIds.length > 0) {
-			throw new Error("Cannot delete favorited tasks. Please unfavorite them first.")
+		// kilocode_change start
+		// Filter out favorited tasks if excludeFavorites is true
+		let idsToDelete = taskIds
+		if (excludeFavorites) {
+			idsToDelete = taskIds.filter((id) => !history.find((item) => item.id === id)?.isFavorited)
 		}
+		// kilocode_change end
 
-		for (const id of taskIds) {
+		for (const id of idsToDelete) {
 			await this.deleteTaskWithId(id)
 		}
 	}

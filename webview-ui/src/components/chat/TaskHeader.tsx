@@ -21,6 +21,7 @@ import { getModelMaxOutputTokens } from "@roo/api"
 import { findLastIndex } from "@roo/array"
 
 import { formatLargeNumber } from "@src/utils/format"
+import { formatCost } from "@/utils/costFormatting"
 import { cn } from "@src/lib/utils"
 import { StandardTooltip, Button } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -261,19 +262,19 @@ const TaskHeader = ({
 											<div>
 												<div>
 													{t("chat:costs.totalWithSubtasks", {
-														cost: (aggregatedCost ?? totalCost).toFixed(2),
+														cost: formatCost(aggregatedCost ?? totalCost),
 													})}
 												</div>
 												{costBreakdown && <div className="text-xs mt-1">{costBreakdown}</div>}
 											</div>
 										) : (
-											<div>{t("chat:costs.total", { cost: totalCost.toFixed(2) })}</div>
+											<div>{t("chat:costs.total", { cost: formatCost(totalCost) })}</div>
 										)
 									}
 									side="top"
 									sideOffset={8}>
 									<span>
-										${(aggregatedCost ?? totalCost).toFixed(2)}
+										${formatCost(aggregatedCost ?? totalCost)}
 										{hasSubtasks && (
 											<span className="text-xs ml-1" title={t("chat:costs.includesSubtasks")}>
 												*
@@ -425,7 +426,7 @@ const TaskHeader = ({
 															<div>
 																<div>
 																	{t("chat:costs.totalWithSubtasks", {
-																		cost: (aggregatedCost ?? totalCost).toFixed(2),
+																		cost: formatCost(aggregatedCost ?? totalCost),
 																	})}
 																</div>
 																{costBreakdown && (
@@ -434,14 +435,14 @@ const TaskHeader = ({
 															</div>
 														) : (
 															<div>
-																{t("chat:costs.total", { cost: totalCost.toFixed(2) })}
+																{t("chat:costs.total", { cost: formatCost(totalCost) })}
 															</div>
 														)
 													}
 													side="top"
 													sideOffset={8}>
 													<span>
-														${(aggregatedCost ?? totalCost).toFixed(2)}
+														${formatCost(aggregatedCost ?? totalCost)}
 														{hasSubtasks && (
 															<span
 																className="text-xs ml-1"

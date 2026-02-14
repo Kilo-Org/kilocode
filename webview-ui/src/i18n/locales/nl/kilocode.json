@@ -249,7 +249,7 @@
 			"idea7": "Maak een rustgevend interactief sterrenveld dat beweegt met muisgebaren"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Code Editor Suggesties",

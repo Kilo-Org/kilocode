@@ -33,19 +33,9 @@ A typical browser interaction follows this pattern:
 
 For example:
 
-```
-Open the browser and view our site.
-```
-
-```
-Can you check if my website at https://kilocode.ai is displaying correctly?
-```
-
-```
-Browse http://localhost:3000, scroll down to the bottom of the page and check if the footer information is displaying correctly.
-```
-
-{% image src="/docs/img/browser-use/KiloCodeBrowser.png" alt="Browser use example" width="300" /%}
+- `Open the browser and view our site.`
+- `Can you check if my website at https://kilocode.ai is displaying correctly?`
+- `Browse http://localhost:3000, scroll down to the bottom of the page and check if the footer information is displaying correctly.`
 
 ## How Browser Actions Work
 
@@ -77,15 +67,14 @@ Key characteristics:
 - **Viewport size**: Small Desktop (900x600)
 - **Screenshot quality**: 75%
 - **Use remote browser connection**: Disabled
-  {% /callout %}
+
+{% /callout %}
 
 ### Accessing Settings
 
 To change Browser / Computer Use settings in Kilo:
 
 1. Open Settings by clicking the gear icon {% codicon name="gear" /%} → Browser / Computer Use
-
-    {% image src="/docs/img/browser-use/browser-use.png" alt="Browser settings menu" width="600" /%}
 
 ### Enable/Disable Browser Use
 
@@ -94,8 +83,6 @@ To change Browser / Computer Use settings in Kilo:
 To change this setting:
 
 1. Check or uncheck the "Enable browser tool" checkbox within your Browser / Computer Use settings
-
-    {% image src="/docs/img/browser-use/browser-use-2.png" alt="Enable browser tool setting" width="300" /%}
 
 ### Viewport Size
 
@@ -113,8 +100,6 @@ To change this setting:
     - Mobile (360x640)
 3. Select your desired resolution.
 
-    {% image src="/docs/img/browser-use/browser-use-3.png" alt="Viewport size setting" width="600" /%}
-
 ### Screenshot Quality
 
 **Purpose**: Controls the WebP compression quality of browser screenshots.
@@ -130,8 +115,6 @@ To change this setting:
     - 40-50%: Good for basic text-based websites
     - 60-70%: Balanced for most general browsing
     - 80%+: Use when fine visual details are critical
-
-    {% image src="/docs/img/browser-use/browser-use-4.png" alt="Screenshot quality setting" width="600" /%}
 
 ### Remote Browser Connection
 
@@ -150,8 +133,6 @@ To enable this feature:
 
 1. Check the "Use remote browser connection" box in Browser / Computer Use settings
 2. Click "Test Connection" to verify
-
-    {% image src="/docs/img/browser-use/browser-use-5.png" alt="Remote browser connection setting" width="600" /%}
 
 #### Common Use Cases
 

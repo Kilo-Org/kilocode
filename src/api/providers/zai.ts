@@ -39,10 +39,11 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 		})
 	}
 
+	// kilocode_change start
 	/**
-	 * Override createStream to handle GLM-4.7's thinking mode.
-	 * GLM-4.7 has thinking enabled by default in the API, so we need to
-	 * explicitly send { type: "disabled" } when the user turns off reasoning.
+	 * Override createStream to handle Z.ai models with thinking mode.
+	 * Thinking-capable models have reasoning enabled by default in the API,
+	 * so we explicitly send { type: "disabled" } when users turn reasoning off.
 	 */
 	protected override createStream(
 		systemPrompt: string,
@@ -50,13 +51,13 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 		metadata?: ApiHandlerCreateMessageMetadata,
 		requestOptions?: OpenAI.RequestOptions,
 	) {
-		const { id: modelId, info } = this.getModel()
+		const { info } = this.getModel()
 
-		// Check if this is a GLM-4.7 model with thinking support
-		const isThinkingModel = modelId === "glm-4.7" && Array.isArray(info.supportsReasoningEffort)
+		// Thinking models advertise explicit reasoning effort support.
+		const isThinkingModel = Array.isArray(info.supportsReasoningEffort)
 
 		if (isThinkingModel) {
-			// For GLM-4.7, thinking is ON by default in the API.
+			// For thinking-enabled models, thinking is ON by default in the API.
 			// We need to explicitly disable it when reasoning is off.
 			const useReasoning = shouldUseReasoningEffort({ model: info, settings: this.options })
 
@@ -67,9 +68,11 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 		// For non-thinking models, use the default behavior
 		return super.createStream(systemPrompt, messages, metadata, requestOptions)
 	}
+	// kilocode_change end
 
+	// kilocode_change start
 	/**
-	 * Creates a stream with explicit thinking control for GLM-4.7
+	 * Creates a stream with explicit thinking control for Z.ai thinking models.
 	 */
 	private createStreamWithThinking(
 		systemPrompt: string,
@@ -99,7 +102,7 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 			messages: [{ role: "system", content: systemPrompt }, ...convertedMessages],
 			stream: true,
 			stream_options: { include_usage: true },
-			// For GLM-4.7: thinking is ON by default, so we explicitly disable when needed
+			// Thinking is ON by default, so we explicitly disable when needed.
 			thinking: useReasoning ? { type: "enabled" } : { type: "disabled" },
 			...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
@@ -110,4 +113,5 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 
 		return this.client.chat.completions.create(params)
 	}
+	// kilocode_change end
 }

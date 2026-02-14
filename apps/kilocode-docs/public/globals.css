@@ -195,33 +195,123 @@ a:hover {
 	margin: 0.5em 0;
 }
 
-/* Dark mode code syntax highlighting */
-.dark pre[class*="language-"] {
-	background: #1f2937 !important;
-	text-shadow: none;
-	color: #e5e7eb;
+/* ==========================================================================
+   Code block base styles
+   ========================================================================== */
+
+code[class*="language-"],
+pre[class*="language-"] {
+	font-family: "JetBrains Mono", Consolas, Monaco, "Andale Mono", monospace;
+	font-size: 14px;
+	line-height: 1.6;
 }
 
-.dark pre[class*="language-"] *,
-.dark code[class*="language-"] {
-	color: #e5e7eb;
+/* ==========================================================================
+   Light mode syntax highlighting
+   Coordinated with site palette: zinc/slate base, indigo accent
+   ========================================================================== */
+
+pre[class*="language-"],
+:not(pre) > code[class*="language-"] {
+	background: #f4f4f5; /* zinc-100 */
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+	color: #3c4257; /* matches --text-color */
+	text-shadow: none;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: #8891a4; /* slate-muted */
+}
+
+.token.punctuation {
+	color: #64748b; /* slate-500 */
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: #b45309; /* amber-700, warm for values */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+	color: #16733e; /* green-700, strings */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+	color: #64748b; /* slate-500, neutral for operators */
+	background: none;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+	color: #4f46e5; /* indigo-600, matches accent */
+}
+
+.token.function,
+.token.class-name {
+	color: #9333ea; /* purple-600 */
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+	color: #b45309; /* amber-700 */
+}
+
+/* ==========================================================================
+   Dark mode syntax highlighting
+   Coordinated with site palette: #1a1a18 base, #f8f674 brand accent
+   ========================================================================== */
+
+.dark pre[class*="language-"],
+.dark :not(pre) > code[class*="language-"] {
+	background: #24241f !important; /* slightly lighter than --bg-color */
+}
+
+.dark code[class*="language-"],
+.dark pre[class*="language-"] {
+	color: #c8c8c6; /* warm neutral base text */
+	text-shadow: none;
+}
+
+.dark pre[class*="language-"] * {
 	text-shadow: none;
 }
 
 /* Ensure inline code also has proper color in dark mode */
 .dark code {
-	color: #e5e7eb;
+	color: #c8c8c6;
 }
 
 .dark .token.comment,
 .dark .token.prolog,
 .dark .token.doctype,
 .dark .token.cdata {
-	color: #6b7280;
+	color: #6b6b66; /* muted, warm gray */
 }
 
 .dark .token.punctuation {
-	color: #9ca3af;
+	color: #8a8a85; /* warm mid-gray */
 }
 
 .dark .token.property,
@@ -231,7 +321,7 @@ a:hover {
 .dark .token.constant,
 .dark .token.symbol,
 .dark .token.deleted {
-	color: #f87171;
+	color: #e8a862; /* warm amber for values */
 }
 
 .dark .token.selector,
@@ -240,7 +330,7 @@ a:hover {
 .dark .token.char,
 .dark .token.builtin,
 .dark .token.inserted {
-	color: #34d399;
+	color: #a8cc7a; /* soft green, strings */
 }
 
 .dark .token.operator,
@@ -248,24 +338,25 @@ a:hover {
 .dark .token.url,
 .dark .language-css .token.string,
 .dark .style .token.string {
-	color: #fbbf24;
+	color: #8a8a85; /* neutral for operators */
+	background: none;
 }
 
 .dark .token.atrule,
 .dark .token.attr-value,
 .dark .token.keyword {
-	color: #60a5fa;
+	color: #d4c96b; /* warm yellow, near brand #f8f674 but less saturated */
 }
 
 .dark .token.function,
 .dark .token.class-name {
-	color: #f472b6;
+	color: #c9a5e8; /* soft purple */
 }
 
 .dark .token.regex,
 .dark .token.important,
 .dark .token.variable {
-	color: #fbbf24;
+	color: #e8a862; /* warm amber */
 }
 
 /* Mobile Responsive Styles */

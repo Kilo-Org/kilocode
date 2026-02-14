@@ -21,17 +21,17 @@ Auto Model routes to different models based on the task type:
 
 | Mode           | Model Used        | Best For                     |
 | -------------- | ----------------- | ---------------------------- |
-| `architect`    | Claude Opus 4.5   | System design, planning      |
-| `orchestrator` | Claude Opus 4.5   | Multi-step task coordination |
-| `ask`          | Claude Opus 4.5   | Questions, explanations      |
-| `plan`         | Claude Opus 4.5   | Planning, reasoning          |
-| `general`      | Claude Opus 4.5   | General assistance           |
+| `architect`    | Claude Opus 4.6   | System design, planning      |
+| `orchestrator` | Claude Opus 4.6   | Multi-step task coordination |
+| `ask`          | Claude Opus 4.6   | Questions, explanations      |
+| `plan`         | Claude Opus 4.6   | Planning, reasoning          |
+| `general`      | Claude Opus 4.6   | General assistance           |
 | `code`         | Claude Sonnet 4.5 | Writing and editing code     |
 | `build`        | Claude Sonnet 4.5 | Implementation tasks         |
 | `debug`        | Claude Sonnet 4.5 | Debugging and fixing issues  |
 | `explore`      | Claude Sonnet 4.5 | Codebase exploration         |
 
-**Planning and reasoning tasks** use Claude Opus 4.5, which excels at complex reasoning, architectural decisions, and breaking down problems.
+**Planning and reasoning tasks** use Claude Opus 4.6, which excels at complex reasoning, architectural decisions, and breaking down problems.
 
 **Implementation tasks** use Claude Sonnet 4.5, which is optimized for fast, accurate code generation and editing.
 

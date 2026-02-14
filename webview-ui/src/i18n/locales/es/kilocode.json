@@ -243,7 +243,7 @@
 			"idea7": "Crea un campo de estrellas interactivo y relajante que se mueva con gestos del ratón"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocompletado",
 		"settings": {
 			"codeEditorSuggestions": "Sugerencias del Editor de Código",

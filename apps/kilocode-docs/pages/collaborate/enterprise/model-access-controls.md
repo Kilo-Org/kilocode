@@ -14,7 +14,7 @@ Admins can **enable or disable** specific models, filter by attributes, and enfo
 2. Toggle the checkbox beside any model or provider to enable or disable access.
 3. Click "Save Changes" to apply
 
-<img width="800" alt="Model-Access-Select" src="https://github.com/user-attachments/assets/af71353d-facc-4d4b-a0cd-c7f2cea73e97" />
+{% image width="800" alt="Model-Access-Select" src="https://github.com/user-attachments/assets/af71353d-facc-4d4b-a0cd-c7f2cea73e97" /%}
 
 ## Filtering Models
 

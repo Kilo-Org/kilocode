@@ -44,7 +44,7 @@
 		"about": "À propos de Kilo Code",
 		"autoPurge": "Auto-nettoyage",
 		"agentBehaviour": "Comportement de l'agent",
-		"ghost": "Autocomplétion"
+		"autocomplete": "Autocomplétion"
 	},
 	"about": {
 		"bugReport": {
@@ -109,6 +109,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clé d'API:",
 		"mistralApiKeyPlaceholder": "Entrez votre clé API Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Clé API Voyage AI",
+		"voyageApiKeyPlaceholder": "Entre ta clé API Voyage AI",
 		"openaiCompatibleProvider": "Compatible OpenAI",
 		"openaiCompatibleResponsesProvider": "Compatible OpenAI (Responses)",
 		"openAiKeyLabel": "Clé API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "L'URL de base Ollama est requise",
 			"baseUrlRequired": "L'URL de base est requise",
 			"modelDimensionMinValue": "La dimension du modèle doit être supérieure à 0",
-			"openRouterApiKeyRequired": "Clé API OpenRouter est requise"
+			"openRouterApiKeyRequired": "Clé API OpenRouter est requise",
+			"voyageApiKeyRequired": "Clé API Voyage AI est requise"
 		},
 		"optional": "optionnel",
 		"advancedConfigLabel": "Configuration avancée",
@@ -368,6 +372,8 @@
 			"success": "Liste des modèles actualisée avec succès !",
 			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer."
 		},
+		"getZenmuxApiKey": "Obtenir la clé API Zenmux",
+		"zenmuxTransformsText": "Utiliser Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"getRequestyBaseUrl": "URL de base",
 		"requestyUseCustomBaseUrl": "Utiliser une URL de base personnalisée",
@@ -378,12 +384,16 @@
 		"anthropic1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"anthropicUseAzureDeployment": "Utiliser le nom de déploiement Azure",
 		"anthropicAzureDeploymentPlaceholder": "Entrez le nom de déploiement...",
+		"apertisApiKey": "Clé API Apertis",
+		"getApertisApiKey": "Obtenir la clé API Apertis",
 		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"vertex1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"vertex1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"basetenApiKey": "Clé API Baseten",
 		"getBasetenApiKey": "Obtenir la clé API Baseten",
+		"corethinkApiKey": "Clé API Corethink",
+		"getCorethinkApiKey": "Obtenir la clé API Corethink",
 		"cerebrasApiKey": "Clé API Cerebras",
 		"getCerebrasApiKey": "Obtenir la clé API Cerebras",
 		"chutesApiKey": "Clé API Chutes",
@@ -610,6 +620,7 @@
 		},
 		"verbosity": {
 			"label": "Verbosité de la sortie",
+			"max": "Max",
 			"high": "Élevée",
 			"medium": "Moyenne",
 			"low": "Faible",
@@ -1169,7 +1180,7 @@
 			"description": "Afficher les statistiques de lignes ajoutées/supprimées dans l'en-tête de la tâche"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Afficher l'animation dans la gouttière lors de l'autocomplétion",
 			"description": "Affiche un indicateur animé dans la gouttière de l'éditeur lorsque l'autocomplétion est en cours",

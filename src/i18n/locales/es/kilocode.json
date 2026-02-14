@@ -97,7 +97,7 @@
 			"generateButton": "Generar Mensaje de Commit"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "pausado",

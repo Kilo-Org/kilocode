@@ -12,6 +12,12 @@
 		"accessDenied": "Akses ditolak ke layanan Amazon Bedrock. Harap periksa izin IAM Anda.",
 		"modelNotFound": "Model {{model}} tidak ditemukan di Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Format respons tidak valid dari Voyage AI",
+		"invalidCredentials": "API key Voyage AI tidak valid. Silakan periksa konfigurasi API key kamu.",
+		"accessDenied": "Akses ditolak. Alamat IP kamu mungkin diblokir oleh Voyage AI. Coba gunakan jaringan lain.",
+		"modelNotFound": "Model {{model}} tidak ditemukan di Voyage AI. Silakan periksa pilihan model kamu."
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Tidak dapat membaca body error",
 		"requestFailed": "Permintaan API Ollama gagal dengan status {{status}} {{statusText}}: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Konfigurasi OpenRouter hilang untuk pembuatan embedder",
 		"vercelAiGatewayConfigMissing": "Konfigurasi Vercel AI Gateway hilang untuk pembuatan embedder",
 		"bedrockConfigMissing": "Konfigurasi Amazon Bedrock hilang untuk pembuatan embedder",
+		"voyageConfigMissing": "Konfigurasi Voyage AI hilang untuk pembuatan embedder",
 		"invalidEmbedderType": "Tipe embedder yang dikonfigurasi tidak valid: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Tidak dapat menentukan dimensi vektor untuk model '{{modelId}}' dengan penyedia '{{provider}}'. Pastikan 'Dimensi Embedding' diatur dengan benar di pengaturan penyedia yang kompatibel dengan OpenAI.",
 		"vectorDimensionNotDetermined": "Tidak dapat menentukan dimensi vektor untuk model '{{modelId}}' dengan penyedia '{{provider}}'. Periksa profil model atau konfigurasi.",

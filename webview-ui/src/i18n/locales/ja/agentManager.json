@@ -16,7 +16,8 @@
 		"shareConfirmYes": "はい",
 		"shareConfirmNo": "いいえ",
 		"options": "オプション",
-		"configureSetupScript": "Worktree セットアップスクリプト"
+		"configureSetupScript": "Worktree セットアップスクリプト",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -62,7 +63,14 @@
 		"defaultModel": "デフォルトモデル",
 		"loadingModels": "読み込み中...",
 		"selectMode": "モードを選択",
-		"modeTooltip": "モード: {{mode}}"
+		"modeTooltip": "モード: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "出力を折りたたむ",
 		"copyCommand": "コマンドをコピー",
 		"thinking": "思考中",
-		"thinkingSeconds": "{{count}}秒"
+		"thinkingSeconds": "{{count}}秒",
+		"approve": "承認",
+		"deny": "拒否"
 	},
 	"chatInput": {
 		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",

@@ -23,6 +23,12 @@
 		"modelNotEmbeddingCapable": "Il modello Ollama non è in grado di eseguire l'embedding: {{modelId}}",
 		"hostNotFound": "Host Ollama non trovato: {{baseUrl}}"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Formato di risposta non valido da Voyage AI",
+		"invalidCredentials": "Chiave API Voyage AI non valida. Controlla la configurazione della tua chiave API.",
+		"accessDenied": "Accesso negato. Il tuo indirizzo IP potrebbe essere bloccato da Voyage AI. Prova con una rete diversa.",
+		"modelNotFound": "Modello {{model}} non trovato in Voyage AI. Controlla la selezione del modello."
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Errore sconosciuto nell'elaborazione del file {{filePath}}",
 		"unknownErrorDeletingPoints": "Errore sconosciuto nell'eliminazione dei punti per {{filePath}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Configurazione di OpenRouter mancante per la creazione dell'embedder",
 		"vercelAiGatewayConfigMissing": "Configurazione di Vercel AI Gateway mancante per la creazione dell'embedder",
 		"bedrockConfigMissing": "Configurazione di Amazon Bedrock mancante per la creazione dell'embedder",
+		"voyageConfigMissing": "Configurazione di Voyage AI mancante per la creazione dell'embedder",
 		"invalidEmbedderType": "Tipo di embedder configurato non valido: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Impossibile determinare la dimensione del vettore per il modello '{{modelId}}' con il provider '{{provider}}'. Assicurati che la 'Dimensione di embedding' sia impostata correttamente nelle impostazioni del provider compatibile con OpenAI.",
 		"vectorDimensionNotDetermined": "Impossibile determinare la dimensione del vettore per il modello '{{modelId}}' con il provider '{{provider}}'. Controlla i profili del modello o la configurazione.",

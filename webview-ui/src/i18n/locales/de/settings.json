@@ -44,7 +44,7 @@
 		"about": "Über Kilo Code",
 		"autoPurge": "Auto-Bereinigung",
 		"agentBehaviour": "Agentenverhalten",
-		"ghost": "Autovervollständigung"
+		"autocomplete": "Autovervollständigung"
 	},
 	"about": {
 		"bugReport": {
@@ -109,6 +109,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API-Schlüssel",
+		"voyageApiKeyPlaceholder": "Gib deinen Voyage AI API-Schlüssel ein",
 		"openaiCompatibleProvider": "OpenAI-kompatibel",
 		"openaiCompatibleResponsesProvider": "OpenAI-kompatibel (Responses)",
 		"openAiKeyLabel": "OpenAI API-Schlüssel",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama-Basis-URL ist erforderlich",
 			"baseUrlRequired": "Basis-URL ist erforderlich",
 			"modelDimensionMinValue": "Modellabmessung muss größer als 0 sein",
-			"openRouterApiKeyRequired": "OpenRouter API-Schlüssel ist erforderlich"
+			"openRouterApiKeyRequired": "OpenRouter API-Schlüssel ist erforderlich",
+			"voyageApiKeyRequired": "Voyage AI API-Schlüssel ist erforderlich"
 		},
 		"optional": "optional",
 		"advancedConfigLabel": "Erweiterte Konfiguration",
@@ -370,11 +374,15 @@
 			"success": "Modellliste erfolgreich aktualisiert!",
 			"error": "Fehler beim Aktualisieren der Modellliste. Bitte versuche es erneut."
 		},
+		"getZenmuxApiKey": "Zenmux API-Schlüssel erhalten",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform verwenden",
 		"getRequestyApiKey": "Requesty API-Schlüssel erhalten",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"anthropicApiKey": "Anthropic API-Schlüssel",
 		"getAnthropicApiKey": "Anthropic API-Schlüssel erhalten",
+		"apertisApiKey": "Apertis API-Schlüssel",
+		"getApertisApiKey": "Apertis API-Schlüssel erhalten",
 		"anthropicUseAuthToken": "Anthropic API-Schlüssel als Authorization-Header anstelle von X-Api-Key übergeben",
 		"anthropicUseAzureDeployment": "Azure-Bereitstellungsname verwenden",
 		"anthropicAzureDeploymentPlaceholder": "Bereitstellungsname eingeben...",
@@ -386,6 +394,8 @@
 		"vertex1MContextBetaDescription": "Erweitert das Kontextfenster für Claude Sonnet 4 auf 1 Million Token",
 		"basetenApiKey": "Baseten API-Schlüssel",
 		"getBasetenApiKey": "Baseten API-Schlüssel erhalten",
+		"corethinkApiKey": "Corethink API-Schlüssel",
+		"getCorethinkApiKey": "Corethink API-Schlüssel erhalten",
 		"cerebrasApiKey": "Cerebras API-Schlüssel",
 		"getCerebrasApiKey": "Cerebras API-Schlüssel erhalten",
 		"chutesApiKey": "Chutes API-Schlüssel",
@@ -636,6 +646,7 @@
 		},
 		"verbosity": {
 			"label": "Ausgabe-Ausführlichkeit",
+			"max": "Max",
 			"high": "Hoch",
 			"medium": "Mittel",
 			"low": "Niedrig",
@@ -1165,7 +1176,7 @@
 			"description": "Statistiken zu hinzugefügten/entfernten Zeilen im Aufgaben-Header anzeigen"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Randanimation bei Autovervollständigung anzeigen",
 			"description": "Zeigt eine animierte Anzeige im Editor-Rand an, wenn die Autovervollständigung läuft",

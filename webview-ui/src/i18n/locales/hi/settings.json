@@ -44,7 +44,7 @@
 		"about": "परिचय",
 		"autoPurge": "स्वचालित सफाई",
 		"agentBehaviour": "एजेंट व्यवहार",
-		"ghost": "ऑटोकम्पलीट"
+		"autocomplete": "ऑटोकम्पलीट"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API कुंजी",
+		"voyageApiKeyPlaceholder": "अपनी Voyage AI API कुंजी दर्ज करें",
 		"openaiCompatibleProvider": "OpenAI संगत",
 		"openaiCompatibleResponsesProvider": "OpenAI संगत (Responses)",
 		"openAiKeyLabel": "OpenAI API कुंजी",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
 			"baseUrlRequired": "आधार URL आवश्यक है",
 			"modelDimensionMinValue": "मॉडल आयाम 0 से बड़ा होना चाहिए",
-			"openRouterApiKeyRequired": "OpenRouter API कुंजी आवश्यक है"
+			"openRouterApiKeyRequired": "OpenRouter API कुंजी आवश्यक है",
+			"voyageApiKeyRequired": "Voyage AI API कुंजी आवश्यक है"
 		},
 		"optional": "वैकल्पिक",
 		"advancedConfigLabel": "उन्नत कॉन्फ़िगरेशन",
@@ -367,11 +371,15 @@
 			"success": "मॉडल सूची सफलतापूर्वक अपडेट की गई!",
 			"error": "मॉडल सूची अपडेट करने में विफल। कृपया पुनः प्रयास करें।"
 		},
+		"getZenmuxApiKey": "Zenmux API कुंजी प्राप्त करें",
+		"zenmuxTransformsText": "Zenmux Middle Out Transform का उपयोग करें",
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"getRequestyBaseUrl": "बेस URL",
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"anthropicApiKey": "Anthropic API कुंजी",
 		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
+		"apertisApiKey": "Apertis API कुंजी",
+		"getApertisApiKey": "Apertis API कुंजी प्राप्त करें",
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
 		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
@@ -383,6 +391,8 @@
 		"vertex1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"basetenApiKey": "Baseten API कुंजी",
 		"getBasetenApiKey": "Baseten API कुंजी प्राप्त करें",
+		"corethinkApiKey": "Corethink API कुंजी",
+		"getCorethinkApiKey": "Corethink API कुंजी प्राप्त करें",
 		"cerebrasApiKey": "Cerebras API कुंजी",
 		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
 		"chutesApiKey": "Chutes API कुंजी",
@@ -627,6 +637,7 @@
 		},
 		"verbosity": {
 			"label": "आउटपुट वर्बोसिटी",
+			"max": "Max",
 			"high": "उच्च",
 			"medium": "मध्यम",
 			"low": "कम",
@@ -1170,7 +1181,7 @@
 			"description": "कार्य हेडर में जोड़ी/हटाई गई पंक्तियों के आँकड़े प्रदर्शित करें"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "स्वत:पूर्ण करते समय गटर एनिमेशन दिखाएँ",
 			"description": "स्वत:पूर्णता चल रही हो तो संपादक गटर में एनिमेटेड संकेतक प्रदर्शित करें",
