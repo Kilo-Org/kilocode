@@ -79,6 +79,7 @@ describe("Model Validation Functions", () => {
 		"vercel-ai-gateway": {},
 		huggingface: {},
 		// kilocode_change start
+		apertis: {},
 		ovhcloud: {},
 		gemini: {},
 		inception: {},
@@ -87,6 +88,7 @@ describe("Model Validation Functions", () => {
 		// kilocode_change end
 		roo: {},
 		chutes: {},
+		zenmux: {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Debug Proxy 활성화** — 모든 아웃바운드 네트워크 요청을 MITM 디버깅을 위해 프록시를 통해 라우팅합니다. 디버그 모드(F5)로 실행 중일 때만 활성화됩니다.",
 	"settings.debugProxy.serverUrl.description": "프록시 URL(예: `http://127.0.0.1:8888`). **Debug Proxy** 가 활성화된 경우에만 사용됩니다.",
 	"settings.debugProxy.tlsInsecure.description": "프록시의 self-signed 인증서를 허용합니다. **MITM 검사에 필요합니다.** ⚠️ 안전하지 않으므로 로컬 디버깅에만 사용하세요.",
-	"ghost.input.title": "'Enter'를 눌러 확인하거나 'Escape'를 눌러 취소하세요",
-	"ghost.input.placeholder": "무엇을 하고 싶은지 설명해주세요...",
-	"ghost.commands.generateSuggestions": "Kilo Code: 편집 제안 생성",
-	"ghost.commands.displaySuggestions": "편집 제안 표시",
-	"ghost.commands.cancelSuggestions": "편집 제안 취소",
-	"ghost.commands.applyCurrentSuggestion": "현재 편집 제안 적용",
-	"ghost.commands.applyAllSuggestions": "모든 편집 제안 적용",
-	"ghost.commands.goToNextSuggestion": "다음 제안으로 이동",
-	"ghost.commands.goToPreviousSuggestion": "이전 제안으로 이동"
+	"autocomplete.input.title": "'Enter'를 눌러 확인하거나 'Escape'를 눌러 취소하세요",
+	"autocomplete.input.placeholder": "무엇을 하고 싶은지 설명해주세요...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: 편집 제안 생성",
+	"autocomplete.commands.displaySuggestions": "편집 제안 표시",
+	"autocomplete.commands.cancelSuggestions": "편집 제안 취소",
+	"autocomplete.commands.applyCurrentSuggestion": "현재 편집 제안 적용",
+	"autocomplete.commands.applyAllSuggestions": "모든 편집 제안 적용",
+	"autocomplete.commands.goToNextSuggestion": "다음 제안으로 이동",
+	"autocomplete.commands.goToPreviousSuggestion": "이전 제안으로 이동"
 }

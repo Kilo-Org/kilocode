@@ -12,12 +12,12 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 
 /**
- * IntelliJ inline completion provider that bridges to VSCode extension's Ghost service.
+ * IntelliJ inline completion provider that bridges to VSCode extension's Autocomplete service.
  * This provider uses the new InlineCompletionService which sends full file content
- * to the Ghost service via RPC for accurate completions.
+ * to the Autocomplete service via RPC for accurate completions.
  *
  * The provider handles triggering and rendering, while all AI logic (debouncing,
- * caching, context gathering, and telemetry) is handled by the Ghost service.
+ * caching, context gathering, and telemetry) is handled by the Autocomplete service.
  */
 class KiloCodeInlineCompletionProvider(
     private val handle: Int,
@@ -42,7 +42,7 @@ class KiloCodeInlineCompletionProvider(
     override val id: InlineCompletionProviderID = InlineCompletionProviderID("kilocode-inline-completion-$extensionId-$handle")
 
     /**
-     * Gets inline completion suggestions using the Ghost service.
+     * Gets inline completion suggestions using the Autocomplete service.
      * Sends full file content to ensure accurate completions.
      */
     override suspend fun getSuggestion(request: InlineCompletionRequest): InlineCompletionSingleSuggestion {

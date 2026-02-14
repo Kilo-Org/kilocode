@@ -250,7 +250,7 @@
 			"idea7": "创建一个宁静的交互式星空，跟随鼠标手势移动"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "自动补全",
 		"settings": {
 			"codeEditorSuggestions": "代码编辑器建议",

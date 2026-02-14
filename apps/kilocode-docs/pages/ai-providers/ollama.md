@@ -8,8 +8,8 @@ Kilo Code supports running models locally using Ollama. This provides privacy, o
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 
-<img src="/docs/img/providers/ollama-devstral-snake.png" alt="Vibe coding a Snake game using devstral" width="500" />
-*Vibe coding a Snake game using devstral*
+<!-- <image src="/docs/img/providers/ollama-devstral-snake.png" alt="Vibe coding a Snake game using devstral" width="500" />
+*Vibe coding a Snake game using devstral* -->
 
 ## Managing Expectations
 
@@ -72,7 +72,7 @@ By default, API requests time out after 10 minutes. Local models can be slow, if
 
 ### Configure Kilo Code
 
-- Open the Kilo Code sidebar (<img src="/docs/img/kilo-v1.svg" width="12" /> icon).
+- Open the Kilo Code panel ({% kiloCodeIcon size="1em" /%}).
 - Click the Settings gear icon ({% codicon name="gear" /%}).
 - Select "Ollama" as the API Provider.
 - Select the model configured in the previous step.

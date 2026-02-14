@@ -7,6 +7,22 @@ import { getModelParams } from "../transform/model-params"
 
 import { OpenAICompatibleHandler, OpenAICompatibleConfig } from "./openai-compatible"
 
+// kilocode_change start
+const STRICT_KIMI_TEMPERATURES = {
+	"kimi-k2.5": {
+		thinkingEnabled: 1.0,
+		thinkingDisabled: moonshotModels["kimi-k2.5"].defaultTemperature ?? 0.6,
+	},
+	"kimi-for-coding": {
+		thinkingEnabled: 1.0,
+		thinkingDisabled: moonshotModels["kimi-for-coding"].defaultTemperature ?? 0.6,
+	},
+} as const
+
+type StrictKimiModelId = keyof typeof STRICT_KIMI_TEMPERATURES
+const STRICT_KIMI_MODELS = new Set(Object.keys(STRICT_KIMI_TEMPERATURES))
+// kilocode_change end
+
 export class MoonshotHandler extends OpenAICompatibleHandler {
 	constructor(options: ApiHandlerOptions) {
 		const modelId = options.apiModelId ?? moonshotDefaultModelId
@@ -67,4 +83,73 @@ export class MoonshotHandler extends OpenAICompatibleHandler {
 		// Moonshot always requires max_tokens
 		return this.options.modelMaxTokens || modelInfo.maxTokens || undefined
 	}
+
+	// kilocode_change start
+	private isStrictKimiModel(modelId: string): boolean {
+		return STRICT_KIMI_MODELS.has(modelId)
+	}
+
+	private getStrictKimiTemperatureConfig(modelId: string) {
+		if (!this.isStrictKimiModel(modelId)) {
+			return undefined
+		}
+
+		return STRICT_KIMI_TEMPERATURES[modelId as StrictKimiModelId]
+	}
+
+	private isStrictKimiThinkingEnabled(): boolean {
+		return this.options.enableReasoningEffort !== false
+	}
+
+	protected override getRequestTemperature(model: { id: string; temperature?: number }): number | undefined {
+		const strictTemperatureConfig = this.getStrictKimiTemperatureConfig(model.id)
+		if (strictTemperatureConfig) {
+			return this.isStrictKimiThinkingEnabled()
+				? strictTemperatureConfig.thinkingEnabled
+				: strictTemperatureConfig.thinkingDisabled
+		}
+
+		return super.getRequestTemperature(model)
+	}
+
+	protected override getProviderOptions(
+		model: { id: string; info: ModelInfo },
+		metadata?: Parameters<OpenAICompatibleHandler["getProviderOptions"]>[1],
+	): ReturnType<OpenAICompatibleHandler["getProviderOptions"]> {
+		const inheritedProviderOptions = super.getProviderOptions(model, metadata)
+		const existingMoonshotOptions =
+			inheritedProviderOptions?.moonshot &&
+			typeof inheritedProviderOptions.moonshot === "object" &&
+			!Array.isArray(inheritedProviderOptions.moonshot)
+				? inheritedProviderOptions.moonshot
+				: {}
+		const moonshotOptions = {
+			...existingMoonshotOptions,
+			...(metadata?.taskId ? { prompt_cache_key: metadata.taskId } : {}),
+		}
+
+		if (!this.isStrictKimiModel(model.id)) {
+			if (Object.keys(moonshotOptions).length === 0) {
+				return inheritedProviderOptions
+			}
+
+			return {
+				...inheritedProviderOptions,
+				moonshot: moonshotOptions,
+			}
+		}
+
+		const thinking = {
+			type: (this.isStrictKimiThinkingEnabled() ? "enabled" : "disabled") as "enabled" | "disabled",
+		}
+
+		return {
+			...inheritedProviderOptions,
+			moonshot: {
+				...moonshotOptions,
+				thinking,
+			},
+		}
+	}
+	// kilocode_change end
 }

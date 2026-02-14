@@ -165,103 +165,291 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files directly at `~/.kilocode/config.json`
+- Config files directly at `~/.config/kilo/config.json`
 - `kilo auth` for credential management
 
-## Auto-approval Settings
+## Permissions
 
-Auto-approval allows the Kilo Code CLI to perform operations without first requiring user confirmation. These settings can either be built up over time in interactive mode, or by editing your config file directly at `~/.kilocode/config.json`.
+Kilo Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.
 
-### Default Auto-approval Settings
+### Actions
+
+Each permission rule resolves to one of:
+
+- `"allow"` — run without approval
+- `"ask"` — prompt for approval
+- `"deny"` — block the action
+
+### Configuration
+
+You can set permissions globally (with `*`), and override specific tools.
 
 ```json
 {
-	"autoApproval": {
-		"enabled": true,
-		"read": {
-			"enabled": true,
-			"outside": false
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"*": "ask",
+		"bash": "allow",
+		"edit": "deny"
+	}
+}
+```
+
+You can also set all permissions at once:
+
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": "allow"
+}
+```
+
+### Granular Rules (Object Syntax)
+
+For most permissions, you can use an object to apply different actions based on the tool input.
+
+```json
+{
+	"$schema": "https://opencode.ai/config.json",
+	"permission": {
+		"bash": {
+			"*": "ask",
+			"git *": "allow",
+			"npm *": "allow",
+			"rm *": "deny",
+			"grep *": "allow"
 		},
-		"write": {
-			"enabled": true,
-			"outside": false,
-			"protected": false
-		},
-		"execute": {
-			"enabled": true,
-			"allowed": ["npm", "git", "pnpm"],
-			"denied": ["rm -rf", "sudo"]
-		},
-		"browser": {
-			"enabled": false
-		},
-		"mcp": {
-			"enabled": true
-		},
-		"mode": {
-			"enabled": true
-		},
-		"subtasks": {
-			"enabled": true
-		},
-		"question": {
-			"enabled": false,
-			"timeout": 60
-		},
-		"retry": {
-			"enabled": true,
-			"delay": 10
-		},
-		"todo": {
-			"enabled": true
+		"edit": {
+			"*": "deny",
+			"packages/web/src/content/docs/*.mdx": "allow"
 		}
 	}
 }
 ```
 
-**Configuration Options:**
+Rules are evaluated by pattern match, with the last matching rule winning. A common pattern is to put the catch-all `"*"` rule first, and more specific rules after it.
 
-- `read`: Auto-approve file read operations
-    - `outside`: Allow reading files outside workspace
-- `write`: Auto-approve file write operations
-    - `outside`: Allow writing files outside workspace
-    - `protected`: Allow writing to protected files (e.g., package.json)
-- `execute`: Auto-approve command execution
-    - `allowed`: List of allowed command patterns (e.g., ["npm", "git"])
-    - `denied`: List of denied command patterns (takes precedence)
-- `browser`: Auto-approve browser operations
-- `mcp`: Auto-approve MCP tool usage
-- `mode`: Auto-approve mode switching
-- `subtasks`: Auto-approve subtask creation
-- `question`: Auto-approve follow-up questions
-- `retry`: Auto-approve API retry requests
-- `todo`: Auto-approve todo list updates
+### Wildcards
 
-### Command Approval Patterns
+Permission patterns use simple wildcard matching:
 
-The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
+- `*` matches zero or more of any character
+- `?` matches exactly one character
+- All other characters match literally
 
-- **Base command**: `"git"` matches any git command (e.g., `git status`, `git commit`, `git push`)
-- **Command + subcommand**: `"git status"` matches any git status command (e.g., `git status --short`, `git status -v`)
-- **Full command**: `"git status --short"` only matches exactly `git status --short`
+### Home Directory Expansion
 
-**Example:**
+You can use `~` or `$HOME` at the start of a pattern to reference your home directory. This is particularly useful for `external_directory` rules.
+
+- `~/projects/*` → `/Users/username/projects/*`
+- `$HOME/projects/*` → `/Users/username/projects/*`
+- `~` → `/Users/username`
+
+### External Directories
+
+Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
 
 ```json
 {
-	"execute": {
-		"enabled": true,
-		"allowed": [
-			"npm", // Allows all npm commands
-			"git status", // Allows all git status commands
-			"ls -la" // Only allows exactly "ls -la"
-		],
-		"denied": [
-			"git push --force" // Denies this specific command even if "git" is allowed
-		]
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"external_directory": {
+			"~/projects/personal/**": "allow"
+		}
 	}
 }
 ```
+
+Any directory allowed here inherits the same defaults as the current workspace. Since `read` defaults to `"allow"`, reads are also allowed for entries under `external_directory` unless overridden. Add explicit rules when a tool should be restricted in these paths, such as blocking edits while keeping reads:
+
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"external_directory": {
+			"~/projects/personal/**": "allow"
+		},
+		"edit": {
+			"~/projects/personal/**": "deny"
+		}
+	}
+}
+```
+
+**Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
+
+## Configuration
+
+The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+
+### Config File Location
+
+| Scope      | Path                                |
+| ---------- | ----------------------------------- |
+| **Global** | `~/.config/kilocode/kilocode.json`  |
+| **Project**| `./kilocode.json` (in project root) |
+
+Project-level configuration takes precedence over global settings.
+
+### Key Configuration Options
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Common configuration options include:
+
+- **`model`** - Default model to use
+- **`provider`** - Provider-specific settings (API keys, base URLs, custom models)
+- **`mcp`** - MCP server configuration
+- **`permission`** - Tool permission settings (`allow` or `ask`)
+- **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
+- **`formatter`** - Code formatter configuration
+- **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+
+### Environment Variables
+
+Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
+
+```json
+{
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+
+## Config reference for providers
+
+Kilo gives you the ability to bring your own keys for a number of model providers and AI gateways, like OpenRouter and Vercel AI Gateway. Each provider has unique configuration options and some let you set environment variables.
+
+You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit .config files manually. You can also run:
+
+`kilocode config`
+
+to complete configuration with an interactive workflow on the command line.
+
+{% callout type="tip" %}
+You can also use the `/config` slash command during an interactive session, which is equivalent to running `kilocode config`.
+{% /callout %}
+
+## Parallel mode
+### Available Permissions
+
+Permissions are keyed by tool name, plus a couple of safety guards:
+
+- `read` — reading a file (matches the file path)
+- `edit` — all file modifications (covers edit, write, patch, multiedit)
+- `glob` — file globbing (matches the glob pattern)
+- `grep` — content search (matches the regex pattern)
+- `list` — listing files in a directory (matches the directory path)
+- `bash` — running shell commands (matches parsed commands like `git status --porcelain`)
+- `task` — launching subagents (matches the subagent type)
+- `skill` — loading a skill (matches the skill name)
+- `lsp` — running LSP queries (currently non-granular)
+- `todoread`, `todowrite` — reading/updating the todo list
+- `webfetch` — fetching a URL (matches the URL)
+- `websearch`, `codesearch` — web/code search (matches the query)
+- `external_directory` — triggered when a tool touches paths outside the project working directory
+- `doom_loop` — triggered when the same tool call repeats 3 times with identical input
+
+### Defaults
+
+If you don't specify anything, Kilo starts from permissive defaults:
+
+- Most permissions default to `"allow"`.
+- `doom_loop` and `external_directory` default to `"ask"`.
+- `read` is `"allow"`, but `.env` files are denied by default:
+
+```json
+{
+	"permission": {
+		"read": {
+			"*": "allow",
+			"*.env": "deny",
+			"*.env.*": "deny",
+			"*.env.example": "allow"
+		}
+	}
+}
+```
+
+### What "Ask" Does
+
+When Kilo prompts for approval, the UI offers three outcomes:
+
+- **once** — approve just this request
+- **always** — approve future requests matching the suggested patterns (for the rest of the current session)
+- **reject** — deny the request
+
+The set of patterns that "always" would approve is provided by the tool (for example, bash approvals typically whitelist a safe command prefix like `git status*`).
+
+### Agent Permissions
+
+You can override permissions per agent. Agent permissions are merged with the global config, and agent rules take precedence.
+
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"bash": {
+			"*": "ask",
+			"git *": "allow",
+			"git commit *": "deny",
+			"git push *": "deny",
+			"grep *": "allow"
+		}
+	},
+	"agent": {
+		"build": {
+			"permission": {
+				"bash": {
+					"*": "ask",
+					"git *": "allow",
+					"git commit *": "ask",
+					"git push *": "deny",
+					"grep *": "allow"
+				}
+			}
+		}
+	}
+}
+```
+
+You can also configure agent permissions in Markdown:
+
+```markdown
+---
+description: Code review without edits
+mode: subagent
+permission:
+    edit: deny
+    bash: ask
+    webfetch: deny
+---
+
+Only analyze code and suggest changes.
+```
+
+{% callout type="tip" %}
+Use pattern matching for commands with arguments. `"grep *"` allows `grep pattern file.txt`, while `"grep"` alone would block it. Commands like `git status` work for default behavior but require explicit permission (like `"git status *"`) when arguments are passed.
+{% /callout %}
 
 ## Interactive Mode
 

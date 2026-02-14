@@ -6,7 +6,7 @@ import {
 	type CustomModePrompts,
 	type ModeConfig,
 	type ExperimentId,
-	GhostServiceSettings, // kilocode_change
+	AutocompleteServiceSettings, // kilocode_change
 	openRouterDefaultModelId, // kilocode_change
 	type TodoItem,
 	type TelemetrySetting,
@@ -177,8 +177,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	commitMessageApiConfigId?: string // kilocode_change
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
 	markNotificationAsDismissed: (notificationId: string) => void // kilocode_change
-	ghostServiceSettings?: GhostServiceSettings // kilocode_change
-	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
+	ghostServiceSettings?: AutocompleteServiceSettings // kilocode_change
+	setAutocompleteServiceSettings: (value: AutocompleteServiceSettings) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
 	setAutoApprovalEnabled: (value: boolean) => void
 	customModes: ModeConfig[]
@@ -279,6 +279,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		featureRoomoteControlEnabled: false,
 		alwaysAllowWrite: true, // kilocode_change
 		alwaysAllowReadOnly: true, // kilocode_change
+		alwaysAllowDelete: false, // kilocode_change
 		requestDelaySeconds: 5,
 		currentApiConfigName: "default",
 		listApiConfigMeta: [],
@@ -660,7 +661,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				}
 			})
 		},
-		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
+		setAutocompleteServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
 		setShowAutoApproveMenu: (value) => setState((prevState) => ({ ...prevState, showAutoApproveMenu: value })),

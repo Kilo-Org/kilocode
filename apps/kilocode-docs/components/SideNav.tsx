@@ -15,6 +15,7 @@ const sectionNavItems: SectionNav = {
 	"deploy-secure": Nav.DeploySecureNav,
 	contributing: Nav.ContributingNav,
 	"ai-providers": Nav.AiProvidersNav,
+	gateway: Nav.GatewayNav,
 }
 
 // Main nav items with their section keys
@@ -26,6 +27,7 @@ const mainNavItems = [
 	{ label: "Collaborate", href: "/collaborate", sectionKey: "collaborate" },
 	{ label: "Automate", href: "/automate", sectionKey: "automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure", sectionKey: "deploy-secure" },
+	{ label: "AI Gateway", href: "/gateway", sectionKey: "gateway" },
 	{ label: "Contributing", href: "/contributing", sectionKey: "contributing" },
 ]
 
