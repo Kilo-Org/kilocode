@@ -310,6 +310,11 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" }) // kilocode_change
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "zenmux",
+			apiKey: undefined,
+			baseUrl: "https://zenmux.ai/api/v1",
+		})
 		// kilocode_change start
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({
@@ -348,6 +353,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -360,6 +366,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"nano-gpt": mockModels, // kilocode_change
 				roo: mockModels,
 				chutes: mockModels,
+				zenmux: mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
@@ -454,6 +461,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -463,6 +471,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
+				zenmux: mockModels,
 				litellm: {},
 				kilocode: mockModels,
 				"nano-gpt": mockModels, // kilocode_change
@@ -506,6 +515,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockResolvedValueOnce(mockModels) // zenmux
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -561,6 +571,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: {},
@@ -568,6 +579,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: {},
 				roo: mockModels,
 				chutes: {},
+				zenmux: mockModels,
 				litellm: {},
 				ollama: {},
 				lmstudio: {},
@@ -606,6 +618,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockResolvedValueOnce({}) // zenmux
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {

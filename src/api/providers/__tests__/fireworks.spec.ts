@@ -102,17 +102,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 128000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.6,
-				outputPrice: 2.5,
-				description: expect.stringContaining("Kimi K2 is a state-of-the-art mixture-of-experts"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return Kimi K2 Thinking model with correct configuration", () => {
@@ -148,17 +139,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 4096,
-				contextWindow: 204800,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.3,
-				outputPrice: 1.2,
-				description: expect.stringContaining("MiniMax M2 is a high-performance language model"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return Qwen3 235B model with correct configuration", () => {
@@ -169,18 +151,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 32768,
-				contextWindow: 256000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.22,
-				outputPrice: 0.88,
-				description:
-					"Latest Qwen3 thinking model, competitive against the best closed source models in Jul 2025.",
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return DeepSeek R1 model with correct configuration", () => {
@@ -191,17 +163,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 20480,
-				contextWindow: 160000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 3,
-				outputPrice: 8,
-				description: expect.stringContaining("05/28 updated checkpoint of Deepseek R1"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return DeepSeek V3 model with correct configuration", () => {
@@ -233,17 +196,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 163840,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.56,
-				outputPrice: 1.68,
-				description: expect.stringContaining("DeepSeek v3.1 is an improved version"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return GLM-4.5 model with correct configuration", () => {
@@ -254,17 +208,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 128000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.55,
-				outputPrice: 2.19,
-				description: expect.stringContaining("Z.ai GLM-4.5 with 355B total parameters"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return GLM-4.5-Air model with correct configuration", () => {
@@ -275,17 +220,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 128000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.55,
-				outputPrice: 2.19,
-				description: expect.stringContaining("Z.ai GLM-4.5-Air with 106B total parameters"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return GLM-4.6 model with correct configuration", () => {
@@ -296,17 +232,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 25344,
-				contextWindow: 198000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.55,
-				outputPrice: 2.19,
-				description: expect.stringContaining("Z.ai GLM-4.6 is an advanced coding model"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return gpt-oss-20b model with correct configuration", () => {
@@ -317,17 +244,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 128000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.07,
-				outputPrice: 0.3,
-				description: expect.stringContaining("OpenAI gpt-oss-20b: Compact model for local/edge deployments"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("should return gpt-oss-120b model with correct configuration", () => {
@@ -338,17 +256,8 @@ describe("FireworksHandler", () => {
 		})
 		const model = handlerWithModel.getModel()
 		expect(model.id).toBe(testModelId)
-		expect(model.info).toEqual(
-			expect.objectContaining({
-				maxTokens: 16384,
-				contextWindow: 128000,
-				supportsImages: false,
-				supportsPromptCache: false,
-				inputPrice: 0.15,
-				outputPrice: 0.6,
-				description: expect.stringContaining("OpenAI gpt-oss-120b: Production-grade, general-purpose model"),
-			}),
-		)
+		// Keep this test aligned with the shared model registry.
+		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
 	it("completePrompt method should return text from Fireworks API", async () => {

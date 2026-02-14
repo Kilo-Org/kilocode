@@ -3,7 +3,7 @@
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { GhostProviderTester } from "./ghost-provider-tester.js"
+import { AutocompleteProviderTester } from "./autocomplete-provider-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
 import { generateHtmlReport } from "./html-report.js"
@@ -50,7 +50,7 @@ export class TestRunner {
 		console.info = this.originalConsoleInfo
 	}
 
-	async runTest(testCase: TestCase, tester: GhostProviderTester): Promise<TestResult> {
+	async runTest(testCase: TestCase, tester: AutocompleteProviderTester): Promise<TestResult> {
 		try {
 			this.suppressConsole()
 			const startTime = performance.now()
@@ -113,7 +113,7 @@ export class TestRunner {
 	}
 
 	async runAllTests(numRuns: number = 1): Promise<void> {
-		const tester = new GhostProviderTester()
+		const tester = new AutocompleteProviderTester()
 		const model = process.env.LLM_MODEL || "mistralai/codestral-2508"
 		const strategyName = tester.getName()
 
@@ -309,7 +309,7 @@ export class TestRunner {
 	}
 
 	async runSingleTest(testName: string, numRuns: number = 10): Promise<void> {
-		const tester = new GhostProviderTester()
+		const tester = new AutocompleteProviderTester()
 		const testCase = testCases.find((tc) => tc.name === testName)
 		if (!testCase) {
 			console.error(`Test "${testName}" not found`)

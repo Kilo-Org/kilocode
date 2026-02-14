@@ -12,6 +12,12 @@
 		"accessDenied": "Acceso denegado al servicio de Amazon Bedrock. Por favor, verifica tus permisos de IAM.",
 		"modelNotFound": "Modelo {{model}} no encontrado en Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Formato de respuesta no válido de Voyage AI",
+		"invalidCredentials": "Clave de API de Voyage AI no válida. Comprueba la configuración de tu clave de API.",
+		"accessDenied": "Acceso denegado. Tu dirección IP puede estar bloqueada por Voyage AI. Prueba con una red diferente.",
+		"modelNotFound": "Modelo {{model}} no encontrado en Voyage AI. Comprueba tu selección de modelo."
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "No se pudo leer el cuerpo del error",
 		"requestFailed": "La solicitud de la API de Ollama falló con estado {{status}} {{statusText}}: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Falta la configuración de OpenRouter para la creación del incrustador",
 		"vercelAiGatewayConfigMissing": "Falta la configuración de Vercel AI Gateway para la creación del incrustador",
 		"bedrockConfigMissing": "Falta la configuración de Amazon Bedrock para la creación del incrustador",
+		"voyageConfigMissing": "Falta la configuración de Voyage AI para la creación del incrustador",
 		"invalidEmbedderType": "Tipo de incrustador configurado inválido: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "No se pudo determinar la dimensión del vector para el modelo '{{modelId}}' con el proveedor '{{provider}}'. Asegúrate de que la 'Dimensión de incrustación' esté configurada correctamente en los ajustes del proveedor compatible con OpenAI.",
 		"vectorDimensionNotDetermined": "No se pudo determinar la dimensión del vector para el modelo '{{modelId}}' con el proveedor '{{provider}}'. Verifica los perfiles del modelo o la configuración.",

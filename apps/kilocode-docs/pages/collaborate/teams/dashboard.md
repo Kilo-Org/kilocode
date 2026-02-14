@@ -7,9 +7,7 @@ description: "Manage your team from the Kilo Code dashboard"
 
 The Kilo seats dashboard is the first screen that comes up when you visit [the Kilo Code web app](https://app.kilo.ai). It provides complete visibility into your team's AI usage, costs, and management.
 
-<center>
-<img src="/docs/img/teams/dashboard.png" alt="Invite your team members" width="700" />
-</center>
+{% image src="/docs/img/teams/dashboard.png" alt="Invite your team members" width="700" /%}
 
 ## Dashboard Navigation
 

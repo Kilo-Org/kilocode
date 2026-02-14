@@ -11,6 +11,7 @@ import {
 	AwsBedrockHandler,
 	CerebrasHandler,
 	OpenRouterHandler,
+	ZenMuxHandler, // kilocode_change
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
@@ -37,6 +38,7 @@ import {
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
+	ApertisHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -51,6 +53,7 @@ import {
 	DeepInfraHandler,
 	MiniMaxHandler,
 	BasetenHandler,
+	CorethinkHandler,
 	OpenAiCompatibleResponsesHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
@@ -180,6 +183,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change end
 		case "openrouter":
 			return new OpenRouterHandler(options)
+		case "zenmux": // kilocode_change
+			return new ZenMuxHandler(options) // kilocode_change
 		case "bedrock":
 			return new AwsBedrockHandler(options)
 		case "vertex":
@@ -253,6 +258,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new OVHcloudAIEndpointsHandler(options)
 		case "sap-ai-core":
 			return new SapAiCoreHandler(options)
+		case "apertis":
+			return new ApertisHandler(options)
 		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)
@@ -268,6 +275,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new MiniMaxHandler(options)
 		case "baseten":
 			return new BasetenHandler(options)
+		case "corethink":
+			return new CorethinkHandler(options)
 		default:
 			apiProvider satisfies undefined
 			return new AnthropicHandler(options)

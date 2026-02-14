@@ -90,7 +90,7 @@ describe("ChatTextArea - slash command Tab guard", () => {
 
 		fireEvent.keyDown(textarea, { key: "Tab" })
 
-		// The regression we are preventing is Tab falling through to ghost/mention handling
+		// The regression we are preventing is Tab falling through to autocomplete/mention handling
 		// which caused setInputValue to be called with an '@' inserted (e.g. "/init@ ").
 		expect(setInputValue).not.toHaveBeenCalledWith(expect.stringContaining("@"))
 	})

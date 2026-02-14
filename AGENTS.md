@@ -180,7 +180,7 @@ Code in these directories is Kilo Code-specific and doesn't need markers:
 - `jetbrains/` - JetBrains plugin
 - `agent-manager/` directories
 - Any path containing `kilocode` in filename or directory name
-- `src/services/ghost/` - Ghost service
+- `src/services/autocomplete/ - Autocomplete service
 
 ### When markers ARE needed
 

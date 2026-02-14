@@ -1,5 +1,6 @@
 export * from "./anthropic.js"
 export * from "./baseten.js"
+export * from "./corethink.js"
 export * from "./bedrock.js"
 export * from "./cerebras.js"
 export * from "./chutes.js"
@@ -15,6 +16,8 @@ export * from "./synthetic.js"
 export * from "./inception.js"
 export * from "./minimax.js"
 export * from "./glama.js"
+export * from "./apertis.js"
+export * from "./zenmux.js"
 // kilocode_change end
 export * from "./groq.js"
 export * from "./huggingface.js"
@@ -44,6 +47,7 @@ export * from "./minimax.js"
 
 import { anthropicDefaultModelId } from "./anthropic.js"
 import { basetenDefaultModelId } from "./baseten.js"
+import { corethinkDefaultModelId } from "./corethink.js"
 import { bedrockDefaultModelId } from "./bedrock.js"
 import { cerebrasDefaultModelId } from "./cerebras.js"
 import { chutesDefaultModelId } from "./chutes.js"
@@ -54,6 +58,8 @@ import { featherlessDefaultModelId } from "./featherless.js"
 import { fireworksDefaultModelId } from "./fireworks.js"
 import { geminiDefaultModelId } from "./gemini.js"
 import { glamaDefaultModelId } from "./glama.js" // kilocode_change
+import { apertisDefaultModelId } from "./apertis.js" // kilocode_change
+import { zenmuxDefaultModelId } from "./zenmux.js" // kilocode_change
 import { groqDefaultModelId } from "./groq.js"
 import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
 import { litellmDefaultModelId } from "./lite-llm.js"
@@ -89,11 +95,15 @@ export function getProviderDefaultModelId(
 	switch (provider) {
 		case "openrouter":
 			return openRouterDefaultModelId
+		case "zenmux": // kilocode_change
+			return zenmuxDefaultModelId // kilocode_change
 		case "requesty":
 			return requestyDefaultModelId
 		// kilocode_change start
 		case "glama":
 			return glamaDefaultModelId
+		case "apertis":
+			return apertisDefaultModelId
 		// kilocode_change end
 		case "unbound":
 			return unboundDefaultModelId
@@ -109,6 +119,8 @@ export function getProviderDefaultModelId(
 			return chutesDefaultModelId
 		case "baseten":
 			return basetenDefaultModelId
+		case "corethink":
+			return corethinkDefaultModelId
 		case "bedrock":
 			return bedrockDefaultModelId
 		case "vertex":

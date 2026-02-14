@@ -236,7 +236,7 @@
 			"idea7": "Crea un camp d'estrelles interactiu i tranquil que es mogui amb gestos del ratolí"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Suggeriments de l'Editor de Codi",

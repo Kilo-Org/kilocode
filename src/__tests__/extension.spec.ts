@@ -253,8 +253,8 @@ vi.mock("../i18n", () => ({
 	}),
 }))
 
-vi.mock("../services/ghost/GhostServiceManager", () => ({
-	GhostServiceManager: {
+vi.mock("../services/autocomplete/AutocompleteServiceManager", () => ({
+	AutocompleteServiceManager: {
 		initialize: vi.fn().mockReturnValue({
 			load: vi.fn(),
 		}),
@@ -263,8 +263,8 @@ vi.mock("../services/ghost/GhostServiceManager", () => ({
 	},
 }))
 
-vi.mock("../services/ghost", () => ({
-	registerGhostProvider: vi.fn(),
+vi.mock("../services/autocomplete", () => ({
+	registerAutocompleteProvider: vi.fn(),
 }))
 
 vi.mock("../services/commit-message", () => ({

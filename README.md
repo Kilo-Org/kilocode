@@ -9,7 +9,7 @@
 # 🚀 Kilo
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 1M+ Kilo Coders. 20T+ tokens processed
+> #1 on OpenRouter. 1.5M+ Kilo Coders. 25T+ tokens processed
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work

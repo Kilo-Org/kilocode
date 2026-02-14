@@ -1,0 +1,1306 @@
+{
+	"back": "Späť na zobrazenie úloh",
+	"common": {
+		"save": "Uložiť",
+		"done": "Hotovo",
+		"cancel": "Zrušiť",
+		"reset": "Resetovať",
+		"select": "Vybrať",
+		"add": "Pridať hlavičku",
+		"remove": "Odstrániť"
+	},
+	"header": {
+		"title": "Nastavenia",
+		"saveButtonTooltip": "Uložiť zmeny",
+		"nothingChangedTooltip": "Nič sa nezmenilo",
+		"doneButtonTooltip": "Zahodiť neuložené zmeny a zavrieť panel nastavení"
+	},
+	"search": {
+		"placeholder": "Hľadať nastavenia...",
+		"noResults": "Nenájdené žiadne nastavenia"
+	},
+	"unsavedChangesDialog": {
+		"title": "Neuložené zmeny",
+		"description": "Chcete zahodiť zmeny a pokračovať?",
+		"cancelButton": "Zrušiť",
+		"discardButton": "Zahodiť zmeny"
+	},
+	"sections": {
+		"providers": "Poskytovatelia",
+		"modes": "Režimy",
+		"mcp": "MCP servery",
+		"autoApprove": "Automatické schválenie",
+		"browser": "Prehliadač",
+		"checkpoints": "Kontrolné body",
+		"display": "Zobrazenie",
+		"notifications": "Oznámenia",
+		"contextManagement": "Kontext",
+		"terminal": "Terminál",
+		"slashCommands": "Slash príkazy",
+		"prompts": "Podporné prompty",
+		"ui": "Používateľské rozhranie",
+		"experimental": "Experimentálne",
+		"language": "Jazyk",
+		"about": "O Kilo Code",
+		"autoPurge": "Automatické čistenie",
+		"agentBehaviour": "Správanie agenta",
+		"autocomplete": "Automatické dokončovanie"
+	},
+	"about": {
+		"bugReport": {
+			"label": "Našiel si chybu?",
+			"link": "Nahlásiť na GitHube"
+		},
+		"featureRequest": {
+			"label": "Máš nápad?",
+			"link": "Podeľte sa s nami"
+		},
+		"securityIssue": {
+			"label": "Objavil si zraniteľnosť?",
+			"link": "Nasleduj náš proces hlásenia"
+		},
+		"contact": {
+			"label": "Potrebuješ s nami hovoriť? Napíš"
+		},
+		"contactSupport": "Kontaktovať podporu",
+		"contactSupportDesc": "Získať pomoc s technickými problémami alebo otázkami k účtu",
+		"joinCommunity": "Pripojiť sa ku komunite",
+		"joinCommunityDesc": "Pripoj sa k ostatným používateľom pre tipy a diskusie",
+		"community": "Chceš tipy alebo si len pokecať s ostatnými používateľmi Kilo Code? Pripoj sa na <redditLink>reddit.com/r/kilocode</redditLink> alebo <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Kontakt a komunita",
+		"manageSettings": "Spravovať nastavenia",
+		"debugMode": {
+			"label": "Povoliť režim ladenia",
+			"description": "Povoliť režim ladenia pre zobrazenie ďalších tlačidiel v záhlaví úlohy pre zobrazenie histórie konverzácie API a správ UI ako sprehľadneného JSON v dočasných súboroch."
+		}
+	},
+	"slashCommands": {
+		"description": "Spravujte svoje slash príkazy pre rýchle spúšťanie vlastných pracovných postupov a akcií. <DocsLink>Viac informácií</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Zbaliť správy Premýšľanie v predvolenom nastavení",
+			"description": "Keď je povolené, bloky premýšľania budú v predvolenom nastavení zbalené, kým s nimi neinteragujete"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Vyžadovať {{primaryMod}}+Enter pre odoslanie správ",
+			"description": "Keď je povolené, musíš stlačiť {{primaryMod}}+Enter pre odoslanie správ namiesto jednoduchého Enter"
+		}
+	},
+	"prompts": {
+		"description": "Nakonfigurujte podporné prompty, ktoré sa používajú pre rýchle akcie, ako je vylepšenie promptov, vysvetlenie kódu a oprava problémov. Tieto prompty pomáhajú Kilo Code poskytovať lepšiu pomoc pri bežných vývojových úlohách."
+	},
+	"codeIndex": {
+		"title": "Indexovanie kódovej bázy",
+		"description": "Nakonfigurujte nastavenia indexovania kódovej bázy pre povolenie sémantického vyhľadávania vášho projektu. <0>Dozvedieť sa viac</0>",
+		"statusTitle": "Stav",
+		"enableLabel": "Povoliť indexovanie kódovej bázy",
+		"enableDescription": "Povoliť indexovanie kódu pre lepšie vyhľadávanie a porozumenie kontextu",
+		"settingsTitle": "Nastavenia indexovania",
+		"disabledMessage": "Indexovanie kódovej bázy je aktuálne zakázané. Povoľte ho v globálnych nastaveniach pre konfiguráciu možností indexovania.",
+		"profileLabel": "Poskytovateľ vkladania",
+		"embedderProviderLabel": "Poskytovateľ vkladania",
+		"selectProfilePlaceholder": "Vyberte poskytovateľa",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS Región",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS Profil",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Názov AWS profilu z ~/.aws/credentials (povinné).",
+		"geminiProvider": "Gemini",
+		"geminiApiKeyLabel": "Kľúč API:",
+		"geminiApiKeyPlaceholder": "Zadajte svoj kľúč API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Kľúč API:",
+		"mistralApiKeyPlaceholder": "Zadajte svoj kľúč API Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Kľúč API",
+		"vercelAiGatewayApiKeyPlaceholder": "Zadajte svoj kľúč API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Kľúč API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Zadajte svoj kľúč API OpenRouter",
+		"openRouterProviderRoutingLabel": "Smerovanie poskytovateľa OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter smeruje požiadavky na najlepších dostupných poskytovateľov pre váš model vkladania. V predvolenom nastavení sú požiadavky vyrovnávané záťažou medzi najlepších poskytovateľov, aby sa maximalizovala doba prevádzky. Môžete si však vybrať konkrétneho poskytovateľa, ktorého chcete pre tento model použiť.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API kľúč Voyage AI",
+		"voyageApiKeyPlaceholder": "Zadaj svoj API kľúč Voyage AI",
+		"openaiCompatibleProvider": "Kompatibilný s OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatibilný s OpenAI (Responses)",
+		"openAiKeyLabel": "Kľúč API OpenAI",
+		"openAiKeyPlaceholder": "Zadajte svoj kľúč API OpenAI",
+		"openAiCompatibleBaseUrlLabel": "Základná URL",
+		"openAiCompatibleApiKeyLabel": "Kľúč API",
+		"openAiCompatibleApiKeyPlaceholder": "Zadajte svoj kľúč API",
+		"openAiCompatibleModelDimensionLabel": "Dimenzia vkladania:",
+		"modelDimensionLabel": "Dimenzia modelu",
+		"openAiCompatibleModelDimensionPlaceholder": "napr. 1536",
+		"openAiCompatibleModelDimensionDescription": "Dimenzia vkladania (veľkosť výstupu) pre váš model. Skontrolujte dokumentáciu svojho poskytovateľa pre túto hodnotu. Bežné hodnoty: 384, 768, 1536, 3072.",
+		"modelLabel": "Model",
+		"modelPlaceholder": "Zadajte názov modelu",
+		"selectModel": "Vyberte model",
+		"selectModelPlaceholder": "Vyberte model",
+		"ollamaUrlLabel": "URL Ollama:",
+		"ollamaBaseUrlLabel": "Základná URL Ollama",
+		"vectorStoreProviderLabel": "Poskytovateľ úložiska vektorov",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Kľúč Qdrant:",
+		"qdrantApiKeyLabel": "Kľúč API Qdrant",
+		"qdrantApiKeyPlaceholder": "Zadajte svoj kľúč API Qdrant (voliteľné)",
+		"lancedbVectorStoreDirectoryLabel": "Cesta k LanceDB úložisku vektorov",
+		"lancedbVectorStoreDirectoryPlaceholder": "Zadajte vlastnú cestu k úložisku vektorov (voliteľné)",
+		"lancedbVectorStoreDirectoryDescription": "Cesta pre uloženie LanceDB databázy vektorov. Ak je prázdna, použije sa predvolené umiestnenie v globalStorageUri/vector.",
+		"setupConfigLabel": "Nastavenie",
+		"advancedConfigLabel": "Pokročilá konfigurácia",
+		"searchMinScoreLabel": "Prahová hodnota skóre vyhľadávania",
+		"searchMinScoreDescription": "Minimálne skóre podobnosti (0.0-1.0) požadované pre výsledky vyhľadávania. Nižšie hodnoty vrátia viac výsledkov, ale môžu byť menej relevantné. Vyššie hodnoty vrátia menej, ale relevantnejšie výsledky.",
+		"searchMinScoreResetTooltip": "Obnoviť na predvolenú hodnotu (0.4)",
+		"searchMaxResultsLabel": "Maximálny počet výsledkov vyhľadávania",
+		"searchMaxResultsDescription": "Maximálny počet výsledkov vyhľadávania, ktoré sa vrátia pri dopytovaní indexu kódovej bázy. Vyššie hodnoty poskytujú viac kontextu, ale môžu zahŕňať menej relevantné výsledky.",
+		"resetToDefault": "Obnoviť na predvolené",
+		"startIndexingButton": "Spustiť indexovanie",
+		"clearIndexDataButton": "Vymazať dáta indexu",
+		"unsavedSettingsMessage": "Pred spustením procesu indexovania prosím uložte nastavenia.",
+		"clearDataDialog": {
+			"title": "Ste si istí?",
+			"description": "Túto akciu nie je možné vrátiť späť. Týmto trvalo zmažete dáta indexu vašej kódovej bázy.",
+			"cancelButton": "Zrušiť",
+			"confirmButton": "Vymazať dáta"
+		},
+		"ollamaUrlPlaceholder": "http://localhost:11434",
+		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
+		"modelDimensionPlaceholder": "1536",
+		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"saveError": "Nepodarilo sa uložiť nastavenia",
+		"modelDimensions": "({{dimension}} dimenzií)",
+		"saveSuccess": "Nastavenie bolo úspešne uložené",
+		"saving": "Ukladanie...",
+		"saveSettings": "Uložiť",
+		"indexingStatuses": {
+			"standby": "Pohotovosť",
+			"indexing": "Indexovanie",
+			"indexed": "Indexované",
+			"error": "Chyba"
+		},
+		"close": "Zavrieť",
+		"validation": {
+			"qdrantUrlRequired": "URL Qdrant je povinné",
+			"invalidQdrantUrl": "Neplatné URL Qdrant",
+			"invalidOllamaUrl": "Neplatné URL Ollama",
+			"invalidBaseUrl": "Neplatná základná URL",
+			"openaiApiKeyRequired": "Kľúč API OpenAI je povinný",
+			"modelSelectionRequired": "Výber modelu je povinný",
+			"apiKeyRequired": "Kľúč API je povinný",
+			"modelIdRequired": "ID modelu je povinné",
+			"modelDimensionRequired": "Dimenzia modelu je povinná",
+			"geminiApiKeyRequired": "Kľúč API Gemini je povinný",
+			"mistralApiKeyRequired": "Kľúč API Mistral je povinný",
+			"vercelAiGatewayApiKeyRequired": "Je vyžadovaný kľúč API Vercel AI Gateway",
+			"openRouterApiKeyRequired": "Kľúč API OpenRouter je povinný",
+			"voyageApiKeyRequired": "API kľúč Voyage AI je povinný",
+			"ollamaBaseUrlRequired": "Základná URL Ollama je povinná",
+			"baseUrlRequired": "Základná URL je povinná",
+			"modelDimensionMinValue": "Dimenzia modelu musí byť väčšia ako 0",
+			"bedrockRegionRequired": "AWS región je povinný",
+			"bedrockProfileRequired": "AWS profil je povinný",
+			"apiKey": "Musíte zadať platný kľúč API.",
+			"awsRegion": "Musíte vybrať región pre použitie s Amazon Bedrock.",
+			"googleCloud": "Musíte zadať platné ID projektu Google Cloud a región.",
+			"modelId": "Musíte zadať platné ID modelu.",
+			"modelSelector": "Musíte zadať platný selektor modelu.",
+			"openAi": "Musíte zadať platnú základnú URL, kľúč API a ID modelu.",
+			"sapAiCore": "Musíte zadať platný kľúč služby SAP AI Core.",
+			"qwenCodeOauthPath": "Musíte poskytnúť platnú cestu k OAuth povereniam."
+		},
+		"optional": "voliteľné",
+		"cancelling": "Prebieha rušenie...",
+		"cancelIndexingButton": "Zrušiť indexovanie"
+	},
+	"autoApproval": {
+		"title": "Automatické schválenie",
+		"description": "Povoliť Kilo Code automaticky vykonávať operácie bez nutnosti schválenia. Povoľte tieto nastavenia iba v prípade, že plne dôverujete AI a rozumiete súvisiacim bezpečnostným rizikám."
+	},
+	"autoApprove": {
+		"description": "Povoliť Kilo Code automaticky vykonávať operácie bez nutnosti schválenia. Povoľte tieto nastavenia iba v prípade, že plne dôverujete AI a rozumiete súvisiacim bezpečnostným rizikám.",
+		"toggleShortcut": "Môžete nakonfigurovať klávesovú skratku pre toto nastavenie <SettingsLink>v nastaveniach vášho IDE</SettingsLink>.",
+		"enabled": "Automatické schválenie povolené",
+		"readOnly": {
+			"label": "Čítať",
+			"description": "Ak je povolené, Kilo Code automaticky zobrazí obsah adresára a prečíta súbory bez toho, aby ste museli klikať na tlačidlo Schváliť.",
+			"outsideWorkspace": {
+				"label": "Zahrnúť súbory mimo pracovného priestoru",
+				"description": "Povoliť Kilo Code čítať súbory mimo aktuálneho pracovného priestoru bez nutnosti schválenia."
+			}
+		},
+		"write": {
+			"label": "Písať",
+			"description": "Automaticky vytvárať a upravovať súbory bez nutnosti schválenia",
+			"delayLabel": "Oneskorenie po zápise, aby diagnostika mohla detekovať potenciálne problémy",
+			"outsideWorkspace": {
+				"label": "Zahrnúť súbory mimo pracovného priestoru",
+				"description": "Povoliť Kilo Code vytvárať a upravovať súbory mimo aktuálneho pracovného priestoru bez nutnosti schválenia."
+			},
+			"protected": {
+				"label": "Zahrnúť chránené súbory",
+				"description": "Povoliť Kilo Code vytvárať a upravovať chránené súbory (ako .kilocodeignore a konfiguračné súbory .kilocode/) bez nutnosti schválenia."
+			}
+		},
+		"browser": {
+			"label": "Prehliadač",
+			"description": "Automaticky vykonávať akcie prehliadača bez nutnosti schválenia. Poznámka: Platí iba v prípade, že model podporuje používanie počítača"
+		},
+		"retry": {
+			"label": "Skúsiť znova",
+			"description": "Automaticky opakovať neúspešné požiadavky API, keď server vráti chybovú odpoveď",
+			"delayLabel": "Oneskorenie pred opakovaním požiadavky"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "Povoliť automatické schvaľovanie jednotlivých nástrojov MCP v zobrazení MCP Servers (vyžaduje toto nastavenie aj individuálne zaškrtávacie políčko nástroja „Vždy povoliť“)"
+		},
+		"modeSwitch": {
+			"label": "Režim",
+			"description": "Automaticky prepínať medzi rôznymi režimami bez nutnosti schválenia"
+		},
+		"subtasks": {
+			"label": "Podúlohy",
+			"description": "Povoliť vytváranie a dokončovanie podúloh bez nutnosti schválenia"
+		},
+		"delete": {
+			"label": "Zmazať",
+			"description": "Automaticky mazať súbory a adresáre bez nutnosti schválenia"
+		},
+		"followupQuestions": {
+			"label": "Otázka",
+			"description": "Automaticky vybrať prvú navrhovanú odpoveď pre následné otázky po uplynutí nastaveného časového limitu",
+			"timeoutLabel": "Doba čakania pred automatickým výberom prvej odpovede"
+		},
+		"execute": {
+			"label": "Spustiť",
+			"description": "Automaticky spúšťať povolené príkazy terminálu bez nutnosti schválenia",
+			"allowedCommands": "Povolené príkazy pre automatické spustenie",
+			"allowedCommandsDescription": "Predpony príkazov, ktoré môžu byť automaticky spustené, keď je povolené \"Vždy schvaľovať operácie spustenia\". Pridajte * pre povolenie všetkých príkazov (používajte s opatrnosťou).",
+			"deniedCommands": "Zakázané príkazy",
+			"deniedCommandsDescription": "Predpony príkazov, ktoré budú automaticky zamietnuté bez žiadosti o schválenie. V prípade konfliktov s povolenými príkazmi má prednosť najdlhšia zhoda predpony. Pridajte * pre zamietnutie všetkých príkazov.",
+			"commandPlaceholder": "Zadajte predponu príkazu (napr. 'git ')",
+			"deniedCommandPlaceholder": "Zadajte predponu príkazu na zamietnutie (napr. 'rm -rf')",
+			"addButton": "Pridať",
+			"autoDenied": "Príkazy s predponou `{{prefix}}` boli používateľom zakázané. Neobchádzajte toto obmedzenie spustením iného príkazu."
+		},
+		"showMenu": {
+			"label": "Zobraziť ponuku automatického schválenia v zobrazení chatu",
+			"description": "Ak je povolené, ponuka automatického schválenia sa zobrazí v dolnej časti zobrazenia chatu, čo umožní rýchly prístup k nastaveniu automatického schválenia"
+		},
+		"updateTodoList": {
+			"label": "Todo",
+			"description": "Automaticky aktualizovať zoznam úloh bez nutnosti schválenia"
+		},
+		"apiRequestLimit": {
+			"title": "Maximálny počet žiadostí",
+			"unlimited": "Neobmedzene"
+		},
+		"apiCostLimit": {
+			"title": "Maximálne náklady",
+			"unlimited": "Neobmedzene"
+		},
+		"maxLimits": {
+			"description": "Automaticky vykonávať požiadavky až do týchto limitov pred žiadosťou o schválenie na pokračovanie."
+		},
+		"toggleAriaLabel": "Prepnúť automatické schválenie",
+		"disabledAriaLabel": "Automatické schválenie zakázané - najprv vyberte možnosti",
+		"selectOptionsFirst": "Vyberte aspoň jednu možnosť nižšie pre povolenie automatického schválenia"
+	},
+	"providers": {
+		"providerDocumentation": "Dokumentácia {{provider}}",
+		"configProfile": "Konfiguračný profil",
+		"description": "Uložte si rôzne konfigurácie API pre rýchle prepínanie medzi poskytovateľmi a nastaveniami.",
+		"makeActiveProfile": "Nastaviť ako aktívny profil",
+		"makeActiveTooltip": "Aktivuj tento profil pre použitie v API požiadavkách",
+		"apiProvider": "Poskytovateľ API",
+		"apiProviderDocs": "Dokumentácia poskytovateľa",
+		"model": "Model",
+		"nameEmpty": "Meno nemôže byť prázdne",
+		"nameExists": "Profil s týmto názvom už existuje",
+		"deleteProfile": "Zmazať profil",
+		"invalidArnFormat": "Neplatný formát ARN. Skontrolujte prosím vyššie uvedené príklady.",
+		"enterNewName": "Zadajte nové meno",
+		"addProfile": "Pridať profil",
+		"renameProfile": "Premenovať profil",
+		"newProfile": "Nový konfiguračný profil",
+		"enterProfileName": "Zadajte názov profilu",
+		"createProfile": "Vytvoriť profil",
+		"cannotDeleteOnlyProfile": "Nie je možné zmazať jediný profil",
+		"searchPlaceholder": "Hľadať profily",
+		"searchProviderPlaceholder": "Hľadať poskytovateľov",
+		"noProviderMatchFound": "Neboli nájdení žiadni poskytovatelia",
+		"noMatchFound": "Neboli nájdené žiadne zodpovedajúce profily",
+		"vscodeLmDescription": "API jazykového modelu VS Code vám umožňuje spúšťať modely poskytované inými rozšíreniami VS Code (vrátane, ale nielen, GitHub Copilot). Najjednoduchší spôsob, ako začať, je nainštalovať rozšírenie Copilot a Copilot Chat z VS Code Marketplace.",
+		"vscodeLmUnavailable": "Podpora jazykových modelov VS Code je dostupná iba vo Visual Studio Code. Forky ako VSCodium a ďalšie nemusia fungovať. Ďalej táto funkcia nie je dostupná v nástrojoch JetBrains.",
+		"vscodeLmUnavailableInstructions": "Uistite sa, že používate podporovaný nástroj a že máte nainštalovaný a povolený VS Code Chat",
+		"awsCustomArnUse": "Zadajte platný Amazon Bedrock ARN pre model, ktorý chcete použiť. Príklady formátu:",
+		"awsCustomArnDesc": "Uistite sa, že región v ARN zodpovedá vyššie vybranému regiónu AWS.",
+		"openRouterApiKey": "Kľúč API OpenRouter",
+		"getOpenRouterApiKey": "Získať kľúč API OpenRouter",
+		"vercelAiGatewayApiKey": "Kľúč API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Získať kľúč API Vercel AI Gateway",
+		"apiKeyStorageNotice": "Kľúče API sú bezpečne uložené v tajnom úložisku VSCode",
+		"glamaApiKey": "Kľúč API Glama",
+		"getGlamaApiKey": "Získať kľúč API Glama",
+		"openAiCodexRateLimits": {
+			"title": "Limity využitia pre Codex{{planLabel}}",
+			"loading": "Načítanie limitov využitia...",
+			"loadError": "Nepodarilo sa načítať limity využitia",
+			"retry": "Skúsiť znova",
+			"usedPercent": "{{percent}}% použité",
+			"resetsIn": "Obnoví sa za {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Teraz",
+				"notAvailable": "Nedostupné"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Využitie",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Denný limit",
+				"weekly": "Týždenný limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
+		"useCustomBaseUrl": "Použiť vlastnú základnú URL",
+		"useReasoning": "Povoliť uvažovanie",
+		"useHostHeader": "Použiť vlastnú hlavičku Host",
+		"useLegacyFormat": "Použiť starší formát API OpenAI",
+		"customHeaders": "Vlastné hlavičky",
+		"headerName": "Názov hlavičky",
+		"headerValue": "Hodnota hlavičky",
+		"noCustomHeaders": "Nie sú definované žiadne vlastné hlavičky. Kliknutím na tlačidlo + pridáte jednu.",
+		"requestyApiKey": "Kľúč API Requesty",
+		"refreshModels": {
+			"label": "Obnoviť modely",
+			"hint": "Znovu otvorte nastavenia, aby ste videli najnovšie modely.",
+			"loading": "Obnovovanie zoznamu modelov...",
+			"success": "Zoznam modelov bol úspešne obnovený!",
+			"error": "Nepodarilo sa obnoviť zoznam modelov. Skúste to prosím znova.",
+			"missingConfig": "Váš profil nie je úplne nakonfigurovaný. Vyplňte prosím všetky povinné polia pred obnovením modelov."
+		},
+		"getRequestyApiKey": "Získať kľúč API Requesty",
+		"getRequestyBaseUrl": "Základná URL",
+		"requestyUseCustomBaseUrl": "Použiť vlastnú základnú URL",
+		"getZenmuxApiKey": "Získať kľúč API Zenmux",
+		"zenmuxTransformsText": "Použiť Zenmux Middle Out Transform",
+		"openRouterTransformsText": "Komprimovať prompty a reťazce správ na veľkosť kontextu (<a>Transformácie OpenRouter</a>)",
+		"anthropicApiKey": "Kľúč API Anthropic",
+		"getAnthropicApiKey": "Získať kľúč API Anthropic",
+		"apertisApiKey": "Kľúč API Apertis",
+		"getApertisApiKey": "Získať kľúč API Apertis",
+		"anthropicUseAuthToken": "Odovzdávať kľúč API Anthropic ako hlavičku Authorization namiesto X-Api-Key",
+		"anthropic1MContextBetaLabel": "Povoliť 1M okno kontextu (Beta)",
+		"anthropic1MContextBetaDescription": "Rozšíriť okno kontextu na 1 milión tokenov pre Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Povoliť 1M okno kontextu (Beta)",
+		"awsBedrock1MContextBetaDescription": "Rozšíriť okno kontextu na 1 milión tokenov pre Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Povoliť 1M okno kontextu (Beta)",
+		"vertex1MContextBetaDescription": "Rozšíriť okno kontextu na 1 milión tokenov pre Claude Sonnet 4",
+		"basetenApiKey": "Kľúč API Baseten",
+		"basetenApiKeyPlaceholder": "Zadajte svoj kľúč API Baseten",
+		"getBasetenApiKey": "Získať kľúč API Baseten",
+		"corethinkApiKey": "Kľúč API Corethink",
+		"getCorethinkApiKey": "Získať kľúč API Corethink",
+		"cerebrasApiKey": "Kľúč API Cerebras",
+		"getCerebrasApiKey": "Získať kľúč API Cerebras",
+		"chutesApiKey": "Kľúč API Chutes",
+		"getChutesApiKey": "Získať kľúč API Chutes",
+		"ioIntelligenceApiKey": "Kľúč API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Zadajte váš kľúč API IO Intelligence",
+		"getIoIntelligenceApiKey": "Získať kľúč API IO Intelligence",
+		"deepSeekApiKey": "Kľúč API DeepSeek",
+		"getDeepSeekApiKey": "Získať kľúč API DeepSeek",
+		"doubaoApiKey": "Kľúč API Doubao",
+		"getDoubaoApiKey": "Získať kľúč API Doubao",
+		"featherlessApiKey": "Kľúč API Featherless",
+		"getFeatherlessApiKey": "Získať kľúč API Featherless",
+		"fireworksApiKey": "Kľúč API Fireworks",
+		"getFireworksApiKey": "Získať kľúč API Fireworks",
+		"syntheticApiKey": "Kľúč API Synthetic",
+		"getSyntheticApiKey": "Získať kľúč API Synthetic",
+		"zaiApiKey": "Kľúč API Z.AI",
+		"getZaiApiKey": "Získať kľúč API Z.AI",
+		"moonshotApiKey": "Kľúč API Moonshot",
+		"getMoonshotApiKey": "Získať kľúč API Moonshot",
+		"moonshotBaseUrl": "Vstupný bod Moonshot",
+		"minimaxApiKey": "Kľúč API MiniMax",
+		"getMiniMaxApiKey": "Získať kľúč API MiniMax",
+		"minimaxBaseUrl": "Vstupný bod MiniMax",
+		"zaiEntrypoint": "Vstupný bod Z AI",
+		"zaiEntrypointDescription": "Vyberte prosím vhodný vstupný bod API podľa vašej polohy. Ak ste v Číne, vyberte open.bigmodel.cn. Inak vyberte api.z.ai.",
+		"geminiApiKey": "Kľúč API Gemini",
+		"nanoGptApiKey": "Kľúč API Nano-GPT",
+		"getNanoGptApiKey": "Získať kľúč API Nano-GPT",
+		"nanoGptModelList": "Zoznam modelov",
+		"nanoGptModelListOptions": {
+			"all": "Všetky modely",
+			"personalized": "Personalizované modely",
+			"subscription": "Modely predplatného"
+		},
+		"getGroqApiKey": "Získať kľúč API Groq",
+		"groqApiKey": "Kľúč API Groq",
+		"getSambaNovaApiKey": "Získať kľúč API SambaNova",
+		"sambaNovaApiKey": "Kľúč API SambaNova",
+		"getGeminiApiKey": "Získať kľúč API Gemini",
+		"openAiApiKey": "Kľúč API OpenAI",
+		"getHuggingFaceApiKey": "Získať kľúč API Hugging Face",
+		"huggingFaceApiKey": "Kľúč API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Získať kľúč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Kľúč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Základná URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Použiť vlastnú základnú URL",
+		"huggingFaceModelId": "ID modelu",
+		"huggingFaceLoading": "Načítanie...",
+		"huggingFaceModelsCount": "({{count}} modelov)",
+		"huggingFaceSelectModel": "Vyberte model...",
+		"huggingFaceSearchModels": "Hľadať modely...",
+		"huggingFaceNoModelsFound": "Nenájdené žiadne modely",
+		"huggingFaceProvider": "Poskytovateľ",
+		"huggingFaceProviderAuto": "Automaticky",
+		"huggingFaceSelectProvider": "Vyberte poskytovateľa...",
+		"huggingFaceSearchProviders": "Hľadať poskytovateľov...",
+		"huggingFaceNoProvidersFound": "Nenájdení žiadni poskytovatelia",
+		"sapAiCore": {
+			"serviceKey": "Kľúč služby AI Core",
+			"serviceKeyJson": "Zadajte JSON kľúča služby...",
+			"resourceGroup": "Skupina prostriedkov AI Core",
+			"credentialsNote": "Tieto prihlasovacie údaje sú uložené lokálne a používajú sa iba na vykonávanie API požiadaviek z tohto rozšírenia.",
+			"learnMore": "Viac informácií o prístupe k SAP AI Core API nájdete tu.",
+			"orchestrationMode": "Režim orchestrácie",
+			"orchestrationEnabledDesc": "Ak je povolené, poskytuje prístup ku všetkým dostupným modelom bez nutnosti jednotlivých nasadení.",
+			"orchestrationDisabledDesc": "Ak je zakázané, poskytuje prístup iba k nasadeným základným modelom vo vašej inštancii služby AI Core.",
+			"modelDeploymentDesc": "Môžete vyberať iba modely s dostupnými nasadeniami.",
+			"deployment": "Nasadenie",
+			"loading": "Načítanie...",
+			"modelsCount": "({{count}} modelov)",
+			"deploymentsCount": "({{count}} nasadení)",
+			"selectModel": "Vyberte model...",
+			"selectDeployment": "Vyberte nasadenie...",
+			"searchModels": "Hľadať modely...",
+			"searchDeployments": "Hľadať nasadenia...",
+			"noModelsFound": "Nenájdené žiadne modely",
+			"noDeploymentFound": "Nenájdené žiadne nasadenie",
+			"getStarted": "Začnite so SAP AI Core",
+			"supportedProviders": "Podporovaní poskytovatelia",
+			"supportedProvidersDesc1": "Poskytovateľ SAP AI Core v súčasnosti podporuje iba základné modely pre nasledujúcich poskytovateľov LLM:",
+			"supportedProvidersDesc2": "Zvážte prepnutie do režimu orchestrácie pre prístup k viacerým modelom.",
+			"supportedProvidersDesc3": "Viac informácií o režime orchestrácie"
+		},
+		"awsApiKey": "Kľúč API Amazon Bedrock",
+		"apiKey": "Kľúč API",
+		"anthropic": {
+			"baseUrl": "Základná URL",
+			"baseUrlDescription": "Vlastná základná URL pre Anthropic API (voliteľné)"
+		},
+		"anthropicUseAzureDeployment": "Použiť názov nasadenia Azure",
+		"anthropicAzureDeploymentPlaceholder": "Zadajte názov nasadenia...",
+		"openai": {
+			"baseUrl": "Základná URL",
+			"baseUrlDescription": "Vlastná základná URL pre OpenAI API (voliteľné)"
+		},
+		"openrouter": {
+			"baseUrl": "Základná URL",
+			"baseUrlDescription": "Vlastná základná URL pre OpenRouter API (voliteľné)"
+		},
+		"openAiBaseUrl": "Základná URL",
+		"getOpenAiApiKey": "Získať kľúč API OpenAI",
+		"mistralApiKey": "Kľúč API Mistral",
+		"getMistralApiKey": "Získať kľúč API Mistral / Codestral",
+		"codestralBaseUrl": "Základná URL Codestral (voliteľné)",
+		"codestralBaseUrlDesc": "Nastavte alternatívnu URL pre model Codestral.",
+		"xaiApiKey": "Kľúč API xAI",
+		"getXaiApiKey": "Získať kľúč API xAI",
+		"litellmApiKey": "Kľúč API LiteLLM",
+		"litellmBaseUrl": "Základná URL LiteLLM",
+		"awsCredentials": "Prihlasovacie údaje AWS",
+		"awsProfile": "Profil AWS",
+		"awsProfileName": "Názov profilu AWS",
+		"awsAccessKey": "Kľúč prístupu AWS",
+		"awsSecretKey": "Tajný kľúč AWS",
+		"awsSessionToken": "Token relácie AWS",
+		"awsRegion": "Región AWS",
+		"awsCrossRegion": "Použiť medziregionálne odvodzovanie",
+		"awsGlobalInference": "Použiť globálne odvodzovanie (automatický výber optimálneho regiónu AWS)",
+		"awsServiceTier": "Úroveň služby",
+		"awsServiceTierStandard": "Štandardná",
+		"awsServiceTierStandardDesc": "Vyvážený výkon a náklady",
+		"awsServiceTierFlex": "Flex (50% zľava)",
+		"awsServiceTierFlexDesc": "Nižšie náklady, vyššia latencia pre nekritické úlohy",
+		"awsServiceTierPriority": "Prioritná (75% príplatok)",
+		"awsServiceTierPriorityDesc": "Najrýchlejší výkon pre kritické aplikácie",
+		"awsServiceTierNote": "Úrovne služieb ovplyvňujú ceny a výkon. Flex ponúka 50% zľavu s vyššou latenciou, Prioritná ponúka o 25% lepší výkon s 75% príplatkom.",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Použiť vlastný koncový bod VPC",
+			"vpcEndpointUrlPlaceholder": "Zadajte URL koncového bodu VPC (voliteľné)",
+			"examples": "Príklady:"
+		},
+		"enablePromptCaching": "Povoliť ukladanie promptov do medzipamäte",
+		"enablePromptCachingTitle": "Povoľte ukladanie promptov do medzipamäte, aby ste zlepšili výkon a znížili náklady na podporované modely.",
+		"cacheUsageNote": "Poznámka: Ak nevidíte využitie medzipamäte, skúste vybrať iný model a potom znova vybrať požadovaný model.",
+		"vscodeLmModel": "Jazykový model",
+		"vscodeLmWarning": "Poznámka: Modely prístupné prostredníctvom API jazykového modelu VS Code môžu byť zabalené alebo doladené poskytovateľom, takže sa správanie môže líšiť od použitia rovnakého modelu priamo od typického poskytovateľa alebo routera. Ak chcete použiť model z rozbaľovacej ponuky jazykového modelu, najprv prepnite na tento model a potom kliknite na Prijať v prompte Copilot Chat; inak môže dôjsť k chybe, ako je 400 \"Požadovaný model nie je podporovaný\".",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Povoliť kontext URL",
+				"description": "Umožňuje Gemini čítať prepojené stránky pre extrakciu, porovnanie a syntézu ich obsahu do informovaných odpovedí."
+			},
+			"groundingSearch": {
+				"title": "Povoliť ukotvenie s vyhľadávaním Google",
+				"description": "Pripája Gemini k webovým dátam v reálnom čase pre presné, aktuálne odpovede s overiteľnými citáciami."
+			}
+		},
+		"googleCloudSetup": {
+			"title": "Ak chcete používať Google Cloud Vertex AI, musíte:",
+			"step1": "1. Vytvoriť účet Google Cloud, povoliť rozhranie Vertex AI API a povoliť požadované modely Claude.",
+			"step2": "2. Nainštalovať rozhranie Google Cloud CLI a nakonfigurovať predvolené prihlasovacie údaje aplikácie.",
+			"step3": "3. Alebo vytvoriť účet služby s prihlasovacími údajmi."
+		},
+		"googleCloudCredentials": "Prihlasovacie údaje Google Cloud",
+		"googleCloudKeyFile": "Cesta k súboru kľúča Google Cloud",
+		"googleCloudProjectId": "ID projektu Google Cloud",
+		"googleCloudRegion": "Región Google Cloud",
+		"lmStudio": {
+			"baseUrl": "Základná URL (voliteľné)",
+			"modelId": "ID modelu",
+			"speculativeDecoding": "Povoliť špekulatívne dekódovanie",
+			"draftModelId": "ID modelu konceptu",
+			"draftModelDesc": "Model konceptu musí byť z rovnakej rodiny modelov, aby špekulatívne dekódovanie fungovalo správne.",
+			"selectDraftModel": "Vybrať model konceptu",
+			"noModelsFound": "Neboli nájdené žiadne modely konceptu. Uistite sa, že LM Studio beží s povoleným režimom servera.",
+			"description": "LM Studio vám umožňuje spúšťať modely lokálne na vašom počítači. Pokyny na začatie práce nájdete v ich <a>sprievodcovi rýchlym štartom</a>. Budete tiež musieť spustiť funkciu <b>lokálneho servera</b> LM Studio, aby ste ho mohli používať s týmto rozšírením. <span>Poznámka:</span> Kilo Code používa zložité prompty a najlepšie funguje s modelmi Claude. Menej schopné modely nemusia fungovať podľa očakávania."
+		},
+		"ollama": {
+			"baseUrl": "Základná URL (voliteľné)",
+			"modelId": "ID modelu",
+			"apiKey": "Kľúč API",
+			"apiKeyPlaceholder": "Zadajte svoj kľúč API",
+			"apiKeyInfo": "Kľúč API bude odoslaný ako Authorization hlavička",
+			"apiKeyHelp": "Voliteľný kľúč API pre autentifikované inštancie Ollama alebo cloudové služby. Ponechajte prázdne pre miestne inštalácie.",
+			"numCtx": "Veľkosť kontextového okna (num_ctx)",
+			"numCtxHelp": "Prepísať predvolenú veľkosť kontextového okna modelu. Ponechajte prázdne pre použitie konfigurácie Modelfile modelu. Minimálna hodnota je 128.",
+			"description": "Ollama vám umožňuje spúšťať modely lokálne na vašom počítači. Pokyny na začatie práce nájdete v ich sprievodcovi rýchlym štartom.",
+			"warning": "Poznámka: Kilo Code používa zložité prompty a najlepšie funguje s modelmi Claude. Menej schopné modely nemusia fungovať podľa očakávania."
+		},
+		"unboundApiKey": "Kľúč API Unbound",
+		"getUnboundApiKey": "Získať kľúč API Unbound",
+		"unboundRefreshModelsSuccess": "Zoznam modelov bol aktualizovaný! Teraz si môžete vybrať z najnovších modelov.",
+		"unboundInvalidApiKey": "Neplatný kľúč API. Skontrolujte prosím svoj kľúč API a skúste to znova.",
+		"humanRelay": {
+			"description": "Nie je vyžadovaný žiadny kľúč API, ale používateľ musí pomôcť skopírovať a vložiť informácie do webového chatu AI.",
+			"instructions": "Počas používania sa zobrazí dialógové okno a aktuálna správa sa automaticky skopíruje do schránky. Musíte ich vložiť do webových verzií AI (napríklad ChatGPT alebo Claude), potom skopírovať odpoveď AI späť do dialógového okna a kliknúť na tlačidlo potvrdiť."
+		},
+		"roo": {
+			"authenticatedMessage": "Bezpečne autentifikované prostredníctvom vášho účtu Kilo Code Cloud.",
+			"connectButton": "Pripojiť sa k Kilo Code Cloud"
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "Smerovanie poskytovateľa OpenRouter",
+				"description": "OpenRouter smeruje požiadavky na najlepších dostupných poskytovateľov pre váš model. V predvolenom nastavení sú požiadavky vyrovnávané záťažou medzi najlepších poskytovateľov, aby sa maximalizovala doba prevádzky. Môžete si však vybrať konkrétneho poskytovateľa, ktorého chcete pre tento model použiť.",
+				"learnMore": "Zistite viac o smerovaní poskytovateľov"
+			}
+		},
+		"customModel": {
+			"capabilities": "Nakonfigurujte schopnosti a ceny pre váš vlastný model kompatibilný s OpenAI. Pri zadávaní schopností modelu buďte opatrní, pretože môžu ovplyvniť výkon Kilo Code.",
+			"maxTokens": {
+				"label": "Maximálny počet výstupných tokenov",
+				"description": "Maximálny počet tokenov, ktoré môže model vygenerovať v odpovedi. (Zadajte -1, aby server mohol nastaviť maximálny počet tokenov.)"
+			},
+			"contextWindow": {
+				"label": "Veľkosť kontextového okna",
+				"description": "Celkový počet tokenov (vstup + výstup), ktoré môže model spracovať."
+			},
+			"imageSupport": {
+				"label": "Podpora obrázkov",
+				"description": "Je tento model schopný spracovávať a rozumieť obrázkom?"
+			},
+			"computerUse": {
+				"label": "Použitie počítača",
+				"description": "Je tento model schopný interagovať s prehliadačom? (napr. Claude 3.7 Sonnet)."
+			},
+			"promptCache": {
+				"label": "Ukladanie promptov do medzipamäte",
+				"description": "Je tento model schopný ukladať prompty do medzipamäte?"
+			},
+			"pricing": {
+				"input": {
+					"label": "Cena vstupu",
+					"description": "Cena za milión tokenov vo vstupe/prompte. To ovplyvňuje náklady na odoslanie kontextu a pokynov do modelu."
+				},
+				"output": {
+					"label": "Cena výstupu",
+					"description": "Cena za milión tokenov v odpovedi modelu. To ovplyvňuje náklady na generovaný obsah a dokončenie."
+				},
+				"cacheReads": {
+					"label": "Cena čítania z medzipamäte",
+					"description": "Cena za milión tokenov za čítanie z medzipamäte. Toto je cena účtovaná pri načítaní odpovede z medzipamäte."
+				},
+				"cacheWrites": {
+					"label": "Cena zápisu do medzipamäte",
+					"description": "Cena za milión tokenov za zápis do medzipamäte. Toto je cena účtovaná pri prvom uložení promptu do medzipamäte."
+				}
+			},
+			"resetDefaults": "Obnoviť predvolené"
+		},
+		"rateLimitAfter": {
+			"label": "Obmedzenie rýchlosti na konci",
+			"description": "Začnite obmedzovať rýchlosť potom, čo stream API skončí."
+		},
+		"rateLimitSeconds": {
+			"label": "Obmedzenie rýchlosti",
+			"description": "Minimálny čas medzi požiadavkami API."
+		},
+		"consecutiveMistakeLimit": {
+			"label": "Limit chýb a opakovaní",
+			"description": "Počet po sebe idúcich chýb alebo opakovaných akcií pred zobrazením dialógu 'Kilo Code má problémy'",
+			"unlimitedDescription": "Neobmedzené opakovanie povolené (automatické pokračovanie). Dialóg sa nikdy nezobrazí.",
+			"warning": "⚠️ Nastavenie na 0 umožňuje neobmedzené opakovanie, čo môže spotrebovať značné množstvo API využitia"
+		},
+		"reasoningEffort": {
+			"label": "Úsilie modelu pri uvažovaní",
+			"none": "Žiadne",
+			"minimal": "Minimálne (najrýchlejšie)",
+			"low": "Nízke",
+			"medium": "Stredné",
+			"high": "Vysoké",
+			"xhigh": "Extra vysoké"
+		},
+		"verbosity": {
+			"label": "Podrobnosť výstupu",
+			"max": "Max",
+			"high": "Vysoká",
+			"medium": "Stredná",
+			"low": "Nízka",
+			"description": "Riadi, ako podrobné sú odpovede modelu. Nízka podrobnosť vytvára stručné odpovede, zatiaľ čo vysoká podrobnosť poskytuje dôkladné vysvetlenia."
+		},
+		"setReasoningLevel": "Povoliť úsilie pri uvažovaní",
+		"claudeCode": {
+			"pathLabel": "Cesta ku Claude Code",
+			"description": "Voliteľná cesta k vášmu CLI Claude Code. V predvolenom nastavení 'claude', ak nie je nastavené.",
+			"placeholder": "Predvolené: claude",
+			"maxTokensLabel": "Maximálny počet výstupných tokenov",
+			"maxTokensDescription": "Maximálny počet výstupných tokenov pre odpovede Claude Code. Predvolené je 8000."
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "Cenovo dostupná inteligencia pre každodenné úlohy"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "Rýchly a spoľahlivý AI asistent"
+		},
+		"kilo_code_openrouter": {
+			"description": "Prístup k 200+ modelom cez OpenRouter s 1M kontextovým oknom"
+		},
+		"qwenCode": {
+			"oauthPath": "Cesta k OAuth prihlasovacím údajom (voliteľné)",
+			"oauthPathDescription": "Cesta k súboru prihlasovacích údajov OAuth. Ponechajte prázdne pre použitie predvoleného umiestnenia (~/.qwen/oauth_creds.json).",
+			"description": "Tento poskytovateľ používa OAuth autentifikáciu zo služby Qwen a nevyžaduje kľúče API.",
+			"instructions": "Postupujte prosím podľa oficiálnej dokumentácie pre získanie autorizačného súboru a umiestnite ho do zadanej cesty.",
+			"setupLink": "Oficiálna dokumentácia Qwen"
+		},
+		"profileName": "Názov profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatické dokončovanie",
+		"profileTypeDescription": "Profily chatu sa používajú pre konverzácie. Je povolený iba jeden profil automatického dokončovania.",
+		"autocompleteLabel": "(Automatické dokončovanie)",
+		"autocomplete": {
+			"onlyOneAllowed": "Je povolený iba jeden profil automatického dokončovania. Profil \"{{existingName}}\" je už nakonfigurovaný pre automatické dokončovanie. Najprv zmeň jeho typ alebo ho zmaž."
+		}
+	},
+	"contextWindow": {
+		"description": "Maximálny kontext konverzácie",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "Maximálna dĺžka odpovede"
+	},
+	"topP": {
+		"description": "Kontrola rozmanitosti odpovedí"
+	},
+	"kiloRemoteControl": {
+		"description": "Povoliť vzdialené ovládanie úloh"
+	},
+	"browser": {
+		"enable": {
+			"label": "Povoliť nástroj prehliadača",
+			"description": "Ak je povolené, Kilo Code môže používať prehliadač na interakciu s webovými stránkami pri používaní modelov, ktoré podporujú používanie počítača. <0>Dozvedieť sa viac</0>"
+		},
+		"viewport": {
+			"label": "Veľkosť zobrazenia",
+			"description": "Vyberte veľkosť zobrazenia pre interakcie s prehliadačom. To ovplyvňuje, ako sa webové stránky zobrazujú a ako s nimi interagujete.",
+			"options": {
+				"largeDesktop": "Veľký desktop (1280x800)",
+				"smallDesktop": "Malý desktop (900x600)",
+				"tablet": "Tablet (768x1024)",
+				"mobile": "Mobilný (360x640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "Kvalita snímky obrazovky",
+			"description": "Upravte kvalitu snímok obrazovky prehliadača vo formáte WebP. Vyššie hodnoty poskytujú jasnejšie snímky obrazovky, ale zvyšujú spotrebu tokenov."
+		},
+		"remote": {
+			"label": "Použiť vzdialené pripojenie prehliadača",
+			"description": "Pripojte sa k prehliadaču Chrome, ktorý beží s povoleným vzdialeným ladením (--remote-debugging-port=9222).",
+			"urlPlaceholder": "Vlastná URL (napr. http://localhost:9222)",
+			"testButton": "Testovať pripojenie",
+			"testingButton": "Testovanie...",
+			"instructions": "Zadajte adresu hostiteľa protokolu DevTools alebo ponechajte prázdne pre automatické zistenie miestnych inštancií Chrome. Tlačidlo Testovať pripojenie sa pokúsi o vlastnú URL, ak je zadaná, alebo o automatické zistenie, ak je pole prázdne."
+		}
+	},
+	"checkpoints": {
+		"timeout": {
+			"label": "Časový limit inicializácie kontrolného bodu (sekundy)",
+			"description": "Maximálna doba čakania na inicializáciu služby kontrolných bodov. Predvolené je 15 sekúnd. Rozsah: 10-60 sekúnd."
+		},
+		"enable": {
+			"label": "Povoliť automatické kontrolné body",
+			"description": "Ak je povolené, Kilo Code automaticky vytvorí kontrolné body počas vykonávania úlohy, čo uľahčí kontrolu zmien alebo návrat do predchádzajúcich stavov. <0>Dozvedieť sa viac</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Povoliť automatické čistenie úloh",
+			"description": "Automaticky mazať staré úlohy pre uvoľnenie miesta na disku a zlepšenie výkonu. Úlohy sú klasifikované podľa typu a veku pre určenie, kedy majú byť odstránené."
+		},
+		"defaultRetention": {
+			"label": "Predvolená doba uchovávania (dni)",
+			"description": "Počet dní pre uchovávanie úloh pred tým, než sú spôsobilé na čistenie"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nikdy nemazať obľúbené úlohy",
+			"description": "Keď je povolené, obľúbené úlohy nebudú nikdy automaticky zmazané bez ohľadu na vek"
+		},
+		"favoritedRetention": {
+			"label": "Uchovávanie obľúbených úloh (dni)",
+			"description": "Počet dní pre uchovávanie obľúbených úloh (platí iba keď je 'Nikdy nemazať obľúbené úlohy' zakázané)"
+		},
+		"completedRetention": {
+			"label": "Uchovávanie dokončených úloh (dni)",
+			"description": "Počet dní pre uchovávanie úloh, ktoré boli úspešne dokončené"
+		},
+		"incompleteRetention": {
+			"label": "Uchovávanie nedokončených úloh (dni)",
+			"description": "Počet dní pre uchovávanie úloh, ktoré neboli dokončené (zvyčajne kratšie ako dokončené úlohy)"
+		},
+		"lastRun": {
+			"label": "Posledné čistenie"
+		},
+		"manualPurge": {
+			"button": "Spustiť čistenie teraz"
+		}
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Zobraziť časovú os úlohy",
+			"description": "Zobraziť vizuálnu časovú os správ úlohy, farebne odlíšenú podľa typu, čo vám umožní rýchlo zobraziť priebeh úlohy a posunúť sa späť na konkrétne body v histórii úlohy."
+		},
+		"sendMessageOnEnter": {
+			"label": "Odoslať správu pomocou Enter",
+			"description": "Ak je povolené, stlačte Enter pre odoslanie a Shift+Enter pre nový riadok. Vypnite pre použitie Shift+Enter pre odoslanie."
+		},
+		"costThreshold": {
+			"label": "Skryť cenu pod prahom",
+			"currentValue": "Aktuálny prah: ${{value}}",
+			"description": "Zobrazovať iba náklady na požiadavky prevyšujúce túto sumu. Náklady sú vždy viditeľné, keď je panel podrobností otvorený."
+		},
+		"showTimestamps": {
+			"label": "Zobraziť časové pečiatky",
+			"description": "Zobraziť časovú pečiatku pre každú správu v zobrazení chatu"
+		},
+		"showDiffStats": {
+			"label": "Zobraziť štatistiky diff",
+			"description": "Zobraziť štatistiky pridaných/odobraných riadkov v záhlaví úlohy"
+		}
+	},
+	"autocomplete": {
+		"showGutterAnimation": {
+			"label": "Zobraziť animáciu v okraji pri automatickom dokončovaní",
+			"description": "Zobraziť animovaný indikátor v okraji editora, keď beží automatické dokončovanie",
+			"preview": "Náhľad animácie"
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "Povoliť zvukové efekty",
+			"description": "Ak je povolené, Kilo Code bude prehrávať zvukové efekty pre oznámenia a udalosti.",
+			"volumeLabel": "Hlasitosť"
+		},
+		"tts": {
+			"label": "Povoliť prevod textu na reč",
+			"description": "Ak je povolené, Kilo Code bude nahlas čítať svoje odpovede pomocou prevodu textu na reč.",
+			"speedLabel": "Rýchlosť"
+		}
+	},
+	"contextManagement": {
+		"description": "Kontrolujte, aké informácie sú zahrnuté v kontextovom okne AI, čo ovplyvňuje využitie tokenov a kvalitu odpovede",
+		"autoCondenseContextPercent": {
+			"label": "Prahová hodnota pre spustenie inteligentného zhusťovania kontextu",
+			"description": "Keď kontextové okno dosiahne túto prahovú hodnotu, Kilo Code ho automaticky zhustí."
+		},
+		"condensingApiConfiguration": {
+			"label": "Konfigurácia API pre zhusťovanie kontextu",
+			"description": "Vyberte, akú konfiguráciu API použiť pre operácie zhusťovania kontextu. Ponechajte nevybrané, ak chcete použiť aktuálne aktívnu konfiguráciu.",
+			"useCurrentConfig": "Predvolené"
+		},
+		"customCondensingPrompt": {
+			"label": "Vlastný prompt pre zhusťovanie kontextu",
+			"description": "Prispôsobte systémový prompt používaný pre zhusťovanie kontextu. Ponechajte prázdne, ak chcete použiť predvolený prompt.",
+			"placeholder": "Sem zadajte svoj vlastný prompt pre zhusťovanie...\n\nMôžete použiť rovnakú štruktúru ako predvolený prompt:\n- Predchádzajúca konverzácia\n- Aktuálna práca\n- Kľúčové technické pojmy\n- Relevantné súbory a kód\n- Riešenie problémov\n- Čakajúce úlohy a ďalšie kroky",
+			"reset": "Obnoviť predvolené",
+			"hint": "Prázdne = použiť predvolený prompt"
+		},
+		"autoCondenseContext": {
+			"name": "Automaticky spúšťať inteligentné zhusťovanie kontextu",
+			"description": "Ak je povolené, Kilo Code automaticky zhustí kontext, keď je dosiahnutá prahová hodnota. Ak je zakázané, môžete stále ručne spúšťať zhusťovanie kontextu."
+		},
+		"openTabs": {
+			"label": "Limit kontextu otvorených kariet",
+			"description": "Maximálny počet otvorených kariet VSCode, ktoré sa majú zahrnúť do kontextu. Vyššie hodnoty poskytujú viac kontextu, ale zvyšujú využitie tokenov."
+		},
+		"workspaceFiles": {
+			"label": "Limit kontextu súborov pracovného priestoru",
+			"description": "Maximálny počet súborov, ktoré sa majú zahrnúť do podrobností aktuálneho pracovného adresára. Vyššie hodnoty poskytujú viac kontextu, ale zvyšujú využitie tokenov."
+		},
+		"maxGitStatusFiles": {
+			"label": "Maximálny počet súborov Git stavu",
+			"description": "Maximálny počet súborových záznamov, ktoré sa zahrnú do kontextu Git stavu. Nastavte na 0 pre vypnutie. Informácie o vetve sa vždy zobrazia, keď je > 0."
+		},
+		"rooignore": {
+			"label": "Zobraziť súbory ignorované .kilocodeignore v zoznamoch a vyhľadávaniach",
+			"description": "Ak je povolené, súbory zodpovedajúce vzorom v .kilocodeignore sa zobrazia v zoznamoch so symbolom zámku. Ak je zakázané, tieto súbory budú úplne skryté zo zoznamov súborov a vyhľadávania."
+		},
+		"enableSubfolderRules": {
+			"label": "Povoliť pravidlá podadresárov",
+			"description": "Rekurzívne objavovať a načítavať súbory .roo/rules a AGENTS.md z podadresárov. Užitočné pre monorepá s pravidlami špecifickými pre balíčky."
+		},
+		"maxConcurrentFileReads": {
+			"label": "Limit súbežného čítania súborov",
+			"description": "Maximálny počet súborov, ktoré môže nástroj 'read_file' spracovávať súbežne. Vyššie hodnoty môžu urýchliť čítanie viacerých malých súborov, ale zvyšujú využitie pamäte."
+		},
+		"maxReadFile": {
+			"label": "Prahová hodnota automatického skrátenia pri čítaní súboru",
+			"description": "Kilo Code načíta tento počet riadkov, keď model vynechá počiatočné/koncové hodnoty. Ak je toto číslo menšie ako celkový počet riadkov súboru, Kilo Code vygeneruje index čísel riadkov definícií kódu. Špeciálne prípady: -1 inštruuje Kilo Code, aby prečítal celý súbor (bez indexovania), a 0 ho inštruuje, aby nenačítal žiadne riadky a poskytoval iba indexy riadkov pre minimálny kontext. Nižšie hodnoty minimalizujú počiatočné využitie kontextu, čo umožňuje presné následné čítanie rozsahu riadkov. Explicitné požiadavky na začiatok/koniec nie sú týmto nastavením obmedzené.",
+			"lines": "riadky",
+			"always_full_read": "Vždy čítať celý súbor"
+		},
+		"maxImageFileSize": {
+			"label": "Maximálna veľkosť súboru obrázka",
+			"mb": "MB",
+			"description": "Maximálna veľkosť (v MB) pre súbory obrázkov, ktoré môže nástroj pre čítanie súborov spracovať."
+		},
+		"maxTotalImageSize": {
+			"label": "Maximálna celková veľkosť obrázkov",
+			"mb": "MB",
+			"description": "Maximálny kumulatívny limit veľkosti (v MB) pre všetky obrázky spracované v jednej operácii read_file. Pri čítaní viacerých obrázkov sa veľkosť každého obrázka pripočíta k celkovej veľkosti. Ak by zahrnutie ďalšieho obrázka prekročilo tento limit, bude preskočený."
+		},
+		"condensingThreshold": {
+			"label": "Prahová hodnota spúšťania zhusťovania",
+			"selectProfile": "Nakonfigurovať prahovú hodnotu pre profil",
+			"defaultProfile": "Globálne predvolené (všetky profily)",
+			"defaultDescription": "Keď kontext dosiahne toto percento, bude automaticky zhustený pre všetky profily, ak nemajú vlastné nastavenie",
+			"profileDescription": "Vlastná prahová hodnota iba pre tento profil (prepisuje globálne predvolené)",
+			"inheritDescription": "Tento profil dedí globálnu predvolenú prahovú hodnotu ({{threshold}}%)",
+			"usesGlobal": "(používa globálne {{threshold}}%)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automaticky zahrnúť diagnostiky do kontextu",
+				"description": "Ak je povolené, diagnostické správy (chyby) z upravovaných súborov budú automaticky zahrnuté do kontextu. Vždy môžete ručne zahrnúť všetky diagnostiky pracovného priestoru pomocou @problems."
+			},
+			"maxMessages": {
+				"label": "Maximálny počet diagnostických správ",
+				"description": "Obmedzuje počet diagnostických správ (chyby, varovania) zahrnutých do kontextu. Keď je nastavené, zobrazí sa iba tento počet diagnostík s uprednostnením chýb pred varovaniami. Nastavte na 0 pre neobmedzené diagnostiky.",
+				"resetTooltip": "Obnoviť na predvolenú hodnotu (50)",
+				"unlimitedLabel": "Neobmedzene"
+			},
+			"delayAfterWrite": {
+				"label": "Oneskorenie po zápise, aby diagnostika mohla detekovať potenciálne problémy",
+				"description": "Čas čakania po zápise súborov pred pokračovaním (v milisekundách). Vyššie hodnoty môžu zlepšiť presnosť, ale spomaľujú detekciu chýb."
+			}
+		},
+		"includeCurrentTime": {
+			"label": "Zahrnúť aktuálny čas do kontextu",
+			"description": "Ak je povolené, aktuálny čas a informácie o časovom pásme budú zahrnuté do systémového promptu. Zakážte toto, ak modely prestávajú pracovať kvôli obavám o čas."
+		},
+		"includeCurrentCost": {
+			"label": "Zahrnúť aktuálne náklady do kontextu",
+			"description": "Ak je povolené, aktuálne náklady na využitie API budú zahrnuté do systémového promptu. Zakážte toto, ak modely prestávajú pracovať kvôli obavám o náklady."
+		},
+		"apiProviderDocs": "Dokumentácia poskytovateľa"
+	},
+	"terminal": {
+		"basic": {
+			"label": "Nastavenia terminálu: Základné",
+			"description": "Základné nastavenia terminálu"
+		},
+		"advanced": {
+			"label": "Nastavenia terminálu: Pokročilé",
+			"description": "Nasledujúce možnosti môžu vyžadovať reštart terminálu, aby sa nastavenie prejavilo."
+		},
+		"outputLineLimit": {
+			"label": "Limit výstupu terminálu",
+			"description": "Maximálny počet riadkov, ktoré sa majú zahrnúť do výstupu terminálu pri vykonávaní príkazov. Pri prekročení budú riadky odstránené zo stredu, čím sa ušetria tokeny. <0>Dozvedieť sa viac</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Limit znakov terminálu",
+			"description": "Maximálny počet znakov, ktoré sa majú zahrnúť do výstupu terminálu pri vykonávaní príkazov. Tento limit má prednosť pred limitom riadkov, aby sa predišlo problémom s pamäťou z extrémne dlhých riadkov. Pri prekročení bude výstup skrátený. <0>Dozvedieť sa viac</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "Časový limit integrácie shellu terminálu",
+			"description": "Maximálna doba čakania na inicializáciu integrácie shellu pred vykonaním príkazov. Pre používateľov s dlhou dobou spúšťania shellu môže byť nutné túto hodnotu zvýšiť, ak sa v termináli zobrazia chyby „Integrácia shellu nie je k dispozícii“. <0>Dozvedieť sa viac</0>"
+		},
+		"shellIntegrationDisabled": {
+			"label": "Zakázať integráciu shellu terminálu",
+			"description": "Povoľte túto možnosť, ak príkazy terminálu nefungujú správne alebo sa zobrazujú chyby „Integrácia shellu nie je k dispozícii“. Tým sa použije jednoduchšia metóda spúšťania príkazov, ktorá obíde niektoré pokročilé funkcie terminálu. <0>Dozvedieť sa viac</0>"
+		},
+		"commandDelay": {
+			"label": "Oneskorenie príkazu terminálu",
+			"description": "Oneskorenie v milisekundách, ktoré sa pridá po vykonaní príkazu. Predvolené nastavenie 0 oneskorenie úplne zakáže. To môže pomôcť zaistiť, že výstup príkazu bude plne zachytený v termináloch s problémami s časovaním. Vo väčšine terminálov sa to implementuje nastavením `PROMPT_COMMAND='sleep N'` a Powershell pripojí `start-sleep` na koniec každého príkazu. Pôvodne to bolo riešenie chyby VSCode#237208 a nemusí byť už potrebné. <0>Dozvedieť sa viac</0>"
+		},
+		"compressProgressBar": {
+			"label": "Komprimovať výstup priebehovej lišty",
+			"description": "Ak je povolené, spracováva výstup terminálu s návratom vozíka (\\r), aby sa simulovalo, ako by skutočný terminál zobrazoval obsah. Tým sa odstránia medzistavy priebehovej lišty a zachová sa iba konečný stav, čo šetrí kontextový priestor pre relevantnejšie informácie. <0>Dozvedieť sa viac</0>"
+		},
+		"powershellCounter": {
+			"label": "Povoliť riešenie problému s počítadlom PowerShell",
+			"description": "Ak je povolené, pridá sa k príkazom PowerShell počítadlo, aby sa zaistilo správne vykonanie príkazu. To pomáha s terminálmi PowerShell, ktoré môžu mať problémy so zachytením výstupu príkazu. <0>Dozvedieť sa viac</0>"
+		},
+		"zshClearEolMark": {
+			"label": "Vymazať značku EOL ZSH",
+			"description": "Ak je povolené, vymaže značku konca riadku ZSH nastavením PROMPT_EOL_MARK=''. Tým sa predíde problémom s interpretáciou výstupu príkazu, keď výstup končí špeciálnymi znakmi, ako je '%'. <0>Dozvedieť sa viac</0>"
+		},
+		"zshOhMy": {
+			"label": "Povoliť integráciu Oh My Zsh",
+			"description": "Ak je povolené, nastaví ITERM_SHELL_INTEGRATION_INSTALLED=Yes pre povolenie funkcií integrácie shellu Oh My Zsh. Použitie tohto nastavenia môže vyžadovať reštartovanie IDE. <0>Dozvedieť sa viac</0>"
+		},
+		"zshP10k": {
+			"label": "Povoliť integráciu Powerlevel10k",
+			"description": "Ak je povolené, nastaví POWERLEVEL9K_TERM_SHELL_INTEGRATION=true pre povolenie funkcií integrácie shellu Powerlevel10k. <0>Dozvedieť sa viac</0>"
+		},
+		"zdotdir": {
+			"label": "Povoliť spracovanie ZDOTDIR",
+			"description": "Ak je povolené, vytvorí dočasný adresár pre ZDOTDIR pre správne spracovanie integrácie shellu zsh. Tým sa zaistí správna funkcia integrácie shellu VSCode s zsh pri zachovaní vašej konfigurácie zsh. <0>Dozvedieť sa viac</0>"
+		},
+		"inheritEnv": {
+			"label": "Dediť premenné prostredia",
+			"description": "Ak je povolené, terminál bude dediť premenné prostredia z rodičovského procesu VSCode, ako sú nastavenia integrácie shellu definované v profile používateľa. Tým sa priamo prepína globálne nastavenie VSCode `terminal.integrated.inheritEnv`. <0>Dozvedieť sa viac</0>"
+		}
+	},
+	"advancedSettings": {
+		"title": "Pokročilé nastavenia",
+		"description": "Pokročilé nastavenia pre vývojárov a pokročilých používateľov",
+		"enableDebugMode": "Povoliť režim ladenia",
+		"enableDebugModeDescription": "Povoliť režim ladenia pre zobrazenie ďalších informácií pre vývoj a riešenie problémov",
+		"maxTokens": "Maximálny počet tokenov",
+		"maxTokensDescription": "Maximálny počet tokenov v odpovedi"
+	},
+	"advanced": {
+		"title": "Pokročilé nastavenia",
+		"description": "Pokročilé nastavenia pre vývojárov a pokročilých používateľov",
+		"enableDebugMode": "Povoliť režim ladenia",
+		"enableDebugModeDescription": "Povoliť režim ladenia pre zobrazenie ďalších informácií pre vývoj a riešenie problémov",
+		"maxTokens": "Maximálny počet tokenov",
+		"maxTokensDescription": "Maximálny počet tokenov v odpovedi",
+		"diff": {
+			"label": "Povoliť úpravy prostredníctvom diffov",
+			"description": "Ak je povolené, Kilo Code bude môcť rýchlejšie upravovať súbory a automaticky odmietne skrátené zápisy celých súborov. Najlepšie funguje s najnovším modelom Claude 4 Sonnet.",
+			"strategy": {
+				"label": "Stratégia diff",
+				"options": {
+					"standard": "Štandardná (jeden blok)",
+					"multiBlock": "Experimentálne: diff s viacerými blokmi",
+					"unified": "Experimentálne: zjednotený diff"
+				},
+				"descriptions": {
+					"standard": "Štandardná stratégia diff aplikuje zmeny na jeden blok kódu naraz.",
+					"unified": "Zjednotená stratégia diff používa viac prístupov k aplikácii diffov a vyberá ten najlepší.",
+					"multiBlock": "Stratégia diff s viacerými blokmi umožňuje aktualizovať viac blokov kódu v súbore v jednej požiadavke."
+				}
+			},
+			"matchPrecision": {
+				"label": "Presnosť zhody",
+				"description": "Tento posuvník riadi, ako presne musí sekcia kódu zodpovedať pri aplikácii diffov. Nižšie hodnoty umožňujú flexibilnejšiu zhodu, ale zvyšujú riziko nesprávnych nahradení. Používajte hodnoty pod 100% s extrémnou opatrnosťou."
+			}
+		},
+		"todoList": {
+			"label": "Povoliť nástroj zoznamu úloh",
+			"description": "Ak je povolené, Kilo Code môže vytvárať a spravovať zoznamy úloh pre sledovanie priebehu úlohy. To pomáha organizovať zložité úlohy do zvládnuteľných krokov."
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "Použiť experimentálnu zjednotenú stratégiu diff",
+			"description": "Povoliť experimentálnu zjednotenú stratégiu diff. Táto stratégia môže znížiť počet opakovaní spôsobených chybami modelu, ale môže spôsobiť neočakávané správanie alebo nesprávne úpravy. Povoľte iba ak rozumiete rizikám a ste ochotní starostlivo skontrolovať všetky zmeny."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Povoliť Fast Apply",
+			"description": "Ak je povolené, Kilo Code môže upravovať súbory pomocou Fast Apply so špecializovanými modelmi optimalizovanými pre úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter alebo kľúč API Morph.",
+			"apiProvider": "Poskytovateľ API",
+			"apiProviderList": {
+				"current": "Aktuálny"
+			},
+			"apiKey": "Kľúč API (voliteľné)",
+			"placeholder": "Zadajte svoj kľúč API (voliteľné)",
+			"modelLabel": "Výber modelu",
+			"modelDescription": "Vyberte, ktorý model rýchleho aplikovania použiť pre úpravy súborov",
+			"models": {
+				"auto": "Automaticky (predvolené - vyberie najlepší dostupný)",
+				"morphFast": "Morph v3 Fast (rýchlejší, nižšie náklady)",
+				"morphLarge": "Morph v3 Large (schopnejší)",
+				"relace": "Relácia Apply v3"
+			}
+		},
+		"INSERT_BLOCK": {
+			"name": "Použiť experimentálny nástroj vkladania obsahu",
+			"description": "Povoliť experimentálny nástroj vkladania obsahu, ktorý umožňuje Kilo Code vkladať obsah na konkrétne čísla riadkov bez nutnosti vytvárať diff."
+		},
+		"POWER_STEERING": {
+			"name": "Použiť experimentálny režim \"posilňovača riadenia\"",
+			"description": "Ak je povolené, Kilo Code bude modelu častejšie pripomínať podrobnosti jeho aktuálnej definície režimu. To povedie k silnejšiemu dodržiavaniu definícií rolí a vlastných inštrukcií, ale použije viac tokenov na správu."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Povoliť súbežné čítanie súborov",
+			"description": "Ak je povolené, Kilo Code môže čítať viac súborov v jednej požiadavke. Ak je zakázané, Kilo Code musí čítať súbory jeden po druhom. Zakázanie môže pomôcť pri práci s menej schopnými modelmi alebo keď chcete mať väčšiu kontrolu nad prístupom k súborom."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Použiť experimentálny nástroj diff s viacerými blokmi",
+			"description": "Ak je povolené, Kilo Code bude používať nástroj diff s viacerými blokmi. To sa pokúsi aktualizovať viac blokov kódu v súbore v jednej požiadavke."
+		},
+		"MARKETPLACE": {
+			"name": "Povoliť Marketplace",
+			"description": "Ak je povolené, môžete inštalovať MCP a vlastné režimy z Marketplace."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Povoliť súbežné úpravy súborov",
+			"description": "Ak je povolené, Kilo Code môže upravovať viac súborov v jednej požiadavke. Ak je zakázané, Kilo Code musí upravovať súbory jeden po druhom. Zakázanie môže pomôcť pri práci s menej schopnými modelmi alebo keď chcete mať väčšiu kontrolu nad úpravami súborov."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Úpravy na pozadí",
+			"description": "Zabrániť narušeniu zamerania editora, keď je povolené. Úpravy súborov prebiehajú na pozadí bez otvárania diff zobrazenia alebo krádeže zamerania. Môžete pokračovať v práci bez prerušenia, zatiaľ čo Kilo Code vykonáva zmeny. Súbory môžu byť otvorené bez zamerania pre zachytenie diagnostiky alebo zostať úplne zatvorené."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Použiť nový parser správ",
+			"description": "Povoliť experimentálny streamovací parser správ, ktorý poskytuje významné zlepšenia výkonu pre dlhé odpovede asistenta efektívnejším spracovaním správ."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Vyžadovať zoznam 'úloh' pre nové úlohy",
+			"description": "Ak je povolené, nástroj new_task bude vyžadovať poskytnutie parametra úloh. Tým sa zaistí, že všetky nové úlohy začnú s jasným zoznamom cieľov. Ak je zakázané (predvolené), parameter úloh zostane voliteľný pre spätnú kompatibilitu."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Povoliť AI generovanie obrázkov",
+			"description": "Keď je povolené, Kilo Code môže generovať obrázky z textových podnetov. Vyžaduje Kilo Code alebo OpenRouter API kľúč.",
+			"apiProvider": "Poskytovateľ API",
+			"providerLabel": "Poskytovateľ",
+			"providerDescription": "Vyberte poskytovateľa pre generovanie obrázkov.",
+			"openRouterApiKeyLabel": "OpenRouter API Key",
+			"openRouterApiKeyPlaceholder": "Zadajte svoj OpenRouter API kľúč",
+			"kiloCodeApiKeyLabel": "Kilo Code API kľúč",
+			"kiloCodeApiKeyPlaceholder": "Zadajte svoj Kilo Code API kľúč",
+			"kiloCodeApiKeyPaste": "Vložte aktuálny Kilo Code API kľúč",
+			"getApiKeyText": "Získajte API kľúč z",
+			"modelSelectionLabel": "Model pre generovanie obrázkov",
+			"modelSelectionDescription": "Vyberte model pre použitie pri generovaní obrázkov",
+			"warningMissingKey": "⚠️ API kľúč je vyžadovaný pre generovanie obrázkov, nakonfigurujte ho vyššie.",
+			"successConfigured": "✓ Generovanie obrázkov je nakonfigurované a pripravené na použitie"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Povoliť slash príkazy iniciované modelom",
+			"description": "Keď je povolené, Kilo Code môže spúšťať vaše slash príkazy na vykonanie pracovných tokov."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Povoliť funkcie Autocomplete pre rýchle návrhy kódu a vylepšenia priamo v tvojom editore. Zahŕňa Rýchlu úlohu (Cmd+I) pre cielené zmeny a Autocomplete pre kontextové vylepšenia."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Paralelné volanie nástrojov",
+			"description": "Ak je povolené, natívny protokol môže vykonávať viac nástrojov v jednom obrate správy asistenta."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Prevod reči na text (STT)",
+			"description": "Keď je povolené, Kilo Code môže prepísať váš hlas do textu pomocou modelu Whisper od OpenAI. Kliknite na tlačidlo mikrofónu v chate pre začatie nahrávania. Vyžaduje nainštalovaný FFmpeg a nakonfigurovaného poskytovateľa OpenAI API."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Povoliť vlastné nástroje",
+			"description": "Ak je povolené, Kilo môže načítavať a používať vlastné nástroje TypeScript/JavaScript z adresára .kilocode/tools vášho projektu alebo ~/.kilocode/tools pre globálne nástroje. Poznámka: tieto nástroje budú automaticky schválené.",
+			"toolsHeader": "Dostupné vlastné nástroje",
+			"noTools": "Nie sú načítané žiadne vlastné nástroje. Pridajte súbory .ts alebo .js do adresára .kilocode/tools vášho projektu alebo ~/.kilocode/tools pre globálne nástroje.",
+			"refreshButton": "Obnoviť",
+			"refreshing": "Obnovovanie...",
+			"refreshSuccess": "Nástroje úspešne obnovené",
+			"refreshError": "Nepodarilo sa obnoviť nástroje",
+			"toolParameters": "Parametre"
+		}
+	},
+	"promptCaching": {
+		"label": "Zakázať ukladanie promptov do medzipamäte",
+		"description": "Ak je zaškrtnuté, Kilo Code nebude používať ukladanie promptov do medzipamäte pre tento model."
+	},
+	"temperature": {
+		"useCustom": "Použiť vlastnú teplotu",
+		"description": "Riadi náhodnosť v odpovediach modelu.",
+		"rangeDescription": "Vyššie hodnoty robia výstup náhodnejším, nižšie hodnoty ho robia deterministickejším."
+	},
+	"modelInfo": {
+		"supportsImages": "Podporuje obrázky",
+		"noImages": "Nepodporuje obrázky",
+		"supportsComputerUse": "Podporuje používanie počítača",
+		"noComputerUse": "Nepodporuje používanie počítača",
+		"supportsPromptCache": "Podporuje ukladanie promptov do medzipamäte",
+		"noPromptCache": "Nepodporuje ukladanie promptov do medzipamäte",
+		"contextWindow": "Kontextové okno:",
+		"maxOutput": "Maximálny výstup",
+		"inputPrice": "Cena vstupu",
+		"outputPrice": "Cena výstupu",
+		"cacheReadsPrice": "Cena čítania z medzipamäte",
+		"cacheWritesPrice": "Cena zápisu do medzipamäte",
+		"enableStreaming": "Povoliť streamovanie",
+		"enableR1Format": "Povoliť parametre modelu R1",
+		"enableR1FormatTips": "Musí byť povolené pri používaní modelov R1, ako je QWQ, aby sa predišlo chybám 400",
+		"useAzure": "Použiť Azure",
+		"azureApiVersion": "Nastaviť verziu Azure API",
+		"gemini": {
+			"freeRequests": "* Zadarmo až {{count}} požiadaviek za minútu. Potom závisí fakturácia na veľkosti promptu.",
+			"pricingDetails": "Ďalšie informácie nájdete v podrobnostiach o cenách.",
+			"billingEstimate": "* Fakturácia je odhad - presná cena závisí na veľkosti promptu."
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "Rozšírenie automaticky načítava najnovší zoznam modelov dostupných na <serviceLink>{{serviceName}}</serviceLink>. Ak si nie ste istí, ktorý model vybrať, Kilo Code funguje najlepšie s <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"label": "Model",
+		"searchPlaceholder": "Hľadať",
+		"noMatchFound": "Nebola nájdená žiadna zhoda",
+		"useCustomModel": "Použiť vlastný: {{modelId}}",
+		"simplifiedExplanation": "Podrobné nastavenia modelu môžete upraviť neskôr.",
+		"recommendedModels": "Odporúčané modely",
+		"allModels": "Všetky modely"
+	},
+	"footer": {
+		"feedback": "Ak máte nejaké otázky alebo spätnú väzbu, neváhajte otvoriť problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> alebo sa pripojte k <redditLink>reddit.com/r/kilocode</redditLink> alebo <discordLink>kilo.ai/discord</discordLink>.",
+		"support": "Pre finančné otázky kontaktujte prosím zákaznícku podporu na <supportLink>https://kilo.ai/support</supportLink>",
+		"telemetry": {
+			"label": "Povoliť hlásenie chýb a používania",
+			"description": "Pomôžte vylepšiť Kilo Code odosielaním dát o používaní a hlásení chýb. Nikdy sa neodosiela žiadny kód, prompty ani osobné informácie. Ďalšie podrobnosti nájdete v našich zásadách ochrany osobných údajov."
+		},
+		"settings": {
+			"import": "Importovať",
+			"export": "Exportovať",
+			"reset": "Resetovať"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "Maximálny počet tokenov",
+		"maxThinkingTokens": "Maximálny počet tokenov pre premýšľanie"
+	},
+	"validation": {
+		"apiKey": "Musíte zadať platný kľúč API.",
+		"awsRegion": "Musíte vybrať región pre použitie s Amazon Bedrock.",
+		"googleCloud": "Musíte zadať platné ID projektu Google Cloud a región.",
+		"modelId": "Musíte zadať platné ID modelu.",
+		"modelSelector": "Musíte zadať platný selektor modelu.",
+		"openAi": "Musíte zadať platnú základnú URL, kľúč API a ID modelu.",
+		"arn": {
+			"invalidFormat": "Neplatný formát ARN. Skontrolujte prosím požiadavky na formát.",
+			"regionMismatch": "Upozornenie: Región vo vašom ARN ({{arnRegion}}) nezodpovedá vybranému regiónu ({{region}}). To môže spôsobiť problémy s prístupom. Poskytovateľ použije región z ARN."
+		},
+		"modelAvailability": "ID modelu ({{modelId}}), ktoré ste zadali, nie je k dispozícii. Vyberte prosím iný model.",
+		"providerNotAllowed": "Poskytovateľ '{{provider}}' nie je povolený vašou organizáciou",
+		"modelNotAllowed": "Model '{{model}}' nie je povolený pre poskytovateľa '{{provider}}' vašou organizáciou",
+		"profileInvalid": "Tento profil obsahuje poskytovateľa alebo model, ktorý nie je povolený vašou organizáciou",
+		"modelDeprecated": "Tento model už nie je dostupný. Prosím vyberte iný model.",
+		"qwenCodeOauthPath": "Musíte poskytnúť platnú cestu k OAuth povereniam.",
+		"sapAiCore": "Musíte zadať platný kľúč služby SAP AI Core.",
+		"sapAiCoreDeploymentId": "Musíte vybrať bežiace nasadenie pre model '{{model}}'."
+	},
+	"placeholders": {
+		"apiKey": "Zadajte kľúč API...",
+		"profileName": "Zadajte názov profilu",
+		"accessKey": "Zadajte prístupový kľúč...",
+		"secretKey": "Zadajte tajný kľúč...",
+		"sessionToken": "Zadajte token relácie...",
+		"credentialsJson": "Zadajte JSON prihlasovacích údajov...",
+		"keyFilePath": "Zadajte cestu k súboru kľúča...",
+		"projectId": "Zadajte ID projektu...",
+		"customArn": "Zadajte ARN (napr. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "Zadajte základnú URL...",
+		"modelId": {
+			"lmStudio": "napr. meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "napr. lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "napr. llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "napr. 4096",
+			"contextWindow": "napr. 128000",
+			"inputPrice": "napr. 0.0001",
+			"outputPrice": "napr. 0.0002",
+			"cacheWritePrice": "napr. 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "Predvolené: http://localhost:11434",
+		"lmStudioUrl": "Predvolené: http://localhost:1234",
+		"geminiUrl": "Predvolené: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "Vlastné ARN",
+		"useCustomArn": "Použiť vlastné ARN..."
+	},
+	"limitMaxTokensDescription": "Obmedziť maximálny počet tokenov v odpovedi",
+	"maxOutputTokensLabel": "Maximálny počet výstupných tokenov",
+	"maxTokensGenerateDescription": "Maximálny počet tokenov na vygenerovanie v odpovedi",
+	"includeMaxOutputTokens": "Zahrnúť maximálny počet výstupných tokenov",
+	"includeMaxOutputTokensDescription": "Odoslať parameter maximálneho počtu výstupných tokenov v požiadavkách API. Niektorí poskytovatelia to nemusia podporovať.",
+	"serviceTier": {
+		"label": "Úroveň služby",
+		"tooltip": "Pre rýchlejšie spracovanie API požiadaviek skúste úroveň prioritného spracovania. Pre nižšie ceny s vyššou latenciou skúste flexibilnú úroveň spracovania.",
+		"standard": "Štandardná",
+		"flex": "Flexibilná",
+		"priority": "Prioritná",
+		"pricingTableTitle": "Ceny podľa úrovne služby (cena za 1M tokenov)",
+		"columns": {
+			"tier": "Úroveň",
+			"input": "Vstup",
+			"output": "Výstup",
+			"cacheReads": "Čítanie cache"
+		}
+	},
+	"toolProtocol": {
+		"label": "Protokol volania nástrojov",
+		"description": "Vyberte, ako Kilo Code komunikuje s API. Natívny používa API pre volanie funkcií poskytovateľa, zatiaľ čo XML používa definície nástrojov vo formáte XML.",
+		"toolProtocolDesc": "Riadi spôsob, akým AI komunikuje s nástrojmi a API",
+		"toolProtocolAuto": "Automatické",
+		"toolProtocolAutoDesc": "Nechať systém automaticky vybrať najlepší protokol",
+		"toolProtocolFunctionCall": "Volanie funkcií",
+		"toolProtocolFunctionCallDesc": "Použiť natívne API pre volanie funkcií od poskytovateľa",
+		"toolProtocolToolUse": "Použitie nástrojov (XML)",
+		"toolProtocolToolUseDesc": "Použiť XML formátované definície nástrojov",
+		"default": "Predvolené",
+		"xml": "XML",
+		"native": "Natívne",
+		"currentDefault": "Predvolené: {{protocol}}"
+	},
+	"gitStatusIncludeUntracked": "Zahrnúť nesledované súbory do Git stavu",
+	"gitStatusIncludeUntrackedDesc": "Zobraziť nesledované súbory v informáciách o Git stave",
+	"experimentalParallelToolCalls": "Experimentálne paralelné volanie nástrojov",
+	"experimentalParallelToolCallsDesc": "Povoliť súbežné vykonávanie viacerých operácií nástrojov",
+	"experimentalParallelToolCallsInfo": "Táto funkcia môže zrýchliť vykonávanie úloh, ale je experimentálna",
+	"experimentalParallelToolCallsWarning": "⚠️ Experimentálna funkcia - môže spôsobiť neočakávané správanie"
+}

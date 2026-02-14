@@ -238,4 +238,51 @@ describe("NativeToolCallParser", () => {
 			})
 		})
 	})
+
+	// kilocode_change start
+	describe("processRawChunk", () => {
+		it("should coerce numeric tool call id to string", () => {
+			const events = NativeToolCallParser.processRawChunk({
+				index: 0,
+				id: 42 as unknown as string,
+				name: "read_file",
+				arguments: '{"path":"test.ts"}',
+			})
+
+			expect(events).toHaveLength(2) // start + delta
+			expect(events[0]).toMatchObject({
+				type: "tool_call_start",
+				id: "42",
+				name: "read_file",
+			})
+			expect(typeof events[0].id).toBe("string")
+		})
+
+		it("should leave undefined id as undefined", () => {
+			const events = NativeToolCallParser.processRawChunk({
+				index: 0,
+				id: undefined,
+				name: "read_file",
+			})
+
+			// No id means no tracking is initialized, so no events emitted
+			expect(events).toHaveLength(0)
+		})
+
+		it("should pass through string id unchanged", () => {
+			const events = NativeToolCallParser.processRawChunk({
+				index: 0,
+				id: "call_abc123",
+				name: "read_file",
+			})
+
+			expect(events).toHaveLength(1)
+			expect(events[0]).toMatchObject({
+				type: "tool_call_start",
+				id: "call_abc123",
+				name: "read_file",
+			})
+		})
+	})
+	// kilocode_change end
 })

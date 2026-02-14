@@ -53,13 +53,13 @@
 	"command.generateCommitMessage.title": "Buat Pesan Commit dengan Kilo",
 	"command.profile.title": "Profil",
 	"command.prompts.title": "Mode",
-	"ghost.input.title": "Tekan 'Enter' untuk konfirmasi atau 'Escape' untuk membatalkan",
-	"ghost.input.placeholder": "Jelaskan apa yang ingin Anda lakukan...",
-	"ghost.commands.generateSuggestions": "Kilo Code: Buat Saran Pengeditan",
-	"ghost.commands.displaySuggestions": "Tampilkan Saran Pengeditan",
-	"ghost.commands.cancelSuggestions": "Batalkan Saran Pengeditan",
-	"ghost.commands.applyCurrentSuggestion": "Terapkan Saran Pengeditan Saat Ini",
-	"ghost.commands.applyAllSuggestions": "Terapkan Semua Saran Pengeditan",
-	"ghost.commands.goToNextSuggestion": "Pergi ke Saran Berikutnya",
-	"ghost.commands.goToPreviousSuggestion": "Pergi ke Saran Sebelumnya"
+	"autocomplete.input.title": "Tekan 'Enter' untuk konfirmasi atau 'Escape' untuk membatalkan",
+	"autocomplete.input.placeholder": "Jelaskan apa yang ingin Anda lakukan...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: Buat Saran Pengeditan",
+	"autocomplete.commands.displaySuggestions": "Tampilkan Saran Pengeditan",
+	"autocomplete.commands.cancelSuggestions": "Batalkan Saran Pengeditan",
+	"autocomplete.commands.applyCurrentSuggestion": "Terapkan Saran Pengeditan Saat Ini",
+	"autocomplete.commands.applyAllSuggestions": "Terapkan Semua Saran Pengeditan",
+	"autocomplete.commands.goToNextSuggestion": "Pergi ke Saran Berikutnya",
+	"autocomplete.commands.goToPreviousSuggestion": "Pergi ke Saran Sebelumnya"
 }
