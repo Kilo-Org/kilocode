@@ -10,6 +10,7 @@ import type { ClineMessage } from "@roo-code/types"
 import { getModelMaxOutputTokens } from "@roo/api"
 
 import { formatLargeNumber } from "@src/utils/format"
+import { formatCost } from "@/utils/costFormatting"
 import { cn } from "@src/lib/utils"
 import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -150,7 +151,7 @@ const KiloTaskHeader = ({
 							{showDiffStats !== false && hasDiffStats && (
 								<DiffStatsDisplay added={diffStats.added} removed={diffStats.removed} />
 							)}
-							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
+							{!!totalCost && <span>${formatCost(totalCost)}</span>}
 						</div>
 					</div>
 				)}
@@ -248,7 +249,7 @@ const KiloTaskHeader = ({
 								<div className="flex justify-between items-center h-[20px]">
 									<div className="flex items-center gap-1">
 										<span className="font-bold">{t("chat:task.apiCost")}</span>
-										<span>${totalCost?.toFixed(2)}</span>
+										<span>${formatCost(totalCost)}</span>
 									</div>
 									<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
 								</div>

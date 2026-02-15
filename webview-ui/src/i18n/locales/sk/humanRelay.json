@@ -1,0 +1,13 @@
+{
+	"dialogTitle": "Human Relay - Prosím pomôž skopírovať/vložiť informácie",
+	"dialogDescription": "Prosím skopíruj nasledujúci prompt do web AI, potom vlož odpoveď AI do vstupného poľa nižšie.",
+	"copiedToClipboard": "Skopírované do schránky",
+	"aiResponse": {
+		"label": "Prosím zadaj odpoveď AI:",
+		"placeholder": "Vlož odpoveď AI sem..."
+	},
+	"actions": {
+		"cancel": "Zrušiť",
+		"submit": "Odoslať"
+	}
+}

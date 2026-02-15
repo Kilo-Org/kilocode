@@ -245,7 +245,7 @@
 			"idea7": "إنشاء حقل نجوم تفاعلي هادئ يتحرك مع إيماءات الماوس"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "اقتراحات محرر الكود",

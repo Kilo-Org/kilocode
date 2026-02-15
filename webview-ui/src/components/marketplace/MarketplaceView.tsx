@@ -131,7 +131,6 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 					style={{ display: hideHeader ? "none" : "flex" }}
 					className="flex flex-col sticky top-0 z-10 px-3 py-2 bg-vscode-sideBar-background">
 					<div className="flex justify-between items-center px-2">
-						<h3 className="font-bold m-0">{t("marketplace:title")}</h3>
 						<div className="flex gap-2 items-center">
 							<Button
 								variant="ghost"

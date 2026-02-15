@@ -25,8 +25,7 @@ import {
 	getGeminiReasoning,
 	getOpenRouterReasoning,
 } from "./reasoning"
-
-type Format = "anthropic" | "openai" | "gemini" | "openrouter"
+type Format = "anthropic" | "openai" | "gemini" | "openrouter" | "zenmux"
 
 type GetModelParamsOptions<T extends Format> = {
 	format: T
@@ -65,13 +64,26 @@ type OpenRouterModelParams = {
 	reasoning: OpenRouterReasoningParams | undefined
 } & BaseModelParams
 
-export type ModelParams = AnthropicModelParams | OpenAiModelParams | GeminiModelParams | OpenRouterModelParams
+// kilocode_change start
+type ZenMuxModelParams = {
+	format: "zenmux"
+	reasoning: OpenRouterReasoningParams | undefined
+} & BaseModelParams
+// kilocode_change end
+
+export type ModelParams =
+	| AnthropicModelParams
+	| OpenAiModelParams
+	| GeminiModelParams
+	| OpenRouterModelParams
+	| ZenMuxModelParams // kilocode_change
 
 // Function overloads for specific return types
 export function getModelParams(options: GetModelParamsOptions<"anthropic">): AnthropicModelParams
 export function getModelParams(options: GetModelParamsOptions<"openai">): OpenAiModelParams
 export function getModelParams(options: GetModelParamsOptions<"gemini">): GeminiModelParams
 export function getModelParams(options: GetModelParamsOptions<"openrouter">): OpenRouterModelParams
+export function getModelParams(options: GetModelParamsOptions<"zenmux">): OpenRouterModelParams
 export function getModelParams({
 	format,
 	modelId,

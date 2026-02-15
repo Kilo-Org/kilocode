@@ -16,7 +16,7 @@ describe("useKeybindings", () => {
 
 	it("should gracefully handle missing keybindings", () => {
 		const { result } = renderHook(() => useKeybindings(["test.command"]))
-		expect(result.current).toEqual({ "test.command": "kilocode:ghost.settings.keybindingNotFound" })
+		expect(result.current).toEqual({ "test.command": "kilocode:autocomplete.settings.keybindingNotFound" })
 	})
 
 	it("should send getKeybindings message on mount", () => {

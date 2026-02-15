@@ -88,6 +88,7 @@ export const languages = [
 	"pl",
 	"pt-BR",
 	"ru",
+	"sk",
 	"tr",
 	"vi",
 	"zh-CN",

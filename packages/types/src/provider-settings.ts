@@ -6,6 +6,7 @@ import { profileTypeSchema } from "./profile-type.js" // kilocode_change
 import {
 	anthropicModels,
 	basetenModels,
+	corethinkModels,
 	bedrockModels,
 	cerebrasModels,
 	claudeCodeModels,
@@ -50,12 +51,14 @@ export const dynamicProviders = [
 	"huggingface",
 	"litellm",
 	// kilocode_change start
+	"apertis",
 	"kilocode",
 	"ovhcloud",
 	"gemini",
 	"inception",
 	"synthetic",
 	"sap-ai-core",
+	"zenmux",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -139,6 +142,7 @@ export const providerNames = [
 	"anthropic",
 	"bedrock",
 	"baseten",
+	"corethink",
 	"cerebras",
 	"claude-code",
 	"doubao",
@@ -159,8 +163,10 @@ export const providerNames = [
 	"kilocode",
 	"minimax",
 	"virtual-quota-fallback",
+	// Note: apertis, synthetic, inception are in dynamicProviders, no need to duplicate here
 	"synthetic",
 	"inception",
+	"zenmux",
 	// kilocode_change end
 	"sambanova",
 	"vertex",
@@ -246,8 +252,21 @@ const nanoGptSchema = baseProviderSettingsSchema.extend({
 	nanoGptModelList: nanoGptModelListSchema.optional(),
 })
 
+const apertisSchema = baseProviderSettingsSchema.extend({
+	apertisApiKey: z.string().optional(),
+	apertisModelId: z.string().optional(),
+	apertisBaseUrl: z.string().optional(),
+	apertisInstructions: z.string().optional(),
+	apertisReasoningEffort: z.enum(["low", "medium", "high"]).optional(),
+	apertisReasoningSummary: z.enum(["auto", "concise", "detailed"]).optional(),
+})
+
 export const openRouterProviderDataCollectionSchema = z.enum(["allow", "deny"])
 export const openRouterProviderSortSchema = z.enum(["price", "throughput", "latency"])
+
+// ZenMux provider schemas - kilocode_change
+export const zenmuxProviderDataCollectionSchema = z.enum(["allow", "deny"])
+export const zenmuxProviderSortSchema = z.enum(["price", "throughput", "latency"])
 // kilocode_change end
 
 const openRouterSchema = baseProviderSettingsSchema.extend({
@@ -261,6 +280,19 @@ const openRouterSchema = baseProviderSettingsSchema.extend({
 	openRouterZdr: z.boolean().optional(),
 	// kilocode_change end
 })
+
+// kilocode_change start
+const zenmuxSchema = baseProviderSettingsSchema.extend({
+	zenmuxApiKey: z.string().optional(),
+	zenmuxModelId: z.string().optional(),
+	zenmuxBaseUrl: z.string().optional(),
+	zenmuxSpecificProvider: z.string().optional(),
+	zenmuxUseMiddleOutTransform: z.boolean().optional(),
+	zenmuxProviderDataCollection: zenmuxProviderDataCollectionSchema.optional(),
+	zenmuxProviderSort: zenmuxProviderSortSchema.optional(),
+	zenmuxZdr: z.boolean().optional(),
+})
+// kilocode_change end
 
 const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsAccessKey: z.string().optional(),
@@ -555,6 +587,10 @@ const basetenSchema = apiModelIdProviderModelSchema.extend({
 	basetenApiKey: z.string().optional(),
 })
 
+const corethinkSchema = apiModelIdProviderModelSchema.extend({
+	corethinkApiKey: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -565,6 +601,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })), // kilocode_change
 	nanoGptSchema.merge(z.object({ apiProvider: z.literal("nano-gpt") })), // kilocode_change
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
+	zenmuxSchema.merge(z.object({ apiProvider: z.literal("zenmux") })), // kilocode_change
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
 	vertexSchema.merge(z.object({ apiProvider: z.literal("vertex") })),
 	openAiSchema.merge(z.object({ apiProvider: z.literal("openai") })),
@@ -588,6 +625,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
+	apertisSchema.merge(z.object({ apiProvider: z.literal("apertis") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
@@ -595,6 +633,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	basetenSchema.merge(z.object({ apiProvider: z.literal("baseten") })),
+	corethinkSchema.merge(z.object({ apiProvider: z.literal("corethink") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
@@ -618,6 +657,7 @@ export const providerSettingsSchema = z.object({
 	...glamaSchema.shape, // kilocode_change
 	...nanoGptSchema.shape, // kilocode_change
 	...openRouterSchema.shape,
+	...zenmuxSchema.shape, // kilocode_change
 	...bedrockSchema.shape,
 	...vertexSchema.shape,
 	...openAiSchema.shape,
@@ -627,6 +667,7 @@ export const providerSettingsSchema = z.object({
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
 	// kilocode_change start
+	...apertisSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	...syntheticSchema.shape,
@@ -648,6 +689,7 @@ export const providerSettingsSchema = z.object({
 	...xaiSchema.shape,
 	...groqSchema.shape,
 	...basetenSchema.shape,
+	...corethinkSchema.shape,
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
@@ -686,6 +728,7 @@ export const modelIdKeys = [
 	"glamaModelId", // kilocode_change
 	"nanoGptModelId", // kilocode_change
 	"openRouterModelId",
+	"zenmuxModelId", // kilocode_change
 	"openAiModelId",
 	"ollamaModelId",
 	"lmStudioModelId",
@@ -701,6 +744,7 @@ export const modelIdKeys = [
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
 	"sapAiCoreModelId", // kilocode_change
+	"apertisModelId", // kilocode_change
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -748,9 +792,12 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	ovhcloud: "ovhCloudAiEndpointsModelId",
 	inception: "inceptionLabsModelId",
 	"sap-ai-core": "sapAiCoreModelId",
+	apertis: "apertisModelId",
+	zenmux: "zenmuxModelId", // kilocode_change
 	// kilocode_change end
 	groq: "apiModelId",
 	baseten: "apiModelId",
+	corethink: "apiModelId",
 	chutes: "apiModelId",
 	litellm: "litellmModelId",
 	huggingface: "huggingFaceModelId",
@@ -904,6 +951,7 @@ export const MODELS_BY_PROVIDER: Record<
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Z.ai", models: Object.keys(internationalZAiModels) },
 	baseten: { id: "baseten", label: "Baseten", models: Object.keys(basetenModels) },
+	corethink: { id: "corethink", label: "Corethink", models: Object.keys(corethinkModels) },
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] }, // kilocode_change
@@ -920,6 +968,8 @@ export const MODELS_BY_PROVIDER: Record<
 	inception: { id: "inception", label: "Inception", models: [] },
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
+	apertis: { id: "apertis", label: "Apertis", models: [] },
+	zenmux: { id: "zenmux", label: "ZenMux", models: [] }, // kilocode_change
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },

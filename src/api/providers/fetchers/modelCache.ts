@@ -33,6 +33,7 @@ import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 import { getSyntheticModels } from "./synthetic"
 import { getSapAiCoreModels } from "./sap-ai-core"
+import { getApertisModels } from "./apertis"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -40,6 +41,7 @@ import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
+import { getZenmuxModels } from "./zenmux"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -75,7 +77,6 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 	const { provider } = options
 
 	let models: ModelRecord
-
 	switch (provider) {
 		case "openrouter":
 			// kilocode_change start: base url and bearer token
@@ -84,6 +85,12 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 				headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : undefined,
 			})
 			// kilocode_change end
+			break
+		case "zenmux":
+			models = await getZenmuxModels({
+				openRouterBaseUrl: options.baseUrl || "https://zenmux.ai/api/v1",
+				headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : undefined,
+			})
 			break
 		case "requesty":
 			// Requesty models endpoint requires an API key for per-user custom policies.
@@ -155,6 +162,12 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			break
 		case "ovhcloud":
 			models = await getOvhCloudAiEndpointsModels()
+			break
+		case "apertis":
+			models = await getApertisModels({
+				apiKey: options.apiKey,
+				baseUrl: options.baseUrl,
+			})
 			break
 		// kilocode_change end
 		case "roo": {
@@ -334,6 +347,7 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 			{ provider: "io-intelligence", options: { provider: "io-intelligence" } }, // kilocode_change: Add io-intelligence to background refresh
 			{ provider: "ovhcloud", options: { provider: "ovhcloud" } }, // kilocode_change: Add ovhcloud to background refresh
 			{ provider: "litellm", options: { provider: "litellm" } }, // kilocode_change: Add litellm to background refresh
+			{ provider: "apertis", options: { provider: "apertis" } }, // kilocode_change: Add apertis to background refresh
 		]
 
 		// Refresh each provider in background (fire and forget)
