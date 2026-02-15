@@ -321,9 +321,8 @@ function getSelectedModel({
 			const isKimiCodingEndpoint = apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
 			const firstNonCodingMoonshotModelId =
 				Object.keys(moonshotModels).find((modelId) => modelId !== "kimi-for-coding") ?? moonshotDefaultModelId
-			const id = isKimiCodingEndpoint
-				? "kimi-for-coding"
-				: configuredId === "kimi-for-coding"
+			const id =
+				configuredId === "kimi-for-coding" && !isKimiCodingEndpoint
 					? firstNonCodingMoonshotModelId
 					: configuredId
 			// kilocode_change end
@@ -336,7 +335,9 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "zai": {
-			const isChina = apiConfiguration.zaiApiLine === "china_coding"
+			// kilocode_change - china_api uses mainland model catalog too.
+			const isChina =
+				apiConfiguration.zaiApiLine === "china_coding" || apiConfiguration.zaiApiLine === "china_api"
 			const models = isChina ? mainlandZAiModels : internationalZAiModels
 			const defaultModelId = getProviderDefaultModelId(provider, { isChina })
 			const id = apiConfiguration.apiModelId ?? defaultModelId
@@ -587,7 +588,7 @@ function getSelectedModel({
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "fake-ai" | "human-relay" | "kilocode"
+			provider satisfies "anthropic" | "fake-ai" | "human-relay" | "kilocode" | "apertis"
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

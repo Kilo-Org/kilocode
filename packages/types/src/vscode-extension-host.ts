@@ -574,6 +574,7 @@ export type ExtensionState = Pick<
 	clineMessages: ClineMessage[]
 	currentTaskItem?: HistoryItem
 	currentTaskTodos?: TodoItem[] // Initial todos for the current task
+	currentTaskCumulativeCost?: number // kilocode_change: cumulative cost including deleted messages
 	apiConfiguration: ProviderSettings
 	uriScheme?: string
 	uiKind?: string // kilocode_change
@@ -1058,6 +1059,7 @@ export interface WebviewMessage {
 			| "vercel-ai-gateway"
 			| "bedrock"
 			| "openrouter"
+			| "voyage" // kilocode_change
 		codebaseIndexVectorStoreProvider?: "lancedb" | "qdrant" // kilocode_change
 		codebaseIndexLancedbVectorStoreDirectory?: string // kilocode_change
 		codebaseIndexEmbedderBaseUrl?: string
@@ -1082,6 +1084,7 @@ export interface WebviewMessage {
 		codebaseIndexMistralApiKey?: string
 		codebaseIndexVercelAiGatewayApiKey?: string
 		codebaseIndexOpenRouterApiKey?: string
+		codebaseIndexVoyageApiKey?: string // kilocode_change
 	}
 	updatedSettings?: RooCodeSettings
 	// kilocode_change start: Review mode

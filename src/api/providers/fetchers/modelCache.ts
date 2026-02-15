@@ -33,6 +33,7 @@ import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 import { getSyntheticModels } from "./synthetic"
 import { getSapAiCoreModels } from "./sap-ai-core"
+import { getApertisModels } from "./apertis"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -161,6 +162,12 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			break
 		case "ovhcloud":
 			models = await getOvhCloudAiEndpointsModels()
+			break
+		case "apertis":
+			models = await getApertisModels({
+				apiKey: options.apiKey,
+				baseUrl: options.baseUrl,
+			})
 			break
 		// kilocode_change end
 		case "roo": {
@@ -340,6 +347,7 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 			{ provider: "io-intelligence", options: { provider: "io-intelligence" } }, // kilocode_change: Add io-intelligence to background refresh
 			{ provider: "ovhcloud", options: { provider: "ovhcloud" } }, // kilocode_change: Add ovhcloud to background refresh
 			{ provider: "litellm", options: { provider: "litellm" } }, // kilocode_change: Add litellm to background refresh
+			{ provider: "apertis", options: { provider: "apertis" } }, // kilocode_change: Add apertis to background refresh
 		]
 
 		// Refresh each provider in background (fire and forget)

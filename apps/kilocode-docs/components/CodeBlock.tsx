@@ -58,10 +58,10 @@ export function CodeBlock({ children, "data-language": language }) {
 						top: 8px;
 						right: 8px;
 						padding: 6px 8px;
-						background: #1e1e1e;
-						border: 1px solid rgba(255, 255, 255, 0.2);
+						background: rgba(0, 0, 0, 0.05);
+						border: 1px solid rgba(0, 0, 0, 0.1);
 						border-radius: 4px;
-						color: rgba(255, 255, 255, 0.7);
+						color: rgba(0, 0, 0, 0.4);
 						cursor: pointer;
 						display: flex;
 						align-items: center;
@@ -71,9 +71,21 @@ export function CodeBlock({ children, "data-language": language }) {
 					}
 
 					.copy-button:hover {
-						background: #2d2d2d;
-						color: rgba(255, 255, 255, 1);
-						border-color: rgba(255, 255, 255, 0.3);
+						background: rgba(0, 0, 0, 0.1);
+						color: rgba(0, 0, 0, 0.6);
+						border-color: rgba(0, 0, 0, 0.2);
+					}
+
+					:global(.dark) .copy-button {
+						background: rgba(255, 255, 255, 0.05);
+						border-color: rgba(255, 255, 255, 0.1);
+						color: rgba(255, 255, 255, 0.4);
+					}
+
+					:global(.dark) .copy-button:hover {
+						background: rgba(255, 255, 255, 0.1);
+						color: rgba(255, 255, 255, 0.7);
+						border-color: rgba(255, 255, 255, 0.2);
 					}
 
 					.copy-button:active {

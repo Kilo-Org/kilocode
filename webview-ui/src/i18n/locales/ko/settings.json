@@ -44,7 +44,7 @@
 		"about": "Kilo Code 정보",
 		"autoPurge": "자동 정리",
 		"agentBehaviour": "에이전트 동작",
-		"ghost": "자동 완성"
+		"autocomplete": "자동 완성"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
 		"openRouterProviderRoutingLabel": "OpenRouter 공급자 라우팅",
 		"openRouterProviderRoutingDescription": "OpenRouter는 임베딩 모델에 가장 적합한 공급자로 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자 간에 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API 키",
+		"voyageApiKeyPlaceholder": "Voyage AI API 키를 입력하세요",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openaiCompatibleResponsesProvider": "OpenAI 호환 (Responses)",
 		"openAiKeyLabel": "OpenAI API 키",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
 			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다",
-			"openRouterApiKeyRequired": "OpenRouter API 키가 필요합니다"
+			"openRouterApiKeyRequired": "OpenRouter API 키가 필요합니다",
+			"voyageApiKeyRequired": "Voyage AI API 키가 필요합니다"
 		},
 		"optional": "선택 사항",
 		"advancedConfigLabel": "고급 구성",
@@ -366,6 +370,8 @@
 		"requestyUseCustomBaseUrl": "사용자 정의 기본 URL 사용",
 		"anthropicApiKey": "Anthropic API 키",
 		"getAnthropicApiKey": "Anthropic API 키 받기",
+		"apertisApiKey": "Apertis API 키",
+		"getApertisApiKey": "Apertis API 키 받기",
 		"anthropicUseAuthToken": "X-Api-Key 대신 Authorization 헤더로 Anthropic API 키 전달",
 		"anthropicUseAzureDeployment": "Azure 배포 이름 사용",
 		"anthropicAzureDeploymentPlaceholder": "배포 이름 입력...",
@@ -1175,7 +1181,7 @@
 			"description": "작업 헤더에 추가/삭제된 줄 통계 표시"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "자동 완성 시 거터 애니메이션 표시",
 			"description": "자동 완성이 실행 중일 때 편집기 거터에 애니메이션 표시기 표시",

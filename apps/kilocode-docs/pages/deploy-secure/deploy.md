@@ -48,7 +48,7 @@ Enable the **GitHub Integration** before deploying:
 - Choose **GitHub** in the Integration dropdown
 - Select your repository and branch
 
-<img width="600" height="443" alt="DeploySelection" src="https://github.com/user-attachments/assets/e592a7c1-a2dd-42e3-ba5d-d86d9b61001f" />
+{% image width="600" height="443" alt="DeploySelection" src="https://github.com/user-attachments/assets/e592a7c1-a2dd-42e3-ba5d-d86d9b61001f" /%}
 
 ### 3. Click **Deploy**
 
@@ -61,7 +61,7 @@ Kilo Code will:
 
 Once complete, you’ll receive a **deployment URL** you can open or share.
 
-<img width="800" height="824" alt="DeploySuccess" src="https://github.com/user-attachments/assets/4a01ad52-1783-443f-9f9e-bfc2d4b77b43" />
+{% image width="800" height="824" alt="DeploySuccess" src="https://github.com/user-attachments/assets/4a01ad52-1783-443f-9f9e-bfc2d4b77b43" /%}
 
 ---
 

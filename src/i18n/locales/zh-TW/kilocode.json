@@ -101,7 +101,7 @@
 			"generateButtonTooltip": "使用 AI 分析程式碼變更並產生 Commit Message"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "已暫停",

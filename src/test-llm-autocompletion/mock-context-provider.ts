@@ -1,19 +1,19 @@
-import { GhostContextProvider } from "../services/ghost/types.js"
-import { GhostModel } from "../services/ghost/GhostModel.js"
+import { AutocompleteContextProvider } from "../services/autocomplete/types.js"
+import { AutocompleteModel } from "../services/autocomplete/AutocompleteModel.js"
 import { LLMClient } from "./llm-client.js"
 import {
-	GhostInlineCompletionProvider,
+	AutocompleteInlineCompletionProvider,
 	CostTrackingCallback,
-} from "../services/ghost/classic-auto-complete/GhostInlineCompletionProvider.js"
-import { HoleFiller } from "../services/ghost/classic-auto-complete/HoleFiller.js"
-import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
-import type { GhostServiceSettings } from "@roo-code/types"
+} from "../services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.js"
+import { HoleFiller } from "../services/autocomplete/classic-auto-complete/HoleFiller.js"
+import { FimPromptBuilder } from "../services/autocomplete/classic-auto-complete/FillInTheMiddle.js"
+import type { AutocompleteServiceSettings } from "@roo-code/types"
 import {
 	AutocompleteSnippetType,
 	type AutocompleteCodeSnippet,
 	type AutocompleteStaticSnippet,
-} from "../services/ghost/continuedev/core/autocomplete/types.js"
-import type { RecentlyEditedRange } from "../services/ghost/continuedev/core/autocomplete/util/types.js"
+} from "../services/autocomplete/continuedev/core/autocomplete/types.js"
+import type { RecentlyEditedRange } from "../services/autocomplete/continuedev/core/autocomplete/util/types.js"
 import type { ContextFile } from "./test-cases.js"
 
 /**
@@ -24,10 +24,10 @@ export function modelSupportsFim(modelId: string): boolean {
 	return modelId.includes("codestral")
 }
 
-export function createTestGhostModel(llmClient: LLMClient, modelId: string): GhostModel {
+export function createTestAutocompleteModel(llmClient: LLMClient, modelId: string): AutocompleteModel {
 	const supportsFim = modelSupportsFim(modelId)
 
-	// Create a mock GhostModel that delegates to LLMClient
+	// Create a mock AutocompleteModel that delegates to LLMClient
 	const mockModel = {
 		loaded: true,
 		profileName: "test-profile",
@@ -74,7 +74,7 @@ export function createTestGhostModel(llmClient: LLMClient, modelId: string): Gho
 
 		reload: async () => true,
 		dispose: () => {},
-	} as unknown as GhostModel
+	} as unknown as AutocompleteModel
 
 	return mockModel
 }
@@ -83,9 +83,9 @@ export function createMockContextProvider(
 	prefix: string,
 	suffix: string,
 	filepath: string,
-	ghostModel: GhostModel,
+	autocompleteModel: AutocompleteModel,
 	contextFiles: ContextFile[] = [],
-): GhostContextProvider {
+): AutocompleteContextProvider {
 	// Convert context files to AutocompleteStaticSnippet format
 	const staticSnippets: AutocompleteStaticSnippet[] = contextFiles.map((file) => ({
 		type: AutocompleteSnippetType.Static,
@@ -105,8 +105,8 @@ export function createMockContextProvider(
 			getSnippetsFromImportDefinitions: async () => [],
 			getStaticContextSnippets: async () => staticSnippets,
 		},
-		model: ghostModel,
-	} as unknown as GhostContextProvider
+		model: autocompleteModel,
+	} as unknown as AutocompleteContextProvider
 }
 
 export class StubRecentlyVisitedRangesService {
@@ -126,11 +126,11 @@ export class StubRecentlyEditedTracker {
 }
 
 export function createProviderForTesting(
-	contextProvider: GhostContextProvider,
+	contextProvider: AutocompleteContextProvider,
 	costTrackingCallback: CostTrackingCallback = () => {},
-	getSettings: () => GhostServiceSettings | null = () => null,
-): GhostInlineCompletionProvider {
-	const instance = Object.create(GhostInlineCompletionProvider.prototype) as GhostInlineCompletionProvider
+	getSettings: () => AutocompleteServiceSettings | null = () => null,
+): AutocompleteInlineCompletionProvider {
+	const instance = Object.create(AutocompleteInlineCompletionProvider.prototype) as AutocompleteInlineCompletionProvider
 	// Initialize private fields using Object.assign to bypass TypeScript private access
 	Object.assign(instance, {
 		suggestionsHistory: [],

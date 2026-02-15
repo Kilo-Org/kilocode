@@ -19,7 +19,7 @@ import {
 	X_KILOCODE_MACHINEID,
 } from "../../shared/kilocode/headers"
 import { DEFAULT_HEADERS } from "./constants"
-import { streamSse } from "../../services/ghost/continuedev/core/fetch/stream"
+import { streamSse } from "../../services/autocomplete/continuedev/core/fetch/stream"
 import { getEditorNameHeader } from "../../core/kilocode/wrapper"
 import type { FimHandler } from "./kilocode/FimHandler"
 import * as vscode from "vscode"

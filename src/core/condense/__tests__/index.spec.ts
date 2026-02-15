@@ -15,6 +15,8 @@ import {
 	getEffectiveApiHistory,
 	cleanupAfterTruncation,
 	N_MESSAGES_TO_KEEP,
+	hasIncompatibleSummaryForExtendedThinking,
+	uncondenseForExtendedThinking,
 } from "../index"
 
 vi.mock("../../../api/transform/image-cleaning", () => ({
@@ -335,6 +337,99 @@ describe("getKeepMessagesWithToolBlocks", () => {
 		expect(result.reasoningBlocksToPreserve).toHaveLength(0)
 	})
 
+	it("should preserve Anthropic thinking blocks alongside tool_use blocks", () => {
+		const thinkingBlock = {
+			type: "thinking" as const,
+			thinking: "Let me analyze this...",
+			signature: "sig_abc123",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_anthropic_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_anthropic_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				content: [thinkingBlock as any, { type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+
+		expect(result.reasoningBlocksToPreserve).toHaveLength(1)
+		expect((result.reasoningBlocksToPreserve[0] as any).type).toBe("thinking")
+		expect((result.reasoningBlocksToPreserve[0] as any).thinking).toBe("Let me analyze this...")
+		expect((result.reasoningBlocksToPreserve[0] as any).signature).toBe("sig_abc123")
+	})
+
+	it("should preserve Anthropic redacted_thinking blocks alongside tool_use blocks", () => {
+		const redactedThinkingBlock = {
+			type: "redacted_thinking" as const,
+			data: "encrypted_data_here",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_redacted_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_redacted_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				content: [
+					redactedThinkingBlock as any,
+					{ type: "text" as const, text: "Reading file..." },
+					toolUseBlock,
+				],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.reasoningBlocksToPreserve).toHaveLength(1)
+		expect((result.reasoningBlocksToPreserve[0] as any).type).toBe("redacted_thinking")
+		expect((result.reasoningBlocksToPreserve[0] as any).data).toBe("encrypted_data_here")
+	})
+
 	it("should preserve tool_use when tool_result is in 2nd kept message and tool_use is 2 messages before boundary", () => {
 		const toolUseBlock = {
 			type: "tool_use" as const,
@@ -368,13 +463,11 @@ describe("getKeepMessagesWithToolBlocks", () => {
 
 		const result = getKeepMessagesWithToolBlocks(messages, 3)
 
-		// keepMessages should be the last 3 messages (ts: 5, 6, 7)
 		expect(result.keepMessages).toHaveLength(3)
 		expect(result.keepMessages[0].ts).toBe(5)
 		expect(result.keepMessages[1].ts).toBe(6)
 		expect(result.keepMessages[2].ts).toBe(7)
 
-		// Should preserve the tool_use block from message at ts:3 (2 messages before boundary)
 		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
 		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
 	})
@@ -410,13 +503,11 @@ describe("getKeepMessagesWithToolBlocks", () => {
 
 		const result = getKeepMessagesWithToolBlocks(messages, 3)
 
-		// keepMessages should be the last 3 messages (ts: 3, 4, 5)
 		expect(result.keepMessages).toHaveLength(3)
 		expect(result.keepMessages[0].ts).toBe(3)
 		expect(result.keepMessages[1].ts).toBe(4)
 		expect(result.keepMessages[2].ts).toBe(5)
 
-		// Should preserve the tool_use block from message at ts:2 (at the search boundary edge)
 		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
 		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
 	})
@@ -473,10 +564,8 @@ describe("getKeepMessagesWithToolBlocks", () => {
 
 		const result = getKeepMessagesWithToolBlocks(messages, 3)
 
-		// keepMessages should be the last 3 messages (ts: 5, 6, 7)
 		expect(result.keepMessages).toHaveLength(3)
 
-		// Should preserve both tool_use blocks
 		expect(result.toolUseBlocksToPreserve).toHaveLength(2)
 		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock1)
 		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock2)
@@ -489,10 +578,6 @@ describe("getKeepMessagesWithToolBlocks", () => {
 			content: "result",
 		}
 
-		// Tool_use is at ts:1, but with N_MESSAGES_TO_KEEP=3, we only search back 3 messages
-		// from startIndex-1. StartIndex is 7 (messages.length=10, keepCount=3, startIndex=7).
-		// So we search from index 6 down to index 4 (7-1 down to 7-3).
-		// The tool_use at index 0 (ts:1) is beyond the search boundary.
 		const messages: ApiMessage[] = [
 			{
 				role: "assistant",
@@ -522,16 +607,13 @@ describe("getKeepMessagesWithToolBlocks", () => {
 			{ role: "user", content: "Message 10", ts: 10 },
 		]
 
-		// Should not crash
 		const result = getKeepMessagesWithToolBlocks(messages, 3)
 
-		// keepMessages should be the last 3 messages
 		expect(result.keepMessages).toHaveLength(3)
 		expect(result.keepMessages[0].ts).toBe(8)
 		expect(result.keepMessages[1].ts).toBe(9)
 		expect(result.keepMessages[2].ts).toBe(10)
 
-		// Should not preserve the tool_use since it's beyond the search boundary
 		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
 	})
 
@@ -568,17 +650,15 @@ describe("getKeepMessagesWithToolBlocks", () => {
 			{ role: "assistant", content: "Processing", ts: 4 },
 			{
 				role: "user",
-				content: [toolResultBlock2], // Same tool_use_id as first result
+				content: [toolResultBlock2],
 				ts: 5,
 			},
 		]
 
 		const result = getKeepMessagesWithToolBlocks(messages, 3)
 
-		// keepMessages should be the last 3 messages (ts: 3, 4, 5)
 		expect(result.keepMessages).toHaveLength(3)
 
-		// Should only preserve the tool_use block once, not twice
 		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
 		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
 	})
@@ -1484,6 +1564,431 @@ describe("summarizeConversation", () => {
 
 		expect(result.error).toBeUndefined()
 	})
+
+	it("should place Anthropic thinking blocks first in summary and skip synthetic reasoning", async () => {
+		// This test verifies the fix for Anthropic extended thinking 400 error:
+		// "messages.1.content.0.type: Expected `thinking` or `redacted_thinking`, but found `text`"
+		// When Anthropic extended thinking is enabled, assistant messages must start with thinking blocks.
+		// Synthetic reasoning blocks (type: "reasoning") get filtered by filterNonAnthropicBlocks,
+		// leaving the message starting with text, which causes the 400 error.
+		const thinkingBlock = {
+			type: "thinking" as const,
+			thinking: "Let me analyze this request...",
+			signature: "sig123456789",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_anthropic_think",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_anthropic_think",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				// Anthropic extended thinking stores thinking blocks with signature
+				content: [thinkingBlock as any, { type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const streamWithUsage = (async function* () {
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithUsage) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false, // isAutomaticTrigger
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
+			true, // useNativeTools - required for tool_use block preservation
+		)
+
+		// Find the summary message
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+		expect(summaryMessage!.isSummary).toBe(true)
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
+
+		// Content should be [thinking block, text block, tool_use block]
+		// - Thinking block FIRST (required by Anthropic when extended thinking enabled)
+		// - NO synthetic reasoning block (would be filtered by filterNonAnthropicBlocks anyway)
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(3)
+
+		// First block should be the preserved thinking block (NOT synthetic reasoning)
+		expect(content[0].type).toBe("thinking")
+		expect(content[0].thinking).toBe("Let me analyze this request...")
+		expect(content[0].signature).toBe("sig123456789")
+
+		// Second block should be text (the summary)
+		expect(content[1].type).toBe("text")
+		expect(content[1].text).toBe("Summary of conversation")
+
+		// Third block should be tool_use
+		expect(content[2].type).toBe("tool_use")
+		expect(content[2].id).toBe("toolu_anthropic_think")
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should place Anthropic redacted_thinking blocks first in summary", async () => {
+		// Test that redacted_thinking blocks are also handled correctly
+		const redactedThinkingBlock = {
+			type: "redacted_thinking" as const,
+			data: "encrypted_data_here",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_redacted",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_redacted",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				content: [
+					redactedThinkingBlock as any,
+					{ type: "text" as const, text: "Reading file..." },
+					toolUseBlock,
+				],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const streamWithUsage = (async function* () {
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithUsage) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			true,
+		)
+
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(3)
+
+		// First block should be redacted_thinking (NOT synthetic reasoning)
+		expect(content[0].type).toBe("redacted_thinking")
+		expect(content[0].data).toBe("encrypted_data_here")
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should capture thinking blocks from condensing API response stream", async () => {
+		// Test that when the condensing API returns thinking blocks in the stream,
+		// they are captured and placed first in the summary message.
+		// This is the key fix for the Anthropic 400 error after condensation.
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please do something", ts: 3 },
+			{ role: "assistant", content: "Working on it", ts: 4 },
+			{ role: "user", content: "Continue", ts: 5 },
+			{ role: "assistant", content: "Done", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Simulate condensing API response with thinking blocks
+		const streamWithThinking = (async function* () {
+			// Condensing API returns thinking block first
+			yield {
+				type: "ant_thinking" as const,
+				thinking: "Analyzing the conversation to create a summary...",
+				signature: "stream_sig_12345",
+			}
+			yield { type: "text" as const, text: "Summary of the conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithThinking) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			false, // useNativeTools
+		)
+
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(2)
+
+		// First block should be the thinking block captured from stream (NOT synthetic reasoning)
+		expect(content[0].type).toBe("thinking")
+		expect(content[0].thinking).toBe("Analyzing the conversation to create a summary...")
+		expect(content[0].signature).toBe("stream_sig_12345")
+
+		// Second block should be the summary text
+		expect(content[1].type).toBe("text")
+		expect(content[1].text).toBe("Summary of the conversation")
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should capture redacted_thinking blocks from condensing API response stream", async () => {
+		// Test that redacted_thinking blocks from stream are also captured
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please do something", ts: 3 },
+			{ role: "assistant", content: "Working on it", ts: 4 },
+			{ role: "user", content: "Continue", ts: 5 },
+			{ role: "assistant", content: "Done", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Simulate condensing API response with redacted_thinking block
+		const streamWithRedactedThinking = (async function* () {
+			yield {
+				type: "ant_redacted_thinking" as const,
+				data: "encrypted_thinking_data_from_stream",
+			}
+			yield { type: "text" as const, text: "Summary of the conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithRedactedThinking) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			false,
+		)
+
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(2)
+
+		// First block should be redacted_thinking from stream
+		expect(content[0].type).toBe("redacted_thinking")
+		expect(content[0].data).toBe("encrypted_thinking_data_from_stream")
+
+		// Second block should be the summary text
+		expect(content[1].type).toBe("text")
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should prioritize thinking blocks from stream over preserved blocks from history", async () => {
+		// When both stream thinking blocks and preserved thinking blocks exist,
+		// the stream blocks should take priority (they have valid signatures for the new summary)
+		const preservedThinkingBlock = {
+			type: "thinking" as const,
+			thinking: "Old thinking from history...",
+			signature: "old_sig_from_history",
+		}
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_priority_test",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_priority_test",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please read the file", ts: 3 },
+			{
+				role: "assistant",
+				content: [
+					preservedThinkingBlock as any,
+					{ type: "text" as const, text: "Reading file..." },
+					toolUseBlock,
+				],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Simulate condensing API returning NEW thinking blocks
+		const streamWithNewThinking = (async function* () {
+			yield {
+				type: "ant_thinking" as const,
+				thinking: "NEW thinking from condensing API response...",
+				signature: "new_stream_sig_priority",
+			}
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithNewThinking) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			true, // useNativeTools - to trigger tool_use preservation logic
+		)
+
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+
+		const content = summaryMessage!.content as any[]
+
+		// First block should be the NEW thinking from stream (NOT the old one from history)
+		expect(content[0].type).toBe("thinking")
+		expect(content[0].thinking).toBe("NEW thinking from condensing API response...")
+		expect(content[0].signature).toBe("new_stream_sig_priority")
+
+		// Should NOT contain the old thinking block from history
+		const hasOldThinking = content.some(
+			(block: any) => block.type === "thinking" && block.signature === "old_sig_from_history",
+		)
+		expect(hasOldThinking).toBe(false)
+
+		expect(result.error).toBeUndefined()
+	})
+
+	it("should use last ant_thinking chunk when multiple are emitted during streaming", async () => {
+		// During streaming, multiple ant_thinking chunks may be emitted:
+		// 1. From content_block_start (partial data)
+		// 2. From signature_delta (complete data)
+		// The code should use the last one with complete data
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{ role: "user", content: "Please do something", ts: 3 },
+			{ role: "assistant", content: "Working on it", ts: 4 },
+			{ role: "user", content: "Continue", ts: 5 },
+			{ role: "assistant", content: "Done", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Simulate streaming with multiple ant_thinking chunks
+		const streamWithMultipleThinking = (async function* () {
+			// First chunk - partial data (as if from content_block_start)
+			yield {
+				type: "ant_thinking" as const,
+				thinking: "Initial partial thinking...",
+				signature: "partial_sig",
+			}
+			// Final chunk - complete data (as if from signature_delta)
+			yield {
+				type: "ant_thinking" as const,
+				thinking: "Complete accumulated thinking from the full response...",
+				signature: "final_complete_sig",
+			}
+			yield { type: "text" as const, text: "Summary of the conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithMultipleThinking) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			false,
+		)
+
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+
+		const content = summaryMessage!.content as any[]
+		expect(content).toHaveLength(2)
+
+		// Should use the LAST ant_thinking chunk with complete data
+		expect(content[0].type).toBe("thinking")
+		expect(content[0].thinking).toBe("Complete accumulated thinking from the full response...")
+		expect(content[0].signature).toBe("final_complete_sig")
+
+		expect(result.error).toBeUndefined()
+	})
 })
 
 describe("summarizeConversation with custom settings", () => {
@@ -1771,3 +2276,196 @@ describe("summarizeConversation with custom settings", () => {
 		)
 	})
 })
+
+// kilocode_change start
+describe("hasIncompatibleSummaryForExtendedThinking", () => {
+	const extendedThinkingModel = { supportsReasoningBudget: true } as any
+	const regularModel = { supportsReasoningBudget: false } as any
+
+	it("should return false for models without extended thinking", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Summary" }],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+		]
+
+		expect(hasIncompatibleSummaryForExtendedThinking(messages, regularModel)).toBe(false)
+	})
+
+	it("should return true when summary lacks thinking blocks for extended thinking model", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Summary" }],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+		]
+
+		expect(hasIncompatibleSummaryForExtendedThinking(messages, extendedThinkingModel)).toBe(true)
+	})
+
+	it("should return false when summary has thinking blocks", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [
+					{ type: "thinking", thinking: "Thinking...", signature: "sig123" },
+					{ type: "text", text: "Summary" },
+				],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+		]
+
+		expect(hasIncompatibleSummaryForExtendedThinking(messages, extendedThinkingModel)).toBe(false)
+	})
+
+	it("should return false when summary has redacted_thinking blocks", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [
+					{ type: "redacted_thinking", data: "encrypted" },
+					{ type: "text", text: "Summary" },
+				],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+		]
+
+		expect(hasIncompatibleSummaryForExtendedThinking(messages, extendedThinkingModel)).toBe(false)
+	})
+
+	it("should return false when there are no summaries", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hi there", ts: 2 },
+		]
+
+		expect(hasIncompatibleSummaryForExtendedThinking(messages, extendedThinkingModel)).toBe(false)
+	})
+})
+
+describe("uncondenseForExtendedThinking", () => {
+	const extendedThinkingModel = { supportsReasoningBudget: true } as any
+	const regularModel = { supportsReasoningBudget: false } as any
+
+	it("should not modify messages for models without extended thinking", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Summary" }],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+		]
+
+		const result = uncondenseForExtendedThinking(messages, regularModel)
+
+		expect(result.didUncondense).toBe(false)
+		expect(result.messages).toEqual(messages)
+	})
+
+	it("should remove invalid summary and restore condensed messages", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hidden by condense", ts: 2, condenseParent: "test-id" },
+			{ role: "user", content: "Another hidden", ts: 3, condenseParent: "test-id" },
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Summary" }],
+				ts: 4,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+			{ role: "user", content: "Recent message", ts: 5 },
+		]
+
+		const result = uncondenseForExtendedThinking(messages, extendedThinkingModel)
+
+		expect(result.didUncondense).toBe(true)
+		expect(result.messages).toHaveLength(4) // Summary removed
+		expect(result.messages.some((m) => m.isSummary)).toBe(false)
+		// Condensed messages should have condenseParent cleared
+		expect(result.messages[1].condenseParent).toBeUndefined()
+		expect(result.messages[2].condenseParent).toBeUndefined()
+	})
+
+	it("should keep valid summaries with thinking blocks", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [
+					{ type: "thinking", thinking: "Thinking...", signature: "sig123" },
+					{ type: "text", text: "Summary" },
+				],
+				ts: 2,
+				isSummary: true,
+				condenseId: "test-id",
+			},
+			{ role: "user", content: "Recent message", ts: 3 },
+		]
+
+		const result = uncondenseForExtendedThinking(messages, extendedThinkingModel)
+
+		expect(result.didUncondense).toBe(false)
+		expect(result.messages).toEqual(messages)
+	})
+
+	it("should handle multiple summaries - only remove invalid ones", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			// First condense - valid
+			{ role: "assistant", content: "Hidden 1", ts: 2, condenseParent: "valid-id" },
+			{
+				role: "assistant",
+				content: [
+					{ type: "thinking", thinking: "...", signature: "sig" },
+					{ type: "text", text: "Valid Summary" },
+				],
+				ts: 3,
+				isSummary: true,
+				condenseId: "valid-id",
+			},
+			// Second condense - invalid
+			{ role: "assistant", content: "Hidden 2", ts: 4, condenseParent: "invalid-id" },
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Invalid Summary" }],
+				ts: 5,
+				isSummary: true,
+				condenseId: "invalid-id",
+			},
+			{ role: "user", content: "Recent", ts: 6 },
+		]
+
+		const result = uncondenseForExtendedThinking(messages, extendedThinkingModel)
+
+		expect(result.didUncondense).toBe(true)
+		// Valid summary should remain, invalid should be removed
+		const summaries = result.messages.filter((m) => m.isSummary)
+		expect(summaries).toHaveLength(1)
+		expect(summaries[0].condenseId).toBe("valid-id")
+		// Hidden 2 should have condenseParent cleared, Hidden 1 should keep it
+		const hidden1 = result.messages.find((m) => m.content === "Hidden 1")
+		const hidden2 = result.messages.find((m) => m.content === "Hidden 2")
+		expect(hidden1?.condenseParent).toBe("valid-id")
+		expect(hidden2?.condenseParent).toBeUndefined()
+	})
+})
+// kilocode_change end

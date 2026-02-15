@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react"
 import type { LucideIcon } from "lucide-react"
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useSettingsSearch, SearchResult, SearchableSettingData } from "./useSettingsSearch"
 import { SectionName } from "./SettingsView"
 import { SettingsSearchInput } from "./SettingsSearchInput"
@@ -98,26 +99,33 @@ export function SettingsSearch({ index, onNavigate, sections }: SettingsSearchPr
 	}, [highlightedResultId, isOpen])
 
 	return (
-		<div className="relative justify-end">
-			<SettingsSearchInput
-				value={searchQuery}
-				onChange={setSearchQuery}
-				onFocus={() => setIsOpen(true)}
-				onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-				onKeyDown={handleSearchKeyDown}
-				inputRef={inputRef}
-			/>
-			{searchQuery && isOpen && (
-				<div className="absolute top-full min-w-[300px] right-0 mt-2 border border-vscode-dropdown-border bg-vscode-dropdown-background rounded-2xl overflow-hidden shadow-xl z-50">
-					<SettingsSearchResults
-						results={results}
-						query={searchQuery}
-						onSelectResult={handleSelectResult}
-						sections={sections}
-						highlightedResultId={highlightedResultId}
+		<Popover open={searchQuery !== "" && isOpen} modal={false}>
+			<PopoverTrigger asChild>
+				<div className="relative justify-end">
+					<SettingsSearchInput
+						value={searchQuery}
+						onChange={setSearchQuery}
+						onFocus={() => setIsOpen(true)}
+						onKeyDown={handleSearchKeyDown}
+						inputRef={inputRef}
 					/>
 				</div>
-			)}
-		</div>
+			</PopoverTrigger>
+			<PopoverContent
+				className="min-w-[300px] p-0 border-vscode-dropdown-border bg-vscode-dropdown-background rounded-2xl overflow-hidden shadow-xl"
+				align="end"
+				side="bottom"
+				sideOffset={8}
+				onOpenAutoFocus={(e) => e.preventDefault()}
+				onCloseAutoFocus={(e) => e.preventDefault()}>
+				<SettingsSearchResults
+					results={results}
+					query={searchQuery}
+					onSelectResult={handleSelectResult}
+					sections={sections}
+					highlightedResultId={highlightedResultId}
+				/>
+			</PopoverContent>
+		</Popover>
 	)
 }

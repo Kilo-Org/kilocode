@@ -44,7 +44,7 @@
 		"about": "Giới thiệu",
 		"autoPurge": "Tự động dọn dẹp",
 		"agentBehaviour": "Hành Vi Agent",
-		"ghost": "Tự Động Hoàn Thành"
+		"autocomplete": "Tự Động Hoàn Thành"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
 		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Khóa API Voyage AI",
+		"voyageApiKeyPlaceholder": "Nhập khóa API Voyage AI của bạn",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openaiCompatibleResponsesProvider": "Tương thích OpenAI (Responses)",
 		"openAiKeyLabel": "Khóa API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0",
-			"openRouterApiKeyRequired": "Yêu cầu khóa API OpenRouter"
+			"openRouterApiKeyRequired": "Yêu cầu khóa API OpenRouter",
+			"voyageApiKeyRequired": "Yêu cầu khóa API Voyage AI"
 		},
 		"optional": "tùy chọn",
 		"advancedConfigLabel": "Cấu hình nâng cao",
@@ -374,6 +378,8 @@
 		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
+		"apertisApiKey": "Khóa API Apertis",
+		"getApertisApiKey": "Lấy khóa API Apertis",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
 		"anthropicUseAzureDeployment": "Sử dụng tên triển khai Azure",
 		"anthropicAzureDeploymentPlaceholder": "Nhập tên triển khai...",
@@ -1175,7 +1181,7 @@
 			"description": "Hiển thị thống kê số dòng thêm/xóa trong tiêu đề tác vụ"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
 			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",

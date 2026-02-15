@@ -97,7 +97,7 @@
 			"generateButtonTooltip": "AIを使用してコード変更を分析し、コミットメッセージを生成します"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "一時停止中",

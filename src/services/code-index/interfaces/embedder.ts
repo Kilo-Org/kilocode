@@ -37,6 +37,7 @@ export type AvailableEmbedders =
 	| "vercel-ai-gateway"
 	| "bedrock"
 	| "openrouter"
+	| "voyage" // kilocode_change
 
 export interface EmbedderInfo {
 	name: AvailableEmbedders

@@ -44,7 +44,7 @@
 		"about": "Sobre Kilo Code",
 		"autoPurge": "Auto-neteja",
 		"agentBehaviour": "Comportament de l'agent",
-		"ghost": "Autocompletat"
+		"autocomplete": "Autocompletat"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"openRouterApiKeyPlaceholder": "Introduïu la vostra clau de l'API d'OpenRouter",
 		"openRouterProviderRoutingLabel": "Encaminament de proveïdors d'OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter dirigeix les sol·licituds als millors proveïdors disponibles per al vostre model d'embedding. Per defecte, les sol·licituds s'equilibren entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per utilitzar amb aquest model.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Clau API de Voyage AI",
+		"voyageApiKeyPlaceholder": "Introdueix la teva clau API de Voyage AI",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
 		"openaiCompatibleResponsesProvider": "Compatible amb OpenAI (Responses)",
 		"openAiKeyLabel": "Clau API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
 			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0",
-			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida"
+			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida",
+			"voyageApiKeyRequired": "Cal una clau API de Voyage AI"
 		},
 		"optional": "opcional",
 		"advancedConfigLabel": "Configuració avançada",
@@ -364,6 +368,8 @@
 		"getRequestyApiKey": "Obtenir clau API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
+		"apertisApiKey": "Clau API d'Apertis",
+		"getApertisApiKey": "Obtenir clau API d'Apertis",
 		"anthropicApiKey": "Clau API d'Anthropic",
 		"getAnthropicApiKey": "Obtenir clau API d'Anthropic",
 		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
@@ -1174,7 +1180,7 @@
 			"description": "Mostra les estadístiques de línies afegides/eliminades a la capçalera de la tasca"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostra l'animació al marge quan s'autocompleta",
 			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",

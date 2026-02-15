@@ -82,7 +82,7 @@ import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import deepEqual from "fast-deep-equal" // kilocode_change
-import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
+import { AutocompleteServiceSettingsView } from "../kilocode/settings/AutocompleteServiceSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { UISettings } from "./UISettings"
 import AgentBehaviourView from "../kilocode/settings/AgentBehaviourView" // kilocode_change - new combined view
@@ -109,7 +109,7 @@ export const sectionNames = [
 	"slashCommands",
 	"browser",
 	"checkpoints",
-	"ghost", // kilocode_change
+	"autocomplete", // kilocode_change
 	"display", // kilocode_change
 	"notifications",
 	"contextManagement",
@@ -389,7 +389,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	}, [])
 
 	// kilocode_change start
-	const setGhostServiceSettingsField = useCallback(
+	const setAutocompleteServiceSettingsField = useCallback(
 		<K extends keyof NonNullable<ExtensionStateContextType["ghostServiceSettings"]>>(
 			field: K,
 			value: NonNullable<ExtensionStateContextType["ghostServiceSettings"]>[K],
@@ -767,7 +767,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			{ id: "ghost" as const, icon: Bot }, // kilocode_change
+			{ id: "autocomplete" as const, icon: Bot }, // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -978,11 +978,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								<div className={cn("flex items-center gap-2", isCompactMode && "justify-center")}>
 									<Icon className="w-4 h-4" />
 									<span className="tab-label">
-										{/* kilocode_change start - handle agentBehaviour and ghost labels */}
+										{/* kilocode_change start - handle agentBehaviour and autocomplete labels */}
 										{id === "agentBehaviour"
 											? t(`kilocode:settings.sections.agentBehaviour`)
-											: id === "ghost"
-												? t(`kilocode:ghost.title`)
+											: id === "autocomplete"
+												? t(`kilocode:autocomplete.title`)
 												: t(`settings:sections.${id}`)}
 										{/* kilocode_change end */}
 									</span>
@@ -1001,11 +1001,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 										</TooltipTrigger>
 										<TooltipContent side="right" className="text-base">
 											<p className="m-0">
-												{/* kilocode_change start - handle agentBehaviour and ghost labels */}
+												{/* kilocode_change start - handle agentBehaviour and autocomplete labels */}
 												{id === "agentBehaviour"
 													? t(`kilocode:settings.sections.agentBehaviour`)
-													: id === "ghost"
-														? t(`kilocode:ghost.title`)
+													: id === "autocomplete"
+														? t(`kilocode:autocomplete.title`)
 														: t(`settings:sections.${id}`)}
 												{/* kilocode_change end */}
 											</p>
@@ -1183,10 +1183,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								setCachedStateField={setCachedStateField}
 							/>
 						)}
-						{activeTab === "ghost" && (
-							<GhostServiceSettingsView
+						{activeTab === "autocomplete" && (
+							<AutocompleteServiceSettingsView
 								ghostServiceSettings={ghostServiceSettings}
-								onGhostServiceSettingsChange={setGhostServiceSettingsField}
+								onAutocompleteServiceSettingsChange={setAutocompleteServiceSettingsField}
 							/>
 						)}
 						{/* kilocode_change end display section */}

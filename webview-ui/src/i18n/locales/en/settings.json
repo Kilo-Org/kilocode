@@ -44,7 +44,7 @@
 		"about": "About Kilo Code",
 		"autoPurge": "Auto-Cleanup",
 		"agentBehaviour": "Agent Behaviour",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -119,6 +119,9 @@
 		"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
 		"openRouterProviderRoutingLabel": "OpenRouter Provider Routing",
 		"openRouterProviderRoutingDescription": "OpenRouter routes requests to the best available providers for your embedding model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API Key",
+		"voyageApiKeyPlaceholder": "Enter your Voyage AI API key",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openaiCompatibleResponsesProvider": "OpenAI Compatible (Responses)",
 		"openAiKeyLabel": "OpenAI API Key",
@@ -193,6 +196,7 @@
 			"bedrockRegionRequired": "AWS region is required",
 			"bedrockProfileRequired": "AWS profile is required",
 			"openRouterApiKeyRequired": "OpenRouter API key is required",
+			"voyageApiKeyRequired": "Voyage AI API key is required",
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
@@ -384,6 +388,8 @@
 		"requestyUseCustomBaseUrl": "Use custom base URL",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Get Anthropic API Key",
+		"apertisApiKey": "Apertis API Key",
+		"getApertisApiKey": "Get Apertis API Key",
 		"anthropicUseAuthToken": "Pass Anthropic API Key as Authorization header instead of X-Api-Key",
 		"anthropic1MContextBetaLabel": "Enable 1M context window (Beta)",
 		"anthropic1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
@@ -766,7 +772,7 @@
 			"description": "Display lines added/removed statistics in the task header"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Show gutter animation when autocompleting",
 			"description": "Display animated indicator in the editor gutter when autocompletion is running",

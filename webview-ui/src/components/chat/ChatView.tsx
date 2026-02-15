@@ -111,6 +111,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		clineMessages: messages,
 		currentTaskItem,
 		currentTaskTodos,
+		currentTaskCumulativeCost, // kilocode_change
 		taskHistoryFullLength, // kilocode_change
 		taskHistoryVersion, // kilocode_change
 		apiConfiguration,
@@ -176,7 +177,19 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const modifiedMessages = useMemo(() => combineApiRequests(combineCommandSequences(messages.slice(1))), [messages])
 
 	// Has to be after api_req_finished are all reduced into api_req_started messages.
-	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
+	// kilocode_change start
+	const apiMetrics = useMemo(() => {
+		const metrics = getApiMetrics(modifiedMessages)
+		// use cumulative cost from backend if available, otherwise fall back to calculated cost
+		if (currentTaskCumulativeCost !== undefined) {
+			return {
+				...metrics,
+				totalCost: currentTaskCumulativeCost,
+			}
+		}
+		return metrics
+	}, [modifiedMessages, currentTaskCumulativeCost])
+	// kilocode_change end
 
 	const [inputValue, setInputValue] = useState("")
 	const inputValueRef = useRef(inputValue)
