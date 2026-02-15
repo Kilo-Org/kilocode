@@ -1,8 +1,0 @@
-# .env
-!.env
-
-# next.js
-.next
-
-# typescript
-tsconfig.tsbuildinfo
