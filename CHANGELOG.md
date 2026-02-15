@@ -224,11 +224,6 @@
 - [#5214](https://github.com/Kilo-Org/kilocode/pull/5214) [`28a46d1`](https://github.com/Kilo-Org/kilocode/commit/28a46d17fe91f13ec0687bb6834b31e2ec454687) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add GLM-4.7 Flash model to recommended models list for Z.ai provider
 
 - [#5662](https://github.com/Kilo-Org/kilocode/pull/5662) [`228745b`](https://github.com/Kilo-Org/kilocode/commit/228745b4159cd28b7a8fb8d1db1b89e9beb49539) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add improved support for Kimi 2.5 reasoning through AI SDK
-- Enhanced Bedrock provider with full support for AWS inference profiles (application-inference-profile and inference-profile ARNs)
-- Added automatic model resolution to detect underlying model capabilities (prompt caching, extended context, reasoning budgets)
-- Improved settings UI with real-time ARN resolution feedback
-- Fixed prompt caching not being enabled for inference profile ARNs
-- Added @aws-sdk/client-bedrock dependency for inference profile resolution
 
 ## 5.2.2
 
