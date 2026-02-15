@@ -237,7 +237,11 @@ export const SelectDropdown = React.memo(
 				if (!itemsContainerRef.current || selectedIndex < 0) return
 
 				const container = itemsContainerRef.current
-				const selectedOption = container.children[selectedIndex] as HTMLElement
+				// Query by data attribute since selectedIndex maps to selectableOptions,
+				// not all DOM children (which include wrapper, separators, labels, shortcuts)
+				const selectedOption = container.querySelector(
+					`[data-selectable-index="${selectedIndex}"]`,
+				) as HTMLElement
 				if (!selectedOption) return
 
 				const containerRect = container.getBoundingClientRect()
@@ -409,6 +413,10 @@ export const SelectDropdown = React.memo(
 												)
 											}
 
+											// Get the selectable index for this option (for keyboard navigation scrolling)
+											const selectableIndex = selectableOptions.findIndex(
+												(opt) => opt.value === option.value,
+											)
 											// Use stable keys for better reconciliation
 											const itemKey = `item-${option.value || option.label || index}`
 											const isSelectedByKeyboard =
@@ -432,7 +440,10 @@ export const SelectDropdown = React.memo(
 															: "",
 														itemClassName,
 													)}
-													data-testid="dropdown-item">
+													data-testid="dropdown-item"
+													data-selectable-index={
+														selectableIndex >= 0 ? selectableIndex : undefined
+													}>
 													{renderItem ? (
 														renderItem(option)
 													) : (
