@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Example usage:
  * ```kotlin
  * val contextManager = project.getService(ContextManager::class.java)
- * contextManager.setContext("kilocode.ghost.enableQuickInlineTaskKeybinding", true)
- * val value = contextManager.getContext("kilocode.ghost.enableQuickInlineTaskKeybinding")
+ * contextManager.setContext("kilocode.autocomplete.enableQuickInlineTaskKeybinding", true)
+ * val value = contextManager.getContext("kilocode.autocomplete.enableQuickInlineTaskKeybinding")
  * ```
  */
 @Service(Service.Level.PROJECT)
@@ -34,7 +34,7 @@ class ContextManager {
      * Sets a context value for the given key.
      * If the value is null, the context key will be removed.
      * 
-     * @param key The context key (e.g., "kilocode.ghost.enableQuickInlineTaskKeybinding")
+     * @param key The context key (e.g., "kilocode.autocomplete.enableQuickInlineTaskKeybinding")
      * @param value The value to set (can be Boolean, String, Number, or any serializable type)
      */
     fun setContext(key: String, value: Any?) {

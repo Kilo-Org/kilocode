@@ -250,7 +250,7 @@
 			"idea7": "마우스 제스처에 따라 움직이는 차분한 인터랙티브 별빛 만들기"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "자동완성",
 		"settings": {
 			"codeEditorSuggestions": "코드 편집기 제안",

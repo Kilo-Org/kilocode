@@ -12,6 +12,12 @@
 		"accessDenied": "Amazon Bedrock सेवा तक पहुंच अस्वीकृत। कृपया अपनी IAM अनुमतियां जांचें।",
 		"modelNotFound": "मॉडल {{model}} Amazon Bedrock में नहीं मिला"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Voyage AI से अमान्य प्रतिसाद प्रारूप",
+		"invalidCredentials": "अमान्य Voyage AI API कुंजी। कृपया अपनी API कुंजी कॉन्फ़िगरेशन जांचें।",
+		"accessDenied": "पहुंच अस्वीकृत। तुम्हारा IP पता Voyage AI द्वारा ब्लॉक किया जा सकता है। एक अलग नेटवर्क आज़माओ।",
+		"modelNotFound": "मॉडल {{model}} Voyage AI में नहीं मिला। कृपया अपना मॉडल चयन जांचें।"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "त्रुटि सामग्री पढ़ नहीं सका",
 		"requestFailed": "Ollama API अनुरोध स्थिति {{status}} {{statusText}} के साथ विफल: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "एम्बेडर निर्माण के लिए OpenRouter कॉन्फ़िगरेशन गायब है",
 		"vercelAiGatewayConfigMissing": "एम्बेडर निर्माण के लिए Vercel AI Gateway कॉन्फ़िगरेशन गायब है",
 		"bedrockConfigMissing": "एम्बेडर निर्माण के लिए Amazon Bedrock कॉन्फ़िगरेशन गायब है",
+		"voyageConfigMissing": "एम्बेडर निर्माण के लिए Voyage AI कॉन्फ़िगरेशन गायब है",
 		"invalidEmbedderType": "अमान्य एम्बेडर प्रकार कॉन्फ़िगर किया गया: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "प्रदाता '{{provider}}' के साथ मॉडल '{{modelId}}' के लिए वेक्टर आयाम निर्धारित नहीं कर सका। कृपया सुनिश्चित करें कि OpenAI-संगत प्रदाता सेटिंग्स में 'एम्बेडिंग आयाम' सही तरीके से सेट है।",
 		"vectorDimensionNotDetermined": "प्रदाता '{{provider}}' के साथ मॉडल '{{modelId}}' के लिए वेक्टर आयाम निर्धारित नहीं कर सका। मॉडल प्रोफ़ाइल या कॉन्फ़िगरेशन की जांच करें।",

@@ -99,7 +99,6 @@ export function consolidateTokenUsage(messages: ClineMessage[]): TokenUsage {
 	// with only apiProtocol (no token data). We need to skip these placeholders and
 	// find the last message with actual token data to avoid showing 0% context.
 	result.contextTokens = 0
-	let foundValidTokenData = false
 
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const message = messages[i]
@@ -112,21 +111,14 @@ export function consolidateTokenUsage(messages: ClineMessage[]): TokenUsage {
 				const hasTokenData = typeof tokensIn === "number" || typeof tokensOut === "number"
 
 				if (hasTokenData) {
-					// Since tokensIn now stores TOTAL input tokens (including cache tokens),
-					// we no longer need to add cacheWrites and cacheReads separately.
-					// This applies to both Anthropic and OpenAI protocols.
 					result.contextTokens = (tokensIn || 0) + (tokensOut || 0)
-					foundValidTokenData = true
+					break
 				}
 			} catch {
-				// Ignore JSON parse errors
 				continue
 			}
 		} else if (message.type === "say" && message.say === "condense_context") {
 			result.contextTokens = message.contextCondense?.newContextTokens ?? 0
-			foundValidTokenData = true
-		}
-		if (foundValidTokenData) {
 			break
 		}
 	}

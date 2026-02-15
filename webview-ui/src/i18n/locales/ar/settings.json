@@ -44,7 +44,7 @@
 		"about": "عن Kilo Code",
 		"autoPurge": "التنظيف التلقائي",
 		"agentBehaviour": "سلوك الوكيل",
-		"ghost": "الإكمال التلقائي"
+		"autocomplete": "الإكمال التلقائي"
 	},
 	"about": {
 		"bugReport": {
@@ -137,6 +137,9 @@
 		"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 		"openRouterProviderRoutingLabel": "توجيه مزود OpenRouter",
 		"openRouterProviderRoutingDescription": "يوجه OpenRouter الطلبات إلى أفضل المزودين المتاحين لنموذج التضمين الخاص بك. افتراضيًا، يتم موازنة التحميل للطلبات عبر أفضل المزودين لزيادة وقت التشغيل. ومع ذلك، يمكنك اختيار مزود معين لاستخدامه مع هذا النموذج.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "مفتاح Voyage AI API",
+		"voyageApiKeyPlaceholder": "أدخل مفتاح Voyage AI API الخاص بك",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openaiCompatibleResponsesProvider": "متوافق مع OpenAI (Responses)",
 		"openAiKeyLabel": "مفتاح OpenAI API",
@@ -211,6 +214,7 @@
 			"bedrockRegionRequired": "منطقة AWS مطلوبة",
 			"bedrockProfileRequired": "ملف AWS مطلوب",
 			"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب",
+			"voyageApiKeyRequired": "مفتاح Voyage AI API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -396,12 +400,16 @@
 			"success": "تم التحديث!",
 			"error": "فشل التحديث. جرّب مرة ثانية."
 		},
+		"getZenmuxApiKey": "احصل على مفتاح Zenmux API",
+		"zenmuxTransformsText": "استخدام Zenmux Middle Out Transform",
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
 		"getRequestyBaseUrl": "رابط الأساس",
 		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
 		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
+		"apertisApiKey": "مفتاح Apertis API",
+		"getApertisApiKey": "احصل على مفتاح Apertis API",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
 		"anthropicUseAzureDeployment": "استخدام اسم نشر Azure",
 		"anthropicAzureDeploymentPlaceholder": "أدخل اسم النشر...",
@@ -827,7 +835,7 @@
 			"description": "عرض إحصائيات الأسطر المضافة/المحذوفة في رأس المهمة"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "إظهار الحركة في الهامش عند الإكمال التلقائي",
 			"description": "عرض مؤشر متحرك في هامش المحرر عند تشغيل الإكمال التلقائي",

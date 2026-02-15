@@ -14,6 +14,7 @@ import { getApiRequestTimeout } from "../../../api/providers/utils/timeout-confi
 export class CodeIndexOllamaEmbedder implements IEmbedder {
 	private readonly baseUrl: string
 	private readonly defaultModelId: string
+	private readonly dimensions?: number // kilocode_change
 
 	constructor(options: ApiHandlerOptions) {
 		// Ensure ollamaBaseUrl and ollamaModelId exist on ApiHandlerOptions or add defaults
@@ -24,6 +25,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 		this.baseUrl = baseUrl
 		this.defaultModelId = options.ollamaModelId || "nomic-embed-text:latest"
+		this.dimensions = options.ollamaNumCtx // kilocode_change
 	}
 
 	/**
@@ -34,6 +36,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 	 */
 	async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
 		const modelToUse = model || this.defaultModelId
+		const dimensions = this.dimensions // kilocode_change
 		const url = `${this.baseUrl}/api/embed` // Endpoint as specified
 
 		// Apply model-specific query prefix if required
@@ -80,6 +83,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				body: JSON.stringify({
 					model: modelToUse,
 					input: processedTexts, // Using 'input' as requested
+					dimensions, // kilocode_change
 				}),
 				signal: controller.signal,
 			})

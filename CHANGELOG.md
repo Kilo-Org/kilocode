@@ -1,5 +1,59 @@
 # kilo-code
 
+## 5.7.0
+
+### Minor Changes
+
+- [#4768](https://github.com/Kilo-Org/kilocode/pull/4768) [`626f18a`](https://github.com/Kilo-Org/kilocode/commit/626f18a91fde30b9a303708b3c42897aa91bcd98) Thanks [@hsp-sz](https://github.com/hsp-sz)! - feat: add Zenmux provider
+
+### Patch Changes
+
+- [#4714](https://github.com/Kilo-Org/kilocode/pull/4714) [`69b36b5`](https://github.com/Kilo-Org/kilocode/commit/69b36b537d5a5f6817dbc60567623ffcdfac9acf) Thanks [@otterDeveloper](https://github.com/otterDeveloper)! - feat (fireworks.ai): add minimax 2.1, glm 4.7, updated other models
+
+- [#4926](https://github.com/Kilo-Org/kilocode/pull/4926) [`079dffd`](https://github.com/Kilo-Org/kilocode/commit/079dffd17e2612ac22f5aaf9430f18363088c4cd) Thanks [@YuriNachos](https://github.com/YuriNachos)! - fix: disable zsh history expansion (#4926)
+
+- [#5162](https://github.com/Kilo-Org/kilocode/pull/5162) [`cad3c68`](https://github.com/Kilo-Org/kilocode/commit/cad3c688dc2493ef7a750fc47c60db9507da4a9d) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Fix attached images being lost when editing a message with checkpoint
+
+    When editing a message that has a checkpoint, the images attached to the edited message were not being included in the `editMessageConfirm` webview message. This caused images to be silently dropped and not sent to the backend.
+
+    The fix adds the `images` field to the message payload in both the checkpoint and non-checkpoint edit confirmation paths.
+
+    Fixes #3489
+
+- [#5139](https://github.com/Kilo-Org/kilocode/pull/5139) [`932c692`](https://github.com/Kilo-Org/kilocode/commit/932c692b2f35e7bd4ffa59f74640ab27e984ef2c) Thanks [@naga-k](https://github.com/naga-k)! - Prevent sending thinkingLevel to unsupporting Gemini models
+
+- [#4945](https://github.com/Kilo-Org/kilocode/pull/4945) [`43bc7ac`](https://github.com/Kilo-Org/kilocode/commit/43bc7acc815d81ba0f775c9e2d7965336c0feb50) Thanks [@CaiDingxian](https://github.com/CaiDingxian)! - feat: add chars count to ListFilesTool
+
+- [#5805](https://github.com/Kilo-Org/kilocode/pull/5805) [`918f767`](https://github.com/Kilo-Org/kilocode/commit/918f767136cb073a71767d76708da40e25c03f06) Thanks [@Neonsy](https://github.com/Neonsy)! - Add support for GLM 5 and set Z.ai default to `glm-5` and align Z.ai API line model selection in VS Code and webview settings
+
+## 5.6.0
+
+### Minor Changes
+
+- [#5040](https://github.com/Kilo-Org/kilocode/pull/5040) [`abe3047`](https://github.com/Kilo-Org/kilocode/commit/abe30473feffb84e885fc8abd5595033fe8b5431) Thanks [@luthraansh](https://github.com/luthraansh)! - Added Corethink as a new AI provider
+
+### Patch Changes
+
+- [#5749](https://github.com/Kilo-Org/kilocode/pull/5749) [`b2fa0a9`](https://github.com/Kilo-Org/kilocode/commit/b2fa0a9b239a396feee39d14eb60eafb088c0ed4) Thanks [@skaldamramra](https://github.com/skaldamramra)! - Add Slovak (sk) language translation for Kilo Code extension and UI
+
+- [#5681](https://github.com/Kilo-Org/kilocode/pull/5681) [`b5ef707`](https://github.com/Kilo-Org/kilocode/commit/b5ef70717068a791da5c3b3068eadb8e189ff484) Thanks [@Drilmo](https://github.com/Drilmo)! - fix(agent-manager): Fix double scrollbar in mode selector dropdowns
+
+- [#5722](https://github.com/Kilo-Org/kilocode/pull/5722) [`f7cf4fd`](https://github.com/Kilo-Org/kilocode/commit/f7cf4fd5002b697f1e41e744b01f096e57666acf) Thanks [@Neonsy](https://github.com/Neonsy)! - Improve Chutes Kimi reliability by preventing terminated-stream retry loops and handling tool/reasoning chunks more safely.
+
+- [#5747](https://github.com/Kilo-Org/kilocode/pull/5747) [`95be119`](https://github.com/Kilo-Org/kilocode/commit/95be1193449184869e49d44b7fe9f09e1620b3ce) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Fix JetBrains build failure by adding missing vsix dependency for build pipeline
+
+- [#5733](https://github.com/Kilo-Org/kilocode/pull/5733) [`1b5c4f4`](https://github.com/Kilo-Org/kilocode/commit/1b5c4f4fab28f03b81a9bdf3cd789b1425108765) Thanks [@krisztian-gajdar](https://github.com/krisztian-gajdar)! - Show loading spinner immediately when opening review scope dialog while scope information is being computed, improving perceived performance for repositories with many changes
+
+- [#5699](https://github.com/Kilo-Org/kilocode/pull/5699) [`e560e47`](https://github.com/Kilo-Org/kilocode/commit/e560e47e39f605f78a6d18fdbfc0dd680ceb5557) Thanks [@Patel230](https://github.com/Patel230)! - Fix unreadable text and poor contrast issues in Agent Manager
+
+- [#5722](https://github.com/Kilo-Org/kilocode/pull/5722) [`a834092`](https://github.com/Kilo-Org/kilocode/commit/a8340925c72e9ee0494e1bffd47dbc1aaddc1c8e) Thanks [@Neonsy](https://github.com/Neonsy)! - Fixed Moonshot Kimi tool-calling and thinking-mode behavior for `kimi-k2.5` and `kimi-for-coding`.
+
+- [#4749](https://github.com/Kilo-Org/kilocode/pull/4749) [`ed70dad`](https://github.com/Kilo-Org/kilocode/commit/ed70dad320a80160dc793bf34f52b87d995285ff) Thanks [@lgrgic](https://github.com/lgrgic)! - Fix 'Delete' toggle button in Auto Approve settings
+
+- [#5756](https://github.com/Kilo-Org/kilocode/pull/5756) [`5d9d4d1`](https://github.com/Kilo-Org/kilocode/commit/5d9d4d1c4a6236fccf7082ea9e8d83d95bbd207a) Thanks [@bernaferrari](https://github.com/bernaferrari)! - Remove duplicate "Kilo Code Marketplace" title in toolbar (thanks @bernaferrari!)
+
+- [#3807](https://github.com/Kilo-Org/kilocode/pull/3807) [`e37717e`](https://github.com/Kilo-Org/kilocode/commit/e37717ee2fad8efb53bea92752dd9ea25f79bbed) Thanks [@davidraedev](https://github.com/davidraedev)! - Hook embedding timeout into settings for ollama
+
 ## 5.5.0
 
 ### Minor Changes

@@ -97,7 +97,7 @@
 			"generateButtonTooltip": "Tạo ra thông điệp commit bằng trí tuệ nhân tạo để phân tích những thay đổi code của bạn"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "tạm dừng",

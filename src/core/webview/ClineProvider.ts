@@ -2397,6 +2397,7 @@ export class ClineProvider
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
+			currentTaskCumulativeCost: this.getCurrentTask()?.getCumulativeTotalCost(), // kilocode_change
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
 			taskHistoryFullLength: taskHistory.length, // kilocode_change
 			taskHistoryVersion: this.kiloCodeTaskHistoryVersion, // kilocode_change

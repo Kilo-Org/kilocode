@@ -900,6 +900,82 @@ describe("Cline", () => {
 				await task.catch(() => {})
 			})
 
+			// kilocode_change start
+			it("attemptApiRequest should not recursively auto-retry first-chunk Chutes terminated errors", async () => {
+				const chutesConfig = {
+					...mockApiConfig,
+					apiProvider: "chutes" as const,
+					apiModelId: "moonshotai/Kimi-K2.5-TEE",
+				}
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: chutesConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext,
+				})
+
+				const terminatedError = new Error("terminated")
+				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
+					async *[Symbol.asyncIterator]() {
+						throw terminatedError
+					},
+					async next() {
+						throw terminatedError
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				const createMessageSpy = vi.spyOn(task.api, "createMessage").mockReturnValue(mockFailedStream)
+				const backoffSpy = vi.spyOn(task as any, "backoffAndAnnounce").mockResolvedValue(undefined)
+
+				mockProvider.getState = vi.fn().mockResolvedValue({
+					apiConfiguration: chutesConfig,
+					autoApprovalEnabled: true,
+					requestDelaySeconds: 1,
+					mode: "code",
+				})
+
+				const iterator = task.attemptApiRequest(0, { skipProviderRateLimit: true })
+				await expect(iterator.next()).rejects.toThrow("terminated")
+
+				expect(createMessageSpy).toHaveBeenCalledTimes(1)
+				expect(backoffSpy).not.toHaveBeenCalled()
+			})
+
+			it("should apply Chutes terminated retry cap at the configured threshold", async () => {
+				const chutesConfig = {
+					...mockApiConfig,
+					apiProvider: "chutes" as const,
+					apiModelId: "moonshotai/Kimi-K2.5-TEE",
+				}
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: chutesConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext,
+				})
+
+				const terminatedError = new Error("terminated")
+
+				expect((task as any).hasExceededChutesTerminatedRetryLimit(terminatedError, 0)).toBe(false)
+				expect((task as any).hasExceededChutesTerminatedRetryLimit(terminatedError, 1)).toBe(false)
+				expect((task as any).hasExceededChutesTerminatedRetryLimit(terminatedError, 2)).toBe(true)
+			})
+			// kilocode_change end
+
 			describe("processUserContentMentions", () => {
 				it("should process mentions in task and feedback tags", async () => {
 					const [cline, task] = Task.create({

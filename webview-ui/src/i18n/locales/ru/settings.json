@@ -44,7 +44,7 @@
 		"about": "О Kilo Code",
 		"autoPurge": "Авто-очистка",
 		"agentBehaviour": "Поведение агента",
-		"ghost": "Автодополнение"
+		"autocomplete": "Автодополнение"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API-ключ Voyage AI",
+		"voyageApiKeyPlaceholder": "Введи свой API-ключ Voyage AI",
 		"openaiCompatibleProvider": "OpenAI-совместимый",
 		"openaiCompatibleResponsesProvider": "OpenAI-совместимый (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",
 			"baseUrlRequired": "Требуется базовый URL",
 			"modelDimensionMinValue": "Размерность модели должна быть больше 0",
-			"openRouterApiKeyRequired": "Требуется ключ API OpenRouter"
+			"openRouterApiKeyRequired": "Требуется ключ API OpenRouter",
+			"voyageApiKeyRequired": "Требуется API-ключ Voyage AI"
 		},
 		"optional": "необязательно",
 		"advancedConfigLabel": "Расширенная конфигурация",
@@ -359,11 +363,15 @@
 			"success": "Список моделей успешно обновлен!",
 			"error": "Не удалось обновить список моделей. Пожалуйста, попробуйте снова."
 		},
+		"getZenmuxApiKey": "Получить Zenmux API-ключ",
+		"zenmuxTransformsText": "Использовать Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
+		"apertisApiKey": "Apertis API-ключ",
+		"getApertisApiKey": "Получить Apertis API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
 		"anthropicUseAzureDeployment": "Использовать имя развертывания Azure",
 		"anthropicAzureDeploymentPlaceholder": "Введите имя развертывания...",
@@ -1173,7 +1181,7 @@
 			"description": "Отображать статистику добавленных/удалённых строк в заголовке задачи"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Показывать анимацию на полях при автозаполнении",
 			"description": "Отображать анимированный индикатор на полях редактора во время работы автозаполнения",

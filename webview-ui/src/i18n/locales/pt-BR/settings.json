@@ -44,7 +44,7 @@
 		"about": "Sobre",
 		"autoPurge": "Auto-limpeza",
 		"agentBehaviour": "Comportamento do Agente",
-		"ghost": "Autocompletar"
+		"autocomplete": "Autocompletar"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Chave de API:",
 		"mistralApiKeyPlaceholder": "Digite sua chave de API da Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Chave de API Voyage AI",
+		"voyageApiKeyPlaceholder": "Digite sua chave de API da Voyage AI",
 		"openaiCompatibleProvider": "Compatível com OpenAI",
 		"openaiCompatibleResponsesProvider": "Compatível com OpenAI (Responses)",
 		"openAiKeyLabel": "Chave de API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "A URL base do Ollama é obrigatória",
 			"baseUrlRequired": "A URL base é obrigatória",
 			"modelDimensionMinValue": "A dimensão do modelo deve ser maior que 0",
-			"openRouterApiKeyRequired": "Chave API do OpenRouter é obrigatória"
+			"openRouterApiKeyRequired": "Chave API do OpenRouter é obrigatória",
+			"voyageApiKeyRequired": "Chave de API da Voyage AI é obrigatória"
 		},
 		"optional": "opcional",
 		"advancedConfigLabel": "Configuração Avançada",
@@ -359,11 +363,15 @@
 			"success": "Lista de modelos atualizada com sucesso!",
 			"error": "Falha ao atualizar a lista de modelos. Por favor, tente novamente."
 		},
+		"getZenmuxApiKey": "Obter chave de API Zenmux",
+		"zenmuxTransformsText": "Usar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obter chave de API Requesty",
 		"getRequestyBaseUrl": "URL Base",
 		"requestyUseCustomBaseUrl": "Usar URL base personalizada",
 		"anthropicApiKey": "Chave de API Anthropic",
 		"getAnthropicApiKey": "Obter chave de API Anthropic",
+		"apertisApiKey": "Chave de API Apertis",
+		"getApertisApiKey": "Obter chave de API Apertis",
 		"anthropicUseAuthToken": "Passar a chave de API Anthropic como cabeçalho Authorization em vez de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Ativar janela de contexto de 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Estende a janela de contexto para 1 milhão de tokens para o Claude Sonnet 4",
@@ -1173,7 +1181,7 @@
 			"description": "Exibir estatísticas de linhas adicionadas/removidas no cabeçalho da tarefa"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostrar animação na lateral ao autocompletar",
 			"description": "Exibir indicador animado na lateral do editor quando o autocompletar está em execução",

@@ -28,9 +28,5 @@ export const Corethink = ({ apiConfiguration, setApiConfigurationField }: Coreth
 	void t // Placeholder to avoid unused variable warning
 	void handleInputChange // Placeholder to avoid unused variable warning
 
-	return (
-		<>
-			{/* Add the input fields back in when Corethink API key is required */}
-		</>
-	)
+	return <>{/* Add the input fields back in when Corethink API key is required */}</>
 }

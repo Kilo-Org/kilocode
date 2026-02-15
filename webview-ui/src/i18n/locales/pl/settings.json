@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Auto-czyszczenie",
 		"agentBehaviour": "Zachowanie agenta",
-		"ghost": "Autouzupełnianie"
+		"autocomplete": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
 		"openRouterProviderRoutingLabel": "Routing dostawców OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu osadzania. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Klucz API Voyage AI",
+		"voyageApiKeyPlaceholder": "Wprowadź swój klucz API Voyage AI",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
 		"openaiCompatibleResponsesProvider": "Kompatybilny z OpenAI (Responses)",
 		"openAiKeyLabel": "Klucz API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
 			"baseUrlRequired": "Wymagany jest bazowy adres URL",
 			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0",
-			"openRouterApiKeyRequired": "Wymagany jest klucz API OpenRouter"
+			"openRouterApiKeyRequired": "Wymagany jest klucz API OpenRouter",
+			"voyageApiKeyRequired": "Wymagany jest klucz API Voyage AI"
 		},
 		"optional": "opcjonalny",
 		"advancedConfigLabel": "Konfiguracja zaawansowana",
@@ -359,11 +363,15 @@
 			"success": "Lista modeli została pomyślnie odświeżona!",
 			"error": "Nie udało się odświeżyć listy modeli. Spróbuj ponownie."
 		},
+		"getZenmuxApiKey": "Uzyskaj klucz API Zenmux",
+		"zenmuxTransformsText": "Użyj Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
 		"getRequestyBaseUrl": "Bazowy URL",
 		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
 		"anthropicApiKey": "Klucz API Anthropic",
 		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
+		"apertisApiKey": "Klucz API Apertis",
+		"getApertisApiKey": "Uzyskaj klucz API Apertis",
 		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
 		"anthropicUseAzureDeployment": "Użyj nazwy wdrożenia Azure",
 		"anthropicAzureDeploymentPlaceholder": "Wprowadź nazwę wdrożenia...",
@@ -1173,7 +1181,7 @@
 			"description": "Wyświetl statystyki dodanych/usuniętych linii w nagłówku zadania"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Pokaż animację marginesu podczas autouzupełniania",
 			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",

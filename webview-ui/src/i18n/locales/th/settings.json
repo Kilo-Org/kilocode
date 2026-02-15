@@ -33,7 +33,7 @@
 		"browser": "เบราว์เซอร์",
 		"checkpoints": "จุดตรวจสอบ",
 		"display": "การแสดงผล",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"notifications": "การแจ้งเตือน",
 		"contextManagement": "บริบท",
 		"terminal": "เทอร์มินัล",
@@ -137,6 +137,9 @@
 		"openRouterApiKeyPlaceholder": "ป้อนคีย์ API OpenRouter ของคุณ",
 		"openRouterProviderRoutingLabel": "การกำหนดเส้นทางผู้ให้บริการ OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter กำหนดเส้นทางคำขอไปยังผู้ให้บริการที่ดีที่สุดสำหรับโมเดล embedding ของคุณ โดยค่าเริ่มต้น คำขอจะถูกกระจายโหลดไปยังผู้ให้บริการชั้นนำเพื่อเพิ่มเวลาทำงานสูงสุด อย่างไรก็ตาม คุณสามารถเลือกผู้ให้บริการเฉพาะสำหรับโมเดลนี้ได้",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "คีย์ API Voyage AI",
+		"voyageApiKeyPlaceholder": "ป้อนคีย์ API Voyage AI ของคุณ",
 		"openaiCompatibleProvider": "เข้ากันได้กับ OpenAI",
 		"openaiCompatibleResponsesProvider": "เข้ากันได้กับ OpenAI (Responses)",
 		"openAiKeyLabel": "คีย์ API OpenAI",
@@ -209,6 +212,7 @@
 			"geminiApiKeyRequired": "จำเป็นต้องมีคีย์ API Gemini",
 			"mistralApiKeyRequired": "จำเป็นต้องมีคีย์ API Mistral",
 			"openRouterApiKeyRequired": "จำเป็นต้องมีคีย์ API OpenRouter",
+			"voyageApiKeyRequired": "จำเป็นต้องมีคีย์ API Voyage AI",
 			"ollamaBaseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน Ollama",
 			"baseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน",
 			"modelDimensionMinValue": "มิติโมเดลต้องมากกว่า 0",
@@ -392,12 +396,16 @@
 			"success": "รีเฟรชรายการโมเดลสำเร็จ!",
 			"error": "ไม่สามารถรีเฟรชรายการโมเดลได้ โปรดลองอีกครั้ง"
 		},
+		"getZenmuxApiKey": "รับ Zenmux API Key",
+		"zenmuxTransformsText": "ใช้ Zenmux Middle Out Transform",
 		"getRequestyApiKey": "รับคีย์ API ของ Requesty",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "ใช้ Base URL ที่กำหนดเอง",
 		"openRouterTransformsText": "บีบอัดพรอมต์และสายข้อความให้มีขนาดบริบท (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "คีย์ API ของ Anthropic",
 		"getAnthropicApiKey": "รับคีย์ API ของ Anthropic",
+		"apertisApiKey": "คีย์ API ของ Apertis",
+		"getApertisApiKey": "รับคีย์ API ของ Apertis",
 		"anthropicUseAuthToken": "ส่งคีย์ API ของ Anthropic เป็นส่วนหัว Authorization แทน X-Api-Key",
 		"anthropicUseAzureDeployment": "ใช้ชื่อการปรับใช้ Azure",
 		"anthropicAzureDeploymentPlaceholder": "ป้อนชื่อการปรับใช้...",
@@ -813,7 +821,7 @@
 			"description": "แสดงสถิติบรรทัดที่เพิ่ม/ลบในส่วนหัวของงาน"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "แสดงภาพเคลื่อนไหวขอบเมื่อทำการเติมอัตโนมัติ",
 			"description": "แสดงตัวบ่งชี้แบบเคลื่อนไหวในขอบตัวแก้ไขเมื่อกำลังทำการเติมอัตโนมัติ",
