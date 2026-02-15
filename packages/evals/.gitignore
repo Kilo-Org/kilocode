@@ -1,8 +1,0 @@
-# .env
-!.env.development
-!.env.test
-
-# docker
-.docker/*
-!.docker/scripts
-!.docker/entrypoints

@@ -1,5 +1,0 @@
-#### Description: Should complete function call parameters
-#### Filename: greeter.js
-function greet(name, <<<AUTOCOMPLETE_HERE>>>) {
-  console.log(`Hello ${name}!`);
-}

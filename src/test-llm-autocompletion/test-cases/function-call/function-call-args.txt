@@ -1,4 +1,0 @@
-#### Description: Should suggest function call argument completion
-#### Filename: greeting.js
-function greet(name) { return 'Hello ' + name; }
-greet(<<<AUTOCOMPLETE_HERE>>>

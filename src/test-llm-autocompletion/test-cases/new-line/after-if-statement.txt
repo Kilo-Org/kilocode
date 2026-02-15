@@ -1,8 +1,0 @@
-#### Description: Should complete if statement body
-#### Filename: value-checker.js
-function checkValue(value) {
-  if (value > 0) {
-<<<AUTOCOMPLETE_HERE>>>
-  }
-  return false;
-}

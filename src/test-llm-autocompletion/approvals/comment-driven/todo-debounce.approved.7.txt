@@ -1,6 +1,0 @@
-function handleSearch(query) {
-  // TODO: Add debounce to prevent excessive API calls
-  // TODO: Add a loading state
-  // TODO: Add error handling
-  searchAPI(query);
-}

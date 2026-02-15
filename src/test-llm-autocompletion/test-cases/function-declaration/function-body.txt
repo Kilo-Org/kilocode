@@ -1,3 +1,0 @@
-#### Description: Should complete function body opening
-#### Filename: calculator.js
-function calculateSum(a, b) <<<AUTOCOMPLETE_HERE>>>

@@ -1,4 +1,0 @@
-#### Description: Should complete Ruby method body
-#### Filename: calculator.rb
-def calculate_sum(a, b)
-	<<<AUTOCOMPLETE_HERE>>>

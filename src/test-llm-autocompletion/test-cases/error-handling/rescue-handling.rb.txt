@@ -1,6 +1,0 @@
-#### Description: Should complete Ruby begin-rescue-ensure error handling
-#### Filename: data_processor.rb
-def process_data(data)
-	begin
-		result = JSON.parse(data)
-		<<<AUTOCOMPLETE_HERE>>>

@@ -1,6 +1,0 @@
-#### Description: Should implement debounce function
-#### Filename: search-handler.js
-function handleSearch(query) {
-  // TODO: Add debounce to prevent excessive API calls<<<AUTOCOMPLETE_HERE>>>
-  searchAPI(query);
-}

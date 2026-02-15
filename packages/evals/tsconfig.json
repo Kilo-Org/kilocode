@@ -1,8 +1,0 @@
-{
-	"extends": "@roo-code/config-typescript/base.json",
-	"compilerOptions": {
-		"types": ["vitest/globals"]
-	},
-	"include": ["src", "drizzle.config.ts", "vitest-global-setup.ts"],
-	"exclude": ["node_modules"]
-}

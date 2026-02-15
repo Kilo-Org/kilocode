@@ -1,3 +1,0 @@
-#### Description: Should suggest import syntax options
-#### Filename: App.jsx
-import <<<AUTOCOMPLETE_HERE>>> from 'react'

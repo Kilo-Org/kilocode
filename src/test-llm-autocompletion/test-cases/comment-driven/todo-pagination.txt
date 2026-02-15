@@ -1,6 +1,0 @@
-#### Description: Should implement pagination logic
-#### Filename: user-repository.js
-function fetchUsers(page, limit) {
-  // TODO: Implement pagination with offset and limit<<<AUTOCOMPLETE_HERE>>>
-  return db.query('SELECT * FROM users');
-}

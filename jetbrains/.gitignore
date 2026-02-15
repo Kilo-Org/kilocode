@@ -1,5 +1,0 @@
-### Debug resources
-resources/*
-
-### i18n strings converted from our normal json files during gradle build
-plugin/src/main/resources/messages

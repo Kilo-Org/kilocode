@@ -1,4 +1,0 @@
-#### Description: Should complete if statement body
-#### Filename: conditional.js
-const x = 10;
-if (x > 5) <<<AUTOCOMPLETE_HERE>>>

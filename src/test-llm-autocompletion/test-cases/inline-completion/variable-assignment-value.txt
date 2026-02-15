@@ -1,4 +1,0 @@
-#### Description: Should complete variable assignment value
-#### Filename: totals.js
-const total = <<<AUTOCOMPLETE_HERE>>>;
-const items = [1, 2, 3, 4, 5];

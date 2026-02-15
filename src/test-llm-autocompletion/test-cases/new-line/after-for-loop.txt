@@ -1,9 +1,0 @@
-#### Description: Should complete for loop body
-#### Filename: array-utils.js
-function sumArray(arr) {
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) {
-<<<AUTOCOMPLETE_HERE>>>
-  }
-  return sum;
-}

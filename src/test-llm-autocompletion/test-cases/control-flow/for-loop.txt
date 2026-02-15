@@ -1,3 +1,0 @@
-#### Description: Should complete for loop body
-#### Filename: loop-example.js
-for (let i = 0; i < 10; i++) <<<AUTOCOMPLETE_HERE>>>
