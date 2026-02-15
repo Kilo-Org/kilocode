@@ -79,11 +79,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			const originalContent: string = await fs.readFile(absolutePath, "utf-8")
 
 			// Apply the diff to the original content
-			const diffResult = (await task.diffStrategy?.applyDiff(
-				originalContent,
-				diffContent,
-				parseInt(params.diff.match(/:start_line:(\d+)/)?.[1] ?? ""),
-			)) ?? {
+			const diffResult = (await task.diffStrategy?.applyDiff(originalContent, diffContent, undefined)) ?? {
 				success: false,
 				error: "No diff strategy available",
 			}
