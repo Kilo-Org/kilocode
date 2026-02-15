@@ -4,7 +4,7 @@ import path from "path"
 import { createVSCodeAPIMock, Uri, WorkspaceEdit, Position, Range } from "../VSCode.js"
 
 describe("WorkspaceAPI.applyEdit", () => {
-	const tempDir = path.join(process.cwd(), "packages/agent-runtime/src/host/__tests__/__tmp__")
+	const tempDir = path.join(__dirname, "__tmp__")
 	const filePath = path.join(tempDir, "apply-edit.txt")
 
 	beforeEach(() => {
