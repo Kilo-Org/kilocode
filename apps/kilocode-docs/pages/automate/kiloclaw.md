@@ -3,7 +3,7 @@ title: "KiloClaw"
 description: "One-click deployment of your personal AI agent with OpenClaw"
 ---
 
-# KiloClaw
+# KiloClaw 🦀
 
 KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service—a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like WhatsApp, Telegram, and Discord.
 
