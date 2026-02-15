@@ -52,7 +52,8 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	synthetic: "Synthetic",
 	"sap-ai-core": "SAP AI Core",
 	baseten: "BaseTen",
-	corethink: "Corethink"
+	apertis: "Apertis", // kilocode_change
+	corethink: "Corethink",
 }
 
 /**

@@ -72,6 +72,7 @@ export const PROVIDERS = [
 	{ value: "synthetic", label: "Synthetic", proxy: false },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints", proxy: false },
 	{ value: "sap-ai-core", label: "SAP AI Core", proxy: false },
+	{ value: "apertis", label: "Apertis" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek", proxy: false },
 	{ value: "moonshot", label: "Moonshot", proxy: false },

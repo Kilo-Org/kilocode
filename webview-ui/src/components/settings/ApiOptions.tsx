@@ -24,6 +24,7 @@ import {
 	deepSeekDefaultModelId,
 	moonshotDefaultModelId,
 	// kilocode_change start
+	apertisDefaultModelId,
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -78,6 +79,7 @@ import {
 
 import {
 	Anthropic,
+	Apertis, // kilocode_change
 	Baseten,
 	Corethink,
 	Bedrock,
@@ -337,9 +339,8 @@ const ApiOptions = ({
 				? Object.fromEntries(
 						Object.entries(filteredModels).filter(
 							([modelId]) =>
-								apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
-									? modelId === "kimi-for-coding"
-									: modelId !== "kimi-for-coding",
+								modelId !== "kimi-for-coding" ||
+								apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1",
 						),
 					)
 				: filteredModels
@@ -469,6 +470,7 @@ const ApiOptions = ({
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
 				// kilocode_change start
+				apertis: { field: "apertisModelId", default: apertisDefaultModelId },
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
@@ -702,6 +704,12 @@ const ApiOptions = ({
 					simplifySettings={fromWelcomeView}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "apertis" && (
+				<Apertis apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "claude-code" && (
 				<ClaudeCode

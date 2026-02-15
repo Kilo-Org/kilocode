@@ -12,6 +12,12 @@
 		"accessDenied": "Amazon Bedrockサービスへのアクセスが拒否されました。IAMの権限を確認してください。",
 		"modelNotFound": "モデル{{model}}がAmazon Bedrockに見つかりません"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Voyage AIからの無効な応答形式",
+		"invalidCredentials": "無効なVoyage AI APIキーだ。APIキーの設定を確認してください。",
+		"accessDenied": "アクセスが拒否された。IPアドレスがVoyage AIによってブロックされている可能性がある。別のネットワークを試してください。",
+		"modelNotFound": "モデル{{model}}がVoyage AIに見つからない。モデルの選択を確認してください。"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "エラー本文を読み取れませんでした",
 		"requestFailed": "Ollama APIリクエストが失敗しました。ステータス {{status}} {{statusText}}: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "エンベッダー作成のためのOpenRouter設定がありません",
 		"vercelAiGatewayConfigMissing": "エンベッダー作成のためのVercel AI Gateway設定がありません",
 		"bedrockConfigMissing": "エンベッダー作成のためのAmazon Bedrock設定がありません",
+		"voyageConfigMissing": "エンベッダー作成のためのVoyage AI設定がありません",
 		"invalidEmbedderType": "無効なエンベッダータイプが設定されています: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "プロバイダー '{{provider}}' のモデル '{{modelId}}' の埋め込み次元を決定できませんでした。OpenAI互換プロバイダー設定で「埋め込み次元」が正しく設定されていることを確認してください。",
 		"vectorDimensionNotDetermined": "プロバイダー '{{provider}}' のモデル '{{modelId}}' の埋め込み次元を決定できませんでした。モデルプロファイルまたは設定を確認してください。",

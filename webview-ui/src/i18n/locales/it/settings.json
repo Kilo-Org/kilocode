@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Chiave API:",
 		"mistralApiKeyPlaceholder": "Inserisci la tua chiave API Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Chiave API Voyage AI",
+		"voyageApiKeyPlaceholder": "Inserisci la tua chiave API Voyage AI",
 		"openaiCompatibleProvider": "Compatibile con OpenAI",
 		"openaiCompatibleResponsesProvider": "Compatibile con OpenAI (Responses)",
 		"openAiKeyLabel": "Chiave API OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "È richiesto l'URL di base di Ollama",
 			"baseUrlRequired": "È richiesto l'URL di base",
 			"modelDimensionMinValue": "La dimensione del modello deve essere maggiore di 0",
-			"openRouterApiKeyRequired": "Chiave API OpenRouter è richiesta"
+			"openRouterApiKeyRequired": "Chiave API OpenRouter è richiesta",
+			"voyageApiKeyRequired": "Chiave API Voyage AI è richiesta"
 		},
 		"optional": "opzionale",
 		"advancedConfigLabel": "Configurazione avanzata",
@@ -380,6 +384,8 @@
 		"requestyUseCustomBaseUrl": "Utilizza URL di base personalizzato",
 		"anthropicApiKey": "Chiave API Anthropic",
 		"getAnthropicApiKey": "Ottieni chiave API Anthropic",
+		"apertisApiKey": "Chiave API Apertis",
+		"getApertisApiKey": "Ottieni chiave API Apertis",
 		"anthropicUseAuthToken": "Passa la chiave API Anthropic come header di autorizzazione invece di X-Api-Key",
 		"anthropic1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",

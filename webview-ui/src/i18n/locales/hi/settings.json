@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API कुंजी",
+		"voyageApiKeyPlaceholder": "अपनी Voyage AI API कुंजी दर्ज करें",
 		"openaiCompatibleProvider": "OpenAI संगत",
 		"openaiCompatibleResponsesProvider": "OpenAI संगत (Responses)",
 		"openAiKeyLabel": "OpenAI API कुंजी",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
 			"baseUrlRequired": "आधार URL आवश्यक है",
 			"modelDimensionMinValue": "मॉडल आयाम 0 से बड़ा होना चाहिए",
-			"openRouterApiKeyRequired": "OpenRouter API कुंजी आवश्यक है"
+			"openRouterApiKeyRequired": "OpenRouter API कुंजी आवश्यक है",
+			"voyageApiKeyRequired": "Voyage AI API कुंजी आवश्यक है"
 		},
 		"optional": "वैकल्पिक",
 		"advancedConfigLabel": "उन्नत कॉन्फ़िगरेशन",
@@ -374,6 +378,8 @@
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"anthropicApiKey": "Anthropic API कुंजी",
 		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
+		"apertisApiKey": "Apertis API कुंजी",
+		"getApertisApiKey": "Apertis API कुंजी प्राप्त करें",
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
 		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",

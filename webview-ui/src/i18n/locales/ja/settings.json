@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI APIキー",
+		"voyageApiKeyPlaceholder": "Voyage AI APIキーを入力してください",
 		"openaiCompatibleProvider": "OpenAI互換",
 		"openaiCompatibleResponsesProvider": "OpenAI互換 (Responses)",
 		"openAiKeyLabel": "OpenAI APIキー",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "OllamaのベースURLが必要です",
 			"baseUrlRequired": "ベースURLが必要です",
 			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません",
-			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です"
+			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です",
+			"voyageApiKeyRequired": "Voyage AI APIキーが必要です"
 		},
 		"optional": "オプション",
 		"advancedConfigLabel": "詳細設定",
@@ -371,6 +375,8 @@
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
+		"apertisApiKey": "Apertis APIキー",
+		"getApertisApiKey": "Apertis APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
 		"anthropic1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
