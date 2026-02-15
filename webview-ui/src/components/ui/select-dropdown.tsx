@@ -73,7 +73,9 @@ export const SelectDropdown = React.memo(
 			const { t } = useTranslation()
 			const [open, setOpen] = React.useState(initiallyOpen) // kilocode_change
 			const [searchValue, setSearchValue] = React.useState("")
+			const [selectedIndex, setSelectedIndex] = React.useState(-1)
 			const searchInputRef = React.useRef<HTMLInputElement>(null)
+			const itemsContainerRef = React.useRef<HTMLDivElement>(null)
 			const portalContainer = useRooPortal("roo-portal")
 
 			// kilocode_change start
@@ -99,7 +101,10 @@ export const SelectDropdown = React.memo(
 				// Clear search when closing - no need for setTimeout
 				if (!open) {
 					// Use requestAnimationFrame instead of setTimeout for better performance
-					requestAnimationFrame(() => setSearchValue(""))
+					requestAnimationFrame(() => {
+						setSearchValue("")
+						setSelectedIndex(-1)
+					})
 				}
 			}, [])
 
@@ -211,6 +216,40 @@ export const SelectDropdown = React.memo(
 			}, [filteredOptions])
 			// kilocode_change end
 
+			// Get selectable options (exclude LABEL, SEPARATOR, SHORTCUT)
+			const selectableOptions = React.useMemo(() => {
+				return groupedOptions.filter(
+					(option) =>
+						option.type !== DropdownOptionType.SEPARATOR &&
+						option.type !== DropdownOptionType.SHORTCUT &&
+						option.type !== DropdownOptionType.LABEL &&
+						!option.disabled,
+				)
+			}, [groupedOptions])
+
+			// Reset selectedIndex when search changes
+			React.useEffect(() => {
+				setSelectedIndex(selectableOptions.length > 0 ? 0 : -1)
+			}, [searchValue, selectableOptions.length])
+
+			// Auto-scroll to keep selected item visible
+			React.useEffect(() => {
+				if (!itemsContainerRef.current || selectedIndex < 0) return
+
+				const container = itemsContainerRef.current
+				const selectedOption = container.children[selectedIndex] as HTMLElement
+				if (!selectedOption) return
+
+				const containerRect = container.getBoundingClientRect()
+				const selectedRect = selectedOption.getBoundingClientRect()
+
+				if (selectedRect.bottom > containerRect.bottom) {
+					container.scrollTop += selectedRect.bottom - containerRect.bottom
+				} else if (selectedRect.top < containerRect.top) {
+					container.scrollTop -= containerRect.top - selectedRect.top
+				}
+			}, [selectedIndex])
+
 			const handleSelect = React.useCallback(
 				(optionValue: string) => {
 					const option = options.find((opt) => opt.value === optionValue)
@@ -232,6 +271,34 @@ export const SelectDropdown = React.memo(
 					// Clear search value immediately
 				},
 				[onChange, options],
+			)
+
+			// Handle keyboard navigation
+			const handleSearchKeyDown = React.useCallback(
+				(event: React.KeyboardEvent<HTMLInputElement>) => {
+					if (selectableOptions.length === 0) return
+
+					if (event.key === "ArrowDown") {
+						event.preventDefault()
+						setSelectedIndex((prev) => (prev + 1) % selectableOptions.length)
+						return
+					}
+
+					if (event.key === "ArrowUp") {
+						event.preventDefault()
+						setSelectedIndex((prev) => (prev - 1 + selectableOptions.length) % selectableOptions.length)
+						return
+					}
+
+					if (event.key === "Enter") {
+						event.preventDefault()
+						if (selectedIndex >= 0 && selectedIndex < selectableOptions.length) {
+							handleSelect(selectableOptions[selectedIndex].value)
+						}
+						return
+					}
+				},
+				[selectableOptions, selectedIndex, handleSelect],
 			)
 
 			const triggerContent = (
@@ -282,6 +349,7 @@ export const SelectDropdown = React.memo(
 										ref={searchInputRef}
 										value={searchValue}
 										onChange={(e) => setSearchValue(e.target.value)}
+										onKeyDown={handleSearchKeyDown}
 										placeholder={t("common:ui.search_placeholder")}
 										className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
 									/>
@@ -298,7 +366,7 @@ export const SelectDropdown = React.memo(
 
 							{/* Dropdown items - Use windowing for large lists */}
 							{/* kilocode_change: different max height: max-h-82, overscroll-contain for scroll wheel support */}
-							<div className="max-h-82 overflow-y-auto overscroll-contain">
+							<div ref={itemsContainerRef} className="max-h-82 overflow-y-auto overscroll-contain">
 								{groupedOptions.length === 0 && searchValue ? (
 									<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
 								) : (
@@ -343,6 +411,10 @@ export const SelectDropdown = React.memo(
 
 											// Use stable keys for better reconciliation
 											const itemKey = `item-${option.value || option.label || index}`
+											const isSelectedByKeyboard =
+												selectedIndex >= 0 &&
+												selectedIndex < selectableOptions.length &&
+												selectableOptions[selectedIndex]?.value === option.value
 
 											return (
 												<div
@@ -352,7 +424,9 @@ export const SelectDropdown = React.memo(
 														"text-sm cursor-pointer flex items-center", // kilocode_change
 														option.disabled
 															? "opacity-50 cursor-not-allowed"
-															: "hover:bg-vscode-list-hoverBackground",
+															: isSelectedByKeyboard
+																? "bg-vscode-list-hoverBackground"
+																: "hover:bg-vscode-list-hoverBackground",
 														option.value === value
 															? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
 															: "",
