@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Habilita el Debug Proxy** — Redirigeix totes les sol·licituds de xarxa sortints a través d'un proxy per a debugging MITM. Només està actiu quan s'executa en mode debug (F5).",
 	"settings.debugProxy.serverUrl.description": "URL del proxy (p. ex., `http://127.0.0.1:8888`). Només s'utilitza quan el **Debug Proxy** està habilitat.",
 	"settings.debugProxy.tlsInsecure.description": "Accepta certificats auto-signats del proxy. **Requerit per a la inspecció MITM.** ⚠️ Insegur — utilitza-ho només per a debugging local.",
-	"ghost.input.title": "Premeu 'Enter' per confirmar o 'Escape' per cancel·lar",
-	"ghost.input.placeholder": "Descriviu què voleu fer...",
-	"ghost.commands.generateSuggestions": "Kilo Code: Generar Edicions Suggerides",
-	"ghost.commands.displaySuggestions": "Mostrar Edicions Suggerides",
-	"ghost.commands.cancelSuggestions": "Cancel·lar Edicions Suggerides",
-	"ghost.commands.applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
-	"ghost.commands.applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
-	"ghost.commands.goToNextSuggestion": "Anar al Suggeriment Següent",
-	"ghost.commands.goToPreviousSuggestion": "Anar al Suggeriment Anterior"
+	"autocomplete.input.title": "Premeu 'Enter' per confirmar o 'Escape' per cancel·lar",
+	"autocomplete.input.placeholder": "Descriviu què voleu fer...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: Generar Edicions Suggerides",
+	"autocomplete.commands.displaySuggestions": "Mostrar Edicions Suggerides",
+	"autocomplete.commands.cancelSuggestions": "Cancel·lar Edicions Suggerides",
+	"autocomplete.commands.applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
+	"autocomplete.commands.applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
+	"autocomplete.commands.goToNextSuggestion": "Anar al Suggeriment Següent",
+	"autocomplete.commands.goToPreviousSuggestion": "Anar al Suggeriment Anterior"
 }

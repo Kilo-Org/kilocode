@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**啟用 Debug Proxy** — 將所有出站網路要求透過代理進行路由，以進行 MITM 偵錯。只有在除錯模式 (F5) 執行時才會啟用。",
 	"settings.debugProxy.serverUrl.description": "代理 URL（例如 `http://127.0.0.1:8888`）。只有在啟用 **Debug Proxy** 時才會使用。",
 	"settings.debugProxy.tlsInsecure.description": "接受來自代理的 self-signed 憑證。**MITM 檢查所必需。** ⚠️ 不安全——只在本機偵錯時使用。",
-	"ghost.input.title": "按 'Enter' 確認或按 'Escape' 取消",
-	"ghost.input.placeholder": "描述您想要做什麼...",
-	"ghost.commands.generateSuggestions": "Kilo Code: 產生編輯建議",
-	"ghost.commands.displaySuggestions": "顯示編輯建議",
-	"ghost.commands.cancelSuggestions": "取消編輯建議",
-	"ghost.commands.applyCurrentSuggestion": "套用目前編輯建議",
-	"ghost.commands.applyAllSuggestions": "套用所有編輯建議",
-	"ghost.commands.goToNextSuggestion": "前往下一個建議",
-	"ghost.commands.goToPreviousSuggestion": "前往上一個建議"
+	"autocomplete.input.title": "按 'Enter' 確認或按 'Escape' 取消",
+	"autocomplete.input.placeholder": "描述您想要做什麼...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: 產生編輯建議",
+	"autocomplete.commands.displaySuggestions": "顯示編輯建議",
+	"autocomplete.commands.cancelSuggestions": "取消編輯建議",
+	"autocomplete.commands.applyCurrentSuggestion": "套用目前編輯建議",
+	"autocomplete.commands.applyAllSuggestions": "套用所有編輯建議",
+	"autocomplete.commands.goToNextSuggestion": "前往下一個建議",
+	"autocomplete.commands.goToPreviousSuggestion": "前往上一個建議"
 }

@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Automatické čistenie",
 		"agentBehaviour": "Správanie agenta",
-		"ghost": "Automatické dokončovanie"
+		"autocomplete": "Automatické dokončovanie"
 	},
 	"about": {
 		"bugReport": {
@@ -123,6 +123,9 @@
 		"openRouterApiKeyPlaceholder": "Zadajte svoj kľúč API OpenRouter",
 		"openRouterProviderRoutingLabel": "Smerovanie poskytovateľa OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter smeruje požiadavky na najlepších dostupných poskytovateľov pre váš model vkladania. V predvolenom nastavení sú požiadavky vyrovnávané záťažou medzi najlepších poskytovateľov, aby sa maximalizovala doba prevádzky. Môžete si však vybrať konkrétneho poskytovateľa, ktorého chcete pre tento model použiť.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API kľúč Voyage AI",
+		"voyageApiKeyPlaceholder": "Zadaj svoj API kľúč Voyage AI",
 		"openaiCompatibleProvider": "Kompatibilný s OpenAI",
 		"openaiCompatibleResponsesProvider": "Kompatibilný s OpenAI (Responses)",
 		"openAiKeyLabel": "Kľúč API OpenAI",
@@ -195,6 +198,7 @@
 			"mistralApiKeyRequired": "Kľúč API Mistral je povinný",
 			"vercelAiGatewayApiKeyRequired": "Je vyžadovaný kľúč API Vercel AI Gateway",
 			"openRouterApiKeyRequired": "Kľúč API OpenRouter je povinný",
+			"voyageApiKeyRequired": "API kľúč Voyage AI je povinný",
 			"ollamaBaseUrlRequired": "Základná URL Ollama je povinná",
 			"baseUrlRequired": "Základná URL je povinná",
 			"modelDimensionMinValue": "Dimenzia modelu musí byť väčšia ako 0",
@@ -399,6 +403,8 @@
 		"openRouterTransformsText": "Komprimovať prompty a reťazce správ na veľkosť kontextu (<a>Transformácie OpenRouter</a>)",
 		"anthropicApiKey": "Kľúč API Anthropic",
 		"getAnthropicApiKey": "Získať kľúč API Anthropic",
+		"apertisApiKey": "Kľúč API Apertis",
+		"getApertisApiKey": "Získať kľúč API Apertis",
 		"anthropicUseAuthToken": "Odovzdávať kľúč API Anthropic ako hlavičku Authorization namiesto X-Api-Key",
 		"anthropic1MContextBetaLabel": "Povoliť 1M okno kontextu (Beta)",
 		"anthropic1MContextBetaDescription": "Rozšíriť okno kontextu na 1 milión tokenov pre Claude Sonnet 4",
@@ -825,7 +831,7 @@
 			"description": "Zobraziť štatistiky pridaných/odobraných riadkov v záhlaví úlohy"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Zobraziť animáciu v okraji pri automatickom dokončovaní",
 			"description": "Zobraziť animovaný indikátor v okraji editora, keď beží automatické dokončovanie",

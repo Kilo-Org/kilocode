@@ -1,7 +1,7 @@
 import type { ModelInfo } from "../model.js"
 
 export const corethinkModels = {
-	"corethink": {
+	corethink: {
 		maxTokens: 8192,
 		contextWindow: 79000,
 		supportsImages: true,

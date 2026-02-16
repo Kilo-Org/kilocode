@@ -35,11 +35,13 @@ Kilo Code offers a streamlined registration that connects you directly to fronti
 
 Kilo Code provides access to the latest frontier coding models through its built-in provider. The specific models available are automatically updated and managed by the Kilo Code service, ensuring you always have access to the most capable models for coding tasks.
 
-## BYOK support
+## Kilo Gateway integration
 
-You can also bring your own key (BYOK) to the Kilo Gateway. We currently support the following providers: Anthropic, OpenAI, Google AI Studio, MiniMax, Mistral AI, xAI, and Z.ai.
+Kilo Code routes requests through the Kilo Gateway for model access, usage tracking, and organization controls. For BYOK setup, provider routing, and full model availability, use the Gateway docs as the source of truth:
 
-You can access the BYOK section of the Kilo Gateway [here](https://app.kilo.ai/byok).
+- [Kilo Gateway overview](/docs/gateway)
+- [Models & Providers](/docs/gateway/models-and-providers)
+- [Authentication & BYOK](/docs/gateway/authentication)
 
 ## Configuration in Kilo Code
 
@@ -48,25 +50,6 @@ Once you've completed the registration process, Kilo Code is automatically confi
 1. **Automatic Setup:** After successful registration, Kilo Code is ready to use immediately
 2. **No API Key Management:** Your authentication is handled seamlessly through the registration process
 3. **Model Selection:** Access to frontier models is provided automatically through your Kilo Code account
-
-### Provider Routing
-
-Kilo Code can route to many different inference providers. For personal accounts, provider routing behavior can be controlled in the API Provider settings under Provider Routing.
-
-#### Provider Sorting
-
-- Default provider sorting: at time of writing equivalent to prefer providers with lower price
-- Prefer providers with lower price
-- Prefer providers with higher throughput (i.e. more tokens per seconds)
-- Prefer providers with lower latency (i.e. shorter time to first token)
-- A specific provider preference can also be chosen.
-
-#### Data Policy
-
-- Allow prompt training (free only): providers that may train on your prompts or completions are only allowed for free models.
-- Allow prompt training: providers that may train on your prompts or completions are allowed.
-- Deny prompt training: providers that may train on your prompts or completions are not allowed.
-- Zero data retention: only providers with a strict zero data retention policy are allowed. This option is not recommended, as it will disable many popular providers, such as Anthropic and OpenAI.
 
 ## Connected Accounts
 
@@ -77,7 +60,7 @@ With the Kilo Code provider, if you sign up with Google you can also connect oth
 3. Under "Link a New account" select the type of account to link
 4. Complete the OAuth authorization, and you'll see your connected accounts!
 
-<img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" />
+<!-- <img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" /> -->
 
 ## Tips and Notes
 

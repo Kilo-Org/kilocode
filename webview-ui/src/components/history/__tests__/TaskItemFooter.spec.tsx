@@ -33,11 +33,35 @@ describe("TaskItemFooter", () => {
 		expect(screen.getByText(/ago/)).toBeInTheDocument()
 	})
 
-	it("renders cost information", () => {
+	it("does not render cost for zero cost", () => {
+		const zeroCostItem = {
+			...mockItem,
+			totalCost: 0.0,
+		}
+		render(<TaskItemFooter item={zeroCostItem} variant="full" />)
+
+		// The component does not render cost element when totalCost is 0 (falsy check)
+		expect(screen.queryByTestId("cost-footer-compact")).not.toBeInTheDocument()
+	})
+
+	it("renders low cost information", () => {
 		render(<TaskItemFooter item={mockItem} variant="full" />)
 
-		// The component shows $0.00 for small amounts, not the exact value
-		expect(screen.getByText("$0.00")).toBeInTheDocument()
+		// The component shows 0.0020 for small amounts (4 decimal places via formatCost)
+		const costElement = screen.getByTestId("cost-footer-compact")
+		expect(costElement.textContent).toContain("0.0020")
+	})
+
+	it("renders high cost information", () => {
+		const highCostItem = {
+			...mockItem,
+			totalCost: 0.0523,
+		}
+		render(<TaskItemFooter item={highCostItem} variant="full" />)
+
+		// The component shows 0.05 for high amounts (2 decimal places via formatCost)
+		const costElement = screen.getByTestId("cost-footer-compact")
+		expect(costElement.textContent).toContain("0.05")
 	})
 
 	it("shows action buttons", () => {

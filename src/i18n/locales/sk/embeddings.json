@@ -27,6 +27,12 @@
 		"modelNotFound": "Model {{model}} nebol nájdený v Amazon Bedrock",
 		"missingConfiguration": "Chýba konfigurácia Amazon Bedrock pre vytvorenie embedderu"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Neplatný formát odpovede z Voyage AI",
+		"invalidCredentials": "Neplatný API kľúč Voyage AI. Skontroluj prosím konfiguráciu API kľúča.",
+		"accessDenied": "Prístup odopretý. Tvoja IP adresa môže byť blokovaná službou Voyage AI. Skús inú sieť.",
+		"modelNotFound": "Model {{model}} nebol nájdený vo Voyage AI. Skontroluj prosím výber modelu."
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Neznáma chyba pri spracovaní súboru {{filePath}}",
 		"unknownErrorDeletingPoints": "Neznáma chyba pri mazaní bodov pre {{filePath}}",
@@ -62,6 +68,7 @@
 		"openRouterConfigMissing": "Chýba konfigurácia OpenRouter pre vytvorenie embedderu",
 		"vercelAiGatewayConfigMissing": "Chýba konfigurácia Vercel AI Gateway pre vytvorenie embedderu",
 		"bedrockConfigMissing": "Chýba konfigurácia Amazon Bedrock pre vytvorenie embedderu",
+		"voyageConfigMissing": "Chýba konfigurácia Voyage AI pre vytvorenie embedderu",
 		"invalidEmbedderType": "Nakonfigurovaný neplatný typ embedderu: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nedá sa určiť rozmer vektora pre model '{{modelId}}' s poskytovateľom '{{provider}}'. Uisti sa prosím, že 'Rozmer Embeddingu' je správne nastavený v nastavení OpenAI-Compatible poskytovateľa.",
 		"vectorDimensionNotDetermined": "Nedá sa určiť rozmer vektora pre model '{{modelId}}' s poskytovateľom '{{provider}}'. Skontroluj profily modelov alebo konfiguráciu.",

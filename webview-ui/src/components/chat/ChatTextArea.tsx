@@ -21,7 +21,7 @@ import {
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { escapeHtml } from "@/utils/highlight" // kilocode_change - FIM autocomplete
-import { useChatGhostText } from "./hooks/useChatGhostText" // kilocode_change: FIM autocomplete
+import { useChatAutocompleteText } from "./hooks/useChatAutocompleteText" // kilocode_change: FIM autocomplete
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui"
 
 import Thumbnails from "../common/Thumbnails"
@@ -414,20 +414,20 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
 		const [isFocused, setIsFocused] = useState(false)
-		// kilocode_change start: FIM autocomplete ghost text
+		// kilocode_change start: FIM autocomplete autocomplete text
 		const {
-			ghostText,
-			handleKeyDown: handleGhostTextKeyDown,
-			handleInputChange: handleGhostTextInputChange,
-			handleFocus: handleGhostTextFocus,
-			handleBlur: handleGhostTextBlur,
-			handleSelect: handleGhostTextSelect,
-			clearGhostText,
-		} = useChatGhostText({
+			autocompleteText,
+			handleKeyDown: handleAutocompleteTextKeyDown,
+			handleInputChange: handleAutocompleteTextInputChange,
+			handleFocus: handleAutocompleteTextFocus,
+			handleBlur: handleAutocompleteTextBlur,
+			handleSelect: handleAutocompleteTextSelect,
+			clearAutocompleteText,
+		} = useChatAutocompleteText({
 			textAreaRef,
 			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
 		})
-		// kilocode_change end: FIM autocomplete ghost text
+		// kilocode_change end: FIM autocomplete autocomplete text
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
 
 		// Use custom hook for prompt history navigation
@@ -783,7 +783,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 				}
 
-				// kilocode_change start: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// kilocode_change start: Prevent Tab from triggering autocomplete/FIM/mention handling while typing a slash command
 				// If the cursor is within the first token of a leading /command, Tab should not fall through to other handlers.
 				// - If the slash command menu is open, Tab is handled above (completion)
 				// - If the slash command menu is closed, Tab should do nothing (must not mutate text, e.g. inserting '@')
@@ -803,11 +803,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						}
 					}
 				}
-				// kilocode_change end: Prevent Tab from triggering ghost/FIM/mention handling while typing a slash command
+				// kilocode_change end: Prevent Tab from triggering autocomplete/FIM/mention handling while typing a slash command
 
-				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
-				if (handleGhostTextKeyDown(event)) {
-					return // Event was handled by ghost text hook, stop here
+				// kilocode_change start: FIM autocomplete - Tab to accept autocomplete text
+				if (handleAutocompleteTextKeyDown(event)) {
+					return // Event was handled by autocomplete text hook, stop here
 				}
 				// kilocode_change end: FIM autocomplete
 
@@ -890,7 +890,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				handleSlashCommandsSelect,
 				selectedSlashCommandsIndex,
 				slashCommandsQuery,
-				handleGhostTextKeyDown, // kilocode_change: FIM autocomplete
+				handleAutocompleteTextKeyDown, // kilocode_change: FIM autocomplete
 				// kilocode_change end
 				onSend,
 				showContextMenu,
@@ -936,7 +936,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// Reset history navigation when user types
 				resetOnInputChange()
 
-				handleGhostTextInputChange(e) // kilocode_change - FIM autocomplete
+				handleAutocompleteTextInputChange(e) // kilocode_change - FIM autocomplete
 
 				const newCursorPosition = target.selectionStart // Use target for consistency
 				setCursorPosition(newCursorPosition)
@@ -1034,7 +1034,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setFileSearchResults,
 				setSearchLoading,
 				resetOnInputChange,
-				handleGhostTextInputChange, // kilocode_change: FIM autocomplete
+				handleAutocompleteTextInputChange, // kilocode_change: FIM autocomplete
 			],
 		)
 
@@ -1054,14 +1054,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setIsFocused(false)
 		}, [isMouseDownOnMenu])
 
-		// kilocode_change start: FIM autocomplete - track focus for ghost text
+		// kilocode_change start: FIM autocomplete - track focus for autocomplete text
 		useEffect(() => {
 			if (isFocused) {
-				handleGhostTextFocus()
+				handleAutocompleteTextFocus()
 			} else {
-				handleGhostTextBlur()
+				handleAutocompleteTextBlur()
 			}
-		}, [isFocused, handleGhostTextFocus, handleGhostTextBlur])
+		}, [isFocused, handleAutocompleteTextFocus, handleAutocompleteTextBlur])
 		// kilocode_change end: FIM autocomplete
 
 		const handlePaste = useCallback(
@@ -1074,7 +1074,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const urlRegex = /^\S+:\/\/\S+$/
 				if (urlRegex.test(pastedText.trim())) {
 					e.preventDefault()
-					clearGhostText() // kilocode_change: Clear ghost text on paste of URL as well
+					clearAutocompleteText() // kilocode_change: Clear autocomplete text on paste of URL as well
 					const trimmedUrl = pastedText.trim()
 					const newValue =
 						inputValue.slice(0, cursorPosition) + trimmedUrl + " " + inputValue.slice(cursorPosition)
@@ -1159,7 +1159,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				t,
 				selectedImages.length,
 				showImageWarning, // kilocode_change
-				clearGhostText, // kilocode_change: Clear ghost text on paste
+				clearAutocompleteText, // kilocode_change: Clear autocomplete text on paste
 			],
 		)
 
@@ -1216,16 +1216,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			}
 			// kilocode_change end - STT preview text highlighting
-			// kilocode_change start - autocomplete ghost text display
-			if (inputValue && ghostText) {
-				processedText += `<span class="text-vscode-editor-foreground opacity-60 pointer-events-none">${escapeHtml(ghostText)}</span>`
+			// kilocode_change start - autocomplete autocomplete text display
+			if (inputValue && autocompleteText) {
+				processedText += `<span class="text-vscode-editor-foreground opacity-60 pointer-events-none">${escapeHtml(autocompleteText)}</span>`
 			}
-			// kilocode_change end - autocomplete ghost text display
+			// kilocode_change end - autocomplete autocomplete text display
 
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes, ghostText, inputValue, isRecording, previewRanges]) // kilocode_change - merged dependencies
+		}, [customModes, autocompleteText, inputValue, isRecording, previewRanges]) // kilocode_change - merged dependencies
 
 		useLayoutEffect(() => {
 			updateHighlights()
@@ -1258,8 +1258,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			if (textAreaRef.current) {
 				setCursorPosition(textAreaRef.current.selectionStart)
 			}
-			handleGhostTextSelect() // kilocode_change: Clear ghost text if cursor moved away from end
-		}, [handleGhostTextSelect])
+			handleAutocompleteTextSelect() // kilocode_change: Clear autocomplete text if cursor moved away from end
+		}, [handleAutocompleteTextSelect])
 
 		const handleKeyUp = useCallback(
 			(e: React.KeyboardEvent<HTMLTextAreaElement>) => {

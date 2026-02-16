@@ -42,7 +42,7 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"ghost": "Ghost",
+		"autocomplete": "Ghost",
 		"autoPurge": "Otomatik Temizlik",
 		"agentBehaviour": "Ajan Davranışı"
 	},
@@ -104,6 +104,9 @@
 		"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
 		"openRouterProviderRoutingLabel": "OpenRouter Sağlayıcı Yönlendirmesi",
 		"openRouterProviderRoutingDescription": "OpenRouter, gömme modeliniz için mevcut en iyi sağlayıcılara istekleri yönlendirir. Varsayılan olarak, istekler çalışma süresini en üst düzeye çıkarmak için en iyi sağlayıcılar arasında dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API Anahtarı",
+		"voyageApiKeyPlaceholder": "Voyage AI API anahtarını gir",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openaiCompatibleResponsesProvider": "OpenAI Uyumlu (Responses)",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
 			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır",
-			"openRouterApiKeyRequired": "OpenRouter API anahtarı gereklidir"
+			"openRouterApiKeyRequired": "OpenRouter API anahtarı gereklidir",
+			"voyageApiKeyRequired": "Voyage AI API anahtarı gereklidir"
 		},
 		"optional": "isteğe bağlı",
 		"advancedConfigLabel": "Gelişmiş Yapılandırma",
@@ -366,6 +370,8 @@
 		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
 		"anthropicApiKey": "Anthropic API Anahtarı",
 		"getAnthropicApiKey": "Anthropic API Anahtarı Al",
+		"apertisApiKey": "Apertis API Anahtarı",
+		"getApertisApiKey": "Apertis API Anahtarı Al",
 		"anthropicUseAuthToken": "Anthropic API Anahtarını X-Api-Key yerine Authorization başlığı olarak geçir",
 		"anthropicUseAzureDeployment": "Azure dağıtım adını kullan",
 		"anthropicAzureDeploymentPlaceholder": "Dağıtım adını girin...",
@@ -1175,7 +1181,7 @@
 			"description": "Görev başlığında eklenen/silinen satır istatistiklerini görüntüle"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
 			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",

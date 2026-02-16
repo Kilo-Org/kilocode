@@ -273,6 +273,22 @@ export interface ConvertToOpenAiMessagesOptions {
 	mergeToolResultText?: boolean
 }
 
+// kilocode_change start
+type ReasoningBlockParam = {
+	/**
+	 * Non-Anthropic block type used by some providers. We preserve it so we can
+	 * round-trip it through OpenAI-format messages.
+	 */
+	type: "reasoning"
+	text?: string
+	thinking?: string
+}
+// kilocode_change end
+
+function isReasoningBlockParam(part: unknown): part is ReasoningBlockParam {
+	return typeof part === "object" && part !== null && (part as { type?: unknown }).type === "reasoning"
+}
+
 export function convertToOpenAiMessages(
 	anthropicMessages: Anthropic.Messages.MessageParam[],
 	options?: ConvertToOpenAiMessagesOptions,
@@ -442,7 +458,14 @@ export function convertToOpenAiMessages(
 				}
 			} else if (anthropicMessage.role === "assistant") {
 				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
-					nonToolMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
+					// kilocode_change start
+					nonToolMessages: (
+						| Anthropic.TextBlockParam
+						| Anthropic.ImageBlockParam
+						| Anthropic.ThinkingBlockParam
+						| ReasoningBlockParam
+					)[]
+					// kilocode_change end
 					toolMessages: Anthropic.ToolUseBlockParam[]
 				}>(
 					(acc, part) => {
@@ -450,7 +473,11 @@ export function convertToOpenAiMessages(
 							acc.toolMessages.push(part)
 						} else if (part.type === "text" || part.type === "image") {
 							acc.nonToolMessages.push(part)
+							// kilocode_change start
+						} else if (part.type === "thinking" || isReasoningBlockParam(part)) {
+							acc.nonToolMessages.push(part)
 						} // assistant cannot send tool_result messages
+						// kilocode_change end
 						return acc
 					},
 					{ nonToolMessages: [], toolMessages: [] },
@@ -463,6 +490,11 @@ export function convertToOpenAiMessages(
 						.map((part) => {
 							if (part.type === "image") {
 								return "" // impossible as the assistant cannot send images
+							} else if (part.type === "thinking") {
+								return "<think>" + part.thinking + "</think>"
+							} else if (part.type === "reasoning") {
+								// kilocode_change - support custom "reasoning" type used by some providers
+								return "<think>" + (part.text || part.thinking || "") + "</think>"
 							}
 							return part.text
 						})

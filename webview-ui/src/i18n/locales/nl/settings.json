@@ -44,7 +44,7 @@
 		"about": "Over Kilo Code",
 		"autoPurge": "Auto-opruimen",
 		"agentBehaviour": "Agentgedrag",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API-sleutel",
+		"voyageApiKeyPlaceholder": "Voer je Voyage AI API-sleutel in",
 		"openaiCompatibleProvider": "OpenAI-compatibel",
 		"openaiCompatibleResponsesProvider": "OpenAI-compatibel (Responses)",
 		"openAiKeyLabel": "OpenAI API-sleutel",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
 			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0",
-			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist"
+			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist",
+			"voyageApiKeyRequired": "Voyage AI API-sleutel is vereist"
 		},
 		"optional": "optioneel",
 		"advancedConfigLabel": "Geavanceerde configuratie",
@@ -366,6 +370,8 @@
 		"requestyUseCustomBaseUrl": "Gebruik aangepaste basis-URL",
 		"anthropicApiKey": "Anthropic API-sleutel",
 		"getAnthropicApiKey": "Anthropic API-sleutel ophalen",
+		"apertisApiKey": "Apertis API-sleutel",
+		"getApertisApiKey": "Apertis API-sleutel ophalen",
 		"anthropicUseAuthToken": "Anthropic API-sleutel als Authorization-header doorgeven in plaats van X-Api-Key",
 		"anthropic1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"anthropic1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
@@ -1175,7 +1181,7 @@
 			"description": "Toon statistieken van toegevoegde/verwijderde regels in de taakkop"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Goot animatie tonen bij automatisch aanvullen",
 			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",

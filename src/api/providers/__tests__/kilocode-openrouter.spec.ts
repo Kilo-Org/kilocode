@@ -27,10 +27,10 @@ import {
 	X_KILOCODE_MACHINEID,
 	X_KILOCODE_MODE,
 } from "../../../shared/kilocode/headers"
-import { streamSse } from "../../../services/ghost/continuedev/core/fetch/stream"
+import { streamSse } from "../../../services/autocomplete/continuedev/core/fetch/stream"
 
 // Mock the stream module
-vitest.mock("../../../services/ghost/continuedev/core/fetch/stream", () => ({
+vitest.mock("../../../services/autocomplete/continuedev/core/fetch/stream", () => ({
 	streamSse: vitest.fn(),
 }))
 

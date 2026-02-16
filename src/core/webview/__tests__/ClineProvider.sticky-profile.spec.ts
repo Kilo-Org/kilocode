@@ -82,6 +82,7 @@ vi.mock("../../task/Task", () => ({
 		setTaskApiConfigName: vi.fn(),
 		_taskApiConfigName: options.historyItem?.apiConfigName,
 		taskApiConfigName: options.historyItem?.apiConfigName,
+		getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 	})),
 }))
 
@@ -300,6 +301,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -365,6 +367,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack
@@ -421,6 +424,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			await provider.addClineToStack(mockTask as any)
@@ -610,6 +614,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Mock getGlobalState to return task history with our task
@@ -677,6 +682,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Create task 2 with profile B
@@ -691,6 +697,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task 1 to stack
@@ -775,6 +782,7 @@ describe("ClineProvider - Sticky Provider Profile", () => {
 				clineMessages: [],
 				apiConversationHistory: [],
 				updateApiConfiguration: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			// Add task to provider stack

@@ -44,7 +44,7 @@
 		"about": "Tentang Kilo Code",
 		"autoPurge": "Pembersihan Otomatis",
 		"agentBehaviour": "Perilaku Agent",
-		"ghost": "Autocomplete"
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Kunci API:",
 		"mistralApiKeyPlaceholder": "Masukkan kunci API Mistral Anda",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Kunci API Voyage AI",
+		"voyageApiKeyPlaceholder": "Masukkan kunci API Voyage AI kamu",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openaiCompatibleResponsesProvider": "OpenAI Compatible (Responses)",
 		"openAiKeyLabel": "OpenAI API Key",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "URL dasar Ollama diperlukan",
 			"baseUrlRequired": "URL dasar diperlukan",
 			"modelDimensionMinValue": "Dimensi model harus lebih besar dari 0",
-			"openRouterApiKeyRequired": "Kunci API OpenRouter diperlukan"
+			"openRouterApiKeyRequired": "Kunci API OpenRouter diperlukan",
+			"voyageApiKeyRequired": "Kunci API Voyage AI diperlukan"
 		},
 		"optional": "opsional",
 		"advancedConfigLabel": "Konfigurasi Lanjutan",
@@ -364,6 +368,8 @@
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Gunakan URL dasar khusus",
+		"apertisApiKey": "Apertis API Key",
+		"getApertisApiKey": "Dapatkan Apertis API Key",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Dapatkan Anthropic API Key",
 		"anthropicUseAuthToken": "Kirim Anthropic API Key sebagai Authorization header alih-alih X-Api-Key",
@@ -1196,7 +1202,7 @@
 			"description": "Tampilkan statistik baris ditambahkan/dihapus di header tugas"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Tampilkan animasi gutter saat autocomplete",
 			"description": "Tampilkan indikator animasi di gutter editor saat autocompletion sedang berjalan",

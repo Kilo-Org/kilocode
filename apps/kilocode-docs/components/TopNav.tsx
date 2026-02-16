@@ -30,6 +30,7 @@ const mainNavItems: NavItem[] = [
 	{ label: "Collaborate", href: "/collaborate" },
 	{ label: "Automate", href: "/automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure" },
+	{ label: "Kilo Gateway", href: "/gateway" },
 	{ label: "Contributing", href: "/contributing" },
 ]
 
@@ -331,6 +332,16 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 				</div>
 			</div>
 
+			{/* Announcement banner */}
+			<div className="announcement-banner">
+				<p>
+					We're{" "}
+					<Link href="https://blog.kilo.ai/p/kilo-cli">replatforming our extensions on the new Kilo CLI</Link>
+					. Contribute to the new CLI and pre-release extensions at{" "}
+					<Link href="https://github.com/Kilo-Org/kilo">Kilo-Org/kilo</Link>.
+				</p>
+			</div>
+
 			<style jsx>{`
 				.top-header {
 					position: fixed;
@@ -515,6 +526,35 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
 					.right-actions {
 						gap: 0.5rem;
+					}
+				}
+
+				.announcement-banner {
+					background: #1a1a18;
+					color: #a3a3a2;
+					padding: 0.5rem 1rem;
+					text-align: center;
+					font-size: 0.875rem;
+					border-bottom: 1px solid #3f3f3f;
+				}
+
+				.announcement-banner p {
+					margin: 0;
+				}
+
+				.announcement-banner :global(a) {
+					color: #f8f674;
+					text-decoration: underline;
+					text-underline-offset: 2px;
+				}
+
+				.announcement-banner :global(a:hover) {
+					color: #ffff8d;
+				}
+
+				@media (max-width: 768px) {
+					.announcement-banner {
+						font-size: 0.8rem;
 					}
 				}
 			`}</style>
