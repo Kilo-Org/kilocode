@@ -12,6 +12,8 @@ The Kilo Code **memory bank** feature has been deprecated in favor of AGENTS.md.
 
 **Existing memory bank rules will continue to work.**
 
+Legacy Memory Bank status indicators such as `[Memory Bank: Active]` and `[Memory Bank: Missing]` can still appear, but they are not guaranteed across all clients or modes.
+
 If you'd like to migrate your memory bank content to AGENTS.md:
 
 1. Examine the contents in `.kilocode/rules/memory-bank/`
