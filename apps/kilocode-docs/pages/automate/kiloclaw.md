@@ -87,7 +87,17 @@ OpenClaw supports integration with popular messaging platforms:
 - Slack
 - And more
 
-For platform-specific setup instructions, refer to the [OpenClaw documentation](https://openclaw.ai/docs).
+For platform-specific setup instructions, refer to the [OpenClaw documentation](https://docs.openclaw.ai).
+
+## Using your OpenClaw Agent
+
+OpenClaw lets you customized your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
+
+For more information on use cases for OpenClaw see:
+
+- [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
+- [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
+- [Clawhub](https://clawhub.ai/): search for skills
 
 ## Pricing
 
@@ -116,4 +126,4 @@ Have feedback or running into issues? Join the [Kilo Discord](https://discord.gg
 
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
-- [OpenClaw Documentation](https://openclaw.ai/docs)
+- [OpenClaw Documentation](https://docs.openclaw.ai)
