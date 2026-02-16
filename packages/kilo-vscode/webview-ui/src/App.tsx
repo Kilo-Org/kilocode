@@ -18,29 +18,12 @@ import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import SessionList from "./components/history/SessionList"
+import MarketplaceView from "./components/MarketplaceView"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings"
 const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings"])
-
-const DummyView: Component<{ title: string }> = (props) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        height: "100%",
-        "min-height": "200px",
-        "font-size": "24px",
-        color: "var(--vscode-foreground)",
-      }}
-    >
-      <h1>{props.title}</h1>
-    </div>
-  )
-}
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -146,7 +129,7 @@ const AppContent: Component = () => {
           <ChatView onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
+          <MarketplaceView onBack={() => setCurrentView("newTask")} />
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />

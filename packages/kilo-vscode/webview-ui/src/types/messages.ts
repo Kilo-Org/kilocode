@@ -189,6 +189,63 @@ export interface ProfileData {
   currentOrgId: string | null
 }
 
+// Marketplace types
+export type MarketplaceItemType = "mode" | "mcp" | "skill"
+
+export interface MarketplaceItemBase {
+  type: MarketplaceItemType
+  id: string
+  name: string
+  description: string
+  managedByOrganization?: boolean
+  author?: string
+  authorUrl?: string
+  tags?: string[]
+  prerequisites?: string[]
+}
+
+export interface MarketplaceMcpParameter {
+  name: string
+  key: string
+  placeholder?: string
+  optional: boolean
+}
+
+export interface MarketplaceMcpInstallMethod {
+  name: string
+  content: string
+  parameters?: MarketplaceMcpParameter[]
+  prerequisites?: string[]
+}
+
+export interface MarketplaceModeItem extends MarketplaceItemBase {
+  type: "mode"
+  content: string
+}
+
+export interface MarketplaceMcpItem extends MarketplaceItemBase {
+  type: "mcp"
+  url: string
+  content: string | MarketplaceMcpInstallMethod[]
+  parameters?: MarketplaceMcpParameter[]
+}
+
+export interface MarketplaceSkillItem extends MarketplaceItemBase {
+  type: "skill"
+  category: string
+  githubUrl: string
+  content: string
+  displayName: string
+  displayCategory: string
+}
+
+export type MarketplaceItem = MarketplaceModeItem | MarketplaceMcpItem | MarketplaceSkillItem
+
+export interface MarketplaceInstalledMetadata {
+  project: Record<string, { type: MarketplaceItemType }>
+  global: Record<string, { type: MarketplaceItemType }>
+}
+
 // Provider/model types for model selector
 
 export interface ProviderModel {
@@ -494,6 +551,21 @@ export interface NotificationSettingsLoadedMessage {
   }
 }
 
+export interface MarketplaceDataMessage {
+  type: "marketplaceData"
+  items: MarketplaceItem[]
+  installedMetadata: MarketplaceInstalledMetadata
+  errors?: string[]
+}
+
+export interface MarketplaceActionResultMessage {
+  type: "marketplaceActionResult"
+  action: "install" | "remove"
+  success: boolean
+  itemID?: string
+  error?: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -526,6 +598,8 @@ export type ExtensionMessage =
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | NotificationSettingsLoadedMessage
+  | MarketplaceDataMessage
+  | MarketplaceActionResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -690,6 +764,36 @@ export interface RequestNotificationSettingsMessage {
   type: "requestNotificationSettings"
 }
 
+export interface RequestMarketplaceDataMessage {
+  type: "requestMarketplaceData"
+}
+
+export interface InstallMarketplaceItemMessage {
+  type: "installMarketplaceItem"
+  item: MarketplaceItem
+  target: "project" | "global"
+  selectedIndex?: number
+  parameters?: Record<string, unknown>
+}
+
+export interface RemoveMarketplaceItemMessage {
+  type: "removeMarketplaceItem"
+  item: MarketplaceItem
+  target: "project" | "global"
+}
+
+export type TelemetryEventName =
+  | "Marketplace Tab Viewed"
+  | "Marketplace Install Button Clicked"
+  | "Marketplace Item Installed"
+  | "Marketplace Item Removed"
+
+export interface TelemetryEventMessage {
+  type: "telemetryEvent"
+  event: TelemetryEventName
+  properties?: Record<string, unknown>
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -722,6 +826,10 @@ export type WebviewMessage =
   | RequestConfigMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
+  | RequestMarketplaceDataMessage
+  | InstallMarketplaceItemMessage
+  | RemoveMarketplaceItemMessage
+  | TelemetryEventMessage
 
 // ============================================
 // VS Code API type

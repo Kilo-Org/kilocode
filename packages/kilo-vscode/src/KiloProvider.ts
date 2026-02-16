@@ -4,6 +4,14 @@ import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionSe
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 import { buildWebviewHtml } from "./utils"
+import { MarketplaceService, marketplaceItemSchema, type MarketplaceItem } from "./services/marketplace"
+
+const MARKETPLACE_TELEMETRY_EVENTS = new Set([
+  "Marketplace Tab Viewed",
+  "Marketplace Install Button Clicked",
+  "Marketplace Item Installed",
+  "Marketplace Item Removed",
+])
 
 export class KiloProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -21,6 +29,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   private cachedAgentsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before httpClient is ready */
   private cachedConfigMessage: unknown = null
+  private readonly marketplaceService = new MarketplaceService()
 
   private trackedSessionIds: Set<string> = new Set()
   private unsubscribeEvent: (() => void) | null = null
@@ -243,6 +252,18 @@ export class KiloProvider implements vscode.WebviewViewProvider {
           break
         case "requestConfig":
           await this.fetchAndSendConfig()
+          break
+        case "requestMarketplaceData":
+          await this.handleRequestMarketplaceData()
+          break
+        case "installMarketplaceItem":
+          await this.handleInstallMarketplaceItem(message.item, message.target, message.selectedIndex, message.parameters)
+          break
+        case "removeMarketplaceItem":
+          await this.handleRemoveMarketplaceItem(message.item, message.target)
+          break
+        case "telemetryEvent":
+          this.handleTelemetryEvent(message.event, message.properties)
           break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
@@ -520,6 +541,177 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       this.postMessage({
         type: "error",
         message: error instanceof Error ? error.message : "Failed to load sessions",
+      })
+    }
+  }
+
+  private parseMarketplaceItem(rawItem: unknown): MarketplaceItem | null {
+    const parsed = marketplaceItemSchema.safeParse(rawItem)
+    return parsed.success ? parsed.data : null
+  }
+
+  private parseMarketplaceTarget(rawTarget: unknown): "project" | "global" {
+    return z.enum(["project", "global"]).catch("project").parse(rawTarget)
+  }
+
+  private parseMarketplaceSelectedIndex(rawSelectedIndex: unknown): number | undefined {
+    const parsed = z.number().int().min(0).safeParse(rawSelectedIndex)
+    return parsed.success ? parsed.data : undefined
+  }
+
+  private parseMarketplaceParameters(rawParameters: unknown): Record<string, unknown> {
+    const parsed = z.record(z.string(), z.unknown()).safeParse(rawParameters)
+    return parsed.success ? parsed.data : {}
+  }
+
+  private parseTelemetryProperties(raw: unknown): Record<string, unknown> | undefined {
+    const parsed = z.record(z.unknown()).safeParse(raw)
+    return parsed.success ? parsed.data : undefined
+  }
+
+  private handleTelemetryEvent(rawEvent: unknown, rawProperties?: unknown): void {
+    const parsedEvent = z.string().safeParse(rawEvent)
+    if (!parsedEvent.success) {
+      return
+    }
+
+    if (!MARKETPLACE_TELEMETRY_EVENTS.has(parsedEvent.data)) {
+      return
+    }
+
+    if (!vscode.env.isTelemetryEnabled) {
+      console.debug("[Kilo New] Telemetry skipped (disabled):", parsedEvent.data)
+      return
+    }
+
+    console.debug("[Kilo New] Telemetry:", parsedEvent.data, this.parseTelemetryProperties(rawProperties) ?? {})
+  }
+
+  private async handleRequestMarketplaceData(): Promise<void> {
+    const errors: string[] = []
+    let extensionSettings: unknown = undefined
+    const client = this.httpClient
+
+    if (client) {
+      try {
+        extensionSettings = await client.getExtensionSettings()
+      } catch (error) {
+        // Extension settings endpoint may be unavailable on older gateways.
+        console.debug("[Kilo New] KiloProvider: Extension settings unavailable for marketplace policy", error)
+      }
+    }
+
+    try {
+      const result = await this.marketplaceService.getCatalog({ extensionSettings })
+      this.postMessage({
+        type: "marketplaceData",
+        items: result.items,
+        installedMetadata: result.installedMetadata,
+        errors: [...errors, ...(result.errors ?? [])],
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch marketplace data:", error)
+      this.postMessage({
+        type: "marketplaceData",
+        items: [],
+        installedMetadata: { project: {}, global: {} },
+        errors: [...errors, error instanceof Error ? error.message : String(error)],
+      })
+    }
+  }
+
+  private async handleInstallMarketplaceItem(
+    rawItem: unknown,
+    rawTarget: unknown,
+    rawSelectedIndex?: unknown,
+    rawParameters?: unknown,
+  ): Promise<void> {
+    const item = this.parseMarketplaceItem(rawItem)
+    if (!item) {
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "install",
+        success: false,
+        error: "Invalid marketplace item payload",
+      })
+      return
+    }
+
+    try {
+      const target = this.parseMarketplaceTarget(rawTarget)
+      const selectedIndex = this.parseMarketplaceSelectedIndex(rawSelectedIndex)
+      const parameters = this.parseMarketplaceParameters(rawParameters)
+
+      await this.marketplaceService.installItem(item, { target, selectedIndex, parameters })
+      const installationMethodName =
+        item.type === "mcp" && Array.isArray(item.content) && typeof selectedIndex === "number"
+          ? item.content[selectedIndex]?.name
+          : undefined
+      this.handleTelemetryEvent("Marketplace Item Installed", {
+        itemId: item.id,
+        itemType: item.type,
+        itemName: item.name,
+        target,
+        hasParameters: Object.keys(parameters).length > 0,
+        ...(typeof installationMethodName === "string" ? { installationMethodName } : {}),
+      })
+      this.marketplaceService.invalidateCache()
+      await this.handleRequestMarketplaceData()
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "install",
+        success: true,
+        itemID: item.id,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to install marketplace item:", error)
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "install",
+        success: false,
+        itemID: item.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  private async handleRemoveMarketplaceItem(rawItem: unknown, rawTarget: unknown): Promise<void> {
+    const item = this.parseMarketplaceItem(rawItem)
+    if (!item) {
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "remove",
+        success: false,
+        error: "Invalid marketplace item payload",
+      })
+      return
+    }
+
+    try {
+      const target = this.parseMarketplaceTarget(rawTarget)
+      await this.marketplaceService.removeItem(item, target)
+      this.handleTelemetryEvent("Marketplace Item Removed", {
+        itemId: item.id,
+        itemType: item.type,
+        itemName: item.name,
+        target,
+      })
+      this.marketplaceService.invalidateCache()
+      await this.handleRequestMarketplaceData()
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "remove",
+        success: true,
+        itemID: item.id,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to remove marketplace item:", error)
+      this.postMessage({
+        type: "marketplaceActionResult",
+        action: "remove",
+        success: false,
+        itemID: item.id,
+        error: error instanceof Error ? error.message : String(error),
       })
     }
   }
