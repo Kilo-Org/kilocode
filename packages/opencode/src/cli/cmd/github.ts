@@ -131,9 +131,9 @@ type IssueQueryResponse = {
   }
 }
 
-const AGENT_USERNAME = "opencode-agent[bot]"
+const AGENT_USERNAME = "kiloconnect[bot]" // kilocode_change
 const AGENT_REACTION = "eyes"
-const WORKFLOW_FILE = ".github/workflows/opencode.yml"
+const WORKFLOW_FILE = ".github/workflows/kilo.yml" // kilocode_change
 
 // Event categories for routing
 // USER_EVENTS: triggered by user actions, have actor/issueId, support reactions/comments
@@ -226,9 +226,9 @@ export const GithubInstallCommand = cmd({
                 `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
                 step2,
                 "",
-                "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
+                "    3. Go to a GitHub issue and comment `/kilo summarize` to see the agent in action", // kilocode_change
                 "",
-                "   Learn more about the GitHub agent - https://opencode.ai/docs/github/#usage-examples",
+                "   Learn more about the GitHub agent - https://kilo.ai/docs/github/#usage-examples", // kilocode_change
               ].join("\n"),
             )
           }
@@ -252,7 +252,7 @@ export const GithubInstallCommand = cmd({
 
           async function promptProvider() {
             const priority: Record<string, number> = {
-              opencode: 0,
+              kilo: 0, // kilocode_change
               anthropic: 1,
               openai: 2,
               google: 3,
@@ -310,7 +310,7 @@ export const GithubInstallCommand = cmd({
             if (installation) return s.stop("GitHub app already installed")
 
             // Open browser
-            const url = "https://github.com/apps/opencode-agent"
+            const url = "https://github.com/apps/kiloconnect" // kilocode_change
             const command =
               process.platform === "darwin"
                 ? `open "${url}"`
@@ -346,23 +346,31 @@ export const GithubInstallCommand = cmd({
             s.stop("Installed GitHub app")
 
             async function getInstallation() {
-              return await fetch(
-                `https://api.opencode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
-              )
+              // kilocode_change start - updated to new endpoint
+              return await fetch(`https://api.kilo.ai/api/integrations/github/check-installation?owner=${app.owner}`)
                 .then((res) => res.json())
                 .then((data) => data.installation)
+              // kilocode_change end
             }
           }
 
           async function addWorkflowFiles() {
-            const envStr =
+            // kilocode_change start - updated workflow template with Kilo branding and gateway secrets
+            const providerEnvStr =
               provider === "amazon-bedrock"
                 ? ""
-                : `\n        env:${providers[provider].env.map((e) => `\n          ${e}: \${{ secrets.${e} }}`).join("")}`
+                : providers[provider].env.map((e) => `\n          ${e}: \${{ secrets.${e} }}`).join("")
+
+            const kiloGatewayEnv =
+              provider === "kilo"
+                ? `\n          KILO_API_KEY: \${{ secrets.KILO_API_KEY }}\n          KILO_ORG_ID: \${{ secrets.KILO_ORG_ID }}`
+                : ""
+
+            const envStr = providerEnvStr || kiloGatewayEnv ? `\n        env:${providerEnvStr}${kiloGatewayEnv}` : ""
 
             await Bun.write(
               path.join(app.root, WORKFLOW_FILE),
-              `name: opencode
+              `name: kilo
 
 on:
   issue_comment:
@@ -371,12 +379,12 @@ on:
     types: [created]
 
 jobs:
-  opencode:
+  kilo:
     if: |
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
-      contains(github.event.comment.body, ' /opencode') ||
-      startsWith(github.event.comment.body, '/opencode')
+      contains(github.event.comment.body, ' /kc') ||
+      startsWith(github.event.comment.body, '/kc') ||
+      contains(github.event.comment.body, ' /kilo') ||
+      startsWith(github.event.comment.body, '/kilo')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -389,11 +397,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run opencode
+      - name: Run Kilo
         uses: Kilo-Org/kilo/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
             )
+            // kilocode_change end
 
             prompts.log.success(`Added workflow file: "${WORKFLOW_FILE}"`)
           }
@@ -459,7 +468,7 @@ export const GithubRunCommand = cmd({
           ? (payload as IssueCommentEvent | IssuesEvent).issue.number
           : (payload as PullRequestEvent | PullRequestReviewCommentEvent).pull_request.number
       const runUrl = `/${owner}/${repo}/actions/runs/${runId}`
-      const shareBaseUrl = isMock ? "https://dev.opencode.ai" : "https://opencode.ai"
+      const shareBaseUrl = isMock ? "https://dev.kilo.ai" : "https://kilo.ai" // kilocode_change
 
       let appToken: string
       let octoRest: Octokit
@@ -507,7 +516,7 @@ export const GithubRunCommand = cmd({
           await addReaction(commentType)
         }
 
-        // Setup opencode session
+        // Setup kilo session // kilocode_change
         const repoData = await fetchRepo()
         session = await Session.create({
           permission: [
@@ -675,7 +684,7 @@ export const GithubRunCommand = cmd({
 
       function normalizeOidcBaseUrl(): string {
         const value = process.env["OIDC_BASE_URL"]
-        if (!value) return "https://api.opencode.ai"
+        if (!value) return "https://api.kilo.ai" // kilocode_change
         return value.replace(/\/+$/, "")
       }
 
@@ -724,7 +733,7 @@ export const GithubRunCommand = cmd({
         }
 
         const reviewContext = getReviewCommentContext()
-        const mentions = (process.env["MENTIONS"] || "/opencode,/oc")
+        const mentions = (process.env["MENTIONS"] || "/kilo,/kc") // kilocode_change
           .split(",")
           .map((m) => m.trim().toLowerCase())
           .filter(Boolean)
@@ -870,7 +879,7 @@ export const GithubRunCommand = cmd({
       }
 
       async function chat(message: string, files: PromptFiles = []) {
-        console.log("Sending message to opencode...")
+        console.log("Sending message to kilo...") // kilocode_change
 
         const result = await SessionPrompt.prompt({
           sessionID: session.id,
@@ -954,7 +963,7 @@ export const GithubRunCommand = cmd({
 
       async function getOidcToken() {
         try {
-          return await core.getIDToken("opencode-github-action")
+          return await core.getIDToken("kilo-github-action") // kilocode_change
         } catch (error) {
           console.error("Failed to get OIDC token:", error instanceof Error ? error.message : error)
           throw new Error(
@@ -964,20 +973,23 @@ export const GithubRunCommand = cmd({
       }
 
       async function exchangeForAppToken(token: string) {
+        // kilocode_change start - updated endpoint URLs per new API structure
         const response = token.startsWith("github_pat_")
-          ? await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {
+          ? await fetch(`${oidcBaseUrl}/api/integrations/github/exchange-token-with-pat`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
               },
               body: JSON.stringify({ owner, repo }),
             })
-          : await fetch(`${oidcBaseUrl}/exchange_github_app_token`, {
+          : await fetch(`${oidcBaseUrl}/api/integrations/github/exchange-token`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,
               },
             })
+        // kilocode_change end
 
         if (!response.ok) {
           const responseJson = (await response.json()) as { error?: string }
@@ -1055,9 +1067,9 @@ export const GithubRunCommand = cmd({
           .join("")
         if (type === "schedule" || type === "dispatch") {
           const hex = crypto.randomUUID().slice(0, 6)
-          return `opencode/${type}-${hex}-${timestamp}`
+          return `kilo/${type}-${hex}-${timestamp}` // kilocode_change
         }
-        return `opencode/${type}${issueId}-${timestamp}`
+        return `kilo/${type}${issueId}-${timestamp}` // kilocode_change
       }
 
       async function pushToNewBranch(summary: string, branch: string, commit: boolean, isSchedule: boolean) {
@@ -1289,17 +1301,10 @@ Co-authored-by: ${actor} <${actor}@users.noreply.github.com>"`
       }
 
       function footer(opts?: { image?: boolean }) {
-        const image = (() => {
-          if (!shareId) return ""
-          if (!opts?.image) return ""
-
-          const titleAlt = encodeURIComponent(session.title.substring(0, 50))
-          const title64 = Buffer.from(session.title.substring(0, 700), "utf8").toString("base64")
-
-          return `<a href="${shareBaseUrl}/s/${shareId}"><img width="200" alt="${titleAlt}" src="https://social-cards.sst.dev/opencode-share/${title64}.png?model=${providerID}/${modelID}&version=${session.version}&id=${shareId}" /></a>\n`
-        })()
-        const shareUrl = shareId ? `[opencode session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
-        return `\n\n${image}${shareUrl}[github run](${runUrl})`
+        // kilocode_change start - simplified footer with text branding (no image backend yet)
+        const share = shareId ? `[kilo session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
+        return `\n\n---\n*Powered by [Kilo](https://kilo.ai)*&nbsp;&nbsp;|&nbsp;&nbsp;${share}[github run](${runUrl})`
+        // kilocode_change end
       }
 
       async function fetchRepo() {
@@ -1359,7 +1364,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         return [
           "<github_action_context>",
           "You are running as a GitHub Action. Important:",
-          "- Git push and PR creation are handled AUTOMATICALLY by the opencode infrastructure after your response",
+          "- Git push and PR creation are handled AUTOMATICALLY by the kilo infrastructure after your response", // kilocode_change
           "- Do NOT include warnings or disclaimers about GitHub tokens, workflow permissions, or PR creation capabilities",
           "- Do NOT suggest manual steps for creating PRs or pushing code - this happens automatically",
           "- Focus only on the code changes and your analysis/response",
@@ -1497,7 +1502,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         return [
           "<github_action_context>",
           "You are running as a GitHub Action. Important:",
-          "- Git push and PR creation are handled AUTOMATICALLY by the opencode infrastructure after your response",
+          "- Git push and PR creation are handled AUTOMATICALLY by the kilo infrastructure after your response", // kilocode_change
           "- Do NOT include warnings or disclaimers about GitHub tokens, workflow permissions, or PR creation capabilities",
           "- Do NOT suggest manual steps for creating PRs or pushing code - this happens automatically",
           "- Focus only on the code changes and your analysis/response",

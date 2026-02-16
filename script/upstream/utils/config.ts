@@ -82,6 +82,12 @@ export const defaultConfig: MergeConfig = {
     ".opencode/command/commit.md",
     // Kilo-specific publish scripts
     "packages/opencode/script/publish-registries.ts",
+    // GitHub Action - Kilo version is fully ported and complete
+    "github/action.yml",
+    "github/README.md",
+    "github/.gitignore",
+    "github/script/release",
+    "github/script/publish",
   ],
 
   // Files that only exist in upstream and should NOT be added to Kilo
@@ -129,6 +135,12 @@ export const defaultConfig: MergeConfig = {
     "packages/function/**",
     "packages/docs/**",
     "packages/identity/**",
+    // GitHub Action - Kilo version is fully ported and complete
+    "github/index.ts",
+    "github/package.json",
+    "github/tsconfig.json",
+    "github/bun.lock",
+    "github/sst-env.d.ts",
   ],
 
   // Files that should take upstream version and apply Kilo branding transforms
@@ -146,8 +158,6 @@ export const defaultConfig: MergeConfig = {
     // E2E and test fixtures
     "packages/app/e2e/**/*.ts",
     "packages/app/script/**/*.ts",
-    // GitHub script
-    "github/index.ts",
   ],
 
   // Tauri/Desktop config files with predictable branding patterns

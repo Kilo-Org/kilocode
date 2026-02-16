@@ -14,9 +14,6 @@ permissions:
 
 jobs:
   release:
-    # kilocode_change start - disabled for kilo-cli fork (OpenCode GitHub Action release)
-    if: false
-    # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +22,13 @@ jobs:
 
       - run: git fetch --force --tags
 
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
       - name: Release
         run: |
-          git config --global user.email "opencode@sst.dev"
-          git config --global user.name "opencode"
           ./github/script/release

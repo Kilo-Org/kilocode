@@ -1,0 +1,38 @@
+name: kilo
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  kilo:
+    if: |
+      (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') &&
+      (
+        contains(github.event.comment.body, ' /kc') ||
+        startsWith(github.event.comment.body, '/kc') ||
+        contains(github.event.comment.body, ' /kilo') ||
+        startsWith(github.event.comment.body, '/kilo')
+      )
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-bun
+
+      - name: Run opencode
+        uses: Kilo-Org/kilo/github@latest
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          KILO_PERMISSION: '{"bash": "deny"}'
+        with:
+          model: kilo/kilo/auto

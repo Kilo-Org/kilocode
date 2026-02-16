@@ -9,9 +9,6 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   stats:
-    # kilocode_change start - disabled for kilo-cli fork (OpenCode stats tracking)
-    if: false
-    # kilocode_change end - original: if: github.repository == 'Kilo-Org/kilo'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write

@@ -6,9 +6,6 @@ on:
 
 jobs:
   check-duplicates:
-    # kilocode_change start - disabled for kilo-cli fork (requires OpenCode API key and install)
-    if: false
-    # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -21,12 +18,15 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Install opencode
-        run: curl -fsSL https://opencode.ai/install | bash
+      # kilocode_change start
+      - name: Setup Kilo
+        uses: ./.github/actions/setup-kilo
+      # kilocode_change end
 
       - name: Check duplicates and compliance
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
@@ -37,7 +37,7 @@ jobs:
               "webfetch": "deny"
             }
         run: |
-          opencode run -m opencode/claude-haiku-4-5 "A new issue has been created:
+          kilo run -m "kilo/anthropic/claude-haiku-4.5" "A new issue has been created:
 
           Issue number: ${{ github.event.issue.number }}
 

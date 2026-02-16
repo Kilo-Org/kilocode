@@ -5,5 +5,9 @@ runs:
   using: "composite"
   steps:
     - name: Install Kilo CLI
-      run: bun add -g @kilocode/cli
+      run: curl -fsSL https://kilo.ai/cli/install | bash
+      shell: bash
+
+    - name: Add Kilo to PATH
+      run: echo "$HOME/.kilo/bin" >> $GITHUB_PATH
       shell: bash

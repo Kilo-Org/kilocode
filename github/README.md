@@ -1,45 +1,45 @@
-# opencode GitHub Action
+# Kilo GitHub Action
 
-A GitHub Action that integrates [opencode](https://opencode.ai) directly into your GitHub workflow.
+A GitHub Action that integrates [Kilo AI](https://kilo.ai) directly into your GitHub workflow.
 
-Mention `/opencode` in your comment, and opencode will execute tasks within your GitHub Actions runner.
+Mention `/kilo` or `/kc` in your comment, and Kilo will execute tasks within your GitHub Actions runner.
 
 ## Features
 
 #### Explain an issue
 
-Leave the following comment on a GitHub issue. `opencode` will read the entire thread, including all comments, and reply with a clear explanation.
+Leave the following comment on a GitHub issue. Kilo will read the entire thread, including all comments, and reply with a clear explanation.
 
 ```
-/opencode explain this issue
+/kilo explain this issue
 ```
 
 #### Fix an issue
 
-Leave the following comment on a GitHub issue. opencode will create a new branch, implement the changes, and open a PR with the changes.
+Leave the following comment on a GitHub issue. Kilo will create a new branch, implement the changes, and open a PR with the changes.
 
 ```
-/opencode fix this
+/kilo fix this
 ```
 
 #### Review PRs and make changes
 
-Leave the following comment on a GitHub PR. opencode will implement the requested change and commit it to the same PR.
+Leave the following comment on a GitHub PR. Kilo will implement the requested change and commit it to the same PR.
 
 ```
-Delete the attachment from S3 when the note is removed /oc
+Delete the attachment from S3 when the note is removed /kc
 ```
 
 #### Review specific code lines
 
-Leave a comment directly on code lines in the PR's "Files" tab. opencode will automatically detect the file, line numbers, and diff context to provide precise responses.
+Leave a comment directly on code lines in the PR's "Files" tab. Kilo will automatically detect the file, line numbers, and diff context to provide precise responses.
 
 ```
 [Comment on specific lines in Files tab]
-/oc add error handling here
+/kc add error handling here
 ```
 
-When commenting on specific lines, opencode receives:
+When commenting on specific lines, Kilo receives:
 
 - The exact file being reviewed
 - The specific lines of code
@@ -53,18 +53,19 @@ This allows for more targeted requests without needing to specify file paths or 
 Run the following command in the terminal from your GitHub repo:
 
 ```bash
-opencode github install
+kilo github install
 ```
 
-This will walk you through installing the GitHub app, creating the workflow, and setting up secrets.
+This will walk you through installing the KiloConnect GitHub app, creating the workflow, and setting up secrets.
 
 ### Manual Setup
 
-1. Install the GitHub app https://github.com/apps/opencode-agent. Make sure it is installed on the target repository.
-2. Add the following workflow file to `.github/workflows/opencode.yml` in your repo. Set the appropriate `model` and required API keys in `env`.
+1. Install the KiloConnect GitHub app at https://github.com/apps/kiloconnect. Make sure it is installed on the target repository.
+
+2. Add the following workflow file to `.github/workflows/kilo.yml` in your repo. Set the appropriate `model` and required API keys.
 
    ```yml
-   name: opencode
+   name: kilo
 
    on:
      issue_comment:
@@ -73,94 +74,65 @@ This will walk you through installing the GitHub app, creating the workflow, and
        types: [created]
 
    jobs:
-     opencode:
+     kilo:
        if: |
-         contains(github.event.comment.body, '/oc') ||
-         contains(github.event.comment.body, '/opencode')
+         contains(github.event.comment.body, '/kc') ||
+         contains(github.event.comment.body, '/kilo')
        runs-on: ubuntu-latest
        permissions:
          id-token: write
+         contents: write
+         pull-requests: write
+         issues: write
        steps:
-          - name: Checkout repository
-            uses: actions/checkout@v6
-            with:
-              fetch-depth: 1
-              persist-credentials: false
-
-          - name: Run opencode
-           uses: Kilo-Org/kilo/github@latest
-           env:
-             ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         - name: Checkout repository
+           uses: actions/checkout@v6
            with:
-             model: anthropic/claude-sonnet-4-20250514
-             use_github_token: true
+             persist-credentials: false
+
+         - name: Run Kilo
+           uses: Kilo-Org/kilo/github@latest
+           with:
+             model: kilo/claude-sonnet-4-20250514
+             kilo_api_key: ${{ secrets.KILO_API_KEY }}
+             kilo_org_id: ${{ secrets.KILO_ORG_ID }}
    ```
 
-3. Store the API keys in secrets. In your organization or project **settings**, expand **Secrets and variables** on the left and select **Actions**. Add the required API keys.
+3. Store the API keys in secrets. In your organization or project **settings**, expand **Secrets and variables** on the left and select **Actions**. Add `KILO_API_KEY` and `KILO_ORG_ID`.
+
+## Configuration
+
+### Inputs
+
+- `model` (required) - The AI model to use (e.g., `kilo/claude-sonnet-4-20250514`)
+- `kilo_api_key` (optional) - Kilo API key for gateway authentication
+- `kilo_org_id` (optional) - Kilo organization ID
+- `agent` (optional) - Agent to use. Must be a primary agent.
+- `share` (optional) - Share the Kilo session (defaults to true for public repos)
+- `prompt` (optional) - Custom prompt to override the default prompt
+- `mentions` (optional) - Comma-separated list of trigger phrases (defaults to `/kilo,/kc`)
+- `use_github_token` (optional) - Use GITHUB_TOKEN directly instead of Kilo App token exchange (defaults to `false`)
+- `oidc_base_url` (optional) - Base URL for OIDC token exchange API (defaults to `https://api.kilo.ai`)
+
+### Using Other Providers
+
+You can also use other AI providers by setting their API keys:
+
+```yml
+- name: Run Kilo
+  uses: Kilo-Org/kilo/github@latest
+  with:
+    model: anthropic/claude-sonnet-4-20250514
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
 
 ## Support
 
-This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilo/issues.
+If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilo/issues.
 
 ## Development
 
-To test locally:
+This directory contains the composite GitHub Action definition. The actual implementation is in the Kilo CLI (`packages/opencode/src/cli/cmd/github.ts`).
 
-1. Navigate to a test repo (e.g. `hello-world`):
-
-   ```bash
-   cd hello-world
-   ```
-
-2. Run:
-
-   ```bash
-   MODEL=anthropic/claude-sonnet-4-20250514 \
-     ANTHROPIC_API_KEY=sk-ant-api03-1234567890 \
-     GITHUB_RUN_ID=dummy \
-     MOCK_TOKEN=github_pat_1234567890 \
-     MOCK_EVENT='{"eventName":"issue_comment",...}' \
-     bun /path/to/opencode/github/index.ts
-   ```
-
-   - `MODEL`: The model used by opencode. Same as the `MODEL` defined in the GitHub workflow.
-   - `ANTHROPIC_API_KEY`: Your model provider API key. Same as the keys defined in the GitHub workflow.
-   - `GITHUB_RUN_ID`: Dummy value to emulate GitHub action environment.
-   - `MOCK_TOKEN`: A GitHub personal access token. This token is used to verify you have `admin` or `write` access to the test repo. Generate a token [here](https://github.com/settings/personal-access-tokens).
-   - `MOCK_EVENT`: Mock GitHub event payload (see templates below).
-   - `/path/to/opencode`: Path to your cloned opencode repo. `bun /path/to/opencode/github/index.ts` runs your local version of `opencode`.
-
-### Issue comment event
-
-```
-MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4},"comment":{"id":1,"body":"hey opencode, summarize thread"}}}'
-```
-
-Replace:
-
-- `"owner":"sst"` with repo owner
-- `"repo":"hello-world"` with repo name
-- `"actor":"fwang"` with the GitHub username of commenter
-- `"number":4` with the GitHub issue id
-- `"body":"hey opencode, summarize thread"` with comment body
-
-### Issue comment with image attachment.
-
-```
-MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4},"comment":{"id":1,"body":"hey opencode, what is in my image ![Image](https://github.com/user-attachments/assets/xxxxxxxx)"}}}'
-```
-
-Replace the image URL `https://github.com/user-attachments/assets/xxxxxxxx` with a valid GitHub attachment (you can generate one by commenting with an image in any issue).
-
-### PR comment event
-
-```
-MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4,"pull_request":{}},"comment":{"id":1,"body":"hey opencode, summarize thread"}}}'
-```
-
-### PR review comment event
-
-```
-MOCK_EVENT='{"eventName":"pull_request_review_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"pull_request":{"number":7},"comment":{"id":1,"body":"hey opencode, add error handling","path":"src/components/Button.tsx","diff_hunk":"@@ -45,8 +45,11 @@\n- const handleClick = () => {\n-   console.log('clicked')\n+ const handleClick = useCallback(() => {\n+   console.log('clicked')\n+   doSomething()\n+ }, [doSomething])","line":47,"original_line":45,"position":10,"commit_id":"abc123","original_commit_id":"def456"}}}'
-```
+To test locally, see the main [AGENTS.md](../AGENTS.md) for development instructions.

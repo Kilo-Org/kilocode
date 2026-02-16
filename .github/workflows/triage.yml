@@ -6,9 +6,6 @@ on:
 
 jobs:
   triage:
-    # kilocode_change start - disabled for kilo-cli fork (requires OpenCode API key and install)
-    if: false
-    # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -22,18 +19,19 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Install opencode
-        run: curl -fsSL https://opencode.ai/install | bash
+      - name: Setup Kilo
+        uses: ./.github/actions/setup-kilo
 
       - name: Triage issue
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          opencode run --agent triage "The following issue was just opened, triage it:
+          kilo run --agent triage "The following issue was just opened, triage it:
 
           Title: $ISSUE_TITLE
 

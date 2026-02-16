@@ -1,8 +1,8 @@
-name: "opencode GitHub Action"
-description: "Run opencode in GitHub Actions workflows"
+name: "Kilo GitHub Action"
+description: "Run Kilo AI agent in GitHub Actions workflows"
 branding:
   icon: "code"
-  color: "orange"
+  color: "gray-dark"
 
 inputs:
   model:
@@ -14,7 +14,7 @@ inputs:
     required: false
 
   share:
-    description: "Share the opencode session (defaults to true for public repos)"
+    description: "Share the Kilo session (defaults to true for public repos)"
     required: false
 
   prompt:
@@ -22,48 +22,56 @@ inputs:
     required: false
 
   use_github_token:
-    description: "Use GITHUB_TOKEN directly instead of OpenCode App token exchange. When true, skips OIDC and uses the GITHUB_TOKEN env var."
+    description: "Use GITHUB_TOKEN directly instead of Kilo App token exchange. When true, skips OIDC and uses the GITHUB_TOKEN env var."
     required: false
     default: "false"
 
   mentions:
-    description: "Comma-separated list of trigger phrases (case-insensitive). Defaults to '/opencode,/oc'"
+    description: "Comma-separated list of trigger phrases (case-insensitive). Defaults to '/kilo,/kc'"
     required: false
 
   oidc_base_url:
-    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.opencode.ai"
+    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.kilo.ai"
+    required: false
+
+  kilo_api_key:
+    description: "Kilo API key for gateway authentication"
+    required: false
+
+  kilo_org_id:
+    description: "Kilo organization ID"
     required: false
 
 runs:
   using: "composite"
   steps:
-    - name: Get opencode version
+    - name: Get Kilo version
       id: version
       shell: bash
       run: |
         VERSION=$(curl -sf https://api.github.com/repos/Kilo-Org/kilo/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
         echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
 
-    - name: Cache opencode
+    - name: Cache Kilo
       id: cache
       uses: actions/cache@v4
       with:
-        path: ~/.opencode/bin
-        key: opencode-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
+        path: ~/.kilo/bin
+        key: kilo-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
 
-    - name: Install opencode
+    - name: Install Kilo
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: curl -fsSL https://opencode.ai/install | bash
+      run: curl -fsSL https://kilo.ai/cli/install | bash
 
-    - name: Add opencode to PATH
+    - name: Add Kilo to PATH
       shell: bash
-      run: echo "$HOME/.opencode/bin" >> $GITHUB_PATH
+      run: echo "$HOME/.kilo/bin" >> $GITHUB_PATH
 
-    - name: Run opencode
+    - name: Run Kilo
       shell: bash
-      id: run_opencode
-      run: opencode github run
+      id: run_kilo
+      run: kilo github run
       env:
         MODEL: ${{ inputs.model }}
         AGENT: ${{ inputs.agent }}
@@ -72,3 +80,5 @@ runs:
         USE_GITHUB_TOKEN: ${{ inputs.use_github_token }}
         MENTIONS: ${{ inputs.mentions }}
         OIDC_BASE_URL: ${{ inputs.oidc_base_url }}
+        KILO_API_KEY: ${{ inputs.kilo_api_key }}
+        KILO_ORG_ID: ${{ inputs.kilo_org_id }}
