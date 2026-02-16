@@ -441,7 +441,7 @@ describe("useSelectedModel", () => {
 		})
 
 		// kilocode_change start
-		it("forces kimi-for-coding when Moonshot coding endpoint is selected with a non-coding model", () => {
+		it("keeps non-coding model when Moonshot coding endpoint is selected", () => {
 			const apiConfiguration: ProviderSettings = {
 				apiProvider: "moonshot",
 				apiModelId: "kimi-k2-thinking",
@@ -451,7 +451,7 @@ describe("useSelectedModel", () => {
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
-			expect(result.current.id).toBe("kimi-for-coding")
+			expect(result.current.id).toBe("kimi-k2-thinking")
 		})
 		// kilocode_change end
 

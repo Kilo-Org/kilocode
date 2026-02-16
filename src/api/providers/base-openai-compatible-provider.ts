@@ -101,10 +101,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			}),
 		}
 
-		// Add thinking parameter if reasoning is enabled and model supports it
-		if (this.options.enableReasoningEffort && info.supportsReasoningBinary) {
-			;(params as any).thinking = { type: "enabled" }
+		// kilocode_change start - Add reasoning effort and thinking parameters
+		if (this.options.enableReasoningEffort) {
+			const effort = this.options.reasoningEffort || info.reasoningEffort
+			const isExplicitlyDisabled = effort === "disable"
+
+			if (info.supportsReasoningBinary && !isExplicitlyDisabled) {
+				;(params as any).thinking = { type: "enabled" }
+			}
+
+			if (info.supportsReasoningEffort && !isExplicitlyDisabled) {
+				if (effort) {
+					;(params as any).reasoning_effort = effort
+				}
+			}
 		}
+		// kilocode_change end
 
 		try {
 			return this.client.chat.completions.create(params, requestOptions)
@@ -232,10 +244,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			messages: [{ role: "user", content: prompt }],
 		}
 
-		// Add thinking parameter if reasoning is enabled and model supports it
-		if (this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary) {
-			;(params as any).thinking = { type: "enabled" }
+		// kilocode_change start - Add reasoning effort and thinking parameters
+		if (this.options.enableReasoningEffort) {
+			const effort = this.options.reasoningEffort || modelInfo.reasoningEffort
+			const isExplicitlyDisabled = effort === "disable"
+
+			if (modelInfo.supportsReasoningBinary && !isExplicitlyDisabled) {
+				;(params as any).thinking = { type: "enabled" }
+			}
+
+			if (modelInfo.supportsReasoningEffort && !isExplicitlyDisabled) {
+				if (effort) {
+					;(params as any).reasoning_effort = effort
+				}
+			}
 		}
+		// kilocode_change end
 
 		try {
 			const response = await this.client.chat.completions.create(params)
