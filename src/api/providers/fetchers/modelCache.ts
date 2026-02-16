@@ -394,6 +394,12 @@ export function getModelsFromCache(provider: ProviderName): ModelRecord | undefi
 	// Check memory cache first (fast)
 	const memoryModels = memoryCache.get<ModelRecord>(provider)
 	if (memoryModels) {
+		// kilocode_change start
+		if (provider === "zenmux" && hasInvalidZenmuxContextWindow(memoryModels)) {
+			console.warn("[MODEL_CACHE] Ignoring stale ZenMux model cache with invalid contextWindow values")
+			return undefined
+		}
+		// kilocode_change end
 		return memoryModels
 	}
 
@@ -429,6 +435,13 @@ export function getModelsFromCache(provider: ProviderName): ModelRecord | undefi
 				)
 				return undefined
 			}
+			// kilocode_change start
+			// Self-heal stale ZenMux cache entries from v5.7.0 where contextWindow was persisted as 0.
+			if (provider === "zenmux" && hasInvalidZenmuxContextWindow(validation.data)) {
+				console.warn("[MODEL_CACHE] Ignoring stale ZenMux model cache with invalid contextWindow values")
+				return undefined
+			}
+			// kilocode_change end
 
 			// Populate memory cache for future fast access
 			memoryCache.set(provider, validation.data)
@@ -459,3 +472,9 @@ function getCacheDirectoryPathSync(): string | undefined {
 		return undefined
 	}
 }
+
+// kilocode_change start
+function hasInvalidZenmuxContextWindow(models: ModelRecord): boolean {
+	return Object.values(models).some((model) => (model.contextWindow ?? 0) <= 0)
+}
+// kilocode_change end

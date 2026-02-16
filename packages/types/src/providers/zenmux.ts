@@ -9,6 +9,10 @@ export const zenmuxDefaultModelInfo: ModelInfo = {
 	contextWindow: 200_000,
 	supportsImages: true,
 	supportsPromptCache: true,
+	// kilocode_change start
+	supportsNativeTools: true,
+	defaultToolProtocol: "native",
+	// kilocode_change end
 	inputPrice: 15.0,
 	outputPrice: 75.0,
 	cacheWritesPrice: 18.75,

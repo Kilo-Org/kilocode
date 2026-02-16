@@ -333,6 +333,29 @@ describe("ContextProxy", () => {
 			expect(proxy.getGlobalState("modelTemperature")).toBeUndefined()
 		})
 
+		// kilocode_change start
+		it("should clear falsy provider settings when switching profiles", async () => {
+			// Regression: falsy values (0, false, "") must be recognized as "set"
+			// and cleared when switching. The old code used !!value (truthy check),
+			// which would skip clearing these keys, causing them to leak between profiles.
+			await proxy.updateGlobalState("modelTemperature", 0)
+			await proxy.updateGlobalState("apiModelId", "")
+
+			const setValuesSpy = vi.spyOn(proxy, "setValues")
+
+			await proxy.setProviderSettings({ apiProvider: "anthropic" })
+
+			// Both falsy values should be cleared (set to undefined) before new values are applied
+			expect(setValuesSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					modelTemperature: undefined,
+					apiModelId: undefined,
+					apiProvider: "anthropic",
+				}),
+			)
+		})
+		// kilocode_change end
+
 		it("should handle empty API configuration", async () => {
 			// Set up initial API configuration values
 			await proxy.updateGlobalState("apiModelId", "old-model")
