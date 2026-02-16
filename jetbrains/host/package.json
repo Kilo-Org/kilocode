@@ -137,7 +137,7 @@
 		"istanbul-reports": "^3.1.5",
 		"lazy.js": "^0.5.1",
 		"merge-options": "^1.0.1",
-		"mime": "^1.4.1",
+		"mime": "^4.1.0",
 		"minimatch": "^3.0.4",
 		"minimist": "^1.2.6",
 		"mocha": "^10.8.2",
