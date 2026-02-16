@@ -119,7 +119,7 @@ KiloClaw is currently in **beta**. Current constraints include:
 - **Feature parity** — Not all OpenClaw features are available in the hosted version yet
 
 {% callout type="info" %}
-Have feedback or running into issues? Join the [Kilo Discord](https://discord.gg/kilocode) and share it in the KiloClaw channel.
+Have feedback or running into issues? Join the [Kilo Discord](https://kilo.ai/discord) and share it in the KiloClaw channel.
 {% /callout %}
 
 ## Related
