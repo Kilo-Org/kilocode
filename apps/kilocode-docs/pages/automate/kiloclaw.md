@@ -93,7 +93,7 @@ For platform-specific setup instructions, refer to the [OpenClaw documentation](
 
 OpenClaw lets you customized your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
 
-For more information on use cases for OpenClaw see:
+For more information on use cases for OpenClaw, see:
 
 - [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
