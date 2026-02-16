@@ -59,9 +59,9 @@ export const minimaxModels = {
 		description:
 			"MiniMax M2.1 builds on M2 with improved overall performance for agentic coding tasks and significantly faster response times.",
 	},
-	"MiniMax-M2.5": {
+	"MiniMax-M2.1-highspeed": {
 		maxTokens: 16_384,
-		contextWindow: 1_000_000,
+		contextWindow: 192_000,
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
@@ -74,7 +74,41 @@ export const minimaxModels = {
 		cacheWritesPrice: 0.375,
 		cacheReadsPrice: 0.03,
 		description:
-			"MiniMax M2.5, SOTA for coding and agentic tasks with 1M context window, achieving 80.2% on SWE-Bench Verified.",
+			"MiniMax M2.1 highspeed builds on M2 with improved overall performance for agentic coding tasks and significantly faster response times, with 40% faster token throughput.",
+	},
+	"MiniMax-M2.5": {
+		maxTokens: 16_384,
+		contextWindow: 192_000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		includedTools: ["search_and_replace"],
+		excludedTools: ["apply_diff"],
+		preserveReasoning: true,
+		inputPrice: 0.3,
+		outputPrice: 1.2,
+		cacheWritesPrice: 0.375,
+		cacheReadsPrice: 0.03,
+		description:
+			"MiniMax M2.5, SOTA for coding and agentic tasks with 192K context window, achieving 80.2% on SWE-Bench Verified.",
+	},
+	"MiniMax-M2.5-highspeed": {
+		maxTokens: 16_384,
+		contextWindow: 192_000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		includedTools: ["search_and_replace"],
+		excludedTools: ["apply_diff"],
+		preserveReasoning: true,
+		inputPrice: 0.3,
+		outputPrice: 1.2,
+		cacheWritesPrice: 0.375,
+		cacheReadsPrice: 0.03,
+		description:
+			"MiniMax M2.5 highspeed, SOTA for coding and agentic tasks with 192K context window, achieving 80.2% on SWE-Bench Verified with 40% faster token throughput.",
 	},
 } as const satisfies Record<string, ModelInfo>
 
