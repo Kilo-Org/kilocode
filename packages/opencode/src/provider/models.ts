@@ -121,8 +121,10 @@ export namespace ModelsDev {
     // kilocode_change start
     const providers = result as Record<string, Provider>
 
-    // Inject kilo provider with dynamic model fetching
-    if (!providers["kilo"]) {
+    // Inject/override kilo provider with dynamic model fetching
+    // Always override because models.dev may define a "kilo" provider with a
+    // different npm package (e.g. "opencode-kilo-auth") that is incompatible.
+    {
       const config = await Config.get()
       const kiloOptions = config.provider?.kilo?.options
       // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
