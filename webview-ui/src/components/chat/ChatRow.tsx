@@ -1362,7 +1362,7 @@ export const ChatRowContent = ({
 									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
 									isEditing
 										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-sideBar-background text-vscode-foreground", // kilocode_change
+										: "cursor-text p-1 bg-vscode-editor-background text-vscode-editor-foreground border-vscode-editorGroup-border", // kilocode_change
 								)}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
