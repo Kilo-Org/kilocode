@@ -24,6 +24,7 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
   let textareaRef: HTMLTextAreaElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
@@ -32,7 +33,7 @@ export const PromptInput: Component = () => {
   const isDisabled = () => !server.isConnected()
   const canSend = () => text().trim().length > 0 && !isBusy() && !isDisabled()
 
-  // Listen for chat completion results from the extension
+  // Listen for chat completion results and autocomplete settings from the extension
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "chatCompletionResult") {
       const result = message as { type: "chatCompletionResult"; text: string; requestId: string }
@@ -42,7 +43,16 @@ export const PromptInput: Component = () => {
         setGhostText(result.text)
       }
     }
+    if (message.type === "autocompleteSettingsLoaded") {
+      const settings = (
+        message as { type: "autocompleteSettingsLoaded"; settings: { enableChatAutocomplete: boolean } }
+      ).settings
+      setChatAutocompleteEnabled(settings.enableChatAutocomplete)
+    }
   })
+
+  // Request autocomplete settings so we know whether chat autocomplete is enabled
+  vscode.postMessage({ type: "requestAutocompleteSettings" })
 
   onCleanup(() => {
     unsubscribe()
@@ -53,7 +63,7 @@ export const PromptInput: Component = () => {
 
   // Request autocomplete from the extension
   const requestAutocomplete = (currentText: string) => {
-    if (currentText.length < MIN_TEXT_LENGTH || isDisabled()) {
+    if (!chatAutocompleteEnabled() || currentText.length < MIN_TEXT_LENGTH || isDisabled()) {
       setGhostText("")
       return
     }
