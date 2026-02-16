@@ -333,6 +333,49 @@ describe("getModelsFromCache disk fallback", () => {
 
 		consoleErrorSpy.mockRestore()
 	})
+
+	// kilocode_change start
+	it("rejects stale ZenMux cache entries with invalid contextWindow", () => {
+		const invalidZenmuxModels = {
+			"anthropic/claude-opus-4": {
+				maxTokens: 0,
+				contextWindow: 0,
+				supportsPromptCache: false,
+			},
+		}
+
+		mockCache.get.mockReturnValue(invalidZenmuxModels)
+
+		const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+		const result = getModelsFromCache("zenmux")
+
+		expect(result).toBeUndefined()
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			"[MODEL_CACHE] Ignoring stale ZenMux model cache with invalid contextWindow values",
+		)
+		expect(fsSync.existsSync).not.toHaveBeenCalled()
+
+		consoleWarnSpy.mockRestore()
+	})
+
+	it("accepts valid ZenMux cache entries", () => {
+		const validZenmuxModels = {
+			"anthropic/claude-opus-4": {
+				maxTokens: 0,
+				contextWindow: 200000,
+				supportsPromptCache: false,
+			},
+		}
+
+		mockCache.get.mockReturnValue(validZenmuxModels)
+
+		const result = getModelsFromCache("zenmux")
+
+		expect(result).toEqual(validZenmuxModels)
+		expect(fsSync.existsSync).not.toHaveBeenCalled()
+	})
+	// kilocode_change end
 })
 
 describe("empty cache protection", () => {
