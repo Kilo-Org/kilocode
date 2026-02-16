@@ -1302,6 +1302,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 			overflow: hidden;
 		}
 		body {
+			background-color: var(--vscode-editor-background);
 			color: var(--vscode-foreground);
 			font-family: var(--vscode-font-family);
 		}

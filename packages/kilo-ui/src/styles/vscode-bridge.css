@@ -11,6 +11,9 @@
  */
 
 html[data-theme="kilo-vscode"] {
+  /* Let VS Code control the color scheme instead of the OS preference */
+  color-scheme: normal;
+
   /* ===== Backgrounds ===== */
   --background-base: var(--vscode-editor-background);
   --background-weak: var(--vscode-sideBar-background, var(--vscode-editor-background));

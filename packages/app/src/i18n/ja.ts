@@ -126,7 +126,7 @@ export const dict = {
     "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
   "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
   "provider.connect.opencodeZen.visit.prefix": " ",
-  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.oauth.code.visit.prefix": " ",
   "provider.connect.oauth.code.visit.link": "このリンク",
@@ -507,9 +507,6 @@ export const dict = {
   "settings.section.server": "サーバー",
   "settings.tab.general": "一般",
   "settings.tab.shortcuts": "ショートカット",
-  "settings.desktop.section.wsl": "WSL",
-  "settings.desktop.wsl.title": "WSL integration",
-  "settings.desktop.wsl.description": "Run the Kilo server inside WSL on Windows.",
 
   "settings.general.section.appearance": "外観",
   "settings.general.section.notifications": "システム通知",

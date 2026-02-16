@@ -1221,7 +1221,7 @@ export default function Layout(props: ParentProps) {
     })
     const dismiss = () => toaster.dismiss(progress)
 
-    const sessions = await globalSDK.client.session
+    const sessions: Session[] = await globalSDK.client.session
       .list({ directory })
       .then((x) => x.data ?? [])
       .catch(() => [])

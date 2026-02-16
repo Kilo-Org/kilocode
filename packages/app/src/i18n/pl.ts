@@ -127,7 +127,7 @@ export const dict = {
   "provider.connect.opencodeZen.line2":
     "Z jednym kluczem API uzyskasz dostęp do modeli takich jak Claude, GPT, Gemini, GLM i więcej.",
   "provider.connect.opencodeZen.visit.prefix": "Odwiedź ",
-  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": ", aby odebrać swój klucz API.",
   "provider.connect.oauth.code.visit.prefix": "Odwiedź ",
   "provider.connect.oauth.code.visit.link": "ten link",
@@ -514,9 +514,6 @@ export const dict = {
   "settings.section.server": "Serwer",
   "settings.tab.general": "Ogólne",
   "settings.tab.shortcuts": "Skróty",
-  "settings.desktop.section.wsl": "WSL",
-  "settings.desktop.wsl.title": "WSL integration",
-  "settings.desktop.wsl.description": "Run the Kilo server inside WSL on Windows.",
 
   "settings.general.section.appearance": "Wygląd",
   "settings.general.section.notifications": "Powiadomienia systemowe",

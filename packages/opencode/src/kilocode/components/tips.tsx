@@ -4,7 +4,7 @@ import { For } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
-const themeTip = `Use {highlight}/theme{/highlight} or {highlight}Ctrl+X T{/highlight} to switch between ${themeCount} built-in themes`
+const themeTip = `Use {highlight}/themes{/highlight} or {highlight}Ctrl+X T{/highlight} to switch between ${themeCount} built-in themes`
 
 type TipPart = { text: string; highlight: boolean }
 
@@ -95,7 +95,7 @@ const TIPS = [
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
   "Reference ANSI colors 0-255 in custom themes",
   "Set agent {highlight}temperature{/highlight} from 0.0 (focused) to 1.0 (creative)",
-  "Configure {highlight}maxSteps{/highlight} to limit agentic iterations per request",
+  "Configure {highlight}steps{/highlight} to limit agentic iterations per request",
   "Press {highlight}Ctrl+X G{/highlight} or {highlight}/timeline{/highlight} to jump to specific messages",
   "Press {highlight}Ctrl+X S{/highlight} or {highlight}/status{/highlight} to see system status info",
   "Enable {highlight}tui.scroll_acceleration{/highlight} for smooth macOS-style scrolling",
@@ -103,7 +103,6 @@ const TIPS = [
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
   "Run {highlight}/help{/highlight} to show the help dialog",
-  "Use {highlight}/details{/highlight} to toggle tool execution details visibility",
   "Use {highlight}/rename{/highlight} to rename the current session",
   "Press {highlight}Ctrl+Z{/highlight} to suspend the terminal and return to your shell",
 ]
