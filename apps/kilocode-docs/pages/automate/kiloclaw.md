@@ -103,7 +103,7 @@ For more information on use cases for OpenClaw, see:
 
 KiloClaw uses your existing Kilo Gateway credits—there's no separate billing or subscription:
 
-- **Instance hosting** — Free for 7-days during beta
+- **Instance hosting** — Free for 7 days during beta
 - **Model inference** — Charged against your Gateway credit balance
 - **Free models** — Several models (MiniMax M2.5, Z.ai GLM 5, Giga Potato, Arcee AI Trinity) cost nothing to use
 
