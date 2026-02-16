@@ -77,7 +77,14 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		}
 
 		// kilocode_change start
-		if (verbosity) {
+		if (thinking?.type === "adaptive") {
+			betas.push(
+				"adaptive-thinking-2026-01-28",
+				"interleaved-thinking-2025-05-14",
+				"effort-2025-11-24",
+				"max-effort-2026-01-24",
+			)
+		} else if (verbosity) {
 			betas.push("effort-2025-11-24")
 		}
 		// kilocode_change end
@@ -110,6 +117,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			: {}
 
 		switch (modelId) {
+			case "claude-opus-4-6": // kilocode_change
 			case "claude-sonnet-4-5":
 			case "claude-sonnet-4-20250514":
 			case "claude-opus-4-5-20251101":
@@ -145,7 +153,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							model: apiModelId, // kilocode_change
 							max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 							temperature,
-							thinking,
+							thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
 							// Setting cache breakpoint for system prompt so new tasks can reuse it.
 							system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
 							messages: sanitizedMessages.map((message, index) => {
@@ -183,6 +191,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 							// Then check for models that support prompt caching
 							switch (modelId) {
+								case "claude-opus-4-6": // kilocode_change
 								case "claude-sonnet-4-5":
 								case "claude-sonnet-4-20250514":
 								case "claude-opus-4-5-20251101":
@@ -365,6 +374,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 									thinking: thinkingDeltaAccumulator,
 									signature: chunk.delta.signature,
 								}
+								// Reset accumulator after emitting the complete thinking block
+								thinkingDeltaAccumulator = ""
 							}
 							break
 						// kilocode_change end

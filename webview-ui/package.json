@@ -56,10 +56,11 @@
 		"lru-cache": "^11.1.0",
 		"lucide-react": "^0.518.0",
 		"mermaid": "^11.4.1",
-		"posthog-js": "^1.227.2",
+		"posthog-js": "^1.337.0",
 		"pretty-bytes": "^7.0.0",
 		"qrcode": "^1.5.4",
 		"react": "^18.3.1",
+		"react-compiler-runtime": "^1.0.0",
 		"react-countup": "^6.5.3",
 		"react-dom": "^18.3.1",
 		"react-i18next": "^15.4.1",
@@ -90,6 +91,7 @@
 		"zod": "^3.25.61"
 	},
 	"devDependencies": {
+		"babel-plugin-react-compiler": "^1.0.0",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@storybook/addon-essentials": "^8.6.15",

@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Wie möchtest du beginnen?",
+		"freeModels": {
+			"title": "Kostenlose Modelle",
+			"description": "Sofort mit dem Programmieren beginnen"
+		},
+		"premiumModels": {
+			"title": "Premium-Modelle",
+			"description": "Registriere dich. Neue Nutzer erhalten 5 $ Guthaben"
+		},
+		"byok": {
+			"title": "Eigenen Schlüssel verwenden",
+			"description": "Fortgeschritten. Eigenes Konto oder Abonnement nutzen"
+		}
+	},
 	"welcome": {
 		"greeting": "Willkommen bei Kilo Code!",
 		"introText1": "Kilo Code ist ein kostenloser Open-Source-KI-Coding-Agent.",
@@ -228,7 +243,7 @@
 			"idea7": "Erstelle ein beruhigendes interaktives Sternfeld, das sich mit Mausgesten bewegt"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Code-Editor-Vorschläge",

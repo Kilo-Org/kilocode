@@ -97,7 +97,7 @@
 		"protectedPaths": "Kontrol noktaları {{workspaceDir}} içinde kullanılamaz. Kontrol noktaları özelliğini kullanmak için bir alt klasörü çalışma alanı olarak açın ya da bu uyarıyı gizlemek için ayarlarda kontrol noktalarını devre dışı bırakın.",
 		"dismissWarning": "Kapat"
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "duraklatıldı",

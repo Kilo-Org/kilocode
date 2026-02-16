@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Да",
 		"shareConfirmNo": "Нет",
 		"options": "Параметры",
-		"configureSetupScript": "Скрипт настройки worktree"
+		"configureSetupScript": "Скрипт настройки worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -64,7 +65,14 @@
 		"defaultModel": "Модель по умолчанию",
 		"loadingModels": "Загрузка...",
 		"selectMode": "Выбрать режим",
-		"modeTooltip": "Режим: {{mode}}"
+		"modeTooltip": "Режим: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
@@ -81,7 +89,9 @@
 		"collapseOutput": "Свернуть вывод",
 		"copyCommand": "Копировать команду",
 		"thinking": "Обдумывание",
-		"thinkingSeconds": "{{count}}с"
+		"thinkingSeconds": "{{count}}с",
+		"approve": "Одобрить",
+		"deny": "Отклонить"
 	},
 	"chatInput": {
 		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",

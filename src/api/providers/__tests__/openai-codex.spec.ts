@@ -20,7 +20,7 @@ describe("OpenAiCodexHandler.getModel", () => {
 		const handler = new OpenAiCodexHandler({ apiModelId: "not-a-real-model" })
 		const model = handler.getModel()
 
-		expect(model.id).toBe("gpt-5.2-codex")
+		expect(model.id).toBe("gpt-5.3-codex")
 		expect(model.info).toBeDefined()
 	})
 })

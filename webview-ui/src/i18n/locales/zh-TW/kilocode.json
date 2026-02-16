@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "想要如何開始？",
+		"freeModels": {
+			"title": "免費模型",
+			"description": "立即開始撰寫程式"
+		},
+		"premiumModels": {
+			"title": "進階模型",
+			"description": "註冊。新用戶可獲得 5 美元額度"
+		},
+		"byok": {
+			"title": "使用自有金鑰",
+			"description": "進階選項。使用自有帳戶或訂閱"
+		}
+	},
 	"welcome": {
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一款免費、開放原始碼的 AI Coding Agent。",
@@ -242,7 +257,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "程式碼編輯器建議",

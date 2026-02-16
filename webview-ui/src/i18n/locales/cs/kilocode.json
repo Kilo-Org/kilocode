@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Jak chceš začít?",
+		"freeModels": {
+			"title": "Bezplatné modely",
+			"description": "Začni programovat ihned"
+		},
+		"premiumModels": {
+			"title": "Prémiové modely",
+			"description": "Zaregistruj se. Noví uživatelé získají kredit 5 $"
+		},
+		"byok": {
+			"title": "Použij vlastní klíč",
+			"description": "Pokročilé. Použij svůj vlastní účet nebo předplatné"
+		}
+	},
 	"welcome": {
 		"greeting": "Vítej v Kilo Code!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
@@ -235,7 +250,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"enableAutoTrigger": {

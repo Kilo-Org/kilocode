@@ -19,8 +19,8 @@ export function isAlphaPeriodEndedError(error: any) {
 	return !!(
 		error &&
 		error.status === 404 &&
-		(error.message?.indexOf("alpha period") ?? -1) >= 0 &&
-		(error.message?.indexOf("has ended") ?? -1) >= 0
+		((error.message?.indexOf("was a stealth model") ?? -1) >= 0 ||
+			((error.message?.indexOf("alpha period") ?? -1) >= 0 && (error.message?.indexOf("has ended") ?? -1) >= 0))
 	)
 }
 

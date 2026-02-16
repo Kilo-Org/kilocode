@@ -82,7 +82,7 @@ import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import deepEqual from "fast-deep-equal" // kilocode_change
-import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
+import { AutocompleteServiceSettingsView } from "../kilocode/settings/AutocompleteServiceSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { UISettings } from "./UISettings"
 import AgentBehaviourView from "../kilocode/settings/AgentBehaviourView" // kilocode_change - new combined view
@@ -109,7 +109,7 @@ export const sectionNames = [
 	"slashCommands",
 	"browser",
 	"checkpoints",
-	"ghost", // kilocode_change
+	"autocomplete", // kilocode_change
 	"display", // kilocode_change
 	"notifications",
 	"contextManagement",
@@ -139,7 +139,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
-	const { currentApiConfigName, listApiConfigMeta, uriScheme, settingsImportedAt } = extensionState
+	const { currentApiConfigName, listApiConfigMeta, uriScheme } = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -184,6 +184,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		alwaysAllowWrite,
 		alwaysAllowWriteOutsideWorkspace,
 		alwaysAllowWriteProtected,
+		alwaysAllowDelete, // kilocode_change
 		autoCondenseContext,
 		autoCondenseContextPercent,
 		browserToolEnabled,
@@ -358,15 +359,21 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			}
 		}
 	}, [extensionState, isChangeDetected, editingApiConfigName, currentApiConfigName])
-	// kilocode_change end
 
 	// Bust the cache when settings are imported.
 	useEffect(() => {
-		if (settingsImportedAt) {
-			setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
-			setChangeDetected(false)
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data
+			if (message.type === "settingsImported") {
+				setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
+				setChangeDetected(false)
+			}
 		}
-	}, [settingsImportedAt, extensionState])
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	})
+	// kilocode_change end
 
 	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback((field, value) => {
 		setCachedState((prevState) => {
@@ -382,7 +389,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 	}, [])
 
 	// kilocode_change start
-	const setGhostServiceSettingsField = useCallback(
+	const setAutocompleteServiceSettingsField = useCallback(
 		<K extends keyof NonNullable<ExtensionStateContextType["ghostServiceSettings"]>>(
 			field: K,
 			value: NonNullable<ExtensionStateContextType["ghostServiceSettings"]>[K],
@@ -532,6 +539,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 					alwaysAllowWrite: alwaysAllowWrite ?? undefined,
 					alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? undefined,
 					alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? undefined,
+					alwaysAllowDelete: alwaysAllowDelete ?? undefined, // kilocode_change
 					alwaysAllowExecute: alwaysAllowExecute ?? undefined,
 					alwaysAllowBrowser: alwaysAllowBrowser ?? undefined,
 					alwaysAllowMcp,
@@ -759,7 +767,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			{ id: "ghost" as const, icon: Bot }, // kilocode_change
+			{ id: "autocomplete" as const, icon: Bot }, // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -979,8 +987,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								<div className={cn("flex items-center gap-2", isCompactMode && "justify-center")}>
 									<Icon className="w-4 h-4" />
 									<span className="tab-label">
-										{/* kilocode_change start - handle agentBehaviour and ghost labels */}
-										{label}
+										{/* kilocode_change start - handle agentBehaviour and autocomplete labels */}
+										{id === "agentBehaviour"
+											? t(`kilocode:settings.sections.agentBehaviour`)
+											: id === "autocomplete"
+												? t(`kilocode:autocomplete.title`)
+												: t(`settings:sections.${id}`)}
 										{/* kilocode_change end */}
 									</span>
 								</div>
@@ -1109,6 +1121,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								alwaysAllowWrite={alwaysAllowWrite}
 								alwaysAllowWriteOutsideWorkspace={alwaysAllowWriteOutsideWorkspace}
 								alwaysAllowWriteProtected={alwaysAllowWriteProtected}
+								alwaysAllowDelete={alwaysAllowDelete} // kilocode_change
 								alwaysAllowBrowser={alwaysAllowBrowser}
 								alwaysAllowMcp={alwaysAllowMcp}
 								alwaysAllowModeSwitch={alwaysAllowModeSwitch}
@@ -1171,10 +1184,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 								setCachedStateField={setCachedStateField}
 							/>
 						)}
-						{activeTab === "ghost" && (
-							<GhostServiceSettingsView
+						{activeTab === "autocomplete" && (
+							<AutocompleteServiceSettingsView
 								ghostServiceSettings={ghostServiceSettings}
-								onGhostServiceSettingsChange={setGhostServiceSettingsField}
+								onAutocompleteServiceSettingsChange={setAutocompleteServiceSettingsField}
 							/>
 						)}
 						{/* kilocode_change end display section */}

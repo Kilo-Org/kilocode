@@ -97,16 +97,22 @@ For team or production use:
 
 ## Configuration
 
-1. Open Kilo Code settings (<Codicon name="gear" /> icon)
-2. Navigate to **Codebase Indexing** section
-3. Enable **"Enable Codebase Indexing"** using the toggle switch
-4. Configure your embedding provider:
+### Open Codebase Indexing Settings
+
+1. In the chat header, click the database icon (indexing status)
+2. The Codebase Indexing settings panel opens
+3. If you don't see the icon, open Kilo Code settings (<Codicon name="gear" />) and search for **Codebase Indexing**
+
+### Configure Settings
+
+1. Enable **"Enable Codebase Indexing"** using the toggle switch
+2. Configure your embedding provider:
     - **OpenAI**: Enter API key and select model
     - **Gemini**: Enter Google AI API key and select embedding model
     - **Ollama**: Enter base URL and select model
-5. Set Qdrant URL and optional API key
-6. Configure **Max Search Results** (default: 20, range: 1-100)
-7. Click **Save** to start initial indexing
+3. Set Qdrant URL and optional API key
+4. Configure **Max Search Results** (default: 20, range: 1-100)
+5. Click **Save** to start initial indexing
 
 ### Enable/Disable Toggle
 
@@ -148,7 +154,7 @@ The indexer automatically excludes:
 - Large files (&gt;1MB)
 - Git repositories (`.git` folders)
 - Dependencies (`node_modules`, `vendor`, etc.)
-- Files matching `.gitignore` and `.kilocodeignore` patterns
+- Files matching `.gitignore` and [`.kilocodeignore`](/docs/customize/context/kilocodeignore) patterns
 
 ### Incremental Updates
 
@@ -186,6 +192,12 @@ The indexer automatically excludes:
 - **Single Workspace**: One workspace at a time
 - **Dependencies**: Requires external services (embedding provider + Qdrant)
 - **Language Coverage**: Limited to Tree-sitter supported languages for optimal parsing
+
+## Troubleshooting
+
+### Embeddings fail or indexing stalls (llama.cpp / Ollama)
+
+If your local embedding server is based on llama.cpp (including Ollama), indexing can fail with errors about `n_ubatch` or `GGML_ASSERT`. Ensure both batch size (`-b`) and micro-batch size (`-ub`) are set to the same value for embedding models, then restart the server. For Ollama, configure `num_batch` in your Modelfile or request options to match the same effective value.
 
 ## Using the Search Feature
 

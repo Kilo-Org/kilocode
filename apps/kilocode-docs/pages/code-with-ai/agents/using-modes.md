@@ -24,9 +24,18 @@ Four ways to switch modes:
 
     {% image src="/docs/img/modes/modes.png" alt="Using the dropdown menu to switch modes" width="400" /%}
 
-2. **Slash command:** Type `/architect`, `/ask`, `/debug`, or `/code` in the chat input
+2. **Slash command:** Type `/architect`, `/ask`, `/debug`, or `/code` in the chat input to switch modes. Type `/newtask` to create a new task, or `/smol` to condense your context window.
 
     {% image src="/docs/img/modes/modes-1.png" alt="Using slash commands to switch modes" width="400" /%}
+
+### Understanding /newtask vs /smol
+
+Users often confuse `/newtask` and `/smol`. Here's the key difference:
+
+| Command    | Purpose                                               | When to Use                                                             |
+| ---------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| `/newtask` | Creates a new task with context from the current task | When you want to start something new while carrying over context        |
+| `/smol`    | Condenses your current context window                 | When your conversation is getting too long and you want to summarize it |
 
 3. **Toggle command/Keyboard shortcut:** Use the keyboard shortcut below, applicable to your operating system. Each press cycles through the available modes in sequence, wrapping back to the first mode after reaching the end.
 
@@ -77,6 +86,10 @@ Four ways to switch modes:
 | **Tool Access**      | Full access to all tool groups: `read`, `edit`, `browser`, `command`, `mcp`         |
 | **Ideal For**        | Tracking down bugs, diagnosing errors, and resolving complex issues                 |
 | **Special Features** | Uses a methodical approach of analyzing, narrowing possibilities, and fixing issues |
+
+{% callout type="tip" %}
+**Keep debugging separate from main tasks:** When using Debug mode, ask Kilo to "start a new task in Debug mode with all of the necessary context needed to figure out X" so that the debugging process uses its own context window and doesn't pollute the main task.
+{% /callout %}
 
 ### Orchestrator Mode
 

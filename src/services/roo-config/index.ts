@@ -26,7 +26,16 @@ import fsSync from "fs" // kilocode_change
  */
 export function getGlobalRooDirectory(): string {
 	const homeDir = os.homedir()
-	return path.join(homeDir, ".kilocode") // kilocode_change
+	const kiloDir = path.join(homeDir, ".kilocode") // kilocode_change
+	const rooDir = path.join(homeDir, ".roo") // kilocode_change
+
+	// kilocode_change start: Prefer .kilocode; fallback to legacy .roo for backwards compatibility.
+	if (fsSync.existsSync(rooDir) && !fsSync.existsSync(kiloDir)) {
+		return rooDir
+	}
+
+	return kiloDir
+	// kilocode_change end
 }
 
 /**
@@ -77,10 +86,17 @@ export async function directoryExists(dirPath: string): Promise<boolean> {
 		const stat = await fs.stat(dirPath)
 		return stat.isDirectory()
 	} catch (error: any) {
-		// Only catch expected "not found" errors
-		if (error.code === "ENOENT" || error.code === "ENOTDIR") {
+		// kilocode_change start: Handle errors that can occur with symlinks: ENOENT (not found), ENOTDIR (not a directory),
+		// ELOOP (too many symlinks), ENOTCONN (network connection issue for network drives)
+		if (
+			error.code === "ENOENT" ||
+			error.code === "ENOTDIR" ||
+			error.code === "ELOOP" ||
+			error.code === "ENOTCONN"
+		) {
 			return false
 		}
+		// kilocode_change end
 		// Re-throw unexpected errors (permission, I/O, etc.)
 		throw error
 	}
@@ -94,10 +110,17 @@ export async function fileExists(filePath: string): Promise<boolean> {
 		const stat = await fs.stat(filePath)
 		return stat.isFile()
 	} catch (error: any) {
-		// Only catch expected "not found" errors
-		if (error.code === "ENOENT" || error.code === "ENOTDIR") {
+		// kilocode_change start: Handle errors that can occur with symlinks: ENOENT (not found), ENOTDIR (not a directory),
+		// ELOOP (too many symlinks), ENOTCONN (network connection issue for network drives)
+		if (
+			error.code === "ENOENT" ||
+			error.code === "ENOTDIR" ||
+			error.code === "ELOOP" ||
+			error.code === "ENOTCONN"
+		) {
 			return false
 		}
+		// kilocode_change end
 		// Re-throw unexpected errors (permission, I/O, etc.)
 		throw error
 	}
@@ -160,14 +183,16 @@ export async function discoverSubfolderRooDirectories(cwd: string): Promise<stri
 		// available in the webview context
 		const { executeRipgrep } = await import("../search/file-search")
 
-		// Use ripgrep to find any file inside any .roo directory
-		// This efficiently discovers all .roo folders regardless of their content
+		// Use ripgrep to find any file inside any .kilocode or legacy .roo directory.
+		// This efficiently discovers all config folders regardless of their content.
 		const args = [
 			"--files",
 			"--hidden",
 			"--follow",
 			"-g",
-			"**/.roo/**",
+			"**/.kilocode/**", // kilocode_change
+			"-g",
+			"**/.roo/**", // kilocode_change (legacy)
 			"-g",
 			"!node_modules/**",
 			"-g",
@@ -177,25 +202,43 @@ export async function discoverSubfolderRooDirectories(cwd: string): Promise<stri
 
 		const results = await executeRipgrep({ args, workspacePath: cwd })
 
-		// Extract unique .roo directory paths
-		const rooDirs = new Set<string>()
+		// Extract unique config directory paths.
+		// Prefer .kilocode when both .kilocode and .roo exist for the same parent folder.
+		const configDirsByParent = new Map<string, string>() // parentDir -> configDir
+		const rootKiloDir = path.join(cwd, ".kilocode") // kilocode_change
 		const rootRooDir = path.join(cwd, ".roo")
 
 		for (const result of results) {
-			// Match paths like "subfolder/.roo/anything" or "subfolder/nested/.roo/anything"
+			// Match paths like:
+			// - "subfolder/.kilocode/anything" (preferred)
+			// - "subfolder/.roo/anything" (legacy)
 			// Handle both forward slashes (Unix) and backslashes (Windows)
-			const match = result.path.match(/^(.+?)[/\\]\.roo[/\\]/)
-			if (match && match[1]) {
-				const rooDir = path.join(cwd, match[1], ".roo")
-				// Exclude the root .roo directory (already handled by getProjectRooDirectoryForCwd)
-				if (rooDir !== rootRooDir) {
-					rooDirs.add(rooDir)
-				}
+			const match = result.path.match(/^(.+?)[/\\]\.(kilocode|roo)[/\\]/)
+			if (!match?.[1] || !match?.[2]) continue
+
+			const parentRel = match[1]
+			const dirName = match[2] as "kilocode" | "roo"
+			const configDir = path.join(cwd, parentRel, `.${dirName}`)
+
+			// Exclude the root config dirs (already handled by getProjectRooDirectoryForCwd)
+			if (configDir === rootKiloDir || configDir === rootRooDir) {
+				continue
+			}
+
+			const existing = configDirsByParent.get(parentRel)
+			if (!existing) {
+				configDirsByParent.set(parentRel, configDir)
+				continue
+			}
+
+			// Prefer .kilocode over legacy .roo for the same parent folder
+			if (existing.endsWith(`${path.sep}.roo`) && dirName === "kilocode") {
+				configDirsByParent.set(parentRel, configDir)
 			}
 		}
 
 		// Return sorted alphabetically
-		return Array.from(rooDirs).sort()
+		return Array.from(configDirsByParent.values()).sort()
 	} catch (error) {
 		// If discovery fails (e.g., ripgrep not available), return empty array
 		return []

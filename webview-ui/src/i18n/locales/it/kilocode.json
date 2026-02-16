@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Come vorresti iniziare?",
+		"freeModels": {
+			"title": "Modelli gratuiti",
+			"description": "Inizia a programmare subito"
+		},
+		"premiumModels": {
+			"title": "Modelli premium",
+			"description": "Registrati. I nuovi utenti ricevono 5 $ di crediti"
+		},
+		"byok": {
+			"title": "Porta la tua chiave",
+			"description": "Avanzato. Usa il tuo account o abbonamento"
+		}
+	},
 	"welcome": {
 		"greeting": "Benvenuto in Kilo Code!",
 		"introText1": "Kilo Code è un agente di coding AI gratuito e open source.",
@@ -228,7 +243,7 @@
 			"idea7": "Crea un campo stellare interattivo rilassante che si muove con i gesti del mouse"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Suggerimenti Editor di Codice",

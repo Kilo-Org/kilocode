@@ -33,6 +33,14 @@ export const CustomizeNav: NavSection[] = [
 				href: "/customize/context/codebase-indexing",
 				children: "Codebase Indexing",
 			},
+			{
+				href: "/customize/context/context-condensing",
+				children: "Context Condensing",
+			},
+			{
+				href: "/customize/context/kilocodeignore",
+				children: ".kilocodeignore",
+			},
 			{ href: "/customize/context/memory-bank", children: "Memory Bank" },
 			{
 				href: "/customize/context/large-projects",

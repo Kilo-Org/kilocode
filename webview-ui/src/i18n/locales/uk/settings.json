@@ -44,7 +44,7 @@
 		"about": "Про Kilo Code",
 		"autoPurge": "Авто-очищення",
 		"agentBehaviour": "Поведінка агента",
-		"ghost": "Ghost"
+		"autocomplete": "Ghost"
 	},
 	"about": {
 		"debugMode": {
@@ -137,6 +137,9 @@
 		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
 		"openRouterProviderRoutingLabel": "Маршрутизація провайдера OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter направляє запити до найкращих доступних провайдерів для вашої моделі вбудовувань. За замовчуванням запити розподіляються між провідними провайдерами для максимального часу безвідмовної роботи. Однак ви можете вибрати конкретного провайдера для використання цієї моделі.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API ключ Voyage AI",
+		"voyageApiKeyPlaceholder": "Введи свій API ключ Voyage AI",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openaiCompatibleResponsesProvider": "Сумісний з OpenAI (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
@@ -218,6 +221,7 @@
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
 			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим",
 			"openRouterApiKeyRequired": "Ключ API OpenRouter є обов'язковим",
+			"voyageApiKeyRequired": "Ключ API Voyage AI є обов'язковим",
 			"bedrockRegionRequired": "Регіон AWS є обов'язковим",
 			"bedrockProfileRequired": "Профіль AWS є обов'язковий"
 		},
@@ -397,12 +401,16 @@
 			"success": "Список моделей успішно оновлено!",
 			"error": "Не вдалося оновити список моделей. Спробуйте ще раз."
 		},
+		"getZenmuxApiKey": "Отримати ключ API Zenmux",
+		"zenmuxTransformsText": "Використовувати Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Отримати ключ API Requesty",
 		"getRequestyBaseUrl": "Базовий URL",
 		"requestyUseCustomBaseUrl": "Використовувати власний базовий URL",
 		"openRouterTransformsText": "Стискати підказки та ланцюжки повідомлень до розміру контексту (<a>Перетворення OpenRouter</a>)",
 		"anthropicApiKey": "Ключ API Anthropic",
 		"getAnthropicApiKey": "Отримати ключ API Anthropic",
+		"apertisApiKey": "Ключ API Apertis",
+		"getApertisApiKey": "Отримати ключ API Apertis",
 		"anthropicUseAuthToken": "Передавати ключ API Anthropic як заголовок Authorization замість X-Api-Key",
 		"anthropic1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
@@ -414,6 +422,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Введіть ім'я розгортання...",
 		"basetenApiKey": "Ключ API Baseten",
 		"getBasetenApiKey": "Отримати ключ API Baseten",
+		"corethinkApiKey": "Ключ API Corethink",
+		"getCorethinkApiKey": "Отримати ключ API Corethink",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",
@@ -671,6 +681,7 @@
 		},
 		"verbosity": {
 			"label": "Рівень деталізації виводу",
+			"max": "Max",
 			"high": "Високий",
 			"medium": "Середній",
 			"low": "Низький",
@@ -763,7 +774,7 @@
 			"description": "Якщо ввімкнено, Kilo Code автоматично створюватиме контрольні точки під час виконання завдання, що полегшить перегляд змін або повернення до попередніх станів. <0>Дізнатися більше</0>"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Показувати анімацію на полях при автозаповненні",
 			"description": "Відображати анімований індикатор на полях редактора під час роботи автозаповнення",

@@ -9,7 +9,7 @@
 # 🚀 Kilo
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 1M+ Kilo Coders. 20T+ tokens processed
+> #1 on OpenRouter. 1.5M+ Kilo Coders. 25T+ tokens processed
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -24,6 +24,8 @@
   <img src="https://media.githubusercontent.com/media/Kilo-Org/kilocode/main/kilo.gif" width="100%" />
 </p>
 
+## Quick Links
+
 - [VS Code Marketplace](https://kilo.ai/vscode-marketplace?utm_source=Readme) (download)
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
@@ -31,12 +33,12 @@
 
 - **Code Generation:** Kilo can generate code using natural language.
 - **Inline Autocomplete:** Get intelligent code completions as you type, powered by AI.
-- **Task Automation:** Kilo can automate repetitive coding tasks.
-- **Automated Refactoring:** Kilo can refactor and improve existing code.
+- **Task Automation:** Kilo can automate repetitive coding tasks to save time..
+- **Automated Refactoring:** Kilo can refactor and improve existing code efficiently.
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## How to get started with Kilo
+## Get Started
 
 1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2. Create your account to access 500+ cutting-edge AI models including Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
@@ -44,9 +46,23 @@
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
-## Extension Development
+## Developer Setup
 
-For details on building and developing the extension, see [DEVELOPMENT.md](/DEVELOPMENT.md)
+If you want to contribute or modify the extension locally, see the [DEVELOPMENT.md](/DEVELOPMENT.md) file for build and setup instructions.
+
+## Contributing
+
+We welcome contributions from developers, writers, and enthusiasts!
+To get started, please read our [Contributing Guide](/CONTRIBUTING.md). It includes details on setting up your environment, coding standards, types of contribution and how to submit pull requests.
+
+## Code of Conduct
+
+Our community is built on respect, inclusivity, and collaboration. Please review our [Code of Conduct](/CODE_OF_CONDUCT.md) to understand the expectations for all contributors and community members.
+
+## License
+
+This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+You’re free to use, modify, and distribute this code, including for commercial purposes as long as you include proper attribution and license notices. See [License](/LICENSE).
 
 ## Contributing
 

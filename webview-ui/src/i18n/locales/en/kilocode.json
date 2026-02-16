@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "How would you like to get started?",
+		"freeModels": {
+			"title": "Free models",
+			"description": "Start coding immediately"
+		},
+		"premiumModels": {
+			"title": "Premium models",
+			"description": "Sign up. New users get $5 in credits"
+		},
+		"byok": {
+			"title": "Bring my own Key",
+			"description": "Advanced. Use your own account or subscription"
+		}
+	},
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
@@ -242,7 +257,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Code Editor Suggestions",

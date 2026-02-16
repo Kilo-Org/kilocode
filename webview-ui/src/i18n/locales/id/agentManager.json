@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Ya",
 		"shareConfirmNo": "Tidak",
 		"options": "Opsi",
-		"configureSetupScript": "Skrip setup worktree"
+		"configureSetupScript": "Skrip setup worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -62,7 +63,14 @@
 		"defaultModel": "Model default",
 		"loadingModels": "Memuat...",
 		"selectMode": "Pilih mode",
-		"modeTooltip": "Mode: {{mode}}"
+		"modeTooltip": "Mode: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "Ciutkan output",
 		"copyCommand": "Salin perintah",
 		"thinking": "Berpikir",
-		"thinkingSeconds": "{{count}}d"
+		"thinkingSeconds": "{{count}}d",
+		"approve": "Setujui",
+		"deny": "Tolak"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

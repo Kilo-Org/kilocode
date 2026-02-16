@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Debug-Proxy aktivieren** — Leite alle ausgehenden Netzwerkanfragen über einen Proxy für MITM-Debugging. Nur aktiv, wenn du im Debug-Modus (F5) läufst.",
 	"settings.debugProxy.serverUrl.description": "Proxy-URL (z. B. `http://127.0.0.1:8888`). Wird nur verwendet, wenn der **Debug-Proxy** aktiviert ist.",
 	"settings.debugProxy.tlsInsecure.description": "Akzeptiere selbstsignierte Zertifikate vom Proxy. **Erforderlich für MITM-Inspektion.** ⚠️ Unsicher – verwende das nur für lokales Debugging.",
-	"ghost.input.title": "Kilo Code Geisterschreiber",
-	"ghost.input.placeholder": "Beschreiben Sie, was Sie programmieren möchten...",
-	"ghost.commands.generateSuggestions": "Kilo Code: Vorgeschlagene Bearbeitungen Generieren",
-	"ghost.commands.displaySuggestions": "Vorgeschlagene Bearbeitungen Anzeigen",
-	"ghost.commands.cancelSuggestions": "Vorgeschlagene Bearbeitungen Abbrechen",
-	"ghost.commands.applyCurrentSuggestion": "Aktuelle Vorgeschlagene Bearbeitung Anwenden",
-	"ghost.commands.applyAllSuggestions": "Alle Vorgeschlagenen Bearbeitungen Anwenden",
-	"ghost.commands.goToNextSuggestion": "Zur Nächsten Vorgeschlagenen Bearbeitung",
-	"ghost.commands.goToPreviousSuggestion": "Zur Vorherigen Vorgeschlagenen Bearbeitung"
+	"autocomplete.input.title": "Kilo Code Geisterschreiber",
+	"autocomplete.input.placeholder": "Beschreiben Sie, was Sie programmieren möchten...",
+	"autocomplete.commands.generateSuggestions": "Kilo Code: Vorgeschlagene Bearbeitungen Generieren",
+	"autocomplete.commands.displaySuggestions": "Vorgeschlagene Bearbeitungen Anzeigen",
+	"autocomplete.commands.cancelSuggestions": "Vorgeschlagene Bearbeitungen Abbrechen",
+	"autocomplete.commands.applyCurrentSuggestion": "Aktuelle Vorgeschlagene Bearbeitung Anwenden",
+	"autocomplete.commands.applyAllSuggestions": "Alle Vorgeschlagenen Bearbeitungen Anwenden",
+	"autocomplete.commands.goToNextSuggestion": "Zur Nächsten Vorgeschlagenen Bearbeitung",
+	"autocomplete.commands.goToPreviousSuggestion": "Zur Vorherigen Vorgeschlagenen Bearbeitung"
 }

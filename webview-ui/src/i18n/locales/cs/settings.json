@@ -44,7 +44,7 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Automatické čištění",
 		"agentBehaviour": "Chování agenta",
-		"ghost": "Automatické dokončování"
+		"autocomplete": "Automatické dokončování"
 	},
 	"about": {
 		"bugReport": {
@@ -123,6 +123,9 @@
 		"openRouterApiKeyPlaceholder": "Zadejte svůj klíč API OpenRouter",
 		"openRouterProviderRoutingLabel": "Směrování poskytovatele OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model vkládání. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API klíč Voyage AI",
+		"voyageApiKeyPlaceholder": "Zadej svůj API klíč Voyage AI",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openaiCompatibleResponsesProvider": "Kompatibilní s OpenAI (Responses)",
 		"openAiKeyLabel": "Klíč API OpenAI",
@@ -195,6 +198,7 @@
 			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
 			"vercelAiGatewayApiKeyRequired": "Je vyžadován klíč API Vercel AI Gateway",
 			"openRouterApiKeyRequired": "Klíč API OpenRouter je povinný",
+			"voyageApiKeyRequired": "API klíč Voyage AI je povinný",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0",
@@ -382,12 +386,16 @@
 			"success": "Seznam modelů byl úspěšně obnoven!",
 			"error": "Nepodařilo se obnovit seznam modelů. Zkuste to prosím znovu."
 		},
+		"getZenmuxApiKey": "Získat Zenmux API Key",
+		"zenmuxTransformsText": "Použít Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Získat klíč API Requesty",
 		"getRequestyBaseUrl": "Základní URL",
 		"requestyUseCustomBaseUrl": "Použít vlastní základní URL",
 		"openRouterTransformsText": "Komprimovat výzvy a řetězce zpráv na velikost kontextu (<a>Transformace OpenRouter</a>)",
 		"anthropicApiKey": "Klíč API Anthropic",
 		"getAnthropicApiKey": "Získat klíč API Anthropic",
+		"apertisApiKey": "Klíč API Apertis",
+		"getApertisApiKey": "Získat klíč API Apertis",
 		"anthropicUseAuthToken": "Předávat klíč API Anthropic jako hlavičku Authorization místo X-Api-Key",
 		"anthropic1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
 		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
@@ -398,6 +406,8 @@
 		"basetenApiKey": "Klíč API Baseten",
 		"basetenApiKeyPlaceholder": "Zadejte svůj klíč API Baseten",
 		"getBasetenApiKey": "Získat klíč API Baseten",
+		"corethinkApiKey": "Klíč API Corethink",
+		"getCorethinkApiKey": "Získat klíč API Corethink",
 		"cerebrasApiKey": "Klíč API Cerebras",
 		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
@@ -664,6 +674,7 @@
 		},
 		"verbosity": {
 			"label": "Podrobnost výstupu",
+			"max": "Max",
 			"high": "Vysoká",
 			"medium": "Střední",
 			"low": "Nízká",
@@ -811,7 +822,7 @@
 			"description": "Zobrazit statistiky přidaných/odebraných řádků v záhlaví úkolu"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Zobrazit animaci v okraji při automatickém dokončování",
 			"description": "Zobrazit animovaný indikátor v okraji editoru, když běží automatické dokončování",

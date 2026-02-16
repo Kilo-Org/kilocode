@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Nasıl başlamak istersiniz?",
+		"freeModels": {
+			"title": "Ücretsiz modeller",
+			"description": "Hemen kodlamaya başlayın"
+		},
+		"premiumModels": {
+			"title": "Premium modeller",
+			"description": "Kaydolun. Yeni kullanıcılar 5 $ kredi alır"
+		},
+		"byok": {
+			"title": "Kendi anahtarınızı kullanın",
+			"description": "Gelişmiş. Kendi hesabınızı veya aboneliğinizi kullanın"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
@@ -228,7 +243,7 @@
 			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Otomatik Tamamlama",
 		"settings": {
 			"codeEditorSuggestions": "Kod Editörü Önerileri",

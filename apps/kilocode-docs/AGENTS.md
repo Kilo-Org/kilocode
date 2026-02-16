@@ -6,6 +6,16 @@ This is the Kilo Code documentation site. Kilo Code is the leading open source a
 
 The dev server is run with `bun dev` and runs on `http://localhost:3002`. Typically the user will be running it themselves, so always check if it is running FIRST before deciding to run it yourself to test something.
 
+## Branch Naming Convention
+
+When making changes _only_ to the documentation, create branches with the `docs/` prefix:
+
+```bash
+git checkout -b docs/description-of-change
+```
+
+This convention helps identify documentation-only PRs and keeps them organized.
+
 ## Markdoc Custom Tags
 
 This project uses [Markdoc](https://markdoc.dev/) for rendering markdown with custom components. Custom tags allow you to embed React components directly in markdown files.

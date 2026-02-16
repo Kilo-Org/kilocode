@@ -235,6 +235,7 @@ vi.mock("../../task/Task", () => ({
 		setRootTask: vi.fn(),
 		taskId: options?.historyItem?.id || "test-task-id",
 		emit: vi.fn(),
+		getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 	})),
 }))
 
@@ -379,6 +380,7 @@ describe("ClineProvider", () => {
 				setRootTask: vi.fn(),
 				taskId: options?.historyItem?.id || "test-task-id",
 				emit: vi.fn(),
+				getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 			}
 
 			Object.defineProperty(task, "messageManager", {
@@ -2783,12 +2785,18 @@ describe("ClineProvider - Router Models", () => {
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
-		expect(getModels).toHaveBeenCalledWith({ provider: "chutes" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: undefined })
+		expect(getModels).toHaveBeenCalledWith({
+			provider: "zenmux",
+			apiKey: undefined,
+			baseUrl: "https://zenmux.ai/api/v1",
+		})
 
 		// Verify response was sent
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -2809,6 +2817,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				zenmux: mockModels,
 			},
 			values: undefined,
 		})
@@ -2861,6 +2870,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode_change: synthetic success
 			.mockResolvedValueOnce(mockModels) // roo success
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes fail
+			.mockResolvedValueOnce(mockModels) // zenmux success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2869,6 +2879,7 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -2889,6 +2900,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				zenmux: mockModels,
 			},
 			values: undefined,
 		})
@@ -3025,6 +3037,7 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -3045,6 +3058,7 @@ describe("ClineProvider - Router Models", () => {
 				"sap-ai-core": {}, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
+				zenmux: mockModels,
 			},
 			values: undefined,
 		})

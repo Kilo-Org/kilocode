@@ -26,6 +26,7 @@ export interface AgentSession {
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
+	yoloMode?: boolean // True if session was started with auto-approval enabled
 	model?: string // Model ID used for this session
 	mode?: string // Mode slug used for this session (e.g., "code", "architect")
 }
@@ -40,6 +41,7 @@ export interface PendingSession {
 	parallelMode?: boolean
 	gitUrl?: string
 	autoMode?: boolean // True if session will be started with --auto flag
+	yoloMode?: boolean // True if session will be started with auto-approval enabled
 }
 
 export interface RemoteSession {
@@ -226,4 +228,18 @@ export const updateSessionModeAtom = atom(null, (get, set, payload: { sessionId:
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)
 	set(isRefreshingRemoteSessionsAtom, false)
+})
+
+export const renameSessionAtom = atom(null, (get, set, payload: { sessionId: string; label: string }) => {
+	const current = get(sessionsMapAtom)
+	const session = current[payload.sessionId]
+	if (!session) return
+
+	set(sessionsMapAtom, {
+		...current,
+		[payload.sessionId]: {
+			...session,
+			label: payload.label,
+		},
+	})
 })

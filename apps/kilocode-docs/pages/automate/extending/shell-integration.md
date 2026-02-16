@@ -31,7 +31,7 @@ Shell integration is built into Kilo Code and works automatically in most cases.
 
 ## Terminal Integration Settings
 
-Kilo Code provides several settings to fine-tune shell integration. Access these in the Kilo Code sidebar under Settings → Terminal.
+Kilo Code provides several settings to fine-tune shell integration. Access these in the Kilo Code panel under Settings → Terminal.
 
 ### Basic Settings
 

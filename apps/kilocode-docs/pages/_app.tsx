@@ -6,8 +6,16 @@ import posthog from "posthog-js"
 import { CopyPageButton, SideNav, TableOfContents, TopNav } from "../components"
 
 import "prismjs"
-// Import other Prism themes here
 import "prismjs/components/prism-bash.min"
+import "prismjs/components/prism-javascript.min"
+import "prismjs/components/prism-typescript.min"
+import "prismjs/components/prism-python.min"
+import "prismjs/components/prism-json.min"
+import "prismjs/components/prism-yaml.min"
+import "prismjs/components/prism-go.min"
+import "prismjs/components/prism-ruby.min"
+import "prismjs/components/prism-markdown.min"
+import "prismjs/components/prism-powershell.min"
 import "prismjs/themes/prism.css"
 
 import "@docsearch/css"
@@ -122,7 +130,12 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
 				<link rel="shortcut icon" href="https://kilo.ai/favicon.ico" />
 				<link rel="icon" href="https://kilo.ai/favicon.ico" sizes="48x48" type="image/x-icon" />
 				<link rel="icon" href="https://kilo.ai/favicon.svg" type="image/svg+xml" />
-				<link rel="apple-touch-icon" href="https://kilo.ai/apple-touch-icon.png" sizes="180x180" type="image/png" />
+				<link
+					rel="apple-touch-icon"
+					href="https://kilo.ai/apple-touch-icon.png"
+					sizes="180x180"
+					type="image/png"
+				/>
 				<link rel="manifest" href="https://kilo.ai/site.webmanifest" />
 				<link rel="icon" href="https://kilo.ai/android-chrome-192x192.png" type="image/png" sizes="192x192" />
 				<link rel="icon" href="https://kilo.ai/android-chrome-512x512.png" type="image/png" sizes="512x512" />

@@ -8,6 +8,7 @@ interface BuiltInCommandDefinition {
 }
 
 const BUILT_IN_COMMANDS: Record<string, BuiltInCommandDefinition> = {
+	// kilocode_change start - Modified all .roo references to .kilocode for Kilo Code fork
 	init: {
 		name: "init",
 		description: "Analyze codebase and create concise AGENTS.md files for AI assistants",
@@ -39,13 +40,13 @@ Please analyze this codebase and create an AGENTS.md file containing:
   <todo_list_creation>
     If the update_todo_list tool is available, create a todo list with these focused analysis steps:
     
-    1. Check for existing AGENTS.md files
+     1. Check for existing AGENTS.md files
        CRITICAL - Check these EXACT paths IN THE PROJECT ROOT:
        - AGENTS.md (in project root directory)
-       - .roo/rules-code/AGENTS.md (relative to project root)
-       - .roo/rules-debug/AGENTS.md (relative to project root)
-       - .roo/rules-ask/AGENTS.md (relative to project root)
-       - .roo/rules-architect/AGENTS.md (relative to project root)
+       - .kilocode/rules-code/AGENTS.md (relative to project root)
+       - .kilocode/rules-debug/AGENTS.md (relative to project root)
+       - .kilocode/rules-ask/AGENTS.md (relative to project root)
+       - .kilocode/rules-architect/AGENTS.md (relative to project root)
        
        IMPORTANT: All paths are relative to the project/workspace root, NOT system root!
        
@@ -94,8 +95,8 @@ Please analyze this codebase and create an AGENTS.md file containing:
          * ONLY KEEP truly non-obvious discoveries
          * Then add newly discovered non-obvious patterns
          * Result should be SHORTER and MORE FOCUSED than before
-       - If creating new: Follow the non-obvious-only principle
-       - Create mode-specific files in .roo/rules-*/ directories (IN PROJECT ROOT)
+        - If creating new: Follow the non-obvious-only principle
+        - Create mode-specific files in .kilocode/rules-*/ directories (IN PROJECT ROOT)
        
     Note: If update_todo_list is not available, proceed with the analysis workflow directly without creating a todo list.
   </todo_list_creation>
@@ -107,12 +108,12 @@ Please analyze this codebase and create an AGENTS.md file containing:
   1. **Discovery Phase**:
      CRITICAL - First check for existing AGENTS.md files at these EXACT locations IN PROJECT ROOT:
      - AGENTS.md (in project/workspace root)
-     - .roo/rules-code/AGENTS.md (relative to project root)
-     - .roo/rules-debug/AGENTS.md (relative to project root)
-     - .roo/rules-ask/AGENTS.md (relative to project root)
-     - .roo/rules-architect/AGENTS.md (relative to project root)
+     - .kilocode/rules-code/AGENTS.md (relative to project root)
+     - .kilocode/rules-debug/AGENTS.md (relative to project root)
+     - .kilocode/rules-ask/AGENTS.md (relative to project root)
+     - .kilocode/rules-architect/AGENTS.md (relative to project root)
      
-     IMPORTANT: The .roo folder should be created in the PROJECT ROOT, not system root!
+     IMPORTANT: The .kilocode folder should be created in the PROJECT ROOT, not system root!
      
      If found, perform CRITICAL analysis:
      - What information is OBVIOUS and must be DELETED?
@@ -170,12 +171,12 @@ Please analyze this codebase and create an AGENTS.md file containing:
     Create or deeply improve mode-specific AGENTS.md files IN THE PROJECT ROOT.
     
     CRITICAL: For each of these paths (RELATIVE TO PROJECT ROOT), check if the file exists FIRST:
-    - .roo/rules-code/AGENTS.md (create .roo in project root, not system root!)
-    - .roo/rules-debug/AGENTS.md (relative to project root)
-    - .roo/rules-ask/AGENTS.md (relative to project root)
-    - .roo/rules-architect/AGENTS.md (relative to project root)
+    - .kilocode/rules-code/AGENTS.md (create .kilocode in project root, not system root!)
+    - .kilocode/rules-debug/AGENTS.md (relative to project root)
+    - .kilocode/rules-ask/AGENTS.md (relative to project root)
+    - .kilocode/rules-architect/AGENTS.md (relative to project root)
     
-    IMPORTANT: The .roo directory must be created in the current project/workspace root directory,
+    IMPORTANT: The .kilocode directory must be created in the current project/workspace root directory,
     NOT at the system root (/) or home directory. All paths are relative to where the project is located.
     
     If files exist:
@@ -190,7 +191,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
     \`\`\`
     project-root/
     ├── AGENTS.md                    # General project guidance
-    ├── .roo/                        # IN PROJECT ROOT, NOT SYSTEM ROOT!
+    ├── .kilocode/                   # IN PROJECT ROOT, NOT SYSTEM ROOT!
     │   ├── rules-code/
     │   │   └── AGENTS.md           # Code mode specific instructions
     │   ├── rules-debug/
@@ -204,7 +205,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
     └── ... other project files
     \`\`\`
     
-    .roo/rules-code/AGENTS.md - ONLY non-obvious coding rules discovered by reading files:
+    .kilocode/rules-code/AGENTS.md - ONLY non-obvious coding rules discovered by reading files:
     - Custom utilities that replace standard approaches
     - Non-standard patterns unique to this project
     - Hidden dependencies or coupling between components
@@ -220,7 +221,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
     - Test files must be in same directory as source for vitest to work (not in separate test folder)
     \`\`\`
     
-    .roo/rules-debug/AGENTS.md - ONLY non-obvious debugging discoveries:
+    .kilocode/rules-debug/AGENTS.md - ONLY non-obvious debugging discoveries:
     - Hidden log locations not mentioned in docs
     - Non-standard debugging tools or flags
     - Gotchas that cause silent failures
@@ -236,7 +237,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
     - Extension logs only visible in "Extension Host" output channel, not Debug Console
     \`\`\`
     
-    .roo/rules-ask/AGENTS.md - ONLY non-obvious documentation context:
+    .kilocode/rules-ask/AGENTS.md - ONLY non-obvious documentation context:
     - Hidden or misnamed documentation
     - Counterintuitive code organization
     - Misleading folder names or structures
@@ -252,7 +253,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
     - Locales in root are for extension, webview-ui/src/i18n for UI (two separate systems)
     \`\`\`
     
-    .roo/rules-architect/AGENTS.md - ONLY non-obvious architectural constraints:
+    .kilocode/rules-architect/AGENTS.md - ONLY non-obvious architectural constraints:
     - Hidden coupling between components
     - Undocumented architectural decisions
     - Non-standard patterns that must be followed
@@ -284,6 +285,7 @@ Please analyze this codebase and create an AGENTS.md file containing:
 
 Remember: The goal is to create documentation that enables AI assistants to be immediately productive in this codebase, focusing on project-specific knowledge that isn't obvious from the code structure alone.`,
 	},
+	// kilocode_change end
 }
 
 /**

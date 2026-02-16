@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Hoe wil je beginnen?",
+		"freeModels": {
+			"title": "Gratis modellen",
+			"description": "Begin direct met coderen"
+		},
+		"premiumModels": {
+			"title": "Premium modellen",
+			"description": "Meld je aan. Nieuwe gebruikers ontvangen $5 tegoed"
+		},
+		"byok": {
+			"title": "Gebruik je eigen sleutel",
+			"description": "Geavanceerd. Gebruik je eigen account of abonnement"
+		}
+	},
 	"welcome": {
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
@@ -234,7 +249,7 @@
 			"idea7": "Maak een rustgevend interactief sterrenveld dat beweegt met muisgebaren"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Code Editor Suggesties",

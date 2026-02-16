@@ -9,6 +9,7 @@ import {
 	versionCountAtom,
 	generateVersionLabels,
 	VERSION_COUNT_OPTIONS,
+	renameSessionAtom,
 	type RunMode,
 	type VersionCount,
 } from "../state/atoms/sessions"
@@ -42,6 +43,8 @@ import {
 	Layers,
 	X,
 	Terminal,
+	Check,
+	Pencil,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -55,9 +58,51 @@ export function SessionDetail() {
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
 	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
+	const renameSession = useSetAtom(renameSessionAtom)
+
+	// Editable title state
+	const [isEditingTitle, setIsEditingTitle] = useState(false)
+	const [editTitleValue, setEditTitleValue] = useState("")
+	const titleInputRef = useRef<HTMLInputElement>(null)
 
 	// Hooks must be called unconditionally before any early returns
 	const timeLabels = useMemo(() => createRelativeTimeLabels(t), [t])
+
+	// Focus input when entering edit mode
+	useEffect(() => {
+		if (isEditingTitle && titleInputRef.current) {
+			titleInputRef.current.focus()
+			titleInputRef.current.select()
+		}
+	}, [isEditingTitle])
+
+	// Reset edit state when session changes
+	useEffect(() => {
+		setIsEditingTitle(false)
+	}, [selectedSession?.sessionId])
+
+	// Handlers for title editing
+	const startEditingTitle = () => {
+		if (selectedSession) {
+			setEditTitleValue(selectedSession.label)
+			setIsEditingTitle(true)
+		}
+	}
+
+	const commitTitleEdit = () => {
+		if (!selectedSession) return
+		const trimmed = editTitleValue.trim()
+		if (trimmed && trimmed !== selectedSession.label) {
+			renameSession({ sessionId: selectedSession.sessionId, label: trimmed })
+			// Persist to backend so rename survives panel close/reopen
+			vscode.postMessage({
+				type: "agentManager.renameSession",
+				sessionId: selectedSession.sessionId,
+				label: trimmed,
+			})
+		}
+		setIsEditingTitle(false)
+	}
 
 	// Auto-cancel session when it ends (as if user clicked the red cancel button)
 	// Only send cancel once when transitioning from "running" to a terminal state
@@ -113,7 +158,57 @@ export function SessionDetail() {
 			<div className="am-detail-header">
 				<div className="am-header-info">
 					<div className="am-header-title" title={selectedSession.prompt}>
-						{selectedSession.label}
+						{isEditingTitle ? (
+							<div className="am-title-edit-container">
+								<input
+									ref={titleInputRef}
+									type="text"
+									className="am-title-input"
+									value={editTitleValue}
+									onChange={(e) => setEditTitleValue(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											commitTitleEdit()
+										} else if (e.key === "Escape") {
+											setIsEditingTitle(false)
+										}
+									}}
+									onBlur={commitTitleEdit}
+									aria-label={t("sessionDetail.renameSession")}
+								/>
+								<button
+									className="am-title-confirm-btn"
+									onClick={commitTitleEdit}
+									title={t("sessionDetail.confirmRename")}
+									aria-label={t("sessionDetail.confirmRename")}>
+									<Check size={14} />
+								</button>
+							</div>
+						) : (
+							<>
+								{selectedSession.yoloMode !== false && (
+									<span className="am-yolo-badge" title={t("sessionDetail.yoloModeOn")}>
+										<Zap size={12} />
+									</span>
+								)}
+								<span
+									className="am-title-text"
+									onClick={startEditingTitle}
+									role="button"
+									tabIndex={0}
+									onKeyDown={(e) => e.key === "Enter" && startEditingTitle()}
+									title={t("sessionDetail.clickToRename")}>
+									{selectedSession.label}
+								</span>
+								<button
+									className="am-title-edit-btn"
+									onClick={startEditingTitle}
+									title={t("sessionDetail.renameSession")}
+									aria-label={t("sessionDetail.renameSession")}>
+									<Pencil size={12} />
+								</button>
+							</>
+						)}
 					</div>
 					<div className="am-header-meta">
 						{showSpinner && (
@@ -169,7 +264,7 @@ export function SessionDetail() {
 				</div>
 			)}
 
-			{isActive && (
+			{isActive && selectedSession.yoloMode !== false && (
 				<div className="am-full-auto-banner">
 					<Zap size={14} />
 					<span>{t("sessionDetail.autoModeWarning")}</span>
@@ -260,6 +355,7 @@ function NewAgentForm() {
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false)
+	const [yoloMode, setYoloMode] = useState(true)
 	const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
 	const [isBranchPickerOpen, setIsBranchPickerOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
@@ -343,6 +439,7 @@ function NewAgentForm() {
 			model: effectiveModelId || undefined,
 			mode: effectiveModeSlug || undefined,
 			images,
+			yoloMode,
 		})
 	}
 
@@ -467,6 +564,20 @@ function NewAgentForm() {
 								disabled={!canAddMore}
 							/>
 							<ModeSelector disabled={isStarting} />
+							<StandardTooltip
+								content={
+									yoloMode ? t("sessionDetail.yoloModeEnabled") : t("sessionDetail.yoloModeDisabled")
+								}>
+								<button
+									className={cn("am-run-mode-trigger-inline", yoloMode && "am-yolo-active")}
+									onClick={() => setYoloMode(!yoloMode)}
+									disabled={isStarting}
+									type="button"
+									aria-pressed={yoloMode}
+									aria-label={t("sessionDetail.yoloModeToggle")}>
+									<Zap size={14} className={cn(yoloMode && "text-yellow-500")} />
+								</button>
+							</StandardTooltip>
 							<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
 								<StandardTooltip
 									content={

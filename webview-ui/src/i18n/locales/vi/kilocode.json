@@ -1,4 +1,19 @@
 {
+	"onboarding": {
+		"title": "Bạn muốn bắt đầu như thế nào?",
+		"freeModels": {
+			"title": "Mô hình miễn phí",
+			"description": "Bắt đầu lập trình ngay"
+		},
+		"premiumModels": {
+			"title": "Mô hình cao cấp",
+			"description": "Đăng ký. Người dùng mới nhận $5 tín dụng"
+		},
+		"byok": {
+			"title": "Sử dụng khóa của bạn",
+			"description": "Nâng cao. Sử dụng tài khoản hoặc đăng ký của bạn"
+		}
+	},
 	"welcome": {
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
@@ -228,7 +243,7 @@
 			"idea7": "Tạo một trường sao tương tác êm dịu di chuyển theo cử chỉ chuột"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Gợi ý Trình soạn thảo Mã",

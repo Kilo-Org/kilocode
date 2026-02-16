@@ -97,7 +97,7 @@
 			"generateButton": "커밋 메시지 생성"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "일시 중지됨",

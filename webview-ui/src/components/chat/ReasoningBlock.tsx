@@ -61,9 +61,13 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 						handleToggle()
 					}
 				}}>
+				className="flex items-center justify-between pr-2 cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity" // kilocode_change: removed mb-2.5, added opacity
+				onClick={handleToggle}>
 				<div className="flex items-center gap-2">
 					<Lightbulb className="w-4" />
-					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+					{/* kilocode_change start */}
+					<span className="text-sm text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+					{/* kilocode_change end */}
 					{elapsed > 0 && (
 						<span className="text-sm text-vscode-descriptionForeground mt-0.5">{secondsLabel}</span>
 					)}
