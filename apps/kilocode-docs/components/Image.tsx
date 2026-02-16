@@ -11,7 +11,7 @@ interface ImageProps {
 // Helper to add 'px' to numeric values that don't have units
 function addPxIfNeeded(value: string): string {
 	// If the value is purely numeric, add 'px'
-	if (/^\d+$/.test(value)) {
+	if (/^\d+(\.\d+)?$/.test(value)) {
 		return `${value}px`
 	}
 	return value
