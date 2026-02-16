@@ -11,14 +11,16 @@ The Kilo Code CLI supports MCP servers, but uses a **different configuration pat
 
 | Environment | MCP Settings Path                                   |
 | ----------- | --------------------------------------------------- |
-| **CLI**     | `~/.kilocode/cli/global/settings/mcp_settings.json` |
+| **CLI**     | `~/.config/kilo/opencode.json`                     |
 | **VS Code** | VS Code's global storage directory                  |
 
-MCP servers configured in VS Code are **not** automatically available in the CLI. You must configure them separately.
+The CLI reads and writes MCP server configuration in the global config file above. Use `kilo mcp add` to add servers (it updates this file); `kilo mcp list` reflects what is stored there. MCP servers configured in VS Code are **not** automatically available in the CLI. You must configure them separately.
+
+> **Former location:** The CLI previously used `~/.kilocode/cli/global/settings/mcp_settings.json`. That path is no longer used; editing it has no effect. Use `~/.config/kilo/opencode.json` instead.
 
 ## Configuration Format
 
-Edit `~/.kilocode/cli/global/settings/mcp_settings.json`:
+Edit `~/.config/kilo/opencode.json` (or use `kilo mcp add` to add servers and let the CLI update the file):
 
 ```json
 {
