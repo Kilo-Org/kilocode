@@ -702,7 +702,7 @@
 		"fuse.js": "^7.1.0",
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
-		"global-agent": "^3.0.0",
+		"global-agent": "^4.1.2",
 		"google-auth-library": "^9.15.1",
 		"gray-matter": "^4.0.3",
 		"i18next": "^25.0.0",
