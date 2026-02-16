@@ -24,6 +24,12 @@
 		"modelNotFound": "ไม่พบโมเดล {{model}} ใน Amazon Bedrock",
 		"missingConfiguration": "การกำหนดค่า Amazon Bedrock หายไปสำหรับการสร้าง embedder"
 	},
+	"voyage": {
+		"invalidResponseFormat": "รูปแบบการตอบสนองไม่ถูกต้องจาก Voyage AI",
+		"invalidCredentials": "API key ของ Voyage AI ไม่ถูกต้อง กรุณาตรวจสอบการกำหนดค่า API key ของคุณ",
+		"accessDenied": "การเข้าถึงถูกปฏิเสธ ที่อยู่ IP ของคุณอาจถูกบล็อกโดย Voyage AI ลองใช้เครือข่ายอื่น",
+		"modelNotFound": "ไม่พบโมเดล {{model}} ใน Voyage AI กรุณาตรวจสอบการเลือกโมเดลของคุณ"
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "ข้อผิดพลาดที่ไม่รู้จักในการประมวลผลไฟล์ {{filePath}}",
 		"unknownErrorDeletingPoints": "ข้อผิดพลาดที่ไม่รู้จักในการลบจุดสำหรับ {{filePath}}",
@@ -59,6 +65,7 @@
 		"vercelAiGatewayConfigMissing": "การกำหนดค่า Vercel AI Gateway หายไปสำหรับการสร้าง embedder",
 		"bedrockConfigMissing": "การกำหนดค่า Amazon Bedrock หายไปสำหรับการสร้าง embedder",
 		"openRouterConfigMissing": "การกำหนดค่า OpenRouter หายไปสำหรับการสร้าง embedder",
+		"voyageConfigMissing": "การกำหนดค่า Voyage AI หายไปสำหรับการสร้าง embedder",
 		"invalidEmbedderType": "ประเภท embedder ที่กำหนดค่าไม่ถูกต้อง: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' กรุณาตรวจสอบให้แน่ใจว่า 'Embedding Dimension' ถูกตั้งค่าอย่างถูกต้องในการตั้งค่าผู้ให้บริการ OpenAI-Compatible",
 		"vectorDimensionNotDetermined": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' ตรวจสอบโปรไฟล์โมเดลหรือการกำหนดค่า",

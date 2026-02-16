@@ -1993,8 +1993,8 @@ export class ClineProvider
 		try {
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
-	
-				// remove task from stack if it's the current task
+
+			// remove task from stack if it's the current task
 			if (id === this.getCurrentTask()?.taskId) {
 				// Close the current task instance; delegation flows will be handled via metadata if applicable.
 				await this.removeClineFromStack()
@@ -2397,6 +2397,7 @@ export class ClineProvider
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
+			currentTaskCumulativeCost: this.getCurrentTask()?.getCumulativeTotalCost(), // kilocode_change
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
 			taskHistoryFullLength: taskHistory.length, // kilocode_change
 			taskHistoryVersion: this.kiloCodeTaskHistoryVersion, // kilocode_change
@@ -3391,6 +3392,13 @@ export class ClineProvider
 				return
 			}
 
+			// Phase 1: Show dialog immediately with loading state
+			await this.postMessageToWebview({
+				type: "askReviewScope",
+				reviewScopeInfo: undefined,
+			})
+
+			// Phase 2: Compute scope info and hydrate
 			const { ReviewService } = await import("../../services/review")
 			const reviewService = new ReviewService({ cwd })
 			const scopeInfo = await reviewService.getScopeInfo()

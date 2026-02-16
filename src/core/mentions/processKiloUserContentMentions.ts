@@ -9,6 +9,7 @@ import { parseKiloSlashCommands } from "../slash-commands/kilo"
 import { refreshWorkflowToggles } from "../context/instructions/workflows" // kilocode_change
 
 import * as vscode from "vscode" // kilocode_change
+import { ClineRulesToggles } from "../../shared/cline-rules"
 
 // This function is a duplicate of processUserContentMentions, but it adds a check for the newrules command
 // and processes Kilo-specific slash commands. It should be merged with processUserContentMentions in the future.
@@ -41,6 +42,35 @@ export async function processKiloUserContentMentions({
 	// kilocode_change
 	const mentionTagRegex = /<(?:task|feedback|answer|user_message)>/
 
+	// Helper function to process text through parseMentions and parseKiloSlashCommands
+	// Returns the processed text and whether a kilorules check is needed
+	const processTextContent = async (
+		text: string,
+		localWorkflowToggles: ClineRulesToggles,
+		globalWorkflowToggles: ClineRulesToggles,
+	): Promise<{ processedText: string; needsRulesFileCheck: boolean }> => {
+		const parsedText = await parseMentions(
+			text,
+			cwd,
+			urlContentFetcher,
+			fileContextTracker,
+			rooIgnoreController,
+			showRooIgnoredFiles,
+			includeDiagnosticMessages,
+			maxDiagnosticMessages,
+			maxReadFileLine,
+		)
+
+		// when parsing slash commands, we still want to allow the user to provide their desired context
+		const { processedText, needsRulesFileCheck: needsCheck } = await parseKiloSlashCommands(
+			parsedText.text,
+			localWorkflowToggles,
+			globalWorkflowToggles,
+		)
+
+		return { processedText, needsRulesFileCheck: needsCheck }
+	}
+
 	const processUserContentMentions = async () => {
 		// Process userContent array, which contains various block types:
 		// TextBlockParam, ImageBlockParam, ToolUseBlockParam, and ToolResultBlockParam.
@@ -62,24 +92,10 @@ export async function processKiloUserContentMentions({
 
 				if (block.type === "text") {
 					if (shouldProcessMentions(block.text)) {
-						// kilocode_change begin: pull slash commands from Cline
-						const parsedText = await parseMentions(
+						const { processedText, needsRulesFileCheck: needsCheck } = await processTextContent(
 							block.text,
-							cwd,
-							urlContentFetcher,
-							fileContextTracker,
-							rooIgnoreController,
-							showRooIgnoredFiles,
-							includeDiagnosticMessages,
-							maxDiagnosticMessages,
-							maxReadFileLine,
-						)
-
-						// when parsing slash commands, we still want to allow the user to provide their desired context
-						const { processedText, needsRulesFileCheck: needsCheck } = await parseKiloSlashCommands(
-							parsedText.text,
-							localWorkflowToggles, // kilocode_change
-							globalWorkflowToggles, // kilocode_change
+							localWorkflowToggles,
+							globalWorkflowToggles,
 						)
 
 						if (needsCheck) {
@@ -90,27 +106,25 @@ export async function processKiloUserContentMentions({
 							...block,
 							text: processedText,
 						}
-						// kilocode_change end
 					}
 
 					return block
 				} else if (block.type === "tool_result") {
 					if (typeof block.content === "string") {
 						if (shouldProcessMentions(block.content)) {
-							const parsedResult = await parseMentions(
+							const { processedText, needsRulesFileCheck: needsCheck } = await processTextContent(
 								block.content,
-								cwd,
-								urlContentFetcher,
-								fileContextTracker,
-								rooIgnoreController,
-								showRooIgnoredFiles,
-								includeDiagnosticMessages,
-								maxDiagnosticMessages,
-								maxReadFileLine,
+								localWorkflowToggles,
+								globalWorkflowToggles,
 							)
+
+							if (needsCheck) {
+								needsRulesFileCheck = true
+							}
+
 							return {
 								...block,
-								content: parsedResult.text,
+								content: processedText,
 							}
 						}
 
@@ -119,20 +133,19 @@ export async function processKiloUserContentMentions({
 						const parsedContent = await Promise.all(
 							block.content.map(async (contentBlock) => {
 								if (contentBlock.type === "text" && shouldProcessMentions(contentBlock.text)) {
-									const parsedResult = await parseMentions(
+									const { processedText, needsRulesFileCheck: needsCheck } = await processTextContent(
 										contentBlock.text,
-										cwd,
-										urlContentFetcher,
-										fileContextTracker,
-										rooIgnoreController,
-										showRooIgnoredFiles,
-										includeDiagnosticMessages,
-										maxDiagnosticMessages,
-										maxReadFileLine,
+										localWorkflowToggles,
+										globalWorkflowToggles,
 									)
+
+									if (needsCheck) {
+										needsRulesFileCheck = true
+									}
+
 									return {
 										...contentBlock,
-										text: parsedResult.text,
+										text: processedText,
 									}
 								}
 

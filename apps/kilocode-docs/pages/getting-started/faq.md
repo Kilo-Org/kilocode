@@ -101,7 +101,7 @@ Yes, Kilo Code supports running models locally using [Ollama](/docs/providers/ol
 
 ### How do I start a new task?
 
-Open the Kilo Code panel (<img src="/docs/img/kilo-v1.svg" width="12" />) and type your task in the chat box. Be clear and specific about what you want Kilo Code to do. See [The Chat Interface](/docs/basic-usage/the-chat-interface) for best practices.
+Open the Kilo Code panel ({% kiloCodeIcon size="1em" /%}) and type your task in the chat box. Be clear and specific about what you want Kilo Code to do. See [The Chat Interface](/docs/basic-usage/the-chat-interface) for best practices.
 
 ### When should I use chat vs autocomplete?
 

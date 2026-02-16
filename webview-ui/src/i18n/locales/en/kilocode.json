@@ -257,7 +257,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Code Editor Suggestions",

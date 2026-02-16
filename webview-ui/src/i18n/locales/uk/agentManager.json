@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Так",
 		"shareConfirmNo": "Ні",
 		"options": "Параметри",
-		"configureSetupScript": "Скрипт налаштування worktree"
+		"configureSetupScript": "Скрипт налаштування worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
@@ -64,7 +65,14 @@
 		"defaultModel": "Модель за замовчуванням",
 		"loadingModels": "Завантаження...",
 		"selectMode": "Вибрати режим",
-		"modeTooltip": "Режим: {{mode}}"
+		"modeTooltip": "Режим: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",
@@ -81,7 +89,9 @@
 		"collapseOutput": "Згорнути вивід",
 		"copyCommand": "Копіювати команду",
 		"thinking": "Думаю",
-		"thinkingSeconds": "{{count}}с"
+		"thinkingSeconds": "{{count}}с",
+		"approve": "Схвалити",
+		"deny": "Відхилити"
 	},
 	"chatInput": {
 		"autoMode": "Агент працює в повністю автоматичному режимі - введення заборонено",

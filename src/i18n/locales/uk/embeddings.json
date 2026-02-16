@@ -23,6 +23,12 @@
 		"accessDenied": "Відмовлено в доступі до сервісу Amazon Bedrock. Будь ласка, перевір свої дозволи IAM.",
 		"modelNotFound": "Модель {{model}} не знайдена в Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Недійсний формат відповіді від Voyage AI",
+		"invalidCredentials": "Недійсний API ключ Voyage AI. Будь ласка, перевір конфігурацію свого API ключа.",
+		"accessDenied": "Доступ заборонено. Твоя IP-адреса може бути заблокована Voyage AI. Спробуй іншу мережу.",
+		"modelNotFound": "Модель {{model}} не знайдена у Voyage AI. Будь ласка, перевір вибір моделі."
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Невідома помилка при обробці файлу {{filePath}}",
 		"unknownErrorDeletingPoints": "Невідома помилка при видаленні точок для {{filePath}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Відсутня конфігурація OpenRouter для створення embedder",
 		"vercelAiGatewayConfigMissing": "Відсутня конфігурація Vercel AI Gateway для створення embedder",
 		"bedrockConfigMissing": "Відсутня конфігурація Amazon Bedrock для створення embedder",
+		"voyageConfigMissing": "Відсутня конфігурація Voyage AI для створення embedder",
 		"invalidEmbedderType": "Налаштовано недійсний тип embedder: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Будь ласка, переконайся, що 'Розмірність Embedding' правильно встановлена в налаштуваннях провайдера OpenAI-Compatible.",
 		"vectorDimensionNotDetermined": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Перевір профілі моделі або конфігурацію.",

@@ -250,7 +250,7 @@
 			"idea7": "マウスジェスチャーに合わせて動く落ち着いたインタラクティブな星空を作成"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "コードエディタの提案",

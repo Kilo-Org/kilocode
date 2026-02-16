@@ -16,7 +16,8 @@
 		"shareConfirmYes": "हाँ",
 		"shareConfirmNo": "नहीं",
 		"options": "विकल्प",
-		"configureSetupScript": "Worktree सेटअप स्क्रिप्ट"
+		"configureSetupScript": "Worktree सेटअप स्क्रिप्ट",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
@@ -62,7 +63,14 @@
 		"defaultModel": "डिफ़ॉल्ट मॉडल",
 		"loadingModels": "लोड हो रहा है...",
 		"selectMode": "मोड चुनें",
-		"modeTooltip": "मोड: {{mode}}"
+		"modeTooltip": "मोड: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
@@ -79,7 +87,9 @@
 		"collapseOutput": "आउटपुट संक्षिप्त करें",
 		"copyCommand": "कमांड कॉपी करें",
 		"thinking": "विचार कर रहा है",
-		"thinkingSeconds": "{{count}} सेकंड"
+		"thinkingSeconds": "{{count}} सेकंड",
+		"approve": "स्वीकार करें",
+		"deny": "अस्वीकार करें"
 	},
 	"chatInput": {
 		"autoMode": "एजेंट पूर्ण-स्वचालित मोड में चल रहा है - इनपुट की अनुमति नहीं है",

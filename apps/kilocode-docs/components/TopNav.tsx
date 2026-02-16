@@ -30,6 +30,7 @@ const mainNavItems: NavItem[] = [
 	{ label: "Collaborate", href: "/collaborate" },
 	{ label: "Automate", href: "/automate" },
 	{ label: "Deploy & Secure", href: "/deploy-secure" },
+	{ label: "Kilo Gateway", href: "/gateway" },
 	{ label: "Contributing", href: "/contributing" },
 ]
 
@@ -88,6 +89,33 @@ function SparkleIcon({ className }: { className?: string }) {
 				d="M8 1V3M8 13V15M3 8H1M15 8H13M12.5 3.5L11 5M5 11L3.5 12.5M12.5 12.5L11 11M5 5L3.5 3.5"
 				stroke="currentColor"
 				strokeWidth="1.5"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+		</svg>
+	)
+}
+
+function SearchIcon({ className }: { className?: string }) {
+	return (
+		<svg
+			className={className}
+			width="20"
+			height="20"
+			viewBox="0 0 20 20"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			<path
+				d="M19 19L14.65 14.65"
+				stroke="currentColor"
+				strokeWidth="2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
@@ -203,6 +231,14 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 		return router.pathname.startsWith(href)
 	}
 
+	// Open DocSearch modal programmatically
+	const openDocSearch = () => {
+		const searchButton = document.querySelector(".DocSearch-Button") as HTMLButtonElement
+		if (searchButton) {
+			searchButton.click()
+		}
+	}
+
 	// Initialize DocSearch
 	useEffect(() => {
 		docsearch({
@@ -253,6 +289,13 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 				</div>
 
 				<div className="right-actions">
+					{/* Mobile search button */}
+					<button
+						className="mobile-search-btn mobile-only"
+						onClick={openDocSearch}
+						aria-label="Search documentation">
+						<SearchIcon />
+					</button>
 					<ThemeToggle />
 					<Link href="https://kilo.ai/github" className="github-link desktop-nav">
 						GitHub
@@ -287,6 +330,16 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 						onClose={handleDropdownClose}
 					/>
 				</div>
+			</div>
+
+			{/* Announcement banner */}
+			<div className="announcement-banner">
+				<p>
+					We're{" "}
+					<Link href="https://blog.kilo.ai/p/kilo-cli">replatforming our extensions on the new Kilo CLI</Link>
+					. Contribute to the new CLI and pre-release extensions at{" "}
+					<Link href="https://github.com/Kilo-Org/kilo">Kilo-Org/kilo</Link>.
+				</p>
 			</div>
 
 			<style jsx>{`
@@ -425,6 +478,22 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 					gap: 0.5rem;
 				}
 
+				.mobile-search-btn {
+					display: none;
+					align-items: center;
+					justify-content: center;
+					padding: 0.5rem;
+					background: transparent;
+					border: none;
+					cursor: pointer;
+					color: var(--text-secondary);
+					transition: color 0.15s ease;
+				}
+
+				.mobile-search-btn:hover {
+					color: var(--text-color);
+				}
+
 				/* Mobile styles */
 				@media (max-width: 768px) {
 					.top-bar {
@@ -432,6 +501,14 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 					}
 
 					.mobile-menu-btn {
+						display: flex;
+					}
+
+					.mobile-search-btn {
+						display: flex;
+					}
+
+					.mobile-only {
 						display: flex;
 					}
 
@@ -449,6 +526,35 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
 					.right-actions {
 						gap: 0.5rem;
+					}
+				}
+
+				.announcement-banner {
+					background: #1a1a18;
+					color: #a3a3a2;
+					padding: 0.5rem 1rem;
+					text-align: center;
+					font-size: 0.875rem;
+					border-bottom: 1px solid #3f3f3f;
+				}
+
+				.announcement-banner p {
+					margin: 0;
+				}
+
+				.announcement-banner :global(a) {
+					color: #f8f674;
+					text-decoration: underline;
+					text-underline-offset: 2px;
+				}
+
+				.announcement-banner :global(a:hover) {
+					color: #ffff8d;
+				}
+
+				@media (max-width: 768px) {
+					.announcement-banner {
+						font-size: 0.8rem;
 					}
 				}
 			`}</style>

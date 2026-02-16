@@ -26,7 +26,7 @@ Before configuring this provider, you must have at least one other API provider 
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Virtual Quota Fallback" from the "API Provider" dropdown. This will open its dedicated configuration panel.
 
-<img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="virtuaQuotaFallback dropdown selection in Kilo Code settings" width="600" />
+<!-- <img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="virtuaQuotaFallback dropdown selection in Kilo Code settings" width="600" /> -->
 
 3.  **Add a Provider Profile:**
 
@@ -46,7 +46,7 @@ Before configuring this provider, you must have at least one other API provider 
 
 6.  **Add More Providers:** Repeat steps 3-5 to build your complete fallback chain. You can add as many profiles as you have configured.
 
-<img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="virtuaQuotaFallback configuration in Kilo Code settings" width="600" />
+<!-- <img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="virtuaQuotaFallback configuration in Kilo Code settings" width="600" /> -->
 
 ## Usage Monitoring
 

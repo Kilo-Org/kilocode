@@ -1,0 +1,405 @@
+{
+	"onboarding": {
+		"title": "Ako chceš začať?",
+		"freeModels": {
+			"title": "Bezplatné modely",
+			"description": "Začni programovať ihneď"
+		},
+		"premiumModels": {
+			"title": "Prémiové modely",
+			"description": "Zaregistruj sa. Noví používatelia získajú kredit 5 $"
+		},
+		"byok": {
+			"title": "Použi vlastný kľúč",
+			"description": "Pokročilé. Použi svoj vlastný účet alebo predplatné"
+		}
+	},
+	"welcome": {
+		"greeting": "Vitaj v Kilo Code!",
+		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
+		"introText2": "Funguje s najnovšími AI modelmi ako Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 a viac ako 450 ďalšími.",
+		"introText3": "Vytvor si bezplatný účet a získaj $20 bonusových kreditov pri prvom dobití.",
+		"ctaButton": "Začať",
+		"manualModeButton": "Použi vlastný API key",
+		"alreadySignedUp": "Už si registrovaný?",
+		"loginText": "Prihlás sa tu"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Pridať kredit",
+		"lowBalance": "Tvoj Kilo Code zostatok je nízky",
+		"switchToFreeModel": "Prepnúť na bezplatný model"
+	},
+	"pagination": {
+		"previous": "Predchádzajúca",
+		"next": "Ďalšia",
+		"page": "Stránka {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Alfa obdobie pre {{model}} skončilo! Zmeň na iný model pre pokračovanie.",
+		"notAllowedForTeam": "⚠️ Tvoja organizácia nepovoľuje použitie modelu {{model}}. Zmeň na iný model pre pokračovanie.",
+		"modelUnavailable": "⚠️ Model {{model}} nie je dostupný. Zmeň na iný model pre pokračovanie.",
+		"continueWith": "Pokračovať s {{model}}",
+		"continue": "Pokračovať"
+	},
+	"unauthorizedError": {
+		"title": "Musíš sa prihlásiť, aby si mohol použiť model {{modelId}}",
+		"message": "Prihlás sa alebo si vytvor účet pre prístup k viac ako 500 modelom, použi kredity za obstarávaciu cenu alebo prines svoj vlastný kľúč.",
+		"loginButton": "Prihlásiť sa"
+	},
+	"pricing": {
+		"costUnknown": "neznáme náklady",
+		"costUnknownDescription": "Poskytovateľ API neposkytol žiadne údaje o nákladoch alebo bola požiadavka zrušená.",
+		"freeModelsLink": "Objavte možnosti bezplatných a rozpočtových modelov"
+	},
+	"notifications": {
+		"toolRequest": "Požiadavka na nástroj čaká na schválenie",
+		"browserAction": "Akcia prehliadača čaká na schválenie",
+		"command": "Príkaz čaká na schválenie"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP servery",
+			"agentBehaviour": "Správanie agenta",
+			"skills": "Zručnosti"
+		},
+		"provider": {
+			"account": "Účet Kilo Code",
+			"apiKey": "Kilo Code API Key",
+			"login": "Prihlásiť sa do Kilo Code",
+			"logout": "Odhlásiť sa z Kilo Code",
+			"loginForPremiumModels": "Prihlás sa pre prístup k prémiovým modelom a funkciám",
+			"providerRouting": {
+				"title": "Smerovanie poskytovateľov",
+				"managedByOrganization": "Spravovať smerovanie poskytovateľov na úrovni organizácie",
+				"createOrganization": "Vytvoriť organizáciu pre správu smerovania poskytovateľov",
+				"description": "Kilo Code smeruje požiadavky na najlepších dostupných poskytovateľov pre váš model. V predvolenom nastavení sú požiadavky rozložené medzi najlepších poskytovateľov, aby sa maximalizovala doba prevádzky. Môžete si však vybrať konkrétneho poskytovateľa, ktorého chcete pre tento model použiť.",
+				"sorting": {
+					"default": "Predvolené radenie poskytovateľov",
+					"price": "Uprednostniť poskytovateľov s nižšou cenou",
+					"throughput": "Uprednostniť poskytovateľov s vyššou priepustnosťou",
+					"latency": "Uprednostniť poskytovateľov s nižšou latenciou"
+				},
+				"dataCollection": {
+					"default": "Nie je nastavená zásada dát",
+					"allowFree": "Povoliť trénovanie promptov (iba zadarmo)",
+					"allow": "Povoliť trénovanie promptov",
+					"deny": "Zakázať trénovanie promptov",
+					"zdr": "Nulové uchovávanie dát"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Kontextové okno",
+			"providerBreakdown": "Rozpis cien a schopností poskytovateľov",
+			"averageKiloCodeCost": "Toto sú priemerné skutočné náklady za použitie tohto modelu v Kilo Code za posledný týždeň. Môže byť nižšia ako uvedená cena vďaka využitiu cache pre prompty.",
+			"table": {
+				"provider": "Poskytovateľ",
+				"context": "Endpoint môže spracovať tento počet tokenov (vstup + výstup).",
+				"inputPrice": "Náklady za milión tokenov pre prompt.",
+				"outputPrice": "Náklady za milión tokenov pre dokončenie.",
+				"cacheReadPrice": "Náklady za milión tokenov pre čítanie z cache.",
+				"cacheWritePrice": "Náklady za milión tokenov pre zápis do cache."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Povoliť čítanie veľmi veľkých súborov",
+				"description": "Keď je povolené, Kilo Code vykoná čítanie veľmi veľkých súborov alebo výstupov MCP aj keď existuje vysoká pravdepodobnosť pretečenia kontextového okna (veľkosť obsahu >80% kontextového okna)."
+			}
+		},
+		"systemNotifications": {
+			"label": "Povoliť systémové oznámenia",
+			"description": "Keď je povolené, Kilo Code bude odosielať systémové oznámenia pre dôležité udalosti ako dokončenie úlohy alebo chyby.",
+			"testButton": "Otestovať oznámenia",
+			"testTitle": "Kilo Code",
+			"testMessage": "Toto je testovacie oznámenie z Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"current": "Použiť aktuálnu konfiguráciu",
+					"label": "Konfigurácia API",
+					"description": "Vyberte, ktorú konfiguráciu API chcete použiť pre generovanie príkazov do terminálu. Ak chcete použiť predvolené nastavenie, ponechajte 'Použiť aktuálnu konfiguráciu'."
+				},
+				"provider": "Poskytovateľ generátora terminálových príkazov"
+			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Veľkosť dávky embeddingu",
+			"embeddingBatchSizeDescription": "Počet segmentov kódu, ktoré sa zoskupia pre generovanie embeddingov a vektorové upserty. Vyššie hodnoty môžu zlepšiť rýchlosť indexovania, ale môžu zvýšiť spotrebu pamäte. Nižšie hodnoty znižujú spotrebu pamäte, ale môžu spomaliť indexovanie.",
+			"scannerMaxBatchRetriesLabel": "Maximálny počet opakovaní dávky skenera",
+			"scannerMaxBatchRetriesDescription": "Maximálny počet pokusov o opakovanie neúspešnej dávky počas skenovania adresárov. Vyššie hodnoty zvyšujú odolnosť voči prechodným chybám, ale môžu spomaliť indexovanie, ak chyby pretrvávajú. Nižšie hodnoty zlyhávajú rýchlejšie, ale môžu pri dočasných problémoch preskočiť obsah."
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code chce skrátiť tvoju konverzáciu",
+			"condenseConversation": "Skrátiť konverzáciu"
+		},
+		"seeNewChanges": "Zobraziť nové zmeny",
+		"revertNewChanges": "Vrátiť nové zmeny",
+		"confirmRevertChanges": "Potvrdiť vrátenie zmien",
+		"cancelRevertChanges": "Zrušiť vrátenie zmien"
+	},
+	"newTaskPreview": {
+		"task": "Úloha"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Prehľad",
+		"logOut": "Odhlásiť sa",
+		"currentBalance": "AKTUÁLNY ZOSTATOK",
+		"loading": "Načítanie...",
+		"organization": "Organizácia",
+		"personal": "Osobný",
+		"shop": {
+			"title": "Kúpiť kredity",
+			"popular": "Populárne",
+			"credits": "kredity",
+			"action": "Kúpiť teraz",
+			"viewAll": "Zobraziť všetky cenové možnosti"
+		},
+		"detailedUsage": "Podrobné využitie",
+		"createOrganization": "Vytvoriť organizáciu pre sledovanie podrobného využitia"
+	},
+	"docs": "Dokumentácia",
+	"rules": {
+		"tooltip": "Spravovať správanie agenta ({{types}})",
+		"agentBehaviourTypes": {
+			"rules": "Pravidlá",
+			"workflows": "Pracovné postupy",
+			"mcps": "MCP",
+			"modes": "Režimy",
+			"skills": "Zručnosti"
+		},
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Pravidlá",
+			"workflows": "Pracovné postupy"
+		},
+		"description": {
+			"rules": "Pravidlá ti umožňujú poskytnúť Kilo Code pokyny, ktoré by mal dodržiavať vo všetkých režimoch a pre všetky prompty. Je to trvalý spôsob, ako zahrnúť kontext a preferencie pre všetky konverzácie v tvojom pracovnom priestore alebo globálne.",
+			"workflows": "Pracovné postupy sú pripravená šablóna pre konverzáciu. Pracovné postupy ti môžu umožniť definovať prompty, ktoré často používaš, a môžu zahŕňať rad krokov na vedenie Kilo Code cez opakujúce sa úlohy, ako je nasadenie služby alebo odoslanie PR. Pre vyvolanie pracovného postupu napíš",
+			"workflowsInChat": "v chate."
+		},
+		"sections": {
+			"globalRules": "Globálne pravidlá",
+			"workspaceRules": "Pravidlá pracovného priestoru",
+			"globalWorkflows": "Globálne pracovné postupy",
+			"workspaceWorkflows": "Pracovné postupy pracovného priestoru"
+		},
+		"validation": {
+			"invalidFileExtension": "Povolené iba .md, .txt alebo bez prípony súboru"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt alebo bez prípony)",
+			"ruleName": "rule-name (.md, .txt alebo bez prípony)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Nový súbor pracovného postupu...",
+			"newRuleFile": "Nový súbor pravidla..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Zobraziť {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "spustenie prehliadača",
+				"browser_action_result": "výsledok akcie prehliadača",
+				"browser_action": "akcia prehliadača",
+				"checkpoint_saved": "uložený kontrolný bod",
+				"command": "vykonanie príkazu",
+				"command_output": "výstup príkazu",
+				"completion_result": "výsledok dokončenia",
+				"condense_context": "skrátiť kontext",
+				"error": "chybová správa",
+				"followup": "následná otázka",
+				"mcp_server_response": "odpoveď MCP servera",
+				"reasoning": "uvažovanie AI",
+				"text": "odpoveď AI",
+				"tool": "použitie nástroja",
+				"unknown": "neznámy typ správy",
+				"use_mcp_server": "použitie MCP servera",
+				"user": "spätná väzba používateľa"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "Zrušiť",
+		"send": "Odoslať",
+		"restoreAndSend": "Obnoviť a odoslať"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Nový tu?",
+		"tryOneOfThese": "Skús jeden z týchto nápadov pre začiatok:",
+		"suggestionText": "<suggestionButton>Klikni sem</suggestionButton> pre skvelý nápad, potom klikni na <sendIcon /> a sleduj ma, ako robím zázraky!",
+		"ideas": {
+			"idea1": "Vytvor rotujúcu, žiariacu 3D guľu, ktorá reaguje na pohyby myši. Urob aplikáciu funkčnú v prehliadači.",
+			"idea2": "Vytvor portfóliovú webovú stránku pre Python vývojára",
+			"idea3": "Vytvor mockup finančnej aplikácie v prehliadači. Potom otestuj, či funguje",
+			"idea4": "Vytvor adresárovú webovú stránku obsahujúcu aktuálne najlepšie AI modely pre generovanie videí",
+			"idea5": "Vytvor generátor CSS gradientov, ktorý exportuje vlastné štýly a zobrazuje živý náhľad",
+			"idea6": "Vygeneruj karty, ktoré krásne odhalia dynamický obsah pri nabehnutí myšou",
+			"idea7": "Vytvor upokojujúce interaktívne hviezdne pole, ktoré sa pohybuje s gestami myši"
+		}
+	},
+	"toolCallStyle": {
+		"title": "Štýl volania nástrojov",
+		"description": "Vyber, ako sú volania nástrojov formátované v systémovom prompte. JSON je momentálne experimentálny a je určený predovšetkým pre používateľov, ktorí majú záujem prispieť k jeho vývoju.",
+		"automatic": "Nechaj Kilo rozhodnúť",
+		"xml": "XML",
+		"json": "JSON"
+	},
+	"autocomplete": {
+		"title": "Autocomplete",
+		"settings": {
+			"enableAutoTrigger": {
+				"label": "Automatické spúšťanie návrhov",
+				"description": "Automaticky zobrazovať návrhy kódu pri pozastavení písania."
+			},
+			"autoTriggerDelay": {
+				"label": "Oneskorenie Automatického Spustenia",
+				"description": "Oneskorenie v sekundách pred zobrazením návrhov po pozastavení písania. Kratšie oneskorenie znamená rýchlejšie návrhy, ale môže byť náročnejšie na zdroje."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Spustiť klávesovou skratkou ({{keybinding}})",
+				"description": "Stlač {{keybinding}} pre vyžiadanie návrhu kódu na pozícii kurzora. <DocsLink>Upraviť skratku</DocsLink>"
+			},
+			"keybindingNotFound": "nenájdené",
+			"configureAutocompleteProfile": "Použi ľubovoľný model tak, že prejdeš do profilov a nakonfiguruješ Profil typu Automatické dokončovanie.",
+			"model": "Model",
+			"provider": "Poskytovateľ",
+			"enableChatAutocomplete": {
+				"label": "Povoliť automatické dokončovanie v chate",
+				"description": "Zobrazovať návrhy pri písaní v chatovom vstupe. Stlač Tab pre prijatie návrhov."
+			},
+			"snooze": {
+				"label": "Pozastaviť návrhy",
+				"description": "Dočasne pozastaviť návrhy na určitú dobu.",
+				"button": "Pozastaviť",
+				"unsnooze": "Obnoviť",
+				"currentlySnoozed": "Návrhy sú momentálne pozastavené.",
+				"duration": {
+					"1min": "1 minúta",
+					"5min": "5 minút",
+					"15min": "15 minút",
+					"30min": "30 minút",
+					"1hour": "1 hodina"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Nie je nakonfigurovaný žiadny model pre automatické dokončovanie",
+				"description": "Pre povolenie automatického dokončovania pridajte profil s jedným z týchto podporovaných poskytovateľov:",
+				"learnMore": "Zistite viac o nastavení automatického dokončovania →"
+			},
+			"noCredits": {
+				"title": "Na vašom účte nie sú žiadne kredity",
+				"description": "Váš účet Kilo Code nemá žiadne kredity. Pre použitie automatického dokončovania prosím pridajte kredity na svoj účet.",
+				"buyCredits": "Kúpiť kredity →"
+			},
+			"codeEditorSuggestions": "Návrhy v editore kódu",
+			"chatSuggestions": "Návrhy v chate"
+		}
+	},
+	"virtualProvider": {
+		"title": "Nastavenie poskytovateľa virtuálneho kvótového záložného riešenia",
+		"description": "Nakonfigurujte zoznam profilov, každý s vlastnými kvótovými limitmi. Keď sú dosiahnuté kvótové limity jedného poskytovateľa, bude použitý ďalší profil v zozname, kým žiadny nezostáva.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Primárny)",
+		"moveProfileUp": "Posunúť profil hore",
+		"moveProfileDown": "Posunúť profil dole",
+		"removeProfile": "Odstrániť profil",
+		"selectProfilePlaceholder": "Vybrať profil...",
+		"addProfile": "Pridať profil",
+		"noProfilesAvailable": "Žiadne profily nie sú k dispozícii. Najprv nakonfigurujte aspoň jeden profil nevirtuálneho poskytovateľa.",
+		"dangerZoneTitle": "Nebezpečná zóna",
+		"dangerZoneDescription": "Tieto akcie sú deštruktívne a nie je možné ich vrátiť späť.",
+		"clearUsageData": "Vymazať dáta o využití",
+		"confirmClearTitle": "Si si istý?",
+		"confirmClearDescription": "Toto trvalo zmaže všetky uložené dáta o využití pre virtuálnych poskytovateľov. Túto akciu nie je možné vrátiť späť.",
+		"tokensLabel": "Tokeny",
+		"perMinute": "Za minútu",
+		"perHour": "Za hodinu",
+		"requestsLabel": "Požiadavky",
+		"perDay": "Za deň"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Obrázky nie sú podporované aktuálnym modelom.",
+		"maxImagesReached": "Maximálne 20 obrázkov na správu. Odstráňte niektoré obrázky, aby ste mohli pridať ďalšie.",
+		"imagesRemovedNoSupport": "Obrázky odstránené, nie sú podporované modelom."
+	},
+	"memoryWarning": {
+		"message": "Využitie pamäte je na {{percentage}}%. Reštartuj prosím svoje IDE, aby sa predišlo pádom."
+	},
+	"commitMessage": {
+		"discoveringFiles": "Vyhľadávanie súborov na potvrdenie...",
+		"gettingContext": "Získavanie kontextu zo súborov...",
+		"initializing": "Inicializácia pre potvrdenie..."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Tieto servery MCP sú spravované komunitou. Kliknite <1>tu</1> pre úpravu vašich vlastných nastavení MCP."
+		},
+		"modes": {
+			"description": "Tieto režimy sú dostupné od komunity. Kliknite <1>tu</1> pre úpravu vašich vlastných režimov."
+		},
+		"skills": {
+			"description": "Prechádzajte a objavujte zručnosti od komunity. Zručnosti poskytujú špecializované inštrukcie pre konkrétne úlohy."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novinka: Zdieľajte režimy vytvorením organizácie"
+	},
+	"deviceAuth": {
+		"title": "Prihlásiť sa do Kilo Code",
+		"step1": "Otvori nasledujúcu URL vo svojom prehliadači",
+		"step2": "Over kód a autorizuj toto zariadenie vo svojom prehliadači",
+		"scanQr": "Alebo naskenuj tento QR kód svojím telefónom",
+		"openBrowser": "Otvoriť prehliadač",
+		"copyUrl": "Kopírovať URL",
+		"waiting": "Čakanie na autorizáciu...",
+		"timeRemaining": "Kód vyprší za {{time}}",
+		"success": "Úspešne prihlásený!",
+		"authenticatedAs": "Overený ako {{email}}",
+		"error": "Chyba overenia",
+		"unknownError": "Došlo k chybe. Skús to prosím znova.",
+		"cancel": "Zrušiť",
+		"retry": "Skúsiť znova",
+		"tryAgain": "Skúsiť znova",
+		"cancelled": "Overenie zrušené",
+		"initiating": "Spúšťanie overenia..."
+	},
+	"speechToText": {
+		"startRecording": "Spustiť hlasový vstup",
+		"stopRecording": "Zastaviť hlasový vstup",
+		"setupPopover": {
+			"title": "Prevod reči na text",
+			"openAiReason": "Pre použitie hlasovej transkripcie potrebujete platného poskytovateľa OpenAI s API kľúčom.",
+			"description": "Prevod reči na text nie je k dispozícii. Prevod reči na text vyžaduje ako FFmpeg, tak platne nakonfigurovaného poskytovateľa OpenAI. <moreInfoLink>Kliknite sem pre viac informácií</moreInfoLink>.",
+			"ffmpegReason": "Potrebujete nainštalovaný FFmpeg. <ffmpegLink>Kliknite tu</ffmpegLink>, aby vám Kilo pomohlo s inštaláciou FFmpeg.",
+			"ffmpegMessage": "Pomôžte mi nainštalovať FFmpeg"
+		},
+		"misconfiguredState": "Nedostupné kvôli konfigurácii",
+		"errorState": "Nedostupné kvôli chybe",
+		"microphone": {
+			"label": "Mikrofón",
+			"description": "Vyberte mikrofónne zariadenie pre prevod reči na text",
+			"defaultOption": "Predvolené nastavenie systému",
+			"loading": "Načítanie mikrofónnych zariadení...",
+			"refresh": "Obnoviť",
+			"noDevices": "Neboli nájdené žiadne zariadenia mikrofónu"
+		}
+	},
+	"skills": {
+		"description": "Zručnosti poskytujú špecializované inštrukcie pre konkrétne úlohy. Sú automaticky aplikované, keď sú relevantné pre tvoju požiadavku.",
+		"noSkills": "Žiadne zručnosti nainštalované",
+		"projectSkills": "Zručnosti projektu",
+		"globalSkills": "Globálne zručnosti",
+		"deleteDialog": {
+			"title": "Zmazať zručnosť",
+			"description": "Naozaj chceš zmazať zručnosť \"{{skillName}}\"? Túto akciu nie je možné vrátiť späť.",
+			"cancel": "Zrušiť",
+			"delete": "Zmazať"
+		}
+	}
+}

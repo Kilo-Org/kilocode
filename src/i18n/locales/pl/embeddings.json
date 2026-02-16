@@ -12,6 +12,12 @@
 		"accessDenied": "Odmowa dostępu do usługi Amazon Bedrock. Sprawdź uprawnienia IAM.",
 		"modelNotFound": "Model {{model}} nie znaleziony w Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Nieprawidłowy format odpowiedzi z Voyage AI",
+		"invalidCredentials": "Nieprawidłowy klucz API Voyage AI. Sprawdź konfigurację klucza API.",
+		"accessDenied": "Odmowa dostępu. Twój adres IP może być zablokowany przez Voyage AI. Spróbuj innej sieci.",
+		"modelNotFound": "Model {{model}} nie znaleziony w Voyage AI. Sprawdź wybór modelu."
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Nie można odczytać treści błędu",
 		"requestFailed": "Żądanie API Ollama nie powiodło się ze statusem {{status}} {{statusText}}: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Brak konfiguracji OpenRouter do utworzenia embeddera",
 		"vercelAiGatewayConfigMissing": "Brak konfiguracji Vercel AI Gateway do utworzenia embeddera",
 		"bedrockConfigMissing": "Brak konfiguracji Amazon Bedrock do utworzenia embeddera",
+		"voyageConfigMissing": "Brak konfiguracji Voyage AI do utworzenia embeddera",
 		"invalidEmbedderType": "Skonfigurowano nieprawidłowy typ embeddera: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nie można określić wymiaru wektora dla modelu '{{modelId}}' z dostawcą '{{provider}}'. Upewnij się, że 'Wymiar osadzania' jest poprawnie ustawiony w ustawieniach dostawcy kompatybilnego z OpenAI.",
 		"vectorDimensionNotDetermined": "Nie można określić wymiaru wektora dla modelu '{{modelId}}' z dostawcą '{{provider}}'. Sprawdź profile modelu lub konfigurację.",

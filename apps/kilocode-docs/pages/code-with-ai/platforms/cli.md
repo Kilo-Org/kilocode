@@ -3,37 +3,46 @@ title: "Kilo CLI"
 description: "Using Kilo Code from the command line"
 ---
 
+{% callout type="warning" title="Version Notice" %}
+This documentation applies only to Kilo version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
+{% /callout %}
+
 # Kilo CLI
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
 The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
-## Install
+## Getting Started
 
-`npm install -g @kilocode/cli`
+### Install
 
-Change directory to where you want to work and run kilocode:
+{% partial file="install-cli.md" /%}
+
+Change directory to where you want to work and run kilo:
 
 ```bash
-# Start interactive chat session
-kilocode
+# Start the TUI
+kilo
 
-# Start with a specific mode
-kilocode --mode architect
+# Check the version
+kilo --version
 
-# Start with a specific workspace
-kilocode --workspace /path/to/project
-
-# Resume last conversation from current workspace
-kilocode --continue
+# Get help
+kilo --help
 ```
 
-to start the CLI and begin a new task with your preferred model and relevant mode.
+### First-Time Setup with `/connect`
+
+After installation, run `kilo` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
 
 ## Update
 
-Upgrade the Kilo CLI package:
+Upgrade the Kilo CLI:
+
+`kilo upgrade`
+
+Or use npm:
 
 `npm update -g @kilocode/cli`
 
@@ -45,282 +54,100 @@ Upgrade the Kilo CLI package:
 - **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
 - **Extend capabilities with skills.** Add domain expertise and repeatable workflows through [Agent Skills](#skills).
 
-## CLI reference
-
-### Keyboard shortcuts
-
-| Shortcut    | Description                                                                        |
-| ----------- | ---------------------------------------------------------------------------------- |
-| `Shift+Tab` | Cycle through modes (architect → code → ask → debug → orchestrator → custom modes) |
-| `Ctrl+C`    | Exit (press twice to confirm)                                                      |
-| `Ctrl+X`    | Cancel current task                                                                |
-| `Esc`       | Cancel current task (while streaming) or clear input                               |
-| `Ctrl+Y`    | Toggle YOLO mode (auto-approve all operations)                                     |
-| `Ctrl+R`    | Resume task (when a task is ready to resume)                                       |
-| `!`         | Enter shell mode (when input is empty)                                             |
-| `↑/↓`       | Navigate command history (when input is empty)                                     |
-
-### CLI commands
-
-| Command                     | Description                                                      | Example                        |
-| --------------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| `kilocode`                  | Start interactive                                                |                                |
-| `/mode`                     | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`           |
-| `/model`                    | Learn about available models and switch between them             |                                |
-| `/model list`               | List available models                                            |                                |
-| `/model info`               | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v`    |
-| `/model select`             | Select and switch to a new model                                 |                                |
-| `/checkpoint list`          | List all available checkpoints                                   |                                |
-| `/checkpoint restore`       | Revert to a specific checkpoint (destructive action)             | `/checkpoint restore 41db173a` |
-| `/tasks`                    | View task history                                                |                                |
-| `/tasks search`             | Search tasks by query                                            | `/tasks search bug fix`        |
-| `/tasks select`             | Switch to a specific task                                        | `/tasks select abc123`         |
-| `/tasks page`               | Go to a specific page                                            | `/tasks page 2`                |
-| `/tasks next`               | Go to next page of task history                                  |                                |
-| `/tasks prev`               | Go to previous page of task history                              |                                |
-| `/tasks sort`               | Change sort order                                                | `/tasks sort most-expensive`   |
-| `/tasks filter`             | Filter tasks                                                     | `/tasks filter favorites`      |
-| `/teams`                    | List all organizations you can switch into                       |                                |
-| `/teams select`             | Switch to a different organization                               |                                |
-| `/config`                   | Open configuration editor (same as `kilocode config`)            |                                |
-| `/new`                      | Start a new task with the agent with a clean slate               |                                |
-| `/local-review`             | Review current branch changes vs base branch                     |                                |
-| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged)                   |                                |
-| `/help`                     | List available commands and how to use them                      |                                |
-| `/exit`                     | Exit the CLI                                                     |                                |
-
-## Skills
-
-The CLI supports [Agent Skills](https://agentskills.io/), a lightweight format for extending AI capabilities with specialized knowledge and workflows.
-
-Skills are discovered from:
-
-- **Global skills**: `~/.kilocode/skills/` (available in all projects)
-- **Project skills**: `.kilocode/skills/` (project-specific)
-
-Skills can be:
-
-- **Generic** - Available in all modes
-- **Mode-specific** - Only loaded when using a particular mode (e.g., `code`, `architect`)
-
-For example:
-
-```
-your-project/
-└── .kilocode/
-    ├── skills/               # Generic skills for this project
-    │   └── project-conventions/
-    │       └── SKILL.md
-    └── skills-code/          # Code mode skills for this project
-        └── linting-rules/
-            └── SKILL.md
-```
-
-### Adding a Skill
-
-1. Create the skill directory:
-
-    ```bash
-    mkdir -p ~/.kilocode/skills/api-design
-    ```
-
-2. Create a `SKILL.md` file with YAML frontmatter:
-
-    ```markdown
-    ---
-    name: api-design
-    description: REST API design best practices and conventions
-    ---
-
-    # API Design Guidelines
-
-    When designing REST APIs, follow these conventions...
-    ```
-
-    The `name` field must match the directory name exactly.
-
-3. Start a new CLI session to load the skill
-
-#### Finding skills
-
-There are community efforts to build and share agent skills. Some resources include:
-
-- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
-- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
-
-## Custom Commands
-
-Custom commands allow you to create reusable slash commands that execute predefined prompts with argument substitution. They provide a convenient way to streamline repetitive tasks and standardize workflows.
-
-Custom commands are discovered from:
-
-- **Global commands**: `~/.kilocode/commands/` (available in all projects)
-- **Project commands**: `.kilocode/commands/` (project-specific)
-
-Commands are simple markdown files with YAML frontmatter for configuration.
-
-### Creating a Custom Command
-
-1. Create the commands directory:
-
-    ```bash
-    mkdir -p ~/.kilocode/commands # mkdir %USERPROFILE%\.kilocode\commands on windows
-    ```
-
-2. Create a markdown file (e.g., `component.md`):
-
-    ```markdown
-    ---
-    description: Create a new React component
-    arguments:
-        - ComponentName
-    ---
-
-    Create a new React component named $1.
-    Include:
-
-    - Proper TypeScript typing
-    - Basic component structure
-    - Export statement
-    - A simple props interface if appropriate
-
-    Place it in the appropriate directory based on the project structure.
-    ```
-
-3. Use the command in your CLI session:
-
-    ```bash
-    /component Button
-    ```
-
-### Frontmatter Options
-
-Custom commands support the following frontmatter fields:
-
-- **`description`** (optional): Short description shown in `/help`
-- **`arguments`** (optional): List of argument names for documentation
-- **`mode`** (optional): Automatically switch to this mode when running the command
-- **`model`** (optional): Automatically switch to this model when running the command
-
-### Argument Substitution
-
-Commands support powerful argument substitution:
-
-- **`$ARGUMENTS`**: All arguments joined with spaces
-- **`$1`, `$2`, `$3`, etc.**: Individual positional arguments
-
-**Example:**
-
-```markdown
----
-description: Create a file with content
-arguments:
-    - filename
-    - content
----
-
-Create a new file named $1 with the following content:
-
-$2
-```
-
-Usage: `/createfile app.ts "console.log('Hello')"`
-
-### Mode and Model Switching
-
-Commands can automatically switch modes and models:
-
-```markdown
----
-description: Run tests with coverage
-mode: code
-model: anthropic/claude-3-5-sonnet-20241022
----
-
-Run the full test suite with coverage report and show any failures.
-Focus on the failing tests and suggest fixes.
-```
-
-When you run `/test`, it will automatically switch to code mode and use the specified model.
-
-### Example Commands
-
-**Initialize project documentation:**
-
-```markdown
----
-description: Analyze codebase and create AGENTS.md
-mode: code
----
-
-Please analyze this codebase and create an AGENTS.md file containing:
-
-1. Build/lint/test commands - especially for running a single test
-2. Code style guidelines including imports, formatting, types, naming conventions
-
-Focus on project-specific, non-obvious information discovered by reading files.
-```
-
-**Refactor code:**
-
-```markdown
----
-description: Refactor code for better quality
-arguments:
-    - filepath
----
-
-Refactor $1 to improve:
-
-- Code readability
-- Performance
-- Maintainability
-- Type safety
-
-Explain the changes you make and why they improve the code.
-```
-
-### Command Priority
-
-Project-specific commands override global commands with the same name, allowing you to customize behavior per project while maintaining sensible defaults globally.
-
-## Checkpoint Management
-
-Kilo Code automatically creates checkpoints as you work, allowing you to revert to previous states in your project's history.
-
-### Viewing Checkpoints
-
-List all available checkpoints with `/checkpoint list`:
-
-```bash
-/checkpoint list
-```
-
-This displays:
-
-- Full 40-character git commit hash
-- Relative timestamp (e.g., "5 minutes ago", "2 hours ago")
-- Auto-saved checkpoints are marked with `[auto-saved]`
-
-### Restoring Checkpoints
-
-Revert to a specific checkpoint using the full git hash:
-
-```bash
-/checkpoint restore 00d185d5020969752bc9ae40823b9d6a723696e2
-```
-
-{% callout type="danger" title="Warning" %}
-Checkpoint restoration is a **destructive action**:
-
-- Performs a git hard reset (all uncommitted changes will be lost)
-- Removes all messages from the conversation after the checkpoint
-- Cannot be undone
-
-Make sure you've committed or backed up any work you want to keep before restoring.
-{% /callout %}
-
-**Aliases:** `/cp` can be used as a shorthand for `/checkpoint`
+## CLI Reference
+
+### Top-Level CLI Commands
+
+| Command                   | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `kilo [project]`          | Start the TUI (Terminal User Interface)    |
+| `kilo run [message..]`    | Run with a message (non-interactive mode)  |
+| `kilo attach <url>`       | Attach to a running kilo server            |
+| `kilo serve`              | Start a headless server                    |
+| `kilo web`                | Start server and open web interface        |
+| `kilo auth`               | Manage credentials (login, logout, list)   |
+| `kilo agent`              | Manage agents (create, list)               |
+| `kilo mcp`                | Manage MCP servers (list, add, auth)       |
+| `kilo models [provider]`  | List available models                      |
+| `kilo stats`              | Show token usage and cost statistics       |
+| `kilo session`            | Manage sessions (list)                     |
+| `kilo export [sessionID]` | Export session data as JSON                |
+| `kilo import <file>`      | Import session data from JSON file or URL  |
+| `kilo upgrade [target]`   | Upgrade kilo to latest or specific version |
+| `kilo uninstall`          | Uninstall kilo and remove related files    |
+| `kilo pr <number>`        | Fetch and checkout a GitHub PR branch      |
+| `kilo github`             | Manage GitHub agent (install, run)         |
+| `kilo debug`              | Debugging and troubleshooting tools        |
+| `kilo completion`         | Generate shell completion script           |
+
+### Global Options
+
+| Flag              | Description                         |
+| ----------------- | ----------------------------------- |
+| `--help`, `-h`    | Show help                           |
+| `--version`, `-v` | Show version number                 |
+| `--print-logs`    | Print logs to stderr                |
+| `--log-level`     | Log level: DEBUG, INFO, WARN, ERROR |
+
+### Interactive Slash Commands
+
+#### Session Commands
+
+| Command       | Aliases                | Description               |
+| ------------- | ---------------------- | ------------------------- |
+| `/sessions`   | `/resume`, `/continue` | Switch session            |
+| `/new`        | `/clear`               | New session               |
+| `/share`      | -                      | Share session             |
+| `/unshare`    | -                      | Unshare session           |
+| `/rename`     | -                      | Rename session            |
+| `/timeline`   | -                      | Jump to message           |
+| `/fork`       | -                      | Fork from message         |
+| `/compact`    | `/summarize`           | Compact/summarize session |
+| `/undo`       | -                      | Undo previous message     |
+| `/redo`       | -                      | Redo message              |
+| `/copy`       | -                      | Copy session transcript   |
+| `/export`     | -                      | Export session transcript |
+| `/timestamps` | `/toggle-timestamps`   | Show/hide timestamps      |
+| `/thinking`   | `/toggle-thinking`     | Show/hide thinking blocks |
+
+#### Agent & Model Commands
+
+| Command   | Description  |
+| --------- | ------------ |
+| `/models` | Switch model |
+| `/agents` | Switch agent |
+| `/mcps`   | Toggle MCPs  |
+
+#### Provider Commands
+
+| Command    | Description                                                               |
+| ---------- | ------------------------------------------------------------------------- |
+| `/connect` | Connect/add a provider - entry point for new users to add API credentials |
+
+#### System Commands
+
+| Command   | Aliases       | Description          |
+| --------- | ------------- | -------------------- |
+| `/status` | -             | View status          |
+| `/themes` | -             | Switch theme         |
+| `/help`   | -             | Show help            |
+| `/editor` | -             | Open external editor |
+| `/exit`   | `/quit`, `/q` | Exit the app         |
+
+#### Kilo Gateway Commands (when connected)
+
+| Command    | Aliases                  | Description                       |
+| ---------- | ------------------------ | --------------------------------- |
+| `/profile` | `/me`, `/whoami`         | View your Kilo Gateway profile    |
+| `/teams`   | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
+
+#### Built-in Commands
+
+| Command                     | Description                                  |
+| --------------------------- | -------------------------------------------- |
+| `/init`                     | Create/update AGENTS.md file for the project |
+| `/local-review`             | Review code changes                          |
+| `/local-review-uncommitted` | Review uncommitted changes                   |
 
 ## Local Code Reviews
 
@@ -333,83 +160,180 @@ Review your code locally before pushing — catch issues early without waiting f
 | `/local-review`             | Review current branch changes vs base branch   |
 | `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
 
-## Task History
+## Config Reference
 
-View, search, and navigate through your task history directly from the CLI.
+Configuration is managed through:
 
-### Viewing Task History
+- `/connect` command for provider setup (interactive)
+- Config files directly at `~/.config/kilo/config.json`
+- `kilo auth` for credential management
 
-Display your task history with `/tasks`:
+## Permissions
 
-```bash
-/tasks
+Kilo Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.
+
+### Actions
+
+Each permission rule resolves to one of:
+
+- `"allow"` — run without approval
+- `"ask"` — prompt for approval
+- `"deny"` — block the action
+
+### Configuration
+
+You can set permissions globally (with `*`), and override specific tools.
+
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"*": "ask",
+		"bash": "allow",
+		"edit": "deny"
+	}
+}
 ```
 
-This shows:
+You can also set all permissions at once:
 
-- Task number and description
-- Task ID (for selecting)
-- Relative timestamp
-- Cost in dollars
-- Token usage
-- Favorite indicator (⭐) for favorited tasks
-- Pagination (10 tasks per page)
-
-### Searching Tasks
-
-Search for specific tasks by keyword:
-
-```bash
-/tasks search bug fix
-/tasks search implement feature
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": "allow"
+}
 ```
 
-Search automatically sorts results by relevance.
+### Granular Rules (Object Syntax)
 
-### Selecting a Task
+For most permissions, you can use an object to apply different actions based on the tool input.
 
-Switch to a specific task using its ID:
-
-```bash
-/tasks select abc123
+```json
+{
+	"$schema": "https://opencode.ai/config.json",
+	"permission": {
+		"bash": {
+			"*": "ask",
+			"git *": "allow",
+			"npm *": "allow",
+			"rm *": "deny",
+			"grep *": "allow"
+		},
+		"edit": {
+			"*": "deny",
+			"packages/web/src/content/docs/*.mdx": "allow"
+		}
+	}
+}
 ```
 
-This loads the selected task and its full conversation history.
+Rules are evaluated by pattern match, with the last matching rule winning. A common pattern is to put the catch-all `"*"` rule first, and more specific rules after it.
 
-### Pagination
+### Wildcards
 
-Navigate through pages of task history:
+Permission patterns use simple wildcard matching:
 
-```bash
-/tasks page 2      # Go to page 2
-/tasks next        # Go to next page
-/tasks prev        # Go to previous page
+- `*` matches zero or more of any character
+- `?` matches exactly one character
+- All other characters match literally
+
+### Home Directory Expansion
+
+You can use `~` or `$HOME` at the start of a pattern to reference your home directory. This is particularly useful for `external_directory` rules.
+
+- `~/projects/*` → `/Users/username/projects/*`
+- `$HOME/projects/*` → `/Users/username/projects/*`
+- `~` → `/Users/username`
+
+### External Directories
+
+Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
+
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"external_directory": {
+			"~/projects/personal/**": "allow"
+		}
+	}
+}
 ```
 
-### Sorting Tasks
+Any directory allowed here inherits the same defaults as the current workspace. Since `read` defaults to `"allow"`, reads are also allowed for entries under `external_directory` unless overridden. Add explicit rules when a tool should be restricted in these paths, such as blocking edits while keeping reads:
 
-Sort tasks by different criteria:
-
-```bash
-/tasks sort newest          # Most recent first (default)
-/tasks sort oldest          # Oldest first
-/tasks sort most-expensive  # Highest cost first
-/tasks sort most-tokens     # Most tokens used first
-/tasks sort most-relevant   # Most relevant (used with search)
-```
-
-### Filtering Tasks
-
-Filter tasks by workspace or favorites:
-
-```bash
-/tasks filter current    # Show only tasks from current workspace
-/tasks filter all        # Show tasks from all workspaces
-/tasks filter favorites  # Show only favorited tasks
-/tasks filter all-tasks  # Show all tasks (remove filters)
+```json
+{
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"external_directory": {
+			"~/projects/personal/**": "allow"
+		},
+		"edit": {
+			"~/projects/personal/**": "deny"
+		}
+	}
+}
 ```
 
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
+
+## Configuration
+
+The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+
+### Config File Location
+
+| Scope      | Path                                |
+| ---------- | ----------------------------------- |
+| **Global** | `~/.config/kilocode/kilocode.json`  |
+| **Project**| `./kilocode.json` (in project root) |
+
+Project-level configuration takes precedence over global settings.
+
+### Key Configuration Options
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Common configuration options include:
+
+- **`model`** - Default model to use
+- **`provider`** - Provider-specific settings (API keys, base URLs, custom models)
+- **`mcp`** - MCP server configuration
+- **`permission`** - Tool permission settings (`allow` or `ask`)
+- **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
+- **`formatter`** - Code formatter configuration
+- **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+
+### Environment Variables
+
+Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
+
+```json
+{
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 
 ## Config reference for providers
 
@@ -426,119 +350,106 @@ You can also use the `/config` slash command during an interactive session, whic
 {% /callout %}
 
 ## Parallel mode
+### Available Permissions
 
-Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
+Permissions are keyed by tool name, plus a couple of safety guards:
 
-```bash
-# Prerequisite: must be within a valid git repository
+- `read` — reading a file (matches the file path)
+- `edit` — all file modifications (covers edit, write, patch, multiedit)
+- `glob` — file globbing (matches the glob pattern)
+- `grep` — content search (matches the regex pattern)
+- `list` — listing files in a directory (matches the directory path)
+- `bash` — running shell commands (matches parsed commands like `git status --porcelain`)
+- `task` — launching subagents (matches the subagent type)
+- `skill` — loading a skill (matches the skill name)
+- `lsp` — running LSP queries (currently non-granular)
+- `todoread`, `todowrite` — reading/updating the todo list
+- `webfetch` — fetching a URL (matches the URL)
+- `websearch`, `codesearch` — web/code search (matches the query)
+- `external_directory` — triggered when a tool touches paths outside the project working directory
+- `doom_loop` — triggered when the same tool call repeats 3 times with identical input
 
-# In interactive mode, changes will be committed on /exit
-# Terminal 1
-kilocode --parallel "improve xyz"
-# Terminal 2
-kilocode --parallel "improve abc"
+### Defaults
 
-# Pairs great with auto mode 🚀
-# Terminal 1
-kilocode --parallel --auto "improve xyz"
-# Terminal 2
-kilocode --parallel --auto "improve abc"
-```
+If you don't specify anything, Kilo starts from permissive defaults:
 
-## Auto-approval settings
-
-Auto-approval allows the Kilo Code CLI to perform operations without first requiring user confirmation. These settings can either be built up over time in interactive mode, or by editing your config file using `kilocode config` or editing the file directly at `~/.kilocode/config.json`.
-
-### Default auto-approval settings
+- Most permissions default to `"allow"`.
+- `doom_loop` and `external_directory` default to `"ask"`.
+- `read` is `"allow"`, but `.env` files are denied by default:
 
 ```json
 {
-	"autoApproval": {
-		"enabled": true,
+	"permission": {
 		"read": {
-			"enabled": true,
-			"outside": false
-		},
-		"write": {
-			"enabled": true,
-			"outside": false,
-			"protected": false
-		},
-		"execute": {
-			"enabled": true,
-			"allowed": ["npm", "git", "pnpm"],
-			"denied": ["rm -rf", "sudo"]
-		},
-		"browser": {
-			"enabled": false
-		},
-		"mcp": {
-			"enabled": true
-		},
-		"mode": {
-			"enabled": true
-		},
-		"subtasks": {
-			"enabled": true
-		},
-		"question": {
-			"enabled": false,
-			"timeout": 60
-		},
-		"retry": {
-			"enabled": true,
-			"delay": 10
-		},
-		"todo": {
-			"enabled": true
+			"*": "allow",
+			"*.env": "deny",
+			"*.env.*": "deny",
+			"*.env.example": "allow"
 		}
 	}
 }
 ```
 
-**Configuration Options:**
+### What "Ask" Does
 
-- `read`: Auto-approve file read operations
-    - `outside`: Allow reading files outside workspace
-- `write`: Auto-approve file write operations
-    - `outside`: Allow writing files outside workspace
-    - `protected`: Allow writing to protected files (e.g., package.json)
-- `execute`: Auto-approve command execution
-    - `allowed`: List of allowed command patterns (e.g., ["npm", "git"])
-    - `denied`: List of denied command patterns (takes precedence)
-- `browser`: Auto-approve browser operations
-- `mcp`: Auto-approve MCP tool usage
-- `mode`: Auto-approve mode switching
-- `subtasks`: Auto-approve subtask creation
-- `question`: Auto-approve follow-up questions
-- `retry`: Auto-approve API retry requests
-- `todo`: Auto-approve todo list updates
+When Kilo prompts for approval, the UI offers three outcomes:
 
-### Command Approval Patterns
+- **once** — approve just this request
+- **always** — approve future requests matching the suggested patterns (for the rest of the current session)
+- **reject** — deny the request
 
-The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
+The set of patterns that "always" would approve is provided by the tool (for example, bash approvals typically whitelist a safe command prefix like `git status*`).
 
-- **Base command**: `"git"` matches any git command (e.g., `git status`, `git commit`, `git push`)
-- **Command + subcommand**: `"git status"` matches any git status command (e.g., `git status --short`, `git status -v`)
-- **Full command**: `"git status --short"` only matches exactly `git status --short`
+### Agent Permissions
 
-**Example:**
+You can override permissions per agent. Agent permissions are merged with the global config, and agent rules take precedence.
 
 ```json
 {
-	"execute": {
-		"enabled": true,
-		"allowed": [
-			"npm", // Allows all npm commands
-			"git status", // Allows all git status commands
-			"ls -la" // Only allows exactly "ls -la"
-		],
-		"denied": [
-			"git push --force" // Denies this specific command even if "git" is allowed
-		]
+	"$schema": "https://kilo.ai/config.json",
+	"permission": {
+		"bash": {
+			"*": "ask",
+			"git *": "allow",
+			"git commit *": "deny",
+			"git push *": "deny",
+			"grep *": "allow"
+		}
+	},
+	"agent": {
+		"build": {
+			"permission": {
+				"bash": {
+					"*": "ask",
+					"git *": "allow",
+					"git commit *": "ask",
+					"git push *": "deny",
+					"grep *": "allow"
+				}
+			}
+		}
 	}
 }
 ```
+
+You can also configure agent permissions in Markdown:
+
+```markdown
+---
+description: Code review without edits
+mode: subagent
+permission:
+    edit: deny
+    bash: ask
+    webfetch: deny
+---
+
+Only analyze code and suggest changes.
+```
+
+{% callout type="tip" %}
+Use pattern matching for commands with arguments. `"grep *"` allows `grep pattern file.txt`, while `"grep"` alone would block it. Commands like `git status` work for default behavior but require explicit permission (like `"git status *"`) when arguments are passed.
+{% /callout %}
 
 ## Interactive Mode
 
@@ -548,7 +459,7 @@ In interactive mode Kilo Code will request approval for operations which have no
 
 ### Interactive Command Approval
 
-When running in interactive mode, command approval requests now show hierarchical options:
+When running in interactive mode, command approval requests show hierarchical options:
 
 ```
 [!] Action Required:
@@ -567,53 +478,23 @@ Selecting an "Always run" option will:
 
 This allows you to progressively build your auto-approval rules without manually editing the config file.
 
-## Autonomous mode (Non-Interactive)
+## Autonomous Mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
 ```bash
-# Run in autonomous mode with a prompt
-kilocode --auto "Implement feature X"
-
-# Run in autonomous mode with piped input
-echo "Fix the bug in app.ts" | kilocode --auto
-
-# Run in autonomous mode with timeout (in seconds)
-kilocode --auto "Run tests" --timeout 300
-
-# Run in autonomous mode with JSON output for structured parsing
-kilocode --auto --json "Implement feature X"
+# Run in autonomous mode with a message
+kilo run --auto "Implement feature X"
 ```
 
 ### Autonomous Mode Behavior
 
-When running in Autonomous mode (`--auto` flag):
+When running in autonomous mode:
 
 1. **No User Interaction**: All approval requests are handled automatically based on configuration
 2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
 3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
 4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
-
-### JSON Output Mode
-
-Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
-
-```bash
-# Standard autonomous mode with terminal UI
-kilocode --auto "Fix the bug"
-
-# Autonomous mode with JSON output
-kilocode --auto --json "Fix the bug"
-
-# With piped input
-echo "Implement feature X" | kilocode --auto --json
-```
-
-**Requirements:**
-
-- The `--json` flag requires `--auto` mode to be enabled
-- Output is sent to stdout as structured JSON for easy parsing
-- Ideal for CI/CD pipelines and automated workflows
 
 ### Auto-Approval in Autonomous Mode
 
@@ -621,9 +502,9 @@ Autonomous mode respects your [auto-approval configuration](#auto-approval-setti
 
 ### Autonomous Mode Follow-up Questions
 
-In Autonomous mode, when the AI asks a follow-up question, it receives this response:
+In autonomous mode, when the AI asks a follow-up question, it receives this response:
 
-> "This process is running in non-interactive Autonomous mode. The user cannot make decisions, so you should make the decision autonomously."
+> "This process is running in non-interactive autonomous mode. The user cannot make decisions, so you should make the decision autonomously."
 
 This instructs the AI to proceed without user input.
 
@@ -639,7 +520,7 @@ This instructs the AI to proceed without user input.
 # GitHub Actions example
 - name: Run Kilo Code
   run: |
-      echo "Implement the new feature" | kilocode --auto --timeout 600
+      kilo run "Implement the new feature" --auto
 ```
 
 ## Session Continuation
@@ -647,38 +528,38 @@ This instructs the AI to proceed without user input.
 Resume your last conversation from the current workspace using the `--continue` (or `-c`) flag:
 
 ```bash
-# Resume the most recent task from this workspace
-kilocode --continue
-kilocode -c
+# Resume the most recent session from this workspace
+kilo --continue
+kilo -c
 ```
 
 This feature:
 
-- Automatically finds the most recent task from the current workspace
+- Automatically finds the most recent session from the current workspace
 - Loads the full conversation history
 - Allows you to continue where you left off
-- Cannot be used with `--auto` mode or with a prompt argument
-- Exits with an error if no previous tasks are found
+- Cannot be used with autonomous mode or with a prompt argument
+- Exits with an error if no previous sessions are found
 
 **Example workflow:**
 
 ```bash
-# Start a task
-kilocode
+# Start a session
+kilo
 # > "Create a REST API"
 # ... work on the task ...
 # Exit with /exit
 
-# Later, resume the same task
-kilocode --continue
+# Later, resume the same session
+kilo --continue
 # Conversation history is restored, ready to continue
 ```
 
 **Limitations:**
 
-- Cannot be combined with `--auto` mode
+- Cannot be combined with autonomous mode
 - Cannot be used with a prompt argument
-- Only works when there's at least one previous task in the workspace
+- Only works when there's at least one previous session in the workspace
 
 ## Environment Variable Overrides
 
@@ -688,16 +569,10 @@ The CLI supports overriding config values with environment variables. The suppor
 - For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
 - For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
 
-## Local Development
-
-### DevTools
-
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
-
 ## Switching into an Organization from the CLI
 
 Use the `/teams` command to see a list of all organizations you can switch into.
 
-Use `/teams select` and start typing the team name to switch teams.
+Use `/teams` and select a team to switch teams.
 
 The process is the same when switching into a Team or Enterprise organization.
