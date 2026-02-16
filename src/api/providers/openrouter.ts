@@ -17,7 +17,8 @@ import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCal
 import {
 	hasKimiToolCalls,
 	parseKimiToolCalls,
-	kimToolCallsToStreamChunks,
+	kimiToolCallsToStreamChunks,
+	KimiToolCallParser,
 } from "../../core/assistant-message/KimiToolCallParser"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -305,6 +306,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): AsyncGenerator<ApiStreamChunk> {
+		// Reset Kimi tool call parser for this request
+		KimiToolCallParser.reset()
+
 		const model = await this.fetchModel()
 
 		let { id: modelId, maxTokens, temperature, topP, reasoning } = model
@@ -591,44 +595,36 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// Skip if we've already yielded from reasoning_details to avoid duplicate display.
 				if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
 					// kilocode_change start
-					// Check for Kimi-style tool calls embedded in reasoning text
-					if (hasKimiToolCalls(delta.reasoning)) {
-						const { cleanedText, toolCalls } = parseKimiToolCalls(delta.reasoning)
-						// Yield cleaned reasoning text (without tool call markers)
-						if (cleanedText.length > 0) {
-							yield { type: "reasoning", text: cleanedText }
-							hasYieldedReasoningFromDetails = true
-						}
-						// Extract and yield tool calls as proper tool_call_partial chunks
-						const toolChunks = kimToolCallsToStreamChunks(toolCalls)
+					// Use stateful Kimi parser to handle streaming fragmentation
+					const { cleanedText, toolCalls } = KimiToolCallParser.processChunk(delta.reasoning)
+					// Yield cleaned reasoning text (without tool call markers)
+					if (cleanedText.length > 0) {
+						yield { type: "reasoning", text: cleanedText }
+						hasYieldedReasoningFromDetails = true
+					}
+					// Extract and yield tool calls as proper tool_call_partial chunks
+					if (toolCalls.length > 0) {
+						const toolChunks = kimiToolCallsToStreamChunks(toolCalls)
 						for (const chunk of toolChunks) {
 							yield chunk
-						}
-					} else {
-						if (!hasYieldedReasoningFromDetails) {
-							yield { type: "reasoning", text: delta.reasoning }
 						}
 					}
 					// kilocode_change end
 				}
 				// kilocode_change start
 				else if ("reasoning_content" in delta && typeof delta.reasoning_content === "string") {
-					// Check for Kimi-style tool calls embedded in reasoning content
-					if (hasKimiToolCalls(delta.reasoning_content)) {
-						const { cleanedText, toolCalls } = parseKimiToolCalls(delta.reasoning_content)
-						// Yield cleaned reasoning text (without tool call markers)
-						if (cleanedText.length > 0) {
-							yield { type: "reasoning", text: cleanedText }
-							hasYieldedReasoningFromDetails = true
-						}
-						// Extract and yield tool calls as proper tool_call_partial chunks
-						const toolChunks = kimToolCallsToStreamChunks(toolCalls)
+					// Use stateful Kimi parser to handle streaming fragmentation
+					const { cleanedText, toolCalls } = KimiToolCallParser.processChunk(delta.reasoning_content)
+					// Yield cleaned reasoning text (without tool call markers)
+					if (cleanedText.length > 0) {
+						yield { type: "reasoning", text: cleanedText }
+						hasYieldedReasoningFromDetails = true
+					}
+					// Extract and yield tool calls as proper tool_call_partial chunks
+					if (toolCalls.length > 0) {
+						const toolChunks = kimiToolCallsToStreamChunks(toolCalls)
 						for (const chunk of toolChunks) {
 							yield chunk
-						}
-					} else {
-						if (!hasYieldedReasoningFromDetails) {
-							yield { type: "reasoning", text: delta.reasoning_content }
 						}
 					}
 				}
