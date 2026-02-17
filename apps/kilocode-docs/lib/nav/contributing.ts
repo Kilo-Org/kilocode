@@ -13,6 +13,10 @@ export const ContributingNav: NavSection[] = [
 				href: "/contributing/cline-to-kilo-migration",
 				children: "Cline to Kilo Migration",
 			},
+			{
+				href: "/contributing/translations",
+				children: "Localization and Crowdin",
+			},
 		],
 	},
 	{

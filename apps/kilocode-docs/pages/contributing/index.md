@@ -123,6 +123,8 @@ Documentation improvements are highly valued contributions:
 
 3. Submit a PR with your documentation changes
 
+For translation and localization work, see [Localization and Crowdin](/docs/contributing/translations).
+
 ## Community Guidelines
 
 When participating in the Kilo Code community:
