@@ -24,7 +24,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-weak, var(--vscode-descriptionForeground, #888));
-  padding: 4px 8px;
+  padding: 4px 8px 0;
 }
 
 .am-sessions-header {
@@ -33,13 +33,60 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-weak, var(--vscode-descriptionForeground, #888));
-  padding: 4px 8px;
+  padding: 4px 8px 0;
 }
 
 .am-list {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.am-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text-base, var(--vscode-foreground));
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.am-item:hover {
+  background: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground, #2a2d2e));
+}
+
+.am-item-active {
+  background: var(--surface-interactive-base, var(--vscode-list-activeSelectionBackground, #04395e));
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground, #fff));
+}
+
+.am-item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.am-item-time {
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #888));
+  flex-shrink: 0;
+}
+
+.am-item-active .am-item-time {
+  color: var(--text-on-interactive-weak, rgba(255, 255, 255, 0.7));
 }
 
 .am-detail {
