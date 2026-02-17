@@ -62,6 +62,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
   })
 
   const Profile = z.object({
+    id: z.string().optional(),
     email: z.string(),
     name: z.string().optional(),
     organizations: z.array(Organization).optional(),

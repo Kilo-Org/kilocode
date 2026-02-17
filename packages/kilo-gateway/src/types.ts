@@ -25,6 +25,7 @@ export interface Organization {
 }
 
 export interface KilocodeProfile {
+  id?: string
   email: string
   name?: string
   organizations?: Organization[]

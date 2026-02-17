@@ -35,6 +35,7 @@ export {
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
+export { buildWelcomeSurveyUrl } from "./api/survey.js" // kilocode_change
 
 // ============================================================================
 // Server Routes (optional - requires hono and OpenCode dependencies)

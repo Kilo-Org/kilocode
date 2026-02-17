@@ -21,14 +21,16 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
   }
 
   const data = (await response.json()) as {
-    user?: { email?: string; name?: string }
+    user?: { id?: string; email?: string; name?: string }
+    id?: string
     email?: string
     name?: string
     organizations?: Organization[]
   }
-  // Backend returns { user: { email, name, ... }, organizations }
+  // Backend returns { user: { id, email, name, ... }, organizations }
   // Transform to flat KilocodeProfile structure
   return {
+    id: data.user?.id ?? data.id,
     email: data.user?.email ?? data.email ?? "",
     name: data.user?.name ?? data.name,
     organizations: data.organizations,
