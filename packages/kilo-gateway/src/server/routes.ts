@@ -6,7 +6,7 @@
  * This factory function accepts OpenCode dependencies to create Kilo-specific routes
  */
 
-import { fetchProfile, fetchBalance } from "../api/profile.js"
+import { fetchProfile, fetchBalance, fetchExtensionSettings } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
 import { KILO_API_BASE } from "../api/constants.js"
 
@@ -240,6 +240,45 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             Connection: "keep-alive",
           },
         })
+      },
+    )
+    .get(
+      "/extension-settings",
+      describeRoute({
+        summary: "Get extension settings",
+        description: "Fetch organization/user extension settings for cloud-managed policy behavior",
+        operationId: "kilo.extensionSettings",
+        responses: {
+          200: {
+            description: "Extension settings",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    organization: z.unknown().optional(),
+                    user: z.unknown().optional(),
+                  }),
+                ),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      async (c: any) => {
+        const auth = await Auth.get("kilo")
+        if (!auth) {
+          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+        }
+
+        const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+        if (!token) {
+          return c.json({ error: "No valid token found" }, 401)
+        }
+
+        const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+        const settings = await fetchExtensionSettings(token, organizationId)
+        return c.json(settings)
       },
     )
     .get(
