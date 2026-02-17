@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react"
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { type ToolProgressStatus } from "@roo-code/types"
+import { cn } from "@src/lib/utils"
 import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 import { formatPathTooltip } from "@src/utils/formatPathTooltip"
 
@@ -90,7 +91,14 @@ const CodeAccordian = ({
 						progressStatus.text && (
 							<>
 								{progressStatus.icon && (
-									<span className={`codicon codicon-${progressStatus.icon} mr-1`} />
+									<span
+										className={cn(
+											"codicon",
+											`codicon-${progressStatus.icon}`,
+											"mr-1",
+											progressStatus.spin && "codicon-modifier-spin",
+										)}
+									/>
 								)}
 								<span className="mr-1 ml-auto text-vscode-descriptionForeground">
 									{progressStatus.text}

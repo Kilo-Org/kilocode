@@ -213,6 +213,7 @@ export type ClineSay = z.infer<typeof clineSaySchema>
 export const toolProgressStatusSchema = z.object({
 	icon: z.string().optional(),
 	text: z.string().optional(),
+	spin: z.boolean().optional(),
 })
 
 export type ToolProgressStatus = z.infer<typeof toolProgressStatusSchema>

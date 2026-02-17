@@ -1,6 +1,6 @@
 import {
 	SUBAGENT_CANCELLED_MODEL_MESSAGE,
-	SUBAGENT_RESULT_CODE_CANCELLED,
+	SUBAGENT_FAILED_MODEL_MESSAGE,
 	SUBAGENT_STATUS_STARTING,
 	SUBAGENT_TOOL_NAMES,
 	type RunSubagentInBackgroundParams,
@@ -35,7 +35,7 @@ export class SubagentTool extends BaseTool<"subagent"> {
 
 	async execute(params: SubagentParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { description, prompt, subagent_type } = params
-		const { handleError, pushToolResult } = callbacks
+		const { pushToolResult } = callbacks
 
 		const provider = task.providerRef.deref()
 		if (!provider || !isSubagentRunner(provider)) {
@@ -66,7 +66,7 @@ export class SubagentTool extends BaseTool<"subagent"> {
 			currentTask: SUBAGENT_STATUS_STARTING,
 		}
 		const runningText = JSON.stringify(runningPayload)
-		const progressStatus = { icon: "sync~spin" }
+		const progressStatus = { icon: "sync", spin: true }
 
 		await task.say("tool", runningText, undefined, true, undefined, progressStatus, {
 			isNonInteractive: true,
@@ -109,18 +109,18 @@ export class SubagentTool extends BaseTool<"subagent"> {
 			})
 			pushToolResult(formatResponse.toolResult(toolResult))
 		} catch (error) {
-			const errMessage = error instanceof Error ? error.message : String(error)
+			console.error("Subagent failed:", error)
+			task.recordToolError("subagent")
 			const errorPayload: SubagentCompletedPayload = {
 				tool: SUBAGENT_TOOL_NAMES.completed,
 				description,
-				error: errMessage,
+				error: SUBAGENT_FAILED_MODEL_MESSAGE,
 			}
 			const errorPayloadStr = JSON.stringify(errorPayload)
 			await task.say("tool", errorPayloadStr, undefined, false, undefined, undefined, {
 				isNonInteractive: true,
 			})
-			await handleError("running subagent", error instanceof Error ? error : new Error(errMessage))
-			pushToolResult(formatResponse.toolError(errMessage))
+			pushToolResult(formatResponse.toolError(SUBAGENT_FAILED_MODEL_MESSAGE))
 		}
 	}
 }

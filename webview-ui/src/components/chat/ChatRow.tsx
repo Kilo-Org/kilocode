@@ -1722,11 +1722,15 @@ export const ChatRowContent = ({
 									: parsed?.purpose
 							return (
 								<div>
-									<div style={headerStyle}>
+									<div className="flex items-center gap-2.5 mb-1 break-words">
 										{message.progressStatus?.icon && (
 											<span
-												className={`codicon codicon-${message.progressStatus.icon}`}
-												style={{ marginRight: "6px", color: "var(--vscode-foreground)" }}
+												className={cn(
+													"codicon",
+													`codicon-${message.progressStatus.icon}`,
+													"mr-1.5 text-vscode-foreground",
+													message.progressStatus.spin && "codicon-modifier-spin",
+												)}
 											/>
 										)}
 										<span>{t("chat:subagents.runningLabel", { description: desc })}</span>
@@ -1758,23 +1762,17 @@ export const ChatRowContent = ({
 							const hasError = !!sayTool.error
 							return (
 								<>
-									<div style={headerStyle}>
+									<div className="flex items-center gap-2.5 mb-1 break-words">
 										<span
-											className={`codicon codicon-${hasError ? "error" : "check-all"}`}
-											style={{
-												marginRight: "6px",
-												color: hasError
-													? "var(--vscode-errorForeground)"
-													: "var(--vscode-foreground)",
-											}}
+											className={cn(
+												`codicon codicon-${hasError ? "error" : "check-all"}`,
+												"mr-1.5",
+												hasError ? "text-vscode-errorForeground" : "text-vscode-foreground",
+											)}
 										/>
 										<span>{t("chat:subagents.completedLabel")}</span>
 										{sayTool.description && (
-											<span
-												style={{
-													color: "var(--vscode-descriptionForeground)",
-													marginLeft: "8px",
-												}}>
+											<span className="text-vscode-descriptionForeground ml-2">
 												{sayTool.description}
 											</span>
 										)}

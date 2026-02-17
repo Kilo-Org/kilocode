@@ -1,6 +1,7 @@
 import {
 	SUBAGENT_CANCELLED_MODEL_MESSAGE,
 	SUBAGENT_CANCELLED_STRUCTURED_RESULT,
+	SUBAGENT_FAILED_MODEL_MESSAGE,
 	type SubagentStructuredResult,
 } from "../../../shared/subagent"
 import { subagentTool } from "../SubagentTool"
@@ -172,7 +173,7 @@ describe("SubagentTool", () => {
 			expect(mockSayAndCreateMissingParamError).toHaveBeenCalledWith("subagent", "prompt")
 		})
 
-		it("calls handleError and pushes tool error when runSubagentInBackground rejects", async () => {
+		it("logs error and pushes generic tool error when runSubagentInBackground rejects (no raw message leak)", async () => {
 			mockRunSubagentInBackground.mockRejectedValue(new Error("API failed"))
 
 			await subagentTool.execute({ description: "X", prompt: "Y", subagent_type: "general" }, mockTask as any, {
@@ -183,8 +184,21 @@ describe("SubagentTool", () => {
 				toolProtocol: "native",
 			})
 
-			expect(mockHandleError).toHaveBeenCalledWith("running subagent", expect.any(Error))
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("API failed"))
+			expect(mockHandleError).not.toHaveBeenCalled()
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining(SUBAGENT_FAILED_MODEL_MESSAGE))
+			expect(mockRecordToolError).toHaveBeenCalledWith("subagent")
+			const sayCalls = mockSay.mock.calls
+			const completedCall = sayCalls.find((c) => {
+				try {
+					const payload = JSON.parse(c[1])
+					return payload.tool === "subagentCompleted" && payload.error !== undefined
+				} catch {
+					return false
+				}
+			})
+			expect(completedCall).toBeDefined()
+			const payload = JSON.parse(completedCall![1])
+			expect(payload.error).toBe(SUBAGENT_FAILED_MODEL_MESSAGE)
 		})
 	})
 })

@@ -26,6 +26,9 @@ export const SUBAGENT_CANCELLED_STRUCTURED_RESULT = {
 /** English message shown to the model when subagent is cancelled (tool result). */
 export const SUBAGENT_CANCELLED_MODEL_MESSAGE = "Subagent was cancelled by the user."
 
+/** Generic message shown to the model/UI when subagent fails (avoids leaking internal error details). */
+export const SUBAGENT_FAILED_MODEL_MESSAGE = "The subagent failed."
+
 export type SubagentStructuredResult = typeof SUBAGENT_CANCELLED_STRUCTURED_RESULT
 
 /** Payload for the "subagentRunning" tool message (progress updates). */
