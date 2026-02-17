@@ -1,6 +1,5 @@
 import { dict as en } from "./en"
 type Keys = keyof typeof en
-
 export const dict = {
   "command.category.suggested": "Foreslått",
   "command.category.view": "Visning",
@@ -17,13 +16,13 @@ export const dict = {
   "command.category.mcp": "MCP",
   "command.category.agent": "Agent",
   "command.category.permissions": "Tillatelser",
+
   "command.category.workspace": "Arbeidsområde",
   "command.category.settings": "Innstillinger",
-
   "theme.scheme.system": "System",
+
   "theme.scheme.light": "Lys",
   "theme.scheme.dark": "Mørk",
-
   "command.sidebar.toggle": "Veksle sidepanel",
   "command.project.open": "Åpne prosjekt",
   "command.provider.connect": "Koble til leverandør",
@@ -32,19 +31,19 @@ export const dict = {
   "command.session.previous": "Forrige sesjon",
   "command.session.next": "Neste sesjon",
   "command.session.previous.unseen": "Forrige uleste økt",
+
   "command.session.next.unseen": "Neste uleste økt",
+
   "command.session.archive": "Arkiver sesjon",
-
   "command.palette": "Kommandopalett",
-
   "command.theme.cycle": "Bytt tema",
   "command.theme.set": "Bruk tema: {{theme}}",
+
   "command.theme.scheme.cycle": "Bytt fargevalg",
   "command.theme.scheme.set": "Bruk fargevalg: {{scheme}}",
 
   "command.language.cycle": "Bytt språk",
   "command.language.set": "Bruk språk: {{language}}",
-
   "command.session.new": "Ny sesjon",
   "command.file.open": "Åpne fil",
   "command.tab.close": "Lukk fane",
@@ -75,6 +74,7 @@ export const dict = {
   "command.permissions.autoaccept.enable": "Godta endringer automatisk",
   "command.permissions.autoaccept.disable": "Slutt å godta endringer automatisk",
   "command.workspace.toggle": "Veksle arbeidsområder",
+  "command.workspace.toggle.description": "Enable or disable multiple workspaces in the sidebar",
   "command.session.undo": "Angre",
   "command.session.undo.description": "Angre siste melding",
   "command.session.redo": "Gjør om",
@@ -85,34 +85,38 @@ export const dict = {
   "command.session.fork.description": "Opprett en ny sesjon fra en tidligere melding",
   "command.session.share": "Del sesjon",
   "command.session.share.description": "Del denne sesjonen og kopier URL-en til utklippstavlen",
+
   "command.session.unshare": "Slutt å dele sesjon",
   "command.session.unshare.description": "Slutt å dele denne sesjonen",
-
   "palette.search.placeholder": "Søk i filer, kommandoer og sesjoner",
   "palette.empty": "Ingen resultater funnet",
+
   "palette.group.commands": "Kommandoer",
   "palette.group.files": "Filer",
-
   "dialog.provider.search.placeholder": "Søk etter leverandører",
   "dialog.provider.empty": "Ingen leverandører funnet",
   "dialog.provider.group.popular": "Populære",
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalt",
+  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
   "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
-  "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
   "dialog.provider.copilot.note": "Koble til med Copilot eller API-nøkkel",
+  "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
+  "dialog.provider.google.note": "Gemini models for fast, structured responses",
 
+  "dialog.provider.openrouter.note": "Access all supported models from one provider",
+  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
   "dialog.model.select.title": "Velg modell",
   "dialog.model.search.placeholder": "Søk etter modeller",
   "dialog.model.empty": "Ingen modellresultater",
+
   "dialog.model.manage": "Administrer modeller",
   "dialog.model.manage.description": "Tilpass hvilke modeller som vises i modellvelgeren.",
 
   "dialog.model.unpaid.freeModels.title": "Gratis modeller levert av Kilo",
+
   "dialog.model.unpaid.addMore.title": "Legg til flere modeller fra populære leverandører",
-
   "dialog.provider.viewAll": "Vis flere leverandører",
-
   "provider.connect.title": "Koble til {{provider}}",
   "provider.connect.title.anthropicProMax": "Logg inn med Claude Pro/Max",
   "provider.connect.selectMethod": "Velg innloggingsmetode for {{provider}}.",
@@ -120,39 +124,72 @@ export const dict = {
   "provider.connect.status.inProgress": "Autorisering pågår...",
   "provider.connect.status.waiting": "Venter på autorisering...",
   "provider.connect.status.failed": "Autorisering mislyktes: {{error}}",
-  "provider.connect.apiKey.description":
-    "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+  "provider.connect.apiKey.description": "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
-  "provider.connect.opencodeZen.line1":
-    "OpenCode Zen gir deg tilgang til et utvalg av pålitelige optimaliserte modeller for kodeagenter.",
-  "provider.connect.opencodeZen.line2":
-    "Med én enkelt API-nøkkel får du tilgang til modeller som Claude, GPT, Gemini, GLM og flere.",
+  "provider.connect.opencodeZen.line1": "OpenCode Zen gir deg tilgang til et utvalg av pålitelige optimaliserte modeller for kodeagenter.",
+  "provider.connect.opencodeZen.line2": "Med én enkelt API-nøkkel får du tilgang til modeller som Claude, GPT, Gemini, GLM og flere.",
   "provider.connect.opencodeZen.visit.prefix": "Besøk ",
   "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " for å hente API-nøkkelen din.",
   "provider.connect.oauth.code.visit.prefix": "Besøk ",
   "provider.connect.oauth.code.visit.link": "denne lenken",
-  "provider.connect.oauth.code.visit.suffix":
-    " for å hente autorisasjonskoden din for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+  "provider.connect.oauth.code.visit.suffix": " for å hente autorisasjonskoden din for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
   "provider.connect.oauth.code.label": "{{method}} autorisasjonskode",
   "provider.connect.oauth.code.placeholder": "Autorisasjonskode",
   "provider.connect.oauth.code.required": "Autorisasjonskode er påkrevd",
   "provider.connect.oauth.code.invalid": "Ugyldig autorisasjonskode",
   "provider.connect.oauth.auto.visit.prefix": "Besøk ",
   "provider.connect.oauth.auto.visit.link": "denne lenken",
-  "provider.connect.oauth.auto.visit.suffix":
-    " og skriv inn koden nedenfor for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+  "provider.connect.oauth.auto.visit.suffix": " og skriv inn koden nedenfor for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
   "provider.connect.oauth.auto.confirmationCode": "Bekreftelseskode",
   "provider.connect.toast.connected.title": "{{provider}} tilkoblet",
   "provider.connect.toast.connected.description": "{{provider}}-modeller er nå tilgjengelige.",
+  "provider.custom.title": "Custom provider",
+  "provider.custom.description.prefix": "Configure an OpenAI-compatible provider. See the ",
+  "provider.custom.description.link": "provider config docs",
 
+  "provider.custom.description.suffix": ".",
+  "provider.custom.field.providerID.label": "Provider ID",
+  "provider.custom.field.providerID.placeholder": "myprovider",
+  "provider.custom.field.providerID.description": "Lowercase letters, numbers, hyphens, or underscores",
+  "provider.custom.field.name.label": "Display name",
+  "provider.custom.field.name.placeholder": "My AI Provider",
+  "provider.custom.field.baseURL.label": "Base URL",
+  "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
+  "provider.custom.field.apiKey.label": "API key",
+  "provider.custom.field.apiKey.placeholder": "API key",
+  "provider.custom.field.apiKey.description": "Optional. Leave empty if you manage auth via headers.",
+  "provider.custom.models.label": "Models",
+  "provider.custom.models.id.label": "ID",
+  "provider.custom.models.id.placeholder": "model-id",
+  "provider.custom.models.name.label": "Name",
+  "provider.custom.models.name.placeholder": "Display Name",
+  "provider.custom.models.remove": "Remove model",
+  "provider.custom.models.add": "Add model",
+  "provider.custom.headers.label": "Headers (optional)",
+  "provider.custom.headers.key.label": "Header",
+  "provider.custom.headers.key.placeholder": "Header-Name",
+  "provider.custom.headers.value.label": "Value",
+  "provider.custom.headers.value.placeholder": "value",
+  "provider.custom.headers.remove": "Remove header",
+  "provider.custom.headers.add": "Add header",
+  "provider.custom.error.providerID.required": "Provider ID is required",
+  "provider.custom.error.providerID.format": "Use lowercase letters, numbers, hyphens, or underscores",
+  "provider.custom.error.providerID.exists": "That provider ID already exists",
+  "provider.custom.error.name.required": "Display name is required",
+  "provider.custom.error.baseURL.required": "Base URL is required",
+  "provider.custom.error.baseURL.format": "Must start with http:// or https://",
+  "provider.custom.error.required": "Required",
+  "provider.custom.error.duplicate": "Duplicate",
   "provider.disconnect.toast.disconnected.title": "{{provider}} frakoblet",
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke lenger tilgjengelige.",
   "model.tag.free": "Gratis",
+
   "model.tag.latest": "Nyeste",
   "model.provider.anthropic": "Anthropic",
+
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
   "model.provider.xai": "xAI",
@@ -166,9 +203,10 @@ export const dict = {
   "model.tooltip.reasoning.allowed": "Tillater resonnering",
   "model.tooltip.reasoning.none": "Ingen resonnering",
   "model.tooltip.context": "Kontekstgrense {{limit}}",
-
   "common.search.placeholder": "Søk",
   "common.goBack": "Gå tilbake",
+  "common.goForward": "Navigate forward",
+
   "common.loading": "Laster",
   "common.loading.ellipsis": "...",
   "common.cancel": "Avbryt",
@@ -179,17 +217,17 @@ export const dict = {
   "common.saving": "Lagrer...",
   "common.default": "Standard",
   "common.attachment": "vedlegg",
-
   "prompt.placeholder.shell": "Skriv inn shell-kommando...",
-  "prompt.placeholder.normal": 'Spør om hva som helst... "{{example}}"',
+  "prompt.placeholder.normal": "Spør om hva som helst... \"{{example}}\"",
   "prompt.placeholder.summarizeComments": "Oppsummer kommentarer…",
+
   "prompt.placeholder.summarizeComment": "Oppsummer kommentar…",
   "prompt.mode.shell": "Shell",
   "prompt.mode.shell.exit": "ESC for å avslutte",
-
   "prompt.example.1": "Fiks en TODO i kodebasen",
   "prompt.example.2": "Hva er teknologistabelen i dette prosjektet?",
   "prompt.example.3": "Fiks ødelagte tester",
+
   "prompt.example.4": "Forklar hvordan autentisering fungerer",
   "prompt.example.5": "Finn og fiks sikkerhetssårbarheter",
   "prompt.example.6": "Legg til enhetstester for brukerservicen",
@@ -212,10 +250,10 @@ export const dict = {
   "prompt.example.23": "Legg til paginering i denne listen",
   "prompt.example.24": "Lag en CLI-kommando for...",
   "prompt.example.25": "Hvordan fungerer miljøvariabler her?",
-
   "prompt.popover.emptyResults": "Ingen matchende resultater",
   "prompt.popover.emptyCommands": "Ingen matchende kommandoer",
   "prompt.dropzone.label": "Slipp bilder eller PDF-er her",
+
   "prompt.dropzone.file.label": "Slipp for å @nevne fil",
   "prompt.slash.badge.custom": "egendefinert",
   "prompt.slash.badge.skill": "skill",
@@ -228,10 +266,10 @@ export const dict = {
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stopp",
-
   "prompt.toast.pasteUnsupported.title": "Liming ikke støttet",
   "prompt.toast.pasteUnsupported.description": "Kun bilder eller PDF-er kan limes inn her.",
   "prompt.toast.modelAgentRequired.title": "Velg en agent og modell",
+
   "prompt.toast.modelAgentRequired.description": "Velg en agent og modell før du sender en forespørsel.",
   "prompt.toast.worktreeCreateFailed.title": "Kunne ikke opprette worktree",
   "prompt.toast.sessionCreateFailed.title": "Kunne ikke opprette sesjon",
@@ -239,27 +277,27 @@ export const dict = {
   "prompt.toast.commandSendFailed.title": "Kunne ikke sende kommando",
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørsel",
   "prompt.toast.promptSendFailed.description": "Kunne ikke hente økt",
-
   "dialog.mcp.title": "MCP-er",
   "dialog.mcp.description": "{{enabled}} av {{total}} aktivert",
   "dialog.mcp.empty": "Ingen MCP-er konfigurert",
 
   "dialog.lsp.empty": "LSP-er automatisk oppdaget fra filtyper",
   "dialog.plugins.empty": "Plugins konfigurert i opencode.json",
-
   "mcp.status.connected": "tilkoblet",
+
   "mcp.status.failed": "mislyktes",
   "mcp.status.needs_auth": "trenger autentisering",
+
   "mcp.status.disabled": "deaktivert",
-
   "dialog.fork.empty": "Ingen meldinger å forgrene fra",
-
   "dialog.directory.search.placeholder": "Søk etter mapper",
   "dialog.directory.empty": "Ingen mapper funnet",
 
   "dialog.server.title": "Servere",
+
   "dialog.server.description": "Bytt hvilken Kilo-server denne appen kobler til.",
   "dialog.server.search.placeholder": "Søk etter servere",
+
   "dialog.server.empty": "Ingen servere ennå",
   "dialog.server.add.title": "Legg til en server",
   "dialog.server.add.url": "Server-URL",
@@ -268,47 +306,46 @@ export const dict = {
   "dialog.server.add.checking": "Sjekker...",
   "dialog.server.add.button": "Legg til server",
   "dialog.server.default.title": "Standardserver",
-  "dialog.server.default.description":
-    "Koble til denne serveren ved oppstart i stedet for å starte en lokal server. Krever omstart.",
+  "dialog.server.default.description": "Koble til denne serveren ved oppstart i stedet for å starte en lokal server. Krever omstart.",
   "dialog.server.default.none": "Ingen server valgt",
   "dialog.server.default.set": "Sett gjeldende server som standard",
   "dialog.server.default.clear": "Tøm",
   "dialog.server.action.remove": "Fjern server",
-
   "dialog.server.menu.edit": "Rediger",
   "dialog.server.menu.default": "Sett som standard",
   "dialog.server.menu.defaultRemove": "Fjern standard",
   "dialog.server.menu.delete": "Slett",
+
   "dialog.server.current": "Gjeldende server",
   "dialog.server.status.default": "Standard",
-
   "dialog.project.edit.title": "Rediger prosjekt",
   "dialog.project.edit.name": "Navn",
   "dialog.project.edit.icon": "Ikon",
   "dialog.project.edit.icon.alt": "Prosjektikon",
+
   "dialog.project.edit.icon.hint": "Klikk eller dra et bilde",
   "dialog.project.edit.icon.recommended": "Anbefalt: 128x128px",
   "dialog.project.edit.color": "Farge",
   "dialog.project.edit.color.select": "Velg fargen {{color}}",
-
   "dialog.project.edit.worktree.startup": "Oppstartsskript for arbeidsområde",
   "dialog.project.edit.worktree.startup.description": "Kjører etter at et nytt arbeidsområde (worktree) er opprettet.",
   "dialog.project.edit.worktree.startup.placeholder": "f.eks. bun install",
   "context.breakdown.title": "Kontekstfordeling",
-  "context.breakdown.note": 'Omtrentlig fordeling av input-tokens. "Annet" inkluderer verktøydefinisjoner og overhead.',
+  "context.breakdown.note": "Omtrentlig fordeling av input-tokens. \"Annet\" inkluderer verktøydefinisjoner og overhead.",
   "context.breakdown.system": "System",
   "context.breakdown.user": "Bruker",
+
   "context.breakdown.assistant": "Assistent",
   "context.breakdown.tool": "Verktøykall",
   "context.breakdown.other": "Annet",
-
   "context.systemPrompt.title": "Systemprompt",
   "context.rawMessages.title": "Rå meldinger",
-
   "context.stats.session": "Sesjon",
   "context.stats.messages": "Meldinger",
+
   "context.stats.provider": "Leverandør",
   "context.stats.model": "Modell",
+
   "context.stats.limit": "Kontekstgrense",
   "context.stats.totalTokens": "Totalt antall tokens",
   "context.stats.usage": "Forbruk",
@@ -321,113 +358,129 @@ export const dict = {
   "context.stats.totalCost": "Total kostnad",
   "context.stats.sessionCreated": "Sesjon opprettet",
   "context.stats.lastActivity": "Siste aktivitet",
-
   "context.usage.tokens": "Tokens",
   "context.usage.usage": "Forbruk",
   "context.usage.cost": "Kostnad",
   "context.usage.clickToView": "Klikk for å se kontekst",
-  "context.usage.view": "Se kontekstforbruk",
 
+  "context.usage.view": "Se kontekstforbruk",
+  "language.en": "English",
+  "language.zh": "简体中文",
+  "language.zht": "繁體中文",
+  "language.ko": "한국어",
+
+  "language.de": "Deutsch",
+  "language.es": "Español",
+  "language.fr": "Français",
+  "language.da": "Dansk",
+  "language.ja": "日本語",
+  "language.pl": "Polski",
+  "language.ru": "Русский",
+  "language.ar": "العربية",
+  "language.no": "Norsk",
+  "language.br": "Português (Brasil)",
+  "language.bs": "Bosanski",
+  "language.th": "ไทย",
   "toast.language.title": "Språk",
   "toast.language.description": "Byttet til {{language}}",
-
   "toast.theme.title": "Tema byttet",
   "toast.scheme.title": "Fargevalg",
+
+  "toast.workspace.enabled.title": "Arbeidsområder aktivert",
+  "toast.workspace.enabled.description": "Flere worktrees vises nå i sidefeltet",
+
+  "toast.workspace.disabled.title": "Arbeidsområder deaktivert",
+  "toast.workspace.disabled.description": "Kun hoved-worktree vises i sidefeltet",
 
   "toast.permissions.autoaccept.on.title": "Godtar endringer automatisk",
   "toast.permissions.autoaccept.on.description": "Redigerings- og skrivetillatelser vil bli godkjent automatisk",
   "toast.permissions.autoaccept.off.title": "Sluttet å godta endringer automatisk",
   "toast.permissions.autoaccept.off.description": "Redigerings- og skrivetillatelser vil kreve godkjenning",
 
-  "toast.workspace.enabled.title": "Arbeidsområder aktivert",
-  "toast.workspace.enabled.description": "Flere worktrees vises nå i sidefeltet",
-  "toast.workspace.disabled.title": "Arbeidsområder deaktivert",
-  "toast.workspace.disabled.description": "Kun hoved-worktree vises i sidefeltet",
-
   "toast.model.none.title": "Ingen modell valgt",
   "toast.model.none.description": "Koble til en leverandør for å oppsummere denne sesjonen",
-
   "toast.file.loadFailed.title": "Kunne ikke laste fil",
-
   "toast.file.listFailed.title": "Kunne ikke liste filer",
+
   "toast.context.noLineSelection.title": "Ingen linjevalg",
   "toast.context.noLineSelection.description": "Velg først et linjeområde i en filfane.",
+
   "toast.session.share.copyFailed.title": "Kunne ikke kopiere URL til utklippstavlen",
   "toast.session.share.success.title": "Sesjon delt",
+
   "toast.session.share.success.description": "Delings-URL kopiert til utklippstavlen!",
   "toast.session.share.failed.title": "Kunne ikke dele sesjon",
-  "toast.session.share.failed.description": "Det oppstod en feil under deling av sesjonen",
 
+  "toast.session.share.failed.description": "Det oppstod en feil under deling av sesjonen",
   "toast.session.unshare.success.title": "Deling av sesjon stoppet",
   "toast.session.unshare.success.description": "Sesjonen deles ikke lenger!",
   "toast.session.unshare.failed.title": "Kunne ikke stoppe deling av sesjon",
   "toast.session.unshare.failed.description": "Det oppstod en feil da delingen av sesjonen skulle stoppes",
 
   "toast.session.listFailed.title": "Kunne ikke laste sesjoner for {{project}}",
-
   "toast.update.title": "Oppdatering tilgjengelig",
   "toast.update.description": "En ny versjon av Kilo ({{version}}) er nå tilgjengelig for installasjon.",
   "toast.update.action.installRestart": "Installer og start på nytt",
+
   "toast.update.action.notYet": "Ikke nå",
 
   "error.page.title": "Noe gikk galt",
   "error.page.description": "Det oppstod en feil under lasting av applikasjonen.",
   "error.page.details.label": "Feildetaljer",
   "error.page.action.restart": "Start på nytt",
+
   "error.page.action.checking": "Sjekker...",
   "error.page.action.checkUpdates": "Se etter oppdateringer",
   "error.page.action.updateTo": "Oppdater til {{version}}",
   "error.page.report.prefix": "Vennligst rapporter denne feilen til Kilo-teamet",
   "error.page.report.discord": "på Discord",
   "error.page.version": "Versjon: {{version}}",
-
-  "error.dev.rootNotFound":
-    "Rotelement ikke funnet. Glemte du å legge det til i index.html? Eller kanskje id-attributten er feilstavet?",
-
+  "error.dev.rootNotFound": "Rotelement ikke funnet. Glemte du å legge det til i index.html? Eller kanskje id-attributten er feilstavet?",
   "error.globalSync.connectFailed": "Kunne ikke koble til server. Kjører det en server på `{{url}}`?",
-
+  "directory.error.invalidUrl": "Invalid directory in URL.",
   "error.chain.unknown": "Ukjent feil",
+
   "error.chain.causedBy": "Forårsaket av:",
   "error.chain.apiError": "API-feil",
+
   "error.chain.status": "Status: {{status}}",
   "error.chain.retryable": "Kan prøves på nytt: {{retryable}}",
+
   "error.chain.responseBody": "Responsinnhold:\n{{body}}",
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Modell ikke funnet: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Sjekk leverandør-/modellnavnene i konfigurasjonen din (opencode.json)",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" mislyktes. Merk at Kilo ikke støtter MCP-autentisering ennå.',
+  "error.chain.mcpFailed": "MCP-server \"{{name}}\" mislyktes. Merk at Kilo ikke støtter MCP-autentisering ennå.",
   "error.chain.providerAuthFailed": "Leverandørautentisering mislyktes ({{provider}}): {{message}}",
-  "error.chain.providerInitFailed":
-    'Kunne ikke initialisere leverandør "{{provider}}". Sjekk legitimasjon og konfigurasjon.',
+  "error.chain.providerInitFailed": "Kunne ikke initialisere leverandør \"{{provider}}\". Sjekk legitimasjon og konfigurasjon.",
   "error.chain.configJsonInvalid": "Konfigurasjonsfilen på {{path}} er ikke gyldig JSON(C)",
   "error.chain.configJsonInvalidWithMessage": "Konfigurasjonsfilen på {{path}} er ikke gyldig JSON(C): {{message}}",
-  "error.chain.configDirectoryTypo":
-    'Mappen "{{dir}}" i {{path}} er ikke gyldig. Gi mappen nytt navn til "{{suggestion}}" eller fjern den. Dette er en vanlig skrivefeil.',
+  "error.chain.configDirectoryTypo": "Mappen \"{{dir}}\" i {{path}} er ikke gyldig. Gi mappen nytt navn til \"{{suggestion}}\" eller fjern den. Dette er en vanlig skrivefeil.",
   "error.chain.configFrontmatterError": "Kunne ikke analysere frontmatter i {{path}}:\n{{message}}",
   "error.chain.configInvalid": "Konfigurasjonsfilen på {{path}} er ugyldig",
   "error.chain.configInvalidWithMessage": "Konfigurasjonsfilen på {{path}} er ugyldig: {{message}}",
-
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",
-
   "notification.session.responseReady.title": "Svar klart",
   "notification.session.error.title": "Sesjonsfeil",
-  "notification.session.error.fallbackDescription": "Det oppstod en feil",
 
+  "notification.session.error.fallbackDescription": "Det oppstod en feil",
   "home.recentProjects": "Nylige prosjekter",
   "home.empty.title": "Ingen nylige prosjekter",
   "home.empty.description": "Kom i gang ved å åpne et lokalt prosjekt",
-
   "session.tab.session": "Sesjon",
+
   "session.tab.review": "Gjennomgang",
   "session.tab.context": "Kontekst",
   "session.panel.reviewAndFiles": "Gjennomgang og filer",
+
   "session.review.filesChanged": "{{count}} filer endret",
   "session.review.change.one": "Endring",
   "session.review.change.other": "Endringer",
+
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.empty": "Ingen endringer i denne sesjonen ennå",
   "session.review.noChanges": "Ingen endringer",
@@ -438,17 +491,23 @@ export const dict = {
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
   "session.messages.loadEarlier": "Last inn tidligere meldinger",
   "session.messages.loading": "Laster meldinger...",
+
   "session.messages.jumpToLatest": "Hopp til nyeste",
-
   "session.context.addToContext": "Legg til {{selection}} i kontekst",
-
   "session.new.worktree.main": "Hovedgren",
+
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
   "session.new.worktree.create": "Opprett nytt worktree",
   "session.new.lastModified": "Sist endret",
-
   "session.header.search.placeholder": "Søk i {{project}}",
   "session.header.searchFiles": "Søk etter filer",
+
+  "session.header.openIn": "Open in",
+
+  "session.header.open.action": "Open {{app}}",
+  "session.header.open.ariaLabel": "Open in {{app}}",
+  "session.header.open.menu": "Open options",
+  "session.header.open.copyPath": "Copy Path",
 
   "status.popover.trigger": "Status",
   "status.popover.ariaLabel": "Serverkonfigurasjoner",
@@ -459,33 +518,30 @@ export const dict = {
   "status.popover.action.manageServers": "Administrer servere",
 
   "session.share.popover.title": "Publiser på nett",
-  "session.share.popover.description.shared":
-    "Denne sesjonen er offentlig på nettet. Den er tilgjengelig for alle med lenken.",
-  "session.share.popover.description.unshared":
-    "Del sesjonen offentlig på nettet. Den vil være tilgjengelig for alle med lenken.",
+  "session.share.popover.description.shared": "Denne sesjonen er offentlig på nettet. Den er tilgjengelig for alle med lenken.",
+  "session.share.popover.description.unshared": "Del sesjonen offentlig på nettet. Den vil være tilgjengelig for alle med lenken.",
   "session.share.action.share": "Del",
   "session.share.action.publish": "Publiser",
   "session.share.action.publishing": "Publiserer...",
   "session.share.action.unpublish": "Avpubliser",
+
   "session.share.action.unpublishing": "Avpubliserer...",
   "session.share.action.view": "Vis",
   "session.share.copy.copied": "Kopiert",
   "session.share.copy.copyLink": "Kopier lenke",
-
   "lsp.tooltip.none": "Ingen LSP-servere",
   "lsp.label.connected": "{{count}} LSP",
-
   "prompt.loading": "Laster prompt...",
   "terminal.loading": "Laster terminal...",
   "terminal.title": "Terminal",
   "terminal.title.numbered": "Terminal {{number}}",
   "terminal.close": "Lukk terminal",
   "terminal.connectionLost.title": "Tilkobling mistet",
-  "terminal.connectionLost.description":
-    "Terminalforbindelsen ble avbrutt. Dette kan skje når serveren starter på nytt.",
+  "terminal.connectionLost.description": "Terminalforbindelsen ble avbrutt. Dette kan skje når serveren starter på nytt.",
 
   "common.closeTab": "Lukk fane",
   "common.dismiss": "Avvis",
+
   "common.requestFailed": "Forespørsel mislyktes",
   "common.moreOptions": "Flere alternativer",
   "common.learnMore": "Lær mer",
@@ -494,10 +550,10 @@ export const dict = {
   "common.archive": "Arkiver",
   "common.delete": "Slett",
   "common.close": "Lukk",
+
   "common.edit": "Rediger",
   "common.loadMore": "Last flere",
   "common.key.esc": "ESC",
-
   "sidebar.menu.toggle": "Veksle meny",
   "sidebar.nav.projectsAndSessions": "Prosjekter og sesjoner",
   "sidebar.settings": "Innstillinger",
@@ -508,43 +564,49 @@ export const dict = {
   "sidebar.gettingStarted.line1": "Kilo inkluderer gratis modeller så du kan starte umiddelbart.",
   "sidebar.gettingStarted.line2": "Koble til en leverandør for å bruke modeller, inkl. Claude, GPT, Gemini osv.",
   "sidebar.project.recentSessions": "Nylige sesjoner",
-  "sidebar.project.viewAllSessions": "Vis alle sesjoner",
 
+  "sidebar.project.viewAllSessions": "Vis alle sesjoner",
   "app.name.desktop": "Kilo Desktop",
   "settings.section.desktop": "Skrivebord",
   "settings.section.server": "Server",
   "settings.tab.general": "Generelt",
   "settings.tab.shortcuts": "Snarveier",
-
   "settings.general.section.appearance": "Utseende",
   "settings.general.section.notifications": "Systemvarsler",
   "settings.general.section.updates": "Oppdateringer",
   "settings.general.section.sounds": "Lydeffekter",
+  "settings.general.section.display": "Display",
 
   "settings.general.row.language.title": "Språk",
+
   "settings.general.row.language.description": "Endre visningsspråket for Kilo",
   "settings.general.row.appearance.title": "Utseende",
   "settings.general.row.appearance.description": "Tilpass hvordan Kilo ser ut på enheten din",
   "settings.general.row.theme.title": "Tema",
+
   "settings.general.row.theme.description": "Tilpass hvordan Kilo er tematisert.",
   "settings.general.row.font.title": "Skrift",
   "settings.general.row.font.description": "Tilpass mono-skriften som brukes i kodeblokker",
+  "settings.general.row.wayland.title": "Use native Wayland",
+  "settings.general.row.wayland.description": "Disable X11 fallback on Wayland. Requires restart.",
 
+  "settings.general.row.wayland.tooltip": "On Linux with mixed refresh-rate monitors, native Wayland can be more stable.",
   "settings.general.row.releaseNotes.title": "Utgivelsesnotater",
-  "settings.general.row.releaseNotes.description": 'Vis "Hva er nytt"-vinduer etter oppdateringer',
-
+  "settings.general.row.releaseNotes.description": "Vis \"Hva er nytt\"-vinduer etter oppdateringer",
   "settings.updates.row.startup.title": "Se etter oppdateringer ved oppstart",
   "settings.updates.row.startup.description": "Se automatisk etter oppdateringer når Kilo starter",
   "settings.updates.row.check.title": "Se etter oppdateringer",
   "settings.updates.row.check.description": "Se etter oppdateringer manuelt og installer hvis tilgjengelig",
   "settings.updates.action.checkNow": "Sjekk nå",
+
   "settings.updates.action.checking": "Sjekker...",
   "settings.updates.toast.latest.title": "Du er oppdatert",
   "settings.updates.toast.latest.description": "Du bruker den nyeste versjonen av Kilo.",
-
   "font.option.ibmPlexMono": "IBM Plex Mono",
+
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
+
   "font.option.hack": "Hack",
   "font.option.inconsolata": "Inconsolata",
   "font.option.intelOneMono": "Intel One Mono",
@@ -600,78 +662,77 @@ export const dict = {
   "sound.option.yup05": "Ja 05",
   "sound.option.yup06": "Ja 06",
   "settings.general.notifications.agent.title": "Agent",
-  "settings.general.notifications.agent.description":
-    "Vis systemvarsel når agenten er ferdig eller trenger oppmerksomhet",
+  "settings.general.notifications.agent.description": "Vis systemvarsel når agenten er ferdig eller trenger oppmerksomhet",
   "settings.general.notifications.permissions.title": "Tillatelser",
   "settings.general.notifications.permissions.description": "Vis systemvarsel når en tillatelse er påkrevd",
   "settings.general.notifications.errors.title": "Feil",
   "settings.general.notifications.errors.description": "Vis systemvarsel når det oppstår en feil",
-
   "settings.general.sounds.agent.title": "Agent",
   "settings.general.sounds.agent.description": "Spill av lyd når agenten er ferdig eller trenger oppmerksomhet",
   "settings.general.sounds.permissions.title": "Tillatelser",
   "settings.general.sounds.permissions.description": "Spill av lyd når en tillatelse er påkrevd",
   "settings.general.sounds.errors.title": "Feil",
-  "settings.general.sounds.errors.description": "Spill av lyd når det oppstår en feil",
 
+  "settings.general.sounds.errors.description": "Spill av lyd når det oppstår en feil",
   "settings.shortcuts.title": "Tastatursnarveier",
   "settings.shortcuts.reset.button": "Tilbakestill til standard",
   "settings.shortcuts.reset.toast.title": "Snarveier tilbakestilt",
   "settings.shortcuts.reset.toast.description": "Tastatursnarveier er tilbakestilt til standard.",
   "settings.shortcuts.conflict.title": "Snarvei allerede i bruk",
   "settings.shortcuts.conflict.description": "{{keybind}} er allerede tilordnet til {{titles}}.",
+
   "settings.shortcuts.unassigned": "Ikke tilordnet",
   "settings.shortcuts.pressKeys": "Trykk taster",
   "settings.shortcuts.search.placeholder": "Søk etter snarveier",
   "settings.shortcuts.search.empty": "Ingen snarveier funnet",
-
   "settings.shortcuts.group.general": "Generelt",
   "settings.shortcuts.group.session": "Sesjon",
+
   "settings.shortcuts.group.navigation": "Navigasjon",
   "settings.shortcuts.group.modelAndAgent": "Modell og agent",
   "settings.shortcuts.group.terminal": "Terminal",
   "settings.shortcuts.group.prompt": "Prompt",
-
   "settings.providers.title": "Leverandører",
   "settings.providers.description": "Leverandørinnstillinger vil kunne konfigureres her.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",
   "settings.providers.tag.environment": "Miljø",
+
   "settings.providers.tag.config": "Konfigurasjon",
   "settings.providers.tag.custom": "Tilpasset",
   "settings.providers.tag.other": "Annet",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modellinnstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",
+
   "settings.agents.description": "Agentinnstillinger vil kunne konfigureres her.",
   "settings.commands.title": "Kommandoer",
   "settings.commands.description": "Kommandoinnstillinger vil kunne konfigureres her.",
   "settings.mcp.title": "MCP",
   "settings.mcp.description": "MCP-innstillinger vil kunne konfigureres her.",
-
   "settings.permissions.title": "Tillatelser",
   "settings.permissions.description": "Kontroller hvilke verktøy serveren kan bruke som standard.",
   "settings.permissions.section.tools": "Verktøy",
   "settings.permissions.toast.updateFailed.title": "Kunne ikke oppdatere tillatelser",
-
   "settings.permissions.action.allow": "Tillat",
   "settings.permissions.action.ask": "Spør",
   "settings.permissions.action.deny": "Avslå",
-
   "settings.permissions.tool.read.title": "Les",
   "settings.permissions.tool.read.description": "Lesing av en fil (matcher filbanen)",
   "settings.permissions.tool.edit.title": "Rediger",
-  "settings.permissions.tool.edit.description":
-    "Endre filer, inkludert redigeringer, skriving, patcher og multi-redigeringer",
+  "settings.permissions.tool.edit.description": "Endre filer, inkludert redigeringer, skriving, patcher og multi-redigeringer",
   "settings.permissions.tool.glob.title": "Glob",
+
   "settings.permissions.tool.glob.description": "Match filer ved hjelp av glob-mønstre",
   "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Søk i filinnhold ved hjelp av regulære uttrykk",
   "settings.permissions.tool.list.title": "Liste",
+
   "settings.permissions.tool.list.description": "List filer i en mappe",
   "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kjør shell-kommandoer",
+
   "settings.permissions.tool.task.title": "Oppgave",
   "settings.permissions.tool.task.description": "Start underagenter",
   "settings.permissions.tool.skill.title": "Ferdighet",
@@ -692,10 +753,9 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Få tilgang til filer utenfor prosjektmappen",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Oppdager gjentatte verktøykall med identisk input",
-
   "session.delete.failed.title": "Kunne ikke slette sesjon",
   "session.delete.title": "Slett sesjon",
-  "session.delete.confirm": 'Slette sesjonen "{{name}}"?',
+  "session.delete.confirm": "Slette sesjonen \"{{name}}\"?",
   "session.delete.button": "Slett sesjon",
   "workspace.new": "Nytt arbeidsområde",
   "workspace.type.local": "lokal",
@@ -705,89 +765,23 @@ export const dict = {
   "workspace.resetting.title": "Tilbakestiller arbeidsområde",
   "workspace.resetting.description": "Dette kan ta et minutt.",
   "workspace.reset.failed.title": "Kunne ikke tilbakestille arbeidsområde",
+
   "workspace.reset.success.title": "Arbeidsområde tilbakestilt",
   "workspace.reset.success.description": "Arbeidsområdet samsvarer nå med standardgrenen.",
   "workspace.error.stillPreparing": "Arbeidsområdet klargjøres fortsatt",
   "workspace.status.checking": "Sjekker for ikke-sammenslåtte endringer...",
+
   "workspace.status.error": "Kunne ikke bekrefte git-status.",
   "workspace.status.clean": "Ingen ikke-sammenslåtte endringer oppdaget.",
   "workspace.status.dirty": "Ikke-sammenslåtte endringer oppdaget i dette arbeidsområdet.",
   "workspace.delete.title": "Slett arbeidsområde",
-  "workspace.delete.confirm": 'Slette arbeidsområdet "{{name}}"?',
+  "workspace.delete.confirm": "Slette arbeidsområdet \"{{name}}\"?",
   "workspace.delete.button": "Slett arbeidsområde",
   "workspace.reset.title": "Tilbakestill arbeidsområde",
-  "workspace.reset.confirm": 'Tilbakestille arbeidsområdet "{{name}}"?',
+  "workspace.reset.confirm": "Tilbakestille arbeidsområdet \"{{name}}\"?",
   "workspace.reset.button": "Tilbakestill arbeidsområde",
   "workspace.reset.archived.none": "Ingen aktive sesjoner vil bli arkivert.",
   "workspace.reset.archived.one": "1 sesjon vil bli arkivert.",
   "workspace.reset.archived.many": "{{count}} sessions will be archived.",
-  "command.workspace.toggle.description": "Enable or disable multiple workspaces in the sidebar",
-  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
-  "dialog.provider.google.note": "Gemini models for fast, structured responses",
-  "dialog.provider.openrouter.note": "Access all supported models from one provider",
-  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
-  "provider.custom.title": "Custom provider",
-  "provider.custom.description.prefix": "Configure an OpenAI-compatible provider. See the ",
-  "provider.custom.description.link": "provider config docs",
-  "provider.custom.description.suffix": ".",
-  "provider.custom.field.providerID.label": "Provider ID",
-  "provider.custom.field.providerID.placeholder": "myprovider",
-  "provider.custom.field.providerID.description": "Lowercase letters, numbers, hyphens, or underscores",
-  "provider.custom.field.name.label": "Display name",
-  "provider.custom.field.name.placeholder": "My AI Provider",
-  "provider.custom.field.baseURL.label": "Base URL",
-  "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
-  "provider.custom.field.apiKey.label": "API key",
-  "provider.custom.field.apiKey.placeholder": "API key",
-  "provider.custom.field.apiKey.description": "Optional. Leave empty if you manage auth via headers.",
-  "provider.custom.models.label": "Models",
-  "provider.custom.models.id.label": "ID",
-  "provider.custom.models.id.placeholder": "model-id",
-  "provider.custom.models.name.label": "Name",
-  "provider.custom.models.name.placeholder": "Display Name",
-  "provider.custom.models.remove": "Remove model",
-  "provider.custom.models.add": "Add model",
-  "provider.custom.headers.label": "Headers (optional)",
-  "provider.custom.headers.key.label": "Header",
-  "provider.custom.headers.key.placeholder": "Header-Name",
-  "provider.custom.headers.value.label": "Value",
-  "provider.custom.headers.value.placeholder": "value",
-  "provider.custom.headers.remove": "Remove header",
-  "provider.custom.headers.add": "Add header",
-  "provider.custom.error.providerID.required": "Provider ID is required",
-  "provider.custom.error.providerID.format": "Use lowercase letters, numbers, hyphens, or underscores",
-  "provider.custom.error.providerID.exists": "That provider ID already exists",
-  "provider.custom.error.name.required": "Display name is required",
-  "provider.custom.error.baseURL.required": "Base URL is required",
-  "provider.custom.error.baseURL.format": "Must start with http:// or https://",
-  "provider.custom.error.required": "Required",
-  "provider.custom.error.duplicate": "Duplicate",
-  "common.goForward": "Navigate forward",
-  "language.en": "English",
-  "language.zh": "简体中文",
-  "language.zht": "繁體中文",
-  "language.ko": "한국어",
-  "language.de": "Deutsch",
-  "language.es": "Español",
-  "language.fr": "Français",
-  "language.da": "Dansk",
-  "language.ja": "日本語",
-  "language.pl": "Polski",
-  "language.ru": "Русский",
-  "language.ar": "العربية",
-  "language.no": "Norsk",
-  "language.br": "Português (Brasil)",
-  "language.bs": "Bosanski",
-  "language.th": "ไทย",
-  "directory.error.invalidUrl": "Invalid directory in URL.",
-  "session.header.openIn": "Open in",
-  "session.header.open.action": "Open {{app}}",
-  "session.header.open.ariaLabel": "Open in {{app}}",
-  "session.header.open.menu": "Open options",
-  "session.header.open.copyPath": "Copy Path",
-  "settings.general.section.display": "Display",
-  "settings.general.row.wayland.title": "Use native Wayland",
-  "settings.general.row.wayland.description": "Disable X11 fallback on Wayland. Requires restart.",
-  "settings.general.row.wayland.tooltip": "On Linux with mixed refresh-rate monitors, native Wayland can be more stable.",
   "workspace.reset.note": "This will reset the workspace to match the default branch.",
 }

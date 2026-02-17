@@ -15,8 +15,8 @@ export const dict = {
   "command.category.agent": "Agent",
   "command.category.permissions": "Permissions",
   "command.category.workspace": "Espace de travail",
-
   "command.category.settings": "Paramètres",
+
   "theme.scheme.system": "Système",
   "theme.scheme.light": "Clair",
   "theme.scheme.dark": "Sombre",
@@ -72,6 +72,7 @@ export const dict = {
   "command.permissions.autoaccept.enable": "Accepter automatiquement les modifications",
   "command.permissions.autoaccept.disable": "Arrêter l'acceptation automatique des modifications",
   "command.workspace.toggle": "Basculer les espaces de travail",
+  "command.workspace.toggle.description": "Enable or disable multiple workspaces in the sidebar",
   "command.session.undo": "Annuler",
   "command.session.undo.description": "Annuler le dernier message",
   "command.session.redo": "Rétablir",
@@ -95,9 +96,13 @@ export const dict = {
   "dialog.provider.group.popular": "Populaire",
   "dialog.provider.group.other": "Autre",
   "dialog.provider.tag.recommended": "Recommandé",
+  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
   "dialog.provider.anthropic.note": "Connectez-vous avec Claude Pro/Max ou une clé API",
-  "dialog.provider.openai.note": "Connectez-vous avec ChatGPT Pro/Plus ou une clé API",
   "dialog.provider.copilot.note": "Connectez-vous avec Copilot ou une clé API",
+  "dialog.provider.openai.note": "Connectez-vous avec ChatGPT Pro/Plus ou une clé API",
+  "dialog.provider.google.note": "Gemini models for fast, structured responses",
+  "dialog.provider.openrouter.note": "Access all supported models from one provider",
+  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Sélectionner un modèle",
   "dialog.model.search.placeholder": "Rechercher des modèles",
@@ -117,42 +122,74 @@ export const dict = {
   "provider.connect.status.inProgress": "Autorisation en cours...",
   "provider.connect.status.waiting": "En attente d'autorisation...",
   "provider.connect.status.failed": "Échec de l'autorisation : {{error}}",
-  "provider.connect.apiKey.description":
-    "Entrez votre clé API {{provider}} pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+  "provider.connect.apiKey.description": "Entrez votre clé API {{provider}} pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
   "provider.connect.apiKey.label": "Clé API {{provider}}",
   "provider.connect.apiKey.placeholder": "Clé API",
   "provider.connect.apiKey.required": "La clé API est requise",
-  "provider.connect.opencodeZen.line1":
-    "OpenCode Zen vous donne accès à un ensemble sélectionné de modèles fiables et optimisés pour les agents de codage.",
-  "provider.connect.opencodeZen.line2":
-    "Avec une seule clé API, vous aurez accès à des modèles tels que Claude, GPT, Gemini, GLM et plus encore.",
+  "provider.connect.opencodeZen.line1": "OpenCode Zen vous donne accès à un ensemble sélectionné de modèles fiables et optimisés pour les agents de codage.",
+  "provider.connect.opencodeZen.line2": "Avec une seule clé API, vous aurez accès à des modèles tels que Claude, GPT, Gemini, GLM et plus encore.",
   "provider.connect.opencodeZen.visit.prefix": "Visitez ",
   "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " pour récupérer votre clé API.",
   "provider.connect.oauth.code.visit.prefix": "Visitez ",
   "provider.connect.oauth.code.visit.link": "ce lien",
-  "provider.connect.oauth.code.visit.suffix":
-    " pour récupérer votre code d'autorisation afin de connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+  "provider.connect.oauth.code.visit.suffix": " pour récupérer votre code d'autorisation afin de connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
   "provider.connect.oauth.code.label": "Code d'autorisation {{method}}",
   "provider.connect.oauth.code.placeholder": "Code d'autorisation",
   "provider.connect.oauth.code.required": "Le code d'autorisation est requis",
   "provider.connect.oauth.code.invalid": "Code d'autorisation invalide",
   "provider.connect.oauth.auto.visit.prefix": "Visitez ",
   "provider.connect.oauth.auto.visit.link": "ce lien",
-  "provider.connect.oauth.auto.visit.suffix":
-    " et entrez le code ci-dessous pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+  "provider.connect.oauth.auto.visit.suffix": " et entrez le code ci-dessous pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
   "provider.connect.oauth.auto.confirmationCode": "Code de confirmation",
   "provider.connect.toast.connected.title": "{{provider}} connecté",
   "provider.connect.toast.connected.description": "Les modèles {{provider}} sont maintenant disponibles.",
+  "provider.custom.title": "Custom provider",
+  "provider.custom.description.prefix": "Configure an OpenAI-compatible provider. See the ",
+  "provider.custom.description.link": "provider config docs",
+  "provider.custom.description.suffix": ".",
+  "provider.custom.field.providerID.label": "Provider ID",
 
+  "provider.custom.field.providerID.placeholder": "myprovider",
+  "provider.custom.field.providerID.description": "Lowercase letters, numbers, hyphens, or underscores",
+  "provider.custom.field.name.label": "Display name",
+  "provider.custom.field.name.placeholder": "My AI Provider",
+  "provider.custom.field.baseURL.label": "Base URL",
+  "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
+  "provider.custom.field.apiKey.label": "API key",
+  "provider.custom.field.apiKey.placeholder": "API key",
+  "provider.custom.field.apiKey.description": "Optional. Leave empty if you manage auth via headers.",
+  "provider.custom.models.label": "Models",
+  "provider.custom.models.id.label": "ID",
+  "provider.custom.models.id.placeholder": "model-id",
+  "provider.custom.models.name.label": "Name",
+  "provider.custom.models.name.placeholder": "Display Name",
+  "provider.custom.models.remove": "Remove model",
+  "provider.custom.models.add": "Add model",
+  "provider.custom.headers.label": "Headers (optional)",
+  "provider.custom.headers.key.label": "Header",
+  "provider.custom.headers.key.placeholder": "Header-Name",
+  "provider.custom.headers.value.label": "Value",
+  "provider.custom.headers.value.placeholder": "value",
+  "provider.custom.headers.remove": "Remove header",
+  "provider.custom.headers.add": "Add header",
+  "provider.custom.error.providerID.required": "Provider ID is required",
+  "provider.custom.error.providerID.format": "Use lowercase letters, numbers, hyphens, or underscores",
+  "provider.custom.error.providerID.exists": "That provider ID already exists",
+  "provider.custom.error.name.required": "Display name is required",
+  "provider.custom.error.baseURL.required": "Base URL is required",
+  "provider.custom.error.baseURL.format": "Must start with http:// or https://",
+  "provider.custom.error.required": "Required",
+  "provider.custom.error.duplicate": "Duplicate",
   "provider.disconnect.toast.disconnected.title": "{{provider}} déconnecté",
   "provider.disconnect.toast.disconnected.description": "Les modèles {{provider}} ne sont plus disponibles.",
   "model.tag.free": "Gratuit",
   "model.tag.latest": "Dernier",
-
   "model.provider.anthropic": "Anthropic",
+
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
+
   "model.provider.xai": "xAI",
   "model.provider.meta": "Meta",
   "model.input.text": "texte",
@@ -166,8 +203,10 @@ export const dict = {
   "model.tooltip.context": "Limite de contexte {{limit}}",
   "common.search.placeholder": "Rechercher",
   "common.goBack": "Retour",
+  "common.goForward": "Navigate forward",
   "common.loading": "Chargement",
   "common.loading.ellipsis": "...",
+
   "common.cancel": "Annuler",
   "common.connect": "Connecter",
   "common.disconnect": "Déconnecter",
@@ -176,19 +215,19 @@ export const dict = {
   "common.saving": "Enregistrement...",
   "common.default": "Défaut",
   "common.attachment": "pièce jointe",
-
   "prompt.placeholder.shell": "Entrez une commande shell...",
-  "prompt.placeholder.normal": 'Demandez n\'importe quoi... "{{example}}"',
+  "prompt.placeholder.normal": "Demandez n'importe quoi... \"{{example}}\"",
   "prompt.placeholder.summarizeComments": "Résumer les commentaires…",
   "prompt.placeholder.summarizeComment": "Résumer le commentaire…",
   "prompt.mode.shell": "Shell",
-  "prompt.mode.shell.exit": "esc pour quitter",
 
+  "prompt.mode.shell.exit": "esc pour quitter",
   "prompt.example.1": "Corriger un TODO dans la base de code",
   "prompt.example.2": "Quelle est la pile technique de ce projet ?",
   "prompt.example.3": "Réparer les tests échoués",
   "prompt.example.4": "Expliquer comment fonctionne l'authentification",
   "prompt.example.5": "Trouver et corriger les vulnérabilités de sécurité",
+
   "prompt.example.6": "Ajouter des tests unitaires pour le service utilisateur",
   "prompt.example.7": "Refactoriser cette fonction pour être plus lisible",
   "prompt.example.8": "Que signifie cette erreur ?",
@@ -209,12 +248,12 @@ export const dict = {
   "prompt.example.23": "Ajouter la pagination à cette liste",
   "prompt.example.24": "Créer une commande CLI pour...",
   "prompt.example.25": "Comment fonctionnent les variables d'environnement ici ?",
-
   "prompt.popover.emptyResults": "Aucun résultat correspondant",
   "prompt.popover.emptyCommands": "Aucune commande correspondante",
   "prompt.dropzone.label": "Déposez des images ou des PDF ici",
   "prompt.dropzone.file.label": "Déposez pour @mentionner le fichier",
   "prompt.slash.badge.custom": "personnalisé",
+
   "prompt.slash.badge.skill": "skill",
   "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "actif",
@@ -225,53 +264,51 @@ export const dict = {
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
   "prompt.action.stop": "Arrêter",
-
   "prompt.toast.pasteUnsupported.title": "Collage non supporté",
   "prompt.toast.pasteUnsupported.description": "Seules les images ou les PDF peuvent être collés ici.",
   "prompt.toast.modelAgentRequired.title": "Sélectionnez un agent et un modèle",
   "prompt.toast.modelAgentRequired.description": "Choisissez un agent et un modèle avant d'envoyer un message.",
   "prompt.toast.worktreeCreateFailed.title": "Échec de la création de l'arbre de travail",
+
   "prompt.toast.sessionCreateFailed.title": "Échec de la création de la session",
   "prompt.toast.shellSendFailed.title": "Échec de l'envoi de la commande shell",
   "prompt.toast.commandSendFailed.title": "Échec de l'envoi de la commande",
   "prompt.toast.promptSendFailed.title": "Échec de l'envoi du message",
   "prompt.toast.promptSendFailed.description": "Impossible de récupérer la session",
-
   "dialog.mcp.title": "MCPs",
   "dialog.mcp.description": "{{enabled}} sur {{total}} activés",
   "dialog.mcp.empty": "Aucun MCP configuré",
-
   "dialog.lsp.empty": "LSPs détectés automatiquement par type de fichier",
   "dialog.plugins.empty": "Plugins configurés dans opencode.json",
 
   "mcp.status.connected": "connecté",
   "mcp.status.failed": "échoué",
   "mcp.status.needs_auth": "nécessite auth",
-  "mcp.status.disabled": "désactivé",
 
+  "mcp.status.disabled": "désactivé",
   "dialog.fork.empty": "Aucun message à partir duquel bifurquer",
 
   "dialog.directory.search.placeholder": "Rechercher des dossiers",
   "dialog.directory.empty": "Aucun dossier trouvé",
-
   "dialog.server.title": "Serveurs",
   "dialog.server.description": "Changez le serveur Kilo auquel cette application se connecte.",
+
   "dialog.server.search.placeholder": "Rechercher des serveurs",
+
   "dialog.server.empty": "Aucun serveur pour l'instant",
   "dialog.server.add.title": "Ajouter un serveur",
+
   "dialog.server.add.url": "URL du serveur",
   "dialog.server.add.placeholder": "http://localhost:4096",
   "dialog.server.add.error": "Impossible de se connecter au serveur",
   "dialog.server.add.checking": "Vérification...",
   "dialog.server.add.button": "Ajouter un serveur",
   "dialog.server.default.title": "Serveur par défaut",
-  "dialog.server.default.description":
-    "Se connecter à ce serveur au lancement de l'application au lieu de démarrer un serveur local. Nécessite un redémarrage.",
+  "dialog.server.default.description": "Se connecter à ce serveur au lancement de l'application au lieu de démarrer un serveur local. Nécessite un redémarrage.",
   "dialog.server.default.none": "Aucun serveur sélectionné",
   "dialog.server.default.set": "Définir le serveur actuel comme défaut",
   "dialog.server.default.clear": "Effacer",
   "dialog.server.action.remove": "Supprimer le serveur",
-
   "dialog.server.menu.edit": "Modifier",
   "dialog.server.menu.default": "Définir par défaut",
   "dialog.server.menu.defaultRemove": "Supprimer par défaut",
@@ -285,31 +322,30 @@ export const dict = {
   "dialog.project.edit.icon.alt": "Icône du projet",
   "dialog.project.edit.icon.hint": "Cliquez ou faites glisser une image",
   "dialog.project.edit.icon.recommended": "Recommandé : 128x128px",
+
   "dialog.project.edit.color": "Couleur",
   "dialog.project.edit.color.select": "Sélectionner la couleur {{color}}",
-
   "dialog.project.edit.worktree.startup": "Script de démarrage de l'espace de travail",
-  "dialog.project.edit.worktree.startup.description":
-    "S'exécute après la création d'un nouvel espace de travail (arbre de travail).",
+  "dialog.project.edit.worktree.startup.description": "S'exécute après la création d'un nouvel espace de travail (arbre de travail).",
   "dialog.project.edit.worktree.startup.placeholder": "p. ex. bun install",
   "context.breakdown.title": "Répartition du contexte",
-  "context.breakdown.note":
-    "Répartition approximative des jetons d'entrée. \"Autre\" inclut les définitions d'outils et les frais généraux.",
+  "context.breakdown.note": "Répartition approximative des jetons d'entrée. \"Autre\" inclut les définitions d'outils et les frais généraux.",
   "context.breakdown.system": "Système",
   "context.breakdown.user": "Utilisateur",
   "context.breakdown.assistant": "Assistant",
   "context.breakdown.tool": "Appels d'outils",
-  "context.breakdown.other": "Autre",
 
+  "context.breakdown.other": "Autre",
   "context.systemPrompt.title": "Prompt système",
   "context.rawMessages.title": "Messages bruts",
-
   "context.stats.session": "Session",
   "context.stats.messages": "Messages",
   "context.stats.provider": "Fournisseur",
   "context.stats.model": "Modèle",
+
   "context.stats.limit": "Limite de contexte",
   "context.stats.totalTokens": "Total des jetons",
+
   "context.stats.usage": "Utilisation",
   "context.stats.inputTokens": "Jetons d'entrée",
   "context.stats.outputTokens": "Jetons de sortie",
@@ -320,120 +356,131 @@ export const dict = {
   "context.stats.totalCost": "Coût total",
   "context.stats.sessionCreated": "Session créée",
   "context.stats.lastActivity": "Dernière activité",
-
   "context.usage.tokens": "Jetons",
   "context.usage.usage": "Utilisation",
   "context.usage.cost": "Coût",
   "context.usage.clickToView": "Cliquez pour voir le contexte",
   "context.usage.view": "Voir l'utilisation du contexte",
+  "language.en": "English",
 
+  "language.zh": "简体中文",
+  "language.zht": "繁體中文",
+  "language.ko": "한국어",
+  "language.de": "Deutsch",
+  "language.es": "Español",
+
+  "language.fr": "Français",
+  "language.da": "Dansk",
+  "language.ja": "日本語",
+  "language.pl": "Polski",
+  "language.ru": "Русский",
+  "language.ar": "العربية",
+  "language.no": "Norsk",
+  "language.br": "Português (Brasil)",
+  "language.bs": "Bosanski",
+  "language.th": "ไทย",
   "toast.language.title": "Langue",
   "toast.language.description": "Passé à {{language}}",
-
   "toast.theme.title": "Thème changé",
   "toast.scheme.title": "Schéma de couleurs",
-
-  "toast.permissions.autoaccept.on.title": "Acceptation auto des modifications",
-  "toast.permissions.autoaccept.on.description":
-    "Les permissions de modification et d'écriture seront automatiquement approuvées",
-  "toast.permissions.autoaccept.off.title": "Arrêt acceptation auto des modifications",
-  "toast.permissions.autoaccept.off.description":
-    "Les permissions de modification et d'écriture nécessiteront une approbation",
-
   "toast.workspace.enabled.title": "Espaces de travail activés",
   "toast.workspace.enabled.description": "Plusieurs worktrees sont désormais affichés dans la barre latérale",
+
   "toast.workspace.disabled.title": "Espaces de travail désactivés",
   "toast.workspace.disabled.description": "Seul le worktree principal est affiché dans la barre latérale",
 
+  "toast.permissions.autoaccept.on.title": "Acceptation auto des modifications",
+  "toast.permissions.autoaccept.on.description": "Les permissions de modification et d'écriture seront automatiquement approuvées",
+
+  "toast.permissions.autoaccept.off.title": "Arrêt acceptation auto des modifications",
+  "toast.permissions.autoaccept.off.description": "Les permissions de modification et d'écriture nécessiteront une approbation",
   "toast.model.none.title": "Aucun modèle sélectionné",
   "toast.model.none.description": "Connectez un fournisseur pour résumer cette session",
 
   "toast.file.loadFailed.title": "Échec du chargement du fichier",
-
   "toast.file.listFailed.title": "Échec de la liste des fichiers",
   "toast.context.noLineSelection.title": "Aucune sélection de lignes",
   "toast.context.noLineSelection.description": "Sélectionnez d'abord une plage de lignes dans un onglet de fichier.",
+
   "toast.session.share.copyFailed.title": "Échec de la copie de l'URL dans le presse-papiers",
   "toast.session.share.success.title": "Session partagée",
+
   "toast.session.share.success.description": "URL de partage copiée dans le presse-papiers !",
   "toast.session.share.failed.title": "Échec du partage de la session",
-  "toast.session.share.failed.description": "Une erreur s'est produite lors du partage de la session",
 
+  "toast.session.share.failed.description": "Une erreur s'est produite lors du partage de la session",
   "toast.session.unshare.success.title": "Session non partagée",
+
   "toast.session.unshare.success.description": "Session non partagée avec succès !",
   "toast.session.unshare.failed.title": "Échec de l'annulation du partage",
   "toast.session.unshare.failed.description": "Une erreur s'est produite lors de l'annulation du partage de la session",
-
   "toast.session.listFailed.title": "Échec du chargement des sessions pour {{project}}",
-
   "toast.update.title": "Mise à jour disponible",
+
   "toast.update.description": "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
   "toast.update.action.installRestart": "Installer et redémarrer",
   "toast.update.action.notYet": "Pas encore",
-
   "error.page.title": "Quelque chose s'est mal passé",
+
   "error.page.description": "Une erreur s'est produite lors du chargement de l'application.",
+
   "error.page.details.label": "Détails de l'erreur",
   "error.page.action.restart": "Redémarrer",
   "error.page.action.checking": "Vérification...",
   "error.page.action.checkUpdates": "Vérifier les mises à jour",
+
   "error.page.action.updateTo": "Mettre à jour vers {{version}}",
   "error.page.report.prefix": "Veuillez signaler cette erreur à l'équipe Kilo",
   "error.page.report.discord": "sur Discord",
   "error.page.version": "Version : {{version}}",
-
-  "error.dev.rootNotFound":
-    "Élément racine introuvable. Avez-vous oublié de l'ajouter à votre index.html ? Ou peut-être que l'attribut id est mal orthographié ?",
-
-  "error.globalSync.connectFailed":
-    "Impossible de se connecter au serveur. Y a-t-il un serveur en cours d'exécution à `{{url}}` ?",
-
+  "error.dev.rootNotFound": "Élément racine introuvable. Avez-vous oublié de l'ajouter à votre index.html ? Ou peut-être que l'attribut id est mal orthographié ?",
+  "error.globalSync.connectFailed": "Impossible de se connecter au serveur. Y a-t-il un serveur en cours d'exécution à `{{url}}` ?",
+  "directory.error.invalidUrl": "Invalid directory in URL.",
   "error.chain.unknown": "Erreur inconnue",
   "error.chain.causedBy": "Causé par :",
   "error.chain.apiError": "Erreur API",
+
   "error.chain.status": "Statut : {{status}}",
   "error.chain.retryable": "Réessayable : {{retryable}}",
+
   "error.chain.responseBody": "Corps de la réponse :\n{{body}}",
   "error.chain.didYouMean": "Vouliez-vous dire : {{suggestions}}",
+
   "error.chain.modelNotFound": "Modèle introuvable : {{provider}}/{{model}}",
   "error.chain.checkConfig": "Vérifiez votre configuration (opencode.json) pour les noms de fournisseur/modèle",
-  "error.chain.mcpFailed":
-    "Le serveur MCP \"{{name}}\" a échoué. Notez qu'Kilo ne supporte pas encore l'authentification MCP.",
+  "error.chain.mcpFailed": "Le serveur MCP \"{{name}}\" a échoué. Notez qu'Kilo ne supporte pas encore l'authentification MCP.",
   "error.chain.providerAuthFailed": "Échec de l'authentification du fournisseur ({{provider}}) : {{message}}",
-  "error.chain.providerInitFailed":
-    'Échec de l\'initialisation du fournisseur "{{provider}}". Vérifiez les identifiants et la configuration.',
+  "error.chain.providerInitFailed": "Échec de l'initialisation du fournisseur \"{{provider}}\". Vérifiez les identifiants et la configuration.",
   "error.chain.configJsonInvalid": "Le fichier de configuration à {{path}} n'est pas un JSON(C) valide",
-  "error.chain.configJsonInvalidWithMessage":
-    "Le fichier de configuration à {{path}} n'est pas un JSON(C) valide : {{message}}",
-  "error.chain.configDirectoryTypo":
-    'Le répertoire "{{dir}}" dans {{path}} n\'est pas valide. Renommez le répertoire en "{{suggestion}}" ou supprimez-le. C\'est une faute de frappe courante.',
+  "error.chain.configJsonInvalidWithMessage": "Le fichier de configuration à {{path}} n'est pas un JSON(C) valide : {{message}}",
+  "error.chain.configDirectoryTypo": "Le répertoire \"{{dir}}\" dans {{path}} n'est pas valide. Renommez le répertoire en \"{{suggestion}}\" ou supprimez-le. C'est une faute de frappe courante.",
   "error.chain.configFrontmatterError": "Échec de l'analyse du frontmatter dans {{path}} :\n{{message}}",
   "error.chain.configInvalid": "Le fichier de configuration à {{path}} est invalide",
   "error.chain.configInvalidWithMessage": "Le fichier de configuration à {{path}} est invalide : {{message}}",
-
   "notification.permission.title": "Permission requise",
   "notification.permission.description": "{{sessionTitle}} dans {{projectName}} a besoin d'une permission",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} dans {{projectName}} a une question",
   "notification.action.goToSession": "Aller à la session",
-
   "notification.session.responseReady.title": "Réponse prête",
   "notification.session.error.title": "Erreur de session",
   "notification.session.error.fallbackDescription": "Une erreur s'est produite",
-
   "home.recentProjects": "Projets récents",
+
   "home.empty.title": "Aucun projet récent",
   "home.empty.description": "Commencez par ouvrir un projet local",
-
   "session.tab.session": "Session",
   "session.tab.review": "Revue",
   "session.tab.context": "Contexte",
+
   "session.panel.reviewAndFiles": "Revue et fichiers",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
   "session.review.change.one": "Modification",
+
   "session.review.change.other": "Modifications",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.empty": "Aucune modification dans cette session pour l'instant",
+
   "session.review.noChanges": "Aucune modification",
   "session.files.selectToOpen": "Sélectionnez un fichier à ouvrir",
   "session.files.all": "Tous les fichiers",
@@ -442,56 +489,59 @@ export const dict = {
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
   "session.messages.loadEarlier": "Charger les messages précédents",
   "session.messages.loading": "Chargement des messages...",
-
   "session.messages.jumpToLatest": "Aller au dernier",
   "session.context.addToContext": "Ajouter {{selection}} au contexte",
 
   "session.new.worktree.main": "Branche principale",
   "session.new.worktree.mainWithBranch": "Branche principale ({{branch}})",
   "session.new.worktree.create": "Créer un nouvel arbre de travail",
-  "session.new.lastModified": "Dernière modification",
 
+  "session.new.lastModified": "Dernière modification",
   "session.header.search.placeholder": "Rechercher {{project}}",
   "session.header.searchFiles": "Rechercher des fichiers",
+  "session.header.openIn": "Open in",
+  "session.header.open.action": "Open {{app}}",
 
+  "session.header.open.ariaLabel": "Open in {{app}}",
+
+  "session.header.open.menu": "Open options",
+  "session.header.open.copyPath": "Copy Path",
   "status.popover.trigger": "Statut",
   "status.popover.ariaLabel": "Configurations des serveurs",
+
   "status.popover.tab.servers": "Serveurs",
   "status.popover.tab.mcp": "MCP",
   "status.popover.tab.lsp": "LSP",
   "status.popover.tab.plugins": "Plugins",
   "status.popover.action.manageServers": "Gérer les serveurs",
-
   "session.share.popover.title": "Publier sur le web",
-  "session.share.popover.description.shared":
-    "Cette session est publique sur le web. Elle est accessible à toute personne disposant du lien.",
-  "session.share.popover.description.unshared":
-    "Partager la session publiquement sur le web. Elle sera accessible à toute personne disposant du lien.",
+  "session.share.popover.description.shared": "Cette session est publique sur le web. Elle est accessible à toute personne disposant du lien.",
+
+  "session.share.popover.description.unshared": "Partager la session publiquement sur le web. Elle sera accessible à toute personne disposant du lien.",
   "session.share.action.share": "Partager",
   "session.share.action.publish": "Publier",
   "session.share.action.publishing": "Publication...",
   "session.share.action.unpublish": "Dépublier",
   "session.share.action.unpublishing": "Dépublication...",
   "session.share.action.view": "Voir",
+
   "session.share.copy.copied": "Copié",
   "session.share.copy.copyLink": "Copier le lien",
-
   "lsp.tooltip.none": "Aucun serveur LSP",
   "lsp.label.connected": "{{count}} LSP",
-
   "prompt.loading": "Chargement du prompt...",
   "terminal.loading": "Chargement du terminal...",
   "terminal.title": "Terminal",
   "terminal.title.numbered": "Terminal {{number}}",
   "terminal.close": "Fermer le terminal",
-
   "terminal.connectionLost.title": "Connexion perdue",
-  "terminal.connectionLost.description":
-    "La connexion au terminal a été interrompue. Cela peut arriver lorsque le serveur redémarre.",
+  "terminal.connectionLost.description": "La connexion au terminal a été interrompue. Cela peut arriver lorsque le serveur redémarre.",
   "common.closeTab": "Fermer l'onglet",
   "common.dismiss": "Ignorer",
+
   "common.requestFailed": "La demande a échoué",
   "common.moreOptions": "Plus d'options",
+
   "common.learnMore": "En savoir plus",
   "common.rename": "Renommer",
   "common.reset": "Réinitialiser",
@@ -510,34 +560,37 @@ export const dict = {
   "sidebar.workspaces.disable": "Désactiver les espaces de travail",
   "sidebar.gettingStarted.title": "Commencer",
   "sidebar.gettingStarted.line1": "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
-  "sidebar.gettingStarted.line2":
-    "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
+  "sidebar.gettingStarted.line2": "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Sessions récentes",
   "sidebar.project.viewAllSessions": "Voir toutes les sessions",
-
   "app.name.desktop": "Kilo Desktop",
+
   "settings.section.desktop": "Bureau",
   "settings.section.server": "Serveur",
   "settings.tab.general": "Général",
   "settings.tab.shortcuts": "Raccourcis",
-
   "settings.general.section.appearance": "Apparence",
   "settings.general.section.notifications": "Notifications système",
   "settings.general.section.updates": "Mises à jour",
   "settings.general.section.sounds": "Effets sonores",
-
+  "settings.general.section.display": "Display",
   "settings.general.row.language.title": "Langue",
   "settings.general.row.language.description": "Changer la langue d'affichage pour Kilo",
+
   "settings.general.row.appearance.title": "Apparence",
+
   "settings.general.row.appearance.description": "Personnaliser l'apparence d'Kilo sur votre appareil",
   "settings.general.row.theme.title": "Thème",
   "settings.general.row.theme.description": "Personnaliser le thème d'Kilo.",
   "settings.general.row.font.title": "Police",
+
   "settings.general.row.font.description": "Personnaliser la police mono utilisée dans les blocs de code",
-
+  "settings.general.row.wayland.title": "Use native Wayland",
+  "settings.general.row.wayland.description": "Disable X11 fallback on Wayland. Requires restart.",
+  "settings.general.row.wayland.tooltip": "On Linux with mixed refresh-rate monitors, native Wayland can be more stable.",
   "settings.general.row.releaseNotes.title": "Notes de version",
-  "settings.general.row.releaseNotes.description": 'Afficher des pop-ups "Quoi de neuf" après les mises à jour',
 
+  "settings.general.row.releaseNotes.description": "Afficher des pop-ups \"Quoi de neuf\" après les mises à jour",
   "settings.updates.row.startup.title": "Vérifier les mises à jour au démarrage",
   "settings.updates.row.startup.description": "Vérifier automatiquement les mises à jour au lancement d'Kilo",
   "settings.updates.row.check.title": "Vérifier les mises à jour",
@@ -545,13 +598,15 @@ export const dict = {
   "settings.updates.action.checkNow": "Vérifier maintenant",
   "settings.updates.action.checking": "Vérification...",
   "settings.updates.toast.latest.title": "Vous êtes à jour",
-  "settings.updates.toast.latest.description": "Vous utilisez la dernière version d'Kilo.",
 
+  "settings.updates.toast.latest.description": "Vous utilisez la dernière version d'Kilo.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
+
   "font.option.hack": "Hack",
   "font.option.inconsolata": "Inconsolata",
+
   "font.option.intelOneMono": "Intel One Mono",
   "font.option.iosevka": "Iosevka",
   "font.option.jetbrainsMono": "JetBrains Mono",
@@ -605,22 +660,19 @@ export const dict = {
   "sound.option.yup05": "Oui 05",
   "sound.option.yup06": "Oui 06",
   "settings.general.notifications.agent.title": "Agent",
-  "settings.general.notifications.agent.description":
-    "Afficher une notification système lorsque l'agent a terminé ou nécessite une attention",
+  "settings.general.notifications.agent.description": "Afficher une notification système lorsque l'agent a terminé ou nécessite une attention",
   "settings.general.notifications.permissions.title": "Permissions",
-  "settings.general.notifications.permissions.description":
-    "Afficher une notification système lorsqu'une permission est requise",
+  "settings.general.notifications.permissions.description": "Afficher une notification système lorsqu'une permission est requise",
   "settings.general.notifications.errors.title": "Erreurs",
   "settings.general.notifications.errors.description": "Afficher une notification système lorsqu'une erreur se produit",
-
   "settings.general.sounds.agent.title": "Agent",
   "settings.general.sounds.agent.description": "Jouer un son lorsque l'agent a terminé ou nécessite une attention",
   "settings.general.sounds.permissions.title": "Permissions",
   "settings.general.sounds.permissions.description": "Jouer un son lorsqu'une permission est requise",
   "settings.general.sounds.errors.title": "Erreurs",
   "settings.general.sounds.errors.description": "Jouer un son lorsqu'une erreur se produit",
-
   "settings.shortcuts.title": "Raccourcis clavier",
+
   "settings.shortcuts.reset.button": "Rétablir les défauts",
   "settings.shortcuts.reset.toast.title": "Raccourcis réinitialisés",
   "settings.shortcuts.reset.toast.description": "Les raccourcis clavier ont été réinitialisés aux valeurs par défaut.",
@@ -628,16 +680,16 @@ export const dict = {
   "settings.shortcuts.conflict.description": "{{keybind}} est déjà assigné à {{titles}}.",
   "settings.shortcuts.unassigned": "Non assigné",
   "settings.shortcuts.pressKeys": "Appuyez sur les touches",
+
   "settings.shortcuts.search.placeholder": "Rechercher des raccourcis",
   "settings.shortcuts.search.empty": "Aucun raccourci trouvé",
-
   "settings.shortcuts.group.general": "Général",
   "settings.shortcuts.group.session": "Session",
   "settings.shortcuts.group.navigation": "Navigation",
   "settings.shortcuts.group.modelAndAgent": "Modèle et agent",
+
   "settings.shortcuts.group.terminal": "Terminal",
   "settings.shortcuts.group.prompt": "Prompt",
-
   "settings.providers.title": "Fournisseurs",
   "settings.providers.description": "Les paramètres des fournisseurs seront configurables ici.",
   "settings.providers.section.connected": "Fournisseurs connectés",
@@ -646,41 +698,41 @@ export const dict = {
   "settings.providers.tag.environment": "Environnement",
   "settings.providers.tag.config": "Configuration",
   "settings.providers.tag.custom": "Personnalisé",
+
   "settings.providers.tag.other": "Autre",
   "settings.models.title": "Modèles",
   "settings.models.description": "Les paramètres des modèles seront configurables ici.",
   "settings.agents.title": "Agents",
   "settings.agents.description": "Les paramètres des agents seront configurables ici.",
   "settings.commands.title": "Commandes",
+
   "settings.commands.description": "Les paramètres des commandes seront configurables ici.",
   "settings.mcp.title": "MCP",
   "settings.mcp.description": "Les paramètres MCP seront configurables ici.",
-
   "settings.permissions.title": "Permissions",
   "settings.permissions.description": "Contrôlez les outils que le serveur peut utiliser par défaut.",
   "settings.permissions.section.tools": "Outils",
   "settings.permissions.toast.updateFailed.title": "Échec de la mise à jour des permissions",
-
   "settings.permissions.action.allow": "Autoriser",
   "settings.permissions.action.ask": "Demander",
   "settings.permissions.action.deny": "Refuser",
-
   "settings.permissions.tool.read.title": "Lire",
   "settings.permissions.tool.read.description": "Lecture d'un fichier (correspond au chemin du fichier)",
   "settings.permissions.tool.edit.title": "Modifier",
-  "settings.permissions.tool.edit.description":
-    "Modifier des fichiers, y compris les modifications, écritures, patchs et multi-modifications",
+  "settings.permissions.tool.edit.description": "Modifier des fichiers, y compris les modifications, écritures, patchs et multi-modifications",
   "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Correspondre aux fichiers utilisant des modèles glob",
   "settings.permissions.tool.grep.title": "Grep",
-  "settings.permissions.tool.grep.description":
-    "Rechercher dans le contenu des fichiers à l'aide d'expressions régulières",
+
+  "settings.permissions.tool.grep.description": "Rechercher dans le contenu des fichiers à l'aide d'expressions régulières",
   "settings.permissions.tool.list.title": "Lister",
   "settings.permissions.tool.list.description": "Lister les fichiers dans un répertoire",
   "settings.permissions.tool.bash.title": "Bash",
+
   "settings.permissions.tool.bash.description": "Exécuter des commandes shell",
   "settings.permissions.tool.task.title": "Tâche",
   "settings.permissions.tool.task.description": "Lancer des sous-agents",
+
   "settings.permissions.tool.skill.title": "Compétence",
   "settings.permissions.tool.skill.description": "Charger une compétence par son nom",
   "settings.permissions.tool.lsp.title": "LSP",
@@ -699,12 +751,10 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Accéder aux fichiers en dehors du répertoire du projet",
   "settings.permissions.tool.doom_loop.title": "Boucle infernale",
   "settings.permissions.tool.doom_loop.description": "Détecter les appels d'outils répétés avec une entrée identique",
-
   "session.delete.failed.title": "Échec de la suppression de la session",
   "session.delete.title": "Supprimer la session",
-  "session.delete.confirm": 'Supprimer la session "{{name}}" ?',
+  "session.delete.confirm": "Supprimer la session \"{{name}}\" ?",
   "session.delete.button": "Supprimer la session",
-
   "workspace.new": "Nouvel espace de travail",
   "workspace.type.local": "local",
   "workspace.type.sandbox": "bac à sable",
@@ -715,87 +765,21 @@ export const dict = {
   "workspace.reset.failed.title": "Échec de la réinitialisation de l'espace de travail",
   "workspace.reset.success.title": "Espace de travail réinitialisé",
   "workspace.reset.success.description": "L'espace de travail correspond maintenant à la branche par défaut.",
+
   "workspace.error.stillPreparing": "L'espace de travail est encore en cours de préparation",
   "workspace.status.checking": "Vérification des modifications non fusionnées...",
   "workspace.status.error": "Impossible de vérifier le statut git.",
   "workspace.status.clean": "Aucune modification non fusionnée détectée.",
+
   "workspace.status.dirty": "Modifications non fusionnées détectées dans cet espace de travail.",
   "workspace.delete.title": "Supprimer l'espace de travail",
-  "workspace.delete.confirm": 'Supprimer l\'espace de travail "{{name}}" ?',
+  "workspace.delete.confirm": "Supprimer l'espace de travail \"{{name}}\" ?",
   "workspace.delete.button": "Supprimer l'espace de travail",
   "workspace.reset.title": "Réinitialiser l'espace de travail",
-  "workspace.reset.confirm": 'Réinitialiser l\'espace de travail "{{name}}" ?',
+  "workspace.reset.confirm": "Réinitialiser l'espace de travail \"{{name}}\" ?",
   "workspace.reset.button": "Réinitialiser l'espace de travail",
   "workspace.reset.archived.none": "Aucune session active ne sera archivée.",
   "workspace.reset.archived.one": "1 session sera archivée.",
   "workspace.reset.archived.many": "{{count}} sessions seront archivées.",
   "workspace.reset.note": "Cela réinitialisera l'espace de travail pour correspondre à la branche par défaut.",
-  "command.workspace.toggle.description": "Enable or disable multiple workspaces in the sidebar",
-  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
-  "dialog.provider.google.note": "Gemini models for fast, structured responses",
-  "dialog.provider.openrouter.note": "Access all supported models from one provider",
-  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
-  "provider.custom.title": "Custom provider",
-  "provider.custom.description.prefix": "Configure an OpenAI-compatible provider. See the ",
-  "provider.custom.description.link": "provider config docs",
-  "provider.custom.description.suffix": ".",
-  "provider.custom.field.providerID.label": "Provider ID",
-  "provider.custom.field.providerID.placeholder": "myprovider",
-  "provider.custom.field.providerID.description": "Lowercase letters, numbers, hyphens, or underscores",
-  "provider.custom.field.name.label": "Display name",
-  "provider.custom.field.name.placeholder": "My AI Provider",
-  "provider.custom.field.baseURL.label": "Base URL",
-  "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
-  "provider.custom.field.apiKey.label": "API key",
-  "provider.custom.field.apiKey.placeholder": "API key",
-  "provider.custom.field.apiKey.description": "Optional. Leave empty if you manage auth via headers.",
-  "provider.custom.models.label": "Models",
-  "provider.custom.models.id.label": "ID",
-  "provider.custom.models.id.placeholder": "model-id",
-  "provider.custom.models.name.label": "Name",
-  "provider.custom.models.name.placeholder": "Display Name",
-  "provider.custom.models.remove": "Remove model",
-  "provider.custom.models.add": "Add model",
-  "provider.custom.headers.label": "Headers (optional)",
-  "provider.custom.headers.key.label": "Header",
-  "provider.custom.headers.key.placeholder": "Header-Name",
-  "provider.custom.headers.value.label": "Value",
-  "provider.custom.headers.value.placeholder": "value",
-  "provider.custom.headers.remove": "Remove header",
-  "provider.custom.headers.add": "Add header",
-  "provider.custom.error.providerID.required": "Provider ID is required",
-  "provider.custom.error.providerID.format": "Use lowercase letters, numbers, hyphens, or underscores",
-  "provider.custom.error.providerID.exists": "That provider ID already exists",
-  "provider.custom.error.name.required": "Display name is required",
-  "provider.custom.error.baseURL.required": "Base URL is required",
-  "provider.custom.error.baseURL.format": "Must start with http:// or https://",
-  "provider.custom.error.required": "Required",
-  "provider.custom.error.duplicate": "Duplicate",
-  "common.goForward": "Navigate forward",
-  "language.en": "English",
-  "language.zh": "简体中文",
-  "language.zht": "繁體中文",
-  "language.ko": "한국어",
-  "language.de": "Deutsch",
-  "language.es": "Español",
-  "language.fr": "Français",
-  "language.da": "Dansk",
-  "language.ja": "日本語",
-  "language.pl": "Polski",
-  "language.ru": "Русский",
-  "language.ar": "العربية",
-  "language.no": "Norsk",
-  "language.br": "Português (Brasil)",
-  "language.bs": "Bosanski",
-  "language.th": "ไทย",
-  "directory.error.invalidUrl": "Invalid directory in URL.",
-  "session.header.openIn": "Open in",
-  "session.header.open.action": "Open {{app}}",
-  "session.header.open.ariaLabel": "Open in {{app}}",
-  "session.header.open.menu": "Open options",
-  "session.header.open.copyPath": "Copy Path",
-  "settings.general.section.display": "Display",
-  "settings.general.row.wayland.title": "Use native Wayland",
-  "settings.general.row.wayland.description": "Disable X11 fallback on Wayland. Requires restart.",
-  "settings.general.row.wayland.tooltip": "On Linux with mixed refresh-rate monitors, native Wayland can be more stable.",
 }
