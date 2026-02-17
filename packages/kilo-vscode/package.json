@@ -23,7 +23,8 @@
         {
           "id": "kilo-code-sidebar",
           "title": "Kilo Code (NEW)",
-          "icon": "$(code)"
+          "icon": "assets/icons/kilo-light.png",
+          "darkIcon": "assets/icons/kilo-dark.png"
         }
       ]
     },
@@ -259,6 +260,7 @@
     "watch": "bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "watch:cli": "bun script/watch-cli.ts",
     "package": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",

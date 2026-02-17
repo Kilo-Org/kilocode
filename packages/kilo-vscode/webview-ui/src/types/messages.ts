@@ -103,6 +103,7 @@ export interface PermissionRequest {
   id: string
   sessionID: string
   toolName: string
+  patterns: string[]
   args: Record<string, unknown>
   message?: string
   tool?: { messageID: string; callID: string }

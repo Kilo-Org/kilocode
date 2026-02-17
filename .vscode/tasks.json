@@ -5,13 +5,16 @@
   "tasks": [
     {
       "label": "VSCode - Watch",
-      "dependsOn": ["VSCode - TSC", "VSCode - ESBuild"],
+      "dependsOn": ["VSCode - TSC", "VSCode - ESBuild", "VSCode - CLI Watch"],
       "presentation": {
         "reveal": "never"
       },
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
       }
     },
     {
@@ -45,6 +48,22 @@
       "options": {
         "cwd": "${workspaceFolder}/packages/kilo-vscode"
       }
+    },
+    {
+      "label": "VSCode - CLI Watch",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "watch:cli"],
+      "group": "build",
+      "isBackground": true,
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": []
     },
     {
       "label": "VSCode - Tests",

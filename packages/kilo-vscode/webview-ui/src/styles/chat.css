@@ -408,6 +408,42 @@
   white-space: nowrap;
 }
 
+/* ============================================
+   Permission Dock (patterns inside BasicTool)
+   ============================================ */
+
+.permission-dock-patterns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.permission-dock-pattern {
+  font-size: 12px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--vscode-foreground);
+  word-break: break-all;
+}
+
+/* ============================================
+   Text Part Copy Button Fix
+   In the sidebar, the text-part copy button overflows into the
+   element above because the gap between messages is smaller.
+   Position it inside the text body instead of above it.
+   ============================================ */
+
+[data-component="text-part"] [data-slot="text-part-body"] {
+  margin-top: 8px;
+}
+
+[data-component="text-part"] [data-slot="text-part-copy-wrapper"] {
+  top: 4px;
+  right: 4px;
+}
+
 /* Dialog Confirmation */
 .dialog-confirm-body {
   display: flex;
