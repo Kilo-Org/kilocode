@@ -20,91 +20,75 @@ This convention helps identify documentation-only PRs and keeps them organized.
 
 This project uses [Markdoc](https://markdoc.dev/) for rendering markdown with custom components. Custom tags allow you to embed React components directly in markdown files.
 
-## Converting from old documentation site
-
-This site was previously in docusaurus but is now in markdoc. Sometimes the user may ask you to update the images and other tags in a page that was imported. These are the types of updates you'd need to make
-
 ### Images
 
-Images will often look like standard HTML image tags like:
+Use the Markdoc image tag format:
 
-<img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" />
-
-We want to convert them to Markdoc image tags like this:
-
+```markdown
 {% image src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="800" caption="Connect account screen" /%}
-
-Note that this site is served under kilo.ai/docs so the `/docs` MUST be present in every image tag.
-
-Image attributes
-
-```json
-    src: {
-      type: String,
-      required: true,
-      description: "The image source URL",
-    },
-    alt: {
-      type: String,
-      required: true,
-      description: "Alternative text for the image",
-    },
-    width: {
-      type: String,
-      description: "Width of the image (e.g., '500px', '80%')",
-    },
-    height: {
-      type: String,
-      description: "Height of the image (e.g., '300px', 'auto')",
-    },
-    caption: {
-      type: String,
-      description: "Optional caption displayed below the image",
-    }
 ```
+
+Note that this site is served under kilo.ai/docs so the `/docs` prefix **must** be present in every image path.
+
+Image attributes:
+
+| Attribute | Type   | Required | Description                                 |
+| --------- | ------ | -------- | ------------------------------------------- |
+| `src`     | String | Yes      | The image source URL                        |
+| `alt`     | String | Yes      | Alternative text for the image              |
+| `width`   | String | No       | Width of the image (e.g., '500px', '80%')   |
+| `height`  | String | No       | Height of the image (e.g., '300px', 'auto') |
+| `caption` | String | No       | Caption displayed below the image           |
 
 ### Callouts
 
-When callouts are used, they should be in markdoc format like this:
+Use the Markdoc callout tag format:
 
 ```markdown
 {% callout type="info" %}
-You can report any bugs or feedbacks by chatting with us in our [Discord server](https://discord.gg/ovhcloud), in the AI Endpoints channel.
+You can report any bugs or feedback by chatting with us in our [Discord server](https://discord.gg/ovhcloud), in the AI Endpoints channel.
 {% /callout %}
 ```
 
-Callout Attributes:
+Callout attributes:
 
-```json
-    title: {
-      type: String,
-      description: "Optional custom title for the callout",
-    },
-    type: {
-      type: String,
-      default: "note",
-      matches: ["generic", "note", "tip", "info", "warning", "danger"],
-      description:
-        "The type of callout: generic (no icon/title), note, tip, info, warning, or danger",
-    },
-    collapsed: {
-      type: Boolean,
-      default: false,
-      description:
-        "When true, the callout starts collapsed and can be expanded by clicking the header",
-    }
-```
+| Attribute   | Type    | Default | Description                                       |
+| ----------- | ------- | ------- | ------------------------------------------------- |
+| `title`     | String  | -       | Optional custom title for the callout             |
+| `type`      | String  | "note"  | One of: generic, note, tip, info, warning, danger |
+| `collapsed` | Boolean | false   | When true, the callout starts collapsed           |
 
 ### Codicons
 
-Codicon icons look like this:
-
-```html
-<Codicon name="gear" />
-```
-
-And we want to convert that to look like this:
+Use the Markdoc codicon tag format:
 
 ```markdown
 {% codicon name="gear" /%}
 ```
+
+## Documentation Guidelines
+
+### Adding New Pages
+
+1. Create your page in the appropriate directory under `pages/`
+2. **Always update navigation**: Add the page to the corresponding navigation file in `lib/nav/`
+    - Each section has its own nav file (e.g., `getting-started.ts`, `code-with-ai.ts`, `ai-providers.ts`)
+    - Navigation structure is exported from `lib/nav/index.ts`
+    - See `lib/types.ts` for the `NavSection` and `NavLink` interfaces
+
+### Removing or Moving Pages
+
+**Never remove a page without adding a redirect.** This prevents broken links from search engines, external references, and user bookmarks.
+
+1. Add a redirect entry to `previous-docs-redirects.js`
+2. Redirect format:
+    ```javascript
+    {
+      source: "/docs/old-path",
+      destination: "/docs/new-path",
+      basePath: false,
+      permanent: true,
+    }
+    ```
+3. Update the navigation file to remove or update the link
+4. Redirects are loaded in `next.config.js`
