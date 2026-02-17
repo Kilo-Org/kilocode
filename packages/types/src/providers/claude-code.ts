@@ -90,6 +90,7 @@ export const claudeCodeDefaultModelId: ClaudeCodeModelId = "claude-sonnet-4-5"
  *
  * Order matters - more specific patterns should come first.
  */
+const MODEL_FAMILY_PATTERNS: Array<{ pattern: RegExp; target: ClaudeCodeModelId }> = [
 	// Opus models (any version) → claude-opus-4-6
 	// Opus models (any version) → claude-opus-4-5
 	{ pattern: /opus/i, target: "claude-opus-4-6" },
