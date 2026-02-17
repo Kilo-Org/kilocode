@@ -30,7 +30,7 @@ describe("normalizeClaudeCodeModelId", () => {
 
 	// kilocode_change start
 	test("should normalize opus 4.6 models with date suffix", () => {
-		expect(normalizeClaudeCodeModelId("claude-opus-4-6-20260214")).toBe("claude-opus-4-6")
+		expect(normalizeClaudeCodeModelId("claude-opus-4-6-20260205")).toBe("claude-opus-4-6")
 	})
 	// kilocode_change end
 
