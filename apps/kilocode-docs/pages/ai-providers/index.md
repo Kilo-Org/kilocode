@@ -5,41 +5,64 @@ description: "Configure and connect different AI model providers to Kilo Code"
 
 # AI Providers
 
-Kilo Code supports a wide variety of AI providers, giving you flexibility in how you power your AI-assisted development workflow. Choose from cloud providers, local models, or AI gateways based on your needs.
+Kilo Code supports a broad set of AI providers, from direct model vendors to gateways, cloud platforms, and local runtimes.
 
 ## Getting Started
 
-The fastest way to get started is with **Kilo Code's built-in provider**, which requires no configuration. Simply sign in and start coding.
+The fastest path is **[Kilo Code (built-in)](/docs/ai-providers/kilocode)**, which works after sign-in with no API key setup.
 
-For users who want to use their own API keys or need specific models, we support over 30 providers.
+If you want to use your own keys or specific provider features, use the provider pages below.
 
 ## Provider Categories
 
-### Cloud Providers
+### First-Party Access Options
 
-Major AI companies offering powerful models via API:
+- **[Kilo Code](/docs/ai-providers/kilocode)** - Built-in provider with simple onboarding
+- **[OpenAI ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro)** - Subscription-based access
+- **[Claude Code](/docs/ai-providers/claude-code)** - Claude Code account flow
+- **[Virtual Quota Fallback](/docs/ai-providers/virtual-quota-fallback)** - Quota fallback behavior
 
-- **[Anthropic](/docs/ai-providers/anthropic)** - Claude models (Claude 4, Claude 3.5 Sonnet, etc.)
-- **[OpenAI](/docs/ai-providers/openai)** - GPT-4, GPT-4o, o1, and more
-- **[Google Gemini](/docs/ai-providers/gemini)** - Gemini Pro, Gemini Ultra
-- **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
-- **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
+### Foundation Model Providers
 
-### Local & Self-Hosted
+- **[Anthropic](/docs/ai-providers/anthropic)**
+- **[OpenAI](/docs/ai-providers/openai)**
+- **[Google Gemini](/docs/ai-providers/gemini)**
+- **[DeepSeek](/docs/ai-providers/deepseek)**
+- **[Mistral](/docs/ai-providers/mistral)**
+- **[xAI](/docs/ai-providers/xai)**
+- **[Minimax](/docs/ai-providers/minimax)**
+- **[Moonshot](/docs/ai-providers/moonshot)**
+- **[Groq](/docs/ai-providers/groq)**
+- **[Cerebras](/docs/ai-providers/cerebras)**
+- **[Fireworks](/docs/ai-providers/fireworks)**
+- **[Inception](/docs/ai-providers/inception)**
+- **[Human Relay](/docs/ai-providers/human-relay)**
+- **[SAP AI Core](/docs/ai-providers/sap-ai-core)**
+- **[Chutes AI](/docs/ai-providers/chutes-ai)**
+- **[Synthetic](/docs/ai-providers/synthetic)**
+- **[Unbound](/docs/ai-providers/unbound)**
+- **[ZenMux](/docs/ai-providers/zenmux)**
+- **[OVHcloud](/docs/ai-providers/ovhcloud)**
 
-Run models on your own hardware for privacy and offline use:
+### Gateways and Compatible APIs
 
-- **[Ollama](/docs/ai-providers/ollama)** - Easy local model management
-- **[LM Studio](/docs/ai-providers/lmstudio)** - Desktop app for local models
-- **[OpenAI Compatible](/docs/ai-providers/openai-compatible)** - Any OpenAI-compatible endpoint
+- **[OpenRouter](/docs/ai-providers/openrouter)**
+- **[Requesty](/docs/ai-providers/requesty)**
+- **[Glama](/docs/ai-providers/glama)**
+- **[Vercel AI Gateway](/docs/ai-providers/vercel-ai-gateway)**
+- **[OpenAI Compatible](/docs/ai-providers/openai-compatible)**
 
-### AI Gateways
+### Cloud Platform Integrations
 
-Route requests through unified APIs with additional features:
+- **[AWS Bedrock](/docs/ai-providers/bedrock)**
+- **[Vertex AI](/docs/ai-providers/vertex)**
+- **[v0](/docs/ai-providers/v0)**
 
-- **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
-- **[Glama](/docs/ai-providers/glama)** - Enterprise AI gateway
-- **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
+### Local and Editor-Hosted Models
+
+- **[Ollama](/docs/ai-providers/ollama)**
+- **[LM Studio](/docs/ai-providers/lmstudio)**
+- **[VS Code LM](/docs/ai-providers/vscode-lm)**
 
 ## Choosing a Provider
 
@@ -50,12 +73,42 @@ Route requests through unified APIs with additional features:
 | Privacy/Offline | Ollama or LM Studio                                 |
 | Enterprise      | AWS Bedrock or Google Vertex                        |
 
-## Why Use Multiple Providers?
+## Complete Provider Directory (A-Z)
 
-- **Cost** - Compare pricing across providers for different tasks
-- **Reliability** - Backup options when a provider has outages
-- **Models** - Access exclusive or specialized models
-- **Regional** - Better latency in certain locations
+- [Anthropic](/docs/ai-providers/anthropic)
+- [AWS Bedrock](/docs/ai-providers/bedrock)
+- [Cerebras](/docs/ai-providers/cerebras)
+- [Chutes AI](/docs/ai-providers/chutes-ai)
+- [Claude Code](/docs/ai-providers/claude-code)
+- [DeepSeek](/docs/ai-providers/deepseek)
+- [Fireworks](/docs/ai-providers/fireworks)
+- [Gemini](/docs/ai-providers/gemini)
+- [Glama](/docs/ai-providers/glama)
+- [Groq](/docs/ai-providers/groq)
+- [Human Relay](/docs/ai-providers/human-relay)
+- [Inception](/docs/ai-providers/inception)
+- [Kilo Code](/docs/ai-providers/kilocode)
+- [LM Studio](/docs/ai-providers/lmstudio)
+- [Minimax](/docs/ai-providers/minimax)
+- [Mistral](/docs/ai-providers/mistral)
+- [Moonshot](/docs/ai-providers/moonshot)
+- [Ollama](/docs/ai-providers/ollama)
+- [OpenAI](/docs/ai-providers/openai)
+- [OpenAI ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro)
+- [OpenAI Compatible](/docs/ai-providers/openai-compatible)
+- [OpenRouter](/docs/ai-providers/openrouter)
+- [OVHcloud](/docs/ai-providers/ovhcloud)
+- [Requesty](/docs/ai-providers/requesty)
+- [SAP AI Core](/docs/ai-providers/sap-ai-core)
+- [Synthetic](/docs/ai-providers/synthetic)
+- [Unbound](/docs/ai-providers/unbound)
+- [v0](/docs/ai-providers/v0)
+- [Vercel AI Gateway](/docs/ai-providers/vercel-ai-gateway)
+- [Vertex AI](/docs/ai-providers/vertex)
+- [Virtual Quota Fallback](/docs/ai-providers/virtual-quota-fallback)
+- [VS Code LM](/docs/ai-providers/vscode-lm)
+- [xAI](/docs/ai-providers/xai)
+- [ZenMux](/docs/ai-providers/zenmux)
 
 {% callout type="note" %}
 All API keys use VS Code's Secret Storage—never stored in plain text.
