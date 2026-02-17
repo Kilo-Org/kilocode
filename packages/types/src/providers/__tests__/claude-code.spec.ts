@@ -5,6 +5,7 @@ describe("normalizeClaudeCodeModelId", () => {
 		expect(normalizeClaudeCodeModelId("claude-sonnet-4-5")).toBe("claude-sonnet-4-5")
 		expect(normalizeClaudeCodeModelId("claude-opus-4-5")).toBe("claude-opus-4-5")
 		expect(normalizeClaudeCodeModelId("claude-haiku-4-5")).toBe("claude-haiku-4-5")
+		expect(normalizeClaudeCodeModelId("claude-opus-4-6")).toBe("claude-opus-4-6") // kilocode_change
 	})
 
 	test("should normalize sonnet models with date suffix to claude-sonnet-4-5", () => {
@@ -26,6 +27,12 @@ describe("normalizeClaudeCodeModelId", () => {
 		// Opus 4 (legacy)
 		expect(normalizeClaudeCodeModelId("claude-opus-4-20250514")).toBe("claude-opus-4-5")
 	})
+
+	// kilocode_change start
+	test("should normalize opus 4.6 models with date suffix", () => {
+		expect(normalizeClaudeCodeModelId("claude-opus-4-6-20260214")).toBe("claude-opus-4-6")
+	})
+	// kilocode_change end
 
 	test("should normalize haiku models with date suffix to claude-haiku-4-5", () => {
 		// Haiku 4.5 with date

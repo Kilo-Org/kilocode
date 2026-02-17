@@ -66,6 +66,19 @@ export const claudeCodeModels = {
 		reasoningEffort: "medium",
 		description: "Claude Sonnet 4.5 - Balanced performance with thinking",
 	},
+	// kilocode_change start
+	"claude-opus-4-6": {
+		maxTokens: 32768,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		supportsReasoningEffort: ["disable", "low", "medium", "high"],
+		reasoningEffort: "medium",
+		description: "Claude Opus 4.6 - Most capable with thinking",
+	},
+	// kilocode_change end
 	"claude-opus-4-5": {
 		maxTokens: 32768,
 		contextWindow: 200_000,
@@ -104,6 +117,7 @@ const MODEL_FAMILY_PATTERNS: Array<{ pattern: RegExp; target: ClaudeCodeModelId 
  * This function handles backward compatibility for legacy model names
  * that may include version numbers or date suffixes. It maps:
  * - claude-sonnet-4-5-20250929, claude-sonnet-4-20250514, claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022 → claude-sonnet-4-5
+ * - claude-opus-4-6-YYYYMMDD → claude-opus-4-6 // kilocode_change
  * - claude-opus-4-5-20251101, claude-opus-4-1-20250805, claude-opus-4-20250514 → claude-opus-4-5
  * - claude-haiku-4-5-20251001, claude-3-5-haiku-20241022 → claude-haiku-4-5
  *
