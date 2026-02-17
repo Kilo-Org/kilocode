@@ -78,18 +78,6 @@ export const claudeCodeModels = {
 		reasoningEffort: "medium",
 		description: "Claude Opus 4.6 - Most capable with thinking",
 	},
-	// kilocode_change end
-	"claude-opus-4-5": {
-		maxTokens: 32768,
-		contextWindow: 200_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		supportsNativeTools: true,
-		defaultToolProtocol: "native",
-		supportsReasoningEffort: ["disable", "low", "medium", "high"],
-		reasoningEffort: "medium",
-		description: "Claude Opus 4.5 - Most capable with thinking",
-	},
 } as const satisfies Record<string, ModelInfo>
 
 // Claude Code - Only models that work with Claude Code OAuth tokens
@@ -104,7 +92,7 @@ export const claudeCodeDefaultModelId: ClaudeCodeModelId = "claude-sonnet-4-5"
  */
 const MODEL_FAMILY_PATTERNS: Array<{ pattern: RegExp; target: ClaudeCodeModelId }> = [
 	// Opus models (any version) → claude-opus-4-5
-	{ pattern: /opus/i, target: "claude-opus-4-5" },
+	{ pattern: /opus/i, target: "claude-opus-4-6" },
 	// Haiku models (any version) → claude-haiku-4-5
 	{ pattern: /haiku/i, target: "claude-haiku-4-5" },
 	// Sonnet models (any version) → claude-sonnet-4-5
