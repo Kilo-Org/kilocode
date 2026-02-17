@@ -76,13 +76,17 @@ export class AgentManagerProvider implements vscode.Disposable {
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.css"))
     const iconsBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons"))
     const nonce = getNonce()
+    const port = this.connectionService.getServerInfo()?.port
+    const connectSrc = port
+      ? `http://127.0.0.1:${port} http://localhost:${port} ws://127.0.0.1:${port} ws://localhost:${port}`
+      : "http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*"
 
     const csp = [
       "default-src 'none'",
       `style-src 'unsafe-inline' ${webview.cspSource}`,
       `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
       `font-src ${webview.cspSource}`,
-      "connect-src http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*",
+      `connect-src ${connectSrc}`,
       `img-src ${webview.cspSource} data: https:`,
     ].join("; ")
 
