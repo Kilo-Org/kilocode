@@ -3,7 +3,7 @@ import { normalizeClaudeCodeModelId } from "../claude-code.js"
 describe("normalizeClaudeCodeModelId", () => {
 	test("should return valid model IDs unchanged", () => {
 		expect(normalizeClaudeCodeModelId("claude-sonnet-4-5")).toBe("claude-sonnet-4-5")
-		expect(normalizeClaudeCodeModelId("claude-opus-4-5")).toBe("claude-opus-4-5")
+		expect(normalizeClaudeCodeModelId("claude-opus-4-5")).toBe("claude-opus-4-6")
 		expect(normalizeClaudeCodeModelId("claude-haiku-4-5")).toBe("claude-haiku-4-5")
 		expect(normalizeClaudeCodeModelId("claude-opus-4-6")).toBe("claude-opus-4-6") // kilocode_change
 	})
