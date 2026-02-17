@@ -1,7 +1,7 @@
 // Agent Manager root component
 // Reuses the sidebar's provider chain and ChatView, adding a session list sidebar
 
-import { Component, createSignal, createMemo, Show, For } from "solid-js"
+import { Component, createMemo, For } from "solid-js"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
@@ -63,33 +63,15 @@ const DataBridge: Component<{ children: any }> = (props) => {
   )
 }
 
-// View state: "new" shows the new-agent form, "session" shows the chat
-type View = "new" | "session"
-
 const AgentManagerContent: Component = () => {
   const session = useSession()
-  const [view, setView] = createSignal<View>("new")
-  const [prompt, setPrompt] = createSignal("")
 
   const handleNewAgent = () => {
-    setView("new")
-    setPrompt("")
-  }
-
-  const handleStart = () => {
-    const text = prompt().trim()
-    if (!text) return
-    // Clear current session so KiloProvider creates a fresh one
     session.clearCurrentSession()
-    // Send message — KiloProvider auto-creates a new session when currentSession is null
-    session.sendMessage(text)
-    setPrompt("")
-    setView("session")
   }
 
   const handleSelectSession = (id: string) => {
     session.selectSession(id)
-    setView("session")
   }
 
   return (
@@ -99,14 +81,12 @@ const AgentManagerContent: Component = () => {
         <button class="am-new-btn" onClick={handleNewAgent}>
           <span class="am-new-icon">+</span> New Agent
         </button>
-        <div class="am-sessions-header">
-          <span>SESSIONS</span>
-        </div>
+        <div class="am-sessions-header">SESSIONS</div>
         <div class="am-list">
           <For each={session.sessions()}>
             {(s) => (
               <div
-                class={`am-item ${s.id === session.currentSessionID() && view() === "session" ? "am-selected" : ""}`}
+                class={`am-item ${s.id === session.currentSessionID() ? "am-selected" : ""}`}
                 onClick={() => handleSelectSession(s.id)}
               >
                 <span class="am-item-title">{s.title || "Untitled"}</span>
@@ -117,28 +97,7 @@ const AgentManagerContent: Component = () => {
         </div>
       </div>
       <div class="am-detail">
-        <Show when={view() === "session" && session.currentSessionID()}>
-          <ChatView onSelectSession={handleSelectSession} />
-        </Show>
-        <Show when={view() === "new" || !session.currentSessionID()}>
-          <div class="am-new-form">
-            <textarea
-              class="am-new-textarea"
-              placeholder="Type your task here..."
-              value={prompt()}
-              onInput={(e) => setPrompt(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStart()
-              }}
-              autofocus
-            />
-            <div class="am-new-actions">
-              <button class="am-start-btn" onClick={handleStart} disabled={!prompt().trim()}>
-                Start
-              </button>
-            </div>
-          </div>
-        </Show>
+        <ChatView onSelectSession={handleSelectSession} />
       </div>
     </div>
   )
