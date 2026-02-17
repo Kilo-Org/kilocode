@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import type * as vscode from "vscode"
 
 export interface AgentSession {

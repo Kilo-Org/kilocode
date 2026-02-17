@@ -35,9 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Create Agent Manager provider for editor panel
-  // kilocode_change start
   const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService, context)
-  // kilocode_change end
   context.subscriptions.push(agentManagerProvider)
 
   // Register toolbar button command handlers

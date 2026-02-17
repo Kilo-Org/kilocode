@@ -141,6 +141,19 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Attach to a webview that already has its own HTML set.
+   * Sets up message handling and connection without overriding HTML content.
+   */
+  // kilocode_change start
+  public attachToWebview(webview: vscode.Webview): void {
+    this.isWebviewReady = false
+    this.webview = webview
+    this.setupWebviewMessageHandler(webview)
+    this.initializeConnection()
+  }
+  // kilocode_change end
+
+  /**
    * Set up the shared message handler for both sidebar and tab webviews.
    * Handles ALL message types so tabs have full functionality.
    */

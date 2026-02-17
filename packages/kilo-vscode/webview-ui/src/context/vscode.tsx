@@ -15,14 +15,13 @@ function getVSCodeAPI(): VSCodeAPI {
     if (typeof acquireVsCodeApi === "function") {
       vscodeApi = acquireVsCodeApi()
     } else {
-      // Outside VS Code (e.g. iframe in Agent Manager) – bridge to parent frame
-      // kilocode_change start
+      // Mock for development/testing outside VS Code
+      console.warn("[Kilo New] Running outside VS Code, using mock API")
       vscodeApi = {
-        postMessage: (msg) => window.parent.postMessage(msg, "*"),
+        postMessage: (msg) => console.log("[Kilo New] Mock postMessage:", msg),
         getState: () => undefined,
         setState: () => {},
       }
-      // kilocode_change end
     }
   }
   return vscodeApi

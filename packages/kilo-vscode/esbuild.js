@@ -128,10 +128,9 @@ async function main() {
     plugins: [esbuildProblemMatcherPlugin],
   })
 
-  // Build Agent Manager webview (vanilla TS, no framework)
-  // kilocode_change start
+  // Build Agent Manager webview (SolidJS, shares components with sidebar)
   const agentManagerCtx = await esbuild.context({
-    entryPoints: ["webview-ui/agent-manager/index.ts"],
+    entryPoints: ["webview-ui/agent-manager/index.tsx"],
     bundle: true,
     format: "iife",
     minify: production,
@@ -140,9 +139,19 @@ async function main() {
     platform: "browser",
     outfile: "dist/agent-manager.js",
     logLevel: "silent",
-    plugins: [esbuildProblemMatcherPlugin],
+    loader: {
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+    },
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerStubPlugin,
+      cssPackageResolvePlugin,
+      solidPlugin(),
+      esbuildProblemMatcherPlugin,
+    ],
   })
-  // kilocode_change end
 
   // Build webview
   const webviewCtx = await esbuild.context({
@@ -170,12 +179,10 @@ async function main() {
   })
 
   if (watch) {
-    // kilocode_change start
     await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch()])
   } else {
     await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild(), agentManagerCtx.rebuild()])
     await Promise.all([extensionCtx.dispose(), webviewCtx.dispose(), agentManagerCtx.dispose()])
-    // kilocode_change end
   }
 }
 

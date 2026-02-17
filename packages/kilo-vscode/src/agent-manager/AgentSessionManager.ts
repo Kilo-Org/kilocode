@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import type { HttpClient, KiloConnectionService, SSEEvent } from "../services/cli-backend"
 import type { AgentSession } from "./types"
 
