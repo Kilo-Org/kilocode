@@ -43,7 +43,8 @@ The script automatically handles building the opencode package if needed.
 - CSP requires nonce for scripts and `font-src` for bundled fonts - see [`KiloProvider.ts`](src/KiloProvider.ts:777)
 - HTML root has `data-theme="kilo-vscode"` to activate kilo-ui's VS Code theme bridge
 - Extension and webview have no shared state - communicate via `vscode.Webview.postMessage()`
-- For editor panels, use [`AgentManagerProvider`](src/AgentManagerProvider.ts) pattern with `retainContextWhenHidden: true`
+- For editor panels, use [`AgentManagerProvider`](src/agent-manager/AgentManagerProvider.ts) pattern with `retainContextWhenHidden: true`
+- The Agent Manager is a multi-session parallel agent runner — see [`docs/agent-manager/AGENTS.md`](docs/agent-manager/AGENTS.md) for full context and [`docs/agent-manager/`](docs/agent-manager/) for feature specs
 - esbuild webview build includes [`cssPackageResolvePlugin`](esbuild.js:29) for CSS `@import` resolution and font loaders (`.woff`, `.woff2`, `.ttf`)
 - [`KiloConnectionService`](src/services/cli-backend/connection-service.ts) is the shared singleton managing server lifecycle, HTTP, SSE — sidebar and editor tabs share one instance
 - Avoid `setTimeout` for sequencing VS Code operations — use deterministic event-based waits (e.g. `waitForWebviewPanelToBeActive()`)
