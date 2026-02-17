@@ -21,6 +21,13 @@ That's it! You're ready to [start your first task](/docs/getting-started/quickst
 [Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
 {% /callout %}
 
+## Choose Your Billing Path
+
+You have two primary ways to pay for model usage in Kilo Code:
+
+1. **Kilo credits (default):** Fastest setup, unified billing, and no separate provider key management.
+2. **Bring Your Own Key (BYOK):** Use your own provider keys while still using Kilo platform features. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok).
+
 ## Kilo Gateway API Key
 
 If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code extension (for example, with the Vercel AI SDK or OpenAI SDK), you'll need an API key:
@@ -30,7 +37,7 @@ If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code e
 3. Scroll to the bottom of the page
 4. Copy your API key
 
-## Using Another API Provider
+## Use Another API Provider
 
 If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:
 
@@ -38,7 +45,7 @@ If you prefer to use your own API key or existing subscription, Kilo Code suppor
 | -------------------------------------------------------------- | ----------------------------------- | ---------------- |
 | [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
 | [OpenRouter](/docs/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
-| [Anthropic](/docs/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
+| [Anthropic](/docs/ai-providers/anthropic)                      | Direct provider access to Claude    | Yes              |
 | [OpenAI](/docs/ai-providers/openai)                            | Access to GPT models                | Yes              |
 
 {% callout type="info" title="Many More Providers Available" %}
@@ -47,7 +54,7 @@ These are just a few examples! Kilo Code supports many more providers including 
 
 ### ChatGPT Plus/Pro Subscription
 
-Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/docs/providers/openai-chatgpt-plus-pro)—no API key needed.
+Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/docs/ai-providers/openai-chatgpt-plus-pro)—no API key needed.
 
 ### OpenRouter
 
