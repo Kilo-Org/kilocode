@@ -22,7 +22,6 @@ export class AgentManagerProvider implements vscode.Disposable {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
-    private readonly context: vscode.ExtensionContext,
   ) {
     this.outputChannel = vscode.window.createOutputChannel("Kilo Agent Manager")
   }
@@ -95,6 +94,22 @@ export class AgentManagerProvider implements vscode.Disposable {
   <meta http-equiv="Content-Security-Policy" content="${csp}">
   <link rel="stylesheet" href="${styleUri}">
   <title>Agent Manager</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      background-color: var(--vscode-editor-background);
+      color: var(--vscode-foreground);
+      font-family: var(--vscode-font-family);
+    }
+    #root {
+      height: 100%;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
