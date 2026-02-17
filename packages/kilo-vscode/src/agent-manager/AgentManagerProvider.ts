@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
-import { getNonce } from "../utils"
+import { buildWebviewHtml } from "../utils"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -73,55 +73,13 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private getHtml(webview: vscode.Webview): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.js"))
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.css"))
-    const iconsBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons"))
-    const nonce = getNonce()
-    const port = this.connectionService.getServerInfo()?.port
-    const connectSrc = port
-      ? `http://127.0.0.1:${port} http://localhost:${port} ws://127.0.0.1:${port} ws://localhost:${port}`
-      : "http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*"
-
-    const csp = [
-      "default-src 'none'",
-      `style-src 'unsafe-inline' ${webview.cspSource}`,
-      `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
-      `font-src ${webview.cspSource}`,
-      `connect-src ${connectSrc}`,
-      `img-src ${webview.cspSource} data: https:`,
-    ].join("; ")
-
-    return `<!DOCTYPE html>
-<html lang="en" data-theme="kilo-vscode">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
-  <link rel="stylesheet" href="${styleUri}">
-  <title>Agent Manager</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
-    body {
-      background-color: var(--vscode-editor-background);
-      color: var(--vscode-foreground);
-      font-family: var(--vscode-font-family);
-    }
-    #root {
-      height: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${iconsBaseUri}";</script>
-  <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`
+    return buildWebviewHtml(webview, {
+      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.js")),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.css")),
+      iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
+      title: "Agent Manager",
+      port: this.connectionService.getServerInfo()?.port,
+    })
   }
 
   public dispose(): void {
