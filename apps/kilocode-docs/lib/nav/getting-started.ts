@@ -56,6 +56,10 @@ export const GettingStartedNav: NavSection[] = [
 					},
 				],
 			},
+			{
+				href: "/getting-started/using-docs-with-agents",
+				children: "Using Docs with Agents",
+			},
 		],
 	},
 ]
