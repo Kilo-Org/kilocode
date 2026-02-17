@@ -128,6 +128,22 @@ async function main() {
     plugins: [esbuildProblemMatcherPlugin],
   })
 
+  // Build Agent Manager webview (vanilla TS, no framework)
+  // kilocode_change start
+  const agentManagerCtx = await esbuild.context({
+    entryPoints: ["webview-ui/agent-manager/index.ts"],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/agent-manager.js",
+    logLevel: "silent",
+    plugins: [esbuildProblemMatcherPlugin],
+  })
+  // kilocode_change end
+
   // Build webview
   const webviewCtx = await esbuild.context({
     entryPoints: ["webview-ui/src/index.tsx"],
@@ -154,10 +170,12 @@ async function main() {
   })
 
   if (watch) {
-    await Promise.all([extensionCtx.watch(), webviewCtx.watch()])
+    // kilocode_change start
+    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch()])
   } else {
-    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild()])
-    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose()])
+    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild(), agentManagerCtx.rebuild()])
+    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose(), agentManagerCtx.dispose()])
+    // kilocode_change end
   }
 }
 
