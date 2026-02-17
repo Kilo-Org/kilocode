@@ -21,7 +21,7 @@ Custom Instructions are IDE-wide and are applied across all workspaces and maint
 
 {% image src="/docs/img/custom-instructions/custom-instructions.png" alt="Kilo Code Modes tab showing global custom instructions interface" width="600" caption="Kilo Code Modes tab showing global custom instructions interface" /%}
 
-1.  **Open Modes Tab:** Click the <Codicon name="organization" /> icon in the Kilo Code top menu bar
+1.  **Open Modes Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
 2.  **Find Section:** Find the "Custom Instructions for All Modes" section
 3.  **Enter Instructions:** Enter your instructions in the text area
 4.  **Save Changes:** Click "Done" to save your changes
@@ -31,7 +31,7 @@ Custom Instructions are IDE-wide and are applied across all workspaces and maint
 Mode-specific instructions can be set using the Modes Tab
 
     {% image src="/docs/img/custom-instructions/custom-instructions-3.png" alt="Kilo Code Modes tab showing mode-specific custom instructions interface" width="600" caption="Kilo Code Modes tab showing mode-specific custom instructions interface" /%}
-    * **Open Tab:** Click the <Codicon name="organization" /> icon in the Kilo Code top menu bar
+    * **Open Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
     * **Select Mode:** Under the Modes heading, click the button for the mode you want to customize
     * **Enter Instructions:** Enter your instructions in the text area under "Mode-specific Custom Instructions (optional)"
     * **Save Changes:** Click "Done" to save your changes
@@ -39,6 +39,17 @@ Mode-specific instructions can be set using the Modes Tab
         {% callout type="info" title="Global Mode Rules" %}
         If the mode itself is global (not workspace-specific), any custom instructions you set for it will also apply globally for that mode across all workspaces.
         {% /callout %}
+
+## Mode-Specific Instructions from Files
+
+For version-controlled mode instructions, use the mode rules file paths documented in [Custom Modes](/docs/customize/custom-modes#mode-specific-instructions-via-filesdirectories):
+
+- Preferred: `.kilo/rules-{mode-slug}/` (directory)
+- Fallback: `.kilorules-{mode-slug}` (single file)
+
+{% callout type="info" title="Legacy Naming Note" %}
+Older naming like `.clinerules-{mode-slug}` is not the recommended path for current Kilo mode-specific instructions.
+{% /callout %}
 
 ## Related Features
 
