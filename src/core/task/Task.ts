@@ -4818,7 +4818,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				yield* this.attemptApiRequest()
 				return
 			}
+			// kilocode_change start
+		} finally {
+			// Clean up abort listeners to prevent memory leaks.
+			// Both listeners are only needed during the first-chunk phase,
+			// so it's safe to remove them here before consuming the rest of the stream.
+			abortSignal.removeEventListener("abort", abortCleanupListener)
+			if (firstChunkAbortListener) {
+				abortSignal.removeEventListener("abort", firstChunkAbortListener)
+			}
 		}
+		// kilocode_change end
 
 		// No error, so we can continue to yield all remaining chunks.
 		// (Needs to be placed outside of try/catch since it we want caller to
@@ -4835,12 +4845,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			Task.lastGlobalApiRequestTime = performance.now()
 		}
 		// kilocode_change end
-
-		// Clean up abort listeners to prevent memory leaks
-		abortSignal.removeEventListener("abort", abortCleanupListener)
-		if (firstChunkAbortListener) {
-			abortSignal.removeEventListener("abort", firstChunkAbortListener)
-		}
 	}
 
 	// Shared exponential backoff for retries (first-chunk and mid-stream)
