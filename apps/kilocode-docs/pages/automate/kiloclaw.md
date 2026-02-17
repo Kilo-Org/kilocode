@@ -13,7 +13,7 @@ KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service—a one-click 
 - **Instant provisioning** — Your agent is ready in seconds
 - **Uses existing credits** — Runs on your Kilo Gateway balance
 - **Multiple free models** — Choose from several models at no additional cost
-- **Web UI included** — Access your agent at claw.kilosessions.ai
+- **Web UI included** — Access your agent's web interface from the instance dashboard
 
 ## Prerequisites
 
@@ -30,12 +30,7 @@ Before creating an instance:
 {% image src="/docs/img/kiloclaw/profile-claw-nav.png" alt="Profile page showing Claw navigation" width="400" caption="Claw navigation in profile sidebar" /%}
 
 3. Click **Create Instance**
-4. Select your preferred model from the dropdown:
-    - **Kilo: Auto** — Automatically routes to the best available model
-    - **MiniMax M2.5** — Free tier
-    - **Z.ai GLM 5** — Free tier
-    - **Giga Potato** — Free tier
-    - **Arcee AI Trinity** — Free tier
+4. Select your preferred model from the dropdown. See all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
@@ -72,10 +67,10 @@ To connect to your agent's web interface:
 
 {% image src="/docs/img/kiloclaw/access-code-modal.png" alt="Access code modal showing one-time code" width="500" caption="One-time access code with 10-minute expiration" /%}
 
-3. Go to [claw.kilosessions.ai](https://claw.kilosessions.ai)
+3. Click the **Open Claw** button in the top-right corner of your instance dashboard
 4. Enter your access code to authenticate
 
-{% image src="/docs/img/kiloclaw/openclaw-dashboard.png" alt="OpenClaw web interface" width="800" caption="OpenClaw web UI at claw.kilosessions.ai" /%}
+{% image src="/docs/img/kiloclaw/openclaw-dashboard.png" alt="OpenClaw web interface" width="800" caption="OpenClaw web UI" /%}
 
 ## Connecting Chat Platforms
 
@@ -105,7 +100,7 @@ KiloClaw uses your existing Kilo Gateway credits—there's no separate billing o
 
 - **Instance hosting** — Free for 7 days during beta
 - **Model inference** — Charged against your Gateway credit balance
-- **Free models** — Several models (MiniMax M2.5, Z.ai GLM 5, Giga Potato, Arcee AI Trinity) cost nothing to use
+- **Free models** — Several models are available at no cost. See the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models) for current availability.
 
 See [Gateway Usage and Billing](/docs/gateway/usage-and-billing) for credit pricing details.
 
