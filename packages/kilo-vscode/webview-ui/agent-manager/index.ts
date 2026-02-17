@@ -387,9 +387,10 @@ function handleExtensionMessage(msg: { type: string; [key: string]: unknown }) {
   <style>${cssVars}</style>
   <link rel="stylesheet" href="${cssBlobUrl}">
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
     body { background-color: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-    #root { height: 100%; }
+    #root, #root > .container, #root > .container > .chat-view { height: 100%; }
+    .container { display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
