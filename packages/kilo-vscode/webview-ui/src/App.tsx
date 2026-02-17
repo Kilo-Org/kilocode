@@ -2,6 +2,10 @@ import { Component, createSignal, createMemo, Switch, Match, onMount, onCleanup 
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
+import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff" // kilocode_change
+import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code" // kilocode_change
+import { Diff } from "@kilocode/kilo-ui/diff" // kilocode_change
+import { Code } from "@kilocode/kilo-ui/code" // kilocode_change
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/Settings"
@@ -170,15 +174,19 @@ const App: Component = () => {
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>
-                <ProviderProvider>
-                  <ConfigProvider>
-                    <SessionProvider>
-                      <DataBridge>
-                        <AppContent />
-                      </DataBridge>
-                    </SessionProvider>
-                  </ConfigProvider>
-                </ProviderProvider>
+                <DiffComponentProvider component={Diff}>
+                  <CodeComponentProvider component={Code}>
+                    <ProviderProvider>
+                      <ConfigProvider>
+                        <SessionProvider>
+                          <DataBridge>
+                            <AppContent />
+                          </DataBridge>
+                        </SessionProvider>
+                      </ConfigProvider>
+                    </ProviderProvider>
+                  </CodeComponentProvider>
+                </DiffComponentProvider>
               </MarkedProvider>
             </LanguageBridge>
           </ServerProvider>

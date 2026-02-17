@@ -55,6 +55,32 @@ const esbuildProblemMatcherPlugin = {
   },
 }
 
+/**
+ * Handle Vite-specific `?worker&url` import suffix used by @pierre/diffs.
+ * Strips the query suffix and re-resolves via esbuild with the `file` loader
+ * so the import returns a URL string at runtime.
+ *
+ * @type {import('esbuild').Plugin}
+ */
+const workerUrlPlugin = {
+  name: "worker-url",
+  setup(build) {
+    build.onResolve({ filter: /\?worker&url$/ }, async (args) => {
+      const bare = args.path.replace(/\?worker&url$/, "")
+      const result = await build.resolve(bare, {
+        kind: "import-statement",
+        resolveDir: args.resolveDir,
+      })
+      if (result.errors.length > 0) return { errors: result.errors }
+      return { path: result.path, namespace: "worker-url" }
+    })
+
+    build.onLoad({ filter: /.*/, namespace: "worker-url" }, (args) => {
+      return { contents: require("fs").readFileSync(args.path), loader: "file" }
+    })
+  },
+}
+
 const cssPackageResolvePlugin = {
   name: "css-package-resolve",
   setup(build) {
@@ -101,7 +127,7 @@ async function main() {
       ".woff2": "file",
       ".ttf": "file",
     },
-    plugins: [solidDedupePlugin, cssPackageResolvePlugin, solidPlugin(), esbuildProblemMatcherPlugin],
+    plugins: [solidDedupePlugin, workerUrlPlugin, cssPackageResolvePlugin, solidPlugin(), esbuildProblemMatcherPlugin],
   })
 
   if (watch) {
