@@ -104,8 +104,8 @@ export function SessionDetail() {
 		setIsEditingTitle(false)
 	}
 
-	// Auto-cancel session when it ends (as if user clicked the red cancel button)
-	// Only send cancel once when transitioning from "running" to a terminal state
+	// Auto-cancel mirrors explicit user stop action only.
+	// Send cancel once when transitioning from "running" to "stopped".
 	// Track both sessionId and status to avoid spurious cancels on session switches
 	useEffect(() => {
 		if (!selectedSession) return
@@ -116,8 +116,8 @@ export function SessionDetail() {
 		// Update the ref for next render
 		prevSessionStateRef.current = currentState
 
-		// Only send cancel if same session transitioned from running to terminal state
-		if (prevState?.id === currentState.id && prevState.status === "running" && currentState.status !== "running") {
+		// Only send cancel for explicit stop transitions (not successful completion) // kilocode_change
+		if (prevState?.id === currentState.id && prevState.status === "running" && currentState.status === "stopped") {
 			vscode.postMessage({
 				type: "agentManager.cancelSession",
 				sessionId: selectedSession.sessionId,

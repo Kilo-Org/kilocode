@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, act } from "@testing-library/react"
 import { Provider, createStore } from "jotai"
 import { SessionDetail } from "../SessionDetail"
 import {
@@ -11,6 +11,7 @@ import {
 } from "../../state/atoms/sessions"
 import { sessionMachineUiStateAtom } from "../../state/atoms/stateMachine"
 import type { SessionUiState } from "../../state/sessionStateMachine"
+import { vscode } from "../../utils/vscode"
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -103,11 +104,13 @@ describe("SessionDetail", () => {
 			store.set(sessionMachineUiStateAtom, machineState)
 		}
 
-		return render(
+		const view = render(
 			<Provider store={store}>
 				<SessionDetail />
 			</Provider>,
 		)
+
+		return { store, ...view }
 	}
 
 	describe("canFinishWorktree logic", () => {
@@ -351,6 +354,60 @@ describe("SessionDetail", () => {
 			})
 
 			expect(screen.getByLabelText("sessionDetail.openTerminal")).toBeInTheDocument()
+		})
+	})
+
+	describe("auto-cancel transitions", () => {
+		it("does not auto-cancel when session transitions running -> done", () => {
+			const session = createSession({
+				status: "running",
+				parallelMode: { enabled: true, branch: "feature/test" },
+			})
+
+			const { store } = renderWithStore(session, {
+				[session.sessionId]: createUiState({ isActive: true, showSpinner: true }),
+			})
+
+			act(() => {
+				store.set(sessionsMapAtom, {
+					[session.sessionId]: {
+						...session,
+						status: "done",
+					},
+				})
+			})
+
+			expect(vscode.postMessage).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "agentManager.cancelSession",
+					sessionId: session.sessionId,
+				}),
+			)
+		})
+
+		it("auto-cancels when session transitions running -> stopped", () => {
+			const session = createSession({
+				status: "running",
+				parallelMode: { enabled: true, branch: "feature/test" },
+			})
+
+			const { store } = renderWithStore(session, {
+				[session.sessionId]: createUiState({ isActive: true, showSpinner: true }),
+			})
+
+			act(() => {
+				store.set(sessionsMapAtom, {
+					[session.sessionId]: {
+						...session,
+						status: "stopped",
+					},
+				})
+			})
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "agentManager.cancelSession",
+				sessionId: session.sessionId,
+			})
 		})
 	})
 })

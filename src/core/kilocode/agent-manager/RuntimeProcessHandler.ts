@@ -129,6 +129,8 @@ export class RuntimeProcessHandler {
 	private pendingResumeContinuation: Map<string, { prompt: string; images?: string[] }> = new Map()
 	// Track current mode for each session to detect mode changes
 	private sessionModes: Map<string, string> = new Map()
+	// Track last emitted completion marker per session to avoid duplicate state events // kilocode_change
+	private completionMarkers: Map<string, string> = new Map() // kilocode_change
 	// VS Code app root path for finding bundled binaries
 	private vscodeAppRoot?: string
 
@@ -670,6 +672,8 @@ export class RuntimeProcessHandler {
 			}
 
 			if (chatMessages && chatMessages.length > 0) {
+				this.emitCompletionStateEventIfDetected(sessionId, chatMessages, onEvent) // kilocode_change
+
 				// Log last few message types and content for debugging
 				const lastMsgs = chatMessages.slice(-3).map((m) => {
 					const msgType = `${m.type}:${m.say || m.ask || "?"}`
@@ -772,7 +776,7 @@ export class RuntimeProcessHandler {
 	private handleStateChange(
 		proc: ChildProcess,
 		state: unknown,
-		_onEvent: (sessionId: string, event: StreamEvent) => void,
+		onEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		const sessionId = this.getSessionIdForProcess(proc)
 		if (!sessionId) {
@@ -783,6 +787,8 @@ export class RuntimeProcessHandler {
 		// Handle both property names - extension uses clineMessages internally
 		const chatMessages = stateObj.chatMessages || stateObj.clineMessages
 		if (chatMessages) {
+			this.emitCompletionStateEventIfDetected(sessionId, chatMessages, onEvent) // kilocode_change
+
 			// Filter out control messages that shouldn't be displayed
 			const filteredMessages = this.filterDisplayableMessages(chatMessages)
 			this.callbacks.onChatMessages(sessionId, filteredMessages)
@@ -792,6 +798,44 @@ export class RuntimeProcessHandler {
 			this.checkAndSendPendingContinuation(sessionId, chatMessages)
 		}
 	}
+
+	// kilocode_change start
+	/**
+	 * Emit a synthetic completion event when completion appears in extension state messages.
+	 * This allows UI state to transition to completed before process exit.
+	 */
+	private emitCompletionStateEventIfDetected(
+		sessionId: string,
+		messages: ClineMessage[],
+		onEvent: (sessionId: string, event: StreamEvent) => void,
+	): void {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const msg = messages[i]
+			const isCompletionAsk = msg.type === "ask" && msg.ask === "completion_result"
+			const isCompletionSay = msg.type === "say" && msg.say === "completion_result"
+			if (!isCompletionAsk && !isCompletionSay) {
+				continue
+			}
+
+			const marker = `${msg.type}:${msg.ask || msg.say || "completion_result"}:${msg.ts ?? i}`
+			if (this.completionMarkers.get(sessionId) === marker) {
+				return
+			}
+
+			this.completionMarkers.set(sessionId, marker)
+			const completionEvent: KilocodeStreamEvent = {
+				streamEventType: "kilocode",
+				payload: {
+					ts: typeof msg.ts === "number" ? msg.ts : Date.now(),
+					type: "ask",
+					ask: "completion_result",
+				},
+			}
+			onEvent(sessionId, completionEvent)
+			return
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Handle agent error
@@ -883,6 +927,7 @@ export class RuntimeProcessHandler {
 			this.sentApiReqStarted.delete(sessionId)
 			this.pendingResumeContinuation.delete(sessionId)
 			this.sessionModes.delete(sessionId)
+			this.completionMarkers.delete(sessionId) // kilocode_change
 
 			// Update session status based on exit code
 			if (code === 0) {
@@ -1031,6 +1076,7 @@ export class RuntimeProcessHandler {
 		}
 		this.activeSessions.clear()
 		this.pendingResumeContinuation.clear()
+		this.completionMarkers.clear() // kilocode_change
 	}
 
 	/**

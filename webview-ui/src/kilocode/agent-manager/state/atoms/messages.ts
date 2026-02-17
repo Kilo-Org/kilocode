@@ -132,10 +132,12 @@ export function messageToEvent(msg: ClineMessage): SessionEvent | null {
 			case "user_feedback_diff":
 			case "api_req_finished":
 			case "api_req_retried":
-			case "completion_result":
 			case "shell_integration_warning":
 			case "checkpoint_saved":
 				return { type: "say_text", partial }
+
+			case "completion_result":
+				return { type: "ask_completion_result" } // kilocode_change
 
 			default:
 				return { type: "say_text", partial }
