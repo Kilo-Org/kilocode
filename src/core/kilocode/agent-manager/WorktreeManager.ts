@@ -106,8 +106,10 @@ export class WorktreeManager {
 		}
 
 		try {
+			// Use --force when checking out an existing branch to allow the same branch
+			// to be checked out in multiple worktrees (e.g., multiple agents on main)
 			const args = params.existingBranch
-				? ["worktree", "add", worktreePath, branch]
+				? ["worktree", "add", "--force", worktreePath, branch]
 				: ["worktree", "add", "-b", branch, worktreePath]
 
 			await this.git.raw(args)

@@ -124,9 +124,9 @@ describe("WorktreeManager", () => {
 			const result = await manager.createWorktree({ existingBranch: "feature/existing-branch" })
 
 			expect(result.branch).toBe("feature/existing-branch")
-			// Check the git raw call - path may use / or \ depending on OS
+			// Check the git raw call includes --force flag for existing branches
 			expect(mockGit.raw).toHaveBeenCalledWith(
-				expect.arrayContaining(["worktree", "add", "feature/existing-branch"]),
+				expect.arrayContaining(["worktree", "add", "--force", "feature/existing-branch"]),
 			)
 		})
 
