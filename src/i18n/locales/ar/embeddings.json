@@ -24,6 +24,12 @@
 		"modelNotFound": "النموذج {{model}} غير موجود في Amazon Bedrock",
 		"missingConfiguration": "إعدادات Amazon Bedrock مفقودة لإنشاء التضمين"
 	},
+	"voyage": {
+		"invalidResponseFormat": "تنسيق استجابة غير صالح من Voyage AI",
+		"invalidCredentials": "مفتاح API الخاص بـ Voyage AI غير صالح. تحقق من إعدادات مفتاح الـ API.",
+		"accessDenied": "تم رفض الوصول. عنوان الـ IP الخاص بك قد يكون محظوراً من Voyage AI. جرّب شبكة مختلفة.",
+		"modelNotFound": "النموذج {{model}} غير موجود في Voyage AI. تحقق من اختيارك للنموذج."
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "خطأ غير معروف أثناء معالجة الملف {{filePath}}",
 		"unknownErrorDeletingPoints": "خطأ غير معروف أثناء حذف النقاط للملف {{filePath}}",
@@ -59,6 +65,7 @@
 		"openRouterConfigMissing": "إعدادات OpenRouter مفقودة لإنشاء التضمين",
 		"vercelAiGatewayConfigMissing": "إعدادات Vercel AI Gateway مفقودة لإنشاء التضمين",
 		"bedrockConfigMissing": "إعدادات Amazon Bedrock مفقودة لإنشاء التضمين",
+		"voyageConfigMissing": "إعدادات Voyage AI مفقودة لإنشاء التضمين",
 		"invalidEmbedderType": "نوع التضمين المُعدّ غير صالح: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. يرجى التأكد من ضبط 'أبعاد التضمين' بشكل صحيح في إعدادات مزوّد OpenAI المتوافق.",
 		"vectorDimensionNotDetermined": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. تحقق من ملفات النموذج أو الإعدادات.",

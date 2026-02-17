@@ -236,7 +236,7 @@
 			"idea7": "Buat starfield interaktif yang menenangkan yang bergerak dengan gerakan mouse"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Saran Editor Kode",

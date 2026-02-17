@@ -272,7 +272,39 @@ For each issue:
 - **Suggestion:** Recommended fix with code snippet
 
 ### Recommendation
-One of: **APPROVE** | **APPROVE WITH SUGGESTIONS** | **NEEDS CHANGES** | **NEEDS DISCUSSION**`,
+One of: **APPROVE** | **APPROVE WITH SUGGESTIONS** | **NEEDS CHANGES**
+
+## Presenting Your Review
+
+After completing your review analysis and formatting your findings:
+
+- If your recommendation is **APPROVE** with no issues found, use \`attempt_completion\` to present your clean review.
+- If your recommendation is **APPROVE WITH SUGGESTIONS** or **NEEDS CHANGES**, use \`ask_followup_question\` instead of \`attempt_completion\`. Present your full review as the question text and include fix suggestions with mode switching so the user can apply fixes with one click.
+
+When using \`ask_followup_question\`, always provide exactly 1-3 suggestions in the \`follow_up\` array (never more than 3). Tailor them based on what you found. Choose the appropriate mode for each suggestion:
+- \`mode="code"\` for direct code fixes (bugs, missing error handling, clear improvements)
+- \`mode="debug"\` for issues needing investigation before fixing (race conditions, unclear root causes, intermittent failures)
+- \`mode="orchestrator"\` when there are many issues (3+) spanning different categories that need coordinated, planned fixes
+
+Suggestion patterns based on review findings:
+- **Few clear fixes (1-4 issues, same category):** offer mode="code" fixes
+- **Many issues across categories (3+, mixed security/performance/quality):** offer mode="orchestrator" to plan fixes and mode="code" for quick wins
+- **Issues needing investigation:** include a mode="debug" option to investigate root causes
+- **Suggestions only:** offer mode="code" to apply improvements
+
+Example with complex findings across multiple categories:
+Use \`ask_followup_question\` with:
+- question: Your full review (Summary, Issues Found table, Detailed Findings, and Recommendation)
+- follow_up:
+  - { text: "Plan and coordinate fixes across all issue categories", mode: "orchestrator" }
+  - { text: "Fix critical and warning issues only", mode: "code" }
+
+Example with straightforward fixes:
+Use \`ask_followup_question\` with:
+- question: Your full review (Summary, Issues Found table, Detailed Findings, and Recommendation)
+- follow_up:
+  - { text: "Fix all issues found in this review", mode: "code" }
+  - { text: "Fix critical issues only", mode: "code" }`,
 	},
 	// kilocode_change end
 ] as const

@@ -53,13 +53,13 @@
 	"settings.debugProxy.enabled.description": "**Ativar Debug Proxy** — Redireciona todas as requisições de rede de saída por um proxy para depuração MITM. Só fica ativo ao executar em modo de depuração (F5).",
 	"settings.debugProxy.serverUrl.description": "URL do proxy (ex: `http://127.0.0.1:8888`). Só é usada quando o **Debug Proxy** está ativado.",
 	"settings.debugProxy.tlsInsecure.description": "Aceitar certificados autoassinados do proxy. **Necessário para inspeção MITM.** ⚠️ Inseguro. Use apenas para depuração local.",
-	"ghost.input.title": "Pressione 'Enter' para confirmar ou 'Escape' para cancelar",
-	"ghost.input.placeholder": "Descreva o que você quer fazer...",
-	"ghost.commands.generateSuggestions": "Gerar Sugestões de Edição",
-	"ghost.commands.displaySuggestions": "Exibir Sugestões de Edição",
-	"ghost.commands.cancelSuggestions": "Cancelar Sugestões de Edição",
-	"ghost.commands.applyCurrentSuggestion": "Aplicar a Sugestão de Edição Atual",
-	"ghost.commands.applyAllSuggestions": "Aplicar Todas as Sugestões de Edição",
-	"ghost.commands.goToNextSuggestion": "Ir para a Próxima Sugestão",
-	"ghost.commands.goToPreviousSuggestion": "Voltar para a Sugestão Anterior"
+	"autocomplete.input.title": "Pressione 'Enter' para confirmar ou 'Escape' para cancelar",
+	"autocomplete.input.placeholder": "Descreva o que você quer fazer...",
+	"autocomplete.commands.generateSuggestions": "Gerar Sugestões de Edição",
+	"autocomplete.commands.displaySuggestions": "Exibir Sugestões de Edição",
+	"autocomplete.commands.cancelSuggestions": "Cancelar Sugestões de Edição",
+	"autocomplete.commands.applyCurrentSuggestion": "Aplicar a Sugestão de Edição Atual",
+	"autocomplete.commands.applyAllSuggestions": "Aplicar Todas as Sugestões de Edição",
+	"autocomplete.commands.goToNextSuggestion": "Ir para a Próxima Sugestão",
+	"autocomplete.commands.goToPreviousSuggestion": "Voltar para a Sugestão Anterior"
 }

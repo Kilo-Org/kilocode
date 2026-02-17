@@ -250,7 +250,7 @@
 			"idea7": "Créez un champ d'étoiles interactif apaisant qui se déplace avec les gestes de la souris"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplétion",
 		"settings": {
 			"codeEditorSuggestions": "Suggestions de l'éditeur de code",

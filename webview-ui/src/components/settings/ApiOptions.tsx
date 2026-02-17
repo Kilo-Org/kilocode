@@ -9,6 +9,7 @@ import {
 	type ProviderSettings,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
+	zenmuxDefaultModelId, // kilocode_change
 	requestyDefaultModelId,
 	glamaDefaultModelId, // kilocode_change
 	unboundDefaultModelId,
@@ -23,6 +24,7 @@ import {
 	deepSeekDefaultModelId,
 	moonshotDefaultModelId,
 	// kilocode_change start
+	apertisDefaultModelId,
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -77,6 +79,7 @@ import {
 
 import {
 	Anthropic,
+	Apertis, // kilocode_change
 	Baseten,
 	Corethink,
 	Bedrock,
@@ -100,6 +103,7 @@ import {
 	OpenAICompatible,
 	OpenAICodex,
 	OpenRouter,
+	ZenMux, // kilocode_change
 	QwenCode,
 	Requesty,
 	Roo,
@@ -238,6 +242,8 @@ const ApiOptions = ({
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
 		syntheticApiKey: apiConfiguration?.syntheticApiKey,
+		zenmuxBaseUrl: apiConfiguration?.zenmuxBaseUrl,
+		zenmuxApiKey: apiConfiguration?.zenmuxApiKey,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -338,9 +344,8 @@ const ApiOptions = ({
 				? Object.fromEntries(
 						Object.entries(filteredModels).filter(
 							([modelId]) =>
-								apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
-									? modelId === "kimi-for-coding"
-									: modelId !== "kimi-for-coding",
+								modelId !== "kimi-for-coding" ||
+								apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1",
 						),
 					)
 				: filteredModels
@@ -427,6 +432,7 @@ const ApiOptions = ({
 			> = {
 				deepinfra: { field: "deepInfraModelId", default: deepInfraDefaultModelId },
 				openrouter: { field: "openRouterModelId", default: openRouterDefaultModelId },
+				zenmux: { field: "zenmuxModelId", default: zenmuxDefaultModelId },
 				glama: { field: "glamaModelId", default: glamaDefaultModelId }, // kilocode_change
 				unbound: { field: "unboundModelId", default: unboundDefaultModelId },
 				requesty: { field: "requestyModelId", default: requestyDefaultModelId },
@@ -455,7 +461,8 @@ const ApiOptions = ({
 				zai: {
 					field: "apiModelId",
 					default:
-						apiConfiguration.zaiApiLine === "china_coding"
+						// kilocode_change - china_api uses mainland model catalog too.
+						apiConfiguration.zaiApiLine === "china_coding" || apiConfiguration.zaiApiLine === "china_api"
 							? mainlandZAiDefaultModelId
 							: internationalZAiDefaultModelId,
 				},
@@ -468,6 +475,7 @@ const ApiOptions = ({
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
 				// kilocode_change start
+				apertis: { field: "apertisModelId", default: apertisDefaultModelId },
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
@@ -614,6 +622,21 @@ const ApiOptions = ({
 				/>
 			)}
 
+			{/* kilocode_change start */}
+			{selectedProvider === "zenmux" && (
+				<ZenMux
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					selectedModelId={selectedModelId}
+					uriScheme={uriScheme}
+					simplifySettings={fromWelcomeView}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
+
 			{selectedProvider === "requesty" && (
 				<Requesty
 					uriScheme={uriScheme}
@@ -686,6 +709,12 @@ const ApiOptions = ({
 					simplifySettings={fromWelcomeView}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "apertis" && (
+				<Apertis apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "claude-code" && (
 				<ClaudeCode

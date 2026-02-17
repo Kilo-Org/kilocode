@@ -44,7 +44,7 @@
 		"about": "Acerca de Kilo Code",
 		"autoPurge": "Auto-limpieza",
 		"agentBehaviour": "Comportamiento del agente",
-		"ghost": "Autocompletado"
+		"autocomplete": "Autocompletado"
 	},
 	"about": {
 		"bugReport": {
@@ -109,6 +109,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Clave API de Voyage AI",
+		"voyageApiKeyPlaceholder": "Introduce tu clave de API de Voyage AI",
 		"openaiCompatibleProvider": "Compatible con OpenAI",
 		"openaiCompatibleResponsesProvider": "Compatible con OpenAI (Responses)",
 		"openAiKeyLabel": "Clave API de OpenAI",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Se requiere la URL base de Ollama",
 			"baseUrlRequired": "Se requiere la URL base",
 			"modelDimensionMinValue": "La dimensión del modelo debe ser mayor que 0",
-			"openRouterApiKeyRequired": "Se requiere la clave API de OpenRouter"
+			"openRouterApiKeyRequired": "Se requiere la clave API de OpenRouter",
+			"voyageApiKeyRequired": "Se requiere la clave API de Voyage AI"
 		},
 		"optional": "opcional",
 		"advancedConfigLabel": "Configuración avanzada",
@@ -368,6 +372,8 @@
 			"success": "¡Lista de modelos actualizada correctamente!",
 			"error": "Error al actualizar la lista de modelos. Por favor, inténtalo de nuevo."
 		},
+		"getZenmuxApiKey": "Obtener clave API de Zenmux",
+		"zenmuxTransformsText": "Usar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtener clave API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
@@ -378,6 +384,8 @@
 		"anthropic1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"anthropicUseAzureDeployment": "Usar nombre de despliegue de Azure",
 		"anthropicAzureDeploymentPlaceholder": "Introduce el nombre del despliegue...",
+		"apertisApiKey": "Clave API de Apertis",
+		"getApertisApiKey": "Obtener clave API de Apertis",
 		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"vertex1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
@@ -1172,7 +1180,7 @@
 			"description": "Mostrar estadísticas de líneas añadidas/eliminadas en el encabezado de la tarea"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostrar animación en el margen al autocompletar",
 			"description": "Muestra un indicador animado en el margen del editor cuando se ejecuta el autocompletado",

@@ -44,7 +44,7 @@
 		"about": "Kilo Codeについて",
 		"autoPurge": "自動クリーンアップ",
 		"agentBehaviour": "エージェントの動作",
-		"ghost": "Ghost"
+		"autocomplete": "Ghost"
 	},
 	"about": {
 		"bugReport": {
@@ -104,6 +104,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI APIキー",
+		"voyageApiKeyPlaceholder": "Voyage AI APIキーを入力してください",
 		"openaiCompatibleProvider": "OpenAI互換",
 		"openaiCompatibleResponsesProvider": "OpenAI互換 (Responses)",
 		"openAiKeyLabel": "OpenAI APIキー",
@@ -178,7 +181,8 @@
 			"ollamaBaseUrlRequired": "OllamaのベースURLが必要です",
 			"baseUrlRequired": "ベースURLが必要です",
 			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません",
-			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です"
+			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です",
+			"voyageApiKeyRequired": "Voyage AI APIキーが必要です"
 		},
 		"optional": "オプション",
 		"advancedConfigLabel": "詳細設定",
@@ -364,11 +368,15 @@
 			"success": "モデルリストが正常に更新されました！",
 			"error": "モデルリストの更新に失敗しました。もう一度お試しください。"
 		},
+		"getZenmuxApiKey": "Zenmux APIキーを取得",
+		"zenmuxTransformsText": "Zenmux Middle Out Transformを使用",
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"getRequestyBaseUrl": "ベースURL",
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
+		"apertisApiKey": "Apertis APIキー",
+		"getApertisApiKey": "Apertis APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
 		"anthropic1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
@@ -1178,7 +1186,7 @@
 			"description": "タスクヘッダーに追加/削除された行の統計を表示"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "オートコンプリート時にガターアニメーションを表示",
 			"description": "オートコンプリートの実行中にエディタガターにアニメーションインジケータを表示",

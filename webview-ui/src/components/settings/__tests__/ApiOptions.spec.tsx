@@ -3,7 +3,12 @@
 import { render, screen, fireEvent } from "@/utils/test-utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-import { type ModelInfo, type ProviderSettings, openAiModelInfoSaneDefaults } from "@roo-code/types"
+import {
+	type ModelInfo,
+	type ProviderSettings,
+	mainlandZAiDefaultModelId,
+	openAiModelInfoSaneDefaults,
+} from "@roo-code/types"
 import { openAiCodexDefaultModelId } from "@roo-code/types"
 
 import * as ExtensionStateContext from "@src/context/ExtensionStateContext"
@@ -339,6 +344,30 @@ describe("ApiOptions", () => {
 		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", openAiCodexDefaultModelId, false)
 	})
 
+	// kilocode_change start
+	it("resets model to mainland Z.ai default when switching to Z.ai with china_api line", () => {
+		const mockSetApiConfigurationField = vi.fn()
+
+		renderApiOptions({
+			apiConfiguration: {
+				apiProvider: "anthropic",
+				apiModelId: "claude-3-5-sonnet-20241022",
+				zaiApiLine: "china_api",
+			},
+			setApiConfigurationField: mockSetApiConfigurationField,
+		})
+
+		const providerSelectContainer = screen.getByTestId("provider-select")
+		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
+		expect(providerSelect).toBeInTheDocument()
+
+		fireEvent.change(providerSelect, { target: { value: "zai" } })
+
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiProvider", "zai")
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", mainlandZAiDefaultModelId, false)
+	})
+	// kilocode_change end
+
 	it("hides kimi-for-coding from model options when Moonshot endpoint is not coding", () => {
 		renderApiOptions({
 			apiConfiguration: {
@@ -361,7 +390,7 @@ describe("ApiOptions", () => {
 		})
 
 		expect(screen.getByRole("option", { name: "kimi-for-coding" })).toBeInTheDocument()
-		expect(screen.queryByRole("option", { name: "kimi-k2-thinking" })).not.toBeInTheDocument() // kilocode_change
+		expect(screen.getByRole("option", { name: "kimi-k2-thinking" })).toBeInTheDocument() // kilocode_change
 	})
 
 	it("shows diff settings, temperature and rate limit controls by default", () => {

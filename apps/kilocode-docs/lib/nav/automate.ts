@@ -8,6 +8,7 @@ export const AutomateNav: NavSection[] = [
 			{ href: "/automate/integrations", children: "Integrations" },
 			{ href: "/automate/code-reviews", children: "Code Reviews" },
 			{ href: "/automate/agent-manager", children: "Agent Manager" },
+			{ href: "/automate/kiloclaw", children: "KiloClaw" },
 		],
 	},
 	{

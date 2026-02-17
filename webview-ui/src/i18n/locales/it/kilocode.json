@@ -243,7 +243,7 @@
 			"idea7": "Crea un campo stellare interattivo rilassante che si muove con i gesti del mouse"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Suggerimenti Editor di Codice",

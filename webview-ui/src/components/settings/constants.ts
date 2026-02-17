@@ -66,11 +66,13 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini", proxy: false },
 	{ value: "doubao", label: "Doubao", proxy: false },
 	// kilocode_change start
+	{ value: "zenmux", label: "ZenMux" },
 	{ value: "inception", label: "Inception", proxy: false },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback", proxy: false },
 	{ value: "synthetic", label: "Synthetic", proxy: false },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints", proxy: false },
 	{ value: "sap-ai-core", label: "SAP AI Core", proxy: false },
+	{ value: "apertis", label: "Apertis" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek", proxy: false },
 	{ value: "moonshot", label: "Moonshot", proxy: false },

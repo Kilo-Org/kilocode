@@ -1,5 +1,31 @@
 # kilo-code
 
+## 5.7.0
+
+### Minor Changes
+
+- [#4768](https://github.com/Kilo-Org/kilocode/pull/4768) [`626f18a`](https://github.com/Kilo-Org/kilocode/commit/626f18a91fde30b9a303708b3c42897aa91bcd98) Thanks [@hsp-sz](https://github.com/hsp-sz)! - feat: add Zenmux provider
+
+### Patch Changes
+
+- [#4714](https://github.com/Kilo-Org/kilocode/pull/4714) [`69b36b5`](https://github.com/Kilo-Org/kilocode/commit/69b36b537d5a5f6817dbc60567623ffcdfac9acf) Thanks [@otterDeveloper](https://github.com/otterDeveloper)! - feat (fireworks.ai): add minimax 2.1, glm 4.7, updated other models
+
+- [#4926](https://github.com/Kilo-Org/kilocode/pull/4926) [`079dffd`](https://github.com/Kilo-Org/kilocode/commit/079dffd17e2612ac22f5aaf9430f18363088c4cd) Thanks [@YuriNachos](https://github.com/YuriNachos)! - fix: disable zsh history expansion (#4926)
+
+- [#5162](https://github.com/Kilo-Org/kilocode/pull/5162) [`cad3c68`](https://github.com/Kilo-Org/kilocode/commit/cad3c688dc2493ef7a750fc47c60db9507da4a9d) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Fix attached images being lost when editing a message with checkpoint
+
+    When editing a message that has a checkpoint, the images attached to the edited message were not being included in the `editMessageConfirm` webview message. This caused images to be silently dropped and not sent to the backend.
+
+    The fix adds the `images` field to the message payload in both the checkpoint and non-checkpoint edit confirmation paths.
+
+    Fixes #3489
+
+- [#5139](https://github.com/Kilo-Org/kilocode/pull/5139) [`932c692`](https://github.com/Kilo-Org/kilocode/commit/932c692b2f35e7bd4ffa59f74640ab27e984ef2c) Thanks [@naga-k](https://github.com/naga-k)! - Prevent sending thinkingLevel to unsupporting Gemini models
+
+- [#4945](https://github.com/Kilo-Org/kilocode/pull/4945) [`43bc7ac`](https://github.com/Kilo-Org/kilocode/commit/43bc7acc815d81ba0f775c9e2d7965336c0feb50) Thanks [@CaiDingxian](https://github.com/CaiDingxian)! - feat: add chars count to ListFilesTool
+
+- [#5805](https://github.com/Kilo-Org/kilocode/pull/5805) [`918f767`](https://github.com/Kilo-Org/kilocode/commit/918f767136cb073a71767d76708da40e25c03f06) Thanks [@Neonsy](https://github.com/Neonsy)! - Add support for GLM 5 and set Z.ai default to `glm-5` and align Z.ai API line model selection in VS Code and webview settings
+
 ## 5.6.0
 
 ### Minor Changes

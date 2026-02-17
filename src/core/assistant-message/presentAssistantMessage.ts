@@ -336,6 +336,9 @@ export async function presentAssistantMessage(cline: Task) {
 				content = content.replace(/<thinking>\s?/g, "")
 				content = content.replace(/\s?<\/thinking>/g, "")
 
+				// Remove internal verification tags (for skill evaluation control flow)
+				content = content.replace(/<internal_verification>[\s\S]*?<\/internal_verification>/g, "") // kilocode_change
+
 				// Remove partial XML tag at the very end of the content (for
 				// tool use and thinking tags), Prevents scrollview from
 				// jumping when tags are automatically removed.
