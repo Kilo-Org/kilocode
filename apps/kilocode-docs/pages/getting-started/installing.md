@@ -65,18 +65,27 @@ For the full feature status, see the [feature parity tracking document](https://
 
 ### Installing the Pre-Release
 
+**If Kilo Code is not yet installed:**
+
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
 3. Search for "Kilo Code"
 4. Click the dropdown arrow next to **Install** and select **Install Pre-Release Version**
+
+**If Kilo Code is already installed:**
+
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+3. Find Kilo Code and click the {% codicon name="gear" /%} (gear) icon
+4. Select **Switch to Pre-Release Version**
 
 ### Switching Back to Stable
 
 If you need to return to the stable version:
 
 1. Open Extensions in VS Code
-2. Find Kilo Code
-3. Click the dropdown and select **Switch to Release Version**
+2. Find Kilo Code and click the {% codicon name="gear" /%} (gear) icon
+3. Select **Switch to Release Version**
 
 ### Feedback and Issues
 
