@@ -44,7 +44,7 @@ export function ReviewScopeSelector({ open, onOpenChange, scopeInfo }: ReviewSco
 	const handleStartReview = () => {
 		vscode.postMessage({
 			type: "reviewScopeSelected",
-			reviewScope: selectedScope,
+			reviewScope: effectiveScope,
 		})
 		onOpenChange(false)
 	}
