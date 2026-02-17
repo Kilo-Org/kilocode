@@ -74,7 +74,7 @@ Modes are managed from the Modes area in Kilo Code. Depending on your UI layout,
 
 1. Open the Modes area from the mode selector in the chat panel (or via the <Codicon name="notebook" /> icon if shown)
 2. Click the Import Mode button (upload icon)
-3. Select the mode's YAML file
+3. Select the mode's YAML file (`.yaml`)
 4. Choose the import level:
     - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
     - **Global:** Available in all projects (saved to global settings)
@@ -121,10 +121,15 @@ The interface provides fields for Name, Slug, Description, Save Location, Role D
 
 You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code now supports both YAML (preferred) and JSON formats.
 
-- **Global Modes:** Edit the `custom_modes.yaml` (preferred) or `custom_modes.json` file. Open the Modes area, click <Codicon name="gear" /> next to Global Modes, then choose "Edit Global Modes"
-- **Project Modes:** Edit the `.kilocodemodes` file (which can be YAML or JSON) in your project root. Open the Modes area, click <Codicon name="gear" /> next to Project Modes, then choose "Edit Project Modes"
+- **Global Modes:** Edit `custom_modes.yaml` (primary). `custom_modes.json` is a legacy fallback and may still exist in older setups.
+- **Project Modes:** Edit `.kilocodemodes` in your project root (YAML preferred; JSON still supported for compatibility).
+- **Open from UI:** Open the Modes area, click <Codicon name="gear" /> next to Global or Project Modes, then choose the corresponding edit action.
 
 These files define an array/list of custom modes.
+
+{% callout type="info" title="Why JSON Files May Still Exist" %}
+If you see both YAML and JSON mode files, this is usually from legacy configuration. Kilo Code reads YAML first and does not keep both files synchronized line-by-line. In practice, edit YAML unless you have a specific reason to stay on JSON.
+{% /callout %}
 
 ## YAML Configuration Format (Preferred)
 
