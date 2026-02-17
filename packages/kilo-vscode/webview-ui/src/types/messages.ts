@@ -181,6 +181,7 @@ export interface KilocodeBalance {
 
 export interface ProfileData {
   profile: {
+    id?: string
     email: string
     name?: string
     organizations?: Array<{ id: string; name: string; role: string }>

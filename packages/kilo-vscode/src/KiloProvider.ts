@@ -3,6 +3,7 @@ import { z } from "zod"
 import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionService } from "./services/cli-backend"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
+import { buildWelcomeSurveyUrl } from "./services/welcome-survey" // kilocode_change
 
 export class KiloProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -970,6 +971,16 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       if (profileData?.profile.organizations && profileData.profile.organizations.length > 0) {
         this.postMessage({ type: "navigate", view: "profile" })
       }
+
+      // kilocode_change start — open welcome survey with hidden fields
+      if (profileData?.profile.email) {
+        const surveyUrl = buildWelcomeSurveyUrl({
+          email: profileData.profile.email,
+          kiloUserId: profileData.profile.id,
+        })
+        vscode.env.openExternal(vscode.Uri.parse(surveyUrl))
+      }
+      // kilocode_change end
     } catch (error) {
       if (attempt !== this.loginAttempt) {
         return
