@@ -127,15 +127,17 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
   }
 
   if (method !== "curl" && method !== "unknown") {
+    // kilocode_change start
     const cmds: Record<string, string> = {
-      npm: "npm uninstall -g opencode-ai",
-      pnpm: "pnpm uninstall -g opencode-ai",
-      bun: "bun remove -g opencode-ai",
-      yarn: "yarn global remove opencode-ai",
+      npm: "npm uninstall -g @kilocode/cli",
+      pnpm: "pnpm uninstall -g @kilocode/cli",
+      bun: "bun remove -g @kilocode/cli",
+      yarn: "yarn global remove @kilocode/cli",
       brew: "brew uninstall opencode",
       choco: "choco uninstall opencode",
       scoop: "scoop uninstall opencode",
     }
+    // kilocode_change end
     prompts.log.info(`  ✓ Package: ${cmds[method] || method}`)
   }
 }
@@ -178,15 +180,17 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
   }
 
   if (method !== "curl" && method !== "unknown") {
+    // kilocode_change start
     const cmds: Record<string, string[]> = {
-      npm: ["npm", "uninstall", "-g", "opencode-ai"],
-      pnpm: ["pnpm", "uninstall", "-g", "opencode-ai"],
-      bun: ["bun", "remove", "-g", "opencode-ai"],
-      yarn: ["yarn", "global", "remove", "opencode-ai"],
+      npm: ["npm", "uninstall", "-g", "@kilocode/cli"],
+      pnpm: ["pnpm", "uninstall", "-g", "@kilocode/cli"],
+      bun: ["bun", "remove", "-g", "@kilocode/cli"],
+      yarn: ["yarn", "global", "remove", "@kilocode/cli"],
       brew: ["brew", "uninstall", "opencode"],
       choco: ["choco", "uninstall", "opencode"],
       scoop: ["scoop", "uninstall", "opencode"],
     }
+    // kilocode_change end
 
     const cmd = cmds[method]
     if (cmd) {
