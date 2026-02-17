@@ -14,12 +14,10 @@ import type {
   MarketplaceItem,
   MarketplaceItemType,
   MarketplaceMcpInstallMethod,
-  MarketplaceOrganizationPolicy,
   MarketplaceSkillItem,
 } from "./types"
 import {
   marketplaceItemSchema,
-  marketplaceOrganizationPolicySchema,
   mcpMarketplaceCatalogSchema,
   modeMarketplaceCatalogSchema,
   skillsMarketplaceCatalogSchema,
@@ -72,14 +70,13 @@ type CacheEntry = {
 export class MarketplaceService {
   private cache: CacheEntry | null = null
 
-  async getCatalog(options?: { extensionSettings?: unknown }): Promise<MarketplaceCatalogResult> {
+  async getCatalog(): Promise<MarketplaceCatalogResult> {
     const errors: string[] = []
     let items: MarketplaceItem[] = []
-    const organizationPolicy = this.parseOrganizationPolicy(options?.extensionSettings, errors)
 
     try {
       const baseItems = await this.getCachedOrFetchItems()
-      items = this.applyOrganizationPolicy(baseItems, organizationPolicy)
+      items = baseItems
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error))
     }
@@ -150,51 +147,6 @@ export class MarketplaceService {
     const items = [...modes, ...mcps, ...skills]
     this.cache = { items, fetchedAt: now }
     return items
-  }
-
-  private parseOrganizationPolicy(extensionSettings: unknown, errors: string[]): MarketplaceOrganizationPolicy | null {
-    if (!extensionSettings || typeof extensionSettings !== "object") {
-      return null
-    }
-
-    const envelope = extensionSettings as { organization?: unknown }
-    const candidate = envelope.organization !== undefined ? envelope.organization : extensionSettings
-    const parsed = marketplaceOrganizationPolicySchema.safeParse(candidate)
-    if (!parsed.success) {
-      errors.push("Organization marketplace settings are invalid and were ignored")
-      return null
-    }
-    return parsed.data
-  }
-
-  private applyOrganizationPolicy(items: MarketplaceItem[], policy: MarketplaceOrganizationPolicy | null): MarketplaceItem[] {
-    if (!policy) {
-      return items
-    }
-
-    const hiddenMcpIds = new Set(Array.isArray(policy.hiddenMcps) ? policy.hiddenMcps : [])
-    let filtered = items
-    if (policy.hideMarketplaceMcps) {
-      filtered = filtered.filter((item) => item.type !== "mcp")
-    } else if (hiddenMcpIds.size > 0) {
-      filtered = filtered.filter((item) => item.type !== "mcp" || !hiddenMcpIds.has(item.id))
-    }
-
-    const managedMcps = Array.isArray(policy.mcps) ? policy.mcps : []
-    if (managedMcps.length === 0) {
-      return filtered
-    }
-
-    const managedItems = managedMcps.map((item) =>
-      marketplaceItemSchema.parse({
-        ...item,
-        type: "mcp",
-        managedByOrganization: true,
-      }),
-    )
-    const managedIds = new Set(managedItems.map((item) => item.id))
-    const remaining = filtered.filter((item) => !(item.type === "mcp" && managedIds.has(item.id)))
-    return [...managedItems, ...remaining]
   }
 
   private async fetchModes(): Promise<MarketplaceItem[]> {

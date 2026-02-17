@@ -589,20 +589,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 
   private async handleRequestMarketplaceData(): Promise<void> {
     const errors: string[] = []
-    let extensionSettings: unknown = undefined
-    const client = this.httpClient
-
-    if (client) {
-      try {
-        extensionSettings = await client.getExtensionSettings()
-      } catch (error) {
-        // Extension settings endpoint may be unavailable on older gateways.
-        console.debug("[Kilo New] KiloProvider: Extension settings unavailable for marketplace policy", error)
-      }
-    }
 
     try {
-      const result = await this.marketplaceService.getCatalog({ extensionSettings })
+      const result = await this.marketplaceService.getCatalog()
       this.postMessage({
         type: "marketplaceData",
         items: result.items,

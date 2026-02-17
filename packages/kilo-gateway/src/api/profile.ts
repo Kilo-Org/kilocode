@@ -114,36 +114,6 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
 export const getKiloDefaultModel = fetchDefaultModel
 
 /**
- * Fetch extension settings for the authenticated user/organization.
- * These settings include org-managed Marketplace policy fields.
- */
-export async function fetchExtensionSettings(
-  token: string,
-  organizationId?: string,
-): Promise<{ organization?: unknown; user?: unknown }> {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  }
-
-  if (organizationId) {
-    headers["x-kilocode-organizationid"] = organizationId
-  }
-
-  const response = await fetch(`${KILO_API_BASE}/api/extension-settings`, { headers })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch extension settings: ${response.status}`)
-  }
-
-  const data = (await response.json()) as { organization?: unknown; user?: unknown }
-  return {
-    organization: data.organization,
-    user: data.user,
-  }
-}
-
-/**
  * Fetch both profile and balance in parallel
  */
 export async function fetchProfileWithBalance(token: string): Promise<{

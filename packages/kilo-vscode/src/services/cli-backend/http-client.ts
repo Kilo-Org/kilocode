@@ -314,14 +314,6 @@ export class HttpClient {
   }
 
   /**
-   * Get extension-level cloud/org settings used by marketplace policy overlays.
-   * This endpoint may not exist on older gateways.
-   */
-  async getExtensionSettings(): Promise<{ organization?: unknown; user?: unknown }> {
-    return this.request<{ organization?: unknown; user?: unknown }>("GET", "/kilo/extension-settings")
-  }
-
-  /**
    * Switch the active organization.
    * Pass null to switch back to personal account.
    */
