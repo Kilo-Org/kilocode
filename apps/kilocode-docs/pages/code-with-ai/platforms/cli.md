@@ -191,7 +191,7 @@ You can set permissions globally (with `*`), and override specific tools.
 
 ```json
 {
-	"$schema": "https://kilo.ai/config.json",
+	"$schema": "https://opencode.ai/config.json",
 	"permission": {
 		"*": "ask",
 		"bash": "allow",
@@ -204,7 +204,7 @@ You can also set all permissions at once:
 
 ```json
 {
-	"$schema": "https://kilo.ai/config.json",
+	"$schema": "https://opencode.ai/config.json",
 	"permission": "allow"
 }
 ```
@@ -256,7 +256,7 @@ Use `external_directory` to allow tool calls that touch paths outside the workin
 
 ```json
 {
-	"$schema": "https://kilo.ai/config.json",
+	"$schema": "https://opencode.ai/config.json",
 	"permission": {
 		"external_directory": {
 			"~/projects/personal/**": "allow"
@@ -269,7 +269,7 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 
 ```json
 {
-	"$schema": "https://kilo.ai/config.json",
+	"$schema": "https://opencode.ai/config.json",
 	"permission": {
 		"external_directory": {
 			"~/projects/personal/**": "allow"
