@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
+import { getNonce } from "../utils"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -128,13 +129,4 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.panel?.dispose()
     this.outputChannel.dispose()
   }
-}
-
-function getNonce(): string {
-  let text = ""
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length))
-  }
-  return text
 }
