@@ -17,6 +17,7 @@ playground
 tmp
 dist
 ts-dist
+storybook-static
 .turbo
 **/.serena
 .serena/
