@@ -44,6 +44,7 @@ import {
 	litellmDefaultModelInfo,
 	lMStudioDefaultModelInfo,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
+	applyBedrock1MTierPricing,
 	isDynamicProvider,
 	getProviderDefaultModelId,
 	NATIVE_TOOL_DEFAULTS,
@@ -284,40 +285,10 @@ function getSelectedModel({
 
 				if (resolvedBaseInfo) {
 					// Apply tier pricing when 1M context is enabled and the resolved model supports it
-					if (
-						apiConfiguration.awsBedrock1MContext &&
-						BEDROCK_1M_CONTEXT_MODEL_IDS.includes(resolvedId as any)
-					) {
-						const modelWithTiers = resolvedBaseInfo as typeof resolvedBaseInfo & {
-							tiers?: Array<{
-								contextWindow: number
-								inputPrice?: number
-								outputPrice?: number
-								cacheWritesPrice?: number
-								cacheReadsPrice?: number
-							}>
-						}
-						const tier = modelWithTiers.tiers?.[0]
-						if (tier) {
-							return {
-								id,
-								info: {
-									...resolvedBaseInfo,
-									contextWindow: tier.contextWindow,
-									inputPrice: tier.inputPrice ?? resolvedBaseInfo.inputPrice,
-									outputPrice: tier.outputPrice ?? resolvedBaseInfo.outputPrice,
-									cacheWritesPrice:
-										tier.cacheWritesPrice ??
-										("cacheWritesPrice" in resolvedBaseInfo
-											? resolvedBaseInfo.cacheWritesPrice
-											: undefined),
-									cacheReadsPrice:
-										tier.cacheReadsPrice ??
-										("cacheReadsPrice" in resolvedBaseInfo
-											? resolvedBaseInfo.cacheReadsPrice
-											: undefined),
-								},
-							}
+					if (apiConfiguration.awsBedrock1MContext) {
+						return {
+							id,
+							info: applyBedrock1MTierPricing(resolvedId, resolvedBaseInfo),
 						}
 					}
 					return { id, info: resolvedBaseInfo }

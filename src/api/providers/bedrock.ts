@@ -30,6 +30,7 @@ import {
 	BEDROCK_GLOBAL_INFERENCE_MODEL_IDS,
 	BEDROCK_SERVICE_TIER_MODEL_IDS,
 	BEDROCK_SERVICE_TIER_PRICING,
+	applyBedrock1MTierPricing,
 	ApiProviderError,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -1155,15 +1156,22 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		// kilocode_change end
 
 		if (this.costModelConfig?.id?.trim().length > 0) {
+			// Apply 1M context tier pricing if enabled
+			let modelInfo = this.costModelConfig.info
+			const baseModelId = this.parseBaseModelId(this.costModelConfig.id)
+			if (BEDROCK_1M_CONTEXT_MODEL_IDS.includes(baseModelId as any) && this.options.awsBedrock1MContext) {
+				modelInfo = applyBedrock1MTierPricing(baseModelId, modelInfo)
+			}
+
 			// Get model params for cost model config
 			const params = getModelParams({
 				format: "anthropic",
 				modelId: this.costModelConfig.id,
-				model: this.costModelConfig.info,
+				model: modelInfo,
 				settings: this.options,
 				defaultTemperature: BEDROCK_DEFAULT_TEMPERATURE,
 			})
-			return { ...this.costModelConfig, ...params }
+			return { ...this.costModelConfig, info: modelInfo, ...params }
 		}
 
 		let modelConfig = undefined
@@ -1204,26 +1212,8 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		// Use parseBaseModelId to handle cross-region inference prefixes
 		const baseModelId = this.parseBaseModelId(modelConfig.id)
 		if (BEDROCK_1M_CONTEXT_MODEL_IDS.includes(baseModelId as any) && this.options.awsBedrock1MContext) {
-			// Check if the model has tiered pricing in bedrockModels
-			const modelDef = bedrockModels[baseModelId as BedrockModelId]
-			if (modelDef && "tiers" in modelDef && modelDef.tiers && modelDef.tiers.length > 0) {
-				// Apply the first tier's pricing (1M context tier)
-				const tier = modelDef.tiers[0]
-				modelConfig.info = {
-					...modelConfig.info,
-					contextWindow: tier.contextWindow,
-					inputPrice: tier.inputPrice,
-					outputPrice: tier.outputPrice,
-					cacheWritesPrice: tier.cacheWritesPrice,
-					cacheReadsPrice: tier.cacheReadsPrice,
-				}
-			} else {
-				// Fallback: just update context window to 1M tokens when 1M context beta is enabled
-				modelConfig.info = {
-					...modelConfig.info,
-					contextWindow: 1_000_000,
-				}
-			}
+			// Apply tier pricing using the shared helper function
+			modelConfig.info = applyBedrock1MTierPricing(baseModelId, modelConfig.info)
 		}
 
 		// Get model params including reasoning configuration

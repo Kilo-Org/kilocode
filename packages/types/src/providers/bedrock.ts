@@ -628,3 +628,49 @@ export const BEDROCK_SERVICE_TIER_PRICING = {
 	FLEX: 0.5, // 50% discount from standard
 	PRIORITY: 1.75, // 75% premium over standard
 } as const
+
+/**
+ * Helper function to apply 1M context tier pricing to a Bedrock model.
+ * This is used by both the backend (bedrock.ts handler) and frontend (useSelectedModel hook)
+ * to ensure consistent pricing when the 1M context beta feature is enabled.
+ *
+ * @param modelId - The Bedrock model ID
+ * @param baseInfo - The base model info from bedrockModels
+ * @returns ModelInfo with tier pricing applied if applicable, otherwise the base info
+ */
+export function applyBedrock1MTierPricing(modelId: string, baseInfo: ModelInfo): ModelInfo {
+	// Check if model supports 1M context
+	const supports1MContext = BEDROCK_1M_CONTEXT_MODEL_IDS.some((id) => id === modelId)
+	if (!supports1MContext) {
+		return baseInfo
+	}
+
+	const modelWithTiers = baseInfo as typeof baseInfo & {
+		tiers?: Array<{
+			contextWindow: number
+			inputPrice?: number
+			outputPrice?: number
+			cacheWritesPrice?: number
+			cacheReadsPrice?: number
+		}>
+	}
+
+	const tier = modelWithTiers.tiers?.[0]
+	if (!tier) {
+		// Fallback: just update context window if no tier is defined
+		return {
+			...baseInfo,
+			contextWindow: 1_000_000,
+		}
+	}
+
+	return {
+		...baseInfo,
+		contextWindow: tier.contextWindow,
+		inputPrice: tier.inputPrice ?? baseInfo.inputPrice,
+		outputPrice: tier.outputPrice ?? baseInfo.outputPrice,
+		cacheWritesPrice:
+			tier.cacheWritesPrice ?? ("cacheWritesPrice" in baseInfo ? baseInfo.cacheWritesPrice : undefined),
+		cacheReadsPrice: tier.cacheReadsPrice ?? ("cacheReadsPrice" in baseInfo ? baseInfo.cacheReadsPrice : undefined),
+	}
+}
