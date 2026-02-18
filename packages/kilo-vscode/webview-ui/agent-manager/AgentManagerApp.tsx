@@ -279,7 +279,10 @@ const AgentManagerContent: Component = () => {
               )}
             </For>
             <Show when={worktrees().length === 0}>
-              <div class="am-empty-hint">No worktrees</div>
+              <button class="am-worktree-create" onClick={handleCreateWorktree}>
+                <Icon name="plus" size="small" />
+                <span>New Worktree</span>
+              </button>
             </Show>
           </div>
         </div>

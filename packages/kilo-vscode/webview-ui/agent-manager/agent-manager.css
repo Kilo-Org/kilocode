@@ -171,13 +171,27 @@
   opacity: 1;
 }
 
-/* Empty state hints */
+/* Create worktree button (empty state) */
 
-.am-empty-hint {
-  font-size: 11px;
-  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
-  padding: 4px 8px;
-  font-style: italic;
+.am-worktree-create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed var(--border-weak-base, var(--vscode-panel-border, #444));
+  border-radius: 6px;
+  background: none;
+  color: var(--text-weak, var(--vscode-descriptionForeground, #888));
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.am-worktree-create:hover {
+  background: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground, #2a2d2e));
+  color: var(--text-base, var(--vscode-foreground));
 }
 
 /* Detail pane */
