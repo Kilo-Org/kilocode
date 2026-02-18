@@ -82,6 +82,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
   }
 
+  public postMessage(message: unknown): void {
+    this.panel?.webview.postMessage(message)
+  }
+
   public dispose(): void {
     this.provider?.dispose()
     this.panel?.dispose()

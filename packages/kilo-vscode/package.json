@@ -80,6 +80,30 @@
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousSession",
+        "title": "Agent Manager: Previous Session",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextSession",
+        "title": "Agent Manager: Next Session",
+        "category": "Kilo Code"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kilo-code.new.agentManager.previousSession",
+        "key": "ctrl+up",
+        "mac": "cmd+up",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextSession",
+        "key": "ctrl+down",
+        "mac": "cmd+down",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],
     "menus": {

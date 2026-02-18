@@ -61,6 +61,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.nextSession", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "sessionNext" })
+    }),
   )
 
   // Register autocomplete provider
