@@ -123,7 +123,7 @@ You can directly edit the configuration files to create or modify custom modes. 
 
 - **Global Modes:** Edit `custom_modes.yaml` (primary). `custom_modes.json` is a legacy fallback and may still exist in older setups.
 - **Project Modes:** Edit `.kilocodemodes` in your project root (YAML preferred; JSON still supported for compatibility).
-- **Open from UI:** Open the Modes area, click <Codicon name="gear" /> next to Global or Project Modes, then choose the corresponding edit action.
+- **Open from UI:** Open the Modes area, click <Codicon name="gear" /> next to Global or Project Modes, then choose **Edit Global Modes** or **Edit Project Modes**.
 
 These files define an array/list of custom modes.
 
