@@ -34,6 +34,7 @@ All of these contribute to the overall reliability and user experience of the sy
 
 - Automated remediation
 - A/B testing infrastructure
+- Offline benchmarking and model/agent comparison (covered by [Benchmarking](/docs/contributing/architecture/benchmarking))
 
 ## Proposed Approach
 

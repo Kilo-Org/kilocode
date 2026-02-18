@@ -293,6 +293,11 @@ export const parseOpenRouterModel = ({
 		modelInfo.maxTokens = anthropicModels["claude-3-7-sonnet-20250219:thinking"].maxTokens
 	}
 
+	// Set claude-sonnet-4.6 model to use the correct configuration
+	if (id === "anthropic/claude-sonnet-4.6") {
+		modelInfo.maxTokens = anthropicModels["claude-sonnet-4-6"].maxTokens
+	}
+
 	// Set claude-opus-4.1 model to use the correct configuration
 	if (id === "anthropic/claude-opus-4.1") {
 		modelInfo.maxTokens = anthropicModels["claude-opus-4-1-20250805"].maxTokens

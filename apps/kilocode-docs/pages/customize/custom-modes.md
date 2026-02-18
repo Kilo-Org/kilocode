@@ -22,7 +22,7 @@ Each mode—including custom ones—features **Sticky Models**. This means Kilo 
 **Keep custom modes on track:** Limit the types of files that they're allowed to edit using the `fileRegex` option in the `groups` configuration. This prevents modes from accidentally modifying files outside their intended scope.
 {% /callout %}
 
-{% image src="/docs/img/custom-modes/custom-modes.png" alt="Overview of custom modes interface" width="600" caption="Overview of custom modes interface" /%}
+{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in Kilo Code" width="600" caption="Custom mode creation interface in Kilo Code" /%}
 
 _Kilo Code's interface for creating and managing custom modes._
 
@@ -62,9 +62,9 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 
 **Exporting a Mode:**
 
-Modes are accessed from the Prompts tab (notebook icon), which contains the Modes section.
+Modes are managed from the Modes area in Kilo Code. Depending on your UI layout, you can open this from the mode selector in the chat panel or from the notebook icon.
 
-1. Open the Prompts Tab (click the <Codicon name="notebook" /> icon in the top menu bar)
+1. Open the Modes area from the mode selector in the chat panel (or via the <Codicon name="notebook" /> icon if shown)
 2. Select the mode you wish to export
 3. Click the Export Mode button (download icon)
 4. Choose a location to save the `.yaml` file
@@ -72,7 +72,7 @@ Modes are accessed from the Prompts tab (notebook icon), which contains the Mode
 
 **Importing a Mode:**
 
-1. Open the Prompts Tab (click the <Codicon name="notebook" /> icon in the top menu bar)
+1. Open the Modes area from the mode selector in the chat panel (or via the <Codicon name="notebook" /> icon if shown)
 2. Click the Import Mode button (upload icon)
 3. Select the mode's YAML file
 4. Choose the import level:
@@ -105,13 +105,13 @@ Kilo Code will guide you through the process, prompting for necessary informatio
 **Create modes from job postings:** If there's a real world job posting for something you want a custom mode to do, try asking Code mode to `Create a custom mode based on the job posting at @[url]`. This can help you quickly create specialized modes with realistic role definitions.
 {% /callout %}
 
-### 2. Using the Prompts Tab
+### 2. Using the Modes UI
 
-1. **Open Prompts Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
+1. **Open Modes:** Use the mode selector in the chat panel to open mode management (or click the <Codicon name="notebook" /> icon if your layout shows it)
 2. **Create New Mode:** Click the <Codicon name="add" /> button to the right of the Modes heading
 3. **Fill in Fields:**
 
-{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Prompts tab" width="600" caption="Custom mode creation interface in the Prompts tab" /%}
+{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Modes UI" width="600" caption="Custom mode creation interface in the Modes UI" /%}
 
 _The custom mode creation interface showing fields for name, slug, description, save location, role definition, available tools, custom instructions._
 
@@ -121,8 +121,8 @@ The interface provides fields for Name, Slug, Description, Save Location, Role D
 
 You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code now supports both YAML (preferred) and JSON formats.
 
-- **Global Modes:** Edit the `custom_modes.yaml` (preferred) or `custom_modes.json` file. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Global Prompts") > "Edit Global Modes"
-- **Project Modes:** Edit the `.kilocodemodes` file (which can be YAML or JSON) in your project root. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Project Prompts") > "Edit Project Modes"
+- **Global Modes:** Edit the `custom_modes.yaml` (preferred) or `custom_modes.json` file. Open the Modes area, click <Codicon name="gear" /> next to Global Modes, then choose "Edit Global Modes"
+- **Project Modes:** Edit the `.kilocodemodes` file (which can be YAML or JSON) in your project root. Open the Modes area, click <Codicon name="gear" /> next to Project Modes, then choose "Edit Project Modes"
 
 These files define an array/list of custom modes.
 

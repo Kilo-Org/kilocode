@@ -1,12 +1,18 @@
+<!--
+NOTE: New versions of the VS Code extension and CLI are being developed in https://github.com/Kilo-Org/Kilo
+(extension: packages/kilo-vscode, CLI: packages/opencode).
+If your changes are for the extension or CLI, please open your PR in that repository instead.
+-->
+
 ## Context
 
-<!-- Brief description of WHAT you’re doing and WHY. -->
+<!-- Brief description of WHAT you're doing and WHY. -->
 
 ## Implementation
 
 <!--
 
-Some description of HOW you achieved it. Perhaps give a high level description of the program flow. Did you need to refactor something? What tradeoffs did you take? Are there things in here which you’d particularly like people to pay close attention to?
+Some description of HOW you achieved it. Perhaps give a high level description of the program flow. Did you need to refactor something? What tradeoffs did you take? Are there things in here which you'd particularly like people to pay close attention to?
 
 -->
 

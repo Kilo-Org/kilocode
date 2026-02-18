@@ -24,7 +24,7 @@ Kilo Code's paid plans provide powerful team management features:
 
 - [**About Plans**](/docs/collaborate/teams/about-plans) — Compare Teams and Enterprise plans
 - **Teams ($15/user/month)** — Zero markup on AI costs, centralized billing, team analytics
-- **Enterprise ($150/user/month)** — Model controls, audit logs, SSO, dedicated support
+- **Enterprise ([Contact Sales](https://kilo.ai/contact-sales))** — Model controls, audit logs, SSO, dedicated support
 
 ### Team Management
 

@@ -24,9 +24,9 @@ When Kilo Code needs to perform tasks like installing dependencies, starting a d
 
 Shell integration is built into Kilo Code and works automatically in most cases. If you see "Shell Integration Unavailable" messages or experience issues with command execution, try these solutions:
 
-1. **Update VSCode/Cursor** to the latest version (VSCode 1.93+ required)
+1. **Update VS Code/Cursor** to the latest version (VS Code 1.93+ required)
 2. **Ensure a compatible shell is selected**: Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) → "Terminal: Select Default Profile" → Choose bash, zsh, PowerShell, or fish
-3. **Windows PowerShell users**: Run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` then restart VSCode
+3. **Windows PowerShell users**: Run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` then restart VS Code
 4. **WSL users**: Add `. "$(code --locate-shell-integration-path bash)"` to your `~/.bashrc`
 
 ## Terminal Integration Settings
@@ -39,7 +39,6 @@ Kilo Code provides several settings to fine-tune shell integration. Access these
 
 {% image src="/docs/img/shell-integration/terminal-output-limit.png" alt="Terminal output limit slider set to 500" width="500" caption="Terminal output limit slider set to 500" /%}
 Controls the maximum number of lines captured from terminal output. When exceeded, it keeps 20% of the beginning and 80% of the end with a truncation message in between. This prevents excessive token usage while maintaining context. Default: 500 lines.
-Controls the maximum number of lines captured from terminal output. When exceeded, lines are removed from the middle to save tokens. Default: 500 lines.
 
 #### Terminal Shell Integration Timeout
 
@@ -238,89 +237,23 @@ For optimal shell integration with WSL, we recommend:
 
 ## Known Issues and Workarounds
 
-### VS Code Shell Integration for Fish + Cygwin on Windows
+### VS Code + Fish + Cygwin (Windows)
 
-For fellow Windows users running Fish terminal within a Cygwin environment, here's how VS Code's shell integration works:
+If you use Fish in Cygwin, a minimal setup is usually enough:
 
-1.  **(Optional) Locate the Shell Integration Script:**
-    Open your Fish terminal _within VS Code_ and run the following command:
+1. In your Cygwin Fish config (`~/.config/fish/config.fish`), add:
 
-    ```bash
-    code --locate-shell-integration-path fish
-    ```
+   ```fish
+   string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration-path fish)
 
-    This will output the path to the `shellIntegration.fish` script. Note down this path.
+2. Configure a terminal profile in VS Code that launches Fish (directly or via Cygwin bash).
+3. Restart VS Code and open a new terminal to verify integration.
 
-2.  **Update Your Fish Configuration:**
-    Edit your `config.fish` file (usually located at `~/.config/fish/config.fish` within your Cygwin home directory). Add the following line, preferably within an `if status is-interactive` block or at the very end of the file:
+{% image src="/docs/img/shell-integration/shell-integration-8.png" alt="Fish Cygwin Integration Example" width="600" caption="Fish Cygwin Integration Example" /%}
 
-    ```fish
-    # Example config.fish structure
-    if status is-interactive
-        # Your other interactive shell configurations...
-        # automatic locate integration script:
-        string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration-path fish)
+### Shell Integration Failures After VS Code 1.98
 
-        # Or if the above fails for you:
-        # Source the VS Code shell integration script
-        # IMPORTANT: Replace the example path below with the actual path you found in Step 1.
-        # Make sure the path is in a format Cygwin can understand (e.g., using /cygdrive/c/...).
-        # source "/cygdrive/c/Users/YourUser/.vscode/extensions/..../shellIntegration.fish"
-    end
-    ```
-
-    _Remember to replace the example path with the actual path from Step 1, correctly formatted for Cygwin._
-
-3.  **Configure VS Code Terminal Profile:**
-    Open your VS Code `settings.json` file (Ctrl+Shift+P -> "Preferences: Open User Settings (JSON)"). Update or add the Fish profile under `terminal.integrated.profiles.windows` like this:
-
-    ```json
-    {
-      // ... other settings ...
-
-      "terminal.integrated.profiles.windows": {
-        // ... other profiles ...
-
-        // Recommended: Use bash.exe to launch fish as a login shell
-        "fish": {
-          "path": "C:\\cygwin64\\bin\\bash.exe", // Or your Cygwin bash path
-          "args": [
-            "--login", // Ensures login scripts run (important for Cygwin environment)
-            "-i",      // Ensures bash runs interactively
-            "-c",
-            "exec fish" // Replace bash process with fish
-          ],
-          "icon": "terminal-bash" // Optional: Use a recognizable icon
-        }
-        // Alternative (if the above fails): Launch fish directly
-        "fish-direct": {
-          "path": "C:\\cygwin64\\bin\\fish.exe", // Ensure this is in your Windows PATH or provide full path
-          // Use 'options' here instead of 'args'; otherwise, you might encounter the error "terminal process terminated exit code 1".
-          "options": ["-l", "-c"], // Example: login and interactive flags.
-          "icon": "terminal-fish" // Optional: Use a fish icon
-        }
-      },
-
-      // Optional: Set fish as your default if desired
-      // "terminal.integrated.defaultProfile.windows": "fish", // or "fish-direct" depending what you use.
-
-      // ... other settings ...
-    }
-    ```
-
-    _Note: Using `bash.exe --login -i -c "exec fish"` is often more reliable in Cygwin environments for ensuring the correct environment setup before `fish` starts. However, if that approach doesn't work, try the `fish-direct` profile configuration._
-
-4.  **Restart VS Code:**
-    Close and reopen Visual Studio Code completely to apply the changes.
-
-5.  **Verify:**
-    Open a new Fish terminal in VS Code. The shell integration features (like command decorations, better command history navigation, etc.) should now be active. You can test basic functionality by running simple commands like `echo "Hello from integrated Fish!"`. {% image src="/docs/img/shell-integration/shell-integration-8.png" alt="Fish Cygwin Integration Example" width="600" caption="Fish Cygwin Integration Example" /%}
-
-This setup works reliably on Windows systems using Cygwin, Fish, and the Starship prompt, and should assist users with similar configurations.
-
-### Shell Integration Failures After VSCode 1.98
-
-**Issue**: After VSCode updates beyond version 1.98, shell integration may fail with the error "VSCE output start escape sequence (]633;C or ]133;C) not received".
+**Issue**: After VS Code updates beyond version 1.98, shell integration may fail with the error "VSCE output start escape sequence (]633;C or ]133;C) not received".
 
 **Solutions**:
 
@@ -328,12 +261,12 @@ This setup works reliably on Windows systems using Cygwin, Fish, and the Starshi
 
     - Set the Terminal Command Delay to 50ms in Kilo Code settings
     - Restart all terminals after changing this setting
-    - This matches older default behavior and may resolve the issue, however some users have reported that a value of 0ms works better. This is a workaround for upstream VSCode problems.
+    - This matches older default behavior and may resolve the issue; some users report 0ms works better depending on shell and environment. This is a workaround for upstream VS Code behavior.
 
-2. **Roll Back VSCode Version**:
+2. **Roll Back VS Code Version**:
 
-    - Download VSCode v1.98 from [VSCode Updates](https://code.visualstudio.com/updates/v1_98)
-    - Replace your current VSCode installation
+    - Download VS Code v1.98 from [VS Code Updates](https://code.visualstudio.com/updates/v1_98)
+    - Replace your current VS Code installation
     - No backup of Kilo settings needed
 
 3. **WSL-Specific Workaround**:
@@ -344,7 +277,7 @@ This setup works reliably on Windows systems using Cygwin, Fish, and the Starshi
     - Try enabling some or all ZSH-related workarounds in Kilo Code settings
     - These settings can help regardless of your operating system
 
-## Known Issues and Workarounds
+## Additional Known Issues
 
 ### Ctrl+C Behavior
 
@@ -381,13 +314,13 @@ When shell integration issues occur, check the debug logs:
 2. Set "Show All Levels" to see all log messages
 3. Look for messages containing `[Terminal Process]`
 4. Check `preOutput` content in error messages:
-    - Empty preOutput (`''`) means VSCode sent no data
-    - This indicates a potential VSCode shell integration issue, or an upstream bug that is out of our control
-    - The absence of shell integration markers may require adjusting settings to work around possible upstream bugs or local workstation configuration issues related to shell initialization and VSCode's loading of special shell integration hooks
+    - Empty preOutput (`''`) means VS Code sent no data
+    - This indicates a potential VS Code shell integration issue, or an upstream bug that is out of our control
+    - The absence of shell integration markers may require adjusting settings to work around possible upstream bugs or local workstation configuration issues related to shell initialization and VS Code loading shell hooks
 
-### Using the VSCode Terminal Integration Test Extension
+### Using the VS Code Terminal Integration Test Extension
 
-The [VSCode Terminal Integration Test Extension](https://github.com/KJ7LNW/vsce-test-terminal-integration) helps diagnose shell integration issues by testing different settings combinations:
+The [VS Code Terminal Integration Test Extension](https://github.com/KJ7LNW/vsce-test-terminal-integration) helps diagnose shell integration issues by testing different settings combinations:
 
 1. **When Commands Stall**:
 
@@ -407,7 +340,7 @@ The [VSCode Terminal Integration Test Extension](https://github.com/KJ7LNW/vsce-
 3. **Reporting Issues**:
     - Once you find a problematic configuration
     - Document the exact settings combination
-    - Note your environment (OS, VSCode version, shell, and any shell prompt customization)
+    - Note your environment (OS, VS Code version, shell, and any shell prompt customization)
     - Open an issue with these details to help improve shell integration
 
 ## Support
@@ -415,6 +348,6 @@ The [VSCode Terminal Integration Test Extension](https://github.com/KJ7LNW/vsce-
 If you've followed these steps and are still experiencing problems, please:
 
 1. Check the [Kilo Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) to see if others have reported similar problems
-2. If not, create a new issue with details about your operating system, VSCode/Cursor version, and the steps you've tried
+2. If not, create a new issue with details about your operating system, VS Code/Cursor version, and the steps you've tried
 
 For additional help, join our [Discord](https://kilo.ai/discord).

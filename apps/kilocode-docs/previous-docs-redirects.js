@@ -483,7 +483,13 @@ module.exports = [
 	// ============================================
 	{
 		source: "/docs/advanced-usage/code-reviews",
-		destination: "/docs/automate/code-reviews",
+		destination: "/docs/automate/code-reviews/overview",
+		basePath: false,
+		permanent: true,
+	},
+	{
+		source: "/docs/automate/code-reviews",
+		destination: "/docs/automate/code-reviews/overview",
 		basePath: false,
 		permanent: true,
 	},

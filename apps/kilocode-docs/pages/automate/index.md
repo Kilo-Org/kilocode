@@ -13,7 +13,7 @@ Automate repetitive tasks, set up AI-powered code reviews, and extend Kilo Code'
 
 Automated AI code reviews for every pull request:
 
-- [**Code Reviews**](/docs/automate/code-reviews) — AI-powered PR reviews
+- [**Code Reviews**](/docs/automate/code-reviews/overview) — AI-powered PR reviews
 - Automated analysis on PR open/update
 - Customizable review styles (Strict, Balanced, Lenient)
 - Focus areas: Security, Performance, Bug Detection, Style, Tests, Documentation

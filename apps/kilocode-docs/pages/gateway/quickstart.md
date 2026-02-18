@@ -35,7 +35,7 @@ Create a `.env` file and add your Kilo API key:
 KILO_API_KEY=your_api_key_here
 ```
 
-You can get your API key from the [Kilo dashboard](https://app.kilo.ai).
+For step-by-step instructions on getting an API key, please see the [Kilo Gateway API Key instructions](/docs/getting-started/setup-authentication#kilo-gateway-api-key).
 
 ### 4. Create and run your script
 

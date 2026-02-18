@@ -124,7 +124,7 @@ Coverage is partly a numbers game. If you have team members who haven't logged i
 
 Spiky usage—heavy on Mondays, quiet the rest of the week—limits your Coverage score.
 
-**Action:** Make [Code Reviews](/docs/advanced-usage/code-reviews) part of your PR process. Reviews happen throughout the week, so AI usage naturally follows.
+**Action:** Make [Code Reviews](/docs/automate/code-reviews/overview) part of your PR process. Reviews happen throughout the week, so AI usage naturally follows.
 
 Other ways to spread usage:
 

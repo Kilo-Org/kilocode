@@ -21,6 +21,15 @@ That's it! You're ready to [start your first task](/docs/getting-started/quickst
 [Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
 {% /callout %}
 
+## Kilo Gateway API Key
+
+If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code extension (for example, with the Vercel AI SDK or OpenAI SDK), you'll need an API key:
+
+1. Go to [app.kilo.ai](https://app.kilo.ai)
+2. Go to **Your Profile** on your **personal account** (not in an organization)
+3. Scroll to the bottom of the page
+4. Copy your API key
+
 ## Using Another API Provider
 
 If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:

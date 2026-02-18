@@ -278,6 +278,30 @@ describe("OpenRouter API", () => {
 	})
 
 	describe("parseOpenRouterModel", () => {
+		it("sets claude-sonnet-4.6 model to Anthropic max tokens", () => {
+			const mockModel = {
+				name: "Claude Sonnet 4.6",
+				description: "Test model",
+				context_length: 200000,
+				max_completion_tokens: 8192,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			const result = parseOpenRouterModel({
+				id: "anthropic/claude-sonnet-4.6",
+				model: mockModel,
+				inputModality: ["text"],
+				outputModality: ["text"],
+				maxTokens: 8192,
+			})
+
+			expect(result.maxTokens).toBe(64000)
+			expect(result.contextWindow).toBe(200000)
+		})
+
 		it("sets horizon-alpha model to 32k max tokens", () => {
 			const mockModel = {
 				name: "Horizon Alpha",

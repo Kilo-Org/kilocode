@@ -5,7 +5,7 @@ description: "Automate code reviews with AI assistance"
 
 # Code Reviews
 
-Kilo's **Code Reviews** feature automatically analyzes your pull requests using an AI model of your choice. It can review code the moment a PR is opened or updated, surface issues, and provide structured feedback across performance, security, style, and test coverage.
+Kilo's **Code Reviews** feature automatically analyzes your pull or merge requests using an AI model of your choice. It can review code the moment a PR/MR is opened or updated, surface issues, and provide structured feedback across performance, security, style, and test coverage.
 
 ## What Code Reviews Enable
 
@@ -15,12 +15,19 @@ Kilo's **Code Reviews** feature automatically analyzes your pull requests using 
 - Deep reasoning over changed files, diffs, and repo context
 - Customizable review strictness and focus areas
 
+## Supported Platforms
+
+| Platform | Integration Type | Details                        |
+| -------- | ---------------- | ------------------------------ |
+| GitHub   | GitHub App       | [GitHub Setup Guide](./github) |
+| GitLab   | OAuth or PAT     | [GitLab Setup Guide](./gitlab) |
+
 ## Prerequisites
 
 Before enabling Code Reviews:
 
-- **GitHub Integration must be configured**  
-  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that the Review Agent can access your repositories.
+- **A platform integration must be configured:** Connect your GitHub or GitLab account via the [Integrations page](https://app.kilo.ai/integrations) so that the Review Agent can access your repositories.
+- **Kilo Code credits:** The AI model uses credits when analyzing your code.
 
 ## Cost
 
@@ -29,27 +36,21 @@ Before enabling Code Reviews:
         - [Kilo Discord](https://discord.gg/hZnd57qN)
 - **Kilo Code credits are still used** when the agent performs model reasoning during a review.
 
-## How to Use
+## Getting Started
 
-1. Go to the **Review Agent** section in your Kilo Code [personal](https://app.kilo.ai/profile) or [Organization](https://app.kilo.ai/organizations) dashboard.
-2. Toggle **Enable AI Code Review** to automatically review PRs on open/update.
-3. Choose an **AI Model** (e.g., Grok Code Fast 1).
-4. Select a **Review Style**:
-    - Strict
-    - Balanced
-    - Lenient
+1. Go to the **Code Reviews** page in your [personal dashboard](https://app.kilo.ai/profile) or [organization dashboard](https://app.kilo.ai/organizations).
+2. Toggle **Enable AI Code Review** to on.
+3. Choose an **AI Model** (e.g., Claude Sonnet 4.5).
+4. Select a **Review Style** — Strict, Balanced, or Lenient.
 5. Choose which **repositories** should receive automatic reviews.
-6. Optionally select **Focus Areas** such as:
-    - Security vulnerabilities
-    - Performance issues
-    - Bug detection
-    - Code style
-    - Test coverage
-    - Documentation gaps
+6. Optionally select **Focus Areas** such as security, performance, bugs, style, testing, or documentation.
 7. Set a **maximum review time** (5–30 minutes).
 8. Add **custom instructions** to shape how the agent reviews your code.
 
-Once configured, the Review Agent will run automatically on PR events.
+Once configured, the Review Agent runs automatically on PR/MR events. For platform-specific setup, see:
+
+- [GitHub Code Reviews](./github.md)
+- [GitLab Code Reviews](./gitlab.md)
 
 ## Local Code Reviews
 
@@ -70,19 +71,20 @@ The CLI provides two commands for local code reviews:
 
 ## How Code Reviews Work
 
-- When a pull request is opened or updated:
-    1. The Review Agent receives the PR metadata, diff, and file context.
-    2. The selected model analyzes all changes.
-    3. The agent applies your chosen review style and focus areas.
-    4. It generates a structured review with:
-        - Inline comments
-        - Summary findings
-        - Suggested fixes
-        - Risk and severity tagging
-- Reviews respect the **maximum time limit** you set.
-- Only repositories you’ve selected will trigger automatic analysis.
+When a pull request or merge request is opened or updated:
 
-Reviews are posted directly in GitHub as if coming from a team reviewer.
+1. The Review Agent receives the PR/MR metadata, diff, and file context.
+2. The selected model analyzes all changes.
+3. The agent applies your chosen review style and focus areas.
+4. It generates a structured review with:
+    - Inline comments
+    - Summary findings
+    - Suggested fixes
+    - Risk and severity tagging
+5. Reviews respect the **maximum time limit** you set.
+6. Only repositories you’ve selected will trigger automatic analysis.
+
+Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
 
 ## Review Styles
 
@@ -102,7 +104,7 @@ Reviews are posted directly in GitHub as if coming from a team reviewer.
 
 - Flags only critical issues
 - Encouraging and lightweight
-- Ideal for exploratory PRs, prototypes, or early WIP reviews
+- Ideal for exploratory PRs/MRs, prototypes, or early WIP reviews
 
 ## Focus Areas
 

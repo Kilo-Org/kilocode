@@ -10,6 +10,7 @@ These pages document the architecture and design of current or planned features,
 | Feature                                                                                  | Description                                      |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | [Agent Observability](/docs/contributing/architecture/agent-observability)               | Observability and monitoring for agentic systems |
+| [Benchmarking](/docs/contributing/architecture/benchmarking)                             | Benchmarking Kilo Code across models and agents  |
 | [Annual Billing](/docs/contributing/architecture/annual-billing)                         | Annual subscription billing                      |
 | [Enterprise MCP Controls](/docs/contributing/architecture/enterprise-mcp-controls)       | Admin controls for MCP server allowlists         |
 | [MCP OAuth Authorization](/docs/contributing/architecture/mcp-oauth-authorization)       | OAuth 2.1-based authorization for MCP servers    |

@@ -68,11 +68,27 @@ describe("useSelectedModel", () => {
 					openrouter: {
 						"test-model": baseModelInfo,
 					},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -132,11 +148,27 @@ describe("useSelectedModel", () => {
 							cacheReadsPrice: 0.3,
 						},
 					},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -200,11 +232,27 @@ describe("useSelectedModel", () => {
 					openrouter: {
 						"test-model": baseModelInfo,
 					},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -255,11 +303,27 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: { "test-model": baseModelInfo },
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -299,11 +363,27 @@ describe("useSelectedModel", () => {
 							cacheReadsPrice: 0.3,
 						},
 					},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -363,7 +443,30 @@ describe("useSelectedModel", () => {
 
 		it("should NOT set loading when openrouter provider metadata is loading but provider is static (anthropic)", () => {
 			mockUseRouterModels.mockReturnValue({
-				data: { openrouter: {}, requesty: {}, glama: {}, unbound: {}, litellm: {}, "io-intelligence": {} }, // kilocode_change
+				data: {
+					openrouter: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
+					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
+					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
+				},
 				isLoading: false,
 				isError: false,
 			} as any)
@@ -474,11 +577,27 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -512,11 +631,27 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -542,92 +677,66 @@ describe("useSelectedModel", () => {
 		})
 	})
 
-	// kilocode_change start
-	describe("litellm provider", () => {
+	// kilocode_change end
+
+	describe("anthropic provider with 1M context", () => {
 		beforeEach(() => {
 			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {},
-					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
-				},
+				data: undefined,
 				isLoading: false,
 				isError: false,
 			} as any)
 
 			mockUseOpenRouterModelProviders.mockReturnValue({
-				data: {},
+				data: undefined,
 				isLoading: false,
 				isError: false,
 			} as any)
 		})
 
-		it("should not crash when litellmDefaultModelId is not found in routerModels.litellm", () => {
+		it("should apply 1M pricing tier for Claude Sonnet 4.6 when enabled", () => {
 			const apiConfiguration: ProviderSettings = {
-				apiProvider: "litellm",
-				litellmModelId: "claude-3-7-sonnet-20250219", // Default LiteLLM model ID, but not present in routerModels.litellm
+				apiProvider: "anthropic",
+				apiModelId: "claude-sonnet-4-6",
+				anthropicBeta1MContext: true,
 			}
 
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
-			// Should not crash; falls back to LiteLLM defaults when model metadata is missing
-			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
-			expect(result.current.info).toEqual(litellmDefaultModelInfo)
-		})
-
-		it("should return model info when litellm model exists in routerModels.litellm", () => {
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 8192,
-				supportsImages: false,
-				supportsPromptCache: false,
-				supportsNativeTools: true,
-				defaultToolProtocol: "native",
-			}
-
-			mockUseRouterModels.mockReturnValue({
-				data: {
-					openrouter: {},
-					requesty: {},
-					glama: {},
-					unbound: {},
-					litellm: {
-						"claude-3-7-sonnet-20250219": modelInfo,
-					},
-					"io-intelligence": {},
-				},
-				isLoading: false,
-				isError: false,
-			} as any)
-
-			const apiConfiguration: ProviderSettings = {
-				apiProvider: "litellm",
-				litellmModelId: "claude-3-7-sonnet-20250219",
-			}
-
-			const wrapper = createWrapper()
-			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
-
-			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
-			expect(result.current.info).toEqual(modelInfo)
+			expect(result.current.id).toBe("claude-sonnet-4-6")
+			expect(result.current.info?.contextWindow).toBe(1_000_000)
+			expect(result.current.info?.inputPrice).toBe(6.0)
+			expect(result.current.info?.outputPrice).toBe(22.5)
 		})
 	})
-	// kilocode_change end
 
 	describe("bedrock provider with 1M context", () => {
 		beforeEach(() => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
-					requesty: {},
-					glama: {}, // kilocode_change
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -696,10 +805,27 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
+					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
+					"io-intelligence": {},
 					requesty: {},
 					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -725,8 +851,8 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
-					requesty: {},
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {
 						"existing-model": {
 							maxTokens: 4096,
@@ -736,7 +862,24 @@ describe("useSelectedModel", () => {
 							supportsNativeTools: true,
 						},
 					},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -771,12 +914,29 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
-					requesty: {},
-					unbound: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
 					litellm: {
 						"custom-model": customModelInfo,
 					},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
 					"io-intelligence": {},
+					requesty: {},
+					unbound: {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,
@@ -809,10 +969,27 @@ describe("useSelectedModel", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
+					"vercel-ai-gateway": {},
+					huggingface: {},
+					litellm: {},
+					apertis: {},
+					kilocode: {},
+					ovhcloud: {},
+					gemini: {},
+					inception: {},
+					synthetic: {},
+					"sap-ai-core": {},
+					zenmux: {},
+					deepinfra: {},
+					"io-intelligence": {},
 					requesty: {},
 					unbound: {},
-					litellm: {},
-					"io-intelligence": {},
+					glama: {},
+					roo: {},
+					chutes: {},
+					"nano-gpt": {},
+					ollama: {},
+					lmstudio: {},
 				},
 				isLoading: false,
 				isError: false,

@@ -86,7 +86,7 @@ Background tasks degrade gracefully when you don't have credits:
 
 ### How to Get It Free
 
-Configure the `small_model` parameter in `~/.kilocode/config.json` to use a free model:
+Configure the `small_model` parameter in `~/.config/kilo/config.json` to use a free model:
 
 ```json
 {

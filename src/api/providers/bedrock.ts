@@ -1119,10 +1119,25 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		// Use parseBaseModelId to handle cross-region inference prefixes
 		const baseModelId = this.parseBaseModelId(modelConfig.id)
 		if (BEDROCK_1M_CONTEXT_MODEL_IDS.includes(baseModelId as any) && this.options.awsBedrock1MContext) {
-			// Update context window to 1M tokens when 1M context beta is enabled
-			modelConfig.info = {
-				...modelConfig.info,
-				contextWindow: 1_000_000,
+			// Check if the model has tiered pricing in bedrockModels
+			const modelDef = bedrockModels[baseModelId as BedrockModelId]
+			if (modelDef && "tiers" in modelDef && modelDef.tiers && modelDef.tiers.length > 0) {
+				// Apply the first tier's pricing (1M context tier)
+				const tier = modelDef.tiers[0]
+				modelConfig.info = {
+					...modelConfig.info,
+					contextWindow: tier.contextWindow,
+					inputPrice: tier.inputPrice,
+					outputPrice: tier.outputPrice,
+					cacheWritesPrice: tier.cacheWritesPrice,
+					cacheReadsPrice: tier.cacheReadsPrice,
+				}
+			} else {
+				// Fallback: just update context window to 1M tokens when 1M context beta is enabled
+				modelConfig.info = {
+					...modelConfig.info,
+					contextWindow: 1_000_000,
+				}
 			}
 		}
 

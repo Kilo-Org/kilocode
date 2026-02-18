@@ -5,11 +5,12 @@ description: "Using Kilo Code to interact with web browsers"
 
 # Browser Use
 
-Kilo Code provides sophisticated browser automation capabilities that let you interact with websites directly from VS Code. This feature enables testing web applications, automating browser tasks, and capturing screenshots without leaving your development environment.
+Kilo Code provides browser automation capabilities that let you interact with websites directly from your coding workflow. This feature supports testing web applications, automating browser tasks, and capturing screenshots without leaving your editor.
 
 {% callout type="info" title="Model Support Required" %}
-Browser Use within Kilo Code requires the use and advanced agentic model, and has only been tested with Claude Sonnet 3.5, 3.7, and 4
+Browser Use requires an advanced agentic model. It is typically most reliable with recent high-capability models (for example Claude Sonnet 4 class models).
 {% /callout %}
+
 
 ## How Browser Use Works
 
@@ -59,7 +60,7 @@ Key characteristics:
 | `scroll_up`   | Scrolls up by one page         | Returning to previous content         |
 | `close`       | Closes the browser             | Ending a browser session              |
 
-## Browser Use Configuration/Settings
+## Browser Use Settings
 
 {% callout type="info" title="Default Browser Settings" %}
 
@@ -74,7 +75,8 @@ Key characteristics:
 
 To change Browser / Computer Use settings in Kilo:
 
-1. Open Settings by clicking the gear icon {% codicon name="gear" /%} → Browser / Computer Use
+1. Click the gear icon {% codicon name="gear" /%} in Kilo Code
+2. Open `Browser / Computer Use`
 
 ### Enable/Disable Browser Use
 
