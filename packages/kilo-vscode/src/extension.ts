@@ -9,8 +9,14 @@ import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 
+const VERSION_KEY = "kilo-code.new.version"
+const CHANGELOG_ACTION = "View Changelog"
+const CHANGELOG_URL = "https://github.com/Kilo-Org/kilo/blob/dev/packages/kilo-vscode/CHANGELOG.md"
+const RELEASE_URL = "https://github.com/Kilo-Org/kilo/releases/tag"
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
+  void showChangelogOnUpdate(context)
 
   const telemetry = TelemetryProxy.getInstance()
 
@@ -134,6 +140,40 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   TelemetryProxy.getInstance().shutdown()
+}
+
+async function showChangelogOnUpdate(context: vscode.ExtensionContext) {
+  const version = String(context.extension.packageJSON.version || "")
+
+  if (!version) {
+    return
+  }
+
+  const previous = context.globalState.get<string>(VERSION_KEY)
+
+  if (!previous) {
+    await context.globalState.update(VERSION_KEY, version)
+    return
+  }
+
+  if (previous === version) {
+    return
+  }
+
+  await context.globalState.update(VERSION_KEY, version)
+  const clicked = await vscode.window.showInformationMessage(`Kilo Code was updated to v${version}.`, CHANGELOG_ACTION)
+
+  if (clicked !== CHANGELOG_ACTION) {
+    return
+  }
+
+  const tag = version.startsWith("v") ? version : `v${version}`
+  const release = `${RELEASE_URL}/${encodeURIComponent(tag)}`
+  const opened = await vscode.env.openExternal(vscode.Uri.parse(release))
+
+  if (!opened) {
+    await vscode.env.openExternal(vscode.Uri.parse(CHANGELOG_URL))
+  }
 }
 
 async function openKiloInNewTab(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
