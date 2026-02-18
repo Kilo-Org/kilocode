@@ -306,15 +306,15 @@ Both have type guards (`isApiProviderError()`, `isConsecutiveMistakeError()`) an
 ## 7. Implementation Recommendations for New Extension
 
 1. **Use `kilo-telemetry` via CLI proxy** — all PostHog communication goes through the CLI's `POST /telemetry/capture` endpoint. The extension does not include `posthog-node` or `posthog-js` directly.
-2. **Singleton service pattern** — single `TelemetryService` instance, multiple pluggable clients
+2. **Singleton pattern** — single `TelemetryProxy` instance that sends to CLI + logs to console, no pluggable clients
 3. **Properties provider pattern** — `KiloProvider` implements `TelemetryPropertiesProvider` to inject VS Code context into every event
 4. **Typed events** — all event names in an enum, with typed capture methods on the service
-5. **Event subscription/filtering** — clients can include/exclude specific events
-6. **Property filtering** — per-client property filtering (privacy controls)
+5. **Event filtering** — `TelemetryProxy` can include/exclude specific events before forwarding to CLI
+6. **Property filtering** — privacy controls applied before forwarding to CLI
 7. **Dual opt-in** — respect both IDE-level and extension-level telemetry settings
 8. **Identity upgrade** — anonymous by default, upgrade to user identity on auth
 9. **Graceful degradation** — never crash on telemetry failures; all capture calls are fire-and-forget
-10. **Debug client** — separate console-logging client for development
+10. **Console logging** — `TelemetryProxy` logs events to console in development mode
 
 ---
 
