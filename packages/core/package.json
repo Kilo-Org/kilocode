@@ -3,7 +3,10 @@
 	"description": "Platform agnostic core functionality for Roo Code.",
 	"version": "0.0.0",
 	"type": "module",
-	"exports": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./browser": "./src/browser.ts"
+	},
 	"scripts": {
 		"lint": "eslint src --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",

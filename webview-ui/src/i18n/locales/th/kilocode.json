@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "คุณต้องการเริ่มต้นอย่างไร?",
+		"freeModels": {
+			"title": "โมเดลฟรี",
+			"description": "เริ่มเขียนโค้ดทันที"
+		},
+		"premiumModels": {
+			"title": "โมเดลพรีเมียม",
+			"description": "สมัคร ผู้ใช้ใหม่จะได้รับเครดิต $5"
+		},
+		"byok": {
+			"title": "ใช้คีย์ของคุณเอง",
+			"description": "ขั้นสูง ใช้บัญชีหรือการสมัครสมาชิกของคุณเอง"
+		}
+	},
 	"welcome": {
 		"greeting": "ยินดีต้อนรับสู่ Kilo Code!",
 		"introText1": "Kilo Code เป็นเอเจนต์เขียนโค้ด AI แบบฟรีและโอเพ่นซอร์ส",
-		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 และอีกกว่า 450 โมเดล",
+		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 และอีกกว่า 450 โมเดล",
 		"introText3": "สร้างบัญชีฟรีและรับเครดิตโบนัส $20 เมื่อเติมเงินครั้งแรก",
 		"ctaButton": "เริ่มต้น",
 		"manualModeButton": "ใช้ API key ของคุณเอง",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "เติมเครดิต",
 		"lowBalance": "ยอดเงิน Kilo Code ของคุณเหลือน้อย",
-		"newOrganization": "ใช้ Kilo เพื่อการทำงาน?"
+		"switchToFreeModel": "เปลี่ยนไปใช้โมเดลฟรีแทน"
 	},
 	"pagination": {
 		"previous": "ก่อนหน้า",
@@ -25,6 +40,11 @@
 		"modelUnavailable": "⚠️ โมเดล {{model}} ไม่พร้อมใช้งาน เปลี่ยนไปใช้โมเดลอื่นเพื่อดำเนินการต่อ",
 		"continueWith": "ดำเนินการต่อด้วย {{model}}",
 		"continue": "ดำเนินการต่อ"
+	},
+	"unauthorizedError": {
+		"title": "คุณต้องเข้าสู่ระบบเพื่อใช้โมเดล {{modelId}}",
+		"message": "เข้าสู่ระบบหรือสร้างบัญชีเพื่อเข้าถึงโมเดลกว่า 500 โมเดล ใช้เครดิตในราคาต้นทุน หรือใช้คีย์ของคุณเอง",
+		"loginButton": "เข้าสู่ระบบ"
 	},
 	"pricing": {
 		"costUnknown": "ค่าใช้จ่ายไม่ทราบ",
@@ -60,7 +80,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "เข้าสู่ระบบที่ Kilo Code",
 			"logout": "ออกจากระบบ Kilo Code",
-			"automaticFetch": "โมเดลล่าสุดจะพร้อมใช้งานใน Kilo Code โดยอัตโนมัติ หากคุณไม่แน่ใจว่าจะเลือกโมเดลใด Kilo Code ทำงานได้ดีที่สุดกับโมเดลที่แนะนำซึ่งแสดงไว้ด้านบนใน<strong>ตัวหนา</strong>",
+			"loginForPremiumModels": "เข้าสู่ระบบเพื่อเข้าถึงโมเดลและฟีเจอร์พรีเมียม",
 			"providerRouting": {
 				"title": "การกำหนดเส้นทางผู้ให้บริการ",
 				"createOrganization": "สร้างองค์กรเพื่อจัดการการกำหนดเส้นทางผู้ให้บริการ",
@@ -218,6 +238,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "มาใหม่ใช่ไหม?",
+		"tryOneOfThese": "ลองไอเดียเหล่านี้เพื่อเริ่มต้น:",
 		"suggestionText": "<suggestionButton>คลิกที่นี่</suggestionButton> สำหรับไอเดียเจ๋งๆ จากนั้นแตะ <sendIcon /> และดูฉันทำมายากล!",
 		"ideas": {
 			"idea1": "สร้างทรงกลม 3D ที่หมุนและเรืองแสงที่ตอบสนองต่อการเคลื่อนไหวของเมาส์ ทำให้แอปทำงานในเบราว์เซอร์",
@@ -229,7 +250,7 @@
 			"idea7": "สร้างสนามดาวเชิงโต้ตอบที่สงบซึ่งเคลื่อนไหวตามท่าทางของเมาส์"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "เติมข้อความอัตโนมัติ",
 		"settings": {
 			"codeEditorSuggestions": "คำแนะนำตัวแก้ไขโค้ด",

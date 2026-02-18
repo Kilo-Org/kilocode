@@ -44,12 +44,6 @@
 		"jetbrains-host:build": {
 			"dependsOn": ["@kilo-code/jetbrains-host#bundle:package"]
 		},
-		"cli:build": {
-			"dependsOn": ["@kilocode/cli#build"]
-		},
-		"cli:bundle": {
-			"dependsOn": ["@kilocode/cli#build"]
-		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
 			"cache": false

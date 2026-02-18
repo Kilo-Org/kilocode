@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Ja",
 		"shareConfirmNo": "Nee",
 		"options": "Opties",
-		"configureSetupScript": "Worktree setup-script"
+		"configureSetupScript": "Worktree setup-script",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -60,7 +61,16 @@
 		"selectModel": "Model selecteren",
 		"modelTooltip": "Kies welk AI-model je wilt gebruiken voor deze sessie",
 		"defaultModel": "Standaardmodel",
-		"loadingModels": "Laden..."
+		"loadingModels": "Laden...",
+		"selectMode": "Selecteer modus",
+		"modeTooltip": "Modus: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",
@@ -75,7 +85,11 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer invouwen",
-		"copyCommand": "Opdracht kopiëren"
+		"copyCommand": "Opdracht kopiëren",
+		"thinking": "Denkt na",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Goedkeuren",
+		"deny": "Weigeren"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

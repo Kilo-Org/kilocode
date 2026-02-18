@@ -1,4 +1,5 @@
 {
+	"back": "Wróć do widoku zadań",
 	"common": {
 		"save": "Zapisz",
 		"done": "Gotowe",
@@ -7,6 +8,10 @@
 		"select": "Wybierz",
 		"add": "Dodaj nagłówek",
 		"remove": "Usuń"
+	},
+	"search": {
+		"placeholder": "Szukaj ustawień...",
+		"noResults": "Nie znaleziono ustawień"
 	},
 	"header": {
 		"title": "Ustawienia",
@@ -37,7 +42,9 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"autoPurge": "Auto-czyszczenie"
+		"autoPurge": "Auto-czyszczenie",
+		"agentBehaviour": "Zachowanie agenta",
+		"autocomplete": "Autouzupełnianie"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Chcesz wskazówek lub po prostu porozmawiać z innymi użytkownikami Kilo Code? Dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Kontakt i Społeczność",
-		"manageSettings": "Zarządzaj Ustawieniami"
+		"manageSettings": "Zarządzaj Ustawieniami",
+		"debugMode": {
+			"label": "Włącz tryb debugowania",
+			"description": "Włącz tryb debugowania, aby wyświetlić dodatkowe przyciski w nagłówku zadania umożliwiające przeglądanie historii konwersacji API i komunikatów UI jako sformatowany JSON w plikach tymczasowych."
+		}
 	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
@@ -93,7 +104,11 @@
 		"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
 		"openRouterProviderRoutingLabel": "Routing dostawców OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu osadzania. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Klucz API Voyage AI",
+		"voyageApiKeyPlaceholder": "Wprowadź swój klucz API Voyage AI",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
+		"openaiCompatibleResponsesProvider": "Kompatybilny z OpenAI (Responses)",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Bazowy URL",
@@ -166,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
 			"baseUrlRequired": "Wymagany jest bazowy adres URL",
 			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0",
-			"openRouterApiKeyRequired": "Wymagany jest klucz API OpenRouter"
+			"openRouterApiKeyRequired": "Wymagany jest klucz API OpenRouter",
+			"voyageApiKeyRequired": "Wymagany jest klucz API Voyage AI"
 		},
 		"optional": "opcjonalny",
 		"advancedConfigLabel": "Konfiguracja zaawansowana",
@@ -301,10 +317,40 @@
 		"glamaApiKey": "Klucz API Glama",
 		"getGlamaApiKey": "Uzyskaj klucz API Glama",
 		"apiKeyStorageNotice": "Klucze API są bezpiecznie przechowywane w Tajnym Magazynie VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
 		"useReasoning": "Włącz rozumowanie",
 		"useHostHeader": "Użyj niestandardowego nagłówka Host",
-		"useLegacyFormat": "Użyj starszego formatu API OpenAI",
 		"customHeaders": "Niestandardowe nagłówki",
 		"headerName": "Nazwa nagłówka",
 		"headerValue": "Wartość nagłówka",
@@ -317,11 +363,15 @@
 			"success": "Lista modeli została pomyślnie odświeżona!",
 			"error": "Nie udało się odświeżyć listy modeli. Spróbuj ponownie."
 		},
+		"getZenmuxApiKey": "Uzyskaj klucz API Zenmux",
+		"zenmuxTransformsText": "Użyj Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
 		"getRequestyBaseUrl": "Bazowy URL",
 		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
 		"anthropicApiKey": "Klucz API Anthropic",
 		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
+		"apertisApiKey": "Klucz API Apertis",
+		"getApertisApiKey": "Uzyskaj klucz API Apertis",
 		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
 		"anthropicUseAzureDeployment": "Użyj nazwy wdrożenia Azure",
 		"anthropicAzureDeploymentPlaceholder": "Wprowadź nazwę wdrożenia...",
@@ -333,6 +383,8 @@
 		"vertex1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
 		"basetenApiKey": "Klucz API Baseten",
 		"getBasetenApiKey": "Uzyskaj klucz API Baseten",
+		"corethinkApiKey": "Klucz API Corethink",
+		"getCorethinkApiKey": "Uzyskaj klucz API Corethink",
 		"cerebrasApiKey": "Klucz API Cerebras",
 		"getCerebrasApiKey": "Pobierz klucz API Cerebras",
 		"chutesApiKey": "Klucz API Chutes",
@@ -585,6 +637,7 @@
 		},
 		"verbosity": {
 			"label": "Szczegółowość danych wyjściowych",
+			"max": "Max",
 			"high": "Wysoka",
 			"medium": "Średnia",
 			"low": "Niska",
@@ -597,21 +650,6 @@
 			"placeholder": "Domyślnie: claude",
 			"maxTokensLabel": "Maksymalna liczba tokenów wyjściowych",
 			"maxTokensDescription": "Maksymalna liczba tokenów wyjściowych dla odpowiedzi Claude Code. Domyślnie 8000."
-		},
-		"geminiCli": {
-			"description": "Ten dostawca używa uwierzytelniania OAuth z narzędzia Gemini CLI i nie wymaga kluczy API.",
-			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
-			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.gemini/oauth_creds.json).",
-			"instructions": "Jeśli jeszcze się nie uwierzytelniłeś, uruchom najpierw",
-			"instructionsContinued": "w swoim terminalu.",
-			"setupLink": "Instrukcje konfiguracji Gemini CLI",
-			"requirementsTitle": "Ważne wymagania",
-			"requirement1": "Najpierw musisz zainstalować narzędzie Gemini CLI",
-			"requirement2": "Następnie uruchom gemini w swoim terminalu i upewnij się, że logujesz się przez Google",
-			"requirement3": "Działa tylko z osobistymi kontami Google (nie z kontami Google Workspace)",
-			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
-			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
-			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
@@ -1143,7 +1181,7 @@
 			"description": "Wyświetl statystyki dodanych/usuniętych linii w nagłówku zadania"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Pokaż animację marginesu podczas autouzupełniania",
 			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",

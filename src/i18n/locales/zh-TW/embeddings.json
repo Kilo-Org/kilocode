@@ -12,6 +12,12 @@
 		"accessDenied": "存取 Amazon Bedrock 服務遭拒。請檢查您的 IAM 權限。",
 		"modelNotFound": "在 Amazon Bedrock 中找不到模型 {{model}}"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Voyage AI 傳回無效的回應格式",
+		"invalidCredentials": "Voyage AI API 金鑰無效。請檢查你的 API 金鑰設定。",
+		"accessDenied": "存取遭拒。你的 IP 位址可能被 Voyage AI 封鎖。請嘗試使用其他網路。",
+		"modelNotFound": "在 Voyage AI 中找不到模型 {{model}}。請檢查你的模型選擇。"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "無法讀取錯誤內容",
 		"requestFailed": "Ollama API 請求失敗，狀態碼 {{status}} {{statusText}}：{{errorBody}}",
@@ -30,7 +36,7 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "連接 Qdrant 向量資料庫失敗。請確保 Qdrant 正在執行並可在 {{qdrantUrl}} 存取。錯誤：{{errorMessage}}",
-		"vectorDimensionMismatch": "無法更新新模型的向量索引。請嘗試清除索引並重新開始。詳細資訊: {{errorMessage}}",
+		"vectorDimensionMismatch": "無法更新新模型的向量索引。請嘗試清除索引並重新開始。詳細資訊：{{errorMessage}}",
 		"lancedbStoreInitFailed": "初始化 LanceDB 向量儲存失敗：{{errorMessage}}",
 		"lancedbLoadFailed": "載入 LanceDB 模組失敗：{{errorMessage}}"
 	},
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "建立嵌入器時缺少 OpenRouter 設定",
 		"vercelAiGatewayConfigMissing": "建立嵌入器時缺少 Vercel AI Gateway 設定",
 		"bedrockConfigMissing": "建立嵌入器時缺少 Amazon Bedrock 設定",
+		"voyageConfigMissing": "建立嵌入器時缺少 Voyage AI 設定",
 		"invalidEmbedderType": "設定的嵌入器類型無效：{{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "無法確定提供商 '{{provider}}' 的模型 '{{modelId}}' 的向量維度。請確保在 OpenAI 相容提供商設定中正確設定了「嵌入維度」。",
 		"vectorDimensionNotDetermined": "無法確定提供商 '{{provider}}' 的模型 '{{modelId}}' 的向量維度。請檢查模型設定檔或設定。",

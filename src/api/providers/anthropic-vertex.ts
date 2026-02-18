@@ -11,9 +11,9 @@ import {
 	TOOL_PROTOCOL,
 	VERTEX_1M_CONTEXT_MODEL_IDS,
 } from "@roo-code/types"
+import { safeJsonParse } from "@roo-code/core"
 
 import { ApiHandlerOptions } from "../../shared/api"
-import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { ApiStream } from "../transform/stream"
 import { addCacheBreakpoints } from "../transform/caching/vertex"
@@ -113,7 +113,7 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 			model: id,
 			max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 			temperature,
-			thinking,
+			thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
 			// Cache the system prompt if caching is enabled.
 			system: supportsPromptCache
 				? [{ text: systemPrompt, type: "text" as const, cache_control: { type: "ephemeral" } }]
@@ -257,6 +257,17 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 			betas.push("context-1m-2025-08-07")
 		}
 
+		// kilocode_change start
+		if (params.reasoning?.type === "adaptive") {
+			betas.push(
+				"adaptive-thinking-2026-01-28",
+				"interleaved-thinking-2025-05-14",
+				"effort-2025-11-24",
+				"max-effort-2026-01-24",
+			)
+		}
+		// kilocode_change end
+
 		// The `:thinking` suffix indicates that the model is a "Hybrid"
 		// reasoning model and that reasoning is required to be enabled.
 		// The actual model ID honored by Anthropic's API does not have this
@@ -283,7 +294,7 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 				model: id,
 				max_tokens: maxTokens,
 				temperature,
-				thinking,
+				thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
 				messages: [
 					{
 						role: "user",

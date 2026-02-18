@@ -1,4 +1,5 @@
 {
+	"back": "العودة لعرض المهام",
 	"common": {
 		"save": "حفظ",
 		"done": "تم",
@@ -13,6 +14,10 @@
 		"saveButtonTooltip": "حفظ التغييرات",
 		"nothingChangedTooltip": "ما صار أي تغيير",
 		"doneButtonTooltip": "تجاهل التغييرات غير المحفوظة وإغلاق اللوحة"
+	},
+	"search": {
+		"placeholder": "البحث في الإعدادات...",
+		"noResults": "لم يتم العثور على إعدادات"
 	},
 	"unsavedChangesDialog": {
 		"title": "تغييرات غير محفوظة",
@@ -37,7 +42,9 @@
 		"experimental": "تجريبي",
 		"language": "اللغة",
 		"about": "عن Kilo Code",
-		"autoPurge": "التنظيف التلقائي"
+		"autoPurge": "التنظيف التلقائي",
+		"agentBehaviour": "سلوك الوكيل",
+		"autocomplete": "الإكمال التلقائي"
 	},
 	"about": {
 		"bugReport": {
@@ -61,7 +68,11 @@
 		"joinCommunity": "انضم للمجتمع",
 		"joinCommunityDesc": "تواصل مع مستخدمين آخرين وشارك الأفكار",
 		"contactAndCommunity": "التواصل والمجتمع",
-		"manageSettings": "إدارة الإعدادات"
+		"manageSettings": "إدارة الإعدادات",
+		"debugMode": {
+			"label": "تفعيل وضع التصحيح",
+			"description": "فعّل وضع التصحيح لإظهار أزرار إضافية في رأس المهمة لعرض سجل محادثات API ورسائل UI كملفات JSON منسقة مؤقتة."
+		}
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
@@ -126,7 +137,11 @@
 		"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 		"openRouterProviderRoutingLabel": "توجيه مزود OpenRouter",
 		"openRouterProviderRoutingDescription": "يوجه OpenRouter الطلبات إلى أفضل المزودين المتاحين لنموذج التضمين الخاص بك. افتراضيًا، يتم موازنة التحميل للطلبات عبر أفضل المزودين لزيادة وقت التشغيل. ومع ذلك، يمكنك اختيار مزود معين لاستخدامه مع هذا النموذج.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "مفتاح Voyage AI API",
+		"voyageApiKeyPlaceholder": "أدخل مفتاح Voyage AI API الخاص بك",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
+		"openaiCompatibleResponsesProvider": "متوافق مع OpenAI (Responses)",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
 		"openAiCompatibleBaseUrlLabel": "الرابط الأساسي",
@@ -199,6 +214,7 @@
 			"bedrockRegionRequired": "منطقة AWS مطلوبة",
 			"bedrockProfileRequired": "ملف AWS مطلوب",
 			"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب",
+			"voyageApiKeyRequired": "مفتاح Voyage AI API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -337,6 +353,37 @@
 		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
 		"glamaApiKey": "مفتاح Glama",
 		"getGlamaApiKey": "احصل على مفتاح Glama",
+		"openAiCodexRateLimits": {
+			"title": "حدود الاستخدام لـ Codex{{planLabel}}",
+			"loading": "جاري تحميل حدود الاستخدام...",
+			"loadError": "فشل تحميل حدود الاستخدام",
+			"retry": "إعادة المحاولة",
+			"usedPercent": "{{percent}}% مستخدم",
+			"resetsIn": "يُعاد التعيين خلال {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "الآن",
+				"notAvailable": "غير متوفر"
+			},
+			"duration": {
+				"daysHours": "{{days}} يوم {{hours}} ساعة",
+				"hoursMinutes": "{{hours}} ساعة {{minutes}} دقيقة",
+				"minutes": "{{minutes}} دقيقة"
+			},
+			"window": {
+				"usage": "الاستخدام",
+				"fiveHour": "حد 5 ساعات",
+				"oneHour": "حد ساعة واحدة",
+				"daily": "الحد اليومي",
+				"weekly": "الحد الأسبوعي",
+				"days": "حد {{days}} يوم",
+				"hours": "حد {{hours}} ساعة",
+				"minutes": "حد {{minutes}} دقيقة"
+			}
+		},
 		"useCustomBaseUrl": "استخدم رابط أساسي مخصص",
 		"useReasoning": "تفعيل الـ Reasoning",
 		"useHostHeader": "استخدم ترويسة Host مخصصة",
@@ -353,12 +400,16 @@
 			"success": "تم التحديث!",
 			"error": "فشل التحديث. جرّب مرة ثانية."
 		},
+		"getZenmuxApiKey": "احصل على مفتاح Zenmux API",
+		"zenmuxTransformsText": "استخدام Zenmux Middle Out Transform",
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
 		"getRequestyBaseUrl": "رابط الأساس",
 		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
 		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
+		"apertisApiKey": "مفتاح Apertis API",
+		"getApertisApiKey": "احصل على مفتاح Apertis API",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
 		"anthropicUseAzureDeployment": "استخدام اسم نشر Azure",
 		"anthropicAzureDeploymentPlaceholder": "أدخل اسم النشر...",
@@ -370,6 +421,8 @@
 		"vertex1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"basetenApiKey": "مفتاح Baseten API",
 		"getBasetenApiKey": "احصل على مفتاح Baseten API",
+		"corethinkApiKey": "مفتاح Corethink API",
+		"getCorethinkApiKey": "احصل على مفتاح Corethink API",
 		"cerebrasApiKey": "مفتاح Cerebras API",
 		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",
@@ -630,6 +683,7 @@
 		},
 		"verbosity": {
 			"label": "مستوى التفصيل في المخرجات",
+			"max": "Max",
 			"high": "عالي",
 			"medium": "متوسط",
 			"low": "منخفض",
@@ -642,21 +696,6 @@
 			"placeholder": "الافتراضي: claude",
 			"maxTokensLabel": "أقصى توكنات المخرجات",
 			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
-		},
-		"geminiCli": {
-			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
-			"oauthPath": "مسار بيانات OAuth (اختياري)",
-			"oauthPathDescription": "إذا تركته فاضي يستخدم المسار الافتراضي (~/.gemini/oauth_creds.json).",
-			"instructions": "إذا ما سجلت دخول، شغّل",
-			"instructionsContinued": "في الطرفية أولاً.",
-			"setupLink": "دليل إعداد Gemini CLI",
-			"requirementsTitle": "متطلبات مهمة",
-			"requirement1": "ثبت أداة Gemini CLI",
-			"requirement2": "سجل دخول بـ Google",
-			"requirement3": "يعمل مع حسابات Google الشخصية فقط",
-			"requirement4": "المصادقة تتم عبر OAuth",
-			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
-			"freeAccess": "طبقة مجانية عبر OAuth"
 		},
 		"io_intelligence": {
 			"name": "IO Intelligence",
@@ -796,7 +835,7 @@
 			"description": "عرض إحصائيات الأسطر المضافة/المحذوفة في رأس المهمة"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "إظهار الحركة في الهامش عند الإكمال التلقائي",
 			"description": "عرض مؤشر متحرك في هامش المحرر عند تشغيل الإكمال التلقائي",

@@ -195,8 +195,8 @@
 }
 
 .am-session-item.am-selected {
-	background: var(--vscode-list-activeSelectionBackground);
-	color: var(--vscode-list-activeSelectionForeground);
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
 }
 
 .am-session-item:focus {
@@ -302,7 +302,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	background: var(--vscode-editor-background);
+	background: var(--vscode-sideBar-background);
 }
 
 .am-header-info {
@@ -314,10 +314,94 @@
 .am-header-title {
 	font-size: 18px;
 	font-weight: 600;
+	color: var(--vscode-titleBar-activeForeground);
 	margin-bottom: 4px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Editable title */
+.am-title-edit-container {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.am-title-input {
+	flex: 1;
+	min-width: 100px;
+	padding: 2px 6px;
+	font-size: 18px;
+	font-weight: 600;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-focusBorder);
+	border-radius: 3px;
+	outline: none;
+}
+
+.am-title-confirm-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	background: transparent;
+	border: none;
+	color: var(--vscode-charts-green);
+	cursor: pointer;
+	border-radius: 3px;
+}
+
+.am-title-confirm-btn:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.am-title-text {
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.am-title-text:hover {
+	text-decoration: underline;
+	text-decoration-style: dotted;
+}
+
+.am-title-edit-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	background: transparent;
+	border: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+	border-radius: 3px;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.am-header-title:hover .am-title-edit-btn {
+	opacity: 0.7;
+}
+
+.am-title-edit-btn:hover {
+	opacity: 1;
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+/* YOLO badge in header */
+.am-yolo-badge {
+	display: flex;
+	align-items: center;
+	color: var(--vscode-charts-yellow, #f5c518);
 }
 
 .am-header-meta {
@@ -393,12 +477,36 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
+	position: relative; /* kilocode_change */
+	background: var(--vscode-sideBar-background);
+	color: var(--vscode-sideBar-foreground);
 }
 
 .am-messages-list {
 	flex: 1;
 	height: 100%;
 	overflow-y: auto !important;
+}
+
+/* Scroll-to-bottom button */
+.am-scroll-to-bottom {
+	/* kilocode_change */
+	position: absolute;
+	right: 16px;
+	bottom: 12px;
+	z-index: 5;
+}
+
+.am-scroll-to-bottom-btn {
+	/* kilocode_change */
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .am-message-item {
@@ -470,6 +578,45 @@
 	overflow-wrap: break-word;
 }
 
+/* Approval Buttons */
+.am-approval-buttons {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.am-approval-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 12px;
+	border-radius: 3px;
+	border: 1px solid var(--vscode-button-border, transparent);
+	font-size: calc(var(--vscode-font-size) * 0.9);
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+
+.am-approval-approve {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.am-approval-approve:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.am-approval-deny {
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	border-color: var(--vscode-input-border);
+}
+
+.am-approval-deny:hover {
+	color: var(--vscode-errorForeground);
+	border-color: var(--vscode-errorForeground);
+}
+
 /* Markdown Styles (Simplified) */
 .am-markdown-content p {
 	margin-bottom: 0.5em;
@@ -495,6 +642,61 @@
 	border-radius: 3px;
 }
 
+/* Reasoning Block */
+.am-reasoning-block {
+	padding: 10px 20px;
+}
+
+.am-reasoning-block:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.am-reasoning-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	user-select: none;
+	padding-right: 8px;
+}
+
+.am-reasoning-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--vscode-foreground);
+}
+
+.am-reasoning-elapsed {
+	font-size: calc(var(--vscode-font-size) * 0.85);
+	color: var(--vscode-descriptionForeground);
+	margin-top: 1px;
+}
+
+.am-reasoning-content {
+	border-left: 1px solid var(--vscode-descriptionForeground);
+	margin-left: 8px;
+	margin-top: 10px;
+	padding-left: 16px;
+	padding-bottom: 4px;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.8;
+}
+
+.am-reasoning-chevron {
+	transition: transform 0.2s;
+	opacity: 0;
+	color: var(--vscode-descriptionForeground);
+}
+
+.am-reasoning-block:hover .am-reasoning-chevron {
+	opacity: 1;
+}
+
+.am-reasoning-chevron.am-collapsed {
+	transform: rotate(180deg);
+}
+
 /* Forms */
 .am-center-form {
 	display: flex;
@@ -504,7 +706,7 @@
 	height: 100%;
 	padding: 20px;
 	width: 100%;
-	max-width: 560px;
+	max-width: 800px;
 	margin: 0 auto;
 	text-align: center;
 }
@@ -540,7 +742,7 @@
 /* Chat Input Styles */
 .am-chat-input-container {
 	padding: 12px 20px 20px 20px;
-	background: var(--vscode-editor-background);
+	background: var(--vscode-sideBar-background);
 }
 
 .am-chat-input-hint {
@@ -644,6 +846,14 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* YOLO mode indicator in sidebar */
+.am-yolo-indicator {
+	display: inline-flex;
+	align-items: center;
+	color: var(--vscode-charts-yellow, #f5c518);
+	opacity: 0.9;
 }
 
 .am-ready-to-merge {
@@ -797,6 +1007,16 @@
 	border-color: transparent;
 }
 
+/* YOLO mode toggle active state */
+.am-run-mode-trigger-inline.am-yolo-active {
+	opacity: 1;
+	color: var(--vscode-charts-yellow, #f5c518);
+}
+
+.am-run-mode-trigger-inline.am-yolo-active:hover:not(:disabled) {
+	color: var(--vscode-charts-yellow, #f5c518);
+}
+
 /* Cancel button for pending session */
 .am-cancel-btn {
 	padding: 6px 16px;
@@ -919,8 +1139,13 @@
 }
 
 .am-model-selector-content {
-	max-height: 300px !important;
 	min-width: 200px !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-model-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }
 
 /* Read-only model indicator in chat input */
@@ -935,4 +1160,101 @@
 
 .am-model-indicator svg {
 	flex-shrink: 0;
+}
+
+/* Session Mode Selector - Compact design for toolbar */
+.am-session-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100px; /* Limit width to prevent overflow */
+	flex-shrink: 1;
+}
+
+.am-session-mode-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 6px !important;
+	min-height: 28px !important;
+	max-width: 100px !important;
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	border-radius: 4px !important;
+	color: var(--vscode-descriptionForeground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+	opacity: 0.6 !important;
+}
+
+.am-session-mode-trigger:hover:not(:disabled) {
+	opacity: 1 !important;
+	color: var(--vscode-foreground) !important;
+	background-color: rgba(255, 255, 255, 0.03) !important;
+	border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.am-session-mode-trigger:disabled {
+	opacity: 0.4 !important;
+	cursor: not-allowed !important;
+}
+
+/* Truncate the mode name in the trigger */
+.am-session-mode-trigger span {
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+	max-width: 70px !important;
+}
+
+.am-session-mode-content {
+	min-width: 180px !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-session-mode-content > div > div:last-child {
+	max-height: 250px !important;
+}
+
+/* Mode Selector for New Agent Form */
+.am-mode-selector {
+	display: inline-flex;
+	align-items: center;
+	width: 100%;
+}
+
+.am-mode-selector-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+	width: 100% !important;
+	background: var(--vscode-input-background) !important;
+	border: 1px solid var(--vscode-input-border) !important;
+	border-radius: 4px !important;
+	color: var(--vscode-input-foreground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+}
+
+.am-mode-selector-trigger:hover:not(:disabled) {
+	border-color: var(--vscode-focusBorder) !important;
+}
+
+.am-mode-selector-trigger:disabled {
+	opacity: 0.5 !important;
+	cursor: not-allowed !important;
+}
+
+.am-mode-selector-content {
+	min-width: 200px !important;
+	overflow: hidden !important;
+}
+
+/* Override inner scroll container height for compact dropdown */
+.am-mode-selector-content > div > div:last-child {
+	max-height: 250px !important;
 }

@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
  * 
  * The setContext command allows the extension to set context values that can be used
  * to control UI state and feature availability. This is commonly used by features like
- * the GhostProvider (autocomplete) to enable/disable keybindings dynamically.
+ * the AutocompleteProvider (autocomplete) to enable/disable keybindings dynamically.
  * 
  * @param project The current IntelliJ project
  * @param registry The command registry to register commands with
@@ -47,9 +47,9 @@ fun registerSetContextCommands(project: Project, registry: CommandRegistry) {
  * setting context key-value pairs that can be used throughout the plugin to control
  * feature availability and UI state.
  * 
- * Example context keys used by GhostProvider:
- * - kilocode.ghost.enableQuickInlineTaskKeybinding
- * - kilocode.ghost.enableSmartInlineTaskKeybinding
+ * Example context keys used by AutocompleteProvider:
+ * - kilocode.autocomplete.enableQuickInlineTaskKeybinding
+ * - kilocode.autocomplete.enableSmartInlineTaskKeybinding
  */
 class SetContextCommands(val project: Project) {
     private val logger = Logger.getInstance(SetContextCommands::class.java)
@@ -61,7 +61,7 @@ class SetContextCommands(val project: Project) {
      * This method is called when the setContext command is executed from the extension.
      * It stores the key-value pair in the ContextManager for later retrieval.
      * 
-     * @param key The context key to set (e.g., "kilocode.ghost.enableQuickInlineTaskKeybinding")
+     * @param key The context key to set (e.g., "kilocode.autocomplete.enableQuickInlineTaskKeybinding")
      * @param value The value to set (typically Boolean, but can be String, Number, etc.)
      * @return null (void return type)
      */

@@ -1,4 +1,5 @@
 {
+	"back": "Назад к списку задач",
 	"common": {
 		"save": "Сохранить",
 		"done": "Готово",
@@ -7,6 +8,10 @@
 		"select": "Выбрать",
 		"add": "Добавить заголовок",
 		"remove": "Удалить"
+	},
+	"search": {
+		"placeholder": "Поиск параметров...",
+		"noResults": "Параметры не найдены"
 	},
 	"header": {
 		"title": "Настройки",
@@ -37,7 +42,9 @@
 		"experimental": "Экспериментальное",
 		"language": "Язык",
 		"about": "О Kilo Code",
-		"autoPurge": "Авто-очистка"
+		"autoPurge": "Авто-очистка",
+		"agentBehaviour": "Поведение агента",
+		"autocomplete": "Автодополнение"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Хотите получить советы или просто пообщаться с другими пользователями Kilo Code? Присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Контакты и Сообщество",
-		"manageSettings": "Управление Настройками"
+		"manageSettings": "Управление Настройками",
+		"debugMode": {
+			"label": "Включить режим отладки",
+			"description": "Включите режим отладки для отображения дополнительных кнопок в заголовке задачи для просмотра истории разговоров API и сообщений UI в виде форматированного JSON во временных файлах."
+		}
 	},
 	"slashCommands": {
 		"description": "Управляйте своими слэш-командами для быстрого выполнения пользовательских рабочих процессов и действий. <DocsLink>Узнать больше</DocsLink>"
@@ -93,7 +104,11 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "API-ключ Voyage AI",
+		"voyageApiKeyPlaceholder": "Введи свой API-ключ Voyage AI",
 		"openaiCompatibleProvider": "OpenAI-совместимый",
+		"openaiCompatibleResponsesProvider": "OpenAI-совместимый (Responses)",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введите ваш ключ API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "Базовый URL",
@@ -166,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",
 			"baseUrlRequired": "Требуется базовый URL",
 			"modelDimensionMinValue": "Размерность модели должна быть больше 0",
-			"openRouterApiKeyRequired": "Требуется ключ API OpenRouter"
+			"openRouterApiKeyRequired": "Требуется ключ API OpenRouter",
+			"voyageApiKeyRequired": "Требуется API-ключ Voyage AI"
 		},
 		"optional": "необязательно",
 		"advancedConfigLabel": "Расширенная конфигурация",
@@ -301,10 +317,40 @@
 		"glamaApiKey": "API-ключ Glama",
 		"getGlamaApiKey": "Получить API-ключ Glama",
 		"apiKeyStorageNotice": "API-ключи хранятся безопасно в Secret Storage VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"useReasoning": "Включить рассуждения",
 		"useHostHeader": "Использовать пользовательский Host-заголовок",
-		"useLegacyFormat": "Использовать устаревший формат OpenAI API",
 		"customHeaders": "Пользовательские заголовки",
 		"headerName": "Имя заголовка",
 		"headerValue": "Значение заголовка",
@@ -317,11 +363,15 @@
 			"success": "Список моделей успешно обновлен!",
 			"error": "Не удалось обновить список моделей. Пожалуйста, попробуйте снова."
 		},
+		"getZenmuxApiKey": "Получить Zenmux API-ключ",
+		"zenmuxTransformsText": "Использовать Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
+		"apertisApiKey": "Apertis API-ключ",
+		"getApertisApiKey": "Получить Apertis API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
 		"anthropicUseAzureDeployment": "Использовать имя развертывания Azure",
 		"anthropicAzureDeploymentPlaceholder": "Введите имя развертывания...",
@@ -333,6 +383,8 @@
 		"vertex1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-ключ",
 		"getBasetenApiKey": "Получить Baseten API-ключ",
+		"corethinkApiKey": "Corethink API-ключ",
+		"getCorethinkApiKey": "Получить Corethink API-ключ",
 		"cerebrasApiKey": "Cerebras API-ключ",
 		"getCerebrasApiKey": "Получить Cerebras API-ключ",
 		"chutesApiKey": "Chutes API-ключ",
@@ -585,6 +637,7 @@
 		},
 		"verbosity": {
 			"label": "Подробность вывода",
+			"max": "Max",
 			"high": "Высокая",
 			"medium": "Средняя",
 			"low": "Низкая",
@@ -597,21 +650,6 @@
 			"placeholder": "По умолчанию: claude",
 			"maxTokensLabel": "Макс. выходных токенов",
 			"maxTokensDescription": "Максимальное количество выходных токенов для ответов Claude Code. По умолчанию 8000."
-		},
-		"geminiCli": {
-			"description": "Этот провайдер использует OAuth-аутентификацию из инструмента Gemini CLI и не требует API-ключей.",
-			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
-			"oauthPathDescription": "Путь к файлу учетных данных OAuth. Оставьте пустым для использования местоположения по умолчанию (~/.gemini/oauth_creds.json).",
-			"instructions": "Если вы еще не прошли аутентификацию, выполните",
-			"instructionsContinued": "в вашем терминале сначала.",
-			"setupLink": "Инструкции по настройке Gemini CLI",
-			"requirementsTitle": "Важные требования",
-			"requirement1": "Сначала вам нужно установить инструмент Gemini CLI",
-			"requirement2": "Затем запустите gemini в вашем терминале и убедитесь, что вы вошли в Google",
-			"requirement3": "Работает только с личными аккаунтами Google (не с аккаунтами Google Workspace)",
-			"requirement4": "Не использует API-ключи - аутентификация обрабатывается через OAuth",
-			"requirement5": "Требует, чтобы инструмент Gemini CLI был сначала установлен и аутентифицирован",
-			"freeAccess": "Бесплатный доступ через OAuth-аутентификацию"
 		},
 		"qwenCode": {
 			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
@@ -1143,7 +1181,7 @@
 			"description": "Отображать статистику добавленных/удалённых строк в заголовке задачи"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Показывать анимацию на полях при автозаполнении",
 			"description": "Отображать анимированный индикатор на полях редактора во время работы автозаполнения",

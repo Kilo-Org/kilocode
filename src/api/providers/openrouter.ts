@@ -3,20 +3,25 @@ import OpenAI from "openai"
 import { z } from "zod"
 
 import {
+	type ModelRecord,
+	ApiProviderError,
 	openRouterDefaultModelId,
 	openRouterDefaultModelInfo,
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	ApiProviderError,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 
-import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
+import type { ApiHandlerOptions } from "../../shared/api"
 
-import { convertToOpenAiMessages } from "../transform/openai-format"
+import {
+	convertToOpenAiMessages,
+	sanitizeGeminiMessages,
+	consolidateReasoningDetails,
+} from "../transform/openai-format"
 import { normalizeMistralToolCallId } from "../transform/mistral-format"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { TOOL_PROTOCOL } from "@roo-code/types"
@@ -43,7 +48,7 @@ type OpenRouterProviderParams = {
 	zdr?: boolean
 }
 
-import { safeJsonParse } from "../../shared/safeJsonParse"
+import { safeJsonParse } from "@roo-code/core" // kilocode_change
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 import { OpenAIError } from "openai"
 // kilocode_change end
@@ -306,7 +311,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		// even if you don't request them. This is not the default for
 		// other providers (including Gemini), so we need to explicitly disable
 		// them unless the user has explicitly configured reasoning.
-		// Note: Gemini 3 models use reasoning_details format and should not be excluded.
+		// Note: Gemini 3 models use reasoning_details format with thought signatures,
+		// but we handle this via skip_thought_signature_validator injection below.
 		if (
 			(modelId === "google/gemini-2.5-pro-preview" || modelId === "google/gemini-2.5-pro") &&
 			typeof reasoning === "undefined"
@@ -336,9 +342,23 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const isNativeProtocol = toolProtocol === TOOL_PROTOCOL.NATIVE
 		const isGemini = modelId.startsWith("google/gemini")
 
-		// For Gemini with native protocol: inject fake reasoning.encrypted blocks for tool calls
-		// This is required when switching from other models to Gemini to satisfy API validation
+		// For Gemini models with native protocol:
+		// 1. Sanitize messages to handle thought signature validation issues.
+		//    This must happen BEFORE fake encrypted block injection to avoid injecting for
+		//    tool calls that will be dropped due to missing/mismatched reasoning_details.
+		// 2. Inject fake reasoning.encrypted block for tool calls without existing encrypted reasoning.
+		//    This is required when switching from other models to Gemini to satisfy API validation.
+		//    Per OpenRouter documentation (conversation with Toven, Nov 2025):
+		//    - Create ONE reasoning_details entry per assistant message with tool calls
+		//    - Set `id` to the FIRST tool call's ID from the tool_calls array
+		//    - Set `data` to "skip_thought_signature_validator" to bypass signature validation
+		//    - Set `index` to 0
+		// See: https://github.com/cline/cline/issues/8214
 		if (isNativeProtocol && isGemini) {
+			// Step 1: Sanitize messages - filter out tool calls with missing/mismatched reasoning_details
+			openAiMessages = sanitizeGeminiMessages(openAiMessages, modelId)
+
+			// Step 2: Inject fake reasoning.encrypted block for tool calls that survived sanitization
 			openAiMessages = openAiMessages.map((msg) => {
 				if (msg.role === "assistant") {
 					const toolCalls = (msg as any).tool_calls as any[] | undefined
@@ -349,17 +369,19 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 						const hasEncrypted = existingDetails?.some((d) => d.type === "reasoning.encrypted") ?? false
 
 						if (!hasEncrypted) {
-							const fakeEncrypted = toolCalls.map((tc, idx) => ({
-								id: tc.id,
+							// Create ONE fake encrypted block with the FIRST tool call's ID
+							// This is the documented format from OpenRouter for skipping thought signature validation
+							const fakeEncrypted = {
 								type: "reasoning.encrypted",
 								data: "skip_thought_signature_validator",
+								id: toolCalls[0].id,
 								format: "google-gemini-v1",
-								index: (existingDetails?.length ?? 0) + idx,
-							}))
+								index: 0,
+							}
 
 							return {
 								...msg,
-								reasoning_details: [...(existingDetails ?? []), ...fakeEncrypted],
+								reasoning_details: [...(existingDetails ?? []), fakeEncrypted],
 							}
 						}
 					}
@@ -395,7 +417,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(reasoning && { reasoning }),
 			...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-			verbosity: model.verbosity, // kilocode_change
+			verbosity: model.verbosity === "max" ? "high" : model.verbosity, // kilocode_change
 		}
 
 		// kilocode_change start
@@ -608,9 +630,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		// After streaming completes, store ONLY the reasoning_details we received from the API.
+		// After streaming completes, consolidate and store reasoning_details from the API.
+		// This filters out corrupted encrypted blocks (missing `data`) and consolidates by index.
 		if (reasoningDetailsAccumulator.size > 0) {
-			this.currentReasoningDetails = Array.from(reasoningDetailsAccumulator.values())
+			const rawDetails = Array.from(reasoningDetailsAccumulator.values())
+			this.currentReasoningDetails = consolidateReasoningDetails(rawDetails)
 		}
 
 		if (lastUsage) {
@@ -686,7 +710,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			stream: false,
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(reasoning && { reasoning }),
-			verbosity, // kilocode_change
+			verbosity: verbosity === "max" ? "high" : verbosity, // kilocode_change
 		}
 
 		// kilocode_change start

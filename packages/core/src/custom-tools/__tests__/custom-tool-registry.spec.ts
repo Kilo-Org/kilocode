@@ -227,7 +227,7 @@ describe("CustomToolRegistry", () => {
 
 			expect(result.loaded).toContain("simple")
 			expect(registry.has("simple")).toBe(true)
-		}, 60000)
+		}, 120_000)
 
 		it("should handle named exports", async () => {
 			const result = await registry.loadFromDirectory(TEST_FIXTURES_DIR)

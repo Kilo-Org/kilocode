@@ -1,5 +1,4 @@
 import React, { HTMLAttributes } from "react"
-import { FlaskConical } from "lucide-react"
 
 import type { Experiments, ImageGenerationProvider } from "@roo-code/types"
 
@@ -14,6 +13,7 @@ import {
 } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SearchableSetting } from "./SearchableSetting"
 import { ExperimentalFeature } from "./ExperimentalFeature"
 import { FastApplySettings } from "./FastApplySettings" // kilocode_change: Use Fast Apply version
 import { ImageGenerationSettings } from "./ImageGenerationSettings"
@@ -69,12 +69,7 @@ export const ExperimentalSettings = ({
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<FlaskConical className="w-4" />
-					<div>{t("settings:sections.experimental")}</div>
-				</div>
-			</SectionHeader>
+			<SectionHeader>{t("settings:sections.experimental")}</SectionHeader>
 
 			<Section>
 				{Object.entries(experimentConfigsMap)
@@ -88,14 +83,19 @@ export const ExperimentalSettings = ({
 						// kilocode_change start: Special handling for experiments with custom components
 						if (config[0] === "MULTI_FILE_APPLY_DIFF") {
 							return (
-								<ExperimentalFeature
+								<SearchableSetting
 									key={config[0]}
-									experimentKey={config[0]}
-									enabled={experiments[EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF] ?? false}
-									onChange={(enabled) =>
-										setExperimentEnabled(EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF, enabled)
-									}
-								/>
+									settingId={`experimental-${config[0].toLowerCase()}`}
+									section="experimental"
+									label={label}>
+									<ExperimentalFeature
+										experimentKey={config[0]}
+										enabled={experiments[EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF] ?? false}
+										onChange={(enabled) =>
+											setExperimentEnabled(EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF, enabled)
+										}
+									/>
+								</SearchableSetting>
 							)
 						}
 						if (config[0] === "MORPH_FAST_APPLY") {
@@ -150,31 +150,43 @@ export const ExperimentalSettings = ({
 							setImageGenerationSelectedModel
 						) {
 							return (
-								<ImageGenerationSettings
+								<SearchableSetting
 									key={config[0]}
-									enabled={experiments[EXPERIMENT_IDS.IMAGE_GENERATION] ?? false}
-									onChange={(enabled) =>
-										setExperimentEnabled(EXPERIMENT_IDS.IMAGE_GENERATION, enabled)
-									}
-									imageGenerationProvider={imageGenerationProvider}
-									openRouterImageApiKey={openRouterImageApiKey}
-									kiloCodeImageApiKey={kiloCodeImageApiKey}
-									openRouterImageGenerationSelectedModel={openRouterImageGenerationSelectedModel}
-									setImageGenerationProvider={setImageGenerationProvider}
-									setOpenRouterImageApiKey={setOpenRouterImageApiKey}
-									setKiloCodeImageApiKey={setKiloCodeImageApiKey}
-									setImageGenerationSelectedModel={setImageGenerationSelectedModel}
-									currentProfileKilocodeToken={currentProfileKilocodeToken}
-								/>
+									settingId={`experimental-${config[0].toLowerCase()}`}
+									section="experimental"
+									label={label}>
+									<ImageGenerationSettings
+										enabled={experiments[EXPERIMENT_IDS.IMAGE_GENERATION] ?? false}
+										onChange={(enabled) =>
+											setExperimentEnabled(EXPERIMENT_IDS.IMAGE_GENERATION, enabled)
+										}
+										imageGenerationProvider={imageGenerationProvider}
+										openRouterImageApiKey={openRouterImageApiKey}
+										openRouterImageGenerationSelectedModel={openRouterImageGenerationSelectedModel}
+										setImageGenerationProvider={setImageGenerationProvider}
+										setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+										setImageGenerationSelectedModel={setImageGenerationSelectedModel}
+										kiloCodeImageApiKey={kiloCodeImageApiKey}
+										setKiloCodeImageApiKey={setKiloCodeImageApiKey}
+										currentProfileKilocodeToken={currentProfileKilocodeToken}
+									/>
+								</SearchableSetting>
 							)
 						}
 						if (config[0] === "CUSTOM_TOOLS") {
 							return (
-								<CustomToolsSettings
+								<SearchableSetting
 									key={config[0]}
-									enabled={experiments[EXPERIMENT_IDS.CUSTOM_TOOLS] ?? false}
-									onChange={(enabled) => setExperimentEnabled(EXPERIMENT_IDS.CUSTOM_TOOLS, enabled)}
-								/>
+									settingId={`experimental-${config[0].toLowerCase()}`}
+									section="experimental"
+									label={label}>
+									<CustomToolsSettings
+										enabled={experiments[EXPERIMENT_IDS.CUSTOM_TOOLS] ?? false}
+										onChange={(enabled) =>
+											setExperimentEnabled(EXPERIMENT_IDS.CUSTOM_TOOLS, enabled)
+										}
+									/>
+								</SearchableSetting>
 							)
 						}
 						// kilocode_change start: Skip experiments that have special handling above
@@ -190,17 +202,24 @@ export const ExperimentalSettings = ({
 						}
 						// kilocode_change end
 						return (
-							<ExperimentalFeature
+							<SearchableSetting
 								key={config[0]}
-								experimentKey={config[0]}
-								enabled={experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false}
-								onChange={(enabled) =>
-									setExperimentEnabled(
-										EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS],
-										enabled,
-									)
-								}
-							/>
+								settingId={`experimental-${config[0].toLowerCase()}`}
+								section="experimental"
+								label={label}>
+								<ExperimentalFeature
+									experimentKey={config[0]}
+									enabled={
+										experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false
+									}
+									onChange={(enabled) =>
+										setExperimentEnabled(
+											EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS],
+											enabled,
+										)
+									}
+								/>
+							</SearchableSetting>
 						)
 					})}
 			</Section>

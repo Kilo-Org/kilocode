@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "टूल्स",
 		"resources": "संसाधन",
-		"logs": "लॉग्स"
+		"logs": "लॉग्स",
+		"authDebug": "Auth डीबग"
 	},
 	"emptyState": {
 		"noTools": "कोई टूल नहीं मिला",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "फिर से कोशिश कर रहा है...",
-		"retryConnection": "कनेक्शन फिर से आज़माएँ"
+		"retryConnection": "कनेक्शन फिर से आज़माएँ",
+		"signIn": "साइन इन करें",
+		"signingIn": "साइन इन हो रहा है..."
 	},
 	"refreshMCP": "एमसीपी सर्वर रीफ्रेश करें",
 	"execution": {
 		"running": "चल रहा है",
 		"completed": "पूरा हुआ",
 		"error": "त्रुटि"
+	},
+	"authDebug": {
+		"title": "OAuth डीबग जानकारी",
+		"status": "स्थिति",
+		"tokenExpires": "Token समाप्ति",
+		"scopes": "स्कोप",
+		"refreshInfo": "Refresh Token जानकारी",
+		"hasRefreshToken": "Refresh Token है",
+		"canRefresh": "ऑटो-रिफ्रेश कर सकता है",
+		"tokenIssuedAt": "Token जारी होने का समय",
+		"nextRefreshAt": "अगला रिफ्रेश",
+		"lastRefreshAt": "पिछला रिफ्रेश",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	}
 }

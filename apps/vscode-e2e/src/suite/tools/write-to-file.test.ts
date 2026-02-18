@@ -8,7 +8,7 @@ import { RooCodeEventName, type ClineMessage } from "@roo-code/types"
 import { waitFor, sleep } from "../utils"
 import { setDefaultSuiteTimeout } from "../test-utils"
 
-suite.skip("Roo Code write_to_file Tool", function () {
+suite("Roo Code write_to_file Tool", function () {
 	setDefaultSuiteTimeout(this)
 
 	let tempDir: string
@@ -67,71 +67,35 @@ suite.skip("Roo Code write_to_file Tool", function () {
 	})
 
 	test("Should create a new file with content", async function () {
-		// Increase timeout for this specific test
-
 		const api = globalThis.api
 		const messages: ClineMessage[] = []
 		const fileContent = "Hello, this is a test file!"
-		let taskStarted = false
 		let taskCompleted = false
-		let errorOccurred: string | null = null
-		let writeToFileToolExecuted = false
-		let toolExecutionDetails = ""
+		let toolExecuted = false
 
 		// Listen for messages
 		const messageHandler = ({ message }: { message: ClineMessage }) => {
 			messages.push(message)
 
-			// Check for tool execution
-			if (message.type === "say" && message.say === "api_req_started") {
-				console.log("Tool execution:", message.text?.substring(0, 200))
-				if (message.text && message.text.includes("write_to_file")) {
-					writeToFileToolExecuted = true
-					toolExecutionDetails = message.text
-					// Try to parse the tool execution details
-					try {
-						const parsed = JSON.parse(message.text)
-						console.log("write_to_file tool called with request:", parsed.request?.substring(0, 300))
-					} catch (_e) {
-						console.log("Could not parse tool execution details")
-					}
-				}
-			}
-
-			// Log important messages for debugging
-			if (message.type === "say" && message.say === "error") {
-				errorOccurred = message.text || "Unknown error"
-				console.error("Error:", message.text)
-			}
+			// Check for tool request
 			if (message.type === "ask" && message.ask === "tool") {
-				console.log("Tool request:", message.text?.substring(0, 200))
-			}
-			if (message.type === "say" && (message.say === "completion_result" || message.say === "text")) {
-				console.log("AI response:", message.text?.substring(0, 200))
+				toolExecuted = true
+				console.log("Tool requested")
 			}
 		}
 		api.on(RooCodeEventName.Message, messageHandler)
 
-		// Listen for task events
-		const taskStartedHandler = (id: string) => {
-			if (id === taskId) {
-				taskStarted = true
-				console.log("Task started:", id)
-			}
-		}
-		api.on(RooCodeEventName.TaskStarted, taskStartedHandler)
-
+		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
 			if (id === taskId) {
 				taskCompleted = true
-				console.log("Task completed:", id)
 			}
 		}
 		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 
 		let taskId: string
 		try {
-			// Start task with a very simple prompt
+			// Start task with a simple prompt
 			const baseFileName = path.basename(testFilePath)
 			taskId = await api.startNewTask({
 				configuration: {
@@ -141,182 +105,77 @@ suite.skip("Roo Code write_to_file Tool", function () {
 					alwaysAllowReadOnly: true,
 					alwaysAllowReadOnlyOutsideWorkspace: true,
 				},
-				text: `Create a file named "${baseFileName}" with the following content:\n${fileContent}`,
+				text: `Use the write_to_file tool to create a file named "${baseFileName}" with the following content:\n${fileContent}`,
 			})
 
 			console.log("Task ID:", taskId)
-			console.log("Base filename:", baseFileName)
-			console.log("Expecting file at:", testFilePath)
-
-			// Wait for task to start
-			await waitFor(() => taskStarted, { timeout: 45_000 })
-
-			// Check for early errors
-			if (errorOccurred) {
-				console.error("Early error detected:", errorOccurred)
-			}
 
 			// Wait for task completion
-			await waitFor(() => taskCompleted, { timeout: 45_000 })
+			await waitFor(() => taskCompleted, { timeout: 60_000 })
 
-			// Give extra time for file system operations
-			await sleep(2000)
+			// Verify the write_to_file tool was executed
+			assert.ok(toolExecuted, "The write_to_file tool should have been executed")
 
-			// The file might be created in different locations, let's check them all
-			const possibleLocations = [
-				testFilePath, // Expected location
-				path.join(tempDir, baseFileName), // In temp directory
-				path.join(process.cwd(), baseFileName), // In current working directory
-				path.join("/tmp/roo-test-workspace-" + "*", baseFileName), // In workspace created by runTest.ts
-			]
+			// Give time for file system operations
+			await sleep(1000)
 
-			let fileFound = false
-			let actualFilePath = ""
-			let actualContent = ""
-
-			// First check the workspace directory that was created
+			// Check workspace directory for the file
 			const workspaceDirs = await fs
 				.readdir("/tmp")
 				.then((files) => files.filter((f) => f.startsWith("roo-test-workspace-")))
 				.catch(() => [])
 
+			let fileFound = false
+			let actualContent = ""
+
 			for (const wsDir of workspaceDirs) {
 				const wsFilePath = path.join("/tmp", wsDir, baseFileName)
 				try {
 					await fs.access(wsFilePath)
-					fileFound = true
-					actualFilePath = wsFilePath
 					actualContent = await fs.readFile(wsFilePath, "utf-8")
-					console.log("File found in workspace directory:", wsFilePath)
+					fileFound = true
+					console.log("File found in workspace:", wsFilePath)
 					break
 				} catch {
 					// Continue checking
 				}
 			}
 
-			// If not found in workspace, check other locations
-			if (!fileFound) {
-				for (const location of possibleLocations) {
-					try {
-						await fs.access(location)
-						fileFound = true
-						actualFilePath = location
-						actualContent = await fs.readFile(location, "utf-8")
-						console.log("File found at:", location)
-						break
-					} catch {
-						// Continue checking
-					}
-				}
-			}
+			assert.ok(fileFound, `File should have been created: ${baseFileName}`)
+			assert.strictEqual(actualContent.trim(), fileContent, "File content should match")
 
-			// If still not found, list directories to help debug
-			if (!fileFound) {
-				console.log("File not found in expected locations. Debugging info:")
-
-				// List temp directory
-				try {
-					const tempFiles = await fs.readdir(tempDir)
-					console.log("Files in temp directory:", tempFiles)
-				} catch (e) {
-					console.log("Could not list temp directory:", e)
-				}
-
-				// List current working directory
-				try {
-					const cwdFiles = await fs.readdir(process.cwd())
-					console.log(
-						"Files in CWD:",
-						cwdFiles.filter((f) => f.includes("test-file")),
-					)
-				} catch (e) {
-					console.log("Could not list CWD:", e)
-				}
-
-				// List /tmp for test files
-				try {
-					const tmpFiles = await fs.readdir("/tmp")
-					console.log(
-						"Test files in /tmp:",
-						tmpFiles.filter((f) => f.includes("test-file") || f.includes("roo-test")),
-					)
-				} catch (e) {
-					console.log("Could not list /tmp:", e)
-				}
-			}
-
-			assert.ok(fileFound, `File should have been created. Expected filename: ${baseFileName}`)
-			assert.strictEqual(actualContent.trim(), fileContent, "File content should match expected content")
-
-			// Verify that write_to_file tool was actually executed
-			assert.ok(writeToFileToolExecuted, "write_to_file tool should have been executed")
-			assert.ok(
-				toolExecutionDetails.includes(baseFileName) || toolExecutionDetails.includes(fileContent),
-				"Tool execution should include the filename or content",
-			)
-
-			console.log("Test passed! File created successfully at:", actualFilePath)
-			console.log("write_to_file tool was properly executed")
+			console.log("Test passed! File created successfully")
 		} finally {
 			// Clean up
 			api.off(RooCodeEventName.Message, messageHandler)
-			api.off(RooCodeEventName.TaskStarted, taskStartedHandler)
 			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})
 
 	test("Should create nested directories when writing file", async function () {
-		// Increase timeout for this specific test
-
 		const api = globalThis.api
 		const messages: ClineMessage[] = []
 		const content = "File in nested directory"
 		const fileName = `file-${Date.now()}.txt`
-		const nestedPath = path.join(tempDir, "nested", "deep", "directory", fileName)
-		let taskStarted = false
 		let taskCompleted = false
-		let writeToFileToolExecuted = false
-		let toolExecutionDetails = ""
+		let toolExecuted = false
 
 		// Listen for messages
 		const messageHandler = ({ message }: { message: ClineMessage }) => {
 			messages.push(message)
 
-			// Check for tool execution
-			if (message.type === "say" && message.say === "api_req_started") {
-				console.log("Tool execution:", message.text?.substring(0, 200))
-				if (message.text && message.text.includes("write_to_file")) {
-					writeToFileToolExecuted = true
-					toolExecutionDetails = message.text
-					// Try to parse the tool execution details
-					try {
-						const parsed = JSON.parse(message.text)
-						console.log("write_to_file tool called with request:", parsed.request?.substring(0, 300))
-					} catch (_e) {
-						console.log("Could not parse tool execution details")
-					}
-				}
-			}
-
+			// Check for tool request
 			if (message.type === "ask" && message.ask === "tool") {
-				console.log("Tool request:", message.text?.substring(0, 200))
+				toolExecuted = true
+				console.log("Tool requested")
 			}
 		}
 		api.on(RooCodeEventName.Message, messageHandler)
 
-		// Listen for task events
-		const taskStartedHandler = (id: string) => {
-			if (id === taskId) {
-				taskStarted = true
-				console.log("Task started:", id)
-			}
-		}
-		api.on(RooCodeEventName.TaskStarted, taskStartedHandler)
-
+		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
 			if (id === taskId) {
 				taskCompleted = true
-				console.log("Task completed:", id)
 			}
 		}
 		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
@@ -332,116 +191,49 @@ suite.skip("Roo Code write_to_file Tool", function () {
 					alwaysAllowReadOnly: true,
 					alwaysAllowReadOnlyOutsideWorkspace: true,
 				},
-				text: `Create a file named "${fileName}" in a nested directory structure "nested/deep/directory/" with the following content:\n${content}`,
+				text: `Use the write_to_file tool to create a file at path "nested/deep/directory/${fileName}" with the following content:\n${content}`,
 			})
 
 			console.log("Task ID:", taskId)
-			console.log("Expected nested path:", nestedPath)
-
-			// Wait for task to start
-			await waitFor(() => taskStarted, { timeout: 45_000 })
 
 			// Wait for task completion
-			await waitFor(() => taskCompleted, { timeout: 45_000 })
+			await waitFor(() => taskCompleted, { timeout: 60_000 })
 
-			// Give extra time for file system operations
-			await sleep(2000)
+			// Verify the write_to_file tool was executed
+			assert.ok(toolExecuted, "The write_to_file tool should have been executed")
 
-			// Check various possible locations
-			let fileFound = false
-			let actualFilePath = ""
-			let actualContent = ""
+			// Give time for file system operations
+			await sleep(1000)
 
-			// Check workspace directories
+			// Check workspace directory for the file
 			const workspaceDirs = await fs
 				.readdir("/tmp")
 				.then((files) => files.filter((f) => f.startsWith("roo-test-workspace-")))
 				.catch(() => [])
 
+			let fileFound = false
+			let actualContent = ""
+
 			for (const wsDir of workspaceDirs) {
-				// Check in nested structure within workspace
 				const wsNestedPath = path.join("/tmp", wsDir, "nested", "deep", "directory", fileName)
 				try {
 					await fs.access(wsNestedPath)
-					fileFound = true
-					actualFilePath = wsNestedPath
 					actualContent = await fs.readFile(wsNestedPath, "utf-8")
-					console.log("File found in workspace nested directory:", wsNestedPath)
+					fileFound = true
+					console.log("File found in nested directory:", wsNestedPath)
 					break
 				} catch {
-					// Also check if file was created directly in workspace root
-					const wsFilePath = path.join("/tmp", wsDir, fileName)
-					try {
-						await fs.access(wsFilePath)
-						fileFound = true
-						actualFilePath = wsFilePath
-						actualContent = await fs.readFile(wsFilePath, "utf-8")
-						console.log("File found in workspace root (nested dirs not created):", wsFilePath)
-						break
-					} catch {
-						// Continue checking
-					}
+					// Continue checking
 				}
 			}
 
-			// If not found in workspace, check the expected location
-			if (!fileFound) {
-				try {
-					await fs.access(nestedPath)
-					fileFound = true
-					actualFilePath = nestedPath
-					actualContent = await fs.readFile(nestedPath, "utf-8")
-					console.log("File found at expected nested path:", nestedPath)
-				} catch {
-					// File not found
-				}
-			}
-
-			// Debug output if file not found
-			if (!fileFound) {
-				console.log("File not found. Debugging info:")
-
-				// List workspace directories and their contents
-				for (const wsDir of workspaceDirs) {
-					const wsPath = path.join("/tmp", wsDir)
-					try {
-						const files = await fs.readdir(wsPath)
-						console.log(`Files in workspace ${wsDir}:`, files)
-
-						// Check if nested directory was created
-						const nestedDir = path.join(wsPath, "nested")
-						try {
-							await fs.access(nestedDir)
-							console.log("Nested directory exists in workspace")
-						} catch {
-							console.log("Nested directory NOT created in workspace")
-						}
-					} catch (e) {
-						console.log(`Could not list workspace ${wsDir}:`, e)
-					}
-				}
-			}
-
-			assert.ok(fileFound, `File should have been created. Expected filename: ${fileName}`)
+			assert.ok(fileFound, `File should have been created in nested directory: ${fileName}`)
 			assert.strictEqual(actualContent.trim(), content, "File content should match")
 
-			// Verify that write_to_file tool was actually executed
-			assert.ok(writeToFileToolExecuted, "write_to_file tool should have been executed")
-			assert.ok(
-				toolExecutionDetails.includes(fileName) ||
-					toolExecutionDetails.includes(content) ||
-					toolExecutionDetails.includes("nested"),
-				"Tool execution should include the filename, content, or nested directory reference",
-			)
-
-			// Note: We're not checking if the nested directory structure was created,
-			// just that the file exists with the correct content
-			console.log("Test passed! File created successfully at:", actualFilePath)
-			console.log("write_to_file tool was properly executed")
+			console.log("Test passed! File created in nested directory successfully")
 		} finally {
 			// Clean up
 			api.off(RooCodeEventName.Message, messageHandler)
-			api.off(RooCodeEventName.TaskStarted, taskStartedHandler)
 			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})

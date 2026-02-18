@@ -1,4 +1,17 @@
 import * as vscode from "vscode"
+import { Ignore } from "ignore"
+
+import type { EmbedderProvider } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
+
+import { t } from "../../i18n"
+
+import { getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
+import { Package } from "../../shared/package"
+
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+
 import { OpenAiEmbedder } from "./embedders/openai"
 import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
@@ -7,19 +20,13 @@ import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { BedrockEmbedder } from "./embedders/bedrock"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
-import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
+import { VoyageEmbedder } from "./embedders/voyage" // kilocode_change
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
 import { CacheManager } from "./cache-manager"
-import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
-import { Ignore } from "ignore"
-import { t } from "../../i18n"
-import { TelemetryService } from "@roo-code/telemetry"
-import { TelemetryEventName } from "@roo-code/types"
-import { Package } from "../../shared/package"
 import { BATCH_SEGMENT_THRESHOLD } from "./constants"
 import { getLancedbVectorStoreDirectoryPath } from "../../utils/storage"
 import { LanceDBManager } from "../../utils/lancedb-manager"
@@ -59,6 +66,7 @@ export class CodeIndexServiceFactory {
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
 				ollamaModelId: config.modelId,
+				ollamaNumCtx: config.modelDimension, // kilocode_change
 			})
 		} else if (provider === "openai-compatible") {
 			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
@@ -100,7 +108,14 @@ export class CodeIndexServiceFactory {
 				undefined, // maxItemTokens
 				config.openRouterOptions.specificProvider,
 			)
+			// kilocode_change start
+		} else if (provider === "voyage") {
+			if (!config.voyageOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.voyageConfigMissing"))
+			}
+			return new VoyageEmbedder(config.voyageOptions.apiKey, config.modelId)
 		}
+		// kilocode_change end
 
 		throw new Error(
 			t("embeddings:serviceFactory.invalidEmbedderType", { embedderProvider: config.embedderProvider }),

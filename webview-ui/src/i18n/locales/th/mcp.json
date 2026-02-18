@@ -26,7 +26,8 @@
 	"tabs": {
 		"tools": "เครื่องมือ",
 		"resources": "ทรัพยากร",
-		"logs": "บันทึก"
+		"logs": "บันทึก",
+		"authDebug": "Auth Debug"
 	},
 	"emptyState": {
 		"noTools": "ไม่พบเครื่องมือ",
@@ -55,11 +56,27 @@
 	},
 	"serverStatus": {
 		"retrying": "กำลังลองใหม่...",
-		"retryConnection": "ลองเชื่อมต่อใหม่"
+		"retryConnection": "ลองเชื่อมต่อใหม่",
+		"signIn": "ลงชื่อเข้าใช้",
+		"signingIn": "กำลังลงชื่อเข้าใช้..."
 	},
 	"execution": {
 		"running": "กำลังทำงาน",
 		"completed": "เสร็จสมบูรณ์",
 		"error": "ข้อผิดพลาด"
+	},
+	"authDebug": {
+		"title": "ข้อมูล OAuth Debug",
+		"status": "สถานะ",
+		"tokenExpires": "Token หมดอายุ",
+		"scopes": "Scopes",
+		"refreshInfo": "ข้อมูล Refresh Token",
+		"hasRefreshToken": "มี Refresh Token",
+		"canRefresh": "รีเฟรชอัตโนมัติได้",
+		"tokenIssuedAt": "Token ออกเมื่อ",
+		"nextRefreshAt": "รีเฟรชถัดไปเมื่อ",
+		"lastRefreshAt": "รีเฟรชล่าสุดเมื่อ",
+		"tokenEndpoint": "Token Endpoint",
+		"clientId": "Client ID"
 	}
 }

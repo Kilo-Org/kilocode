@@ -97,8 +97,8 @@ const pricingTiers: PricingTier[] = [
 		description: "For AI-forward engineers",
 		featuresIntro: "Go beyond the extension with",
 		features: [
-			"Access to Cloud Agents: fully autonomous development you can call from Slack, Github and the web",
-			"Access to the Roo Code Cloud Provider",
+			"Access to Cloud Agents: fully autonomous development you can kick off from Github and the web",
+			"Access to the Roo Code Router",
 			"Follow your tasks from anywhere",
 			"Share tasks with friends and co-workers",
 			"Token usage analytics",
@@ -119,7 +119,12 @@ const pricingTiers: PricingTier[] = [
 		trial: "Free for 14 days, then",
 		description: "For AI-forward teams",
 		featuresIntro: "Everything in Free +",
-		features: ["Unlimited users (no per-seat cost)", "Shared configuration & policies", "Centralized billing"],
+		features: [
+			"Unlimited users (no per-seat cost)",
+			"Shared configuration & policies",
+			"Centralized billing",
+			"Slack and Linear integrations",
+		],
 		cta: {
 			text: "Sign up",
 			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP + "?redirect_url=/billing",
@@ -140,7 +145,7 @@ export default function PricingPage() {
 						<h1 className="text-5xl font-bold tracking-tight">Roo Code Pricing</h1>
 						<p className="mt-4 text-lg text-muted-foreground">
 							For all of our products: the Roo Code VS Code Extension, Roo Code Cloud and the Roo Code
-							Cloud inference Provider.
+							Router.
 						</p>
 					</div>
 				</div>
@@ -230,12 +235,12 @@ export default function PricingPage() {
 
 					<div className="max-w-6xl mx-auto mt-8 p-7 flex flex-col md:flex-row gap-8 md:gap-4 bg-violet-200/20 outline-violet-700/20 outline outline-1 rounded-2xl transition-all shadow-none">
 						<div className="md:border-r md:pr-4">
-							<h3 className="text-lg font-medium mb-1">Roo Code Provider</h3>
+							<h3 className="text-lg font-medium mb-1">Roo Code Router</h3>
 							<div className="text-sm text-muted-foreground">
 								<p className="">
 									On any plan, you can use your own LLM provider API key or use the built-in Roo Code
-									Cloud provider – curated models to work with Roo with no markup, including the
-									latest Gemini, GPT and Claude. Paid with credits.
+									Router – curated models to work with Roo with no markup, including the latest
+									Gemini, GPT and Claude. Paid with credits.
 									<Link href="/provider" className="underline hover:no-underline ml-1">
 										See per model pricing.
 									</Link>

@@ -1,20 +1,19 @@
+// kilocode_change - new file
+
 /**
- * Safely parses JSON without crashing on invalid input
+ * Minimal safe JSON parse helper for webview code.
  *
- * @param jsonString The string to parse
- * @param defaultValue Value to return if parsing fails
- * @returns Parsed JSON object or defaultValue if parsing fails
+ * This is a shim used via the webview-ui TS path alias `@roo/*` -> `../src/shared/*`.
+ * Keep it browser-safe (no Node-only imports).
  */
-export function safeJsonParse<T>(jsonString: string | null | undefined, defaultValue?: T): T | undefined {
-	if (!jsonString) {
-		return defaultValue
+export function safeJsonParse<T = unknown>(raw: string | undefined | null, fallback?: T): T {
+	if (raw == null || raw === "") {
+		return fallback as T
 	}
 
 	try {
-		return JSON.parse(jsonString) as T
-	} catch (error) {
-		// Log the error to the console for debugging
-		console.error("Error parsing JSON:", error)
-		return defaultValue
+		return JSON.parse(raw) as T
+	} catch {
+		return fallback as T
 	}
 }

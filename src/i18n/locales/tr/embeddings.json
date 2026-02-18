@@ -12,6 +12,12 @@
 		"accessDenied": "Amazon Bedrock hizmetine erişim reddedildi. Lütfen IAM izinlerinizi kontrol edin.",
 		"modelNotFound": "Model {{model}} Amazon Bedrock'ta bulunamadı"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Voyage AI'dan geçersiz yanıt formatı",
+		"invalidCredentials": "Geçersiz Voyage AI API anahtarı. Lütfen API anahtarı yapılandırmanı kontrol et.",
+		"accessDenied": "Erişim reddedildi. IP adresin Voyage AI tarafından engellenmiş olabilir. Farklı bir ağ dene.",
+		"modelNotFound": "Model {{model}} Voyage AI'da bulunamadı. Lütfen model seçimini kontrol et."
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Hata gövdesi okunamadı",
 		"requestFailed": "Ollama API isteği {{status}} {{statusText}} durumuyla başarısız oldu: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Gömücü oluşturmak için OpenRouter yapılandırması eksik",
 		"vercelAiGatewayConfigMissing": "Gömücü oluşturmak için Vercel AI Gateway yapılandırması eksik",
 		"bedrockConfigMissing": "Gömücü oluşturmak için Amazon Bedrock yapılandırması eksik",
+		"voyageConfigMissing": "Gömücü oluşturmak için Voyage AI yapılandırması eksik",
 		"invalidEmbedderType": "Geçersiz gömücü türü yapılandırıldı: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "'{{provider}}' sağlayıcısı ile '{{modelId}}' modeli için vektör boyutu belirlenemedi. OpenAI uyumlu sağlayıcı ayarlarında 'Gömme Boyutu'nun doğru ayarlandığından emin ol.",
 		"vectorDimensionNotDetermined": "'{{provider}}' sağlayıcısı ile '{{modelId}}' modeli için vektör boyutu belirlenemedi. Model profillerini veya yapılandırmayı kontrol et.",

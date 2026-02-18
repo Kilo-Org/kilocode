@@ -3,13 +3,14 @@ import OpenAI from "openai"
 
 import {
 	type ModelInfo,
+	type ModelRecord,
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
 	TOOL_PROTOCOL,
 	NATIVE_TOOL_DEFAULTS,
 } from "@roo-code/types"
 
-import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
+import type { ApiHandlerOptions } from "../../shared/api"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { calculateApiCostOpenAI } from "../../shared/cost"
 

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+    - name: Contribute to the Extension or CLI
+      url: https://github.com/Kilo-Org/Kilo
+      about: New versions of the VS Code extension and CLI are being developed in the Kilo repository (extension at packages/kilo-vscode, CLI at packages/opencode). Open issues and PRs there instead.
     - name: Feature Request / Idea
       url: https://github.com/Kilo-Org/kilocode/discussions/new?category=1-feature-requests
       about: Submit a feature request (check Discussions first to prevent duplicates).

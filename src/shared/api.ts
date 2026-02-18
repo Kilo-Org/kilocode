@@ -1,5 +1,7 @@
 import {
 	type ModelInfo,
+	type ModelRecord, // kilocode_change
+	type RouterModels, // kilocode_change
 	type ProviderSettings,
 	type DynamicProvider,
 	type LocalProvider,
@@ -8,6 +10,12 @@ import {
 	isLocalProvider,
 	ToolProtocol, // kilocode_change
 } from "@roo-code/types"
+
+// Re-export for legacy imports (some providers still import ModelRecord from this module).
+export type { ModelRecord } // kilocode_change
+
+// Re-export for webview-ui legacy imports (via `@roo/api`).
+export type { RouterModels } // kilocode_change
 
 // ApiHandlerOptions
 // Extend ProviderSettings (minus apiProvider) with handler-specific toggles.
@@ -39,12 +47,6 @@ export function toRouterName(value?: string): RouterName {
 
 	throw new Error(`Invalid router name: ${value}`)
 }
-
-// RouterModels
-
-export type ModelRecord = Record<string, ModelInfo>
-
-export type RouterModels = Record<RouterName, ModelRecord>
 
 // Reasoning
 
@@ -118,7 +120,7 @@ export const getModelMaxOutputTokens = ({
 	modelId: string
 	model: ModelInfo
 	settings?: ProviderSettings
-	format?: "anthropic" | "openai" | "gemini" | "openrouter"
+	format?: "anthropic" | "openai" | "gemini" | "openrouter" | "zenmux"
 }): number | undefined => {
 	if (shouldUseReasoningBudget({ model, settings })) {
 		return settings?.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
@@ -127,7 +129,8 @@ export const getModelMaxOutputTokens = ({
 	const isAnthropicContext =
 		modelId.includes("claude") ||
 		format === "anthropic" ||
-		(format === "openrouter" && modelId.startsWith("anthropic/"))
+		(format === "openrouter" && modelId.startsWith("anthropic/")) ||
+		(format === "zenmux" && modelId.startsWith("anthropic/"))
 
 	// For "Hybrid" reasoning models, discard the model's actual maxTokens for Anthropic contexts
 	/* kilocode_change: don't limit Anthropic model output, no idea why this was done before
@@ -179,6 +182,7 @@ type CommonFetchParams = {
 const dynamicProviderExtras = {
 	gemini: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	zenmux: {} as { apiKey?: string; baseUrl?: string },
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	litellm: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change: parameters optional
@@ -204,6 +208,7 @@ const dynamicProviderExtras = {
 		sapAiCoreResourceGroup?: string
 		sapAiCoreUseOrchestration?: boolean
 	},
+	apertis: {} as { apiKey?: string; baseUrl?: string },
 	// kilocode_change end
 } as const satisfies Record<RouterName, object>
 

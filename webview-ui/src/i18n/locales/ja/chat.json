@@ -89,10 +89,15 @@
 		"title": "終了",
 		"tooltip": "現在のタスクを終了"
 	},
+	"stop": {
+		"title": "停止",
+		"tooltip": "現在のタスクを停止"
+	},
 	"cancel": {
 		"title": "キャンセル",
 		"tooltip": "現在の操作をキャンセル"
 	},
+	"enqueueMessage": "メッセージをキューに追加（現在のタスク完了後に送信されます）",
 	"scrollToBottom": "チャットの最下部にスクロール",
 	"about": "AIアシスタンスでコードを生成、リファクタリング、デバッグします。詳細については、<DocsLink>ドキュメント</DocsLink>をご確認ください。",
 	"docs": "詳細については、<DocsLink>ドキュメント</DocsLink>をご確認ください。",
@@ -286,7 +291,8 @@
 		"title": "エラー詳細",
 		"copyToClipboard": "クリップボードにコピー",
 		"copied": "コピーしました！",
-		"diagnostics": "詳細なエラー情報を取得"
+		"diagnostics": "詳細なエラー情報を取得",
+		"proxyProvider": "プロキシベースのプロバイダーを使用しているようです。ログを確認し、Rooのリクエストを書き換えていないことを確認してください。"
 	},
 	"powershell": {
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
@@ -307,7 +313,7 @@
 		"triggerLabel_zero": "0個の自動承認",
 		"triggerLabel_one": "1個の自動承認済み",
 		"triggerLabel_other": "{{count}}個の自動承認済み",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "考え中",
@@ -344,8 +350,9 @@
 		},
 		"release": {
 			"heading": "新機能:",
-			"skills": "Rooが<skillsLink>Agent Skills</skillsLink>に対応しました - Rooの機能を拡張するためのプロンプト、ツール、リソースの再利用可能なパッケージです。",
-			"nativeToolCalling": "すべての新しいタスクではネイティブツール呼び出しが必須になりました。<blogLink>詳しく知る</blogLink>理由と問題が発生した場合の対応方法について。"
+			"openaiCodexProvider": "OpenAI - ChatGPT Plus/ProプロバイダーがCodexモデルへのサブスクリプションベースのアクセスを提供します（トークン単価なし）。",
+			"gpt52codexModel": "新しいgpt-5.2-codexモデルがRoo Code Router、標準OpenAIプロバイダーなどに追加されました。",
+			"bugFixes": "灰色画面を引き起こすメモリリーク、Gemini思考署名の問題、および多くの安定性改善を修正しました。"
 		},
 		"cloudAgents": {
 			"heading": "クラウドの新機能:",
@@ -356,8 +363,14 @@
 		"careers": "また、<careersLink>採用中です！</careersLink>",
 		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/KiloCode</redditLink>でフォローしてください 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "合計コスト（サブタスク含む）: ${{cost}}",
+		"total": "合計コスト: ${{cost}}",
+		"includesSubtasks": "サブタスクのコストを含む"
+	},
 	"browser": {
 		"session": "ブラウザセッション",
+		"active": "アクティブ",
 		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
 		"consoleLogs": "コンソールログ",
 		"noNewLogs": "(新しいログはありません)",

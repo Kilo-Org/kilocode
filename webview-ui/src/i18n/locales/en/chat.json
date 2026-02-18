@@ -26,8 +26,8 @@
 		"sharingDisabledByOrganization": "Sharing disabled by organization",
 		"shareSuccessOrganization": "Organization link copied to clipboard",
 		"shareSuccessPublic": "Public link copied to clipboard",
-		"openInCloud": "Open task in Roo Code Cloud",
-		"openInCloudIntro": "Keep monitoring or interacting with Roo from anywhere. Scan, click or copy to open.",
+		"openInCloud": "Open task in Kilo Code Cloud",
+		"openInCloudIntro": "Keep monitoring or interacting with Kilo from anywhere. Scan, click or copy to open.",
 		"openApiHistory": "Open API History",
 		"openUiHistory": "Open UI History"
 	},
@@ -61,13 +61,13 @@
 		"reservedForResponse": "Reserved for model response: {{amount}} tokens"
 	},
 	"reject": {
-		"title": "Reject",
-		"tooltip": "Reject this action"
+		"title": "Deny",
+		"tooltip": "Prevent this action from occurring"
 	},
 	"completeSubtaskAndReturn": "Complete Subtask and Return",
 	"approve": {
 		"title": "Approve",
-		"tooltip": "Approve this action"
+		"tooltip": "Allow this action to happen"
 	},
 	"read-batch": {
 		"approve": {
@@ -82,25 +82,30 @@
 		"tooltip": "Execute this command"
 	},
 	"proceedWhileRunning": {
-		"title": "Proceed While Running",
-		"tooltip": "Continue despite warnings"
+		"title": "Continue While Running",
+		"tooltip": "Keep going despite warnings"
 	},
 	"killCommand": {
 		"title": "Kill Command",
 		"tooltip": "Kill the current command"
 	},
 	"resumeTask": {
-		"title": "Resume Task",
-		"tooltip": "Continue the current task"
+		"title": "Continue",
+		"tooltip": "Resume the current task"
 	},
 	"terminate": {
-		"title": "Terminate",
-		"tooltip": "End the current task"
+		"title": "New task",
+		"tooltip": "Start a new task"
 	},
 	"cancel": {
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Stop the current task"
+	},
+	"enqueueMessage": "Add message to queue (will be sent after current task completes)",
 	"editMessage": {
 		"placeholder": "Edit your message..."
 	},
@@ -115,7 +120,7 @@
 		},
 		"modelAgnostic": {
 			"title": "Bring your own model, no markup or lock-in",
-			"description": "Use your own provider key or even run local inference — Roo doesn't charge for it"
+			"description": "Use your own provider key or even run local inference — Kilo doesn't charge for it"
 		}
 	},
 	"selectMode": "Select mode for interaction",
@@ -313,7 +318,8 @@
 		"title": "Error Details",
 		"copyToClipboard": "Copy basic error info",
 		"copied": "Copied!",
-		"diagnostics": "Get detailed error info"
+		"diagnostics": "Get detailed error info",
+		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting Kilo's requests."
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
@@ -337,22 +343,23 @@
 		"triggerLabel_zero": "0 auto-approve",
 		"triggerLabel_one": "1 auto-approved",
 		"triggerLabel_other": "{{count}} auto-approved",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"announcement": {
-		"title": "Roo Code {{version}} Released",
-		"support": "Please support Roo Code by starring us on <githubLink>GitHub</githubLink>.",
+		"title": "Kilo Code {{version}} Released",
+		"support": "Please support Kilo Code by starring us on <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
-			"feature": "<bold>Limited-time FREE stealth model</bold> - Code Supernova: Now upgraded with a <bold>1M token context window</bold>! A versatile agentic coding model that supports image inputs, accessible through Roo Code Cloud.",
+			"feature": "<bold>Limited-time FREE stealth model</bold> - Code Supernova: Now upgraded with a <bold>1M token context window</bold>! A versatile agentic coding model that supports image inputs, accessible through Kilo Code Cloud.",
 			"note": "(Note: prompts and completions are logged by the model creator and used to improve the model)",
-			"connectButton": "Connect to Roo Code Cloud",
-			"selectModel": "Select <code>roo/code-supernova</code> from the Roo Code Cloud provider in Settings to get started.",
+			"connectButton": "Connect to Kilo Code Cloud",
+			"selectModel": "Select <code>roo/code-supernova</code> from the Kilo Code Cloud provider in Settings to get started.",
 			"goToSettingsButton": "Go to Settings"
 		},
 		"release": {
 			"heading": "What's New:",
-			"skills": "Roo now supports <skillsLink>Agent Skills</skillsLink> - reusable packages of prompts, tools, and resources to extend Roo's capabilities.",
-			"nativeToolCalling": "Native tool calling is now required for all new tasks. <blogLink>Read more</blogLink> about the motivation and what to do if you're encountering issues."
+			"openaiCodexProvider": "Added OpenAI - ChatGPT Plus/Pro Provider that gives subscription-based access to Codex models without per-token costs.",
+			"gpt52codexModel": "Added the new gpt-5.2-codex model to Kilo Code Router, the standard OpenAI provider, and more.",
+			"bugFixes": "Fixed memory leaks causing gray screens, Gemini thought signature issues, and more stability improvements."
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
@@ -371,8 +378,14 @@
 		"copyToInput": "Copy to input (same as shift + click)",
 		"timerPrefix": "Auto-approve enabled. Selecting in {{seconds}}s…"
 	},
+	"costs": {
+		"totalWithSubtasks": "Total Cost (including subtasks): ${{cost}}",
+		"total": "Total Cost: ${{cost}}",
+		"includesSubtasks": "Includes subtask costs"
+	},
 	"browser": {
 		"session": "Browser Session",
+		"active": "Active",
 		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",

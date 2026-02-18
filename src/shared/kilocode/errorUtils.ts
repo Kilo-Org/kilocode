@@ -11,12 +11,16 @@ export function isPaymentRequiredError(error: any) {
 	return !!(error && error.status === 402)
 }
 
+export function isUnauthorizedError(error: any) {
+	return !!(error && error.status === 401)
+}
+
 export function isAlphaPeriodEndedError(error: any) {
 	return !!(
 		error &&
 		error.status === 404 &&
-		(error.message?.indexOf("alpha period") ?? -1) >= 0 &&
-		(error.message?.indexOf("has ended") ?? -1) >= 0
+		((error.message?.indexOf("was a stealth model") ?? -1) >= 0 ||
+			((error.message?.indexOf("alpha period") ?? -1) >= 0 && (error.message?.indexOf("has ended") ?? -1) >= 0))
 	)
 }
 
@@ -32,6 +36,7 @@ export function isModelNotAllowedForTeamError(error: any) {
 export function isAnyRecognizedKiloCodeError(error: any) {
 	return (
 		isPaymentRequiredError(error) ||
+		isUnauthorizedError(error) ||
 		isOpenRouterInvalidModelError(error) ||
 		isAlphaPeriodEndedError(error) ||
 		isModelNotAllowedForTeamError(error)

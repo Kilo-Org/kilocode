@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "¿Cómo te gustaría empezar?",
+		"freeModels": {
+			"title": "Modelos gratuitos",
+			"description": "Empieza a programar de inmediato"
+		},
+		"premiumModels": {
+			"title": "Modelos premium",
+			"description": "Regístrate. Los nuevos usuarios reciben 5 $ en créditos"
+		},
+		"byok": {
+			"title": "Usa tu propia clave",
+			"description": "Avanzado. Usa tu propia cuenta o suscripción"
+		}
+	},
 	"welcome": {
 		"greeting": "¡Bienvenido a Kilo Code!",
 		"introText1": "Kilo Code es un agente de codificación de IA gratuito y de código abierto.",
-		"introText2": "Funciona con los modelos de IA más recientes como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, y más de 450 modelos adicionales.",
+		"introText2": "Funciona con los modelos de IA más recientes como Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, y más de 450 modelos adicionales.",
 		"introText3": "Crea una cuenta gratuita y obtén $20 en créditos de bonificación cuando recargues por primera vez.",
 		"ctaButton": "Empezar",
 		"manualModeButton": "Usa tu propia clave API",
@@ -12,12 +27,17 @@
 	"lowCreditWarning": {
 		"addCredit": "Añadir Crédito",
 		"lowBalance": "Tu saldo de Kilo Code es bajo",
-		"newOrganization": "¿Usas Kilo para el trabajo?"
+		"switchToFreeModel": "Cambiar a un modelo gratuito"
 	},
 	"pagination": {
 		"previous": "Anterior",
 		"next": "Siguiente",
 		"page": "Página {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Necesitas iniciar sesión para usar el modelo {{modelId}}",
+		"message": "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
+		"loginButton": "Iniciar Sesión"
 	},
 	"pricing": {
 		"costUnknown": "costo desconocido",
@@ -40,7 +60,7 @@
 			"apiKey": "Clave API de Kilo Code",
 			"login": "Iniciar sesión en Kilo Code",
 			"logout": "Cerrar sesión de Kilo Code",
-			"automaticFetch": "Los modelos más recientes están disponibles automáticamente en Kilo Code. Si no estás seguro de qué modelo elegir, Kilo Code funciona mejor con los modelos recomendados que aparecen en la parte superior en <strong>negrita</strong>.",
+			"loginForPremiumModels": "Inicia sesión para acceder a modelos y funciones premium",
 			"providerRouting": {
 				"title": "Enrutamiento de proveedores",
 				"managedByOrganization": "Gestionar enrutamiento de proveedores a nivel de organización",
@@ -211,6 +231,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "¿Nuevo aquí?",
+		"tryOneOfThese": "Prueba una de estas ideas para empezar:",
 		"suggestionText": "<suggestionButton>Haz clic aquí</suggestionButton> para una idea genial, luego toca <sendIcon /> y ¡mira cómo hago magia!",
 		"ideas": {
 			"idea1": "Crea una esfera 3D giratoria y brillante que responda a los movimientos del ratón. Haz que la aplicación funcione en el navegador.",
@@ -222,7 +243,7 @@
 			"idea7": "Crea un campo de estrellas interactivo y relajante que se mueva con gestos del ratón"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocompletado",
 		"settings": {
 			"codeEditorSuggestions": "Sugerencias del Editor de Código",

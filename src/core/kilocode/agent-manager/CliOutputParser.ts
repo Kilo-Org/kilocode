@@ -87,6 +87,13 @@ export interface WelcomeStreamEvent {
 	instructions?: string[]
 }
 
+export interface ModeChangedStreamEvent {
+	streamEventType: "mode_changed"
+	mode: string
+	previousMode: string
+	timestamp: number
+}
+
 export type StreamEvent =
 	| KilocodeStreamEvent
 	| StatusStreamEvent
@@ -97,6 +104,7 @@ export type StreamEvent =
 	| SessionCreatedStreamEvent
 	| SessionTitleGeneratedStreamEvent
 	| WelcomeStreamEvent
+	| ModeChangedStreamEvent
 
 /**
  * Result of parsing a chunk of CLI output
@@ -279,6 +287,16 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 			worktreePath,
 			timestamp: (parsed.timestamp as number) || Date.now(),
 			instructions: Array.isArray(instructions) && instructions.length > 0 ? instructions : undefined,
+		}
+	}
+
+	// Detect modeChanged event from CLI (format: { type: "modeChanged", mode: "...", previousMode: "..." })
+	if (parsed.type === "modeChanged" && typeof parsed.mode === "string") {
+		return {
+			streamEventType: "mode_changed",
+			mode: parsed.mode as string,
+			previousMode: (parsed.previousMode as string) || "",
+			timestamp: Date.now(),
 		}
 	}
 

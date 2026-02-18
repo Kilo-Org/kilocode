@@ -139,6 +139,7 @@ export const organizationCloudSettingsSchema = z.object({
 	taskShareExpirationDays: z.number().int().positive().optional(),
 	allowMembersViewAllTasks: z.boolean().optional(),
 	workspaceTaskVisibility: workspaceTaskVisibilitySchema.optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
@@ -184,6 +185,7 @@ export type UserFeatures = z.infer<typeof userFeaturesSchema>
 export const userSettingsConfigSchema = z.object({
 	extensionBridgeEnabled: z.boolean().optional(),
 	taskSyncEnabled: z.boolean().optional(),
+	llmEnhancedFeaturesEnabled: z.boolean().optional(),
 })
 
 export type UserSettingsConfig = z.infer<typeof userSettingsConfigSchema>
@@ -213,6 +215,7 @@ export const ORGANIZATION_DEFAULT: OrganizationSettings = {
 		allowPublicTaskSharing: true,
 		taskShareExpirationDays: 30,
 		allowMembersViewAllTasks: true,
+		llmEnhancedFeaturesEnabled: false,
 	},
 	defaultSettings: {},
 	allowList: ORGANIZATION_ALLOW_ALL,

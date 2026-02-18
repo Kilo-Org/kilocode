@@ -7,18 +7,31 @@ import { TerminalProcess } from "../TerminalProcess"
 import { Terminal } from "../Terminal"
 import { TerminalRegistry } from "../TerminalRegistry"
 
+class TestTerminalProcess extends TerminalProcess {
+	public callTrimRetrievedOutput(): void {
+		this.trimRetrievedOutput()
+	}
+}
+
 vi.mock("execa", () => ({
 	execa: vi.fn(),
 }))
 
 describe("TerminalProcess", () => {
-	let terminalProcess: TerminalProcess
+	let terminalProcess: TestTerminalProcess
 	let mockTerminal: any
+	type TestVscodeTerminal = vscode.Terminal & {
+		shellIntegration: {
+			executeCommand: any
+		}
+	}
 	let mockTerminalInfo: Terminal
 	let mockExecution: any
 	let mockStream: AsyncIterableIterator<string>
 
 	beforeEach(() => {
+		vi.clearAllMocks()
+
 		// Create properly typed mock terminal
 		mockTerminal = {
 			shellIntegration: {
@@ -33,16 +46,12 @@ describe("TerminalProcess", () => {
 			hide: vi.fn(),
 			show: vi.fn(),
 			sendText: vi.fn(),
-		} as unknown as vscode.Terminal & {
-			shellIntegration: {
-				executeCommand: any
-			}
-		}
+		} as unknown as TestVscodeTerminal
 
 		mockTerminalInfo = new Terminal(1, mockTerminal, "./")
 
 		// Create a process for testing
-		terminalProcess = new TerminalProcess(mockTerminalInfo)
+		terminalProcess = new TestTerminalProcess(mockTerminalInfo)
 
 		TerminalRegistry["terminals"].push(mockTerminalInfo)
 
@@ -179,6 +188,34 @@ describe("TerminalProcess", () => {
 		})
 	})
 
+	describe("abort", () => {
+		it("sends CTRL+C even after continue has been called", () => {
+			// Simulate user clicking "Proceed While Running"
+			terminalProcess.continue()
+
+			// User later clicks "Kill Command"
+			terminalProcess.abort()
+
+			// CTRL+C should still be sent to terminate the process
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+		})
+
+		it("sends CTRL+C when still listening", () => {
+			terminalProcess.abort()
+
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+		})
+
+		it("does not throw if terminal is already gone", () => {
+			// Simulate terminal being garbage collected
+			vi.spyOn(terminalProcess["terminalRef"], "deref").mockReturnValue(undefined)
+
+			expect(() => terminalProcess.abort()).not.toThrow()
+		})
+	})
+
 	describe("getUnretrievedOutput", () => {
 		it("returns and clears unretrieved output", () => {
 			terminalProcess["fullOutput"] = `\x1b]633;C\x07previous\nnew output\x1b]633;D\x07`
@@ -236,6 +273,49 @@ describe("TerminalProcess", () => {
 				signalName: "Unknown Signal (127)",
 				coreDumpPossible: false,
 			})
+		})
+	})
+
+	describe("trimRetrievedOutput", () => {
+		it("clears buffer when all output has been retrieved", () => {
+			// Set up a scenario where all output has been retrieved
+			terminalProcess["fullOutput"] = "test output data"
+			terminalProcess["lastRetrievedIndex"] = 16 // Same as fullOutput.length
+
+			terminalProcess.callTrimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
+		})
+
+		it("does not clear buffer when there is unretrieved output", () => {
+			// Set up a scenario where not all output has been retrieved
+			terminalProcess["fullOutput"] = "test output data"
+			terminalProcess["lastRetrievedIndex"] = 5 // Less than fullOutput.length
+			terminalProcess.callTrimRetrievedOutput()
+
+			// Buffer should NOT be cleared - there's still unretrieved content
+			expect(terminalProcess["fullOutput"]).toBe("test output data")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(5)
+		})
+
+		it("does nothing when buffer is already empty", () => {
+			terminalProcess["fullOutput"] = ""
+			terminalProcess["lastRetrievedIndex"] = 0
+			terminalProcess.callTrimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
+		})
+
+		it("clears buffer when lastRetrievedIndex exceeds fullOutput length", () => {
+			// Edge case: index is greater than current length (could happen if output was modified)
+			terminalProcess["fullOutput"] = "short"
+			terminalProcess["lastRetrievedIndex"] = 100
+			terminalProcess.callTrimRetrievedOutput()
+
+			expect(terminalProcess["fullOutput"]).toBe("")
+			expect(terminalProcess["lastRetrievedIndex"]).toBe(0)
 		})
 	})
 

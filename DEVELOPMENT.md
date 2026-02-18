@@ -1,5 +1,7 @@
 # Kilo Code Development Guide
 
+> **Note**: New versions of the VS Code extension and CLI are being developed in [Kilo-Org/Kilo](https://github.com/Kilo-Org/Kilo) (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to develop or contribute to the extension or CLI, please refer to the development guide in that repository instead.
+
 Welcome to the Kilo Code development guide! This document will help you set up your development environment and understand how to work with the codebase. Whether you're fixing bugs, adding features, or just exploring the code, this guide will get you started.
 
 ## Prerequisites
@@ -146,6 +148,8 @@ The project is organized into several key directories:
 - **`e2e/`** - End-to-end tests
 - **`scripts/`** - Utility scripts
 - **`assets/`** - Static assets like images and icons
+
+For details on where Kilo Code stores configuration, data, and cache files at runtime, see [File Locations](docs/file-locations.md).
 
 ## Development Workflow
 
