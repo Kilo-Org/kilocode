@@ -103,6 +103,10 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 While the old extension coexists, runtime labels append `(NEW)` — controlled by the flag in [`constants.ts`](src/constants.ts). Static labels in `package.json` must be updated separately. Remove this convention once the old extension is retired.
 
+## Agent Manager
+
+Opens as an editor tab (not the sidebar) and lets users run multiple independent AI sessions in parallel. It has a left sidebar listing active sessions and a right panel showing the chat UI for the selected one. Each session is a standard `kilo serve` session. The extension side uses the same `KiloProvider` wiring as the sidebar; the webview side reuses the same provider chain and `ChatView` component.
+
 ## Kilocode Change Markers
 
 This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
