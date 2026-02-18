@@ -115,10 +115,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     const type = msg.type as string
 
     if (type === "agentManager.createWorktree") return this.onCreateWorktree()
-    if (type === "agentManager.deleteWorktree") return this.onDeleteWorktree(msg.worktreeId as string)
-    if (type === "agentManager.promoteSession") return this.onPromoteSession(msg.sessionId as string)
-    if (type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(msg.worktreeId as string)
-    if (type === "agentManager.closeSession") return this.onCloseSession(msg.sessionId as string)
+    if (type === "agentManager.deleteWorktree" && typeof msg.worktreeId === "string")
+      return this.onDeleteWorktree(msg.worktreeId)
+    if (type === "agentManager.promoteSession" && typeof msg.sessionId === "string")
+      return this.onPromoteSession(msg.sessionId)
+    if (type === "agentManager.addSessionToWorktree" && typeof msg.worktreeId === "string")
+      return this.onAddSessionToWorktree(msg.worktreeId)
+    if (type === "agentManager.closeSession" && typeof msg.sessionId === "string")
+      return this.onCloseSession(msg.sessionId)
 
     // After clearSession, re-register worktree sessions so SSE events keep flowing
     if (type === "clearSession") {
