@@ -443,6 +443,19 @@ export namespace ProviderTransform {
 
     switch (model.api.npm) {
       case "@openrouter/ai-sdk-provider":
+        // kilocode_change start - Claude/Anthropic models support reasoning via effort levels through OpenRouter API
+        if (
+          model.id.includes("claude") ||
+          model.id.includes("anthropic") ||
+          model.api.id.includes("claude") ||
+          model.api.id.includes("anthropic")
+        ) {
+          const ANTHROPIC_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "max"]
+          return Object.fromEntries(
+            ANTHROPIC_EFFORTS.map((effort) => [effort, { reasoning: { effort: effort === "max" ? "xhigh" : effort } }]),
+          )
+        }
+        // kilocode_change end
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
