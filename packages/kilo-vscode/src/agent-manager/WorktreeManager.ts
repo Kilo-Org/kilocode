@@ -178,9 +178,10 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const entry = ".kilocode/worktrees/"
     const gitDir = await this.resolveGitDir()
-    await this.addExcludeEntry(path.join(gitDir, "info", "exclude"), entry, "Kilo Code agent worktrees")
+    const excludePath = path.join(gitDir, "info", "exclude")
+    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
+    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {

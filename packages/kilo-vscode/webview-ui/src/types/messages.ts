@@ -520,6 +520,28 @@ export interface AgentManagerWorktreeSetupMessage {
   branch?: string
 }
 
+// Agent Manager worktree state types (mirrored from WorktreeStateManager)
+export interface WorktreeState {
+  id: string
+  branch: string
+  path: string
+  parentBranch: string
+  createdAt: string
+}
+
+export interface ManagedSessionState {
+  id: string
+  worktreeId: string | null
+  createdAt: string
+}
+
+// Full state push from extension to webview
+export interface AgentManagerStateMessage {
+  type: "agentManager.state"
+  worktrees: WorktreeState[]
+  sessions: ManagedSessionState[]
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -555,6 +577,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | AgentManagerSessionMetaMessage
   | AgentManagerWorktreeSetupMessage
+  | AgentManagerStateMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -738,6 +761,35 @@ export interface CreateWorktreeSessionRequest {
   agent?: string
 }
 
+// Create a new worktree (with auto-created first session)
+export interface CreateWorktreeRequest {
+  type: "agentManager.createWorktree"
+}
+
+// Delete a worktree and dissociate its sessions
+export interface DeleteWorktreeRequest {
+  type: "agentManager.deleteWorktree"
+  worktreeId: string
+}
+
+// Promote a session: create a worktree and move the session into it
+export interface PromoteSessionRequest {
+  type: "agentManager.promoteSession"
+  sessionId: string
+}
+
+// Add a new session to an existing worktree
+export interface AddSessionToWorktreeRequest {
+  type: "agentManager.addSessionToWorktree"
+  worktreeId: string
+}
+
+// Close (remove) a session from its worktree
+export interface CloseSessionRequest {
+  type: "agentManager.closeSession"
+  sessionId: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -773,6 +825,11 @@ export type WebviewMessage =
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
   | CreateWorktreeSessionRequest
+  | CreateWorktreeRequest
+  | DeleteWorktreeRequest
+  | PromoteSessionRequest
+  | AddSessionToWorktreeRequest
+  | CloseSessionRequest
 
 // ============================================
 // VS Code API type

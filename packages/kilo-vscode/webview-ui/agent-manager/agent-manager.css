@@ -15,7 +15,7 @@
   flex-shrink: 0;
   background: var(--surface-base, var(--vscode-sideBar-background, #181818));
   padding: 8px;
-  gap: 8px;
+  gap: 4px;
 }
 
 .am-sidebar-header {
@@ -27,13 +27,77 @@
   padding: 4px 8px 0;
 }
 
-.am-sessions-header {
+/* Sections */
+
+.am-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.am-section-grow {
+  flex: 1;
+  min-height: 0;
+}
+
+.am-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 2px;
+}
+
+.am-section-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-weak, var(--vscode-descriptionForeground, #888));
-  padding: 4px 8px 0;
+}
+
+/* Worktree list */
+
+.am-worktree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+/* Worktree item — larger card style */
+
+.am-worktree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-base, var(--vscode-foreground));
+}
+
+.am-worktree-item:hover {
+  background: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground, #2a2d2e));
+}
+
+.am-worktree-item-active {
+  background: var(--surface-interactive-base, var(--vscode-list-activeSelectionBackground, #04395e));
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground, #fff));
+}
+
+.am-worktree-branch {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.am-worktree-close {
+  flex-shrink: 0;
 }
 
 /* Session list */
@@ -46,6 +110,8 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* Session items */
 
 .am-item {
   display: flex;
@@ -79,9 +145,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   min-width: 0;
 }
 
@@ -96,28 +159,25 @@
   color: var(--text-on-interactive-weak, rgba(255, 255, 255, 0.7));
 }
 
-/* Worktree badge */
+/* Promote button on session rows */
 
-.am-worktree-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--surface-inset-base, var(--vscode-badge-background, #4d4d4d));
-  color: var(--text-weak, var(--vscode-badge-foreground, #ccc));
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.am-item-promote {
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 
-.am-item-active .am-worktree-badge {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-on-interactive-weak, rgba(255, 255, 255, 0.85));
+.am-item:hover .am-item-promote {
+  opacity: 1;
+}
+
+/* Empty state hints */
+
+.am-empty-hint {
+  font-size: 11px;
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
+  padding: 4px 8px;
+  font-style: italic;
 }
 
 /* Detail pane */
@@ -131,7 +191,129 @@
   position: relative;
 }
 
-/* Worktree setup overlay */
+/* Tab bar */
+
+.am-tab-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-weak-base, var(--vscode-panel-border, #333));
+  background: var(--surface-base, var(--vscode-editorGroupHeader-tabsBackground, #1e1e1e));
+  height: 36px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.am-tab-list {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow-x: auto;
+  height: 100%;
+}
+
+.am-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: none;
+  color: var(--text-weak, var(--vscode-tab-inactiveForeground, #888));
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  border-bottom: 2px solid transparent;
+  min-width: 0;
+  height: 100%;
+}
+
+.am-tab:hover {
+  color: var(--text-base, var(--vscode-tab-activeForeground, #fff));
+}
+
+.am-tab-active {
+  color: var(--text-base, var(--vscode-tab-activeForeground, #fff));
+  border-bottom-color: var(--surface-interactive-base, var(--vscode-focusBorder, #007acc));
+}
+
+.am-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.am-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.1s ease;
+}
+
+.am-tab:hover .am-tab-close {
+  opacity: 0.6;
+}
+
+.am-tab-active .am-tab-close {
+  opacity: 0.6;
+}
+
+.am-tab-close:hover {
+  opacity: 1;
+  background: var(--surface-inset-base-hover, rgba(255, 255, 255, 0.1));
+}
+
+.am-tab-add {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Empty worktree state */
+
+.am-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.am-empty-state-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--surface-inset-base, var(--vscode-input-background, #252526));
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
+}
+
+.am-empty-state-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-weak, var(--vscode-descriptionForeground, #888));
+}
+
+.am-empty-state-hint {
+  font-size: 13px;
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
+}
+
+/* Setup overlay */
 
 .am-setup-overlay {
   position: absolute;

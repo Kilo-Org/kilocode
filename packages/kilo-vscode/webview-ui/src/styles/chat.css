@@ -321,51 +321,6 @@
   padding: 6px;
 }
 
-/* Worktree Selector (Agent Manager only) */
-
-.worktree-selector-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.worktree-selector-list {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.worktree-selector-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.worktree-selector-item:hover {
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
-}
-
-.worktree-selector-item.selected {
-  background: var(
-    --surface-interactive-active,
-    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
-  );
-}
-
-.worktree-selector-item-name {
-  font-weight: 500;
-}
-
-.worktree-selector-item-desc {
-  font-size: 11px;
-  color: var(--text-weak, var(--vscode-descriptionForeground));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .prompt-input-hint-selectors {
   display: flex;
   gap: 4px;

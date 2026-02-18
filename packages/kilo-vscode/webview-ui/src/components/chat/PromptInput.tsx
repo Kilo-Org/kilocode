@@ -5,14 +5,12 @@
 
 import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Popover } from "@kilocode/kilo-ui/popover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { useWorktreeMode, type SessionMode } from "../../context/worktree-mode"
 import { ModelSelector } from "./ModelSelector"
 import { ModeSwitcher } from "./ModeSwitcher"
 import { useFileMention } from "../../hooks/useFileMention"
@@ -20,61 +18,6 @@ import { useImageAttachments } from "../../hooks/useImageAttachments"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
 const MIN_TEXT_LENGTH = 3
-
-const WORKTREE_OPTIONS = [
-  { id: "local" as const, label: "Local", description: "Run in current workspace" },
-  { id: "worktree" as const, label: "Worktree", description: "Run in isolated git worktree" },
-]
-
-/**
- * Popover-based Local/Worktree selector shown in the Agent Manager's prompt footer.
- * Matches the visual style of ModeSwitcher and ModelSelector.
- */
-const WorktreeSelector: Component = () => {
-  const ctx = useWorktreeMode()!
-  const [open, setOpen] = createSignal(false)
-
-  function pick(mode: SessionMode) {
-    ctx.setMode(mode)
-    setOpen(false)
-  }
-
-  const label = () => (ctx.mode() === "worktree" ? "Worktree" : "Local")
-
-  return (
-    <Popover
-      placement="top-start"
-      open={open()}
-      onOpenChange={setOpen}
-      triggerAs={Button}
-      triggerProps={{ variant: "ghost", size: "small" }}
-      trigger={
-        <>
-          <span class="worktree-selector-label">{label()}</span>
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
-            <path d="M8 4l4 5H4l4-5z" />
-          </svg>
-        </>
-      }
-    >
-      <div class="worktree-selector-list" role="listbox">
-        <For each={WORKTREE_OPTIONS}>
-          {(opt) => (
-            <div
-              class={`worktree-selector-item${opt.id === ctx.mode() ? " selected" : ""}`}
-              role="option"
-              aria-selected={opt.id === ctx.mode()}
-              onClick={() => pick(opt.id)}
-            >
-              <span class="worktree-selector-item-name">{opt.label}</span>
-              <span class="worktree-selector-item-desc">{opt.description}</span>
-            </div>
-          )}
-        </For>
-      </div>
-    </Popover>
-  )
-}
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -84,7 +27,6 @@ export const PromptInput: Component = () => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const worktreeMode = useWorktreeMode()
   const mention = useFileMention(vscode)
   const imageAttach = useImageAttachments()
 
@@ -275,20 +217,7 @@ export const PromptInput: Component = () => {
     const sel = session.selected()
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    // In agent manager worktree mode with no session yet, route through a separate
-    // message type so the extension creates the worktree + session before the webview
-    // tries to update local state for a nonexistent session.
-    if (worktreeMode?.mode() === "worktree" && !session.currentSessionID()) {
-      vscode.postMessage({
-        type: "agentManager.createWorktreeSession",
-        text: message,
-        providerID: sel?.providerID,
-        modelID: sel?.modelID,
-        agent: session.selectedAgent(),
-      })
-    } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
-    }
+    session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
 
     requestCounter++
     setText("")
@@ -396,9 +325,6 @@ export const PromptInput: Component = () => {
         <div class="prompt-input-hint-selectors">
           <ModeSwitcher />
           <ModelSelector />
-          <Show when={worktreeMode && !session.currentSessionID()}>
-            <WorktreeSelector />
-          </Show>
         </div>
         <div class="prompt-input-hint-actions">
           <Show
