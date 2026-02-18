@@ -972,6 +972,8 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.fontSize.title": "Font size",
+  "settings.display.fontSize.description": "Adjust the font size for the webview UI (default: 13px)",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",

@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup, createEffect } from "solid-js"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
@@ -13,7 +13,7 @@ import ProfileView from "./components/ProfileView"
 import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider } from "./context/provider"
-import { ConfigProvider } from "./context/config"
+import { ConfigProvider, useConfig } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -108,6 +108,26 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const session = useSession()
   const server = useServer()
+  const { config } = useConfig()
+
+  const fontSize = createMemo(() => config().fontSize ?? 13)
+
+    // kilocode_change - apply font size with proper ratios matching CSS defaults
+  createEffect(() => {
+    const size = fontSize()
+    const root = document.documentElement
+    if (size !== 13) {
+      // Custom font size: apply with ratios matching CSS defaults (11, 13, 16)
+      root.style.setProperty("--font-size-small", `${size - 2}px`)   // 13-2=11 (default)
+      root.style.setProperty("--font-size-base", `${size}px`)        // 13 (default)
+      root.style.setProperty("--font-size-large", `${size + 3}px`)   // 13+3=16 (default)
+    } else {
+      // Default font size: clear inline styles to use CSS defaults
+      root.style.removeProperty("--font-size-small")
+      root.style.removeProperty("--font-size-base")
+      root.style.removeProperty("--font-size-large")
+    }
+  })
 
   const handleViewAction = (action: string) => {
     switch (action) {
