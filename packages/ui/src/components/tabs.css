@@ -383,7 +383,7 @@
           min-width: 200px;
         }
         padding: 12px;
-        gap: 0;
+        gap: 2px;
         background-color: var(--background-base);
         border-right: 1px solid var(--border-weak-base);
 

@@ -22,7 +22,7 @@ export const TaskHeader: Component = () => {
   const cost = createMemo(() => {
     const total = session.totalCost()
     if (total === 0) return undefined
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(language.locale(), {
       style: "currency",
       currency: "USD",
     }).format(total)
@@ -31,7 +31,7 @@ export const TaskHeader: Component = () => {
   const context = createMemo(() => {
     const usage = session.contextUsage()
     if (!usage) return undefined
-    const tokens = usage.tokens.toLocaleString("en-US")
+    const tokens = usage.tokens.toLocaleString(language.locale())
     const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
     return { tokens, pct }
   })

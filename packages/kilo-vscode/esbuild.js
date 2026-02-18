@@ -55,6 +55,49 @@ const esbuildProblemMatcherPlugin = {
   },
 }
 
+/**
+ * Stub the pierre worker module so the Diff/Code components work without
+ * web workers in the VS Code webview. The `@pierre/diffs` library handles
+ * undefined worker pools gracefully (renders without syntax highlighting).
+ *
+ * We stub the entire worker module rather than just the URL import because
+ * `new Worker('')` would throw at runtime.
+ *
+ * @type {import('esbuild').Plugin}
+ */
+const pierreWorkerStubPlugin = {
+  name: "pierre-worker-stub",
+  setup(build) {
+    // Stub the Vite-specific ?worker&url import
+    build.onResolve({ filter: /\?worker&url$/ }, (args) => ({
+      path: args.path,
+      namespace: "worker-url-stub",
+    }))
+    build.onLoad({ filter: /.*/, namespace: "worker-url-stub" }, () => ({
+      contents: "export default ''",
+      loader: "js",
+    }))
+
+    // Stub the pierre worker module so getWorkerPool always returns undefined
+    build.onResolve({ filter: /pierre\/worker$/ }, (args) => {
+      // Only stub the local UI worker module, not @pierre/diffs/worker
+      if (args.path.includes("@pierre")) return
+      return {
+        path: args.path,
+        namespace: "pierre-worker-stub",
+      }
+    })
+    build.onLoad({ filter: /.*/, namespace: "pierre-worker-stub" }, () => ({
+      contents: `
+        export function getWorkerPool() { return undefined }
+        export function getWorkerPools() { return { unified: undefined, split: undefined } }
+        export function workerFactory() { return undefined }
+      `,
+      loader: "js",
+    }))
+  },
+}
+
 const cssPackageResolvePlugin = {
   name: "css-package-resolve",
   setup(build) {
@@ -85,6 +128,31 @@ async function main() {
     plugins: [esbuildProblemMatcherPlugin],
   })
 
+  // Build Agent Manager webview (SolidJS, shares components with sidebar)
+  const agentManagerCtx = await esbuild.context({
+    entryPoints: ["webview-ui/agent-manager/index.tsx"],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/agent-manager.js",
+    logLevel: "silent",
+    loader: {
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+    },
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerStubPlugin,
+      cssPackageResolvePlugin,
+      solidPlugin(),
+      esbuildProblemMatcherPlugin,
+    ],
+  })
+
   // Build webview
   const webviewCtx = await esbuild.context({
     entryPoints: ["webview-ui/src/index.tsx"],
@@ -101,14 +169,20 @@ async function main() {
       ".woff2": "file",
       ".ttf": "file",
     },
-    plugins: [solidDedupePlugin, cssPackageResolvePlugin, solidPlugin(), esbuildProblemMatcherPlugin],
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerStubPlugin,
+      cssPackageResolvePlugin,
+      solidPlugin(),
+      esbuildProblemMatcherPlugin,
+    ],
   })
 
   if (watch) {
-    await Promise.all([extensionCtx.watch(), webviewCtx.watch()])
+    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch()])
   } else {
-    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild()])
-    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose()])
+    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild(), agentManagerCtx.rebuild()])
+    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose(), agentManagerCtx.dispose()])
   }
 }
 

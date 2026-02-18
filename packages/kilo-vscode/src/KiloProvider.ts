@@ -3,6 +3,7 @@ import { z } from "zod"
 import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionService } from "./services/cli-backend"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
+import { buildWebviewHtml } from "./utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -12,6 +13,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private loginAttempt = 0
   private isWebviewReady = false
+  private readonly extensionVersion =
+    vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before httpClient is ready */
   private cachedProvidersMessage: unknown = null
   /** Cached agentsLoaded payload so requestAgents can be served before httpClient is ready */
@@ -73,6 +76,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       this.postMessage({
         type: "ready",
         serverInfo,
+        extensionVersion: this.extensionVersion,
         vscodeLanguage: vscode.env.language,
         languageOverride: langConfig.get<string>("language"),
       })
@@ -137,6 +141,17 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(panel.webview)
 
+    this.initializeConnection()
+  }
+
+  /**
+   * Attach to a webview that already has its own HTML set.
+   * Sets up message handling and connection without overriding HTML content.
+   */
+  public attachToWebview(webview: vscode.Webview): void {
+    this.isWebviewReady = false
+    this.webview = webview
+    this.setupWebviewMessageHandler(webview)
     this.initializeConnection()
   }
 
@@ -279,6 +294,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
+        case "resetAllSettings":
+          await this.handleResetAllSettings()
+          break
       }
     })
   }
@@ -349,6 +367,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         this.postMessage({
           type: "ready",
           serverInfo,
+          extensionVersion: this.extensionVersion,
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
         })
@@ -1058,6 +1077,43 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Reset all "kilo-code.new.*" extension settings to their defaults by reading
+   * contributes.configuration from the extension's package.json at runtime.
+   * Only resets settings under the "kilo-code.new." namespace to avoid touching
+   * settings from the previous version of the extension which shares the same
+   * extension ID and "kilo-code.*" namespace.
+   */
+  // kilocode_change start
+  private async handleResetAllSettings(): Promise<void> {
+    const confirmed = await vscode.window.showWarningMessage(
+      "Reset all Kilo Code extension settings to defaults?",
+      { modal: true },
+      "Reset",
+    )
+    if (confirmed !== "Reset") return
+
+    const prefix = "kilo-code.new."
+    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+    const properties = ext?.packageJSON?.contributes?.configuration?.properties as Record<string, unknown> | undefined
+    if (!properties) return
+
+    for (const key of Object.keys(properties)) {
+      if (!key.startsWith(prefix)) continue
+      const parts = key.split(".")
+      const section = parts.slice(0, -1).join(".")
+      const leaf = parts[parts.length - 1]
+      const config = vscode.workspace.getConfiguration(section)
+      await config.update(leaf, undefined, vscode.ConfigurationTarget.Global)
+    }
+
+    // Re-send all settings to the webview so the UI reflects the reset
+    this.sendAutocompleteSettings()
+    this.sendBrowserSettings()
+    this.sendNotificationSettings()
+  }
+  // kilocode_change end
+
+  /**
    * Read the current browser automation settings and push them to the webview.
    */
   private sendBrowserSettings(): void {
@@ -1149,6 +1205,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
             id: event.properties.id,
             sessionID: event.properties.sessionID,
             toolName: event.properties.permission,
+            patterns: event.properties.patterns ?? [],
             args: event.properties.metadata,
             message: `Permission required: ${event.properties.permission}`,
             tool: event.properties.tool,
@@ -1265,63 +1322,14 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js"))
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css"))
-    const iconsBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons"))
-
-    const nonce = getNonce()
-
-    // CSP allows:
-    // - default-src 'none': Block everything by default
-    // - style-src: Allow inline styles and our CSS file
-    // - script-src 'nonce-...': Only allow scripts with our nonce
-    // - connect-src: Allow connections to localhost for API calls
-    // - img-src: Allow images from webview and data URIs
-    const csp = [
-      "default-src 'none'",
-      `style-src 'unsafe-inline' ${webview.cspSource}`,
-      `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
-      `font-src ${webview.cspSource}`,
-      "connect-src http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*",
-      `img-src ${webview.cspSource} data: https:`,
-    ].join("; ")
-
-    return `<!DOCTYPE html>
-<html lang="en" data-theme="kilo-vscode">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="Content-Security-Policy" content="${csp}">
-	<title>Kilo Code</title>
-	<link rel="stylesheet" href="${styleUri}">
-	<style>
-		html, body {
-			margin: 0;
-			padding: 0;
-			height: 100%;
-			overflow: hidden;
-		}
-		body {
-			color: var(--vscode-foreground);
-			font-family: var(--vscode-font-family);
-		}
-		#root {
-			height: 100%;
-		}
-		.container {
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			height: 100vh;
-		}
-	</style>
-</head>
-<body>
-	<div id="root"></div>
-	<script nonce="${nonce}">window.ICONS_BASE_URI = "${iconsBaseUri}";</script>
-	<script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`
+    return buildWebviewHtml(webview, {
+      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
+      iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
+      title: "Kilo Code",
+      port: this.connectionService.getServerInfo()?.port,
+      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; }`,
+    })
   }
 
   /**
@@ -1334,13 +1342,4 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
   }
-}
-
-function getNonce(): string {
-  let text = ""
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length))
-  }
-  return text
 }

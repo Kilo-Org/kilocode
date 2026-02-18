@@ -7786,6 +7786,10 @@
           "description": {
             "description": "Explanation of choice",
             "type": "string"
+          },
+          "mode": {
+            "description": "Optional agent/mode to switch to when selected (e.g. code, debug, orchestrator)",
+            "type": "string"
           }
         },
         "required": ["label", "description"]

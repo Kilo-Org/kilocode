@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { AutocompleteTelemetry, MIN_VISIBILITY_DURATION_MS, getSuggestionKey } from "../AutocompleteTelemetry"
 import type { AutocompleteContext, FillInAtCursorSuggestion } from "../../types"
 

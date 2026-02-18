@@ -28,29 +28,44 @@
   height: 10px;
 }
 
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 5px;
+}
+
 ::-webkit-scrollbar-thumb {
   background: rgba(121, 121, 121, 0.4);
-  border-radius: 0;
+  border-radius: 5px;
+  border: 3px solid transparent !important;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.7);
 }
 
-::-webkit-scrollbar-track {
+::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-::-webkit-scrollbar-corner {
-  background: transparent;
+::-webkit-scrollbar-button {
+  display: block;
+  height: 0;
 }
 
 /* ===== VS Code extension: inherit native styling ===== */
 
 html[data-theme="kilo-vscode"] {
+  --font-family-sans: var(--vscode-font-family);
+  --font-family-mono: var(--vscode-editor-font-family, Menlo, Monaco, "Courier New", monospace);
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   font-weight: var(--vscode-font-weight);
+
+  ::-webkit-scrollbar-button {
+    display: block;
+    height: 0;
+  }
 
   ::-webkit-scrollbar-thumb {
     background: var(--vscode-scrollbarSlider-background);

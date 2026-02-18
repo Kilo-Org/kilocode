@@ -158,7 +158,7 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
     pattern: /__OPENCODE__/g,
     replacement: "__KILO__",
     description: "Window global",
-    fileTypes: [".rs"],
+    fileTypes: [".rs", ".tsx"],
   },
   {
     pattern: /OPENCODE_PORT/g,

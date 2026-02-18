@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import type { KiloConnectionService } from "../cli-backend"

@@ -1,0 +1,104 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "VSCode - Watch",
+      "dependsOn": ["VSCode - TSC", "VSCode - ESBuild", "VSCode - CLI Watch"],
+      "presentation": {
+        "reveal": "never"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "VSCode - ESBuild",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "watch:esbuild"],
+      "group": "build",
+      "problemMatcher": "$esbuild-watch",
+      "isBackground": true,
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      }
+    },
+    {
+      "label": "VSCode - TSC",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "watch:tsc"],
+      "group": "build",
+      "problemMatcher": "$tsc-watch",
+      "isBackground": true,
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      }
+    },
+    {
+      "label": "VSCode - CLI Watch",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "watch:cli"],
+      "group": "build",
+      "isBackground": true,
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "VSCode - Compile",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "compile"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": ["$tsc", "$eslint-stylish"]
+    },
+    {
+      "label": "VSCode - Tests",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "watch-tests"],
+      "problemMatcher": "$tsc-watch",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "group": "watchers"
+      },
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      }
+    },
+    {
+      "label": "VSCode - Tests (Composite)",
+      "dependsOn": ["VSCode - Watch", "VSCode - Tests"],
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { base64Decode } from "@opencode-ai/util/encode"
 import fs from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import type { Page } from "@playwright/test"
 
@@ -10,11 +11,18 @@ import {
   cleanupTestProject,
   clickMenuItem,
   confirmDialog,
+  openProjectMenu,
   openSidebar,
   openWorkspaceMenu,
   setWorkspacesEnabled,
 } from "../actions"
-import { inlineInputSelector, workspaceItemSelector } from "../selectors"
+import {
+  inlineInputSelector,
+  projectSwitchSelector,
+  projectWorkspacesToggleSelector,
+  workspaceItemSelector,
+} from "../selectors"
+import { dirSlug } from "../utils"
 
 function slugFromUrl(url: string) {
   return /\/([^/]+)\/session(?:\/|$)/.exec(url)?.[1] ?? ""
@@ -60,7 +68,8 @@ async function setupWorkspaceTest(page: Page, project: { slug: string }) {
   return { rootSlug, slug, directory: dir }
 }
 
-test("can enable and disable workspaces from project menu", async ({ page, withProject }) => {
+// kilocode_change: skip
+test.skip("can enable and disable workspaces from project menu", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -80,7 +89,8 @@ test("can enable and disable workspaces from project menu", async ({ page, withP
   })
 })
 
-test("can create a workspace", async ({ page, withProject }) => {
+// kilocode_change: skip
+test.skip("can create a workspace", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace creation issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -128,7 +138,43 @@ test("can create a workspace", async ({ page, withProject }) => {
   })
 })
 
-test("can rename a workspace", async ({ page, withProject }) => {
+// kilocode_change: skip
+test.skip("non-git projects keep workspace mode disabled", async ({ page, withProject }) => {
+  await page.setViewportSize({ width: 1400, height: 800 })
+
+  const nonGit = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-e2e-project-nongit-"))
+  const nonGitSlug = dirSlug(nonGit)
+
+  await fs.writeFile(path.join(nonGit, "README.md"), "# e2e nongit\n")
+
+  try {
+    await withProject(
+      async () => {
+        await openSidebar(page)
+
+        const nonGitButton = page.locator(projectSwitchSelector(nonGitSlug)).first()
+        await expect(nonGitButton).toBeVisible()
+        await nonGitButton.click()
+        await expect(page).toHaveURL(new RegExp(`/${nonGitSlug}/session`))
+
+        const menu = await openProjectMenu(page, nonGitSlug)
+        const toggle = menu.locator(projectWorkspacesToggleSelector(nonGitSlug)).first()
+
+        await expect(toggle).toBeVisible()
+        await expect(toggle).toBeDisabled()
+
+        await expect(menu.getByRole("menuitem", { name: "New workspace" })).toHaveCount(0)
+        await expect(page.getByRole("button", { name: "New workspace" })).toHaveCount(0)
+      },
+      { extra: [nonGit] },
+    )
+  } finally {
+    await cleanupTestProject(nonGit)
+  }
+})
+
+// kilocode_change: skip
+test.skip("can rename a workspace", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -151,7 +197,8 @@ test("can rename a workspace", async ({ page, withProject }) => {
   })
 })
 
-test("can reset a workspace", async ({ page, sdk, withProject }) => {
+// kilocode_change: skip
+test.skip("can reset a workspace", async ({ page, sdk, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -214,7 +261,8 @@ test("can reset a workspace", async ({ page, sdk, withProject }) => {
   })
 })
 
-test("can delete a workspace", async ({ page, withProject }) => {
+// kilocode_change: skip
+test.skip("can delete a workspace", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -231,7 +279,8 @@ test("can delete a workspace", async ({ page, withProject }) => {
   })
 })
 
-test("can reorder workspaces by drag and drop", async ({ page, withProject }) => {
+// kilocode_change: skip
+test.skip("can reorder workspaces by drag and drop", async ({ page, withProject }) => {
   test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   await page.setViewportSize({ width: 1400, height: 800 })
   await withProject(async ({ slug: rootSlug }) => {

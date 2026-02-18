@@ -1,5 +1,4 @@
 node_modules
 dist
 out
-pnpm-lock.yaml
 *.md

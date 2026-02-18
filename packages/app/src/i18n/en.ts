@@ -132,7 +132,7 @@ export const dict = {
   "provider.connect.opencodeZen.line2":
     "With a single API key you'll get access to models such as Claude, GPT, Gemini, GLM and more.",
   "provider.connect.opencodeZen.visit.prefix": "Visit ",
-  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " to collect your API key.",
   "provider.connect.oauth.code.visit.prefix": "Visit ",
   "provider.connect.oauth.code.visit.link": "this link",
@@ -503,6 +503,11 @@ export const dict = {
   "session.messages.jumpToLatest": "Jump to latest",
 
   "session.context.addToContext": "Add {{selection}} to context",
+
+  "session.modeSwitch.switching": "Switching to {{mode}} mode…",
+  "session.modeSwitch.waiting": "Waiting for current task to complete",
+  "session.modeSwitch.notAvailable": "Agent not available",
+  "session.modeSwitch.fallback": '"{{requested}}" not found, using "{{actual}}"',
 
   "session.new.worktree.main": "Main branch",
   "session.new.worktree.mainWithBranch": "Main branch ({{branch}})",

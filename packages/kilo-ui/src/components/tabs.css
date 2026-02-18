@@ -24,9 +24,17 @@
     padding: 4px 0;
     font-size: 13px;
     line-height: normal;
+  }
 
-    &[aria-selected="true"] {
-      border-bottom: 2px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  /* Settings variant: content area padding and header styling */
+  &[data-variant="settings"] [data-slot="tabs-content"] {
+    padding: 16px 20px;
+
+    > h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      color: var(--vscode-foreground, var(--text-strong));
     }
   }
 }

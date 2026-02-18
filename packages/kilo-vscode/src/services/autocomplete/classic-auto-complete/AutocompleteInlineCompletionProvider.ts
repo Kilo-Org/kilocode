@@ -259,7 +259,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private recentlyEditedTracker: RecentlyEditedTracker
   private debounceTimer: NodeJS.Timeout | null = null
   private isFirstCall: boolean = true
-  private ignoreController?: Promise<FileIgnoreController>
+  private ignoreController: Promise<FileIgnoreController>
   private acceptedCommand: vscode.Disposable | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
   private latencyHistory: number[] = []
@@ -280,9 +280,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.costTrackingCallback = costTrackingCallback
     this.getSettings = getSettings
 
-    // Create ignore controller internally
     this.ignoreController = (async () => {
-      const ignoreController = new FileIgnoreController()
+      const ignoreController = new FileIgnoreController(workspacePath)
       await ignoreController.initialize()
       return ignoreController
     })()
@@ -385,11 +384,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   }
 
   private async disposeIgnoreController(): Promise<void> {
-    if (this.ignoreController) {
-      const ignoreController = this.ignoreController
-      this.ignoreController = undefined
-      ;(await ignoreController).dispose()
-    }
+    const ignoreController = await this.ignoreController.catch(() => null)
+    ignoreController?.dispose()
   }
 
   /**
@@ -477,7 +473,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     try {
       // Check if file is ignored (for manual trigger via codeSuggestion)
       // Skip ignore check for untitled documents
-      if (this.ignoreController && !document.isUntitled) {
+      if (!document.isUntitled) {
         try {
           // Try to get the controller with a short timeout
           const controller = await Promise.race([

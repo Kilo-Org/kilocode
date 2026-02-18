@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // tr package.nls translations for autocomplete
 
 export const dict = {

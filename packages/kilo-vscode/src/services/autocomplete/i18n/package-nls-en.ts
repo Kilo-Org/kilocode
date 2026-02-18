@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // English package.nls translations for autocomplete (used in package.json command titles/descriptions)
 // Source: src/package.nls.json → "autocomplete.*" keys
 

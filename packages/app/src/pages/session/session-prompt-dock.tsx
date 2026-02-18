@@ -22,6 +22,7 @@ export function SessionPromptDock(props: {
   onNewSessionWorktreeReset: () => void
   onSubmit: () => void
   setPromptDockRef: (el: HTMLDivElement) => void
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void // kilocode_change
 }) {
   return (
     <div
@@ -48,7 +49,7 @@ export function SessionPromptDock(props: {
                     subtitle,
                   }}
                 />
-                <QuestionDock request={questionDockRequest(req)} />
+                <QuestionDock request={questionDockRequest(req)} onModeAction={props.onModeAction} />
               </div>
             )
           }}

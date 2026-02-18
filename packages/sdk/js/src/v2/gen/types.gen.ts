@@ -578,6 +578,10 @@ export type QuestionOption = {
    * Explanation of choice
    */
   description: string
+  /**
+   * Optional agent/mode to switch to when selected (e.g. code, debug, orchestrator)
+   */
+  mode?: string
 }
 
 export type QuestionInfo = {

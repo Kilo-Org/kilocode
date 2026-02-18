@@ -10,6 +10,7 @@ import type { ConnectionState, ServerInfo, ProfileData, DeviceAuthState, Extensi
 interface ServerContextValue {
   connectionState: Accessor<ConnectionState>
   serverInfo: Accessor<ServerInfo | undefined>
+  extensionVersion: Accessor<string | undefined>
   error: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
@@ -28,6 +29,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
   const [connectionState, setConnectionState] = createSignal<ConnectionState>("connecting")
   const [serverInfo, setServerInfo] = createSignal<ServerInfo | undefined>()
+  const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>()
   const [error, setError] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
@@ -40,6 +42,7 @@ export const ServerProvider: ParentComponent = (props) => {
         case "ready":
           console.log("[Kilo New] Server ready:", message.serverInfo)
           setServerInfo(message.serverInfo)
+          if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
           setConnectionState("connected")
           setError(undefined)
           if (message.vscodeLanguage) {
@@ -115,6 +118,7 @@ export const ServerProvider: ParentComponent = (props) => {
   const value: ServerContextValue = {
     connectionState,
     serverInfo,
+    extensionVersion,
     error,
     isConnected: () => connectionState() === "connected",
     profileData,

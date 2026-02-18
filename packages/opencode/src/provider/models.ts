@@ -121,6 +121,10 @@ export namespace ModelsDev {
     // kilocode_change start
     const providers = result as Record<string, Provider>
 
+    if (providers["kilo"]) {
+      delete providers["kilo"]
+    }
+
     // Inject kilo provider with dynamic model fetching
     if (!providers["kilo"]) {
       const config = await Config.get()

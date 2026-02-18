@@ -5,11 +5,52 @@
  */
 
 import { Component, For, Show, createSignal, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { Message } from "./Message"
+
+/** Inline working/retry indicator shown below messages while the agent is active. */
+const WorkingIndicator: Component = () => {
+  const session = useSession()
+  const language = useLanguage()
+  const [elapsed, setElapsed] = createSignal(0)
+
+  // Tick every second while busy
+  createEffect(() => {
+    const start = session.busySince()
+    if (!start) {
+      setElapsed(0)
+      return
+    }
+    setElapsed(Math.floor((Date.now() - start) / 1000))
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000))
+    }, 1000)
+    onCleanup(() => clearInterval(timer))
+  })
+
+  const info = () => session.statusInfo()
+  const text = () => {
+    const i = info()
+    if (i.type === "retry") return language.t("session.status.retrying", { attempt: i.attempt, message: i.message })
+    return session.statusText() ?? language.t("session.status.working")
+  }
+
+  return (
+    <Show when={info().type !== "idle"}>
+      <div class="working-indicator" role="status">
+        <Spinner />
+        <span class="working-text">{text()}</span>
+        <Show when={elapsed() > 0}>
+          <span class="working-elapsed">{elapsed()}s</span>
+        </Show>
+      </div>
+    </Show>
+  )
+}
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -60,7 +101,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
   createEffect(() => {
     const msgs = session.messages()
     if (msgs.length > 0 && isAtBottom()) {
-      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (containerRef) {
+          containerRef.scrollTop = containerRef.scrollHeight
+        }
+      })
+    }
+  })
+
+  // Auto-scroll when parts of the last message update (Phase 2)
+  createEffect(() => {
+    const msgs = session.messages()
+    const last = msgs[msgs.length - 1]
+    if (!last) return
+    const parts = session.getParts(last.id)
+    if (parts.length > 0 && isAtBottom()) {
       requestAnimationFrame(() => {
         if (containerRef) {
           containerRef.scrollTop = containerRef.scrollHeight
@@ -123,6 +178,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </div>
         </Show>
         <For each={messages()}>{(message) => <Message message={message} />}</For>
+        <WorkingIndicator />
       </div>
 
       <Show when={showScrollButton()}>

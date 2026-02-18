@@ -59,8 +59,7 @@ const keepSandbox = process.env.KILO_E2E_KEEP_SANDBOX === "1"
 
 const serverEnv = {
   ...process.env,
-  KILO_DISABLE_SHARE: process.env.KILO_DISABLE_SHARE ?? "true",
-  KILO_DISABLE_SHARE: "true", // kilocode_change
+  KILO_DISABLE_SHARE: process.env.KILO_DISABLE_SHARE ?? "true", // kilocode_change
   KILO_DISABLE_SESSION_INGEST: "true", // kilocode_change
   KILO_DISABLE_LSP_DOWNLOAD: "true",
   KILO_DISABLE_DEFAULT_PLUGINS: "true",

@@ -51,7 +51,6 @@ const Settings: Component<SettingsProps> = (props) => {
       {/* Settings tabs */}
       <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
         <Tabs.List>
-          <Tabs.SectionTitle>{language.t("settings.section.configuration")}</Tabs.SectionTitle>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
             {language.t("settings.providers.title")}
@@ -164,7 +163,11 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="aboutKiloCode">
           <h3>{language.t("settings.aboutKiloCode.title")}</h3>
-          <AboutKiloCodeTab port={server.serverInfo()?.port ?? null} connectionState={server.connectionState()} />
+          <AboutKiloCodeTab
+            port={server.serverInfo()?.port ?? null}
+            connectionState={server.connectionState()}
+            extensionVersion={server.extensionVersion()}
+          />
         </Tabs.Content>
       </Tabs>
     </div>

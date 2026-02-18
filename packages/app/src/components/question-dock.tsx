@@ -7,7 +7,12 @@ import type { QuestionAnswer, QuestionRequest } from "@kilocode/sdk/v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 
-export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
+// kilocode_change start - add onModeAction prop for mode-switching support
+export const QuestionDock: Component<{
+  request: QuestionRequest
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
+}> = (props) => {
+  // kilocode_change end
   const sdk = useSDK()
   const language = useLanguage()
 
@@ -39,13 +44,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const reply = (answers: QuestionAnswer[]) => {
-    if (store.sending) return
+    if (store.sending) return undefined
 
     setStore("sending", true)
-    sdk.client.question
-      .reply({ requestID: props.request.id, answers })
-      .catch(fail)
-      .finally(() => setStore("sending", false))
+    return sdk.client.question.reply({ requestID: props.request.id, answers }).finally(() => setStore("sending", false))
   }
 
   const reject = () => {
@@ -59,10 +61,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const submit = () => {
-    reply(questions().map((_, i) => store.answers[i] ?? []))
+    reply(questions().map((_, i) => store.answers[i] ?? []))?.catch(fail) // kilocode_change
   }
 
   const pick = (answer: string, custom: boolean = false) => {
+    // kilocode_change start - find option to check for mode
+    // Custom answers won't match a predefined option, so mode switching is intentionally skipped
+    const option = options().find((o) => o.label === answer)
+    // kilocode_change end
+
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -74,7 +81,17 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
 
     if (single()) {
-      reply([[answer]])
+      // kilocode_change start - trigger mode switch after question reply completes
+      const pending = reply([[answer]])
+      if (option?.mode && props.onModeAction) {
+        const action = props.onModeAction
+        const mode = option.mode
+        const description = option.description
+        pending?.then(() => action({ mode, text: answer, description }), fail).catch(fail)
+      } else {
+        pending?.catch(fail)
+      }
+      // kilocode_change end
       return
     }
 
@@ -194,6 +211,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                     <Show when={opt.description}>
                       <span data-slot="option-description">{opt.description}</span>
                     </Show>
+                    {/* kilocode_change start - show mode badge */}
+                    <Show when={opt.mode}>
+                      <span data-slot="option-mode" class="text-text-weakest text-11-regular">
+                        → {opt.mode}
+                      </span>
+                    </Show>
+                    {/* kilocode_change end */}
                     <Show when={picked()}>
                       <Icon name="check-small" size="normal" />
                     </Show>

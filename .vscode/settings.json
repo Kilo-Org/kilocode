@@ -1,0 +1,15 @@
+{
+  "[mdx]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+  "files.exclude": {
+    "packages/kilo-vscode/out": false,
+    "packages/kilo-vscode/dist": false
+  },
+  "search.exclude": {
+    "packages/kilo-vscode/out": true,
+    "packages/kilo-vscode/dist": true
+  },
+  "typescript.tsc.autoDetect": "off"
+}

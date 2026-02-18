@@ -19,7 +19,7 @@ import type {
 export class HttpClient {
   private readonly baseUrl: string
   private readonly authHeader: string
-  private readonly authUsername = "opencode"
+  private readonly authUsername = "kilo"
 
   constructor(config: ServerConfig) {
     this.baseUrl = config.baseUrl

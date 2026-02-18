@@ -128,13 +128,13 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
 
   if (method !== "curl" && method !== "unknown") {
     const cmds: Record<string, string> = {
-      npm: "npm uninstall -g opencode-ai",
-      pnpm: "pnpm uninstall -g opencode-ai",
-      bun: "bun remove -g opencode-ai",
-      yarn: "yarn global remove opencode-ai",
+      npm: "npm uninstall -g @kilocode/cli", // kilocode_change
+      pnpm: "pnpm uninstall -g @kilocode/cli", // kilocode_change
+      bun: "bun remove -g @kilocode/cli", // kilocode_change
+      yarn: "yarn global remove @kilocode/cli", // kilocode_change
       brew: "brew uninstall opencode",
-      choco: "choco uninstall opencode",
-      scoop: "scoop uninstall opencode",
+      choco: "choco uninstall kilo", // kilocode_change
+      scoop: "scoop uninstall kilo", // kilocode_change
     }
     prompts.log.info(`  ✓ Package: ${cmds[method] || method}`)
   }
@@ -179,13 +179,13 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
 
   if (method !== "curl" && method !== "unknown") {
     const cmds: Record<string, string[]> = {
-      npm: ["npm", "uninstall", "-g", "opencode-ai"],
-      pnpm: ["pnpm", "uninstall", "-g", "opencode-ai"],
-      bun: ["bun", "remove", "-g", "opencode-ai"],
-      yarn: ["yarn", "global", "remove", "opencode-ai"],
+      npm: ["npm", "uninstall", "-g", "@kilocode/cli"], // kilocode_change
+      pnpm: ["pnpm", "uninstall", "-g", "@kilocode/cli"], // kilocode_change
+      bun: ["bun", "remove", "-g", "@kilocode/cli"], // kilocode_change
+      yarn: ["yarn", "global", "remove", "@kilocode/cli"], // kilocode_change
       brew: ["brew", "uninstall", "opencode"],
-      choco: ["choco", "uninstall", "opencode"],
-      scoop: ["scoop", "uninstall", "opencode"],
+      choco: ["choco", "uninstall", "kilo"], // kilocode_change
+      scoop: ["scoop", "uninstall", "kilo"], // kilocode_change
     }
 
     const cmd = cmds[method]
@@ -193,7 +193,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
       spinner.start(`Running ${cmd.join(" ")}...`)
       const result =
         method === "choco"
-          ? await $`echo Y | choco uninstall opencode -y -r`.quiet().nothrow()
+          ? await $`echo Y | choco uninstall kilo -y -r`.quiet().nothrow() // kilocode_change
           : await $`${cmd}`.quiet().nothrow()
       if (result.exitCode !== 0) {
         spinner.stop(`Package manager uninstall failed: exit code ${result.exitCode}`, 1)
@@ -217,7 +217,8 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
     prompts.log.info(`  rm "${targets.binary}"`)
 
     const binDir = path.dirname(targets.binary)
-    if (binDir.includes(".opencode")) {
+    if (binDir.includes(".opencode") || binDir.includes(".kilo")) {
+      // kilocode_change
       prompts.log.info(`  rmdir "${binDir}" 2>/dev/null`)
     }
   }
@@ -270,9 +271,16 @@ async function getShellConfigFile(): Promise<string | null> {
     const content = await Bun.file(file)
       .text()
       .catch(() => "")
-    if (content.includes("# opencode") || content.includes(".opencode/bin")) {
+    // kilocode_change start - detect both opencode and kilo markers
+    if (
+      content.includes("# opencode") ||
+      content.includes(".opencode/bin") ||
+      content.includes("# kilo") ||
+      content.includes(".kilo/bin")
+    ) {
       return file
     }
+    // kilocode_change end
   }
 
   return null
@@ -288,24 +296,26 @@ async function cleanShellConfig(file: string) {
   for (const line of lines) {
     const trimmed = line.trim()
 
-    if (trimmed === "# opencode") {
+    // kilocode_change start - clean both opencode and kilo markers
+    if (trimmed === "# opencode" || trimmed === "# kilo") {
       skip = true
       continue
     }
 
     if (skip) {
       skip = false
-      if (trimmed.includes(".opencode/bin") || trimmed.includes("fish_add_path")) {
+      if (trimmed.includes(".opencode/bin") || trimmed.includes(".kilo/bin") || trimmed.includes("fish_add_path")) {
         continue
       }
     }
 
     if (
-      (trimmed.startsWith("export PATH=") && trimmed.includes(".opencode/bin")) ||
-      (trimmed.startsWith("fish_add_path") && trimmed.includes(".opencode"))
+      (trimmed.startsWith("export PATH=") && (trimmed.includes(".opencode/bin") || trimmed.includes(".kilo/bin"))) ||
+      (trimmed.startsWith("fish_add_path") && (trimmed.includes(".opencode") || trimmed.includes(".kilo")))
     ) {
       continue
     }
+    // kilocode_change end
 
     filtered.push(line)
   }

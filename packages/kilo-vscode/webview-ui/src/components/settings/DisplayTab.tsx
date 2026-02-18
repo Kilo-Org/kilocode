@@ -3,44 +3,30 @@ import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
+import { useLanguage } from "../../context/language"
+import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
   value: string
-  label: string
+  labelKey: string
 }
 
 const LAYOUT_OPTIONS: LayoutOption[] = [
-  { value: "auto", label: "Auto" },
-  { value: "stretch", label: "Stretch" },
+  { value: "auto", labelKey: "settings.display.layout.auto" },
+  { value: "stretch", labelKey: "settings.display.layout.stretch" },
 ]
 
 const DisplayTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const language = useLanguage()
 
   return (
     <div>
       <Card>
-        <div
-          data-slot="settings-row"
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "space-between",
-            padding: "8px 0",
-            "border-bottom": "1px solid var(--border-weak-base)",
-          }}
+        <SettingsRow
+          title={language.t("settings.display.username.title")}
+          description={language.t("settings.display.username.description")}
         >
-          <div style={{ flex: 1, "min-width": 0, "margin-right": "12px" }}>
-            <div style={{ "font-weight": "500" }}>Username</div>
-            <div
-              style={{
-                "font-size": "11px",
-                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-              }}
-            >
-              Custom username displayed in conversations
-            </div>
-          </div>
           <div style={{ width: "160px" }}>
             <TextField
               value={config().username ?? ""}
@@ -48,39 +34,24 @@ const DisplayTab: Component = () => {
               onChange={(val) => updateConfig({ username: val.trim() || undefined })}
             />
           </div>
-        </div>
+        </SettingsRow>
 
-        <div
-          data-slot="settings-row"
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "space-between",
-            padding: "8px 0",
-          }}
+        <SettingsRow
+          title={language.t("settings.display.layout.title")}
+          description={language.t("settings.display.layout.description")}
+          last
         >
-          <div style={{ flex: 1, "min-width": 0, "margin-right": "12px" }}>
-            <div style={{ "font-weight": "500" }}>Layout</div>
-            <div
-              style={{
-                "font-size": "11px",
-                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-              }}
-            >
-              Layout mode for the chat interface
-            </div>
-          </div>
           <Select
             options={LAYOUT_OPTIONS}
             current={LAYOUT_OPTIONS.find((o) => o.value === (config().layout ?? "auto"))}
             value={(o) => o.value}
-            label={(o) => o.label}
+            label={(o) => language.t(o.labelKey)}
             onSelect={(o) => o && updateConfig({ layout: o.value as "auto" | "stretch" })}
             variant="secondary"
             size="small"
             triggerVariant="settings"
           />
-        </div>
+        </SettingsRow>
       </Card>
     </div>
   )

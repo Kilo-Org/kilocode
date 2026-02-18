@@ -12,6 +12,10 @@ export namespace Question {
     .object({
       label: z.string().describe("Display text (1-5 words, concise)"),
       description: z.string().describe("Explanation of choice"),
+      mode: z
+        .string()
+        .optional()
+        .describe("Optional agent/mode to switch to when selected (e.g. code, debug, orchestrator)"), // kilocode_change
     })
     .meta({
       ref: "QuestionOption",

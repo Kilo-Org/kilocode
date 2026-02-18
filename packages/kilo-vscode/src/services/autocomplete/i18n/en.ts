@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // English runtime translations for autocomplete (kilocode:autocomplete.* namespace)
 // Source: src/i18n/locales/en/kilocode.json → "autocomplete" section
 

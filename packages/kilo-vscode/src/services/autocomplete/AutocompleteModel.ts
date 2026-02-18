@@ -1,4 +1,3 @@
-// kilocode_change - rewritten to use CLI backend FIM endpoint
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
 

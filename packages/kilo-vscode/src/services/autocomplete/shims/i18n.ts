@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // i18n bridge for autocomplete module
 // Provides a t() function using the autocomplete English dictionary as fallback.
 // Can be wired to locale detection later.

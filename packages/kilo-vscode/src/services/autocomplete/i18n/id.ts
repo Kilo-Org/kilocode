@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // id runtime translations for autocomplete
 
 export const dict = {

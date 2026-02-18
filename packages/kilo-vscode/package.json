@@ -2,9 +2,15 @@
   "name": "kilo-code",
   "displayName": "Kilo Code",
   "description": "Kilo Code AI Agent & Autocomplete",
-  "version": "1.0.21",
+  "version": "7.0.23",
+  "publisher": "kilocode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilo.git",
+    "directory": "packages/kilo-vscode"
+  },
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.108.0"
   },
   "categories": [
     "Other"
@@ -17,7 +23,8 @@
         {
           "id": "kilo-code-sidebar",
           "title": "Kilo Code (NEW)",
-          "icon": "$(code)"
+          "icon": "assets/icons/kilo-light.png",
+          "darkIcon": "assets/icons/kilo-dark.png"
         }
       ]
     },
@@ -73,6 +80,30 @@
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousSession",
+        "title": "Agent Manager: Previous Session",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextSession",
+        "title": "Agent Manager: Next Session",
+        "category": "Kilo Code"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kilo-code.new.agentManager.previousSession",
+        "key": "ctrl+up",
+        "mac": "cmd+up",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextSession",
+        "key": "ctrl+down",
+        "mac": "cmd+down",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],
     "menus": {
@@ -248,36 +279,34 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run package",
-    "prepare:cli-binary": "node scripts/prepare-cli-binary.mjs",
-    "compile": "pnpm run prepare:cli-binary && pnpm run check-types && pnpm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "pnpm run prepare:cli-binary && node esbuild.js --watch",
+    "prepare:cli-binary": "bun script/local-bin.ts",
+    "compile": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js",
+    "watch": "bun run --parallel watch:esbuild watch:tsc",
+    "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "pnpm run prepare:cli-binary && pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "watch:cli": "bun script/watch-cli.ts",
+    "package": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint src",
-    "test": "vscode-test",
-    "update-backend": "node scripts/prepare-cli-binary.mjs --force"
+    "test": "vscode-test"
   },
   "devDependencies": {
     "@types/diff": "^6.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/qrcode": "^1.5.6",
-    "@types/vscode": "^1.109.0",
+    "@types/vscode": "^1.108.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
-    "npm-run-all": "^4.1.5",
     "prettier": "^3.8.1",
     "qrcode": "^1.5.4",
     "typescript": "^5.9.3",
@@ -285,9 +314,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@kilocode/kilo-i18n": "file:../kilo-i18n",
-    "@kilocode/kilo-ui": "file:../kilo-ui",
-    "@kilocode/sdk": "file:../sdk/js",
+    "@kilocode/kilo-i18n": "workspace:*",
+    "@kilocode/kilo-ui": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
     "diff": "^7.0.0",
     "dotenv": "^16.4.7",
     "eventsource": "^2.0.2",

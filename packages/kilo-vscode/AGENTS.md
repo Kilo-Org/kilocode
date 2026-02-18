@@ -4,30 +4,35 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Package Context
 
-VSCode extension for Kilo Code. Part of a Bun/Turbo monorepo but this package uses **pnpm** (not Bun).
+VSCode extension for Kilo Code. Part of a Bun/Turbo monorepo using Bun workspace dependencies.
 
 ## Commands
 
 ```bash
-pnpm compile          # Type-check + lint + build
-pnpm watch            # Watch mode (esbuild + tsc)
-pnpm test             # Run tests (requires pretest compilation)
-pnpm lint             # ESLint on src/
-pnpm run format       # Run formatter (do this before committing to avoid styling-only changes in commits)
+bun run compile          # Type-check + lint + build
+bun run watch            # Watch mode (esbuild + tsc)
+bun run test             # Run tests (requires pretest compilation)
+bun run lint             # ESLint on src/
+bun run format           # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
 
-Single test: `pnpm test -- --grep "test name"`
+Single test: `bun run test -- --grep "test name"`
 
 ## CLI Binary
 
 The extension bundles a CLI backend binary. To build it:
 
 ```bash
-cd ../../packages/opencode && bun install && cd ../../packages/kilo-vscode
-node scripts/prepare-cli-binary.mjs
+bun script/local-bin.ts
 ```
 
-`bun install` in the opencode package is required before the binary can be built.
+Or use `--force` to rebuild:
+
+```bash
+bun script/local-bin.ts --force
+```
+
+The script automatically handles building the opencode package if needed.
 
 ## Architecture (Non-Obvious)
 
@@ -98,6 +103,14 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 While the old extension coexists, runtime labels append `(NEW)` — controlled by the flag in [`constants.ts`](src/constants.ts). Static labels in `package.json` must be updated separately. Remove this convention once the old extension is retired.
 
+## Agent Manager
+
+Opens as an editor tab (not the sidebar) and lets users run multiple independent AI sessions in parallel. It has a left sidebar listing active sessions and a right panel showing the chat UI for the selected one. Each session is a standard `kilo serve` session. The extension side uses the same `KiloProvider` wiring as the sidebar; the webview side reuses the same provider chain and `ChatView` component.
+
+## Kilocode Change Markers
+
+This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
+
 ## Style
 
 Follow monorepo root AGENTS.md style guide:
@@ -113,4 +126,4 @@ Do not pad markdown table cells for column alignment. Use `| content |` with sin
 
 ## Committing
 
-- Before committing, always run `pnpm run format` so commits don't accidentally include formatting/styling-only diffs.
+- Before committing, always run `bun run format` so commits don't accidentally include formatting/styling-only diffs.

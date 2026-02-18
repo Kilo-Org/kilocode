@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // zh-TW runtime translations for autocomplete
 
 export const dict = {

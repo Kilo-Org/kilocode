@@ -30,33 +30,7 @@ interface SelectOption {
   label: string
 }
 
-interface SettingRowProps {
-  label: string
-  description: string
-  last?: boolean
-  children: any
-}
-
-const SettingRow: Component<SettingRowProps> = (props) => (
-  <div
-    data-slot="settings-row"
-    style={{
-      display: "flex",
-      "align-items": "center",
-      "justify-content": "space-between",
-      padding: "8px 0",
-      "border-bottom": props.last ? "none" : "1px solid var(--border-weak-base)",
-    }}
-  >
-    <div style={{ flex: 1, "min-width": 0, "margin-right": "12px" }}>
-      <div style={{ "font-weight": "500" }}>{props.label}</div>
-      <div style={{ "font-size": "11px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>
-        {props.description}
-      </div>
-    </div>
-    {props.children}
-  </div>
-)
+import SettingsRow from "./SettingsRow"
 
 const Placeholder: Component<{ text: string }> = (props) => (
   <Card>
@@ -68,7 +42,7 @@ const Placeholder: Component<{ text: string }> = (props) => (
         "line-height": "1.5",
       }}
     >
-      <strong>Not yet implemented.</strong> {props.text}
+      <strong>{useLanguage().t("settings.agentBehaviour.notImplemented")}</strong> {props.text}
     </p>
   </Card>
 )
@@ -96,12 +70,12 @@ const AgentBehaviourTab: Component = () => {
   })
 
   const defaultAgentOptions = createMemo<SelectOption[]>(() => [
-    { value: "", label: "Default" },
+    { value: "", label: language.t("common.default") },
     ...agentNames().map((name) => ({ value: name, label: name })),
   ])
 
   const agentSelectorOptions = createMemo<SelectOption[]>(() => [
-    { value: "", label: "Select an agent to configure…" },
+    { value: "", label: language.t("settings.agentBehaviour.selectAgent") },
     ...agentNames().map((name) => ({ value: name, label: name })),
   ])
 
@@ -190,7 +164,11 @@ const AgentBehaviourTab: Component = () => {
     <div>
       {/* Default agent */}
       <Card style={{ "margin-bottom": "12px" }}>
-        <SettingRow label="Default Agent" description="Agent to use when none is specified" last>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.defaultAgent.title")}
+          description={language.t("settings.agentBehaviour.defaultAgent.description")}
+          last
+        >
           <Select
             options={defaultAgentOptions()}
             current={defaultAgentOptions().find((o) => o.value === (config().default_agent ?? ""))}
@@ -201,7 +179,7 @@ const AgentBehaviourTab: Component = () => {
             size="small"
             triggerVariant="settings"
           />
-        </SettingRow>
+        </SettingsRow>
       </Card>
 
       {/* Agent selector */}
@@ -221,7 +199,10 @@ const AgentBehaviourTab: Component = () => {
       <Show when={selectedAgent()}>
         <Card>
           {/* Model override */}
-          <SettingRow label="Model Override" description="Override the default model for this agent">
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.modelOverride.title")}
+            description={language.t("settings.agentBehaviour.modelOverride.description")}
+          >
             <TextField
               value={currentAgentConfig().model ?? ""}
               placeholder="e.g. anthropic/claude-sonnet-4-20250514"
@@ -231,10 +212,13 @@ const AgentBehaviourTab: Component = () => {
                 })
               }
             />
-          </SettingRow>
+          </SettingsRow>
 
           {/* System prompt */}
-          <SettingRow label="Custom Prompt" description="Additional system prompt for this agent">
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.prompt.title")}
+            description={language.t("settings.agentBehaviour.prompt.description")}
+          >
             <TextField
               value={currentAgentConfig().prompt ?? ""}
               placeholder="Custom instructions…"
@@ -245,43 +229,53 @@ const AgentBehaviourTab: Component = () => {
                 })
               }
             />
-          </SettingRow>
+          </SettingsRow>
 
           {/* Temperature */}
-          <SettingRow label="Temperature" description="Sampling temperature (0-2)">
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.temperature.title")}
+            description={language.t("settings.agentBehaviour.temperature.description")}
+          >
             <TextField
               value={currentAgentConfig().temperature?.toString() ?? ""}
-              placeholder="Default"
+              placeholder={language.t("common.default")}
               onChange={(val) => {
                 const parsed = parseFloat(val)
                 updateAgentConfig(selectedAgent(), { temperature: isNaN(parsed) ? undefined : parsed })
               }}
             />
-          </SettingRow>
+          </SettingsRow>
 
           {/* Top-p */}
-          <SettingRow label="Top P" description="Nucleus sampling parameter (0-1)">
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.topP.title")}
+            description={language.t("settings.agentBehaviour.topP.description")}
+          >
             <TextField
               value={currentAgentConfig().top_p?.toString() ?? ""}
-              placeholder="Default"
+              placeholder={language.t("common.default")}
               onChange={(val) => {
                 const parsed = parseFloat(val)
                 updateAgentConfig(selectedAgent(), { top_p: isNaN(parsed) ? undefined : parsed })
               }}
             />
-          </SettingRow>
+          </SettingsRow>
 
           {/* Max steps */}
-          <SettingRow label="Max Steps" description="Maximum agentic iterations" last>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.maxSteps.title")}
+            description={language.t("settings.agentBehaviour.maxSteps.description")}
+            last
+          >
             <TextField
               value={currentAgentConfig().steps?.toString() ?? ""}
-              placeholder="Default"
+              placeholder={language.t("common.default")}
               onChange={(val) => {
                 const parsed = parseInt(val, 10)
                 updateAgentConfig(selectedAgent(), { steps: isNaN(parsed) ? undefined : parsed })
               }}
             />
-          </SettingRow>
+          </SettingsRow>
         </Card>
       </Show>
     </div>
@@ -302,7 +296,7 @@ const AgentBehaviourTab: Component = () => {
                   color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                 }}
               >
-                No MCP servers configured. Edit the opencode config file to add MCP servers.
+                {language.t("settings.agentBehaviour.mcpEmpty")}
               </div>
             </Card>
           }
@@ -346,7 +340,7 @@ const AgentBehaviourTab: Component = () => {
   const renderSkillsSubtab = () => (
     <div>
       {/* Skill paths */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>Skill Folder Paths</h4>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillPaths")}</h4>
       <Card style={{ "margin-bottom": "16px" }}>
         <div
           style={{
@@ -368,7 +362,7 @@ const AgentBehaviourTab: Component = () => {
             />
           </div>
           <Button size="small" onClick={addSkillPath}>
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
         <For each={skillPaths()}>
@@ -397,7 +391,7 @@ const AgentBehaviourTab: Component = () => {
       </Card>
 
       {/* Skill URLs */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>Skill URLs</h4>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillUrls")}</h4>
       <Card>
         <div
           style={{
@@ -419,7 +413,7 @@ const AgentBehaviourTab: Component = () => {
             />
           </div>
           <Button size="small" onClick={addSkillUrl}>
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
         <For each={skillUrls()}>
@@ -458,7 +452,7 @@ const AgentBehaviourTab: Component = () => {
             "border-bottom": "1px solid var(--border-weak-base)",
           }}
         >
-          <div style={{ "font-weight": "500" }}>Additional Instruction Files</div>
+          <div style={{ "font-weight": "500" }}>{language.t("settings.agentBehaviour.instructionFiles")}</div>
           <div
             style={{
               "font-size": "11px",
@@ -466,7 +460,7 @@ const AgentBehaviourTab: Component = () => {
               "margin-top": "2px",
             }}
           >
-            Paths to additional instruction files that are included in the system prompt
+            {language.t("settings.agentBehaviour.instructionFiles.description")}
           </div>
         </div>
 
@@ -491,7 +485,7 @@ const AgentBehaviourTab: Component = () => {
             />
           </div>
           <Button size="small" onClick={addInstruction}>
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
 
@@ -532,7 +526,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text="Workflows are managed via workflow files in your workspace." />
+        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
       case "skills":
         return renderSkillsSubtab()
       default:

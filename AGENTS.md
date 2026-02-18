@@ -23,6 +23,7 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
 | `packages/opencode/`       | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
 | `packages/sdk/js/`         | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
+| `packages/kilo-vscode/`    | `@kilocode/kilo-vscode`    | VS Code extension with SolidJS webview UI. See its own `AGENTS.md` for details.            |
 | `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
 | `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
 | `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Internationalization / translations                                                        |
@@ -82,6 +83,32 @@ function foo() {
   if (condition) return 1
   else return 2
 }
+```
+
+### No empty catch blocks
+
+Never leave a `catch` block empty. An empty `catch` silently swallows errors and hides bugs. If you're tempted to write one, ask yourself:
+
+1. Is the `try`/`catch` even needed? (prefer removing it)
+2. Should the error be handled explicitly? (recover, retry, rethrow)
+3. At minimum, log it so failures are visible
+
+Good:
+
+```ts
+try {
+  await save(data)
+} catch (err) {
+  log.error("save failed", { err })
+}
+```
+
+Bad:
+
+```ts
+try {
+  await save(data)
+} catch {}
 ```
 
 ### Prefer single word naming

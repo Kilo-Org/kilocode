@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // ar runtime translations for autocomplete
 
 export const dict = {

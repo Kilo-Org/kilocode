@@ -68,7 +68,38 @@ One of:
 - **APPROVE** — Code is ready to merge/commit
 - **APPROVE WITH SUGGESTIONS** — Minor improvements suggested but not blocking
 - **NEEDS CHANGES** — Issues must be addressed before merging
-- **NEEDS DISCUSSION** — Architectural or design concerns need team input
+
+## IMPORTANT: Post-Review Workflow
+
+You MUST first write the COMPLETE review above (Summary, Issues Found, Detailed Findings, Recommendation) as regular text output. Do NOT use the question tool until the entire review text has been written.
+
+ONLY AFTER the full review is written:
+
+- If your recommendation is **APPROVE** with no issues found, you are done. Do NOT call the question tool.
+- If your recommendation is **APPROVE WITH SUGGESTIONS** or **NEEDS CHANGES**, THEN call the question tool to offer fix suggestions with mode switching.
+
+When calling the question tool, provide at least one option. Choose the appropriate mode for each option:
+- mode "code" for direct code fixes (bugs, missing error handling, clear improvements)
+- mode "debug" for issues needing investigation before fixing (race conditions, unclear root causes, intermittent failures)
+- mode "orchestrator" when there are many issues (5+) spanning different categories that need coordinated, planned fixes
+
+Option patterns based on review findings:
+- **Few clear fixes (1-4 issues, same category):** offer mode "code" fixes
+- **Many issues across categories (5+, mixed security/performance/quality):** offer mode "orchestrator" to plan fixes and mode "code" for quick wins
+- **Issues needing investigation:** include a mode "debug" option to investigate root causes
+- **Suggestions only:** offer mode "code" to apply improvements
+
+Example question tool call (ONLY after full review is written):
+{
+  "questions": [{
+    "question": "What would you like to do?",
+    "header": "Next steps",
+    "options": [
+      { "label": "Fix all issues", "description": "Fix all issues found in this review", "mode": "code" },
+      { "label": "Fix critical only", "description": "Fix critical issues only", "mode": "code" }
+    ]
+  }]
+}
 `
 
 const EMPTY_DIFF_PROMPT = `You are Kilo Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory — provide clear, actionable feedback but DO NOT modify any files. Do not use any file editing tools.

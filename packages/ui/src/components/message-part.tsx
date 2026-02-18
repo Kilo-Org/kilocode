@@ -711,7 +711,11 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props) {
   const part = props.part as ReasoningPart
-  const text = () => part.text.trim()
+  // kilocode_change start
+  // Filter out redacted reasoning chunks from OpenRouter
+  // OpenRouter sends encrypted reasoning data that appears as [REDACTED]
+  const text = () => part.text.replace("[REDACTED]", "").trim()
+  // kilocode_change end
   const throttledText = createThrottledValue(text)
 
   return (

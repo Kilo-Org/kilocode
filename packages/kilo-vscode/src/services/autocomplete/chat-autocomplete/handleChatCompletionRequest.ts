@@ -27,7 +27,8 @@ export async function handleChatCompletionRequest(
   const requestId = message.requestId || ""
 
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
-  const ignoreController = new FileIgnoreController()
+
+  const ignoreController = new FileIgnoreController(workspacePath)
   await ignoreController.initialize()
 
   const tracker = new VisibleCodeTracker(workspacePath, ignoreController)

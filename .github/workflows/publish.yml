@@ -87,6 +87,40 @@ jobs:
     outputs:
       version: ${{ needs.version.outputs.version }}
 
+  build-vscode:
+    needs: build-cli
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'Kilo-Org/kilo'
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-bun
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install @vscode/vsce
+        run: bun install -g @vscode/vsce
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: kilo-cli
+          path: packages/opencode/dist
+
+      - name: Build VSIX packages
+        run: bun script/build.ts
+        working-directory: ./packages/kilo-vscode
+        env:
+          CLI_DIST_DIR: ../../packages/opencode/dist
+          KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kilo-vscode
+          path: packages/kilo-vscode/out
+
   # build-tauri:
   #   needs:
   #     - build-cli
@@ -207,6 +241,7 @@ jobs:
     needs:
       - version
       - build-cli
+      - build-vscode
       # - build-tauri
     runs-on: ubuntu-24.04
     steps:
@@ -232,6 +267,9 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Install @vscode/vsce
+        run: bun install -g @vscode/vsce
+
       - name: Setup Git Committer
         id: committer
         uses: ./.github/actions/setup-git-committer
@@ -245,6 +283,11 @@ jobs:
         with:
           name: kilo-cli
           path: packages/opencode/dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: kilo-vscode
+          path: packages/kilo-vscode/out
 
       - name: Cache apt packages (AUR)
         uses: actions/cache@v4
@@ -273,3 +316,5 @@ jobs:
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+          OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}

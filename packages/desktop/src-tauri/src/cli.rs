@@ -9,7 +9,7 @@ use tokio::sync::oneshot;
 use crate::constants::{SETTINGS_STORE, WSL_ENABLED_KEY};
 
 const CLI_INSTALL_DIR: &str = ".kilo/bin";
-const CLI_BINARY_NAME: &str = "kilo"; // kilocode_change
+const CLI_BINARY_NAME: &str = "opencode";
 
 #[derive(serde::Deserialize)]
 pub struct ServerConfig {
@@ -69,7 +69,7 @@ pub fn install_cli(app: tauri::AppHandle) -> Result<String, String> {
         return Err("Sidecar binary not found".to_string());
     }
 
-    let temp_script = std::env::temp_dir().join("kilo-install.sh"); // kilocode_change
+    let temp_script = std::env::temp_dir().join("opencode-install.sh");
     std::fs::write(&temp_script, INSTALL_SCRIPT)
         .map_err(|e| format!("Failed to write install script: {}", e))?;
 
@@ -208,10 +208,10 @@ pub fn create_command(app: &tauri::AppHandle, args: &str, extra_env: &[(&str, St
             let version = app.package_info().version.to_string();
             let mut script = vec![
                 "set -e".to_string(),
-                "BIN=\"$HOME/.kilo/bin/kilo\"".to_string(), // kilocode_change
+                "BIN=\"$HOME/.opencode/bin/opencode\"".to_string(),
                 "if [ ! -x \"$BIN\" ]; then".to_string(),
                 format!(
-                    "  curl -fsSL https://kilo.ai/cli/install | bash -s -- --version {} --no-modify-path", // kilocode_change
+                    "  curl -fsSL https://kilo.ai/install | bash -s -- --version {} --no-modify-path",
                     shell_escape(&version)
                 ),
                 "fi".to_string(),
@@ -282,7 +282,7 @@ pub fn serve(
     tracing::info!(port, "Spawning sidecar");
 
     let envs = [
-        ("KILO_SERVER_USERNAME", "kilo".to_string()), // kilocode_change
+        ("KILO_SERVER_USERNAME", "opencode".to_string()),
         ("KILO_SERVER_PASSWORD", password.to_string()),
     ];
 
@@ -292,7 +292,7 @@ pub fn serve(
         &envs,
     )
     .spawn()
-    .expect("Failed to spawn kilo"); // kilocode_change
+    .expect("Failed to spawn opencode");
 
     tokio::spawn(async move {
         let mut exit_tx = Some(exit_tx);

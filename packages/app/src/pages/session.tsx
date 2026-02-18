@@ -1,4 +1,4 @@
-import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on } from "solid-js"
+import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, createRoot, on } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Dynamic } from "solid-js/web"
@@ -39,6 +39,7 @@ import { usePermission } from "@/context/permission"
 import { showToast } from "@opencode-ai/ui/toast"
 import { SessionHeader, SessionContextTab, SortableTab, FileVisual, NewSessionView } from "@/components/session"
 import { navMark, navParams } from "@/utils/perf"
+import { Identifier } from "@/utils/id" // kilocode_change
 import { same } from "@/utils/same"
 import { createOpenReviewFile, focusTerminalById, getTabReorderIndex } from "@/pages/session/helpers"
 import { createScrollSpy } from "@/pages/session/scroll-spy"
@@ -150,6 +151,106 @@ export default function Page() {
       })
       .finally(() => setUi("responding", false))
   }
+
+  // kilocode_change start - handle mode switch from question options
+  let modeActionAbort: AbortController | undefined
+
+  const waitForIdle = (sessionID: string, signal: AbortSignal) =>
+    new Promise<void>((resolve, reject) => {
+      let settled = false
+      const ref: { dispose?: () => void } = {}
+      const settle = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        ref.dispose?.()
+        fn()
+      }
+      const timeout = setTimeout(() => {
+        settle(() => reject(new Error("Timed out waiting for session idle")))
+      }, 30_000)
+
+      createRoot((dispose) => {
+        ref.dispose = dispose
+        signal.addEventListener("abort", () => settle(() => reject(new Error("Cancelled"))), { once: true })
+        createEffect(() => {
+          const status = sync.data.session_status[sessionID]
+          if (!status || status.type !== "idle") return
+          settle(() => resolve())
+        })
+      })
+    })
+
+  onCleanup(() => modeActionAbort?.abort())
+
+  const handleModeAction = async (input: { mode: string; text: string; description?: string }) => {
+    const sessionID = params.id
+    if (!sessionID) return
+
+    modeActionAbort?.abort()
+    const controller = new AbortController()
+    modeActionAbort = controller
+
+    const toastTimer = setTimeout(() => {
+      showToast({
+        title: language.t("session.modeSwitch.switching", { mode: input.mode }),
+        description: language.t("session.modeSwitch.waiting"),
+      })
+    }, 500)
+
+    try {
+      // Allow one microtask for session status to reflect the reply before checking idle
+      await new Promise((r) => setTimeout(r, 0))
+      await waitForIdle(sessionID, controller.signal)
+    } catch (err: unknown) {
+      clearTimeout(toastTimer)
+      if (controller.signal.aborted) return
+      const message = err instanceof Error ? err.message : String(err)
+      showToast({ title: language.t("common.requestFailed"), description: message })
+      return
+    }
+
+    clearTimeout(toastTimer)
+
+    if (controller.signal.aborted) return
+
+    local.agent.set(input.mode)
+
+    const agent = local.agent.current()
+    if (!agent) return
+
+    if (agent.name !== input.mode) {
+      showToast({
+        title: language.t("session.modeSwitch.notAvailable"),
+        description: language.t("session.modeSwitch.fallback", { requested: input.mode, actual: agent.name }),
+      })
+    }
+
+    const model = local.model.current()
+    if (!model) return
+
+    const variant = local.model.variant.current()
+    const messageID = Identifier.ascending("message")
+
+    sdk.client.session
+      .prompt({
+        sessionID,
+        agent: agent.name,
+        model: {
+          modelID: model.id,
+          providerID: model.provider.id,
+        },
+        messageID,
+        parts: [{ type: "text", text: input.description ?? input.text }],
+        variant,
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        showToast({ title: language.t("common.requestFailed"), description: message })
+      })
+  }
+  // kilocode_change end
+
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const workspaceKey = createMemo(() => params.dir ?? "")
   const workspaceTabs = createMemo(() => layout.tabs(workspaceKey))
@@ -1697,6 +1798,7 @@ export default function Page() {
               resumeScroll()
             }}
             setPromptDockRef={(el) => (promptDock = el)}
+            onModeAction={handleModeAction}
           />
 
           <Show when={desktopReviewOpen()}>
