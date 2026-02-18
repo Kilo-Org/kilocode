@@ -313,6 +313,35 @@
   color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
 }
 
+/* Read-only session wrapper */
+
+.am-chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.am-readonly-banner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface-inset-base, var(--vscode-input-background, #252526));
+  color: var(--text-weak, var(--vscode-descriptionForeground, #888));
+  font-size: 13px;
+}
+
+.am-readonly-text {
+  flex: 1;
+}
+
 /* Setup overlay */
 
 .am-setup-overlay {

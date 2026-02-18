@@ -79,6 +79,9 @@ const AgentManagerContent: Component = () => {
   // Whether the selected worktree has zero sessions (show empty state)
   const worktreeEmpty = createMemo(() => selectedWorktree() !== null && activeWorktreeSessions().length === 0)
 
+  // Read-only mode: viewing an unassigned session (not in a worktree)
+  const readOnly = createMemo(() => !selectedWorktree() && !!session.currentSessionID())
+
   // Display name for worktree: use first session's title or branch name
   const worktreeLabel = (wt: WorktreeState): string => {
     const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
@@ -317,7 +320,7 @@ const AgentManagerContent: Component = () => {
             <div class="am-tab-list">
               <For each={activeWorktreeSessions()}>
                 {(s) => (
-                  <Tooltip content={s.title || "Untitled"} placement="bottom">
+                  <Tooltip value={s.title || "Untitled"} placement="bottom">
                     <div
                       class={`am-tab ${s.id === session.currentSessionID() ? "am-tab-active" : ""}`}
                       onClick={() => session.selectSession(s.id)}
@@ -376,7 +379,25 @@ const AgentManagerContent: Component = () => {
           </div>
         </Show>
         <Show when={!worktreeEmpty()}>
-          <ChatView onSelectSession={(id) => session.selectSession(id)} />
+          <div class="am-chat-wrapper">
+            <ChatView onSelectSession={(id) => session.selectSession(id)} />
+            <Show when={readOnly()}>
+              <div class="am-readonly-banner">
+                <Icon name="branch" size="small" />
+                <span class="am-readonly-text">Open in a worktree to continue this session</span>
+                <IconButton
+                  icon="branch"
+                  size="small"
+                  variant="ghost"
+                  label="Open in worktree"
+                  onClick={() => {
+                    const sid = session.currentSessionID()
+                    if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                  }}
+                />
+              </div>
+            </Show>
+          </div>
         </Show>
       </div>
     </div>
