@@ -283,7 +283,7 @@ function getSelectedModel({
 					? bedrockModels[resolvedId as keyof typeof bedrockModels]
 					: undefined
 
-				if (resolvedBaseInfo) {
+				if (resolvedBaseInfo && resolvedId) {
 					// Apply tier pricing when 1M context is enabled and the resolved model supports it
 					if (apiConfiguration.awsBedrock1MContext) {
 						return {
