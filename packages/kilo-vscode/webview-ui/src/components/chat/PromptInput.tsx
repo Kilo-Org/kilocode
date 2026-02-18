@@ -184,7 +184,13 @@ export const PromptInput: Component = () => {
             </div>
           </Show>
         </div>
-        <div class="prompt-input-actions">
+      </div>
+      <div class="prompt-input-hint">
+        <div class="prompt-input-hint-selectors">
+          <ModeSwitcher />
+          <ModelSelector />
+        </div>
+        <div class="prompt-input-hint-actions">
           <Show
             when={isBusy()}
             fallback={
@@ -212,10 +218,6 @@ export const PromptInput: Component = () => {
             </Tooltip>
           </Show>
         </div>
-      </div>
-      <div class="prompt-input-hint">
-        <ModeSwitcher />
-        <ModelSelector />
       </div>
     </div>
   )

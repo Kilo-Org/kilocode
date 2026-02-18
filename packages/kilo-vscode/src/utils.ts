@@ -39,6 +39,14 @@ export function buildWebviewHtml(
   <link rel="stylesheet" href="${opts.styleUri}">
   <title>${opts.title}</title>
   <style>
+    html {
+      scrollbar-color: auto;
+
+      ::-webkit-scrollbar-thumb {
+        border: 3px solid transparent !important;
+        background-clip: padding-box !important;
+      }
+    }
     html, body {
       margin: 0;
       padding: 0;

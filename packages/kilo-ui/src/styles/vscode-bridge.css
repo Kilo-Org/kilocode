@@ -45,7 +45,7 @@ html[data-theme="kilo-vscode"] {
   --surface-float-base: var(--vscode-editorWidget-background, var(--vscode-menu-background));
   --surface-float-base-hover: var(--vscode-editorHoverWidget-statusBarBackground, var(--vscode-menu-background));
 
-  --surface-weak: var(--vscode-list-hoverBackground);
+  --surface-weak: var(--vscode-input-background, var(--vscode-list-hoverBackground));
   --surface-weaker: var(--vscode-editor-inactiveSelectionBackground);
   --surface-strong: var(--vscode-editorWidget-background);
 
