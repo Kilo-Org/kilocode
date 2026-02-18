@@ -66,6 +66,20 @@
       "problemMatcher": []
     },
     {
+      "label": "VSCode - Compile",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "compile"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": ["$tsc", "$eslint-stylish"]
+    },
+    {
       "label": "VSCode - Tests",
       "type": "shell",
       "command": "bun",

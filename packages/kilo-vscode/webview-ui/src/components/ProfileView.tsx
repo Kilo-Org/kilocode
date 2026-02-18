@@ -55,7 +55,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     const orgs = props.profileData?.profile.organizations ?? []
     if (orgs.length === 0) return []
     return [
-      { value: PERSONAL, label: "Personal Account" },
+      { value: PERSONAL, label: language.t("profile.personalAccount") },
       ...orgs.map((org) => ({ value: org.id, label: org.name, description: org.role })),
     ]
   })

@@ -130,7 +130,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* CLI Server */}
-      <div style={{ ...sectionStyle, "margin-bottom": "0" }}>
+      <div style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.cliServer")}</h4>
 
         {/* Connection Status */}
@@ -155,6 +155,36 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.port.label")}</span>
           <span style={valueStyle}>{props.port !== null ? props.port : "—"}</span>
         </div>
+      </div>
+
+      {/* Reset Settings */}
+      <div style={{ ...sectionStyle, "margin-bottom": "0" }}>
+        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
+        <p
+          style={{
+            "font-size": "12px",
+            color: "var(--vscode-descriptionForeground)",
+            margin: "0 0 12px 0",
+            "line-height": "1.5",
+          }}
+        >
+          {language.t("settings.aboutKiloCode.resetSettings.description")}
+        </p>
+        <button
+          type="button"
+          onClick={() => vscode.postMessage({ type: "resetAllSettings" })}
+          style={{
+            background: "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            padding: "6px 14px",
+            "border-radius": "2px",
+            cursor: "pointer",
+            "font-size": "12px",
+          }}
+        >
+          {language.t("settings.aboutKiloCode.resetSettings.button")}
+        </button>
       </div>
     </div>
   )

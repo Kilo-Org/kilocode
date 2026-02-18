@@ -690,6 +690,10 @@ export interface RequestNotificationSettingsMessage {
   type: "requestNotificationSettings"
 }
 
+export interface ResetAllSettingsRequest {
+  type: "resetAllSettings"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -722,6 +726,7 @@ export type WebviewMessage =
   | RequestConfigMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
+  | ResetAllSettingsRequest
 
 // ============================================
 // VS Code API type

@@ -6,10 +6,12 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../context/config"
+import { useLanguage } from "../../context/language"
 import SettingsRow from "./SettingsRow"
 
 const ContextTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const language = useLanguage()
   const [newPattern, setNewPattern] = createSignal("")
 
   const patterns = () => config().watcher?.ignore ?? []
@@ -35,27 +37,34 @@ const ContextTab: Component = () => {
     <div>
       {/* Compaction settings */}
       <Card>
-        <SettingsRow title="Auto Compaction" description="Automatically compact context when it's full">
+        <SettingsRow
+          title={language.t("settings.context.autoCompaction.title")}
+          description={language.t("settings.context.autoCompaction.description")}
+        >
           <Switch
             checked={config().compaction?.auto ?? false}
             onChange={(checked) => updateConfig({ compaction: { ...config().compaction, auto: checked } })}
             hideLabel
           >
-            Auto Compaction
+            {language.t("settings.context.autoCompaction.title")}
           </Switch>
         </SettingsRow>
-        <SettingsRow title="Prune Old Outputs" description="Remove old tool outputs during compaction" last>
+        <SettingsRow
+          title={language.t("settings.context.prune.title")}
+          description={language.t("settings.context.prune.description")}
+          last
+        >
           <Switch
             checked={config().compaction?.prune ?? false}
             onChange={(checked) => updateConfig({ compaction: { ...config().compaction, prune: checked } })}
             hideLabel
           >
-            Prune Old Outputs
+            {language.t("settings.context.prune.title")}
           </Switch>
         </SettingsRow>
       </Card>
 
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>File Watcher Ignore Patterns</h4>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.context.watcherPatterns")}</h4>
 
       <Card>
         <div
@@ -66,7 +75,7 @@ const ContextTab: Component = () => {
             "border-bottom": patterns().length > 0 || newPattern() ? "1px solid var(--border-weak-base)" : "none",
           }}
         >
-          Glob patterns for files the watcher should ignore
+          {language.t("settings.context.watcherPatterns.description")}
         </div>
 
         {/* Add new pattern */}
@@ -90,7 +99,7 @@ const ContextTab: Component = () => {
             />
           </div>
           <Button size="small" onClick={addPattern}>
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
 

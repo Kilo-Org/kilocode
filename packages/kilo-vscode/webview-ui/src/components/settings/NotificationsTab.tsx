@@ -3,21 +3,23 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
+import { useLanguage } from "../../context/language"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface SoundOption {
   value: string
-  label: string
+  labelKey: string
 }
 
 const SOUND_OPTIONS: SoundOption[] = [
-  { value: "default", label: "Default" },
-  { value: "none", label: "None" },
+  { value: "default", labelKey: "settings.notifications.sound.default" },
+  { value: "none", labelKey: "settings.notifications.sound.none" },
 ]
 
 const NotificationsTab: Component = () => {
   const vscode = useVSCode()
+  const language = useLanguage()
 
   const [agentNotify, setAgentNotify] = createSignal(true)
   const [permNotify, setPermNotify] = createSignal(true)
@@ -49,7 +51,10 @@ const NotificationsTab: Component = () => {
   return (
     <div>
       <Card>
-        <SettingsRow title="Agent Completion" description="Show notification when agent completes a task">
+        <SettingsRow
+          title={language.t("settings.notifications.agent.title")}
+          description={language.t("settings.notifications.agent.description")}
+        >
           <Switch
             checked={agentNotify()}
             onChange={(checked) => {
@@ -58,10 +63,13 @@ const NotificationsTab: Component = () => {
             }}
             hideLabel
           >
-            Agent Completion
+            {language.t("settings.notifications.agent.title")}
           </Switch>
         </SettingsRow>
-        <SettingsRow title="Permission Requests" description="Show notification on permission requests">
+        <SettingsRow
+          title={language.t("settings.notifications.permissions.title")}
+          description={language.t("settings.notifications.permissions.description")}
+        >
           <Switch
             checked={permNotify()}
             onChange={(checked) => {
@@ -70,10 +78,14 @@ const NotificationsTab: Component = () => {
             }}
             hideLabel
           >
-            Permission Requests
+            {language.t("settings.notifications.permissions.title")}
           </Switch>
         </SettingsRow>
-        <SettingsRow title="Errors" description="Show notification on errors" last>
+        <SettingsRow
+          title={language.t("settings.notifications.errors.title")}
+          description={language.t("settings.notifications.errors.description")}
+          last
+        >
           <Switch
             checked={errorNotify()}
             onChange={(checked) => {
@@ -82,19 +94,22 @@ const NotificationsTab: Component = () => {
             }}
             hideLabel
           >
-            Errors
+            {language.t("settings.notifications.errors.title")}
           </Switch>
         </SettingsRow>
       </Card>
 
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>Sounds</h4>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.notifications.sounds")}</h4>
       <Card>
-        <SettingsRow title="Agent Completion Sound" description="Sound to play when agent completes">
+        <SettingsRow
+          title={language.t("settings.notifications.agentSound.title")}
+          description={language.t("settings.notifications.agentSound.description")}
+        >
           <Select
             options={SOUND_OPTIONS}
             current={SOUND_OPTIONS.find((o) => o.value === agentSound())}
             value={(o) => o.value}
-            label={(o) => o.label}
+            label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (o) {
                 setAgentSound(o.value)
@@ -106,12 +121,15 @@ const NotificationsTab: Component = () => {
             triggerVariant="settings"
           />
         </SettingsRow>
-        <SettingsRow title="Permission Request Sound" description="Sound to play on permission requests">
+        <SettingsRow
+          title={language.t("settings.notifications.permSound.title")}
+          description={language.t("settings.notifications.permSound.description")}
+        >
           <Select
             options={SOUND_OPTIONS}
             current={SOUND_OPTIONS.find((o) => o.value === permSound())}
             value={(o) => o.value}
-            label={(o) => o.label}
+            label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (o) {
                 setPermSound(o.value)
@@ -123,12 +141,16 @@ const NotificationsTab: Component = () => {
             triggerVariant="settings"
           />
         </SettingsRow>
-        <SettingsRow title="Error Sound" description="Sound to play on errors" last>
+        <SettingsRow
+          title={language.t("settings.notifications.errorSound.title")}
+          description={language.t("settings.notifications.errorSound.description")}
+          last
+        >
           <Select
             options={SOUND_OPTIONS}
             current={SOUND_OPTIONS.find((o) => o.value === errorSound())}
             value={(o) => o.value}
-            label={(o) => o.label}
+            label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (o) {
                 setErrorSound(o.value)

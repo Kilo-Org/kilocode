@@ -5,6 +5,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
+import { useLanguage } from "../../context/language"
 import { ModelSelectorBase } from "../chat/ModelSelector"
 import type { ModelSelection } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
@@ -29,6 +30,7 @@ function parseModelConfig(raw: string | undefined): ModelSelection | null {
 const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
+  const language = useLanguage()
 
   const providerOptions = createMemo<ProviderOption[]>(() =>
     Object.keys(provider.providers())
@@ -70,18 +72,21 @@ const ProvidersTab: Component = () => {
     <div>
       {/* Model selection */}
       <Card>
-        <SettingsRow title="Default Model" description="Primary model for conversations">
+        <SettingsRow
+          title={language.t("settings.providers.defaultModel.title")}
+          description={language.t("settings.providers.defaultModel.description")}
+        >
           <ModelSelectorBase
             value={parseModelConfig(config().model)}
             onSelect={handleModelSelect("model")}
             placement="bottom-start"
             allowClear
-            clearLabel="Not set (use server default)"
+            clearLabel={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
         <SettingsRow
-          title="Small Model"
-          description="Lightweight model for title generation and other quick tasks"
+          title={language.t("settings.providers.smallModel.title")}
+          description={language.t("settings.providers.smallModel.description")}
           last
         >
           <ModelSelectorBase
@@ -89,13 +94,13 @@ const ProvidersTab: Component = () => {
             onSelect={handleModelSelect("small_model")}
             placement="bottom-start"
             allowClear
-            clearLabel="Not set (use server default)"
+            clearLabel={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
       </Card>
 
       {/* Disabled providers */}
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>Disabled Providers</h4>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
         <div
           style={{
@@ -105,7 +110,7 @@ const ProvidersTab: Component = () => {
             "border-bottom": "1px solid var(--border-weak-base)",
           }}
         >
-          Providers to hide from the provider list
+          {language.t("settings.providers.disabled.description")}
         </div>
         <div
           style={{
@@ -138,7 +143,7 @@ const ProvidersTab: Component = () => {
               }
             }}
           >
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
         <For each={disabledProviders()}>
@@ -166,7 +171,7 @@ const ProvidersTab: Component = () => {
       </Card>
 
       {/* Enabled providers (allowlist) */}
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>Enabled Providers (Allowlist)</h4>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.enabled")}</h4>
       <Card>
         <div
           style={{
@@ -176,7 +181,7 @@ const ProvidersTab: Component = () => {
             "border-bottom": "1px solid var(--border-weak-base)",
           }}
         >
-          If set, only these providers will be available (exclusive allowlist)
+          {language.t("settings.providers.enabled.description")}
         </div>
         <div
           style={{
@@ -209,7 +214,7 @@ const ProvidersTab: Component = () => {
               }
             }}
           >
-            Add
+            {language.t("common.add")}
           </Button>
         </div>
         <For each={enabledProviders()}>

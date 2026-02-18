@@ -1,6 +1,9 @@
 import { Component } from "solid-js"
+import { useLanguage } from "../../context/language"
 
 const PromptsTab: Component = () => {
+  const language = useLanguage()
+
   return (
     <div>
       <div
@@ -19,10 +22,8 @@ const PromptsTab: Component = () => {
             "line-height": "1.5",
           }}
         >
-          <strong style={{ color: "var(--vscode-foreground)" }}>This section is not implemented yet.</strong> It will
-          contain configuration options and explanatory text related to the selected settings category. During
-          reimplementation, use this space to validate layout, spacing, scrolling behavior, and navigation state before
-          wiring up real controls.
+          <strong style={{ color: "var(--vscode-foreground)" }}>{language.t("settings.notImplemented")}</strong>{" "}
+          {language.t("settings.notImplemented.description")}
         </p>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { Component, For, createMemo } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
+import { useLanguage } from "../../context/language"
 import type { PermissionLevel } from "../../types/messages"
 
 const TOOLS = [
@@ -25,36 +26,18 @@ const TOOLS = [
 
 interface LevelOption {
   value: PermissionLevel
-  label: string
+  labelKey: string
 }
 
 const LEVEL_OPTIONS: LevelOption[] = [
-  { value: "allow", label: "Allow" },
-  { value: "ask", label: "Ask" },
-  { value: "deny", label: "Deny" },
+  { value: "allow", labelKey: "settings.autoApprove.level.allow" },
+  { value: "ask", labelKey: "settings.autoApprove.level.ask" },
+  { value: "deny", labelKey: "settings.autoApprove.level.deny" },
 ]
-
-const TOOL_DESCRIPTIONS: Record<string, string> = {
-  read: "Read file contents",
-  edit: "Edit or create files",
-  glob: "Find files by pattern",
-  grep: "Search file contents",
-  list: "List directory contents",
-  bash: "Execute shell commands",
-  task: "Create sub-agent tasks",
-  skill: "Execute skills",
-  lsp: "Language server operations",
-  todoread: "Read todo lists",
-  todowrite: "Write todo lists",
-  webfetch: "Fetch web pages",
-  websearch: "Search the web",
-  codesearch: "Search codebase",
-  external_directory: "Access files outside workspace",
-  doom_loop: "Continue after repeated failures",
-}
 
 const AutoApproveTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const language = useLanguage()
 
   const permissions = createMemo(() => config().permission ?? {})
 
@@ -84,16 +67,16 @@ const AutoApproveTab: Component = () => {
           data-slot="settings-row"
           style={{ display: "flex", "align-items": "center", "justify-content": "space-between", padding: "8px 0" }}
         >
-          <span style={{ "font-weight": "600" }}>Set all permissions</span>
+          <span style={{ "font-weight": "600" }}>{language.t("settings.autoApprove.setAll")}</span>
           <Select
             options={LEVEL_OPTIONS}
             value={(o) => o.value}
-            label={(o) => o.label}
+            label={(o) => language.t(o.labelKey)}
             onSelect={(option) => option && setAll(option.value)}
             variant="secondary"
             size="small"
             triggerVariant="settings"
-            placeholder="Choose…"
+            placeholder={language.t("common.choose")}
           />
         </div>
       </Card>
@@ -130,14 +113,14 @@ const AutoApproveTab: Component = () => {
                     "margin-top": "2px",
                   }}
                 >
-                  {TOOL_DESCRIPTIONS[tool] ?? tool}
+                  {language.t(`settings.autoApprove.tool.${tool}`)}
                 </div>
               </div>
               <Select
                 options={LEVEL_OPTIONS}
                 current={LEVEL_OPTIONS.find((o) => o.value === getLevel(tool))}
                 value={(o) => o.value}
-                label={(o) => o.label}
+                label={(o) => language.t(o.labelKey)}
                 onSelect={(option) => option && setPermission(tool, option.value)}
                 variant="secondary"
                 size="small"

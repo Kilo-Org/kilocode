@@ -294,6 +294,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
+        case "resetAllSettings":
+          await this.handleResetAllSettings()
+          break
       }
     })
   }
@@ -1072,6 +1075,43 @@ export class KiloProvider implements vscode.WebviewViewProvider {
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
   }
+
+  /**
+   * Reset all "kilo-code.new.*" extension settings to their defaults by reading
+   * contributes.configuration from the extension's package.json at runtime.
+   * Only resets settings under the "kilo-code.new." namespace to avoid touching
+   * settings from the previous version of the extension which shares the same
+   * extension ID and "kilo-code.*" namespace.
+   */
+  // kilocode_change start
+  private async handleResetAllSettings(): Promise<void> {
+    const confirmed = await vscode.window.showWarningMessage(
+      "Reset all Kilo Code extension settings to defaults?",
+      { modal: true },
+      "Reset",
+    )
+    if (confirmed !== "Reset") return
+
+    const prefix = "kilo-code.new."
+    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+    const properties = ext?.packageJSON?.contributes?.configuration?.properties as Record<string, unknown> | undefined
+    if (!properties) return
+
+    for (const key of Object.keys(properties)) {
+      if (!key.startsWith(prefix)) continue
+      const parts = key.split(".")
+      const section = parts.slice(0, -1).join(".")
+      const leaf = parts[parts.length - 1]
+      const config = vscode.workspace.getConfiguration(section)
+      await config.update(leaf, undefined, vscode.ConfigurationTarget.Global)
+    }
+
+    // Re-send all settings to the webview so the UI reflects the reset
+    this.sendAutocompleteSettings()
+    this.sendBrowserSettings()
+    this.sendNotificationSettings()
+  }
+  // kilocode_change end
 
   /**
    * Read the current browser automation settings and push them to the webview.

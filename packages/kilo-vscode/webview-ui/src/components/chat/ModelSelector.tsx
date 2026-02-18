@@ -193,7 +193,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       return raw.providerID === KILO_GATEWAY_ID ? raw.modelID : `${raw.providerID} / ${raw.modelID}`
     }
     if (props.allowClear) {
-      return props.clearLabel ?? "Not set"
+      return props.clearLabel ?? language.t("dialog.model.notSet")
     }
     return hasProviders() ? language.t("dialog.model.select.title") : language.t("dialog.model.noProviders")
   }
@@ -246,7 +246,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
               onMouseEnter={() => setActiveIndex(0)}
             >
               <span class="model-selector-item-name" style={{ "font-style": "italic", opacity: 0.7 }}>
-                {props.clearLabel ?? "Not set (use server default)"}
+                {props.clearLabel ?? language.t("dialog.model.notSet")}
               </span>
             </div>
           </Show>
