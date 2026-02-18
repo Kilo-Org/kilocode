@@ -114,7 +114,11 @@ describe("PostHogSpanExporter", () => {
   }
 
   test("export returns success when disabled", () => {
-    const exporter = new PostHogSpanExporter(createMockPostHogClient())
+    const exporter = new PostHogSpanExporter(createMockPostHogClient(), {
+      appName: "test",
+      appVersion: "1.0.0",
+      platform: "test",
+    })
     exporter.setEnabled(false)
 
     const span = createMockSpan("ai.generateText", { "ai.model.id": "gpt-4" })
@@ -131,7 +135,11 @@ describe("PostHogSpanExporter", () => {
   test("sensitive attributes are not included in exported properties", () => {
     // This test verifies the filtering logic by checking the SENSITIVE_ATTRIBUTES set
     // and the mapAttributes method behavior through the export function
-    const exporter = new PostHogSpanExporter(createMockPostHogClient())
+    const exporter = new PostHogSpanExporter(createMockPostHogClient(), {
+      appName: "test",
+      appVersion: "1.0.0",
+      platform: "test",
+    })
 
     // Create a span with both safe and sensitive attributes
     const span = createMockSpan("ai.generateText", {

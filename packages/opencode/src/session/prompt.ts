@@ -26,7 +26,6 @@ import { ToolRegistry } from "../tool/registry"
 import { MCP } from "../mcp"
 import { LSP } from "../lsp"
 import { ReadTool } from "../tool/read"
-import { ListTool } from "../tool/ls"
 import { FileTime } from "../file/time"
 import { Flag } from "../flag/flag"
 import { ulid } from "ulid"
@@ -468,6 +467,7 @@ export namespace SessionPrompt {
             tool: "task",
             sessionID,
             callID: part.id,
+            args: taskArgs,
           },
           result,
         )
@@ -828,6 +828,7 @@ export namespace SessionPrompt {
               tool: item.id,
               sessionID: ctx.sessionID,
               callID: ctx.callID,
+              args,
             },
             result,
           )
@@ -873,6 +874,7 @@ export namespace SessionPrompt {
             tool: key,
             sessionID: ctx.sessionID,
             callID: opts.toolCallId,
+            args,
           },
           result,
         )
@@ -1218,7 +1220,7 @@ export namespace SessionPrompt {
               }
 
               if (part.mime === "application/x-directory") {
-                const args = { path: filepath }
+                const args = { filePath: filepath }
                 const listCtx: Tool.Context = {
                   sessionID: input.sessionID,
                   abort: new AbortController().signal,
@@ -1229,7 +1231,7 @@ export namespace SessionPrompt {
                   metadata: async () => {},
                   ask: async () => {},
                 }
-                const result = await ListTool.init().then((t) => t.execute(args, listCtx))
+                const result = await ReadTool.init().then((t) => t.execute(args, listCtx))
                 return [
                   {
                     id: Identifier.ascending("part"),
@@ -1237,7 +1239,7 @@ export namespace SessionPrompt {
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `Called the list tool with the following input: ${JSON.stringify(args)}`,
+                    text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
                   },
                   {
                     id: Identifier.ascending("part"),

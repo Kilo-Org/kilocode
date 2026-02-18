@@ -263,7 +263,7 @@ export namespace Config {
     // Inline config content overrides all non-managed config sources.
     if (Flag.KILO_CONFIG_CONTENT) {
       result = mergeConfigConcatArrays(result, JSON.parse(Flag.KILO_CONFIG_CONTENT))
-      log.debug("loaded custom config from KILO_CONFIG_CONTENT")
+      log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
     }
 
     // Load managed config files last (highest priority) - enterprise admin-controlled

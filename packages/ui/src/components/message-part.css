@@ -344,10 +344,18 @@
 }
 
 [data-component="todos"] {
-  padding: 10px 12px 24px 48px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
+
+  [data-component="checkbox"] {
+    gap: 8px;
+
+    [data-slot="checkbox-checkbox-content"] {
+      display: contents;
+    }
+  }
 
   [data-slot="message-part-todo-content"] {
     &[data-completed="completed"] {

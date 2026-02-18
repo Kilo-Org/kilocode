@@ -18,6 +18,7 @@ export class KiloConnectionService {
   private client: HttpClient | null = null
   private sseClient: SSEClient | null = null
   private info: { port: number } | null = null
+  private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
   private connectPromise: Promise<void> | null = null
 
@@ -75,6 +76,14 @@ export class KiloConnectionService {
    */
   getServerInfo(): { port: number } | null {
     return this.info
+  }
+
+  /**
+   * Get server config (baseUrl + password). Returns null if not connected.
+   * Used by TelemetryProxy to POST events to the CLI server.
+   */
+  getServerConfig(): ServerConfig | null {
+    return this.config
   }
 
   /**
@@ -175,6 +184,7 @@ export class KiloConnectionService {
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null
+    this.config = null
     this.info = null
     this.state = "disconnected"
   }
@@ -198,6 +208,7 @@ export class KiloConnectionService {
       password: server.password,
     }
 
+    this.config = config
     this.client = new HttpClient(config)
     this.sseClient = new SSEClient(config)
 

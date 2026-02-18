@@ -4,8 +4,9 @@ import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionSe
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 import { buildWebviewHtml } from "./utils"
+import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 
-export class KiloProvider implements vscode.WebviewViewProvider {
+export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
 
   private webview: vscode.Webview | null = null
@@ -36,7 +37,21 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
-  ) {}
+  ) {
+    TelemetryProxy.getInstance().setProvider(this)
+  }
+
+  getTelemetryProperties(): Record<string, unknown> {
+    return {
+      appName: "kilo-code",
+      appVersion: this.extensionVersion,
+      platform: "vscode",
+      editorName: vscode.env.appName,
+      vscodeVersion: vscode.version,
+      machineId: vscode.env.machineId,
+      vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
+    }
+  }
 
   /**
    * Convenience getter that returns the shared HttpClient or null if not yet connected.
@@ -268,6 +283,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         case "loadMessages":
           await this.handleLoadMessages(message.sessionID)
           break
+        case "syncSession":
+          await this.handleSyncSession(message.sessionID)
+          break
         case "loadSessions":
           await this.handleLoadSessions()
           break
@@ -382,6 +400,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
           break
         case "resetAllSettings":
           await this.handleResetAllSettings()
+          break
+        case "telemetry":
+          TelemetryProxy.capture(message.event, message.properties)
           break
       }
     })
@@ -581,6 +602,44 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         type: "error",
         message: error instanceof Error ? error.message : "Failed to load messages",
       })
+    }
+  }
+
+  /**
+   * Handle syncing a child session (e.g. spawned by the task tool).
+   * Tracks the session for SSE events and fetches its messages.
+   */
+  private async handleSyncSession(sessionID: string): Promise<void> {
+    if (!this.httpClient) return
+    if (this.trackedSessionIds.has(sessionID)) return
+
+    this.trackedSessionIds.add(sessionID)
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory(sessionID)
+      const messagesData = await this.httpClient.getMessages(sessionID, workspaceDir)
+
+      const messages = messagesData.map((m) => ({
+        id: m.info.id,
+        sessionID: m.info.sessionID,
+        role: m.info.role,
+        parts: m.parts,
+        createdAt: new Date(m.info.time.created).toISOString(),
+        cost: m.info.cost,
+        tokens: m.info.tokens,
+      }))
+
+      for (const message of messages) {
+        this.connectionService.recordMessageSessionId(message.id, message.sessionID)
+      }
+
+      this.postMessage({
+        type: "messagesLoaded",
+        sessionID,
+        messages,
+      })
+    } catch (err) {
+      console.error("[Kilo New] KiloProvider: Failed to sync child session:", err)
     }
   }
 

@@ -4048,6 +4048,74 @@
         ]
       }
     },
+    "/telemetry/capture": {
+      "post": {
+        "operationId": "telemetry.capture",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Capture telemetry event",
+        "description": "Forward a telemetry event to PostHog via kilo-telemetry.",
+        "responses": {
+          "200": {
+            "description": "Event captured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "description": "Event name",
+                    "type": "string"
+                  },
+                  "properties": {
+                    "description": "Event properties",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": ["event"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.telemetry.capture({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/profile": {
       "get": {
         "operationId": "kilo.profile",

@@ -38,14 +38,22 @@ const SENSITIVE_ATTRIBUTES = new Set([
 export class PostHogSpanExporter implements SpanExporter {
   private client: PostHog
   private enabled = true
-  private appName = "kilo-cli"
-  private appVersion = "unknown"
+  private appName: string
+  private appVersion: string
+  private platform: string
+  private editorName?: string
+  private vscodeVersion?: string
 
-  constructor(client: PostHog, options?: { appVersion?: string }) {
+  constructor(
+    client: PostHog,
+    options: { appName: string; appVersion: string; platform: string; editorName?: string; vscodeVersion?: string },
+  ) {
     this.client = client
-    if (options?.appVersion) {
-      this.appVersion = options.appVersion
-    }
+    this.appName = options.appName
+    this.appVersion = options.appVersion
+    this.platform = options.platform
+    this.editorName = options.editorName
+    this.vscodeVersion = options.vscodeVersion
   }
 
   setEnabled(value: boolean) {
@@ -82,7 +90,9 @@ export class PostHogSpanExporter implements SpanExporter {
     const properties: Record<string, unknown> = {
       appName: this.appName,
       appVersion: this.appVersion,
-      platform: process.platform,
+      platform: this.platform,
+      ...(this.editorName && { editorName: this.editorName }),
+      ...(this.vscodeVersion && { vscodeVersion: this.vscodeVersion }),
       $ai_trace_id: span.spanContext().traceId,
       $ai_span_id: span.spanContext().spanId,
       $ai_span_name: name,

@@ -28,6 +28,7 @@ import { McpRoutes } from "./routes/mcp"
 import { FileRoutes } from "./routes/file"
 import { ConfigRoutes } from "./routes/config"
 import { ExperimentalRoutes } from "./routes/experimental"
+import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
 import { ProviderRoutes } from "./routes/provider"
 import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
 import { lazy } from "../util/lazy"
@@ -233,6 +234,7 @@ export namespace Server {
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
+        .route("/telemetry", TelemetryRoutes()) // kilocode_change
         // kilocode_change start - Kilo Gateway routes
         .route(
           "/kilo",

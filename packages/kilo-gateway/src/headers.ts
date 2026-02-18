@@ -4,11 +4,13 @@ import {
   HEADER_PROJECTID,
   HEADER_TESTER,
   HEADER_EDITORNAME,
+  HEADER_FEATURE, // kilocode_change
   USER_AGENT,
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
   TESTER_SUPPRESS_VALUE,
+  ENV_FEATURE, // kilocode_change
 } from "./api/constants.js"
 
 /**
@@ -20,6 +22,18 @@ export const X_KILOCODE_TASKID = HEADER_TASKID
 export const X_KILOCODE_PROJECTID = HEADER_PROJECTID
 export const X_KILOCODE_TESTER = HEADER_TESTER
 export const X_KILOCODE_EDITORNAME = HEADER_EDITORNAME
+export const X_KILOCODE_FEATURE = HEADER_FEATURE // kilocode_change
+
+/**
+ * Get feature header value from KILOCODE_FEATURE env var.
+ * Returns undefined when not set — the gateway stores NULL (unattributed).
+ * Callers must explicitly set the env var to get attribution.
+ */
+// kilocode_change start
+export function getFeatureHeader(): string | undefined {
+  return process.env[ENV_FEATURE] || undefined
+}
+// kilocode_change end
 
 /**
  * Default headers for KiloCode requests
@@ -47,9 +61,13 @@ export function buildKiloHeaders(
     kilocodeTesterWarningsDisabledUntil?: number
   },
 ): Record<string, string> {
+  // kilocode_change start
+  const feature = getFeatureHeader()
   const headers: Record<string, string> = {
     [X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
+    ...(feature ? { [X_KILOCODE_FEATURE]: feature } : {}),
   }
+  // kilocode_change end
 
   if (metadata?.taskId) {
     headers[X_KILOCODE_TASKID] = metadata.taskId

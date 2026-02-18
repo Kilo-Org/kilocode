@@ -149,6 +149,8 @@ import type {
   SessionUpdateErrors,
   SessionUpdateResponses,
   SubtaskPartInput,
+  TelemetryCaptureErrors,
+  TelemetryCaptureResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -2174,6 +2176,47 @@ export class Provider extends HeyApiClient {
   }
 }
 
+export class Telemetry extends HeyApiClient {
+  /**
+   * Capture telemetry event
+   *
+   * Forward a telemetry event to PostHog via kilo-telemetry.
+   */
+  public capture<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      event?: string
+      properties?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "event" },
+            { in: "body", key: "properties" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetryCaptureResponses, TelemetryCaptureErrors, ThrowOnError>({
+      url: "/telemetry/capture",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Organization extends HeyApiClient {
   /**
    * Update Kilo Gateway organization
@@ -3389,6 +3432,11 @@ export class OpencodeClient extends HeyApiClient {
   private _provider?: Provider
   get provider(): Provider {
     return (this._provider ??= new Provider({ client: this.client }))
+  }
+
+  private _telemetry?: Telemetry
+  get telemetry(): Telemetry {
+    return (this._telemetry ??= new Telemetry({ client: this.client }))
   }
 
   private _kilo?: Kilo

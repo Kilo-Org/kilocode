@@ -4214,6 +4214,44 @@ export type ProviderOauthCallbackResponses = {
 
 export type ProviderOauthCallbackResponse = ProviderOauthCallbackResponses[keyof ProviderOauthCallbackResponses]
 
+export type TelemetryCaptureData = {
+  body?: {
+    /**
+     * Event name
+     */
+    event: string
+    /**
+     * Event properties
+     */
+    properties?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/telemetry/capture"
+}
+
+export type TelemetryCaptureErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TelemetryCaptureError = TelemetryCaptureErrors[keyof TelemetryCaptureErrors]
+
+export type TelemetryCaptureResponses = {
+  /**
+   * Event captured
+   */
+  200: boolean
+}
+
+export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
+
 export type KiloProfileData = {
   body?: never
   path?: never

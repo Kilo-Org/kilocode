@@ -14,6 +14,12 @@ export namespace Identity {
   export async function getMachineId(): Promise<string> {
     if (machineId) return machineId
 
+    const override = process.env.KILO_MACHINE_ID
+    if (override) {
+      machineId = override
+      return machineId
+    }
+
     const filepath = path.join(dataPath, "telemetry-id")
     const file = Bun.file(filepath)
 

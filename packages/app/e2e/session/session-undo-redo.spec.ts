@@ -10,21 +10,26 @@ async function seedConversation(input: {
   sessionID: string
   token: string
 }) {
+  const messages = async () =>
+    await input.sdk.session.messages({ sessionID: input.sessionID, limit: 100 }).then((r) => r.data ?? [])
+  const seeded = await messages()
+  const userIDs = new Set(seeded.filter((m) => m.info.role === "user").map((m) => m.info.id))
+
   const prompt = input.page.locator(promptSelector)
   await expect(prompt).toBeVisible()
-  await prompt.click()
-  await input.page.keyboard.type(`Reply with exactly: ${input.token}`)
-  await input.page.keyboard.press("Enter")
+  await input.sdk.session.promptAsync({
+    sessionID: input.sessionID,
+    noReply: true,
+    parts: [{ type: "text", text: input.token }],
+  })
 
   let userMessageID: string | undefined
   await expect
     .poll(
       async () => {
-        const messages = await input.sdk.session
-          .messages({ sessionID: input.sessionID, limit: 50 })
-          .then((r) => r.data ?? [])
-        const users = messages.filter(
+        const users = (await messages()).filter(
           (m) =>
+            !userIDs.has(m.info.id) &&
             m.info.role === "user" &&
             m.parts.filter((p) => p.type === "text").some((p) => p.text.includes(input.token)),
         )
@@ -33,25 +38,19 @@ async function seedConversation(input: {
         const user = users[users.length - 1]
         if (!user) return false
         userMessageID = user.info.id
-
-        const assistantText = messages
-          .filter((m) => m.info.role === "assistant")
-          .flatMap((m) => m.parts)
-          .filter((p) => p.type === "text")
-          .map((p) => p.text)
-          .join("\n")
-
-        return assistantText.includes(input.token)
+        return true
       },
-      { timeout: 90_000 },
+      { timeout: 90_000, intervals: [250, 500, 1_000] },
     )
     .toBe(true)
 
   if (!userMessageID) throw new Error("Expected a user message id")
+  await expect(input.page.locator(`[data-message-id="${userMessageID}"]`).first()).toBeVisible({ timeout: 30_000 })
   return { prompt, userMessageID }
 }
 
 test("slash undo sets revert and restores prior prompt", async ({ page, withProject }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   test.setTimeout(120_000)
 
   const token = `undo_${Date.now()}`
@@ -84,6 +83,7 @@ test("slash undo sets revert and restores prior prompt", async ({ page, withProj
 })
 
 test("slash redo clears revert and restores latest state", async ({ page, withProject }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   test.setTimeout(120_000)
 
   const token = `redo_${Date.now()}`
@@ -131,6 +131,7 @@ test("slash redo clears revert and restores latest state", async ({ page, withPr
 })
 
 test("slash undo/redo traverses multi-step revert stack", async ({ page, withProject }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
   test.setTimeout(120_000)
 
   const firstToken = `undo_redo_first_${Date.now()}`
