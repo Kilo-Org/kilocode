@@ -167,7 +167,7 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilo](https://github.com/Kilo-Org/kilo)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/automate/mcp/using-in-cli) for MCP config format.
+- Config files in **`~/.config/kilo/config.json`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilo](https://github.com/Kilo-Org/kilo)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/automate/mcp/using-in-cli) for MCP config format.
 - `kilo auth` for credential management
  
 ## Slash Commands
