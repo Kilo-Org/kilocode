@@ -221,9 +221,9 @@ export const PromptInput: Component = () => {
     if (textareaRef) textareaRef.style.height = "auto"
   }
 
-  const fileName = (path: string) => path.split("/").pop() ?? path
+  const fileName = (path: string) => path.replaceAll("\\", "/").split("/").pop() ?? path
   const dirName = (path: string) => {
-    const parts = path.split("/")
+    const parts = path.replaceAll("\\", "/").split("/")
     if (parts.length <= 1) return ""
     const dir = parts.slice(0, -1).join("/")
     return dir.length > 30 ? `…/${parts.slice(-3, -1).join("/")}` : dir

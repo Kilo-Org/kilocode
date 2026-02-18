@@ -164,10 +164,13 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
   const parseFileAttachments = (text: string): FileAttachment[] => {
     const paths = mentionedPaths()
     const result: FileAttachment[] = []
+    const dir = workspaceDir.replaceAll("\\", "/")
     for (const path of paths) {
       if (text.includes(`@${path}`)) {
-        const abs = path.startsWith("/") ? path : `${workspaceDir}/${path}`
-        result.push({ mime: "text/plain", url: `file://${abs}` })
+        const abs = path.startsWith("/") ? path : `${dir}/${path}`
+        const url = new URL("file://")
+        url.pathname = abs.startsWith("/") ? abs : `/${abs}`
+        result.push({ mime: "text/plain", url: url.href })
       }
     }
     return result
