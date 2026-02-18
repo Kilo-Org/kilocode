@@ -74,6 +74,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionNext" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.previousTab", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "tabPrevious" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
+    }),
   )
 
   // Register autocomplete provider

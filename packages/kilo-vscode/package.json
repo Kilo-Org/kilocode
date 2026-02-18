@@ -90,6 +90,16 @@
         "command": "kilo-code.new.agentManager.nextSession",
         "title": "Agent Manager: Next Session",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousTab",
+        "title": "Agent Manager: Previous Tab",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTab",
+        "title": "Agent Manager: Next Tab",
+        "category": "Kilo Code"
       }
     ],
     "keybindings": [
@@ -103,6 +113,18 @@
         "command": "kilo-code.new.agentManager.nextSession",
         "key": "ctrl+down",
         "mac": "cmd+down",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousTab",
+        "key": "ctrl+left",
+        "mac": "cmd+left",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTab",
+        "key": "ctrl+right",
+        "mac": "cmd+right",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],

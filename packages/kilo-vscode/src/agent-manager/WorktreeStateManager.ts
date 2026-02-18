@@ -205,22 +205,4 @@ export class WorktreeStateManager {
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
     await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
   }
-
-  // ---------------------------------------------------------------------------
-  // Migration from legacy per-worktree metadata
-  // ---------------------------------------------------------------------------
-
-  async migrateFromLegacy(
-    worktreeInfos: Array<{ branch: string; path: string; parentBranch: string; sessionId?: string }>,
-  ): Promise<void> {
-    if (this.worktrees.size > 0) return // Already have state, skip migration
-
-    for (const info of worktreeInfos) {
-      const wt = this.addWorktree({ branch: info.branch, path: info.path, parentBranch: info.parentBranch })
-      if (info.sessionId) {
-        this.addSession(info.sessionId, wt.id)
-      }
-    }
-    this.log(`Migrated ${worktreeInfos.length} legacy worktrees`)
-  }
 }

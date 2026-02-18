@@ -18,6 +18,7 @@ import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -48,14 +49,14 @@ const AgentManagerContent: Component = () => {
   const [managedSessions, setManagedSessions] = createSignal<ManagedSessionState[]>([])
   const [selectedWorktree, setSelectedWorktree] = createSignal<string | null>(null)
 
-  // Set of session IDs that belong to worktrees
-  const worktreeSessionIds = createMemo(() => {
-    const ids = new Set<string>()
-    for (const ms of managedSessions()) {
-      if (ms.worktreeId) ids.add(ms.id)
-    }
-    return ids
-  })
+  const worktreeSessionIds = createMemo(
+    () =>
+      new Set(
+        managedSessions()
+          .filter((ms) => ms.worktreeId)
+          .map((ms) => ms.id),
+      ),
+  )
 
   // Sessions NOT in any worktree
   const unassignedSessions = createMemo(() =>
@@ -66,9 +67,9 @@ const AgentManagerContent: Component = () => {
 
   // Sessions for the currently selected worktree (tab bar), sorted by creation date (stable order)
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
-    const wtId = selectedWorktree()
-    if (!wtId) return []
-    const managed = managedSessions().filter((ms) => ms.worktreeId === wtId)
+    const selected = selectedWorktree()
+    if (!selected) return []
+    const managed = managedSessions().filter((ms) => ms.worktreeId === selected)
     const ids = new Set(managed.map((ms) => ms.id))
     return session
       .sessions()
@@ -132,10 +133,10 @@ const AgentManagerContent: Component = () => {
     session.selectSession(tabs[next]!.id)
   }
 
-  const selectWorktree = (wtId: string) => {
-    setSelectedWorktree(wtId)
+  const selectWorktree = (worktreeId: string) => {
+    setSelectedWorktree(worktreeId)
     // Select the first session in this worktree, or clear if empty
-    const managed = managedSessions().filter((ms) => ms.worktreeId === wtId)
+    const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
     const ids = new Set(managed.map((ms) => ms.id))
     const first = session.sessions().find((s) => ids.has(s.id))
     if (first) {
@@ -151,20 +152,10 @@ const AgentManagerContent: Component = () => {
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") navigate("up")
       else if (msg.action === "sessionNext") navigate("down")
+      else if (msg.action === "tabPrevious") navigateTab("left")
+      else if (msg.action === "tabNext") navigateTab("right")
     }
     window.addEventListener("message", handler)
-
-    const keyHandler = (e: KeyboardEvent) => {
-      if (!e.metaKey && !e.ctrlKey) return
-      if (e.key === "ArrowLeft") {
-        e.preventDefault()
-        navigateTab("left")
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault()
-        navigateTab("right")
-      }
-    }
-    window.addEventListener("keydown", keyHandler)
 
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.worktreeSetup") {
@@ -173,6 +164,10 @@ const AgentManagerContent: Component = () => {
           const error = ev.status === "error"
           setSetup({ active: true, message: ev.message, branch: ev.branch, error })
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
+          // Auto-focus the new session in its worktree
+          if (!error && ev.sessionId) {
+            session.selectSession(ev.sessionId)
+          }
         } else {
           setSetup({ active: true, message: ev.message, branch: ev.branch })
         }
@@ -193,7 +188,6 @@ const AgentManagerContent: Component = () => {
 
     onCleanup(() => {
       window.removeEventListener("message", handler)
-      window.removeEventListener("keydown", keyHandler)
       unsub()
     })
   })
@@ -202,10 +196,10 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.createWorktree" })
   }
 
-  const handleDeleteWorktree = (wtId: string, e: MouseEvent) => {
+  const handleDeleteWorktree = (worktreeId: string, e: MouseEvent) => {
     e.stopPropagation()
-    vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wtId })
-    if (selectedWorktree() === wtId) setSelectedWorktree(null)
+    vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId })
+    if (selectedWorktree() === worktreeId) setSelectedWorktree(null)
   }
 
   const handlePromote = (sessionId: string, e: MouseEvent) => {
@@ -214,8 +208,8 @@ const AgentManagerContent: Component = () => {
   }
 
   const handleAddSession = () => {
-    const wtId = selectedWorktree()
-    if (wtId) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: wtId })
+    const id = selectedWorktree()
+    if (id) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: id })
   }
 
   const handleCloseTab = (sessionId: string, e: MouseEvent) => {
@@ -238,7 +232,7 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  const isWorktreeActive = (wtId: string) => selectedWorktree() === wtId
+  const isWorktreeActive = (worktreeId: string) => selectedWorktree() === worktreeId
 
   return (
     <div class="am-layout">
@@ -357,7 +351,9 @@ const AgentManagerContent: Component = () => {
               <Icon name="branch" size="large" />
             </div>
             <div class="am-empty-state-text">No sessions open</div>
-            <div class="am-empty-state-hint">Click + to start a new session in this worktree</div>
+            <Button variant="primary" size="small" onClick={handleAddSession}>
+              New session
+            </Button>
           </div>
         </Show>
 
@@ -380,21 +376,23 @@ const AgentManagerContent: Component = () => {
         </Show>
         <Show when={!worktreeEmpty()}>
           <div class="am-chat-wrapper">
-            <ChatView onSelectSession={(id) => session.selectSession(id)} />
+            <ChatView onSelectSession={(id) => session.selectSession(id)} readonly={readOnly()} />
             <Show when={readOnly()}>
-              <div class="am-readonly-banner">
-                <Icon name="branch" size="small" />
-                <span class="am-readonly-text">Open in a worktree to continue this session</span>
-                <IconButton
-                  icon="branch"
+              <div class="am-empty-state">
+                <div class="am-empty-state-icon">
+                  <Icon name="branch" size="large" />
+                </div>
+                <div class="am-empty-state-text">Read-only session</div>
+                <Button
+                  variant="primary"
                   size="small"
-                  variant="ghost"
-                  label="Open in worktree"
                   onClick={() => {
                     const sid = session.currentSessionID()
                     if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
                   }}
-                />
+                >
+                  Open in worktree
+                </Button>
               </div>
             </Show>
           </div>

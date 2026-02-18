@@ -90,19 +90,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     const root = this.getWorkspaceRoot()
     if (root) await state.validate(root)
 
-    // Migrate from legacy per-worktree metadata if no state file existed
-    if (state.getWorktrees().length === 0) {
-      try {
-        const discovered = await mgr.discoverWorktrees()
-        const legacy = discovered.filter((wt) => wt.sessionId)
-        if (legacy.length > 0) {
-          await state.migrateFromLegacy(legacy)
-        }
-      } catch (error) {
-        this.log(`Failed legacy migration: ${error}`)
-      }
-    }
-
     // Register all worktree sessions with KiloProvider
     for (const wt of state.getWorktrees()) {
       for (const session of state.getSessions(wt.id)) {
@@ -127,8 +114,6 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     const type = msg.type as string
 
-    // Custom agent-manager messages -- consumed here, never reach KiloProvider
-    if (type === "agentManager.createWorktreeSession") return this.onCreateWorktreeSession(msg)
     if (type === "agentManager.createWorktree") return this.onCreateWorktree()
     if (type === "agentManager.deleteWorktree") return this.onDeleteWorktree(msg.worktreeId as string)
     if (type === "agentManager.promoteSession") return this.onPromoteSession(msg.sessionId as string)
@@ -149,13 +134,42 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   // ---------------------------------------------------------------------------
-  // Worktree actions
+  // Shared helpers
   // ---------------------------------------------------------------------------
 
-  /**
-   * Create a new worktree with an auto-created first session.
-   */
-  private async onCreateWorktree(): Promise<null> {
+  /** Create a git worktree on disk and register it in state. Returns null on failure. */
+  private async createWorktreeOnDisk(): Promise<{
+    wt: ReturnType<WorktreeStateManager["addWorktree"]>
+    result: CreateWorktreeResult
+  } | null> {
+    const mgr = this.getWorktreeManager()
+    const state = this.getStateManager()
+    if (!mgr || !state) {
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: "No workspace folder open" })
+      return null
+    }
+
+    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
+
+    let result: CreateWorktreeResult
+    try {
+      result = await mgr.createWorktree({ prompt: "kilo" })
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error)
+      this.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: `Failed to create worktree: ${err}`,
+      })
+      return null
+    }
+
+    const wt = state.addWorktree({ branch: result.branch, path: result.path, parentBranch: result.parentBranch })
+    return { wt, result }
+  }
+
+  /** Create a CLI session in a worktree directory. Returns null on failure. */
+  private async createSessionInWorktree(worktreePath: string, branch: string): Promise<SessionInfo | null> {
     let client: HttpClient
     try {
       client = this.connectionService.getHttpClient()
@@ -168,47 +182,17 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    const mgr = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!mgr || !state) {
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: "No workspace folder open" })
-      return null
-    }
-
-    // Step 1: Create git worktree
-    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
-
-    let result: CreateWorktreeResult
-    try {
-      result = await mgr.createWorktree({ prompt: "kilo" })
-    } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Failed to create worktree: ${err}`,
-      })
-      return null
-    }
-
-    // Step 2: Register in state
-    const wt = state.addWorktree({ branch: result.branch, path: result.path, parentBranch: result.parentBranch })
-
-    // Step 3: Create session in worktree
     this.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "starting",
       message: "Starting session...",
-      branch: result.branch,
+      branch,
     })
 
-    let session: SessionInfo
     try {
-      session = await client.createSession(result.path)
+      return await client.createSession(worktreePath)
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error)
-      state.removeWorktree(wt.id)
-      await mgr.removeWorktree(result.path)
       this.postToWebview({
         type: "agentManager.worktreeSetup",
         status: "error",
@@ -216,42 +200,55 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
       return null
     }
+  }
 
-    // Step 4: Register session
-    state.addSession(session.id, wt.id)
-    this.registerWorktreeSession(session.id, result.path)
-
-    // Write legacy metadata for backward compat
-    mgr
-      .writeMetadata(result.path, session.id, result.parentBranch)
-      .catch((err) => this.log(`Failed to persist worktree metadata: ${err}`))
-
+  /** Send worktreeSetup.ready + sessionMeta + pushState after worktree creation. */
+  private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult): void {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "ready",
       message: "Worktree ready",
-      sessionId: session.id,
+      sessionId,
       branch: result.branch,
     })
-
-    // Notify webview about session meta (for badges)
     this.postToWebview({
       type: "agentManager.sessionMeta",
-      sessionId: session.id,
+      sessionId,
       mode: "worktree",
       branch: result.branch,
       path: result.path,
       parentBranch: result.parentBranch,
     })
+  }
 
-    this.log(`Created worktree ${wt.id} with session ${session.id}`)
+  // ---------------------------------------------------------------------------
+  // Worktree actions
+  // ---------------------------------------------------------------------------
+
+  /** Create a new worktree with an auto-created first session. */
+  private async onCreateWorktree(): Promise<null> {
+    const created = await this.createWorktreeOnDisk()
+    if (!created) return null
+
+    const session = await this.createSessionInWorktree(created.result.path, created.result.branch)
+    if (!session) {
+      const state = this.getStateManager()
+      const mgr = this.getWorktreeManager()
+      state?.removeWorktree(created.wt.id)
+      await mgr?.removeWorktree(created.result.path)
+      return null
+    }
+
+    const state = this.getStateManager()!
+    state.addSession(session.id, created.wt.id)
+    this.registerWorktreeSession(session.id, created.result.path)
+    this.notifyWorktreeReady(session.id, created.result)
+    this.log(`Created worktree ${created.wt.id} with session ${session.id}`)
     return null
   }
 
-  /**
-   * Delete a worktree and dissociate its sessions.
-   */
+  /** Delete a worktree and dissociate its sessions. */
   private async onDeleteWorktree(worktreeId: string): Promise<null> {
     const mgr = this.getWorktreeManager()
     const state = this.getStateManager()
@@ -263,88 +260,37 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    // Remove the git worktree from disk
     try {
       await mgr.removeWorktree(wt.path)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
 
-    // Dissociate sessions (they become local/unassociated)
     state.removeWorktree(worktreeId)
     this.pushState()
-
     this.log(`Deleted worktree ${worktreeId} (${wt.branch})`)
     return null
   }
 
-  /**
-   * Promote a session: create a worktree and move the session into it.
-   */
+  /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
-    const mgr = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!mgr || !state) {
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: "No workspace folder open" })
-      return null
-    }
+    const created = await this.createWorktreeOnDisk()
+    if (!created) return null
 
-    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
-
-    let result: CreateWorktreeResult
-    try {
-      result = await mgr.createWorktree({ prompt: "kilo" })
-    } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Failed to create worktree: ${err}`,
-      })
-      return null
-    }
-
-    const wt = state.addWorktree({ branch: result.branch, path: result.path, parentBranch: result.parentBranch })
-
-    // Register session if not already tracked
+    const state = this.getStateManager()!
     if (!state.getSession(sessionId)) {
-      state.addSession(sessionId, wt.id)
+      state.addSession(sessionId, created.wt.id)
     } else {
-      state.moveSession(sessionId, wt.id)
+      state.moveSession(sessionId, created.wt.id)
     }
 
-    this.registerWorktreeSession(sessionId, result.path)
-
-    // Write legacy metadata
-    mgr
-      .writeMetadata(result.path, sessionId, result.parentBranch)
-      .catch((err) => this.log(`Failed to persist worktree metadata: ${err}`))
-
-    this.pushState()
-    this.postToWebview({
-      type: "agentManager.worktreeSetup",
-      status: "ready",
-      message: "Session promoted",
-      sessionId,
-      branch: result.branch,
-    })
-
-    this.postToWebview({
-      type: "agentManager.sessionMeta",
-      sessionId,
-      mode: "worktree",
-      branch: result.branch,
-      path: result.path,
-      parentBranch: result.parentBranch,
-    })
-
-    this.log(`Promoted session ${sessionId} to worktree ${wt.id}`)
+    this.registerWorktreeSession(sessionId, created.result.path)
+    this.notifyWorktreeReady(sessionId, created.result)
+    this.log(`Promoted session ${sessionId} to worktree ${created.wt.id}`)
     return null
   }
 
-  /**
-   * Add a new session to an existing worktree.
-   */
+  /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
     let client: HttpClient
     try {
@@ -388,9 +334,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     return null
   }
 
-  /**
-   * Close (remove) a session from its worktree. The session is dissociated but not deleted.
-   */
+  /** Close (remove) a session from its worktree. */
   private async onCloseSession(sessionId: string): Promise<null> {
     const state = this.getStateManager()
     if (!state) return null
@@ -398,130 +342,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     state.removeSession(sessionId)
     this.pushState()
     this.log(`Closed session ${sessionId}`)
-    return null
-  }
-
-  /**
-   * Handle the full worktree session lifecycle for the first message.
-   * Creates worktree + session, registers with KiloProvider, sends the first
-   * message via httpClient directly.
-   */
-  private async onCreateWorktreeSession(msg: Record<string, unknown>): Promise<null> {
-    const text = (msg.text as string) || ""
-    let client: HttpClient
-
-    try {
-      client = this.connectionService.getHttpClient()
-    } catch {
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: "Not connected to CLI backend",
-      })
-      return null
-    }
-
-    const mgr = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!mgr || !state) {
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: "No workspace folder open" })
-      return null
-    }
-
-    // Step 1: Create worktree
-    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
-
-    let worktree: CreateWorktreeResult
-    try {
-      worktree = await mgr.createWorktree({ prompt: text || "kilo" })
-    } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Failed to create worktree: ${err}`,
-      })
-      return null
-    }
-
-    // Step 2: Create session in worktree directory
-    this.postToWebview({
-      type: "agentManager.worktreeSetup",
-      status: "starting",
-      message: "Starting session...",
-      branch: worktree.branch,
-    })
-
-    let session: SessionInfo
-    try {
-      session = await client.createSession(worktree.path)
-    } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
-      await mgr.removeWorktree(worktree.path)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Failed to create session: ${err}`,
-      })
-      return null
-    }
-
-    // Step 3: Store in centralized state
-    const wt = state.addWorktree({ branch: worktree.branch, path: worktree.path, parentBranch: worktree.parentBranch })
-    state.addSession(session.id, wt.id)
-
-    // Legacy metadata for backward compat
-    mgr
-      .writeMetadata(worktree.path, session.id, worktree.parentBranch)
-      .catch((err) => this.log(`Failed to persist worktree metadata: ${err}`))
-
-    // Register with KiloProvider
-    this.registerWorktreeSession(session.id, worktree.path)
-
-    // Notify webview about worktree metadata (for badges/icons)
-    this.postToWebview({
-      type: "agentManager.sessionMeta",
-      sessionId: session.id,
-      mode: "worktree",
-      branch: worktree.branch,
-      path: worktree.path,
-      parentBranch: worktree.parentBranch,
-    })
-
-    this.postToWebview({
-      type: "agentManager.worktreeSetup",
-      status: "ready",
-      message: "Worktree ready",
-      sessionId: session.id,
-      branch: worktree.branch,
-    })
-
-    this.pushState()
-
-    // Step 4: Send the first message directly via httpClient
-    const fileParts = ((msg.files ?? []) as Array<{ mime: string; url: string }>).map((f) => ({
-      type: "file" as const,
-      mime: f.mime,
-      url: f.url,
-    }))
-    if (text || fileParts.length > 0) {
-      try {
-        const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = [
-          ...fileParts,
-          ...(text ? [{ type: "text" as const, text }] : []),
-        ]
-        await client.sendMessage(session.id, parts, worktree.path, {
-          providerID: msg.providerID as string | undefined,
-          modelID: msg.modelID as string | undefined,
-          agent: msg.agent as string | undefined,
-        })
-      } catch (error) {
-        const err = error instanceof Error ? error.message : String(error)
-        this.postToWebview({ type: "error", message: `Failed to send message: ${err}` })
-      }
-    }
-
-    this.log(`Worktree session ready: session=${session.id} branch=${worktree.branch}`)
     return null
   }
 
@@ -535,7 +355,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.provider.trackSession(sessionId)
   }
 
-  /** Push the full worktree+session state to the webview. */
   private pushState(): void {
     const state = this.state
     if (!state) return
