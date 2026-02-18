@@ -87,6 +87,15 @@ You can customize each Cloud Agent session by also defining env vars and startup
     - Bootstrapping tooling
     - Running setup scripts
 
+### Setup Commands vs `.kilocode/setup-script`
+
+- Cloud Agent executes **Setup Commands** configured in the Cloud UI/profile.
+- Cloud Agent does **not** automatically discover or run `.kilocode/setup-script`.
+- If you want to use `.kilocode/setup-script` in Cloud Agent, call it explicitly from Setup Commands, for example: `bash .kilocode/setup-script`.
+- If both are present, execution order is:
+  1. Setup Commands (in the order you define them)
+  2. Anything those commands invoke (such as `.kilocode/setup-script`)
+
 ## Skills
 
 Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
