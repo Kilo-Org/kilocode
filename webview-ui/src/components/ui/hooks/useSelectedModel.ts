@@ -83,7 +83,7 @@ function getValidatedModelId(
 	return configuredId && availableModels?.[configuredId] ? configuredId : defaultModelId
 }
 
-export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
+export const useSelectedModel = (apiConfiguration?: ProviderSettings, resolvedBedrockModelId?: string | null) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	// kilocode_change start
 	const { kilocodeDefaultModel, virtualQuotaActiveModel } = useExtensionState()
@@ -146,6 +146,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					kilocodeDefaultModel,
 					ollamaModels: (ollamaModels.data || undefined) as ModelRecord | undefined,
 					virtualQuotaActiveModel, // kilocode_change: Pass virtual quota active model
+					resolvedBedrockModelId, // kilocode_change: Pass resolved Bedrock model ID for custom ARN
 				})
 			: { id: getProviderDefaultModelId(provider), info: undefined }
 
@@ -175,6 +176,7 @@ function getSelectedModel({
 	kilocodeDefaultModel,
 	ollamaModels,
 	virtualQuotaActiveModel, //kilocode_change
+	resolvedBedrockModelId, // kilocode_change
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
@@ -184,6 +186,7 @@ function getSelectedModel({
 	kilocodeDefaultModel: string
 	ollamaModels: ModelRecord | undefined
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } //kilocode_change
+	resolvedBedrockModelId?: string | null // kilocode_change
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -271,15 +274,64 @@ function getSelectedModel({
 		}
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId
-			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
 
-			// Special case for custom ARN.
+			// kilocode_change start: For custom ARN, use the resolved model ID if available
 			if (id === "custom-arn") {
+				const resolvedId = resolvedBedrockModelId
+				const resolvedBaseInfo = resolvedId
+					? bedrockModels[resolvedId as keyof typeof bedrockModels]
+					: undefined
+
+				if (resolvedBaseInfo) {
+					// Apply tier pricing when 1M context is enabled and the resolved model supports it
+					if (
+						apiConfiguration.awsBedrock1MContext &&
+						BEDROCK_1M_CONTEXT_MODEL_IDS.includes(resolvedId as any)
+					) {
+						const modelWithTiers = resolvedBaseInfo as typeof resolvedBaseInfo & {
+							tiers?: Array<{
+								contextWindow: number
+								inputPrice?: number
+								outputPrice?: number
+								cacheWritesPrice?: number
+								cacheReadsPrice?: number
+							}>
+						}
+						const tier = modelWithTiers.tiers?.[0]
+						if (tier) {
+							return {
+								id,
+								info: {
+									...resolvedBaseInfo,
+									contextWindow: tier.contextWindow,
+									inputPrice: tier.inputPrice ?? resolvedBaseInfo.inputPrice,
+									outputPrice: tier.outputPrice ?? resolvedBaseInfo.outputPrice,
+									cacheWritesPrice:
+										tier.cacheWritesPrice ??
+										("cacheWritesPrice" in resolvedBaseInfo
+											? resolvedBaseInfo.cacheWritesPrice
+											: undefined),
+									cacheReadsPrice:
+										tier.cacheReadsPrice ??
+										("cacheReadsPrice" in resolvedBaseInfo
+											? resolvedBaseInfo.cacheReadsPrice
+											: undefined),
+								},
+							}
+						}
+					}
+					return { id, info: resolvedBaseInfo }
+				}
+
+				// Fallback when ARN is not yet resolved
 				return {
 					id,
 					info: { maxTokens: 5000, contextWindow: 128_000, supportsPromptCache: false, supportsImages: true },
 				}
 			}
+			// kilocode_change end
+
+			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
 
 			// Apply 1M context for Claude Sonnet 4 / 4.5 when enabled
 			if (BEDROCK_1M_CONTEXT_MODEL_IDS.includes(id as any) && apiConfiguration.awsBedrock1MContext && baseInfo) {
