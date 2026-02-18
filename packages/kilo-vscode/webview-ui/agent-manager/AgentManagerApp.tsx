@@ -157,6 +157,15 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("message", handler)
 
+    // Prevent Cmd+Up/Down/Left/Right from triggering native scroll
+    const preventScroll = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener("keydown", preventScroll)
+
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
@@ -188,6 +197,7 @@ const AgentManagerContent: Component = () => {
 
     onCleanup(() => {
       window.removeEventListener("message", handler)
+      window.removeEventListener("keydown", preventScroll)
       unsub()
     })
   })
@@ -378,11 +388,9 @@ const AgentManagerContent: Component = () => {
           <div class="am-chat-wrapper">
             <ChatView onSelectSession={(id) => session.selectSession(id)} readonly={readOnly()} />
             <Show when={readOnly()}>
-              <div class="am-empty-state">
-                <div class="am-empty-state-icon">
-                  <Icon name="branch" size="large" />
-                </div>
-                <div class="am-empty-state-text">Read-only session</div>
+              <div class="am-readonly-banner">
+                <Icon name="branch" size="small" />
+                <span class="am-readonly-text">Read-only session</span>
                 <Button
                   variant="primary"
                   size="small"

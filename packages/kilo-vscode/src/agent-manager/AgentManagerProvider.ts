@@ -325,6 +325,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     state.addSession(session.id, worktreeId)
     this.registerWorktreeSession(session.id, wt.path)
     this.pushState()
+    this.postToWebview({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Session created",
+      sessionId: session.id,
+      branch: wt.branch,
+    })
 
     if (this.provider) {
       this.provider.registerSession(session)

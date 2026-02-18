@@ -288,27 +288,27 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .am-empty-state-icon {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--surface-inset-base, var(--vscode-input-background, #252526));
-  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #555));
 }
 
 .am-empty-state-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-weak, var(--vscode-descriptionForeground, #888));
 }
 
-/* Read-only session wrapper */
+/* Read-only session wrapper + banner */
 
 .am-chat-wrapper {
   display: flex;
@@ -316,6 +316,22 @@
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+.am-readonly-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border, #333));
+  background: var(--surface-inset-base, var(--vscode-input-background, #252526));
+}
+
+.am-readonly-text {
+  font-size: 13px;
+  color: var(--text-weak, var(--vscode-descriptionForeground, #888));
 }
 
 /* Setup overlay */
