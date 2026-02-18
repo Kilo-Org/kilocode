@@ -4,7 +4,6 @@ import {
   HEADER_PROJECTID,
   HEADER_TESTER,
   HEADER_EDITORNAME,
-  HEADER_MACHINEID,
   USER_AGENT,
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
@@ -21,7 +20,6 @@ export const X_KILOCODE_TASKID = HEADER_TASKID
 export const X_KILOCODE_PROJECTID = HEADER_PROJECTID
 export const X_KILOCODE_TESTER = HEADER_TESTER
 export const X_KILOCODE_EDITORNAME = HEADER_EDITORNAME
-export const X_KILOCODE_MACHINEID = HEADER_MACHINEID
 
 /**
  * Default headers for KiloCode requests
@@ -47,7 +45,6 @@ export function buildKiloHeaders(
   options?: {
     kilocodeOrganizationId?: string
     kilocodeTesterWarningsDisabledUntil?: number
-    machineId?: string
   },
 ): Record<string, string> {
   const headers: Record<string, string> = {
@@ -69,10 +66,6 @@ export function buildKiloHeaders(
   // Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
   if (options?.kilocodeTesterWarningsDisabledUntil && options.kilocodeTesterWarningsDisabledUntil > Date.now()) {
     headers[X_KILOCODE_TESTER] = TESTER_SUPPRESS_VALUE
-  }
-
-  if (options?.machineId) {
-    headers[X_KILOCODE_MACHINEID] = options.machineId
   }
 
   return headers

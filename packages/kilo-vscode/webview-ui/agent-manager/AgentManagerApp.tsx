@@ -1,6 +1,6 @@
 // Agent Manager root component
 
-import { Component, For, onMount, onCleanup } from "solid-js"
+import { Component, For, createMemo, onMount, onCleanup } from "solid-js"
 import type { ExtensionMessage } from "../src/types/messages"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
@@ -23,15 +23,18 @@ import "./agent-manager.css"
 
 const AgentManagerContent: Component = () => {
   const session = useSession()
+  const sorted = createMemo(() =>
+    [...session.sessions()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+  )
 
   const navigate = (direction: "up" | "down") => {
-    const list = session.sessions()
+    const list = sorted()
     if (list.length === 0) return
     const current = session.currentSessionID()
     const idx = current ? list.findIndex((s) => s.id === current) : -1
     const next = direction === "up" ? idx - 1 : idx + 1
     if (next < 0 || next >= list.length) return
-    session.selectSession(list[next].id)
+    session.selectSession(list[next]!.id)
   }
 
   onMount(() => {
@@ -54,7 +57,7 @@ const AgentManagerContent: Component = () => {
         </Button>
         <div class="am-sessions-header">SESSIONS</div>
         <div class="am-list">
-          <For each={session.sessions()}>
+          <For each={sorted()}>
             {(s) => (
               <button
                 class={`am-item ${s.id === session.currentSessionID() ? "am-item-active" : ""}`}
