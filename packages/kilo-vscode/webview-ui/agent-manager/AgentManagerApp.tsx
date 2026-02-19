@@ -1,6 +1,6 @@
 // Agent Manager root component
 
-import { Component, For, Show, createSignal, createMemo, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerWorktreeSetupMessage,
@@ -247,8 +247,6 @@ const AgentManagerContent: Component = () => {
   return (
     <div class="am-layout">
       <div class="am-sidebar">
-        <div class="am-sidebar-header">AGENT MANAGER</div>
-
         {/* WORKTREES section */}
         <div class="am-section">
           <div class="am-section-header">

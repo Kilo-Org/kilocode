@@ -194,6 +194,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sessionDirectories.set(sessionId, directory)
   }
 
+  public clearSessionDirectory(sessionId: string): void {
+    this.sessionDirectories.delete(sessionId)
+  }
+
   /**
    * Re-fetch and send the full session list to the webview.
    * Called by AgentManagerProvider after worktree recovery completes.

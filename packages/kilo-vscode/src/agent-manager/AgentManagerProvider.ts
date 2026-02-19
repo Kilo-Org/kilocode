@@ -270,7 +270,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
 
-    state.removeWorktree(worktreeId)
+    const orphaned = state.removeWorktree(worktreeId)
+    for (const s of orphaned) {
+      this.provider?.clearSessionDirectory(s.id)
+    }
     this.pushState()
     this.log(`Deleted worktree ${worktreeId} (${wt.branch})`)
     return null

@@ -18,15 +18,6 @@
   gap: 4px;
 }
 
-.am-sidebar-header {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-weak, var(--vscode-descriptionForeground, #888));
-  padding: 4px 8px 0;
-}
-
 /* Sections */
 
 .am-section {
