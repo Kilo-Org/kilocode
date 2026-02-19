@@ -69,6 +69,8 @@ export namespace Agent {
       question: "deny",
       plan_enter: "deny",
       plan_exit: "deny",
+      learnwrite: "deny", // kilocode_change
+      learnread: "deny", // kilocode_change
       // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
       read: {
         "*": "allow",
@@ -209,6 +211,8 @@ export namespace Agent {
           PermissionNext.fromConfig({
             question: "allow",
             plan_enter: "allow",
+            learnwrite: "allow",
+            learnread: "allow",
           }),
           user,
         ),
