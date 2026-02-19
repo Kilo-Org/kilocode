@@ -18,6 +18,63 @@
   gap: 4px;
 }
 
+/* Fixed local workspace item */
+
+.am-local-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text-base, var(--vscode-foreground));
+  font-size: 13px;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.am-local-item:hover {
+  background: var(--surface-inset-base-hover, rgba(255, 255, 255, 0.05));
+}
+
+.am-local-item-active {
+  background: var(--surface-base-active, rgba(255, 255, 255, 0.08));
+}
+
+.am-local-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #666));
+}
+
+.am-local-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0;
+}
+
+.am-local-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.am-local-branch {
+  font-size: 11px;
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #777));
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Sections */
 
 .am-section {
@@ -109,8 +166,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
   background: none;
   border: none;
@@ -119,15 +176,16 @@
   color: var(--text-base, var(--vscode-foreground));
   font-size: 13px;
   font-family: inherit;
+  transition: background-color 0.15s ease;
 }
 
 .am-item:hover {
-  background: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground, #2a2d2e));
+  background: var(--surface-inset-base-hover, rgba(255, 255, 255, 0.05));
 }
 
 .am-item-active {
-  background: var(--surface-interactive-base, var(--vscode-list-activeSelectionBackground, #04395e));
-  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground, #fff));
+  background: var(--surface-base-active, rgba(255, 255, 255, 0.08));
+  color: var(--text-base, var(--vscode-foreground));
 }
 
 .am-item-title {
@@ -147,7 +205,7 @@
 }
 
 .am-item-active .am-item-time {
-  color: var(--text-on-interactive-weak, rgba(255, 255, 255, 0.7));
+  color: var(--text-weaker, var(--vscode-descriptionForeground, #888));
 }
 
 /* Promote button on session rows */

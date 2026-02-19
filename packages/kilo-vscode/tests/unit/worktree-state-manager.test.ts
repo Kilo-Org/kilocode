@@ -144,7 +144,7 @@ describe("WorktreeStateManager", () => {
       manager.addSession("s1", wt.id)
       manager.addSession("s2", null)
       // Wait for fire-and-forget saves from mutations to settle
-      await new Promise((r) => setTimeout(r, 50))
+      await new Promise((r) => setTimeout(r, 200))
       await manager.save()
 
       const loaded = new WorktreeStateManager(root, () => {})

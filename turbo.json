@@ -15,6 +15,11 @@
     "@opencode-ai/app#test": {
       "dependsOn": ["^build"],
       "outputs": []
+    },
+    "@kilocode/kilo-docs#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**"],
+      "env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
     }
   }
 }

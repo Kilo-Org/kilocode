@@ -1,8 +1,9 @@
 // Agent Manager root component
 
-import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createSignal, createMemo, createEffect, onMount, onCleanup } from "solid-js"
 import type {
   ExtensionMessage,
+  AgentManagerRepoInfoMessage,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
   WorktreeState,
@@ -31,6 +32,7 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { formatRelativeDate } from "../src/utils/date"
+import { validateLocalSession } from "./navigate"
 import "./agent-manager.css"
 
 interface SetupState {
@@ -40,6 +42,9 @@ interface SetupState {
   error?: boolean
 }
 
+/** Sidebar selection: "local" for workspace, worktree ID for a worktree, or null for an unassigned session. */
+type SidebarSelection = "local" | string | null
+
 const AgentManagerContent: Component = () => {
   const session = useSession()
   const vscode = useVSCode()
@@ -47,7 +52,28 @@ const AgentManagerContent: Component = () => {
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
   const [worktrees, setWorktrees] = createSignal<WorktreeState[]>([])
   const [managedSessions, setManagedSessions] = createSignal<ManagedSessionState[]>([])
-  const [selectedWorktree, setSelectedWorktree] = createSignal<string | null>(null)
+  const [selection, setSelection] = createSignal<SidebarSelection>("local")
+  const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
+
+  // Recover persisted local session IDs from webview state
+  const persisted = vscode.getState<{ localSessionIDs?: string[] }>()
+  const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
+
+  // Persist local session IDs to webview state for recovery
+  createEffect(() => {
+    vscode.setState({ localSessionIDs: localSessionIDs() })
+  })
+
+  // Invalidate persisted local session IDs if they no longer exist
+  createEffect(() => {
+    const all = session.sessions()
+    if (all.length === 0) return // sessions not loaded yet
+    const ids = all.map((s) => s.id)
+    const valid = localSessionIDs().filter((lid) => validateLocalSession(lid, ids))
+    if (valid.length !== localSessionIDs().length) {
+      setLocalSessionIDs(valid)
+    }
+  })
 
   const worktreeSessionIds = createMemo(
     () =>
@@ -58,18 +84,29 @@ const AgentManagerContent: Component = () => {
       ),
   )
 
-  // Sessions NOT in any worktree
+  const localSet = createMemo(() => new Set(localSessionIDs()))
+
+  // Sessions NOT in any worktree and not local
   const unassignedSessions = createMemo(() =>
     [...session.sessions()]
-      .filter((s) => !worktreeSessionIds().has(s.id))
+      .filter((s) => !worktreeSessionIds().has(s.id) && !localSet().has(s.id))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   )
 
-  // Sessions for the currently selected worktree (tab bar), sorted by creation date (stable order)
+  // Local sessions (resolved from session list, stable creation order)
+  const localSessions = createMemo((): SessionInfo[] => {
+    const ids = localSet()
+    return session
+      .sessions()
+      .filter((s) => ids.has(s.id))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  })
+
+  // Sessions for the currently selected worktree (tab bar), sorted by creation date
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
-    const selected = selectedWorktree()
-    if (!selected) return []
-    const managed = managedSessions().filter((ms) => ms.worktreeId === selected)
+    const sel = selection()
+    if (!sel || sel === "local") return []
+    const managed = managedSessions().filter((ms) => ms.worktreeId === sel)
     const ids = new Set(managed.map((ms) => ms.id))
     return session
       .sessions()
@@ -77,13 +114,26 @@ const AgentManagerContent: Component = () => {
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   })
 
-  // Whether the selected worktree has zero sessions (show empty state)
-  const worktreeEmpty = createMemo(() => selectedWorktree() !== null && activeWorktreeSessions().length === 0)
+  // Active tab sessions: local sessions when on "local", worktree sessions otherwise
+  const activeTabs = createMemo((): SessionInfo[] => {
+    const sel = selection()
+    if (sel === "local") return localSessions()
+    if (sel) return activeWorktreeSessions()
+    return []
+  })
 
-  // Read-only mode: viewing an unassigned session (not in a worktree)
-  const readOnly = createMemo(() => !selectedWorktree() && !!session.currentSessionID())
+  // Whether the selected context has zero sessions
+  const contextEmpty = createMemo(() => {
+    const sel = selection()
+    if (sel === "local") return false // local always shows chat (even with no session yet)
+    if (sel) return activeWorktreeSessions().length === 0
+    return false
+  })
 
-  // Display name for worktree: use first session's title or branch name
+  // Read-only mode: viewing an unassigned session (not in a worktree or local)
+  const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
+
+  // Display name for worktree
   const worktreeLabel = (wt: WorktreeState): string => {
     const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
     const ids = new Set(managed.map((ms) => ms.id))
@@ -91,40 +141,41 @@ const AgentManagerContent: Component = () => {
     return first?.title || wt.branch
   }
 
-  // Scroll selected sidebar item into view
   const scrollIntoView = (el: HTMLElement) => {
     el.scrollIntoView({ block: "nearest", behavior: "smooth" })
   }
 
   // Navigate sidebar items with arrow keys
   const navigate = (direction: "up" | "down") => {
-    const flat = [
+    const flat: { type: "local" | "wt" | "session"; id: string }[] = [
+      { type: "local", id: "local" },
       ...worktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
       ...unassignedSessions().map((s) => ({ type: "session" as const, id: s.id })),
     ]
     if (flat.length === 0) return
 
-    const current = selectedWorktree() ?? session.currentSessionID()
+    const current = selection() ?? session.currentSessionID()
     const idx = current ? flat.findIndex((f) => f.id === current) : -1
     const next = direction === "up" ? idx - 1 : idx + 1
     if (next < 0 || next >= flat.length) return
 
     const item = flat[next]!
-    if (item.type === "wt") {
+    if (item.type === "local") {
+      selectLocal()
+    } else if (item.type === "wt") {
       selectWorktree(item.id)
     } else {
-      setSelectedWorktree(null)
+      setSelection(null)
       session.selectSession(item.id)
     }
 
-    // Scroll the item into view
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
   // Navigate tabs with Cmd+Left/Right
   const navigateTab = (direction: "left" | "right") => {
-    const tabs = activeWorktreeSessions()
+    const tabs = activeTabs()
     if (tabs.length === 0) return
     const current = session.currentSessionID()
     const idx = current ? tabs.findIndex((s) => s.id === current) : -1
@@ -133,9 +184,19 @@ const AgentManagerContent: Component = () => {
     session.selectSession(tabs[next]!.id)
   }
 
+  const selectLocal = () => {
+    setSelection("local")
+    vscode.postMessage({ type: "agentManager.requestRepoInfo" })
+    const locals = localSessions()
+    if (locals.length > 0) {
+      session.selectSession(locals[0]!.id)
+    } else {
+      session.clearCurrentSession()
+    }
+  }
+
   const selectWorktree = (worktreeId: string) => {
-    setSelectedWorktree(worktreeId)
-    // Select the first session in this worktree, or clear if empty
+    setSelection(worktreeId)
     const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
     const ids = new Set(managed.map((ms) => ms.id))
     const first = session.sessions().find((s) => ids.has(s.id))
@@ -170,14 +231,26 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => window.dispatchEvent(new Event("focusPrompt"))
     window.addEventListener("focus", onWindowFocus)
 
+    // When a session is created while on local with no local session yet, adopt it
+    const unsubCreate = vscode.onMessage((msg) => {
+      if (msg.type === "sessionCreated" && selection() === "local") {
+        const created = msg as { type: string; session: { id: string } }
+        setLocalSessionIDs((prev) => [...prev, created.session.id])
+      }
+    })
+
     const unsub = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.repoInfo") {
+        const info = msg as AgentManagerRepoInfoMessage
+        setRepoBranch(info.branch)
+      }
+
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" || ev.status === "error") {
           const error = ev.status === "error"
           setSetup({ active: true, message: ev.message, branch: ev.branch, error })
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
-          // Auto-focus the new session in its worktree
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
           }
@@ -190,11 +263,10 @@ const AgentManagerContent: Component = () => {
         const state = msg as AgentManagerStateMessage
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
-        // Auto-select worktree if current session belongs to one
         const current = session.currentSessionID()
         if (current) {
           const ms = state.sessions.find((s) => s.id === current)
-          if (ms?.worktreeId) setSelectedWorktree(ms.worktreeId)
+          if (ms?.worktreeId) setSelection(ms.worktreeId)
         }
       }
     })
@@ -203,8 +275,16 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventScroll)
       window.removeEventListener("focus", onWindowFocus)
+      unsubCreate()
       unsub()
     })
+  })
+
+  // If we have persisted local sessions, select local on mount
+  onMount(() => {
+    if (localSessionIDs().length > 0) {
+      selectLocal()
+    }
   })
 
   const handleCreateWorktree = () => {
@@ -214,7 +294,7 @@ const AgentManagerContent: Component = () => {
   const handleDeleteWorktree = (worktreeId: string, e: MouseEvent) => {
     e.stopPropagation()
     vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId })
-    if (selectedWorktree() === worktreeId) setSelectedWorktree(null)
+    if (selection() === worktreeId) selectLocal()
   }
 
   const handlePromote = (sessionId: string, e: MouseEvent) => {
@@ -223,21 +303,30 @@ const AgentManagerContent: Component = () => {
   }
 
   const handleAddSession = () => {
-    const id = selectedWorktree()
-    if (id) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: id })
+    const sel = selection()
+    if (sel === "local") {
+      // Create a new session on local — it gets adopted via sessionCreated listener
+      session.clearCurrentSession()
+    } else if (sel) {
+      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    }
   }
 
   const handleCloseTab = (sessionId: string, e: MouseEvent) => {
     e.stopPropagation()
-    // Switch to adjacent tab before closing
     if (session.currentSessionID() === sessionId) {
-      const tabs = activeWorktreeSessions()
+      const tabs = activeTabs()
       const idx = tabs.findIndex((s) => s.id === sessionId)
       const next = tabs[idx + 1] ?? tabs[idx - 1]
       if (next) session.selectSession(next.id)
       else session.setCurrentSessionID(undefined)
     }
-    vscode.postMessage({ type: "agentManager.closeSession", sessionId })
+    // Remove from local list if it's a local session
+    if (localSet().has(sessionId)) {
+      setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
+    } else {
+      vscode.postMessage({ type: "agentManager.closeSession", sessionId })
+    }
   }
 
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
@@ -247,11 +336,28 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  const isWorktreeActive = (worktreeId: string) => selectedWorktree() === worktreeId
-
   return (
     <div class="am-layout">
       <div class="am-sidebar">
+        {/* Local workspace item */}
+        <button
+          class={`am-local-item ${selection() === "local" ? "am-local-item-active" : ""}`}
+          data-sidebar-id="local"
+          onClick={() => selectLocal()}
+        >
+          <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
+            <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
+            <path d="M10 13.5V16.5" stroke="currentColor" />
+          </svg>
+          <div class="am-local-text">
+            <span class="am-local-label">local</span>
+            <Show when={repoBranch()}>
+              <span class="am-local-branch">{repoBranch()}</span>
+            </Show>
+          </div>
+        </button>
+
         {/* WORKTREES section */}
         <div class="am-section">
           <div class="am-section-header">
@@ -262,7 +368,7 @@ const AgentManagerContent: Component = () => {
             <For each={worktrees()}>
               {(wt) => (
                 <div
-                  class={`am-worktree-item ${isWorktreeActive(wt.id) ? "am-worktree-item-active" : ""}`}
+                  class={`am-worktree-item ${selection() === wt.id ? "am-worktree-item-active" : ""}`}
                   data-sidebar-id={wt.id}
                   onClick={() => selectWorktree(wt.id)}
                 >
@@ -290,7 +396,7 @@ const AgentManagerContent: Component = () => {
           </div>
         </div>
 
-        {/* SESSIONS section */}
+        {/* SESSIONS section (unassigned) */}
         <div class="am-section am-section-grow">
           <div class="am-section-header">
             <span class="am-section-label">SESSIONS</span>
@@ -299,10 +405,10 @@ const AgentManagerContent: Component = () => {
             <For each={unassignedSessions()}>
               {(s) => (
                 <button
-                  class={`am-item ${s.id === session.currentSessionID() && !selectedWorktree() ? "am-item-active" : ""}`}
+                  class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
                   data-sidebar-id={s.id}
                   onClick={() => {
-                    setSelectedWorktree(null)
+                    setSelection(null)
                     session.selectSession(s.id)
                   }}
                 >
@@ -324,11 +430,11 @@ const AgentManagerContent: Component = () => {
       </div>
 
       <div class="am-detail">
-        {/* Tab bar for worktree sessions */}
-        <Show when={selectedWorktree()}>
+        {/* Tab bar for local or worktree sessions */}
+        <Show when={selection() !== null && activeTabs().length > 0}>
           <div class="am-tab-bar">
             <div class="am-tab-list">
-              <For each={activeWorktreeSessions()}>
+              <For each={activeTabs()}>
                 {(s) => (
                   <Tooltip value={s.title || "Untitled"} placement="bottom">
                     <div
@@ -361,7 +467,7 @@ const AgentManagerContent: Component = () => {
         </Show>
 
         {/* Empty worktree state */}
-        <Show when={worktreeEmpty()}>
+        <Show when={contextEmpty()}>
           <div class="am-empty-state">
             <div class="am-empty-state-icon">
               <Icon name="branch" size="large" />
@@ -390,9 +496,15 @@ const AgentManagerContent: Component = () => {
             </div>
           </div>
         </Show>
-        <Show when={!worktreeEmpty()}>
+        <Show when={!contextEmpty()}>
           <div class="am-chat-wrapper">
-            <ChatView onSelectSession={(id) => session.selectSession(id)} readonly={readOnly()} />
+            <ChatView
+              onSelectSession={(id) => {
+                // If on local and selecting a different session, keep local context
+                session.selectSession(id)
+              }}
+              readonly={readOnly()}
+            />
             <Show when={readOnly()}>
               <div class="am-readonly-banner">
                 <Icon name="branch" size="small" />

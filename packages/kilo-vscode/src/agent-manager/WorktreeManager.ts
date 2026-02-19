@@ -271,7 +271,7 @@ export class WorktreeManager {
     }
   }
 
-  private async currentBranch(): Promise<string> {
+  async currentBranch(): Promise<string> {
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 

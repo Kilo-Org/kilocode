@@ -511,6 +511,12 @@ export interface AgentManagerSessionMetaMessage {
   parentBranch?: string
 }
 
+// Agent Manager repo info (current branch of the main workspace)
+export interface AgentManagerRepoInfoMessage {
+  type: "agentManager.repoInfo"
+  branch: string
+}
+
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
@@ -576,6 +582,7 @@ export type ExtensionMessage =
   | ConfigUpdatedMessage
   | NotificationSettingsLoadedMessage
   | AgentManagerSessionMetaMessage
+  | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerStateMessage
 
@@ -802,6 +809,10 @@ export interface CloseSessionRequest {
   sessionId: string
 }
 
+export interface RequestRepoInfoMessage {
+  type: "agentManager.requestRepoInfo"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -844,6 +855,7 @@ export type WebviewMessage =
   | AddSessionToWorktreeRequest
   | CloseSessionRequest
   | TelemetryRequest
+  | RequestRepoInfoMessage
 
 // ============================================
 // VS Code API type
