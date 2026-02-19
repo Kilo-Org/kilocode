@@ -59,17 +59,32 @@ const AgentManagerContent: Component = () => {
   const persisted = vscode.getState<{ localSessionIDs?: string[] }>()
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
 
-  // Persist local session IDs to webview state for recovery
+  // Pending local tab counter for generating unique IDs
+  let pendingCounter = 0
+  const PENDING_PREFIX = "pending:"
+  const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
+
+  const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
+
+  const addPendingTab = () => {
+    const id = `${PENDING_PREFIX}${++pendingCounter}`
+    setLocalSessionIDs((prev) => [...prev, id])
+    setActivePendingId(id)
+    session.clearCurrentSession()
+    return id
+  }
+
+  // Persist local session IDs to webview state for recovery (exclude pending tabs)
   createEffect(() => {
-    vscode.setState({ localSessionIDs: localSessionIDs() })
+    vscode.setState({ localSessionIDs: localSessionIDs().filter((id) => !isPending(id)) })
   })
 
-  // Invalidate persisted local session IDs if they no longer exist
+  // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
     const ids = all.map((s) => s.id)
-    const valid = localSessionIDs().filter((lid) => validateLocalSession(lid, ids))
+    const valid = localSessionIDs().filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
     if (valid.length !== localSessionIDs().length) {
       setLocalSessionIDs(valid)
     }
@@ -93,13 +108,22 @@ const AgentManagerContent: Component = () => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   )
 
-  // Local sessions (resolved from session list, stable creation order)
+  // Local sessions (resolved from session list + pending tabs, in insertion order)
   const localSessions = createMemo((): SessionInfo[] => {
-    const ids = localSet()
-    return session
-      .sessions()
-      .filter((s) => ids.has(s.id))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    const ids = localSessionIDs()
+    const all = session.sessions()
+    const lookup = new Map(all.map((s) => [s.id, s]))
+    const result: SessionInfo[] = []
+    const now = new Date().toISOString()
+    for (const id of ids) {
+      const real = lookup.get(id)
+      if (real) {
+        result.push(real)
+      } else if (isPending(id)) {
+        result.push({ id, title: "New Session", createdAt: now, updatedAt: now })
+      }
+    }
+    return result
   })
 
   // Sessions for the currently selected worktree (tab bar), sorted by creation date
@@ -125,7 +149,7 @@ const AgentManagerContent: Component = () => {
   // Whether the selected context has zero sessions
   const contextEmpty = createMemo(() => {
     const sel = selection()
-    if (sel === "local") return false // local always shows chat (even with no session yet)
+    if (sel === "local") return localSessionIDs().length === 0
     if (sel) return activeWorktreeSessions().length === 0
     return false
   })
@@ -178,19 +202,33 @@ const AgentManagerContent: Component = () => {
     const tabs = activeTabs()
     if (tabs.length === 0) return
     const current = session.currentSessionID()
-    const idx = current ? tabs.findIndex((s) => s.id === current) : -1
+    // Find current index — if no current session, look for the active pending tab
+    const idx = current ? tabs.findIndex((s) => s.id === current) : tabs.findIndex((s) => s.id === activePendingId())
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= tabs.length) return
-    session.selectSession(tabs[next]!.id)
+    const target = tabs[next]!
+    if (isPending(target.id)) {
+      setActivePendingId(target.id)
+      session.clearCurrentSession()
+    } else {
+      setActivePendingId(undefined)
+      session.selectSession(target.id)
+    }
   }
 
   const selectLocal = () => {
     setSelection("local")
     vscode.postMessage({ type: "agentManager.requestRepoInfo" })
     const locals = localSessions()
-    if (locals.length > 0) {
-      session.selectSession(locals[0]!.id)
+    const first = locals[0]
+    if (first && !isPending(first.id)) {
+      setActivePendingId(undefined)
+      session.selectSession(first.id)
+    } else if (first && isPending(first.id)) {
+      setActivePendingId(first.id)
+      session.clearCurrentSession()
     } else {
+      setActivePendingId(undefined)
       session.clearCurrentSession()
     }
   }
@@ -231,11 +269,19 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => window.dispatchEvent(new Event("focusPrompt"))
     window.addEventListener("focus", onWindowFocus)
 
-    // When a session is created while on local with no local session yet, adopt it
+    // When a session is created while on local, replace the current pending tab with the real session.
+    // Guard against duplicate sessionCreated events (HTTP response + SSE can both fire).
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type === "sessionCreated" && selection() === "local") {
         const created = msg as { type: string; session: { id: string } }
-        setLocalSessionIDs((prev) => [...prev, created.session.id])
+        if (localSessionIDs().includes(created.session.id)) return
+        const pending = activePendingId()
+        if (pending) {
+          setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
+          setActivePendingId(undefined)
+        } else {
+          setLocalSessionIDs((prev) => [...prev, created.session.id])
+        }
       }
     })
 
@@ -280,10 +326,12 @@ const AgentManagerContent: Component = () => {
     })
   })
 
-  // If we have persisted local sessions, select local on mount
+  // Always select local on mount to initialize branch info and session state
   onMount(() => {
-    if (localSessionIDs().length > 0) {
-      selectLocal()
+    selectLocal()
+    // Open a pending "New Session" tab if there are no persisted local sessions
+    if (localSessionIDs().length === 0) {
+      addPendingTab()
     }
   })
 
@@ -305,8 +353,7 @@ const AgentManagerContent: Component = () => {
   const handleAddSession = () => {
     const sel = selection()
     if (sel === "local") {
-      // Create a new session on local — it gets adopted via sessionCreated listener
-      session.clearCurrentSession()
+      addPendingTab()
     } else if (sel) {
       vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
     }
@@ -314,15 +361,26 @@ const AgentManagerContent: Component = () => {
 
   const handleCloseTab = (sessionId: string, e: MouseEvent) => {
     e.stopPropagation()
-    if (session.currentSessionID() === sessionId) {
+    const pending = isPending(sessionId)
+    const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
+    if (isActive) {
       const tabs = activeTabs()
       const idx = tabs.findIndex((s) => s.id === sessionId)
       const next = tabs[idx + 1] ?? tabs[idx - 1]
-      if (next) session.selectSession(next.id)
-      else session.setCurrentSessionID(undefined)
+      if (next) {
+        if (isPending(next.id)) {
+          setActivePendingId(next.id)
+          session.clearCurrentSession()
+        } else {
+          setActivePendingId(undefined)
+          session.selectSession(next.id)
+        }
+      } else {
+        setActivePendingId(undefined)
+        session.clearCurrentSession()
+      }
     }
-    // Remove from local list if it's a local session
-    if (localSet().has(sessionId)) {
+    if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     } else {
       vscode.postMessage({ type: "agentManager.closeSession", sessionId })
@@ -430,29 +488,44 @@ const AgentManagerContent: Component = () => {
       </div>
 
       <div class="am-detail">
-        {/* Tab bar for local or worktree sessions */}
-        <Show when={selection() !== null && activeTabs().length > 0}>
+        {/* Tab bar — visible when a section is selected and has tabs or a pending new session */}
+        <Show when={selection() !== null && !contextEmpty()}>
           <div class="am-tab-bar">
             <div class="am-tab-list">
               <For each={activeTabs()}>
-                {(s) => (
-                  <Tooltip value={s.title || "Untitled"} placement="bottom">
-                    <div
-                      class={`am-tab ${s.id === session.currentSessionID() ? "am-tab-active" : ""}`}
-                      onClick={() => session.selectSession(s.id)}
-                      onMouseDown={(e: MouseEvent) => handleTabMouseDown(s.id, e)}
-                    >
-                      <span class="am-tab-label">{s.title || "Untitled"}</span>
-                      <button
-                        class="am-tab-close"
-                        onClick={(e: MouseEvent) => handleCloseTab(s.id, e)}
-                        aria-label="Close tab"
+                {(s) => {
+                  const pending = isPending(s.id)
+                  const active = () =>
+                    pending
+                      ? s.id === activePendingId() && !session.currentSessionID()
+                      : s.id === session.currentSessionID()
+                  return (
+                    <Tooltip value={s.title || "Untitled"} placement="bottom">
+                      <div
+                        class={`am-tab ${active() ? "am-tab-active" : ""}`}
+                        onClick={() => {
+                          if (pending) {
+                            setActivePendingId(s.id)
+                            session.clearCurrentSession()
+                          } else {
+                            setActivePendingId(undefined)
+                            session.selectSession(s.id)
+                          }
+                        }}
+                        onMouseDown={(e: MouseEvent) => handleTabMouseDown(s.id, e)}
                       >
-                        ×
-                      </button>
-                    </div>
-                  </Tooltip>
-                )}
+                        <span class="am-tab-label">{s.title || "Untitled"}</span>
+                        <button
+                          class="am-tab-close"
+                          onClick={(e: MouseEvent) => handleCloseTab(s.id, e)}
+                          aria-label="Close tab"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </Tooltip>
+                  )
+                }}
               </For>
             </div>
             <IconButton

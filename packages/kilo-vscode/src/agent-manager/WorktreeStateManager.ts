@@ -45,6 +45,8 @@ export class WorktreeStateManager {
   private worktrees = new Map<string, Worktree>()
   private sessions = new Map<string, ManagedSession>()
   private readonly log: (msg: string) => void
+  private saving: Promise<void> | undefined
+  private pendingSave = false
 
   constructor(root: string, log: (msg: string) => void) {
     this.file = path.join(root, KILOCODE_DIR, STATE_FILE)
@@ -190,7 +192,34 @@ export class WorktreeStateManager {
     if (changed) await this.save()
   }
 
+  /** Wait for any in-flight save to complete without triggering a new one. */
+  async flush(): Promise<void> {
+    if (this.saving) await this.saving
+  }
+
   async save(): Promise<void> {
+    // Serialize concurrent saves — if a save is in-flight, queue one follow-up
+    if (this.saving) {
+      this.pendingSave = true
+      await this.saving
+      return
+    }
+
+    this.saving = this.writeToDisk()
+    try {
+      await this.saving
+    } finally {
+      this.saving = undefined
+    }
+
+    // If another save was requested while we were writing, flush it now
+    if (this.pendingSave) {
+      this.pendingSave = false
+      await this.save()
+    }
+  }
+
+  private async writeToDisk(): Promise<void> {
     const data: StateFile = { worktrees: {}, sessions: {} }
     for (const [id, wt] of this.worktrees) {
       const { id: _, ...rest } = wt

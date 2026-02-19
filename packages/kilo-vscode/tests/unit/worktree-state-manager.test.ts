@@ -17,7 +17,8 @@ describe("WorktreeStateManager", () => {
     manager = new WorktreeStateManager(root, (msg) => logs.push(msg))
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await manager.flush()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
@@ -143,8 +144,8 @@ describe("WorktreeStateManager", () => {
       const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
       manager.addSession("s1", wt.id)
       manager.addSession("s2", null)
-      // Wait for fire-and-forget saves from mutations to settle
-      await new Promise((r) => setTimeout(r, 200))
+      // Flush fire-and-forget saves from mutations, then do a final save
+      await manager.flush()
       await manager.save()
 
       const loaded = new WorktreeStateManager(root, () => {})
