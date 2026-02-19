@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 # Add node_modules/.bin to PATH for local binaries
 # Use git to find repository root reliably
