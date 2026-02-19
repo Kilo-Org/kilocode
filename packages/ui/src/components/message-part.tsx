@@ -533,10 +533,16 @@ export const ToolRegistry = {
   render: getTool,
 }
 
+/** Check if text looks like a file path (contains / and has a file extension) */
+const FILE_PATH_RE = /^\.{0,2}\/.*\.\w+$|^[a-zA-Z]:\\.*\.\w+$|^\w[\w.-]*\/.*\.\w+$/
+
+function isFilePath(text: string): boolean {
+  return FILE_PATH_RE.test(text.trim())
+}
+
 /**
  * Renders tool output text with file paths as clickable elements.
- * Lines that look like file paths (start with / or contain common path patterns)
- * become clickable to open the file in the editor.
+ * Lines that look like file paths become clickable to open the file in the editor.
  */
 function ClickableFileOutput(props: { text: string; openFile?: OpenFileFn; directory?: string }) {
   const lines = createMemo(() => props.text.split("\n").filter((l) => l.trim()))
@@ -547,11 +553,10 @@ function ClickableFileOutput(props: { text: string; openFile?: OpenFileFn; direc
       <For each={lines()}>
         {(line) => {
           const trimmed = line.trim()
-          const isPath = trimmed.startsWith("/") || trimmed.match(/^[a-zA-Z]:\\/) || trimmed.match(/^\w[\w.-]*\//)
           const displayPath = props.directory ? relativizeProjectPaths(trimmed, props.directory) : trimmed
           return (
             <Show
-              when={hasClickable() && isPath}
+              when={hasClickable() && isFilePath(trimmed)}
               fallback={<div data-slot="file-output-line">{displayPath}</div>}
             >
               <div
