@@ -1,0 +1,13 @@
+name: Closed for Contributions
+
+on:
+  pull_request:
+
+jobs:
+  closed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository closed for contributions
+        run: |
+          echo "::error::This repository is closed for contributions. Please use the kilocode repo instead: https://github.com/kilocode/kilocode"
+          exit 1
