@@ -111,7 +111,7 @@
 			]
 		},
 		"views": {
-			"kilo-code-ActivityBar": [
+			"cmbt-agent-ActivityBar": [
 				{
 					"type": "webview",
 					"id": "cmbt-agent.SidebarProvider",

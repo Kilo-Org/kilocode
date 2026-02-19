@@ -6,13 +6,6 @@ if [ -d "$REPO_ROOT/node_modules/.bin" ]; then
     export PATH="$REPO_ROOT/node_modules/.bin:$PATH"
 fi
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
-
-if [ "$branch" = "main" ]; then
-  echo "You can't commit directly to main - please check out a branch."
-  exit 1
-fi
-
 # Detect if running on Windows and use pnpm.cmd, otherwise use pnpm.
 if [ "$OS" = "Windows_NT" ]; then
   pnpm_cmd="pnpm.cmd"

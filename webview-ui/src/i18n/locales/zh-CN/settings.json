@@ -41,7 +41,7 @@
 		"ui": "UI",
 		"experimental": "实验性",
 		"language": "语言",
-		"about": "关于 Kilo Code",
+		"about": "关于",
 		"autoPurge": "自动清理",
 		"agentBehaviour": "智能体行为",
 		"autocomplete": "自动补全"
@@ -62,7 +62,7 @@
 		"contact": {
 			"label": "需要联系我们？请发送邮件至"
 		},
-		"community": "想要获取使用技巧或与其他 Kilo Code 用户交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
+		"community": "想要获取使用技巧或与其他 CMBT Agent 用户交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "联系与社区",
 		"manageSettings": "管理设置",
 		"debugMode": {
@@ -74,7 +74,7 @@
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
-		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
+		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 CMBT Agent 为常见开发任务提供更好的支持。"
 	},
 	"codeIndex": {
 		"title": "代码库索引",
@@ -197,7 +197,7 @@
 	},
 	"autoApprove": {
 		"toggleShortcut": "您可以<SettingsLink>在 IDE 首选项中</SettingsLink>为此设置配置全局快捷方式。",
-		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
+		"description": "允许 CMBT Agent 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
 		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
@@ -207,10 +207,10 @@
 		},
 		"readOnly": {
 			"label": "读取",
-			"description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
+			"description": "启用后，CMBT Agent 将自动浏览目录和读取文件内容，无需人工确认。",
 			"outsideWorkspace": {
 				"label": "包含工作区外的文件",
-				"description": "允许 Kilo Code 读取当前工作区外的文件，无需批准。"
+				"description": "允许 CMBT Agent 读取当前工作区外的文件，无需批准。"
 			}
 		},
 		"write": {
@@ -219,11 +219,11 @@
 			"delayLabel": "延迟一段时间再自动批准写入，可以在期间检查模型输出是否有问题",
 			"outsideWorkspace": {
 				"label": "包含工作区外的文件",
-				"description": "允许 Kilo Code 创建和编辑当前工作区外的文件，无需批准。"
+				"description": "允许 CMBT Agent 创建和编辑当前工作区外的文件，无需批准。"
 			},
 			"protected": {
 				"label": "包含受保护的文件",
-				"description": "允许 Kilo Code 创建和编辑受保护的文件（如 .kilocodeignore 和 .kilocode/ 配置文件），无需批准。"
+				"description": "允许 CMBT Agent 创建和编辑受保护的文件（如 .kilocodeignore 和 .kilocode/ 配置文件），无需批准。"
 			}
 		},
 		"browser": {
@@ -537,7 +537,7 @@
 			"draftModelDesc": "草稿模型必须来自相同的模型系列，推测性解码才能正常工作。",
 			"selectDraftModel": "选择草稿模型",
 			"noModelsFound": "未找到草稿模型。请确保 LM Studio 已启用服务器模式运行。",
-			"description": "LM Studio 允许您在本地计算机上运行模型。要了解如何开始，请参阅他们的 <a>快速入门指南</a>。您还需要启动 LM Studio 的 <b>本地服务器</b> 功能，以便与此扩展一起使用。<span>注意：</span>Kilo Code 使用复杂的提示，并且在 Claude 模型上效果最佳。功能较弱的模型可能无法正常工作。"
+			"description": "LM Studio 允许您在本地计算机上运行模型。要了解如何开始，请参阅他们的 <a>快速入门指南</a>。您还需要启动 LM Studio 的 <b>本地服务器</b> 功能，以便与此扩展一起使用。<span>注意：</span>CMBT Agent 使用复杂的提示，并且在 Claude 模型上效果最佳。功能较弱的模型可能无法正常工作。"
 		},
 		"ollama": {
 			"baseUrl": "基础 URL（可选）",
@@ -548,7 +548,7 @@
 			"numCtx": "上下文窗口大小 (num_ctx)",
 			"numCtxHelp": "覆盖模型的默认上下文窗口大小。留空以使用模型的 Modelfile 配置。最小值为 128。",
 			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
-			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
+			"warning": "注意：CMBT Agent 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
 		},
 		"unboundApiKey": "Unbound API 密钥",
 		"getUnboundApiKey": "获取 Unbound API 密钥",
@@ -671,7 +671,7 @@
 	"browser": {
 		"enable": {
 			"label": "启用浏览器工具",
-			"description": "启用后，若模型支持计算机功能调用，Kilo Code 可以使用浏览器与网站交互。 <0>了解更多</0>"
+			"description": "启用后，若模型支持计算机功能调用，CMBT Agent 可以使用浏览器与网站交互。 <0>了解更多</0>"
 		},
 		"viewport": {
 			"label": "视口大小",
@@ -741,12 +741,12 @@
 	"notifications": {
 		"sound": {
 			"label": "启用声音通知",
-			"description": "启用后，Kilo Code 将为通知和事件播放音效。",
+			"description": "启用后，CMBT Agent 将为通知和事件播放音效。",
 			"volumeLabel": "音量"
 		},
 		"tts": {
 			"label": "启用文本转语音",
-			"description": "启用后，Kilo Code 将使用文本转语音功能朗读其响应。",
+			"description": "启用后，CMBT Agent 将使用文本转语音功能朗读其响应。",
 			"speedLabel": "速度"
 		}
 	},
@@ -754,7 +754,7 @@
 		"description": "管理AI上下文信息（影响token用量和回答质量）",
 		"autoCondenseContextPercent": {
 			"label": "触发智能上下文压缩的阈值",
-			"description": "当上下文窗口达到此阈值时，Kilo Code 将自动压缩它。"
+			"description": "当上下文窗口达到此阈值时，CMBT Agent 将自动压缩它。"
 		},
 		"condensingApiConfiguration": {
 			"label": "上下文压缩的API配置",
@@ -770,7 +770,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "自动触发智能上下文压缩",
-			"description": "启用时，Kilo Code 将在达到阈值时自动压缩上下文。禁用时，您仍可以手动触发上下文压缩。"
+			"description": "启用时，CMBT Agent 将在达到阈值时自动压缩上下文。禁用时，您仍可以手动触发上下文压缩。"
 		},
 		"openTabs": {
 			"label": "标签页数量限制",
@@ -910,7 +910,7 @@
 	},
 	"toolProtocol": {
 		"label": "工具调用协议",
-		"description": "选择 Kilo Code 如何与 API 通信。原生使用提供商的函数调用 API，而 XML 使用 XML 格式的工具定义。",
+		"description": "选择 CMBT Agent 如何与 API 通信。原生使用提供商的函数调用 API，而 XML 使用 XML 格式的工具定义。",
 		"default": "默认",
 		"xml": "XML",
 		"native": "原生",
@@ -919,7 +919,7 @@
 	"advanced": {
 		"diff": {
 			"label": "启用diff更新",
-			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗",
+			"description": "启用后，CMBT Agent 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗",
 			"strategy": {
 				"label": "Diff 策略",
 				"options": {
@@ -940,7 +940,7 @@
 		},
 		"todoList": {
 			"label": "启用任务清单工具",
-			"description": "启用后，Kilo Code 可以创建和管理任务清单来跟踪任务进度。这有助于将复杂任务组织成可管理的步骤。"
+			"description": "启用后，CMBT Agent 可以创建和管理任务清单来跟踪任务进度。这有助于将复杂任务组织成可管理的步骤。"
 		}
 	},
 	"experimental": {
@@ -950,23 +950,23 @@
 		},
 		"INSERT_BLOCK": {
 			"name": "启用插入内容工具",
-			"description": "允许 Kilo Code 在特定行号插入内容，无需处理差异。"
+			"description": "允许 CMBT Agent 在特定行号插入内容，无需处理差异。"
 		},
 		"POWER_STEERING": {
 			"name": "启用增强导向模式",
-			"description": "开启后，Kilo Code 将更频繁地向模型推送当前模式定义的详细信息，从而强化对角色设定和自定义指令的遵循力度。注意：此模式会提升每条消息的 token 消耗量。"
+			"description": "开启后，CMBT Agent 将更频繁地向模型推送当前模式定义的详细信息，从而强化对角色设定和自定义指令的遵循力度。注意：此模式会提升每条消息的 token 消耗量。"
 		},
 		"AUTOCOMPLETE": {
 			"name": "使用实验性“自动完成”功能",
-			"description": "启用后，Kilo Code 会在您键入时提供内联代码建议。"
+			"description": "启用后，CMBT Agent 会在您键入时提供内联代码建议。"
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "允许批量搜索和替换",
-			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
+			"description": "启用后，CMBT Agent 将尝试在一个请求中进行批量搜索和替换。"
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "启用并发文件读取",
-			"description": "启用后，Kilo Code 可以在单个请求中读取多个文件。禁用后，Kilo Code 必须逐个读取文件。在使用能力较弱的模型或希望对文件访问有更多控制时，禁用此功能可能会有所帮助。"
+			"description": "启用后，CMBT Agent 可以在单个请求中读取多个文件。禁用后，CMBT Agent 必须逐个读取文件。在使用能力较弱的模型或希望对文件访问有更多控制时，禁用此功能可能会有所帮助。"
 		},
 		"MARKETPLACE": {
 			"name": "启用 Marketplace",
@@ -974,11 +974,11 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "启用并发文件编辑",
-			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
+			"description": "启用后 CMBT Agent 可在单个请求中编辑多个文件。禁用后 CMBT Agent 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
-			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
+			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 CMBT Agent 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "使用新的消息解析器",
@@ -992,13 +992,13 @@
 			"providerLabel": "提供商",
 			"providerDescription": "选择用于图像生成的提供商。",
 			"name": "启用 AI 图像生成",
-			"description": "启用后，Kilo Code 可以从文本提示生成图像。需要配置 Kilo Code 或 OpenRouter API 密钥。",
+			"description": "启用后，CMBT Agent 可以从文本提示生成图像。需要配置 CMBT Agent 或 OpenRouter API 密钥。",
 			"apiProvider": "API 提供商",
 			"openRouterApiKeyLabel": "OpenRouter API 密钥",
 			"openRouterApiKeyPlaceholder": "输入您的 OpenRouter API 密钥",
-			"kiloCodeApiKeyLabel": "Kilo Code API 密钥",
-			"kiloCodeApiKeyPlaceholder": "输入您的 Kilo Code API 密钥",
-			"kiloCodeApiKeyPaste": "粘贴当前 Kilo Code API 密钥",
+			"kiloCodeApiKeyLabel": "CMBT Agent API 密钥",
+			"kiloCodeApiKeyPlaceholder": "输入您的 CMBT Agent API 密钥",
+			"kiloCodeApiKeyPaste": "粘贴当前 CMBT Agent API 密钥",
 			"getApiKeyText": "获取您的 API 密钥",
 			"modelSelectionLabel": "图像生成模型",
 			"modelSelectionDescription": "选择用于图像生成的模型",
@@ -1011,7 +1011,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "启用 Fast Apply",
-			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
+			"description": "启用后 CMBT Agent 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
 			"apiProvider": "API 提供商",
 			"apiProviderList": {
 				"current": "当前"
@@ -1029,14 +1029,14 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "启用模型发起的斜杠命令",
-			"description": "启用后 Kilo Code 可运行斜杠命令执行工作流程。"
+			"description": "启用后 CMBT Agent 可运行斜杠命令执行工作流程。"
 		},
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "并行工具调用",
 			"description": "启用后，原生协议可在单个助手消息轮次中执行多个工具。"
 		},
 		"SPEECH_TO_TEXT": {
-			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
+			"description": "启用后，CMBT Agent 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
 			"name": "语音转文本 (STT)"
 		},
 		"CUSTOM_TOOLS": {
@@ -1053,7 +1053,7 @@
 	},
 	"promptCaching": {
 		"label": "禁用提示词缓存",
-		"description": "选中后，Kilo Code 将不会为此模型使用提示词缓存。"
+		"description": "选中后，CMBT Agent 将不会为此模型使用提示词缓存。"
 	},
 	"temperature": {
 		"useCustom": "使用自定义温度",
@@ -1083,7 +1083,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，Kilo Code 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。",
+		"automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，CMBT Agent 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。",
 		"label": "模型",
 		"searchPlaceholder": "搜索",
 		"noMatchFound": "未找到匹配项",
@@ -1097,7 +1097,7 @@
 		"support": "如有财务问题，请联系客户支持 <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允许错误和使用情况报告",
-			"description": "通过发送使用数据和错误报告帮助改进 Kilo Code。绝不会发送代码、提示词或个人信息。详情请查看我们的隐私政策。"
+			"description": "通过发送使用数据和错误报告帮助改进 CMBT Agent。绝不会发送代码、提示词或个人信息。详情请查看我们的隐私政策。"
 		},
 		"settings": {
 			"import": "导入",

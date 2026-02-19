@@ -333,11 +333,16 @@ export const openClineInNewTab = async ({ context, outputChannel }: Omit<Registe
 
 	const targetCol = hasVisibleEditors ? Math.max(lastCol + 1, 1) : vscode.ViewColumn.Two
 
-	const newPanel = vscode.window.createWebviewPanel(ClineProvider.tabPanelId, "Kilo Code", targetCol, {
-		enableScripts: true,
-		retainContextWhenHidden: true,
-		localResourceRoots: [context.extensionUri],
-	})
+	const newPanel = vscode.window.createWebviewPanel(
+		ClineProvider.tabPanelId,
+		vscode.l10n.t("CMBT Agent"), // kilocode_change
+		targetCol,
+		{
+			enableScripts: true,
+			retainContextWhenHidden: true,
+			localResourceRoots: [context.extensionUri],
+		},
+	)
 
 	// Save as tab type panel.
 	setPanel(newPanel, "tab")
