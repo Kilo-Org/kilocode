@@ -126,8 +126,9 @@ async function tryResolveSymlinkedCommand(filePath: string): Promise<string | un
 /**
  * Get all available commands from built-in, global, and project directories
  * Priority order: project > global > built-in (later sources override earlier ones)
+ * Workflows are filtered by toggle state when options are provided
  */
-export async function getCommands(cwd: string): Promise<Command[]> {
+export async function getCommands(cwd: string, options?: GetCommandOptions): Promise<Command[]> {
 	const commands = new Map<string, Command>()
 
 	// Add built-in commands first (lowest priority)
@@ -154,6 +155,23 @@ export async function getCommands(cwd: string): Promise<Command[]> {
 	// Also scan project workflows
 	const projectWorkflowsDir = path.join(getProjectRooDirectoryForCwd(cwd), "workflows")
 	await scanCommandDirectory(projectWorkflowsDir, "project", commands)
+	// kilocode_change end
+
+	// kilocode_change start
+	// Filter out disabled workflows if options are provided
+	if (options) {
+		const filteredCommands = Array.from(commands.values()).filter((cmd) => {
+			// Built-in commands are always enabled
+			if (cmd.source === "built-in") return true
+			// Apply toggle filtering for global and project sources
+			if (cmd.source === "global" || cmd.source === "project") {
+				return isEnabled(cmd.filePath, cmd.source, options)
+			}
+			// Unknown source types are included by default
+			return true
+		})
+		return filteredCommands
+	}
 	// kilocode_change end
 
 	return Array.from(commands.values())
@@ -183,6 +201,7 @@ function isEnabled(filePath: string, source: "global" | "project", options?: Get
 /**
  * Get a specific command by name (optimized to avoid scanning all commands)
  * Priority order: project > global > built-in
+ * Project workflows have higher priority than global commands
  */
 // kilocode_change start
 export async function getCommand(cwd: string, name: string, options?: GetCommandOptions): Promise<Command | undefined> {
@@ -202,16 +221,16 @@ export async function getCommand(cwd: string, name: string, options?: GetCommand
 		return projectCommand
 	}
 
-	// Check global commands
-	const globalCommand = await tryLoadCommand(globalDir, name, "global")
-	if (globalCommand) {
-		return globalCommand
-	}
-
-	// Check project workflows (if enabled by toggle)
+	// Check project workflows (if enabled by toggle) - project workflows override global commands
 	const projectWorkflow = await tryLoadCommand(projectWorkflowsDir, name, "project")
 	if (projectWorkflow && isEnabled(projectWorkflow.filePath, "project", options)) {
 		return projectWorkflow
+	}
+
+	// Check global commands (after project workflows to respect project > global priority)
+	const globalCommand = await tryLoadCommand(globalDir, name, "global")
+	if (globalCommand) {
+		return globalCommand
 	}
 
 	// Check global workflows (if enabled by toggle)
