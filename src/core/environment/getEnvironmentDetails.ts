@@ -407,7 +407,6 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	})
 
 	const workflowSection = await getWorkflowsForEnvironment(cline.cwd, experiments, enabledWorkflows)
-	// kilocode_change end
 
 	return `<environment_details>\n${details.trim()}\n${reminderSection}\n${workflowSection}\n</environment_details>`
 }
