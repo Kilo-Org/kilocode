@@ -47,8 +47,8 @@
 		"loginButton": "Přihlásit se"
 	},
 	"promotionError": {
-		"title": "Zaregistruj se zdarma a pokračuj v používání tohoto modelu a více než 500 dalších modelů.",
-		"message": "Zaregistruj se a získej $5 kreditů pro placené modely a pokračuj v používání bezplatných modelů. Není potřeba kreditní karta ani nákup.",
+		"title": "Pro pokračování se musíš zaregistrovat",
+		"message": "Zaregistruj se zdarma, pokračuj a prozkoumej 500 dalších modelů. Zabere to 2 minuty, bez kreditní karty. Nebo se vrať později.",
 		"signUpButton": "Registrovat se"
 	},
 	"pricing": {

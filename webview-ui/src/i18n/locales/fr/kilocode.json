@@ -47,8 +47,8 @@
 		"loginButton": "Se Connecter"
 	},
 	"promotionError": {
-		"title": "Inscris-toi gratuitement pour continuer à utiliser ce modèle et plus de 500 autres modèles.",
-		"message": "Inscris-toi pour recevoir $5 de crédits pour les modèles payants et continuer à utiliser les modèles gratuits. Aucune carte de crédit ni achat requis.",
+		"title": "Tu dois t'inscrire pour continuer",
+		"message": "Inscris-toi gratuitement pour continuer et explorer 500 autres modèles. Ça prend 2 minutes, pas de carte de crédit requise. Ou reviens plus tard.",
 		"signUpButton": "S'inscrire"
 	},
 	"pricing": {

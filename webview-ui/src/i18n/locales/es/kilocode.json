@@ -40,8 +40,8 @@
 		"loginButton": "Iniciar Sesión"
 	},
 	"promotionError": {
-		"title": "Regístrate gratis para seguir usando este modelo y más de 500 modelos más.",
-		"message": "Regístrate para recibir $5 en créditos para modelos de pago y seguir usando modelos gratuitos. No se requiere tarjeta de crédito ni compra.",
+		"title": "Necesitas registrarte para continuar",
+		"message": "Regístrate gratis para continuar y explorar 500 modelos más. Solo 2 minutos, sin tarjeta de crédito. O vuelve más tarde.",
 		"signUpButton": "Registrarse"
 	},
 	"pricing": {

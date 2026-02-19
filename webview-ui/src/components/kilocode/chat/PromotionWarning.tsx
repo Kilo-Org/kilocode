@@ -52,7 +52,7 @@ export const PromotionWarning = ({ message }: PromotionWarningProps) => {
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-center gap-2">
-				<span className="text-yellow-400 text-lg">✨</span>
+				<span className="text-yellow-400 text-lg">🕙</span>
 				<span className="font-semibold text-vscode-foreground">{t("kilocode:promotionError.title")}</span>
 			</div>
 			<p className="text-vscode-descriptionForeground text-sm m-0 break-words">

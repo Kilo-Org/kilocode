@@ -47,8 +47,8 @@
 		"loginButton": "Inloggen"
 	},
 	"promotionError": {
-		"title": "Meld je gratis aan om dit model en meer dan 500 andere modellen te blijven gebruiken.",
-		"message": "Meld je aan om $5 aan credits voor betaalde modellen te ontvangen en gratis modellen te blijven gebruiken. Geen creditcard of aankoop vereist.",
+		"title": "Je moet je aanmelden om verder te gaan",
+		"message": "Meld je gratis aan om verder te gaan en 500 andere modellen te ontdekken. Duurt 2 minuten, geen creditcard nodig. Of kom later terug.",
 		"signUpButton": "Aanmelden"
 	},
 	"pricing": {

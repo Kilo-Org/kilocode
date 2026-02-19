@@ -40,8 +40,8 @@
 		"loginButton": "Masuk"
 	},
 	"promotionError": {
-		"title": "Daftar gratis untuk terus menggunakan model ini dan lebih dari 500 model lainnya.",
-		"message": "Daftar untuk mendapatkan $5 kredit untuk model berbayar dan terus menggunakan model gratis. Tidak perlu kartu kredit atau pembelian.",
+		"title": "Kamu perlu mendaftar untuk melanjutkan",
+		"message": "Daftar gratis untuk melanjutkan dan menjelajahi 500 model lainnya. Hanya 2 menit, tanpa kartu kredit. Atau kembali lagi nanti.",
 		"signUpButton": "Daftar"
 	},
 	"pricing": {

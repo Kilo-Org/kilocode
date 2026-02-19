@@ -4678,6 +4678,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 				: {}),
 			projectId: (await kiloConfig)?.project?.id, // kilocode_change: pass projectId for backend tracking (ignored by other providers)
+			// kilocode_change: child tasks (spawned via new_task tool) are parallel agents
+			...(this.parentTaskId ? { feature: "parallel-agent" } : {}),
 		}
 
 		// Create an AbortController to allow cancelling the request mid-stream

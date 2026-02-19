@@ -40,8 +40,8 @@
 		"loginButton": "Zaloguj się"
 	},
 	"promotionError": {
-		"title": "Zarejestruj się za darmo, aby nadal korzystać z tego modelu i ponad 500 innych modeli.",
-		"message": "Zarejestruj się, aby otrzymać $5 kredytów na płatne modele i nadal korzystać z bezpłatnych modeli. Nie wymagana karta kredytowa ani zakup.",
+		"title": "Musisz się zarejestrować, aby kontynuować",
+		"message": "Zarejestruj się za darmo, aby kontynuować i odkryć 500 innych modeli. Zajmie to 2 minuty, bez karty kredytowej. Lub wróć później.",
 		"signUpButton": "Zarejestruj się"
 	},
 	"pricing": {

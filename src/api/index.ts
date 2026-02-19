@@ -99,6 +99,13 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * @kilocode-only
 	 */
 	projectId?: string
+	/**
+	 * KiloCode-specific: Feature attribution for microdollar usage tracking.
+	 * When set, overrides the default feature detection in customRequestOptions().
+	 * Examples: 'parallel-agent', 'autocomplete'
+	 * @kilocode-only
+	 */
+	feature?: string
 	// kilocode_change end
 	/**
 	 * Optional array of tool definitions to pass to the model.

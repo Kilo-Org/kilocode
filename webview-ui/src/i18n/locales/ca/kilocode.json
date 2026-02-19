@@ -40,8 +40,8 @@
 		"loginButton": "Iniciar Sessió"
 	},
 	"promotionError": {
-		"title": "Registra't gratuïtament per continuar usant aquest model i més de 500 models més.",
-		"message": "Registra't per rebre $5 en crèdits per a models de pagament i per continuar usant models gratuïts. No cal targeta de crèdit ni compra.",
+		"title": "Has de registrar-te per continuar",
+		"message": "Registra't gratuïtament per continuar i explorar 500 models més. Només 2 minuts, sense targeta de crèdit. O torna més tard.",
 		"signUpButton": "Registrar-se"
 	},
 	"pricing": {

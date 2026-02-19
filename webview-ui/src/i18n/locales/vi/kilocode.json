@@ -47,8 +47,8 @@
 		"loginButton": "Đăng Nhập"
 	},
 	"promotionError": {
-		"title": "Đăng ký miễn phí để tiếp tục sử dụng mô hình này và hơn 500 mô hình khác.",
-		"message": "Đăng ký để nhận $5 tín dụng cho các mô hình trả phí và tiếp tục sử dụng các mô hình miễn phí. Không cần thẻ tín dụng hay mua hàng.",
+		"title": "Bạn cần đăng ký để tiếp tục",
+		"message": "Đăng ký miễn phí để tiếp tục và khám phá 500 mô hình khác. Chỉ mất 2 phút, không cần thẻ tín dụng. Hoặc quay lại sau.",
 		"signUpButton": "Đăng Ký"
 	},
 	"pricing": {

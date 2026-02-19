@@ -40,8 +40,8 @@
 		"loginButton": "Giriş Yap"
 	},
 	"promotionError": {
-		"title": "Bu modeli ve 500'den fazla diğer modeli kullanmaya devam etmek için ücretsiz kaydol.",
-		"message": "Ücretli modeller için $5 kredi almak ve ücretsiz modelleri kullanmaya devam etmek için kaydol. Kredi kartı veya satın alma gerekmez.",
+		"title": "Devam etmek için kaydolman gerekiyor",
+		"message": "Devam etmek ve 500 diğer modeli keşfetmek için ücretsiz kaydol. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gel.",
 		"signUpButton": "Kaydol"
 	},
 	"pricing": {

@@ -47,8 +47,8 @@
 		"loginButton": "Anmelden"
 	},
 	"promotionError": {
-		"title": "Registriere dich kostenlos, um dieses Modell und über 500 weitere Modelle weiter zu nutzen.",
-		"message": "Registriere dich und erhalte $5 Guthaben für kostenpflichtige Modelle und nutze weiterhin kostenlose Modelle. Keine Kreditkarte oder Kauf erforderlich.",
+		"title": "Du musst dich registrieren, um weiterzumachen",
+		"message": "Registriere dich kostenlos, um weiterzumachen und 500 weitere Modelle zu entdecken. Dauert 2 Minuten, keine Kreditkarte nötig. Oder komm später wieder.",
 		"signUpButton": "Registrieren"
 	},
 	"pricing": {

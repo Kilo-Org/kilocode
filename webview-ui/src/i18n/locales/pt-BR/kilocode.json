@@ -47,8 +47,8 @@
 		"loginButton": "Fazer Login"
 	},
 	"promotionError": {
-		"title": "Cadastre-se gratuitamente para continuar usando este modelo e mais de 500 outros modelos.",
-		"message": "Cadastre-se para receber $5 em créditos para modelos pagos e continuar usando modelos gratuitos. Não é necessário cartão de crédito ou compra.",
+		"title": "Você precisa se cadastrar para continuar",
+		"message": "Cadastre-se gratuitamente para continuar e explorar 500 outros modelos. Leva 2 minutos, sem cartão de crédito. Ou volte mais tarde.",
 		"signUpButton": "Cadastrar-se"
 	},
 	"pricing": {

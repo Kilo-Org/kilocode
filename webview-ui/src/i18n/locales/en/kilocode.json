@@ -50,8 +50,8 @@
 		"loginButton": "Sign In"
 	},
 	"promotionError": {
-		"title": "Sign up for free to continue using this model and over 500 other models.",
-		"message": "Sign up to receive $5 in credits for paid models and to continue using free models. No credit card or purchase required.",
+		"title": "You need to sign up to keep going",
+		"message": "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
 		"signUpButton": "Sign Up"
 	},
 	"pricing": {

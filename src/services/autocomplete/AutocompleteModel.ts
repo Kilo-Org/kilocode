@@ -162,9 +162,12 @@ export class AutocompleteModel {
 
 		console.log("USED MODEL", this.apiHandler.getModel())
 
-		const stream = this.apiHandler.createMessage(systemPrompt, [
-			{ role: "user", content: [{ type: "text", text: userPrompt }] },
-		])
+		// kilocode_change: pass feature metadata for microdollar usage tracking
+		const stream = this.apiHandler.createMessage(
+			systemPrompt,
+			[{ role: "user", content: [{ type: "text", text: userPrompt }] }],
+			{ taskId: "autocomplete", feature: "autocomplete" },
+		)
 
 		let cost = 0
 		let inputTokens = 0
