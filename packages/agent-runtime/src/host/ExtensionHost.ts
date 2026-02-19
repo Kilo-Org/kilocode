@@ -805,7 +805,6 @@ export class ExtensionHost extends EventEmitter {
 				multiFileApplyDiff: false,
 				powerSteering: false,
 				imageGeneration: false,
-				runSlashCommand: false,
 			},
 			// Add appendSystemPrompt from CLI options
 			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),
@@ -1192,11 +1191,7 @@ export class ExtensionHost extends EventEmitter {
 		)
 
 		// 2. Write task files to disk
-		await this.writeTaskHistory(
-			resumeData.sessionId,
-			resumeData.uiMessages,
-			resumeData.apiConversationHistory,
-		)
+		await this.writeTaskHistory(resumeData.sessionId, resumeData.uiMessages, resumeData.apiConversationHistory)
 
 		logs.info("Task history pre-seeded successfully", "ExtensionHost")
 	}
@@ -1206,12 +1201,7 @@ export class ExtensionHost extends EventEmitter {
 	 * This is required before calling showTaskWithId, as the extension looks up
 	 * the task in taskHistory to get metadata before loading from files.
 	 */
-	public async addHistoryItemForResume(
-		taskId: string,
-		task: string,
-		ts: number,
-		mode: string,
-	): Promise<void> {
+	public async addHistoryItemForResume(taskId: string, task: string, ts: number, mode: string): Promise<void> {
 		const globalState = this.vscodeAPI?.context?.globalState
 		if (!globalState) {
 			throw new Error("Cannot add history item: globalState not available")
@@ -1221,14 +1211,15 @@ export class ExtensionHost extends EventEmitter {
 		const taskHistory = (globalState.get("taskHistory") as unknown[]) || []
 
 		// Check if this task already exists in history
-		const existingIndex = taskHistory.findIndex(
-			(item: unknown) => (item as { id?: string }).id === taskId
-		)
+		const existingIndex = taskHistory.findIndex((item: unknown) => (item as { id?: string }).id === taskId)
 
 		// Create the HistoryItem with minimal required fields
 		const historyItem = {
 			id: taskId,
-			number: existingIndex >= 0 ? (taskHistory[existingIndex] as { number?: number }).number || 0 : taskHistory.length + 1,
+			number:
+				existingIndex >= 0
+					? (taskHistory[existingIndex] as { number?: number }).number || 0
+					: taskHistory.length + 1,
 			ts,
 			task,
 			tokensIn: 0,
