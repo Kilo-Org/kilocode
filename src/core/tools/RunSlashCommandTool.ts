@@ -1,6 +1,8 @@
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
+// kilocode_change start
 import { getCommand, getCommandNames } from "../../services/command/commands"
+// kilocode_change end
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
@@ -53,8 +55,17 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 
 			task.consecutiveMistakeCount = 0
 
-			// Get the command from the commands service
-			const command = await getCommand(task.cwd, commandName)
+			// kilocode_change start
+			// Get workflow toggles from state
+			const localToggles = state?.localWorkflowToggles ?? {}
+			const globalToggles = state?.globalWorkflowToggles ?? {}
+
+			// Get the command from the commands service with toggle filtering
+			const command = await getCommand(task.cwd, commandName, {
+				localToggles,
+				globalToggles,
+			})
+			// kilocode_change end
 
 			if (!command) {
 				// Get available commands for error message

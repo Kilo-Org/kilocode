@@ -4,6 +4,9 @@ import { Dirent } from "fs"
 import matter from "gray-matter"
 import { getGlobalRooDirectory, getProjectRooDirectoryForCwd } from "../roo-config"
 import { getBuiltInCommands, getBuiltInCommand } from "./built-in-commands"
+// kilocode_change start
+import { ClineRulesToggles } from "../../shared/cline-rules"
+// kilocode_change end
 
 /**
  * Maximum depth for resolving symlinks to prevent cyclic symlink loops
@@ -137,33 +140,86 @@ export async function getCommands(cwd: string): Promise<Command[]> {
 	const globalDir = path.join(getGlobalRooDirectory(), "commands")
 	await scanCommandDirectory(globalDir, "global", commands)
 
+	// kilocode_change start
+	// Also scan global workflows
+	const globalWorkflowsDir = path.join(getGlobalRooDirectory(), "workflows")
+	await scanCommandDirectory(globalWorkflowsDir, "global", commands)
+	// kilocode_change end
+
 	// Scan project commands (highest priority - override both global and built-in)
 	const projectDir = path.join(getProjectRooDirectoryForCwd(cwd), "commands")
 	await scanCommandDirectory(projectDir, "project", commands)
 
+	// kilocode_change start
+	// Also scan project workflows
+	const projectWorkflowsDir = path.join(getProjectRooDirectoryForCwd(cwd), "workflows")
+	await scanCommandDirectory(projectWorkflowsDir, "project", commands)
+	// kilocode_change end
+
 	return Array.from(commands.values())
 }
+
+// kilocode_change start
+/**
+ * Options for getting commands with toggle filtering
+ */
+export interface GetCommandOptions {
+	localToggles?: ClineRulesToggles
+	globalToggles?: ClineRulesToggles
+}
+
+/**
+ * Check if a workflow/command is enabled based on toggle state
+ * Commands (non-workflows) are always enabled since they have no toggle concept
+ */
+function isEnabled(filePath: string, source: "global" | "project", options?: GetCommandOptions): boolean {
+	if (!options) return true
+	const toggles = source === "project" ? options.localToggles : options.globalToggles
+	if (!toggles) return true
+	return toggles[filePath] !== false // enabled by default if not set
+}
+// kilocode_change end
 
 /**
  * Get a specific command by name (optimized to avoid scanning all commands)
  * Priority order: project > global > built-in
  */
-export async function getCommand(cwd: string, name: string): Promise<Command | undefined> {
+// kilocode_change start
+export async function getCommand(cwd: string, name: string, options?: GetCommandOptions): Promise<Command | undefined> {
+	// kilocode_change end
 	// Try to find the command directly without scanning all commands
 	const projectDir = path.join(getProjectRooDirectoryForCwd(cwd), "commands")
 	const globalDir = path.join(getGlobalRooDirectory(), "commands")
 
-	// Check project directory first (highest priority)
+	// kilocode_change start
+	// Also check workflow directories
+	const projectWorkflowsDir = path.join(getProjectRooDirectoryForCwd(cwd), "workflows")
+	const globalWorkflowsDir = path.join(getGlobalRooDirectory(), "workflows")
+
+	// Check project commands first (highest priority)
 	const projectCommand = await tryLoadCommand(projectDir, name, "project")
 	if (projectCommand) {
 		return projectCommand
 	}
 
-	// Check global directory if not found in project
+	// Check global commands
 	const globalCommand = await tryLoadCommand(globalDir, name, "global")
 	if (globalCommand) {
 		return globalCommand
 	}
+
+	// Check project workflows (if enabled by toggle)
+	const projectWorkflow = await tryLoadCommand(projectWorkflowsDir, name, "project")
+	if (projectWorkflow && isEnabled(projectWorkflow.filePath, "project", options)) {
+		return projectWorkflow
+	}
+
+	// Check global workflows (if enabled by toggle)
+	const globalWorkflow = await tryLoadCommand(globalWorkflowsDir, name, "global")
+	if (globalWorkflow && isEnabled(globalWorkflow.filePath, "global", options)) {
+		return globalWorkflow
+	}
+	// kilocode_change end
 
 	// Check built-in commands if not found in project or global (lowest priority)
 	return await getBuiltInCommand(name)
