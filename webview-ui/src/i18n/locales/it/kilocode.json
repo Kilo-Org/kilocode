@@ -46,6 +46,11 @@
 		"message": "Accedi o crea un account per accedere a oltre 500 modelli, utilizzare crediti al costo effettivo o portare la tua chiave.",
 		"loginButton": "Accedi"
 	},
+	"promotionError": {
+		"title": "Registrati gratuitamente per continuare a usare questo modello e oltre 500 altri modelli.",
+		"message": "Registrati per ricevere $5 in crediti per i modelli a pagamento e continuare a usare i modelli gratuiti. Non è richiesta carta di credito né acquisto.",
+		"signUpButton": "Registrati"
+	},
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",

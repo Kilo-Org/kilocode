@@ -49,6 +49,11 @@
 		"message": "登入或建立帳戶即可存取超過 500 種模型、以成本價使用額度，或使用自有的金鑰。",
 		"loginButton": "登入"
 	},
+	"promotionError": {
+		"title": "免費註冊以繼續使用此模型及超過 500 個其他模型。",
+		"message": "註冊即可獲得 $5 付費模型額度，並繼續使用免費模型。無需信用卡或購買。",
+		"signUpButton": "註冊"
+	},
 	"pricing": {
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 供應商未提供任何費用資料，或請求已取消。",

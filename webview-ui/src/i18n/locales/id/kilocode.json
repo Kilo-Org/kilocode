@@ -39,6 +39,11 @@
 		"message": "Masuk atau buat akun untuk mengakses lebih dari 500 model, gunakan kredit dengan harga biaya, atau bawa kunci milikmu sendiri.",
 		"loginButton": "Masuk"
 	},
+	"promotionError": {
+		"title": "Daftar gratis untuk terus menggunakan model ini dan lebih dari 500 model lainnya.",
+		"message": "Daftar untuk mendapatkan $5 kredit untuk model berbayar dan terus menggunakan model gratis. Tidak perlu kartu kredit atau pembelian.",
+		"signUpButton": "Daftar"
+	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",

@@ -46,6 +46,11 @@
 		"message": "Đăng nhập hoặc tạo tài khoản để truy cập hơn 500 mô hình, sử dụng tín dụng với giá gốc hoặc sử dụng khóa của riêng bạn.",
 		"loginButton": "Đăng Nhập"
 	},
+	"promotionError": {
+		"title": "Đăng ký miễn phí để tiếp tục sử dụng mô hình này và hơn 500 mô hình khác.",
+		"message": "Đăng ký để nhận $5 tín dụng cho các mô hình trả phí và tiếp tục sử dụng các mô hình miễn phí. Không cần thẻ tín dụng hay mua hàng.",
+		"signUpButton": "Đăng Ký"
+	},
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",

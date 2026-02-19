@@ -46,6 +46,11 @@
 		"message": "Log in of maak een account aan om toegang te krijgen tot meer dan 500 modellen, gebruik credits tegen kostprijs of breng je eigen sleutel mee.",
 		"loginButton": "Inloggen"
 	},
+	"promotionError": {
+		"title": "Meld je gratis aan om dit model en meer dan 500 andere modellen te blijven gebruiken.",
+		"message": "Meld je aan om $5 aan credits voor betaalde modellen te ontvangen en gratis modellen te blijven gebruiken. Geen creditcard of aankoop vereist.",
+		"signUpButton": "Aanmelden"
+	},
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",

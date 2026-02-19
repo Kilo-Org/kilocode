@@ -46,6 +46,11 @@
 		"message": "Connecte-toi ou crée un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter ta propre clé.",
 		"loginButton": "Se Connecter"
 	},
+	"promotionError": {
+		"title": "Inscris-toi gratuitement pour continuer à utiliser ce modèle et plus de 500 autres modèles.",
+		"message": "Inscris-toi pour recevoir $5 de crédits pour les modèles payants et continuer à utiliser les modèles gratuits. Aucune carte de crédit ni achat requis.",
+		"signUpButton": "S'inscrire"
+	},
 	"pricing": {
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",

@@ -46,6 +46,11 @@
 		"message": "Prihlás sa alebo si vytvor účet pre prístup k viac ako 500 modelom, použi kredity za obstarávaciu cenu alebo prines svoj vlastný kľúč.",
 		"loginButton": "Prihlásiť sa"
 	},
+	"promotionError": {
+		"title": "Zaregistruj sa zadarmo a pokračuj v používaní tohto modelu a viac ako 500 ďalších modelov.",
+		"message": "Zaregistruj sa a získaj $5 kreditov pre platené modely a pokračuj v používaní bezplatných modelov. Nie je potrebná kreditná karta ani nákup.",
+		"signUpButton": "Registrovať sa"
+	},
 	"pricing": {
 		"costUnknown": "neznáme náklady",
 		"costUnknownDescription": "Poskytovateľ API neposkytol žiadne údaje o nákladoch alebo bola požiadavka zrušená.",
