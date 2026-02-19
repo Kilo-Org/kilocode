@@ -9,5 +9,5 @@ jobs:
     steps:
       - name: Repository closed for contributions
         run: |
-          echo "::error::This repository is closed for contributions. Please use the kilocode repo instead: https://github.com/kilocode/kilocode"
+          echo "::error::This repository is closed for contributions. Please use the kilocode repo instead: https://github.com/Kilo-Org/kilocode"
           exit 1
