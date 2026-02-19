@@ -1025,9 +1025,13 @@
 			"warningMissingKey": "⚠️ An API key is required for image generation, please configure it above.",
 			"successConfigured": "✓ Image generation is configured and ready to use"
 		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Enable unified slash commands",
+			"description": "When enabled, Kilo Code can use the unified slash command tool to discover and execute both commands and workflows from .kilocode/commands/ and .kilocode/workflows/ directories."
+		},
 		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Enable Kilo workflow access",
-			"description": "When enabled, Kilo Code can access and execute workflow slash commands to retrieve their content without requiring approval."
+			"description": "When enabled, Kilo Code can execute workflow slash commands to retrieve their content without requiring approval."
 		},
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Parallel tool calls",
