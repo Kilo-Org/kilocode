@@ -115,6 +115,15 @@
 [data-component="text-part"] {
   width: 100%;
 
+  &[data-has-open-file] [data-slot="text-part-body"] code:not(pre code) {
+    cursor: pointer;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
   [data-slot="text-part-body"] {
     position: relative;
     margin-top: 32px;
