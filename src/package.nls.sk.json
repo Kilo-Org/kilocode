@@ -42,7 +42,7 @@
 	"command.importSettings.title": "Importovať nastavenia",
 	"settings.enableCodeActions.description": "Povoliť rýchle opravy Kilo Code",
 	"settings.enableSettingsSync.description": "Povoliť synchronizáciu nastavení Kilo Code medzi zariadeniami cez VS Code Settings Sync. Keď je povolené, vaše konfigurácie API, vlastné režimy a preferencie sa automaticky synchronizujú pri prihlásení do VS Code Settings Sync.",
-	"settings.autoImportSettingsPath.description": "Cesta ku konfiguračnému súboru Kilo Code pre automatický import pri spustení rozšírenia. Podporuje absolútne cesty a cesty relatívne k domovskému adresáru (napr. '~/Documents/kilo-code-settings.json'). Ponechajte prázdne pre zakázanie automatického importu.",
+	"settings.autoImportSettingsPath.description": "Cesta ku konfiguračnému súboru Kilo Code pre automatický import pri spustení rozšírenia. Podporuje absolútne cesty a cesty relatívne k domovskému adresáru (napr. '~/Documents/cmbt-agent-settings.json'). Ponechajte prázdne pre zakázanie automatického importu.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Maximálny počet súborov na indexovanie pre funkciu vyhľadávania súborov @. Vyššie hodnoty poskytujú lepšie výsledky vyhľadávania vo veľkých projektoch, ale môžu využívať viac pamäte. Predvolené: 10 000.",
 	"settings.useAgentRules.description": "Povoliť načítanie súborov AGENTS.md pre pravidlá špecifické pre agentov (viď https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Maximálna doba v sekundách čakania na odpovede API (0 = bez časového limitu, 1-86400s, predvolené: 600s). Vyššie hodnoty sa odporúčajú pre lokálnych poskytovateľov ako LM Studio a Ollama, ktorí môžu potrebovať viac času na spracovanie.",

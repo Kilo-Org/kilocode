@@ -1,6 +1,6 @@
 {
 	"name": "@roo-code/vscode-nightly",
-	"description": "Nightly build for the Kilo Code VSCode extension.",
+	"description": "Nightly build for the CMBT Agent VSCode extension.",
 	"private": true,
 	"packageManager": "pnpm@10.8.1",
 	"scripts": {

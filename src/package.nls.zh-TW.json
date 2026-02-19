@@ -42,7 +42,7 @@
 	"settings.customStoragePath.description": "自訂儲存路徑。留空以使用預設位置。支援絕對路徑（例如：'D:\\KiloCodeStorage'）",
 	"settings.enableCodeActions.description": "啟用 Kilo Code 快速修復。",
 	"settings.enableSettingsSync.description": "啟用透過 VS Code Settings Sync 跨裝置同步 Kilo Code 設定。啟用後，當您登入 VS Code Settings Sync 時，您的 API 設定、自訂模式和偏好設定將自動同步。",
-	"settings.autoImportSettingsPath.description": "Kilo Code 設定檔案的路徑，用於在擴充功能啟動時自動匯入。支援絕對路徑和相對於主目錄的路徑（例如 '~/Documents/kilo-code-settings.json'）。留空以停用自動匯入。",
+	"settings.autoImportSettingsPath.description": "Kilo Code 設定檔案的路徑，用於在擴充功能啟動時自動匯入。支援絕對路徑和相對於主目錄的路徑（例如 '~/Documents/cmbt-agent-settings.json'）。留空以停用自動匯入。",
 	"settings.maximumIndexedFilesForFileSearch.description": "為 @ 檔案搜尋功能建立索引時要索引的最大檔案數。較大的值在大型專案中提供更好的搜尋結果，但可能佔用更多記憶體。預設值：10,000。",
 	"settings.useAgentRules.description": "為特定於代理的規則啟用 AGENTS.md 檔案的載入（請參閱 https://agents.md/）",
 	"settings.apiRequestTimeout.description": "等待 API 回應的最長時間（秒）（0 = 無超時，1-86400秒，預設值：600秒）。對於像 LM Studio 和 Ollama 這樣可能需要更多處理時間的本地提供商，建議使用更高的值。",

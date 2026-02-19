@@ -26,9 +26,9 @@ export async function checkAndRunAutoLaunchingTask(context: vscode.ExtensionCont
 		console.log(`🚀 Auto-launching task from '${configPath}' with config:\n${JSON.stringify(config)}`)
 
 		await new Promise((resolve) => setTimeout(resolve, 500))
-		await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+		await vscode.commands.executeCommand("cmbt-agent.SidebarProvider.focus")
 
-		vscode.commands.executeCommand("kilo-code.newTask", config) // Pass the full config to newTask
+		vscode.commands.executeCommand("cmbt-agent.newTask", config) // Pass the full config to newTask
 	} catch (error) {
 		if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
 			return // No config file found

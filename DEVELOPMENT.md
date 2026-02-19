@@ -195,7 +195,7 @@ This will:
 To install your built extension:
 
 ```bash
-code --install-extension "$(ls -1v bin/kilo-code-*.vsix | tail -n1)"
+code --install-extension "$(ls -1v bin/cmbt-agent-*.vsix | tail -n1)"
 ```
 
 Replace `[version]` with the current version number.
@@ -236,7 +236,7 @@ This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks
 Before a commit is finalized, the `.husky/pre-commit` hook runs:
 
 1.  **Branch Check**: Prevents committing directly to the `main` branch.
-2.  **Type Generation**: Runs `pnpm --filter kilo-code generate-types`.
+2.  **Type Generation**: Runs `pnpm --filter cmbt-agent generate-types`.
 3.  **Type File Check**: Ensures that any changes made to `src/exports/roo-code.d.ts` by the type generation are staged.
 4.  **Linting**: Runs `lint-staged` to lint and format staged files.
 

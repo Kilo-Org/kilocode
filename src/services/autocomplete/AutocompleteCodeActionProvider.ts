@@ -17,7 +17,7 @@ export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider
 			this.providedCodeActionKinds["quickfix"],
 		)
 		action.command = {
-			command: "kilo-code.autocomplete.generateSuggestions",
+			command: "cmbt-agent.autocomplete.generateSuggestions",
 			title: "",
 			arguments: [document.uri, range],
 		}

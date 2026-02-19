@@ -127,7 +127,7 @@ Format (in `.changeset/<random-name>.md`):
 
 ```md
 ---
-"kilo-code": patch
+"cmbt-agent": patch
 ---
 
 Brief description of the change

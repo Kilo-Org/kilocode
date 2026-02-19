@@ -39,7 +39,7 @@ export class TerminalWelcomeService {
 	}
 
 	private async showWelcomeMessage(terminal: vscode.Terminal): Promise<void> {
-		const shortcut = await getKeybindingForCommand("kilo-code.generateTerminalCommand")
+		const shortcut = await getKeybindingForCommand("cmbt-agent.generateTerminalCommand")
 		const message = t("kilocode:terminalCommandGenerator.tipMessage", { shortcut })
 		vscode.window.showInformationMessage(message)
 	}

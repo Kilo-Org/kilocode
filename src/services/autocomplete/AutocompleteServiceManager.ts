@@ -36,7 +36,9 @@ export class AutocompleteServiceManager {
 
 	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		if (AutocompleteServiceManager._instance) {
-			throw new Error("AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.")
+			throw new Error(
+				"AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
+			)
 		}
 
 		this.context = context
@@ -355,7 +357,7 @@ export class AutocompleteServiceManager {
 		if (response === disableCopilot) {
 			await vscode.commands.executeCommand<any>("github.copilot.completions.disable")
 		} else if (response === disableInlineAssist) {
-			await vscode.commands.executeCommand<any>("kilo-code.autocomplete.disable")
+			await vscode.commands.executeCommand<any>("cmbt-agent.autocomplete.disable")
 		}
 	}
 

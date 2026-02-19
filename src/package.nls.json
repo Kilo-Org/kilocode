@@ -41,7 +41,7 @@
 	"settings.vsCodeLmModelSelector.family.description": "The family of the language model (e.g. gpt-4)",
 	"settings.customStoragePath.description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Enable Kilo Code quick fixes",
-	"settings.autoImportSettingsPath.description": "Path to a Kilo Code configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/kilo-code-settings.json'). Leave empty to disable auto-import.",
+	"settings.autoImportSettingsPath.description": "Path to a Kilo Code configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/cmbt-agent-settings.json'). Leave empty to disable auto-import.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Maximum number of files to index for the @ file search feature. Higher values provide better search results in large projects but may use more memory. Default: 10,000.",
 	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Maximum time in seconds to wait for API responses (0 = no timeout, 1-86400s, default: 600s). Higher values are recommended for local providers like LM Studio and Ollama that may need more processing time.",

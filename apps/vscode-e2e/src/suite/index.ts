@@ -35,7 +35,7 @@ export async function run() {
 		openRouterModelId: MODELS_TO_TEST[0],
 	})
 
-	await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+	await vscode.commands.executeCommand("cmbt-agent.SidebarProvider.focus")
 	await waitFor(() => api.isReady())
 
 	globalThis.api = api

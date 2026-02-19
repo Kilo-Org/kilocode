@@ -10,7 +10,7 @@ import { FimPromptBuilder } from "./classic-auto-complete/FillInTheMiddle"
 import { HoleFiller } from "./classic-auto-complete/HoleFiller"
 import { MockTextDocument } from "../mocking/MockTextDocument"
 
-const GET_INLINE_COMPLETIONS_COMMAND = "kilo-code.jetbrains.getInlineCompletions"
+const GET_INLINE_COMPLETIONS_COMMAND = "cmbt-agent.jetbrains.getInlineCompletions"
 
 // Zod schemas for validation
 const PositionSchema = z.object({

@@ -1,5 +1,5 @@
 {
-	"name": "kilo-code",
+	"name": "cmbt-agent",
 	"packageManager": "pnpm@10.8.1",
 	"engines": {
 		"node": "20.20.0"
