@@ -645,17 +645,7 @@ export function applyBedrock1MTierPricing(modelId: string, baseInfo: ModelInfo):
 		return baseInfo
 	}
 
-	const modelWithTiers = baseInfo as typeof baseInfo & {
-		tiers?: Array<{
-			contextWindow: number
-			inputPrice?: number
-			outputPrice?: number
-			cacheWritesPrice?: number
-			cacheReadsPrice?: number
-		}>
-	}
-
-	const tier = modelWithTiers.tiers?.[0]
+	const tier = baseInfo.tiers?.[0]
 	if (!tier) {
 		// Fallback: just update context window if no tier is defined
 		return {
