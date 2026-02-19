@@ -1,22 +1,17 @@
-import {
-	getCommands,
-	getCommand,
-	getCommandNames,
-	getCommandNameFromFile,
-	isMarkdownFile,
-} from "../services/command/commands"
+import { getCommands, getCommand, getCommandNames } from "../services/command/commands"
+import { getResourceNameFromFile, isMarkdownFile } from "../services/markdown-resource-base"
 
 describe("Command Utilities", () => {
 	const testCwd = "/test/project"
 
-	describe("getCommandNameFromFile", () => {
+	describe("getResourceNameFromFile", () => {
 		it("should strip .md extension only", () => {
-			expect(getCommandNameFromFile("my-command.md")).toBe("my-command")
-			expect(getCommandNameFromFile("test.txt")).toBe("test.txt")
-			expect(getCommandNameFromFile("no-extension")).toBe("no-extension")
-			expect(getCommandNameFromFile("multiple.dots.file.md")).toBe("multiple.dots.file")
-			expect(getCommandNameFromFile("api.config.md")).toBe("api.config")
-			expect(getCommandNameFromFile("deploy_prod.md")).toBe("deploy_prod")
+			expect(getResourceNameFromFile("my-command.md")).toBe("my-command")
+			expect(getResourceNameFromFile("test.txt")).toBe("test.txt")
+			expect(getResourceNameFromFile("no-extension")).toBe("no-extension")
+			expect(getResourceNameFromFile("multiple.dots.file.md")).toBe("multiple.dots.file")
+			expect(getResourceNameFromFile("api.config.md")).toBe("api.config")
+			expect(getResourceNameFromFile("deploy_prod.md")).toBe("deploy_prod")
 		})
 	})
 
@@ -62,17 +57,17 @@ describe("Command Utilities", () => {
 	describe("command name extraction edge cases", () => {
 		it("should handle various filename formats", () => {
 			// Files without extensions
-			expect(getCommandNameFromFile("command")).toBe("command")
-			expect(getCommandNameFromFile("my-command")).toBe("my-command")
+			expect(getResourceNameFromFile("command")).toBe("command")
+			expect(getResourceNameFromFile("my-command")).toBe("my-command")
 
 			// Files with multiple dots - only strip .md extension
-			expect(getCommandNameFromFile("my.complex.command.md")).toBe("my.complex.command")
-			expect(getCommandNameFromFile("v1.2.3.txt")).toBe("v1.2.3.txt")
+			expect(getResourceNameFromFile("my.complex.command.md")).toBe("my.complex.command")
+			expect(getResourceNameFromFile("v1.2.3.txt")).toBe("v1.2.3.txt")
 
 			// Edge cases
-			expect(getCommandNameFromFile(".")).toBe(".")
-			expect(getCommandNameFromFile("..")).toBe("..")
-			expect(getCommandNameFromFile(".hidden.md")).toBe(".hidden")
+			expect(getResourceNameFromFile(".")).toBe(".")
+			expect(getResourceNameFromFile("..")).toBe("..")
+			expect(getResourceNameFromFile(".hidden.md")).toBe(".hidden")
 		})
 	})
 

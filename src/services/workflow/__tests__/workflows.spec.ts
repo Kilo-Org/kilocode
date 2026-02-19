@@ -2,33 +2,34 @@
 
 import { describe, it, expect } from "vitest"
 import * as path from "path"
-import { getWorkflows, getWorkflow, getWorkflowNames, getWorkflowNameFromFile, isMarkdownFile } from "../workflows"
+import { getWorkflows, getWorkflow, getWorkflowNames } from "../workflows"
+import { getResourceNameFromFile, isMarkdownFile } from "../../markdown-resource-base"
 
 const testWorkspaceDir = path.join(__dirname, "../../../")
 
-describe("getWorkflowNameFromFile", () => {
+describe("getResourceNameFromFile", () => {
 	it("should strip .md extension only", () => {
-		expect(getWorkflowNameFromFile("my-workflow.md")).toBe("my-workflow")
-		expect(getWorkflowNameFromFile("test.txt")).toBe("test.txt")
-		expect(getWorkflowNameFromFile("no-extension")).toBe("no-extension")
-		expect(getWorkflowNameFromFile("multiple.dots.file.md")).toBe("multiple.dots.file")
-		expect(getWorkflowNameFromFile("api.config.md")).toBe("api.config")
-		expect(getWorkflowNameFromFile("deploy_prod.md")).toBe("deploy_prod")
+		expect(getResourceNameFromFile("my-workflow.md")).toBe("my-workflow")
+		expect(getResourceNameFromFile("test.txt")).toBe("test.txt")
+		expect(getResourceNameFromFile("no-extension")).toBe("no-extension")
+		expect(getResourceNameFromFile("multiple.dots.file.md")).toBe("multiple.dots.file")
+		expect(getResourceNameFromFile("api.config.md")).toBe("api.config")
+		expect(getResourceNameFromFile("deploy_prod.md")).toBe("deploy_prod")
 	})
 
 	it("should handle edge cases", () => {
 		// Files without extensions
-		expect(getWorkflowNameFromFile("workflow")).toBe("workflow")
-		expect(getWorkflowNameFromFile("my-workflow")).toBe("my-workflow")
+		expect(getResourceNameFromFile("workflow")).toBe("workflow")
+		expect(getResourceNameFromFile("my-workflow")).toBe("my-workflow")
 
 		// Files with multiple dots - only strip .md extension
-		expect(getWorkflowNameFromFile("my.complex.workflow.md")).toBe("my.complex.workflow")
-		expect(getWorkflowNameFromFile("v1.2.3.txt")).toBe("v1.2.3.txt")
+		expect(getResourceNameFromFile("my.complex.workflow.md")).toBe("my.complex.workflow")
+		expect(getResourceNameFromFile("v1.2.3.txt")).toBe("v1.2.3.txt")
 
 		// Edge cases
-		expect(getWorkflowNameFromFile(".")).toBe(".")
-		expect(getWorkflowNameFromFile("..")).toBe("..")
-		expect(getWorkflowNameFromFile(".hidden.md")).toBe(".hidden")
+		expect(getResourceNameFromFile(".")).toBe(".")
+		expect(getResourceNameFromFile("..")).toBe("..")
+		expect(getResourceNameFromFile(".hidden.md")).toBe(".hidden")
 	})
 })
 

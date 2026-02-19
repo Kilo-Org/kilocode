@@ -7,6 +7,7 @@ export const EXPERIMENT_IDS = {
 	POWER_STEERING: "powerSteering",
 	PREVENT_FOCUS_DISRUPTION: "preventFocusDisruption",
 	IMAGE_GENERATION: "imageGeneration",
+	RUN_SLASH_COMMAND: "runSlashCommand", // kilocode_change: Enable the /slash command tool
 	AUTO_EXECUTE_WORKFLOW: "autoExecuteWorkflow",
 	MULTIPLE_NATIVE_TOOL_CALLS: "multipleNativeToolCalls",
 	CUSTOM_TOOLS: "customTools",
@@ -27,6 +28,7 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	POWER_STEERING: { enabled: false },
 	PREVENT_FOCUS_DISRUPTION: { enabled: false },
 	IMAGE_GENERATION: { enabled: false },
+	RUN_SLASH_COMMAND: { enabled: false }, // kilocode_change: Enable the /slash command tool
 	AUTO_EXECUTE_WORKFLOW: { enabled: false }, // kilocode_change: Auto-execute workflows without approval
 	MULTIPLE_NATIVE_TOOL_CALLS: { enabled: false },
 	CUSTOM_TOOLS: { enabled: false },
