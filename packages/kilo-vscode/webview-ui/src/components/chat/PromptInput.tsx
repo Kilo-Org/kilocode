@@ -256,6 +256,11 @@ export const PromptInput: Component = () => {
       dismissSuggestion()
       return
     }
+    if (e.key === "Escape" && isBusy()) {
+      e.preventDefault()
+      session.abort()
+      return
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       dismissSuggestion()
