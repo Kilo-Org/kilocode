@@ -265,9 +265,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			this.options.modelTemperature = BEDROCK_DEFAULT_TEMPERATURE
 		}
 
-		// Lazy initialization: costModelConfig wird über Getter bereitgestellt
-		// this.getModel() wird erst bei Bedarf aufgerufen, damit resolveInferenceProfileAsync
-		// Zeit hat, das Modell aufzulösen (falls Custom ARN mit Inference Profile)
+		// Lazy initialization: costModelConfig is provided via getter
+		// this.getModel() is only called on demand, so resolveInferenceProfileAsync
+		// has time to resolve the model (if Custom ARN with Inference Profile is used)
 
 		const clientConfig: BedrockRuntimeClientConfig = {
 			defaultUserAgentProvider: () => Promise.resolve([["KiloCode", Package.version]]),
@@ -936,9 +936,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	 *
 	 *************************************************************************************/
 
-	// Lazy getter for costModelConfig - statt direkter Initialisierung im Constructor
-	// wird das Model erst bei Bedarf geholt, damit resolveInferenceProfileAsync Zeit hat
-	// das Inference Profile aufzulösen (falls Custom ARN verwendet wird)
+	// Lazy getter for costModelConfig - instead of direct initialization in the constructor,
+	// the model is only fetched on demand, so resolveInferenceProfileAsync has time to
+	// resolve the Inference Profile (if Custom ARN is used)
 	private _costModelConfig: { id: BedrockModelId | string; info: ModelInfo } | null = null
 
 	get costModelConfig(): { id: BedrockModelId | string; info: ModelInfo } {
