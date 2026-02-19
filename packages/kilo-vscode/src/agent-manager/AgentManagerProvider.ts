@@ -91,9 +91,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (root) await state.validate(root)
 
     // Register all worktree sessions with KiloProvider
-    for (const wt of state.getWorktrees()) {
-      for (const session of state.getSessions(wt.id)) {
-        this.provider?.setSessionDirectory(session.id, wt.path)
+    for (const worktree of state.getWorktrees()) {
+      for (const session of state.getSessions(worktree.id)) {
+        this.provider?.setSessionDirectory(session.id, worktree.path)
         this.provider?.trackSession(session.id)
       }
     }
@@ -143,7 +143,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
   private async createWorktreeOnDisk(): Promise<{
-    wt: ReturnType<WorktreeStateManager["addWorktree"]>
+    worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
   } | null> {
     const mgr = this.getWorktreeManager()
@@ -168,8 +168,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    const wt = state.addWorktree({ branch: result.branch, path: result.path, parentBranch: result.parentBranch })
-    return { wt, result }
+    const worktree = state.addWorktree({ branch: result.branch, path: result.path, parentBranch: result.parentBranch })
+    return { worktree, result }
   }
 
   /** Create a CLI session in a worktree directory. Returns null on failure. */
@@ -239,16 +239,16 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!session) {
       const state = this.getStateManager()
       const mgr = this.getWorktreeManager()
-      state?.removeWorktree(created.wt.id)
+      state?.removeWorktree(created.worktree.id)
       await mgr?.removeWorktree(created.result.path)
       return null
     }
 
     const state = this.getStateManager()!
-    state.addSession(session.id, created.wt.id)
+    state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
     this.notifyWorktreeReady(session.id, created.result)
-    this.log(`Created worktree ${created.wt.id} with session ${session.id}`)
+    this.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
     return null
   }
 
@@ -258,14 +258,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()
     if (!mgr || !state) return null
 
-    const wt = state.getWorktree(worktreeId)
-    if (!wt) {
+    const worktree = state.getWorktree(worktreeId)
+    if (!worktree) {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
 
     try {
-      await mgr.removeWorktree(wt.path)
+      await mgr.removeWorktree(worktree.path)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
@@ -275,7 +275,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.provider?.clearSessionDirectory(s.id)
     }
     this.pushState()
-    this.log(`Deleted worktree ${worktreeId} (${wt.branch})`)
+    this.log(`Deleted worktree ${worktreeId} (${worktree.branch})`)
     return null
   }
 
@@ -286,14 +286,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     const state = this.getStateManager()!
     if (!state.getSession(sessionId)) {
-      state.addSession(sessionId, created.wt.id)
+      state.addSession(sessionId, created.worktree.id)
     } else {
-      state.moveSession(sessionId, created.wt.id)
+      state.moveSession(sessionId, created.worktree.id)
     }
 
     this.registerWorktreeSession(sessionId, created.result.path)
     this.notifyWorktreeReady(sessionId, created.result)
-    this.log(`Promoted session ${sessionId} to worktree ${created.wt.id}`)
+    this.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
     return null
   }
 
@@ -314,15 +314,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()
     if (!state) return null
 
-    const wt = state.getWorktree(worktreeId)
-    if (!wt) {
+    const worktree = state.getWorktree(worktreeId)
+    if (!worktree) {
       this.log(`Worktree ${worktreeId} not found`)
       return null
     }
 
     let session: SessionInfo
     try {
-      session = await client.createSession(wt.path)
+      session = await client.createSession(worktree.path)
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
@@ -330,14 +330,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     state.addSession(session.id, worktreeId)
-    this.registerWorktreeSession(session.id, wt.path)
+    this.registerWorktreeSession(session.id, worktree.path)
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "ready",
       message: "Session created",
       sessionId: session.id,
-      branch: wt.branch,
+      branch: worktree.branch,
     })
 
     if (this.provider) {
