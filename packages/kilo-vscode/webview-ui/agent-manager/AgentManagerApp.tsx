@@ -166,6 +166,10 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventScroll)
 
+    // When the panel regains focus (e.g. returning from terminal), focus the prompt
+    const onWindowFocus = () => window.dispatchEvent(new Event("focusPrompt"))
+    window.addEventListener("focus", onWindowFocus)
+
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
@@ -198,6 +202,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventScroll)
+      window.removeEventListener("focus", onWindowFocus)
       unsub()
     })
   })

@@ -56,8 +56,14 @@ export const PromptInput: Component = () => {
         textareaRef.style.height = "auto"
         textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
       }
+      window.dispatchEvent(new Event("focusPrompt"))
     }),
   )
+
+  // Focus textarea when any part of the app requests it
+  const onFocusPrompt = () => textareaRef?.focus()
+  window.addEventListener("focusPrompt", onFocusPrompt)
+  onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
