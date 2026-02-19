@@ -45,21 +45,8 @@ export const SlashCommandItem: React.FC<SlashCommandItemProps> = ({
 	const { t: tList } = useAppTranslation() // kilocode_change: always call hooks at top level
 	const { t: t2 } = useTranslation() // kilocode_change: for workflow execution translations
 
-	// kilocode_change: Add diagnostic logging for workflow display issue
-	console.log(`[SlashCommandItem] Rendering with props:`, {
-		isWorkflowExecution,
-		tool,
-		messageType,
-		isExpanded,
-		toolKeys: tool ? Object.keys(tool) : "no tool",
-	})
-	// kilocode_change end
-
 	// kilocode_change start: Workflow execution mode
 	if (isWorkflowExecution && tool) {
-		// kilocode_change: Add diagnostic logging for workflow display issue
-		console.log(`[SlashCommandItem] Rendering workflow execution UI with tool:`, tool)
-		// kilocode_change end
 		const slashCommandInfo = tool
 
 		return (
@@ -183,15 +170,6 @@ export const SlashCommandItem: React.FC<SlashCommandItemProps> = ({
 			</>
 		)
 	}
-	// kilocode_change end
-
-	// kilocode_change: Add diagnostic logging for workflow display issue
-	console.log(
-		`[SlashCommandItem] Not rendering workflow execution - returning null. isWorkflowExecution:`,
-		isWorkflowExecution,
-		", tool:",
-		tool,
-	)
 	// kilocode_change end
 
 	// Original command list mode

@@ -146,11 +146,7 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				source: workflow?.source,
 				description: workflow?.description,
 			})
-			// kilocode_change: Add diagnostic logging for workflow tool display issue
-			console.log(`[RunSlashCommandTool.handlePartial] Sending COMPLETE message to webview:`, completeMessage)
 			await task.ask("tool", completeMessage, false).catch(() => {})
-			console.log(`[RunSlashCommandTool.handlePartial] COMPLETE message sent successfully`)
-			// kilocode_change end
 		} else {
 			// Partial message - use minimal data structure
 			const partialMessage = JSON.stringify({
@@ -158,11 +154,7 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				command: this.removeClosingTag("command", commandName, block.partial),
 				args: this.removeClosingTag("args", args, block.partial),
 			})
-			// kilocode_change: Add diagnostic logging for workflow tool display issue
-			console.log(`[RunSlashCommandTool.handlePartial] Sending PARTIAL message to webview:`, partialMessage)
 			await task.ask("tool", partialMessage, block.partial).catch(() => {})
-			console.log(`[RunSlashCommandTool.handlePartial] PARTIAL message sent successfully`)
-			// kilocode_change end
 		}
 		// kilocode_change end
 	}
