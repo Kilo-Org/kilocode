@@ -306,12 +306,8 @@ function getSelectedModel({
 
 			// Apply 1M context for Claude Sonnet 4 / 4.5 when enabled
 			if (BEDROCK_1M_CONTEXT_MODEL_IDS.includes(id as any) && apiConfiguration.awsBedrock1MContext && baseInfo) {
-				// Create a new ModelInfo object with updated context window
-				const info: ModelInfo = {
-					...baseInfo,
-					contextWindow: 1_000_000,
-				}
-				return { id, info }
+				// Use shared helper for consistent tier pricing
+				return { id, info: applyBedrock1MTierPricing(id, baseInfo) }
 			}
 
 			return { id, info: baseInfo }

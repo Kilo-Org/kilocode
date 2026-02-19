@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { BedrockClient, GetInferenceProfileCommand } from "@aws-sdk/client-bedrock"
-import type { BedrockRuntimeClientConfig } from "@aws-sdk/client-bedrock-runtime"
+import type { BedrockClientConfig } from "@aws-sdk/client-bedrock"
 import { fromIni } from "@aws-sdk/credential-providers"
 import type { ProviderSettings } from "@roo-code/types"
 import { logger } from "../../utils/logging"
@@ -28,7 +28,7 @@ export class BedrockInferenceProfileResolver {
 
 	private initializeClient(): void {
 		try {
-			const clientConfig: any = {
+			const clientConfig: BedrockClientConfig = {
 				region: this.options.awsRegion,
 				// Add the endpoint configuration when specified and enabled
 				...(this.options.awsBedrockEndpoint &&

@@ -47,17 +47,18 @@ export const Bedrock = ({
 	// kilocode_change end
 
 	// Check if the selected model supports 1M context (Claude Sonnet 4 / 4.5)
+	// Use resolved model ID for inference profiles, fallback to apiModelId
+	const effectiveModelIdForFeatures = resolvedModelId || apiConfiguration?.apiModelId
 	const supports1MContextBeta =
-		!!apiConfiguration?.apiModelId && BEDROCK_1M_CONTEXT_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
+		!!effectiveModelIdForFeatures && BEDROCK_1M_CONTEXT_MODEL_IDS.includes(effectiveModelIdForFeatures as any)
 
 	// Check if the selected model supports Global Inference profile routing
 	const supportsGlobalInference =
-		!!apiConfiguration?.apiModelId &&
-		BEDROCK_GLOBAL_INFERENCE_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
+		!!effectiveModelIdForFeatures && BEDROCK_GLOBAL_INFERENCE_MODEL_IDS.includes(effectiveModelIdForFeatures as any)
 
 	// Check if the selected model supports service tiers
 	const supportsServiceTiers =
-		!!apiConfiguration?.apiModelId && BEDROCK_SERVICE_TIER_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
+		!!effectiveModelIdForFeatures && BEDROCK_SERVICE_TIER_MODEL_IDS.includes(effectiveModelIdForFeatures as any)
 
 	// Update the endpoint enabled state when the configuration changes
 	useEffect(() => {
