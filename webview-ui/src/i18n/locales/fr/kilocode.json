@@ -46,6 +46,11 @@
 		"message": "Connecte-toi ou crée un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter ta propre clé.",
 		"loginButton": "Se Connecter"
 	},
+	"promotionError": {
+		"title": "Tu dois t'inscrire pour continuer",
+		"message": "Inscris-toi gratuitement pour continuer et explorer 500 autres modèles. Ça prend 2 minutes, pas de carte de crédit requise. Ou reviens plus tard.",
+		"signUpButton": "S'inscrire"
+	},
 	"pricing": {
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",

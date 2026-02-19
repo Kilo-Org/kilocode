@@ -46,6 +46,11 @@
 		"message": "Faça login ou crie uma conta para acessar mais de 500 modelos, usar créditos a preço de custo ou trazer sua própria chave.",
 		"loginButton": "Fazer Login"
 	},
+	"promotionError": {
+		"title": "Você precisa se cadastrar para continuar",
+		"message": "Cadastre-se gratuitamente para continuar e explorar 500 outros modelos. Leva 2 minutos, sem cartão de crédito. Ou volte mais tarde.",
+		"signUpButton": "Cadastrar-se"
+	},
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",

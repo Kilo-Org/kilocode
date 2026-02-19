@@ -150,7 +150,9 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 import {
 	isAnyRecognizedKiloCodeError,
 	isPaymentRequiredError,
-	isUnauthorizedError,
+	isUnauthorizedGenericError,
+	isUnauthorizedPaidModelError,
+	isUnauthorizedPromotionLimitError,
 } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel" // kilocode_change
@@ -4676,6 +4678,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 				: {}),
 			projectId: (await kiloConfig)?.project?.id, // kilocode_change: pass projectId for backend tracking (ignored by other providers)
+			// kilocode_change: child tasks (spawned via new_task tool) are parallel agents
+			...(this.parentTaskId ? { feature: "parallel-agent" } : {}),
 		}
 
 		// Create an AbortController to allow cancelling the request mid-stream
@@ -4732,34 +4736,49 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						apiConfiguration.kilocodeOrganizationId,
 					)
 				).defaultFreeModel
-				const { response } = await (isPaymentRequiredError(error)
-					? this.ask(
-							"payment_required_prompt",
-							JSON.stringify({
-								title: error.error?.title ?? t("kilocode:lowCreditWarning.title"),
-								message: error.error?.message ?? t("kilocode:lowCreditWarning.message"),
-								balance: error.error?.balance ?? "0.00",
-								buyCreditsUrl: error.error?.buyCreditsUrl ?? getAppUrl("/profile"),
-								defaultFreeModel,
-							}),
-						)
-					: isUnauthorizedError(error)
-						? this.ask(
-								"unauthorized_prompt",
-								JSON.stringify({
-									modelId: apiConfiguration.kilocodeModel,
-								}),
-							)
-						: this.ask(
-								"invalid_model",
-								JSON.stringify({
-									modelId: apiConfiguration.kilocodeModel,
-									error: {
-										status: error.status,
-										message: error.message,
-									},
-								}),
-							))
+
+				let askResponse: { response: string }
+
+				if (isPaymentRequiredError(error)) {
+					askResponse = await this.ask(
+						"payment_required_prompt",
+						JSON.stringify({
+							title: error.error?.title ?? t("kilocode:lowCreditWarning.title"),
+							message: error.error?.message ?? t("kilocode:lowCreditWarning.message"),
+							balance: error.error?.balance ?? "0.00",
+							buyCreditsUrl: error.error?.buyCreditsUrl ?? getAppUrl("/profile"),
+							defaultFreeModel,
+						}),
+					)
+				} else if (isUnauthorizedPromotionLimitError(error)) {
+					askResponse = await this.ask(
+						"promotion_model_sign_up_required_prompt",
+						JSON.stringify({
+							modelId: apiConfiguration.kilocodeModel,
+						}),
+					)
+				} else if (isUnauthorizedPaidModelError(error) || isUnauthorizedGenericError(error)) {
+					askResponse = await this.ask(
+						"unauthorized_prompt",
+						JSON.stringify({
+							modelId: apiConfiguration.kilocodeModel,
+						}),
+					)
+				} else {
+					askResponse = await this.ask(
+						"invalid_model",
+						JSON.stringify({
+							modelId: apiConfiguration.kilocodeModel,
+							error: {
+								status: error.status,
+								message: error.message,
+							},
+						}),
+					)
+				}
+
+				const { response } = askResponse
+
 				this.currentRequestAbortController = undefined
 				const isContextWindowExceededError = checkContextWindowExceededError(error)
 

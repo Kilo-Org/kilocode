@@ -39,6 +39,11 @@
 		"message": "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
 		"loginButton": "Iniciar Sesión"
 	},
+	"promotionError": {
+		"title": "Necesitas registrarte para continuar",
+		"message": "Regístrate gratis para continuar y explorar 500 modelos más. Solo 2 minutos, sin tarjeta de crédito. O vuelve más tarde.",
+		"signUpButton": "Registrarse"
+	},
 	"pricing": {
 		"costUnknown": "costo desconocido",
 		"costUnknownDescription": "El proveedor de API no proporcionó datos de costo o la solicitud fue cancelada.",

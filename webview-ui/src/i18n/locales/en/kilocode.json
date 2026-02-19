@@ -49,6 +49,11 @@
 		"message": "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
 		"loginButton": "Sign In"
 	},
+	"promotionError": {
+		"title": "You need to sign up to keep going",
+		"message": "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
+		"signUpButton": "Sign Up"
+	},
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",

@@ -87,6 +87,7 @@ import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
+import { PromotionWarning } from "../kilocode/chat/PromotionWarning"
 // kilocode_change end
 
 // Helper function to get previous todos before a specific message
@@ -1875,6 +1876,9 @@ export const ChatRowContent = ({
 				}
 				case "unauthorized_prompt": {
 					return <UnauthorizedWarning message={message} />
+				}
+				case "promotion_model_sign_up_required_prompt": {
+					return <PromotionWarning message={message} />
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

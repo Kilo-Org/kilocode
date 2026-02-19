@@ -39,6 +39,11 @@
 		"message": "Zaloguj się lub utwórz konto, aby uzyskać dostęp do ponad 500 modeli, korzystać z kredytów po cenie kosztowej lub przynieść własny klucz.",
 		"loginButton": "Zaloguj się"
 	},
+	"promotionError": {
+		"title": "Musisz się zarejestrować, aby kontynuować",
+		"message": "Zarejestruj się za darmo, aby kontynuować i odkryć 500 innych modeli. Zajmie to 2 minuty, bez karty kredytowej. Lub wróć później.",
+		"signUpButton": "Zarejestruj się"
+	},
 	"pricing": {
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",

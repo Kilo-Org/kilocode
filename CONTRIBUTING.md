@@ -34,7 +34,7 @@ to [hi@kilocode.ai](mailto:hi@kilocode.ai).
 
 ## I Have a Question
 
-If you need clarification after reading this document, we encourage you to join our [discord](https://kilocode.ai/discord) workspace and join channels [kilo-dev-contributors](https://discord.com/channels/1349288496988160052/1391109167275577464) and [extensions-support channel](https://discord.com/channels/1349288496988160052/1349358641295265864).
+If you need clarification after reading this document, we encourage you to join our [discord](https://kilo.ai/discord) workspace and join channels [kilo-dev-contributors](https://discord.com/channels/1349288496988160052/1391109167275577464) and [extensions-support channel](https://discord.com/channels/1349288496988160052/1349358641295265864).
 
 ## I Want To Contribute
 
@@ -76,7 +76,7 @@ Custom modes are a powerful way to extend Kilo Code's capabilities. To create an
 
 ### Feature Requests
 
-Suggest feature requests in [Discussion](https://github.com/Kilo-Org/kilocode/discussions), only open an [Issue](https://github.com/Kilo-Org/kilocode/issues/new/choose) for reporting a bug or actual contributions. Don't open issues for questions or support, instead join our [Discord workspace](https://kilocode.ai/discord) and ask there.
+Suggest feature requests in [Discussion](https://github.com/Kilo-Org/kilocode/discussions), only open an [Issue](https://github.com/Kilo-Org/kilocode/issues/new/choose) for reporting a bug or actual contributions. Don't open issues for questions or support, instead join our [Discord workspace](https://kilo.ai/discord) and ask there.
 
 - Provide as much context as you can about what you're running into.
 

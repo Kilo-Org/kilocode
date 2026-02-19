@@ -39,6 +39,11 @@
 		"message": "Masuk atau buat akun untuk mengakses lebih dari 500 model, gunakan kredit dengan harga biaya, atau bawa kunci milikmu sendiri.",
 		"loginButton": "Masuk"
 	},
+	"promotionError": {
+		"title": "Kamu perlu mendaftar untuk melanjutkan",
+		"message": "Daftar gratis untuk melanjutkan dan menjelajahi 500 model lainnya. Hanya 2 menit, tanpa kartu kredit. Atau kembali lagi nanti.",
+		"signUpButton": "Daftar"
+	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
