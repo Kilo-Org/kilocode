@@ -78,6 +78,7 @@
   },
   "peerDependencies": {
     "@opencode-ai/ui": "workspace:*",
+    "@opencode-ai/util": "workspace:*",
     "solid-js": "catalog:"
   },
   "devDependencies": {
