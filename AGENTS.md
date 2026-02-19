@@ -111,7 +111,26 @@ pnpm check-types      # TypeScript type checking
 
 - **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
 
-## Workflows
+## Slash Commands & Workflows
+
+Kilo Code supports slash commands (workflows) that can be executed via the `run_slash_command` tool.
+
+### Command Naming Convention
+
+- Workflow files are located in `.kilocode/workflows/` directory
+- Command names are derived from the filename **without** the path and extension
+- Example: `.kilocode/workflows/user-favorite-animal.md` → command name is `user-favorite-animal`
+
+### Using Slash Commands
+
+When a user mentions "slash commands", "workflows", or asks you to run a `/command`:
+
+1. **Use the `run_slash_command` tool** - This is the tool for executing workflows
+2. **Command name format**: Use just the filename without extension (e.g., `user-favorite-animal`, not the full path)
+3. **Explore before declaring impossibility**: If unsure what commands exist, try running a command or check the `.kilocode/workflows/` directory
+4. **Trust user direction**: When a user explicitly says to use a specific tool type, explore that avenue thoroughly before concluding it won't work
+
+### Available Workflows
 
 - **Add Missing Translations**: `.kilocode/workflows/add-missing-translations.md` - Run `/add-missing-translations` to find and fix missing translations
 
