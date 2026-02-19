@@ -331,6 +331,29 @@ function App() {
     }
   })
 
+  // kilocode_change start - auto-resume session if restarted within 60 seconds
+  let resumed = false
+  createEffect(() => {
+    if (resumed || sync.status === "loading") return
+    if (args.continue || args.sessionID || args.prompt) return
+    const recent = sync.data.session
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+      .find((x) => x.parentID === undefined)
+    if (!recent) return
+    const elapsed = Date.now() - recent.time.updated
+    const RESUME_THRESHOLD_MS = 60_000
+    if (elapsed < RESUME_THRESHOLD_MS) {
+      resumed = true
+      route.navigate({ type: "session", sessionID: recent.id })
+      toast.show({
+        variant: "info",
+        message: `Resumed session "${recent.title}" — type /new for a fresh session`,
+        duration: 5000,
+      })
+    }
+  })
+  // kilocode_change end
+
   // Handle --session with --fork: wait for sync to be fully complete before forking
   // (session list loads in non-blocking phase for --session, so we must wait for "complete"
   // to avoid a race where reconcile overwrites the newly forked session)

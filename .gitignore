@@ -37,3 +37,6 @@ logs/
 
 # Telemetry ID
 telemetry-id
+
+# Learn mode skill files
+anti-cogni-skill.md
