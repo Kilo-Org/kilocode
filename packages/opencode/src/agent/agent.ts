@@ -13,6 +13,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_ASK from "./prompt/ask.txt"
+import PROMPT_LEARN from "./prompt/learn.txt" // kilocode_change
 import PROMPT_ORCHESTRATOR from "./prompt/orchestrator.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
@@ -191,6 +192,23 @@ export namespace Agent {
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
+          }),
+          user,
+        ),
+        mode: "primary",
+        native: true,
+      },
+      learn: {
+        name: "learn",
+        description: "AI-mentored coding. Implements code, then checks your understanding.",
+        prompt: PROMPT_LEARN,
+        color: "#9B59B6",
+        options: {},
+        permission: PermissionNext.merge(
+          defaults,
+          PermissionNext.fromConfig({
+            question: "allow",
+            plan_enter: "allow",
           }),
           user,
         ),
