@@ -17,7 +17,7 @@ if [ "$branch" = "main" ]; then
 fi
 
 # Set memory limits to prevent excessive resource usage
-export NODE_OPTIONS="--max-old-space-size=3072 --max-semi-space-size=256"
+export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=3072 --max-semi-space-size=256"
 
 # Detect if running on Windows and use pnpm.cmd, otherwise use pnpm.
 if [ "$OS" = "Windows_NT" ]; then
