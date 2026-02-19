@@ -173,7 +173,7 @@ export namespace Config {
         const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://kilo.ai/config.json" // kilocode_change
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json" // kilocode_change
         result = mergeConfigConcatArrays(
           result,
           await load(JSON.stringify(remoteConfig), `${key}/.well-known/opencode`),
@@ -1307,7 +1307,7 @@ export namespace Config {
         .then(async (mod) => {
           const { provider, model, ...rest } = mod.default
           if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://kilo.ai/config.json" // kilocode_change
+          result["$schema"] = "https://opencode.ai/config.json" // kilocode_change
           result = mergeDeep(result, rest)
           await Bun.write(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
           await fs.unlink(legacy)
@@ -1400,9 +1400,9 @@ export namespace Config {
     const parsed = Info.safeParse(data)
     if (parsed.success) {
       if (!parsed.data.$schema) {
-        parsed.data.$schema = "https://kilo.ai/config.json" // kilocode_change
+        parsed.data.$schema = "https://opencode.ai/config.json" // kilocode_change
         // Write the $schema to the original text to preserve variables like {env:VAR}
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://kilo.ai/config.json",') // kilocode_change
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://opencode.ai/config.json",') // kilocode_change
         await Bun.write(configFilepath, updated).catch(() => {})
       }
       const data = parsed.data
