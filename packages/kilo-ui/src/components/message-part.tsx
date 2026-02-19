@@ -6,12 +6,18 @@ import {
   createSignal,
   For,
   Show,
-  onCleanup,
-  createEffect,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import type { TextPart, ToolPart } from "@kilocode/sdk/v2"
-import { ToolRegistry, PART_MAPPING } from "@opencode-ai/ui/message-part"
+import type { TextPart } from "@kilocode/sdk/v2"
+import {
+  ToolRegistry,
+  PART_MAPPING,
+  DiagnosticsDisplay,
+  getDiagnostics,
+  relativizeProjectPaths,
+  getDirectory,
+  createThrottledValue,
+} from "@opencode-ai/ui/message-part"
 import { BasicTool } from "@opencode-ai/ui/basic-tool"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Markdown } from "@opencode-ai/ui/markdown"
@@ -22,59 +28,9 @@ import { useData } from "@opencode-ai/ui/context/data"
 import { useI18n } from "@opencode-ai/ui/context/i18n"
 import { useDiffComponent } from "@opencode-ai/ui/context/diff"
 import { useCodeComponent } from "@opencode-ai/ui/context/code"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
+import { getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import type { OpenFileFn } from "@opencode-ai/ui/context/data"
-
-function relativizeProjectPaths(text: string, directory?: string) {
-  if (!text) return ""
-  if (!directory) return text
-  return text.split(directory).join("")
-}
-
-function getDirectory(path: string | undefined) {
-  const data = useData()
-  return relativizeProjectPaths(_getDirectory(path), data.directory)
-}
-
-interface Diagnostic {
-  range: {
-    start: { line: number; character: number }
-    end: { line: number; character: number }
-  }
-  message: string
-  severity?: number
-}
-
-function getDiagnostics(
-  diagnosticsByFile: Record<string, Diagnostic[]> | undefined,
-  filePath: string | undefined,
-): Diagnostic[] {
-  if (!diagnosticsByFile || !filePath) return []
-  const diagnostics = diagnosticsByFile[filePath] ?? []
-  return diagnostics.filter((d) => d.severity === 1).slice(0, 3)
-}
-
-function DiagnosticsDisplay(props: { diagnostics: Diagnostic[] }) {
-  const i18n = useI18n()
-  return (
-    <Show when={props.diagnostics.length > 0}>
-      <div data-component="diagnostics">
-        <For each={props.diagnostics}>
-          {(diagnostic) => (
-            <div data-slot="diagnostic">
-              <span data-slot="diagnostic-label">{i18n.t("ui.messagePart.diagnostic.error")}</span>
-              <span data-slot="diagnostic-location">
-                [{diagnostic.range.start.line + 1}:{diagnostic.range.start.character + 1}]
-              </span>
-              <span data-slot="diagnostic-message">{diagnostic.message}</span>
-            </div>
-          )}
-        </For>
-      </div>
-    </Show>
-  )
-}
 
 /** Check if text looks like a file path (contains / and has a file extension) */
 const FILE_PATH_RE = /^\.{0,2}\/.*\.\w+$|^[a-zA-Z]:\\.*\.\w+$|^\w[\w.-]*\/.*\.\w+$/
@@ -115,41 +71,6 @@ function ClickableFileOutput(props: { text: string; openFile?: OpenFileFn; direc
       </For>
     </div>
   )
-}
-
-const TEXT_RENDER_THROTTLE_MS = 100
-
-function createThrottledValue(getValue: () => string) {
-  const [value, setValue] = createSignal(getValue())
-  let timeout: ReturnType<typeof setTimeout> | undefined
-  let last = 0
-
-  createEffect(() => {
-    const next = getValue()
-    const now = Date.now()
-    const remaining = TEXT_RENDER_THROTTLE_MS - (now - last)
-    if (remaining <= 0) {
-      if (timeout) {
-        clearTimeout(timeout)
-        timeout = undefined
-      }
-      last = now
-      setValue(next)
-      return
-    }
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => {
-      last = Date.now()
-      setValue(next)
-      timeout = undefined
-    }, remaining)
-  })
-
-  onCleanup(() => {
-    if (timeout) clearTimeout(timeout)
-  })
-
-  return value
 }
 
 // Override TextPartDisplay to make inline code file paths clickable

@@ -59,6 +59,10 @@ interface Diagnostic {
   severity?: number
 }
 
+// kilocode_change start - export for kilo-ui overrides
+export { type Diagnostic, getDiagnostics, DiagnosticsDisplay, relativizeProjectPaths, getDirectory, createThrottledValue }
+// kilocode_change end
+
 function getDiagnostics(
   diagnosticsByFile: Record<string, Diagnostic[]> | undefined,
   filePath: string | undefined,
