@@ -49,8 +49,8 @@ Before enabling Code Reviews:
 
 Once configured, the Review Agent runs automatically on PR/MR events. For platform-specific setup, see:
 
-- [GitHub Code Reviews](./github.md)
-- [GitLab Code Reviews](./gitlab.md)
+- [GitHub Code Reviews](./github)
+- [GitLab Code Reviews](./gitlab)
 
 ## Local Code Reviews
 
