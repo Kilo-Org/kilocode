@@ -52,12 +52,12 @@ export const BedrockCustomArn = ({
 			const message = event.data
 			if (message.type === "bedrockInferenceProfileResolved") {
 				setIsResolving(false)
-				if (message.modelId) {
-					setResolvedModelId(message.modelId)
+				if (message.bedrockInferenceModelId) {
+					setResolvedModelId(message.bedrockInferenceModelId)
 					setResolutionError(null)
 					// Notify parent component about resolved model
 					if (onResolvedModelInfo) {
-						onResolvedModelInfo(message.modelId)
+						onResolvedModelInfo(message.bedrockInferenceModelId)
 					}
 				} else if (message.error) {
 					setResolutionError(message.error)
@@ -76,7 +76,7 @@ export const BedrockCustomArn = ({
 
 	// Effect to automatically resolve when ARN changes and is valid
 	useEffect(() => {
-		const { awsCustomArn } = apiConfiguration
+		const awsCustomArn = apiConfiguration.awsCustomArn
 
 		// Clear previous resolution state when ARN changes
 		setResolvedModelId(null)
@@ -95,7 +95,7 @@ export const BedrockCustomArn = ({
 		) {
 			handleResolveArn()
 		}
-	}, [apiConfiguration.awsCustomArn, validation.isValid, onResolvedModelInfo, handleResolveArn, apiConfiguration])
+	}, [apiConfiguration, validation.isValid, onResolvedModelInfo, handleResolveArn])
 	// kilocode_change end
 
 	return (
