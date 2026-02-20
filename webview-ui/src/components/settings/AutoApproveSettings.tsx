@@ -327,7 +327,7 @@ export const AutoApproveSettings = ({
 					</div>
 				)}
 
-        {/* kilocode_change start */}
+				{/* kilocode_change start */}
 				{(alwaysApproveResubmit ?? alwaysApproveResubmitState) && (
 					<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
 						<div className="flex items-center gap-4 font-bold">
