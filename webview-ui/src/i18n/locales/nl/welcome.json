@@ -17,16 +17,23 @@
 		}
 	},
 	"chooseProvider": "Om zijn magie te doen, heeft Kilo Code een API-sleutel nodig.",
+	"landing": {
+		"greeting": "Welkom bij Roo Code!",
+		"introduction": "Met een reeks ingebouwde en uitbreidbare Modi laat Roo Code je plannen, ontwerpen, coderen, debuggen en je productiviteit verhogen als nooit tevoren.",
+		"accountMention": "Maak je Roo Code Cloud-account aan om te beginnen. Krijg krachtige modellen, webcontrole, analyses, ondersteuning en meer.",
+		"getStarted": "Roo-account aanmaken",
+		"noAccount": "of gebruik zonder account"
+	},
 	"providerSignup": {
 		"heading": "Kies je provider",
 		"chooseProvider": "Roo heeft een LLM-provider nodig om te werken. Kies er een om te beginnen, je kunt er later meer toevoegen.",
-		"rooCloudProvider": "Roo Code Cloud Provider",
-		"rooCloudDescription": "De eenvoudigste manier om te beginnen is met de Roo Code Cloud Provider: een zorgvuldig samengesteld mix van gratis en betaalde modellen tegen lage kosten.",
+		"rooCloudProvider": "Roo Code Router",
+		"rooCloudDescription": "De eenvoudigste manier om te beginnen is met de Roo Code Router: een zorgvuldig samengesteld mix van gratis en betaalde modellen tegen lage kosten.",
 		"learnMore": "Meer informatie",
 		"useAnotherProvider": "Provider van derden",
 		"useAnotherProviderDescription": "Voer een API-sleutel in en begin.",
 		"noApiKeys": "Wil je je niet bezighouden met API-sleutels en aparte accounts?",
-		"backToRoo": "Kies de Roo Code Cloud Provider.",
+		"backToRoo": "Kies de Roo Code Router.",
 		"goBack": "Terug",
 		"finish": "Klaar"
 	},

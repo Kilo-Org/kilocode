@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Eines",
 		"resources": "Recursos",
-		"logs": "Registres"
+		"logs": "Registres",
+		"authDebug": "Depuració d'autenticació"
 	},
 	"emptyState": {
 		"noTools": "No s'han trobat eines",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "Tornant a intentar...",
-		"retryConnection": "Torna a intentar la connexió"
+		"retryConnection": "Torna a intentar la connexió",
+		"signIn": "Inicia sessió",
+		"signingIn": "Iniciant sessió..."
 	},
 	"refreshMCP": "Actualitza els servidors MCP",
 	"execution": {
 		"running": "En execució",
 		"completed": "Completat",
 		"error": "Error"
+	},
+	"authDebug": {
+		"title": "Informació de depuració OAuth",
+		"status": "Estat",
+		"tokenExpires": "Caducitat del token",
+		"scopes": "Àmbits",
+		"refreshInfo": "Informació del token d'actualització",
+		"hasRefreshToken": "Té token d'actualització",
+		"canRefresh": "Pot actualitzar automàticament",
+		"tokenIssuedAt": "Token emès el",
+		"nextRefreshAt": "Propera actualització el",
+		"lastRefreshAt": "Última actualització el",
+		"tokenEndpoint": "Punt d'accés del token",
+		"clientId": "ID de client"
 	}
 }

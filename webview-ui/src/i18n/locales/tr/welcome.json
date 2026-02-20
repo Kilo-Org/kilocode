@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Sihirini yapabilmesi için Kilo Code'nun bir API anahtarına ihtiyacı var.",
+	"landing": {
+		"greeting": "Roo Code'a Hoş Geldin!",
+		"introduction": "Yerleşik ve genişletilebilir Modlar yelpazesiyle Roo Code, daha önce hiç olmadığı gibi planlama, mimari tasarım, kodlama, hata ayıklama ve üretkenliğini artırmanı sağlar.",
+		"accountMention": "Başlamak için Roo Code Cloud hesabını oluştur. Güçlü modeller, web kontrolü, analizler, destek ve daha fazlasını al.",
+		"getStarted": "Roo Hesabı Oluştur",
+		"noAccount": "veya hesap olmadan kullan"
+	},
 	"providerSignup": {
 		"heading": "Sağlayıcınızı seçin",
 		"chooseProvider": "Roo'nun çalışması için bir LLM sağlayıcısına ihtiyacı var. Başlamak için bir tane seç, sonra daha fazlasını ekleyebilirsin.",

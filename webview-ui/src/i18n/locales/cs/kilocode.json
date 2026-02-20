@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Jak chceš začít?",
+		"freeModels": {
+			"title": "Bezplatné modely",
+			"description": "Začni programovat ihned"
+		},
+		"premiumModels": {
+			"title": "Prémiové modely",
+			"description": "Zaregistruj se. Noví uživatelé získají kredit 5 $"
+		},
+		"byok": {
+			"title": "Použij vlastní klíč",
+			"description": "Pokročilé. Použij svůj vlastní účet nebo předplatné"
+		}
+	},
 	"welcome": {
 		"greeting": "Vítej v Kilo Code!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
-		"introText2": "Funguje s nejnovějšími AI modely jako Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 a více než 450 dalšími.",
+		"introText2": "Funguje s nejnovějšími AI modely jako Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 a více než 450 dalšími.",
 		"introText3": "Vytvoř si bezplatný účet a získej $20 bonusových kreditů při prvním dobití.",
 		"ctaButton": "Začít",
 		"manualModeButton": "Použij vlastní API key",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký",
-		"newOrganization": "Používáš Kilo pro práci?"
+		"switchToFreeModel": "Přepnout na bezplatný model"
 	},
 	"pagination": {
 		"previous": "Předchozí",
@@ -25,6 +40,16 @@
 		"modelUnavailable": "⚠️ Model {{model}} není dostupný. Změň na jiný model pro pokračování.",
 		"continueWith": "Pokračovat s {{model}}",
 		"continue": "Pokračovat"
+	},
+	"unauthorizedError": {
+		"title": "Musíš se přihlásit, abys mohl použít model {{modelId}}",
+		"message": "Přihlaš se nebo si vytvoř účet pro přístup k více než 500 modelům, použij kredity za pořizovací cenu nebo přines svůj vlastní klíč.",
+		"loginButton": "Přihlásit se"
+	},
+	"promotionError": {
+		"title": "Pro pokračování se musíš zaregistrovat",
+		"message": "Zaregistruj se zdarma, pokračuj a prozkoumej 500 dalších modelů. Zabere to 2 minuty, bez kreditní karty. Nebo se vrať později.",
+		"signUpButton": "Registrovat se"
 	},
 	"pricing": {
 		"costUnknown": "neznámé náklady",
@@ -47,7 +72,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
 			"logout": "Odhlásit se z Kilo Code",
-			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
+			"loginForPremiumModels": "Přihlas se pro přístup k prémiovým modelům a funkcím",
 			"providerRouting": {
 				"title": "Směrování poskytovatelů",
 				"managedByOrganization": "Spravovat směrování poskytovatelů na úrovni organizace",
@@ -211,6 +236,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nový tady?",
+		"tryOneOfThese": "Zkus jeden z těchto nápadů pro začátek:",
 		"suggestionText": "<suggestionButton>Klikni sem</suggestionButton> pro skvělý nápad, pak klikni na <sendIcon /> a sleduj mě, jak dělám zázraky!",
 		"ideas": {
 			"idea1": "Vytvoř rotující, zářící 3D kouli, která reaguje na pohyby myši. Udělej aplikaci funkční v prohlížeči.",
@@ -229,7 +255,7 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"enableAutoTrigger": {

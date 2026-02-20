@@ -1,8 +1,5 @@
 import { memo, useMemo, useEffect, useRef } from "react"
-import { ClineMessage } from "@roo-code/types"
-import { ClineSayBrowserAction } from "@roo/ExtensionMessage"
-import { vscode } from "@src/utils/vscode"
-import { getViewportCoordinate as getViewportCoordinateShared, prettyKey } from "@roo/browserUtils"
+import { useTranslation } from "react-i18next"
 import {
 	MousePointer as MousePointerIcon,
 	Keyboard,
@@ -14,8 +11,13 @@ import {
 	Maximize2,
 	Camera,
 } from "lucide-react"
+
+import type { ClineMessage, ClineSayBrowserAction } from "@roo-code/types"
+
+import { getViewportCoordinate as getViewportCoordinateShared, prettyKey } from "@roo/browserUtils"
+
+import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { useTranslation } from "react-i18next"
 
 interface BrowserActionRowProps {
 	message: ClineMessage

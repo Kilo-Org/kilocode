@@ -101,16 +101,6 @@
 			"stoppedWithReason": "Claude Code が理由により停止しました：{{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
-		"geminiCli": {
-			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}",
-			"tokenRefreshFailed": "OAuthトークンの更新に失敗しました: {{error}}",
-			"onboardingTimeout": "オンボーディング操作が60秒でタイムアウトしました。後でもう一度お試しください。",
-			"projectDiscoveryFailed": "プロジェクトIDを発見できませんでした。'gemini auth'で認証されていることを確認してください。",
-			"rateLimitExceeded": "レート制限を超過しました。無料プランの制限に達しています。",
-			"badRequest": "不正なリクエスト: {{details}}",
-			"apiError": "Gemini CLI APIエラー: {{error}}",
-			"completionError": "Gemini CLI補完エラー: {{error}}"
-		},
 		"message": {
 			"no_active_task_to_delete": "メッセージを削除するアクティブなタスクがありません",
 			"invalid_timestamp_for_deletion": "削除用のメッセージタイムスタンプが無効です",
@@ -213,7 +203,8 @@
 	},
 	"interruption": {
 		"responseInterruptedByUser": "ユーザーによって応答が中断されました",
-		"responseInterruptedByApiError": "APIエラーによって応答が中断されました"
+		"responseInterruptedByApiError": "APIエラーによって応答が中断されました",
+		"streamTerminatedByProvider": "プロバイダーがリクエストを終了しました"
 	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",

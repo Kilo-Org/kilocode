@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Không thể ngắt kết nối {{count}} máy chủ MCP. Kiểm tra đầu ra để biết chi tiết.",
 		"toolNotFound": "Công cụ '{{toolName}}' không tồn tại trên máy chủ '{{serverName}}'. Công cụ có sẵn: {{availableTools}}",
 		"serverNotFound": "Máy chủ MCP '{{serverName}}' chưa được cấu hình. Máy chủ có sẵn: {{availableServers}}",
-		"toolDisabled": "Công cụ '{{toolName}}' trên máy chủ '{{serverName}}' đã bị vô hiệu hóa. Công cụ đã kích hoạt có sẵn: {{availableTools}}"
+		"toolDisabled": "Công cụ '{{toolName}}' trên máy chủ '{{serverName}}' đã bị vô hiệu hóa. Công cụ đã kích hoạt có sẵn: {{availableTools}}",
+		"oauth_signin_failed": "Đăng nhập OAuth thất bại. Vui lòng thử lại.",
+		"oauth_failed": "Xác thực OAuth thất bại cho {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Đang khởi động lại máy chủ MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Các máy chủ MCP đã đang làm mới.",
 		"refreshing_all": "Đang làm mới tất cả các máy chủ MCP...",
 		"all_refreshed": "Tất cả các máy chủ MCP đã được làm mới.",
-		"project_config_deleted": "Tệp cấu hình MCP của dự án đã bị xóa. Tất cả các máy chủ MCP của dự án đã bị ngắt kết nối."
+		"project_config_deleted": "Tệp cấu hình MCP của dự án đã bị xóa. Tất cả các máy chủ MCP của dự án đã bị ngắt kết nối.",
+		"oauth_required": "Cần xác thực OAuth để kết nối với '{{serverUrl}}'",
+		"oauth_success": "Xác thực OAuth thành công cho '{{serverUrl}}'"
 	}
 }

@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "どのように始めますか？",
+		"freeModels": {
+			"title": "無料モデル",
+			"description": "すぐにコーディングを開始"
+		},
+		"premiumModels": {
+			"title": "プレミアムモデル",
+			"description": "登録。新規ユーザーは5ドルのクレジットを獲得"
+		},
+		"byok": {
+			"title": "自分のキーを使用",
+			"description": "上級者向け。自分のアカウントまたはサブスクリプションを使用"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Codeへようこそ！",
 		"introText1": "Kilo Codeは無料のオープンソースAIコーディングエージェントです。",
-		"introText2": "Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5、その他450以上の最新のAIモデルと連携します。",
+		"introText2": "Claude Opus 4.5、Gemini 3 Pro、GPT-5.2、その他450以上の最新のAIモデルと連携します。",
 		"introText3": "無料アカウントを作成して、初回チャージ時に$20のボーナスクレジットを獲得しましょう。",
 		"ctaButton": "始める",
 		"manualModeButton": "自分のAPIキーを使う",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています",
-		"newOrganization": "仕事でKiloを使用していますか？"
+		"switchToFreeModel": "無料モデルに切り替える"
 	},
 	"pagination": {
 		"previous": "前へ",
@@ -25,6 +40,16 @@
 		"modelUnavailable": "⚠️ モデル{{model}}は利用できません。続行するには別のモデルに変更してください。",
 		"continueWith": "{{model}}で続行",
 		"continue": "続行"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}}モデルを使用するにはサインインが必要です",
+		"message": "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを使用できます。",
+		"loginButton": "サインイン"
+	},
+	"promotionError": {
+		"title": "続けるにはサインアップが必要です",
+		"message": "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でまた来てください。",
+		"signUpButton": "登録する"
 	},
 	"pricing": {
 		"costUnknown": "コスト不明",
@@ -47,6 +72,7 @@
 			"apiKey": "Kilo Code APIキー",
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト",
+			"loginForPremiumModels": "ログインしてプレミアムモデルと機能にアクセス",
 			"providerRouting": {
 				"title": "プロバイダールーティング",
 				"managedByOrganization": "組織レベルのプロバイダールーティングを管理",
@@ -65,8 +91,7 @@
 					"deny": "プロンプトトレーニングを拒否",
 					"zdr": "データ保持なし"
 				}
-			},
-			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。"
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "コンテキストウィンドウ",
@@ -218,6 +243,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "初めてですか？",
+		"tryOneOfThese": "これらのアイデアを試して始めましょう：",
 		"suggestionText": "クールなアイデアのために<suggestionButton>ここをクリック</suggestionButton>してから、<sendIcon />をタップして私がマジックを行うのを見てください！",
 		"ideas": {
 			"idea1": "マウスの動きに反応する回転する光る3D球体を作成してください。アプリをブラウザで動作させてください。",
@@ -229,7 +255,7 @@
 			"idea7": "マウスジェスチャーに合わせて動く落ち着いたインタラクティブな星空を作成"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "コードエディタの提案",

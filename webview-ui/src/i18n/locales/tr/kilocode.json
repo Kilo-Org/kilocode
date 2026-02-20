@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Nasıl başlamak istersiniz?",
+		"freeModels": {
+			"title": "Ücretsiz modeller",
+			"description": "Hemen kodlamaya başlayın"
+		},
+		"premiumModels": {
+			"title": "Premium modeller",
+			"description": "Kaydolun. Yeni kullanıcılar 5 $ kredi alır"
+		},
+		"byok": {
+			"title": "Kendi anahtarınızı kullanın",
+			"description": "Gelişmiş. Kendi hesabınızı veya aboneliğinizi kullanın"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 ve 450+ diğer en yeni AI modelleri ile çalışır.",
 		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
@@ -11,13 +26,23 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
-		"lowBalance": "Kilo Code bakiyeniz düşük",
-		"newOrganization": "İş için mi kullanıyorsun?"
+		"lowBalance": "Kilo Code bakiyen düşük",
+		"switchToFreeModel": "Ücretsiz modele geç"
 	},
 	"pagination": {
 		"previous": "Önceki",
 		"next": "Sonraki",
 		"page": "Sayfa {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}} modelini kullanmak için giriş yapman gerekiyor",
+		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
+		"loginButton": "Giriş Yap"
+	},
+	"promotionError": {
+		"title": "Devam etmek için kaydolman gerekiyor",
+		"message": "Devam etmek ve 500 diğer modeli keşfetmek için ücretsiz kaydol. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gel.",
+		"signUpButton": "Kaydol"
 	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
@@ -52,7 +77,7 @@
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
 			"logout": "Kilo Code'dan çıkış yap",
-			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
+			"loginForPremiumModels": "Premium modellere ve özelliklere erişmek için giriş yap",
 			"providerRouting": {
 				"title": "Sağlayıcı Yönlendirme",
 				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
@@ -211,6 +236,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Burada yeni misin?",
+		"tryOneOfThese": "Başlamak için bu fikirlerden birini dene:",
 		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
 		"ideas": {
 			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",
@@ -222,7 +248,7 @@
 			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Otomatik Tamamlama",
 		"settings": {
 			"codeEditorSuggestions": "Kod Editörü Önerileri",

@@ -12,10 +12,7 @@ import {
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 import { AlertTriangle } from "lucide-react"
 
-import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
-
-import type { EmbedderProvider } from "@roo/embeddingModels"
-import type { IndexingStatus } from "@roo/ExtensionMessage"
+import { type IndexingStatus, type EmbedderProvider, CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -100,6 +97,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexVercelAiGatewayApiKey?: string
 	codebaseIndexOpenRouterApiKey?: string
 	codebaseIndexOpenRouterSpecificProvider?: string
+	codebaseIndexVoyageApiKey?: string // kilocode_change
 }
 
 // Validation schema for codebase index settings
@@ -195,6 +193,16 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		// kilocode_change start
+		case "voyage":
+			return baseSchema.extend({
+				codebaseIndexVoyageApiKey: z.string().min(1, t("settings:codeIndex.validation.voyageApiKeyRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+		// kilocode_change end
+
 		default:
 			return baseSchema
 	}
@@ -265,6 +273,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexVercelAiGatewayApiKey: "",
 		codebaseIndexOpenRouterApiKey: "",
 		codebaseIndexOpenRouterSpecificProvider: "",
+		codebaseIndexVoyageApiKey: "", // kilocode_change
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -323,6 +332,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexOpenRouterApiKey: "",
 				codebaseIndexOpenRouterSpecificProvider:
 					codebaseIndexConfig.codebaseIndexOpenRouterSpecificProvider || "",
+				codebaseIndexVoyageApiKey: "", // kilocode_change
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -447,6 +457,11 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 							? SECRET_PLACEHOLDER
 							: ""
 					}
+					// kilocode_change start
+					if (!prev.codebaseIndexVoyageApiKey || prev.codebaseIndexVoyageApiKey === SECRET_PLACEHOLDER) {
+						updated.codebaseIndexVoyageApiKey = secretStatus.hasVoyageApiKey ? SECRET_PLACEHOLDER : ""
+					}
+					// kilocode_change end
 
 					return updated
 				}
@@ -530,7 +545,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					key === "codebaseIndexGeminiApiKey" ||
 					key === "codebaseIndexMistralApiKey" ||
 					key === "codebaseIndexVercelAiGatewayApiKey" ||
-					key === "codebaseIndexOpenRouterApiKey"
+					key === "codebaseIndexOpenRouterApiKey" ||
+					key === "codebaseIndexVoyageApiKey" // kilocode_change
 				) {
 					dataToValidate[key] = "placeholder-valid"
 				}
@@ -889,6 +905,11 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<SelectItem value="openrouter">
 													{t("settings:codeIndex.openRouterProvider")}
 												</SelectItem>
+												{/* kilocode_change start */}
+												<SelectItem value="voyage">
+													{t("settings:codeIndex.voyageProvider")}
+												</SelectItem>
+												{/* kilocode_change end */}
 											</SelectContent>
 										</Select>
 									</div>
@@ -1579,6 +1600,74 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												)}
 										</>
 									)}
+
+									{/* kilocode_change start */}
+									{/* Voyage AI Settings */}
+									{currentSettings.codebaseIndexEmbedderProvider === "voyage" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.voyageApiKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexVoyageApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexVoyageApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.voyageApiKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVoyageApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexVoyageApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVoyageApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId || ""}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="" className="p-2">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+									{/* kilocode_change end */}
 
 									{/* Qdrant Settings */}
 									{currentSettings.codebaseIndexVectorStoreProvider === "qdrant" && (

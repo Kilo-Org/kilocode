@@ -1,0 +1,215 @@
+{
+	"info": {
+		"settings_imported": "Nastavenia boli úspešne importované."
+	},
+	"userFeedback": {
+		"message_update_failed": "Aktualizácia správy zlyhala",
+		"no_checkpoint_found": "Pred touto správou nebol nájdený žiadny checkpoint",
+		"message_updated": "Správa bola úspešne aktualizovaná"
+	},
+	"lowCreditWarning": {
+		"title": "Varovanie o nízkom kredite!",
+		"message": "Skontroluj, či môžeš doplniť bezplatné kredity alebo si kúpiť ďalšie!"
+	},
+	"task": {
+		"noAssistantMessages": "Odpoveď modelu neočakávane skončila (žiadne správy asistenta). Môže to byť známka obmedzenia počtu požiadaviek.",
+		"notLoggedInError": "Požiadavku nie je možné dokončiť, uisti sa, že si pripojený a prihlásený u vybraného poskytovateľa.\n\n{{error}}",
+		"maxCompletionTokens": "Bolo dosiahnuté maximálneho počtu completion tokenov.",
+		"contentFilter": "Požiadavka bola zablokovaná filtrom obsahu.",
+		"disableApplyDiff": "Ak sa táto chyba opakuje, zakážte prosím Úpravy pomocou rozdielov v pokročilom nastavení.",
+		"disableEditFile": "Ak sa táto chyba opakuje, zakážte prosím experimentálnu funkciu Rýchle použitie."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Checkpointy nie sú k dispozícii, pretože bol detegovaný vnorený Git repozitár na: {{path}}. Prosím odstráňte alebo premiestnite vnorené Git repozitáre pre použitie funkcie checkpointov alebo deaktivujte checkpointy v nastavení pre potlačenie tohto varovania.",
+		"protectedPaths": "Checkpointy nie sú k dispozícii v {{workspaceDir}}. Prosím otvorte podpriečinok ako workspace pre použitie funkcie checkpointov alebo deaktivujte checkpointy v nastavení pre potlačenie tohto varovania.",
+		"dismissWarning": "Zavrieť"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Zmazať",
+			"confirmDelete": "Si si istý, že chceš zmazať {{filename}}?",
+			"deleted": "Zmazané {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Nebola nájdená zložka pracovného priestoru",
+			"fileAlreadyExists": "Súbor {{filename}} už existuje",
+			"failedToCreateRuleFile": "Vytvorenie súboru pravidla zlyhalo.",
+			"failedToDeleteRuleFile": "Zmazanie súboru pravidla zlyhalo."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Popis pracovného postupu tu...",
+				"stepsHeader": "## Kroky",
+				"step1": "Krok 1",
+				"step2": "Krok 2"
+			},
+			"rule": {
+				"description": "Popis pravidla tu...",
+				"guidelinesHeader": "## Pokyny",
+				"guideline1": "Pokyn 1",
+				"guideline2": "Pokyn 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"initializing": "Inicializujem...",
+		"discoveringFiles": "Zisťujem súbory...",
+		"gettingContext": "Získavam kontext...",
+		"activated": "Generátor správ pre commit Kilo Code aktivovaný",
+		"gitNotFound": "⚠️ Git repozitár nebol nájdený alebo git nie je dostupný",
+		"gitInitError": "⚠️ Chyba inicializácie Gitu: {{error}}",
+		"generating": "Kilo: Generujem správu commitu...",
+		"noChanges": "Kilo: Nenájdené žiadne zmeny na analýzu",
+		"generated": "Kilo: Správa bola vygenerovaná!",
+		"generationFailed": "Kilo: Nepodarilo sa vygenerovať správu commitu: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generovanie správy s použitím nenapojených zmien",
+		"activationFailed": "Kilo: Aktivácia generátora správ sa nepodarila: {{error}}",
+		"providerRegistered": "Kilo: Poskytovateľ správ commitov zaregistrovaný",
+		"errors": {
+			"noProject": "Žiadny projekt k dispozícii",
+			"connectionFailed": "Nepodarilo sa pripojiť k rozšíreniu Kilo Code",
+			"timeout": "Časový limit požiadavky vypršal po 30 sekundách",
+			"invalidResponse": "Neplatný formát odpovede prijatý od rozšírenia",
+			"missingMessage": "Z rozšírenia nebola prijatá žiadna správa o commite",
+			"noChanges": "Nenájdené žiadne zmeny na zapísanie",
+			"noWorkspacePath": "Nebolo možné určiť cestu pracovného priestoru pre Git repozitár",
+			"workspaceNotFound": "Nedá sa určiť cestu k pracovnému priestoru pre Git repozitár",
+			"processingError": "Chyba pri spracovaní generovania správy o commite: {{error}}"
+		},
+		"error": {
+			"title": "Chyba",
+			"workspacePathNotFound": "Nedá sa určiť cestu pracovného priestoru pre Git repozitár",
+			"generationFailed": "Nepodarilo sa vygenerovať správu o commite: {{error}}",
+			"processingFailed": "Chyba pri spracovaní generovania správy o commite: {{error}}",
+			"unknown": "Neznáma chyba"
+		},
+		"dialogs": {
+			"info": "Správa commitu AI",
+			"success": "Úspech",
+			"error": "Chyba",
+			"title": "Commit správa AI"
+		},
+		"progress": {
+			"title": "Generovanie Commit Message",
+			"connecting": "Pripájanie k Kilo Code...",
+			"analyzing": "Analyzujem zmeny...",
+			"generating": "Generujem správu commitu..."
+		},
+		"ui": {
+			"generateButton": "Vygenerovať správu pre commit",
+			"generateButtonTooltip": "Generuje správy pre commit pomocou umelej inteligencie pre analýzu zmien vo vašom kóde"
+		}
+	},
+	"seeNewChanges": {
+		"title": "Zobrazovanie nových zmien",
+		"checkpointsUnavailable": "Nedá sa zobraziť nové zmeny, kontrolné body nie sú dostupné.",
+		"noChanges": "Nedá sa zobraziť nové zmeny, neboli nájdené žiadne zmeny.",
+		"error": "Nedá sa zobraziť nové zmeny, došlo k chybe."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Tvoja verzia Kilocode CLI je zastaraná a nepodporuje Agent Manager. Prosím aktualizuj na najnovšiu verziu.",
+			"cliMisconfigured": "Kilocode CLI nie je nakonfigurované. Spusť 'kilocode auth' pre prihlásenie alebo 'kilocode config' pre konfiguráciu.",
+			"sessionFailed": "Nepodarilo sa spustiť reláciu agenta",
+			"sessionFailedWithMessage": "Nepodarilo sa spustiť reláciu agenta: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Inštrukcie k Aktualizácii",
+			"installInstructions": "Inštrukcie k Inštalácii",
+			"getHelp": "Získať Pomoc",
+			"runInTerminal": "Spustiť v Termináli",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "Aktualizovať Globálne",
+			"updateLocal": "Aktualizovať Lokálne",
+			"installGlobal": "Inštalovať Globálne",
+			"installLocal": "Inštalovať Lokálne"
+		},
+		"terminal": {
+			"installMessage": "Spúšťam npm install pre inštaláciu Kilocode CLI. Po dokončení môžeš tento terminál zavrieť a skúsiť Agent Manager spustiť znova.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"autocomplete": {
+		"statusBar": {
+			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "pozastavené",
+			"warning": "$(warning) Autocomplete",
+			"tooltip": {
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (zakázané)",
+				"noCredits": "**Na tvojom účte nie sú žiadne kredity**\n\nTvoj účet Kilo Code nemá žiadne kredity. Pre použitie automatického doplňovania prosím pridaj kredity na svoj účet.\n\n[Otvoriť Nastavenia](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Nie je nakonfigurovaný žiadny model automatického doplňovania**\n\nPre povolenie automatického doplňovania pridaj profil s jedným z týchto podporovaných poskytovateľov: {{providers}}.\n\n[Otvoriť Nastavenia](command:kilo-code.settingsButtonClicked)",
+				"sessionTotal": "Celkové náklady relácie:",
+				"provider": "Poskytovateľ:",
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Predvolený",
+				"completionSummary": "Vykonaných {{count}} dokončení medzi {{startTime}} a {{endTime}}, s celkovými nákladmi {{cost}}.",
+				"providerInfo": "Automatické dokončovanie poskytuje {{model}} cez {{provider}}."
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Analyzujem tvoj kód...",
+			"generating": "Generujem navrhované úpravy...",
+			"processing": "Spracovávam navrhované úpravy...",
+			"showing": "Zobrazujem navrhované úpravy..."
+		},
+		"input": {
+			"title": "Kilo Code: Rýchla úloha",
+			"placeholder": "napr. 'refaktoruj túto funkciu, aby bola efektívnejšia'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generovať navrhované úpravy",
+			"displaySuggestions": "Zobraziť navrhované úpravy",
+			"cancelSuggestions": "Zrušiť navrhované úpravy",
+			"applyCurrentSuggestion": "Použiť aktuálnu navrhnutú úpravu",
+			"applyAllSuggestions": "Použiť všetky navrhované úpravy",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Navrhované úpravy"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Môžem ti pomôcť s rýchlymi úlohami a navrhnutými úpravami."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Autocomplete je blokované konfliktom s GitHub Copilot. Pre vyriešenie tohto problému musíš zakázať inline návrhy Copilot.",
+			"disableCopilot": "Zakázať Copilot",
+			"disableInlineAssist": "Zakázať Autocomplete"
+		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Popíšte príkaz, ktorý chcete vygenerovať",
+		"noActiveTerminal": "Kilo: Nebol nájdený žiadny aktívny terminál. Najprv prosím otvorte terminál.",
+		"inputPlaceholder": "napr. ukončiť proces bežiaci na porte 3001, nájsť veľké súbory atď.",
+		"generatingProgress": "Kilo: Generujem príkaz terminálu...",
+		"generationFailed": "Kilo: Príkaz sa nepodarilo vygenerovať: {{error}}",
+		"commandGenerated": "Kilo: Vygenerovaný príkaz: {{command}}",
+		"warningDialog": {
+			"title": "Bezpečnostné Upozornenie Terminálu",
+			"okButton": "Rozumiem",
+			"message": "Dvakrát skontrolujte všetky vygenerované príkazy pred ich spustením. Akcie v termináli sa nedajú vždy vrátiť späť – spustenie neoverených príkazov môže viesť k nevratnej strate dát alebo poškodeniu systému. Pred pokračovaním si príkaz dôkladne prejdite a uistite sa, že mu rozumiete!",
+			"cancelButton": "Zrušiť"
+		},
+		"tipMessage": "Kilo: Stlačte {{shortcut}} pre generovanie príkazov v termináli"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Váš OpenAI API kľúč je neplatný alebo nemá prístup k Realtime API. Skontrolujte prosím svoj API kľúč a skúste to znova.",
+			"unknown": "Pripojenie sa nepodarilo. Skontrolujte prosím svoju konfiguráciu a skúste to znova."
+		}
+	},
+	"configDiscovery": {
+		"added": "Kód kilo: Pridané {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kód Kilo: Odstránené {{source}} {{configType}}: {{name}}{{modeStr}}"
+	}
+}

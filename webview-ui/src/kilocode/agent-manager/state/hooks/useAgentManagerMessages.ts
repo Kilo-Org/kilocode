@@ -5,6 +5,7 @@ import { updateSessionMessagesAtom } from "../atoms/messages"
 import { updateSessionTodosAtom } from "../atoms/todos"
 import { updateBranchesAtom } from "../atoms/branches"
 import { updateModelsConfigAtom, modelsLoadFailedAtom, type AvailableModel } from "../atoms/models"
+import { updateAvailableModesAtom, type AvailableMode } from "../atoms/modes"
 import { extractTodosFromMessages } from "./extractTodosFromMessages"
 import {
 	upsertSessionAtom,
@@ -15,6 +16,7 @@ import {
 	remoteSessionsAtom,
 	pendingSessionAtom,
 	isRefreshingRemoteSessionsAtom,
+	updateSessionModeAtom,
 	type AgentSession,
 	type RemoteSession,
 	type PendingSession,
@@ -77,6 +79,18 @@ interface ModelsLoadFailedMessage {
 	error?: string
 }
 
+interface AvailableModesMessage {
+	type: "agentManager.availableModes"
+	modes: AvailableMode[]
+}
+
+interface ModeChangedMessage {
+	type: "agentManager.modeChanged"
+	sessionId: string
+	mode: string
+	previousMode?: string
+}
+
 type ExtensionMessage =
 	| ChatMessagesMessage
 	| StateMessage
@@ -87,6 +101,8 @@ type ExtensionMessage =
 	| BranchesMessage
 	| AvailableModelsMessage
 	| ModelsLoadFailedMessage
+	| AvailableModesMessage
+	| ModeChangedMessage
 	| { type: string; [key: string]: unknown }
 
 /**
@@ -149,6 +165,7 @@ export function useAgentManagerMessages() {
 	const updateBranches = useSetAtom(updateBranchesAtom)
 	const updateModelsConfig = useSetAtom(updateModelsConfigAtom)
 	const handleModelsLoadFailed = useSetAtom(modelsLoadFailedAtom)
+	const updateAvailableModes = useSetAtom(updateAvailableModesAtom)
 	const upsertSession = useSetAtom(upsertSessionAtom)
 	const removeSession = useSetAtom(removeSessionAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
@@ -158,6 +175,7 @@ export function useAgentManagerMessages() {
 	const setIsRefreshingRemoteSessions = useSetAtom(isRefreshingRemoteSessionsAtom)
 	const sendSessionEvent = useSetAtom(sendSessionEventAtom)
 	const cleanupSessionMachine = useSetAtom(cleanupSessionMachineAtom)
+	const updateSessionMode = useSetAtom(updateSessionModeAtom)
 	const sessionOrder = useAtomValue(sessionOrderAtom)
 	const hasInitializedSelection = useRef(false)
 	const knownSessionsRef = useRef(new Set<string>())
@@ -270,6 +288,18 @@ export function useAgentManagerMessages() {
 					handleModelsLoadFailed(error)
 					break
 				}
+
+				case "agentManager.availableModes": {
+					const { modes } = message as AvailableModesMessage
+					updateAvailableModes(modes)
+					break
+				}
+
+				case "agentManager.modeChanged": {
+					const { sessionId, mode } = message as ModeChangedMessage
+					updateSessionMode({ sessionId, mode })
+					break
+				}
 			}
 		}
 
@@ -281,6 +311,7 @@ export function useAgentManagerMessages() {
 		updateBranches,
 		updateModelsConfig,
 		handleModelsLoadFailed,
+		updateAvailableModes,
 		upsertSession,
 		removeSession,
 		setSelectedSessionId,
@@ -290,6 +321,7 @@ export function useAgentManagerMessages() {
 		setIsRefreshingRemoteSessions,
 		sendSessionEvent,
 		cleanupSessionMachine,
+		updateSessionMode,
 		sessionOrder,
 	])
 }

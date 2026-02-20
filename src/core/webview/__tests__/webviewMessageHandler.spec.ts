@@ -5,17 +5,34 @@ import type { Mock } from "vitest"
 // Mock dependencies - must come before imports
 vi.mock("../../../api/providers/fetchers/modelCache")
 
+vi.mock("../../../integrations/openai-codex/oauth", () => ({
+	openAiCodexOAuthManager: {
+		getAccessToken: vi.fn(),
+		getAccountId: vi.fn(),
+	},
+}))
+
+vi.mock("../../../integrations/openai-codex/rate-limits", () => ({
+	fetchOpenAiCodexRateLimitInfo: vi.fn(),
+}))
+
 // Mock the diagnosticsHandler module
 vi.mock("../diagnosticsHandler", () => ({
 	generateErrorDiagnostics: vi.fn().mockResolvedValue({ success: true, filePath: "/tmp/diagnostics.json" }),
 }))
 
+import type { ModelRecord } from "@roo-code/types"
+
 import { webviewMessageHandler } from "../webviewMessageHandler"
 import type { ClineProvider } from "../ClineProvider"
 import { getModels } from "../../../api/providers/fetchers/modelCache"
-import type { ModelRecord } from "../../../shared/api"
+const { openAiCodexOAuthManager } = await import("../../../integrations/openai-codex/oauth")
+const { fetchOpenAiCodexRateLimitInfo } = await import("../../../integrations/openai-codex/rate-limits")
 
 const mockGetModels = getModels as Mock<typeof getModels>
+const mockGetAccessToken = vi.mocked(openAiCodexOAuthManager.getAccessToken)
+const mockGetAccountId = vi.mocked(openAiCodexOAuthManager.getAccountId)
+const mockFetchOpenAiCodexRateLimitInfo = vi.mocked(fetchOpenAiCodexRateLimitInfo)
 
 // Mock ClineProvider
 const mockClineProvider = {
@@ -118,6 +135,15 @@ vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
 vi.mock("../../../utils/globalContext")
 
+vi.mock("../../mentions/resolveImageMentions", () => ({
+	resolveImageMentions: vi.fn(async ({ text, images }: { text: string; images?: string[] }) => ({
+		text,
+		images: [...(images ?? []), "data:image/png;base64,from-mention"],
+	})),
+}))
+
+import { resolveImageMentions } from "../../mentions/resolveImageMentions"
+
 describe("webviewMessageHandler - requestLmStudioModels", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -157,6 +183,37 @@ describe("webviewMessageHandler - requestLmStudioModels", () => {
 			type: "lmStudioModels",
 			lmStudioModels: mockModels,
 		})
+	})
+})
+
+describe("webviewMessageHandler - image mentions", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			maxImageFileSize: 5,
+			maxTotalImageSize: 20,
+		})
+	})
+
+	it("should resolve image mentions for askResponse payloads", async () => {
+		const mockHandleWebviewAskResponse = vi.fn()
+		vi.mocked(mockClineProvider.getCurrentTask).mockReturnValue({
+			cwd: "/mock/workspace",
+			rooIgnoreController: undefined,
+			handleWebviewAskResponse: mockHandleWebviewAskResponse,
+		} as any)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "askResponse",
+			askResponse: "messageResponse",
+			text: "See @/img.png",
+			images: [],
+		})
+
+		expect(vi.mocked(resolveImageMentions)).toHaveBeenCalled()
+		expect(mockHandleWebviewAskResponse).toHaveBeenCalledWith("messageResponse", "See @/img.png", [
+			"data:image/png;base64,from-mention",
+		])
 	})
 })
 
@@ -253,6 +310,11 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" }) // kilocode_change
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "zenmux",
+			apiKey: undefined,
+			baseUrl: "https://zenmux.ai/api/v1",
+		})
 		// kilocode_change start
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({
@@ -291,6 +353,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -303,6 +366,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"nano-gpt": mockModels, // kilocode_change
 				roo: mockModels,
 				chutes: mockModels,
+				zenmux: mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
@@ -397,6 +461,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
@@ -406,6 +471,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
+				zenmux: mockModels,
 				litellm: {},
 				kilocode: mockModels,
 				"nano-gpt": mockModels, // kilocode_change
@@ -449,6 +515,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockResolvedValueOnce(mockModels) // zenmux
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -504,6 +571,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				apertis: {}, // kilocode_change
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: {},
@@ -511,6 +579,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: {},
 				roo: mockModels,
 				chutes: {},
+				zenmux: mockModels,
 				litellm: {},
 				ollama: {},
 				lmstudio: {},
@@ -549,6 +618,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			.mockResolvedValueOnce({}) // zenmux
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -695,6 +765,43 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			provider: "litellm",
 			apiKey: "litellm-key", // From config
 			baseUrl: "http://localhost:4000", // From config
+		})
+	})
+})
+
+describe("webviewMessageHandler - requestOpenAiCodexRateLimits", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockGetAccessToken.mockResolvedValue(null)
+		mockGetAccountId.mockResolvedValue(null)
+	})
+
+	it("posts error when not authenticated", async () => {
+		await webviewMessageHandler(mockClineProvider, { type: "requestOpenAiCodexRateLimits" } as any)
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "openAiCodexRateLimits",
+			error: "Not authenticated with OpenAI Codex",
+		})
+	})
+
+	it("posts values when authenticated", async () => {
+		mockGetAccessToken.mockResolvedValue("token")
+		mockGetAccountId.mockResolvedValue("acct_123")
+		mockFetchOpenAiCodexRateLimitInfo.mockResolvedValue({
+			primary: { usedPercent: 10, resetsAt: 1700000000000 },
+			fetchedAt: 1700000000000,
+		})
+
+		await webviewMessageHandler(mockClineProvider, { type: "requestOpenAiCodexRateLimits" } as any)
+
+		expect(mockFetchOpenAiCodexRateLimitInfo).toHaveBeenCalledWith("token", { accountId: "acct_123" })
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "openAiCodexRateLimits",
+			values: {
+				primary: { usedPercent: 10, resetsAt: 1700000000000 },
+				fetchedAt: 1700000000000,
+			},
 		})
 	})
 })

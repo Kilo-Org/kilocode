@@ -68,16 +68,26 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		const sanitizedMessages = filterNonAnthropicBlocks(messages)
 		const apiModelId = this.options.anthropicDeploymentName?.trim() || modelId // kilocode_change
 
-		// Add 1M context beta flag if enabled for Claude Sonnet 4 and 4.5
+		// Add 1M context beta flag if enabled for supported models (Claude Sonnet 4/4.5/4.6, Opus 4.6)
 		if (
-			(modelId === "claude-sonnet-4-20250514" || modelId === "claude-sonnet-4-5") &&
+			(modelId === "claude-sonnet-4-20250514" ||
+				modelId === "claude-sonnet-4-5" ||
+				modelId === "claude-sonnet-4-6" ||
+				modelId === "claude-opus-4-6") &&
 			this.options.anthropicBeta1MContext
 		) {
 			betas.push("context-1m-2025-08-07")
 		}
 
 		// kilocode_change start
-		if (verbosity) {
+		if (thinking?.type === "adaptive") {
+			betas.push(
+				"adaptive-thinking-2026-01-28",
+				"interleaved-thinking-2025-05-14",
+				"effort-2025-11-24",
+				"max-effort-2026-01-24",
+			)
+		} else if (verbosity) {
 			betas.push("effort-2025-11-24")
 		}
 		// kilocode_change end
@@ -110,6 +120,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			: {}
 
 		switch (modelId) {
+			case "claude-opus-4-6": // kilocode_change
+			case "claude-sonnet-4-6":
 			case "claude-sonnet-4-5":
 			case "claude-sonnet-4-20250514":
 			case "claude-opus-4-5-20251101":
@@ -145,7 +157,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							model: apiModelId, // kilocode_change
 							max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 							temperature,
-							thinking,
+							thinking: thinking as Anthropic.Messages.ThinkingConfigParam | undefined, // kilocode_change
 							// Setting cache breakpoint for system prompt so new tasks can reuse it.
 							system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
 							messages: sanitizedMessages.map((message, index) => {
@@ -183,6 +195,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 							// Then check for models that support prompt caching
 							switch (modelId) {
+								case "claude-opus-4-6": // kilocode_change
+								case "claude-sonnet-4-6":
 								case "claude-sonnet-4-5":
 								case "claude-sonnet-4-20250514":
 								case "claude-opus-4-5-20251101":
@@ -365,6 +379,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 									thinking: thinkingDeltaAccumulator,
 									signature: chunk.delta.signature,
 								}
+								// Reset accumulator after emitting the complete thinking block
+								thinkingDeltaAccumulator = ""
 							}
 							break
 						// kilocode_change end
@@ -418,8 +434,14 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		let id = modelId && modelId in anthropicModels ? (modelId as AnthropicModelId) : anthropicDefaultModelId
 		let info: ModelInfo = anthropicModels[id]
 
-		// If 1M context beta is enabled for Claude Sonnet 4 or 4.5, update the model info
-		if ((id === "claude-sonnet-4-20250514" || id === "claude-sonnet-4-5") && this.options.anthropicBeta1MContext) {
+		// If 1M context beta is enabled for supported models, update the model info
+		if (
+			(id === "claude-sonnet-4-20250514" ||
+				id === "claude-sonnet-4-5" ||
+				id === "claude-sonnet-4-6" ||
+				id === "claude-opus-4-6") &&
+			this.options.anthropicBeta1MContext
+		) {
 			// Use the tier pricing for 1M context
 			const tier = info.tiers?.[0]
 			if (tier) {

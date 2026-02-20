@@ -1,4 +1,5 @@
 {
+	"back": "Torna a la vista de tasques",
 	"common": {
 		"save": "Desar",
 		"done": "Fet",
@@ -7,6 +8,10 @@
 		"select": "Seleccionar",
 		"add": "Afegir capçalera",
 		"remove": "Eliminar"
+	},
+	"search": {
+		"placeholder": "Cercar configuració...",
+		"noResults": "No s'ha trobat cap configuració"
 	},
 	"header": {
 		"title": "Configuració",
@@ -37,7 +42,9 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"autoPurge": "Auto-neteja"
+		"autoPurge": "Auto-neteja",
+		"agentBehaviour": "Comportament de l'agent",
+		"autocomplete": "Autocompletat"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Vols consells o simplement passar l'estona amb altres usuaris de Kilo Code? Uneix-te a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contacte i Comunitat",
-		"manageSettings": "Gestionar Configuració"
+		"manageSettings": "Gestionar Configuració",
+		"debugMode": {
+			"label": "Activa el mode de depuració",
+			"description": "Activa el mode de depuració per mostrar botons addicionals a la capçalera de la tasca que permetin veure l'historial de conversa de l'API i els missatges de la UI com a JSON formatejat en fitxers temporals."
+		}
 	},
 	"slashCommands": {
 		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
@@ -93,7 +104,11 @@
 		"openRouterApiKeyPlaceholder": "Introduïu la vostra clau de l'API d'OpenRouter",
 		"openRouterProviderRoutingLabel": "Encaminament de proveïdors d'OpenRouter",
 		"openRouterProviderRoutingDescription": "OpenRouter dirigeix les sol·licituds als millors proveïdors disponibles per al vostre model d'embedding. Per defecte, les sol·licituds s'equilibren entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per utilitzar amb aquest model.",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Clau API de Voyage AI",
+		"voyageApiKeyPlaceholder": "Introdueix la teva clau API de Voyage AI",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
+		"openaiCompatibleResponsesProvider": "Compatible amb OpenAI (Responses)",
 		"openAiKeyLabel": "Clau API OpenAI",
 		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
 		"openAiCompatibleBaseUrlLabel": "URL base",
@@ -166,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
 			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0",
-			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida"
+			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida",
+			"voyageApiKeyRequired": "Cal una clau API de Voyage AI"
 		},
 		"optional": "opcional",
 		"advancedConfigLabel": "Configuració avançada",
@@ -301,10 +317,40 @@
 		"glamaApiKey": "Clau API de Glama",
 		"getGlamaApiKey": "Obtenir clau API de Glama",
 		"apiKeyStorageNotice": "Les claus API s'emmagatzemen de forma segura a l'Emmagatzematge Secret de VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Utilitzar URL base personalitzada",
 		"useReasoning": "Activar raonament",
 		"useHostHeader": "Utilitzar capçalera Host personalitzada",
-		"useLegacyFormat": "Utilitzar el format d'API OpenAI antic",
 		"customHeaders": "Capçaleres personalitzades",
 		"headerName": "Nom de la capçalera",
 		"headerValue": "Valor de la capçalera",
@@ -317,9 +363,13 @@
 			"success": "Llista de models actualitzada correctament!",
 			"error": "No s'ha pogut actualitzar la llista de models. Si us plau, torneu-ho a provar."
 		},
+		"getZenmuxApiKey": "Obtenir clau API de Zenmux",
+		"zenmuxTransformsText": "Utilitzar Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Obtenir clau API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
+		"apertisApiKey": "Clau API d'Apertis",
+		"getApertisApiKey": "Obtenir clau API d'Apertis",
 		"anthropicApiKey": "Clau API d'Anthropic",
 		"getAnthropicApiKey": "Obtenir clau API d'Anthropic",
 		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
@@ -333,6 +383,8 @@
 		"vertex1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
 		"basetenApiKey": "Clau API de Baseten",
 		"getBasetenApiKey": "Obtenir clau API de Baseten",
+		"corethinkApiKey": "Clau API de Corethink",
+		"getCorethinkApiKey": "Obtenir clau API de Corethink",
 		"cerebrasApiKey": "Clau API de Cerebras",
 		"getCerebrasApiKey": "Obtenir clau API de Cerebras",
 		"chutesApiKey": "Clau API de Chutes",
@@ -585,6 +637,7 @@
 		},
 		"verbosity": {
 			"label": "Verbositat de la sortida",
+			"max": "Max",
 			"high": "Alta",
 			"medium": "Mitjana",
 			"low": "Baixa",
@@ -597,21 +650,6 @@
 			"placeholder": "Per defecte: claude",
 			"maxTokensLabel": "Tokens màxims de sortida",
 			"maxTokensDescription": "Nombre màxim de tokens de sortida per a les respostes de Claude Code. El valor per defecte és 8000."
-		},
-		"geminiCli": {
-			"description": "Aquest proveïdor utilitza l'autenticació OAuth de l'eina Gemini CLI i no requereix claus d'API.",
-			"oauthPath": "Ruta de Credencials OAuth (opcional)",
-			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.gemini/oauth_creds.json).",
-			"instructions": "Si encara no t'has autenticat, executa",
-			"instructionsContinued": "al teu terminal primer.",
-			"setupLink": "Instruccions de Configuració de Gemini CLI",
-			"requirementsTitle": "Requisits Importants",
-			"requirement1": "Primer, necessites instal·lar l'eina Gemini CLI",
-			"requirement2": "Després, executa gemini al teu terminal i assegura't d'iniciar sessió amb Google",
-			"requirement3": "Només funciona amb comptes personals de Google (no comptes de Google Workspace)",
-			"requirement4": "No utilitza claus d'API - l'autenticació es gestiona via OAuth",
-			"requirement5": "Requereix que l'eina Gemini CLI estigui instal·lada i autenticada primer",
-			"freeAccess": "Accés gratuït via autenticació OAuth"
 		},
 		"qwenCode": {
 			"oauthPath": "Ruta de Credencials OAuth (opcional)",
@@ -1138,7 +1176,7 @@
 			"description": "Mostra les estadístiques de línies afegides/eliminades a la capçalera de la tasca"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Mostra l'animació al marge quan s'autocompleta",
 			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",

@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Sí",
 		"shareConfirmNo": "No",
 		"options": "Opcions",
-		"configureSetupScript": "Script de setup del worktree"
+		"configureSetupScript": "Script de setup del worktree",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -60,7 +61,16 @@
 		"selectModel": "Selecciona model",
 		"modelTooltip": "Tria quin model d'IA utilitzar per a aquesta sessió",
 		"defaultModel": "Model per defecte",
-		"loadingModels": "Carregant..."
+		"loadingModels": "Carregant...",
+		"selectMode": "Selecciona el mode",
+		"modeTooltip": "Mode: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",
@@ -75,7 +85,11 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir sortida",
 		"collapseOutput": "Replegar sortida",
-		"copyCommand": "Copiar comanda"
+		"copyCommand": "Copiar comanda",
+		"thinking": "Pensant",
+		"thinkingSeconds": "{{count}}s",
+		"approve": "Aprovar",
+		"deny": "Rebutjar"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",

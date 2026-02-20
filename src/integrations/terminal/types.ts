@@ -36,6 +36,7 @@ export interface RooTerminalProcess extends EventEmitter<RooTerminalProcessEvent
 	abort: () => void
 	hasUnretrievedOutput: () => boolean
 	getUnretrievedOutput: () => string
+	trimRetrievedOutput: () => void
 }
 
 export type RooTerminalProcessResultPromise = RooTerminalProcess & Promise<void>

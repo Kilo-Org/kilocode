@@ -88,7 +88,7 @@ async function main() {
 					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
 
 					// Copy tree-sitter files to dist directory
-					copyPaths([["services/continuedev/tree-sitter", "tree-sitter"]], srcDir, distDir)
+					copyPaths([["services/autocomplete/continuedev/tree-sitter", "tree-sitter"]], srcDir, distDir)
 
 					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
 					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")
@@ -147,7 +147,10 @@ async function main() {
 		plugins,
 		entryPoints: ["extension.ts"],
 		outfile: "dist/extension.js",
-		external: ["vscode", "esbuild", "@lancedb/lancedb"],
+		// global-agent must be external because it dynamically patches Node.js http/https modules
+		// which breaks when bundled. It needs access to the actual Node.js module instances.
+		// undici must be bundled because our VSIX is packaged with `--no-dependencies`.
+		external: ["vscode", "esbuild", "global-agent", "@lancedb/lancedb"], // kilocode_change: add @lancedb/lancedb
 	}
 
 	/**

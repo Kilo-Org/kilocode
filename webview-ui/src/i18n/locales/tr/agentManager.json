@@ -16,7 +16,8 @@
 		"shareConfirmYes": "Evet",
 		"shareConfirmNo": "Hayır",
 		"options": "Seçenekler",
-		"configureSetupScript": "Worktree kurulum betiği"
+		"configureSetupScript": "Worktree kurulum betiği",
+		"yoloMode": "YOLO mode (auto-approve)"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -60,7 +61,16 @@
 		"selectModel": "Model seç",
 		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
 		"defaultModel": "Varsayılan model",
-		"loadingModels": "Yükleniyor..."
+		"loadingModels": "Yükleniyor...",
+		"selectMode": "Mod seç",
+		"modeTooltip": "Mod: {{mode}}",
+		"yoloModeToggle": "Toggle YOLO mode",
+		"yoloModeEnabled": "YOLO mode enabled - tools auto-approved",
+		"yoloModeDisabled": "YOLO mode disabled - tools require approval",
+		"yoloModeOn": "YOLO mode - tools auto-approved",
+		"renameSession": "Rename session",
+		"confirmRename": "Confirm rename",
+		"clickToRename": "Click to rename"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",
@@ -75,7 +85,11 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
-		"copyCommand": "Komutu kopyala"
+		"copyCommand": "Komutu kopyala",
+		"thinking": "Düşünüyor",
+		"thinkingSeconds": "{{count}}sn",
+		"approve": "Onayla",
+		"deny": "Reddet"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

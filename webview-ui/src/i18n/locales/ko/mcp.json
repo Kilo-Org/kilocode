@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "도구",
 		"resources": "리소스",
-		"logs": "로그"
+		"logs": "로그",
+		"authDebug": "인증 디버그"
 	},
 	"emptyState": {
 		"noTools": "도구를 찾을 수 없음",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "다시 시도 중...",
-		"retryConnection": "연결 다시 시도"
+		"retryConnection": "연결 다시 시도",
+		"signIn": "로그인",
+		"signingIn": "로그인 중..."
 	},
 	"refreshMCP": "MCP 서버 새로 고침",
 	"execution": {
 		"running": "실행 중",
 		"completed": "완료됨",
 		"error": "오류"
+	},
+	"authDebug": {
+		"title": "OAuth 디버그 정보",
+		"status": "상태",
+		"tokenExpires": "Token 만료 시간",
+		"scopes": "권한 범위",
+		"refreshInfo": "Refresh Token 정보",
+		"hasRefreshToken": "Refresh Token 보유",
+		"canRefresh": "자동 갱신 가능",
+		"tokenIssuedAt": "Token 발급 시간",
+		"nextRefreshAt": "다음 갱신 시간",
+		"lastRefreshAt": "마지막 갱신 시간",
+		"tokenEndpoint": "Token 엔드포인트",
+		"clientId": "클라이언트 ID"
 	}
 }

@@ -1,4 +1,5 @@
 {
+	"back": "Terug naar takenoverzicht",
 	"common": {
 		"save": "Opslaan",
 		"done": "Gereed",
@@ -7,6 +8,10 @@
 		"select": "Selecteren",
 		"add": "Header toevoegen",
 		"remove": "Verwijderen"
+	},
+	"search": {
+		"placeholder": "Instellingen zoeken...",
+		"noResults": "Geen instellingen gevonden"
 	},
 	"header": {
 		"title": "Instellingen",
@@ -37,7 +42,9 @@
 		"experimental": "Experimenteel",
 		"language": "Taal",
 		"about": "Over Kilo Code",
-		"autoPurge": "Auto-opruimen"
+		"autoPurge": "Auto-opruimen",
+		"agentBehaviour": "Agentgedrag",
+		"autocomplete": "Autocomplete"
 	},
 	"about": {
 		"bugReport": {
@@ -57,7 +64,11 @@
 		},
 		"community": "Wil je tips of gewoon even hangen met andere Kilo Code-gebruikers? Sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
 		"contactAndCommunity": "Contact & Gemeenschap",
-		"manageSettings": "Instellingen Beheren"
+		"manageSettings": "Instellingen Beheren",
+		"debugMode": {
+			"label": "Debugmodus inschakelen",
+			"description": "Schakel de debugmodus in om extra knoppen in de taakkoptekst te tonen voor het bekijken van API-gesprekgeschiedenis en UI-berichten als opgemaakte JSON in tijdelijke bestanden."
+		}
 	},
 	"slashCommands": {
 		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
@@ -93,7 +104,11 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
+		"voyageProvider": "Voyage AI",
+		"voyageApiKeyLabel": "Voyage AI API-sleutel",
+		"voyageApiKeyPlaceholder": "Voer je Voyage AI API-sleutel in",
 		"openaiCompatibleProvider": "OpenAI-compatibel",
+		"openaiCompatibleResponsesProvider": "OpenAI-compatibel (Responses)",
 		"openAiKeyLabel": "OpenAI API-sleutel",
 		"openAiKeyPlaceholder": "Voer uw OpenAI API-sleutel in",
 		"openAiCompatibleBaseUrlLabel": "Basis-URL",
@@ -166,7 +181,8 @@
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
 			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0",
-			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist"
+			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist",
+			"voyageApiKeyRequired": "Voyage AI API-sleutel is vereist"
 		},
 		"optional": "optioneel",
 		"advancedConfigLabel": "Geavanceerde configuratie",
@@ -301,10 +317,40 @@
 		"glamaApiKey": "Glama API-sleutel",
 		"getGlamaApiKey": "Glama API-sleutel ophalen",
 		"apiKeyStorageNotice": "API-sleutels worden veilig opgeslagen in de geheime opslag van VSCode",
+		"openAiCodexRateLimits": {
+			"title": "Usage Limits for Codex{{planLabel}}",
+			"loading": "Loading usage limits...",
+			"loadError": "Failed to load usage limits",
+			"retry": "Retry",
+			"usedPercent": "{{percent}}% used",
+			"resetsIn": "Resets in {{time}}",
+			"plan": {
+				"default": "",
+				"withType": " ({{planType}})"
+			},
+			"time": {
+				"now": "Now",
+				"notAvailable": "N/A"
+			},
+			"duration": {
+				"daysHours": "{{days}}d {{hours}}h",
+				"hoursMinutes": "{{hours}}h {{minutes}}m",
+				"minutes": "{{minutes}}m"
+			},
+			"window": {
+				"usage": "Usage",
+				"fiveHour": "5h limit",
+				"oneHour": "1h limit",
+				"daily": "Daily limit",
+				"weekly": "Weekly limit",
+				"days": "{{days}}d limit",
+				"hours": "{{hours}}h limit",
+				"minutes": "{{minutes}}m limit"
+			}
+		},
 		"useCustomBaseUrl": "Aangepaste basis-URL gebruiken",
 		"useReasoning": "Redenering inschakelen",
 		"useHostHeader": "Aangepaste Host-header gebruiken",
-		"useLegacyFormat": "Verouderd OpenAI API-formaat gebruiken",
 		"customHeaders": "Aangepaste headers",
 		"headerName": "Headernaam",
 		"headerValue": "Headerwaarde",
@@ -317,11 +363,15 @@
 			"success": "Modellenlijst succesvol vernieuwd!",
 			"error": "Kan modellenlijst niet vernieuwen. Probeer het opnieuw."
 		},
+		"getZenmuxApiKey": "Zenmux API-sleutel ophalen",
+		"zenmuxTransformsText": "Gebruik Zenmux Middle Out Transform",
 		"getRequestyApiKey": "Requesty API-sleutel ophalen",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Gebruik aangepaste basis-URL",
 		"anthropicApiKey": "Anthropic API-sleutel",
 		"getAnthropicApiKey": "Anthropic API-sleutel ophalen",
+		"apertisApiKey": "Apertis API-sleutel",
+		"getApertisApiKey": "Apertis API-sleutel ophalen",
 		"anthropicUseAuthToken": "Anthropic API-sleutel als Authorization-header doorgeven in plaats van X-Api-Key",
 		"anthropic1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"anthropic1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
@@ -333,6 +383,8 @@
 		"vertex1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-sleutel",
 		"getBasetenApiKey": "Baseten API-sleutel verkrijgen",
+		"corethinkApiKey": "Corethink API-sleutel",
+		"getCorethinkApiKey": "Corethink API-sleutel ophalen",
 		"cerebrasApiKey": "Cerebras API-sleutel",
 		"getCerebrasApiKey": "Cerebras API-sleutel verkrijgen",
 		"chutesApiKey": "Chutes API-sleutel",
@@ -585,6 +637,7 @@
 		},
 		"verbosity": {
 			"label": "Uitvoerbaarheid",
+			"max": "Max",
 			"high": "Hoog",
 			"medium": "Gemiddeld",
 			"low": "Laag",
@@ -597,21 +650,6 @@
 			"placeholder": "Standaard: claude",
 			"maxTokensLabel": "Max Output Tokens",
 			"maxTokensDescription": "Maximaal aantal output-tokens voor Claude Code-reacties. Standaard is 8000."
-		},
-		"geminiCli": {
-			"description": "Deze provider gebruikt OAuth-authenticatie van de Gemini CLI-tool en vereist geen API-sleutels.",
-			"oauthPath": "OAuth-referentiepad (optioneel)",
-			"oauthPathDescription": "Pad naar het OAuth-referentiebestand. Laat leeg om de standaardlocatie te gebruiken (~/.gemini/oauth_creds.json).",
-			"instructions": "Als je nog niet bent geauthenticeerd, voer dan eerst",
-			"instructionsContinued": "uit in je terminal.",
-			"setupLink": "Gemini CLI Setup-instructies",
-			"requirementsTitle": "Belangrijke vereisten",
-			"requirement1": "Eerst moet je de Gemini CLI-tool installeren",
-			"requirement2": "Voer vervolgens gemini uit in je terminal en zorg ervoor dat je inlogt met Google",
-			"requirement3": "Werkt alleen met persoonlijke Google-accounts (geen Google Workspace-accounts)",
-			"requirement4": "Gebruikt geen API-sleutels - authenticatie wordt afgehandeld via OAuth",
-			"requirement5": "Vereist dat de Gemini CLI-tool eerst wordt geïnstalleerd en geauthenticeerd",
-			"freeAccess": "Gratis toegang via OAuth-authenticatie"
 		},
 		"qwenCode": {
 			"oauthPath": "OAuth-referentiepad (optioneel)",
@@ -1143,7 +1181,7 @@
 			"description": "Toon statistieken van toegevoegde/verwijderde regels in de taakkop"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"showGutterAnimation": {
 			"label": "Goot animatie tonen bij automatisch aanvullen",
 			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",

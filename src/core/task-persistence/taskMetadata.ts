@@ -21,6 +21,8 @@ export type TaskMetadataOptions = {
 	globalStoragePath: string
 	workspace: string
 	mode?: string
+	/** Provider profile name for the task (sticky profile feature) */
+	apiConfigName?: string
 	/** Initial status for the task (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
 	/**
@@ -28,6 +30,13 @@ export type TaskMetadataOptions = {
 	 * continue using this protocol even if user settings change.
 	 */
 	toolProtocol?: ToolProtocol
+	// kilocode_change start
+	/**
+	 * cumulative total cost including deleted messages.
+	 * if provided, this overrides the calculated totalCost from messages.
+	 */
+	cumulativeTotalCost?: number
+	// kilocode_change end
 }
 
 export async function taskMetadata({
@@ -39,8 +48,10 @@ export async function taskMetadata({
 	globalStoragePath,
 	workspace,
 	mode,
+	apiConfigName,
 	initialStatus,
 	toolProtocol,
+	cumulativeTotalCost, // kilocode_change
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, id)
 
@@ -111,11 +122,12 @@ export async function taskMetadata({
 		tokensOut: tokenUsage.totalTokensOut,
 		cacheWrites: tokenUsage.totalCacheWrites,
 		cacheReads: tokenUsage.totalCacheReads,
-		totalCost: tokenUsage.totalCost,
+		totalCost: cumulativeTotalCost !== undefined ? cumulativeTotalCost : tokenUsage.totalCost, // kilocode_change
 		size: taskDirSize,
 		workspace,
 		mode,
 		...(toolProtocol && { toolProtocol }),
+		...(typeof apiConfigName === "string" && apiConfigName.length > 0 ? { apiConfigName } : {}),
 		...(initialStatus && { status: initialStatus }),
 	}
 

@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "你想如何开始？",
+		"freeModels": {
+			"title": "免费模型",
+			"description": "立即开始编程"
+		},
+		"premiumModels": {
+			"title": "高级模型",
+			"description": "注册。新用户可获得 5 美元额度"
+		},
+		"byok": {
+			"title": "使用自己的密钥",
+			"description": "高级选项。使用你自己的账户或订阅"
+		}
+	},
 	"welcome": {
 		"greeting": "欢迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
-		"introText2": "它适用于最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多个其他模型。",
+		"introText2": "它适用于最新的 AI 模型，如 Claude Opus 4.5、Gemini 3 Pro、GPT-5.2 以及 450 多个其他模型。",
 		"introText3": "创建免费账户，首次充值即可获得 20 美元奖励额度。",
 		"ctaButton": "开始使用",
 		"manualModeButton": "使用你自己的 API 密钥",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
 		"lowBalance": "你的 Kilo Code 余额不足",
-		"newOrganization": "在工作中使用 Kilo？"
+		"switchToFreeModel": "切换到免费模型"
 	},
 	"pagination": {
 		"previous": "上一页",
@@ -25,6 +40,16 @@
 		"modelUnavailable": "⚠️ 模型 {{model}} 不可用。请切换到其他模型继续使用。",
 		"continueWith": "继续使用 {{model}}",
 		"continue": "继续"
+	},
+	"unauthorizedError": {
+		"title": "你需要登录才能使用 {{modelId}} 模型",
+		"message": "登录或创建账号即可访问 500+ 模型,按成本价使用额度,或使用自己的 API 密钥。",
+		"loginButton": "登录"
+	},
+	"promotionError": {
+		"title": "需要注册才能继续",
+		"message": "免费注册以继续使用并探索 500 多个其他模型。只需 2 分钟，无需信用卡。或稍后再来。",
+		"signUpButton": "注册"
 	},
 	"pricing": {
 		"costUnknown": "费用未知",
@@ -60,7 +85,7 @@
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
 			"logout": "退出 Kilo Code",
-			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
+			"loginForPremiumModels": "登录以访问高级模型和功能",
 			"providerRouting": {
 				"title": "提供商路由",
 				"managedByOrganization": "管理组织级提供商路由",
@@ -218,6 +243,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "新用户？",
+		"tryOneOfThese": "试试这些想法开始使用：",
 		"suggestionText": "<suggestionButton>点击这里</suggestionButton>获取有趣的想法，然后点击 <sendIcon /> 看我施展魔法！",
 		"ideas": {
 			"idea1": "创建一个旋转发光的 3D 球体，能够响应鼠标移动。让应用在浏览器中运行。",
@@ -229,7 +255,7 @@
 			"idea7": "创建一个宁静的交互式星空，跟随鼠标手势移动"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "自动补全",
 		"settings": {
 			"codeEditorSuggestions": "代码编辑器建议",

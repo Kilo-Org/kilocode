@@ -3,4 +3,7 @@ export const X_KILOCODE_ORGANIZATIONID = "X-KiloCode-OrganizationId"
 export const X_KILOCODE_TASKID = "X-KiloCode-TaskId"
 export const X_KILOCODE_PROJECTID = "X-KiloCode-ProjectId"
 export const X_KILOCODE_EDITORNAME = "X-KiloCode-EditorName"
+export const X_KILOCODE_MACHINEID = "X-KiloCode-MachineId"
+export const X_KILOCODE_MODE = "X-KiloCode-Mode"
 export const X_KILOCODE_TESTER = "X-KILOCODE-TESTER"
+export const X_KILOCODE_FEATURE = "X-KiloCode-Feature" // kilocode_change

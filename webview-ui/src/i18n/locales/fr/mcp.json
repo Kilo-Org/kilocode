@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Outils",
 		"resources": "Ressources",
-		"logs": "Journaux"
+		"logs": "Journaux",
+		"authDebug": "Débogage Auth"
 	},
 	"emptyState": {
 		"noTools": "Aucun outil trouvé",
@@ -54,12 +55,28 @@
 	},
 	"serverStatus": {
 		"retrying": "Nouvelle tentative...",
-		"retryConnection": "Réessayer la connexion"
+		"retryConnection": "Réessayer la connexion",
+		"signIn": "Se connecter",
+		"signingIn": "Connexion en cours..."
 	},
 	"refreshMCP": "Rafraîchir les serveurs MCP",
 	"execution": {
 		"running": "En cours",
 		"completed": "Terminé",
 		"error": "Erreur"
+	},
+	"authDebug": {
+		"title": "Informations de débogage OAuth",
+		"status": "Statut",
+		"tokenExpires": "Expiration du token",
+		"scopes": "Portées",
+		"refreshInfo": "Informations du token de rafraîchissement",
+		"hasRefreshToken": "A un token de rafraîchissement",
+		"canRefresh": "Peut se rafraîchir automatiquement",
+		"tokenIssuedAt": "Token émis le",
+		"nextRefreshAt": "Prochain rafraîchissement le",
+		"lastRefreshAt": "Dernier rafraîchissement le",
+		"tokenEndpoint": "Point de terminaison du token",
+		"clientId": "ID client"
 	}
 }

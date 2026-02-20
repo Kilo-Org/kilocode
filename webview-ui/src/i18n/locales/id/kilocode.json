@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Bagaimana Anda ingin memulai?",
+		"freeModels": {
+			"title": "Model gratis",
+			"description": "Mulai coding segera"
+		},
+		"premiumModels": {
+			"title": "Model premium",
+			"description": "Daftar. Pengguna baru mendapatkan kredit $5"
+		},
+		"byok": {
+			"title": "Gunakan kunci sendiri",
+			"description": "Lanjutan. Gunakan akun atau langganan Anda sendiri"
+		}
+	},
 	"welcome": {
 		"greeting": "Selamat datang di Kilo Code!",
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
-		"introText2": "Bekerja dengan model AI terbaru seperti Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, dan lebih dari 450 model lainnya.",
+		"introText2": "Bekerja dengan model AI terbaru seperti Claude Opus 4.5, Gemini 3 Pro, GPT-5.2, dan lebih dari 450 model lainnya.",
 		"introText3": "Buat akun gratis dan dapatkan $20 kredit bonus saat top-up pertama kali.",
 		"ctaButton": "Mulai",
 		"manualModeButton": "Gunakan API key sendiri",
@@ -12,12 +27,22 @@
 	"lowCreditWarning": {
 		"addCredit": "Tambah Kredit",
 		"lowBalance": "Saldo Kilo Code kamu rendah",
-		"newOrganization": "Menggunakan Kilo untuk pekerjaan?"
+		"switchToFreeModel": "Beralih ke Model Gratis"
 	},
 	"pagination": {
 		"previous": "Sebelumnya",
 		"next": "Selanjutnya",
 		"page": "Halaman {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Kamu perlu masuk untuk menggunakan model {{modelId}}",
+		"message": "Masuk atau buat akun untuk mengakses lebih dari 500 model, gunakan kredit dengan harga biaya, atau bawa kunci milikmu sendiri.",
+		"loginButton": "Masuk"
+	},
+	"promotionError": {
+		"title": "Kamu perlu mendaftar untuk melanjutkan",
+		"message": "Daftar gratis untuk melanjutkan dan menjelajahi 500 model lainnya. Hanya 2 menit, tanpa kartu kredit. Atau kembali lagi nanti.",
+		"signUpButton": "Daftar"
 	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
@@ -40,7 +65,7 @@
 			"apiKey": "API Key Kilo Code",
 			"login": "Masuk ke Kilo Code",
 			"logout": "Keluar dari Kilo Code",
-			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
+			"loginForPremiumModels": "Masuk untuk mengakses model dan fitur premium",
 			"providerRouting": {
 				"title": "Perutean Penyedia",
 				"managedByOrganization": "Kelola Perutean Penyedia Tingkat Organisasi",
@@ -204,6 +229,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Baru di sini?",
+		"tryOneOfThese": "Coba salah satu ide ini untuk memulai:",
 		"suggestionText": "<suggestionButton>Klik di sini</suggestionButton> untuk ide yang keren, lalu ketuk <sendIcon /> dan lihat saya melakukan keajaiban!",
 		"ideas": {
 			"idea1": "Buat bola 3D yang berputar dan bersinar yang merespons gerakan mouse. Buat aplikasi berfungsi di browser.",
@@ -215,7 +241,7 @@
 			"idea7": "Buat starfield interaktif yang menenangkan yang bergerak dengan gerakan mouse"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Saran Editor Kode",

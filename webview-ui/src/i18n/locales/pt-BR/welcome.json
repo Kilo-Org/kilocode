@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Para fazer sua mágica, o Kilo Code precisa de uma chave API.",
+	"landing": {
+		"greeting": "Bem-vindo ao Roo Code!",
+		"introduction": "Com uma variedade de Modos integrados e extensíveis, o Roo Code permite que você planeje, arquitete, codifique, depure e aumente sua produtividade como nunca antes.",
+		"accountMention": "Para começar, crie sua conta Roo Code Cloud. Obtenha modelos poderosos, controle na web, análises, suporte e muito mais.",
+		"getStarted": "Criar conta Roo",
+		"noAccount": "ou usar sem conta"
+	},
 	"providerSignup": {
 		"heading": "Escolha seu provedor",
 		"chooseProvider": "Roo precisa de um provedor LLM para funcionar. Escolha um para começar, você pode adicionar mais depois.",

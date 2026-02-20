@@ -1,5 +1,5 @@
 // kilocode_change - new file: Extract code identifiers from visible code for STT context
-import type { VisibleCodeContext } from "../../ghost/types"
+import type { VisibleCodeContext } from "../../autocomplete/types"
 
 export interface CodeGlossary {
 	identifiers: string[] // Unique code identifiers from visible code

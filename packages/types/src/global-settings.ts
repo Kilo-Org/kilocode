@@ -14,7 +14,11 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { fastApplyModelSchema, ghostServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
+import {
+	fastApplyModelSchema,
+	autocompleteServiceSettingsSchema,
+	fastApplyApiProviderSchema,
+} from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -227,7 +231,7 @@ export const globalSettingsSchema = z.object({
 	dismissedNotificationIds: z.string().array().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
-	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	ghostServiceSettings: autocompleteServiceSettingsSchema, // kilocode_change
 	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
@@ -241,6 +245,7 @@ export const globalSettingsSchema = z.object({
 	enterBehavior: z.enum(["send", "newline"]).optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
+	hasCompletedOnboarding: z.boolean().optional(), // kilocode_change: Track if user has completed onboarding flow
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
 	appendSystemPrompt: z.string().optional(), // kilocode_change: Custom text to append to system prompt (CLI only)
@@ -309,6 +314,8 @@ export const SECRET_STATE_KEYS = [
 	"vercelAiGatewayApiKey",
 	"sapAiCoreServiceKey", // kilocode_change
 	"basetenApiKey",
+	"codebaseIndexVoyageApiKey", // kilocode_change
+	"corethinkApiKey",
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
