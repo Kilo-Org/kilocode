@@ -58,7 +58,7 @@ export namespace LearnTracker {
     const now = Date.now()
     const check: Check = {
       ...input.check,
-      id: `chk_${now.toString(36)}`,
+      id: `chk_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       timestamp: now,
     }
     current.checks.push(check)
