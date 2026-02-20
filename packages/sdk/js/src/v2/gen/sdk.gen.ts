@@ -121,6 +121,8 @@ import type {
   SessionGetResponses,
   SessionInitErrors,
   SessionInitResponses,
+  SessionLearnErrors,
+  SessionLearnResponses,
   SessionListResponses,
   SessionMessageErrors,
   SessionMessageResponses,
@@ -1187,6 +1189,36 @@ export class Session extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<SessionTodoResponses, SessionTodoErrors, ThrowOnError>({
       url: "/session/{sessionID}/todo",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get learn state
+   *
+   * Retrieve the learning tracker state for a session, including comprehension checks, difficulty level, and summary.
+   */
+  public learn<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionLearnResponses, SessionLearnErrors, ThrowOnError>({
+      url: "/session/{sessionID}/learn",
       ...options,
       ...params,
     })

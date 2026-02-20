@@ -1765,6 +1765,69 @@
         ]
       }
     },
+    "/session/{sessionID}/learn": {
+      "get": {
+        "operationId": "session.learn",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Session ID"
+          }
+        ],
+        "summary": "Get learn state",
+        "description": "Retrieve the learning tracker state for a session, including comprehension checks, difficulty level, and summary.",
+        "responses": {
+          "200": {
+            "description": "Learn state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.session.learn({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/session/{sessionID}/init": {
       "post": {
         "operationId": "session.init",
@@ -8177,6 +8240,74 @@
         },
         "required": ["type", "properties"]
       },
+      "LearnCheck": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["comprehension", "reasoning", "system", "edge"]
+          },
+          "quality": {
+            "type": "string",
+            "enum": ["correct", "partial", "wrong", "skipped"]
+          },
+          "concepts": {
+            "description": "Concepts or identifiers referenced in this check",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "question", "category", "quality", "concepts", "timestamp"]
+      },
+      "LearnState": {
+        "type": "object",
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearnCheck"
+            }
+          },
+          "level": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "advanced"]
+          }
+        },
+        "required": ["checks", "level"]
+      },
+      "Event.learn.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "learn.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/components/schemas/LearnState"
+              }
+            },
+            "required": ["sessionID", "state"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.tui.prompt.append": {
         "type": "object",
         "properties": {
@@ -8895,6 +9026,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.todo.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.learn.updated"
           },
           {
             "$ref": "#/components/schemas/Event.tui.prompt.append"
