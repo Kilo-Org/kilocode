@@ -4,6 +4,9 @@ import { Bus } from "@/bus"
 import z from "zod"
 import { Storage } from "../storage/storage"
 import { Instance } from "../project/instance"
+import { Log } from "../util/log"
+
+const log = Log.create({ service: "learn-tracker" })
 
 export namespace LearnTracker {
   export const Category = z.enum(["comprehension", "reasoning", "system", "edge"])
@@ -52,15 +55,18 @@ export namespace LearnTracker {
 
   export async function record(input: { sessionID: string; check: Omit<Check, "id" | "timestamp"> }) {
     const current = await get(input.sessionID)
+    const now = Date.now()
     const check: Check = {
       ...input.check,
-      id: `chk_${Date.now().toString(36)}`,
-      timestamp: Date.now(),
+      id: `chk_${now.toString(36)}`,
+      timestamp: now,
     }
     current.checks.push(check)
     current.level = calibrate(current.checks)
     await Storage.write(["learn", input.sessionID], current)
-    await appendAggregate({ sessionID: input.sessionID, check }).catch(() => {})
+    await appendAggregate({ sessionID: input.sessionID, check }).catch((err) => {
+      log.info("aggregate write skipped", { err })
+    })
     Bus.publish(Event.Updated, { sessionID: input.sessionID, state: current })
     return current
   }
