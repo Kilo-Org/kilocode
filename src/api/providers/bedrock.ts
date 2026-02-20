@@ -564,7 +564,11 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 						//However, we want to keep the id of the model to be the ID for the router for
 						//subsequent requests so they are sent back through the router
 						let invokedArnInfo = this.parseArn(streamEvent.trace.promptRouter.invokedModelId)
-						let invokedModel = this.getModelById(invokedArnInfo.modelId as string, invokedArnInfo.modelType)
+						let invokedModel = this.getModelById(
+							invokedArnInfo.modelId as string,
+							invokedArnInfo.modelType,
+							true,
+						)
 						if (invokedModel) {
 							invokedModel.id = modelConfig.id
 							this.costModelConfig = invokedModel

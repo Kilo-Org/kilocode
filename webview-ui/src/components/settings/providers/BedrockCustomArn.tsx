@@ -136,17 +136,19 @@ export const BedrockCustomArn = ({
 					apiConfiguration.awsCustomArn.includes(":inference-profile/")) && (
 					<div className="mt-3 p-3 border border-vscode-panel-border rounded">
 						<div className="flex items-center justify-between mb-2">
-							<div className="text-sm font-medium">Inference Profile Resolution</div>
+							<div className="text-sm font-medium">
+								{t("settings:providers.awsInferenceProfileResolution")}
+							</div>
 							<VSCodeButton appearance="secondary" onClick={handleResolveArn} disabled={isResolving}>
 								{isResolving ? (
 									<span className="flex items-center gap-2">
 										<i className="codicon codicon-loading codicon-modifier-spin" />
-										Resolving...
+										{t("settings:providers.awsInferenceProfileResolving")}
 									</span>
 								) : (
 									<span className="flex items-center gap-2">
 										<i className="codicon codicon-refresh" />
-										Resolve
+										{t("settings:providers.awsInferenceProfileResolve")}
 									</span>
 								)}
 							</VSCodeButton>
@@ -154,14 +156,15 @@ export const BedrockCustomArn = ({
 						{resolvedModelId && (
 							<div className="mt-2 p-2 bg-vscode-textBlockQuote-background rounded">
 								<div className="text-sm">
-									<span className="text-vscode-descriptionForeground">Underlying Model: </span>
+									<span className="text-vscode-descriptionForeground">
+										{t("settings:providers.awsInferenceProfileUnderlyingModel")}
+									</span>
 									<span className="font-mono text-vscode-textPreformat-foreground">
 										{resolvedModelId}
 									</span>
 								</div>
 								<div className="text-xs text-vscode-descriptionForeground mt-1">
-									This model&apos;s capabilities (prompt caching, extended context, etc.) will be used
-									for this ARN.
+									{t("settings:providers.awsInferenceProfileCapabilitiesNote")}
 								</div>
 							</div>
 						)}
@@ -175,8 +178,7 @@ export const BedrockCustomArn = ({
 						)}
 						{!resolvedModelId && !resolutionError && !isResolving && (
 							<div className="text-xs text-vscode-descriptionForeground mt-2">
-								Click &quot;Resolve&quot; to retrieve the underlying model information for this
-								inference profile.
+								{t("settings:providers.awsInferenceProfileClickResolve")}
 							</div>
 						)}
 					</div>
