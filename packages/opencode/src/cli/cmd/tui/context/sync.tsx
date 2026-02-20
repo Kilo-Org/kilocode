@@ -453,12 +453,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         },
         async sync(sessionID: string) {
           if (fullSyncedSessions.has(sessionID)) return
-          const [session, messages, todo, diff, learn] = await Promise.all([
+          const [session, messages, todo, diff] = await Promise.all([
             sdk.client.session.get({ sessionID }, { throwOnError: true }),
             sdk.client.session.messages({ sessionID, limit: 100 }),
             sdk.client.session.todo({ sessionID }),
             sdk.client.session.diff({ sessionID }),
-            sdk.client.session.learn({ sessionID }), // kilocode_change
           ])
           setStore(
             produce((draft) => {
@@ -466,7 +465,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.learn[sessionID] = learn.data ?? { checks: [], level: "intermediate" } // kilocode_change
               draft.message[sessionID] = messages.data!.map((x) => x.info)
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
@@ -475,6 +473,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             }),
           )
           fullSyncedSessions.add(sessionID)
+          // kilocode_change - lazy fetch learn state (non-blocking, most sessions don't use learn mode)
+          sdk.client.session.learn({ sessionID }).then((learn) => {
+            setStore("learn", sessionID, learn.data ?? { checks: [], level: "intermediate" })
+          })
         },
       },
       bootstrap,
