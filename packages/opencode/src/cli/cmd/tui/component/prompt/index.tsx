@@ -1027,6 +1027,19 @@ export function Prompt(props: PromptProps) {
                       <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
                     </text>
                   </Show>
+                  {/* kilocode_change start */}
+                  <Show
+                    when={
+                      local.agent.current().name === "learn" && props.sessionID && sync.data.learn[props.sessionID!]
+                    }
+                  >
+                    <text fg={theme.textMuted}>·</text>
+                    <text fg={highlight()}>
+                      {sync.data.learn[props.sessionID!].level} · {sync.data.learn[props.sessionID!].checks.length}{" "}
+                      checks
+                    </text>
+                  </Show>
+                  {/* kilocode_change end */}
                 </box>
               </Show>
             </box>

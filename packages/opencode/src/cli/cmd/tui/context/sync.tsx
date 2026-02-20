@@ -17,6 +17,7 @@ import type {
   ProviderListResponse,
   ProviderAuthMethod,
   VcsInfo,
+  LearnState, // kilocode_change
 } from "@kilocode/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useSDK } from "@tui/context/sdk"
@@ -57,6 +58,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       todo: {
         [sessionID: string]: Todo[]
       }
+      learn: {
+        // kilocode_change
+        [sessionID: string]: LearnState
+      }
       message: {
         [sessionID: string]: Message[]
       }
@@ -92,6 +97,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       session_status: {},
       session_diff: {},
       todo: {},
+      learn: {}, // kilocode_change
       message: {},
       part: {},
       lsp: [],
@@ -188,6 +194,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "todo.updated":
           setStore("todo", event.properties.sessionID, event.properties.todos)
           break
+
+        // kilocode_change start
+        case "learn.updated":
+          setStore("learn", event.properties.sessionID, event.properties.state)
+          break
+        // kilocode_change end
 
         case "session.diff":
           setStore("session_diff", event.properties.sessionID, event.properties.diff)
