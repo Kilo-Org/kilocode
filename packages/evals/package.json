@@ -48,7 +48,7 @@
 		"@types/node": "20.x",
 		"@types/node-ipc": "^9.2.3",
 		"drizzle-kit": "^0.31.1",
-		"tsx": "^4.19.3",
+		"tsx": "^4.21.0",
 		"vitest": "^3.2.3"
 	}
 }
