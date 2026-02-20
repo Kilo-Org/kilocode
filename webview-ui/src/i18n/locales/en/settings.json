@@ -255,7 +255,7 @@
 			"description": "Automatically select the first suggested answer for follow-up questions after the configured timeout",
 			"timeoutLabel": "Time to wait before auto-selecting the first answer"
 		},
-    "retry": {
+		"retry": {
 			"label": "Retry",
 			"description": "Automatically retry requests when the model fails to provide a response or when a rate limit is reached.",
 			"delayLabel": "Base delay between retries (seconds)",
