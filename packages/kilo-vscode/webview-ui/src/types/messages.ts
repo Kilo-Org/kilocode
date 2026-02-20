@@ -174,20 +174,6 @@ export interface DeviceAuthState {
   error?: string
 }
 
-// Kilo notification types (mirrored from kilo-gateway)
-export interface KilocodeNotificationAction {
-  actionText: string
-  actionURL: string
-}
-
-export interface KilocodeNotification {
-  id: string
-  title: string
-  message: string
-  action?: KilocodeNotificationAction
-  showIn?: string[]
-}
-
 // Profile types from kilo-gateway
 export interface KilocodeBalance {
   balance: number
@@ -528,12 +514,6 @@ export interface NotificationSettingsLoadedMessage {
   }
 }
 
-export interface NotificationsLoadedMessage {
-  type: "notificationsLoaded"
-  notifications: KilocodeNotification[]
-  dismissedIds: string[]
-}
-
 // Agent Manager worktree session metadata
 export interface AgentManagerSessionMetaMessage {
   type: "agentManager.sessionMeta"
@@ -660,7 +640,6 @@ export type ExtensionMessage =
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | NotificationSettingsLoadedMessage
-  | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
@@ -854,15 +833,6 @@ export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
 }
 
-export interface RequestNotificationsMessage {
-  type: "requestNotifications"
-}
-
-export interface DismissNotificationMessage {
-  type: "dismissNotification"
-  notificationId: string
-}
-
 export interface SyncSessionRequest {
   type: "syncSession"
   sessionID: string
@@ -1006,8 +976,6 @@ export type WebviewMessage =
   | ResetAllSettingsRequest
   | SyncSessionRequest
   | CreateWorktreeSessionRequest
-  | RequestNotificationsMessage
-  | DismissNotificationMessage
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
   | PromoteSessionRequest

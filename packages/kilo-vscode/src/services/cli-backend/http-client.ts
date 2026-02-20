@@ -11,7 +11,6 @@ import type {
   McpStatus,
   McpConfig,
   Config,
-  KilocodeNotification,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -324,19 +323,6 @@ export class HttpClient {
       return await this.request<ProfileData>("GET", "/kilo/profile")
     } catch {
       return null
-    }
-  }
-
-  /**
-   * Fetch Kilo notifications for the current user from the kilo-gateway.
-   * Returns an empty array if not logged in or if the request fails.
-   */
-  async getNotifications(): Promise<KilocodeNotification[]> {
-    try {
-      return await this.request<KilocodeNotification[]>("GET", "/kilo/notifications")
-    } catch (err) {
-      console.warn("[Kilo] Failed to fetch notifications:", err)
-      return []
     }
   }
 
