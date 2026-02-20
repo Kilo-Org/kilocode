@@ -755,7 +755,7 @@
 		"tiktoken": "^1.0.21",
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.12",
-		"turndown": "^7.2.0",
+		"turndown": "^7.2.2",
 		"uri-js": "^4.4.1",
 		"undici": "^6.21.3",
 		"uuid": "^11.1.0",
