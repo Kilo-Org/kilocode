@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
@@ -6,7 +6,6 @@ import {
 	type ProviderSettings,
 	type ModelInfo,
 	type BedrockServiceTier,
-	bedrockModels,
 	BEDROCK_REGIONS,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	BEDROCK_GLOBAL_INFERENCE_MODEL_IDS,
@@ -34,17 +33,6 @@ export const Bedrock = ({
 }: BedrockProps) => {
 	const { t } = useAppTranslation()
 	const [awsEndpointSelected, setAwsEndpointSelected] = useState(!!apiConfiguration?.awsBedrockEndpointEnabled)
-
-	// kilocode_change start: Merge resolved model info with selected model info
-	const effectiveModelInfo = useMemo(() => {
-		// If we have a resolved model ID from inference profile, use that model's info
-		if (resolvedModelId && resolvedModelId in bedrockModels) {
-			return bedrockModels[resolvedModelId as keyof typeof bedrockModels]
-		}
-		// Otherwise use the selected model info
-		return selectedModelInfo
-	}, [resolvedModelId, selectedModelInfo])
-	// kilocode_change end
 
 	// Check if the selected model supports 1M context (Claude Sonnet 4 / 4.5)
 	// Use resolved model ID for inference profiles, fallback to apiModelId
@@ -214,8 +202,8 @@ export const Bedrock = ({
 				}}>
 				{t("settings:providers.awsCrossRegion")}
 			</Checkbox>
-			{/* kilocode_change: Use effectiveModelInfo instead of selectedModelInfo */}
-			{effectiveModelInfo?.supportsPromptCache && (
+			{/* kilocode_change: Use selectedModelInfo (tier-priced effectiveModelInfo from ApiOptions) */}
+			{selectedModelInfo?.supportsPromptCache && (
 				<>
 					<Checkbox
 						checked={apiConfiguration?.awsUsePromptCache || false}

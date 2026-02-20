@@ -30,6 +30,8 @@ import {
 	inceptionDefaultModelId,
 	MODEL_SELECTION_ENABLED,
 	bedrockModels, // kilocode_change: Import for resolving inference profile models
+	applyBedrock1MTierPricing, // kilocode_change: Apply 1M context tier pricing
+	BEDROCK_1M_CONTEXT_MODEL_IDS, // kilocode_change: 1M context eligible model IDs
 	// kilocode_change end
 	mistralDefaultModelId,
 	xaiDefaultModelId,
@@ -244,13 +246,20 @@ const ApiOptions = ({
 	const effectiveModelInfo = useMemo(() => {
 		// For Bedrock with resolved model ID, use the resolved model's capabilities
 		if (selectedProvider === "bedrock" && resolvedBedrockModelId) {
-			if (resolvedBedrockModelId in bedrockModels) {
-				return bedrockModels[resolvedBedrockModelId as keyof typeof bedrockModels]
+			const baseInfo = bedrockModels[resolvedBedrockModelId as keyof typeof bedrockModels]
+			if (baseInfo) {
+				if (
+					apiConfiguration?.awsBedrock1MContext &&
+					BEDROCK_1M_CONTEXT_MODEL_IDS.includes(resolvedBedrockModelId as any)
+				) {
+					return applyBedrock1MTierPricing(resolvedBedrockModelId, baseInfo)
+				}
+				return baseInfo
 			}
 		}
 		// Otherwise use the selected model info
 		return selectedModelInfo
-	}, [selectedProvider, resolvedBedrockModelId, selectedModelInfo])
+	}, [selectedProvider, resolvedBedrockModelId, selectedModelInfo, apiConfiguration?.awsBedrock1MContext])
 	// kilocode_change end
 
 	// kilocode_change start: queryKey, chutesApiKey, gemini
