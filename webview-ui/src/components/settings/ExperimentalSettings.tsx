@@ -83,8 +83,6 @@ export const ExperimentalSettings = ({
 					.filter((config) => config[0] !== "MARKETPLACE") // kilocode_change: we have our own market place, filter this out for now
 					// Hide MULTIPLE_NATIVE_TOOL_CALLS - feature is on hold
 					.filter(([key]) => key !== "MULTIPLE_NATIVE_TOOL_CALLS")
-					// Hide WORKFLOW_DISCOVERY - use AUTO_EXECUTE_WORKFLOW instead // kilocode_change
-					.filter(([key]) => key !== "WORKFLOW_DISCOVERY") // kilocode_change
 					.map((config) => {
 						// Use the same translation key pattern as ExperimentalFeature
 						const experimentKey = config[0]
