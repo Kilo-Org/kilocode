@@ -54,8 +54,23 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     }
   })
 
+  // Track which cloud session ID we're importing so we can navigate on completion
+  const [pendingImport, setPendingImport] = createSignal<string | null>(null)
+
+  // Navigate to the imported session once it arrives
+  createEffect(() => {
+    const pending = pendingImport()
+    if (!pending) return
+    // importingCloudSessionId goes null when import finishes (success or failure)
+    if (session.importingCloudSessionId()) return
+    const id = session.currentSessionID()
+    setPendingImport(null)
+    if (id) props.onSelectSession(id)
+  })
+
   const handleSelect = (s: CloudSession | undefined) => {
     if (!s || session.importingCloudSessionId()) return
+    setPendingImport(s.session_id)
     session.importCloudSession(s.session_id)
   }
 
@@ -97,11 +112,13 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
             const importing = () => session.importingCloudSessionId() === s.session_id
             return (
               <>
-                <Show when={importing()}>
+                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
+                <Show
+                  when={importing()}
+                  fallback={<span data-slot="list-item-description">{formatRelativeDate(s.updated_at)}</span>}
+                >
                   <Spinner />
                 </Show>
-                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
-                <span data-slot="list-item-description">{formatRelativeDate(s.updated_at)}</span>
               </>
             )
           }}
