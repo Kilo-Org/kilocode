@@ -732,7 +732,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    const result = await this.httpClient.listCloudSessions(cursor)
+    const result = await this.httpClient.listCloudSessions(cursor, 50)
     console.log("[Kilo New] KiloProvider: Cloud sessions result", { result })
     if (!result) {
       this.postMessage({ type: "cloudSessionsLoaded", sessions: [], nextCursor: null })

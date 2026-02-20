@@ -737,11 +737,12 @@
   opacity: 0.7;
 }
 
-/* Cloud Session List */
-.session-list[data-component="cloud-session-list"] {
+/* Session List (shared by local and cloud) */
+.session-list {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .session-list-loading,

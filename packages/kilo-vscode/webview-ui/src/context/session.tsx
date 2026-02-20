@@ -393,7 +393,7 @@ export const SessionProvider: ParentComponent = (props) => {
           break
 
         case "cloudSessionsLoaded":
-          setCloudSessions(message.sessions)
+          setCloudSessions((prev) => [...prev, ...message.sessions])
           setCloudSessionsNextCursor(message.nextCursor)
           setCloudSessionsLoaded(true)
           break
