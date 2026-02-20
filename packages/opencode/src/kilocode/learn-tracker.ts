@@ -3,6 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import z from "zod"
 import { Storage } from "../storage/storage"
+import { Instance } from "../project/instance"
 
 export namespace LearnTracker {
   export const Category = z.enum(["comprehension", "reasoning", "system", "edge"])
@@ -59,6 +60,7 @@ export namespace LearnTracker {
     current.checks.push(check)
     current.level = calibrate(current.checks)
     await Storage.write(["learn", input.sessionID], current)
+    await appendAggregate({ sessionID: input.sessionID, check }).catch(() => {})
     Bus.publish(Event.Updated, { sessionID: input.sessionID, state: current })
     return current
   }
@@ -91,5 +93,52 @@ export namespace LearnTracker {
       total: state.checks.length,
       level: state.level,
     }
+  }
+
+  // --- Cross-session aggregate ---
+
+  export const AggregateCheck = Check.extend({
+    sessionID: z.string(),
+  }).meta({ ref: "LearnAggregateCheck" })
+  export type AggregateCheck = z.infer<typeof AggregateCheck>
+
+  export const Aggregate = z
+    .object({
+      checks: z.array(AggregateCheck),
+      level: z.enum(["beginner", "intermediate", "advanced"]),
+      sessions: z.number().describe("Number of sessions with learn data"),
+    })
+    .meta({ ref: "LearnAggregate" })
+  export type Aggregate = z.infer<typeof Aggregate>
+
+  function emptyAggregate(): Aggregate {
+    return { checks: [], level: "intermediate", sessions: 0 }
+  }
+
+  function aggregateKey() {
+    return ["learn_aggregate", Instance.project.id]
+  }
+
+  export async function getAggregate(): Promise<Aggregate> {
+    return Storage.read<Aggregate>(aggregateKey())
+      .then((x) => x || emptyAggregate())
+      .catch(() => emptyAggregate())
+  }
+
+  export async function appendAggregate(input: { sessionID: string; check: Check }) {
+    const current = await getAggregate()
+    const entry: AggregateCheck = { ...input.check, sessionID: input.sessionID }
+    current.checks.push(entry)
+    current.level = calibrate(current.checks)
+    const ids = new Set(current.checks.map((c) => c.sessionID))
+    current.sessions = ids.size
+    await Storage.write(aggregateKey(), current)
+    return current
+  }
+
+  export async function clearAggregate() {
+    const state = emptyAggregate()
+    await Storage.write(aggregateKey(), state)
+    return state
   }
 }
