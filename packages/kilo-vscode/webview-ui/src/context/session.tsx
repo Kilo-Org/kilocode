@@ -873,6 +873,11 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function loadCloudSessions(cursor?: string) {
+    if (!cursor) {
+      setCloudSessions([])
+      setCloudSessionsNextCursor(null)
+      setCloudSessionsLoaded(false)
+    }
     vscode.postMessage({ type: "loadCloudSessions", cursor })
   }
 
