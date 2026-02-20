@@ -62,6 +62,8 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				return
 			}
 
+			// kilocode_change: Fix workflow display bug - send complete workflow data BEFORE approval flow
+			// This ensures the webview transitions from partial to complete state correctly
 			const toolMessage = JSON.stringify({
 				tool: "runSlashCommand",
 				command: commandName,
@@ -71,19 +73,16 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				mode: workflow.mode,
 			})
 
-			// kilocode_change: Fix workflow display bug - always send tool message to webview even when auto-execute is enabled
-			// This ensures that user can see what workflow is being executed
+			// Send complete tool message to webview BEFORE approval flow
+			// This fixes the display bug where SlashCommandItem was stuck on partial=true
+			await task.ask("tool", toolMessage, false).catch(() => {})
+
 			// If auto-execute is disabled, wait for approval
-			// If auto-execute is enabled, still send message but don't wait for approval
 			if (!isAutoExecuteEnabled) {
 				const didApprove = await askApproval("tool", toolMessage)
 				if (!didApprove) {
 					return
 				}
-			} else {
-				// kilocode_change: When auto-execute is enabled, send message to webview without waiting for approval
-				// This ensures that workflow tool UI is displayed even when auto-executing
-				await task.ask("tool", toolMessage, false).catch(() => {})
 			}
 			// kilocode_change end
 
