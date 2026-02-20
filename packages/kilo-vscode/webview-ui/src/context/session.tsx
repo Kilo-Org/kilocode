@@ -115,6 +115,7 @@ interface SessionContextValue {
   // Cloud sessions
   cloudSessions: Accessor<CloudSession[]>
   cloudSessionsNextCursor: Accessor<string | null>
+  cloudSessionsLoaded: Accessor<boolean>
   importingCloudSessionId: Accessor<string | null>
   loadCloudSessions: (cursor?: string) => void
   importCloudSession: (sessionId: string) => void
@@ -186,6 +187,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Cloud sessions state
   const [cloudSessions, setCloudSessions] = createSignal<CloudSession[]>([])
   const [cloudSessionsNextCursor, setCloudSessionsNextCursor] = createSignal<string | null>(null)
+  const [cloudSessionsLoaded, setCloudSessionsLoaded] = createSignal(false)
   const [importingCloudSessionId, setImportingCloudSessionId] = createSignal<string | null>(null)
 
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
@@ -393,6 +395,7 @@ export const SessionProvider: ParentComponent = (props) => {
         case "cloudSessionsLoaded":
           setCloudSessions(message.sessions)
           setCloudSessionsNextCursor(message.nextCursor)
+          setCloudSessionsLoaded(true)
           break
 
         case "cloudSessionImported":
@@ -969,6 +972,7 @@ export const SessionProvider: ParentComponent = (props) => {
     syncSession,
     cloudSessions,
     cloudSessionsNextCursor,
+    cloudSessionsLoaded,
     importingCloudSessionId,
     loadCloudSessions,
     importCloudSession,

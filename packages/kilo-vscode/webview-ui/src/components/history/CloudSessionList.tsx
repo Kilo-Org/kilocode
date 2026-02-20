@@ -4,7 +4,7 @@
  * Clicking a session imports it to local storage and opens it.
  */
 
-import { Component, For, Show, createSignal, onMount } from "solid-js"
+import { Component, For, Show, createSignal, createEffect, onMount } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -54,6 +54,13 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     session.loadCloudSessions()
   })
 
+  // Clear loading once cloud sessions response arrives
+  createEffect(() => {
+    if (session.cloudSessionsLoaded()) {
+      setLoading(false)
+    }
+  })
+
   const groups = () => groupByDate(session.cloudSessions())
 
   const handleSelect = (s: CloudSession) => {
@@ -65,15 +72,6 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     const cursor = session.cloudSessionsNextCursor()
     if (!cursor) return
     session.loadCloudSessions(cursor)
-  }
-
-  // Clear loading once sessions arrive
-  const cloudSessions = () => {
-    const list = session.cloudSessions()
-    if (loading() && (list.length > 0 || session.cloudSessionsNextCursor() === null)) {
-      setLoading(false)
-    }
-    return list
   }
 
   const isLoggedIn = () => server.profileData() !== null
@@ -90,12 +88,12 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
           <Spinner />
         </div>
       </Show>
-      <Show when={isLoggedIn() && !loading() && cloudSessions().length === 0}>
+      <Show when={isLoggedIn() && !loading() && session.cloudSessions().length === 0}>
         <div class="session-list-empty">
           <span>{language.t("session.cloud.empty")}</span>
         </div>
       </Show>
-      <Show when={isLoggedIn() && !loading() && cloudSessions().length > 0}>
+      <Show when={isLoggedIn() && !loading() && session.cloudSessions().length > 0}>
         <For each={groups()}>
           {(group) => (
             <div class="session-group">
