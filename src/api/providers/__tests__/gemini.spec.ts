@@ -181,6 +181,8 @@ describe("GeminiHandler", () => {
 			const modelInfo = handler.getModel()
 			expect(modelInfo.id).toBe(GEMINI_MODEL_NAME)
 			expect(modelInfo.info).toBeDefined()
+			expect(modelInfo.info.supportsNativeTools).toBe(true) // kilocode_change
+			expect(modelInfo.info.defaultToolProtocol).toBe("native") // kilocode_change
 		})
 
 		it("should return default model if invalid model specified", () => {
@@ -191,6 +193,59 @@ describe("GeminiHandler", () => {
 			const modelInfo = invalidHandler.getModel()
 			expect(modelInfo.id).toBe(geminiDefaultModelId) // Default model
 		})
+
+		// kilocode_change start
+		it("should preserve customtools model alias after dynamic model loading", async () => {
+			const customToolsModelId = "gemini-3.1-pro-preview-customtools"
+			getGeminiModelsMock.mockResolvedValueOnce({
+				"gemini-3.1-pro-preview": {
+					maxTokens: 65_536,
+					contextWindow: 1_048_576,
+					supportsNativeTools: true,
+					defaultToolProtocol: "native",
+					supportsPromptCache: true,
+				},
+				[customToolsModelId]: {
+					maxTokens: 65_536,
+					contextWindow: 1_048_576,
+					supportsNativeTools: true,
+					defaultToolProtocol: "native",
+					supportsPromptCache: true,
+				},
+			})
+
+			const customToolsHandler = new GeminiHandler({
+				apiModelId: customToolsModelId,
+				geminiApiKey: "test-key",
+			})
+
+			const mockGenerateContentStream = vitest.fn().mockResolvedValue({
+				[Symbol.asyncIterator]: async function* () {
+					yield { text: "ok" }
+					yield { usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 } }
+				},
+			})
+
+			customToolsHandler["client"] = {
+				models: {
+					generateContentStream: mockGenerateContentStream,
+					generateContent: vitest.fn(),
+					getGenerativeModel: vitest.fn(),
+				},
+			} as any
+
+			const stream = customToolsHandler.createMessage("sys", [{ role: "user", content: "hello" }])
+			for await (const _chunk of stream) {
+				// Drain stream
+			}
+
+			expect(mockGenerateContentStream).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: customToolsModelId,
+				}),
+			)
+		})
+		// kilocode_change end
 	})
 
 	describe("calculateCost", () => {
