@@ -104,6 +104,14 @@ export interface SessionInfo {
   updatedAt: string
 }
 
+// Cloud session from Kilo cloud
+export interface CloudSession {
+  session_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Permission request
 export interface PermissionRequest {
   id: string
@@ -534,6 +542,22 @@ export interface NotificationsLoadedMessage {
   dismissedIds: string[]
 }
 
+export interface CloudSessionsLoadedMessage {
+  type: "cloudSessionsLoaded"
+  sessions: CloudSession[]
+  nextCursor: string | null
+}
+
+export interface CloudSessionImportedMessage {
+  type: "cloudSessionImported"
+  session: SessionInfo
+}
+
+export interface CloudSessionImportFailedMessage {
+  type: "cloudSessionImportFailed"
+  error: string
+}
+
 // Agent Manager worktree session metadata
 export interface AgentManagerSessionMetaMessage {
   type: "agentManager.sessionMeta"
@@ -672,6 +696,9 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | CloudSessionsLoadedMessage
+  | CloudSessionImportedMessage
+  | CloudSessionImportFailedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -969,6 +996,16 @@ export interface RequestVariantsMessage {
   type: "requestVariants"
 }
 
+export interface LoadCloudSessionsRequest {
+  type: "loadCloudSessions"
+  cursor?: string
+}
+
+export interface ImportCloudSessionRequest {
+  type: "importCloudSession"
+  sessionId: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1023,6 +1060,8 @@ export type WebviewMessage =
   | SetSessionsCollapsedRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | LoadCloudSessionsRequest
+  | ImportCloudSessionRequest
 
 // ============================================
 // VS Code API type

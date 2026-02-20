@@ -23,6 +23,7 @@ import { useProvider } from "./provider"
 import { useLanguage } from "./language"
 import type {
   SessionInfo,
+  CloudSession,
   Message,
   Part,
   PartDelta,
@@ -111,6 +112,13 @@ interface SessionContextValue {
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
 
+  // Cloud sessions
+  cloudSessions: Accessor<CloudSession[]>
+  cloudSessionsNextCursor: Accessor<string | null>
+  importingCloudSessionId: Accessor<string | null>
+  loadCloudSessions: (cursor?: string) => void
+  importCloudSession: (sessionId: string) => void
+
   // Actions
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
@@ -174,6 +182,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending agent selection for before a session exists (mirrors pendingModelSelection)
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
+
+  // Cloud sessions state
+  const [cloudSessions, setCloudSessions] = createSignal<CloudSession[]>([])
+  const [cloudSessionsNextCursor, setCloudSessionsNextCursor] = createSignal<string | null>(null)
+  const [importingCloudSessionId, setImportingCloudSessionId] = createSignal<string | null>(null)
 
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
@@ -375,6 +388,21 @@ export const SessionProvider: ParentComponent = (props) => {
           // Only clear loading if the error is for the current session
           // (or has no sessionID for backwards compatibility)
           if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
+          break
+
+        case "cloudSessionsLoaded":
+          setCloudSessions(message.sessions)
+          setCloudSessionsNextCursor(message.nextCursor)
+          break
+
+        case "cloudSessionImported":
+          setImportingCloudSessionId(null)
+          handleSessionCreated(message.session)
+          break
+
+        case "cloudSessionImportFailed":
+          setImportingCloudSessionId(null)
+          console.error("[Kilo New] Cloud session import failed:", message.error)
           break
       }
     })
@@ -841,6 +869,15 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "syncSession", sessionID })
   }
 
+  function loadCloudSessions(cursor?: string) {
+    vscode.postMessage({ type: "loadCloudSessions", cursor })
+  }
+
+  function importCloudSession(sessionId: string) {
+    setImportingCloudSessionId(sessionId)
+    vscode.postMessage({ type: "importCloudSession", sessionId })
+  }
+
   const todos = () => {
     const id = currentSessionID()
     return id ? store.todos[id] || [] : []
@@ -930,6 +967,11 @@ export const SessionProvider: ParentComponent = (props) => {
     deleteSession,
     renameSession,
     syncSession,
+    cloudSessions,
+    cloudSessionsNextCursor,
+    importingCloudSessionId,
+    loadCloudSessions,
+    importCloudSession,
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>

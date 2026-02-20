@@ -78,7 +78,89 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     currentOrgId: z.string().nullable(),
   })
 
+  const CloudSession = z.object({
+    session_id: z.string(),
+    title: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string(),
+  })
+
+  const CloudSessionsResponse = z.object({
+    sessions: z.array(CloudSession),
+    nextCursor: z.string().nullable(),
+  })
+
   return new Hono()
+    .get(
+      "/cloud/sessions",
+      describeRoute({
+        summary: "List cloud sessions",
+        description: "Fetch the list of sessions synced to the Kilo cloud for the current user",
+        operationId: "kilo.cloud.sessions.list",
+        responses: {
+          200: {
+            description: "Cloud sessions list",
+            content: {
+              "application/json": {
+                schema: resolver(CloudSessionsResponse),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      async (c: any) => {
+        const auth = await Auth.get("kilo")
+        if (!auth) return c.json({ error: "Not authenticated with Kilo" }, 401)
+
+        const token =
+          auth.type === "api"
+            ? auth.key
+            : auth.type === "oauth"
+              ? auth.access
+              : auth.type === "wellknown"
+                ? auth.token
+                : undefined
+        if (!token) return c.json({ error: "No valid token found" }, 401)
+
+        const cursor = c.req.query("cursor")
+        const limit = c.req.query("limit")
+
+        const input: Record<string, unknown> = {}
+        if (cursor) input.cursor = cursor
+        if (limit) input.limit = Number(limit)
+
+        const params = new URLSearchParams({
+          batch: "1",
+          input: JSON.stringify({ "0": input }),
+        })
+
+        const response = await fetch(`${KILO_API_BASE}/api/trpc/cliSessionsV2.list?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          const text = await response.text()
+          return c.json({ error: `Cloud sessions fetch failed: ${response.status} ${text}` }, response.status as any)
+        }
+
+        const json = await response.json()
+        const result = Array.isArray(json) ? json[0]?.result?.data : null
+        if (!result) return c.json({ sessions: [], nextCursor: null })
+
+        const sessions = (result.cliSessions ?? []).map((s: any) => ({
+          session_id: s.session_id,
+          title: s.title ?? null,
+          created_at: typeof s.created_at === "string" ? s.created_at : new Date(s.created_at).toISOString(),
+          updated_at: typeof s.updated_at === "string" ? s.updated_at : new Date(s.updated_at).toISOString(),
+        }))
+
+        return c.json({ sessions, nextCursor: result.nextCursor ?? null })
+      },
+    )
     .get(
       "/profile",
       describeRoute({

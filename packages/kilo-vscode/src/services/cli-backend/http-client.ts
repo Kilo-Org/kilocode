@@ -12,6 +12,7 @@ import type {
   McpConfig,
   Config,
   KilocodeNotification,
+  CloudSessionsResponse,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -314,6 +315,34 @@ export class HttpClient {
   // ============================================
   // Profile Methods
   // ============================================
+
+  /**
+   * List cloud-synced sessions for the current user.
+   * Returns null if not logged in or if the request fails.
+   */
+  async listCloudSessions(cursor?: string, limit?: number): Promise<CloudSessionsResponse | null> {
+    const params = new URLSearchParams()
+    if (cursor) params.set("cursor", cursor)
+    if (limit !== undefined) params.set("limit", String(limit))
+    const query = params.toString()
+    try {
+      return await this.request<CloudSessionsResponse>("GET", `/kilo/cloud/sessions${query ? `?${query}` : ""}`)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Import a cloud session by session ID into local storage.
+   * Returns the imported SessionInfo, or null on failure.
+   */
+  async importCloudSession(sessionId: string): Promise<SessionInfo | null> {
+    try {
+      return await this.request<SessionInfo>("POST", "/session/import-cloud", { sessionId })
+    } catch {
+      return null
+    }
+  }
 
   /**
    * Get the current user's profile from the kilo-gateway.

@@ -18,12 +18,13 @@ import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import SessionList from "./components/history/SessionList"
+import CloudSessionList from "./components/history/CloudSessionList"
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings"])
+type ViewType = "newTask" | "marketplace" | "history" | "cloudSessions" | "profile" | "settings"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudSessions", "profile", "settings"])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -117,6 +118,9 @@ const AppContent: Component = () => {
       case "marketplaceButtonClicked":
         setCurrentView("marketplace")
         break
+      case "cloudSessionsButtonClicked":
+        setCurrentView("cloudSessions")
+        break
       case "historyButtonClicked":
         setCurrentView("history")
         break
@@ -161,6 +165,9 @@ const AppContent: Component = () => {
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />
+        </Match>
+        <Match when={currentView() === "cloudSessions"}>
+          <CloudSessionList onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "profile"}>
           <ProfileView

@@ -28,6 +28,8 @@ export type {
   Config,
   KilocodeNotification,
   KilocodeNotificationAction,
+  CloudSession,
+  CloudSessionsResponse,
 } from "./types"
 
 export { ServerManager } from "./server-manager"

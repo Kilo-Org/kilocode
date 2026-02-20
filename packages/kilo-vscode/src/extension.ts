@@ -58,6 +58,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", () => {
       provider.postMessage({ type: "action", action: "marketplaceButtonClicked" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.cloudSessionsButtonClicked", () => {
+      provider.postMessage({ type: "action", action: "cloudSessionsButtonClicked" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       provider.postMessage({ type: "action", action: "historyButtonClicked" })
     }),

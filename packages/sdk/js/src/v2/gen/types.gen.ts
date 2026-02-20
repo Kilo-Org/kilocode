@@ -3892,6 +3892,39 @@ export type PermissionRespondResponses = {
 
 export type PermissionRespondResponse = PermissionRespondResponses[keyof PermissionRespondResponses]
 
+export type SessionImportCloudData = {
+  body?: {
+    sessionId: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/session/import-cloud"
+}
+
+export type SessionImportCloudErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionImportCloudError = SessionImportCloudErrors[keyof SessionImportCloudErrors]
+
+export type SessionImportCloudResponses = {
+  /**
+   * Imported session info
+   */
+  200: Session
+}
+
+export type SessionImportCloudResponse = SessionImportCloudResponses[keyof SessionImportCloudResponses]
+
 export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
@@ -4299,6 +4332,41 @@ export type CommitMessageGenerateResponses = {
 }
 
 export type CommitMessageGenerateResponse = CommitMessageGenerateResponses[keyof CommitMessageGenerateResponses]
+
+export type KiloCloudSessionsListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/kilo/cloud/sessions"
+}
+
+export type KiloCloudSessionsListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloCloudSessionsListError = KiloCloudSessionsListErrors[keyof KiloCloudSessionsListErrors]
+
+export type KiloCloudSessionsListResponses = {
+  /**
+   * Cloud sessions list
+   */
+  200: {
+    sessions: Array<{
+      session_id: string
+      title: string | null
+      created_at: string
+      updated_at: string
+    }>
+    nextCursor: string | null
+  }
+}
+
+export type KiloCloudSessionsListResponse = KiloCloudSessionsListResponses[keyof KiloCloudSessionsListResponses]
 
 export type KiloProfileData = {
   body?: never

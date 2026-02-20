@@ -12,6 +12,14 @@ import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { Message } from "./Message"
 
+const SESSION_ID_RE = /\bses_[A-Za-z0-9]{26}\b/
+
+function parseSessionId(input: string): string | null {
+  const trimmed = input.trim()
+  const match = trimmed.match(SESSION_ID_RE)
+  return match ? match[0] : null
+}
+
 /** Inline working/retry indicator shown below messages while the agent is active. */
 const WorkingIndicator: Component = () => {
   const session = useSession()
@@ -67,12 +75,17 @@ const KiloLogo = (): JSX.Element => {
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
+  onShowCloudSessions?: () => void
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+
+  const [showImportInput, setShowImportInput] = createSignal(false)
+  const [importValue, setImportValue] = createSignal("")
+  const [importError, setImportError] = createSignal("")
 
   let containerRef: HTMLDivElement | undefined
   const [isAtBottom, setIsAtBottom] = createSignal(true)
@@ -145,6 +158,24 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   })
 
+  const handleImportSubmit = () => {
+    const id = parseSessionId(importValue())
+    if (!id) {
+      setImportError(language.t("session.cloud.importInvalidId"))
+      return
+    }
+    setImportError("")
+    session.importCloudSession(id)
+    setShowImportInput(false)
+    setImportValue("")
+  }
+
+  const handleImportCancel = () => {
+    setShowImportInput(false)
+    setImportValue("")
+    setImportError("")
+  }
+
   const messages = () => session.messages()
   const isEmpty = () => messages().length === 0 && !session.loading()
 
@@ -181,6 +212,46 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 </For>
               </div>
             </Show>
+            <div class="import-from-cloud">
+              <Show when={!showImportInput()}>
+                <button class="import-from-cloud-trigger" onClick={() => setShowImportInput(true)}>
+                  {language.t("session.cloud.importFromCloud")}
+                </button>
+              </Show>
+              <Show when={showImportInput()}>
+                <div class="import-from-cloud-input-row">
+                  <input
+                    class="import-from-cloud-input"
+                    type="text"
+                    placeholder={language.t("session.cloud.importPlaceholder")}
+                    value={importValue()}
+                    onInput={(e) => {
+                      setImportValue(e.currentTarget.value)
+                      setImportError("")
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleImportSubmit()
+                      if (e.key === "Escape") handleImportCancel()
+                    }}
+                    autofocus
+                  />
+                  <Show when={session.importingCloudSessionId()}>
+                    <Spinner />
+                  </Show>
+                  <Show when={!session.importingCloudSessionId()}>
+                    <button class="import-from-cloud-ok" onClick={handleImportSubmit}>
+                      OK
+                    </button>
+                    <button class="import-from-cloud-cancel" onClick={handleImportCancel}>
+                      ✕
+                    </button>
+                  </Show>
+                </div>
+                <Show when={importError()}>
+                  <span class="import-from-cloud-error">{importError()}</span>
+                </Show>
+              </Show>
+            </div>
           </div>
         </Show>
         <Show when={!session.loading()}>

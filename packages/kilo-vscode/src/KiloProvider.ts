@@ -446,6 +446,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.extensionContext?.globalState.update("variantSelections", stored)
           break
         }
+        case "loadCloudSessions":
+          await this.handleLoadCloudSessions(message.cursor)
+          break
+        case "importCloudSession":
+          if (typeof message.sessionId === "string") {
+            await this.handleImportCloudSession(message.sessionId)
+          }
+          break
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
@@ -712,6 +720,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (err) {
       console.error("[Kilo New] KiloProvider: Failed to sync child session:", err)
     }
+  }
+
+  /**
+   * Handle loading cloud sessions list.
+   */
+  private async handleLoadCloudSessions(cursor?: string): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    const result = await this.httpClient.listCloudSessions(cursor)
+    if (!result) {
+      this.postMessage({ type: "cloudSessionsLoaded", sessions: [], nextCursor: null })
+      return
+    }
+
+    this.postMessage({
+      type: "cloudSessionsLoaded",
+      sessions: result.sessions,
+      nextCursor: result.nextCursor,
+    })
+  }
+
+  /**
+   * Import a cloud session into local storage, then notify the webview.
+   */
+  private async handleImportCloudSession(sessionId: string): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "cloudSessionImportFailed", error: "Not connected to CLI backend" })
+      return
+    }
+
+    const session = await this.httpClient.importCloudSession(sessionId)
+    if (!session) {
+      this.postMessage({ type: "cloudSessionImportFailed", error: "Failed to import session from cloud" })
+      return
+    }
+
+    this.postMessage({ type: "cloudSessionImported", session: this.sessionToWebview(session) })
   }
 
   /**

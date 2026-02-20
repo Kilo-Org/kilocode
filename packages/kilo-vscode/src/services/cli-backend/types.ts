@@ -213,6 +213,19 @@ export interface ProfileData {
   currentOrgId: string | null
 }
 
+// Cloud session from Kilo cloud (ingest.kilosessions.ai)
+export interface CloudSession {
+  session_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CloudSessionsResponse {
+  sessions: CloudSession[]
+  nextCursor: string | null
+}
+
 // MCP server status — discriminated union returned by the backend
 export type McpStatus =
   | { status: "connected" }

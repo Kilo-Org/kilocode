@@ -727,6 +727,13 @@ export const dict = {
   "session.recent": "Recent",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
+  "session.cloud.loginRequired": "Sign in to view cloud sessions.",
+  "session.cloud.empty": "No cloud sessions found.",
+  "session.cloud.loadMore": "Load more",
+  "session.cloud.importFromCloud": "Import from Cloud",
+  "session.cloud.importPlaceholder": "Session ID or URL",
+  "session.cloud.importInvalidId": "Invalid session ID or URL",
+  "session.cloud.importFailed": "Failed to import session",
 
   "workspace.new": "New workspace",
   "workspace.type.local": "local",

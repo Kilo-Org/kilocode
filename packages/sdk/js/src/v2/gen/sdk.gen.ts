@@ -43,6 +43,8 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
+  KiloCloudSessionsListErrors,
+  KiloCloudSessionsListResponses,
   KiloFimErrors,
   KiloFimResponses,
   KiloNotificationsErrors,
@@ -121,6 +123,8 @@ import type {
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionImportCloudErrors,
+  SessionImportCloudResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListResponses,
@@ -1783,6 +1787,41 @@ export class Session extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Import session from cloud
+   *
+   * Download a cloud-synced session and write it to local storage.
+   */
+  public importCloud<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      sessionId?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "sessionId" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionImportCloudResponses, SessionImportCloudErrors, ThrowOnError>({
+      url: "/session/import-cloud",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class Part extends HeyApiClient {
@@ -2264,6 +2303,38 @@ export class CommitMessage extends HeyApiClient {
   }
 }
 
+export class Sessions extends HeyApiClient {
+  /**
+   * List cloud sessions
+   *
+   * Fetch the list of sessions synced to the Kilo cloud for the current user
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<
+      KiloCloudSessionsListResponses,
+      KiloCloudSessionsListErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/cloud/sessions",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Cloud extends HeyApiClient {
+  private _sessions?: Sessions
+  get sessions(): Sessions {
+    return (this._sessions ??= new Sessions({ client: this.client }))
+  }
+}
+
 export class Organization extends HeyApiClient {
   /**
    * Update Kilo Gateway organization
@@ -2383,6 +2454,11 @@ export class Kilo extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+
+  private _cloud?: Cloud
+  get cloud(): Cloud {
+    return (this._cloud ??= new Cloud({ client: this.client }))
   }
 
   private _organization?: Organization
