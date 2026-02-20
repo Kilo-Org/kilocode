@@ -154,6 +154,11 @@
 				"icon": "$(history)"
 			},
 			{
+				"command": "kilo-code.benchButtonClicked",
+				"title": "Bench",
+				"icon": "$(graph)"
+			},
+			{
 				"command": "kilo-code.marketplaceButtonClicked",
 				"title": "%command.marketplace.title%",
 				"icon": "$(extensions)"
@@ -360,6 +365,11 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
+					"command": "kilo-code.benchButtonClicked",
+					"group": "navigation@2",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
 					"command": "kilo-code.marketplaceButtonClicked",
 					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
@@ -394,6 +404,11 @@
 				{
 					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@1",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.benchButtonClicked",
+					"group": "navigation@2",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{

@@ -34,6 +34,7 @@ export const commandIds = [
 	"promptsButtonClicked",
 
 	"historyButtonClicked",
+	"benchButtonClicked", // kilocode_change: Bench tab
 	"marketplaceButtonClicked",
 	"popoutButtonClicked",
 	"cloudButtonClicked",

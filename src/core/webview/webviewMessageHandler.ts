@@ -4652,6 +4652,111 @@ export const webviewMessageHandler = async (
 		}
 		// kilocode_change end
 
+		// kilocode_change start: Bench
+		case "benchStartRun": {
+			const models = message.benchModels || []
+			if (models.length === 0) {
+				await provider.postMessageToWebview({ type: "benchError", benchError: "No models selected" })
+				break
+			}
+			try {
+				const { BenchService } = await import("../../services/bench/BenchService")
+				const benchService = new BenchService(provider.cwd, (await provider.getState()).apiConfiguration as any)
+				;(provider as any)._activeBenchService = benchService
+				const result = await benchService.startBenchmark(models, async (progress) => {
+					await provider.postMessageToWebview({ type: "benchProgress", benchProgress: progress })
+				})
+				;(provider as any)._activeBenchService = null
+				await provider.postMessageToWebview({ type: "benchResults", benchResults: result })
+			} catch (err: any) {
+				;(provider as any)._activeBenchService = null
+				await provider.postMessageToWebview({
+					type: "benchError",
+					benchError: err?.message || "Benchmark failed",
+				})
+			}
+			break
+		}
+		case "benchLoadResults": {
+			try {
+				const { BenchService } = await import("../../services/bench/BenchService")
+				const benchService = new BenchService(provider.cwd, (await provider.getState()).apiConfiguration as any)
+				const result = await benchService.loadLatestResult()
+				if (result) {
+					await provider.postMessageToWebview({ type: "benchResults", benchResults: result })
+				}
+				const config = await benchService.loadConfig()
+				await provider.postMessageToWebview({ type: "benchConfig", benchConfig: config })
+			} catch (err: any) {
+				await provider.postMessageToWebview({
+					type: "benchError",
+					benchError: err?.message || "Failed to load results",
+				})
+			}
+			break
+		}
+		case "benchUpdateConfig": {
+			try {
+				const { BenchService } = await import("../../services/bench/BenchService")
+				const benchService = new BenchService(provider.cwd, (await provider.getState()).apiConfiguration as any)
+				const currentConfig = await benchService.loadConfig()
+				const merged = { ...currentConfig, ...message.benchConfig }
+				await benchService.saveConfig(merged)
+				await provider.postMessageToWebview({ type: "benchConfig", benchConfig: merged })
+			} catch (err: any) {
+				await provider.postMessageToWebview({
+					type: "benchError",
+					benchError: err?.message || "Failed to update config",
+				})
+			}
+			break
+		}
+		case "benchSetActiveModel": {
+			if (message.benchModelId) {
+				// Update the current API config to use the selected model
+				const state = await provider.getState()
+				const configName = state.currentApiConfigName || "default"
+				try {
+					await provider.providerSettingsManager.saveConfig(configName, {
+						...state.apiConfiguration,
+						apiModelId: message.benchModelId,
+					})
+					await provider.postStateToWebview()
+				} catch {
+					// Fall back to opening settings
+					await provider.postMessageToWebview({
+						type: "action",
+						action: "settingsButtonClicked",
+					})
+				}
+			}
+			break
+		}
+		case "benchRegenerateProblems": {
+			try {
+				const { BenchService } = await import("../../services/bench/BenchService")
+				const benchService = new BenchService(provider.cwd, (await provider.getState()).apiConfiguration as any)
+				const problems = await benchService.generate(async (progress) => {
+					await provider.postMessageToWebview({ type: "benchProgress", benchProgress: progress })
+				})
+				await provider.postMessageToWebview({ type: "benchProblems", benchProblems: problems })
+			} catch (err: any) {
+				await provider.postMessageToWebview({
+					type: "benchError",
+					benchError: err?.message || "Failed to generate problems",
+				})
+			}
+			break
+		}
+		case "benchCancelRun": {
+			const activeBench = (provider as any)._activeBenchService
+			if (activeBench && typeof activeBench.cancel === "function") {
+				activeBench.cancel()
+			}
+			break
+		}
+		// kilocode_change end: Bench
+
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)
 			//

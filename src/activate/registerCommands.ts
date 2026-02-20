@@ -180,6 +180,12 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		vscode.env.openExternal(vscode.Uri.parse(getAppUrl()))
 	},
 	// kilocode_change end
+	// kilocode_change: Bench tab button
+	benchButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) return
+		visibleProvider.postMessageToWebview({ type: "action", action: "benchButtonClicked" })
+	},
 	marketplaceButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 		if (!visibleProvider) return

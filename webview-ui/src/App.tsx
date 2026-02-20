@@ -19,6 +19,7 @@ import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_
 import McpView from "./components/mcp/McpView" // kilocode_change
 import AuthView from "./components/kilocode/auth/AuthView" // kilocode_change
 import { MarketplaceView } from "./components/marketplace/MarketplaceView"
+import BenchView from "./components/bench/BenchView" // kilocode_change
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 import { MemoryService } from "./services/MemoryService" // kilocode_change
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
@@ -33,7 +34,18 @@ import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 import { MemoryWarningBanner } from "./kilocode/MemoryWarningBanner"
 
-type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" | "auth" // kilocode_change: add "profile" and "auth"
+type Tab =
+	| "settings"
+	| "history"
+	| "mcp"
+	| "modes"
+	| "chat"
+	| "marketplace"
+	| "account"
+	| "cloud"
+	| "profile"
+	| "auth"
+	| "bench" // kilocode_change: add "profile", "auth", and "bench"
 
 interface HumanRelayDialogState {
 	isOpen: boolean
@@ -67,6 +79,7 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
+	benchButtonClicked: "bench", // kilocode_change: Navigate to bench tab
 	promptsButtonClicked: "settings", // kilocode_change: Navigate to settings with modes section
 	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
@@ -381,6 +394,8 @@ const App = () => {
 			{/* kilocode_change: add profileview and authview */}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
 			{tab === "auth" && <AuthView returnTo={authReturnTo} profileName={authProfileName} />}
+			{/* kilocode_change: bench tab */}
+			{tab === "bench" && <BenchView onDone={() => switchTab("chat")} />}
 			{tab === "marketplace" && (
 				<MarketplaceView
 					stateManager={marketplaceStateManager}

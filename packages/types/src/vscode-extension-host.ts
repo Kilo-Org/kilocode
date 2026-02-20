@@ -261,6 +261,11 @@ export interface ExtensionMessage {
 		| "skillsData"
 		| "askReviewScope" // kilocode_change: Review mode scope selection
 		| "openAiCodexRateLimits"
+		| "benchProgress" // kilocode_change: Bench progress update
+		| "benchResults" // kilocode_change: Bench final results
+		| "benchProblems" // kilocode_change: Bench generated problems
+		| "benchConfig" // kilocode_change: Bench config response
+		| "benchError" // kilocode_change: Bench error
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -290,6 +295,7 @@ export interface ExtensionMessage {
 		| "focusInput"
 		| "switchTab"
 		| "focusChatInput" // kilocode_change
+		| "benchButtonClicked" // kilocode_change: Navigate to bench tab
 		| "toggleAutoApprove"
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
@@ -465,6 +471,17 @@ export interface ExtensionMessage {
 		error?: string
 	}
 	// kilocode_change end: Review mode
+	// kilocode_change start: Bench
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	benchProgress?: any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	benchResults?: any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	benchProblems?: any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	benchConfig?: any
+	benchError?: string
+	// kilocode_change end: Bench
 }
 
 export interface OpenAiCodexRateLimitsMessage {
@@ -964,13 +981,19 @@ export interface WebviewMessage {
 		| "debugSetting"
 		| "refreshSkills"
 		| "reviewScopeSelected" // kilocode_change: Review mode scope selection
+		| "benchStartRun" // kilocode_change: Start a benchmark run
+		| "benchUpdateConfig" // kilocode_change: Update bench config
+		| "benchLoadResults" // kilocode_change: Load stored bench results
+		| "benchSetActiveModel" // kilocode_change: Set active model from bench
+		| "benchRegenerateProblems" // kilocode_change: Regenerate bench problems
+		| "benchCancelRun" // kilocode_change: Cancel a running benchmark
 	text?: string
 	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
 	sessionId?: string // kilocode_change - for sessionSelect
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" // kilocode_change
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" | "bench" // kilocode_change
 	disabled?: boolean
 	context?: string
 	dataUri?: string
@@ -1090,6 +1113,12 @@ export interface WebviewMessage {
 	// kilocode_change start: Review mode
 	reviewScope?: "uncommitted" | "branch"
 	// kilocode_change end: Review mode
+	// kilocode_change start: Bench
+	benchModels?: string[] // For benchStartRun: selected model IDs
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	benchConfig?: any // For benchUpdateConfig: partial config
+	benchModelId?: string // For benchSetActiveModel: model to set as active
+	// kilocode_change end: Bench
 }
 
 // kilocode_change: Create discriminated union for type-safe messages
