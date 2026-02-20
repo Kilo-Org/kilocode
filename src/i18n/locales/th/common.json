@@ -279,5 +279,8 @@
 		"copyInstructions": "คัดลอกรายละเอียดข้อผิดพลาดด้านล่าง:",
 		"errorStack": "Error Stack",
 		"componentStack": "Component Stack"
+	},
+	"suggestions": {
+		"start_code_review": "เริ่มการตรวจสอบโค้ด"
 	}
 }

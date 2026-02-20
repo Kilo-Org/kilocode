@@ -283,5 +283,8 @@
 		"copyInstructions": "Copia i dettagli dell'errore qui sotto:",
 		"errorStack": "Stack dell'errore",
 		"componentStack": "Stack dei componenti"
+	},
+	"suggestions": {
+		"start_code_review": "Avvia revisione del codice"
 	}
 }

@@ -256,6 +256,9 @@
 			"confirm": "Delete"
 		}
 	},
+	"suggestions": {
+		"start_code_review": "Start code review"
+	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
 			"description": "Prevent task completion when there are incomplete todos in the todo list"

@@ -283,5 +283,8 @@
 		"copyInstructions": "Kopieer de foutdetails hieronder:",
 		"errorStack": "Foutstack",
 		"componentStack": "Componentenstack"
+	},
+	"suggestions": {
+		"start_code_review": "Codebeoordeling starten"
 	}
 }

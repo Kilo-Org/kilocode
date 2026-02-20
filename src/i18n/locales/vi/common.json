@@ -290,5 +290,8 @@
 		"copyInstructions": "Sao chép chi tiết lỗi bên dưới:",
 		"errorStack": "Stack lỗi",
 		"componentStack": "Stack thành phần"
+	},
+	"suggestions": {
+		"start_code_review": "Bắt đầu đánh giá mã"
 	}
 }

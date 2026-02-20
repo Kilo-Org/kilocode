@@ -1380,6 +1380,27 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				markFollowUpAsAnswered()
 			}
 
+			// kilocode_change start - Handle review mode suggestions from completion.
+			// Close the pending completion_result ask, then switch to review mode
+			// with a reviewScope so the backend skips the scope dialog and starts
+			// the review directly (via handleReviewScopeSelected). The mode switch
+			// itself creates a new task, which implicitly clears the old context.
+			// Shift+click is a no-op for review suggestions (they can't be appended to text).
+			// Guard on clineAsk to ensure this only triggers for completion suggestions,
+			// not LLM-generated follow-up suggestions that might also have mode: "review".
+			if (suggestion.mode === "review" && clineAsk === "completion_result") {
+				if (!event?.shiftKey) {
+					const isManualClick = !!event
+					if (isManualClick || alwaysAllowModeSwitch) {
+						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
+						setMode("review")
+						vscode.postMessage({ type: "mode", text: "review", reviewScope: "uncommitted" })
+					}
+				}
+				return
+			}
+			// kilocode_change end
+
 			// Check if we need to switch modes
 			if (suggestion.mode) {
 				// Only switch modes if it's a manual click (event exists) or auto-approval is allowed
@@ -1404,7 +1425,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setInputValue(preservedInput)
 			}
 		},
-		[handleSendMessage, setInputValue, switchToMode, alwaysAllowModeSwitch, clineAsk, markFollowUpAsAnswered],
+		[
+			handleSendMessage,
+			setInputValue,
+			switchToMode,
+			alwaysAllowModeSwitch,
+			clineAsk,
+			markFollowUpAsAnswered,
+			setMode,
+		],
 	)
 
 	const handleBatchFileResponse = useCallback((response: { [key: string]: boolean }) => {
