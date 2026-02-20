@@ -474,9 +474,14 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           )
           fullSyncedSessions.add(sessionID)
           // kilocode_change - lazy fetch learn state (non-blocking, most sessions don't use learn mode)
-          sdk.client.session.learn({ sessionID }).then((learn) => {
-            setStore("learn", sessionID, learn.data ?? { checks: [], level: "intermediate" })
-          })
+          sdk.client.session
+            .learn({ sessionID })
+            .then((learn) => {
+              setStore("learn", sessionID, learn.data ?? { checks: [], level: "intermediate" })
+            })
+            .catch((err) => {
+              Log.Default.info("learn state fetch skipped", { sessionID, err })
+            })
         },
       },
       bootstrap,
