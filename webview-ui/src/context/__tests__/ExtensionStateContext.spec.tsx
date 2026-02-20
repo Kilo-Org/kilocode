@@ -309,7 +309,7 @@ describe("mergeExtensionState", () => {
 			autoExecuteWorkflow: false, // kilocode_change
 			newTaskRequireTodos: false,
 			imageGeneration: false,
-			runSlashCommand: false,
+			autoExecuteWorkflow: false, // kilocode_change
 			nativeToolCalling: false,
 			multipleNativeToolCalls: false,
 			customTools: false,
