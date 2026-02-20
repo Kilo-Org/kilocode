@@ -26,6 +26,7 @@ export const BedrockCustomArn = ({
 	const [isResolving, setIsResolving] = useState(false)
 	const [resolvedModelId, setResolvedModelId] = useState<string | null>(null)
 	const [resolutionError, setResolutionError] = useState<string | null>(null)
+	const [isHoveringRefresh, setIsHoveringRefresh] = useState(false)
 	// kilocode_change end
 
 	const validation = useMemo(() => {
@@ -134,52 +135,44 @@ export const BedrockCustomArn = ({
 				apiConfiguration?.awsCustomArn &&
 				(apiConfiguration.awsCustomArn.includes(":application-inference-profile/") ||
 					apiConfiguration.awsCustomArn.includes(":inference-profile/")) && (
-					<div className="mt-3 p-3 border border-vscode-panel-border rounded">
-						<div className="flex items-center justify-between mb-2">
-							<div className="text-sm font-medium">
-								{t("settings:providers.awsInferenceProfileResolution")}
-							</div>
-							<VSCodeButton appearance="secondary" onClick={handleResolveArn} disabled={isResolving}>
-								{isResolving ? (
-									<span className="flex items-center gap-2">
-										<i className="codicon codicon-loading codicon-modifier-spin" />
-										{t("settings:providers.awsInferenceProfileResolving")}
-									</span>
-								) : (
-									<span className="flex items-center gap-2">
-										<i className="codicon codicon-refresh" />
-										{t("settings:providers.awsInferenceProfileResolve")}
-									</span>
-								)}
-							</VSCodeButton>
-						</div>
-						{resolvedModelId && (
-							<div className="mt-2 p-2 bg-vscode-textBlockQuote-background rounded">
-								<div className="text-sm">
-									<span className="text-vscode-descriptionForeground">
-										{t("settings:providers.awsInferenceProfileUnderlyingModel")}
-									</span>
-									<span className="font-mono text-vscode-textPreformat-foreground">
-										{resolvedModelId}
-									</span>
-								</div>
-								<div className="text-xs text-vscode-descriptionForeground mt-1">
-									{t("settings:providers.awsInferenceProfileCapabilitiesNote")}
-								</div>
-							</div>
+					<div
+						className="flex items-center gap-1 mt-1"
+						onMouseEnter={() => setIsHoveringRefresh(true)}
+						onMouseLeave={() => setIsHoveringRefresh(false)}>
+						<VSCodeButton
+							appearance="icon"
+							onClick={handleResolveArn}
+							disabled={isResolving}
+							title={t("settings:providers.awsInferenceProfileResolve")}>
+							{isResolving ? (
+								<i className="codicon codicon-loading codicon-modifier-spin" />
+							) : (
+								<i className="codicon codicon-refresh" />
+							)}
+						</VSCodeButton>
+						{isResolving && (
+							<span className="text-xs text-vscode-descriptionForeground">
+								{t("settings:providers.awsInferenceProfileResolving")}
+							</span>
 						)}
-						{resolutionError && (
-							<div className="mt-2 p-2 bg-vscode-inputValidation-errorBackground border border-vscode-inputValidation-errorBorder rounded">
-								<div className="text-sm text-vscode-errorForeground">
-									<i className="codicon codicon-error mr-1" />
-									{resolutionError}
-								</div>
-							</div>
+						{!isResolving && resolvedModelId && (
+							<span className="text-xs text-vscode-descriptionForeground">
+								{t("settings:providers.awsInferenceProfileUnderlyingModel")}
+								<span className="font-mono text-vscode-textPreformat-foreground ml-1">
+									{resolvedModelId}
+								</span>
+							</span>
 						)}
-						{!resolvedModelId && !resolutionError && !isResolving && (
-							<div className="text-xs text-vscode-descriptionForeground mt-2">
-								{t("settings:providers.awsInferenceProfileClickResolve")}
-							</div>
+						{!isResolving && resolutionError && (
+							<span className="text-xs text-vscode-errorForeground">
+								<i className="codicon codicon-error mr-1" />
+								{resolutionError}
+							</span>
+						)}
+						{!isResolving && !resolvedModelId && !resolutionError && isHoveringRefresh && (
+							<span className="text-xs text-vscode-descriptionForeground">
+								{t("settings:providers.awsInferenceProfileResolve")}
+							</span>
 						)}
 					</div>
 				)}
