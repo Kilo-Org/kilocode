@@ -48,6 +48,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
   const [loading, setLoading] = createSignal(false)
 
   onMount(() => {
+    console.log("[Kilo New] CloudSessionList: mounted", { connected: server.isConnected() })
     if (!server.isConnected()) return
     setLoading(true)
     session.loadCloudSessions()

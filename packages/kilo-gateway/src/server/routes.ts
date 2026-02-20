@@ -152,7 +152,9 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         }
 
         const json = await response.json()
-        const result = Array.isArray(json) ? json[0]?.result?.data : null
+        console.log("[Kilo Gateway] cloud/sessions tRPC response:", JSON.stringify(json).slice(0, 500))
+        const data = Array.isArray(json) ? json[0]?.result?.data : null
+        const result = data?.json ?? data
         if (!result) return c.json({ sessions: [], nextCursor: null })
 
         const sessions = (result.cliSessions ?? []).map((s: any) => ({

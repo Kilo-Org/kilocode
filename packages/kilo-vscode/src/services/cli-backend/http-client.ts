@@ -327,7 +327,8 @@ export class HttpClient {
     const query = params.toString()
     try {
       return await this.request<CloudSessionsResponse>("GET", `/kilo/cloud/sessions${query ? `?${query}` : ""}`)
-    } catch {
+    } catch (err) {
+      console.error("[Kilo New] HTTP: listCloudSessions failed:", err)
       return null
     }
   }

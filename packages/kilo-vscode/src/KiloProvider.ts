@@ -726,12 +726,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle loading cloud sessions list.
    */
   private async handleLoadCloudSessions(cursor?: string): Promise<void> {
+    console.log("[Kilo New] KiloProvider: Loading cloud sessions", { cursor, hasClient: !!this.httpClient })
     if (!this.httpClient) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
     const result = await this.httpClient.listCloudSessions(cursor)
+    console.log("[Kilo New] KiloProvider: Cloud sessions result", { result })
     if (!result) {
       this.postMessage({ type: "cloudSessionsLoaded", sessions: [], nextCursor: null })
       return
