@@ -118,6 +118,7 @@ vi.mock("../../task/Task", () => ({
 			updateApiConfiguration: vi.fn().mockImplementation(function (this: any, newConfig: any) {
 				this.apiConfiguration = newConfig
 			}),
+			getCumulativeTotalCost: vi.fn().mockReturnValue(0), // kilocode_change
 		}
 		// Define apiConfiguration as a property so tests can read it
 		Object.defineProperty(mockTask, "apiConfiguration", {

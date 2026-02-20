@@ -97,7 +97,7 @@
 			"generateButtonTooltip": "Genera messaggi di commit utilizzando l'IA per analizzare le modifiche al tuo codice"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "in pausa",

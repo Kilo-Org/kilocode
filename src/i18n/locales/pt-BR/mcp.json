@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "Falha ao desconectar {{count}} servidor(es) MCP. Verifique a saída para detalhes.",
 		"toolNotFound": "A ferramenta '{{toolName}}' não existe no servidor '{{serverName}}'. Ferramentas disponíveis: {{availableTools}}",
 		"serverNotFound": "O servidor MCP '{{serverName}}' não está configurado. Servidores disponíveis: {{availableServers}}",
-		"toolDisabled": "A ferramenta '{{toolName}}' no servidor '{{serverName}}' está desabilitada. Ferramentas habilitadas disponíveis: {{availableTools}}"
+		"toolDisabled": "A ferramenta '{{toolName}}' no servidor '{{serverName}}' está desabilitada. Ferramentas habilitadas disponíveis: {{availableTools}}",
+		"oauth_signin_failed": "Falha no login OAuth. Por favor, tente novamente.",
+		"oauth_failed": "Falha na autenticação OAuth para {{serverUrl}}: {{error}}"
 	},
 	"info": {
 		"server_restarting": "Reiniciando o servidor MCP {{serverName}}...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "Os servidores MCP já estão atualizando.",
 		"refreshing_all": "Atualizando todos os servidores MCP...",
 		"all_refreshed": "Todos os servidores MCP foram atualizados.",
-		"project_config_deleted": "Arquivo de configuração MCP do projeto excluído. Todos os servidores MCP do projeto foram desconectados."
+		"project_config_deleted": "Arquivo de configuração MCP do projeto excluído. Todos os servidores MCP do projeto foram desconectados.",
+		"oauth_required": "Autenticação OAuth necessária para conectar a '{{serverUrl}}'",
+		"oauth_success": "Autenticação OAuth bem-sucedida para '{{serverUrl}}'"
 	}
 }

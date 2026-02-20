@@ -11,7 +11,9 @@
 		"disconnect_servers_partial": "{{count}}개의 MCP 서버 연결 해제 실패. 자세한 내용은 출력을 확인하세요.",
 		"toolNotFound": "도구 '{{toolName}}'이(가) 서버 '{{serverName}}'에 존재하지 않습니다. 사용 가능한 도구: {{availableTools}}",
 		"serverNotFound": "MCP 서버 '{{serverName}}'이(가) 구성되지 않았습니다. 사용 가능한 서버: {{availableServers}}",
-		"toolDisabled": "서버 '{{serverName}}'의 도구 '{{toolName}}'이(가) 비활성화되었습니다. 사용 가능한 활성화된 도구: {{availableTools}}"
+		"toolDisabled": "서버 '{{serverName}}'의 도구 '{{toolName}}'이(가) 비활성화되었습니다. 사용 가능한 활성화된 도구: {{availableTools}}",
+		"oauth_signin_failed": "OAuth 로그인에 실패했습니다. 다시 시도해 주세요.",
+		"oauth_failed": "{{serverUrl}}의 OAuth 인증 실패: {{error}}"
 	},
 	"info": {
 		"server_restarting": "{{serverName}} MCP 서버를 재시작하는 중...",
@@ -23,6 +25,8 @@
 		"already_refreshing": "MCP 서버가 이미 새로 고쳐지고 있습니다.",
 		"refreshing_all": "모든 MCP 서버를 새로 고치는 중...",
 		"all_refreshed": "모든 MCP 서버가 새로 고쳐졌습니다.",
-		"project_config_deleted": "프로젝트 MCP 구성 파일이 삭제되었습니다. 모든 프로젝트 MCP 서버가 연결 해제되었습니다."
+		"project_config_deleted": "프로젝트 MCP 구성 파일이 삭제되었습니다. 모든 프로젝트 MCP 서버가 연결 해제되었습니다.",
+		"oauth_required": "'{{serverUrl}}'에 연결하려면 OAuth 인증이 필요해요",
+		"oauth_success": "'{{serverUrl}}' OAuth 인증 성공"
 	}
 }

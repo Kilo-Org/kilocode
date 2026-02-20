@@ -1,3 +1,5 @@
+import type { ToolName, ToolProtocol } from "@roo-code/types"
+
 import { Task } from "../task/Task"
 import type {
 	ToolUse,
@@ -7,7 +9,6 @@ import type {
 	AskApproval,
 	NativeToolArgs,
 } from "../../shared/tools"
-import type { ToolName, ToolProtocol } from "@roo-code/types"
 
 /**
  * Callbacks passed to tool execution
@@ -46,6 +47,12 @@ export abstract class BaseTool<TName extends ToolName> {
 	 * The tool's name (must match ToolName type)
 	 */
 	abstract readonly name: TName
+
+	/**
+	 * Track the last seen path during streaming to detect when the path has stabilized.
+	 * Used by hasPathStabilized() to prevent displaying truncated paths from partial-json parsing.
+	 */
+	protected lastSeenPartialPath: string | undefined = undefined
 
 	/**
 	 * Parse XML/legacy string-based parameters into typed parameters.
@@ -118,6 +125,41 @@ export abstract class BaseTool<TName extends ToolName> {
 		)
 
 		return text.replace(tagRegex, "")
+	}
+
+	/**
+	 * Check if a path parameter has stabilized during streaming.
+	 *
+	 * During native tool call streaming, the partial-json library may return truncated
+	 * string values when chunk boundaries fall mid-value. This method tracks the path
+	 * value between consecutive handlePartial() calls and returns true only when the
+	 * path has stopped changing (stabilized).
+	 *
+	 * Usage in handlePartial():
+	 * ```typescript
+	 * if (!this.hasPathStabilized(block.params.path)) {
+	 *     return // Path still changing, wait for it to stabilize
+	 * }
+	 * // Path is stable, proceed with UI updates
+	 * ```
+	 *
+	 * @param path - The current path value from the partial block
+	 * @returns true if path has stabilized (same value seen twice) and is non-empty, false otherwise
+	 */
+	protected hasPathStabilized(path: string | undefined): boolean {
+		const pathHasStabilized = this.lastSeenPartialPath !== undefined && this.lastSeenPartialPath === path
+		this.lastSeenPartialPath = path
+		return pathHasStabilized && !!path
+	}
+
+	/**
+	 * Reset the partial state tracking.
+	 *
+	 * Should be called at the end of execute() (both success and error paths)
+	 * to ensure clean state for the next tool invocation.
+	 */
+	resetPartialState(): void {
+		this.lastSeenPartialPath = undefined
 	}
 
 	/**

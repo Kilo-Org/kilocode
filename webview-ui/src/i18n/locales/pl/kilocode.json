@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "Jak chcesz zacząć?",
+		"freeModels": {
+			"title": "Darmowe modele",
+			"description": "Zacznij kodować od razu"
+		},
+		"premiumModels": {
+			"title": "Modele premium",
+			"description": "Zarejestruj się. Nowi użytkownicy otrzymują 5 $ kredytu"
+		},
+		"byok": {
+			"title": "Użyj własnego klucza",
+			"description": "Zaawansowane. Użyj własnego konta lub subskrypcji"
+		}
+	},
 	"welcome": {
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
-		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 i ponad 450 innymi.",
+		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 i ponad 450 innymi.",
 		"introText3": "Stwórz darmowe konto i otrzymaj $20 bonusowych kredytów przy pierwszym doładowaniu.",
 		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
@@ -12,12 +27,22 @@
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
 		"lowBalance": "Twój stan konta Kilo Code jest niski",
-		"newOrganization": "Używasz Kilo do pracy?"
+		"switchToFreeModel": "Przełącz na darmowy model"
 	},
 	"pagination": {
 		"previous": "Poprzednia",
 		"next": "Następna",
 		"page": "Strona {{page}} / {{count}}"
+	},
+	"unauthorizedError": {
+		"title": "Musisz się zalogować, aby użyć modelu {{modelId}}",
+		"message": "Zaloguj się lub utwórz konto, aby uzyskać dostęp do ponad 500 modeli, korzystać z kredytów po cenie kosztowej lub przynieść własny klucz.",
+		"loginButton": "Zaloguj się"
+	},
+	"promotionError": {
+		"title": "Musisz się zarejestrować, aby kontynuować",
+		"message": "Zarejestruj się za darmo, aby kontynuować i odkryć 500 innych modeli. Zajmie to 2 minuty, bez karty kredytowej. Lub wróć później.",
+		"signUpButton": "Zarejestruj się"
 	},
 	"pricing": {
 		"costUnknown": "koszt nieznany",
@@ -40,6 +65,7 @@
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
 			"logout": "Wyloguj się z Kilo Code",
+			"loginForPremiumModels": "Zaloguj się, aby uzyskać dostęp do modeli i funkcji premium",
 			"providerRouting": {
 				"title": "Routing dostawców",
 				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",
@@ -58,8 +84,7 @@
 					"deny": "Zabroń treningu promptów",
 					"zdr": "Zerowe przechowywanie danych"
 				}
-			},
-			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
+			}
 		},
 		"modelInfo": {
 			"contextWindow": "Okno kontekstu",
@@ -211,6 +236,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "Nowy tutaj?",
+		"tryOneOfThese": "Wypróbuj jeden z tych pomysłów, aby zacząć:",
 		"suggestionText": "<suggestionButton>Kliknij tutaj</suggestionButton> dla fajnego pomysłu, następnie dotknij <sendIcon /> i zobacz, jak robię magię!",
 		"ideas": {
 			"idea1": "Stwórz obracającą się, świecącą kulę 3D, która reaguje na ruchy myszy. Spraw, aby aplikacja działała w przeglądarce.",
@@ -222,7 +248,7 @@
 			"idea7": "Stwórz uspokajające interaktywne pole gwiazd, które porusza się wraz z gestami myszy"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "Autocomplete",
 		"settings": {
 			"codeEditorSuggestions": "Sugestie Edytora Kodu",

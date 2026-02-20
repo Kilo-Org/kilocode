@@ -56,6 +56,11 @@ export class NanoGptHandler extends BaseProvider implements SingleCompletionHand
 			messages: openAiMessages,
 			stream: true,
 			stream_options: { include_usage: true },
+			...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+			...(metadata?.toolProtocol === "native" && {
+				parallel_tool_calls: metadata.parallelToolCalls ?? false,
+			}),
 		}
 
 		let stream
@@ -66,6 +71,7 @@ export class NanoGptHandler extends BaseProvider implements SingleCompletionHand
 		}
 
 		let lastUsage: OpenAI.CompletionUsage | undefined = undefined
+		const activeToolCallIds = new Set<string>()
 
 		// Initialize XmlMatcher to parse <think>...</think> tags
 		const matcher = new XmlMatcher("think", (chunk) => {
@@ -83,12 +89,50 @@ export class NanoGptHandler extends BaseProvider implements SingleCompletionHand
 			}
 
 			const delta = chunk.choices[0]?.delta
+			const finishReason = chunk.choices[0]?.finish_reason
 
 			if (delta?.content) {
 				// Use XmlMatcher to parse <think>...</think> tags
 				for (const parsedChunk of matcher.update(delta.content)) {
 					yield parsedChunk
 				}
+			}
+
+			// Handle native reasoning fields (reasoning_content or reasoning)
+			if (delta) {
+				for (const key of ["reasoning_content", "reasoning"] as const) {
+					if (key in delta) {
+						const reasoning_content = ((delta as any)[key] as string | undefined) || ""
+						if (reasoning_content?.trim()) {
+							yield { type: "reasoning", text: reasoning_content }
+						}
+						break
+					}
+				}
+			}
+
+			// Handle native tool calls
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					if (toolCall.id) {
+						activeToolCallIds.add(toolCall.id)
+					}
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
+			}
+
+			// Emit tool_call_end events when finish_reason is "tool_calls"
+			if (finishReason === "tool_calls" && activeToolCallIds.size > 0) {
+				for (const id of activeToolCallIds) {
+					yield { type: "tool_call_end", id }
+				}
+				activeToolCallIds.clear()
 			}
 
 			if (chunk.usage) {

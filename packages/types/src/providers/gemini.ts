@@ -3,9 +3,71 @@ import type { ModelInfo } from "../model.js"
 // https://ai.google.dev/gemini-api/docs/models/gemini
 export type GeminiModelId = keyof typeof geminiModels
 
-export const geminiDefaultModelId: GeminiModelId = "gemini-3-pro-preview"
+export const geminiDefaultModelId: GeminiModelId = "gemini-3.1-pro-preview"
 
 export const geminiModels = {
+	"gemini-3.1-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true, // kilocode_change
+		defaultToolProtocol: "native", // kilocode_change
+		supportsPromptCache: true,
+		supportsReasoningEffort: ["low", "medium", "high"],
+		reasoningEffort: "low",
+
+		supportsTemperature: true,
+		defaultTemperature: 1,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		cacheReadsPrice: 0.4,
+		cacheWritesPrice: 4.5,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+				cacheReadsPrice: 0.2,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+				cacheReadsPrice: 0.4,
+			},
+		],
+	},
+	"gemini-3.1-pro-preview-customtools": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true, // kilocode_change
+		defaultToolProtocol: "native", // kilocode_change
+		supportsPromptCache: true,
+		supportsReasoningEffort: ["low", "medium", "high"],
+		reasoningEffort: "low",
+
+		supportsTemperature: true,
+		defaultTemperature: 1,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		cacheReadsPrice: 0.4,
+		cacheWritesPrice: 4.5,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+				cacheReadsPrice: 0.2,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+				cacheReadsPrice: 0.4,
+			},
+		],
+	},
 	"gemini-3-pro-preview": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
@@ -15,8 +77,7 @@ export const geminiModels = {
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["low", "high"],
 		reasoningEffort: "low",
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		supportsTemperature: true,
 		defaultTemperature: 1,
 		inputPrice: 4.0,
@@ -43,8 +104,7 @@ export const geminiModels = {
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
 		reasoningEffort: "medium",
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		supportsTemperature: true,
 		defaultTemperature: 1,
 		inputPrice: 0.3,
@@ -60,8 +120,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
 		cacheReadsPrice: 0.625,
@@ -91,8 +150,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
 		cacheReadsPrice: 0.625,
@@ -121,8 +179,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
 		cacheReadsPrice: 0.625,
@@ -149,8 +206,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
 		cacheReadsPrice: 0.625,
@@ -181,8 +237,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.3,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.075,
@@ -197,8 +252,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.3,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.075,
@@ -213,8 +267,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.3,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.075,
@@ -231,8 +284,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,
@@ -247,8 +299,7 @@ export const geminiModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,

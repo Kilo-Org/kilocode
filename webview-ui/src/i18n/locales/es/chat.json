@@ -89,10 +89,15 @@
 		"title": "Terminar",
 		"tooltip": "Terminar la tarea actual"
 	},
+	"stop": {
+		"title": "Detener",
+		"tooltip": "Detener la tarea actual"
+	},
 	"cancel": {
 		"title": "Cancelar",
 		"tooltip": "Cancelar la operación actual"
 	},
+	"enqueueMessage": "Agregar mensaje a la cola (se enviará después de que termine la tarea actual)",
 	"scrollToBottom": "Desplazarse al final del chat",
 	"about": "Genera, refactoriza y depura código con asistencia de IA. Consulta nuestra <DocsLink>documentación</DocsLink> para saber más.",
 	"docs": "Consulta nuestra <DocsLink>documentación</DocsLink> para saber más.",
@@ -286,7 +291,8 @@
 		"title": "Detalles del error",
 		"copyToClipboard": "Copiar al portapapeles",
 		"copied": "¡Copiado!",
-		"diagnostics": "Obtener información de error detallada"
+		"diagnostics": "Obtener información de error detallada",
+		"proxyProvider": "Parece que estás usando un proveedor basado en proxy. Asegúrate de revisar sus registros y de que no está reescribiendo las solicitudes de Roo."
 	},
 	"powershell": {
 		"issues": "Parece que estás teniendo problemas con Windows PowerShell, por favor consulta esta"
@@ -307,7 +313,7 @@
 		"triggerLabel_zero": "0 aprobaciones automáticas",
 		"triggerLabel_one": "1 aprobación automática",
 		"triggerLabel_other": "{{count}} aprobaciones automáticas",
-		"triggerLabelAll": "YOLO"
+		"triggerLabelAll": "BRRR"
 	},
 	"reasoning": {
 		"thinking": "Pensando",
@@ -344,8 +350,9 @@
 		},
 		"release": {
 			"heading": "Qué hay de nuevo:",
-			"skills": "Roo ahora soporta <skillsLink>Agent Skills</skillsLink> - paquetes reutilizables de prompts, herramientas y recursos para extender las capacidades de Roo.",
-			"nativeToolCalling": "Las llamadas nativas de herramientas ahora son necesarias para todas las nuevas tareas. <blogLink>Lee más</blogLink> sobre la motivación y qué hacer si encuentras problemas."
+			"openaiCodexProvider": "Se añadió el Proveedor OpenAI - ChatGPT Plus/Pro que ofrece acceso basado en suscripción a modelos Codex sin costos por token.",
+			"gpt52codexModel": "Se añadió el nuevo modelo gpt-5.2-codex al Roo Code Router, al proveedor estándar OpenAI y más.",
+			"bugFixes": "Se corrigieron fugas de memoria que causaban pantallas grises, problemas de firma de pensamiento de Gemini y más mejoras de estabilidad."
 		},
 		"cloudAgents": {
 			"heading": "Novedades en la Nube:",
@@ -356,8 +363,14 @@
 		"careers": "Además, <careersLink>¡estamos contratando!</careersLink>",
 		"socialLinks": "Únete a nosotros en <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/KiloCode</redditLink> 🚀"
 	},
+	"costs": {
+		"totalWithSubtasks": "Costo total (incluyendo subtareas): ${{cost}}",
+		"total": "Costo total: ${{cost}}",
+		"includesSubtasks": "Incluye costos de subtareas"
+	},
 	"browser": {
 		"session": "Sesión del navegador",
+		"active": "Activo",
 		"rooWantsToUse": "Kilo Code quiere usar el navegador",
 		"consoleLogs": "Registros de la consola",
 		"noNewLogs": "(No hay nuevos registros)",

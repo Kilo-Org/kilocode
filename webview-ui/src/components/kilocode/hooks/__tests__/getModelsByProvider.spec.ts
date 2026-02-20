@@ -22,6 +22,7 @@ describe("getModelsByProvider", () => {
 	}
 
 	const routerModels: RouterModels = {
+		apertis: { "test-model": testModel }, // kilocode_change
 		openrouter: { "test-model": testModel },
 		requesty: { "test-model": testModel },
 		glama: { "test-model": testModel },
@@ -42,6 +43,7 @@ describe("getModelsByProvider", () => {
 		synthetic: { "test-model": testModel },
 		inception: { "test-model": testModel },
 		roo: { "test-model": testModel },
+		zenmux: { "test-model": testModel },
 	}
 
 	it("returns models for all providers", () => {
@@ -51,6 +53,7 @@ describe("getModelsByProvider", () => {
 			"human-relay", // no models
 			"nano-gpt", // dynamic provider - models fetched from API
 			"openai", // not implemented
+			"openai-responses", // not implemented
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
 			"vercel-ai-gateway", // different structure
@@ -115,4 +118,11 @@ describe("getOptionsForProvider", () => {
 		const result = getOptionsForProvider("zai", { zaiApiLine: "china_coding" })
 		expect(result).toEqual({ isChina: true })
 	})
+
+	// kilocode_change start
+	it("returns isChina: true for zai provider with china_api apiConfiguration", () => {
+		const result = getOptionsForProvider("zai", { zaiApiLine: "china_api" })
+		expect(result).toEqual({ isChina: true })
+	})
+	// kilocode_change end
 })

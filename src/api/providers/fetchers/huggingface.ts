@@ -3,13 +3,12 @@ import { z } from "zod"
 
 import {
 	type ModelInfo,
+	type ModelRecord,
 	HUGGINGFACE_API_URL,
 	HUGGINGFACE_CACHE_DURATION,
 	HUGGINGFACE_DEFAULT_MAX_TOKENS,
 	HUGGINGFACE_DEFAULT_CONTEXT_WINDOW,
 } from "@roo-code/types"
-
-import type { ModelRecord } from "../../../shared/api"
 
 const huggingFaceProviderSchema = z.object({
 	provider: z.string(),

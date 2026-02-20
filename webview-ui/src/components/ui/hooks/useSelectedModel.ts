@@ -2,17 +2,18 @@ import {
 	type ProviderName,
 	type ProviderSettings,
 	type ModelInfo,
+	type ModelRecord,
+	type RouterModels,
 	anthropicModels,
 	bedrockModels,
 	cerebrasModels,
 	deepSeekModels,
 	moonshotModels,
+	moonshotDefaultModelId,
 	minimaxModels,
 	geminiModels,
 	geminiDefaultModelId,
 	// kilocode_change start
-	geminiCliDefaultModelId,
-	geminiCliModels,
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -37,6 +38,7 @@ import {
 	featherlessModels,
 	ioIntelligenceModels,
 	basetenModels,
+	corethinkModels,
 	qwenCodeModels,
 	litellmDefaultModelInfo,
 	lMStudioDefaultModelInfo,
@@ -45,8 +47,6 @@ import {
 	getProviderDefaultModelId,
 	NATIVE_TOOL_DEFAULTS,
 } from "@roo-code/types"
-
-import type { ModelRecord, RouterModels } from "@roo/api"
 
 import { useRouterModels } from "./useRouterModels"
 import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
@@ -101,6 +101,8 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 			geminiApiKey: apiConfiguration?.geminiApiKey,
 			googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 			syntheticApiKey: apiConfiguration?.syntheticApiKey,
+			zenmuxBaseUrl: apiConfiguration?.zenmuxBaseUrl,
+			zenmuxApiKey: apiConfiguration?.zenmuxApiKey,
 		},
 		// kilocode_change end
 		{
@@ -261,6 +263,11 @@ function getSelectedModel({
 			const info = basetenModels[id as keyof typeof basetenModels]
 			return { id, info }
 		}
+		case "corethink": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = corethinkModels[id as keyof typeof corethinkModels]
+			return { id, info }
+		}
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
@@ -309,7 +316,16 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "moonshot": {
-			const id = apiConfiguration.apiModelId ?? defaultModelId
+			// kilocode_change start
+			const configuredId = apiConfiguration.apiModelId ?? defaultModelId
+			const isKimiCodingEndpoint = apiConfiguration.moonshotBaseUrl === "https://api.kimi.com/coding/v1"
+			const firstNonCodingMoonshotModelId =
+				Object.keys(moonshotModels).find((modelId) => modelId !== "kimi-for-coding") ?? moonshotDefaultModelId
+			const id =
+				configuredId === "kimi-for-coding" && !isKimiCodingEndpoint
+					? firstNonCodingMoonshotModelId
+					: configuredId
+			// kilocode_change end
 			const info = moonshotModels[id as keyof typeof moonshotModels]
 			return { id, info }
 		}
@@ -319,7 +335,9 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "zai": {
-			const isChina = apiConfiguration.zaiApiLine === "china_coding"
+			// kilocode_change - china_api uses mainland model catalog too.
+			const isChina =
+				apiConfiguration.zaiApiLine === "china_coding" || apiConfiguration.zaiApiLine === "china_api"
 			const models = isChina ? mainlandZAiModels : internationalZAiModels
 			const defaultModelId = getProviderDefaultModelId(provider, { isChina })
 			const id = apiConfiguration.apiModelId ?? defaultModelId
@@ -347,6 +365,18 @@ function getSelectedModel({
 			const info = customInfo ? { ...nativeToolDefaults, ...customInfo } : openAiModelInfoSaneDefaults
 			return { id, info }
 		}
+		// kilocode_change start
+		case "openai-responses": {
+			const id = apiConfiguration.openAiModelId ?? ""
+			const customInfo = apiConfiguration?.openAiCustomModelInfo
+			const nativeToolDefaults = {
+				supportsNativeTools: openAiModelInfoSaneDefaults.supportsNativeTools,
+				defaultToolProtocol: openAiModelInfoSaneDefaults.defaultToolProtocol,
+			}
+			const info = customInfo ? { ...nativeToolDefaults, ...customInfo } : openAiModelInfoSaneDefaults
+			return { id, info }
+		}
+		// kilocode_change end
 		// kilocode_change start - improved context window handling
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
@@ -435,11 +465,6 @@ function getSelectedModel({
 				id: invalidOrDefaultModel,
 				info: routerModels["kilocode"][invalidOrDefaultModel],
 			}
-		}
-		case "gemini-cli": {
-			const id = apiConfiguration.apiModelId ?? geminiCliDefaultModelId
-			const info = geminiCliModels[id as keyof typeof geminiCliModels]
-			return { id, info }
 		}
 		case "virtual-quota-fallback": {
 			if (virtualQuotaActiveModel) {
@@ -553,23 +578,31 @@ function getSelectedModel({
 			}
 			return { id, info }
 		}
+		case "zenmux": {
+			const id = getValidatedModelId(apiConfiguration.zenmuxModelId, routerModels.zenmux, defaultModelId)
+			const info = routerModels.zenmux?.[id]
+			return { id, info }
+		}
 		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "fake-ai" | "human-relay" | "kilocode"
+			provider satisfies "anthropic" | "fake-ai" | "human-relay" | "kilocode" | "apertis"
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 
 			// Apply 1M context beta tier pricing for Claude Sonnet 4
 			if (
 				provider === "anthropic" &&
-				(id === "claude-sonnet-4-20250514" || id === "claude-sonnet-4-5") &&
+				(id === "claude-sonnet-4-20250514" ||
+					id === "claude-sonnet-4-5" ||
+					id === "claude-sonnet-4-6" ||
+					id === "claude-opus-4-6") &&
 				apiConfiguration.anthropicBeta1MContext &&
 				baseInfo
 			) {
-				// Type assertion since we know claude-sonnet-4-20250514 and claude-sonnet-4-5 have tiers
+				// Type assertion since supported Claude 4 models include 1M context pricing tiers.
 				const modelWithTiers = baseInfo as typeof baseInfo & {
 					tiers?: Array<{
 						contextWindow: number

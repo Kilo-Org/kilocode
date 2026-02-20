@@ -129,5 +129,9 @@
 		"delegated_to": "Delegováno na úkol {{childId}}",
 		"delegation_completed": "Podúkol dokončen, pokračuje nadřazený úkol",
 		"awaiting_child": "Čeká se na podřízený úkol {{childId}}"
+	},
+	"costs": {
+		"own": "Vlastní",
+		"subtasks": "Podúkoly"
 	}
 }

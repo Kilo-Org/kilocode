@@ -1,8 +1,23 @@
 {
+	"onboarding": {
+		"title": "어떻게 시작하시겠습니까?",
+		"freeModels": {
+			"title": "무료 모델",
+			"description": "바로 코딩 시작"
+		},
+		"premiumModels": {
+			"title": "프리미엄 모델",
+			"description": "가입하기. 신규 사용자는 5달러 크레딧 제공"
+		},
+		"byok": {
+			"title": "내 키 사용",
+			"description": "고급. 본인 계정 또는 구독 사용"
+		}
+	},
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
-		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText2": "Claude Opus 4.5, Gemini 3 Pro, GPT-5.2 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
 		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
 		"ctaButton": "시작하기",
 		"manualModeButton": "내 API 키 사용하기",
@@ -12,7 +27,7 @@
 	"lowCreditWarning": {
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다",
-		"newOrganization": "업무용으로 Kilo를 사용하시나요?"
+		"switchToFreeModel": "무료 모델로 전환"
 	},
 	"pagination": {
 		"previous": "이전",
@@ -25,6 +40,16 @@
 		"modelUnavailable": "⚠️ {{model}} 모델을 사용할 수 없습니다. 계속하려면 다른 모델로 변경하세요.",
 		"continueWith": "{{model}}로 계속",
 		"continue": "계속"
+	},
+	"unauthorizedError": {
+		"title": "{{modelId}} 모델을 사용하려면 로그인이 필요합니다",
+		"message": "로그인하거나 계정을 만들어 500개 이상의 모델에 액세스하고, 원가로 크레딧을 사용하거나, 자신의 키를 사용하세요.",
+		"loginButton": "로그인"
+	},
+	"promotionError": {
+		"title": "계속하려면 가입이 필요합니다",
+		"message": "무료로 가입하여 계속하고 500개 이상의 모델을 탐색하세요. 2분이면 됩니다. 신용카드 불필요. 나중에 다시 와도 됩니다.",
+		"signUpButton": "가입하기"
 	},
 	"pricing": {
 		"costUnknown": "비용 알 수 없음",
@@ -47,7 +72,7 @@
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃",
-			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
+			"loginForPremiumModels": "로그인하여 프리미엄 모델 및 기능에 액세스하세요",
 			"providerRouting": {
 				"title": "공급자 라우팅",
 				"managedByOrganization": "조직 수준 공급자 라우팅 관리",
@@ -218,6 +243,7 @@
 	},
 	"ideaSuggestionsBox": {
 		"newHere": "처음이신가요?",
+		"tryOneOfThese": "시작하려면 이 아이디어 중 하나를 시도해보세요:",
 		"suggestionText": "멋진 아이디어를 위해 <suggestionButton>여기를 클릭</suggestionButton>하세요. 그다음 <sendIcon />를 탭하고 제가 마법을 부리는 것을 보세요!",
 		"ideas": {
 			"idea1": "마우스 움직임에 반응하는 회전하고 빛나는 3D 구체를 만드세요. 앱이 브라우저에서 작동하도록 하세요.",
@@ -229,7 +255,7 @@
 			"idea7": "마우스 제스처에 따라 움직이는 차분한 인터랙티브 별빛 만들기"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"title": "자동완성",
 		"settings": {
 			"codeEditorSuggestions": "코드 편집기 제안",

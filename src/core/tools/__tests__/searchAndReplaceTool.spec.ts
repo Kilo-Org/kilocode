@@ -346,7 +346,10 @@ describe("searchAndReplaceTool", () => {
 	})
 
 	describe("partial block handling", () => {
-		it("handles partial block without errors", async () => {
+		it("handles partial block without errors after path stabilizes", async () => {
+			// Path stabilization requires two consecutive calls with the same path
+			// First call sets lastSeenPartialPath, second call sees it has stabilized
+			await executeSearchAndReplaceTool({}, { isPartial: true })
 			await executeSearchAndReplaceTool({}, { isPartial: true })
 
 			expect(mockTask.ask).toHaveBeenCalled()

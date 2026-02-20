@@ -6,10 +6,7 @@ import { t } from "../../../i18n"
 import { withValidationErrorHandling, sanitizeErrorMessage } from "../shared/validation-helpers"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
-
-// Timeout constants for Ollama API requests
-const OLLAMA_EMBEDDING_TIMEOUT_MS = 60000 // 60 seconds for embedding requests
-const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
+import { getApiRequestTimeout } from "../../../api/providers/utils/timeout-config"
 
 /**
  * Implements the IEmbedder interface using a local Ollama instance.
@@ -17,6 +14,7 @@ const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
 export class CodeIndexOllamaEmbedder implements IEmbedder {
 	private readonly baseUrl: string
 	private readonly defaultModelId: string
+	private readonly dimensions?: number // kilocode_change
 
 	constructor(options: ApiHandlerOptions) {
 		// Ensure ollamaBaseUrl and ollamaModelId exist on ApiHandlerOptions or add defaults
@@ -27,6 +25,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 		this.baseUrl = baseUrl
 		this.defaultModelId = options.ollamaModelId || "nomic-embed-text:latest"
+		this.dimensions = options.ollamaNumCtx // kilocode_change
 	}
 
 	/**
@@ -37,6 +36,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 	 */
 	async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
 		const modelToUse = model || this.defaultModelId
+		const dimensions = this.dimensions // kilocode_change
 		const url = `${this.baseUrl}/api/embed` // Endpoint as specified
 
 		// Apply model-specific query prefix if required
@@ -70,7 +70,10 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 			// Add timeout to prevent indefinite hanging
 			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
+			// kilocode_change start
+			const timeoutMs = getApiRequestTimeout() ?? 0
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+			// kilocode_change end
 
 			const response = await fetch(url, {
 				method: "POST",
@@ -80,9 +83,11 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				body: JSON.stringify({
 					model: modelToUse,
 					input: processedTexts, // Using 'input' as requested
+					dimensions, // kilocode_change
 				}),
 				signal: controller.signal,
 			})
+
 			clearTimeout(timeoutId)
 
 			if (!response.ok) {
@@ -149,7 +154,10 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 				// Add timeout to prevent indefinite hanging
 				const controller = new AbortController()
-				const timeoutId = setTimeout(() => controller.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
+				// kilocode_change start
+				const timeoutMs = getApiRequestTimeout() ?? 0
+				const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+				// kilocode_change end
 
 				const modelsResponse = await fetch(modelsUrl, {
 					method: "GET",
@@ -205,8 +213,10 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				const testUrl = `${this.baseUrl}/api/embed`
 
 				// Add timeout for test request too
+				// kilocode_change start
 				const testController = new AbortController()
-				const testTimeoutId = setTimeout(() => testController.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
+				const testTimeoutId = setTimeout(() => testController.abort(), timeoutMs)
+				// kilocode_change end
 
 				const testResponse = await fetch(testUrl, {
 					method: "POST",

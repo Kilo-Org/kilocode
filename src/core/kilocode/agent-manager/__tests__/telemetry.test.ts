@@ -251,7 +251,6 @@ describe("Agent Manager Telemetry", () => {
 				props,
 			)
 		})
-
 	})
 
 	describe("getPlatformDiagnostics", () => {

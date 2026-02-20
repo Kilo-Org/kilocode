@@ -101,7 +101,7 @@
 			"generateButtonTooltip": "ينشئ رسالة الالتزام (commit message) باستخدام الذكاء الاصطناعي لتحليل تغييرات الكود الخاصة بك"
 		}
 	},
-	"ghost": {
+	"autocomplete": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
 			"snoozed": "متوقف مؤقتاً",

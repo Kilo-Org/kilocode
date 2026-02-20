@@ -25,7 +25,8 @@
 	"tabs": {
 		"tools": "Công cụ",
 		"resources": "Tài nguyên",
-		"logs": "Nhật ký"
+		"logs": "Nhật ký",
+		"authDebug": "Debug Xác thực"
 	},
 	"emptyState": {
 		"noTools": "Không tìm thấy công cụ",
@@ -54,7 +55,23 @@
 	},
 	"serverStatus": {
 		"retrying": "Đang thử lại...",
-		"retryConnection": "Thử kết nối lại"
+		"retryConnection": "Thử kết nối lại",
+		"signIn": "Đăng nhập",
+		"signingIn": "Đang đăng nhập..."
+	},
+	"authDebug": {
+		"title": "Thông tin Debug OAuth",
+		"status": "Trạng thái",
+		"tokenExpires": "Token hết hạn",
+		"scopes": "Phạm vi",
+		"refreshInfo": "Thông tin Refresh Token",
+		"hasRefreshToken": "Có Refresh Token",
+		"canRefresh": "Có thể tự động làm mới",
+		"tokenIssuedAt": "Token được cấp lúc",
+		"nextRefreshAt": "Lần làm mới tiếp theo",
+		"lastRefreshAt": "Lần làm mới cuối",
+		"tokenEndpoint": "Endpoint Token",
+		"clientId": "Client ID"
 	},
 	"refreshMCP": "Làm mới Máy chủ MCP",
 	"execution": {

@@ -9,20 +9,24 @@
 		"refresh_after_disable": "停用後重新整理 MCP 連線失敗",
 		"refresh_after_enable": "啟用後重新整理 MCP 連線失敗",
 		"disconnect_servers_partial": "斷開 {{count}} 個 MCP 伺服器失敗。請查看輸出了解詳情。",
-		"toolNotFound": "工具 '{{toolName}}' 在伺服器 '{{serverName}}' 上不存在。可用工具: {{availableTools}}",
-		"serverNotFound": "MCP 伺服器 '{{serverName}}' 未設定。可用伺服器: {{availableServers}}",
-		"toolDisabled": "伺服器 '{{serverName}}' 上的工具 '{{toolName}}' 已停用。可用的已啟用工具: {{availableTools}}"
+		"toolNotFound": "工具 '{{toolName}}' 在伺服器 '{{serverName}}' 上不存在。可用工具：{{availableTools}}",
+		"serverNotFound": "MCP 伺服器 '{{serverName}}' 未設定。可用伺服器：{{availableServers}}",
+		"toolDisabled": "伺服器 '{{serverName}}' 上的工具 '{{toolName}}' 已停用。可用的已啟用工具：{{availableTools}}",
+		"oauth_signin_failed": "OAuth 登入失敗。請重試。",
+		"oauth_failed": "OAuth 驗證 {{serverUrl}} 失敗：{{error}}"
 	},
 	"info": {
 		"server_restarting": "正在重啟{{serverName}}MCP 伺服器...",
 		"server_connected": "{{serverName}}MCP 伺服器已連接",
 		"server_deleted": "已刪除 MCP 伺服器：{{serverName}}",
 		"server_not_found": "在設定中沒有找到伺服器\"{{serverName}}\"",
-		"global_servers_active": "活動的全域 MCP 伺服器: {{mcpServers}}",
-		"project_servers_active": "活動的專案 MCP 伺服器: {{mcpServers}}",
+		"global_servers_active": "活動的全域 MCP 伺服器：{{mcpServers}}",
+		"project_servers_active": "活動的專案 MCP 伺服器：{{mcpServers}}",
 		"already_refreshing": "MCP 伺服器已在重新整理中。",
 		"refreshing_all": "正在重新整理所有 MCP 伺服器...",
 		"all_refreshed": "所有 MCP 伺服器已重新整理。",
-		"project_config_deleted": "專案 MCP 設定檔案已刪除。所有專案 MCP 伺服器已斷開連接。"
+		"project_config_deleted": "專案 MCP 設定檔案已刪除。所有專案 MCP 伺服器已斷開連接。",
+		"oauth_required": "需要進行 OAuth 驗證才能連線至「{{serverUrl}}」",
+		"oauth_success": "OAuth 驗證「{{serverUrl}}」成功"
 	}
 }

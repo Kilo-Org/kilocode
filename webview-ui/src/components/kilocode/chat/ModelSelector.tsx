@@ -142,7 +142,7 @@ export const ModelSelector = ({
 			title={t("chat:selectApiConfig")}
 			options={options}
 			onChange={onChange}
-			contentClassName="max-h-[300px] overflow-y-auto"
+			contentClassName="max-h-[400px] overflow-y-auto"
 			triggerClassName={cn(
 				"w-full text-ellipsis overflow-hidden p-0",
 				"bg-transparent border-transparent hover:bg-transparent hover:border-transparent",

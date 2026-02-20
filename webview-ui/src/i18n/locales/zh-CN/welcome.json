@@ -17,6 +17,13 @@
 		}
 	},
 	"chooseProvider": "Kilo Code 需要一个 API 密钥才能发挥魔力。",
+	"landing": {
+		"greeting": "欢迎使用 Roo Code！",
+		"introduction": "通过一系列内置和可扩展的模式，Roo Code 让你能够以前所未有的方式进行规划、架构设计、编码、调试并提升工作效率。",
+		"accountMention": "开始使用，创建你的 Roo Code Cloud 账户。获得强大模型、网络控制、分析、支持等。",
+		"getStarted": "创建 Roo 账户",
+		"noAccount": "或不使用账户"
+	},
 	"providerSignup": {
 		"heading": "选择你的供应商",
 		"chooseProvider": "Roo 需要 LLM 提供商才能工作。选择一个开始使用，你可以稍后添加更多。",

@@ -15,4 +15,5 @@ export const inceptionDefaultModelInfo: ModelInfo = {
 	outputPrice: 0.000001,
 	cacheReadsPrice: 0,
 	cacheWritesPrice: 0,
+	supportsNativeTools: true,
 }

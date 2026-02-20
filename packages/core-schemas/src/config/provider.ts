@@ -37,6 +37,14 @@ export const openAINativeProviderSchema = baseProviderSchema.extend({
 	openAiNativeServiceTier: z.enum(["auto", "default", "flex", "priority"]).optional(),
 })
 
+// kilocode_change start
+// OpenAI Codex provider (ChatGPT Plus/Pro)
+export const openAICodexProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("openai-codex"),
+	apiModelId: z.string().optional(),
+})
+// kilocode_change end
+
 // OpenAI provider
 export const openAIProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("openai"),
@@ -51,6 +59,22 @@ export const openAIProviderSchema = baseProviderSchema.extend({
 	openAiHeaders: z.record(z.string(), z.string()).optional(),
 })
 
+// kilocode_change start
+// OpenAI Responses provider
+export const openAIResponsesProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("openai-responses"),
+	openAiModelId: z.string().optional(),
+	openAiBaseUrl: z.string().optional(),
+	openAiApiKey: z.string().optional(),
+	openAiLegacyFormat: z.boolean().optional(),
+	openAiR1FormatEnabled: z.boolean().optional(),
+	openAiUseAzure: z.boolean().optional(),
+	azureApiVersion: z.string().optional(),
+	openAiStreamingEnabled: z.boolean().optional(),
+	openAiHeaders: z.record(z.string(), z.string()).optional(),
+})
+// kilocode_change end
+
 // OpenRouter provider
 export const openRouterProviderSchema = baseProviderSchema.extend({
 	provider: z.literal("openrouter"),
@@ -63,6 +87,21 @@ export const openRouterProviderSchema = baseProviderSchema.extend({
 	openRouterProviderSort: z.enum(["price", "throughput", "latency"]).optional(),
 	openRouterZdr: z.boolean().optional(),
 })
+
+// kilocode_change start
+// ZenMux provider
+export const zenmuxProviderSchema = baseProviderSchema.extend({
+	provider: z.literal("zenmux"),
+	zenmuxModelId: z.string().optional(),
+	zenmuxApiKey: z.string().optional(),
+	zenmuxBaseUrl: z.string().optional(),
+	zenmuxSpecificProvider: z.string().optional(),
+	zenmuxUseMiddleOutTransform: z.boolean().optional(),
+	zenmuxProviderDataCollection: z.enum(["allow", "deny"]).optional(),
+	zenmuxProviderSort: z.enum(["price", "throughput", "latency"]).optional(),
+	zenmuxZdr: z.boolean().optional(),
+})
+// kilocode_change end
 
 // Ollama provider
 export const ollamaProviderSchema = baseProviderSchema.extend({
@@ -192,14 +231,6 @@ export const geminiProviderSchema = baseProviderSchema.extend({
 	googleGeminiBaseUrl: z.string().optional(),
 	enableUrlContext: z.boolean().optional(),
 	enableGrounding: z.boolean().optional(),
-})
-
-// Gemini CLI provider
-export const geminiCliProviderSchema = baseProviderSchema.extend({
-	provider: z.literal("gemini-cli"),
-	apiModelId: z.string().optional(),
-	geminiCliOAuthPath: z.string().optional(),
-	geminiCliProjectId: z.string().optional(),
 })
 
 // Mistral provider
@@ -387,8 +418,11 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 	kilocodeProviderSchema,
 	anthropicProviderSchema,
 	openAINativeProviderSchema,
+	openAICodexProviderSchema, // kilocode_change
 	openAIProviderSchema,
+	openAIResponsesProviderSchema, // kilocode_change
 	openRouterProviderSchema,
+	zenmuxProviderSchema, // kilocode_change
 	ollamaProviderSchema,
 	lmStudioProviderSchema,
 	glamaProviderSchema,
@@ -403,7 +437,6 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 	bedrockProviderSchema,
 	vertexProviderSchema,
 	geminiProviderSchema,
-	geminiCliProviderSchema,
 	mistralProviderSchema,
 	moonshotProviderSchema,
 	minimaxProviderSchema,
@@ -432,8 +465,11 @@ export const providerConfigSchema = z.discriminatedUnion("provider", [
 export type KilocodeProviderConfig = z.infer<typeof kilocodeProviderSchema>
 export type AnthropicProviderConfig = z.infer<typeof anthropicProviderSchema>
 export type OpenAINativeProviderConfig = z.infer<typeof openAINativeProviderSchema>
+export type OpenAICodexProviderConfig = z.infer<typeof openAICodexProviderSchema> // kilocode_change
 export type OpenAIProviderConfig = z.infer<typeof openAIProviderSchema>
+export type OpenAIResponsesProviderConfig = z.infer<typeof openAIResponsesProviderSchema> // kilocode_change
 export type OpenRouterProviderConfig = z.infer<typeof openRouterProviderSchema>
+export type ZenmuxProviderConfig = z.infer<typeof zenmuxProviderSchema> // kilocode_change
 export type OllamaProviderConfig = z.infer<typeof ollamaProviderSchema>
 export type LMStudioProviderConfig = z.infer<typeof lmStudioProviderSchema>
 export type GlamaProviderConfig = z.infer<typeof glamaProviderSchema>
@@ -448,7 +484,6 @@ export type InceptionProviderConfig = z.infer<typeof inceptionProviderSchema>
 export type BedrockProviderConfig = z.infer<typeof bedrockProviderSchema>
 export type VertexProviderConfig = z.infer<typeof vertexProviderSchema>
 export type GeminiProviderConfig = z.infer<typeof geminiProviderSchema>
-export type GeminiCliProviderConfig = z.infer<typeof geminiCliProviderSchema>
 export type MistralProviderConfig = z.infer<typeof mistralProviderSchema>
 export type MoonshotProviderConfig = z.infer<typeof moonshotProviderSchema>
 export type MinimaxProviderConfig = z.infer<typeof minimaxProviderSchema>

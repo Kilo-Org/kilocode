@@ -12,6 +12,12 @@
 		"accessDenied": "Bị từ chối truy cập dịch vụ Amazon Bedrock. Vui lòng kiểm tra quyền IAM của bạn.",
 		"modelNotFound": "Không tìm thấy mô hình {{model}} trong Amazon Bedrock"
 	},
+	"voyage": {
+		"invalidResponseFormat": "Định dạng phản hồi không hợp lệ từ Voyage AI",
+		"invalidCredentials": "Khóa API Voyage AI không hợp lệ. Vui lòng kiểm tra cấu hình khóa API của bạn.",
+		"accessDenied": "Bị từ chối truy cập. Địa chỉ IP của bạn có thể bị Voyage AI chặn. Hãy thử mạng khác.",
+		"modelNotFound": "Không tìm thấy mô hình {{model}} trong Voyage AI. Vui lòng kiểm tra lựa chọn mô hình của bạn."
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Không thể đọc nội dung lỗi",
 		"requestFailed": "Yêu cầu API Ollama thất bại với trạng thái {{status}} {{statusText}}: {{errorBody}}",
@@ -58,6 +64,7 @@
 		"openRouterConfigMissing": "Thiếu cấu hình OpenRouter để tạo trình nhúng",
 		"vercelAiGatewayConfigMissing": "Thiếu cấu hình Vercel AI Gateway để tạo trình nhúng",
 		"bedrockConfigMissing": "Thiếu cấu hình Amazon Bedrock để tạo trình nhúng",
+		"voyageConfigMissing": "Thiếu cấu hình Voyage AI để tạo trình nhúng",
 		"invalidEmbedderType": "Loại embedder được cấu hình không hợp lệ: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Không thể xác định kích thước vector cho mô hình '{{modelId}}' với nhà cung cấp '{{provider}}'. Hãy đảm bảo 'Kích thước Embedding' được cài đặt đúng trong cài đặt nhà cung cấp tương thích OpenAI.",
 		"vectorDimensionNotDetermined": "Không thể xác định kích thước vector cho mô hình '{{modelId}}' với nhà cung cấp '{{provider}}'. Kiểm tra hồ sơ mô hình hoặc cấu hình.",

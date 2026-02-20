@@ -2,28 +2,7 @@
  * Defines profiles for different embedding models, including their dimensions.
  */
 
-export type EmbedderProvider =
-	| "openai"
-	| "ollama"
-	| "openai-compatible"
-	| "gemini"
-	| "mistral"
-	| "vercel-ai-gateway"
-	| "bedrock"
-	| "openrouter" // Add other providers as needed
-
-export interface EmbeddingModelProfile {
-	dimension: number
-	scoreThreshold?: number // Model-specific minimum score threshold for semantic search
-	queryPrefix?: string // Optional prefix required by the model for queries
-	// Add other model-specific properties if needed, e.g., context window size
-}
-
-export type EmbeddingModelProfiles = {
-	[provider in EmbedderProvider]?: {
-		[modelId: string]: EmbeddingModelProfile
-	}
-}
+import type { EmbedderProvider, EmbeddingModelProfiles } from "@roo-code/types"
 
 // Example profiles - expand this list as needed
 export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
@@ -104,6 +83,17 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		"qwen/qwen3-embedding-4b": { dimension: 2560, scoreThreshold: 0.4 },
 		"qwen/qwen3-embedding-8b": { dimension: 4096, scoreThreshold: 0.4 },
 	},
+	// kilocode_change start
+	voyage: {
+		// Voyage AI embedding models - code-specific and general purpose
+		"voyage-code-3": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4-large": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-4-lite": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-finance-2": { dimension: 1024, scoreThreshold: 0.4 },
+		"voyage-law-2": { dimension: 1024, scoreThreshold: 0.4 },
+	},
+	// kilocode_change end
 }
 
 /**
@@ -201,6 +191,11 @@ export function getDefaultModelId(provider: EmbedderProvider): string {
 			return "amazon.titan-embed-text-v2:0"
 		case "openrouter":
 			return "openai/text-embedding-3-large"
+
+		// kilocode_change start
+		case "voyage":
+			return "voyage-code-3"
+		// kilocode_change end
 
 		default:
 			// Fallback for unknown providers

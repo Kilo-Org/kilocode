@@ -31,7 +31,25 @@ describe("TaskItem", () => {
 		vi.clearAllMocks()
 	})
 
-	it("renders task information", () => {
+	it("does not render cost for zero cost", () => {
+		const zeroCostTask = { ...mockTask, totalCost: 0.0 }
+		render(
+			<TaskItem
+				item={zeroCostTask}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+		// The component does not render cost element when totalCost is 0 (falsy check)
+		expect(screen.queryByTestId("cost-footer-compact")).not.toBeInTheDocument()
+	})
+
+	it("renders low cost information", () => {
+		// Uses mockTask.totalCost (0.002)
 		render(
 			<TaskItem
 				item={mockTask}
@@ -43,7 +61,27 @@ describe("TaskItem", () => {
 		)
 
 		expect(screen.getByText("Test task")).toBeInTheDocument()
-		expect(screen.getByText("$0.00")).toBeInTheDocument() // Component shows $0.00 for small amounts
+		// The component shows 0.0020 for small amounts (4 decimal places via formatCost)
+		const costElement = screen.getByTestId("cost-footer-compact")
+		expect(costElement.textContent).toContain("0.0020")
+	})
+
+	it("renders high cost information", () => {
+		const highCostTask = { ...mockTask, totalCost: 0.0523 }
+		render(
+			<TaskItem
+				item={highCostTask}
+				variant="full"
+				isSelected={false}
+				onToggleSelection={vi.fn()}
+				isSelectionMode={false}
+			/>,
+		)
+
+		expect(screen.getByText("Test task")).toBeInTheDocument()
+		// The component shows 0.05 for high amounts (2 decimal places via formatCost)
+		const costElement = screen.getByTestId("cost-footer-compact")
+		expect(costElement.textContent).toContain("0.05")
 	})
 
 	it("handles selection in selection mode", () => {

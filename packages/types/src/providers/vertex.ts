@@ -6,6 +6,53 @@ export type VertexModelId = keyof typeof vertexModels
 export const vertexDefaultModelId: VertexModelId = "claude-sonnet-4-5@20250929"
 
 export const vertexModels = {
+	// kilocode_change start
+	"claude-opus-4-6@default": {
+		maxTokens: 128_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
+		supportsAdaptiveThinking: true,
+		supportsVerbosity: ["low", "medium", "high", "max"],
+	},
+	// kilocode_change end
+	"gemini-3.1-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true, // kilocode_change
+		defaultToolProtocol: "native", // kilocode_change
+		supportsPromptCache: true,
+		supportsReasoningEffort: ["low", "medium", "high"],
+		reasoningEffort: "low",
+
+		supportsTemperature: true,
+		defaultTemperature: 1,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		cacheReadsPrice: 0.4,
+		cacheWritesPrice: 4.5,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+				cacheReadsPrice: 0.2,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+				cacheReadsPrice: 0.4,
+			},
+		],
+	},
 	"gemini-3-pro-preview": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
@@ -15,8 +62,7 @@ export const vertexModels = {
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["low", "high"],
 		reasoningEffort: "low",
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		supportsTemperature: true,
 		defaultTemperature: 1,
 		inputPrice: 4.0,
@@ -43,8 +89,7 @@ export const vertexModels = {
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
 		reasoningEffort: "medium",
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		supportsTemperature: true,
 		defaultTemperature: 1,
 		inputPrice: 0.3,
@@ -59,8 +104,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.15,
 		outputPrice: 3.5,
 		maxThinkingTokens: 24_576,
@@ -74,8 +118,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.15,
 		outputPrice: 0.6,
 	},
@@ -86,8 +129,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.3,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.075,
@@ -102,8 +144,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.15,
 		outputPrice: 3.5,
 		maxThinkingTokens: 24_576,
@@ -117,8 +158,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.15,
 		outputPrice: 0.6,
 	},
@@ -129,8 +169,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5,
 		outputPrice: 15,
 	},
@@ -141,8 +180,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5,
 		outputPrice: 15,
 	},
@@ -153,8 +191,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5,
 		outputPrice: 15,
 		maxThinkingTokens: 32_768,
@@ -167,8 +204,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 2.5,
 		outputPrice: 15,
 		maxThinkingTokens: 32_768,
@@ -196,8 +232,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0,
 		outputPrice: 0,
 	},
@@ -208,8 +243,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0,
 		outputPrice: 0,
 	},
@@ -220,8 +254,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.15,
 		outputPrice: 0.6,
 	},
@@ -232,8 +265,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.075,
 		outputPrice: 0.3,
 	},
@@ -244,8 +276,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0,
 		outputPrice: 0,
 	},
@@ -256,8 +287,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.075,
 		outputPrice: 0.3,
 	},
@@ -268,8 +298,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: false,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 1.25,
 		outputPrice: 5,
 	},
@@ -303,6 +332,29 @@ export const vertexModels = {
 		supportsPromptCache: true,
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
+		inputPrice: 3.0, // $3 per million input tokens (≤200K context)
+		outputPrice: 15.0, // $15 per million output tokens (≤200K context)
+		cacheWritesPrice: 3.75, // $3.75 per million tokens
+		cacheReadsPrice: 0.3, // $0.30 per million tokens
+		supportsReasoningBudget: true,
+		// Tiered pricing for extended context (requires beta flag 'context-1m-2025-08-07')
+		tiers: [
+			{
+				contextWindow: 1_000_000, // 1M tokens with beta flag
+				inputPrice: 6.0, // $6 per million input tokens (>200K context)
+				outputPrice: 22.5, // $22.50 per million output tokens (>200K context)
+				cacheWritesPrice: 7.5, // $7.50 per million tokens (>200K context)
+				cacheReadsPrice: 0.6, // $0.60 per million tokens (>200K context)
+			},
+		],
+	},
+	"claude-sonnet-4-6@20260114": {
+		maxTokens: 8192,
+		contextWindow: 200_000, // Default 200K, extendable to 1M with beta flag 'context-1m-2025-08-07'
+		supportsImages: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		supportsPromptCache: true,
 		inputPrice: 3.0, // $3 per million input tokens (≤200K context)
 		outputPrice: 15.0, // $15 per million output tokens (≤200K context)
 		cacheWritesPrice: 3.75, // $3.75 per million tokens
@@ -463,8 +515,7 @@ export const vertexModels = {
 		supportsNativeTools: true,
 		defaultToolProtocol: "native",
 		supportsPromptCache: true,
-		includedTools: ["write_file", "edit_file"],
-		excludedTools: ["apply_diff"],
+
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,
@@ -546,7 +597,12 @@ export const vertexModels = {
 
 // Vertex AI models that support 1M context window beta
 // Uses the same beta header 'context-1m-2025-08-07' as Anthropic and Bedrock
-export const VERTEX_1M_CONTEXT_MODEL_IDS = ["claude-sonnet-4@20250514", "claude-sonnet-4-5@20250929"] as const
+export const VERTEX_1M_CONTEXT_MODEL_IDS = [
+	"claude-sonnet-4@20250514",
+	"claude-sonnet-4-5@20250929",
+	"claude-sonnet-4-6@20260114",
+	"claude-opus-4-6",
+] as const
 
 export const VERTEX_REGIONS = [
 	{ value: "global", label: "global" },

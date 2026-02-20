@@ -1,6 +1,4 @@
-// Test screenshot action functionality in browser actions
-import { describe, it, expect } from "vitest"
-import { browserActions } from "../../../shared/ExtensionMessage"
+import { browserActions } from "@roo-code/types"
 
 describe("Browser Action Screenshot", () => {
 	describe("browserActions array", () => {

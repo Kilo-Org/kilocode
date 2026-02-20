@@ -201,7 +201,7 @@ You are an expert Git commit message generator that creates conventional commit 
 \${customInstructions}
 
 ## CRITICAL: Commit Message Output Rules
-- DO NOT include any memory bank status indicators like "[Memory Bank: Active]" or "[Memory Bank: Missing]"
+- DO NOT include any internal status indicators or bracketed metadata (e.g. "[Status: Active]", "[Context: Missing]")
 - DO NOT include any task-specific formatting or artifacts from other rules
 - ONLY Generate a clean conventional commit message as specified below
 

@@ -1,10 +1,10 @@
 // kilocode_change - new file: STT message handlers (replaces speechMessageHandlers.ts)
 import type { ClineProvider } from "./ClineProvider"
-import type { STTCommand, STTSegment, MicrophoneDevice } from "../../shared/sttContract"
+import type { STTCommand, STTSegment as ContractSTTSegment, MicrophoneDevice } from "../../shared/sttContract"
 import { STTService } from "../../services/stt"
 import { STTEventEmitter } from "../../services/stt/types"
 import { getOpenAiApiKey } from "../../services/stt/utils/getOpenAiCredentials"
-import { VisibleCodeTracker } from "../../services/ghost/context/VisibleCodeTracker"
+import { VisibleCodeTracker } from "../../services/autocomplete/context/VisibleCodeTracker"
 import { extractCodeGlossary, formatGlossaryAsPrompt } from "../../services/stt/context/codeGlossaryExtractor"
 import { listMicrophoneDevices } from "../../services/stt/FFmpegDeviceEnumerator"
 import { checkSpeechToTextAvailable } from "./speechToTextCheck"
@@ -30,12 +30,20 @@ function getService(clineProvider: ClineProvider): STTService {
 				})
 			},
 
-			onTranscript: (segments: STTSegment[], isFinal: boolean) => {
+			onTranscript: (segments: ContractSTTSegment[], isFinal: boolean) => {
 				const sessionId = service?.getSessionId() || ""
+				// packages/types expects STTSegment with timing fields. The internal STT service
+				// doesn't currently provide timings, so we populate safe defaults.
+				const segmentsForWebview = segments.map((s) => ({
+					text: s.text,
+					start: 0,
+					end: 0,
+					isFinal,
+				})) satisfies import("@roo-code/types").STTSegment[]
 				clineProvider.postMessageToWebview({
 					type: "stt:transcript",
 					sessionId,
-					segments,
+					segments: segmentsForWebview,
 					isFinal,
 				})
 			},

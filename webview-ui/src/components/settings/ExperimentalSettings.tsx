@@ -1,5 +1,4 @@
 import React, { HTMLAttributes } from "react"
-import { FlaskConical } from "lucide-react"
 
 import type { Experiments, ImageGenerationProvider } from "@roo-code/types"
 
@@ -70,12 +69,7 @@ export const ExperimentalSettings = ({
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
-			<SectionHeader>
-				<div className="flex items-center gap-2">
-					<FlaskConical className="w-4" />
-					<div>{t("settings:sections.experimental")}</div>
-				</div>
-			</SectionHeader>
+			<SectionHeader>{t("settings:sections.experimental")}</SectionHeader>
 
 			<Section>
 				{Object.entries(experimentConfigsMap)

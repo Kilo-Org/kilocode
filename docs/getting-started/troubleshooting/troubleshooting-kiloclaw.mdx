@@ -1,0 +1,44 @@
+# KiloClaw Troubleshooting
+
+## OpenClaw Runtime Layer
+
+Issues originating from the OpenClaw environment.
+
+### Typical symptoms
+
+- Agent execution halts or crashes
+- Tool invocation errors
+- Automation/cron execution issues
+- UI rendering or session state problems
+
+**The Heartbeat Check:** Look for `heartbeat` events in the logs. If you see these, the OpenClaw Gateway is alive.
+
+Check the [OpenClaw Troubleshooting docs](https://docs.openclaw.ai/help/troubleshooting) for a deep dive on OpenClaw errors.
+
+---
+
+## Gateway / Provisioning Layer
+
+Issues related to model access, routing, authentication, or billing.
+
+### Typical symptoms
+
+- Provider or model resolution errors
+- Authentication failures (401 / 403)
+- Rate limiting or quota enforcement
+- Credits related questions
+- Gateway timeout or upstream provider failures
+
+---
+
+## Log Collection
+
+Accurate diagnostics may require logs from the OpenClaw instance.
+
+### Exporting logs
+
+Open the OpenClaw UI and navigate to **Debug / Logs**.
+
+1. Click **Export visible logs**
+2. Attach the exported file when opening a support request
+

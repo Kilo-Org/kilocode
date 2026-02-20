@@ -5,10 +5,12 @@ export function checkExistKey(config: ProviderSettings | undefined) {
 		return false
 	}
 
-	// Special case for human-relay, fake-ai, claude-code, qwen-code, and roo providers which don't need any configuration.
+	// Special case for human-relay, fake-ai, claude-code, openai-codex, qwen-code, roo and kilocode providers which don't need any configuration.
 	if (
 		config.apiProvider &&
-		["human-relay", "fake-ai", "claude-code", "qwen-code", "roo", "gemini-cli"].includes(config.apiProvider) // kilocode_change: add gemini-cli
+		["human-relay", "fake-ai", "claude-code", "openai-codex", "qwen-code", "roo", "kilocode"].includes(
+			config.apiProvider,
+		) // kilocode_change: add kilocode for anonymous access
 	) {
 		return true
 	}

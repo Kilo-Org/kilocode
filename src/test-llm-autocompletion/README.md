@@ -1,6 +1,6 @@
 # LLM Autocompletion Tests
 
-Standalone approval-test suite for `GhostInlineCompletionProvider` using **real LLM calls**.
+Standalone approval-test suite for `AutocompleteInlineCompletionProvider` using **real LLM calls**.
 
 ## Setup
 
@@ -70,10 +70,10 @@ Default model: `mistralai/codestral-2508` (supports FIM).
 LLM_MODEL=anthropic/claude-3-haiku pnpm run test
 ```
 
-The suite mirrors production behavior via `GhostProviderTester`:
+The suite mirrors production behavior via `AutocompleteProviderTester`:
 
-- If the model supports FIM → `ghost-provider-fim` (uses `FimPromptBuilder`)
-- Otherwise → `ghost-provider-holefiller` (uses `HoleFiller`)
+- If the model supports FIM → `autocomplete-provider-fim` (uses `FimPromptBuilder`)
+- Otherwise → `autocomplete-provider-holefiller` (uses `HoleFiller`)
 
 ## HTML report
 

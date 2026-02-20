@@ -32,7 +32,15 @@ describe("safeStringify", () => {
 		})
 
 		it("should handle nested arrays", () => {
-			expect(safeStringify([[1, 2], [3, 4]])).toEqual([[1, 2], [3, 4]])
+			expect(
+				safeStringify([
+					[1, 2],
+					[3, 4],
+				]),
+			).toEqual([
+				[1, 2],
+				[3, 4],
+			])
 		})
 
 		it("should handle arrays with mixed types", () => {
