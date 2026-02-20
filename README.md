@@ -66,7 +66,7 @@ You’re free to use, modify, and distribute this code, including for commercial
 
 ## Contributing
 
-Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://discord.gg/kilocode) to chat with the team and community.
+Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://kilo.ai/discord) to chat with the team and community.
 
 Thanks to all the contributors who help make Kilo better!
 

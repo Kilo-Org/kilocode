@@ -286,10 +286,10 @@ We welcome contributions to Kilo Code! Here's how you can help:
 3. **Write tests** to improve Code Coverage
 4. **Improve Documentation** at [kilo.ai/docs](https://kilo.ai/docs)
 5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
-6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
+6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://kilo.ai/discord)!
 
 ## Community
 
-Your contributions are welcome! For questions or ideas, please join our Discord server: https://discord.gg/Ja6BkfyTzJ
+Your contributions are welcome! For questions or ideas, please join our Discord server: https://kilo.ai/discord
 
 We look forward to your contributions and feedback!

@@ -149,5 +149,20 @@ describe("VertexHandler", () => {
 			expect(modelInfo.info.maxTokens).toBe(8192)
 			expect(modelInfo.info.contextWindow).toBe(1048576)
 		})
+
+		// kilocode_change start
+		it("should expose native tools metadata for gemini-3.1-pro-preview", () => {
+			const testHandler = new VertexHandler({
+				apiModelId: "gemini-3.1-pro-preview",
+				vertexProjectId: "test-project",
+				vertexRegion: "us-central1",
+			})
+
+			const modelInfo = testHandler.getModel()
+			expect(modelInfo.id).toBe("gemini-3.1-pro-preview")
+			expect(modelInfo.info.supportsNativeTools).toBe(true)
+			expect(modelInfo.info.defaultToolProtocol).toBe("native")
+		})
+		// kilocode_change end
 	})
 })

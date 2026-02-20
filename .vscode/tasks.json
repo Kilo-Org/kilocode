@@ -142,20 +142,6 @@
 				"clear": false
 			},
 			"problemMatcher": []
-		},
-		{
-			"type": "shell",
-			"command": "pnpm docs:start",
-			"problemMatcher": [],
-			"label": "docs: start",
-			"detail": "node -r dotenv/config node_modules/.bin/docusaurus start --host 0.0.0.0"
-		},
-		{
-			"type": "shell",
-			"command": "pnpm docs:build",
-			"problemMatcher": [],
-			"label": "docs: build",
-			"detail": "Build the Docusaurus site for production"
 		}
 	]
 }

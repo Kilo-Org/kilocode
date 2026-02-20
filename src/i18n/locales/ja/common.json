@@ -283,5 +283,8 @@
 		"copyInstructions": "以下のエラーの詳細をコピーしてください：",
 		"errorStack": "エラースタック",
 		"componentStack": "コンポーネントスタック"
+	},
+	"suggestions": {
+		"start_code_review": "コードレビューを開始"
 	}
 }

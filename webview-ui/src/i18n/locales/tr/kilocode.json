@@ -39,6 +39,11 @@
 		"message": "500'den fazla modele erişmek, kredileri maliyet fiyatından kullanmak veya kendi anahtarını kullanmak için giriş yap veya hesap oluştur.",
 		"loginButton": "Giriş Yap"
 	},
+	"promotionError": {
+		"title": "Devam etmek için kaydolman gerekiyor",
+		"message": "Devam etmek ve 500 diğer modeli keşfetmek için ücretsiz kaydol. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gel.",
+		"signUpButton": "Kaydol"
+	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",

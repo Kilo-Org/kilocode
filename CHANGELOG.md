@@ -1,5 +1,21 @@
 # kilo-code
 
+## 5.8.1
+
+### Patch Changes
+
+- [#6007](https://github.com/Kilo-Org/kilocode/pull/6007) [`39109ca`](https://github.com/Kilo-Org/kilocode/commit/39109ca06d719de2b468e4a73bc9da71bfbc327c) Thanks [@alex-alecu](https://github.com/alex-alecu)! - Show post-completion suggestions after `code` and `orchestrator` tasks to start `review` mode, including an option that clears context and starts a fresh review of uncommitted changes.
+
+- [#5989](https://github.com/Kilo-Org/kilocode/pull/5989) [`7478c67`](https://github.com/Kilo-Org/kilocode/commit/7478c67f577a27d260e28eb83bec4d6a2583a8a8) Thanks [@pedroheyerdahl](https://github.com/pedroheyerdahl)! - Add X-KiloCode-Feature header for microdollar usage tracking
+
+- [#6017](https://github.com/Kilo-Org/kilocode/pull/6017) [`34f7bc0`](https://github.com/Kilo-Org/kilocode/commit/34f7bc05d79081da2ccd03b3736e2bd359e7defa) Thanks [@PeterDaveHello](https://github.com/PeterDaveHello)! - Update Gemini default model metadata for Gemini 3.1 Pro and keep tool calling behavior consistent.
+
+- [#5901](https://github.com/Kilo-Org/kilocode/pull/5901) [`8d7f102`](https://github.com/Kilo-Org/kilocode/commit/8d7f102e77178c6c40fc4a6f80130f041ee038f5) Thanks [@SkipperQ93](https://github.com/SkipperQ93)! - Fix: JetBrains editor initialization when ExtensionHostManager is missing from SystemObjectProvider
+
+- [#5986](https://github.com/Kilo-Org/kilocode/pull/5986) [`fe0c0f0`](https://github.com/Kilo-Org/kilocode/commit/fe0c0f0cf914f5edf12d9683c01f2b53c0592291) Thanks [@imanolmzd-svg](https://github.com/imanolmzd-svg)! - Add promotion sign-up prompt when anonymous users hit the promotional model usage limit
+
+- [#6014](https://github.com/Kilo-Org/kilocode/pull/6014) [`c5d23dd`](https://github.com/Kilo-Org/kilocode/commit/c5d23ddf47959fc1e8cf8207a93c736e7f31b2a7) Thanks [@imanolmzd-svg](https://github.com/imanolmzd-svg)! - Updated promotion warning text and translations across all 22 languages
+
 ## 5.8.0
 
 ### Minor Changes

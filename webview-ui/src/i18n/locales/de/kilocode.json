@@ -46,6 +46,11 @@
 		"message": "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zu Selbstkosten zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
 		"loginButton": "Anmelden"
 	},
+	"promotionError": {
+		"title": "Du musst dich registrieren, um weiterzumachen",
+		"message": "Registriere dich kostenlos, um weiterzumachen und 500 weitere Modelle zu entdecken. Dauert 2 Minuten, keine Kreditkarte nötig. Oder komm später wieder.",
+		"signUpButton": "Registrieren"
+	},
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",

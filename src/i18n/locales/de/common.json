@@ -278,5 +278,8 @@
 		"copyInstructions": "Kopiere die unten stehenden Fehlerdetails:",
 		"errorStack": "Fehler-Stack",
 		"componentStack": "Komponenten-Stack"
+	},
+	"suggestions": {
+		"start_code_review": "Code-Review starten"
 	}
 }

@@ -32,9 +32,7 @@
 		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
 		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
-		"jetbrains-host:build": "turbo jetbrains-host:build",
-		"docs:dev": "pnpm --filter kilocode-docs dev",
-		"docs:build": "pnpm --filter kilocode-docs build"
+		"jetbrains-host:build": "turbo jetbrains-host:build"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

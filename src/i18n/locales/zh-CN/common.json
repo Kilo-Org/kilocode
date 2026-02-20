@@ -288,5 +288,8 @@
 		"copyInstructions": "复制下方的错误详情:",
 		"errorStack": "错误堆栈",
 		"componentStack": "组件堆栈"
+	},
+	"suggestions": {
+		"start_code_review": "开始代码审查"
 	}
 }

@@ -503,7 +503,14 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		finishReason: string | null | undefined,
 		activeToolCallIds: Set<string>,
 	): Generator<
-		| { type: "tool_call_partial"; index: number; id?: string; name?: string; arguments?: string }
+		| {
+				type: "tool_call_partial"
+				index: number
+				id?: string
+				name?: string
+				arguments?: string
+				extra_content?: Record<string, unknown> // kilocode_change
+		  }
 		| { type: "tool_call_end"; id: string }
 	> {
 		if (delta?.tool_calls) {
@@ -517,6 +524,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					id: toolCall.id,
 					name: toolCall.function?.name,
 					arguments: toolCall.function?.arguments,
+					// kilocode_change start: Preserve extra_content for Gemini 3 thought_signature support
+					extra_content: (toolCall as any).extra_content,
+					// kilocode_change end
 				}
 			}
 		}

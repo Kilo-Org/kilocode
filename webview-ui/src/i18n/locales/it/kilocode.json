@@ -46,6 +46,11 @@
 		"message": "Accedi o crea un account per accedere a oltre 500 modelli, utilizzare crediti al costo effettivo o portare la tua chiave.",
 		"loginButton": "Accedi"
 	},
+	"promotionError": {
+		"title": "Devi registrarti per continuare",
+		"message": "Registrati gratis per continuare e scoprire 500 altri modelli. Bastano 2 minuti, nessuna carta di credito richiesta. Oppure torna più tardi.",
+		"signUpButton": "Registrati"
+	},
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",

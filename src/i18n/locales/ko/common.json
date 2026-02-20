@@ -283,5 +283,8 @@
 		"copyInstructions": "아래 오류 세부 정보를 복사하세요:",
 		"errorStack": "오류 스택",
 		"componentStack": "컴포넌트 스택"
+	},
+	"suggestions": {
+		"start_code_review": "코드 리뷰 시작"
 	}
 }

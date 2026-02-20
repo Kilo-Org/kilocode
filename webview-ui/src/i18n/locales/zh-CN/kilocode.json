@@ -46,6 +46,11 @@
 		"message": "登录或创建账号即可访问 500+ 模型,按成本价使用额度,或使用自己的 API 密钥。",
 		"loginButton": "登录"
 	},
+	"promotionError": {
+		"title": "需要注册才能继续",
+		"message": "免费注册以继续使用并探索 500 多个其他模型。只需 2 分钟，无需信用卡。或稍后再来。",
+		"signUpButton": "注册"
+	},
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
