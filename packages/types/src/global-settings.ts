@@ -85,7 +85,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowBrowser: z.boolean().optional(),
 	alwaysApproveResubmit: z.boolean().optional(), // kilocode_change
 	requestDelaySeconds: z.number().optional(),
-	requestRetryMax: z.number().optional(), // kilocode_change
+	requestRetryMax: z.number().min(0).optional(), // kilocode_change
 	alwaysAllowMcp: z.boolean().optional(),
 	alwaysAllowModeSwitch: z.boolean().optional(),
 	alwaysAllowSubtasks: z.boolean().optional(),
