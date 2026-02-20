@@ -131,10 +131,13 @@ export namespace LearnTracker {
       .catch(() => emptyAggregate())
   }
 
+  const MAX_AGGREGATE_CHECKS = 500
+
   export async function appendAggregate(input: { sessionID: string; check: Check }) {
     const current = await getAggregate()
     const entry: AggregateCheck = { ...input.check, sessionID: input.sessionID }
     current.checks.push(entry)
+    if (current.checks.length > MAX_AGGREGATE_CHECKS) current.checks = current.checks.slice(-MAX_AGGREGATE_CHECKS)
     current.level = calibrate(current.checks)
     const ids = new Set(current.checks.map((c) => c.sessionID))
     current.sessions = ids.size
