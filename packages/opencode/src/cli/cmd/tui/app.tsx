@@ -340,7 +340,7 @@ function App() {
   let resumed = false
   createEffect(() => {
     if (resumed || sync.status === "loading") return
-    if (args.continue || args.sessionID || args.prompt) return
+    if (args.continue || args.sessionID || args.prompt || args.agent || args.model) return
     const recent = sync.data.session
       .toSorted((a, b) => b.time.updated - a.time.updated)
       .find((x) => x.parentID === undefined)
