@@ -103,10 +103,10 @@ function checkJava() {
 	}
 
 	// Parse Java version - handle both old format (1.8.0_xxx) and new format (17.0.x)
-	let majorVersion = null
 	const newFormatMatch = javaVersion.match(/version "(\d+)\.(\d+)/)
 	const oldFormatMatch = javaVersion.match(/version "1\.(\d+)/)
 
+	let majorVersion = null
 	if (newFormatMatch) {
 		majorVersion = newFormatMatch[1]
 	} else if (oldFormatMatch) {
