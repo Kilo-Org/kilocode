@@ -352,7 +352,7 @@ export const AutoApproveSettings = ({
 												})
 											}}
 										/>
-										<span className="w-12 text-right">{requestDelaySeconds ?? 5}s</span>
+										<span className="w-12 text-right">{requestDelaySeconds ?? 10}s</span>
 									</div>
 									<div className="text-vscode-descriptionForeground text-sm mt-1">
 										{t("settings:autoApprove.retry.delayLabel")}
