@@ -2,10 +2,13 @@
  * CloudSessionList component
  * Displays sessions synced to Kilo cloud, grouped by date.
  * Clicking a session imports it to local storage and opens it.
+ * Uses kilo-ui List component for consistent styling with SessionList.
  */
 
-import { Component, For, Show, createSignal, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createEffect, onMount } from "solid-js"
+import { List } from "@kilocode/kilo-ui/list"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
@@ -28,15 +31,6 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
   return DATE_GROUP_KEYS[4]
 }
 
-function groupByDate(sessions: CloudSession[]): Array<{ key: string; items: CloudSession[] }> {
-  const map = new Map<string, CloudSession[]>()
-  for (const key of DATE_GROUP_KEYS) map.set(key, [])
-  for (const s of sessions) {
-    map.get(dateGroupKey(s.updated_at))!.push(s)
-  }
-  return DATE_GROUP_KEYS.filter((k) => map.get(k)!.length > 0).map((k) => ({ key: k, items: map.get(k)! }))
-}
-
 interface CloudSessionListProps {
   onSelectSession: (id: string) => void
 }
@@ -48,7 +42,6 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
   const [loading, setLoading] = createSignal(false)
 
   onMount(() => {
-    console.log("[Kilo New] CloudSessionList: mounted", { connected: server.isConnected() })
     if (!server.isConnected()) return
     setLoading(true)
     session.loadCloudSessions()
@@ -61,10 +54,8 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     }
   })
 
-  const groups = () => groupByDate(session.cloudSessions())
-
-  const handleSelect = (s: CloudSession) => {
-    if (session.importingCloudSessionId()) return
+  const handleSelect = (s: CloudSession | undefined) => {
+    if (!s || session.importingCloudSessionId()) return
     session.importCloudSession(s.session_id)
   }
 
@@ -88,41 +79,39 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
           <Spinner />
         </div>
       </Show>
-      <Show when={isLoggedIn() && !loading() && session.cloudSessions().length === 0}>
-        <div class="session-list-empty">
-          <span>{language.t("session.cloud.empty")}</span>
-        </div>
-      </Show>
-      <Show when={isLoggedIn() && !loading() && session.cloudSessions().length > 0}>
-        <For each={groups()}>
-          {(group) => (
-            <div class="session-group">
-              <div class="session-group-label">{language.t(group.key)}</div>
-              <For each={group.items}>
-                {(s) => {
-                  const importing = () => session.importingCloudSessionId() === s.session_id
-                  return (
-                    <button
-                      class="session-item"
-                      onClick={() => handleSelect(s)}
-                      disabled={!!session.importingCloudSessionId()}
-                    >
-                      <Show when={importing()}>
-                        <Spinner />
-                      </Show>
-                      <span class="session-item-title">{s.title || language.t("session.untitled")}</span>
-                      <span class="session-item-date">{formatRelativeDate(s.updated_at)}</span>
-                    </button>
-                  )
-                }}
-              </For>
-            </div>
-          )}
-        </For>
+      <Show when={isLoggedIn() && !loading()}>
+        <List<CloudSession>
+          items={session.cloudSessions()}
+          key={(s) => s.session_id}
+          filterKeys={["title"]}
+          onSelect={handleSelect}
+          search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
+          emptyMessage={language.t("session.cloud.empty")}
+          groupBy={(s) => language.t(dateGroupKey(s.updated_at))}
+          sortGroupsBy={(a, b) => {
+            const rank = Object.fromEntries(DATE_GROUP_KEYS.map((k, i) => [language.t(k), i]))
+            return (rank[a.category] ?? 99) - (rank[b.category] ?? 99)
+          }}
+        >
+          {(s) => {
+            const importing = () => session.importingCloudSessionId() === s.session_id
+            return (
+              <>
+                <Show when={importing()}>
+                  <Spinner />
+                </Show>
+                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
+                <span data-slot="list-item-description">{formatRelativeDate(s.updated_at)}</span>
+              </>
+            )
+          }}
+        </List>
         <Show when={!!session.cloudSessionsNextCursor()}>
-          <button class="session-load-more" onClick={handleLoadMore}>
-            {language.t("session.cloud.loadMore")}
-          </button>
+          <div style={{ padding: "8px 12px" }}>
+            <Button variant="ghost" size="small" onClick={handleLoadMore}>
+              {language.t("session.cloud.loadMore")}
+            </Button>
+          </div>
         </Show>
       </Show>
     </div>
