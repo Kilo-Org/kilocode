@@ -208,6 +208,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         if (!token) return c.json({ error: "No valid token found" }, 401)
 
         const ingestBase = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+        console.log("[Kilo Gateway] cloud/session/import", { sessionId, token: token.slice(0, 20) + "..." })
         const response = await fetch(`${ingestBase}/api/session/${sessionId}/export`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -216,6 +217,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         if (!response.ok) {
           const text = await response.text()
           console.error("[Kilo Gateway] cloud/session/import export failed:", {
+            sessionId,
             status: response.status,
             body: text.slice(0, 500),
           })
