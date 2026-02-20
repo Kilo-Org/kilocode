@@ -1015,6 +1015,18 @@ export namespace Config {
       .enum(["auto", "stacked"])
       .optional()
       .describe("Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column"),
+    // kilocode_change start
+    notifications: z
+      .object({
+        bell: z.boolean().optional().describe("Enable terminal bell when input is needed and window is unfocused"),
+        osc: z
+          .boolean()
+          .optional()
+          .describe("Enable OSC 9/99 notifications for iTerm2/Kitty when input is needed and window is unfocused"),
+      })
+      .optional()
+      .describe("Notification settings for the TUI"),
+    // kilocode_change end
   })
 
   export const Server = z

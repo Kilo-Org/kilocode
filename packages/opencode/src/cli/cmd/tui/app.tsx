@@ -42,6 +42,8 @@ import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { FocusProvider, useFocused } from "@tui/util/focus" // kilocode_change
+import { notify } from "@tui/util/notify" // kilocode_change
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -159,7 +161,9 @@ export function tui(input: {
                                       <FrecencyProvider>
                                         <PromptHistoryProvider>
                                           <PromptRefProvider>
-                                            <App />
+                                            <FocusProvider>
+                                              <App />
+                                            </FocusProvider>
                                           </PromptRefProvider>
                                         </PromptHistoryProvider>
                                       </FrecencyProvider>
@@ -739,6 +743,25 @@ function App() {
       duration: 10000,
     })
   })
+
+  // kilocode_change start - Terminal notifications when input is needed and window is unfocused
+  const focus = useFocused()
+  sdk.event.on("permission.asked", (evt) => {
+    if (focus.focused()) return
+    notify(
+      "Permission Required",
+      `${evt.properties.permission} approval needed`,
+      sync.data.config,
+      evt.properties.sessionID,
+    )
+  })
+
+  sdk.event.on("question.asked", (evt) => {
+    if (focus.focused()) return
+    const body = evt.properties.questions[0]?.header ?? "The agent is asking a question"
+    notify("Question", body, sync.data.config, evt.properties.sessionID)
+  })
+  // kilocode_change end
 
   return (
     <box

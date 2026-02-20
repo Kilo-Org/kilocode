@@ -10157,6 +10157,20 @@
                 "description": "Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column",
                 "type": "string",
                 "enum": ["auto", "stacked"]
+              },
+              "notifications": {
+                "description": "Notification settings for the TUI",
+                "type": "object",
+                "properties": {
+                  "bell": {
+                    "description": "Enable terminal bell when input is needed and window is unfocused",
+                    "type": "boolean"
+                  },
+                  "osc": {
+                    "description": "Enable OSC 9/99 notifications for iTerm2/Kitty when input is needed and window is unfocused",
+                    "type": "boolean"
+                  }
+                }
               }
             }
           },

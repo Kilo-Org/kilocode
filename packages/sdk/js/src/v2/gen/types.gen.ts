@@ -1719,6 +1719,19 @@ export type Config = {
      * Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column
      */
     diff_style?: "auto" | "stacked"
+    /**
+     * Notification settings for the TUI
+     */
+    notifications?: {
+      /**
+       * Enable terminal bell when input is needed and window is unfocused
+       */
+      bell?: boolean
+      /**
+       * Enable OSC 9/99 notifications for iTerm2/Kitty when input is needed and window is unfocused
+       */
+      osc?: boolean
+    }
   }
   server?: ServerConfig
   /**
