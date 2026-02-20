@@ -112,7 +112,7 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 			} else {
 				// kilocode_change: When auto-execute is enabled, send message to webview without waiting for approval
 				// This ensures that workflow tool UI is displayed even when auto-executing
-				await task.ask("tool", toolMessage, false).catch(() => {})
+				await task.ask("tool", toolMessage, false).catch((err) => console.warn("[RunSlashCommand] Failed to send tool message to webview:", err))
 			}
 			// kilocode_change end
 
