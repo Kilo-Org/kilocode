@@ -292,6 +292,11 @@
         "mac": "cmd+shift+a"
       },
       {
+        "command": "kilo-code.new.agentManagerOpen",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
         "command": "kilo-code.new.addToContext",
         "key": "ctrl+k ctrl+a",
         "mac": "cmd+k cmd+a",
