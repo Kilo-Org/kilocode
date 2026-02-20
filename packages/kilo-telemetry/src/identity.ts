@@ -11,8 +11,16 @@ export namespace Identity {
     dataPath = p
   }
 
-  export async function getMachineId(): Promise<string> {
+  export async function getMachineId(): Promise<string | undefined> {
     if (machineId) return machineId
+    const override = process.env.KILO_MACHINE_ID
+    if (override) {
+      machineId = override
+      return machineId
+    }
+
+    // Don't write to the working directory if no data path is configured
+    if (!dataPath) return undefined
 
     const filepath = path.join(dataPath, "telemetry-id")
     const file = Bun.file(filepath)

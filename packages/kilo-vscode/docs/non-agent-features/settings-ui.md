@@ -18,12 +18,9 @@ Replicate the settings that are available in OpenCode (CLI) and allow users to c
 
 ## Current State
 
-15-tab settings shell exists, migrated to kilo-ui `Tabs` component. [`BrowserTab`](../../webview-ui/src/components/settings/BrowserTab.tsx) has real settings controls (enable/disable, system Chrome, headless toggles using kilo-ui `Switch`). [`LanguageTab`](../../webview-ui/src/components/settings/LanguageTab.tsx) has a working locale selector using kilo-ui `Select`. The remaining 13 tabs are still stubs.
+14 tabs are functional: Providers (model selection + allow/block lists), AgentBehaviour (MCP read-only, rules, skills), AutoApprove (per-tool allow/ask/deny dropdowns), Browser, Autocomplete, Display, Notifications, Context, Terminal, Prompts, Experimental, Language, AboutKiloCode.
 
 ## Gaps
 
-- All tabs are stubs — no actual form controls or settings values
-- No settings read/write integration with CLI backend
-- No settings validation
-- Need to determine which CLI endpoints expose/accept configuration
+- Workflows subtab inside AgentBehaviour is a `<Placeholder>` (not implemented)
 - No import/export settings functionality

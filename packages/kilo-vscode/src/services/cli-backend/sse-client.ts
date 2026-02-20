@@ -36,8 +36,9 @@ export class SSEClient {
     console.log('[Kilo New] SSE: 🔄 Setting state to "connecting"')
     this.notifyState("connecting")
 
-    // Build URL with directory parameter
-    const url = `${this.config.baseUrl}/event?directory=${encodeURIComponent(directory)}`
+    // Use the global event endpoint so we receive events from all directories
+    // (including worktree sessions). Events are filtered client-side by trackedSessionIds.
+    const url = `${this.config.baseUrl}/global/event?directory=${encodeURIComponent(directory)}`
     console.log("[Kilo New] SSE: 🌐 Connecting to URL:", url)
 
     // Create auth header
@@ -65,7 +66,13 @@ export class SSEClient {
     this.eventSource.onmessage = (messageEvent) => {
       console.log("[Kilo New] SSE: 📨 Received message event:", messageEvent.data)
       try {
-        const event = JSON.parse(messageEvent.data) as SSEEvent
+        const raw = JSON.parse(messageEvent.data)
+        // Global endpoint wraps events as { directory, payload: { type, properties } }
+        const event = (raw.payload ?? raw) as SSEEvent
+        if (!event.type) {
+          console.warn("[Kilo New] SSE: ⚠️ Received event without type:", raw)
+          return
+        }
         console.log("[Kilo New] SSE: 📦 Parsed event type:", event.type)
         this.notifyEvent(event)
       } catch (error) {

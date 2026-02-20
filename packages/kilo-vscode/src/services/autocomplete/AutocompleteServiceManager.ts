@@ -1,12 +1,12 @@
 import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "./shims/i18n"
-import { TelemetryStub } from "./shims/TelemetryStub"
+import { TelemetryProxy, TelemetryEventName } from "../telemetry"
 import { AutocompleteModel } from "./AutocompleteModel"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
-import { AutocompleteTelemetry, TelemetryEventName } from "./classic-auto-complete/AutocompleteTelemetry"
+import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { KiloConnectionService } from "../cli-backend"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
@@ -43,7 +43,6 @@ export class AutocompleteServiceManager {
 
   private readonly model: AutocompleteModel
   private readonly context: vscode.ExtensionContext
-  private readonly telemetry = new TelemetryStub()
   private settings: AutocompleteServiceSettings | null = null
 
   private taskId: string | null = null
@@ -134,7 +133,7 @@ export class AutocompleteServiceManager {
       enableSmartInlineTaskKeybinding: false,
     })
 
-    this.telemetry.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
+    TelemetryProxy.capture(TelemetryEventName.GHOST_SERVICE_DISABLED)
 
     await this.load()
   }
@@ -232,7 +231,7 @@ export class AutocompleteServiceManager {
     }
 
     this.taskId = crypto.randomUUID()
-    this.telemetry.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
+    TelemetryProxy.capture(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
       taskId: this.taskId,
     })
 

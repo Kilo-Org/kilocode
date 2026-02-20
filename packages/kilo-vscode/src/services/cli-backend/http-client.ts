@@ -1,6 +1,7 @@
 import type {
   ServerConfig,
   SessionInfo,
+  SessionStatusInfo,
   MessageInfo,
   MessagePart,
   AgentInfo,
@@ -23,8 +24,8 @@ export class HttpClient {
 
   constructor(config: ServerConfig) {
     this.baseUrl = config.baseUrl
-    // Auth header format: Basic base64("opencode:password")
-    // NOTE: The CLI server expects a non-empty username ("opencode"). Using an empty username
+    // Auth header format: Basic base64("kilo:password")
+    // NOTE: The CLI server expects a non-empty username ("kilo"). Using an empty username
     // (":password") results in 401 for both REST and SSE endpoints.
     this.authHeader = `Basic ${Buffer.from(`${this.authUsername}:${config.password}`).toString("base64")}`
 
@@ -137,6 +138,14 @@ export class HttpClient {
    */
   async listSessions(directory: string): Promise<SessionInfo[]> {
     return this.request<SessionInfo[]>("GET", "/session", undefined, { directory })
+  }
+
+  /**
+   * Get the status of all sessions.
+   * Returns a map of sessionID → SessionStatusInfo.
+   */
+  async getSessionStatuses(directory: string): Promise<Record<string, SessionStatusInfo>> {
+    return this.request<Record<string, SessionStatusInfo>>("GET", "/session/status", undefined, { directory })
   }
 
   /**
@@ -461,34 +470,59 @@ export class HttpClient {
   }
 
   // ============================================
+  // File Search Methods
+  // ============================================
+
+  async findFiles(query: string, directory: string): Promise<string[]> {
+    const params = new URLSearchParams({ query, dirs: "false", limit: "10" })
+    return this.request<string[]>("GET", `/find/file?${params.toString()}`, undefined, { directory })
+  }
+
+  // ============================================
+  // Commit Message Methods
+  // ============================================
+
+  /**
+   * Generate a commit message for the current diff in the given directory.
+   */
+  async generateCommitMessage(path: string, selectedFiles?: string[], previousMessage?: string): Promise<string> {
+    const result = await this.request<{ message: string }>("POST", "/commit-message", {
+      path,
+      selectedFiles,
+      previousMessage,
+    })
+    return result.message
+  }
+
+  // ============================================
   // MCP Methods
   // ============================================
 
   /**
    * Get the status of all MCP servers.
    */
-  async getMcpStatus(): Promise<Record<string, McpStatus>> {
-    return this.request<Record<string, McpStatus>>("GET", "/mcp")
+  async getMcpStatus(directory: string): Promise<Record<string, McpStatus>> {
+    return this.request<Record<string, McpStatus>>("GET", "/mcp", undefined, { directory })
   }
 
   /**
    * Add or update an MCP server configuration.
    */
-  async addMcpServer(name: string, config: McpConfig): Promise<Record<string, McpStatus>> {
-    return this.request<Record<string, McpStatus>>("POST", "/mcp", { name, config })
+  async addMcpServer(name: string, config: McpConfig, directory: string): Promise<Record<string, McpStatus>> {
+    return this.request<Record<string, McpStatus>>("POST", "/mcp", { name, config }, { directory })
   }
 
   /**
    * Connect an MCP server by name.
    */
-  async connectMcpServer(name: string): Promise<boolean> {
-    return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/connect`)
+  async connectMcpServer(name: string, directory: string): Promise<boolean> {
+    return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/connect`, undefined, { directory })
   }
 
   /**
    * Disconnect an MCP server by name.
    */
-  async disconnectMcpServer(name: string): Promise<boolean> {
-    return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/disconnect`)
+  async disconnectMcpServer(name: string, directory: string): Promise<boolean> {
+    return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/disconnect`, undefined, { directory })
   }
 }

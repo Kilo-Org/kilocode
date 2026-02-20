@@ -98,6 +98,33 @@ const pierreWorkerStubPlugin = {
   },
 }
 
+const svgSpritePlugin = {
+  name: "svg-sprite-inline",
+  setup(build) {
+    build.onLoad({ filter: /sprite\.svg$/ }, (args) => {
+      const content = require("fs").readFileSync(args.path, "utf8")
+      return {
+        contents: `
+          const svg = ${JSON.stringify(content)};
+          const inject = () => {
+            if (!document.getElementById("kilo-sprite")) {
+              const el = document.createElement("div");
+              el.id = "kilo-sprite";
+              el.style.display = "none";
+              el.innerHTML = svg;
+              document.body.appendChild(el);
+            }
+          };
+          if (document.body) inject();
+          else document.addEventListener("DOMContentLoaded", inject);
+          export default "";
+        `,
+        loader: "js",
+      }
+    })
+  },
+}
+
 const cssPackageResolvePlugin = {
   name: "css-package-resolve",
   setup(build) {
@@ -147,6 +174,7 @@ async function main() {
     plugins: [
       solidDedupePlugin,
       pierreWorkerStubPlugin,
+      svgSpritePlugin,
       cssPackageResolvePlugin,
       solidPlugin(),
       esbuildProblemMatcherPlugin,
@@ -172,6 +200,7 @@ async function main() {
     plugins: [
       solidDedupePlugin,
       pierreWorkerStubPlugin,
+      svgSpritePlugin,
       cssPackageResolvePlugin,
       solidPlugin(),
       esbuildProblemMatcherPlugin,

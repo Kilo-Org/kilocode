@@ -29,6 +29,7 @@ const openRouterModelSchema = z.object({
   architecture: openRouterArchitectureSchema.optional(),
   top_provider: z.object({ max_completion_tokens: z.number().nullish() }).optional(),
   supported_parameters: z.array(z.string()).optional(),
+  preferredIndex: z.number().optional(),
 })
 
 const openRouterModelsResponseSchema = z.object({
@@ -166,6 +167,10 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
         input: mapModalities(inputModalities),
         output: mapModalities(outputModalities),
       },
+    }),
+    ...(model.preferredIndex !== undefined && {
+      recommended: true,
+      recommendedIndex: model.preferredIndex,
     }),
     options: {
       ...(model.description && { description: model.description }),

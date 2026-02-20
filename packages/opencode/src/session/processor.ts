@@ -15,6 +15,7 @@ import { Config } from "@/config/config"
 import { SessionCompaction } from "./compaction"
 import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -34,6 +35,7 @@ export namespace SessionProcessor {
     let blocked = false
     let attempt = 0
     let needsCompaction = false
+    let stepStart = 0 // kilocode_change
 
     const result = {
       get message() {
@@ -223,6 +225,7 @@ export namespace SessionProcessor {
                   throw value.error
 
                 case "start-step":
+                  stepStart = performance.now() // kilocode_change
                   snapshot = await Snapshot.track()
                   await Session.updatePart({
                     id: Identifier.ascending("part"),
@@ -239,6 +242,26 @@ export namespace SessionProcessor {
                     usage: value.usage,
                     metadata: value.providerMetadata,
                   })
+                  // kilocode_change start
+                  if (
+                    usage.tokens.input > 0 ||
+                    usage.tokens.output > 0 ||
+                    usage.tokens.cache.write > 0 ||
+                    usage.tokens.cache.read > 0
+                  ) {
+                    Telemetry.trackLlmCompletion({
+                      sessionId: input.sessionID,
+                      provider: input.model.providerID,
+                      model: input.model.id,
+                      inputTokens: usage.tokens.input,
+                      outputTokens: usage.tokens.output,
+                      cacheReadTokens: usage.tokens.cache.read,
+                      cacheWriteTokens: usage.tokens.cache.write,
+                      cost: usage.cost,
+                      completionTime: Math.round(performance.now() - stepStart),
+                    })
+                  }
+                  // kilocode_change end
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens

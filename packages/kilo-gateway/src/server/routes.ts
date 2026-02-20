@@ -8,7 +8,8 @@
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
-import { KILO_API_BASE } from "../api/constants.js"
+import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js" // kilocode_change - added HEADER_FEATURE
+import { buildKiloHeaders } from "../headers.js" // kilocode_change
 
 // Type definitions for OpenCode dependencies (injected at runtime)
 type Hono = any
@@ -216,6 +217,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            // kilocode_change start - include kilo headers with autocomplete feature override
+            ...buildKiloHeaders(),
+            [HEADER_FEATURE]: "autocomplete",
+            // kilocode_change end
           },
           body: JSON.stringify({
             model: fimModel,

@@ -50,19 +50,14 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
+    const msgs = session.allMessages()
+    const parts = session.allParts()
     return {
-      session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })),
+      session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
       session_status: {} as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
-      message: id ? { [id]: session.messages() as unknown as SDKMessage[] } : {},
-      part: id
-        ? Object.fromEntries(
-            session
-              .messages()
-              .map((msg) => [msg.id, session.getParts(msg.id) as unknown as SDKPart[]])
-              .filter(([, parts]) => (parts as SDKPart[]).length > 0),
-          )
-        : {},
+      message: msgs as unknown as Record<string, SDKMessage[]>,
+      part: parts as unknown as Record<string, SDKPart[]>,
       permission: id ? { [id]: session.permissions() as unknown as any[] } : {},
     }
   })
@@ -71,8 +66,12 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.respondToPermission(input.permissionID, input.response)
   }
 
+  const sync = (sessionID: string) => {
+    session.syncSession(sessionID)
+  }
+
   return (
-    <DataProvider data={data()} directory="" onPermissionRespond={respond}>
+    <DataProvider data={data()} directory="" onPermissionRespond={respond} onSyncSession={sync}>
       {props.children}
     </DataProvider>
   )

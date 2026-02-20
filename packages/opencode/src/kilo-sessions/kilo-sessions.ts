@@ -10,6 +10,9 @@ import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
+import { Instance } from "@/project/instance"
+import { Vcs } from "@/project/vcs"
+import simpleGit from "simple-git"
 
 export namespace KiloSessions {
   const log = Log.create({ service: "kilo-sessions" })
@@ -23,6 +26,7 @@ export namespace KiloSessions {
   const tokenKey = "kilo-sessions:token"
   const orgKey = "kilo-sessions:org"
   const clientKey = "kilo-sessions:client"
+  const gitUrlKeyPrefix = "kilo-sessions:git-url:"
 
   const ttlMs = 10_000
 
@@ -31,6 +35,7 @@ export namespace KiloSessions {
     clearInFlightCache(tokenValidKey)
     clearInFlightCache(clientKey)
     clearInFlightCache(orgKey)
+    clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
   }
 
   async function authValid(token: string) {
@@ -370,13 +375,56 @@ export namespace KiloSessions {
     ])
   }
 
+  /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
+  function normalizeGitUrl(raw: string): string | undefined {
+    const ssh = raw.match(/^git@([^:]+):(.+)$/)
+    if (ssh) return `git@${ssh[1]}:${ssh[2].split("?")[0]}`
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined
+      parsed.username = ""
+      parsed.password = ""
+      parsed.search = ""
+      parsed.hash = ""
+      return parsed.toString()
+    } catch {
+      return undefined
+    }
+  }
+
+  async function getGitUrl(): Promise<string | undefined> {
+    return withInFlightCache(gitUrlKeyPrefix + Instance.worktree, ttlMs, async () => {
+      const repo = simpleGit(Instance.worktree)
+      const remotes = await repo.getRemotes(true).catch(() => [])
+      if (remotes.length === 0) return undefined
+
+      const names = remotes.map((r) => r.name)
+      const remote = names.includes("origin")
+        ? "origin"
+        : remotes.length === 1
+          ? names[0]
+          : names.includes("upstream")
+            ? "upstream"
+            : undefined
+
+      if (!remote) return undefined
+
+      const url = remotes.find((r) => r.name === remote)?.refs.fetch ?? ""
+      return url ? normalizeGitUrl(url) : undefined
+    })
+  }
+
   async function meta() {
     const platform = process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
+    const gitBranch = await Vcs.branch().catch(() => undefined)
+    const gitUrl = await getGitUrl().catch(() => undefined)
 
     return {
       platform,
       ...(orgId ? { orgId } : {}),
+      ...(gitUrl ? { gitUrl } : {}),
+      ...(gitBranch ? { gitBranch } : {}),
     }
   }
 

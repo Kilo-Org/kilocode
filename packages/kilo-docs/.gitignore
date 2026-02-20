@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+.next/
+.vercel
+package-lock.json
+yarn.lock
+screenshots/
+.beads/
+.env
+next-env.d.ts
+tsconfig.tsbuildinfo

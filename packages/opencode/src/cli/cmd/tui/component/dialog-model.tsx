@@ -8,20 +8,6 @@ import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { useKeybind } from "../context/keybind"
 import * as fuzzysort from "fuzzysort"
 
-// kilocode_change start - Recommended models for Kilo Gateway (order determines display priority)
-const KILO_RECOMMENDED_MODELS = [
-  "kilo/auto",
-  "anthropic/claude-sonnet-4.5",
-  "anthropic/claude-opus-4.5",
-  "anthropic/claude-haiku-4.5",
-  "openai/gpt-5.2",
-  "openai/gpt-5.2-codex",
-  "google/gemini-3-pro-preview",
-  "google/gemini-3-flash-preview",
-  "mistralai/devstral-2512",
-]
-// kilocode_change end
-
 export function useConnected() {
   const sync = useSync()
   return createMemo(() =>
@@ -100,7 +86,7 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change start
             category: connected()
-              ? provider.id === "kilo" && KILO_RECOMMENDED_MODELS.includes(model)
+              ? provider.id === "kilo" && info.recommended
                 ? "Recommended"
                 : provider.name
               : undefined,
@@ -123,11 +109,11 @@ export function DialogModel(props: { providerID?: string }) {
           sortBy(
             // kilocode_change start - Sort recommended models first for Kilo Gateway
             (x) => {
-              if (x.value.providerID === "kilo") {
-                const idx = KILO_RECOMMENDED_MODELS.indexOf(x.value.modelID)
-                return idx >= 0 ? idx : KILO_RECOMMENDED_MODELS.length + 1
-              }
-              return 0
+              if (x.value.providerID !== "kilo") return 0
+              const provider = sync.data.provider.find((p) => p.id === "kilo")
+              const model = provider?.models[x.value.modelID]
+              if (model?.recommendedIndex !== undefined) return model.recommendedIndex
+              return Object.keys(provider?.models ?? {}).length
             },
             // kilocode_change end
             (x) => x.footer !== "Free",

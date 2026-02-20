@@ -165,6 +165,7 @@
    ============================================ */
 
 .prompt-input-container {
+  position: relative;
   margin: 12px;
   border-radius: 0.25rem;
   background-color: var(--input-base, var(--vscode-input-background, #3c3c3c));
@@ -175,6 +176,65 @@
     border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
     box-shadow: none;
   }
+}
+
+/* Image Attachments */
+.image-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 0;
+}
+
+.image-attachment {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.image-attachment img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+  display: block;
+}
+
+.image-attachment-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--vscode-badge-background, #4d4d4d);
+  color: var(--vscode-badge-foreground, #fff);
+  border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.15));
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+
+  &:hover {
+    background: var(--vscode-errorForeground, #f48771);
+    color: #fff;
+  }
+}
+
+.image-attachment:hover .image-attachment-remove {
+  opacity: 1;
+}
+
+.prompt-input-container--dragging {
+  border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  border-style: dashed;
 }
 
 .prompt-input-wrapper {
@@ -188,7 +248,8 @@
   min-height: 54px;
   max-height: 200px;
   padding: 8px;
-  color: var(--vscode-input-foreground);
+  color: transparent;
+  caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
   font-size: 13px;
   line-height: 1.4;
@@ -209,7 +270,7 @@
   color: var(--vscode-input-placeholderForeground);
 }
 
-/* Ghost text autocomplete overlay */
+/* Input overlay (highlight + ghost text) */
 .prompt-input-ghost-wrapper {
   position: relative;
   flex: 1;
@@ -224,25 +285,26 @@
   box-sizing: border-box;
 }
 
-.prompt-input-ghost-overlay {
+.prompt-input-highlight-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   pointer-events: none;
-  padding: 8px 12px;
+  padding: 8px;
   font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: 13px;
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow: hidden;
   z-index: 0;
+  color: var(--vscode-input-foreground);
 }
 
-.prompt-input-ghost-text-hidden {
-  visibility: hidden;
+.prompt-input-file-mention {
+  color: var(--vscode-textLink-foreground, #3794ff);
 }
 
 .prompt-input-ghost-text {
@@ -252,6 +314,8 @@
 .prompt-input-hint {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   padding: 6px;
@@ -320,6 +384,72 @@
       color: var(--icon-base) !important;
     }
   }
+}
+
+/* ============================================
+   File Mention Dropdown
+   ============================================ */
+
+.file-mention-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.file-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  min-width: 0;
+}
+
+.file-mention-item--active {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.file-mention-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.file-mention-name {
+  flex-shrink: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.file-mention-dir {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
+  font-size: 11px;
+  text-align: right;
+}
+
+.file-mention-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
 }
 
 /* ============================================

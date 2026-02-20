@@ -92,12 +92,17 @@ export class BrowserAutomationService implements vscode.Disposable {
     }
 
     try {
-      const status = await httpClient.addMcpServer(BrowserAutomationService.MCP_SERVER_NAME, {
-        type: "local",
-        command,
-        enabled: true,
-        timeout: 60000,
-      })
+      const directory = this.getWorkspaceDirectory()
+      const status = await httpClient.addMcpServer(
+        BrowserAutomationService.MCP_SERVER_NAME,
+        {
+          type: "local",
+          command,
+          enabled: true,
+          timeout: 60000,
+        },
+        directory,
+      )
 
       const serverStatus = status[BrowserAutomationService.MCP_SERVER_NAME]
       if (serverStatus?.status === "connected") {
@@ -128,7 +133,8 @@ export class BrowserAutomationService implements vscode.Disposable {
     const httpClient = this.getHttpClient()
     if (httpClient) {
       try {
-        await httpClient.disconnectMcpServer(BrowserAutomationService.MCP_SERVER_NAME)
+        const directory = this.getWorkspaceDirectory()
+        await httpClient.disconnectMcpServer(BrowserAutomationService.MCP_SERVER_NAME, directory)
       } catch (error) {
         console.error("[Kilo New] BrowserAutomationService: Failed to disconnect MCP server:", error)
       }
@@ -147,7 +153,8 @@ export class BrowserAutomationService implements vscode.Disposable {
     }
 
     try {
-      const allStatus = await httpClient.getMcpStatus()
+      const directory = this.getWorkspaceDirectory()
+      const allStatus = await httpClient.getMcpStatus(directory)
       return allStatus[BrowserAutomationService.MCP_SERVER_NAME] ?? null
     } catch {
       return null
@@ -160,6 +167,14 @@ export class BrowserAutomationService implements vscode.Disposable {
     } catch {
       return null
     }
+  }
+
+  private getWorkspaceDirectory(): string {
+    const folders = vscode.workspace.workspaceFolders
+    if (folders && folders.length > 0) {
+      return folders[0].uri.fsPath
+    }
+    return process.cwd()
   }
 
   private setState(state: BrowserAutomationState): void {

@@ -137,9 +137,16 @@ describe("share ingest queue", () => {
       }),
     })
 
-    await q.sync("s7", [{ type: "kilo_meta", data: { platform: "cli" } }])
+    await q.sync("s7", [
+      { type: "kilo_meta", data: { platform: "cli", gitUrl: "https://github.com/old/repo.git", gitBranch: "main" } },
+    ])
     clock.now = 100
-    await q.sync("s7", [{ type: "kilo_meta", data: { platform: "vscode", orgId: "org-1" } }])
+    await q.sync("s7", [
+      {
+        type: "kilo_meta",
+        data: { platform: "vscode", orgId: "org-1", gitUrl: "https://github.com/new/repo.git", gitBranch: "feature" },
+      },
+    ])
 
     clock.now = 1000
     sched.run()
@@ -149,6 +156,8 @@ describe("share ingest queue", () => {
     expect((sent[0] as any).data[0].type).toBe("kilo_meta")
     expect((sent[0] as any).data[0].data.platform).toBe("vscode")
     expect((sent[0] as any).data[0].data.orgId).toBe("org-1")
+    expect((sent[0] as any).data[0].data.gitUrl).toBe("https://github.com/new/repo.git")
+    expect((sent[0] as any).data[0].data.gitBranch).toBe("feature")
   })
 
   test("network failure retries and fill preserves newer updates", async () => {

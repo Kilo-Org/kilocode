@@ -10,7 +10,7 @@ registerCustomTheme("Kilo", () => {
   return Promise.resolve({
     name: "Kilo",
     colors: {
-      "editor.background": "transparent",
+      "editor.background": "var(--color-background-stronger)",
       "editor.foreground": "var(--text-base)",
       "gitDecoration.addedResourceForeground": "var(--syntax-diff-add)",
       "gitDecoration.deletedResourceForeground": "var(--syntax-diff-delete)",

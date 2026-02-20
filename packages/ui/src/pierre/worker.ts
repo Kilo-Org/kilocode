@@ -21,6 +21,7 @@ function createPool(lineDiffType: "none" | "word-alt") {
     {
       theme: "Kilo", // kilocode_change
       lineDiffType,
+      preferredHighlighter: "shiki-wasm",
     },
   )
 

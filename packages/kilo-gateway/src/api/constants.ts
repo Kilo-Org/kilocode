@@ -50,6 +50,7 @@ export const HEADER_TASKID = "X-KILOCODE-TASKID"
 export const HEADER_PROJECTID = "X-KILOCODE-PROJECTID"
 export const HEADER_TESTER = "X-KILOCODE-TESTER"
 export const HEADER_EDITORNAME = "X-KILOCODE-EDITORNAME"
+export const HEADER_MACHINEID = "X-KILOCODE-MACHINEID"
 
 /** Default editor name value */
 export const DEFAULT_EDITOR_NAME = "Kilo CLI"
@@ -59,3 +60,11 @@ export const ENV_EDITOR_NAME = "KILOCODE_EDITOR_NAME"
 
 /** Tester header value for suppressing warnings */
 export const TESTER_SUPPRESS_VALUE = "SUPPRESS"
+
+// kilocode_change start
+/** Header name for feature tracking */
+export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
+
+/** Environment variable name for feature override */
+export const ENV_FEATURE = "KILOCODE_FEATURE"
+// kilocode_change end

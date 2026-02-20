@@ -28,18 +28,31 @@ function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
 }
 
+function platformTag(): string {
+  const os = process.platform === "win32" ? "windows" : process.platform
+  return `cli-${os}-${process.arch}`
+}
+
 async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const distDir = join(opencodeDir, "dist")
 
-  // Check if dist directory exists using readdirSync
   try {
     readdirSync(distDir)
   } catch {
     return null
   }
 
-  // Expected: packages/opencode/dist/@kilocode/cli-<platform>/bin/kilo
-  // But keep it flexible: find any dist/**/bin/kilo
+  // Prefer the binary matching the current platform (e.g. cli-darwin-arm64)
+  const tag = platformTag()
+  const preferred = join(distDir, `@kilocode`, tag, "bin", "kilo")
+  try {
+    statSync(preferred)
+    return preferred
+  } catch {
+    // fall through to generic search
+  }
+
+  // Fallback: find any dist/**/bin/kilo
   const queue = [distDir]
   while (queue.length) {
     const dir = queue.pop()

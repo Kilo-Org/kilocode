@@ -3,16 +3,19 @@
  *
  * The agent manager runs in the same webview context as other UI.
  * All its CSS classes must be prefixed with "am-" to avoid conflicts.
- * These tests also verify consistency between CSS definitions and TSX usage.
+ * These tests also verify consistency between CSS definitions and TSX usage,
+ * and that the provider sends correct message types for each action.
  */
 
 import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
+import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
 const TSX_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
+const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 
 describe("Agent Manager CSS Prefix", () => {
   it("all class selectors should use am- prefix", () => {
@@ -77,5 +80,31 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Agent Manager Provider Messages", () => {
+  function getMethodBody(name: string): string {
+    const project = new Project({ compilerOptions: { allowJs: true } })
+    const source = project.addSourceFileAtPath(PROVIDER_FILE)
+    const cls = source.getFirstDescendantByKind(SyntaxKind.ClassDeclaration)
+    const method = cls?.getMethod(name)
+    expect(method, `method ${name} not found in AgentManagerProvider`).toBeTruthy()
+    return method!.getText()
+  }
+
+  /**
+   * Regression: onAddSessionToWorktree must NOT send agentManager.worktreeSetup
+   * because that triggers a full-screen overlay with a spinner. Adding a session
+   * to an existing worktree should use agentManager.sessionAdded instead.
+   */
+  it("onAddSessionToWorktree should not send worktreeSetup messages", () => {
+    const body = getMethodBody("onAddSessionToWorktree")
+    expect(body).not.toContain("agentManager.worktreeSetup")
+  })
+
+  it("onAddSessionToWorktree should send sessionAdded message", () => {
+    const body = getMethodBody("onAddSessionToWorktree")
+    expect(body).toContain("agentManager.sessionAdded")
   })
 })

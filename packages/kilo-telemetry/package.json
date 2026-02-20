@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-telemetry",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "type": "module",
   "license": "MIT",
   "description": "Telemetry for Kilo CLI - PostHog analytics integration",

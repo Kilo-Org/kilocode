@@ -8,6 +8,8 @@ export interface TelemetryProperties {
   appName: string
   appVersion: string
   platform: string
+  editorName?: string
+  vscodeVersion?: string
 }
 
 export namespace Telemetry {
@@ -25,11 +27,32 @@ export namespace Telemetry {
     Identity.setDataPath(options.dataPath)
     props.appVersion = options.version
 
+    const app = process.env.KILO_APP_NAME
+    if (app) props.appName = app
+    const editor = process.env.KILO_EDITOR_NAME
+    if (editor) props.editorName = editor
+    const platform = process.env.KILO_PLATFORM
+    if (platform) props.platform = platform
+    const version = process.env.KILO_APP_VERSION
+    if (version) props.appVersion = version
+    const vscodeVersion = process.env.KILO_VSCODE_VERSION
+    if (vscodeVersion) props.vscodeVersion = vscodeVersion
+
     Client.init()
-    Client.setEnabled(options.enabled)
+
+    const level = process.env.KILO_TELEMETRY_LEVEL
+    const enabled = level ? level === "all" : options.enabled
+    Client.setEnabled(enabled)
 
     // Initialize OpenTelemetry tracer for AI SDK spans
-    TracerSetup.init({ version: options.version, enabled: options.enabled })
+    TracerSetup.init({
+      version: props.appVersion,
+      enabled,
+      appName: props.appName,
+      platform: props.platform,
+      editorName: props.editorName,
+      vscodeVersion: props.vscodeVersion,
+    })
 
     await Identity.getMachineId()
 
@@ -119,6 +142,8 @@ export namespace Telemetry {
     outputTokens?: number
     cacheReadTokens?: number
     cacheWriteTokens?: number
+    cost?: number
+    completionTime?: number
     duration?: number
   }) {
     track(TelemetryEvent.LLM_COMPLETION, properties)

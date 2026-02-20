@@ -16,6 +16,8 @@ export namespace IngestQueue {
         data: {
           platform: string
           orgId?: string
+          gitUrl?: string
+          gitBranch?: string
         }
       }
     | {
