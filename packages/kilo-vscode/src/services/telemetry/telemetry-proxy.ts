@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { TelemetryEventName, type TelemetryPropertiesProvider } from "./types"
+import { buildTelemetryPayload, buildTelemetryAuthHeader } from "./telemetry-proxy-utils"
 
 /**
  * Singleton proxy that captures telemetry events and forwards them to the CLI
@@ -45,13 +46,9 @@ export class TelemetryProxy {
     if (!this.isVSCodeTelemetryEnabled()) return
     if (!this.url || !this.password) return
 
-    const merged = {
-      ...this.provider?.getTelemetryProperties(),
-      ...properties,
-    }
-
-    const payload = JSON.stringify({ event, properties: merged })
-    const auth = `Basic ${Buffer.from(`kilo:${this.password}`).toString("base64")}`
+    const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
+    const payload = JSON.stringify(built)
+    const auth = buildTelemetryAuthHeader(this.password)
 
     fetch(`${this.url}/telemetry/capture`, {
       method: "POST",

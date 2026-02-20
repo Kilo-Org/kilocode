@@ -1,5 +1,6 @@
 import * as crypto from "crypto"
 import * as vscode from "vscode"
+import { buildCspString } from "./webview-html-utils"
 
 export function getNonce(): string {
   return crypto.randomBytes(16).toString("hex")
@@ -17,18 +18,7 @@ export function buildWebviewHtml(
   },
 ): string {
   const nonce = getNonce()
-  const connectSrc = opts.port
-    ? `http://127.0.0.1:${opts.port} http://localhost:${opts.port} ws://127.0.0.1:${opts.port} ws://localhost:${opts.port}`
-    : "http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*"
-
-  const csp = [
-    "default-src 'none'",
-    `style-src 'unsafe-inline' ${webview.cspSource}`,
-    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
-    `font-src ${webview.cspSource}`,
-    `connect-src ${connectSrc}`,
-    `img-src ${webview.cspSource} data: https:`,
-  ].join("; ")
+  const csp = buildCspString(webview.cspSource, nonce, opts.port)
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="kilo-vscode">

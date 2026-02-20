@@ -372,3 +372,81 @@ describe("WorktreeManager.ensureGitExclude", () => {
     expect(count).toBe(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- branch name collision retry
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.createWorktree branch collision", () => {
+  /**
+   * Exercise the retry path at WorktreeManager.ts:77-86.
+   *
+   * The collision happens when `git worktree add -b <name>` fails because
+   * a branch with that name already exists. generateBranchName appends
+   * Date.now() making it hard to predict. We force the collision by
+   * monkey-patching Date.now to return a fixed value for the duration of
+   * the branch name generation, guaranteeing the same name is produced
+   * twice.
+   */
+  it("retries with a unique suffix when generated branch name collides", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const mgr = createManager(root)
+
+    // Create a first worktree — this consumes a branch name
+    const first = await mgr.createWorktree({ prompt: "collide" })
+    const firstBranch = first.branch
+
+    // Remove the worktree via git but keep the branch ref alive
+    await git.raw(["worktree", "remove", "--force", first.path])
+
+    // Verify the branch still exists (worktree is gone, branch is not)
+    const branches = await git.branch()
+    expect(branches.all).toContain(firstBranch)
+
+    // Force Date.now to return the same timestamp that produced firstBranch.
+    // firstBranch is "collide-<timestamp>", extract that timestamp.
+    const timestamp = firstBranch.replace("collide-", "")
+    const real = Date.now
+    Date.now = () => Number(timestamp)
+    try {
+      // This will generate the same branch name and hit the collision retry
+      const second = await mgr.createWorktree({ prompt: "collide" })
+
+      // The retry appends a new timestamp suffix, so the branch name differs
+      expect(second.branch).not.toBe(firstBranch)
+      expect(second.branch).toStartWith("collide-")
+
+      const stat = await fs.stat(path.join(second.path, ".git"))
+      expect(stat.isFile()).toBe(true)
+    } finally {
+      Date.now = real
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- removeWorktree safety guard
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.removeWorktree safety", () => {
+  it("refuses to remove paths outside the worktrees directory", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // Create a directory outside .kilocode/worktrees/
+    const outside = path.join(root, "important-data")
+    await fs.mkdir(outside, { recursive: true })
+    await fs.writeFile(path.join(outside, "file.txt"), "precious")
+
+    // Attempt to remove it — should be silently refused
+    await mgr.removeWorktree(outside)
+
+    // Directory should still exist
+    const exists = await fs
+      .stat(outside)
+      .then(() => true)
+      .catch(() => false)
+    expect(exists).toBe(true)
+  })
+})

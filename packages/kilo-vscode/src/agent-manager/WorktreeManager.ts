@@ -46,7 +46,10 @@ export class WorktreeManager {
 
   async createWorktree(params: { prompt?: string; existingBranch?: string }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
-    if (!repo) throw new Error("Workspace is not a git repository")
+    if (!repo)
+      throw new Error(
+        "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
+      )
 
     await this.ensureDir()
     await this.ensureGitExclude()
@@ -182,6 +185,7 @@ export class WorktreeManager {
     const excludePath = path.join(gitDir, "info", "exclude")
     await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
     await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {

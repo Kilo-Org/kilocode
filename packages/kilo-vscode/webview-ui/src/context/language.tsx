@@ -58,43 +58,12 @@ import { dict as kiloBr } from "@kilocode/kilo-i18n/br"
 import { dict as kiloTh } from "@kilocode/kilo-i18n/th"
 import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
 import { useVSCode } from "./vscode"
+import { normalizeLocale as _normalizeLocale, resolveTemplate as _resolveTemplate } from "./language-utils"
 
-export type Locale =
-  | "en"
-  | "zh"
-  | "zht"
-  | "ko"
-  | "de"
-  | "es"
-  | "fr"
-  | "da"
-  | "ja"
-  | "pl"
-  | "ru"
-  | "ar"
-  | "no"
-  | "br"
-  | "th"
-  | "bs"
-
-export const LOCALES: readonly Locale[] = [
-  "en",
-  "zh",
-  "zht",
-  "ko",
-  "de",
-  "es",
-  "fr",
-  "da",
-  "ja",
-  "pl",
-  "ru",
-  "ar",
-  "no",
-  "br",
-  "th",
-  "bs",
-]
+export type { Locale } from "./language-utils"
+export { LOCALES } from "./language-utils"
+import type { Locale } from "./language-utils"
+import { LOCALES } from "./language-utils"
 
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
@@ -137,33 +106,11 @@ const dicts: Record<Locale, Record<string, string>> = {
 }
 
 function normalizeLocale(lang: string): Locale {
-  const lower = lang.toLowerCase()
-  if (lower.startsWith("zh")) {
-    return lower.includes("hant") ? "zht" : "zh"
-  }
-  for (const loc of LOCALES) {
-    if (lower.startsWith(loc)) {
-      return loc
-    }
-  }
-  // Special cases
-  if (lower.startsWith("nb") || lower.startsWith("nn")) {
-    return "no"
-  }
-  if (lower.startsWith("pt")) {
-    return "br"
-  }
-  return "en"
+  return _normalizeLocale(lang)
 }
 
 function resolveTemplate(text: string, params?: UiI18nParams) {
-  if (!params) {
-    return text
-  }
-  return text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, rawKey) => {
-    const value = params[String(rawKey)]
-    return value === undefined ? "" : String(value)
-  })
+  return _resolveTemplate(text, params as Record<string, string | number | boolean | undefined>)
 }
 
 interface LanguageProviderProps {

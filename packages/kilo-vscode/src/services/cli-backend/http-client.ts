@@ -11,7 +11,9 @@ import type {
   McpStatus,
   McpConfig,
   Config,
+  KilocodeNotification,
 } from "./types"
+import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
 /**
  * HTTP Client for communicating with the CLI backend server.
@@ -67,15 +69,7 @@ export class HttpClient {
 
     // Non-2xx: try to extract an error message from JSON, otherwise fall back to raw text.
     if (!response.ok) {
-      let errorMessage = response.statusText
-      if (rawText.trim().length > 0) {
-        try {
-          const errorJson = JSON.parse(rawText) as { error?: string; message?: string }
-          errorMessage = errorJson.error || errorJson.message || errorMessage
-        } catch {
-          errorMessage = rawText
-        }
-      }
+      const errorMessage = extractHttpErrorMessage(response.statusText, rawText)
 
       console.error("[Kilo New] HTTP: ❌ Request failed", {
         method,
@@ -323,6 +317,19 @@ export class HttpClient {
   }
 
   /**
+   * Fetch Kilo notifications for the current user from the kilo-gateway.
+   * Returns an empty array if not logged in or if the request fails.
+   */
+  async getNotifications(): Promise<KilocodeNotification[]> {
+    try {
+      return await this.request<KilocodeNotification[]>("GET", "/kilo/notifications")
+    } catch (err) {
+      console.warn("[Kilo] Failed to fetch notifications:", err)
+      return []
+    }
+  }
+
+  /**
    * Switch the active organization.
    * Pass null to switch back to personal account.
    */
@@ -398,38 +405,12 @@ export class HttpClient {
       buffer = lines.pop() ?? "" // Keep incomplete line in buffer
 
       for (const line of lines) {
-        if (!line.startsWith("data: ")) {
-          continue
-        }
-
-        const data = line.slice(6).trim()
-        if (data === "[DONE]") {
-          continue
-        }
-
-        try {
-          const parsed = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>
-            usage?: { prompt_tokens?: number; completion_tokens?: number }
-            cost?: number
-          }
-
-          const content = parsed.choices?.[0]?.delta?.content
-          if (content) {
-            onChunk(content)
-          }
-
-          if (parsed.usage) {
-            inputTokens = parsed.usage.prompt_tokens ?? 0
-            outputTokens = parsed.usage.completion_tokens ?? 0
-          }
-
-          if (parsed.cost !== undefined) {
-            cost = parsed.cost
-          }
-        } catch {
-          // Skip malformed JSON lines
-        }
+        const chunk = parseSSEDataLine(line)
+        if (!chunk) continue
+        if (chunk.content) onChunk(chunk.content)
+        if (chunk.inputTokens !== undefined) inputTokens = chunk.inputTokens
+        if (chunk.outputTokens !== undefined) outputTokens = chunk.outputTokens
+        if (chunk.cost !== undefined) cost = chunk.cost
       }
     }
 

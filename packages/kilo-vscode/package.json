@@ -292,6 +292,11 @@
         "mac": "cmd+shift+a"
       },
       {
+        "command": "kilo-code.new.agentManagerOpen",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
         "command": "kilo-code.new.addToContext",
         "key": "ctrl+k ctrl+a",
         "mac": "cmd+k cmd+a",
@@ -504,7 +509,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "test:unit": "bun test tests/unit/"
   },
   "devDependencies": {
     "@types/diff": "^6.0.0",
@@ -530,6 +536,7 @@
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
+    "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "^7.0.0",
     "dotenv": "^16.4.7",
     "eventsource": "^2.0.2",

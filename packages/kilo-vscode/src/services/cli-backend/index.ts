@@ -26,6 +26,8 @@ export type {
   McpRemoteConfig,
   McpConfig,
   Config,
+  KilocodeNotification,
+  KilocodeNotificationAction,
 } from "./types"
 
 export { ServerManager } from "./server-manager"

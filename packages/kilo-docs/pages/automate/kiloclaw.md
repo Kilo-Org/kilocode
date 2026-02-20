@@ -58,6 +58,22 @@ Once created, you can control your instance from the dashboard.
 | **Settings** | Model configuration and instance parameters     |
 | **Actions**  | Quick actions and connected platform management |
 
+### Changelog
+
+Your instance page includes a changelog with recent KiloClaw platform updates.
+
+Each changelog entry is labeled by update type:
+
+- **Feature** — New capability or enhancement
+- **Bug** — Fix for incorrect or broken behavior
+
+Some entries also include a redeploy label:
+
+- **Redeploy required** — You must redeploy your instance to fully take advantage of the change
+- **Redeploy suggested** — Redeploy is optional and only needed if you want to use the new behavior
+
+For example, if you manually configured a channel such as Telegram, and would prefer to have KiloClaw manage the channel for you, you would need to redeploy.
+
 ## Accessing Your Agent
 
 To connect to your agent's web interface:

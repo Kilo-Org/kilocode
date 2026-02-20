@@ -45,6 +45,7 @@ import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
+import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -336,6 +337,12 @@ export namespace SessionPrompt {
         !["tool-calls", "unknown", "other"].includes(lastAssistant.finish) &&
         lastUser.id < lastAssistant.id
       ) {
+        // kilocode_change start - ask follow-up after plan agent completes
+        if (lastUser.agent === "plan" && !abort.aborted && ["cli", "vscode"].includes(Flag.KILO_CLIENT)) {
+          const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
+          if (action === "continue") continue
+        }
+        // kilocode_change end
         log.info("exiting loop", { sessionID })
         break
       }

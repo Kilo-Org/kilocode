@@ -49,7 +49,8 @@
 }
 
 ::-webkit-scrollbar-button {
-  display: block;
+  display: none;
+  width: 0;
   height: 0;
 }
 
@@ -63,7 +64,8 @@ html[data-theme="kilo-vscode"] {
   font-weight: var(--vscode-font-weight);
 
   ::-webkit-scrollbar-button {
-    display: block;
+    display: none;
+    width: 0;
     height: 0;
   }
 

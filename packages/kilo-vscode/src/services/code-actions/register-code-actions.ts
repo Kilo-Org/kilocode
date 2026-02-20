@@ -1,9 +1,16 @@
 import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
+import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { getEditorContext } from "./editor-utils"
 import { createPrompt } from "./support-prompt"
 
-export function registerCodeActions(context: vscode.ExtensionContext, provider: KiloProvider): void {
+export function registerCodeActions(
+  context: vscode.ExtensionContext,
+  provider: KiloProvider,
+  agentManager?: AgentManagerProvider,
+): void {
+  const target = () => (agentManager?.isActive() ? agentManager : provider)
+
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.explainCode", () => {
       const ctx = getEditorContext()
@@ -54,12 +61,12 @@ export function registerCodeActions(context: vscode.ExtensionContext, provider: 
         endLine: String(ctx.endLine),
         selectedText: ctx.selectedText,
       })
-      provider.postMessage({ type: "setChatBoxMessage", text: prompt })
-      provider.postMessage({ type: "action", action: "focusInput" })
+      target().postMessage({ type: "setChatBoxMessage", text: prompt })
+      target().postMessage({ type: "action", action: "focusInput" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.focusChatInput", () => {
-      provider.postMessage({ type: "action", action: "focusInput" })
+      target().postMessage({ type: "action", action: "focusInput" })
     }),
   )
 }

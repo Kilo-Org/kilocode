@@ -13,6 +13,15 @@ import {
   AutocompleteContext,
   LastSuggestionInfo,
 } from "../types"
+import {
+  findMatchingSuggestion as _findMatchingSuggestion,
+  applyFirstLineOnly as _applyFirstLineOnly,
+  countLines as _countLines,
+  shouldShowOnlyFirstLine as _shouldShowOnlyFirstLine,
+  getFirstLine as _getFirstLine,
+  calcDebounceDelay,
+  MatchingSuggestionWithFillIn as _MatchingSuggestionWithFillIn,
+} from "./inline-utils"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
 import { AutocompleteModel } from "../AutocompleteModel"
@@ -59,101 +68,21 @@ const LATENCY_SAMPLE_SIZE = 10
 
 export type { CostTrackingCallback, AutocompletePrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
-/**
- * Result from findMatchingSuggestion including the original suggestion for telemetry tracking
- */
-export interface MatchingSuggestionWithFillIn extends MatchingSuggestionResult {
-  /** The original FillInAtCursorSuggestion for telemetry tracking */
-  fillInAtCursor: FillInAtCursorSuggestion
-}
+export type MatchingSuggestionWithFillIn = _MatchingSuggestionWithFillIn
 
-/**
- * Find a matching suggestion from the history based on current prefix and suffix.
- *
- * @param prefix - The text before the cursor position
- * @param suffix - The text after the cursor position
- * @param suggestionsHistory - Array of previous suggestions (most recent last)
- * @returns The matching suggestion with match type and the original FillInAtCursorSuggestion, or null if no match found
- */
 export function findMatchingSuggestion(
   prefix: string,
   suffix: string,
   suggestionsHistory: FillInAtCursorSuggestion[],
 ): MatchingSuggestionWithFillIn | null {
-  // Search from most recent to least recent
-  for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
-    const fillInAtCursor = suggestionsHistory[i]
-
-    // First, try exact prefix/suffix match
-    if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-      return {
-        text: fillInAtCursor.text,
-        matchType: "exact",
-        fillInAtCursor,
-      }
-    }
-
-    // If no exact match, but suggestion is available, check for partial typing
-    // The user may have started typing the suggested text
-    if (fillInAtCursor.text !== "" && prefix.startsWith(fillInAtCursor.prefix) && suffix === fillInAtCursor.suffix) {
-      // Extract what the user has typed between the original prefix and current position
-      const typedContent = prefix.substring(fillInAtCursor.prefix.length)
-
-      // Check if the typed content matches the beginning of the suggestion
-      if (fillInAtCursor.text.startsWith(typedContent)) {
-        // Return the remaining part of the suggestion (with already-typed portion removed)
-        return {
-          text: fillInAtCursor.text.substring(typedContent.length),
-          matchType: "partial_typing",
-          fillInAtCursor,
-        }
-      }
-    }
-
-    // Check for backward deletion: user deleted characters from the end of the prefix
-    // The stored prefix should start with the current prefix (current is shorter)
-    // Only use this logic if the original suggestion is non-empty
-    if (fillInAtCursor.text !== "" && fillInAtCursor.prefix.startsWith(prefix) && suffix === fillInAtCursor.suffix) {
-      // Extract the deleted portion of the prefix
-      const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
-
-      // Return the deleted portion plus the original suggestion text
-      return {
-        text: deletedContent + fillInAtCursor.text,
-        matchType: "backward_deletion",
-        fillInAtCursor,
-      }
-    }
-  }
-
-  return null
+  return _findMatchingSuggestion(prefix, suffix, suggestionsHistory)
 }
 
-/**
- * Transforms a matching suggestion result by applying first-line-only logic if needed.
- * Use this at call sites where you want to show only the first line of multi-line completions
- * when the cursor is in the middle of a line.
- *
- * @param result - The result from findMatchingSuggestion
- * @param prefix - The text before the cursor position
- * @returns A new result with potentially truncated text, or null if input was null
- */
 export function applyFirstLineOnly(
   result: MatchingSuggestionWithFillIn | null,
   prefix: string,
 ): MatchingSuggestionWithFillIn | null {
-  if (result === null || result.text === "") {
-    return result
-  }
-  if (shouldShowOnlyFirstLine(prefix, result.text)) {
-    const firstLineText = getFirstLine(result.text)
-    return {
-      text: firstLineText,
-      matchType: result.matchType,
-      fillInAtCursor: result.fillInAtCursor,
-    }
-  }
-  return result
+  return _applyFirstLineOnly(result, prefix)
 }
 
 /**
@@ -162,76 +91,16 @@ export function applyFirstLineOnly(
  */
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
 
-/**
- * Counts the number of lines in a text string.
- *
- * Notes:
- * - Returns 0 for an empty string
- * - A single trailing newline (or CRLF) does not count as an additional line
- *
- * @param text - The text to count lines in
- * @returns The number of lines
- */
 export function countLines(text: string): number {
-  if (text === "") {
-    return 0
-  }
-
-  // Count line breaks and add 1 for the first line.
-  // If the text ends with a line break, don't count the implicit trailing empty line.
-  const lineBreakCount = (text.match(/\r?\n/g) || []).length
-  const endsWithLineBreak = text.endsWith("\n")
-
-  return lineBreakCount + 1 - (endsWithLineBreak ? 1 : 0)
+  return _countLines(text)
 }
 
-/**
- * Determines if only the first line of a completion should be shown.
- *
- * The logic is:
- * - If the suggestion starts with a newline → show the whole block
- * - If the prefix's last line has non-whitespace text → show only the first line
- * - If at start of line and suggestion is 3+ lines → show only the first line
- * - Otherwise → show the whole block
- *
- * @param prefix - The text before the cursor position
- * @param suggestion - The completion text being suggested
- * @returns true if only the first line should be shown
- */
 export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boolean {
-  // If the suggestion starts with a newline, show the whole block
-  if (suggestion.startsWith("\n") || suggestion.startsWith("\r\n")) {
-    return false
-  }
-
-  // Check if the current line (before cursor) has non-whitespace text
-  const lastNewlineIndex = prefix.lastIndexOf("\n")
-  const currentLinePrefix = prefix.slice(lastNewlineIndex + 1)
-
-  // if the first line contains no word characters, show the whole block
-  if (!currentLinePrefix.match(/\w/)) {
-    return false
-  }
-
-  // If the current line prefix contains non-whitespace, only show the first line
-  if (currentLinePrefix.trim().length > 0) {
-    return true
-  }
-
-  // At start of line (only whitespace before cursor on this line)
-  // Show only first line if suggestion is 3 or more lines
-  const lineCount = countLines(suggestion)
-  return lineCount >= 3
+  return _shouldShowOnlyFirstLine(prefix, suggestion)
 }
 
-/**
- * Extracts the first line from a completion text.
- *
- * @param text - The full completion text
- * @returns The first line of the completion (without the newline)
- */
 export function getFirstLine(text: string): string {
-  return text.split(/\r?\n/, 1)[0]
+  return _getFirstLine(text)
 }
 
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
@@ -398,19 +267,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
    * @param latencyMs - The latency of the most recent request in milliseconds
    */
   public recordLatency(latencyMs: number): void {
-    // Add the new latency to the history
     this.latencyHistory.push(latencyMs)
-
-    // Remove oldest if we exceed the sample size
     if (this.latencyHistory.length > LATENCY_SAMPLE_SIZE) {
       this.latencyHistory.shift()
-
-      // Once we have enough samples, update the debounce delay to the average
-      const sum = this.latencyHistory.reduce((acc, val) => acc + val, 0)
-      const averageLatency = Math.round(sum / this.latencyHistory.length)
-
-      // Clamp the debounce delay between MIN and MAX
-      this.debounceDelayMs = Math.max(MIN_DEBOUNCE_DELAY_MS, Math.min(averageLatency, MAX_DEBOUNCE_DELAY_MS))
+      this.debounceDelayMs = calcDebounceDelay(this.latencyHistory)
     }
   }
 

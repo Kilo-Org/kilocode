@@ -2,4 +2,32 @@
   .shiki {
     margin: 0rem;
   }
+
+  pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-weak-base) transparent;
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-button {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-weak-base);
+      border-radius: 4px;
+
+      &:hover {
+        background: var(--border-strong-base);
+      }
+    }
+  }
 }

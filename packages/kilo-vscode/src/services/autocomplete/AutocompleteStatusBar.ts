@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { t } from "./shims/i18n"
 import type { AutocompleteStatusBarStateProps } from "./types"
+import { humanFormatSessionCost, formatTime } from "./statusbar-utils"
 
 const SUPPORTED_PROVIDER_DISPLAY_NAME = "Kilo Gateway"
 
@@ -40,14 +41,7 @@ export class AutocompleteStatusBar {
   }
 
   private humanFormatSessionCost(): string {
-    const cost = this.props.totalSessionCost
-    if (cost === 0) {
-      return t("kilocode:autocomplete.statusBar.cost.zero")
-    }
-    if (cost > 0 && cost < 0.01) {
-      return t("kilocode:autocomplete.statusBar.cost.lessThanCent")
-    }
-    return `$${cost.toFixed(2)}`
+    return humanFormatSessionCost(this.props.totalSessionCost)
   }
 
   public update(params: Partial<AutocompleteStatusBarStateProps>) {
@@ -60,8 +54,7 @@ export class AutocompleteStatusBar {
   }
 
   private formatTime(timestamp: number): string {
-    const date = new Date(timestamp)
-    return date.toLocaleTimeString()
+    return formatTime(timestamp)
   }
 
   private renderDefault() {

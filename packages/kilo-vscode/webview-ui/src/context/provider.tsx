@@ -7,6 +7,7 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage } from "../types/messages"
+import { flattenModels, findModel as _findModel } from "./provider-utils"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
@@ -31,30 +32,10 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
 
-  // Flat list of all models enriched with provider info
-  const models = createMemo<EnrichedModel[]>(() => {
-    const result: EnrichedModel[] = []
-    const provs = providers()
-    for (const providerID of Object.keys(provs)) {
-      const provider = provs[providerID]
-      for (const modelID of Object.keys(provider.models)) {
-        result.push({
-          ...provider.models[modelID],
-          id: modelID,
-          providerID,
-          providerName: provider.name,
-        })
-      }
-    }
-    return result
-  })
+  const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
-  // Look up an enriched model by selection
   function findModel(selection: ModelSelection | null): EnrichedModel | undefined {
-    if (!selection) {
-      return undefined
-    }
-    return models().find((m) => m.providerID === selection.providerID && m.id === selection.modelID)
+    return _findModel(models(), selection)
   }
 
   // Register handler immediately (not in onMount) so we never miss

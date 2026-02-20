@@ -1,5 +1,6 @@
 import EventSource from "eventsource"
 import type { ServerConfig, SSEEvent } from "./types"
+import { unwrapSSEPayload } from "./sse-utils"
 
 // Type definitions for handlers
 export type SSEEventHandler = (event: SSEEvent) => void
@@ -67,9 +68,8 @@ export class SSEClient {
       console.log("[Kilo New] SSE: 📨 Received message event:", messageEvent.data)
       try {
         const raw = JSON.parse(messageEvent.data)
-        // Global endpoint wraps events as { directory, payload: { type, properties } }
-        const event = (raw.payload ?? raw) as SSEEvent
-        if (!event.type) {
+        const event = unwrapSSEPayload(raw)
+        if (!event) {
           console.warn("[Kilo New] SSE: ⚠️ Received event without type:", raw)
           return
         }

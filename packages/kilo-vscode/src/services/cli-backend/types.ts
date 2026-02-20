@@ -174,6 +174,20 @@ export interface ProviderAuthAuthorization {
   instructions: string
 }
 
+// Kilo notification from kilo-gateway
+export interface KilocodeNotificationAction {
+  actionText: string
+  actionURL: string
+}
+
+export interface KilocodeNotification {
+  id: string
+  title: string
+  message: string
+  action?: KilocodeNotificationAction
+  showIn?: string[]
+}
+
 // Profile types from kilo-gateway
 export interface KilocodeOrganization {
   id: string

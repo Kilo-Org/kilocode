@@ -1,9 +1,9 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { FileAttachment, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { AT_PATTERN, syncMentionedPaths as _syncMentionedPaths, buildFileAttachments } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
-const AT_PATTERN = /(?:^|\s)@(\S*)$/
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -78,13 +78,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
   }
 
   const syncMentionedPaths = (text: string) => {
-    setMentionedPaths((prev) => {
-      const next = new Set<string>()
-      for (const path of prev) {
-        if (text.includes(`@${path}`)) next.add(path)
-      }
-      return next
-    })
+    setMentionedPaths((prev) => _syncMentionedPaths(prev, text))
   }
 
   const selectMentionFile = (
@@ -161,20 +155,8 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     return false
   }
 
-  const parseFileAttachments = (text: string): FileAttachment[] => {
-    const paths = mentionedPaths()
-    const result: FileAttachment[] = []
-    const dir = workspaceDir.replaceAll("\\", "/")
-    for (const path of paths) {
-      if (text.includes(`@${path}`)) {
-        const abs = path.startsWith("/") ? path : `${dir}/${path}`
-        const url = new URL("file://")
-        url.pathname = abs.startsWith("/") ? abs : `/${abs}`
-        result.push({ mime: "text/plain", url: url.href })
-      }
-    }
-    return result
-  }
+  const parseFileAttachments = (text: string): FileAttachment[] =>
+    buildFileAttachments(text, mentionedPaths(), workspaceDir)
 
   return {
     mentionedPaths,

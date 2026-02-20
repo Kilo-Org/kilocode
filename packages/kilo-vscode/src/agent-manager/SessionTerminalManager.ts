@@ -42,7 +42,7 @@ export class SessionTerminalManager {
 
     if (!cwd) {
       this.log(`showTerminal: no cwd resolved for session ${sessionId}`)
-      vscode.window.showWarningMessage("No workspace folder open")
+      vscode.window.showWarningMessage("Open a folder that contains a git repository to use worktrees")
       return
     }
 

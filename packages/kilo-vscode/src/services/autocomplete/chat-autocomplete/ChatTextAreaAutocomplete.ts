@@ -4,6 +4,7 @@ import { removePrefixOverlap } from "../continuedev/core/autocomplete/postproces
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 import type { KiloConnectionService } from "../../cli-backend"
+import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
 export class ChatTextAreaAutocomplete {
   private model: AutocompleteModel
@@ -134,52 +135,17 @@ TASK: Complete the user's message naturally.
   }
 
   private async buildPrefix(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
-    const contextParts: string[] = []
-
-    // Add visible code context (replaces cursor-based prefix/suffix)
-    if (visibleCodeContext && visibleCodeContext.editors.length > 0) {
-      contextParts.push("// Code visible in editor:")
-
-      for (const editor of visibleCodeContext.editors) {
-        const fileName = editor.filePath.split("/").pop() || editor.filePath
-        contextParts.push(`\n// File: ${fileName} (${editor.languageId})`)
-
-        for (const range of editor.visibleRanges) {
-          contextParts.push(range.content)
-        }
-      }
-    }
-
-    contextParts.push("\n// User's message:")
-    contextParts.push(userText)
-
-    return contextParts.join("\n")
+    return buildChatPrefix(userText, visibleCodeContext?.editors)
   }
 
   public cleanSuggestion(suggestion: string, userText: string): string {
-    let cleaned = postprocessAutocompleteSuggestion({
+    const cleaned = postprocessAutocompleteSuggestion({
       suggestion: removePrefixOverlap(suggestion, userText),
       prefix: userText,
-      suffix: "", // Chat textarea has no suffix
+      suffix: "",
       model: this.model.getModelName() ?? "unknown",
     })
-
-    if (cleaned === undefined) {
-      return ""
-    }
-
-    // Filter suggestions that look like code rather than natural language
-    if (cleaned.match(/^(\/\/|\/\*|\*|#)/)) {
-      return ""
-    }
-
-    // Chat-specific: truncate at first newline for single-line suggestions
-    const firstNewline = cleaned.indexOf("\n")
-    if (firstNewline !== -1) {
-      cleaned = cleaned.substring(0, firstNewline)
-    }
-    cleaned = cleaned.trimEnd()
-
-    return cleaned
+    if (cleaned === undefined) return ""
+    return finalizeChatSuggestion(cleaned)
   }
 }

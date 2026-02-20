@@ -700,3 +700,78 @@
   color: var(--text-weak, var(--vscode-descriptionForeground));
   white-space: nowrap;
 }
+
+/* ============================================
+   Kilo Notifications
+   ============================================ */
+
+.kilo-notifications {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.kilo-notifications-card {
+  background-color: var(--vscode-editor-background);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kilo-notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kilo-notifications-title {
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+  flex: 1;
+}
+
+.kilo-notifications-message {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.kilo-notifications-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+}
+
+.kilo-notifications-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.kilo-notifications-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--vscode-descriptionForeground);
+  display: inline-flex;
+  align-items: center;
+}
+
+.kilo-notifications-nav-btn:hover {
+  color: var(--vscode-foreground);
+}
+
+.kilo-notifications-nav-count {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  padding: 0 4px;
+}

@@ -228,6 +228,7 @@
         "@kilocode/kilo-ui": "workspace:*",
         "@kilocode/sdk": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
+        "@thisbeyond/solid-dnd": "0.7.5",
         "diff": "^7.0.0",
         "dotenv": "^16.4.7",
         "eventsource": "^2.0.2",

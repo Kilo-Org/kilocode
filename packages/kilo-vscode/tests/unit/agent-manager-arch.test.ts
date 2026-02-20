@@ -14,8 +14,16 @@ import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
-const TSX_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
+const TSX_FILES = [
+  path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
+]
+const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+
+function readAllTsx(): string {
+  return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
+}
 
 describe("Agent Manager CSS Prefix", () => {
   it("all class selectors should use am- prefix", () => {
@@ -54,7 +62,7 @@ describe("Agent Manager CSS Prefix", () => {
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
     const css = fs.readFileSync(CSS_FILE, "utf-8")
-    const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+    const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
     const cssMatches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
@@ -71,7 +79,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
 
   it("all am- classes defined in CSS should be used in TSX", () => {
     const css = fs.readFileSync(CSS_FILE, "utf-8")
-    const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+    const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
     const cssMatches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
@@ -106,5 +114,146 @@ describe("Agent Manager Provider Messages", () => {
   it("onAddSessionToWorktree should send sessionAdded message", () => {
     const body = getMethodBody("onAddSessionToWorktree")
     expect(body).toContain("agentManager.sessionAdded")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Provider message routing — static-analysis regression tests
+//
+// These tests use ts-morph to inspect the source code of AgentManagerProvider
+// and verify structural invariants that prevent regressions without needing
+// a VS Code test host.
+// ---------------------------------------------------------------------------
+
+describe("Agent Manager Provider — onMessage routing", () => {
+  let source: import("ts-morph").SourceFile
+  let cls: import("ts-morph").ClassDeclaration
+
+  function setup() {
+    if (source) return
+    const project = new Project({ compilerOptions: { allowJs: true } })
+    source = project.addSourceFileAtPath(PROVIDER_FILE)
+    cls = source.getFirstDescendantByKind(SyntaxKind.ClassDeclaration)!
+  }
+
+  function body(name: string): string {
+    setup()
+    const method = cls.getMethod(name)
+    expect(method, `method ${name} not found`).toBeTruthy()
+    return method!.getText()
+  }
+
+  // -- onMessage dispatches all expected message types -----------------------
+
+  it("onMessage handles all documented agentManager.* message types", () => {
+    const text = body("onMessage")
+    const expected = [
+      "agentManager.createWorktree",
+      "agentManager.deleteWorktree",
+      "agentManager.promoteSession",
+      "agentManager.addSessionToWorktree",
+      "agentManager.closeSession",
+      "agentManager.configureSetupScript",
+      "agentManager.showTerminal",
+      "agentManager.requestRepoInfo",
+      "agentManager.requestState",
+      "agentManager.setTabOrder",
+    ]
+    for (const msg of expected) {
+      expect(text, `onMessage should handle "${msg}"`).toContain(msg)
+    }
+  })
+
+  it("onMessage handles loadMessages for terminal switching", () => {
+    const text = body("onMessage")
+    expect(text).toContain("loadMessages")
+    expect(text).toContain("showExisting")
+  })
+
+  it("onMessage handles clearSession for SSE re-registration", () => {
+    const text = body("onMessage")
+    expect(text).toContain("clearSession")
+    expect(text).toContain("trackSession")
+  })
+
+  // -- onDeleteWorktree invariants -------------------------------------------
+
+  /**
+   * Regression: deletion must clean up both disk (manager) and state, then
+   * push to webview. Missing any step leaves ghost worktrees or stale UI.
+   */
+  it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
+    const text = body("onDeleteWorktree")
+    expect(text).toContain("manager.removeWorktree")
+    expect(text).toContain("state.removeWorktree")
+    expect(text).toContain("clearSessionDirectory")
+    expect(text).toContain("this.pushState()")
+  })
+
+  // -- onCreateWorktree invariants -------------------------------------------
+
+  /**
+   * Regression: the setup script MUST run before session creation.
+   * If reversed, the agent starts in an unconfigured worktree (missing .env,
+   * deps, etc.) which causes hard-to-debug failures.
+   */
+  it("onCreateWorktree runs setup script before creating session", () => {
+    const text = body("onCreateWorktree")
+    const setupIdx = text.indexOf("runSetupScriptForWorktree")
+    const sessionIdx = text.indexOf("createSessionInWorktree")
+    expect(setupIdx, "setup script call must exist").toBeGreaterThan(-1)
+    expect(sessionIdx, "session creation call must exist").toBeGreaterThan(-1)
+    expect(setupIdx, "setup script must run before session creation").toBeLessThan(sessionIdx)
+  })
+
+  /**
+   * Regression: if session creation fails after the worktree was already
+   * created on disk, the worktree must be cleaned up to avoid orphaned dirs.
+   */
+  it("onCreateWorktree cleans up worktree on session creation failure", () => {
+    const text = body("onCreateWorktree")
+    expect(text).toContain("removeWorktree")
+  })
+
+  // -- onPromoteSession invariants -------------------------------------------
+
+  /**
+   * Regression: same setup-before-move ordering as onCreateWorktree.
+   */
+  it("onPromoteSession runs setup script before modifying session", () => {
+    const text = body("onPromoteSession")
+    const setupIdx = text.indexOf("runSetupScriptForWorktree")
+    const moveIdx = text.indexOf("moveSession")
+    expect(setupIdx).toBeGreaterThan(-1)
+    expect(moveIdx).toBeGreaterThan(-1)
+    expect(setupIdx, "setup must run before move").toBeLessThan(moveIdx)
+  })
+
+  /**
+   * Regression: promote must handle the case where the session doesn't
+   * exist in state yet (e.g. a workspace session that was never tracked).
+   * It must branch between addSession (new) and moveSession (existing).
+   */
+  it("onPromoteSession handles both new and existing sessions", () => {
+    const text = body("onPromoteSession")
+    expect(text).toContain("getSession")
+    expect(text).toContain("addSession")
+    expect(text).toContain("moveSession")
+  })
+
+  // -- notifyWorktreeReady invariants ----------------------------------------
+
+  /**
+   * Regression: pushState must come before the ready/meta messages.
+   * If reversed, the webview receives the "ready" signal but can't find
+   * the worktree/session in state, causing a blank panel.
+   */
+  it("notifyWorktreeReady pushes state before sending ready message", () => {
+    const text = body("notifyWorktreeReady")
+    const pushIdx = text.indexOf("this.pushState()")
+    const readyIdx = text.indexOf("agentManager.worktreeSetup")
+    expect(pushIdx, "pushState must come before worktreeSetup").toBeLessThan(readyIdx)
+    // Must also send sessionMeta so the webview knows the branch/path
+    expect(text).toContain("agentManager.sessionMeta")
   })
 })

@@ -14,20 +14,11 @@ import { useProvider, EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
+import { KILO_GATEWAY_ID, providerSortKey, isFree, buildTriggerLabel } from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
   models: EnrichedModel[]
-}
-
-const KILO_GATEWAY_ID = "kilo"
-
-/** Provider display order — popular providers sort first */
-const PROVIDER_ORDER = [KILO_GATEWAY_ID, "anthropic", "openai", "google"]
-
-function providerSortKey(providerID: string): number {
-  const idx = PROVIDER_ORDER.indexOf(providerID.toLowerCase())
-  return idx >= 0 ? idx : PROVIDER_ORDER.length
 }
 
 // ---------------------------------------------------------------------------
@@ -168,10 +159,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     })
   }
 
-  function isFree(model: EnrichedModel): boolean {
-    return model.inputPrice === 0
-  }
-
   function isSelected(model: EnrichedModel): boolean {
     const sel = selectedModel()
     return sel !== undefined && sel.providerID === model.providerID && sel.id === model.id
@@ -182,21 +169,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     return flatFiltered().indexOf(model) + clearOffset()
   }
 
-  const triggerLabel = () => {
-    const sel = selectedModel()
-    if (sel) {
-      return sel.name
-    }
-    // Fallback: raw selection exists but findModel didn't resolve — show raw IDs
-    const raw = props.value
-    if (raw?.providerID && raw?.modelID) {
-      return raw.providerID === KILO_GATEWAY_ID ? raw.modelID : `${raw.providerID} / ${raw.modelID}`
-    }
-    if (props.allowClear) {
-      return props.clearLabel ?? language.t("dialog.model.notSet")
-    }
-    return hasProviders() ? language.t("dialog.model.select.title") : language.t("dialog.model.noProviders")
-  }
+  const triggerLabel = () =>
+    buildTriggerLabel(
+      selectedModel()?.name,
+      props.value,
+      props.allowClear ?? false,
+      props.clearLabel ?? "",
+      hasProviders(),
+      {
+        select: language.t("dialog.model.select.title"),
+        noProviders: language.t("dialog.model.noProviders"),
+        notSet: language.t("dialog.model.notSet"),
+      },
+    )
 
   return (
     <Popover

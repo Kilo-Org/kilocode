@@ -18,6 +18,7 @@ import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import SessionList from "./components/history/SessionList"
+import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -50,15 +51,21 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
-    const msgs = session.allMessages()
-    const parts = session.allParts()
+    const perms = id ? session.permissions().filter((p) => p.sessionID === id) : []
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
       session_status: {} as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
-      message: msgs as unknown as Record<string, SDKMessage[]>,
-      part: parts as unknown as Record<string, SDKPart[]>,
-      permission: id ? { [id]: session.permissions() as unknown as any[] } : {},
+      message: id ? { [id]: session.messages() as unknown as SDKMessage[] } : {},
+      part: id
+        ? Object.fromEntries(
+            session
+              .messages()
+              .map((msg) => [msg.id, session.getParts(msg.id) as unknown as SDKPart[]])
+              .filter(([, parts]) => (parts as SDKPart[]).length > 0),
+          )
+        : {},
+      permission: id ? { [id]: perms as unknown as any[] } : {},
     }
   })
 
@@ -178,11 +185,13 @@ const App: Component = () => {
                   <CodeComponentProvider component={Code}>
                     <ProviderProvider>
                       <ConfigProvider>
-                        <SessionProvider>
-                          <DataBridge>
-                            <AppContent />
-                          </DataBridge>
-                        </SessionProvider>
+                        <NotificationsProvider>
+                          <SessionProvider>
+                            <DataBridge>
+                              <AppContent />
+                            </DataBridge>
+                          </SessionProvider>
+                        </NotificationsProvider>
                       </ConfigProvider>
                     </ProviderProvider>
                   </CodeComponentProvider>

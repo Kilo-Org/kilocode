@@ -1,0 +1,32 @@
+name: test-vscode
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "packages/kilo-vscode/**"
+  pull_request:
+    paths:
+      - "packages/kilo-vscode/**"
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: unit tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Run unit tests
+        working-directory: packages/kilo-vscode
+        run: bun run test:unit

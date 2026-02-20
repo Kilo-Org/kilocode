@@ -18,6 +18,7 @@ function toRelativePath(absolutePath: string, workspacePath: string): string {
 }
 
 import { VisibleCodeContext, VisibleEditorInfo, VisibleRange, DiffInfo } from "../types"
+import { extractDiffInfo as _extractDiffInfo } from "./visible-code-utils"
 
 // Git-related URI schemes that should be captured for diff support
 const GIT_SCHEMES = ["git", "gitfs", "file", "vscode-remote"]
@@ -120,38 +121,6 @@ export class VisibleCodeTracker {
    * Git URIs typically look like: git:/path/to/file.ts?ref=HEAD~1
    */
   private extractDiffInfo(uri: vscode.Uri): DiffInfo | undefined {
-    const scheme = uri.scheme
-
-    // Only extract diff info for git-related schemes
-    if (scheme === "git" || scheme === "gitfs") {
-      // Parse query parameters for git reference
-      const query = uri.query
-      let gitRef: string | undefined
-
-      if (query) {
-        // Common patterns: ref=HEAD, ref=abc123
-        const refMatch = query.match(/ref=([^&]+)/)
-        if (refMatch) {
-          gitRef = refMatch[1]
-        }
-      }
-
-      return {
-        scheme,
-        side: "old", // Git scheme documents are typically the "old" side
-        gitRef,
-        originalPath: uri.fsPath,
-      }
-    }
-
-    // File scheme in a diff view is the "new" side
-    // We can't always tell if it's in a diff, so we mark it as new when there's a paired git doc
-    if (scheme === "file") {
-      // This will be marked as diffInfo only if we detect it's paired with a git document
-      // For now, we don't set diffInfo for regular file scheme documents
-      return undefined
-    }
-
-    return undefined
+    return _extractDiffInfo(uri.scheme, uri.query, uri.fsPath)
   }
 }

@@ -1,6 +1,7 @@
-import { describe, expect, test, beforeEach } from "bun:test"
+import { describe, expect, test, beforeEach, mock } from "bun:test"
 
-// Mock Bun.spawnSync before importing the module under test
+// Mock Bun.spawnSync via mock.module so it integrates properly with bun:test
+// and doesn't conflict with other test files that mock "../git-context".
 const spawnSyncResults: Record<string, string> = {}
 
 function setGitOutput(args: string, output: string) {
@@ -13,17 +14,171 @@ function clearGitOutputs() {
   }
 }
 
-// Replace global Bun.spawnSync — the git() helper in git-context.ts calls
-// result.stdout.toString().trim(), so we return a Buffer and let git() trim.
-Bun.spawnSync = ((cmd: string[], _opts?: any) => {
-  const args = cmd.slice(1).join(" ")
-  const output = spawnSyncResults[args] ?? ""
-  return {
-    stdout: Buffer.from(output),
-    stderr: Buffer.from(""),
-    exitCode: 0,
+// Override the git-context module with a version that uses our mock spawnSync.
+// This avoids conflicts with generate.test.ts which also mocks this module.
+mock.module("../git-context", () => {
+  function git(args: string[], cwd: string): string {
+    const key = args.join(" ")
+    return spawnSyncResults[key] ?? ""
   }
-}) as typeof Bun.spawnSync
+
+  const LOCK_FILES = new Set([
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "shrinkwrap.yaml",
+    "bun.lockb",
+    "bun.lock",
+    ".pnp.js",
+    ".pnp.cjs",
+    "jspm.lock",
+    "Pipfile.lock",
+    "poetry.lock",
+    "pdm.lock",
+    ".pdm-lock.toml",
+    "uv.lock",
+    "conda-lock.yml",
+    "pylock.toml",
+    "Gemfile.lock",
+    "composer.lock",
+    "gradle.lockfile",
+    "lockfile.json",
+    "dependency-lock.json",
+    "dependency-reduced-pom.xml",
+    "coursier.lock",
+    "build.sbt.lock",
+    "packages.lock.json",
+    "paket.lock",
+    "project.assets.json",
+    "Cargo.lock",
+    "go.sum",
+    "Gopkg.lock",
+    "glide.lock",
+    "build.zig.zon.lock",
+    "dune.lock",
+    "opam.lock",
+    "Package.resolved",
+    "Podfile.lock",
+    "Cartfile.resolved",
+    "pubspec.lock",
+    "mix.lock",
+    "rebar.lock",
+    "stack.yaml.lock",
+    "cabal.project.freeze",
+    "exact-dependencies.json",
+    "shard.lock",
+    "Manifest.toml",
+    "JuliaManifest.toml",
+    "renv.lock",
+    "packrat.lock",
+    "nimble.lock",
+    "dub.selections.json",
+    "rocks.lock",
+    "carton.lock",
+    "cpanfile.snapshot",
+    "conan.lock",
+    "vcpkg-lock.json",
+    ".terraform.lock.hcl",
+    "Berksfile.lock",
+    "Puppetfile.lock",
+    "MODULE.bazel.lock",
+    "flake.lock",
+    "deno.lock",
+    "devcontainer.lock.json",
+  ])
+
+  const MAX_DIFF_LENGTH = 4000
+
+  function isLockFile(filepath: string): boolean {
+    const name = filepath.split("/").pop() ?? filepath
+    return LOCK_FILES.has(name)
+  }
+
+  function parseNameStatus(output: string): Array<{ status: string; path: string }> {
+    if (!output) return []
+    return output.split("\n").map((line) => {
+      const [status, ...rest] = line.split("\t")
+      const path = status!.startsWith("R") ? (rest[1] ?? rest[0]) : rest.join("\t")
+      return { status: status!, path }
+    })
+  }
+
+  function parsePorcelain(output: string): Array<{ status: string; path: string }> {
+    if (!output) return []
+    return output
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const xy = line.slice(0, 2)
+        const filepath = line.slice(3)
+        return { status: xy.trim(), path: filepath }
+      })
+  }
+
+  type FileStatus = "added" | "modified" | "deleted" | "renamed"
+
+  function mapStatus(code: string): FileStatus {
+    if (code.startsWith("R")) return "renamed"
+    if (code === "A" || code === "??" || code === "?") return "added"
+    if (code === "D") return "deleted"
+    if (code === "M") return "modified"
+    return "modified"
+  }
+
+  function isUntracked(code: string): boolean {
+    return code === "??" || code === "?"
+  }
+
+  async function getGitContext(repoPath: string, selectedFiles?: string[]) {
+    const branch = git(["branch", "--show-current"], repoPath) || "HEAD"
+    const log = git(["log", "--oneline", "-5"], repoPath)
+    const recentCommits = log ? log.split("\n") : []
+
+    const staged = parseNameStatus(git(["diff", "--name-status", "--cached"], repoPath))
+    const useStaged = staged.length > 0
+    const raw = useStaged ? staged : parsePorcelain(git(["status", "--porcelain"], repoPath))
+
+    const selected = selectedFiles ? new Set(selectedFiles) : undefined
+
+    const files: Array<{ status: FileStatus; path: string; diff: string }> = []
+    for (const entry of raw) {
+      if (isLockFile(entry.path)) continue
+      if (selected && !selected.has(entry.path)) continue
+
+      const status = mapStatus(entry.status)
+      const untracked = isUntracked(entry.status)
+
+      let diff: string
+      if (untracked) {
+        diff = `New untracked file: ${entry.path}`
+      } else if (status === "deleted") {
+        diff = useStaged
+          ? git(["diff", "--cached", "--", entry.path], repoPath)
+          : git(["diff", "--", entry.path], repoPath)
+      } else {
+        const raw = useStaged
+          ? git(["diff", "--cached", "--", entry.path], repoPath)
+          : git(["diff", "--", entry.path], repoPath)
+        if (raw.includes("Binary files") || raw.includes("GIT binary patch")) {
+          diff = `Binary file ${entry.path} has been modified`
+        } else {
+          diff = raw
+        }
+      }
+
+      if (diff.length > MAX_DIFF_LENGTH) {
+        diff = diff.slice(0, MAX_DIFF_LENGTH) + "\n... [truncated]"
+      }
+
+      files.push({ status, path: entry.path, diff })
+    }
+
+    return { branch, recentCommits, files }
+  }
+
+  return { getGitContext }
+})
 
 import { getGitContext } from "../git-context"
 

@@ -1,14 +1,11 @@
 import { TelemetryProxy, TelemetryEventName } from "../../telemetry"
 import type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion } from "../types"
+import { getSuggestionKey as _getSuggestionKey, insertWithLRUEviction } from "./telemetry-utils"
 
 export type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion }
 
-/**
- * Generate a unique key for a suggestion based on its content and context.
- * This key is used to track whether the same suggestion is still being displayed.
- */
 export function getSuggestionKey(suggestion: FillInAtCursorSuggestion): string {
-  return `${suggestion.prefix}|${suggestion.suffix}|${suggestion.text}`
+  return _getSuggestionKey(suggestion)
 }
 
 /**
@@ -64,14 +61,7 @@ export class AutocompleteTelemetry {
   private firedUniqueTelemetryKeys: Map<string, true> = new Map()
 
   private markSuggestionKeyAsFired(suggestionKey: string): void {
-    this.firedUniqueTelemetryKeys.set(suggestionKey, true)
-
-    if (this.firedUniqueTelemetryKeys.size > MAX_FIRED_UNIQUE_TELEMETRY_KEYS) {
-      const oldestKey = this.firedUniqueTelemetryKeys.keys().next().value as string | undefined
-      if (oldestKey) {
-        this.firedUniqueTelemetryKeys.delete(oldestKey)
-      }
-    }
+    insertWithLRUEviction(this.firedUniqueTelemetryKeys, suggestionKey, MAX_FIRED_UNIQUE_TELEMETRY_KEYS)
   }
 
   /**

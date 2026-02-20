@@ -7,7 +7,7 @@
 }
 
 .am-sidebar {
-  width: 260px;
+  position: relative;
   min-width: 200px;
   border-right: 1px solid var(--border-weak-base);
   display: flex;
@@ -16,6 +16,10 @@
   background: var(--surface-base);
   padding: 8px;
   gap: 4px;
+}
+
+.am-sidebar > [data-component="resize-handle"]::after {
+  background: var(--surface-interactive-base);
 }
 
 /* Fixed local workspace item */
@@ -103,6 +107,36 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-weak);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Collapsible section toggle */
+
+button.am-section-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 2px;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button.am-section-toggle:hover .am-section-label {
+  color: var(--text-base);
+}
+
+.am-section-chevron {
+  flex-shrink: 0;
+}
+
+.am-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 /* Worktree list */
@@ -112,10 +146,20 @@
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
   max-height: 50vh;
 }
 
+.am-section-grow .am-worktree-list {
+  max-height: none;
+  flex: 1;
+}
+
 /* Worktree item — larger card style */
+
+.am-worktree-list [data-slot="hover-card-trigger"] {
+  min-width: 0;
+}
 
 .am-worktree-item {
   position: relative;
@@ -127,6 +171,8 @@
   cursor: pointer;
   font-size: var(--font-size-base);
   color: var(--text-base);
+  min-width: 0;
+  width: 100%;
 }
 
 .am-worktree-item:hover {
@@ -171,6 +217,48 @@
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+/* Grouped worktrees — visual grouping with header and left accent */
+
+.am-wt-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 2px;
+  margin-top: 6px;
+  color: var(--text-weaker);
+}
+
+.am-wt-group-header [data-component="icon"] {
+  color: var(--border-focus, #007fd4);
+  opacity: 0.7;
+}
+
+.am-wt-group-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  color: color-mix(in srgb, var(--border-focus, #007fd4) 80%, var(--text-weak));
+}
+
+.am-wt-grouped {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--border-focus, #007fd4) 35%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.am-wt-group-end {
+  margin-bottom: 6px;
+}
+
+.am-wt-grouped:hover {
+  border-left-color: color-mix(in srgb, var(--border-focus, #007fd4) 60%, transparent);
+}
+
+.am-wt-grouped.am-worktree-item-active {
+  border-left-color: var(--border-focus, #007fd4);
 }
 
 /* Session list */
@@ -308,6 +396,51 @@
   min-width: 0;
   overflow-x: auto;
   height: 100%;
+
+  /* Hide scrollbar while keeping scroll functionality */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.am-tab-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Wrapper that positions overflow fade indicators */
+.am-tab-scroll-area {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-shrink: 1;
+  align-items: stretch;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fade indicators for overflow */
+.am-tab-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.am-tab-fade-visible {
+  opacity: 1;
+}
+
+.am-tab-fade-left {
+  left: 0;
+  background: linear-gradient(to right, var(--surface-base) 0%, transparent 100%);
+}
+
+.am-tab-fade-right {
+  right: 0;
+  background: linear-gradient(to left, var(--surface-base) 0%, transparent 100%);
 }
 
 .am-tab {
@@ -360,6 +493,29 @@
 
 .am-tab-close:hover {
   opacity: 1;
+}
+
+/* Drag-and-drop sortable tab wrapper */
+
+.am-tab-sortable {
+  display: flex;
+  height: 100%;
+  touch-action: none;
+}
+
+.am-tab-dragging {
+  opacity: 0.25;
+}
+
+/* Drag overlay tab (follows the cursor) */
+
+.am-tab-overlay {
+  background: var(--surface-base);
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  color: var(--text-base);
 }
 
 .am-tab-add {
@@ -455,7 +611,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  max-width: 300px;
+  max-width: 400px;
   text-align: center;
 }
 
@@ -479,12 +635,14 @@
 .am-setup-status {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   background: var(--surface-inset-base);
   color: var(--text-base);
   font-size: var(--font-size-base);
+  text-align: center;
 }
 
 .am-setup-spinner {
@@ -547,4 +705,395 @@
   font-size: var(--font-size-small);
   opacity: 0.6;
   margin-left: 6px;
+}
+
+/* Split button (+ with dropdown arrow) */
+
+.am-split-button {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.am-split-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-weak);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition: all 120ms;
+}
+
+.am-split-arrow:hover {
+  opacity: 1;
+  background: var(--surface-inset-base-hover);
+}
+
+.am-split-arrow[data-expanded] {
+  opacity: 1;
+  background: var(--surface-inset-base-hover);
+}
+
+.am-split-menu {
+  min-width: 210px;
+}
+
+.am-split-menu [data-slot="dropdown-menu-item"] {
+  padding: 6px 10px;
+}
+
+.am-split-menu [data-slot="dropdown-menu-separator"] {
+  margin: 4px 0;
+}
+
+/* New Versioned Session Dialog */
+
+.am-nv-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 20px 20px;
+  min-width: 460px;
+}
+
+/* Reuse prompt-input-container inside dialog — resizable from bottom edge */
+.am-nv-dialog .prompt-input-container {
+  margin: 0;
+  resize: vertical;
+  overflow: hidden;
+  min-height: 120px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-nv-dialog .prompt-input-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+.am-nv-dialog .prompt-input-ghost-wrapper {
+  height: 100%;
+}
+
+.am-nv-dialog .prompt-input {
+  color: var(--vscode-input-foreground, var(--text-base));
+  resize: none;
+  min-height: 100%;
+  max-height: none;
+}
+
+.am-nv-config-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-weaker);
+  white-space: nowrap;
+}
+
+/* Version selector bar below the prompt */
+.am-nv-version-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Version pills */
+
+.am-nv-pills {
+  display: flex;
+  gap: 2px;
+  background: var(--surface-base);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.am-nv-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  background: transparent;
+  color: var(--text-weak);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 100ms;
+}
+
+.am-nv-pill:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-nv-pill-active {
+  background: var(--border-focus, #007fd4) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Version hint text */
+
+.am-nv-version-hint {
+  font-size: 12px;
+  color: var(--text-weaker);
+}
+
+.am-nv-spinner {
+  width: 14px;
+  height: 14px;
+}
+
+/* HoverCard popover for worktree items */
+
+.am-hover-card {
+  padding: 10px 12px;
+  min-width: 160px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.am-hover-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.am-hover-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-weaker);
+  line-height: 1.4;
+}
+
+.am-hover-card-branch {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.am-hover-card-meta {
+  font-size: 12px;
+  color: var(--text-weaker);
+  line-height: 1.4;
+}
+
+.am-hover-card-keybind {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--surface-inset-base);
+  border: 1px solid var(--border-weak-base);
+  font-family: var(--font-family-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+.am-hover-card-divider {
+  height: 1px;
+  background: var(--border-weak-base);
+  margin: 6px 0;
+}
+
+.am-hover-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.am-hover-card-row-label {
+  font-size: 12px;
+  color: var(--text-weaker);
+}
+
+.am-hover-card-row-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-base);
+}
+
+/* Keyboard shortcuts dialog */
+
+.am-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 24px 20px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.am-shortcuts-category {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.am-shortcuts-category-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-weaker);
+  padding: 0 0 4px 0;
+}
+
+.am-shortcuts-list {
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.am-shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  gap: 16px;
+}
+
+.am-shortcuts-row + .am-shortcuts-row {
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.am-shortcuts-label {
+  font-size: var(--font-size-base);
+  color: var(--text-base);
+  white-space: nowrap;
+}
+
+.am-shortcuts-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.am-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--surface-inset-base);
+  border: 1px solid var(--border-weak-base);
+  font-family: var(--font-family-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-weak);
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border-weak-base);
+}
+
+/* Skeleton loading states */
+
+@keyframes am-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+.am-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: am-fade-in 0.2s ease;
+}
+
+/* Worktree skeleton — matches .am-worktree-item layout */
+.am-skeleton-wt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+}
+
+.am-skeleton-wt-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.am-skeleton-wt-text {
+  height: 13px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.am-skeleton-wt:nth-child(2) .am-skeleton-wt-icon,
+.am-skeleton-wt:nth-child(2) .am-skeleton-wt-text {
+  animation-delay: 0.15s;
+}
+
+/* Session skeleton — matches .am-item layout */
+.am-skeleton-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.am-skeleton-session-title {
+  height: 13px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.am-skeleton-session-time {
+  height: 10px;
+  width: 52px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.am-skeleton-session:nth-child(2) .am-skeleton-session-title,
+.am-skeleton-session:nth-child(2) .am-skeleton-session-time {
+  animation-delay: 0.15s;
+}
+
+.am-skeleton-session:nth-child(3) .am-skeleton-session-title,
+.am-skeleton-session:nth-child(3) .am-skeleton-session-time {
+  animation-delay: 0.3s;
 }

@@ -37,41 +37,8 @@ import type {
   ExtensionMessage,
   FileAttachment,
 } from "../types/messages"
-
-// Derive human-readable status from the last streaming part
-function computeStatus(
-  part: Part | undefined,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string | undefined {
-  if (!part) return undefined
-  if (part.type === "tool") {
-    switch (part.tool) {
-      case "task":
-        return t("ui.sessionTurn.status.delegating")
-      case "todowrite":
-      case "todoread":
-        return t("ui.sessionTurn.status.planning")
-      case "read":
-        return t("ui.sessionTurn.status.gatheringContext")
-      case "list":
-      case "grep":
-      case "glob":
-        return t("ui.sessionTurn.status.searchingCodebase")
-      case "webfetch":
-        return t("ui.sessionTurn.status.searchingWeb")
-      case "edit":
-      case "write":
-        return t("ui.sessionTurn.status.makingEdits")
-      case "bash":
-        return t("ui.sessionTurn.status.runningCommands")
-      default:
-        return undefined
-    }
-  }
-  if (part.type === "reasoning") return t("ui.sessionTurn.status.thinking")
-  if (part.type === "text") return t("session.status.writingResponse")
-  return undefined
-}
+import { removeSessionPermissions, upsertPermission } from "./permission-queue"
+import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -135,6 +102,8 @@ interface SessionContextValue {
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
   getSessionModel: (sessionID: string) => ModelSelection | null
+  setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
+  setSessionAgent: (sessionID: string, name: string) => void
 
   // Actions
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
@@ -508,7 +477,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
-    setPermissions((prev) => [...prev, permission])
+    setPermissions((prev) => upsertPermission(prev, permission))
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
@@ -603,6 +572,7 @@ export const SessionProvider: ParentComponent = (props) => {
           return next
         })
       }
+      setPermissions((prev) => removeSessionPermissions(prev, sessionID))
       setStatusMap(
         produce((map) => {
           delete map[sessionID]
@@ -830,10 +800,7 @@ export const SessionProvider: ParentComponent = (props) => {
     Object.values(store.sessions).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  // Total cost across all assistant messages in the current session
-  const totalCost = createMemo(() => {
-    return messages().reduce((sum, m) => sum + (m.role === "assistant" ? (m.cost ?? 0) : 0), 0)
-  })
+  const totalCost = createMemo(() => calcTotalCost(messages()))
 
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
@@ -849,24 +816,17 @@ export const SessionProvider: ParentComponent = (props) => {
     return fallback
   })
 
-  // Context usage from the last assistant message that has token data
   const contextUsage = createMemo<ContextUsage | undefined>(() => {
     const msgs = messages()
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.role !== "assistant" || !m.tokens) continue
-      const total =
-        m.tokens.input +
-        m.tokens.output +
-        (m.tokens.reasoning ?? 0) +
-        (m.tokens.cache?.read ?? 0) +
-        (m.tokens.cache?.write ?? 0)
-      if (total === 0) continue
+      const usage = calcContextUsage(m.tokens, undefined)
+      if (usage.tokens === 0) continue
       const sel = selected()
       const model = sel ? provider.findModel(sel) : undefined
       const limit = model?.limit?.context ?? model?.contextLength
-      const percentage = limit ? Math.round((total / limit) * 100) : null
-      return { tokens: total, percentage }
+      return calcContextUsage(m.tokens, limit)
     }
     return undefined
   })
@@ -896,6 +856,12 @@ export const SessionProvider: ParentComponent = (props) => {
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     getSessionModel: (sessionID: string) => store.modelSelections[sessionID] ?? provider.defaultSelection(),
+    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
+      setStore("modelSelections", sessionID, { providerID, modelID })
+    },
+    setSessionAgent: (sessionID: string, name: string) => {
+      setStore("agentSelections", sessionID, name)
+    },
     allMessages,
     allParts,
     sendMessage,

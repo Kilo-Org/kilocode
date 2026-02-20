@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js"
+import { ACCEPTED_IMAGE_TYPES, isAcceptedImageType, isDragLeavingComponent } from "./image-attachments-utils"
 
-export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"]
+export { ACCEPTED_IMAGE_TYPES }
 
 export interface ImageAttachment {
   id: string
@@ -14,7 +15,7 @@ export function useImageAttachments() {
   const [dragging, setDragging] = createSignal(false)
 
   const add = (file: File) => {
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return
+    if (!isAcceptedImageType(file.type)) return
     const reader = new FileReader()
     reader.onload = () => {
       const attachment: ImageAttachment = {
@@ -53,7 +54,7 @@ export function useImageAttachments() {
   }
 
   const handleDragLeave = (event: DragEvent) => {
-    if (!event.relatedTarget || !(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) {
+    if (isDragLeavingComponent(event.relatedTarget, event.currentTarget as HTMLElement)) {
       setDragging(false)
     }
   }

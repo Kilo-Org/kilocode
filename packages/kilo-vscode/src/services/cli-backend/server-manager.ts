@@ -3,6 +3,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
+import { parseServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -85,11 +86,9 @@ export class ServerManager {
         const output = data.toString()
         console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
 
-        // Parse: "kilo server listening on http://127.0.0.1:12345"
-        const match = output.match(/listening on http:\/\/[\w.]+:(\d+)/)
-        if (match && !resolved) {
+        const port = parseServerPort(output)
+        if (port !== null && !resolved) {
           resolved = true
-          const port = parseInt(match[1], 10)
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
           resolve({ port, password, process: serverProcess })
         }

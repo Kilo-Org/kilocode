@@ -12,6 +12,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
+import { toggleAnswer, buildSubtitleText } from "./question-dock-utils"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -46,11 +47,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     return store.answers[store.tab]?.includes(value) ?? false
   })
 
-  const subtitle = createMemo(() => {
-    const count = questions().length
-    if (count === 0) return ""
-    return `${count} ${language.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
-  })
+  const subtitle = createMemo(() =>
+    buildSubtitleText(questions().length, language.t("ui.common.question.one"), language.t("ui.common.question.other")),
+  )
 
   const reply = (answers: string[][]) => {
     if (store.sending) return
@@ -88,12 +87,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const toggle = (answer: string) => {
-    const existing = store.answers[store.tab] ?? []
-    const next = [...existing]
-    const index = next.indexOf(answer)
-    if (index === -1) next.push(answer)
-    if (index !== -1) next.splice(index, 1)
-
+    const next = toggleAnswer(store.answers[store.tab] ?? [], answer)
     const answers = [...store.answers]
     answers[store.tab] = next
     setStore("answers", answers)

@@ -47,6 +47,34 @@ export function validateLocalSession(persisted: string | undefined, ids: string[
 }
 
 /**
+ * Return the keybinding hint for an item adjacent to the active item.
+ * Only returns a hint when the item is exactly one step away in the flat list.
+ * Returns empty string for non-adjacent items or the active item itself.
+ *
+ * @param itemId  - The item being hovered
+ * @param activeId - The currently selected/active item (or undefined for LOCAL)
+ * @param flatIds - The full ordered sidebar list (LOCAL first, then worktrees, then sessions)
+ * @param prev    - Display string for "go up" (e.g. "⌘↑" or keybinding)
+ * @param next    - Display string for "go down" (e.g. "⌘↓" or keybinding)
+ */
+export function adjacentHint(
+  itemId: string,
+  activeId: string | undefined,
+  flatIds: string[],
+  prev: string,
+  next: string,
+): string {
+  if (!activeId || itemId === activeId) return ""
+  const activeIdx = flatIds.indexOf(activeId)
+  const itemIdx = flatIds.indexOf(itemId)
+  if (activeIdx === -1 || itemIdx === -1) return ""
+  const diff = itemIdx - activeIdx
+  if (diff === -1) return prev
+  if (diff === 1) return next
+  return ""
+}
+
+/**
  * After removing a worktree, pick the nearest remaining sidebar neighbor.
  * Order: the worktree just below → the one above → LOCAL.
  */
